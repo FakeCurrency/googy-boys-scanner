@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
-echo Starting Fib Scanner...
-start "Fib Scanner server" cmd /c "python -m http.server 8765 --directory public"
+echo Starting Googy Boys Scanner...
+start "Googy Boys server" cmd /c "python serve.py 8765 public"
 timeout /t 2 >nul
 start "" http://localhost:8765
 echo.

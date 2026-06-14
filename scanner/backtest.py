@@ -126,9 +126,9 @@ def _print_block(title: str, s: dict) -> None:
           f"maxDD {s['max_dd_r']:.1f}R | hold {s['avg_bars']:.0f}d")
 
 
-def run(market_key: str, limit: int) -> list[dict]:
+def run(market_key: str, limit: int, full: bool = False) -> list[dict]:
     market = config.MARKETS[market_key]
-    universe = load_universe(market_key, full=False)[:limit]
+    universe = load_universe(market_key, full=full)[:limit]
     tickers = [u["yf"] for u in universe]
     print(f"\n=== {market.label}: backtesting {len(tickers)} liquid names ===", flush=True)
     frames = download(tickers)
@@ -154,10 +154,12 @@ def main() -> None:
     ap.add_argument("--market", action="append", choices=list(config.MARKETS))
     ap.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
                     help=f"tickers per market (default {DEFAULT_LIMIT})")
+    ap.add_argument("--full", action="store_true",
+                    help="use the full ASX directory instead of the curated list")
     args = ap.parse_args()
 
     for mk in (args.market or list(config.MARKETS)):
-        run(mk, args.limit)
+        run(mk, args.limit, full=args.full)
 
     print("\nNote: universe = today's listed names, so results are optimistic "
           "(survivorship bias). Use to compare grades / tune, not as a return forecast.\n")

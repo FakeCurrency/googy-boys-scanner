@@ -58,6 +58,18 @@
     if (v >= 1e3) return state.cur + Math.round(v / 1e3) + "k";
     return state.cur + v;
   }
+  function num(v) {
+    if (v == null || isNaN(v)) return "—";
+    const dp = Math.abs(v) >= 100 ? 2 : Math.abs(v) >= 1 ? 3 : 4;
+    return v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  }
+  function fmtK(v) {
+    if (v == null) return "—";
+    if (v >= 1e9) return (v / 1e9).toFixed(1) + "B";
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+    if (v >= 1e3) return Math.round(v / 1e3) + "K";
+    return String(v);
+  }
 
   function fmtTime(iso, tz) {
     try {
@@ -134,11 +146,13 @@
     const rrCls = r.low_rr ? "red" : "green";
     const starred = isStarred(r.symbol);
 
-    return `<div class="row" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}`;
+    return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
+     <div class="row">
       <div class="row-grade">${r.grade}</div>
       <div class="row-main">
         <div class="row-line1">
-          <span class="tkr">${r.symbol}</span>
+          <a class="tkr" href="${chartHref}" title="Open chart">${r.symbol}</a>
           <span class="badge dir">${r.dir}</span>
           <span class="cname">${r.name || ""}</span>
           ${sector}
@@ -148,10 +162,10 @@
         </div>
         <div class="row-chips">${chips}${lowrr}${t2r}</div>
       </div>
-      <div class="row-spark">
+      <a class="row-spark" href="${chartHref}" title="Open chart">
         ${spark(r.spark, 120, 30, COLOR[r.trend] || COLOR.blue)}
         <div class="trend-bar ${r.trend}"></div>
-      </div>
+      </a>
       <div class="row-prices">
         <div class="pcell"><div class="pcell-label">Y Close</div><div class="pcell-val">${fmtPrice(r.y_close)}</div></div>
         <div class="pcell"><div class="pcell-label">Open</div><div class="pcell-val">${fmtPrice(r.open)} <span class="pcell-pct ${pctCls(r.open_pct)}">${fmtPct(r.open_pct)}</span></div></div>
@@ -167,6 +181,62 @@
         <button class="t-star ${starred ? "starred" : ""}" data-sym="${r.symbol}" title="Watchlist" aria-label="Toggle watchlist">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
+        <button class="row-expand" title="Details" aria-label="Toggle details">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+     </div>
+     ${detailHtml(r)}
+    </div>`;
+  }
+
+  function detailHtml(r) {
+    const d = r.detail || {};
+    const cur = state.cur;
+    const lvl = (label, val, pct, cls) =>
+      `<div class="dl-row"><span class="dl-label ${cls || ""}">${label}</span>
+        <span class="dl-val">${cur}${num(val)}</span>
+        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+    const ladder = (state.data.ema_periods || []).map((p, i, a) =>
+      `<span class="el-ema" style="color:${EMA_COLOR[p]}">${p}</span>${i < a.length - 1 ? '<span class="el-gt">›</span>' : ""}`).join("");
+    const fast = (d.fast_levels || []).map((f) =>
+      `<div class="fl-row"><span class="fl-label">${f.label}</span><span class="fl-ema" style="color:${EMA_COLOR[f.ema]}">EMA ${f.ema}</span>
+        <span class="fl-val">${cur}${num(f.value)}</span><span class="fl-pct ${f.pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(f.pct)}</span></div>`).join("");
+    const st = d.structure || {};
+    const trend = st.trend || "";
+    const trendCls = trend.includes("Up") ? "green" : trend.includes("Down") ? "pct-down" : "muted";
+    const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
+
+    return `<div class="row-detail">
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-levels">
+        ${lvl("SWING LOW", d.swing_low, d.swing_low_pct, "red")}
+        ${lvl("EMA 55", d.ema55, d.ema55_pct)}
+        ${lvl("EMA 89", d.ema89, d.ema89_pct)}
+        ${lvl("SWING HIGH", d.swing_high, d.swing_high_pct, "green")}
+      </div>
+      <div class="rd-trail">
+        <span class="rd-trail-label">TRAILING STOP</span>
+        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+        <span class="rd-trail-note">${d.trailing_label || ""}</span>
+        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+      </div>
+      <div class="rd-volume">
+        <span class="rd-k">VOLUME</span>
+        <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
+        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+      </div>
+      <div class="rd-ema">
+        <div class="rd-ema-head"><span class="rd-k">EMA STATUS</span>
+          <span class="${d.ema_aligned ? "green" : "muted"}">${d.ema_aligned ? "ALIGNED ✓" : "NOT ALIGNED"}</span>
+          <span class="rd-spread">${d.ema_spread_pct}% spread</span></div>
+        <div class="rd-ladder">${ladder}</div>
+        <div class="rd-fast">${fast}</div>
+      </div>
+      <div class="rd-structure">
+        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
+        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
+          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
       </div>
     </div>`;
   }
@@ -204,13 +274,6 @@
       return;
     }
     wrap.innerHTML = list.map(rowHtml).join("");
-    wrap.querySelectorAll(".t-star").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toggleStar(btn.dataset.sym);
-        renderStats(state.data);
-        renderRows();
-      });
-    });
   }
 
   // ----------------------------------------------------------- apply
@@ -282,6 +345,24 @@
       document.querySelectorAll("#sorts .seg-btn").forEach((x) => x.classList.toggle("is-active", x === b));
       renderRows();
     }));
+
+    // Row interactions (delegated): star toggle, chart link, expand details.
+    $("#results").addEventListener("click", (e) => {
+      const star = e.target.closest(".t-star");
+      if (star) {
+        toggleStar(star.dataset.sym);
+        $("#watch-count").textContent = (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
+        if (state.view === "watch") { renderRows(); return; }
+        const on = isStarred(star.dataset.sym);
+        star.classList.toggle("starred", on);
+        const svg = star.querySelector("svg");
+        if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
+        return;
+      }
+      if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
+      const wrap = e.target.closest(".row-wrap");
+      if (wrap) wrap.classList.toggle("open");
+    });
   }
 
   bind();

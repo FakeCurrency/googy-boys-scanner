@@ -34,6 +34,10 @@ def main() -> None:
         help="after scanning, update the paper-trade journal (forward test)",
     )
     parser.add_argument(
+        "--alert", action="store_true",
+        help="after scanning, email new A+/A setups (needs GBS_SMTP_* env vars)",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -42,7 +46,8 @@ def main() -> None:
     markets = args.market or list(config.MARKETS)
     for market_key in markets:
         print(f"Scanning {config.MARKETS[market_key].label} ...", flush=True)
-        payload = scan.scan_market(market_key, limit=args.limit, full=not args.curated)
+        payload = scan.scan_market(market_key, limit=args.limit, full=not args.curated,
+                                   out_root=args.out)
         path = output.write(payload, args.out)
         tradeable = sum(1 for r in payload["results"]
                         if r["grade"] in config.TRADEABLE_GRADES)
@@ -59,6 +64,11 @@ def main() -> None:
         s = journal.summarize(j)
         print(f"  journal: {s['open']} open | {s['closed']} closed | "
               f"win {s['win_rate']}% | realised {s['total_r']:+.1f}R")
+
+    if args.alert:
+        from . import alerts
+        print("Checking for new A+/A setups to alert ...", flush=True)
+        alerts.run(markets)
 
 
 if __name__ == "__main__":

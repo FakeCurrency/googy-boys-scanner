@@ -25,6 +25,16 @@ web page — a macro **PULSE** bar, full price columns, a watchlist, and an **AS
 
 All weights and thresholds live in [`scanner/config.py`](scanner/config.py).
 
+## On the website
+
+- **Click a row** to expand a detail dropdown — plain-English analysis, the swing/EMA level
+  breakdown, trailing stop, volume, EMA alignment ladder, and market structure (HH/HL).
+- **Click a ticker** to open a full **candlestick chart** (`chart.html`) with EMA 34/55/89, the
+  SuperTrend line, marked price levels (high / resistance / EMA-watch / stop / leg-low / low),
+  volume, and an *Open in TradingView* link.
+- **Journal** page (`journal.html`) — the forward-test track record: stats, equity curve, open
+  positions and closed trades.
+
 ## Project layout
 
 ```
@@ -80,11 +90,22 @@ python -m http.server 8765 --directory public
 python -m scanner.backtest                # curated liquid names, both markets
 python -m scanner.backtest --market asx --limit 15
 
+# Bigger backtest — all curated liquid names, or the full ASX directory.
+python -m scanner.backtest --limit 200      # all liquid names, both markets
+python -m scanner.backtest --market asx --full --limit 150
+
 # Paper-trade journal (forward test) — opens a paper position for each new A+/A
 # setup and walks open positions forward (stop/target/trail) into a track record.
 python -m scanner.journal                  # update from the latest scans
 python -m scanner.run --journal            # scan AND update the journal in one go
+
+# Email alerts of new A+/A setups (writes a preview; emails only if SMTP is set).
+python -m scanner.alerts                    # new since last run  (--all for every current A+/A)
+python -m scanner.run --journal --alert     # scan, journal, and alert together
 ```
+
+Set `GBS_SMTP_HOST`, `GBS_SMTP_PORT`, `GBS_SMTP_USER`, `GBS_SMTP_PASS` and `GBS_ALERT_TO` to enable
+email; otherwise the digest is written to `public/data/alert_preview.html` so you can preview it.
 
 The journal is stored in `journal/journal.json` (full history) and mirrored to
 `public/data/journal.json`. It builds a **bias-free** record over time — the trustworthy

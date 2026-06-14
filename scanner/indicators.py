@@ -72,3 +72,12 @@ def pivot_highs(df: pd.DataFrame, window: int = 3) -> pd.Series:
     for k in range(1, window + 1):
         cond &= (high >= high.shift(k)) & (high >= high.shift(-k))
     return high[cond]
+
+
+def pivot_lows(df: pd.DataFrame, window: int = 3) -> pd.Series:
+    """Local minima of Low: a bar whose Low is <= the `window` bars on each side."""
+    low = df["Low"]
+    cond = pd.Series(True, index=df.index)
+    for k in range(1, window + 1):
+        cond &= (low <= low.shift(k)) & (low <= low.shift(-k))
+    return low[cond]

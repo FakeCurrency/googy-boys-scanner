@@ -88,6 +88,7 @@ def evaluate(df: pd.DataFrame) -> dict | None:
         "weekly": weekly,
         "pullback_ema": config.PULLBACK_EMAS[nearest_idx],
         "confluence_level": confluence_level,
+        "confluence_n": len(clustered),
         "vol": vol,
         "avg_vol": avg_vol,
     }

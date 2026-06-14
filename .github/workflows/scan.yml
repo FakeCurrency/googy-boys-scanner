@@ -34,8 +34,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scanner (ASX + NASDAQ) and update the paper-trade journal
-        run: python -m scanner.run --journal
+      - name: Run scanner (ASX + NASDAQ), journal, and email alerts
+        env:
+          GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+        run: python -m scanner.run --journal --alert
 
       - name: Commit updated data
         run: |
