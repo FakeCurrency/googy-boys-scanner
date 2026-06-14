@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Googy Boys Scanner — ASX &amp; NASDAQ</title>
+  <meta name="description" content="Daily Fibonacci-EMA setup scanner for the ASX and NASDAQ markets." />
+  <meta name="theme-color" content="#080b11" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Googy Boys" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
+        </svg>
+      </span>
+      <h1>GOOGY BOYS SCANNER</h1>
+    </div>
+
+    <div class="market-switch" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+    </div>
+
+    <a class="howto-link" href="about.html">How it works</a>
+  </header>
+
+  <main class="wrap">
+    <!-- last scanned -->
+    <section class="scan-banner">
+      <div class="scan-banner-title" id="scan-title">Loading latest scan…</div>
+      <div class="scan-banner-sub" id="scan-sub">Updates automatically after each market close</div>
+    </section>
+
+    <!-- PULSE -->
+    <section class="pulse" id="pulse">
+      <div class="pulse-label">PULSE</div>
+      <div class="pulse-track" id="pulse-track"></div>
+    </section>
+
+    <!-- stat cards -->
+    <section class="stats">
+      <div class="stat-card"><div class="stat-label">Stocks Scanned</div><div class="stat-value" id="stat-scanned">—</div></div>
+      <div class="stat-card"><div class="stat-label">A+ / A Setups</div><div class="stat-value accent-green" id="stat-setups">—</div></div>
+      <div class="stat-card"><div class="stat-label">Top Pick</div><div class="stat-value accent-orange" id="stat-toppick">—</div></div>
+      <div class="stat-card"><div class="stat-label">Best R:R</div><div class="stat-value" id="stat-rr">—</div></div>
+    </section>
+
+    <!-- Results / Watch -->
+    <nav class="view-tabs" role="tablist" aria-label="View">
+      <button class="view-tab is-active" data-view="results" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Results
+      </button>
+      <button class="view-tab" data-view="watch" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Watch <span class="watch-count" id="watch-count">0</span>
+      </button>
+    </nav>
+
+    <!-- filters -->
+    <section class="controls">
+      <div class="control-group">
+        <span class="control-label">TAB</span>
+        <div class="seg" id="tabs">
+          <button class="seg-btn is-active" data-tab="aplus">A+ <span class="seg-count" id="count-aplus">0</span></button>
+          <button class="seg-btn" data-tab="a">A <span class="seg-count" id="count-a">0</span></button>
+          <button class="seg-btn" data-tab="watch">WATCH <span class="seg-count" id="count-watch">0</span></button>
+        </div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">SORT</span>
+        <div class="seg" id="sorts">
+          <button class="seg-btn is-active" data-sort="score">Score</button>
+          <button class="seg-btn" data-sort="price">Price</button>
+          <button class="seg-btn" data-sort="rr">R:R</button>
+          <button class="seg-btn" data-sort="az">A-Z</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMA legend -->
+    <section class="ema-legend" id="ema-legend"></section>
+
+    <!-- results -->
+    <section class="rows" id="results" aria-live="polite"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
+    <p class="credit">Googy Boys Scanner · data via Yahoo Finance · refreshed daily after each market close</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

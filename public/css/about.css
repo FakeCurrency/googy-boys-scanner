@@ -1,0 +1,45 @@
+/* "How it works" page — dark, layered on top of styles.css */
+.doc { max-width: 760px; margin: 0 auto; padding: 30px 22px 72px; }
+.doc-title { font-size: 30px; font-weight: 800; letter-spacing: -0.4px; margin: 8px 0 14px; color: var(--text); }
+.lead { font-size: 16px; line-height: 1.65; color: var(--text-2); margin: 0 0 8px; }
+.lead em { color: var(--orange); font-style: normal; }
+
+.doc-section {
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.doc-section h3 {
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin: 0 0 14px;
+}
+.doc-section p { font-size: 14.5px; line-height: 1.7; color: var(--text-2); margin: 0 0 12px; }
+.doc-section p:last-child { margin-bottom: 0; }
+.doc-section strong { color: var(--text); }
+
+.ema-ladder { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.ema-ladder span { font: 700 17px/1 var(--mono); color: var(--green); }
+.ema-ladder span:nth-child(even) { color: var(--muted-2); font-weight: 400; }
+
+.chip-list, .def-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 13px; }
+.chip-list li, .def-list li { font-size: 14px; line-height: 1.5; color: var(--text-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip-list li em, .def-list li em { color: var(--muted); font-style: normal; font-weight: 600; margin-left: auto; font: 600 12px/1 var(--mono); }
+.def-list li { display: list-item; list-style: none; }
+
+.grade-grid { display: grid; gap: 10px; }
+.grade-row {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; color: var(--text-2);
+  background: var(--elevated); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.grade-row em { color: var(--text); font-style: normal; font-weight: 600; margin-left: auto; font-size: 12px; }
+.g { font: 800 14px/1 var(--sans); width: 30px; }
+.g-aplus { color: var(--grade-aplus); }
+.g-a { color: var(--grade-a); }
+.g-b { color: var(--grade-b); }
+.g-c { color: var(--grade-c); }
+
+.doc-disclaimer { margin-top: 26px; text-align: center; color: var(--muted); font-size: 12.5px; }

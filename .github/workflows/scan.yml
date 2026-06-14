@@ -1,0 +1,66 @@
+name: Daily scan & publish
+
+# Runs the scanner on a schedule, commits the fresh JSON back to the repo,
+# and publishes the static site to GitHub Pages.
+on:
+  schedule:
+    # Times are UTC. ASX closes 16:00 AEST (~06:00 UTC); NASDAQ closes 16:00 ET (~20:00-21:00 UTC).
+    - cron: "0 7 * * 1-6"    # after the ASX session
+    - cron: "30 21 * * 1-5"  # after the US session
+  workflow_dispatch:          # allow manual runs from the Actions tab
+
+# Let the workflow commit results and deploy Pages.
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Don't run two scans on top of each other.
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scanner (ASX + NASDAQ)
+        run: python -m scanner.run
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/*.json
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "chore: daily scan $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

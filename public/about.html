@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How it works — Googy Boys Scanner</title>
+  <meta name="theme-color" content="#080b11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/about.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
+        </svg>
+      </span>
+      <h1>GOOGY BOYS SCANNER</h1>
+    </div>
+    <a class="howto-link" href="index.html">← Back to scanner</a>
+  </header>
+
+  <main class="doc">
+    <h2 class="doc-title">How the scanner works</h2>
+    <p class="lead">
+      Every trading day the scanner reviews the ASX and NASDAQ and surfaces stocks showing a healthy
+      uptrend that has paused and pulled back to a key moving average. It is a shortlist for
+      <em>manual review</em> — it does not place trades or predict prices.
+    </p>
+
+    <section class="doc-section">
+      <h3>The Fibonacci-EMA framework</h3>
+      <p>The engine tracks seven exponential moving averages spaced along the Fibonacci sequence:</p>
+      <div class="ema-ladder">
+        <span>8</span><span>›</span><span>13</span><span>›</span><span>21</span><span>›</span>
+        <span>34</span><span>›</span><span>55</span><span>›</span><span>89</span><span>›</span><span>144</span>
+      </div>
+      <p>
+        The ideal condition is when they line up in order — the fast 8 above the 13, above the 21,
+        and so on. That is <strong>full bullish alignment</strong>: a clean uptrend across every
+        timescale at once.
+      </p>
+    </section>
+
+    <section class="doc-section">
+      <h3>Signal chips</h3>
+      <p>Each pattern element a stock shows contributes points toward a score out of 13:</p>
+      <ul class="chip-list">
+        <li><span class="chip">FULL BULLISH ALIGNMENT</span> all seven EMAs stacked in order. <em>+3</em></li>
+        <li><span class="chip">CORE FIB PULLBACK EMA_34</span> price has retraced to a core EMA (21 / 34 / 55). <em>+3</em></li>
+        <li><span class="chip">STRONG FIB CONFLUENCE @ …</span> several EMA levels cluster at one price zone. <em>+3</em></li>
+        <li><span class="chip">EMA COMPRESSION</span> the moving averages are bunched tightly. <em>+2</em></li>
+        <li><span class="chip weekly">WEEKLY BULLISH</span> the weekly timeframe is also trending up. <em>+1</em></li>
+        <li><span class="chip">VOLUME EXPANSION</span> volume is elevated versus its recent average. <em>+1</em></li>
+      </ul>
+    </section>
+
+    <section class="doc-section">
+      <h3>Grades</h3>
+      <p>The grade is simply the sum of the points above (out of 13).</p>
+      <div class="grade-grid">
+        <div class="grade-row"><span class="g g-aplus">A+</span> The most signals stacked together — the strongest aligned setup. <em>Tradeable</em></div>
+        <div class="grade-row"><span class="g g-a">A</span> A strong setup with most quality signals present. <em>Tradeable</em></div>
+        <div class="grade-row"><span class="g g-b">B</span> A partial setup — fewer signals lined up. <em>Watching</em></div>
+        <div class="grade-row"><span class="g g-c">C</span> Only one or two signals present. <em>Watching</em></div>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h3>Entry, stop &amp; target</h3>
+      <ul class="def-list">
+        <li><strong>Entry</strong> — the pullback level, where price has retraced to a key EMA.</li>
+        <li><strong>Stop</strong> — below the recent swing low / structure (shown as Stop&nbsp;%).</li>
+        <li><strong>Target</strong> — the nearest real resistance above; if price is at new highs the
+          target falls back to a 2R measured move, tagged <span class="chip info">TARGET = 2R FALLBACK</span>.</li>
+        <li><strong>P2</strong> — the Phase-2 SuperTrend (ATR) trailing stop, as a % below price.</li>
+      </ul>
+      <p>The <strong>R : R</strong> is reward-to-risk. A poor reward-to-risk is flagged
+        <span class="chip warn">LOW R:R (0.7:1)</span> — the grade still reflects the signal quality,
+        but the warning tells you the trade itself is unattractive.</p>
+    </section>
+
+    <section class="doc-section">
+      <h3>PULSE &amp; liquidity</h3>
+      <p>
+        The <strong>PULSE</strong> bar across the top tracks macro context — gold, silver, oil, gas,
+        the tech and biotech indices, bond yields and the Aussie dollar — each with its 1-day and
+        5-day move. A liquidity filter keeps only names trading meaningful volume each day; the most
+        liquid are tagged <span class="badge liq-liquid">LIQUID</span>.
+      </p>
+    </section>
+
+    <section class="doc-section">
+      <h3>Timing &amp; data</h3>
+      <p>
+        Scans run automatically after each market's close — ASX around 6:00&nbsp;am AEST, NASDAQ
+        after the US session. Price and volume data comes from Yahoo Finance.
+      </p>
+    </section>
+
+    <p class="doc-disclaimer">General information only — not financial advice. Markets carry risk.</p>
+  </main>
+</body>
+</html>
