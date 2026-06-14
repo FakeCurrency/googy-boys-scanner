@@ -45,7 +45,12 @@ def download(tickers: list[str], period: str | None = None,
 
         for ticker in batch:
             try:
-                df = data if len(batch) == 1 else data[ticker]
+                # yfinance returns MultiIndex (ticker, field) columns when grouping;
+                # extract the ticker's frame. A single-ticker download may be flat.
+                if isinstance(data.columns, pd.MultiIndex):
+                    df = data[ticker]
+                else:
+                    df = data
                 df = df.dropna()
                 if len(df):
                     frames[ticker] = df

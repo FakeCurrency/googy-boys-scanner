@@ -73,6 +73,12 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         if lv["rr"] <= 0:
             continue
 
+        # Tuning toward R:R — a tradeable grade must clear the minimum reward-to-risk,
+        # otherwise it's a strong pattern but a poor trade, so demote it to the watch list.
+        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
+                and lv["rr"] < config.MIN_TRADEABLE_RR:
+            grade = "B"
+
         info = meta.get(yf_ticker, {})
         close = sig["close"]
         open_ = float(df["Open"].iloc[-1])

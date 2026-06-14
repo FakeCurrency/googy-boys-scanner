@@ -37,9 +37,15 @@ GRADE_CUTOFFS = [
 TRADEABLE_GRADES = {"A+", "A"}
 WATCH_GRADES = {"B", "C"}
 
-# Reward-to-risk below this is flagged with a red "LOW R:R" chip (not demoted —
-# matches the original, which grades on signals and merely warns on poor R:R).
+# Reward-to-risk below this is flagged with a red "LOW R:R" chip.
 LOW_RR_THRESHOLD = 1.5
+
+# Tuning toward R:R: when True, a tradeable grade (A+/A) must also offer at least
+# MIN_TRADEABLE_RR reward-to-risk; weaker setups are demoted to the watch list (B).
+# Backtesting showed this materially improves the strategy (fewer, better trades).
+# Set DEMOTE_LOW_RR = False to revert to signal-only grading (flag, don't demote).
+DEMOTE_LOW_RR = True
+MIN_TRADEABLE_RR = 1.5
 
 # Average daily turnover (local currency) at/above which a name is tagged
 # "LIQUID" rather than just "OK".
