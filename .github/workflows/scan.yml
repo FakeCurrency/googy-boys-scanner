@@ -34,8 +34,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scanner (ASX + NASDAQ)
-        run: python -m scanner.run
+      - name: Run scanner (ASX + NASDAQ) and update the paper-trade journal
+        run: python -m scanner.run --journal
 
       - name: Commit updated data
         run: |
