@@ -72,6 +72,28 @@ python -m http.server 8765 --directory public
 > the ASX, so it takes a few minutes. NASDAQ uses a curated large-cap list. Use `--curated` (ASX
 > top names) or `--limit N` for a fast run.
 
+## Backtest & paper-trade journal
+
+```bash
+# Quick-sanity backtest — replays the same signals over history and reports
+# results in R multiples (win rate, expectancy, profit factor, drawdown) by grade.
+python -m scanner.backtest                # curated liquid names, both markets
+python -m scanner.backtest --market asx --limit 15
+
+# Paper-trade journal (forward test) — opens a paper position for each new A+/A
+# setup and walks open positions forward (stop/target/trail) into a track record.
+python -m scanner.journal                  # update from the latest scans
+python -m scanner.run --journal            # scan AND update the journal in one go
+```
+
+The journal is stored in `journal/journal.json` (full history) and mirrored to
+`public/data/journal.json`. It builds a **bias-free** record over time — the trustworthy
+counterpart to the backtest.
+
+> The backtest universe is *today's* listed names, so its numbers are **optimistic**
+> (survivorship bias). Use them to compare grades and tune `config.py`, not as a return
+> forecast. No orders are ever placed — execution stays manual.
+
 ## Customising
 
 - **Universe** — the ASX scan uses the **full live ASX directory** by default; NASDAQ uses

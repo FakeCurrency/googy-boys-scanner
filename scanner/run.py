@@ -30,6 +30,10 @@ def main() -> None:
         help="use the smaller bundled ASX list instead of the full ~2,000-name directory",
     )
     parser.add_argument(
+        "--journal", action="store_true",
+        help="after scanning, update the paper-trade journal (forward test)",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -44,6 +48,17 @@ def main() -> None:
                         if r["grade"] in config.TRADEABLE_GRADES)
         print(f"  {len(payload['results'])} setups "
               f"({tradeable} A+/A) from {payload['scanned']} scanned -> {path}")
+
+    if args.journal:
+        from . import journal
+        print("Updating paper-trade journal ...", flush=True)
+        j = journal._load()
+        for market_key in markets:
+            j = journal.update_market(market_key, j)
+        journal._save(j)
+        s = journal.summarize(j)
+        print(f"  journal: {s['open']} open | {s['closed']} closed | "
+              f"win {s['win_rate']}% | realised {s['total_r']:+.1f}R")
 
 
 if __name__ == "__main__":
