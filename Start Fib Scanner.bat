@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 echo Starting Googy Boys Scanner...
-start "Googy Boys server" cmd /c "python serve.py 8765 public"
+start "Googy Boys server" cmd /c ".venv\Scripts\python.exe serve.py 8765 public"
 timeout /t 2 >nul
 start "" http://localhost:8765
 echo.

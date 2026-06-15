@@ -73,6 +73,21 @@ Two batch files are included for non-technical use:
 - **`Start Fib Scanner.bat`** — serves the site and opens it at `http://localhost:8765`.
 - **`Refresh Data.bat`** — re-runs the scanner so the results are up to date.
 
+Both use the project's virtual environment at `.venv\` (created once with
+`python -m venv .venv` then `.venv\Scripts\python -m pip install -r requirements.txt`).
+
+### Automatic twice-daily scans (Windows)
+
+A Windows Task Scheduler task named **"Googy Boys Scanner"** runs `scan_scheduled.bat` at
+**6:30am and 4:30pm AEST** (local time, so it tracks AEDT in summer). It scans all three markets +
+both scanners and updates the journal, logging to `scan.log`. Manage it in **Task Scheduler**, or:
+
+```powershell
+Get-ScheduledTaskInfo "Googy Boys Scanner"     # next run / last result
+Start-ScheduledTask  "Googy Boys Scanner"       # run now
+Disable-ScheduledTask "Googy Boys Scanner"      # pause it
+```
+
 ## Run it from a terminal
 
 ```bash

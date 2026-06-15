@@ -4,9 +4,10 @@ name: Daily scan & publish
 # and publishes the static site to GitHub Pages.
 on:
   schedule:
-    # Times are UTC. ASX closes 16:00 AEST (~06:00 UTC); NASDAQ closes 16:00 ET (~20:00-21:00 UTC).
-    - cron: "0 7 * * 1-6"    # after the ASX session
-    - cron: "30 21 * * 1-5"  # after the US session
+    # Twice daily at 6:30am and 4:30pm AEST (UTC+10). GitHub cron is fixed UTC,
+    # so during AEDT (summer) these effectively run at 7:30am / 5:30pm local.
+    - cron: "30 20 * * *"   # 06:30 AEST
+    - cron: "30 6 * * *"    # 16:30 AEST
   workflow_dispatch:          # allow manual runs from the Actions tab
 
 # Let the workflow commit results and deploy Pages.
