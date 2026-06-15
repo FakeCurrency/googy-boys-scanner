@@ -4,8 +4,11 @@ A daily **Fibonacci‑EMA setup scanner**, rebuilt from
 [asx-scanner-app.web.app](https://asx-scanner-app.web.app/) and extended with a second market.
 It reviews a universe of stocks each day, finds those in a healthy uptrend that have paused and
 pulled back to a key moving average, grades them **A+ / A / B / C**, computes **Entry / Stop /
-Target** and a **risk‑reward** read, and publishes everything to a dense dark **market‑terminal**
-web page — a macro **PULSE** bar, full price columns, a watchlist, and an **ASX ⇄ NASDAQ** toggle.
+Target** and a **risk‑reward** read, and publishes everything to a dense iOS‑styled web page — a
+macro **PULSE** bar, full price columns, a watchlist, and an **ASX / NASDAQ / Crypto** market toggle.
+
+Markets: **ASX** (full live directory), **NASDAQ** (curated large caps), and **Crypto** (top 100 by
+market cap from CoinGecko, via Yahoo `BTC-USD`‑style data; stablecoins/wrapped tokens skipped).
 
 > General information only — not financial advice. Markets carry risk.
 

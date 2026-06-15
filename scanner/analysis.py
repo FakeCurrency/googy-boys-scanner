@@ -18,8 +18,8 @@ def _pct_from(level: float, close: float) -> float:
 def _structure(df: pd.DataFrame) -> dict:
     highs = pivot_highs(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
     lows = pivot_lows(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
-    sh = [round(float(v), 4) for v in highs.iloc[-3:].tolist()]
-    sl = [round(float(v), 4) for v in lows.iloc[-3:].tolist()]
+    sh = [round(float(v), 8) for v in highs.iloc[-3:].tolist()]
+    sl = [round(float(v), 8) for v in lows.iloc[-3:].tolist()]
 
     up = len(sh) >= 2 and sh[-1] >= sh[0] and len(sl) >= 2 and sl[-1] >= sl[0]
     down = len(sh) >= 2 and sh[-1] < sh[0] and len(sl) >= 2 and sl[-1] < sl[0]
@@ -44,15 +44,15 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     for label, period in (("Pullback", 8), ("Next level", 13), ("Support", 21)):
         v = ema[period]
         fast_levels.append({
-            "label": label, "ema": period, "value": round(v, 4),
+            "label": label, "ema": period, "value": round(v, 8),
             "pct": round((close - v) / v * 100, 1) if v else 0.0,   # +ve = price above EMA
         })
 
     return {
-        "swing_low": round(swing_low, 4), "swing_low_pct": _pct_from(swing_low, close),
-        "swing_high": round(swing_high, 4), "swing_high_pct": _pct_from(swing_high, close),
-        "ema55": round(ema[55], 4), "ema55_pct": _pct_from(ema[55], close),
-        "ema89": round(ema[89], 4), "ema89_pct": _pct_from(ema[89], close),
+        "swing_low": round(swing_low, 8), "swing_low_pct": _pct_from(swing_low, close),
+        "swing_high": round(swing_high, 8), "swing_high_pct": _pct_from(swing_high, close),
+        "ema55": round(ema[55], 8), "ema55_pct": _pct_from(ema[55], close),
+        "ema89": round(ema[89], 8), "ema89_pct": _pct_from(ema[89], close),
         "trailing_stop": lv["trail"], "trailing_label": "SuperTrend 3× ATR",
         "trailing_pct": _pct_from(lv["trail"], close),
         "volume_ratio": round(ratio, 1), "volume_today": int(vol), "volume_avg": int(avg_vol),

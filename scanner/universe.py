@@ -8,6 +8,7 @@ fine. If a CSV is missing, NASDAQ can fall back to the official symbol file.
 
 import csv
 import io
+import json
 import pathlib
 import urllib.request
 
@@ -18,6 +19,15 @@ UNIVERSE_DIR = ROOT / "data_universe"
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
+COINGECKO_URL = ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
+                 "&order=market_cap_desc&per_page=130&page=1&sparkline=false")
+
+# Stablecoins / wrapped-pegged tokens to skip (they don't trend).
+CRYPTO_SKIP = {
+    "USDT", "USDC", "DAI", "BUSD", "TUSD", "USDD", "FDUSD", "PYUSD", "USDE", "USDS",
+    "FRAX", "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
+    "WBTC", "WETH", "WEETH", "WSTETH", "STETH", "RETH", "CBETH", "WBETH", "BSC-USD",
+}
 
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
@@ -97,6 +107,33 @@ def _fetch_nasdaq_listed(suffix: str) -> list[dict]:
     return items
 
 
+def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
+    """Top coins by market cap from CoinGecko (stablecoins/wrapped tokens skipped).
+
+    Maps each coin to a Yahoo ``<SYMBOL>-USD`` ticker; coins Yahoo doesn't carry
+    under that exact ticker are dropped at scan time when no data comes back.
+    """
+    try:
+        req = urllib.request.Request(COINGECKO_URL, headers=_BROWSER_HEADERS)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8", "ignore"))
+    except Exception:
+        return []
+
+    items: list[dict] = []
+    seen: set[str] = set()
+    for coin in data:
+        sym = (coin.get("symbol") or "").strip().upper()
+        name = (coin.get("name") or sym).strip()
+        if not sym or sym in CRYPTO_SKIP or not sym.isalnum() or sym in seen:
+            continue
+        seen.add(sym)
+        items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
+        if len(items) >= limit:
+            break
+    return items
+
+
 def load_universe(market_key: str, full: bool = True) -> list[dict]:
     """Return [{symbol, name, yf}, ...] for a market.
 
@@ -110,6 +147,12 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     # ASX: full universe straight from the official directory.
     if market_key == "asx" and full:
         items = _fetch_asx_listed(market.suffix)
+        if items:
+            return items
+
+    # Crypto: top 100 by market cap from CoinGecko.
+    if market_key == "crypto":
+        items = _fetch_crypto(market.suffix)
         if items:
             return items
         # fall through to the bundled list if the fetch failed

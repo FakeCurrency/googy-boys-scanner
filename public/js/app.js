@@ -42,9 +42,13 @@
   }
 
   // ----------------------------------------------------------- formatting
+  function decimals(v) {
+    const a = Math.abs(v);
+    return a >= 100 ? 2 : a >= 1 ? 3 : a >= 0.1 ? 4 : a >= 0.01 ? 5 : a >= 0.001 ? 6 : 8;
+  }
   function fmtPrice(v) {
     if (v == null || isNaN(v)) return "—";
-    const dp = Math.abs(v) >= 100 ? 2 : Math.abs(v) >= 1 ? 3 : 4;
+    const dp = decimals(v);
     return state.cur + v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
   }
   function fmtPct(v) {
@@ -62,7 +66,7 @@
   }
   function num(v) {
     if (v == null || isNaN(v)) return "—";
-    const dp = Math.abs(v) >= 100 ? 2 : Math.abs(v) >= 1 ? 3 : 4;
+    const dp = decimals(v);
     return v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
   }
   function fmtK(v) {

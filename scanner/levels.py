@@ -40,10 +40,10 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     trail = float(supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT).iloc[-1])
 
     return {
-        "entry": round(entry, 4),
-        "stop": round(stop, 4),
-        "target": round(target, 4),
+        "entry": round(entry, 8),
+        "stop": round(stop, 8),
+        "target": round(target, 8),
         "rr": round(rr, 2),
-        "trail": round(trail, 4),
+        "trail": round(trail, 8),
         "target_basis": target_basis,
     }

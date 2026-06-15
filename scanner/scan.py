@@ -11,7 +11,10 @@ from .universe import load_universe
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
 
 
-def _liquidity(df) -> float:
+def _liquidity(df, market) -> float:
+    # Crypto: Yahoo "Volume" is already USD dollar-volume; stocks: price * shares.
+    if getattr(market, "volume_is_usd", False):
+        return float(df["Volume"].iloc[-config.LIQUIDITY_LOOKBACK:].mean())
     turnover = (df["Close"] * df["Volume"]).iloc[-config.LIQUIDITY_LOOKBACK:].mean()
     return float(turnover)
 
@@ -23,7 +26,7 @@ def _build_chips(fired: list[str], sig: dict) -> list[str]:
         if key == "pullback":
             chips.append(f"CORE FIB PULLBACK EMA_{sig['pullback_ema']}")
         elif key == "confluence" and sig.get("confluence_level"):
-            chips.append(f"STRONG FIB CONFLUENCE @ {round(sig['confluence_level'], 4)}")
+            chips.append(f"STRONG FIB CONFLUENCE @ {round(sig['confluence_level'], 8)}")
         else:
             chips.append(signals.CHIP_BASE[key])
     return chips
@@ -31,7 +34,7 @@ def _build_chips(fired: list[str], sig: dict) -> list[str]:
 
 def _spark(df) -> list[float]:
     closes = df["Close"].iloc[-config.SPARK_BARS:].tolist()
-    return [round(float(c), 4) for c in closes]
+    return [round(float(c), 8) for c in closes]
 
 
 def scan_market(market_key: str, limit: int | None = None, full: bool = True,
@@ -64,7 +67,7 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         if sig is None or not sig["uptrend"]:
             continue
 
-        turnover = _liquidity(df)
+        turnover = _liquidity(df, market)
         if turnover < market.liquidity_min:
             continue
 
@@ -103,9 +106,9 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
             "rr_text": f"{lv['rr']:.1f}:1",
             "target_2r": lv["target_basis"] == "measured",
             "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 4),
-            "y_close": round(y_close, 4),
-            "open": round(open_, 4),
+            "price": round(close, 8),
+            "y_close": round(y_close, 8),
+            "open": round(open_, 8),
             "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
             "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
             "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
@@ -190,7 +193,7 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
         if sig is None or not sig.get("ok"):
             continue
 
-        turnover = _liquidity(df)
+        turnover = _liquidity(df, market)
         if turnover < market.liquidity_min:
             continue
 
@@ -224,9 +227,9 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
             "rr_text": f"{lv['rr']:.1f}:1",
             "target_2r": lv["target_basis"] == "measured",
             "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 4),
-            "y_close": round(y_close, 4),
-            "open": round(open_, 4),
+            "price": round(close, 8),
+            "y_close": round(y_close, 8),
+            "open": round(open_, 8),
             "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
             "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
             "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,

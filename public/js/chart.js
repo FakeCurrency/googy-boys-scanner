@@ -17,7 +17,8 @@
 
   function fmt(v, cur) {
     if (v == null || isNaN(v)) return "—";
-    const dp = Math.abs(v) >= 100 ? 2 : Math.abs(v) >= 1 ? 3 : 4;
+    const a = Math.abs(v);
+    const dp = a >= 100 ? 2 : a >= 1 ? 3 : a >= 0.1 ? 4 : a >= 0.01 ? 5 : a >= 0.001 ? 6 : 8;
     return (cur || "") + v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
   }
 
@@ -87,9 +88,13 @@
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
 
+    const px = d.price || (d.candles.length ? d.candles[d.candles.length - 1].close : 1);
+    const a = Math.abs(px);
+    const prec = a >= 100 ? 2 : a >= 1 ? 3 : a >= 0.1 ? 4 : a >= 0.01 ? 5 : a >= 0.001 ? 6 : 8;
     const candle = chart.addCandlestickSeries({
       upColor: "#2fd07f", downColor: "#ff5b5b",
       wickUpColor: "#2fd07f", wickDownColor: "#ff5b5b", borderVisible: false,
+      priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) },
     });
     candle.setData(d.candles);
 

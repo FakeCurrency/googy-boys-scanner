@@ -15,30 +15,37 @@ from .indicators import ema, sma, supertrend
 CHART_BARS = 320   # ~14 months of daily candles
 
 
+def _tv(market, symbol: str) -> str:
+    """TradingView symbol for the Open-in-TradingView link."""
+    if market.key == "crypto":
+        return f"CRYPTO:{symbol}USD"
+    return f"{market.label}:{symbol}"
+
+
 def build_chart(df, sig: dict, lv: dict, result: dict, market) -> dict:
     win = df.iloc[-CHART_BARS:]
     times = [d.date().isoformat() for d in win.index]
 
     def line(series):
         vals = series.iloc[-CHART_BARS:]
-        return [{"time": t, "value": round(float(v), 4)}
+        return [{"time": t, "value": round(float(v), 8)}
                 for t, v in zip(times, vals) if v == v]  # skip NaN
 
     candles = [{"time": t,
-                "open": round(float(o), 4), "high": round(float(h), 4),
-                "low": round(float(l), 4), "close": round(float(c), 4)}
+                "open": round(float(o), 8), "high": round(float(h), 8),
+                "low": round(float(l), 8), "close": round(float(c), 8)}
                for t, o, h, l, c in zip(times, win["Open"], win["High"], win["Low"], win["Close"])]
     volume = [{"time": t, "value": int(v),
                "color": "rgba(47,208,127,0.5)" if c >= o else "rgba(255,91,91,0.5)"}
               for t, v, o, c in zip(times, win["Volume"], win["Open"], win["Close"])]
 
     levels = {
-        "high": round(float(win["High"].max()), 4),
-        "low": round(float(win["Low"].min()), 4),
+        "high": round(float(win["High"].max()), 8),
+        "low": round(float(win["Low"].min()), 8),
         "resistance": lv["target"],
-        "ema_watch": round(sig["ema_last"][sig["pullback_ema"]], 4),
+        "ema_watch": round(sig["ema_last"][sig["pullback_ema"]], 8),
         "stop": lv["stop"],
-        "leg_low": round(float(df["Low"].iloc[-config.SWING_LOOKBACK:].min()), 4),
+        "leg_low": round(float(df["Low"].iloc[-config.SWING_LOOKBACK:].min()), 8),
         "entry": lv["entry"],
         "target": lv["target"],
     }
@@ -51,7 +58,7 @@ def build_chart(df, sig: dict, lv: dict, result: dict, market) -> dict:
         "rr": result["rr"], "low_rr": result["low_rr"], "rr_text": result["rr_text"],
         "risk_pct": result.get("detail", {}).get("risk_pct"),
         "analysis": result.get("analysis", ""),
-        "tv_symbol": f"{market.label}:{result['symbol']}",
+        "tv_symbol": _tv(market, result['symbol']),
         "candles": candles,
         "volume": volume,
         "ema34": line(ema(df["Close"], 34)),
@@ -69,11 +76,11 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
 
     def line(series):
         vals = series.iloc[-CHART_BARS:]
-        return [{"time": t, "value": round(float(v), 4)}
+        return [{"time": t, "value": round(float(v), 8)}
                 for t, v in zip(times, vals) if v == v]
 
-    candles = [{"time": t, "open": round(float(o), 4), "high": round(float(h), 4),
-                "low": round(float(l), 4), "close": round(float(c), 4)}
+    candles = [{"time": t, "open": round(float(o), 8), "high": round(float(h), 8),
+                "low": round(float(l), 8), "close": round(float(c), 8)}
                for t, o, h, l, c in zip(times, win["Open"], win["High"], win["Low"], win["Close"])]
     volume = [{"time": t, "value": int(v),
                "color": "rgba(47,208,127,0.5)" if c >= o else "rgba(255,91,91,0.5)"}
@@ -88,9 +95,9 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
     ]
     level_lines = [
         {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
-        {"price": round(sig["base_high"], 4), "color": "#4d9fff", "title": "BASE HIGH"},
+        {"price": round(sig["base_high"], 8), "color": "#4d9fff", "title": "BASE HIGH"},
         {"price": lv["entry"], "color": "#cbd5e1", "title": "ENTRY"},
-        {"price": round(sig["sma"][200], 4), "color": "#ff9500", "title": "200 SMA"},
+        {"price": round(sig["sma"][200], 8), "color": "#ff9500", "title": "200 SMA"},
         {"price": lv["stop"], "color": "#ff5b5b", "title": "STOP"},
     ]
     return {
@@ -101,7 +108,7 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
         "rr": result["rr"], "low_rr": result["low_rr"], "rr_text": result["rr_text"],
         "risk_pct": result.get("detail", {}).get("risk_pct"),
         "analysis": result.get("analysis", ""),
-        "tv_symbol": f"{market.label}:{result['symbol']}",
+        "tv_symbol": _tv(market, result['symbol']),
         "candles": candles, "volume": volume,
         "lines": lines, "level_lines": level_lines,
     }

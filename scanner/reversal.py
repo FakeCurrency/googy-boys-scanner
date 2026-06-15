@@ -128,8 +128,8 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
 
     rr = (target - entry) / risk if risk > 0 else 0.0
     trail = float(supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT).iloc[-1])
-    return {"entry": round(entry, 4), "stop": round(stop, 4), "target": round(target, 4),
-            "rr": round(rr, 2), "trail": round(trail, 4), "target_basis": basis}
+    return {"entry": round(entry, 8), "stop": round(stop, 8), "target": round(target, 8),
+            "rr": round(rr, 2), "trail": round(trail, 8), "target_basis": basis}
 
 
 def build_chips(fired: list[str], sig: dict) -> list[str]:
@@ -156,18 +156,18 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     swing_low = float(df["Low"].iloc[-config.REV_STOP_LOOKBACK:].min())
     return {
         "setup_type": "reversal",
-        "sma9": round(s[9], 4), "sma9_pct": _pct(s[9], close),
-        "sma26": round(s[26], 4), "sma26_pct": _pct(s[26], close),
-        "sma43": round(s[43], 4), "sma43_pct": _pct(s[43], close),
-        "sma200": round(s[200], 4), "sma200_pct": _pct(s[200], close),
+        "sma9": round(s[9], 8), "sma9_pct": _pct(s[9], close),
+        "sma26": round(s[26], 8), "sma26_pct": _pct(s[26], close),
+        "sma43": round(s[43], 8), "sma43_pct": _pct(s[43], close),
+        "sma200": round(s[200], 8), "sma200_pct": _pct(s[200], close),
         "cross_up": sig["cross_up"],
         "rsi": round(sig["rsi"], 1), "rsi_ma": round(sig["rsi_ma"], 1), "rsi_up": sig["rsi_up"],
         "volume_ratio": round(ratio, 1), "volume_today": int(sig["vol"]),
         "volume_avg": int(sig["vol20"]), "volume_surge": sig["volume"],
         "off_high_pct": round(sig["off_high"] * 100, 1),
-        "base_high": round(sig["base_high"], 4), "base_high_pct": _pct(sig["base_high"], close),
+        "base_high": round(sig["base_high"], 8), "base_high_pct": _pct(sig["base_high"], close),
         "broken": sig["breakout"],
-        "swing_low": round(swing_low, 4), "swing_low_pct": _pct(swing_low, close),
+        "swing_low": round(swing_low, 8), "swing_low_pct": _pct(swing_low, close),
         "trailing_stop": lv["trail"], "trailing_label": "SuperTrend 3× ATR",
         "trailing_pct": _pct(lv["trail"], close),
         "structure": analysis._structure(df),

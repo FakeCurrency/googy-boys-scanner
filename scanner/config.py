@@ -49,7 +49,7 @@ MIN_TRADEABLE_RR = 1.5
 
 # Average daily turnover (local currency) at/above which a name is tagged
 # "LIQUID" rather than just "OK".
-LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000}
+LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000, "crypto": 100_000_000}
 
 # ---------------------------------------------------------------------------
 # Signal thresholds
@@ -140,12 +140,13 @@ MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 class MarketConfig:
     key: str
     label: str
-    suffix: str            # yfinance ticker suffix (".AX" for ASX, "" for NASDAQ)
+    suffix: str            # yfinance ticker suffix (".AX" ASX, "" NASDAQ, "-USD" crypto)
     currency: str
     currency_symbol: str
     timezone: str          # IANA tz for the "scanned at" timestamp
     tz_label: str          # short label shown in the UI
     liquidity_min: float   # minimum average daily turnover, in local currency
+    volume_is_usd: bool = False   # crypto: Yahoo volume is already USD dollar-volume
 
 
 MARKETS = {
@@ -160,5 +161,11 @@ MARKETS = {
         currency="USD", currency_symbol="$",
         timezone="America/New_York", tz_label="ET",
         liquidity_min=1_000_000,
+    ),
+    "crypto": MarketConfig(
+        key="crypto", label="CRYPTO", suffix="-USD",
+        currency="USD", currency_symbol="$",
+        timezone="UTC", tz_label="UTC",
+        liquidity_min=3_000_000, volume_is_usd=True,
     ),
 }
