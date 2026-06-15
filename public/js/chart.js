@@ -71,12 +71,17 @@
     header(d); footer(d); legend(d);
     const el = $("#chart");
     const LC = window.LightweightCharts;
+    const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const textColor = dark ? "#aeb9c9" : "#4b4b52";
+    const gridColor = dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)";
+    const borderColor = dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)";
     const chart = LC.createChart(el, {
       width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { color: "transparent" }, textColor: "#aeb9c9", fontFamily: "JetBrains Mono, monospace" },
-      grid: { vertLines: { color: "rgba(27,35,51,0.6)" }, horzLines: { color: "rgba(27,35,51,0.6)" } },
-      rightPriceScale: { borderColor: "#1b2333" },
-      timeScale: { borderColor: "#1b2333" },
+      layout: { background: { color: "transparent" }, textColor,
+        fontFamily: '-apple-system, "SF Pro Text", Inter, system-ui, sans-serif' },
+      grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
+      rightPriceScale: { borderColor },
+      timeScale: { borderColor },
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
 
