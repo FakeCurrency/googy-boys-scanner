@@ -12,12 +12,14 @@
     8: "#ff5c8a", 13: "#ff9f43", 21: "#ffd23f", 34: "#2fd07f",
     55: "#2fd0c4", 89: "#4d9fff", 144: "#a78bfa",
   };
+  const SMA_COLOR = { 9: "#e5e9f0", 26: "#ffd23f", 43: "#a78bfa", 200: "#ff5b5b" };
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
   const GRADE_RANK = { "A+": 0, "A": 1, "B": 2, "C": 3 };
   const WATCH_KEY = "gbs:watch";
 
   const state = {
     market: "asx",
+    mode: "pullback",  // pullback | reversal
     view: "results",   // results | watch
     tab: "aplus",      // aplus | a | watch
     sort: "score",     // score | price | rr | az
@@ -108,10 +110,14 @@
     }).join("");
   }
 
-  // ----------------------------------------------------------- EMA legend
-  function renderLegend(periods) {
-    $("#ema-legend").innerHTML = (periods || []).map((p) =>
-      `<span class="ema-dot"><i style="background:${EMA_COLOR[p] || "#888"}"></i>${p}</span>`).join("");
+  // ------------------------------------------------------- EMA / SMA legend
+  function renderLegend(d) {
+    const reversal = d.setup_type === "reversal";
+    const periods = reversal ? (d.sma_periods || []) : (d.ema_periods || []);
+    const colors = reversal ? SMA_COLOR : EMA_COLOR;
+    const label = reversal ? "SMA" : "EMA";
+    $("#ema-legend").innerHTML = `<span class="legend-tag">${label}</span>` +
+      periods.map((p) => `<span class="ema-dot"><i style="background:${colors[p] || "#888"}"></i>${p}</span>`).join("");
   }
 
   // ----------------------------------------------------------- stats
@@ -136,7 +142,9 @@
     const chips = (r.chips || []).map((c) =>
       `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${r.rr_text})</span>` : "";
-    const t2r = r.target_2r ? `<span class="chip info">TARGET = 2R FALLBACK</span>` : "";
+    const t2r = r.target_2r
+      ? `<span class="chip info">${r.setup_type === "reversal" ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
+      : "";
     const sector = r.sector ? `<span class="badge sector">${r.sector}</span>` : "";
     const seccount = (r.sector && r.sector_count > 1)
       ? `<span class="badge seccount">${r.sector.toUpperCase()} ×${r.sector_count}</span>` : "";
@@ -146,7 +154,7 @@
     const rrCls = r.low_rr ? "red" : "green";
     const starred = isStarred(r.symbol);
 
-    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}`;
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode === "reversal" ? "&mode=reversal" : ""}`;
     return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
      <div class="row">
       <div class="row-grade">${r.grade}</div>
@@ -191,6 +199,7 @@
   }
 
   function detailHtml(r) {
+    if ((r.detail || {}).setup_type === "reversal") return detailHtmlReversal(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>
@@ -232,6 +241,53 @@
           <span class="rd-spread">${d.ema_spread_pct}% spread</span></div>
         <div class="rd-ladder">${ladder}</div>
         <div class="rd-fast">${fast}</div>
+      </div>
+      <div class="rd-structure">
+        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
+        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
+          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
+      </div>
+    </div>`;
+  }
+
+  function detailHtmlReversal(r) {
+    const d = r.detail || {};
+    const cur = state.cur;
+    const sma = (p, val, pct) =>
+      `<div class="dl-row"><span class="dl-label" style="color:${SMA_COLOR[p]}">SMA ${p}</span>
+        <span class="dl-val">${cur}${num(val)}</span>
+        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+    const st = d.structure || {};
+    const trend = st.trend || "";
+    const trendCls = trend.includes("Up") ? "green" : trend.includes("Down") ? "pct-down" : "muted";
+    const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
+
+    return `<div class="row-detail">
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-levels">
+        ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
+        ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}
+      </div>
+      <div class="rd-volume">
+        <span class="rd-k">RSI 14</span>
+        <span class="rd-vol ${d.rsi_up ? "green" : ""}">${d.rsi} ${d.rsi_up ? "↑ rising" : "flat"}</span>
+        <span class="rd-vol-note">signal MA ${d.rsi_ma}</span>
+      </div>
+      <div class="rd-volume">
+        <span class="rd-k">VOLUME</span>
+        <span class="rd-vol ${d.volume_surge ? "green" : ""}">${d.volume_ratio}× ${d.volume_surge ? "Surge" : "Normal"}</span>
+        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+      </div>
+      <div class="rd-volume">
+        <span class="rd-k">BASE</span>
+        <span class="rd-vol">${d.off_high_pct}% off 1-year high</span>
+        <span class="rd-vol-note">base high ${cur}${num(d.base_high)}${d.broken ? " · broken ✓" : ""}</span>
+      </div>
+      <div class="rd-trail">
+        <span class="rd-trail-label">TRAILING STOP</span>
+        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+        <span class="rd-trail-note">${d.trailing_label || ""}</span>
+        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
       </div>
       <div class="rd-structure">
         <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
@@ -283,7 +339,7 @@
     $("#scan-title").textContent = `Last scanned: ${fmtTime(d.generated_at, d.tz_label)}`;
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups · updates after each market close`;
     renderPulse(d.pulse);
-    renderLegend(d.ema_periods);
+    renderLegend(d);
     renderStats(d);
     renderRows();
   }
@@ -292,21 +348,25 @@
     $("#results").innerHTML = Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join("");
   }
 
-  async function loadMarket(market) {
-    state.market = market;
+  const dataFile = (market, mode) =>
+    mode === "reversal" ? `data/${market}_reversal.json` : `data/${market}.json`;
+
+  async function load() {
+    const { market, mode } = state;
+    const key = `${market}:${mode}`;
     $("#scan-title").textContent = "Loading latest scan…";
     skeleton();
-    if (state.cache[market]) { applyPayload(state.cache[market]); return; }
+    if (state.cache[key]) { applyPayload(state.cache[key]); return; }
     try {
-      const res = await fetch(`data/${market}.json`, { cache: "no-cache" });
+      const res = await fetch(dataFile(market, mode), { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
       const d = await res.json();
-      state.cache[market] = d;
+      state.cache[key] = d;
       applyPayload(d);
     } catch (e) {
       $("#scan-title").textContent = "No scan data yet";
-      $("#results").innerHTML = `<div class="placeholder"><h3>No data for ${market.toUpperCase()}</h3>
-        <p>Run the scanner to generate <code>data/${market}.json</code>, then refresh.</p></div>`;
+      $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
+        <p>Run the scanner to generate the data, then refresh.</p></div>`;
     }
   }
 
@@ -318,7 +378,18 @@
         x.classList.toggle("is-active", x === b);
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
-      loadMarket(b.dataset.market);
+      state.market = b.dataset.market;
+      load();
+    }));
+
+    document.querySelectorAll(".scan-btn").forEach((b) => b.addEventListener("click", () => {
+      if (b.classList.contains("is-active")) return;
+      document.querySelectorAll(".scan-btn").forEach((x) => {
+        x.classList.toggle("is-active", x === b);
+        x.setAttribute("aria-selected", x === b ? "true" : "false");
+      });
+      state.mode = b.dataset.mode;
+      load();
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
@@ -366,5 +437,5 @@
   }
 
   bind();
-  loadMarket(state.market);
+  load();
 })();

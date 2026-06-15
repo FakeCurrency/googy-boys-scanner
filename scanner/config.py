@@ -97,6 +97,39 @@ PULSE = [
 ]
 
 # ---------------------------------------------------------------------------
+# REVERSALS scanner — early trend-reversal / base-breakout setups.
+# Uses the user's own indicators: SMA 9/26/43/200, RSI 14 (+ its MA), Vol 20.
+# ---------------------------------------------------------------------------
+REV_SMAS = [9, 26, 43, 200]
+REV_RSI_PERIOD = 14
+REV_RSI_MA = 14                # SMA of RSI (the yellow RSI line on the charts)
+REV_VOL_LOOKBACK = 20          # Vol-20 average
+
+# Signal points (grade = sum). Order reflects importance (see chat).
+REV_POINTS = {
+    "reclaim": 4,     # price reclaimed + 9 crossed up over 26 (the trigger)
+    "base": 3,        # beaten-down / basing (room to run)
+    "volume": 3,      # volume expansion confirms the move
+    "breakout": 2,    # closing above the base high / descending resistance
+    "rsi": 2,         # RSI turning up through its MA
+}
+REV_SCORE_MAX = sum(REV_POINTS.values())   # 14
+REV_GRADE_CUTOFFS = [("A+", 11), ("A", 9), ("B", 6), ("C", 4)]
+
+# Thresholds
+REV_CROSS_LOOKBACK = 15        # 9-over-26 cross must be this fresh (bars)
+REV_SLOPE_BARS = 5             # bars used to judge an MA is curling up
+REV_BASE_OFF_HIGH = 0.20       # >=20% below the 1-year high => beaten down
+REV_BASE_HIGH_LOOKBACK = 252   # window for the "1-year high"
+REV_BELOW200_LOOKBACK = 45     # recently traded below the 200 SMA => recovering
+REV_VOL_MULT = 1.4             # 5-day avg volume >= 1.4x Vol-20
+REV_VOL_SPIKE = 2.0            # or a single day >= 2.0x Vol-20
+REV_BREAKOUT_BASE = (45, 5)    # base = highs from bar -45 to -5; break = close above it
+REV_RSI_BAND = (48, 72)        # RSI turned up but not yet overbought
+REV_STOP_LOOKBACK = 12         # recent swing low for the stop
+REV_MIN_HISTORY = 230          # need warm-up for SMA200 + base lookbacks
+
+# ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "2y"            # history pulled per ticker (enough warm-up for EMA144)

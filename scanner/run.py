@@ -10,7 +10,9 @@ Examples:
 import argparse
 import pathlib
 
-from . import config, output, scan
+from . import config, output, pulse, scan
+from .data import download
+from .universe import load_universe
 
 DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
 
@@ -38,21 +40,41 @@ def main() -> None:
         help="after scanning, email new A+/A setups (needs GBS_SMTP_* env vars)",
     )
     parser.add_argument(
+        "--no-reversal", action="store_true",
+        help="skip the Reversals scan (only run the Fib pullback scan)",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
     args = parser.parse_args()
 
+    def tradeable(payload):
+        return sum(1 for r in payload["results"] if r["grade"] in config.TRADEABLE_GRADES)
+
     markets = args.market or list(config.MARKETS)
     for market_key in markets:
-        print(f"Scanning {config.MARKETS[market_key].label} ...", flush=True)
-        payload = scan.scan_market(market_key, limit=args.limit, full=not args.curated,
-                                   out_root=args.out)
-        path = output.write(payload, args.out)
-        tradeable = sum(1 for r in payload["results"]
-                        if r["grade"] in config.TRADEABLE_GRADES)
-        print(f"  {len(payload['results'])} setups "
-              f"({tradeable} A+/A) from {payload['scanned']} scanned -> {path}")
+        market = config.MARKETS[market_key]
+        print(f"Scanning {market.label} ...", flush=True)
+        universe = load_universe(market_key, full=not args.curated)
+        if args.limit:
+            universe = universe[:args.limit]
+        print(f"  downloading {len(universe)} tickers ...", flush=True)
+        frames = download([u["yf"] for u in universe])
+        pulse_data = pulse.fetch()
+
+        # 1) Fibonacci pullback scan -> <market>.json
+        pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
+                              pulse_data=pulse_data, universe=universe, progress=False)
+        output.write(pb, args.out)
+        print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
+
+        # 2) Reversal / base-breakout scan -> <market>_reversal.json
+        if not args.no_reversal:
+            rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
+                                           pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(rv, args.out, name=f"{market_key}_reversal")
+            print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
 
     if args.journal:
         from . import journal

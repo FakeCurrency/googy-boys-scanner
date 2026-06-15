@@ -111,6 +111,15 @@ body {
 .market-btn.is-active { background: var(--panel); color: var(--text); box-shadow: var(--shadow-pill); }
 .market-btn:not(.is-active):hover { color: var(--text-2); }
 
+.scan-switch { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill); border-radius: 9px; }
+.scan-btn {
+  appearance: none; border: 0; cursor: pointer; background: transparent;
+  color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: -0.01em;
+  padding: 7px 14px; border-radius: 7px; transition: all .18s;
+}
+.scan-btn.is-active { background: var(--orange); color: #fff; box-shadow: var(--shadow-pill); }
+.scan-btn:not(.is-active):hover { color: var(--text-2); }
+
 .howto-link {
   margin-left: 0; color: var(--blue); text-decoration: none; font-size: 15px; font-weight: 500;
 }
@@ -185,6 +194,7 @@ body {
 
 /* -------------------------------------------------------------- EMA legend */
 .ema-legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--panel); border-radius: var(--radius); padding: 11px 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.legend-tag { font: 700 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }
 .ema-dot { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--sans); color: var(--text-2); }
 .ema-dot i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 

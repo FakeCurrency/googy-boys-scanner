@@ -4,7 +4,7 @@ import datetime as dt
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import analysis, charts, config, levels, pulse, signals
+from . import analysis, charts, config, levels, pulse, reversal, signals
 from .data import download
 from .universe import load_universe
 
@@ -36,19 +36,22 @@ def _spark(df) -> list[float]:
 
 def scan_market(market_key: str, limit: int | None = None, full: bool = True,
                 write_charts: bool = True, out_root: str | None = None,
-                progress: bool = True) -> dict:
+                progress: bool = True, frames: dict | None = None,
+                pulse_data: list | None = None, universe: list | None = None) -> dict:
     market = config.MARKETS[market_key]
     liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
-    universe = load_universe(market_key, full=full)
-    if limit:
-        universe = universe[:limit]
+    if universe is None:
+        universe = load_universe(market_key, full=full)
+        if limit:
+            universe = universe[:limit]
 
     tickers = [u["yf"] for u in universe]
     meta = {u["yf"]: u for u in universe}
 
-    if progress:
-        print(f"  downloading {len(tickers)} {market.label} tickers ...", flush=True)
-    frames = download(tickers)
+    if frames is None:
+        if progress:
+            print(f"  downloading {len(tickers)} {market.label} tickers ...", flush=True)
+        frames = download(tickers)
 
     if write_charts and out_root:
         charts.reset_dir(out_root, market_key)
@@ -134,14 +137,16 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
 
     results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
 
-    if progress:
-        print("  fetching market pulse ...", flush=True)
-    pulse_data = pulse.fetch()
+    if pulse_data is None:
+        if progress:
+            print("  fetching market pulse ...", flush=True)
+        pulse_data = pulse.fetch()
 
     now = dt.datetime.now(ZoneInfo(market.timezone))
     return {
         "market": market.key,
         "label": market.label,
+        "setup_type": "pullback",
         "currency": market.currency,
         "currency_symbol": market.currency_symbol,
         "timezone": market.timezone,
@@ -151,6 +156,124 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         "universe_size": len(universe),
         "score_max": config.SCORE_MAX,
         "ema_periods": config.EMA_PERIODS,
+        "pulse": pulse_data,
+        "sector_counts": dict(sector_counts.most_common()),
+        "results": results,
+    }
+
+
+def scan_reversal_market(market_key: str, limit: int | None = None, full: bool = True,
+                         write_charts: bool = True, out_root: str | None = None,
+                         progress: bool = True, frames: dict | None = None,
+                         pulse_data: list | None = None, universe: list | None = None) -> dict:
+    """Scan a market for early reversal / base-breakout setups (the 'Reversals' tab)."""
+    market = config.MARKETS[market_key]
+    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
+    if universe is None:
+        universe = load_universe(market_key, full=full)
+        if limit:
+            universe = universe[:limit]
+
+    meta = {u["yf"]: u for u in universe}
+    if frames is None:
+        frames = download([u["yf"] for u in universe])
+
+    chart_key = f"{market_key}_rev"
+    if write_charts and out_root:
+        charts.reset_dir(out_root, chart_key)
+
+    results: list[dict] = []
+    scanned = 0
+    for yf_ticker, df in frames.items():
+        scanned += 1
+        sig = reversal.evaluate(df)
+        if sig is None or not sig.get("ok"):
+            continue
+
+        turnover = _liquidity(df)
+        if turnover < market.liquidity_min:
+            continue
+
+        points, grade, fired = reversal.score_and_grade(sig)
+        if grade is None:
+            continue
+
+        lv = reversal.compute_levels(df, sig)
+        if lv["rr"] <= 0:
+            continue
+
+        info = meta.get(yf_ticker, {})
+        close = sig["close"]
+        open_ = float(df["Open"].iloc[-1])
+        y_close = float(df["Close"].iloc[-2])
+        entry = lv["entry"]
+
+        detail = reversal.build_detail(df, sig, lv)
+        row = {
+            "symbol": info.get("symbol", yf_ticker),
+            "name": info.get("name", yf_ticker),
+            "sector": info.get("sector", ""),
+            "dir": "LONG",
+            "setup_type": "reversal",
+            "grade": grade,
+            "score": points,
+            "score_max": config.REV_SCORE_MAX,
+            "chips": reversal.build_chips(fired, sig),
+            "weekly": False,
+            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
+            "rr_text": f"{lv['rr']:.1f}:1",
+            "target_2r": lv["target_basis"] == "measured",
+            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
+            "price": round(close, 4),
+            "y_close": round(y_close, 4),
+            "open": round(open_, 4),
+            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
+            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "entry": entry,
+            "stop": lv["stop"],
+            "target": lv["target"],
+            "rr": lv["rr"],
+            "trail": lv["trail"],
+            "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
+            "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
+            "target_basis": lv["target_basis"],
+            "spark": _spark(df),
+            "trend": "green" if points >= 11 else "blue",
+            "turnover": round(turnover),
+            "detail": detail,
+            "analysis": reversal.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
+                                           market.currency_symbol),
+        }
+        results.append(row)
+
+        if write_charts and out_root:
+            charts.write_chart(charts.build_chart_reversal(df, sig, lv, row, market),
+                               out_root, chart_key)
+
+    sector_counts = Counter(r["sector"] for r in results if r["sector"])
+    for r in results:
+        r["sector_count"] = sector_counts.get(r["sector"], 0)
+
+    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+
+    if pulse_data is None:
+        pulse_data = pulse.fetch()
+
+    now = dt.datetime.now(ZoneInfo(market.timezone))
+    return {
+        "market": market.key,
+        "label": market.label,
+        "setup_type": "reversal",
+        "currency": market.currency,
+        "currency_symbol": market.currency_symbol,
+        "timezone": market.timezone,
+        "tz_label": market.tz_label,
+        "generated_at": now.isoformat(timespec="seconds"),
+        "scanned": scanned,
+        "universe_size": len(universe),
+        "score_max": config.REV_SCORE_MAX,
+        "sma_periods": config.REV_SMAS,
         "pulse": pulse_data,
         "sector_counts": dict(sector_counts.most_common()),
         "results": results,

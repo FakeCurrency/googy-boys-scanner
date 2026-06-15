@@ -13,6 +13,22 @@ def ema(series: pd.Series, span: int) -> pd.Series:
     return series.ewm(span=span, adjust=False).mean()
 
 
+def sma(series: pd.Series, window: int) -> pd.Series:
+    """Simple moving average."""
+    return series.rolling(window).mean()
+
+
+def rsi(series: pd.Series, period: int = 14) -> pd.Series:
+    """Wilder's RSI."""
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, float("nan"))
+    return (100 - 100 / (1 + rs)).fillna(100)
+
+
 def ema_ladder(df: pd.DataFrame) -> dict[int, pd.Series]:
     """EMA series for every period in the Fibonacci ladder."""
     return {p: ema(df["Close"], p) for p in config.EMA_PERIODS}

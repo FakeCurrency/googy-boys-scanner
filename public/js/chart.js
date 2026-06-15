@@ -10,6 +10,8 @@
   const params = new URLSearchParams(location.search);
   const market = (params.get("m") || "asx").toLowerCase();
   const symbol = params.get("s") || "";
+  const mode = (params.get("mode") || "pullback").toLowerCase();
+  const chartFile = `data/charts/${market}${mode === "reversal" ? "_rev" : ""}/${encodeURIComponent(symbol)}.json`;
 
   const $ = (s) => document.querySelector(s);
 
@@ -57,10 +59,10 @@
   }
 
   function legend(d) {
-    const rows = [
-      ["EMA 34", "#2fd07f", d.ema34], ["EMA 55", "#4d9fff", d.ema55],
-      ["EMA 89", "#a78bfa", d.ema89], ["SuperTrend", "#2fd0c4", d.supertrend],
-    ];
+    const rows = (d.lines && d.lines.length)
+      ? d.lines.map((l) => [l.name, l.color, l.data])
+      : [["EMA 34", "#2fd07f", d.ema34], ["EMA 55", "#4d9fff", d.ema55],
+         ["EMA 89", "#a78bfa", d.ema89], ["SuperTrend", "#2fd0c4", d.supertrend]];
     $("#chart-legend").innerHTML = rows.map(([name, color, series]) => {
       const last = series && series.length ? series[series.length - 1].value : null;
       return `<span><span class="cl-name" style="color:${color}">${name}</span> ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
@@ -96,26 +98,34 @@
       s.setData(data || []);
       return s;
     };
-    addLine(d.ema34, "#2fd07f");
-    addLine(d.ema55, "#4d9fff");
-    addLine(d.ema89, "#a78bfa");
-    addLine(d.supertrend, "#2fd0c4", 1.5);
+    if (d.lines && d.lines.length) {
+      d.lines.forEach((l) => addLine(l.data, l.color, l.name === "SuperTrend" ? 1.5 : 2));
+    } else {
+      addLine(d.ema34, "#2fd07f");
+      addLine(d.ema55, "#4d9fff");
+      addLine(d.ema89, "#a78bfa");
+      addLine(d.supertrend, "#2fd0c4", 1.5);
+    }
 
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
     vol.setData(d.volume || []);
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
 
-    const lv = d.levels || {};
     const line = (price, color, title) => {
       if (price == null) return;
       candle.createPriceLine({ price, color, lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
     };
-    line(lv.high, "#2fd0c4", "HIGH");
-    line(lv.resistance, "#4d9fff", "RESISTANCE");
-    line(lv.ema_watch, "#cbd5e1", "EMA WATCH");
-    line(lv.stop, "#ff5b5b", "STOP");
-    line(lv.leg_low, "#f5a623", "LEG LOW");
-    line(lv.low, "#ff5b5b", "LOW");
+    if (d.level_lines && d.level_lines.length) {
+      d.level_lines.forEach((L) => line(L.price, L.color, L.title));
+    } else {
+      const lv = d.levels || {};
+      line(lv.high, "#2fd0c4", "HIGH");
+      line(lv.resistance, "#4d9fff", "RESISTANCE");
+      line(lv.ema_watch, "#cbd5e1", "EMA WATCH");
+      line(lv.stop, "#ff5b5b", "STOP");
+      line(lv.leg_low, "#f5a623", "LEG LOW");
+      line(lv.low, "#ff5b5b", "LOW");
+    }
 
     chart.timeScale().fitContent();
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
@@ -123,7 +133,7 @@
   }
 
   if (!symbol) { fail("No ticker specified."); return; }
-  fetch(`data/charts/${market}/${encodeURIComponent(symbol)}.json`, { cache: "no-cache" })
+  fetch(chartFile, { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(render)
     .catch(() => fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`));

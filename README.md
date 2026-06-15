@@ -25,6 +25,15 @@ web page — a macro **PULSE** bar, full price columns, a watchlist, and an **AS
 
 All weights and thresholds live in [`scanner/config.py`](scanner/config.py).
 
+## Two scanners
+
+- **Pullbacks** (the Fib-EMA scan above) — continuation setups in an *existing* uptrend.
+- **Reversals** — a second scanner for the *start* of a new uptrend: a beaten-down/basing stock
+  reclaiming and crossing up through its short SMAs (9 over 26), coming off a base, with volume and
+  RSI turning up. Uses SMA 9/26/43/200 + RSI 14 + Vol 20; scored out of 14 (see `scanner/reversal.py`
+  and the `REV_*` settings in `config.py`). Switch with the **Pullbacks / Reversals** toggle in the
+  header. Both scans run from one daily download.
+
 ## On the website
 
 - **Click a row** to expand a detail dropdown — plain-English analysis, the swing/EMA level
