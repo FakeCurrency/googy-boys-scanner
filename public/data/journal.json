@@ -1,12 +1,12 @@
 {
-  "updated_at": "2026-06-16T10:36:18",
+  "updated_at": "2026-06-16T19:59:39",
   "stats": {
-    "open": 14,
+    "open": 15,
     "closed": 1,
     "win_rate": 100.0,
     "avg_r": 1.19,
     "total_r": 1.19,
-    "open_unrealised_r": -0.0
+    "open_unrealised_r": -0.57
   },
   "open": [
     {
@@ -85,8 +85,8 @@
       "rr": 2.0,
       "opened": "2026-06-14",
       "status": "open",
-      "current": 62.99,
-      "unreal_r": 0.0,
+      "current": 62.125,
+      "unreal_r": -0.24,
       "trail_stop": 59.9969
     },
     {
@@ -148,8 +148,9 @@
       "rr": 2.0,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 47.57,
-      "unreal_r": 0.22
+      "current": 46.84,
+      "unreal_r": -0.06,
+      "trail_stop": 44.928
     },
     {
       "market": "asx",
@@ -223,8 +224,23 @@
       "rr": 2.0,
       "opened": "2026-06-16",
       "status": "open",
-      "current": 1.0001,
-      "unreal_r": 0.01
+      "current": 0.9995,
+      "unreal_r": -0.04
+    },
+    {
+      "market": "asx",
+      "symbol": "LLM",
+      "name": "Loyal Metals Ltd",
+      "grade": "A+",
+      "score": 10,
+      "entry": 0.42500001,
+      "stop": 0.42075001,
+      "target": 0.43000001,
+      "rr": 20.9,
+      "opened": "2026-06-17",
+      "status": "open",
+      "current": 0.425,
+      "unreal_r": 0.0
     }
   ],
   "closed": [
