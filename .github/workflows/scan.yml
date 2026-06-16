@@ -1,22 +1,23 @@
-name: Daily scan & publish
+name: Scheduled scan
 
-# Runs the scanner on a schedule, commits the fresh JSON back to the repo,
-# and publishes the static site to GitHub Pages.
+# Runs the scanner twice daily, commits the fresh data, and pushing to main
+# triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
     # Twice daily at 6:30am and 4:30pm AEST (UTC+10). GitHub cron is fixed UTC,
     # so during AEDT (summer) these effectively run at 7:30am / 5:30pm local.
     - cron: "30 20 * * *"   # 06:30 AEST
     - cron: "30 6 * * *"    # 16:30 AEST
-  workflow_dispatch:          # allow manual runs from the Actions tab
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "Extra args for scanner.run (e.g. --market crypto --limit 12 for a quick test)"
+        default: ""
+        required: false
 
-# Let the workflow commit results and deploy Pages.
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
-# Don't run two scans on top of each other.
 concurrency:
   group: scan
   cancel-in-progress: false
@@ -35,39 +36,23 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scanner (ASX + NASDAQ), journal, and email alerts
+      - name: Run scanner
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
           GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
           GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
-        run: python -m scanner.run --journal --alert
+        run: python -m scanner.run --journal --alert ${{ github.event.inputs.args }}
 
-      - name: Commit updated data
+      - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/*.json
+          git add public/data journal/journal.json
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else
-            git commit -m "chore: daily scan $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
           fi
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
-
-  deploy:
-    needs: scan
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
