@@ -39,6 +39,6 @@ table.sec-table { width: 100%; border-collapse: collapse; }
 
 @media (max-width: 860px) {
   .sec-grid { grid-template-columns: 1fr; }
-  .sec-side { position: static; flex-direction: column; }
+  .sec-side { position: static; flex-direction: column; order: -1; }  /* boxes first on mobile */
   .topbar { flex-wrap: wrap; gap: 10px; }
 }
