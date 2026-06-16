@@ -135,6 +135,31 @@
     chart.timeScale().fitContent();
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
     ro.observe(el);
+
+    // --- Setup chart  <->  TradingView (all timeframes) toggle ---
+    let tvMounted = false;
+    const mountTV = () => {
+      const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      try {
+        new window.TradingView.widget({
+          container_id: "tv-chart", autosize: true,
+          symbol: d.tv_symbol || d.symbol, interval: "D",
+          timezone: "Australia/Sydney", theme: isDark ? "dark" : "light",
+          style: "1", locale: "en", hide_side_toolbar: false, allow_symbol_change: false,
+          backgroundColor: isDark ? "rgba(0,0,0,0)" : "rgba(255,255,255,0)",
+        });
+      } catch (_) {
+        $("#tv-chart").innerHTML = `<p style="padding:24px;color:var(--muted)">Live chart unavailable. <a class="tv-btn" href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}" target="_blank" rel="noopener">Open in TradingView ↗</a></p>`;
+      }
+    };
+    document.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+      const tv = b.dataset.view === "tv";
+      $("#tv-chart").hidden = !tv;
+      $("#chart").hidden = tv;
+      $("#chart-legend").style.display = tv ? "none" : "";
+      if (tv && !tvMounted && window.TradingView) { mountTV(); tvMounted = true; }
+    }));
   }
 
   if (!symbol) { fail("No ticker specified."); return; }

@@ -123,8 +123,17 @@ body {
 .howto-link {
   margin-left: 0; color: var(--blue); text-decoration: none; font-size: 15px; font-weight: 500;
 }
-.howto-link:first-of-type { margin-left: auto; }
 .howto-link:hover { opacity: .65; }
+
+.reload-btn {
+  margin-left: auto; appearance: none; cursor: pointer;
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--panel); color: var(--blue); transition: color .15s, border-color .15s;
+}
+.reload-btn:hover { border-color: var(--blue); }
+.reload-btn.spinning svg { animation: spin .8s linear infinite; transform-origin: 50% 50%; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .wrap { max-width: 1500px; margin: 0 auto; padding: 18px 22px 60px; }
 

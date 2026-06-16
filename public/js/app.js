@@ -386,6 +386,14 @@
       load();
     }));
 
+    $("#reload-btn").addEventListener("click", async () => {
+      const btn = $("#reload-btn");
+      btn.classList.add("spinning");
+      delete state.cache[`${state.market}:${state.mode}`];
+      await load();
+      setTimeout(() => btn.classList.remove("spinning"), 500);
+    });
+
     document.querySelectorAll(".scan-btn").forEach((b) => b.addEventListener("click", () => {
       if (b.classList.contains("is-active")) return;
       document.querySelectorAll(".scan-btn").forEach((x) => {
