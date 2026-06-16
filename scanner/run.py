@@ -76,6 +76,15 @@ def main() -> None:
             output.write(rv, args.out, name=f"{market_key}_reversal")
             print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
 
+    # Sector & index dashboard (ASX + US) with an auto market read.
+    import json as _json
+    from . import sectors as _sectors
+    print("Fetching sector dashboard ...", flush=True)
+    sec = _sectors.fetch()
+    (pathlib.Path(args.out) / "sectors.json").write_text(_json.dumps(sec, indent=2), encoding="utf-8")
+    print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
+          f"US {len(sec['markets']['us']['sectors'])} sectors")
+
     if args.journal:
         from . import journal
         print("Updating paper-trade journal ...", flush=True)

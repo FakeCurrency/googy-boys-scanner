@@ -39,12 +39,14 @@ def fetch() -> list[dict]:
             close = _series(sub)
             if close is None:
                 continue
-            last = float(close.iloc[-1]) / divide
-            prev = float(close.iloc[-2]) / divide
-            ref5 = float(close.iloc[-6]) / divide
+            # Yahoo sometimes quotes ^TNX (10Y) as yield×10; normalise to a real %.
+            div = divide * 10 if (ticker == "^TNX" and float(close.iloc[-1]) > 15) else divide
+            last = float(close.iloc[-1]) / div
+            prev = float(close.iloc[-2]) / div
+            ref5 = float(close.iloc[-6]) / div
             day_pct = (last - prev) / prev * 100 if prev else 0.0
             d5_pct = (last - ref5) / ref5 * 100 if ref5 else 0.0
-            spark = [round(float(v) / divide, 4) for v in close.iloc[-22:].tolist()]
+            spark = [round(float(v) / div, 4) for v in close.iloc[-22:].tolist()]
             out.append({
                 "key": key,
                 "label": label,

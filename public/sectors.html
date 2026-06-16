@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Markets &amp; Sectors — Googy Boys Scanner</title>
+  <meta name="theme-color" content="#f9f9fb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#141416" media="(prefers-color-scheme: dark)" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/sectors.css?v=1" />
+  <script src="js/gate.js?v=1"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
+      </span>
+      <h1>GOOGY BOYS SCANNER</h1>
+    </div>
+    <div class="market-switch" id="sec-tabs" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="us" role="tab" aria-selected="false">US</button>
+    </div>
+    <a class="howto-link" href="index.html">← Scanner</a>
+  </header>
+
+  <main class="wrap">
+    <div class="sec-head">
+      <h2 class="sec-title">Markets &amp; Sectors</h2>
+      <p class="sec-sub" id="sec-sub">Loading…</p>
+    </div>
+
+    <div class="sec-grid">
+      <section class="sec-main">
+        <div class="sec-section-title">Indices</div>
+        <div class="sec-indices" id="sec-indices"></div>
+        <div class="sec-section-title">Sectors</div>
+        <div class="sec-table-wrap" id="sec-table"></div>
+      </section>
+
+      <aside class="sec-side">
+        <div class="sec-box overnight">
+          <div class="sec-box-title">What happened</div>
+          <p class="sec-box-text" id="sec-summary"></p>
+        </div>
+        <div class="sec-box rotation">
+          <div class="sec-box-title">Money rotation</div>
+          <p class="sec-box-text" id="sec-rotation"></p>
+        </div>
+        <p class="sec-disclaimer">Auto-generated from the day's moves. General information only — not financial advice.</p>
+      </aside>
+    </div>
+  </main>
+
+  <script src="js/sectors.js?v=1"></script>
+</body>
+</html>

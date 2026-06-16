@@ -92,7 +92,7 @@ PULSE = [
     ("NATGAS",  "Nat Gas",  "NG=F",      1,  2),
     ("TECH",    "Tech",     "^IXIC",     1,  2),
     ("BIOTECH", "Biotech",  "XBI",       1,  2),
-    ("YIELDS",  "10Y",      "^TNX",      10, 3),
+    ("YIELDS",  "10Y",      "^TNX",      1,  3),
     ("AUD",     "AUD/USD",  "AUDUSD=X",  1,  4),
 ]
 
