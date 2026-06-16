@@ -1,12 +1,15 @@
 /* =========================================================================
-   Chart page — renders a candlestick chart (TradingView lightweight-charts)
-   with EMAs, SuperTrend, marked price levels and volume, from a per-ticker
-   data file written by the scanner.
+   Chart page — candlestick chart (lightweight-charts) showing the user's own
+   system (EMA/SMA + SuperTrend + entry/stop/target levels) on every timeframe.
+   Timeframe buttons (D / 3D / W / M / 3M) switch the data client-side.
    ========================================================================= */
 (() => {
   "use strict";
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
+  const TF_LABEL = { "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
+  const TF_ORDER = ["1D", "3D", "1W", "1M", "3M"];
+
   const params = new URLSearchParams(location.search);
   const market = (params.get("m") || "asx").toLowerCase();
   const symbol = params.get("s") || "";
@@ -41,125 +44,90 @@
 
   function footer(d) {
     const cur = d.currency_symbol || "";
-    const lv = d.levels || {};
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
     $("#cf-metrics").innerHTML = [
-      metric("Entry", fmt(lv.entry, cur)),
-      metric("Stop", fmt(lv.stop, cur), "red"),
-      metric("Target", fmt(lv.target, cur), "green"),
+      metric("Entry", fmt(d.entry, cur)),
+      metric("Stop", fmt(d.stop, cur), "red"),
+      metric("Target", fmt(d.target, cur), "green"),
       metric("Trail", "after entry", "amber"),
       metric("Score", `${d.score}/${d.score_max}`),
       metric("Risk", d.risk_pct != null ? `${d.risk_pct}%` : "—", "red"),
-      metric("R:R", d.rr.toFixed(2), d.low_rr ? "red" : "green"),
+      metric("R:R", (d.rr || 0).toFixed(2), d.low_rr ? "red" : "green"),
     ].join("");
     $("#cf-analysis").textContent = d.analysis || "";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
-    const tv = $("#cf-tv");
-    tv.href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
-  }
-
-  function legend(d) {
-    const rows = (d.lines && d.lines.length)
-      ? d.lines.map((l) => [l.name, l.color, l.data])
-      : [["EMA 34", "#2fd07f", d.ema34], ["EMA 55", "#4d9fff", d.ema55],
-         ["EMA 89", "#a78bfa", d.ema89], ["SuperTrend", "#2fd0c4", d.supertrend]];
-    $("#chart-legend").innerHTML = rows.map(([name, color, series]) => {
-      const last = series && series.length ? series[series.length - 1].value : null;
-      return `<span><span class="cl-name" style="color:${color}">${name}</span> ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
-    }).join("");
+    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
   function render(d) {
-    header(d); footer(d); legend(d);
+    header(d); footer(d);
+    const tfs = d.timeframes || {};
+    const available = TF_ORDER.filter((k) => tfs[k]);
+    if (!available.length) { fail("No chart data for this ticker yet."); return; }
+    let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
+
     const el = $("#chart");
     const LC = window.LightweightCharts;
     const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const textColor = dark ? "#aeb9c9" : "#4b4b52";
-    const gridColor = dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)";
-    const borderColor = dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)";
     const chart = LC.createChart(el, {
       width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { color: "transparent" }, textColor,
+      layout: { background: { color: "transparent" }, textColor: dark ? "#aeb9c9" : "#4b4b52",
         fontFamily: '-apple-system, "SF Pro Text", Inter, system-ui, sans-serif' },
-      grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
-      rightPriceScale: { borderColor },
-      timeScale: { borderColor },
+      grid: { vertLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" },
+              horzLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" } },
+      rightPriceScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)" },
+      timeScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)" },
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
 
-    const px = d.price || (d.candles.length ? d.candles[d.candles.length - 1].close : 1);
-    const a = Math.abs(px);
+    const a = Math.abs(d.price || 1);
     const prec = a >= 100 ? 2 : a >= 1 ? 3 : a >= 0.1 ? 4 : a >= 0.01 ? 5 : a >= 0.001 ? 6 : 8;
     const candle = chart.addCandlestickSeries({
-      upColor: "#2fd07f", downColor: "#ff5b5b",
-      wickUpColor: "#2fd07f", wickDownColor: "#ff5b5b", borderVisible: false,
-      priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) },
+      upColor: "#2fd07f", downColor: "#ff5b5b", wickUpColor: "#2fd07f", wickDownColor: "#ff5b5b",
+      borderVisible: false, priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) },
     });
-    candle.setData(d.candles);
-
-    const addLine = (data, color, width) => {
-      const s = chart.addLineSeries({ color, lineWidth: width || 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-      s.setData(data || []);
-      return s;
-    };
-    if (d.lines && d.lines.length) {
-      d.lines.forEach((l) => addLine(l.data, l.color, l.name === "SuperTrend" ? 1.5 : 2));
-    } else {
-      addLine(d.ema34, "#2fd07f");
-      addLine(d.ema55, "#4d9fff");
-      addLine(d.ema89, "#a78bfa");
-      addLine(d.supertrend, "#2fd0c4", 1.5);
-    }
-
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
-    vol.setData(d.volume || []);
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
 
-    const line = (price, color, title) => {
-      if (price == null) return;
-      candle.createPriceLine({ price, color, lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
-    };
-    if (d.level_lines && d.level_lines.length) {
-      d.level_lines.forEach((L) => line(L.price, L.color, L.title));
-    } else {
-      const lv = d.levels || {};
-      line(lv.high, "#2fd0c4", "HIGH");
-      line(lv.resistance, "#4d9fff", "RESISTANCE");
-      line(lv.ema_watch, "#cbd5e1", "EMA WATCH");
-      line(lv.stop, "#ff5b5b", "STOP");
-      line(lv.leg_low, "#f5a623", "LEG LOW");
-      line(lv.low, "#ff5b5b", "LOW");
+    // One line series per indicator (the set is the same across timeframes).
+    const lineSeries = tfs[curTF].lines.map((l) => chart.addLineSeries({
+      color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
+      priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+    }));
+
+    (d.level_lines || []).forEach((L) => {
+      if (L.price != null) candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
+        lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: L.title });
+    });
+
+    function legend(tf) {
+      $("#chart-legend").innerHTML = tf.lines.map((l) => {
+        const last = l.data.length ? l.data[l.data.length - 1].value : null;
+        return `<span><span class="cl-name" style="color:${l.color}">${l.name}</span> ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
+      }).join("");
+    }
+    function applyTF(key) {
+      const tf = tfs[key]; if (!tf) return;
+      curTF = key;
+      candle.setData(tf.candles);
+      vol.setData(tf.volume);
+      tf.lines.forEach((l, i) => lineSeries[i] && lineSeries[i].setData(l.data));
+      chart.timeScale().fitContent();
+      legend(tf);
     }
 
-    chart.timeScale().fitContent();
+    const toggle = $("#tf-toggle");
+    toggle.innerHTML = available.map((k) =>
+      `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}">${TF_LABEL[k]}</button>`).join("");
+    toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
+      toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+      applyTF(b.dataset.tf);
+    }));
+
+    applyTF(curTF);
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
     ro.observe(el);
-
-    // --- Setup chart  <->  TradingView (all timeframes) toggle ---
-    let tvMounted = false;
-    const mountTV = () => {
-      const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      try {
-        new window.TradingView.widget({
-          container_id: "tv-chart", autosize: true,
-          symbol: d.tv_symbol || d.symbol, interval: "D",
-          timezone: "Australia/Sydney", theme: isDark ? "dark" : "light",
-          style: "1", locale: "en", hide_side_toolbar: false, allow_symbol_change: false,
-          backgroundColor: isDark ? "rgba(0,0,0,0)" : "rgba(255,255,255,0)",
-        });
-      } catch (_) {
-        $("#tv-chart").innerHTML = `<p style="padding:24px;color:var(--muted)">Live chart unavailable. <a class="tv-btn" href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}" target="_blank" rel="noopener">Open in TradingView ↗</a></p>`;
-      }
-    };
-    document.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
-      document.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
-      const tv = b.dataset.view === "tv";
-      $("#tv-chart").hidden = !tv;
-      $("#chart").hidden = tv;
-      $("#chart-legend").style.display = tv ? "none" : "";
-      if (tv && !tvMounted && window.TradingView) { mountTV(); tvMounted = true; }
-    }));
   }
 
   if (!symbol) { fail("No ticker specified."); return; }

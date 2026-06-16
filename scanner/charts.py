@@ -1,8 +1,10 @@
 """Per-ticker chart data for the candlestick view.
 
-For each setup we write public/data/charts/<market>/<SYMBOL>.json containing the
-recent daily candles, the key EMAs, the SuperTrend line, marked price levels, and
-the analysis text — everything the chart page needs, loaded on demand.
+For each setup we write public/data/charts/<market>/<SYMBOL>.json with the price
+candles and the *user's own indicators* (EMA/SMA + SuperTrend) computed on every
+timeframe — Daily, 3-Day, Weekly, Monthly, 3-Month — by resampling the daily
+data, plus the marked entry/stop/target levels. The chart page switches between
+timeframes client-side, always showing the same system.
 """
 
 import json
@@ -12,7 +14,15 @@ import shutil
 from . import config
 from .indicators import ema, sma, supertrend
 
-CHART_BARS = 320   # ~14 months of daily candles
+# (label, pandas resample rule [None = daily], max candles to send)
+TIMEFRAMES = [
+    ("1D", None, 320),
+    ("3D", "3D", 240),
+    ("1W", "W-FRI", 220),
+    ("1M", "ME", 120),
+    ("3M", "QE", 60),
+]
+_AGG = {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
 
 
 def _tv(market, symbol: str) -> str:
@@ -22,62 +32,19 @@ def _tv(market, symbol: str) -> str:
     return f"{market.label}:{symbol}"
 
 
-def build_chart(df, sig: dict, lv: dict, result: dict, market) -> dict:
-    win = df.iloc[-CHART_BARS:]
-    times = [d.date().isoformat() for d in win.index]
-
-    def line(series):
-        vals = series.iloc[-CHART_BARS:]
-        return [{"time": t, "value": round(float(v), 8)}
-                for t, v in zip(times, vals) if v == v]  # skip NaN
-
-    candles = [{"time": t,
-                "open": round(float(o), 8), "high": round(float(h), 8),
-                "low": round(float(l), 8), "close": round(float(c), 8)}
-               for t, o, h, l, c in zip(times, win["Open"], win["High"], win["Low"], win["Close"])]
-    volume = [{"time": t, "value": int(v),
-               "color": "rgba(47,208,127,0.5)" if c >= o else "rgba(255,91,91,0.5)"}
-              for t, v, o, c in zip(times, win["Volume"], win["Open"], win["Close"])]
-
-    levels = {
-        "high": round(float(win["High"].max()), 8),
-        "low": round(float(win["Low"].min()), 8),
-        "resistance": lv["target"],
-        "ema_watch": round(sig["ema_last"][sig["pullback_ema"]], 8),
-        "stop": lv["stop"],
-        "leg_low": round(float(df["Low"].iloc[-config.SWING_LOOKBACK:].min()), 8),
-        "entry": lv["entry"],
-        "target": lv["target"],
-    }
-
-    return {
-        "symbol": result["symbol"], "name": result["name"], "market": market.key,
-        "currency_symbol": market.currency_symbol, "sector": result.get("sector", ""),
-        "grade": result["grade"], "dir": result["dir"], "price": result["price"],
-        "chips": result["chips"], "score": result["score"], "score_max": result["score_max"],
-        "rr": result["rr"], "low_rr": result["low_rr"], "rr_text": result["rr_text"],
-        "risk_pct": result.get("detail", {}).get("risk_pct"),
-        "analysis": result.get("analysis", ""),
-        "tv_symbol": _tv(market, result['symbol']),
-        "candles": candles,
-        "volume": volume,
-        "ema34": line(ema(df["Close"], 34)),
-        "ema55": line(ema(df["Close"], 55)),
-        "ema89": line(ema(df["Close"], 89)),
-        "supertrend": line(supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT)),
-        "levels": levels,
-    }
+def _resample(df, rule):
+    if rule is None:
+        return df
+    return df.resample(rule).agg(_AGG).dropna(subset=["Open", "High", "Low", "Close"])
 
 
-def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
-    """Chart data for a reversal setup — SMA 9/26/43/200 lines + breakout levels."""
-    win = df.iloc[-CHART_BARS:]
-    times = [d.date().isoformat() for d in win.index]
-
-    def line(series):
-        vals = series.iloc[-CHART_BARS:]
-        return [{"time": t, "value": round(float(v), 8)}
-                for t, v in zip(times, vals) if v == v]
+def _tf_block(df, rule, n_bars, kind):
+    """Candles + volume + the user's indicator lines for one timeframe."""
+    r = _resample(df, rule)
+    if len(r) < 6:
+        return None
+    times = [d.date().isoformat() for d in r.index][-n_bars:]
+    win = r.iloc[-n_bars:]
 
     candles = [{"time": t, "open": round(float(o), 8), "high": round(float(h), 8),
                 "low": round(float(l), 8), "close": round(float(c), 8)}
@@ -86,20 +53,37 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
                "color": "rgba(47,208,127,0.5)" if c >= o else "rgba(255,91,91,0.5)"}
               for t, v, o, c in zip(times, win["Volume"], win["Open"], win["Close"])]
 
-    lines = [
-        {"name": "SMA 9", "color": "#e5e9f0", "data": line(sma(df["Close"], 9))},
-        {"name": "SMA 26", "color": "#ffd23f", "data": line(sma(df["Close"], 26))},
-        {"name": "SMA 43", "color": "#af52de", "data": line(sma(df["Close"], 43))},
-        {"name": "SMA 200", "color": "#ff5b5b", "data": line(sma(df["Close"], 200))},
-        {"name": "SuperTrend", "color": "#30b0c7", "data": line(supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT))},
-    ]
-    level_lines = [
-        {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
-        {"price": round(sig["base_high"], 8), "color": "#4d9fff", "title": "BASE HIGH"},
-        {"price": lv["entry"], "color": "#cbd5e1", "title": "ENTRY"},
-        {"price": round(sig["sma"][200], 8), "color": "#ff9500", "title": "200 SMA"},
-        {"price": lv["stop"], "color": "#ff5b5b", "title": "STOP"},
-    ]
+    close = r["Close"]
+
+    def line(name, color, series):
+        s = series.iloc[-n_bars:]
+        return {"name": name, "color": color,
+                "data": [{"time": t, "value": round(float(v), 8)}
+                         for t, v in zip(times, s) if v == v]}
+
+    st = line("SuperTrend", "#30b0c7", supertrend(r, config.ATR_PERIOD, config.SUPERTREND_MULT))
+    if kind == "pullback":
+        lines = [line("EMA 34", "#2fd07f", ema(close, 34)),
+                 line("EMA 55", "#4d9fff", ema(close, 55)),
+                 line("EMA 89", "#a78bfa", ema(close, 89)), st]
+    else:
+        lines = [line("SMA 9", "#e5e9f0", sma(close, 9)),
+                 line("SMA 26", "#ffd23f", sma(close, 26)),
+                 line("SMA 43", "#a78bfa", sma(close, 43)),
+                 line("SMA 200", "#ff5b5b", sma(close, 200)), st]
+    return {"candles": candles, "volume": volume, "lines": lines}
+
+
+def _timeframes(df, kind):
+    out = {}
+    for label, rule, n in TIMEFRAMES:
+        blk = _tf_block(df, rule, n, kind)
+        if blk:
+            out[label] = blk
+    return out
+
+
+def _meta(result, market):
     return {
         "symbol": result["symbol"], "name": result["name"], "market": market.key,
         "currency_symbol": market.currency_symbol, "sector": result.get("sector", ""),
@@ -108,10 +92,36 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
         "rr": result["rr"], "low_rr": result["low_rr"], "rr_text": result["rr_text"],
         "risk_pct": result.get("detail", {}).get("risk_pct"),
         "analysis": result.get("analysis", ""),
-        "tv_symbol": _tv(market, result['symbol']),
-        "candles": candles, "volume": volume,
-        "lines": lines, "level_lines": level_lines,
+        "tv_symbol": _tv(market, result["symbol"]),
+        "entry": result["entry"], "stop": result["stop"], "target": result["target"],
+        "default_tf": "1D",
     }
+
+
+def build_chart(df, sig: dict, lv: dict, result: dict, market) -> dict:
+    """Pullback setup chart — EMA 34/55/89 + SuperTrend across timeframes."""
+    win = df.iloc[-config.SWING_LOOKBACK:]
+    level_lines = [
+        {"price": round(float(df["High"].iloc[-260:].max()), 8), "color": "#2fd0c4", "title": "HIGH"},
+        {"price": lv["target"], "color": "#4d9fff", "title": "RESISTANCE"},
+        {"price": round(sig["ema_last"][sig["pullback_ema"]], 8), "color": "#cbd5e1", "title": "EMA WATCH"},
+        {"price": lv["entry"], "color": "#e5e9f0", "title": "ENTRY"},
+        {"price": round(float(win["Low"].min()), 8), "color": "#f5a623", "title": "LEG LOW"},
+        {"price": lv["stop"], "color": "#ff5b5b", "title": "STOP"},
+    ]
+    return {**_meta(result, market), "level_lines": level_lines, "timeframes": _timeframes(df, "pullback")}
+
+
+def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
+    """Reversal setup chart — SMA 9/26/43/200 + SuperTrend across timeframes."""
+    level_lines = [
+        {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
+        {"price": round(sig["base_high"], 8), "color": "#4d9fff", "title": "BASE HIGH"},
+        {"price": lv["entry"], "color": "#e5e9f0", "title": "ENTRY"},
+        {"price": round(sig["sma"][200], 8), "color": "#ff9500", "title": "200 SMA"},
+        {"price": lv["stop"], "color": "#ff5b5b", "title": "STOP"},
+    ]
+    return {**_meta(result, market), "level_lines": level_lines, "timeframes": _timeframes(df, "reversal")}
 
 
 def chart_dir(out_root: str | pathlib.Path, market_key: str) -> pathlib.Path:
@@ -134,10 +144,10 @@ _WIN_RESERVED = {"CON", "PRN", "AUX", "NUL",
 def write_chart(chart: dict, out_root: str | pathlib.Path, market_key: str) -> None:
     symbol = str(chart["symbol"])
     if symbol.upper() in _WIN_RESERVED:
-        return  # can't write e.g. CON.json on Windows; skip its chart
+        return
     d = chart_dir(out_root, market_key)
     d.mkdir(parents=True, exist_ok=True)
     try:
         (d / f"{symbol}.json").write_text(json.dumps(chart), encoding="utf-8")
     except OSError:
-        pass  # best-effort: a bad filename just means no chart for that ticker
+        pass
