@@ -6,9 +6,16 @@ the moves (no social/AI). Written to public/data/sectors.json.
 """
 
 import datetime as dt
+import urllib.request
+import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
+
+# ForexFactory weekly economic-calendar feeds (free, times in UTC).
+FF_URLS = ["https://nfs.faireconomy.media/ff_calendar_thisweek.xml",
+           "https://nfs.faireconomy.media/ff_calendar_nextweek.xml"]
+_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; GoogyBoys/1.0)"}
 
 # (display symbol, name, yfinance ticker, divide_by)
 ASX_INDICES = [("XJO", "S&P/ASX 200", "^AXJO", 1), ("XKO", "ASX 300", "^AXKO", 1),
@@ -108,7 +115,64 @@ def _read(label, sectors, indices):
     return summary, rotation
 
 
+def _calendar():
+    """Upcoming high/medium-impact events per market from the ForexFactory feed."""
+    out = {"us": [], "asx": []}
+    now = dt.datetime.now(dt.timezone.utc)
+    syd = ZoneInfo("Australia/Sydney")
+    seen = set()
+    for url in FF_URLS:
+        try:
+            req = urllib.request.Request(url, headers=_HEADERS)
+            root = ET.fromstring(urllib.request.urlopen(req, timeout=25).read())
+        except Exception:
+            continue
+        for e in root.findall("event"):
+            impact = (e.findtext("impact") or "").strip()
+            country = (e.findtext("country") or "").strip()
+            if impact not in ("High", "Medium"):
+                continue
+            mkey = "us" if country == "USD" else "asx" if country == "AUD" else None
+            if not mkey:
+                continue
+            title = (e.findtext("title") or "").strip()
+            ds = (e.findtext("date") or "").strip()
+            ts = (e.findtext("time") or "").strip()
+            try:
+                day = dt.datetime.strptime(ds, "%m-%d-%Y").date()
+                if ts[:1].isdigit():
+                    t = dt.datetime.strptime(ts, "%I:%M%p").time()
+                    when = dt.datetime.combine(day, t, tzinfo=dt.timezone.utc)
+                    timed = True
+                else:
+                    when = dt.datetime.combine(day, dt.time(23, 59), tzinfo=dt.timezone.utc)
+                    timed = False
+            except Exception:
+                continue
+            if when < now:
+                continue
+            key = (mkey, title, ds, ts)
+            if key in seen:
+                continue
+            seen.add(key)
+            loc = when.astimezone(syd)
+            date_lbl = f"{loc.strftime('%a')} {loc.day} {loc.strftime('%b')}"
+            hr = loc.hour % 12 or 12
+            time_lbl = f"{hr}:{loc.minute:02d}{'am' if loc.hour < 12 else 'pm'}" if timed else ""
+            out[mkey].append({"date": date_lbl, "time": time_lbl, "title": title,
+                              "impact": impact, "forecast": (e.findtext("forecast") or "").strip(),
+                              "previous": (e.findtext("previous") or "").strip(),
+                              "_s": when.isoformat()})
+    for k in out:
+        out[k].sort(key=lambda x: x["_s"])
+        out[k] = out[k][:7]
+        for ev in out[k]:
+            ev.pop("_s", None)
+    return out
+
+
 def fetch() -> dict:
+    cal = _calendar()
     markets = {}
     for key, label, idx_rows, sec_rows in [
         ("asx", "ASX", ASX_INDICES, ASX_SECTORS),
@@ -118,7 +182,8 @@ def fetch() -> dict:
         sectors = _fetch(sec_rows)
         summary, rotation = _read(label, sectors, indices)
         markets[key] = {"label": label, "indices": indices, "sectors": sectors,
-                        "summary": summary, "rotation": rotation}
+                        "summary": summary, "rotation": rotation,
+                        "upcoming": cal.get(key, [])}
 
     now = dt.datetime.now(ZoneInfo("Australia/Sydney"))
     return {"generated_at": now.isoformat(timespec="seconds"), "tz_label": "AEST",

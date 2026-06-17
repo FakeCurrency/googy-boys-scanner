@@ -71,6 +71,19 @@
     renderTable((m.sectors || []).slice().sort((a, b) => b.chg_pct - a.chg_pct));
     $("#sec-summary").textContent = m.summary || "—";
     $("#sec-rotation").textContent = m.rotation || "—";
+
+    const upc = m.upcoming || [];
+    $("#sec-upcoming").innerHTML = upc.length ? upc.map((e) => {
+      const fp = e.forecast ? `f/c ${e.forecast}${e.previous ? ` · prev ${e.previous}` : ""}`
+        : (e.previous ? `prev ${e.previous}` : "");
+      return `<li class="upc-item">
+        <span class="upc-when">${e.date}${e.time ? ` · ${e.time}` : ""}</span>
+        <span class="upc-title">${e.title}</span>
+        <span class="upc-impact ${e.impact.toLowerCase()}">${e.impact}</span>
+        ${fp ? `<span class="upc-fp">${fp}</span>` : ""}
+      </li>`;
+    }).join("") : '<li class="upc-empty">No major scheduled events found for this market.</li>';
+
     mountWidgets();
   }
 
