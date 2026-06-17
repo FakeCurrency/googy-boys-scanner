@@ -115,6 +115,100 @@ def _read(label, sectors, indices):
     return summary, rotation
 
 
+def enrich(m, frames, universe, min_dollar_vol):
+    """Add stock-level depth to a market read: biggest winners/losers, a deeper
+    sector-rotation line (which stocks drove it), and an 'explain like I'm 5' note.
+
+    Computed from the scan's already-downloaded daily frames so it costs no extra
+    network. ``frames`` is {yf_ticker: OHLCV DataFrame}; ``universe`` carries the
+    per-stock GICS sector (ASX) used for the rotation breakdown.
+    """
+    rows = []
+    for u in universe:
+        df = frames.get(u["yf"])
+        if df is None or len(df) < 2:
+            continue
+        try:
+            close, vol = df["Close"], df["Volume"]
+            last, prev = float(close.iloc[-1]), float(close.iloc[-2])
+            if prev <= 0:
+                continue
+            pct = (last / prev - 1) * 100
+            dvol = float((close * vol).tail(20).mean())
+        except Exception:
+            continue
+        # keep it to real, liquid names and drop obvious data glitches
+        if dvol < min_dollar_vol or last < 0.05 or abs(pct) > 60:
+            continue
+        rows.append({"symbol": u["symbol"], "name": u["name"],
+                     "sector": (u.get("sector") or "").strip(),
+                     "last": round(last, 2 if last >= 1 else 4),
+                     "pct": round(pct, 2)})
+
+    rows.sort(key=lambda r: r["pct"], reverse=True)
+    winners = rows[:6]
+    losers = rows[-6:][::-1] if rows else []
+    m["top_movers"] = {"winners": winners, "losers": losers}
+
+    # deeper rotation: group the liquid names by GICS sector (ASX has it), find
+    # the leading & lagging sector and name the actual stocks driving each.
+    by_sec = {}
+    for r in rows:
+        if r["sector"]:
+            by_sec.setdefault(r["sector"], []).append(r)
+    detail = ""
+    sec_avg = []
+    for name, items in by_sec.items():
+        if len(items) < 3:
+            continue
+        avg = sum(i["pct"] for i in items) / len(items)
+        sec_avg.append((name, avg, sorted(items, key=lambda i: i["pct"], reverse=True)))
+    if sec_avg:
+        sec_avg.sort(key=lambda x: x[1], reverse=True)
+        best, worst = sec_avg[0], sec_avg[-1]
+
+        def names(items, up=True, n=3):
+            picks = items[:n] if up else items[::-1][:n]
+            return ", ".join(f"{p['symbol']} {p['pct']:+.1f}%" for p in picks)
+
+        detail = (f"{best[0]} led the session (avg {best[1]:+.1f}% across its big names): "
+                  f"{names(best[2])}. {worst[0]} was the weakest (avg {worst[1]:+.1f}%): "
+                  f"{names(worst[2], up=False)}.")
+    if not detail and winners:
+        detail = "Standout names: " + ", ".join(
+            f"{w['symbol']} {w['pct']:+.1f}%" for w in winners[:4])
+        if losers:
+            detail += ". Weakest: " + ", ".join(
+                f"{l['symbol']} {l['pct']:+.1f}%" for l in losers[:3])
+        detail += "."
+    if detail:
+        m["rotation_detail"] = detail
+
+    # "Explain like I'm 5" — the same read in plain words.
+    idx = {i["symbol"]: i for i in m.get("indices", [])}
+    head = idx.get("XJO" if m.get("label") == "ASX" else "SPX")
+    if head:
+        d = head["chg_pct"]
+        dirw = "went up a bit" if d > 0.1 else "went down a bit" if d < -0.1 else "barely moved"
+        head_txt = f"The {m.get('label', 'market')} market {dirw} today ({d:+.1f}%)."
+    else:
+        head_txt = f"Here's the {m.get('label', 'market')} market in simple words."
+    secs = sorted(m.get("sectors", []), key=lambda s: s["chg_pct"], reverse=True)
+    parts = [head_txt]
+    if secs:
+        parts.append(f"{secs[0]['name']} companies did the best, and "
+                     f"{secs[-1]['name']} companies did the worst.")
+    if winners:
+        w = winners[0]
+        msg = f"The biggest winner was {w['symbol']} (up {w['pct']:.1f}%)"
+        if losers:
+            l = losers[0]
+            msg += f", and the biggest faller was {l['symbol']} (down {abs(l['pct']):.1f}%)"
+        parts.append(msg + ".")
+    m["eli5"] = " ".join(parts)
+    return m
+
+
 def _calendar():
     """Upcoming high/medium-impact events per market from the ForexFactory feed."""
     out = {"us": [], "asx": []}

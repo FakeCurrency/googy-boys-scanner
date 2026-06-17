@@ -127,13 +127,27 @@ body {
 
 .reload-btn {
   margin-left: auto; appearance: none; cursor: pointer;
-  display: grid; place-items: center; width: 36px; height: 36px;
-  border: 1px solid var(--border); border-radius: 9px;
-  background: var(--panel); color: var(--blue); transition: color .15s, border-color .15s;
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
+  border: none; border-radius: 9px;
+  background: var(--blue); color: #fff; transition: filter .15s, opacity .15s;
 }
-.reload-btn:hover { border-color: var(--blue); }
+.reload-btn:hover { filter: brightness(1.06); }
+.reload-btn:disabled { opacity: .65; cursor: default; }
+.reload-label { font: 800 12.5px/1 var(--sans); letter-spacing: 0.06em; }
 .reload-btn.spinning svg { animation: spin .8s linear infinite; transform-origin: 50% 50%; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* SCAN result toast */
+.scan-toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px);
+  z-index: 999; max-width: min(92vw, 460px);
+  background: var(--text); color: var(--panel);
+  font: 600 13.5px/1.45 var(--sans); padding: 13px 18px; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+}
+.scan-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.scan-toast.warn { background: var(--orange); color: #fff; }
 
 .wrap { max-width: 1500px; margin: 0 auto; padding: 18px 22px 60px; }
 

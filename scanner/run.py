@@ -52,6 +52,12 @@ def main() -> None:
     def tradeable(payload):
         return sum(1 for r in payload["results"] if r["grade"] in config.TRADEABLE_GRADES)
 
+    # page-market -> (frames, universe) so the sector page can show real
+    # stock-level winners/losers & rotation depth (ASX scan -> "asx" page,
+    # NASDAQ scan -> "us" page).
+    mover_inputs: dict[str, tuple] = {}
+    MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
+
     markets = args.market or list(config.MARKETS)
     for market_key in markets:
         market = config.MARKETS[market_key]
@@ -62,6 +68,8 @@ def main() -> None:
         print(f"  downloading {len(universe)} tickers ...", flush=True)
         frames = download([u["yf"] for u in universe])
         pulse_data = pulse.fetch()
+        if market_key in ("asx", "nasdaq"):
+            mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
 
         # 1) Fibonacci pullback scan -> <market>.json
         pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
@@ -81,6 +89,10 @@ def main() -> None:
     from . import sectors as _sectors
     print("Fetching sector dashboard ...", flush=True)
     sec = _sectors.fetch()
+    for page_key, (frames, universe) in mover_inputs.items():
+        if page_key in sec["markets"]:
+            _sectors.enrich(sec["markets"][page_key], frames, universe,
+                            MOVER_MIN_DVOL.get(page_key, 1_000_000))
     (pathlib.Path(args.out) / "sectors.json").write_text(_json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")

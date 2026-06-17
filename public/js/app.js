@@ -388,11 +388,43 @@
 
     $("#reload-btn").addEventListener("click", async () => {
       const btn = $("#reload-btn");
+      if (btn.disabled) return;
       btn.classList.add("spinning");
+      btn.disabled = true;
+      // Kick off a fresh cloud scan (updates the "Last scanned" time once it
+      // finishes). Falls back to just reloading the current data if the scan
+      // endpoint isn't configured yet.
+      try {
+        const res = await fetch("/api/scan", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."),
+                  res.ok ? "ok" : "warn");
+      } catch (_) {
+        flashScan("Couldn't reach the scan service — reloaded latest data.", "warn");
+      }
+      // always refresh what's on screen too
       delete state.cache[`${state.market}:${state.mode}`];
       await load();
-      setTimeout(() => btn.classList.remove("spinning"), 500);
+      setTimeout(() => {
+        btn.classList.remove("spinning");
+        btn.disabled = false;
+      }, 800);
     });
+
+    function flashScan(msg, kind) {
+      let el = document.getElementById("scan-toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "scan-toast";
+        el.className = "scan-toast";
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.classList.toggle("warn", kind === "warn");
+      el.classList.add("show");
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove("show"), 6000);
+    }
 
     document.querySelectorAll(".scan-btn").forEach((b) => b.addEventListener("click", () => {
       if (b.classList.contains("is-active")) return;

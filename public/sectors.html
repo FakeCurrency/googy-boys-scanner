@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=4" />
-  <link rel="stylesheet" href="css/sectors.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=5" />
+  <link rel="stylesheet" href="css/sectors.css?v=5" />
   <script src="js/gate.js?v=1"></script>
 </head>
 <body>
@@ -21,58 +21,24 @@
       </span>
       <div class="brand-text"><h1>GOOGY BOYS SCANNER</h1><span style="font:600 10px/1.2 -apple-system,Inter,sans-serif;color:#34c759;letter-spacing:.3px;margin-top:3px">Vivek has a beautiful son &#10084;</span></div>
     </div>
-    <div class="market-switch" id="sec-tabs" role="tablist" aria-label="Market">
-      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
-      <button class="market-btn" data-market="us" role="tab" aria-selected="false">US</button>
-    </div>
     <a class="howto-link" href="index.html">← Scanner</a>
   </header>
 
   <main class="wrap">
     <div class="sec-head">
-      <h2 class="sec-title">Markets &amp; Sectors — <span id="sec-market-label">ASX</span></h2>
+      <h2 class="sec-title">Markets &amp; Sectors</h2>
       <p class="sec-sub" id="sec-sub">Loading…</p>
     </div>
 
-    <!-- major upcoming events -->
-    <div class="sec-upcoming">
-      <div class="sec-box-title">📅 Major upcoming events</div>
-      <ul class="upc-list" id="sec-upcoming"></ul>
+    <!-- two markets side by side: ASX (left) / US (right) -->
+    <div class="sec-grid">
+      <section class="sec-col" id="col-asx"></section>
+      <section class="sec-col" id="col-us"></section>
     </div>
 
-    <!-- the read -->
-    <div class="sec-reads">
-      <div class="sec-box overnight">
-        <div class="sec-box-title" id="sec-summary-title">What happened overnight</div>
-        <p class="sec-box-text" id="sec-summary"></p>
-      </div>
-      <div class="sec-box rotation">
-        <div class="sec-box-title">Money rotation</div>
-        <p class="sec-box-text" id="sec-rotation"></p>
-      </div>
-    </div>
-
-    <!-- live calendar + news -->
-    <div class="sec-widgets">
-      <div class="sec-widget">
-        <div class="sec-section-title" id="cal-title">Economic calendar</div>
-        <div class="tv-host" id="tv-calendar"></div>
-      </div>
-      <div class="sec-widget">
-        <div class="sec-section-title" id="news-title">Market news</div>
-        <div class="tv-host" id="tv-news"></div>
-      </div>
-    </div>
-
-    <!-- data -->
-    <div class="sec-section-title">Indices</div>
-    <div class="sec-indices" id="sec-indices"></div>
-    <div class="sec-section-title">Sectors</div>
-    <div class="sec-table-wrap" id="sec-table"></div>
-
-    <p class="sec-disclaimer">Read &amp; rotation are auto-generated from the day's moves; the calendar and news are live from TradingView. General information only — not financial advice.</p>
+    <p class="sec-disclaimer">Reads, rotation, winners/losers are auto-generated from the day's moves; the calendar and news are live from TradingView. General information only — not financial advice.</p>
   </main>
 
-  <script src="js/sectors.js?v=3"></script>
+  <script src="js/sectors.js?v=4"></script>
 </body>
 </html>
