@@ -12,8 +12,8 @@
       "rr": 2.0,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 5.05,
-      "unreal_r": -0.14,
+      "current": 5.09,
+      "unreal_r": 0.14,
       "trail_stop": 5.0033
     },
     {
@@ -28,8 +28,8 @@
       "rr": 2.0,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 0.635,
-      "unreal_r": -0.31,
+      "current": 0.64,
+      "unreal_r": -0.0,
       "trail_stop": 0.6237
     },
     {
@@ -44,8 +44,8 @@
       "rr": 2.0,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 1.98,
-      "unreal_r": -0.07,
+      "current": 1.99,
+      "unreal_r": 0.07,
       "trail_stop": 1.932
     },
     {
@@ -60,9 +60,9 @@
       "rr": 1.74,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 3.1,
-      "unreal_r": 0.19,
-      "trail_stop": 2.9198
+      "current": 3.15,
+      "unreal_r": 0.43,
+      "trail_stop": 2.9512
     },
     {
       "market": "nasdaq",
@@ -92,25 +92,9 @@
       "rr": 2.0,
       "opened": "2026-06-15",
       "status": "open",
-      "current": 4.29,
-      "unreal_r": 0.05,
+      "current": 4.24,
+      "unreal_r": -0.2,
       "trail_stop": 4.1722
-    },
-    {
-      "market": "asx",
-      "symbol": "NHC",
-      "name": "New Hope Corporation Limited",
-      "grade": "A",
-      "score": 8,
-      "entry": 5.56,
-      "stop": 5.148,
-      "target": 6.08,
-      "rr": 1.57,
-      "opened": "2026-06-15",
-      "status": "open",
-      "current": 5.59,
-      "unreal_r": 0.07,
-      "trail_stop": 5.4466
     },
     {
       "market": "asx",
@@ -124,8 +108,9 @@
       "rr": 2.0,
       "opened": "2026-06-16",
       "status": "open",
-      "current": 5.73,
-      "unreal_r": -0.02
+      "current": 5.77,
+      "unreal_r": 0.05,
+      "trail_stop": 5.4791
     },
     {
       "market": "nasdaq",
@@ -156,7 +141,8 @@
       "opened": "2026-06-16",
       "status": "open",
       "current": 2.06,
-      "unreal_r": 0.0
+      "unreal_r": 0.0,
+      "trail_stop": 2.0163
     },
     {
       "market": "asx",
@@ -170,8 +156,9 @@
       "rr": 1.87,
       "opened": "2026-06-16",
       "status": "open",
-      "current": 23.21,
-      "unreal_r": 0.0
+      "current": 23.2,
+      "unreal_r": -0.01,
+      "trail_stop": 21.8972
     },
     {
       "market": "asx",
@@ -185,23 +172,9 @@
       "rr": 2.0,
       "opened": "2026-06-16",
       "status": "open",
-      "current": 3.77,
-      "unreal_r": 0.0
-    },
-    {
-      "market": "asx",
-      "symbol": "TCL",
-      "name": "Transurban Group",
-      "grade": "A+",
-      "score": 10,
-      "entry": 15.06999969,
-      "stop": 14.04315042,
-      "target": 16.76156249,
-      "rr": 2.0,
-      "opened": "2026-06-16",
-      "status": "open",
-      "current": 15.07,
-      "unreal_r": 0.0
+      "current": 3.84,
+      "unreal_r": 0.26,
+      "trail_stop": 3.6155
     },
     {
       "market": "crypto",
@@ -215,8 +188,9 @@
       "rr": 2.0,
       "opened": "2026-06-16",
       "status": "open",
-      "current": 1.0,
-      "unreal_r": -0.0
+      "current": 1.0002,
+      "unreal_r": 0.01,
+      "trail_stop": 0.9953
     },
     {
       "market": "asx",
@@ -231,6 +205,21 @@
       "opened": "2026-06-17",
       "status": "open",
       "current": 0.425,
+      "unreal_r": 0.0
+    },
+    {
+      "market": "asx",
+      "symbol": "VFY",
+      "name": "Vitrafy Life Sciences Limited",
+      "grade": "A",
+      "score": 8,
+      "entry": 2.79999995,
+      "stop": 2.31659992,
+      "target": 3.79999995,
+      "rr": 2.15,
+      "opened": "2026-06-17",
+      "status": "open",
+      "current": 2.8,
       "unreal_r": 0.0
     }
   ],
@@ -254,7 +243,48 @@
       "reason": "target",
       "bars": 1,
       "r": 1.19
+    },
+    {
+      "market": "asx",
+      "symbol": "NHC",
+      "name": "New Hope Corporation Limited",
+      "grade": "A",
+      "score": 8,
+      "entry": 5.56,
+      "stop": 5.148,
+      "target": 6.08,
+      "rr": 1.57,
+      "opened": "2026-06-15",
+      "status": "closed",
+      "current": 5.59,
+      "unreal_r": 0.07,
+      "trail_stop": 5.4466,
+      "exit": 5.4466,
+      "exit_date": "2026-06-17",
+      "reason": "trail",
+      "bars": 2,
+      "r": -0.28
+    },
+    {
+      "market": "asx",
+      "symbol": "TCL",
+      "name": "Transurban Group",
+      "grade": "A+",
+      "score": 10,
+      "entry": 15.06999969,
+      "stop": 14.04315042,
+      "target": 16.76156249,
+      "rr": 2.0,
+      "opened": "2026-06-16",
+      "status": "closed",
+      "current": 15.07,
+      "unreal_r": 0.0,
+      "exit": 14.7116,
+      "exit_date": "2026-06-17",
+      "reason": "trail",
+      "bars": 1,
+      "r": -0.35
     }
   ],
-  "updated_at": "2026-06-16T21:57:05"
+  "updated_at": "2026-06-17T12:48:42"
 }
