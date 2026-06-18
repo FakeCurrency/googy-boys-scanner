@@ -154,6 +154,8 @@ SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
+SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
+                              # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
 # Data

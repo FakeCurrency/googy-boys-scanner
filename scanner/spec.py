@@ -23,12 +23,15 @@ narrative = reversal.narrative
 CHIP_ORDER = ["volume", "breakout", "reclaim", "base", "rsi"]
 
 
-def evaluate(df: pd.DataFrame) -> dict | None:
+def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     if df is None or len(df) < config.SPEC_MIN_HISTORY:
         return None
     close, high, low, vol = df["Close"], df["High"], df["Low"], df["Volume"]
     c = float(close.iloc[-1])
     if not np.isfinite(c) or c <= 0:
+        return None
+    # specs only: cheap, speculative names (skip the big/expensive stocks)
+    if max_price is not None and c > max_price:
         return None
 
     s9, s26, s43, s200 = (sma(close, n) for n in (9, 26, 43, 200))

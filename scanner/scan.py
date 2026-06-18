@@ -303,11 +303,14 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
     if write_charts and out_root:
         charts.reset_dir(out_root, chart_key)
 
+    # price cap applies to real stocks; disabled for crypto (per-coin price is meaningless)
+    max_price = None if getattr(market, "volume_is_usd", False) else config.SPEC_MAX_PRICE
+
     results: list[dict] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
-        sig = spec.evaluate(df)
+        sig = spec.evaluate(df, max_price=max_price)
         if sig is None or not sig.get("ok"):
             continue
 
