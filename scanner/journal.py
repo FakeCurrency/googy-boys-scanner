@@ -42,6 +42,8 @@ def summarize(j: dict) -> dict:
     rs = np.array([c["r"] for c in closed], dtype=float) if closed else np.array([])
     wins = rs[rs > 0]
     open_unreal = sum(p.get("unreal_r", 0) or 0 for p in j["open"])
+    total_pnl = sum(c.get("pnl", 0) or 0 for c in closed)
+    open_unreal_pnl = sum(p.get("unreal_pnl", 0) or 0 for p in j["open"])
     return {
         "open": len(j["open"]),
         "closed": len(closed),
@@ -49,6 +51,10 @@ def summarize(j: dict) -> dict:
         "avg_r": round(float(rs.mean()), 3) if len(rs) else 0.0,
         "total_r": round(float(rs.sum()), 2) if len(rs) else 0.0,
         "open_unrealised_r": round(open_unreal, 2),
+        "total_pnl": round(total_pnl, 2),
+        "open_unrealised_pnl": round(open_unreal_pnl, 2),
+        "position_size": config.POSITION_SIZE_USD,
+        "brokerage": config.BROKERAGE_EACH_WAY,
     }
 
 
@@ -67,10 +73,20 @@ def _save(j: dict) -> None:
 
 
 def _close(pos: dict, price: float, date: str, reason: str, bars: int) -> dict:
-    risk = pos["entry"] - pos["stop"]
+    direction = pos.get("direction", "long")
+    shares = pos.get("shares", 0)
+    brokerage = pos.get("brokerage", config.BROKERAGE_EACH_WAY)
+    if direction == "short":
+        risk = pos["stop"] - pos["entry"]
+        r_val = round((pos["entry"] - price) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (pos["entry"] - price) - 2 * brokerage, 2)
+    else:
+        risk = pos["entry"] - pos["stop"]
+        r_val = round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (price - pos["entry"]) - 2 * brokerage, 2)
     return {**pos, "status": "closed", "exit": round(price, 4),
             "exit_date": date, "reason": reason, "bars": bars,
-            "r": round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0}
+            "r": r_val, "pnl": pnl}
 
 
 def _walk(df, pos: dict) -> dict:
@@ -78,7 +94,13 @@ def _walk(df, pos: dict) -> dict:
     if df is None or len(df) < 2:
         return pos
     entry, stop, target = pos["entry"], pos["stop"], pos["target"]
-    risk = entry - stop
+    direction = pos.get("direction", "long")
+    shares = pos.get("shares", 0)
+
+    if direction == "short":
+        risk = stop - entry  # stop is above entry for shorts
+    else:
+        risk = entry - stop
     if risk <= 0:
         return _close(pos, entry, pos["opened"], "invalid", 0)
 
@@ -91,23 +113,41 @@ def _walk(df, pos: dict) -> dict:
     start = next((k for k, ds in enumerate(dates) if ds > pos["opened"]), None)
     if start is None:  # opened on the latest bar; nothing to evaluate yet
         pos["current"] = round(float(closes[-1]), 4)
-        pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+        if direction == "short":
+            pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
+            pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
+        else:
+            pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+            pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
         return pos
 
-    current_stop = stop
-    for j in range(start, len(df)):
-        st = st_arr[j]
-        if np.isfinite(st) and closes[j] > st > current_stop:
-            current_stop = st
-        if lows[j] <= current_stop:
-            return _close(pos, current_stop, dates[j],
-                          "trail" if current_stop > stop else "stop", j - start + 1)
-        if highs[j] >= target:
-            return _close(pos, target, dates[j], "target", j - start + 1)
-
-    pos["current"] = round(float(closes[-1]), 4)
-    pos["trail_stop"] = round(current_stop, 4)
-    pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+    if direction == "short":
+        current_stop = stop  # for shorts, trail stop moves DOWN
+        for j in range(start, len(df)):
+            if highs[j] >= current_stop:
+                return _close(pos, current_stop, dates[j],
+                              "trail" if current_stop < stop else "stop", j - start + 1)
+            if lows[j] <= target:
+                return _close(pos, target, dates[j], "target", j - start + 1)
+        pos["current"] = round(float(closes[-1]), 4)
+        pos["trail_stop"] = round(current_stop, 4)
+        pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
+        pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
+    else:
+        current_stop = stop
+        for j in range(start, len(df)):
+            st = st_arr[j]
+            if np.isfinite(st) and closes[j] > st > current_stop:
+                current_stop = st
+            if lows[j] <= current_stop:
+                return _close(pos, current_stop, dates[j],
+                              "trail" if current_stop > stop else "stop", j - start + 1)
+            if highs[j] >= target:
+                return _close(pos, target, dates[j], "target", j - start + 1)
+        pos["current"] = round(float(closes[-1]), 4)
+        pos["trail_stop"] = round(current_stop, 4)
+        pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+        pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
     return pos
 
 
@@ -125,11 +165,17 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     opened_now = 0
     for r in scan["results"]:
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"]) not in open_keys:
+            entry_price = r["price"]
+            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
                 "grade": r["grade"], "score": r["score"],
-                "entry": r["price"], "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
+                "direction": "long",
+                "shares": shares,
+                "brokerage": config.BROKERAGE_EACH_WAY,
+                "size_usd": config.POSITION_SIZE_USD,
             })
             open_keys.add((market_key, r["symbol"]))
             opened_now += 1

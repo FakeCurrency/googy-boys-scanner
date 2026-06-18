@@ -32,3 +32,13 @@
 .reason { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .jr-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+.dir-chip {
+  display: inline-block; font: 700 9px/1 var(--sans); letter-spacing: 0.6px;
+  padding: 2px 5px; border-radius: 3px; text-transform: uppercase;
+}
+.dir-long  { background: rgba(45,208,127,.15); color: #2dd07f; }
+.dir-short { background: rgba(255,91,91,.15);  color: #ff5b5b; }
+
+.jr-table td:nth-child(3) { text-align: left; }
+.jr-table th:nth-child(3) { text-align: left; }

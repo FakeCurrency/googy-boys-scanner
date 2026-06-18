@@ -81,6 +81,12 @@ WEEKLY_SLOW = 20
 SPARK_BARS = 30
 
 # ---------------------------------------------------------------------------
+# Position sizing
+# ---------------------------------------------------------------------------
+POSITION_SIZE_USD = 1_000    # target dollar amount invested per trade (AUD for ASX, USD for NASDAQ/Crypto)
+BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
+
+# ---------------------------------------------------------------------------
 # PULSE — macro market indicators shown in the top bar.
 # (key, label, yfinance ticker, divide_by, decimals)
 # ---------------------------------------------------------------------------
