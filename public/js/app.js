@@ -146,6 +146,8 @@
     const chips = (r.chips || []).map((c) =>
       `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${r.rr_text})</span>` : "";
+    const widestop = (r.stop_pct != null && r.stop_pct > 20)
+      ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
@@ -172,7 +174,7 @@
           <span class="badge ${liqCls}">${r.liquidity}</span>
           ${seccount}
         </div>
-        <div class="row-chips">${chips}${lowrr}${t2r}</div>
+        <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
       </div>
       <a class="row-spark" href="${chartHref}" title="Open chart">
         ${spark(r.spark, 120, 30, COLOR[r.trend] || COLOR.blue)}
