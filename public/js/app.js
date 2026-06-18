@@ -78,12 +78,17 @@
     return String(v);
   }
 
+  const TZ_MAP = { AEST: "Australia/Sydney", ET: "America/New_York", UTC: "UTC" };
   function fmtTime(iso, tz) {
     try {
       const d = new Date(iso);
-      const date = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-      const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-      return `${date}, ${time} ${tz || ""}`.trim();
+      const zone = TZ_MAP[tz];
+      const opts = {
+        weekday: "short", day: "numeric", month: "short",
+        hour: "numeric", minute: "2-digit",
+        ...(zone ? { timeZone: zone } : {}),
+      };
+      return `${d.toLocaleString(undefined, opts)} ${tz || ""}`.trim();
     } catch (_) { return iso; }
   }
 

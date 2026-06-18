@@ -569,7 +569,7 @@ def scan_scalp(progress: bool = True) -> dict:
                 "score":       points,
                 "score_max":   scalp.SCALP_SCORE_MAX,
                 "chips":       scalp.build_chips(fired, sig),
-                "weekly":      sig.get("4h_confirm", False),
+                "weekly":      sig.get("squeeze_fired", False),
                 "low_rr":      lv["rr"] < 1.5,
                 "rr_text":     f"{lv['rr']:.1f}:1",
                 "target_2r":   False,
