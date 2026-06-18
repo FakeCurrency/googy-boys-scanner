@@ -248,6 +248,8 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
 
 def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     """Build the detail dropdown payload for the scalp card."""
+    from . import config as cfg
+
     if getattr(df.index, "tz", None) is not None:
         df = df.copy()
         df.index = df.index.tz_localize(None)
@@ -273,7 +275,7 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     avg_vol   = float(df["Volume"].iloc[-21:-1].mean())
     vol_ratio = round(vol / avg_vol, 2) if avg_vol > 0 else 0.0
 
-    # Swing high/low over the same pivot window
+    # Swing high/low over the pivot window
     swing_high = float(df["High"].iloc[-PIVOT_LOOKBACK:].max())
     swing_low  = float(df["Low"].iloc[-PIVOT_LOOKBACK:].min())
 
@@ -287,24 +289,61 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     sup = sig.get("nearest_support")
     res = sig.get("nearest_resistance")
 
+    # ── Position sizing ──────────────────────────────────────────────────────
+    entry_price  = lv["entry"]
+    stop_price   = lv["stop"]
+    target_price = lv["target"]
+    notional     = cfg.SCALP_POSITION_SIZE * cfg.SCALP_LEVERAGE   # $5,000
+    units        = int(notional / entry_price) if entry_price > 0 else 0
+    stop_dist    = abs(entry_price - stop_price)
+    target_dist  = abs(target_price - entry_price)
+    risk_dollars   = round(stop_dist   * units, 2)
+    reward_dollars = round(target_dist * units, 2)
+    brokerage_rt   = cfg.SCALP_BROKERAGE_EACH_WAY * 2
+    net_loss       = round(risk_dollars   + brokerage_rt, 2)
+    net_profit     = round(reward_dollars - brokerage_rt, 2)
+    eff_rr         = round(net_profit / net_loss, 2) if net_loss > 0 else 0.0
+    stop_pct_val   = round(stop_dist   / entry_price * 100, 2) if entry_price else 0.0
+    target_pct_val = round(target_dist / entry_price * 100, 2) if entry_price else 0.0
+
     return {
         "setup_type":         "scalp",
+        # Trade levels
+        "entry":              round(entry_price,  6),
+        "stop":               round(stop_price,   6),
+        "target":             round(target_price, 6),
+        "stop_pct":           stop_pct_val,
+        "target_pct":         target_pct_val,
+        # Position sizing
+        "notional":           notional,
+        "units":              units,
+        "risk_dollars":       risk_dollars,
+        "reward_dollars":     reward_dollars,
+        "brokerage_rt":       brokerage_rt,
+        "net_loss":           net_loss,
+        "net_profit":         net_profit,
+        "eff_rr":             eff_rr,
+        # Squeeze
         "sq_state":           sq_state,
         "mom_val":            sig.get("mom_val", 0.0),
+        # Pivot levels
         "nearest_support":    sup,
         "support_pct":        pct_from(sup) if sup is not None else None,
         "nearest_resistance": res,
         "resistance_pct":     pct_from(res) if res is not None else None,
+        # BB / KC bands
         "bb_upper":           round(bb_upper, 6),
         "bb_mid":             round(bb_mid,   6),
         "bb_lower":           round(bb_lower, 6),
         "kc_upper":           round(kc_upper, 6),
         "kc_lower":           round(kc_lower, 6),
         "atr":                lv.get("atr", 0.0),
+        # Swing levels
         "swing_high":         round(swing_high, 6),
         "swing_high_pct":     pct_from(swing_high),
         "swing_low":          round(swing_low,  6),
         "swing_low_pct":      pct_from(swing_low),
+        # Volume
         "volume_ratio":       vol_ratio,
         "volume_expanding":   sig.get("volume", False),
         "volume_today":       int(vol),

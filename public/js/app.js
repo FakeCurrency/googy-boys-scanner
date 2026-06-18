@@ -224,50 +224,78 @@
   }
 
   function detailHtmlScalp(r) {
-    const d   = r.detail || {};
-    const cur = r.asset_type === "asx" ? "A$" : "$";
+    const d       = r.detail || {};
+    const cur     = r.asset_type === "asx" ? "A$" : "$";
+    const isShort = r.dir === "SHORT";
     const lvl = (label, val, pct, cls) => val == null ? "" :
-      `<div class="dl-row"><span class="dl-label ${cls || ""}">${label}</span>
+      `<div class="dl-row"><span class="dl-label ${cls||""}">${label}</span>
         <span class="dl-val">${cur}${num(val)}</span>
-        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+        <span class="dl-pct ${pct>=0?"pct-up":"pct-down"}">${fmtPct(pct)}</span></div>`;
     const band = (label, val) => val == null ? "" :
       `<div class="fl-row"><span class="fl-label">${label}</span><span class="fl-val">${cur}${num(val)}</span></div>`;
     const sqCls  = d.sq_state === "FIRED" ? "green" : d.sq_state === "BUILDING" ? "accent-orange" : "muted";
     const momAbs = Math.abs(d.mom_val || 0);
     const momDir = (d.mom_val || 0) >= 0 ? "▲" : "▼";
     const momCls = (d.mom_val || 0) >= 0 ? "green" : "pct-down";
+    const stopPct   = isShort ? +(d.stop_pct   || 0) : -(d.stop_pct   || 0);
+    const targetPct = isShort ? -(d.target_pct || 0) : +(d.target_pct || 0);
+    const effRR  = d.eff_rr || 0;
+    const effCls = effRR >= 1 ? "green" : "pct-down";
+    const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
       <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+
+      <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
+      <div class="rd-levels">
+        ${lvl("ENTRY",  d.entry,  0,         "")}
+        ${lvl("STOP",   d.stop,   stopPct,   "red")}
+        ${lvl("TARGET", d.target, targetPct, "green")}
+        ${band("ATR (14)", d.atr)}
+      </div>
+
+      <div class="rd-trail">
+        <span class="rd-trail-label">POSITION — ${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span>
+      </div>
+      <div class="rd-levels">
+        <div class="dl-row"><span class="dl-label red">$ RISK at stop</span>
+          <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
+          <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
+        <div class="dl-row"><span class="dl-label green">$ REWARD at target</span>
+          <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
+          <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
+        <div class="dl-row"><span class="dl-label red">NET LOSS (incl. brok)</span>
+          <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
+        <div class="dl-row"><span class="dl-label ${npCls}">NET PROFIT (incl. brok)</span>
+          <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
+        <div class="dl-row"><span class="dl-label">EFFECTIVE R:R</span>
+          <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
+          <span class="dl-pct muted">after brokerage</span></div>
+      </div>
+
+      <div class="rd-trail"><span class="rd-trail-label">KEY LEVELS</span></div>
       <div class="rd-levels">
         ${lvl("SWING LOW",   d.swing_low,          d.swing_low_pct,  "red")}
         ${lvl("SUPPORT",     d.nearest_support,    d.support_pct,    "red")}
         ${lvl("RESISTANCE",  d.nearest_resistance, d.resistance_pct, "green")}
         ${lvl("SWING HIGH",  d.swing_high,         d.swing_high_pct, "green")}
       </div>
-      <div class="rd-trail">
-        <span class="rd-trail-label">TRAILING STOP</span>
-        <span class="rd-trail-val">${cur}${num(r.stop)}</span>
-        <span class="rd-trail-note">1.5× ATR(14) from entry</span>
-      </div>
+
       <div class="rd-ema">
         <div class="rd-ema-head">
           <span class="rd-k">TTM SQUEEZE</span>
-          <span class="${sqCls}">${d.sq_state || "—"}</span>
+          <span class="${sqCls}">${d.sq_state||"—"}</span>
           <span class="rd-spread ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span>
         </div>
         <div class="rd-fast">
-          ${band("BB UPPER", d.bb_upper)}
-          ${band("BB MID",   d.bb_mid)}
-          ${band("BB LOWER", d.bb_lower)}
-          ${band("KC UPPER", d.kc_upper)}
-          ${band("KC LOWER", d.kc_lower)}
-          ${band("ATR (14)", d.atr)}
+          ${band("BB UPPER", d.bb_upper)}${band("BB MID", d.bb_mid)}${band("BB LOWER", d.bb_lower)}
+          ${band("KC UPPER", d.kc_upper)}${band("KC LOWER", d.kc_lower)}
         </div>
       </div>
+
       <div class="rd-volume">
-        <span class="rd-k">VOLUME</span>
-        <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg (1h bar)</span>
+        <span class="rd-k">VOLUME (1h)</span>
+        <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
+        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
       </div>
     </div>`;
   }
