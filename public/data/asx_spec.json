@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-18T12:12:46+10:00",
-  "scanned": 1836,
+  "generated_at": "2026-06-18T14:03:02+10:00",
+  "scanned": 1715,
   "universe_size": 1985,
   "score_max": 11,
   "sma_periods": [
@@ -20,10 +20,10 @@
     {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4338.0,
+      "value": 4359.0,
       "decimals": 0,
-      "day_pct": 0.17,
-      "d5_pct": 5.6,
+      "day_pct": 0.65,
+      "d5_pct": 6.1,
       "spark": [
         4552.5,
         4506.2998,
@@ -46,17 +46,17 @@
         4215.0,
         4328.0,
         4330.8999,
-        4338.1001
+        4358.8999
       ],
       "dir": "up"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 69.4,
+      "value": 70.7,
       "decimals": 2,
-      "day_pct": -0.71,
-      "d5_pct": 7.44,
+      "day_pct": 1.14,
+      "d5_pct": 9.44,
       "spark": [
         77.073,
         74.828,
@@ -79,17 +79,17 @@
         67.859,
         70.066,
         69.899,
-        69.405
+        70.696
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "BRENT",
       "label": "Brent",
-      "value": 78.41,
+      "value": 79.55,
       "decimals": 2,
-      "day_pct": -0.7,
-      "d5_pct": -15.78,
+      "day_pct": 0.75,
+      "d5_pct": -14.55,
       "spark": [
         112.1,
         111.28,
@@ -112,17 +112,17 @@
         87.33,
         83.17,
         78.96,
-        78.41
+        79.55
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "WTI",
       "label": "WTI",
-      "value": 74.84,
+      "value": 76.79,
       "decimals": 2,
-      "day_pct": -1.59,
-      "d5_pct": -16.87,
+      "day_pct": 0.97,
+      "d5_pct": -14.71,
       "spark": [
         108.66,
         107.77,
@@ -145,17 +145,17 @@
         84.88,
         80.75,
         76.05,
-        74.84
+        76.79
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "NATGAS",
       "label": "Nat Gas",
-      "value": 3.17,
+      "value": 3.14,
       "decimals": 2,
-      "day_pct": -2.07,
-      "d5_pct": -0.41,
+      "day_pct": -2.9,
+      "d5_pct": -1.26,
       "spark": [
         3.024,
         3.114,
@@ -178,7 +178,7 @@
         3.12,
         3.147,
         3.239,
-        3.172
+        3.145
       ],
       "dir": "down"
     },
@@ -211,7 +211,7 @@
         25888.8398,
         26683.9395,
         26376.3398,
-        26021.6562
+        26021.6602
       ],
       "dir": "down"
     },
@@ -284,10 +284,10 @@
     {
       "key": "AUD",
       "label": "AUD/USD",
-      "value": 0.7035,
+      "value": 0.7043,
       "decimals": 4,
-      "day_pct": -0.43,
-      "d5_pct": 0.58,
+      "day_pct": -0.31,
+      "d5_pct": 0.7,
       "spark": [
         0.7107,
         0.715,
@@ -310,14 +310,13 @@
         0.7075,
         0.7073,
         0.7066,
-        0.7035
+        0.7043
       ],
       "dir": "down"
     }
   ],
   "sector_counts": {
-    "Energy": 1,
-    "Materials": 1
+    "Energy": 1
   },
   "results": [
     {
@@ -433,120 +432,6 @@
         "new_high_long": true
       },
       "analysis": "AGE just fired a speculative volume-spike breakout \u2014 volume hit 5.6\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0525, stop A$0.0307, target A$0.1179 (3.00:1) \u2014 then trail it.",
-      "sector_count": 1
-    },
-    {
-      "symbol": "WCN",
-      "name": "White Cliff Minerals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "setup_type": "spec",
-      "grade": "A",
-      "score": 7,
-      "score_max": 11,
-      "chips": [
-        "VOLUME 3.2\u00d7 SPIKE",
-        "NEW 3-MONTH HIGH",
-        "9 \u203a 26 RECLAIM"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 0.021,
-      "y_close": 0.022,
-      "open": 0.021,
-      "open_pct": -4.55,
-      "current_pct": 0.0,
-      "day_pct": -4.55,
-      "entry": 0.021,
-      "stop": 0.01287,
-      "target": 0.04539,
-      "rr": 3.0,
-      "trail": 0.01771178,
-      "stop_pct": 38.7,
-      "p2_pct": 116.1,
-      "target_basis": "measured",
-      "spark": [
-        0.015,
-        0.015,
-        0.0145,
-        0.016,
-        0.017,
-        0.017,
-        0.017,
-        0.017,
-        0.017,
-        0.0145,
-        0.015,
-        0.016,
-        0.014,
-        0.014,
-        0.014,
-        0.013,
-        0.013,
-        0.014,
-        0.013,
-        0.016,
-        0.016,
-        0.015,
-        0.015,
-        0.017,
-        0.018,
-        0.018,
-        0.018,
-        0.022,
-        0.022,
-        0.021
-      ],
-      "trend": "blue",
-      "turnover": 379799,
-      "detail": {
-        "setup_type": "spec",
-        "sma9": 0.01844444,
-        "sma9_pct": -12.2,
-        "sma26": 0.01628846,
-        "sma26_pct": -22.4,
-        "sma43": 0.01569481,
-        "sma43_pct": -25.3,
-        "sma200": 0.01788689,
-        "sma200_pct": -14.8,
-        "cross_up": true,
-        "rsi": 67.6,
-        "rsi_ma": 57.0,
-        "rsi_up": false,
-        "volume_ratio": 2.2,
-        "volume_today": 52143881,
-        "volume_avg": 19729103,
-        "volume_surge": true,
-        "off_high_pct": 25.0,
-        "base_high": 0.021,
-        "base_high_pct": 0.0,
-        "broken": true,
-        "swing_low": 0.013,
-        "swing_low_pct": -38.1,
-        "trailing_stop": 0.01771178,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -15.7,
-        "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
-          "swing_highs": [
-            0.018,
-            0.017,
-            0.016
-          ],
-          "swing_lows": [
-            0.014,
-            0.014,
-            0.012
-          ]
-        },
-        "risk_pct": 38.7,
-        "spike_ratio": 3.2,
-        "new_high_long": true
-      },
-      "analysis": "WCN just fired a speculative volume-spike breakout \u2014 volume hit 3.2\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0210, stop A$0.0129, target A$0.0454 (3.00:1) \u2014 then trail it.",
       "sector_count": 1
     }
   ]
