@@ -203,8 +203,8 @@
   }
 
   function detailHtml(r) {
-    const st = (r.detail || {}).setup_type;
-    if (st === "reversal" || st === "spec") return detailHtmlReversal(r);
+    const stype = (r.detail || {}).setup_type;
+    if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>
