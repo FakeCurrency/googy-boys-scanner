@@ -35,17 +35,19 @@ SCALP_MIN_BARS        = 65   # warm-up for SQ_PERIOD + SQ_MOM_PERIOD + ATR
 # ── Scoring ────────────────────────────────────────────────────────────────────
 SCALP_POINTS = {
     "squeeze_fired":  3,   # squeeze just fired in trade direction — the trigger
+    "squeeze_on":     1,   # squeeze currently ON (market coiling, pressure building)
     "momentum_dir":   2,   # momentum positive (long) / negative (short)
     "momentum_accel": 1,   # histogram expanding (momentum strengthening)
     "pivot_ok":       2,   # price at a key pivot level (support for long, resistance for short)
-    "volume":         2,   # volume expansion vs 20-bar average
+    "volume":         1,   # volume expansion vs 20-bar average
 }
 SCALP_SCORE_MAX  = sum(SCALP_POINTS.values())  # 10
 SCALP_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 
-SCALP_CHIP_ORDER = ["squeeze_fired", "momentum_dir", "momentum_accel", "pivot_ok", "volume"]
+SCALP_CHIP_ORDER = ["squeeze_fired", "squeeze_on", "momentum_dir", "momentum_accel", "pivot_ok", "volume"]
 SCALP_CHIP_BASE  = {
     "squeeze_fired":  "SQUEEZE FIRED",
+    "squeeze_on":     "SQUEEZE BUILDING",
     "momentum_dir":   "MOMENTUM ALIGNED",
     "momentum_accel": "MOMENTUM ACCELERATING",
     "pivot_ok":       "AT KEY LEVEL",
@@ -96,7 +98,7 @@ def _squeeze_signals(df: pd.DataFrame) -> dict:
     val = close - ((hh + ll) / 2 + bb_mid) / 2
     mom = _linreg(val, SQ_MOM_PERIOD)
 
-    return {"sq_on": sq_on, "mom": mom}
+    return {"sq_on": sq_on, "mom": mom, "bb_mid": bb_mid}
 
 
 def _find_pivot_levels(df: pd.DataFrame, last: float):
@@ -163,16 +165,20 @@ def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
     if not (np.isfinite(mom_now) and np.isfinite(mom_prev)):
         return None
 
+    # Direction gate: price above (long) / below (short) the BB midline (SMA 20).
+    # More stable than momentum sign — allows transitioning / coiling setups.
+    bb_mid_now = float(sigs["bb_mid"].iloc[-1])
+    if not np.isfinite(bb_mid_now) or bb_mid_now <= 0:
+        return None
+    if direction == "long"  and last < bb_mid_now:
+        return None
+    if direction == "short" and last > bb_mid_now:
+        return None
+
     # Squeeze fired = was compressed recently, now released
     sq_currently_on = bool(sq_on.iloc[-1])
     sq_was_on       = bool(sq_on.iloc[-(SQ_FIRE_LOOKBACK + 1):-1].any())
     sq_fired        = (not sq_currently_on) and sq_was_on
-
-    # Direction gate: momentum must point the right way
-    if direction == "long"  and mom_now <= 0:
-        return None
-    if direction == "short" and mom_now >= 0:
-        return None
 
     # ── Momentum direction ─────────────────────────────────────────────────────
     mom_dir = (mom_now > 0) if direction == "long" else (mom_now < 0)
@@ -199,6 +205,7 @@ def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
         "direction":          direction,
         "close":              round(last, 8),
         "squeeze_fired":      sq_fired,
+        "squeeze_on":         sq_currently_on,
         "sq_on":              sq_currently_on,
         "momentum_dir":       mom_dir,
         "momentum_accel":     mom_accel,
