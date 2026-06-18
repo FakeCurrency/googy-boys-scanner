@@ -53,25 +53,33 @@ def _kelly(rs: np.ndarray) -> float | None:
     return round(max(0.0, full_kelly * 0.5) * 100, 1)  # half-Kelly, as %
 
 
-def summarize(j: dict) -> dict:
-    closed = j["closed"]
-    rs = np.array([c["r"] for c in closed], dtype=float) if closed else np.array([])
+def _dir_stats(closed_list: list, open_list: list) -> dict:
+    rs = np.array([c["r"] for c in closed_list], dtype=float) if closed_list else np.array([])
     wins = rs[rs > 0]
-    open_unreal = sum(p.get("unreal_r", 0) or 0 for p in j["open"])
-    total_pnl = sum(c.get("pnl", 0) or 0 for c in closed)
-    open_unreal_pnl = sum(p.get("unreal_pnl", 0) or 0 for p in j["open"])
     return {
-        "open": len(j["open"]),
-        "closed": len(closed),
+        "open": len(open_list),
+        "closed": len(closed_list),
         "win_rate": round(len(wins) / len(rs) * 100, 1) if len(rs) else 0.0,
-        "avg_r": round(float(rs.mean()), 3) if len(rs) else 0.0,
         "total_r": round(float(rs.sum()), 2) if len(rs) else 0.0,
-        "open_unrealised_r": round(open_unreal, 2),
-        "total_pnl": round(total_pnl, 2),
-        "open_unrealised_pnl": round(open_unreal_pnl, 2),
+        "total_pnl": round(sum(c.get("pnl", 0) or 0 for c in closed_list), 2),
+        "open_unrealised_r": round(sum(p.get("unreal_r", 0) or 0 for p in open_list), 2),
+        "open_unrealised_pnl": round(sum(p.get("unreal_pnl", 0) or 0 for p in open_list), 2),
+        "kelly_pct": _kelly(rs),
+    }
+
+
+def summarize(j: dict) -> dict:
+    long_open   = [p for p in j["open"]   if p.get("direction", "long") == "long"]
+    short_open  = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    long_closed = [c for c in j["closed"] if c.get("direction", "long") == "long"]
+    short_closed= [c for c in j["closed"] if c.get("direction", "short") == "short"]
+    return {
         "position_size": config.POSITION_SIZE_USD,
         "brokerage": config.BROKERAGE_EACH_WAY,
-        "kelly_pct": _kelly(rs),  # half-Kelly % of account (None until 20+ closed trades)
+        "max_positions_long": config.MAX_POSITIONS_LONG,
+        "max_positions_short": config.MAX_POSITIONS_SHORT,
+        "longs": _dir_stats(long_closed, long_open),
+        "shorts": _dir_stats(short_closed, short_open),
     }
 
 
@@ -80,12 +88,19 @@ def _save(j: dict) -> None:
     JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
     JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
 
+    open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
+    open_shorts = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
+    cl_shorts   = [c for c in j["closed"] if c.get("direction", "short") == "short"]
+
     PUBLIC_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
     PUBLIC_JOURNAL.write_text(json.dumps({
         "updated_at": j["updated_at"],
         "stats": summarize(j),
-        "open": j["open"],
-        "closed": j["closed"][-100:],
+        "open_longs":    open_longs,
+        "open_shorts":   open_shorts,
+        "closed_longs":  cl_longs[-100:],
+        "closed_shorts": cl_shorts[-100:],
     }, indent=2), encoding="utf-8")
 
 
@@ -189,9 +204,14 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
 
     # 1) open a paper position for each new A+/A setup
     open_keys = {(p["market"], p["symbol"], p.get("direction", "long")) for p in j["open"]}
+    open_long_count  = sum(1 for p in j["open"] if p.get("direction", "long")  == "long")
+    open_short_count = sum(1 for p in j["open"] if p.get("direction", "short") == "short")
     opened_now = 0
+
     for r in scan["results"]:
-        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"]) not in open_keys:
+        if open_long_count >= config.MAX_POSITIONS_LONG:
+            break
+        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "long") not in open_keys:
             entry_price = r["price"]
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
@@ -205,10 +225,13 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
                 "size_usd": config.POSITION_SIZE_USD,
             })
             open_keys.add((market_key, r["symbol"], "long"))
+            open_long_count += 1
             opened_now += 1
 
     # open short positions from the short scan file
     for r in short_results:
+        if open_short_count >= config.MAX_POSITIONS_SHORT:
+            break
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
             entry_price = r["price"]
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
@@ -223,6 +246,7 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
                 "size_usd": config.POSITION_SIZE_USD,
             })
             open_keys.add((market_key, r["symbol"], "short"))
+            open_short_count += 1
             opened_now += 1
 
     # 2) walk this market's open positions against fresh prices
@@ -260,9 +284,11 @@ def main() -> None:
     _save(j)
 
     s = summarize(j)
-    print(f"\nJournal: {s['open']} open ({s['open_unrealised_r']:+.1f}R unrealised) | "
-          f"{s['closed']} closed | win {s['win_rate']}% | "
-          f"realised {s['total_r']:+.1f}R")
+    sl, ss = s["longs"], s["shorts"]
+    print(f"\nJournal 1 — LONGS:  {sl['open']} open ({sl['open_unrealised_r']:+.1f}R unrealised) | "
+          f"{sl['closed']} closed | win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
+    print(f"Journal 2 — SHORTS: {ss['open']} open ({ss['open_unrealised_r']:+.1f}R unrealised) | "
+          f"{ss['closed']} closed | win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
     print(f"Saved -> {JOURNAL_FILE}\n")
 
 

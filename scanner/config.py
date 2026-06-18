@@ -96,6 +96,8 @@ SPARK_BARS = 30
 # ---------------------------------------------------------------------------
 POSITION_SIZE_USD = 1_000    # target dollar amount invested per trade (AUD for ASX, USD for NASDAQ/Crypto)
 BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
+MAX_POSITIONS_LONG = 10      # maximum concurrent open long positions across all markets
+MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across all markets
 
 # ---------------------------------------------------------------------------
 # PULSE — macro market indicators shown in the top bar.
