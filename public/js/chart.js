@@ -14,7 +14,8 @@
   const market = (params.get("m") || "asx").toLowerCase();
   const symbol = params.get("s") || "";
   const mode = (params.get("mode") || "pullback").toLowerCase();
-  const chartFile = `data/charts/${market}${mode === "reversal" ? "_rev" : ""}/${encodeURIComponent(symbol)}.json`;
+  const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : "";
+  const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
   const $ = (s) => document.querySelector(s);
 

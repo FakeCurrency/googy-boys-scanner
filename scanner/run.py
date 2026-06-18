@@ -44,6 +44,10 @@ def main() -> None:
         help="skip the Reversals scan (only run the Fib pullback scan)",
     )
     parser.add_argument(
+        "--no-spec", action="store_true",
+        help="skip the Specs (volume-spike breakout) scan",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -83,6 +87,13 @@ def main() -> None:
                                            pulse_data=pulse_data, universe=universe, progress=False)
             output.write(rv, args.out, name=f"{market_key}_reversal")
             print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
+
+        # 3) Specs / volume-spike breakout scan -> <market>_spec.json
+        if not args.no_spec:
+            sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
+                                       pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(sp, args.out, name=f"{market_key}_spec")
+            print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     import json as _json

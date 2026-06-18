@@ -116,10 +116,10 @@
 
   // ------------------------------------------------------- EMA / SMA legend
   function renderLegend(d) {
-    const reversal = d.setup_type === "reversal";
-    const periods = reversal ? (d.sma_periods || []) : (d.ema_periods || []);
-    const colors = reversal ? SMA_COLOR : EMA_COLOR;
-    const label = reversal ? "SMA" : "EMA";
+    const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec";
+    const periods = smaSetup ? (d.sma_periods || []) : (d.ema_periods || []);
+    const colors = smaSetup ? SMA_COLOR : EMA_COLOR;
+    const label = smaSetup ? "SMA" : "EMA";
     $("#ema-legend").innerHTML = `<span class="legend-tag">${label}</span>` +
       periods.map((p) => `<span class="ema-dot"><i style="background:${colors[p] || "#888"}"></i>${p}</span>`).join("");
   }
@@ -147,7 +147,7 @@
       `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${r.rr_text})</span>` : "";
     const t2r = r.target_2r
-      ? `<span class="chip info">${r.setup_type === "reversal" ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
+      ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
     const sector = r.sector ? `<span class="badge sector">${r.sector}</span>` : "";
     const seccount = (r.sector && r.sector_count > 1)
@@ -158,7 +158,7 @@
     const rrCls = r.low_rr ? "red" : "green";
     const starred = isStarred(r.symbol);
 
-    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode === "reversal" ? "&mode=reversal" : ""}`;
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
      <div class="row">
       <div class="row-grade">${r.grade}</div>
@@ -203,7 +203,8 @@
   }
 
   function detailHtml(r) {
-    if ((r.detail || {}).setup_type === "reversal") return detailHtmlReversal(r);
+    const st = (r.detail || {}).setup_type;
+    if (st === "reversal" || st === "spec") return detailHtmlReversal(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>
@@ -353,7 +354,9 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "reversal" ? `data/${market}_reversal.json` : `data/${market}.json`;
+    mode === "reversal" ? `data/${market}_reversal.json`
+      : mode === "spec" ? `data/${market}_spec.json`
+        : `data/${market}.json`;
 
   async function load() {
     const { market, mode } = state;

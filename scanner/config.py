@@ -130,6 +130,32 @@ REV_STOP_LOOKBACK = 12         # recent swing low for the stop
 REV_MIN_HISTORY = 230          # need warm-up for SMA200 + base lookbacks
 
 # ---------------------------------------------------------------------------
+# SPECS scanner — speculative volume-spike breakouts from a base (ASX-style).
+# The setup Vivek circled: a beaten-down/basing small-cap that suddenly trades
+# on a big VOLUME SPIKE and breaks out of its base while the short SMAs turn up.
+# Volume spike + base + breakout are MANDATORY gates; the grade then reflects
+# how strong the spike and breakout are. Reuses the SMA 9/26/43/200 + RSI 14.
+# ---------------------------------------------------------------------------
+SPEC_SMAS = [9, 26, 43, 200]
+SPEC_VOL_LOOKBACK = 20         # Vol-20 average baseline
+SPEC_VOL_RECENT = 5           # the spike must have happened within this many bars
+SPEC_VOL_SPIKE = 3.0          # mandatory: a recent day >= 3x the 20-day avg volume
+SPEC_OFF_HIGH = 0.40          # mandatory base: >=40% below the 1-year high (room to run)
+SPEC_BASE_HIGH_LOOKBACK = 252 # window for the "1-year high"
+SPEC_BELOW200_LOOKBACK = 60   # recently traded below the 200 SMA => beaten down
+SPEC_BREAKOUT_BASE = (40, 3)  # base = highs from bar -40 to -3; breakout = close above it
+SPEC_NEWHIGH_LONG = 63        # bonus if it's also a fresh ~3-month high
+SPEC_CROSS_LOOKBACK = 12      # fresh 9-over-26 cross within this many bars (bonus)
+SPEC_SLOPE_BARS = 5           # bars used to judge the 9-SMA is curling up
+SPEC_RSI_BAND = (45, 85)      # specs can run hot — wider band than reversals
+SPEC_MAX_EXT = 0.60           # skip if already >60% above the 9-SMA (too late / chased)
+SPEC_STOP_LOOKBACK = 10       # recent swing low for the stop
+SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
+
+SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
+SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
+
+# ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "2y"            # history pulled per ticker (enough warm-up for EMA144)
