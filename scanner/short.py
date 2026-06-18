@@ -70,6 +70,44 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     if not downtrend:
         return None
 
+    # ── HARD GATE 1: sustained downtrend ────────────────────────────────────
+    # Price must have been below EMA 144 for at least SHORT_DOWNTREND_BARS bars.
+    # Stocks that just briefly dipped below EMA 144 are often basing, not shorting.
+    n = config.SHORT_DOWNTREND_BARS
+    below_144 = (df["Close"].iloc[-n:].values < emas[144].iloc[-n:].values).sum()
+    if below_144 < int(n * 0.75):
+        return None
+
+    # EMA 8 must also have been below EMA 21 for minimum bars (confirmed bear stack).
+    align_n = config.SHORT_EMA_ALIGN_BARS
+    e8_below_e21 = (emas[8].iloc[-align_n:].values < emas[21].iloc[-align_n:].values).sum()
+    if e8_below_e21 < int(align_n * 0.75):
+        return None
+
+    # ── HARD GATE 2: no ascending swing lows (basing pattern) ───────────────
+    # If the last 3 pivot lows are stepping UP, the stock is accumulating — not a short.
+    recent_lows = pivot_lows(df.iloc[-60:], 3)
+    if len(recent_lows) >= 3:
+        last3 = recent_lows.iloc[-3:].values
+        if last3[2] > last3[1] > last3[0]:   # higher lows = base forming = skip
+            return None
+
+    # ── HARD GATE 3: weak bounce volume ─────────────────────────────────────
+    # The recent rally to the EMA should be on LIGHTER volume than the prior selloff.
+    # Strong buying volume on the bounce = buyers absorbing supply = skip.
+    window = config.SHORT_BOUNCE_VOL_WINDOW
+    recent = df.iloc[-window:]
+    closes = recent["Close"].values
+    vols = recent["Volume"].values
+    diff = np.diff(closes, prepend=closes[0])
+    up_mask = diff > 0
+    down_mask = diff <= 0
+    up_vol = vols[up_mask].mean() if up_mask.sum() > 0 else 0.0
+    down_vol = vols[down_mask].mean() if down_mask.sum() > 0 else 0.0
+    if up_vol > 0 and down_vol > 0 and up_vol >= down_vol * 0.9:
+        # bounce volume is comparable to or greater than selloff volume — buyers present
+        return None
+
     # 1) Full bearish alignment: each EMA below the next (8 < 13 < 21 < ... < 144)
     bearish_alignment = all(vals[i] < vals[i + 1] for i in range(len(vals) - 1))
 

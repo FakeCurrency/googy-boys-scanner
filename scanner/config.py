@@ -174,6 +174,11 @@ SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
+# Short scanner quality gates (hard filters — fail any one = skip the stock)
+SHORT_DOWNTREND_BARS = 15     # price must have been below EMA 144 for this many bars (no recent dips)
+SHORT_EMA_ALIGN_BARS = 10     # EMA 8 must have been below EMA 21 for this many bars
+SHORT_BOUNCE_VOL_WINDOW = 8   # bars to compare up-day vs down-day volume on the bounce
+
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
                               # disabled for crypto, where per-coin price is meaningless)
 
