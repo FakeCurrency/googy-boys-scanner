@@ -127,8 +127,11 @@ def main() -> None:
             j = journal.update_market(market_key, j)
         journal._save(j)
         s = journal.summarize(j)
-        print(f"  journal: {s['open']} open | {s['closed']} closed | "
-              f"win {s['win_rate']}% | realised {s['total_r']:+.1f}R")
+        sl, ss = s["longs"], s["shorts"]
+        print(f"  journal longs:  {sl['open']} open | {sl['closed']} closed | "
+              f"win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
+        print(f"  journal shorts: {ss['open']} open | {ss['closed']} closed | "
+              f"win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
 
     if args.alert:
         from . import alerts
