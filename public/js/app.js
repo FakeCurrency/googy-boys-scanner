@@ -168,7 +168,17 @@
     const rrCls = r.low_rr ? "red" : "green";
     const starred = isStarred(r.symbol);
 
-    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
+    const SCALP_TV = {
+      GOLD:"TVC:GOLD", SILVER:"TVC:SILVER", OIL:"TVC:USOIL", BRENT:"TVC:UKOIL",
+      NATGAS:"TVC:NATURALGAS", WHEAT:"TVC:WHEAT", COFFEE:"TVC:COFFEE", COPPER:"TVC:COPPER",
+    };
+    const chartHref = (state.mode === "scalp")
+      ? `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(
+          r.asset_type === "asx"    ? `ASX:${r.symbol}`  :
+          r.asset_type === "nasdaq" ? r.symbol            :
+          SCALP_TV[r.symbol]        || r.symbol
+        )}`
+      : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
      <div class="row">
       <div class="row-grade">${r.grade}</div>
