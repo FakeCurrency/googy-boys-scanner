@@ -351,6 +351,120 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     }
 
 
+_SCALP_TV_SYMBOLS = {
+    "GOLD": "TVC:GOLD", "SILVER": "TVC:SILVER", "OIL": "TVC:USOIL",
+    "BRENT": "TVC:UKOIL", "NATGAS": "TVC:NATURALGAS",
+    "WHEAT": "TVC:WHEAT", "COFFEE": "TVC:COFFEE", "COPPER": "TVC:COPPER",
+}
+
+
+def build_chart_data(
+    df: pd.DataFrame, sig: dict, lv: dict,
+    info: dict, points: int, grade: str, chips: list[str],
+) -> dict:
+    """1h candlestick + BB/KC/EMA overlay JSON for the chart page."""
+    if getattr(df.index, "tz", None) is not None:
+        df = df.copy()
+        df.index = df.index.tz_localize(None)
+
+    close    = df["Close"]
+    sigs     = _squeeze_signals(df)
+    bb_mid   = sigs["bb_mid"]
+    bb_std   = close.rolling(SQ_PERIOD).std(ddof=0)
+    bb_upper = bb_mid + SQ_BB_MULT * bb_std
+    bb_lower = bb_mid - SQ_BB_MULT * bb_std
+    kc_range = atr(df, SQ_PERIOD) * SQ_KC_MULT
+    kc_upper = bb_mid + kc_range
+    kc_lower = bb_mid - kc_range
+    ema9     = close.ewm(span=9,  adjust=False).mean()
+    ema21    = close.ewm(span=21, adjust=False).mean()
+
+    n = min(120, len(df))
+
+    def _ts(idx_val) -> int:
+        """UTC Unix timestamp (seconds) from tz-naive pandas Timestamp."""
+        return int(pd.Timestamp(idx_val).value // 1_000_000_000)
+
+    candles, volume = [], []
+    for i in range(-n, 0):
+        bar = df.iloc[i]
+        ts  = _ts(df.index[i])
+        o, h, l, c, v = (float(bar["Open"]), float(bar["High"]), float(bar["Low"]),
+                         float(bar["Close"]), float(bar["Volume"]))
+        candles.append({"time": ts, "open": round(o, 8), "high": round(h, 8),
+                        "low": round(l, 8), "close": round(c, 8)})
+        volume.append({"time": ts, "value": int(v),
+                       "color": "rgba(47,208,127,0.5)" if c >= o else "rgba(255,91,91,0.5)"})
+
+    def _line(series: pd.Series, color: str, name: str) -> dict:
+        data = [{"time": _ts(df.index[i]), "value": round(float(series.iloc[i]), 8)}
+                for i in range(-n, 0) if np.isfinite(float(series.iloc[i]))]
+        return {"name": name, "color": color, "data": data}
+
+    symbol     = info.get("symbol", "")
+    asset_type = info.get("type", "")
+    direction  = sig["direction"]
+    cur        = "A$" if asset_type == "asx" else "$"
+
+    if asset_type == "asx":
+        tv_sym = f"ASX:{symbol}"
+    elif asset_type == "nasdaq":
+        tv_sym = symbol
+    else:
+        tv_sym = _SCALP_TV_SYMBOLS.get(symbol, symbol)
+
+    risk_pct = round(abs(lv["entry"] - lv["stop"]) / lv["entry"] * 100, 1) if lv["entry"] else 0.0
+
+    level_lines = [
+        {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
+        {"price": lv["entry"],  "color": "#f0a500", "title": "ENTRY"},
+        {"price": lv["stop"],   "color": "#ff5b5b", "title": "STOP"},
+    ]
+    if direction == "long" and sig.get("nearest_support") is not None:
+        level_lines.append({"price": sig["nearest_support"],    "color": "#4477cc", "title": "SUPPORT"})
+    elif direction == "short" and sig.get("nearest_resistance") is not None:
+        level_lines.append({"price": sig["nearest_resistance"], "color": "#cc7700", "title": "RESIST"})
+
+    return {
+        "symbol":          symbol,
+        "name":            info.get("name", symbol),
+        "price":           lv["entry"],
+        "grade":           grade,
+        "score":           points,
+        "score_max":       SCALP_SCORE_MAX,
+        "chips":           chips,
+        "sector":          info.get("sector", ""),
+        "currency_symbol": cur,
+        "tv_symbol":       tv_sym,
+        "rr":              lv["rr"],
+        "low_rr":          lv["rr"] < 1.5,
+        "rr_text":         f"{lv['rr']:.1f}:1",
+        "risk_pct":        risk_pct,
+        "entry":           lv["entry"],
+        "stop":            lv["stop"],
+        "target":          lv["target"],
+        "dir":             direction.upper(),
+        "analysis":        narrative(symbol, sig, lv, asset_type, cur),
+        "default_tf":      "1H",
+        "level_lines":     level_lines,
+        "timeframes": {
+            "1H": {
+                "candles": candles,
+                "volume":  volume,
+                "lines": [
+                    _line(bb_upper, "#4477cc", "BB Upper"),
+                    _line(bb_mid,   "#888888", "BB Mid"),
+                    _line(bb_lower, "#4477cc", "BB Lower"),
+                    _line(kc_upper, "#cc7700", "KC Upper"),
+                    _line(kc_lower, "#cc7700", "KC Lower"),
+                    _line(ema9,     "#ffd23f", "EMA 9"),
+                    _line(ema21,    "#2fd07f", "EMA 21"),
+                ],
+            }
+        },
+    }
+
+
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     points = 0
     fired: list[str] = []

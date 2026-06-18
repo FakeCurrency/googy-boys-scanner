@@ -7,8 +7,8 @@
   "use strict";
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
-  const TF_LABEL = { "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
-  const TF_ORDER = ["1D", "3D", "1W", "1M", "3M"];
+  const TF_LABEL = { "1H": "1H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
+  const TF_ORDER = ["1H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
   const market = (params.get("m") || "asx").toLowerCase();

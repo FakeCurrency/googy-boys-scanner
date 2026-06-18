@@ -519,8 +519,12 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
     }
 
 
-def scan_scalp(progress: bool = True) -> dict:
+def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
     """Cross-asset intraday scalp scan on 1h bars (commodities + ASX + NASDAQ)."""
+    import json as _json
+    import pathlib as _pathlib
+    import shutil as _shutil
+
     universe = load_scalp_universe()
     tickers  = [u["yf"] for u in universe]
     meta     = {u["yf"]: u for u in universe}
@@ -528,6 +532,12 @@ def scan_scalp(progress: bool = True) -> dict:
     if progress:
         print(f"  downloading {len(tickers)} scalp tickers (1h) ...", flush=True)
     frames = download(tickers, period="60d", interval="1h", chunk=30)
+
+    if out_root:
+        chart_dir = _pathlib.Path(out_root) / "charts" / "scalp"
+        if chart_dir.exists():
+            _shutil.rmtree(chart_dir, ignore_errors=True)
+        chart_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
     scanned = 0
@@ -595,6 +605,16 @@ def scan_scalp(progress: bool = True) -> dict:
                 "analysis":    scalp.narrative(
                     info.get("symbol", yf_ticker), sig, lv, asset_type, cur),
             })
+
+            if out_root:
+                chips = scalp.build_chips(fired, sig)
+                cd = scalp.build_chart_data(df, sig, lv, info, points, grade, chips)
+                chart_name = f"{info.get('symbol', yf_ticker)}_{direction}"
+                try:
+                    (chart_dir / f"{chart_name}.json").write_text(
+                        _json.dumps(cd), encoding="utf-8")
+                except OSError:
+                    pass
 
     results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
 

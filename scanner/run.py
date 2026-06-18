@@ -114,7 +114,7 @@ def main() -> None:
     if not args.no_scalp:
         import json as _json2
         print("Scanning SCALP (1h intraday) ...", flush=True)
-        sc = scan.scan_scalp()
+        sc = scan.scan_scalp(out_root=args.out)
         (pathlib.Path(args.out) / "scalp.json").write_text(
             _json2.dumps(sc, indent=2), encoding="utf-8")
         tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
