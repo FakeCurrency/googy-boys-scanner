@@ -223,9 +223,59 @@
     </div>`;
   }
 
+  function detailHtmlScalp(r) {
+    const d   = r.detail || {};
+    const cur = r.asset_type === "asx" ? "A$" : "$";
+    const lvl = (label, val, pct, cls) => val == null ? "" :
+      `<div class="dl-row"><span class="dl-label ${cls || ""}">${label}</span>
+        <span class="dl-val">${cur}${num(val)}</span>
+        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+    const band = (label, val) => val == null ? "" :
+      `<div class="fl-row"><span class="fl-label">${label}</span><span class="fl-val">${cur}${num(val)}</span></div>`;
+    const sqCls  = d.sq_state === "FIRED" ? "green" : d.sq_state === "BUILDING" ? "accent-orange" : "muted";
+    const momAbs = Math.abs(d.mom_val || 0);
+    const momDir = (d.mom_val || 0) >= 0 ? "▲" : "▼";
+    const momCls = (d.mom_val || 0) >= 0 ? "green" : "pct-down";
+    return `<div class="row-detail">
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-levels">
+        ${lvl("SWING LOW",   d.swing_low,          d.swing_low_pct,  "red")}
+        ${lvl("SUPPORT",     d.nearest_support,    d.support_pct,    "red")}
+        ${lvl("RESISTANCE",  d.nearest_resistance, d.resistance_pct, "green")}
+        ${lvl("SWING HIGH",  d.swing_high,         d.swing_high_pct, "green")}
+      </div>
+      <div class="rd-trail">
+        <span class="rd-trail-label">TRAILING STOP</span>
+        <span class="rd-trail-val">${cur}${num(r.stop)}</span>
+        <span class="rd-trail-note">1.5× ATR(14) from entry</span>
+      </div>
+      <div class="rd-ema">
+        <div class="rd-ema-head">
+          <span class="rd-k">TTM SQUEEZE</span>
+          <span class="${sqCls}">${d.sq_state || "—"}</span>
+          <span class="rd-spread ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span>
+        </div>
+        <div class="rd-fast">
+          ${band("BB UPPER", d.bb_upper)}
+          ${band("BB MID",   d.bb_mid)}
+          ${band("BB LOWER", d.bb_lower)}
+          ${band("KC UPPER", d.kc_upper)}
+          ${band("KC LOWER", d.kc_lower)}
+          ${band("ATR (14)", d.atr)}
+        </div>
+      </div>
+      <div class="rd-volume">
+        <span class="rd-k">VOLUME</span>
+        <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
+        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg (1h bar)</span>
+      </div>
+    </div>`;
+  }
+
   function detailHtml(r) {
     const stype = (r.detail || {}).setup_type;
     if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
+    if (stype === "scalp") return detailHtmlScalp(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>

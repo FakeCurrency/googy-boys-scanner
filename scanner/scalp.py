@@ -246,6 +246,72 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     }
 
 
+def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
+    """Build the detail dropdown payload for the scalp card."""
+    if getattr(df.index, "tz", None) is not None:
+        df = df.copy()
+        df.index = df.index.tz_localize(None)
+
+    close = df["Close"]
+    last  = sig["close"]
+
+    def pct_from(price: float) -> float:
+        return round((price - last) / last * 100, 2) if last else 0.0
+
+    # BB and KC band values
+    sigs     = _squeeze_signals(df)
+    bb_mid   = float(sigs["bb_mid"].iloc[-1])
+    bb_std   = float(close.rolling(SQ_PERIOD).std(ddof=0).iloc[-1])
+    bb_upper = bb_mid + SQ_BB_MULT * bb_std
+    bb_lower = bb_mid - SQ_BB_MULT * bb_std
+    kc_range = float((atr(df, SQ_PERIOD) * SQ_KC_MULT).iloc[-1])
+    kc_upper = bb_mid + kc_range
+    kc_lower = bb_mid - kc_range
+
+    # Volume
+    vol       = float(df["Volume"].iloc[-1])
+    avg_vol   = float(df["Volume"].iloc[-21:-1].mean())
+    vol_ratio = round(vol / avg_vol, 2) if avg_vol > 0 else 0.0
+
+    # Swing high/low over the same pivot window
+    swing_high = float(df["High"].iloc[-PIVOT_LOOKBACK:].max())
+    swing_low  = float(df["Low"].iloc[-PIVOT_LOOKBACK:].min())
+
+    if sig.get("squeeze_fired"):
+        sq_state = "FIRED"
+    elif sig.get("sq_on"):
+        sq_state = "BUILDING"
+    else:
+        sq_state = "RELEASED"
+
+    sup = sig.get("nearest_support")
+    res = sig.get("nearest_resistance")
+
+    return {
+        "setup_type":         "scalp",
+        "sq_state":           sq_state,
+        "mom_val":            sig.get("mom_val", 0.0),
+        "nearest_support":    sup,
+        "support_pct":        pct_from(sup) if sup is not None else None,
+        "nearest_resistance": res,
+        "resistance_pct":     pct_from(res) if res is not None else None,
+        "bb_upper":           round(bb_upper, 6),
+        "bb_mid":             round(bb_mid,   6),
+        "bb_lower":           round(bb_lower, 6),
+        "kc_upper":           round(kc_upper, 6),
+        "kc_lower":           round(kc_lower, 6),
+        "atr":                lv.get("atr", 0.0),
+        "swing_high":         round(swing_high, 6),
+        "swing_high_pct":     pct_from(swing_high),
+        "swing_low":          round(swing_low,  6),
+        "swing_low_pct":      pct_from(swing_low),
+        "volume_ratio":       vol_ratio,
+        "volume_expanding":   sig.get("volume", False),
+        "volume_today":       int(vol),
+        "volume_avg":         int(avg_vol),
+    }
+
+
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     points = 0
     fired: list[str] = []

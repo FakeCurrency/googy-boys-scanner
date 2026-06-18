@@ -591,7 +591,7 @@ def scan_scalp(progress: bool = True) -> dict:
                 "spark":       spark,
                 "trend":       "green" if points >= 8 else "blue",
                 "turnover":    0,
-                "detail":      [],
+                "detail":      scalp.build_detail(df, sig, lv),
                 "analysis":    scalp.narrative(
                     info.get("symbol", yf_ticker), sig, lv, asset_type, cur),
             })
