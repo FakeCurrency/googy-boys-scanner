@@ -185,6 +185,16 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# SCALP — intraday scanner (1h bars, cross-asset)
+# ---------------------------------------------------------------------------
+SCALP_BROKERAGE_EACH_WAY = 20   # per-leg brokerage (CFD style)
+SCALP_POSITION_SIZE = 1_000     # margin per trade
+SCALP_LEVERAGE = 10             # indicative CFD leverage (for display only)
+SCALP_MAX_TRADES_PER_DAY = 5    # max A-grade alerts shown per scan
+SCALP_STARTING_CAPITAL = 20_000 # starting account size (for display)
+SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
+
+# ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "2y"            # history pulled per ticker (enough warm-up for EMA144)

@@ -19,10 +19,11 @@
 
   const state = {
     market: "asx",
-    mode: "pullback",  // pullback | reversal | spec | short
-    view: "results",   // results | watch
-    tab: "aplus",      // aplus | a | watch
-    sort: "score",     // score | price | rr | az
+    mode: "pullback",   // pullback | reversal | spec | short | scalp
+    view: "results",    // results | watch
+    tab: "aplus",       // aplus | a | watch
+    sort: "score",      // score | price | rr | az
+    scalp_type: "all",  // all | commodity | asx | nasdaq
     data: null,
     cache: {},
     cur: "$",
@@ -154,6 +155,8 @@
     const sector = r.sector ? `<span class="badge sector">${r.sector}</span>` : "";
     const seccount = (r.sector && r.sector_count > 1)
       ? `<span class="badge seccount">${r.sector.toUpperCase()} ×${r.sector_count}</span>` : "";
+    const assetBadge = r.asset_type
+      ? `<span class="badge asset-${r.asset_type}">${r.asset_type.toUpperCase()}</span>` : "";
     const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
     const p2 = r.p2_pct == null ? "—" : `${r.p2_pct}%`;
     const rrStar = r.target_2r ? "*" : "";
@@ -168,6 +171,7 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${r.symbol}</a>
           <span class="badge dir">${r.dir}</span>
+          ${assetBadge}
           <span class="cname">${r.name || ""}</span>
           ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
@@ -317,6 +321,10 @@
     } else {
       list = all.filter((r) => r.grade === "B" || r.grade === "C");
     }
+    // Scalp: filter by asset type
+    if (state.mode === "scalp" && state.scalp_type && state.scalp_type !== "all") {
+      list = list.filter((r) => r.asset_type === state.scalp_type);
+    }
     const s = state.sort;
     list = list.slice();
     if (s === "price") list.sort((a, b) => b.price - a.price);
@@ -356,9 +364,10 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "reversal" ? `data/${market}_reversal.json`
-      : mode === "spec" ? `data/${market}_spec.json`
-      : mode === "short" ? `data/${market}_short.json`
+    mode === "scalp"    ? `data/scalp.json`
+      : mode === "reversal" ? `data/${market}_reversal.json`
+      : mode === "spec"     ? `data/${market}_spec.json`
+      : mode === "short"    ? `data/${market}_short.json`
       : `data/${market}.json`;
 
   async function load() {
@@ -439,7 +448,21 @@
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
       state.mode = b.dataset.mode;
+      // Show/hide scalp banner + hide market switch in scalp mode
+      const isScalp = state.mode === "scalp";
+      const scalp_banner = $("#scalp-banner");
+      if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
+      document.querySelectorAll(".market-btn").forEach((mb) => {
+        mb.closest(".market-switch") && (mb.closest(".market-switch").style.opacity = isScalp ? "0.35" : "");
+      });
       load();
+    }));
+
+    // Scalp asset-type filter
+    document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll("[data-scalp-type]").forEach((x) => x.classList.toggle("is-active", x === b));
+      state.scalp_type = b.dataset.scalpType || b.dataset.scalp_type || b.getAttribute("data-scalp-type") || "all";
+      render();
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {

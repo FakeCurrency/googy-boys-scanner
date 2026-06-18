@@ -52,6 +52,10 @@ def main() -> None:
         help="skip the Shorts (bearish pullback) scan",
     )
     parser.add_argument(
+        "--no-scalp", action="store_true",
+        help="skip the intraday scalp scan",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -105,6 +109,17 @@ def main() -> None:
                                         pulse_data=pulse_data, universe=universe, progress=False)
             output.write(sh, args.out, name=f"{market_key}_short")
             print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+
+    # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
+    if not args.no_scalp:
+        import json as _json2
+        print("Scanning SCALP (1h intraday) ...", flush=True)
+        sc = scan.scan_scalp()
+        (pathlib.Path(args.out) / "scalp.json").write_text(
+            _json2.dumps(sc, indent=2), encoding="utf-8")
+        tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
+        print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
+              f"across {sc['scanned']} instruments")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     import json as _json

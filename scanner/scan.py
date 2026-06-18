@@ -4,9 +4,9 @@ import datetime as dt
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import analysis, charts, config, levels, pulse, reversal, short, signals, spec
+from . import analysis, charts, config, levels, pulse, reversal, scalp, short, signals, spec
 from .data import download
-from .universe import load_universe
+from .universe import load_scalp_universe, load_universe
 
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
 
@@ -503,6 +503,7 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         "market": market.key,
         "label": market.label,
         "setup_type": "short",
+
         "currency": market.currency,
         "currency_symbol": market.currency_symbol,
         "timezone": market.timezone,
@@ -515,4 +516,106 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         "pulse": pulse_data,
         "sector_counts": dict(sector_counts.most_common()),
         "results": results,
+    }
+
+
+def scan_scalp(progress: bool = True) -> dict:
+    """Cross-asset intraday scalp scan on 1h bars (commodities + ASX + NASDAQ)."""
+    universe = load_scalp_universe()
+    tickers  = [u["yf"] for u in universe]
+    meta     = {u["yf"]: u for u in universe}
+
+    if progress:
+        print(f"  downloading {len(tickers)} scalp tickers (1h) ...", flush=True)
+    frames = download(tickers, period="60d", interval="1h", chunk=30)
+
+    results: list[dict] = []
+    scanned = 0
+    for yf_ticker, df in frames.items():
+        scanned += 1
+        info = meta.get(yf_ticker, {})
+        asset_type = info.get("type", "")
+
+        for direction in ("long", "short"):
+            sig = scalp.evaluate(df, direction=direction)
+            if sig is None:
+                continue
+            points, grade, fired = scalp.score_and_grade(sig)
+            if grade is None:
+                continue
+            lv = scalp.compute_levels(df, sig)
+            if lv["rr"] <= 0:
+                continue
+
+            entry = lv["entry"]
+            if direction == "long":
+                stop_pct = round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0
+                p2_pct   = round((lv["target"] - entry) / entry * 100, 1) if entry else None
+            else:
+                stop_pct = round((lv["stop"] - entry) / entry * 100, 1) if entry else 0.0
+                p2_pct   = round((entry - lv["target"]) / entry * 100, 1) if entry else None
+
+            cur = "$" if asset_type != "asx" else "A$"
+            close = sig["close"]
+            spark = [round(float(c), 8) for c in df["Close"].iloc[-30:].tolist()]
+
+            results.append({
+                "symbol":      info.get("symbol", yf_ticker),
+                "name":        info.get("name", yf_ticker),
+                "sector":      info.get("sector", ""),
+                "asset_type":  asset_type,
+                "dir":         direction.upper(),
+                "grade":       grade,
+                "score":       points,
+                "score_max":   scalp.SCALP_SCORE_MAX,
+                "chips":       scalp.build_chips(fired, sig),
+                "weekly":      sig.get("4h_confirm", False),
+                "low_rr":      lv["rr"] < 1.5,
+                "rr_text":     f"{lv['rr']:.1f}:1",
+                "target_2r":   False,
+                "liquidity":   "LIQUID",
+                "price":       round(close, 8),
+                "y_close":     round(close, 8),
+                "open":        round(close, 8),
+                "open_pct":    0.0,
+                "current_pct": 0.0,
+                "day_pct":     0.0,
+                "entry":       entry,
+                "stop":        lv["stop"],
+                "target":      lv["target"],
+                "rr":          lv["rr"],
+                "trail":       lv["stop"],
+                "stop_pct":    stop_pct,
+                "p2_pct":      p2_pct,
+                "target_basis": "atr",
+                "spark":       spark,
+                "trend":       "green" if points >= 8 else "blue",
+                "turnover":    0,
+                "detail":      [],
+                "analysis":    scalp.narrative(
+                    info.get("symbol", yf_ticker), sig, lv, asset_type, cur),
+            })
+
+    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+
+    now = dt.datetime.now(dt.timezone.utc)
+    return {
+        "market":         "scalp",
+        "label":          "SCALP",
+        "setup_type":     "scalp",
+        "currency":       "USD",
+        "currency_symbol": "$",
+        "timezone":       "UTC",
+        "tz_label":       "UTC",
+        "generated_at":   now.isoformat(timespec="seconds"),
+        "timeframe":      "1h",
+        "scanned":        scanned,
+        "universe_size":  len(universe),
+        "score_max":      scalp.SCALP_SCORE_MAX,
+        "brokerage":      config.SCALP_BROKERAGE_EACH_WAY,
+        "position_size":  config.SCALP_POSITION_SIZE,
+        "leverage":       config.SCALP_LEVERAGE,
+        "max_daily_trades": config.SCALP_MAX_TRADES_PER_DAY,
+        "pulse":          [],
+        "results":        results,
     }
