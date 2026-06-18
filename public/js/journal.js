@@ -21,6 +21,9 @@
     const totalPnl = s.total_pnl ?? null;
     const unrPnl = s.open_unrealised_pnl ?? null;
     const posSize = s.position_size ? `$${s.position_size.toLocaleString()} / trade` : "";
+    const kelly = s.kelly_pct != null
+      ? statCard("½-Kelly size", `${s.kelly_pct}% of acct`, s.kelly_pct > 0 ? "accent-green" : "")
+      : statCard("½-Kelly size", "Need 20+ trades", "");
     $("#jr-stats").innerHTML = [
       statCard("Open", s.open),
       statCard("Closed", s.closed),
@@ -29,6 +32,7 @@
       totalPnl != null ? statCard("Realised $", pnlfmt(totalPnl), pnlcls(totalPnl)) : "",
       unrPnl != null ? statCard("Unrealised $", pnlfmt(unrPnl), pnlcls(unrPnl)) : "",
       posSize ? statCard("Position size", posSize) : "",
+      kelly,
     ].join("");
   }
 

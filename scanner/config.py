@@ -22,8 +22,10 @@ POINTS = {
     "compression": 2,   # EMAs bunched tightly
     "weekly": 1,        # higher-timeframe (weekly) uptrend confirmation
     "volume": 1,        # volume expansion vs recent average
+    "adx": 1,           # ADX > threshold — market is actually trending, not ranging
+    "rsi_pullback": 1,  # RSI(21) in 38–62 zone — healthy dip, not washed out
 }
-SCORE_MAX = sum(POINTS.values())   # 13
+SCORE_MAX = sum(POINTS.values())   # 15
 
 # Grade cut-offs on total points (checked high -> low). Max possible = 13.
 GRADE_CUTOFFS = [
@@ -63,6 +65,15 @@ VOLUME_MULT = 1.4              # latest volume >= 1.4x its recent average
 VOLUME_LOOKBACK = 20
 LIQUIDITY_LOOKBACK = 20        # bars used for the average-turnover liquidity test
 
+# ADX — trend-strength chip
+ADX_PERIOD = 14
+ADX_TREND_MIN = 25             # ADX above this = trending (chip fires)
+
+# RSI(21) pullback quality chip
+RSI_PERIOD = 21                # Fibonacci period — more stable than 14 on daily bars
+RSI_PULLBACK_LOW = 38          # RSI must be above this (not washed out / capitulation)
+RSI_PULLBACK_HIGH = 62         # RSI must be below this (still has room to run)
+
 # ---------------------------------------------------------------------------
 # Entry / stop / target levels
 # ---------------------------------------------------------------------------
@@ -91,6 +102,7 @@ BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
 # (key, label, yfinance ticker, divide_by, decimals)
 # ---------------------------------------------------------------------------
 PULSE = [
+    ("ASX200",  "ASX 200",  "^AXJO",     1,  0),
     ("GOLD",    "Gold",     "GC=F",      1,  0),
     ("SILVER",  "Silver",   "SI=F",      1,  2),
     ("BRENT",   "Brent",    "BZ=F",      1,  2),
@@ -100,6 +112,8 @@ PULSE = [
     ("BIOTECH", "Biotech",  "XBI",       1,  2),
     ("YIELDS",  "10Y",      "^TNX",      1,  3),
     ("AUD",     "AUD/USD",  "AUDUSD=X",  1,  4),
+    ("VIX",     "VIX",      "^VIX",      1,  2),
+    ("USD",     "USD Idx",  "DX-Y.NYB",  1,  2),
 ]
 
 # ---------------------------------------------------------------------------

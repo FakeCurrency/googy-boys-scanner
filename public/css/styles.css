@@ -119,6 +119,8 @@ body {
 }
 .scan-btn.is-active { background: var(--orange); color: #fff; box-shadow: var(--shadow-pill); }
 .scan-btn:not(.is-active):hover { color: var(--text-2); }
+.scan-btn-short.is-active { background: var(--red); }
+.scan-btn-short:not(.is-active) { color: var(--red); }
 
 .howto-link {
   margin-left: 0; color: var(--blue); text-decoration: none; font-size: 15px; font-weight: 500;
@@ -349,4 +351,11 @@ body {
   .row { grid-template-columns: 40px 1fr; padding: 13px; }
   .row-prices { grid-template-columns: repeat(2,1fr); gap: 10px; }
   .cname { max-width: 120px; }
+  /* hide less-essential columns on small screens */
+  .scan-switch { order: 4; width: 100%; overflow-x: auto; }
+  .topbar { gap: 8px; }
+  .howto-link { font-size: 13px; }
+  /* Stack the trade row so numbers don't overflow */
+  .row-trade { flex-wrap: wrap; gap: 12px; }
+  .t-score { margin-left: auto; }
 }

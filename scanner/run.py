@@ -48,6 +48,10 @@ def main() -> None:
         help="skip the Specs (volume-spike breakout) scan",
     )
     parser.add_argument(
+        "--no-short", action="store_true",
+        help="skip the Shorts (bearish pullback) scan",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -94,6 +98,13 @@ def main() -> None:
                                        pulse_data=pulse_data, universe=universe, progress=False)
             output.write(sp, args.out, name=f"{market_key}_spec")
             print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
+
+        # 4) Shorts / bearish pullback scan -> <market>_short.json
+        if not args.no_short:
+            sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
+                                        pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(sh, args.out, name=f"{market_key}_short")
+            print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     import json as _json

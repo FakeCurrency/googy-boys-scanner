@@ -19,7 +19,7 @@
 
   const state = {
     market: "asx",
-    mode: "pullback",  // pullback | reversal
+    mode: "pullback",  // pullback | reversal | spec | short
     view: "results",   // results | watch
     tab: "aplus",      // aplus | a | watch
     sort: "score",     // score | price | rr | az
@@ -356,7 +356,8 @@
   const dataFile = (market, mode) =>
     mode === "reversal" ? `data/${market}_reversal.json`
       : mode === "spec" ? `data/${market}_spec.json`
-        : `data/${market}.json`;
+      : mode === "short" ? `data/${market}_short.json`
+      : `data/${market}.json`;
 
   async function load() {
     const { market, mode } = state;

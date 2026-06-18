@@ -37,6 +37,22 @@ def _load() -> dict:
     return {"open": [], "closed": []}
 
 
+def _kelly(rs: np.ndarray) -> float | None:
+    """Half-Kelly position size as % of account. Returns None if < 20 closed trades."""
+    if len(rs) < 20:
+        return None
+    wins = rs[rs > 0]
+    losses = rs[rs < 0]
+    if not len(wins) or not len(losses):
+        return None
+    p = len(wins) / len(rs)
+    avg_win = float(wins.mean())
+    avg_loss = float(abs(losses.mean()))
+    b = avg_win / avg_loss
+    full_kelly = (p * b - (1 - p)) / b
+    return round(max(0.0, full_kelly * 0.5) * 100, 1)  # half-Kelly, as %
+
+
 def summarize(j: dict) -> dict:
     closed = j["closed"]
     rs = np.array([c["r"] for c in closed], dtype=float) if closed else np.array([])
@@ -55,6 +71,7 @@ def summarize(j: dict) -> dict:
         "open_unrealised_pnl": round(open_unreal_pnl, 2),
         "position_size": config.POSITION_SIZE_USD,
         "brokerage": config.BROKERAGE_EACH_WAY,
+        "kelly_pct": _kelly(rs),  # half-Kelly % of account (None until 20+ closed trades)
     }
 
 
@@ -160,8 +177,18 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     scan = json.loads(data_file.read_text(encoding="utf-8"))
     scan_date = scan["generated_at"][:10]
 
+    # Also ingest short setups from <market>_short.json if it exists
+    short_file = ROOT / "public" / "data" / f"{market_key}_short.json"
+    short_results = []
+    if short_file.exists():
+        try:
+            short_scan = json.loads(short_file.read_text(encoding="utf-8"))
+            short_results = short_scan.get("results", [])
+        except Exception:
+            pass
+
     # 1) open a paper position for each new A+/A setup
-    open_keys = {(p["market"], p["symbol"]) for p in j["open"]}
+    open_keys = {(p["market"], p["symbol"], p.get("direction", "long")) for p in j["open"]}
     opened_now = 0
     for r in scan["results"]:
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"]) not in open_keys:
@@ -177,7 +204,25 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
                 "brokerage": config.BROKERAGE_EACH_WAY,
                 "size_usd": config.POSITION_SIZE_USD,
             })
-            open_keys.add((market_key, r["symbol"]))
+            open_keys.add((market_key, r["symbol"], "long"))
+            opened_now += 1
+
+    # open short positions from the short scan file
+    for r in short_results:
+        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
+            entry_price = r["price"]
+            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
+            j["open"].append({
+                "market": market_key, "symbol": r["symbol"], "name": r["name"],
+                "grade": r["grade"], "score": r["score"],
+                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "opened": scan_date, "status": "open",
+                "direction": "short",
+                "shares": shares,
+                "brokerage": config.BROKERAGE_EACH_WAY,
+                "size_usd": config.POSITION_SIZE_USD,
+            })
+            open_keys.add((market_key, r["symbol"], "short"))
             opened_now += 1
 
     # 2) walk this market's open positions against fresh prices

@@ -4,7 +4,7 @@ import datetime as dt
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import analysis, charts, config, levels, pulse, reversal, signals, spec
+from . import analysis, charts, config, levels, pulse, reversal, short, signals, spec
 from .data import download
 from .universe import load_universe
 
@@ -157,6 +157,7 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         "generated_at": now.isoformat(timespec="seconds"),
         "scanned": scanned,
         "universe_size": len(universe),
+        "universe_tickers": [u.get("symbol", u.get("yf", "")) for u in universe],
         "score_max": config.SCORE_MAX,
         "ema_periods": config.EMA_PERIODS,
         "pulse": pulse_data,
@@ -398,6 +399,119 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
         "universe_size": len(universe),
         "score_max": config.SPEC_SCORE_MAX,
         "sma_periods": config.SPEC_SMAS,
+        "pulse": pulse_data,
+        "sector_counts": dict(sector_counts.most_common()),
+        "results": results,
+    }
+
+
+def scan_short_market(market_key: str, limit: int | None = None, full: bool = True,
+                      write_charts: bool = False, out_root: str | None = None,
+                      progress: bool = True, frames: dict | None = None,
+                      pulse_data: list | None = None, universe: list | None = None) -> dict:
+    """Scan a market for bearish pullback (short) setups — the Shorts tab."""
+    market = config.MARKETS[market_key]
+    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
+    if universe is None:
+        universe = load_universe(market_key, full=full)
+        if limit:
+            universe = universe[:limit]
+
+    meta = {u["yf"]: u for u in universe}
+    if frames is None:
+        frames = download([u["yf"] for u in universe])
+
+    results: list[dict] = []
+    scanned = 0
+    for yf_ticker, df in frames.items():
+        scanned += 1
+        sig = short.evaluate(df)
+        if sig is None:
+            continue
+
+        turnover = _liquidity(df, market)
+        if turnover < market.liquidity_min:
+            continue
+
+        points, grade, fired = short.score_and_grade(sig)
+        if grade is None:
+            continue
+
+        lv = short.compute_levels(df, sig)
+        if lv["rr"] <= 0:
+            continue
+
+        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
+                and lv["rr"] < config.MIN_TRADEABLE_RR:
+            grade = "B"
+
+        info = meta.get(yf_ticker, {})
+        close = sig["close"]
+        open_ = float(df["Open"].iloc[-1])
+        y_close = float(df["Close"].iloc[-2])
+        entry = lv["entry"]
+
+        row = {
+            "symbol": info.get("symbol", yf_ticker),
+            "name": info.get("name", yf_ticker),
+            "sector": info.get("sector", ""),
+            "dir": "SHORT",
+            "setup_type": "short",
+            "grade": grade,
+            "score": points,
+            "score_max": short.SHORT_SCORE_MAX,
+            "chips": short.build_chips(fired, sig),
+            "weekly": sig["weekly_bearish"],
+            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
+            "rr_text": f"{lv['rr']:.1f}:1",
+            "target_2r": lv["target_basis"] == "measured",
+            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
+            "price": round(close, 8),
+            "y_close": round(y_close, 8),
+            "open": round(open_, 8),
+            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
+            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "entry": entry,
+            "stop": lv["stop"],
+            "target": lv["target"],
+            "rr": lv["rr"],
+            "trail": lv["trail"],
+            "stop_pct": round((lv["stop"] - entry) / entry * 100, 1) if entry else 0.0,
+            "p2_pct": round((entry - lv["target"]) / entry * 100, 1) if entry else None,
+            "target_basis": lv["target_basis"],
+            "spark": _spark(df),
+            "trend": "green" if points >= 10 else "blue",
+            "turnover": round(turnover),
+            "detail": [],
+            "analysis": short.narrative(info.get("symbol", yf_ticker), sig, lv,
+                                        market.currency_symbol),
+        }
+        results.append(row)
+
+    sector_counts = Counter(r["sector"] for r in results if r["sector"])
+    for r in results:
+        r["sector_count"] = sector_counts.get(r["sector"], 0)
+
+    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+
+    if pulse_data is None:
+        pulse_data = pulse.fetch()
+
+    now = dt.datetime.now(ZoneInfo(market.timezone))
+    return {
+        "market": market.key,
+        "label": market.label,
+        "setup_type": "short",
+        "currency": market.currency,
+        "currency_symbol": market.currency_symbol,
+        "timezone": market.timezone,
+        "tz_label": market.tz_label,
+        "generated_at": now.isoformat(timespec="seconds"),
+        "scanned": scanned,
+        "universe_size": len(universe),
+        "score_max": short.SHORT_SCORE_MAX,
+        "ema_periods": config.EMA_PERIODS,
         "pulse": pulse_data,
         "sector_counts": dict(sector_counts.most_common()),
         "results": results,
