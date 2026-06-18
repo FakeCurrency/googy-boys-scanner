@@ -135,6 +135,10 @@ def enrich(m, frames, universe, min_dollar_vol):
                 continue
             pct = (last / prev - 1) * 100
             dvol = float((close * vol).tail(20).mean())
+            vol_today = float(vol.iloc[-1])
+            vol20 = float(vol.tail(21).iloc[:-1].mean())
+            spike = vol_today / vol20 if vol20 > 0 else 0.0
+            turnover_today = last * vol_today
         except Exception:
             continue
         # keep it to real, liquid names and drop obvious data glitches
@@ -143,12 +147,20 @@ def enrich(m, frames, universe, min_dollar_vol):
         rows.append({"symbol": u["symbol"], "name": u["name"],
                      "sector": (u.get("sector") or "").strip(),
                      "last": round(last, 2 if last >= 1 else 4),
-                     "pct": round(pct, 2)})
+                     "pct": round(pct, 2),
+                     "turnover": round(turnover_today),
+                     "spike": round(spike, 1)})
 
     rows.sort(key=lambda r: r["pct"], reverse=True)
-    winners = rows[:6]
-    losers = rows[-6:][::-1] if rows else []
+    winners = [{k: v for k, v in r.items() if k != "turnover"} for r in rows[:6]]
+    losers = [{k: v for k, v in r.items() if k != "turnover"} for r in rows[-6:][::-1]] if rows else []
     m["top_movers"] = {"winners": winners, "losers": losers}
+
+    # biggest volume = most $ traded today, with how unusual that volume is (× avg)
+    by_vol = sorted(rows, key=lambda r: r["turnover"], reverse=True)[:6]
+    m["top_volume"] = [{"symbol": r["symbol"], "name": r["name"], "sector": r["sector"],
+                        "pct": r["pct"], "turnover": r["turnover"], "spike": r["spike"]}
+                       for r in by_vol]
 
     # deeper rotation: group the liquid names by GICS sector (ASX has it), find
     # the leading & lagging sector and name the actual stocks driving each.
@@ -209,10 +221,55 @@ def enrich(m, frames, universe, min_dollar_vol):
     return m
 
 
+def _num(s):
+    """Pull a float out of a ForexFactory value like '3.2%', '-0.1%', '187K', '5.50%'."""
+    s = (s or "").strip().replace(",", "")
+    if not s:
+        return None
+    mult = 1.0
+    if s[-1:] in "KkMmBb":
+        mult = {"k": 1e3, "m": 1e6, "b": 1e9}[s[-1].lower()]
+        s = s[:-1]
+    s = s.rstrip("%")
+    try:
+        return float(s) * mult
+    except ValueError:
+        return None
+
+
+# Events where a HOTTER number (actual > forecast) means a hawkish / higher-for-longer
+# read for rates, and a COOLER number means dovish. (Growth/jobs are read the same way:
+# hotter data => the Fed can stay tighter.)
+_HAWKISH_IF_HOT = ("CPI", "PPI", "INFLATION", "PRICE INDEX", "RATE DECISION", "FUNDS RATE",
+                   "CASH RATE", "EMPLOYMENT", "PAYROLL", "NONFARM", "WAGE", "EARNINGS", "GDP",
+                   "RETAIL SALES", "PMI", "ISM")
+
+
+def _tone(title, actual, forecast):
+    """Plain, data-derived hawkish/dovish read from actual vs forecast (no sentiment)."""
+    if actual is None or forecast is None:
+        return None, None
+    t = title.upper()
+    hot_is_hawk = any(k in t for k in _HAWKISH_IF_HOT)
+    # unemployment rate is inverted (higher = weaker labour market = dovish)
+    if "UNEMPLOYMENT" in t:
+        hot_is_hawk = False
+    diff = actual - forecast
+    if abs(diff) < 1e-9:
+        return "in line with forecast", "neutral"
+    higher = diff > 0
+    surprise = "higher than expected" if higher else "lower than expected"
+    tone = ("hawkish" if higher else "dovish") if hot_is_hawk else ("dovish" if higher else "hawkish")
+    return surprise, tone
+
+
 def _calendar():
-    """Upcoming high/medium-impact events per market from the ForexFactory feed."""
-    out = {"us": [], "asx": []}
+    """High/medium-impact events per market: upcoming, plus the latest released
+    high-impact result with a data-derived hawkish/dovish read."""
+    upcoming = {"us": [], "asx": []}
+    recent = {"us": [], "asx": []}
     now = dt.datetime.now(dt.timezone.utc)
+    horizon = now - dt.timedelta(days=4)
     syd = ZoneInfo("Australia/Sydney")
     seen = set()
     for url in FF_URLS:
@@ -243,26 +300,42 @@ def _calendar():
                     timed = False
             except Exception:
                 continue
-            if when < now:
-                continue
             key = (mkey, title, ds, ts)
             if key in seen:
                 continue
             seen.add(key)
-            loc = when.astimezone(syd)
-            date_lbl = f"{loc.strftime('%a')} {loc.day} {loc.strftime('%b')}"
-            hr = loc.hour % 12 or 12
-            time_lbl = f"{hr}:{loc.minute:02d}{'am' if loc.hour < 12 else 'pm'}" if timed else ""
-            out[mkey].append({"date": date_lbl, "time": time_lbl, "title": title,
-                              "impact": impact, "forecast": (e.findtext("forecast") or "").strip(),
-                              "previous": (e.findtext("previous") or "").strip(),
-                              "_s": when.isoformat()})
-    for k in out:
-        out[k].sort(key=lambda x: x["_s"])
-        out[k] = out[k][:7]
-        for ev in out[k]:
+            forecast = (e.findtext("forecast") or "").strip()
+            previous = (e.findtext("previous") or "").strip()
+            actual = (e.findtext("actual") or "").strip()
+
+            if when >= now:
+                loc = when.astimezone(syd)
+                date_lbl = f"{loc.strftime('%a')} {loc.day} {loc.strftime('%b')}"
+                hr = loc.hour % 12 or 12
+                time_lbl = f"{hr}:{loc.minute:02d}{'am' if loc.hour < 12 else 'pm'}" if timed else ""
+                upcoming[mkey].append({"date": date_lbl, "time": time_lbl, "title": title,
+                                       "impact": impact, "forecast": forecast,
+                                       "previous": previous, "when": when.isoformat(),
+                                       "_s": when.isoformat()})
+            elif impact == "High" and when >= horizon and actual:
+                surprise, tone = _tone(title, _num(actual), _num(forecast))
+                loc = when.astimezone(syd)
+                recent[mkey].append({"title": title, "actual": actual, "forecast": forecast,
+                                     "previous": previous, "surprise": surprise, "tone": tone,
+                                     "when_lbl": f"{loc.strftime('%a')} {loc.day} {loc.strftime('%b')}",
+                                     "_s": when.isoformat()})
+    for k in upcoming:
+        upcoming[k].sort(key=lambda x: x["_s"])
+        upcoming[k] = upcoming[k][:7]
+        for ev in upcoming[k]:
             ev.pop("_s", None)
-    return out
+    latest = {}
+    for k in recent:
+        recent[k].sort(key=lambda x: x["_s"], reverse=True)
+        latest[k] = recent[k][0] if recent[k] else None
+        if latest[k]:
+            latest[k].pop("_s", None)
+    return {"upcoming": upcoming, "latest": latest}
 
 
 def fetch() -> dict:
@@ -277,7 +350,8 @@ def fetch() -> dict:
         summary, rotation = _read(label, sectors, indices)
         markets[key] = {"label": label, "indices": indices, "sectors": sectors,
                         "summary": summary, "rotation": rotation,
-                        "upcoming": cal.get(key, [])}
+                        "upcoming": cal["upcoming"].get(key, []),
+                        "latest_event": cal["latest"].get(key)}
 
     now = dt.datetime.now(ZoneInfo("Australia/Sydney"))
     return {"generated_at": now.isoformat(timespec="seconds"), "tz_label": "AEST",

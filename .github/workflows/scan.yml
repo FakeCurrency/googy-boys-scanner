@@ -4,10 +4,15 @@ name: Scheduled scan
 # triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
-    # Twice daily at 6:30am and 4:30pm AEST (UTC+10). GitHub cron is fixed UTC,
-    # so during AEDT (summer) these effectively run at 7:30am / 5:30pm local.
-    - cron: "30 20 * * *"   # 06:30 AEST
-    - cron: "30 6 * * *"    # 16:30 AEST
+    # Five daily scans, in AEST (UTC+10). GitHub cron is fixed UTC, so during
+    # AEDT/daylight-saving (Oct–Apr) these effectively fire 1 hour later in
+    # Sydney local time. GitHub cron is also best-effort and can run a few
+    # minutes late under load.
+    - cron: "30 20 * * *"   # 06:30 AEST  (20:30 UTC prev day)
+    - cron: "30 2 * * *"    # 12:30 AEST  (02:30 UTC)
+    - cron: "30 6 * * *"    # 16:30 AEST  (06:30 UTC)
+    - cron: "30 14 * * *"   # 00:30 AEST  (14:30 UTC prev day)
+    - cron: "30 16 * * *"   # 02:30 AEST  (16:30 UTC prev day)
   workflow_dispatch:
     inputs:
       args:

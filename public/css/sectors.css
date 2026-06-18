@@ -71,6 +71,49 @@ table.sec-table { width: 100%; border-collapse: collapse; }
 .upc-fp { font: 500 11.5px/1 var(--sans); color: var(--muted); width: 100%; }
 .upc-empty { font-size: 13px; color: var(--muted); padding: 12px 0; list-style: none; }
 
+.sec-muted { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+
+/* ---- macro cards (next event countdown + latest result) ---- */
+.macro-card { background: var(--panel); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 5px solid var(--blue); }
+.macro-card.result { border-left-color: var(--muted); }
+.macro-card.result.tone-hawkish { border-left-color: var(--red); }
+.macro-card.result.tone-dovish { border-left-color: var(--green); }
+.macro-label { font: 700 11px/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.macro-title { font: 800 17px/1.2 var(--sans); color: var(--text); margin: 8px 0 4px; }
+.macro-when { font: 600 12.5px/1 var(--sans); color: var(--muted); }
+.macro-countdown { font: 800 24px/1.1 var(--sans); color: var(--blue); margin: 8px 0; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.macro-countdown.live { color: var(--orange); font-size: 17px; }
+.macro-exp { font: 500 13.5px/1.5 var(--sans); color: var(--text-2); }
+.macro-result-row { display: flex; gap: 12px; flex-wrap: wrap; font: 600 13.5px/1.4 var(--sans); color: var(--text-2); margin: 6px 0; }
+.macro-actual b { color: var(--text); }
+.macro-tone { font: 700 14px/1.4 var(--sans); margin: 6px 0 4px; }
+.macro-tone.tone-hawkish { color: var(--red); }
+.macro-tone.tone-dovish { color: var(--green); }
+.macro-tone.tone-neutral { color: var(--muted); }
+.macro-note { font: 500 11px/1.4 var(--sans); color: var(--muted-2); }
+
+/* ---- sectors as explained rows ---- */
+.sec-srows { background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.sec-srow { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 0.5px solid var(--border-soft); }
+.sec-srow:last-child { border-bottom: 0; }
+.sec-srow:hover { background: var(--panel-2); }
+.sec-sleft { flex: 1; min-width: 0; }
+.sec-sname { font: 700 13.5px/1.2 var(--sans); color: var(--text); }
+.sec-sname b { font-weight: 800; }
+.sec-sdesc { font: 500 11.5px/1.3 var(--sans); color: var(--muted); margin-top: 2px; }
+.sec-sright { width: 96px; text-align: right; flex-shrink: 0; }
+.sec-spct { font: 800 14px/1 var(--sans); font-variant-numeric: tabular-nums; }
+.sec-sbar { height: 5px; border-radius: 3px; background: var(--fill); margin-top: 6px; overflow: hidden; }
+.sec-sbar i { display: block; height: 100%; margin-left: auto; }
+
+/* ---- biggest volume rows ---- */
+.vol-col { background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.mv-item.vol { grid-template-columns: auto 1fr auto auto auto; gap: 10px; }
+.vol-turn { font: 700 12.5px/1 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
+.vol-spike { font: 600 11px/1 var(--sans); color: var(--muted); }
+.vol-spike.hot { color: var(--orange); font-weight: 800; }
+.mv-head.vol { color: var(--blue); }
+
 /* live widgets */
 .tv-host { height: 420px; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .tv-host .tradingview-widget-container { height: 100%; }
