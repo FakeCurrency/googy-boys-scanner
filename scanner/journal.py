@@ -15,7 +15,9 @@ public/data/journal.json so a UI can show the track record.
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
+import tempfile
 
 import numpy as np
 
@@ -83,25 +85,34 @@ def summarize(j: dict) -> dict:
     }
 
 
+def _atomic_write(path: pathlib.Path, payload: str) -> None:
+    """Write payload to path atomically via a temp file + rename (POSIX-safe)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
+    ) as f:
+        f.write(payload)
+        tmp = f.name
+    os.replace(tmp, path)
+
+
 def _save(j: dict) -> None:
     j["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
-    JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
+    _atomic_write(JOURNAL_FILE, json.dumps(j, indent=2))
 
     open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
     open_shorts = [p for p in j["open"]   if p.get("direction", "long") == "short"]
     cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
     cl_shorts   = [c for c in j["closed"] if c.get("direction", "long") == "short"]
 
-    PUBLIC_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
-    PUBLIC_JOURNAL.write_text(json.dumps({
+    _atomic_write(PUBLIC_JOURNAL, json.dumps({
         "updated_at": j["updated_at"],
         "stats": summarize(j),
         "open_longs":    open_longs,
         "open_shorts":   open_shorts,
         "closed_longs":  cl_longs[-100:],
         "closed_shorts": cl_shorts[-100:],
-    }, indent=2), encoding="utf-8")
+    }, indent=2))
 
 
 def _close(pos: dict, price: float, date: str, reason: str, bars: int) -> dict:

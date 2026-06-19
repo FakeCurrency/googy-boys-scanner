@@ -61,7 +61,7 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     # ---- price action: breakout out of the base -------------------------
     a, b = config.SPEC_BREAKOUT_BASE
     base_high = float(high.iloc[-a:-b].max())
-    breakout = bool(c >= base_high * 0.999)
+    breakout = bool(c >= base_high * config.REV_BREAKOUT_TOL)
     if not breakout:                                  # MANDATORY
         return None
     # momentum must be turning up, and price has reclaimed the mid SMA
@@ -72,7 +72,7 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     if c > s9l * (1 + config.SPEC_MAX_EXT):           # MANDATORY (skip the latecomers)
         return None
 
-    new_high_long = bool(c >= float(high.iloc[-config.SPEC_NEWHIGH_LONG:-b].max()) * 0.999)
+    new_high_long = bool(c >= float(high.iloc[-config.SPEC_NEWHIGH_LONG:-b].max()) * config.REV_BREAKOUT_TOL)
 
     # ---- fresh 9-over-26 reclaim (bonus) ---------------------------------
     above = (s9 > s26).to_numpy()

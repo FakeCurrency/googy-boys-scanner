@@ -75,7 +75,7 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     # 4) base / trendline breakout
     a, b = config.REV_BREAKOUT_BASE
     base_high = float(high.iloc[-a:-b].max())
-    breakout = bool(c >= base_high * 0.999)
+    breakout = bool(c >= base_high * config.REV_BREAKOUT_TOL)
 
     # 5) RSI turning up through its MA, not yet overbought
     lo, hi = config.REV_RSI_BAND
@@ -114,7 +114,7 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     swing_low = float(df["Low"].iloc[-config.REV_STOP_LOOKBACK:].min())
     stop = swing_low * (1 - config.STOP_BUFFER)
     if stop >= entry:
-        stop = min(sig["sma"][26], entry * 0.95)
+        stop = min(sig["sma"][26], entry * config.REV_STOP_FALLBACK_PCT)
     risk = entry - stop
 
     # target: nearest meaningful resistance (>=10% up), else a 3R measured move.

@@ -116,7 +116,7 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     pull_dists = [abs(close - ema_last[p]) / close for p in config.PULLBACK_EMAS]
     nearest_idx = int(np.argmin(pull_dists))
     nearest_ema_val = ema_last[config.PULLBACK_EMAS[nearest_idx]]
-    resistance_touch = (min(pull_dists) <= config.PULLBACK_TOL) and (close <= nearest_ema_val * 1.005)
+    resistance_touch = (min(pull_dists) <= config.PULLBACK_TOL) and (close <= nearest_ema_val * (1 + config.SHORT_RESISTANCE_TOL))
 
     # 3) EMA compression
     compression = (max(vals) - min(vals)) / close <= config.COMPRESSION_TOL
@@ -191,7 +191,7 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     swing_high = float(df["High"].iloc[-config.SWING_LOOKBACK:].max())
     stop = swing_high * (1 + config.STOP_BUFFER)
     if stop <= entry:
-        stop = entry * (1 + 0.03)
+        stop = entry * (1 + config.SHORT_STOP_FALLBACK_PCT)
 
     close = sig["close"]
     pivs = pivot_lows(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
