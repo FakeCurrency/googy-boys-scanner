@@ -39,9 +39,9 @@ _SOURCES = [
     ("nasdaq", "Reversal", "public/data/nasdaq_reversal.json", "$",  "NASDAQ"),
 ]
 
-_ALERT_GRADES   = {"A+"}    # A+ only keeps the list tight (~20 or fewer)
-_MAX_PER_DIGEST = 20        # max signals shown per market per slot
-_TG_MAX_CHARS   = 4000      # Telegram hard limit is 4096; leave headroom
+_ALERT_GRADES   = {"A+"}    # A+ only keeps the list tight
+_MAX_PER_DIGEST = 50        # hard cap per slot (paginated across multiple messages)
+_TG_MAX_CHARS   = 3800      # safe limit per message (Telegram hard cap is 4096)
 
 # Alert slots: (slot_key, utc_hour_min, utc_hour_max_exclusive, display_label)
 _SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
@@ -183,70 +183,72 @@ def _h(text: str) -> str:
     return _html.escape(str(text))
 
 
-def _format_digest(market: str, signals: list[dict], today: str, slot_label: str,
-                   caps: dict[str, str] | None = None) -> str:
-    """Build a single digest message for one market, capped at _TG_MAX_CHARS."""
+def _sig_block(sig: dict, caps: dict[str, str]) -> str:
+    """Format one signal as a text block (no trailing newline)."""
+    symbol     = sig.get("symbol", "")
+    grade      = sig.get("grade", "")
+    direction  = sig.get("dir", "LONG")
+    rr_text    = sig.get("rr_text", "")
+    entry      = float(sig.get("entry") or 0)
+    stop_pct   = float(sig.get("stop_pct") or 0)
+    p2_pct     = float(sig.get("p2_pct") or 0)
+    weekly     = sig.get("weekly", False)
+    chips      = sig.get("chips", [])[:3]
+    setup_type = sig.get("_setup_type", "")
+    currency   = sig.get("_currency", "$")
+    tv_prefix  = sig.get("_tv_prefix", "")
+    sector     = sig.get("sector", "")
+    mcap       = caps.get(symbol, "")
+
+    dec        = _decimals(entry)
+    dir_icon   = "🟢" if direction == "LONG" else "🔴"
+    grade_icon = "⭐" if grade == "A+" else "✅"
+    weekly_str = " W✓" if weekly else ""
+    meta_parts = [p for p in [sector, mcap] if p]
+    meta_str   = ("  ·  " + "  ·  ".join(_h(p) for p in meta_parts)) if meta_parts else ""
+    reason     = _h(" · ".join(chips))
+    tv_url     = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
+
+    return (
+        f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{_h(symbol)}</a></b>"
+        f"{meta_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}\n"
+        f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%"
+        f"  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}\n"
+        f"   <i>{reason}</i>"
+    )
+
+
+def _build_pages(market: str, signals: list[dict], today: str, slot_label: str,
+                 caps: dict[str, str] | None = None) -> list[str]:
+    """Return one or more messages covering all signals, each under _TG_MAX_CHARS."""
     mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
     total     = len(signals)
-    if caps is None:
-        caps = {}
+    caps      = caps or {}
+    footer    = "\n⚠️ <i>Check your own chart before entering. This is not financial advice.</i>"
 
-    header = [
-        f"<b>{mkt_label} SWING SETUPS — {slot_label}</b>",
-        f"<i>{today}  ·  {total} A+ signal{'s' if total != 1 else ''} found</i>",
-        "",
-    ]
-    footer = "\n⚠️ <i>Check your own chart before entering. This is not financial advice.</i>"
+    blocks = [_sig_block(s, caps) for s in signals[:_MAX_PER_DIGEST]]
 
-    body_lines: list[str] = []
-    shown = 0
+    pages: list[str] = []
+    i = 0
+    while i < len(blocks):
+        page_n = len(pages) + 1
+        if page_n == 1:
+            hdr = (f"<b>{mkt_label} SWING SETUPS — {slot_label}</b>\n"
+                   f"<i>{today}  ·  {total} A+ signal{'s' if total != 1 else ''} found</i>\n\n")
+        else:
+            hdr = f"<b>{mkt_label} — {slot_label} (cont.)</b>\n\n"
 
-    for sig in signals[:_MAX_PER_DIGEST]:
-        symbol     = sig.get("symbol", "")
-        grade      = sig.get("grade", "")
-        direction  = sig.get("dir", "LONG")
-        rr_text    = sig.get("rr_text", "")
-        entry      = float(sig.get("entry") or 0)
-        stop_pct   = float(sig.get("stop_pct") or 0)
-        p2_pct     = float(sig.get("p2_pct") or 0)
-        weekly     = sig.get("weekly", False)
-        chips      = sig.get("chips", [])[:3]
-        setup_type = sig.get("_setup_type", "")
-        currency   = sig.get("_currency", "$")
-        tv_prefix  = sig.get("_tv_prefix", "")
-        sector     = sig.get("sector", "")
-        mcap       = caps.get(symbol, "")
+        body = ""
+        while i < len(blocks):
+            candidate = hdr + body + blocks[i] + "\n\n" + footer
+            if len(candidate) > _TG_MAX_CHARS and body:
+                break
+            body += blocks[i] + "\n\n"
+            i += 1
 
-        dec         = _decimals(entry)
-        dir_icon    = "🟢" if direction == "LONG" else "🔴"
-        grade_icon  = "⭐" if grade == "A+" else "✅"
-        weekly_str  = " W✓" if weekly else ""
-        meta_parts  = [p for p in [sector, mcap] if p]
-        meta_str    = ("  ·  " + "  ·  ".join(_h(p) for p in meta_parts)) if meta_parts else ""
-        reason      = _h(" · ".join(chips))
-        tv_url      = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
-        sym_safe    = _h(symbol)
+        pages.append(hdr + body.rstrip() + footer)
 
-        sig_lines = [
-            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>{meta_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}",
-            f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}",
-            f"   <i>{reason}</i>",
-            "",
-        ]
-
-        candidate = "\n".join(header + body_lines + sig_lines) + footer
-        if len(candidate) > _TG_MAX_CHARS:
-            break
-
-        body_lines += sig_lines
-        shown += 1
-
-    more = total - shown
-    if more > 0:
-        body_lines.append(f"<i>…and {more} more signal{'s' if more != 1 else ''}</i>")
-        body_lines.append("")
-
-    return "\n".join(header + body_lines) + footer
+    return pages or [f"<b>{mkt_label} — {slot_label}</b>\n<i>No A+ signals.</i>"]
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -284,23 +286,30 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
             skipped += 1
             continue
 
-        caps = _fetch_market_caps(market, signals)
-        msg = _format_digest(market, signals, today, slot_label, caps)
+        caps  = _fetch_market_caps(market, signals)
+        pages = _build_pages(market, signals, today, slot_label, caps)
 
         if dry_run:
-            print(f"\n{'═'*62}")
-            print(msg)
-            print(f"{'═'*62}\n")
+            for pg in pages:
+                print(f"\n{'═'*62}")
+                print(pg)
+                print(f"{'═'*62}\n")
             seen[key] = now.isoformat(timespec="seconds")
             sent += 1
         else:
-            ok = _tg_send(msg)
-            if ok:
+            all_ok = True
+            for pg in pages:
+                if not _tg_send(pg):
+                    all_ok = False
+                    break
+            if all_ok:
                 seen[key] = now.isoformat(timespec="seconds")
                 sent += 1
-                print(f"  notify: ✓ {market.upper()} {slot_label} digest sent ({len(signals)} signals)")
+                n_pages = len(pages)
+                print(f"  notify: ✓ {market.upper()} {slot_label} sent "
+                      f"({len(signals)} signals, {n_pages} message{'s' if n_pages > 1 else ''})")
             else:
-                print(f"  notify: ✗ {market.upper()} {slot_label} digest failed — will retry next scan")
+                print(f"  notify: ✗ {market.upper()} {slot_label} failed — will retry next scan")
 
     _save_seen(seen)
 
