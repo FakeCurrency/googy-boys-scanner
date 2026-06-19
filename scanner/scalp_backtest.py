@@ -23,15 +23,17 @@ Note: yfinance caps 1H history at ~730 days; --months is clamped accordingly.
 """
 
 import argparse
+import concurrent.futures
 import datetime as dt
 import json
 import pathlib
+import time
 
 import numpy as np
 import pandas as pd
+import yfinance as yf
 
 from . import config, scalp
-from .data import download
 from .universe import load_scalp_universe
 
 ROOT          = pathlib.Path(__file__).resolve().parents[1]
@@ -44,6 +46,49 @@ SLIP     = config.SCALP_FILL_SLIPPAGE_PCT                       # 0.03% one-way
 # Don't let a single trade run forever — abandon (close at market) after this many
 # 1H bars without hitting stop or target. Keeps the test honest about dead trades.
 MAX_HOLD_BARS = 48   # ~ two trading days of 1H bars
+
+# Yahoo Finance rate-limit guard: one ticker at a time, hard timeout per request.
+_DL_TIMEOUT_S    = 45   # seconds before giving up on a single ticker
+_DL_INTER_SLEEP  = 2.0  # seconds between tickers
+
+
+def _download_one(yf_ticker: str, period: str) -> "pd.DataFrame | None":
+    """Fetch 1H bars for one ticker with a hard wall-clock timeout."""
+    def _fetch():
+        df = yf.download(
+            yf_ticker, period=period, interval="1h",
+            auto_adjust=True, progress=False, threads=False,
+        )
+        if df is None or len(df) == 0:
+            return None
+        df = df.dropna()
+        return df if len(df) else None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        fut = pool.submit(_fetch)
+        try:
+            return fut.result(timeout=_DL_TIMEOUT_S)
+        except Exception:
+            return None
+
+
+def _fetch_frames(tickers: list[str], period: str, progress: bool) -> "dict[str, pd.DataFrame]":
+    """Download 1H bars one ticker at a time; sleep between each to avoid rate limits."""
+    frames: dict = {}
+    for i, ticker in enumerate(tickers):
+        if progress:
+            print(f"  [{i+1:>2}/{len(tickers)}] {ticker:<14}", end="", flush=True)
+        df = _download_one(ticker, period)
+        if df is not None:
+            frames[ticker] = df
+            if progress:
+                print(f"{len(df)} bars")
+        else:
+            if progress:
+                print("skipped (timeout / no data)")
+        if i < len(tickers) - 1:
+            time.sleep(_DL_INTER_SLEEP)
+    return frames
 
 
 def _simulate_one(df: pd.DataFrame, direction: str) -> list[dict]:
@@ -210,8 +255,8 @@ def run(months: int = 12, symbol: str | None = None, progress: bool = True) -> d
 
     if progress:
         print(f"Scalp backtest — {len(tickers)} instruments, {days}d of 1H bars "
-              f"(pessimistic fills, ${NOTIONAL:,.0f} notional, ${BROK_RT} RT) ...", flush=True)
-    frames = download(tickers, period=period, interval="1h", chunk=30)
+              f"(pessimistic fills, ${NOTIONAL:,.0f} notional, ${BROK_RT} RT)", flush=True)
+    frames = _fetch_frames(tickers, period, progress)
 
     all_trades: list[dict] = []
     per_symbol: list[dict] = []
