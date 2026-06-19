@@ -6,7 +6,7 @@
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-06-18T20:21:41-04:00",
+  "generated_at": "2026-06-18T22:31:17-04:00",
   "scanned": 98,
   "universe_size": 98,
   "score_max": 14,
@@ -20,12 +20,11 @@
     {
       "key": "ASX200",
       "label": "ASX 200",
-      "value": 8841.0,
+      "value": 8827.0,
       "decimals": 0,
-      "day_pct": -1.4,
-      "d5_pct": 2.41,
+      "day_pct": -0.95,
+      "d5_pct": 0.26,
       "spark": [
-        8604.7002,
         8496.5996,
         8621.7002,
         8657.0,
@@ -46,17 +45,18 @@
         8914.0,
         8917.7002,
         8966.2998,
-        8841.2002
+        8911.0996,
+        8826.7998
       ],
       "dir": "down"
     },
     {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4205.0,
+      "value": 4195.0,
       "decimals": 0,
-      "day_pct": -3.54,
-      "d5_pct": 2.79,
+      "day_pct": -3.76,
+      "d5_pct": 2.56,
       "spark": [
         4506.2998,
         4531.2998,
@@ -79,17 +79,17 @@
         4328.0,
         4330.8999,
         4358.8999,
-        4204.6001
+        4195.0
       ],
       "dir": "down"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 65.32,
+      "value": 64.65,
       "decimals": 2,
-      "day_pct": -7.6,
-      "d5_pct": 2.25,
+      "day_pct": -8.55,
+      "d5_pct": 1.21,
       "spark": [
         74.828,
         75.851,
@@ -112,17 +112,17 @@
         70.066,
         69.899,
         70.696,
-        65.32
+        64.655
       ],
       "dir": "down"
     },
     {
       "key": "BRENT",
       "label": "Brent",
-      "value": 78.99,
+      "value": 79.68,
       "decimals": 2,
-      "day_pct": -0.7,
-      "d5_pct": -12.6,
+      "day_pct": 0.16,
+      "d5_pct": -11.84,
       "spark": [
         111.28,
         105.02,
@@ -145,17 +145,17 @@
         83.17,
         78.96,
         79.55,
-        78.99
+        79.68
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "WTI",
       "label": "WTI",
-      "value": 75.12,
+      "value": 75.81,
       "decimals": 2,
-      "day_pct": -2.17,
-      "d5_pct": -14.35,
+      "day_pct": -1.28,
+      "d5_pct": -13.57,
       "spark": [
         107.77,
         98.26,
@@ -178,7 +178,7 @@
         80.75,
         76.05,
         76.79,
-        75.12
+        75.81
       ],
       "dir": "down"
     },
@@ -187,8 +187,8 @@
       "label": "Nat Gas",
       "value": 3.21,
       "decimals": 2,
-      "day_pct": 2.13,
-      "d5_pct": 4.05,
+      "day_pct": 2.07,
+      "d5_pct": 3.98,
       "spark": [
         3.114,
         3.004,
@@ -211,7 +211,7 @@
         3.147,
         3.239,
         3.145,
-        3.212
+        3.21
       ],
       "dir": "up"
     },
@@ -383,10 +383,10 @@
     {
       "key": "USD",
       "label": "USD Idx",
-      "value": 100.8,
+      "value": 100.85,
       "decimals": 2,
-      "day_pct": 0.71,
-      "d5_pct": 0.94,
+      "day_pct": 0.76,
+      "d5_pct": 0.99,
       "spark": [
         99.3,
         99.11,
@@ -409,7 +409,7 @@
         99.63,
         99.54,
         100.09,
-        100.796
+        100.853
       ],
       "dir": "up"
     }
@@ -1226,7 +1226,7 @@
       "stop": 111.5532003,
       "target": 131.13020209,
       "rr": 1.65,
-      "trail": 112.19414616,
+      "trail": 112.19414615,
       "stop_pct": 6.2,
       "p2_pct": 10.2,
       "target_basis": "resistance",
@@ -1272,7 +1272,7 @@
         "sma26_pct": -3.9,
         "sma43": 116.1999352,
         "sma43_pct": -2.3,
-        "sma200": 110.98338501,
+        "sma200": 110.98338528,
         "sma200_pct": -6.7,
         "cross_up": true,
         "rsi": 55.1,
@@ -1288,7 +1288,7 @@
         "broken": false,
         "swing_low": 112.68000031,
         "swing_low_pct": -5.3,
-        "trailing_stop": 112.19414616,
+        "trailing_stop": 112.19414615,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": -5.7,
         "structure": {
@@ -1781,7 +1781,7 @@
       "stop": 84.42719879,
       "target": 145.7983902,
       "rr": 3.0,
-      "trail": 102.3161519,
+      "trail": 102.31615193,
       "stop_pct": 15.4,
       "p2_pct": 46.1,
       "target_basis": "measured",
@@ -1827,7 +1827,7 @@
         "sma26_pct": -5.5,
         "sma43": 93.25014762,
         "sma43_pct": -6.5,
-        "sma200": 71.84252638,
+        "sma200": 71.84252623,
         "sma200_pct": -28.0,
         "cross_up": true,
         "rsi": 58.1,
@@ -1843,7 +1843,7 @@
         "broken": false,
         "swing_low": 85.27999878,
         "swing_low_pct": -14.5,
-        "trailing_stop": 102.3161519,
+        "trailing_stop": 102.31615193,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": 2.6,
         "structure": {
@@ -2049,7 +2049,7 @@
         "sma26_pct": -1.7,
         "sma43": 292.56697686,
         "sma43_pct": -6.6,
-        "sma200": 232.61356995,
+        "sma200": 232.61356888,
         "sma200_pct": -25.7,
         "cross_up": false,
         "rsi": 55.5,
@@ -2114,7 +2114,7 @@
       "stop": 271.14120483,
       "target": 478.0163269,
       "rr": 3.0,
-      "trail": 324.99320591,
+      "trail": 324.99320592,
       "stop_pct": 16.0,
       "p2_pct": 48.1,
       "target_basis": "measured",
@@ -2160,7 +2160,7 @@
         "sma26_pct": -5.9,
         "sma43": 291.42866942,
         "sma43_pct": -9.7,
-        "sma200": 208.56276535,
+        "sma200": 208.56276527,
         "sma200_pct": -35.4,
         "cross_up": false,
         "rsi": 62.0,
@@ -2176,7 +2176,7 @@
         "broken": false,
         "swing_low": 273.88000488,
         "swing_low_pct": -15.2,
-        "trailing_stop": 324.99320591,
+        "trailing_stop": 324.99320592,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": 0.7,
         "structure": {
@@ -2225,7 +2225,7 @@
       "stop": 188.19900604,
       "target": 258.96354123,
       "rr": 0.87,
-      "trail": 249.31061678,
+      "trail": 249.3106168,
       "stop_pct": 16.8,
       "p2_pct": 14.5,
       "target_basis": "resistance",
@@ -2271,7 +2271,7 @@
         "sma26_pct": -2.8,
         "sma43": 200.57273403,
         "sma43_pct": -11.3,
-        "sma200": 165.30761803,
+        "sma200": 165.30761879,
         "sma200_pct": -26.9,
         "cross_up": false,
         "rsi": 55.5,
@@ -2287,7 +2287,7 @@
         "broken": false,
         "swing_low": 190.1000061,
         "swing_low_pct": -15.9,
-        "trailing_stop": 249.31061678,
+        "trailing_stop": 249.3106168,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": 10.3,
         "structure": {
@@ -2382,7 +2382,7 @@
         "sma26_pct": -16.3,
         "sma43": 303.33649498,
         "sma43_pct": -22.0,
-        "sma200": 209.70179108,
+        "sma200": 209.70179058,
         "sma200_pct": -46.1,
         "cross_up": true,
         "rsi": 68.6,
@@ -2493,7 +2493,7 @@
         "sma26_pct": -19.5,
         "sma43": 779.93278965,
         "sma43_pct": -31.2,
-        "sma200": 400.62187698,
+        "sma200": 400.6218766,
         "sma200_pct": -64.7,
         "cross_up": true,
         "rsi": 66.4,
@@ -2604,7 +2604,7 @@
         "sma26_pct": -20.2,
         "sma43": 196.54269303,
         "sma43_pct": -24.3,
-        "sma200": 144.11617817,
+        "sma200": 144.11617813,
         "sma200_pct": -44.5,
         "cross_up": true,
         "rsi": 70.2,
