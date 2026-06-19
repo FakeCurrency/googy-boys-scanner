@@ -11,7 +11,9 @@
   const TF_ORDER = ["1H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
-  const market = (params.get("m") || "asx").toLowerCase();
+  const VALID_MARKETS = new Set(["asx", "nasdaq", "crypto", "scalp"]);
+  const marketRaw = (params.get("m") || "asx").toLowerCase();
+  const market = VALID_MARKETS.has(marketRaw) ? marketRaw : "asx";
   const symbol = params.get("s") || "";
   const mode = (params.get("mode") || "pullback").toLowerCase();
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : "";
@@ -27,8 +29,16 @@
   }
 
   function fail(msg) {
-    document.body.innerHTML = `<header class="chart-top"><a class="back-link" href="index.html">← Dashboard</a></header>
-      <div class="chart-error"><h2>Chart unavailable</h2><p>${msg}</p></div>`;
+    const h = document.createElement("header");
+    h.className = "chart-top";
+    h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
+    const d = document.createElement("div");
+    d.className = "chart-error";
+    d.innerHTML = "<h2>Chart unavailable</h2>";
+    const p = document.createElement("p");
+    p.textContent = msg;
+    d.appendChild(p);
+    document.body.replaceChildren(h, d);
   }
 
   function header(d) {

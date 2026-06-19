@@ -25,7 +25,7 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
 
     # Target: nearest pivot high above price; else a 2R measured move.
     pivots = pivot_highs(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
-    above = pivots[pivots > close * 1.005]
+    above = pivots[pivots > entry * 1.005]
     risk = entry - stop
     if len(above) > 0:
         target = float(above.min())

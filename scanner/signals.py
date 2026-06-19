@@ -60,7 +60,10 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     # 2) Core Fib pullback — price near a core EMA (from above).
     pull_dists = [abs(close - ema_last[p]) / close for p in config.PULLBACK_EMAS]
     nearest_idx = int(np.argmin(pull_dists))
-    pullback = (min(pull_dists) <= config.PULLBACK_TOL) and uptrend
+    nearest_ema = ema_last[config.PULLBACK_EMAS[nearest_idx]]
+    # Require price is AT or ABOVE the nearest EMA — abs() distance alone would
+    # fire the chip even when price has already broken below the support level.
+    pullback = (min(pull_dists) <= config.PULLBACK_TOL) and uptrend and (close >= nearest_ema)
 
     # 3) EMA compression.
     compression = (max(vals) - min(vals)) / close <= config.COMPRESSION_TOL

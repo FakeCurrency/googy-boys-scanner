@@ -21,7 +21,7 @@ def _structure(df: pd.DataFrame) -> dict:
     sh = [round(float(v), 8) for v in highs.iloc[-3:].tolist()]
     sl = [round(float(v), 8) for v in lows.iloc[-3:].tolist()]
 
-    up = len(sh) >= 2 and sh[-1] >= sh[0] and len(sl) >= 2 and sl[-1] >= sl[0]
+    up = len(sh) >= 2 and sh[-1] > sh[0] and len(sl) >= 2 and sl[-1] > sl[0]
     down = len(sh) >= 2 and sh[-1] < sh[0] and len(sl) >= 2 and sl[-1] < sl[0]
     trend = "HH/HL — Uptrend" if up else "LH/LL — Downtrend" if down else "Mixed / consolidating"
     return {"trend": trend, "swing_highs": sh, "swing_lows": sl}
