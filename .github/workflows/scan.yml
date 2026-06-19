@@ -1,20 +1,23 @@
 name: Scheduled scan
 
-# Runs the scanner twice daily, commits the fresh data, and pushing to main
-# triggers Cloudflare Pages to redeploy the site automatically.
+# ASX and NASDAQ are downloaded and scanned in parallel, cutting wall-clock
+# time roughly in half.  The scalp scan, journal, broker sync, and Telegram
+# notify run sequentially once both market scans finish.
+# Pushing to main triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
     # Every 30 min during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
     # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
     # NASDAQ 9:30 AM–4:00 PM ET   = 13:30–21:00 UTC  (EDT; add 1h in EST winter)
     - cron: "0,30 0-5 * * 1-5"   # ASX  00:00–05:30 UTC (every 30 min)
+    - cron: "30 6 * * 1-5"        # ASX  06:30 UTC = 4:30 PM AEST (closing alert)
     - cron: "30 13 * * 1-5"       # NASDAQ open  13:30 UTC
     - cron: "0,30 14-20 * * 1-5"  # NASDAQ 14:00–20:30 UTC (every 30 min)
     - cron: "0 21 * * 1-5"        # NASDAQ close 21:00 UTC
   workflow_dispatch:
     inputs:
       args:
-        description: "Extra args for scanner.run (e.g. --market crypto --limit 12 for a quick test)"
+        description: "Extra args for scanner.run (e.g. --market asx --limit 12 for a quick test)"
         default: ""
         required: false
 
@@ -39,14 +42,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scanner
+      - name: Run market scans (ASX + NASDAQ in parallel)
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
           GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
           GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
-        run: python -m scanner.run --journal --alert ${{ github.event.inputs.args }}
+        run: |
+          python -m scanner.run --market asx --no-scalp ${{ github.event.inputs.args }} &
+          PID_ASX=$!
+          python -m scanner.run --market nasdaq --no-scalp ${{ github.event.inputs.args }} &
+          PID_NAS=$!
+          wait $PID_ASX; RC_ASX=$?
+          wait $PID_NAS; RC_NAS=$?
+          [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+
+      - name: Scalp scan
+        run: python -m scanner.run --scalp-only
 
       - name: Broker sync (Alpaca paper — no-op if secrets not configured)
         env:
@@ -55,7 +68,11 @@ jobs:
           # ALPACA_LIVE: set to "true" only at deliberate go-live
         run: python -m scanner.broker.paper_run
 
+      - name: Update paper-trade journal
+        run: python -m scanner.journal
+
       - name: Swing trade alerts (Telegram)
+        continue-on-error: true
         env:
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
