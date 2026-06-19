@@ -1,16 +1,15 @@
 """Telegram swing trade digest for ASX and NASDAQ.
 
-Sends TWO digests per market per trading day (open + mid-session) so you get
-an early heads-up at the open AND a mid-day refresh of new setups that formed
-during the session.  Only A+ signals are included to keep the list tight.
+Sends three digests per market per trading day at fixed AEST times.
+Only A+ signals are included to keep the list tight (~20 or fewer).
 
     python -m scanner.notify            # live send
     python -m scanner.notify --dry-run  # print without sending
     python -m scanner.notify --reset    # clear today's sent state (re-sends)
 
-Session windows (UTC):
-  ASX   open  00:00–02:59   mid  03:00–05:59
-  NASDAQ open 13:00–16:59   mid  17:00–21:59
+Alert slots (AEST → UTC):
+  ASX    11:00 AM → 01:00 UTC   2:00 PM → 04:00 UTC   4:30 PM → 06:30 UTC
+  NASDAQ 12:00 AM → 14:00 UTC   3:00 AM → 17:00 UTC   7:00 AM → 21:00 UTC
 """
 
 import argparse
@@ -35,11 +34,22 @@ _SOURCES = [
 ]
 
 _ALERT_GRADES   = {"A+"}    # A+ only keeps the list tight (~20 or fewer)
-_MAX_PER_DIGEST = 20        # max signals shown per market per session
+_MAX_PER_DIGEST = 20        # max signals shown per market per slot
 _TG_MAX_CHARS   = 4000      # Telegram hard limit is 4096; leave headroom
 
-# Session split: which UTC hour marks the start of the "mid" window.
-_MID_HOUR = {"asx": 3, "nasdaq": 17}
+# Alert slots: (slot_key, utc_hour_min, utc_hour_max_exclusive, display_label)
+_SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
+    "asx": [
+        ("s1",  1,  4, "11 AM AEST"),
+        ("s2",  4,  6,  "2 PM AEST"),
+        ("s3",  6, 24, "4:30 PM AEST"),
+    ],
+    "nasdaq": [
+        ("s1", 14, 17, "12 AM AEST"),
+        ("s2", 17, 21,  "3 AM AEST"),
+        ("s3", 21, 24,  "7 AM AEST"),
+    ],
+}
 
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
@@ -138,15 +148,14 @@ def _h(text: str) -> str:
     return _html.escape(str(text))
 
 
-def _format_digest(market: str, signals: list[dict], today: str, session: str) -> str:
+def _format_digest(market: str, signals: list[dict], today: str, slot_label: str) -> str:
     """Build a single digest message for one market, capped at _TG_MAX_CHARS."""
-    mkt_label     = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
-    session_label = "OPEN" if session == "open" else "MID-SESSION"
-    total         = len(signals)
+    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
+    total     = len(signals)
 
     header = [
-        f"<b>{mkt_label} SWING SETUPS — {today} {session_label}</b>",
-        f"<i>{total} A+ signal{'s' if total != 1 else ''} found</i>",
+        f"<b>{mkt_label} SWING SETUPS — {slot_label}</b>",
+        f"<i>{today}  ·  {total} A+ signal{'s' if total != 1 else ''} found</i>",
         "",
     ]
     footer = "\n⚠️ <i>Check your own chart before entering. This is not financial advice.</i>"
@@ -200,9 +209,13 @@ def _format_digest(market: str, signals: list[dict], today: str, session: str) -
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def _session(market: str, now: dt.datetime) -> str:
-    """Return 'open' or 'mid' based on current UTC hour."""
-    return "mid" if now.hour >= _MID_HOUR[market] else "open"
+def _slot(market: str, now: dt.datetime) -> tuple[str, str] | None:
+    """Return (slot_key, display_label) for the current UTC hour, or None."""
+    h = now.hour
+    for key, h_min, h_max, label in _SLOTS.get(market, []):
+        if h_min <= h < h_max:
+            return key, label
+    return None
 
 
 def run(dry_run: bool = False, reset: bool = False) -> None:
@@ -215,16 +228,21 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
     by_market = _load_signals()
 
     for market, signals in by_market.items():
+        slot_info = _slot(market, now)
+        if slot_info is None:
+            continue  # not in an alert window for this market right now
+
+        slot_key, slot_label = slot_info
+
         if not signals:
             continue
 
-        session = _session(market, now)
-        key = f"{market}_{today}_{session}"
+        key = f"{market}_{today}_{slot_key}"
         if seen.get(key):
             skipped += 1
             continue
 
-        msg = _format_digest(market, signals, today, session)
+        msg = _format_digest(market, signals, today, slot_label)
 
         if dry_run:
             print(f"\n{'═'*62}")
@@ -237,9 +255,9 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
             if ok:
                 seen[key] = now.isoformat(timespec="seconds")
                 sent += 1
-                print(f"  notify: ✓ {market.upper()} {session} digest sent ({len(signals)} signals)")
+                print(f"  notify: ✓ {market.upper()} {slot_label} digest sent ({len(signals)} signals)")
             else:
-                print(f"  notify: ✗ {market.upper()} {session} digest failed — will retry next scan")
+                print(f"  notify: ✗ {market.upper()} {slot_label} digest failed — will retry next scan")
 
     _save_seen(seen)
 
