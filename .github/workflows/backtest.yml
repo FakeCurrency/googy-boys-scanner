@@ -1,0 +1,52 @@
+name: Weekly scalp backtest
+
+# The scalp backtest re-evaluates the signal engine at every 1H bar across ~12
+# months of history for the whole universe — far too heavy for the 30-min scan.
+# It runs once a week (and on demand) and commits public/data/scalp_backtest.json,
+# which the Journal page renders alongside the live forward-test numbers.
+on:
+  schedule:
+    - cron: "0 7 * * 6"   # Saturday 07:00 UTC — markets closed, quiet window
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "Months of 1H history to backtest (clamped to ~24)"
+        default: "12"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scalp backtest
+        run: python -m scanner.scalp_backtest --months ${{ github.event.inputs.months || '12' }}
+
+      - name: Commit & push backtest results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/scalp_backtest.json
+          if git diff --cached --quiet; then
+            echo "No backtest changes to commit."
+          else
+            git commit -m "data: scalp backtest $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase origin main
+            git push
+          fi
