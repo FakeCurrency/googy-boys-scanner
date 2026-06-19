@@ -1,20 +1,27 @@
 {
-  "updated_at": "2026-06-19T00:22:01Z",
+  "updated_at": "2026-06-19T02:31:41Z",
   "stats": {
     "notional": 5000,
     "brokerage_rt": 40,
     "max_daily_trades": 5,
     "max_daily_loss": 500,
+    "max_per_group": 2,
+    "session_day": "2026-06-18",
     "today_trades": 5,
     "today_pnl": 0,
     "trades_left_today": 0,
+    "group_exposure": {
+      "us_tech": 2,
+      "materials_au": 2,
+      "ags": 1
+    },
     "longs": {
       "open": 1,
       "closed": 0,
       "win_rate": 0.0,
       "total_r": 0.0,
       "total_pnl": 0.0,
-      "open_unrealised_pnl": -40.0
+      "open_unrealised_pnl": 0
     },
     "shorts": {
       "open": 4,
@@ -22,7 +29,7 @@
       "win_rate": 0.0,
       "total_r": 0.0,
       "total_pnl": 0.0,
-      "open_unrealised_pnl": -150.52
+      "open_unrealised_pnl": 0
     }
   },
   "open_longs": [
@@ -43,7 +50,7 @@
       "status": "open",
       "current": 226.07000732,
       "unreal_r": 0.0,
-      "unreal_pnl": -40.0
+      "unreal_pnl": 0.0
     }
   ],
   "open_shorts": [
@@ -64,7 +71,7 @@
       "status": "open",
       "current": 613.25,
       "unreal_r": 0.0,
-      "unreal_pnl": -40.0
+      "unreal_pnl": 0.0
     },
     {
       "symbol": "BHP",
@@ -82,8 +89,8 @@
       "opened_ts": "2026-06-19T00:22:01+00:00",
       "status": "open",
       "current": 62.88000107,
-      "unreal_r": 0.16,
-      "unreal_pnl": -30.52
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0
     },
     {
       "symbol": "ORCL",
@@ -102,7 +109,7 @@
       "status": "open",
       "current": 184.30999756,
       "unreal_r": 0.0,
-      "unreal_pnl": -40.0
+      "unreal_pnl": 0.0
     },
     {
       "symbol": "COPPER",
@@ -121,7 +128,7 @@
       "status": "open",
       "current": 6.36999989,
       "unreal_r": 0.0,
-      "unreal_pnl": -40.0
+      "unreal_pnl": 0.0
     }
   ],
   "closed_longs": [],
