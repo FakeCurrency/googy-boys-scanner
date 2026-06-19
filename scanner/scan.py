@@ -1,6 +1,9 @@
 """Orchestration: download -> indicators -> signals -> grade -> rank, per market."""
 
 import datetime as dt
+import json
+import pathlib
+import shutil
 from collections import Counter
 from zoneinfo import ZoneInfo
 
@@ -9,6 +12,36 @@ from .data import download
 from .universe import load_scalp_universe, load_universe
 
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
+
+
+def _pct(new: float, old: float, dp: int = 2) -> float:
+    """Percent change of `new` vs `old`, rounded; 0.0 when `old` is missing/zero."""
+    return round((new - old) / old * 100, dp) if old else 0.0
+
+
+def _dir_pcts(entry: float, stop: float, target: float, direction: str) -> tuple[float, float | None]:
+    """Return (stop_pct, p2_pct) measured from entry, signed for the trade direction.
+
+    Long: stop is below entry, target above. Short: the mirror. p2_pct is None
+    when entry is missing/zero (matches the live JSON the site already consumes).
+    """
+    if not entry:
+        return 0.0, None
+    if direction == "long":
+        return round((entry - stop) / entry * 100, 1), round((target - entry) / entry * 100, 1)
+    return round((stop - entry) / entry * 100, 1), round((entry - target) / entry * 100, 1)
+
+
+def _finalize(results: list[dict]) -> Counter:
+    """Attach per-row sector counts, then rank by grade -> score -> R:R (in place).
+
+    Returns the sector Counter so the caller can embed it in the payload.
+    """
+    counts = Counter(r["sector"] for r in results if r["sector"])
+    for r in results:
+        r["sector_count"] = counts.get(r["sector"], 0)
+    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    return counts
 
 
 def _liquidity(df, market) -> float:
@@ -91,6 +124,7 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
             open_ = float(df["Open"].iloc[-1])
             y_close = float(df["Close"].iloc[-2])
             entry = lv["entry"]
+            stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
 
             detail = analysis.build_detail(df, sig, lv)
             row = {
@@ -110,20 +144,20 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
                 "price": round(close, 8),
                 "y_close": round(y_close, 8),
                 "open": round(open_, 8),
-                "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
-                "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
-                "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+                "open_pct": _pct(open_, y_close),
+                "current_pct": _pct(close, open_),
+                "day_pct": _pct(close, y_close),
                 "entry": entry,
                 "stop": lv["stop"],
                 "target": lv["target"],
                 "rr": lv["rr"],
                 "trail": lv["trail"],
                 # Stop% = risk to stop, P2% = reward to target — both from entry (R:R = P2/Stop).
-                "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
-                "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
+                "stop_pct": stop_pct,
+                "p2_pct": p2_pct,
                 "target_basis": lv["target_basis"],
                 "spark": _spark(df),
-                "trend": "green" if points >= 10 else "blue",
+                "trend": "green" if points >= config.TREND_THRESHOLDS["pullback"] else "blue",
                 "turnover": round(turnover),
                 "detail": detail,
                 "analysis": analysis.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
@@ -137,11 +171,7 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
             print(f"  warning: {yf_ticker} → {e}", flush=True)
 
     # Sector counts across all results, attached to each row (e.g. "MATERIALS x16").
-    sector_counts = Counter(r["sector"] for r in results if r["sector"])
-    for r in results:
-        r["sector_count"] = sector_counts.get(r["sector"], 0)
-
-    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    sector_counts = _finalize(results)
 
     if pulse_data is None:
         if progress:
@@ -214,6 +244,7 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
         open_ = float(df["Open"].iloc[-1])
         y_close = float(df["Close"].iloc[-2])
         entry = lv["entry"]
+        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
 
         detail = reversal.build_detail(df, sig, lv)
         row = {
@@ -234,19 +265,19 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
             "price": round(close, 8),
             "y_close": round(y_close, 8),
             "open": round(open_, 8),
-            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
-            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
-            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "open_pct": _pct(open_, y_close),
+            "current_pct": _pct(close, open_),
+            "day_pct": _pct(close, y_close),
             "entry": entry,
             "stop": lv["stop"],
             "target": lv["target"],
             "rr": lv["rr"],
             "trail": lv["trail"],
-            "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
-            "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
+            "stop_pct": stop_pct,
+            "p2_pct": p2_pct,
             "target_basis": lv["target_basis"],
             "spark": _spark(df),
-            "trend": "green" if points >= 11 else "blue",
+            "trend": "green" if points >= config.TREND_THRESHOLDS["reversal"] else "blue",
             "turnover": round(turnover),
             "detail": detail,
             "analysis": reversal.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
@@ -258,11 +289,7 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
             charts.write_chart(charts.build_chart_reversal(df, sig, lv, row, market),
                                out_root, chart_key)
 
-    sector_counts = Counter(r["sector"] for r in results if r["sector"])
-    for r in results:
-        r["sector_count"] = sector_counts.get(r["sector"], 0)
-
-    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    sector_counts = _finalize(results)
 
     if pulse_data is None:
         pulse_data = pulse.fetch()
@@ -335,6 +362,7 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
         open_ = float(df["Open"].iloc[-1])
         y_close = float(df["Close"].iloc[-2])
         entry = lv["entry"]
+        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
 
         detail = spec.build_detail(df, sig, lv)
         row = {
@@ -355,19 +383,19 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
             "price": round(close, 8),
             "y_close": round(y_close, 8),
             "open": round(open_, 8),
-            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
-            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
-            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "open_pct": _pct(open_, y_close),
+            "current_pct": _pct(close, open_),
+            "day_pct": _pct(close, y_close),
             "entry": entry,
             "stop": lv["stop"],
             "target": lv["target"],
             "rr": lv["rr"],
             "trail": lv["trail"],
-            "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
-            "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
+            "stop_pct": stop_pct,
+            "p2_pct": p2_pct,
             "target_basis": lv["target_basis"],
             "spark": _spark(df),
-            "trend": "green" if points >= 8 else "blue",
+            "trend": "green" if points >= config.TREND_THRESHOLDS["spec"] else "blue",
             "turnover": round(turnover),
             "detail": detail,
             "analysis": spec.spec_narrative(info.get("symbol", yf_ticker), sig, lv, detail,
@@ -379,11 +407,7 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
             charts.write_chart(charts.build_chart_reversal(df, sig, lv, row, market),
                                out_root, chart_key)
 
-    sector_counts = Counter(r["sector"] for r in results if r["sector"])
-    for r in results:
-        r["sector_count"] = sector_counts.get(r["sector"], 0)
-
-    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    sector_counts = _finalize(results)
 
     if pulse_data is None:
         pulse_data = pulse.fetch()
@@ -453,6 +477,7 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         open_ = float(df["Open"].iloc[-1])
         y_close = float(df["Close"].iloc[-2])
         entry = lv["entry"]
+        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "short")
 
         row = {
             "symbol": info.get("symbol", yf_ticker),
@@ -472,19 +497,19 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
             "price": round(close, 8),
             "y_close": round(y_close, 8),
             "open": round(open_, 8),
-            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
-            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
-            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+            "open_pct": _pct(open_, y_close),
+            "current_pct": _pct(close, open_),
+            "day_pct": _pct(close, y_close),
             "entry": entry,
             "stop": lv["stop"],
             "target": lv["target"],
             "rr": lv["rr"],
             "trail": lv["trail"],
-            "stop_pct": round((lv["stop"] - entry) / entry * 100, 1) if entry else 0.0,
-            "p2_pct": round((entry - lv["target"]) / entry * 100, 1) if entry else None,
+            "stop_pct": stop_pct,
+            "p2_pct": p2_pct,
             "target_basis": lv["target_basis"],
             "spark": _spark(df),
-            "trend": "green" if points >= 10 else "blue",
+            "trend": "green" if points >= config.TREND_THRESHOLDS["short"] else "blue",
             "turnover": round(turnover),
             "detail": [],
             "analysis": short.narrative(info.get("symbol", yf_ticker), sig, lv,
@@ -492,11 +517,7 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         }
         results.append(row)
 
-    sector_counts = Counter(r["sector"] for r in results if r["sector"])
-    for r in results:
-        r["sector_count"] = sector_counts.get(r["sector"], 0)
-
-    results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    sector_counts = _finalize(results)
 
     if pulse_data is None:
         pulse_data = pulse.fetch()
@@ -524,10 +545,6 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
 
 def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
     """Cross-asset intraday scalp scan on 1h bars (commodities + ASX + NASDAQ)."""
-    import json as _json
-    import pathlib as _pathlib
-    import shutil as _shutil
-
     universe = load_scalp_universe()
     tickers  = [u["yf"] for u in universe]
     meta     = {u["yf"]: u for u in universe}
@@ -537,9 +554,9 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
     frames = download(tickers, period="60d", interval="1h", chunk=30)
 
     if out_root:
-        chart_dir = _pathlib.Path(out_root) / "charts" / "scalp"
+        chart_dir = pathlib.Path(out_root) / "charts" / "scalp"
         if chart_dir.exists():
-            _shutil.rmtree(chart_dir, ignore_errors=True)
+            shutil.rmtree(chart_dir, ignore_errors=True)
         chart_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
@@ -561,12 +578,7 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
                 continue
 
             entry = lv["entry"]
-            if direction == "long":
-                stop_pct = round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0
-                p2_pct   = round((lv["target"] - entry) / entry * 100, 1) if entry else None
-            else:
-                stop_pct = round((lv["stop"] - entry) / entry * 100, 1) if entry else 0.0
-                p2_pct   = round((entry - lv["target"]) / entry * 100, 1) if entry else None
+            stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], direction)
 
             cur = "$" if asset_type != "asx" else "A$"
             close = sig["close"]
@@ -602,7 +614,7 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
                 "p2_pct":      p2_pct,
                 "target_basis": "atr",
                 "spark":       spark,
-                "trend":       "green" if points >= 8 else "blue",
+                "trend":       "green" if points >= config.TREND_THRESHOLDS["scalp"] else "blue",
                 "turnover":    0,
                 "detail":      scalp.build_detail(df, sig, lv),
                 "analysis":    scalp.narrative(
@@ -615,7 +627,7 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
                 chart_name = f"{info.get('symbol', yf_ticker)}_{direction}"
                 try:
                     (chart_dir / f"{chart_name}.json").write_text(
-                        _json.dumps(cd), encoding="utf-8")
+                        json.dumps(cd), encoding="utf-8")
                 except OSError:
                     pass
 

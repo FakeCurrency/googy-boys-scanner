@@ -8,6 +8,7 @@ Examples:
 """
 
 import argparse
+import json
 import pathlib
 
 from . import config, output, pulse, scan
@@ -115,11 +116,10 @@ def main() -> None:
 
     # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
     if not args.no_scalp:
-        import json as _json2
         print("Scanning SCALP (1h intraday) ...", flush=True)
         sc = scan.scan_scalp(out_root=args.out)
         (pathlib.Path(args.out) / "scalp.json").write_text(
-            _json2.dumps(sc, indent=2), encoding="utf-8")
+            json.dumps(sc, indent=2), encoding="utf-8")
         tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
         print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
               f"across {sc['scanned']} instruments")
@@ -135,7 +135,6 @@ def main() -> None:
               f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
-    import json as _json
     from . import sectors as _sectors
     print("Fetching sector dashboard ...", flush=True)
     sec = _sectors.fetch()
@@ -143,7 +142,7 @@ def main() -> None:
         if page_key in sec["markets"]:
             _sectors.enrich(sec["markets"][page_key], frames, universe,
                             MOVER_MIN_DVOL.get(page_key, 1_000_000))
-    (pathlib.Path(args.out) / "sectors.json").write_text(_json.dumps(sec, indent=2), encoding="utf-8")
+    (pathlib.Path(args.out) / "sectors.json").write_text(json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")
 

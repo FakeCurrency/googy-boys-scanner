@@ -39,6 +39,16 @@ GRADE_CUTOFFS = [
 TRADEABLE_GRADES = {"A+", "A"}
 WATCH_GRADES = {"B", "C"}
 
+# Score at/above which a row's sparkline+trend bar paints green (else blue) on the
+# site. Per scan type because each has a different max score. Pure cosmetics.
+TREND_THRESHOLDS = {
+    "pullback": 10,
+    "reversal": 11,
+    "spec": 8,
+    "short": 10,
+    "scalp": 8,
+}
+
 # Reward-to-risk below this is flagged with a red "LOW R:R" chip.
 LOW_RR_THRESHOLD = 1.5
 

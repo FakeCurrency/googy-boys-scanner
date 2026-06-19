@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from . import config
+from .grading import grade_from_points, score_chips
 from .indicators import adx as calc_adx, ema, ema_ladder, rsi as calc_rsi
 
 # Signal key -> base display label (some get dynamic suffixes in scan.py).
@@ -113,16 +114,5 @@ def evaluate(df: pd.DataFrame) -> dict | None:
 
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     """Return (points, grade, fired_signal_keys) for an evaluated signal dict."""
-    points = 0
-    fired: list[str] = []
-    for key in CHIP_ORDER:
-        if sig.get(key):
-            points += config.POINTS[key]
-            fired.append(key)
-
-    grade = None
-    for name, cutoff in config.GRADE_CUTOFFS:
-        if points >= cutoff:
-            grade = name
-            break
-    return points, grade, fired
+    points, fired = score_chips(sig, CHIP_ORDER, config.POINTS)
+    return points, grade_from_points(points, config.GRADE_CUTOFFS), fired

@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from . import config, reversal
+from .grading import grade_from_points
 from .indicators import rsi, sma
 
 # reuse the Reversals trade-level, detail and narrative builders verbatim
@@ -134,12 +135,7 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
         points += 1
         fired.append("rsi")
 
-    grade = None
-    for name, cutoff in config.SPEC_GRADE_CUTOFFS:
-        if points >= cutoff:
-            grade = name
-            break
-    return points, grade, fired
+    return points, grade_from_points(points, config.SPEC_GRADE_CUTOFFS), fired
 
 
 def build_chips(fired: list[str], sig: dict) -> list[str]:
