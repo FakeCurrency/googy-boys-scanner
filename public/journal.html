@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=6" />
-  <link rel="stylesheet" href="css/journal.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="stylesheet" href="css/journal.css?v=5" />
 </head>
 <body>
   <header class="topbar">
@@ -29,13 +29,16 @@
       <p class="jr-config">Max 10 positions per journal &nbsp;·&nbsp; $1,000 AUD per trade &nbsp;·&nbsp; $5 brokerage each way</p>
     </div>
 
-    <!-- LONGS / SHORTS tab selector -->
+    <!-- LONGS / SHORTS / SCALP tab selector -->
     <div class="jr-tabs" role="tablist">
       <button class="jr-tab is-active" data-journal="long" role="tab" aria-selected="true">
         <span class="jr-tab-arrow">↑</span> Journal 1 &nbsp;<span class="jr-tab-label">LONGS</span>
       </button>
       <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">↓</span> Journal 2 &nbsp;<span class="jr-tab-label">SHORTS</span>
+      </button>
+      <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
+        <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
       </button>
     </div>
 
@@ -78,12 +81,31 @@
         <div class="jr-table-wrap" id="jr-short-closed"></div>
       </section>
     </div>
+    <!-- ── SCALP ── -->
+    <div id="jr-scalp-section" class="jr-hidden">
+      <section class="stats" id="jr-scalp-stats"></section>
+
+      <section class="jr-equity">
+        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, all scalp trades)</span></div>
+        <div id="jr-scalp-equity" class="jr-equity-chart"></div>
+      </section>
+
+      <section>
+        <div class="jr-section-title">Open scalp positions <span id="jr-scalp-open-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-scalp-open"></div>
+      </section>
+
+      <section>
+        <div class="jr-section-title">Closed scalp trades <span id="jr-scalp-closed-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-scalp-closed"></div>
+      </section>
+    </div>
   </main>
 
   <footer class="site-footer">
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
   </footer>
 
-  <script src="js/journal.js?v=4"></script>
+  <script src="js/journal.js?v=5"></script>
 </body>
 </html>

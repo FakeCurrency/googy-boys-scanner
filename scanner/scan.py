@@ -618,6 +618,15 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
 
     results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
 
+    # Keep only the best direction per symbol (highest score first after sort)
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for r in results:
+        if r["symbol"] not in seen:
+            seen.add(r["symbol"])
+            deduped.append(r)
+    results = deduped
+
     now = dt.datetime.now(dt.timezone.utc)
     return {
         "market":         "scalp",

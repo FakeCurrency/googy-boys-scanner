@@ -121,6 +121,16 @@ def main() -> None:
         print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
               f"across {sc['scanned']} instruments")
 
+        from . import scalp_journal as _sj
+        print("Updating scalp journal ...", flush=True)
+        sj = _sj._load()
+        sj = _sj.update_scalp(sj)
+        _sj._save(sj)
+        sj_s = _sj.summarize(sj)
+        print(f"  scalp journal: {sj_s['longs']['open'] + sj_s['shorts']['open']} open | "
+              f"{sj_s['longs']['closed'] + sj_s['shorts']['closed']} closed | "
+              f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
+
     # Sector & index dashboard (ASX + US) with an auto market read.
     import json as _json
     from . import sectors as _sectors
