@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-19T04:53:25Z",
+  "updated_at": "2026-06-19T06:16:54Z",
   "stats": {
     "notional": 5000,
     "brokerage_rt": 40,
@@ -29,7 +29,7 @@
       "win_rate": 0.0,
       "total_r": 0.0,
       "total_pnl": 0.0,
-      "open_unrealised_pnl": 0
+      "open_unrealised_pnl": -41.86
     }
   },
   "open_longs": [
@@ -80,7 +80,7 @@
       "direction": "short",
       "grade": "A+",
       "score": 8,
-      "entry": 63.0,
+      "entry": 61.8564375,
       "stop": 63.7663855,
       "target": 61.46722899,
       "rr": 2.0,
@@ -88,9 +88,11 @@
       "yf_ticker": "BHP.AX",
       "opened_ts": "2026-06-19T00:22:01+00:00",
       "status": "open",
-      "current": 62.88000107,
-      "unreal_r": 0.0,
-      "unreal_pnl": 0.0
+      "current": 61.88000107,
+      "unreal_r": -0.01,
+      "unreal_pnl": -41.86,
+      "fill_price": 61.8564375,
+      "filled": true
     },
     {
       "symbol": "ORCL",
