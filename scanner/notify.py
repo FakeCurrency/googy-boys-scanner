@@ -21,6 +21,12 @@ import pathlib
 import urllib.error
 import urllib.request
 
+try:
+    import yfinance as yf
+    _YF_AVAILABLE = True
+except ImportError:
+    _YF_AVAILABLE = False
+
 ROOT       = pathlib.Path(__file__).resolve().parents[1]
 DATA_DIR   = ROOT / "data"
 _SEEN_FILE = DATA_DIR / "notified_signals.json"
@@ -50,6 +56,42 @@ _SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
         ("s3", 21, 24,  "7 AM AEST"),
     ],
 }
+
+
+# ── Market cap helpers ────────────────────────────────────────────────────────
+
+def _yf_sym(market: str, symbol: str) -> str:
+    return symbol + ".AX" if market == "asx" else symbol
+
+
+def _fmt_mcap(v: float | None) -> str:
+    if not v or v <= 0:
+        return ""
+    if v >= 1e12: return f"{v/1e12:.1f}T"
+    if v >= 1e9:  return f"{v/1e9:.1f}B"
+    if v >= 1e6:  return f"{v/1e6:.0f}M"
+    return f"{v/1e3:.0f}K"
+
+
+def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, str]:
+    """Return {symbol: formatted_mcap} for signals[:_MAX_PER_DIGEST]."""
+    if not _YF_AVAILABLE:
+        return {}
+    syms = [s.get("symbol", "") for s in signals[:_MAX_PER_DIGEST] if s.get("symbol")]
+    if not syms:
+        return {}
+    yf_syms = [_yf_sym(market, s) for s in syms]
+    caps: dict[str, str] = {}
+    try:
+        tickers_obj = yf.Tickers(" ".join(yf_syms))
+        for sym, yft in zip(syms, yf_syms):
+            try:
+                caps[sym] = _fmt_mcap(tickers_obj.tickers[yft].fast_info.market_cap)
+            except Exception:
+                caps[sym] = ""
+    except Exception:
+        pass
+    return caps
 
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
@@ -141,10 +183,13 @@ def _h(text: str) -> str:
     return _html.escape(str(text))
 
 
-def _format_digest(market: str, signals: list[dict], today: str, slot_label: str) -> str:
+def _format_digest(market: str, signals: list[dict], today: str, slot_label: str,
+                   caps: dict[str, str] | None = None) -> str:
     """Build a single digest message for one market, capped at _TG_MAX_CHARS."""
     mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
     total     = len(signals)
+    if caps is None:
+        caps = {}
 
     header = [
         f"<b>{mkt_label} SWING SETUPS — {slot_label}</b>",
@@ -170,18 +215,20 @@ def _format_digest(market: str, signals: list[dict], today: str, slot_label: str
         currency   = sig.get("_currency", "$")
         tv_prefix  = sig.get("_tv_prefix", "")
         sector     = sig.get("sector", "")
+        mcap       = caps.get(symbol, "")
 
         dec         = _decimals(entry)
         dir_icon    = "🟢" if direction == "LONG" else "🔴"
         grade_icon  = "⭐" if grade == "A+" else "✅"
         weekly_str  = " W✓" if weekly else ""
-        sector_str  = f"  ·  {_h(sector)}" if sector else ""
+        meta_parts  = [p for p in [sector, mcap] if p]
+        meta_str    = ("  ·  " + "  ·  ".join(_h(p) for p in meta_parts)) if meta_parts else ""
         reason      = _h(" · ".join(chips))
         tv_url      = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
         sym_safe    = _h(symbol)
 
         sig_lines = [
-            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>{sector_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}",
+            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>{meta_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}",
             f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}",
             f"   <i>{reason}</i>",
             "",
@@ -237,7 +284,8 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
             skipped += 1
             continue
 
-        msg = _format_digest(market, signals, today, slot_label)
+        caps = _fetch_market_caps(market, signals)
+        msg = _format_digest(market, signals, today, slot_label, caps)
 
         if dry_run:
             print(f"\n{'═'*62}")
