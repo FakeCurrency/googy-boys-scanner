@@ -1,8 +1,9 @@
 # Roadmap — path to real capital
 
 Status of the work needed before the Scalp engine could trade real money, plus
-the broader backlog. The scanner + paper journals are a **forward test**; nothing
-here places real orders yet.
+the broader backlog. The scanner + paper journals are a **forward test**; the
+Alpaca paper-trading integration (step 4) is now wired — real orders rest at the
+broker, but on the **paper** endpoint until the 1-month parallel-run agrees.
 
 Legend: 🔴 blocker · 🟠 important · 🟡 nice-to-have · ✅ done · 🚧 in progress
 
@@ -15,7 +16,7 @@ Legend: 🔴 blocker · 🟠 important · 🟡 nice-to-have · ✅ done · 🚧 
 | 1 | **Out-of-sample scalp backtest** with the live pessimistic fill model | ✅ | `scanner/scalp_backtest.py` + weekly `backtest.yml`. Re-evaluates the engine bar-by-bar (no look-ahead); same next-bar-open + slippage + gap-through fills; reports win rate, profit factor, max drawdown, expectancy. **Next:** review the numbers once the first CI run publishes `scalp_backtest.json`, then decide if the edge survives costs. |
 | 2 | **Session-boundary daily reset** | ✅ | Daily trade/loss limits reset at a fixed **08:00 UTC** anchor (quiet window between NASDAQ close and ASX open), so they never reset mid-session — even during AEDT when the ASX session straddles 00:00 UTC. |
 | 3 | **Portfolio correlation caps** | ✅ | Max 2 open positions per correlation group (metals, energy, materials_au, ags, au_financials, us_tech…). Stops Gold + Silver + GLD + a miner counting as one oversized bet. |
-| 4 | **Resting bracket orders at the broker** | 🔴 | Design captured below. Stops currently live in code and are only enforced when a scan runs (~every 30 min). For real money the stop **must rest at the broker** and execute while the system is asleep. Not yet built. |
+| 4 | **Resting bracket orders at the broker** | 🚧 | `scanner/broker/` module built. Alpaca paper API wired: OCO bracket orders submitted after every scan; reconcile step syncs fills/closures back into the journal; kill-switch workflow flattens everything if daily loss limit breaches between scans. **Next:** add `ALPACA_API_KEY` + `ALPACA_SECRET_KEY` to GitHub Secrets; run for ≥1 month in parallel with the JSON journal; confirm the two agree before going live. ASX/commodities require IBKR — TBD. |
 | 5 | **Walk-forward / out-of-sample split** | 🟠 | The backtest is a single in-sample pass. Before sizing up, split into train/validate windows (or rolling walk-forward) so the grade cut-offs aren't overfit. |
 
 ## Medium priority
@@ -99,9 +100,11 @@ PENDING_ENTRY → OPEN → (PENDING_EXIT) → CLOSED
 
 1. ✅ Harden the forward test with pessimistic fills *(done)*.
 2. ✅ Build the backtest with the same fills *(done)* — **review the numbers**.
-3. 🔴 Wire a **broker paper/sandbox** account; submit real bracket orders against
+3. 🚧 Wire a **broker paper/sandbox** account; submit real bracket orders against
    it and run it **in parallel** with the JSON journal for ≥1 month. The two
-   must agree.
-4. 🔴 Add the pre-trade risk gate + kill-switch as broker-enforced, not code-only.
+   must agree. (`scanner/broker/` is built — add secrets to enable it)
+4. 🚧 Pre-trade risk gate + kill-switch — **done in code** (`kill_switch.py` +
+   `kill_switch.yml` runs every 30 min). Kill-switch flattens at the broker,
+   independent of the scanner schedule.
 5. 🔴 Go live with **tiny** size; scale only if live results track the paper +
-   backtest numbers.
+   backtest numbers. Switch `ALPACA_LIVE=true` in GitHub Secrets when ready.

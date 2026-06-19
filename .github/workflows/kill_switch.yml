@@ -1,0 +1,48 @@
+name: Kill-switch check
+
+# Runs every 30 minutes during trading hours — independently of the scanner.
+# Flattens all Alpaca positions if the daily loss limit is breached between scans.
+# Safe to run with no broker credentials (logs only and exits cleanly).
+on:
+  schedule:
+    - cron: "15,45 0-5 * * 1-5"    # ASX session  00:15–05:45 UTC
+    - cron: "15,45 13-21 * * 1-5"  # NASDAQ session  13:15–21:45 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Log only — do not flatten positions"
+        default: "true"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kill-switch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run kill-switch check
+        env:
+          ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: |
+          DRY="${{ github.event.inputs.dry_run }}"
+          if [ "$DRY" = "true" ]; then
+            python -m scanner.broker.kill_switch --dry-run
+          else
+            python -m scanner.broker.kill_switch
+          fi

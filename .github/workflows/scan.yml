@@ -48,6 +48,13 @@ jobs:
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: python -m scanner.run --journal --alert ${{ github.event.inputs.args }}
 
+      - name: Broker sync (Alpaca paper — no-op if secrets not configured)
+        env:
+          ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          # ALPACA_LIVE: set to "true" only at deliberate go-live
+        run: python -m scanner.broker.paper_run
+
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
           git config user.name "github-actions[bot]"
