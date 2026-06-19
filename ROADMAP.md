@@ -22,17 +22,17 @@ Legend: 🔴 blocker · 🟠 important · 🟡 nice-to-have · ✅ done · 🚧 
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 6 | Momentum histogram / TTM-squeeze visual on the 1H chart | 🟡 | Chart shows BB/KC bands + EMAs but not the squeeze momentum histogram. |
-| 7 | Clearer entry/stop/target labels with % distance on the chart | 🟡 | Lines are drawn but unlabelled with R / % distance. |
+| 6 | Momentum histogram / TTM-squeeze visual on the 1H chart | ✅ | LazyBear-coloured momentum histogram in its own pane + squeeze ON/FIRE markers on the candles. |
+| 7 | Clearer entry/stop/target labels with % distance on the chart | ✅ | Level lines labelled with % from entry and R (e.g. "TARGET +2.5% (2.0R)", "STOP -1.2% (1R)"). |
 | 8 | Scalp-output dedup (same asset, both directions) | ✅ | Highest-scoring direction per **symbol** kept in `scan_scalp` (scanner output) and the journal. Correlated **cross-symbol** exposure handled by #3. |
-| 9 | Alert dedup (highest-scoring direction per asset) | 🟡 | `alerts.py` keys by symbol only — can email the same name long *and* short. |
-| 10 | SCAN button robustness | 🟡 | Better error handling / status feedback when manually dispatching a scan via the Cloudflare Function. |
+| 9 | Alert dedup (highest-scoring direction per asset) | ✅ | `alerts._dedup_by_symbol` keeps the best-scoring row per symbol before the digest is built. |
+| 10 | SCAN button robustness | ✅ | Timeouts (client + Cloudflare Function), mapped GitHub error codes to actionable messages, three toast states (ok/info/warn). |
 
 ## Lower priority
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 11 | Combined journal dashboard (overall equity + stats, not just per tab) | 🟡 | |
+| 11 | Combined journal dashboard (overall equity + stats, not just per tab) | ✅ | "Overall" tab aggregates all journals by $ P&L: combined stats + one equity curve. (Also fixed: the Scalp tab was never wired to its data.) |
 | 12 | This `ROADMAP.md` | ✅ | |
 | 13 | Shorts scanner refinement | 🟡 | Known weak; deferred. |
 
