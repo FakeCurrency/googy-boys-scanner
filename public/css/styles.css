@@ -164,6 +164,7 @@ body {
 }
 .scan-toast.show { opacity: 1; transform: translate(-50%, 0); }
 .scan-toast.warn { background: var(--orange); color: #fff; }
+.scan-toast.info { background: var(--blue, #2f6fed); color: #fff; }
 
 .wrap { max-width: 1500px; margin: 0 auto; padding: 18px 22px 60px; }
 

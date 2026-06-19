@@ -491,16 +491,24 @@
       if (btn.disabled) return;
       btn.classList.add("spinning");
       btn.disabled = true;
+      flashScan("Requesting a fresh scan…", "info");
       // Kick off a fresh cloud scan (updates the "Last scanned" time once it
       // finishes). Falls back to just reloading the current data if the scan
-      // endpoint isn't configured yet.
+      // endpoint isn't configured yet. Aborts if the service hangs.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
       try {
-        const res = await fetch("/api/scan", { method: "POST" });
+        const res = await fetch("/api/scan", { method: "POST", signal: ctrl.signal });
         const data = await res.json().catch(() => ({}));
-        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."),
-                  res.ok ? "ok" : "warn");
-      } catch (_) {
-        flashScan("Couldn't reach the scan service — reloaded latest data.", "warn");
+        // 503 = not configured (info, not an error the user can fix at runtime).
+        const kind = res.ok ? "ok" : (res.status === 503 || data.configured === false) ? "info" : "warn";
+        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."), kind);
+      } catch (err) {
+        flashScan(err && err.name === "AbortError"
+          ? "Scan service timed out — reloaded latest data instead."
+          : "Couldn't reach the scan service — reloaded latest data.", "warn");
+      } finally {
+        clearTimeout(timer);
       }
       // always refresh what's on screen too
       delete state.cache[`${state.market}:${state.mode}`];
@@ -521,6 +529,7 @@
       }
       el.textContent = msg;
       el.classList.toggle("warn", kind === "warn");
+      el.classList.toggle("info", kind === "info");
       el.classList.add("show");
       clearTimeout(el._t);
       el._t = setTimeout(() => el.classList.remove("show"), 6000);

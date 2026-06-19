@@ -40,6 +40,10 @@ export const onRequestPost = async ({ env }) => {
   }
 
   const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
+
+  // Abort if GitHub is slow so the browser never hangs on this request.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -51,6 +55,7 @@ export const onRequestPost = async ({ env }) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ ref }),
+      signal: ctrl.signal,
     });
 
     if (res.status === 204) {
@@ -60,13 +65,28 @@ export const onRequestPost = async ({ env }) => {
         message: "Scan started — fresh data in ~6–10 minutes.",
       });
     }
-    const detail = await res.text();
-    return json(502, {
+
+    // Map the common GitHub failure modes to a clear, actionable message.
+    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    const friendly = {
+      401: "Scan token is invalid or expired — regenerate GH_DISPATCH_TOKEN in Cloudflare.",
+      403: "Scan token lacks permission (needs Actions: Read and write) or GitHub is rate-limiting.",
+      404: `Workflow "${workflow}" or repo not found — check GH_WORKFLOW / GH_REPO.`,
+      422: `GitHub couldn't dispatch on ref "${ref}" — check the branch exists and the workflow has workflow_dispatch.`,
+      429: "GitHub is rate-limiting scan requests — wait a minute and try again.",
+    }[res.status] || `GitHub rejected the request (${res.status}). ${detail}`;
+
+    return json(502, { ok: false, configured: true, status: res.status, message: friendly });
+  } catch (err) {
+    const aborted = err && err.name === "AbortError";
+    return json(aborted ? 504 : 502, {
       ok: false,
       configured: true,
-      message: `GitHub rejected the request (${res.status}). ${detail.slice(0, 200)}`,
+      message: aborted
+        ? "GitHub took too long to respond — the scan may still start; check back shortly."
+        : `Network error reaching GitHub: ${err}`,
     });
-  } catch (err) {
-    return json(502, { ok: false, configured: true, message: `Network error: ${err}` });
+  } finally {
+    clearTimeout(timer);
   }
 };
