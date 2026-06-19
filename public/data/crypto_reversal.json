@@ -6,7 +6,7 @@
   "currency_symbol": "$",
   "timezone": "UTC",
   "tz_label": "UTC",
-  "generated_at": "2026-06-19T09:55:39+00:00",
+  "generated_at": "2026-06-19T10:33:47+00:00",
   "scanned": 79,
   "universe_size": 100,
   "score_max": 14,
@@ -22,10 +22,9 @@
       "label": "ASX 200",
       "value": 8829.0,
       "decimals": 0,
-      "day_pct": -1.53,
-      "d5_pct": 2.26,
+      "day_pct": -0.92,
+      "d5_pct": 0.28,
       "spark": [
-        8604.7002,
         8496.5996,
         8621.7002,
         8657.0,
@@ -46,6 +45,7 @@
         8914.0,
         8917.7002,
         8966.2998,
+        8911.0996,
         8828.7002
       ],
       "dir": "down"
@@ -53,10 +53,10 @@
     {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4182.0,
+      "value": 4172.0,
       "decimals": 0,
-      "day_pct": -1.0,
-      "d5_pct": -0.79,
+      "day_pct": -1.24,
+      "d5_pct": -1.02,
       "spark": [
         4531.2998,
         4539.7998,
@@ -79,17 +79,17 @@
         4330.8999,
         4358.8999,
         4224.1001,
-        4181.7998
+        4171.7998
       ],
       "dir": "down"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 65.18,
+      "value": 65.0,
       "decimals": 2,
-      "day_pct": -1.63,
-      "d5_pct": -3.96,
+      "day_pct": -1.9,
+      "d5_pct": -4.22,
       "spark": [
         75.851,
         76.414,
@@ -112,17 +112,17 @@
         69.899,
         70.696,
         66.255,
-        65.175
+        64.995
       ],
       "dir": "down"
     },
     {
       "key": "BRENT",
       "label": "Brent",
-      "value": 79.52,
+      "value": 79.6,
       "decimals": 2,
-      "day_pct": -0.41,
-      "d5_pct": -8.94,
+      "day_pct": -0.31,
+      "d5_pct": -8.85,
       "spark": [
         105.02,
         102.58,
@@ -145,17 +145,17 @@
         78.96,
         79.55,
         79.85,
-        79.52
+        79.6
       ],
       "dir": "down"
     },
     {
       "key": "WTI",
       "label": "WTI",
-      "value": 75.82,
+      "value": 75.89,
       "decimals": 2,
-      "day_pct": -1.02,
-      "d5_pct": -10.67,
+      "day_pct": -0.93,
+      "d5_pct": -10.59,
       "spark": [
         98.26,
         96.35,
@@ -178,17 +178,17 @@
         76.05,
         76.79,
         76.6,
-        75.82
+        75.89
       ],
       "dir": "down"
     },
     {
       "key": "NATGAS",
       "label": "Nat Gas",
-      "value": 3.2,
+      "value": 3.22,
       "decimals": 2,
-      "day_pct": -0.87,
-      "d5_pct": 2.72,
+      "day_pct": -0.49,
+      "d5_pct": 3.11,
       "spark": [
         3.004,
         3.018,
@@ -211,7 +211,7 @@
         3.239,
         3.145,
         3.233,
-        3.205
+        3.217
       ],
       "dir": "down"
     },
@@ -317,10 +317,10 @@
     {
       "key": "AUD",
       "label": "AUD/USD",
-      "value": 0.7021,
+      "value": 0.7016,
       "decimals": 4,
-      "day_pct": 0.04,
-      "d5_pct": -0.38,
+      "day_pct": -0.03,
+      "d5_pct": -0.45,
       "spark": [
         0.715,
         0.7148,
@@ -343,17 +343,17 @@
         0.7073,
         0.7066,
         0.7018,
-        0.7021
+        0.7016
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "VIX",
       "label": "VIX",
-      "value": 16.85,
+      "value": 16.94,
       "decimals": 2,
-      "day_pct": 2.74,
-      "d5_pct": -4.69,
+      "day_pct": 3.29,
+      "d5_pct": -4.19,
       "spark": [
         16.76,
         16.7,
@@ -376,17 +376,17 @@
         16.41,
         18.44,
         16.4,
-        16.85
+        16.94
       ],
       "dir": "up"
     },
     {
       "key": "USD",
       "label": "USD Idx",
-      "value": 100.77,
+      "value": 100.84,
       "decimals": 2,
-      "day_pct": -0.08,
-      "d5_pct": 1.02,
+      "day_pct": -0.01,
+      "d5_pct": 1.09,
       "spark": [
         99.11,
         99.19,
@@ -409,7 +409,7 @@
         99.54,
         100.09,
         100.85,
-        100.767
+        100.839
       ],
       "dir": "down"
     }
@@ -436,19 +436,19 @@
       "rr_text": "3.0:1",
       "target_2r": true,
       "liquidity": "OK",
-      "price": 1.61989796,
+      "price": 1.61675203,
       "y_close": 1.660658,
       "open": 1.66066086,
       "open_pct": 0.0,
-      "current_pct": -2.45,
-      "day_pct": -2.45,
-      "entry": 1.61989796,
+      "current_pct": -2.64,
+      "day_pct": -2.64,
+      "entry": 1.61675203,
       "stop": 0.00080982,
-      "target": 6.47716239,
+      "target": 6.46457865,
       "rr": 3.0,
       "trail": 1.29192135,
-      "stop_pct": 100.0,
-      "p2_pct": 299.9,
+      "stop_pct": 99.9,
+      "p2_pct": 299.8,
       "target_basis": "measured",
       "spark": [
         0.002027,
@@ -480,29 +480,29 @@
         0.001339,
         1.65085101,
         1.660658,
-        1.61989796
+        1.61675203
       ],
       "trend": "green",
-      "turnover": 7308318,
+      "turnover": 7305366,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 0.54880877,
+        "sma9": 0.54845923,
         "sma9_pct": -66.1,
-        "sma26": 0.19139558,
+        "sma26": 0.19127458,
         "sma26_pct": -88.2,
-        "sma43": 0.11636205,
+        "sma43": 0.11628888,
         "sma43_pct": -92.8,
-        "sma200": 0.02704471,
+        "sma200": 0.02702898,
         "sma200_pct": -98.3,
         "cross_up": true,
-        "rsi": 97.1,
+        "rsi": 96.9,
         "rsi_ma": 58.3,
         "rsi_up": false,
         "volume_ratio": 5.6,
-        "volume_today": 41493148,
+        "volume_today": 41434120,
         "volume_avg": 5233996,
         "volume_surge": true,
-        "off_high_pct": 5.9,
+        "off_high_pct": 6.1,
         "base_high": 0.263549,
         "base_high_pct": -83.7,
         "broken": true,
@@ -510,7 +510,7 @@
         "swing_low_pct": -99.9,
         "trailing_stop": 1.29192135,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -20.2,
+        "trailing_pct": -20.1,
         "structure": {
           "trend": "LH/LL \u2014 Downtrend",
           "swing_highs": [
@@ -524,9 +524,9 @@
             0.000818
           ]
         },
-        "risk_pct": 100.0
+        "risk_pct": 99.9
       },
-      "analysis": "GRAM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 6% below its one-year high, so there is room to run. Volume is expanding (5.6\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at $0.2635. Trade idea: entry $1.6199, stop $0.0008, target $6.4772 (3.00:1) \u2014 then trail it.",
+      "analysis": "GRAM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 6% below its one-year high, so there is room to run. Volume is expanding (5.6\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at $0.2635. Trade idea: entry $1.6168, stop $0.0008, target $6.4646 (3.00:1) \u2014 then trail it.",
       "sector_count": 0
     },
     {
@@ -548,15 +548,15 @@
       "rr_text": "3.0:1",
       "target_2r": true,
       "liquidity": "OK",
-      "price": 0.08319138,
+      "price": 0.08325294,
       "y_close": 0.081133,
       "open": 0.08111651,
       "open_pct": -0.02,
-      "current_pct": 2.56,
-      "day_pct": 2.54,
-      "entry": 0.08319138,
+      "current_pct": 2.63,
+      "day_pct": 2.61,
+      "entry": 0.08325294,
       "stop": 0.0122364,
-      "target": 0.29605632,
+      "target": 0.29630258,
       "rr": 3.0,
       "trail": 0.06199902,
       "stop_pct": 85.3,
@@ -592,34 +592,34 @@
         0.081451,
         0.079864,
         0.081133,
-        0.08319138
+        0.08325294
       ],
       "trend": "blue",
-      "turnover": 9491079,
+      "turnover": 9502725,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 0.07763726,
+        "sma9": 0.0776441,
         "sma9_pct": -6.7,
-        "sma26": 0.07830394,
+        "sma26": 0.07830631,
         "sma26_pct": -5.9,
-        "sma43": 0.07867845,
-        "sma43_pct": -5.4,
-        "sma200": 0.08272783,
+        "sma43": 0.07867988,
+        "sma43_pct": -5.5,
+        "sma200": 0.08272813,
         "sma200_pct": -0.6,
         "cross_up": false,
-        "rsi": 56.0,
+        "rsi": 56.1,
         "rsi_ma": 48.5,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 9265543,
+        "volume_today": 9498451,
         "volume_avg": 9597365,
         "volume_surge": false,
-        "off_high_pct": 20.8,
+        "off_high_pct": 20.7,
         "base_high": 0.081022,
-        "base_high_pct": -2.6,
+        "base_high_pct": -2.7,
         "broken": true,
         "swing_low": 0.01236,
-        "swing_low_pct": -85.1,
+        "swing_low_pct": -85.2,
         "trailing_stop": 0.06199902,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": -25.5,
@@ -638,7 +638,7 @@
         },
         "risk_pct": 85.3
       },
-      "analysis": "It is coming off a base, 21% below its one-year high, so there is room to run. Price has broken above the base high at $0.0810. RSI has turned up through its signal line. Trade idea: entry $0.0832, stop $0.0122, target $0.2961 (3.00:1) \u2014 then trail it.",
+      "analysis": "It is coming off a base, 21% below its one-year high, so there is room to run. Price has broken above the base high at $0.0810. RSI has turned up through its signal line. Trade idea: entry $0.0833, stop $0.0122, target $0.2963 (3.00:1) \u2014 then trail it.",
       "sector_count": 0
     },
     {
@@ -656,22 +656,22 @@
       ],
       "weekly": false,
       "low_rr": false,
-      "rr_text": "1.9:1",
+      "rr_text": "2.0:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 0.219438,
+      "price": 0.218099,
       "y_close": 0.234616,
       "open": 0.23460409,
       "open_pct": -0.01,
-      "current_pct": -6.46,
-      "day_pct": -6.47,
-      "entry": 0.219438,
+      "current_pct": -7.04,
+      "day_pct": -7.04,
+      "entry": 0.218099,
       "stop": 0.17954641,
       "target": 0.29659301,
-      "rr": 1.93,
+      "rr": 2.04,
       "trail": 0.23806731,
-      "stop_pct": 18.2,
-      "p2_pct": 35.2,
+      "stop_pct": 17.7,
+      "p2_pct": 36.0,
       "target_basis": "resistance",
       "spark": [
         0.14646199,
@@ -703,37 +703,37 @@
         0.216048,
         0.225529,
         0.234616,
-        0.219438
+        0.218099
       ],
       "trend": "blue",
-      "turnover": 651174876,
+      "turnover": 650291186,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 0.20748145,
-        "sma9_pct": -5.4,
-        "sma26": 0.20599273,
-        "sma26_pct": -6.1,
-        "sma43": 0.18554677,
-        "sma43_pct": -15.4,
-        "sma200": 0.18619168,
-        "sma200_pct": -15.2,
+        "sma9": 0.20733267,
+        "sma9_pct": -4.9,
+        "sma26": 0.20594123,
+        "sma26_pct": -5.6,
+        "sma43": 0.18551563,
+        "sma43_pct": -14.9,
+        "sma200": 0.18618499,
+        "sma200_pct": -14.6,
         "cross_up": true,
-        "rsi": 57.2,
+        "rsi": 56.7,
         "rsi_ma": 54.3,
         "rsi_up": false,
         "volume_ratio": 0.9,
-        "volume_today": 665568448,
+        "volume_today": 647894656,
         "volume_avg": 714273990,
         "volume_surge": false,
-        "off_high_pct": 38.1,
+        "off_high_pct": 38.5,
         "base_high": 0.29659301,
-        "base_high_pct": 35.2,
+        "base_high_pct": 36.0,
         "broken": false,
         "swing_low": 0.18136001,
-        "swing_low_pct": -17.4,
+        "swing_low_pct": -16.8,
         "trailing_stop": 0.23806731,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 8.5,
+        "trailing_pct": 9.2,
         "structure": {
           "trend": "Mixed / consolidating",
           "swing_highs": [
@@ -747,9 +747,9 @@
             0.18136799
           ]
         },
-        "risk_pct": 18.2
+        "risk_pct": 17.7
       },
-      "analysis": "XLM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 38% below its one-year high, so there is room to run. Trade idea: entry $0.2194, stop $0.1795, target $0.2966 (1.93:1) \u2014 then trail it.",
+      "analysis": "XLM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 38% below its one-year high, so there is room to run. Trade idea: entry $0.2181, stop $0.1795, target $0.2966 (2.04:1) \u2014 then trail it.",
       "sector_count": 0
     }
   ]
