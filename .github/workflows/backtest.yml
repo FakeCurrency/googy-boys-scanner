@@ -11,7 +11,7 @@ on:
     inputs:
       months:
         description: "Months of 1H history to backtest (clamped to ~24)"
-        default: "12"
+        default: "6"
         required: false
 
 permissions:
@@ -36,7 +36,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run scalp backtest
-        run: python -m scanner.scalp_backtest --months ${{ github.event.inputs.months || '12' }}
+        timeout-minutes: 50
+        run: python -m scanner.scalp_backtest --months ${{ github.event.inputs.months || '6' }}
 
       - name: Commit & push backtest results
         run: |
