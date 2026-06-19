@@ -372,6 +372,8 @@ def build_chart_data(
     close    = df["Close"]
     sigs     = _squeeze_signals(df)
     bb_mid   = sigs["bb_mid"]
+    mom      = sigs["mom"]
+    sq_on    = sigs["sq_on"]
     bb_std   = close.rolling(SQ_PERIOD).std(ddof=0)
     bb_upper = bb_mid + SQ_BB_MULT * bb_std
     bb_lower = bb_mid - SQ_BB_MULT * bb_std
@@ -386,6 +388,30 @@ def build_chart_data(
     def _ts(idx_val) -> int:
         """UTC Unix timestamp (seconds) from tz-naive pandas Timestamp."""
         return int(pd.Timestamp(idx_val).value // 1_000_000_000)
+
+    # ── TTM Squeeze momentum histogram (LazyBear colour convention) ──────────
+    #   above 0 & rising  → aqua   · above 0 & fading → teal
+    #   below 0 & falling → red    · below 0 & rising → maroon
+    histogram = []
+    mom_vals = mom.to_numpy(dtype=float)
+    for i in range(-n, 0):
+        v = float(mom_vals[i])
+        if not np.isfinite(v):
+            continue
+        prev = float(mom_vals[i - 1]) if i - 1 >= -len(mom_vals) and np.isfinite(mom_vals[i - 1]) else v
+        if v >= 0:
+            color = "#00e6cc" if v >= prev else "#127d70"
+        else:
+            color = "#ff3b3b" if v <= prev else "#7d1f1f"
+        histogram.append({"time": _ts(df.index[i]), "value": round(v, 8), "color": color})
+
+    # Squeeze on/off dots on the zero line (red = coiling/ON, green = fired/OFF)
+    sq_dots = []
+    sq_vals = sq_on.to_numpy()
+    for i in range(-n, 0):
+        on = bool(sq_vals[i]) if i >= -len(sq_vals) else False
+        sq_dots.append({"time": _ts(df.index[i]), "value": 0,
+                        "color": "#ff5b5b" if on else "#2fd07f"})
 
     candles, volume = [], []
     for i in range(-n, 0):
@@ -415,17 +441,30 @@ def build_chart_data(
     else:
         tv_sym = _SCALP_TV_SYMBOLS.get(symbol, symbol)
 
-    risk_pct = round(abs(lv["entry"] - lv["stop"]) / lv["entry"] * 100, 1) if lv["entry"] else 0.0
+    entry_px = lv["entry"]
+    risk_pct = round(abs(entry_px - lv["stop"]) / entry_px * 100, 1) if entry_px else 0.0
 
+    def _pct(price: float) -> str:
+        if not entry_px:
+            return ""
+        d = (price - entry_px) / entry_px * 100
+        return f"{d:+.1f}%"
+
+    # Distances labelled in % from entry and in R, so the chart reads at a glance.
+    tgt_pct  = _pct(lv["target"])
+    stop_pct = _pct(lv["stop"])
+    rr       = lv["rr"]
     level_lines = [
-        {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
+        {"price": lv["target"], "color": "#2fd07f", "title": f"TARGET {tgt_pct} ({rr:.1f}R)"},
         {"price": lv["entry"],  "color": "#f0a500", "title": "ENTRY"},
-        {"price": lv["stop"],   "color": "#ff5b5b", "title": "STOP"},
+        {"price": lv["stop"],   "color": "#ff5b5b", "title": f"STOP {stop_pct} (1R)"},
     ]
     if direction == "long" and sig.get("nearest_support") is not None:
-        level_lines.append({"price": sig["nearest_support"],    "color": "#4477cc", "title": "SUPPORT"})
+        level_lines.append({"price": sig["nearest_support"],    "color": "#4477cc",
+                            "title": f"SUPPORT {_pct(sig['nearest_support'])}"})
     elif direction == "short" and sig.get("nearest_resistance") is not None:
-        level_lines.append({"price": sig["nearest_resistance"], "color": "#cc7700", "title": "RESIST"})
+        level_lines.append({"price": sig["nearest_resistance"], "color": "#cc7700",
+                            "title": f"RESIST {_pct(sig['nearest_resistance'])}"})
 
     return {
         "symbol":          symbol,
@@ -453,6 +492,8 @@ def build_chart_data(
             "1H": {
                 "candles": candles,
                 "volume":  volume,
+                "histogram": histogram,
+                "squeeze_dots": sq_dots,
                 "lines": [
                     _line(bb_upper, "#4477cc", "BB Upper"),
                     _line(bb_mid,   "#888888", "BB Mid"),
