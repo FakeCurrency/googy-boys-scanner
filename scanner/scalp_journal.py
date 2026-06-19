@@ -20,11 +20,37 @@ ROOT                 = pathlib.Path(__file__).resolve().parents[1]
 SCALP_JOURNAL_FILE   = ROOT / "journal" / "scalp_journal.json"
 PUBLIC_SCALP_JOURNAL = ROOT / "public" / "data" / "scalp_journal.json"
 
-NOTIONAL  = config.SCALP_POSITION_SIZE * config.SCALP_LEVERAGE  # $5,000
-BROK_RT   = config.SCALP_BROKERAGE_EACH_WAY * 2                  # $40
-MAX_DAILY = config.SCALP_MAX_TRADES_PER_DAY                       # 5
-MAX_LOSS  = config.SCALP_MAX_DAILY_LOSS                           # $500
-SLIP      = config.SCALP_FILL_SLIPPAGE_PCT                        # 0.03% one-way
+NOTIONAL   = config.SCALP_POSITION_SIZE * config.SCALP_LEVERAGE  # $5,000
+BROK_RT    = config.SCALP_BROKERAGE_EACH_WAY * 2                  # $40
+MAX_DAILY  = config.SCALP_MAX_TRADES_PER_DAY                       # 5
+MAX_LOSS   = config.SCALP_MAX_DAILY_LOSS                           # $500
+SLIP       = config.SCALP_FILL_SLIPPAGE_PCT                        # 0.03% one-way
+DAY_ANCHOR = config.SCALP_DAY_ANCHOR_UTC                           # 08:00 UTC rollover
+MAX_GROUP  = config.SCALP_MAX_PER_GROUP                            # correlated positions cap
+
+
+def _session_day(ts: str | None = None) -> str:
+    """Trading-day key anchored at SCALP_DAY_ANCHOR_UTC so it never resets mid-session.
+
+    Pass an ISO timestamp (UTC) or None for 'now'. Subtracting the anchor shifts the
+    day boundary into the quiet window between NASDAQ close and ASX open.
+    """
+    if ts:
+        try:
+            t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19])
+        except ValueError:
+            t = dt.datetime.utcnow()
+    else:
+        t = dt.datetime.utcnow()
+    return (t - dt.timedelta(hours=DAY_ANCHOR)).strftime("%Y-%m-%d")
+
+
+def _corr_group(symbol: str, asset_type: str = "", sector: str = "") -> str:
+    """Correlation bucket for a symbol — explicit override, else <type>:<sector>."""
+    g = config.SCALP_CORRELATION_GROUPS.get(symbol)
+    if g:
+        return g
+    return f"{asset_type or '?'}:{sector or '?'}".lower()
 
 
 def _load() -> dict:
@@ -50,23 +76,39 @@ def _dir_stats(closed: list, open_: list) -> dict:
     }
 
 
+def _trade_day(item: dict) -> str:
+    """Session-day a position belongs to — stored at open, else derived from opened_ts."""
+    return item.get("session_day") or _session_day(item.get("opened_ts"))
+
+
 def summarize(j: dict) -> dict:
-    today        = dt.datetime.utcnow().strftime("%Y-%m-%d")
-    today_closed = [c for c in j["closed"] if (c.get("opened_ts") or "")[:10] == today]
+    today        = _session_day()
+    today_closed = [c for c in j["closed"] if _trade_day(c) == today]
+    today_open   = [p for p in j["open"]   if _trade_day(p) == today]
     today_pnl    = round(sum(c.get("pnl", 0) for c in today_closed), 2)
-    trades_used  = len(today_closed) + len(j["open"])
+    trades_used  = len(today_closed) + len(today_open)
     long_open    = [p for p in j["open"]   if p["direction"] == "long"]
     short_open   = [p for p in j["open"]   if p["direction"] == "short"]
     long_closed  = [c for c in j["closed"] if c["direction"] == "long"]
     short_closed = [c for c in j["closed"] if c["direction"] == "short"]
+
+    # Live correlation-group exposure (open positions only)
+    group_exposure: dict[str, int] = {}
+    for p in j["open"]:
+        g = p.get("corr_group") or _corr_group(p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
+        group_exposure[g] = group_exposure.get(g, 0) + 1
+
     return {
         "notional":          NOTIONAL,
         "brokerage_rt":      BROK_RT,
         "max_daily_trades":  MAX_DAILY,
         "max_daily_loss":    MAX_LOSS,
+        "max_per_group":     MAX_GROUP,
+        "session_day":       today,
         "today_trades":      trades_used,
         "today_pnl":         today_pnl,
         "trades_left_today": max(0, MAX_DAILY - trades_used),
+        "group_exposure":    dict(sorted(group_exposure.items(), key=lambda kv: -kv[1])),
         "longs":  _dir_stats(long_closed,  long_open),
         "shorts": _dir_stats(short_closed, short_open),
     }
@@ -231,13 +273,23 @@ def update_scalp(j: dict, progress: bool = True) -> dict:
     universe  = load_scalp_universe()
     sym_to_yf = {u["symbol"]: u["yf"] for u in universe}
 
-    today        = scan_ts[:10]
-    today_closed = [c for c in j["closed"] if (c.get("opened_ts") or "")[:10] == today]
+    # Daily caps are scoped to the SESSION day (anchored at 08:00 UTC), derived
+    # from the scan timestamp so a scan never resets the count mid-session.
+    sess_day     = _session_day(scan_ts)
+    today_closed = [c for c in j["closed"] if _trade_day(c) == sess_day]
+    today_open   = [p for p in j["open"]   if _trade_day(p) == sess_day]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
-    trades_used  = len(today_closed) + len(j["open"])
+    trades_used  = len(today_closed) + len(today_open)
 
     open_keys  = {(p["symbol"], p["direction"]) for p in j["open"]}
+    # Live correlation-group exposure across ALL open positions
+    group_count: dict[str, int] = {}
+    for p in j["open"]:
+        g = p.get("corr_group") or _corr_group(p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
+        group_count[g] = group_count.get(g, 0) + 1
+
     opened_now = 0
+    skipped_group = 0
 
     for r in scan["results"]:
         if r["grade"] not in ("A+", "A"):
@@ -250,29 +302,42 @@ def update_scalp(j: dict, progress: bool = True) -> dict:
         if today_pnl < -MAX_LOSS:
             break
 
+        # Portfolio risk: don't pile into correlated names (metals, energy, us_tech…)
+        group = _corr_group(r["symbol"], r.get("asset_type", ""), r.get("sector", ""))
+        if group_count.get(group, 0) >= MAX_GROUP:
+            skipped_group += 1
+            continue
+
         entry = r["entry"]
         units = int(NOTIONAL / entry) if entry > 0 else 0
         if units == 0:
             continue
 
         j["open"].append({
-            "symbol":     r["symbol"],
-            "name":       r["name"],
-            "asset_type": r.get("asset_type", ""),
-            "direction":  direction,
-            "grade":      r["grade"],
-            "score":      r["score"],
-            "entry":      entry,
-            "stop":       r["stop"],
-            "target":     r["target"],
-            "rr":         r["rr"],
-            "units":      units,
-            "yf_ticker":  sym_to_yf.get(r["symbol"], r["symbol"]),
-            "opened_ts":  scan_ts,
-            "status":     "open",
+            "symbol":      r["symbol"],
+            "name":        r["name"],
+            "asset_type":  r.get("asset_type", ""),
+            "sector":      r.get("sector", ""),
+            "corr_group":  group,
+            "direction":   direction,
+            "grade":       r["grade"],
+            "score":       r["score"],
+            "entry":       entry,
+            "stop":        r["stop"],
+            "target":      r["target"],
+            "rr":          r["rr"],
+            "units":       units,
+            "yf_ticker":   sym_to_yf.get(r["symbol"], r["symbol"]),
+            "opened_ts":   scan_ts,
+            "session_day": sess_day,
+            "status":      "open",
         })
         open_keys.add((r["symbol"], direction))
+        group_count[group] = group_count.get(group, 0) + 1
         opened_now += 1
+
+    if progress and skipped_group:
+        print(f"  scalp journal: {skipped_group} setups skipped (correlation cap, max {MAX_GROUP}/group)")
 
     yf_tickers = sorted({p.get("yf_ticker", p["symbol"]) for p in j["open"]})
     if progress and (yf_tickers or opened_now):

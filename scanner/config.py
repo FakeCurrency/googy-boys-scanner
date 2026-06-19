@@ -197,6 +197,38 @@ SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
 # Captures the gap between the last 1h close (scan price) and the next bar open.
 SCALP_FILL_SLIPPAGE_PCT = 0.0003  # 0.03% one-way — $1.50 on a $5,000 notional trade
 
+# Trading-day boundary. The daily trade count / loss limit reset once per 24h at
+# this fixed UTC hour. 08:00 UTC sits in the quiet window between ASX close
+# (~06:00 UTC) and NASDAQ open (13:30 UTC), so it NEVER bisects a live session —
+# even during AEDT (Oct–Apr) when the ASX session straddles 00:00 UTC.
+SCALP_DAY_ANCHOR_UTC = 8
+
+# Portfolio risk — correlation caps. Highly-correlated instruments (e.g. Gold +
+# Silver + Gold ETFs + a gold miner) are ONE bet, not five. Cap how many open
+# scalp positions may share a correlation group at once. Symbols not listed fall
+# back to a "<asset_type>:<sector>" bucket built from the universe CSV.
+SCALP_MAX_PER_GROUP = 2
+SCALP_CORRELATION_GROUPS = {
+    # Precious metals — futures, ETFs and a gold miner all move together
+    "GOLD": "metals", "SILVER": "metals", "GLD": "metals", "SLV": "metals", "NST": "metals",
+    # Energy complex — crude/gas futures + energy producers
+    "OIL": "energy", "BRENT": "energy", "NATGAS": "energy",
+    "WDS": "energy", "STO": "energy", "ORG": "energy",
+    # Base metals / diversified miners (iron ore tracks the broad materials bid)
+    "COPPER": "materials_au", "BHP": "materials_au", "RIO": "materials_au", "FMG": "materials_au",
+    # Soft commodities
+    "WHEAT": "ags", "COFFEE": "ags",
+    # Australian banks / financials
+    "CBA": "au_financials", "NAB": "au_financials", "WBC": "au_financials",
+    "ANZ": "au_financials", "MQG": "au_financials", "QBE": "au_financials", "SUN": "au_financials",
+    # US mega-cap tech & semis (incl. index ETFs — one big beta bet)
+    "AAPL": "us_tech", "MSFT": "us_tech", "NVDA": "us_tech", "META": "us_tech",
+    "GOOGL": "us_tech", "AMZN": "us_tech", "TSLA": "us_tech", "AMD": "us_tech",
+    "AVGO": "us_tech", "NFLX": "us_tech", "PLTR": "us_tech", "CRM": "us_tech",
+    "ORCL": "us_tech", "ADBE": "us_tech", "MU": "us_tech", "QCOM": "us_tech",
+    "SPY": "us_tech", "QQQ": "us_tech",
+}
+
 # ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
