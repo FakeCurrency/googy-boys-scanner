@@ -70,9 +70,9 @@ def _dir_stats(closed_list: list, open_list: list) -> dict:
 
 def summarize(j: dict) -> dict:
     long_open   = [p for p in j["open"]   if p.get("direction", "long") == "long"]
-    short_open  = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    short_open  = [p for p in j["open"]   if p.get("direction", "long") == "short"]
     long_closed = [c for c in j["closed"] if c.get("direction", "long") == "long"]
-    short_closed= [c for c in j["closed"] if c.get("direction", "short") == "short"]
+    short_closed= [c for c in j["closed"] if c.get("direction", "long") == "short"]
     return {
         "position_size": config.POSITION_SIZE_USD,
         "brokerage": config.BROKERAGE_EACH_WAY,
@@ -89,9 +89,9 @@ def _save(j: dict) -> None:
     JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
 
     open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
-    open_shorts = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    open_shorts = [p for p in j["open"]   if p.get("direction", "long") == "short"]
     cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
-    cl_shorts   = [c for c in j["closed"] if c.get("direction", "short") == "short"]
+    cl_shorts   = [c for c in j["closed"] if c.get("direction", "long") == "short"]
 
     PUBLIC_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
     PUBLIC_JOURNAL.write_text(json.dumps({
@@ -154,8 +154,11 @@ def _walk(df, pos: dict) -> dict:
         return pos
 
     if direction == "short":
-        current_stop = stop  # for shorts, trail stop moves DOWN
+        current_stop = stop  # trail ratchets DOWN as price falls
         for j in range(start, len(df)):
+            st = st_arr[j]
+            if np.isfinite(st) and closes[j] < st < current_stop:
+                current_stop = st
             if highs[j] >= current_stop:
                 return _close(pos, current_stop, dates[j],
                               "trail" if current_stop < stop else "stop", j - start + 1)
@@ -205,14 +208,14 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     # 1) open a paper position for each new A+/A setup
     open_keys = {(p["market"], p["symbol"], p.get("direction", "long")) for p in j["open"]}
     open_long_count  = sum(1 for p in j["open"] if p.get("direction", "long")  == "long")
-    open_short_count = sum(1 for p in j["open"] if p.get("direction", "short") == "short")
+    open_short_count = sum(1 for p in j["open"] if p.get("direction", "long") == "short")
     opened_now = 0
 
     for r in scan["results"]:
         if open_long_count >= config.MAX_POSITIONS_LONG:
             break
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "long") not in open_keys:
-            entry_price = r["price"]
+            entry_price = r["entry"]
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
@@ -233,7 +236,7 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
         if open_short_count >= config.MAX_POSITIONS_SHORT:
             break
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
-            entry_price = r["price"]
+            entry_price = r["entry"]
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],

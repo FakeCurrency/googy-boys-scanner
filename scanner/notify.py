@@ -151,9 +151,9 @@ def _format_digest(market: str, signals: list[dict], today: str) -> str:
         grade      = sig.get("grade", "")
         direction  = sig.get("dir", "LONG")
         rr_text    = sig.get("rr_text", "")
-        entry      = float(sig.get("entry", 0))
-        stop_pct   = float(sig.get("stop_pct", 0))
-        p2_pct     = float(sig.get("p2_pct", 0))
+        entry      = float(sig.get("entry") or 0)
+        stop_pct   = float(sig.get("stop_pct") or 0)
+        p2_pct     = float(sig.get("p2_pct") or 0)
         weekly     = sig.get("weekly", False)
         chips      = sig.get("chips", [])[:3]
         setup_type = sig.get("_setup_type", "")

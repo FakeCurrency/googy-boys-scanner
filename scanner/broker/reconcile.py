@@ -91,7 +91,7 @@ def reconcile_journal(j: dict) -> dict:
             survivors.append({**pos, "broker_status": status})
             continue
 
-        if status in ("canceled", "expired", "rejected"):
+        if status in ("canceled", "expired", "rejected", "done_for_day", "replaced"):
             print(f"  reconcile: {pos['symbol']} {pos['direction']} → {status}, removing")
             j["closed"].append({
                 **pos,
