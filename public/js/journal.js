@@ -204,11 +204,16 @@
       btn.classList.add("is-active");
       btn.setAttribute("aria-selected", "true");
       const jrnl = btn.dataset.journal;
+      const allSec = $("#jr-all-section");
+      if (allSec) allSec.classList.toggle("jr-hidden", jrnl !== "all");
       $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
       $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
       $("#jr-scalp-section").classList.toggle("jr-hidden", jrnl !== "scalp");
     });
   });
+
+  // Holds each journal's closed-trade $ P&L for the combined Overall view.
+  const overall = { swing: [], scalp: [] };
 
   fetch("data/journal.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -234,9 +239,86 @@
       $("#jr-short-closed-n").textContent = `(${cs.length})`;
       $("#jr-short-open").innerHTML   = openTable(os);
       $("#jr-short-closed").innerHTML = closedTable(cs);
+
+      // Feed the Overall view (timestamped $ P&L from closed swing trades)
+      overall.swing = [...cl, ...cs]
+        .filter((c) => c.pnl != null)
+        .map((c) => ({ ts: c.exit_date || c.opened || "", pnl: c.pnl, src: "swing" }));
+      renderOverall();
     })
     .catch(() => {
       $("#jr-long-stats").innerHTML = `<div class="jr-empty" style="grid-column:1/-1">
         No journal yet. Run <code>python -m scanner.journal</code> to start the forward test.</div>`;
     });
+
+  // ── SCALP journal (separate file, $-based) ───────────────────────────────
+  fetch("data/scalp_journal.json", { cache: "no-cache" })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((d) => {
+      const s  = d.stats || {};
+      const ol = d.open_longs   || [];
+      const os = d.open_shorts  || [];
+      const open = [...ol, ...os];
+      const ac = d.all_closed || [...(d.closed_longs || []), ...(d.closed_shorts || [])];
+
+      renderScalpStats(s);
+      scalp_equity(ac, "jr-scalp-equity");
+      $("#jr-scalp-open-n").textContent   = `(${open.length})`;
+      $("#jr-scalp-closed-n").textContent = `(${ac.length})`;
+      $("#jr-scalp-open").innerHTML   = scalp_openTable(open);
+      $("#jr-scalp-closed").innerHTML = scalp_closedTable(ac);
+
+      overall.scalp = ac
+        .filter((c) => c.pnl != null)
+        .map((c) => ({ ts: c.exit_ts || c.opened_ts || "", pnl: c.pnl, src: "scalp" }));
+      renderOverall();
+    })
+    .catch(() => {
+      const el = $("#jr-scalp-stats");
+      if (el) el.innerHTML = `<div class="jr-empty" style="grid-column:1/-1">
+        No scalp journal yet — it populates on the next scan.</div>`;
+    });
+
+  // ── Combined Overall dashboard (all journals, by $ P&L) ──────────────────
+  function renderOverall() {
+    const trades = [...overall.swing, ...overall.scalp]
+      .filter((t) => t.pnl != null)
+      .sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    if (!$("#jr-all-stats")) return;
+    if (!trades.length) {
+      $("#jr-all-stats").innerHTML = `<div class="jr-empty" style="grid-column:1/-1">
+        No closed trades across any journal yet.</div>`;
+      return;
+    }
+    const pnls = trades.map((t) => t.pnl);
+    const wins = pnls.filter((p) => p > 0);
+    const loss = pnls.filter((p) => p < 0);
+    const grossWin  = wins.reduce((a, b) => a + b, 0);
+    const grossLoss = Math.abs(loss.reduce((a, b) => a + b, 0));
+    const pf  = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : "∞";
+    const tot = pnls.reduce((a, b) => a + b, 0);
+
+    $("#jr-all-stats").innerHTML = [
+      statCard("Total trades", trades.length),
+      statCard("Win rate", `${(wins.length / trades.length * 100).toFixed(1)}%`),
+      statCard("Profit factor", pf, grossWin >= grossLoss ? "accent-green" : ""),
+      statCard("Realised $", pfmt(tot), pcls(tot)),
+      statCard("Swing / Scalp", `${overall.swing.length} / ${overall.scalp.length}`),
+      statCard("Expectancy", pfmt(tot / trades.length), pcls(tot)),
+    ].join("");
+
+    // Combined cumulative $ equity curve
+    let cum = 0;
+    const pts = trades.map((t) => (cum += t.pnl)); pts.unshift(0);
+    const el = $("#jr-all-equity");
+    const w = 1000, h = 180, pad = 8;
+    const min = Math.min(0, ...pts), max = Math.max(0, ...pts), rng = (max - min) || 1;
+    const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
+    const y = (v) => h - pad - ((v - min) / rng) * (h - 2 * pad);
+    const path = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
+      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+  }
 })();

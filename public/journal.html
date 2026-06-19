@@ -30,9 +30,12 @@
       <p class="jr-config">Max 10 positions per journal &nbsp;·&nbsp; $1,000 AUD per trade &nbsp;·&nbsp; $5 brokerage each way</p>
     </div>
 
-    <!-- LONGS / SHORTS / SCALP tab selector -->
+    <!-- OVERALL / LONGS / SHORTS / SCALP tab selector -->
     <div class="jr-tabs" role="tablist">
-      <button class="jr-tab is-active" data-journal="long" role="tab" aria-selected="true">
+      <button class="jr-tab jr-tab-all is-active" data-journal="all" role="tab" aria-selected="true">
+        <span class="jr-tab-arrow">Σ</span> Overall &nbsp;<span class="jr-tab-label">ALL</span>
+      </button>
+      <button class="jr-tab" data-journal="long" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">↑</span> Journal 1 &nbsp;<span class="jr-tab-label">LONGS</span>
       </button>
       <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
@@ -43,8 +46,20 @@
       </button>
     </div>
 
+    <!-- ── OVERALL ── -->
+    <div id="jr-all-section">
+      <section class="stats" id="jr-all-stats"></section>
+
+      <section class="jr-equity">
+        <div class="jr-section-title">Combined equity curve <span class="muted">(cumulative $, all journals)</span></div>
+        <div id="jr-all-equity" class="jr-equity-chart"></div>
+      </section>
+
+      <p class="jr-sub" style="margin-top:14px">Aggregates every closed paper-trade across the Longs, Shorts and Scalp journals by dollar P&amp;L. Use the tabs above to drill into each journal.</p>
+    </div>
+
     <!-- ── LONGS ── -->
-    <div id="jr-long-section">
+    <div id="jr-long-section" class="jr-hidden">
       <section class="stats" id="jr-long-stats"></section>
 
       <section class="jr-equity">
@@ -107,6 +122,6 @@
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
   </footer>
 
-  <script src="js/journal.js?v=5"></script>
+  <script src="js/journal.js?v=6"></script>
 </body>
 </html>
