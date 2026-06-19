@@ -1,0 +1,86 @@
+name: Swing backtest
+
+# Run manually to get win-rate / profit-factor / max-drawdown for the
+# pullback + reversal scanners across the ASX / NASDAQ universe.
+# Results are saved to backtest/swing_results.txt and committed for review.
+on:
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market to backtest (asx / nasdaq / both)"
+        default: "both"
+        required: false
+      account:
+        description: "Starting account size ($)"
+        default: "5000"
+        required: false
+      size:
+        description: "Position size per trade ($)"
+        default: "1000"
+        required: false
+      brokerage:
+        description: "Brokerage per transaction ($)"
+        default: "10"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: swing-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run swing backtest
+        run: |
+          mkdir -p backtest
+          MARKETS="${{ github.event.inputs.market || 'both' }}"
+          ACCOUNT="${{ github.event.inputs.account || '5000' }}"
+          SIZE="${{ github.event.inputs.size || '1000' }}"
+          BROKERAGE="${{ github.event.inputs.brokerage || '10' }}"
+
+          {
+            echo "======================================================"
+            echo "  SWING SCANNER BACKTEST (pullback + reversal)"
+            echo "  Account: \$$ACCOUNT  Position: \$$SIZE  Brokerage: \$$BROKERAGE"
+            echo "  Run: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo "======================================================"
+            echo ""
+
+            if [ "$MARKETS" = "both" ] || [ "$MARKETS" = "asx" ]; then
+              python -m scanner.backtest --market asx --full \
+                --account "$ACCOUNT" --size "$SIZE" --brokerage "$BROKERAGE"
+            fi
+
+            if [ "$MARKETS" = "both" ] || [ "$MARKETS" = "nasdaq" ]; then
+              python -m scanner.backtest --market nasdaq \
+                --account "$ACCOUNT" --size "$SIZE" --brokerage "$BROKERAGE"
+            fi
+          } 2>&1 | tee backtest/swing_results.txt
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backtest/swing_results.txt
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "backtest: swing results $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase origin main
+            git push
+          fi

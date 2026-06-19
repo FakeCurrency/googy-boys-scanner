@@ -216,7 +216,7 @@
       + '<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
     const s = document.createElement("script");
     s.type = "text/javascript"; s.async = true; s.src = src;
-    s.innerHTML = JSON.stringify(config);
+    s.textContent = JSON.stringify(config);
     host.firstChild.appendChild(s);
   }
 

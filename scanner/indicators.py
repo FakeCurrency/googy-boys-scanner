@@ -107,9 +107,12 @@ def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
 
     plus_dm = (high - prev_high).clip(lower=0)
     minus_dm = (prev_low - low).clip(lower=0)
-    # When +DM and -DM both positive, only the larger one counts.
-    plus_dm = plus_dm.where(plus_dm >= minus_dm, 0.0)
-    minus_dm = minus_dm.where(minus_dm > plus_dm, 0.0)
+    # When +DM and -DM both positive, only the larger one counts; an exact tie
+    # zeroes both (standard DMI rule). Compare against snapshots so the
+    # reassignment of plus_dm doesn't change the minus_dm comparison.
+    _pdm, _mdm = plus_dm, minus_dm
+    plus_dm  = _pdm.where(_pdm > _mdm, 0.0)
+    minus_dm = _mdm.where(_mdm > _pdm, 0.0)
 
     atr_ = atr(df, period)
     plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr_.replace(0, float("nan"))

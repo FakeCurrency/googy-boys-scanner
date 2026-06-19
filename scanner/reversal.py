@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from . import analysis, config
+from .grading import grade_from_points, score_chips
 from .indicators import pivot_highs, rsi, sma, supertrend
 
 CHIP_ORDER = ["reclaim", "base", "volume", "breakout", "rsi"]
@@ -95,17 +96,8 @@ def evaluate(df: pd.DataFrame) -> dict | None:
 
 
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
-    points, fired = 0, []
-    for key in CHIP_ORDER:
-        if sig[_KEY[key]]:
-            points += config.REV_POINTS[key]
-            fired.append(key)
-    grade = None
-    for name, cutoff in config.REV_GRADE_CUTOFFS:
-        if points >= cutoff:
-            grade = name
-            break
-    return points, grade, fired
+    points, fired = score_chips(sig, CHIP_ORDER, config.REV_POINTS, key_map=_KEY)
+    return points, grade_from_points(points, config.REV_GRADE_CUTOFFS), fired
 
 
 def compute_levels(df: pd.DataFrame, sig: dict) -> dict:

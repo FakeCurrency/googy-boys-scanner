@@ -8,6 +8,7 @@ Examples:
 """
 
 import argparse
+import json
 import pathlib
 
 from . import config, output, pulse, scan
@@ -78,49 +79,51 @@ def main() -> None:
     for market_key in markets:
         market = config.MARKETS[market_key]
         print(f"Scanning {market.label} ...", flush=True)
-        universe = load_universe(market_key, full=not args.curated)
-        if args.limit:
-            universe = universe[:args.limit]
-        print(f"  downloading {len(universe)} tickers ...", flush=True)
-        frames = download([u["yf"] for u in universe])
-        pulse_data = pulse.fetch()
-        if market_key in ("asx", "nasdaq"):
-            mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
+        try:
+            universe = load_universe(market_key, full=not args.curated)
+            if args.limit:
+                universe = universe[:args.limit]
+            print(f"  downloading {len(universe)} tickers ...", flush=True)
+            frames = download([u["yf"] for u in universe])
+            pulse_data = pulse.fetch()
+            if market_key in ("asx", "nasdaq"):
+                mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
 
-        # 1) Fibonacci pullback scan -> <market>.json
-        pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
-                              pulse_data=pulse_data, universe=universe, progress=False)
-        output.write(pb, args.out)
-        print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
+            # 1) Fibonacci pullback scan -> <market>.json
+            pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
+                                  pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(pb, args.out)
+            print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
 
-        # 2) Reversal / base-breakout scan -> <market>_reversal.json
-        if not args.no_reversal:
-            rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
+            # 2) Reversal / base-breakout scan -> <market>_reversal.json
+            if not args.no_reversal:
+                rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
+                                               pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(rv, args.out, name=f"{market_key}_reversal")
+                print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
+
+            # 3) Specs / volume-spike breakout scan -> <market>_spec.json
+            if not args.no_spec:
+                sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
                                            pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(rv, args.out, name=f"{market_key}_reversal")
-            print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
+                output.write(sp, args.out, name=f"{market_key}_spec")
+                print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
 
-        # 3) Specs / volume-spike breakout scan -> <market>_spec.json
-        if not args.no_spec:
-            sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
-                                       pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(sp, args.out, name=f"{market_key}_spec")
-            print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
-
-        # 4) Shorts / bearish pullback scan -> <market>_short.json
-        if not args.no_short:
-            sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
-                                        pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(sh, args.out, name=f"{market_key}_short")
-            print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+            # 4) Shorts / bearish pullback scan -> <market>_short.json
+            if not args.no_short:
+                sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
+                                            pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(sh, args.out, name=f"{market_key}_short")
+                print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+        except Exception as e:
+            print(f"  ERROR scanning {market_key}: {e}", flush=True)
 
     # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
     if not args.no_scalp:
-        import json as _json2
         print("Scanning SCALP (1h intraday) ...", flush=True)
         sc = scan.scan_scalp(out_root=args.out)
         (pathlib.Path(args.out) / "scalp.json").write_text(
-            _json2.dumps(sc, indent=2), encoding="utf-8")
+            json.dumps(sc, indent=2), encoding="utf-8")
         tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
         print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
               f"across {sc['scanned']} instruments")
@@ -136,7 +139,6 @@ def main() -> None:
               f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
-    import json as _json
     from . import sectors as _sectors
     print("Fetching sector dashboard ...", flush=True)
     sec = _sectors.fetch()
@@ -144,7 +146,7 @@ def main() -> None:
         if page_key in sec["markets"]:
             _sectors.enrich(sec["markets"][page_key], frames, universe,
                             MOVER_MIN_DVOL.get(page_key, 1_000_000))
-    (pathlib.Path(args.out) / "sectors.json").write_text(_json.dumps(sec, indent=2), encoding="utf-8")
+    (pathlib.Path(args.out) / "sectors.json").write_text(json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")
 

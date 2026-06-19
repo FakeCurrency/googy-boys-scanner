@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 
 from . import config
-from .indicators import adx as calc_adx, atr, ema, ema_ladder, pivot_lows, rsi as calc_rsi, supertrend
+from .grading import grade_from_points, score_chips
+from .indicators import adx as calc_adx, ema, ema_ladder, pivot_lows, rsi as calc_rsi, supertrend
 
 SHORT_CHIP_ORDER = [
     "bearish_alignment", "compression", "resistance_touch",
@@ -158,18 +159,8 @@ def evaluate(df: pd.DataFrame) -> dict | None:
 
 
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
-    points = 0
-    fired: list[str] = []
-    for key in SHORT_CHIP_ORDER:
-        if sig.get(key):
-            points += SHORT_POINTS[key]
-            fired.append(key)
-    grade = None
-    for name, cutoff in SHORT_GRADE_CUTOFFS:
-        if points >= cutoff:
-            grade = name
-            break
-    return points, grade, fired
+    points, fired = score_chips(sig, SHORT_CHIP_ORDER, SHORT_POINTS)
+    return points, grade_from_points(points, SHORT_GRADE_CUTOFFS), fired
 
 
 def build_chips(fired: list[str], sig: dict) -> list[str]:

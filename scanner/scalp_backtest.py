@@ -53,7 +53,13 @@ _DL_INTER_SLEEP  = 2.0  # seconds between tickers
 
 
 def _download_one(yf_ticker: str, period: str) -> "pd.DataFrame | None":
-    """Fetch 1H bars for one ticker with a hard wall-clock timeout."""
+    """Fetch 1H bars for one ticker with a hard wall-clock timeout.
+
+    Does NOT use the executor as a context manager: the context manager calls
+    shutdown(wait=True) on exit which blocks until the thread finishes even
+    after a TimeoutError, defeating the timeout. We call shutdown(wait=False)
+    explicitly so the main thread is immediately unblocked.
+    """
     def _fetch():
         df = yf.download(
             yf_ticker, period=period, interval="1h",
@@ -64,12 +70,15 @@ def _download_one(yf_ticker: str, period: str) -> "pd.DataFrame | None":
         df = df.dropna()
         return df if len(df) else None
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        fut = pool.submit(_fetch)
-        try:
-            return fut.result(timeout=_DL_TIMEOUT_S)
-        except Exception:
-            return None
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    fut  = pool.submit(_fetch)
+    try:
+        result = fut.result(timeout=_DL_TIMEOUT_S)
+        pool.shutdown(wait=False)
+        return result
+    except Exception:
+        pool.shutdown(wait=False, cancel_futures=True)
+        return None
 
 
 def _fetch_frames(tickers: list[str], period: str, progress: bool) -> "dict[str, pd.DataFrame]":
@@ -134,21 +143,46 @@ def _simulate_one(df: pd.DataFrame, direction: str) -> list[dict]:
         raw_open = opens[fill_bar]
         entry = raw_open * (1 + SLIP) if direction == "long" else raw_open * (1 - SLIP)
         risk  = (entry - stop) if direction == "long" else (stop - entry)
+
+        # Gapped through the stop on the fill bar: entry is already past the stop,
+        # so risk ≤ 0.  Record a stop-out at the fill price and move on.
         if risk <= 0:
-            i += 1
+            units_gap = int(NOTIONAL / raw_open) if raw_open > 0 else 0
+            if units_gap > 0:
+                gapped_risk = max(abs(raw_open - stop), raw_open * 0.0001)
+                trades.append(_record(direction, grade, entry, entry, stop, units_gap,
+                                       ts[fill_bar], "stop-gap", 0, gapped_risk))
+            i = fill_bar + 1
             continue
+
         units = int(NOTIONAL / entry) if entry > 0 else 0
         if units == 0:
             i += 1
             continue
 
-        # Gapped straight through the stop on the fill bar → immediate stop-out
-        gapped = (direction == "long" and entry <= stop) or (direction == "short" and entry >= stop)
-        if gapped:
-            trades.append(_record(direction, grade, entry, raw_open, stop, units,
-                                   ts[fill_bar], "stop-gap", 0, risk))
-            i = fill_bar + 1
-            continue
+        # Check if the fill bar itself hits stop/target intrabar (same-bar exit)
+        if direction == "long":
+            if lows[fill_bar] <= stop:
+                trades.append(_record(direction, grade, entry, stop, stop, units,
+                                       ts[fill_bar], "stop", 0, risk))
+                i = fill_bar + 1
+                continue
+            if highs[fill_bar] >= target:
+                trades.append(_record(direction, grade, entry, target, stop, units,
+                                       ts[fill_bar], "target", 0, risk))
+                i = fill_bar + 1
+                continue
+        else:
+            if highs[fill_bar] >= stop:
+                trades.append(_record(direction, grade, entry, stop, stop, units,
+                                       ts[fill_bar], "stop", 0, risk))
+                i = fill_bar + 1
+                continue
+            if lows[fill_bar] <= target:
+                trades.append(_record(direction, grade, entry, target, stop, units,
+                                       ts[fill_bar], "target", 0, risk))
+                i = fill_bar + 1
+                continue
 
         # ── Walk forward from the bar after entry ────────────────────────────
         exit_px = exit_ts = reason = None

@@ -79,7 +79,10 @@ def submit(pos: dict) -> dict:
         }
 
     body = build_bracket(pos)
-    resp = ac.post("/orders", body)
+    try:
+        resp = ac.post("/orders", body)
+    except Exception as e:
+        return {"skipped": True, "reason": f"order submit failed: {e}"}
     return {
         "order_id":        resp["id"],
         "client_order_id": resp.get("client_order_id", ""),
