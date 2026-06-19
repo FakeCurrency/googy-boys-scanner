@@ -55,11 +55,17 @@ jobs:
           # ALPACA_LIVE: set to "true" only at deliberate go-live
         run: python -m scanner.broker.paper_run
 
+      - name: Swing trade alerts (Telegram)
+        env:
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m scanner.notify
+
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data journal/journal.json journal/scalp_journal.json
+          git add public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else
