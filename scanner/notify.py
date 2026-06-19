@@ -1,12 +1,16 @@
 """Telegram swing trade digest for ASX and NASDAQ.
 
-Sends ONE message per market per trading day (not one per signal) so your
-phone doesn't explode. The digest lists the top A+/A setups sorted by grade
-then R:R, with a direct TradingView link for each.
+Sends TWO digests per market per trading day (open + mid-session) so you get
+an early heads-up at the open AND a mid-day refresh of new setups that formed
+during the session.  Only A+ signals are included to keep the list tight.
 
     python -m scanner.notify            # live send
     python -m scanner.notify --dry-run  # print without sending
-    python -m scanner.notify --reset    # clear today's seen state (re-send)
+    python -m scanner.notify --reset    # clear today's sent state (re-sends)
+
+Session windows (UTC):
+  ASX   open  00:00–02:59   mid  03:00–05:59
+  NASDAQ open 13:00–16:59   mid  17:00–21:59
 """
 
 import argparse
@@ -30,9 +34,12 @@ _SOURCES = [
     ("nasdaq", "Reversal", "public/data/nasdaq_reversal.json", "$",  "NASDAQ"),
 ]
 
-_ALERT_GRADES  = {"A+", "A"}
-_MAX_PER_DIGEST = 10       # max signals shown per market in one message
-_TG_MAX_CHARS   = 4000     # Telegram hard limit is 4096; leave headroom
+_ALERT_GRADES   = {"A+"}    # A+ only keeps the list tight (~20 or fewer)
+_MAX_PER_DIGEST = 20        # max signals shown per market per session
+_TG_MAX_CHARS   = 4000      # Telegram hard limit is 4096; leave headroom
+
+# Session split: which UTC hour marks the start of the "mid" window.
+_MID_HOUR = {"asx": 3, "nasdaq": 17}
 
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
@@ -131,14 +138,15 @@ def _h(text: str) -> str:
     return _html.escape(str(text))
 
 
-def _format_digest(market: str, signals: list[dict], today: str) -> str:
+def _format_digest(market: str, signals: list[dict], today: str, session: str) -> str:
     """Build a single digest message for one market, capped at _TG_MAX_CHARS."""
-    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
-    total     = len(signals)
+    mkt_label     = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
+    session_label = "OPEN" if session == "open" else "MID-SESSION"
+    total         = len(signals)
 
     header = [
-        f"<b>{mkt_label} SWING SETUPS — {today}</b>",
-        f"<i>{total} A+/A signal{'s' if total != 1 else ''} found</i>",
+        f"<b>{mkt_label} SWING SETUPS — {today} {session_label}</b>",
+        f"<i>{total} A+ signal{'s' if total != 1 else ''} found</i>",
         "",
     ]
     footer = "\n⚠️ <i>Check your own chart before entering. This is not financial advice.</i>"
@@ -192,8 +200,14 @@ def _format_digest(market: str, signals: list[dict], today: str) -> str:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def _session(market: str, now: dt.datetime) -> str:
+    """Return 'open' or 'mid' based on current UTC hour."""
+    return "mid" if now.hour >= _MID_HOUR[market] else "open"
+
+
 def run(dry_run: bool = False, reset: bool = False) -> None:
-    today  = dt.date.today().isoformat()
+    now    = dt.datetime.now(dt.timezone.utc)
+    today  = now.date().isoformat()
     seen   = {} if reset else _load_seen()
     sent   = 0
     skipped = 0
@@ -204,33 +218,34 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
         if not signals:
             continue
 
-        key = f"{market}_{today}"
+        session = _session(market, now)
+        key = f"{market}_{today}_{session}"
         if seen.get(key):
             skipped += 1
             continue
 
-        msg = _format_digest(market, signals, today)
+        msg = _format_digest(market, signals, today, session)
 
         if dry_run:
             print(f"\n{'═'*62}")
             print(msg)
             print(f"{'═'*62}\n")
-            seen[key] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+            seen[key] = now.isoformat(timespec="seconds")
             sent += 1
         else:
             ok = _tg_send(msg)
             if ok:
-                seen[key] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+                seen[key] = now.isoformat(timespec="seconds")
                 sent += 1
-                print(f"  notify: ✓ {market.upper()} digest sent ({len(signals)} signals)")
+                print(f"  notify: ✓ {market.upper()} {session} digest sent ({len(signals)} signals)")
             else:
-                print(f"  notify: ✗ {market.upper()} digest failed — will retry next scan")
+                print(f"  notify: ✗ {market.upper()} {session} digest failed — will retry next scan")
 
     _save_seen(seen)
 
     total_markets = sum(1 for v in by_market.values() if v)
     if total_markets == 0:
-        print("  notify: no A+/A swing signals in current scan")
+        print("  notify: no A+ swing signals in current scan")
     elif skipped == total_markets:
         print(f"  notify: digest already sent today for all {skipped} market(s) — skipping")
     else:
