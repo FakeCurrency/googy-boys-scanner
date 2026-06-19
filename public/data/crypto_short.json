@@ -6,7 +6,7 @@
   "currency_symbol": "$",
   "timezone": "UTC",
   "tz_label": "UTC",
-  "generated_at": "2026-06-19T02:31:27+00:00",
+  "generated_at": "2026-06-19T02:39:55+00:00",
   "scanned": 78,
   "universe_size": 100,
   "score_max": 13,
@@ -23,10 +23,10 @@
     {
       "key": "ASX200",
       "label": "ASX 200",
-      "value": 8827.0,
+      "value": 8818.0,
       "decimals": 0,
-      "day_pct": -0.95,
-      "d5_pct": 0.26,
+      "day_pct": -1.05,
+      "d5_pct": 0.15,
       "spark": [
         8496.5996,
         8621.7002,
@@ -49,17 +49,17 @@
         8917.7002,
         8966.2998,
         8911.0996,
-        8826.7998
+        8817.5
       ],
       "dir": "down"
     },
     {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4195.0,
+      "value": 4197.0,
       "decimals": 0,
-      "day_pct": -3.76,
-      "d5_pct": 2.56,
+      "day_pct": -3.71,
+      "d5_pct": 2.61,
       "spark": [
         4506.2998,
         4531.2998,
@@ -82,17 +82,17 @@
         4328.0,
         4330.8999,
         4358.8999,
-        4195.0
+        4197.1001
       ],
       "dir": "down"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 64.66,
+      "value": 64.75,
       "decimals": 2,
-      "day_pct": -8.54,
-      "d5_pct": 1.21,
+      "day_pct": -8.42,
+      "d5_pct": 1.35,
       "spark": [
         74.828,
         75.851,
@@ -115,17 +115,17 @@
         70.066,
         69.899,
         70.696,
-        64.66
+        64.745
       ],
       "dir": "down"
     },
     {
       "key": "BRENT",
       "label": "Brent",
-      "value": 79.68,
+      "value": 79.5,
       "decimals": 2,
-      "day_pct": 0.16,
-      "d5_pct": -11.84,
+      "day_pct": -0.06,
+      "d5_pct": -12.04,
       "spark": [
         111.28,
         105.02,
@@ -148,17 +148,17 @@
         83.17,
         78.96,
         79.55,
-        79.68
+        79.5
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "WTI",
       "label": "WTI",
-      "value": 75.81,
+      "value": 75.59,
       "decimals": 2,
-      "day_pct": -1.28,
-      "d5_pct": -13.57,
+      "day_pct": -1.56,
+      "d5_pct": -13.82,
       "spark": [
         107.77,
         98.26,
@@ -181,7 +181,7 @@
         80.75,
         76.05,
         76.79,
-        75.81
+        75.59
       ],
       "dir": "down"
     },
@@ -320,10 +320,10 @@
     {
       "key": "AUD",
       "label": "AUD/USD",
-      "value": 0.7014,
+      "value": 0.7012,
       "decimals": 4,
-      "day_pct": -0.06,
-      "d5_pct": -0.48,
+      "day_pct": -0.09,
+      "d5_pct": -0.51,
       "spark": [
         0.715,
         0.7148,
@@ -346,7 +346,7 @@
         0.7073,
         0.7066,
         0.7018,
-        0.7014
+        0.7012
       ],
       "dir": "down"
     },
@@ -386,10 +386,10 @@
     {
       "key": "USD",
       "label": "USD Idx",
-      "value": 100.85,
+      "value": 100.83,
       "decimals": 2,
-      "day_pct": 0.76,
-      "d5_pct": 0.99,
+      "day_pct": 0.74,
+      "d5_pct": 0.97,
       "spark": [
         99.3,
         99.11,
@@ -412,7 +412,7 @@
         99.63,
         99.54,
         100.09,
-        100.853
+        100.826
       ],
       "dir": "up"
     }
@@ -431,20 +431,20 @@
       "chips": [
         "EMA COMPRESSION",
         "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 0.32174986"
+        "STRONG RESISTANCE CONFLUENCE @ 0.32174654"
       ],
       "weekly": false,
       "low_rr": true,
       "rr_text": "0.3:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 0.3207618,
+      "price": 0.32073548,
       "y_close": 0.32147399,
       "open": 0.32040146,
       "open_pct": -0.33,
-      "current_pct": 0.11,
-      "day_pct": -0.22,
-      "entry": 0.3274136,
+      "current_pct": 0.1,
+      "day_pct": -0.23,
+      "entry": 0.32741121,
       "stop": 0.35560786,
       "target": 0.31843799,
       "rr": 0.32,
@@ -482,10 +482,10 @@
         0.31847399,
         0.31661099,
         0.32147399,
-        0.3207618
+        0.32073548
       ],
       "trend": "blue",
-      "turnover": 598974903,
+      "turnover": 598972839,
       "detail": [],
       "analysis": "TRX is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $0.3274, stop above the swing high at $0.3556 (8.6% risk). Target $0.3184 (support), R:R 0.3:1.",
       "sector_count": 0
@@ -518,7 +518,7 @@
       "stop": 9.14123512,
       "target": 3.60575225,
       "rr": 2.0,
-      "trail": 7.48493538,
+      "trail": 7.47942246,
       "stop_pct": 25.3,
       "p2_pct": 50.6,
       "target_basis": "measured",
@@ -555,7 +555,7 @@
         6.25
       ],
       "trend": "blue",
-      "turnover": 305172357,
+      "turnover": 305217540,
       "detail": [],
       "analysis": "AVAX is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $7.2961, stop above the swing high at $9.1412 (25.3% risk). Target $3.6058 (measured), R:R 2.0:1.",
       "sector_count": 0
@@ -625,7 +625,7 @@
         4.78e-06
       ],
       "trend": "blue",
-      "turnover": 89984111,
+      "turnover": 89987130,
       "detail": [],
       "analysis": "SHIB is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $0.0000, stop above the swing high at $0.0000 (18.1% risk). Target $0.0000 (support), R:R 1.2:1.",
       "sector_count": 0
@@ -648,13 +648,13 @@
       "rr_text": "1.1:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 1703.25,
+      "price": 1703.31994629,
       "y_close": 1790.39819336,
       "open": 1709.1295166,
       "open_pct": -4.54,
       "current_pct": -0.34,
-      "day_pct": -4.87,
-      "entry": 1792.81237995,
+      "day_pct": -4.86,
+      "entry": 1792.8187387,
       "stop": 2062.96852173,
       "target": 1506.5057373,
       "rr": 1.06,
@@ -692,12 +692,12 @@
         1724.61328125,
         1794.96118164,
         1790.39819336,
-        1703.25
+        1703.31994629
       ],
       "trend": "blue",
-      "turnover": 16393911628,
+      "turnover": 16394553317,
       "detail": [],
-      "analysis": "ETH is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $1792.8124, stop above the swing high at $2062.9685 (15.1% risk). Target $1506.5057 (support), R:R 1.1:1.",
+      "analysis": "ETH is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $1792.8187, stop above the swing high at $2062.9685 (15.1% risk). Target $1506.5057 (support), R:R 1.1:1.",
       "sector_count": 0
     },
     {
@@ -718,13 +718,13 @@
       "rr_text": "1.0:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 4170.20019531,
+      "price": 4171.14990234,
       "y_close": 4319.31689453,
       "open": 4180.29003906,
       "open_pct": -3.22,
-      "current_pct": -0.24,
-      "day_pct": -3.45,
-      "entry": 4325.48539439,
+      "current_pct": -0.22,
+      "day_pct": -3.43,
+      "entry": 4325.57173139,
       "stop": 4621.34870117,
       "target": 4028.88183594,
       "rr": 1.0,
@@ -762,12 +762,12 @@
         4286.25683594,
         4306.87744141,
         4319.31689453,
-        4170.20019531
+        4171.14990234
       ],
       "trend": "blue",
-      "turnover": 181087947,
+      "turnover": 181069294,
       "detail": [],
-      "analysis": "PAXG is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $4325.4854, stop above the swing high at $4621.3487 (6.8% risk). Target $4028.8818 (support), R:R 1.0:1.",
+      "analysis": "PAXG is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $4325.5717, stop above the swing high at $4621.3487 (6.8% risk). Target $4028.8818 (support), R:R 1.0:1.",
       "sector_count": 0
     },
     {
@@ -835,7 +835,7 @@
         69.44999695
       ],
       "trend": "blue",
-      "turnover": 3070075886,
+      "turnover": 3069947387,
       "detail": [],
       "analysis": "SOL is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $72.2009, stop above the swing high at $84.0501 (16.4% risk). Target $60.4147 (support), R:R 1.0:1.",
       "sector_count": 0
@@ -858,13 +858,13 @@
       "rr_text": "0.9:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 0.0835,
+      "price": 0.08353,
       "y_close": 0.087115,
       "open": 0.08342092,
       "open_pct": -4.24,
-      "current_pct": 0.09,
-      "day_pct": -4.15,
-      "entry": 0.0899081,
+      "current_pct": 0.13,
+      "day_pct": -4.12,
+      "entry": 0.08991082,
       "stop": 0.10262913,
       "target": 0.078095,
       "rr": 0.93,
@@ -902,10 +902,10 @@
         0.088766,
         0.088109,
         0.087115,
-        0.0835
+        0.08353
       ],
       "trend": "blue",
-      "turnover": 886734599,
+      "turnover": 886747881,
       "detail": [],
       "analysis": "DOGE is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $0.0899, stop above the swing high at $0.1026 (14.1% risk). Target $0.0781 (support), R:R 0.9:1.",
       "sector_count": 0
@@ -975,7 +975,7 @@
         0.1636
       ],
       "trend": "blue",
-      "turnover": 529093133,
+      "turnover": 529135969,
       "detail": [],
       "analysis": "ADA is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $0.1877, stop above the swing high at $0.2410 (28.4% risk). Target $0.1492 (support), R:R 0.7:1.",
       "sector_count": 0
@@ -998,13 +998,13 @@
       "rr_text": "0.3:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 320.75048828,
+      "price": 321.00540161,
       "y_close": 336.68386841,
       "open": 318.91345215,
       "open_pct": -5.28,
-      "current_pct": 0.58,
-      "day_pct": -4.73,
-      "entry": 345.35316411,
+      "current_pct": 0.66,
+      "day_pct": -4.66,
+      "entry": 345.37633805,
       "stop": 442.78830902,
       "target": 317.92907715,
       "rr": 0.28,
@@ -1042,12 +1042,12 @@
         348.50366211,
         345.53161621,
         336.68386841,
-        320.75048828
+        321.00540161
       ],
       "trend": "blue",
-      "turnover": 150652642,
+      "turnover": 150641600,
       "detail": [],
-      "analysis": "XMR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $345.3532, stop above the swing high at $442.7883 (28.2% risk). Target $317.9291 (support), R:R 0.3:1.",
+      "analysis": "XMR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $345.3763, stop above the swing high at $442.7883 (28.2% risk). Target $317.9291 (support), R:R 0.3:1.",
       "sector_count": 0
     }
   ]
