@@ -4,6 +4,12 @@
   const $ = (s) => document.querySelector(s);
   const GRADE_CLS = { "A+": "g-aplus", "A": "g-a", "B": "g-b", "C": "g-c" };
 
+  // Escape data-derived strings before injecting into innerHTML (incl. quotes
+  // so values are safe inside quoted attributes too).
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
+
   const rcls  = (r) => (r >= 0 ? "r-pos" : "r-neg");
   const rfmt  = (r) => (r == null ? "—" : (r >= 0 ? "+" : "") + r.toFixed(2) + "R");
   const pfmt  = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2));
@@ -58,8 +64,8 @@
   function openTable(open) {
     if (!open.length) return `<div class="jr-empty">No open positions.</div>`;
     const rows = open.map((p) => `<tr>
-      <td class="jr-sym">${p.symbol}</td>
-      <td><span class="jr-grade ${GRADE_CLS[p.grade] || ""}">${p.grade}</span></td>
+      <td class="jr-sym">${esc(p.symbol)}</td>
+      <td><span class="jr-grade ${GRADE_CLS[p.grade] || ""}">${esc(p.grade)}</span></td>
       <td>${num(p.entry)}</td>
       <td>${num(p.stop)}</td>
       <td>${num(p.target)}</td>
@@ -67,7 +73,7 @@
       <td>${p.shares != null ? p.shares + " sh" : "—"}</td>
       <td class="${rcls(p.unreal_r || 0)}">${rfmt(p.unreal_r)}</td>
       <td class="${pcls(p.unreal_pnl || 0)}">${pfmt(p.unreal_pnl)}</td>
-      <td>${p.opened}</td>
+      <td>${esc(p.opened)}</td>
     </tr>`).join("");
     return `<table class="jr-table"><thead><tr>
       <th>Symbol</th><th>Grade</th><th>Entry</th><th>Stop</th><th>Target</th>
@@ -78,15 +84,15 @@
   function closedTable(closed) {
     if (!closed.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const rows = closed.slice().reverse().map((c) => `<tr>
-      <td class="jr-sym">${c.symbol}</td>
-      <td><span class="jr-grade ${GRADE_CLS[c.grade] || ""}">${c.grade}</span></td>
+      <td class="jr-sym">${esc(c.symbol)}</td>
+      <td><span class="jr-grade ${GRADE_CLS[c.grade] || ""}">${esc(c.grade)}</span></td>
       <td>${num(c.entry)}</td>
       <td>${num(c.exit)}</td>
       <td>${c.shares != null ? c.shares + " sh" : "—"}</td>
-      <td><span class="reason">${c.reason}</span></td>
+      <td><span class="reason">${esc(c.reason)}</span></td>
       <td class="${rcls(c.r)}">${rfmt(c.r)}</td>
       <td class="${pcls(c.pnl || 0)}">${pfmt(c.pnl)}</td>
-      <td>${c.opened} → ${c.exit_date}</td>
+      <td>${esc(c.opened)} → ${esc(c.exit_date)}</td>
     </tr>`).join("");
     return `<table class="jr-table"><thead><tr>
       <th>Symbol</th><th>Grade</th><th>Entry</th><th>Exit</th>
@@ -106,10 +112,10 @@
     if (!open.length) return `<div class="jr-empty">No open scalp positions.</div>`;
     const rows = open.map((p) => {
       const dirCls = p.direction === "long" ? "r-pos" : "r-neg";
-      const assetBadge = p.asset_type ? `<span class="reason">${p.asset_type.toUpperCase()}</span>` : "";
+      const assetBadge = p.asset_type ? `<span class="reason">${up(p.asset_type)}</span>` : "";
       return `<tr>
-        <td class="jr-sym">${p.symbol} ${assetBadge}</td>
-        <td class="${dirCls}">${p.direction.toUpperCase()}</td>
+        <td class="jr-sym">${esc(p.symbol)} ${assetBadge}</td>
+        <td class="${dirCls}">${up(p.direction)}</td>
         <td><span class="jr-grade ${GRADE_CLS[p.grade] || ""}">${p.grade}</span></td>
         <td>${num(p.entry)}</td>
         <td class="r-neg">${num(p.stop)}</td>
@@ -133,13 +139,13 @@
       const dirCls = c.direction === "long" ? "r-pos" : "r-neg";
       const dur    = c.bars != null ? `${c.bars}h` : "—";
       return `<tr>
-        <td class="jr-sym">${c.symbol}</td>
-        <td class="${dirCls}">${c.direction.toUpperCase()}</td>
-        <td><span class="jr-grade ${GRADE_CLS[c.grade] || ""}">${c.grade}</span></td>
+        <td class="jr-sym">${esc(c.symbol)}</td>
+        <td class="${dirCls}">${up(c.direction)}</td>
+        <td><span class="jr-grade ${GRADE_CLS[c.grade] || ""}">${esc(c.grade)}</span></td>
         <td>${num(c.entry)}</td>
         <td>${num(c.exit)}</td>
         <td>${c.units != null ? c.units + " u" : "—"}</td>
-        <td><span class="reason">${c.reason}</span></td>
+        <td><span class="reason">${esc(c.reason)}</span></td>
         <td class="${rcls(c.r)}">${rfmt(c.r)}</td>
         <td class="${pcls(c.pnl || 0)}">${pfmt(c.pnl)}</td>
         <td class="muted">${dur}</td>

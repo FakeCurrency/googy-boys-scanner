@@ -116,7 +116,7 @@ def reconcile_journal(j: dict) -> dict:
                 leg        = filled_legs[0]
                 exit_price = float(leg.get("filled_avg_price") or leg.get("limit_price") or pos["target"])
                 leg_type   = leg.get("type", "")
-                reason     = "target" if "limit" in leg_type else "stop"
+                reason     = "stop" if "stop" in leg_type else "target"
                 closed     = _close_from_broker(pos, exit_price, reason, now_ts)
                 j["closed"].append(closed)
                 print(f"  reconcile: {pos['symbol']} {pos['direction']} → {reason} @ {exit_price:.4f}")

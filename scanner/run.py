@@ -74,41 +74,44 @@ def main() -> None:
     for market_key in markets:
         market = config.MARKETS[market_key]
         print(f"Scanning {market.label} ...", flush=True)
-        universe = load_universe(market_key, full=not args.curated)
-        if args.limit:
-            universe = universe[:args.limit]
-        print(f"  downloading {len(universe)} tickers ...", flush=True)
-        frames = download([u["yf"] for u in universe])
-        pulse_data = pulse.fetch()
-        if market_key in ("asx", "nasdaq"):
-            mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
+        try:
+            universe = load_universe(market_key, full=not args.curated)
+            if args.limit:
+                universe = universe[:args.limit]
+            print(f"  downloading {len(universe)} tickers ...", flush=True)
+            frames = download([u["yf"] for u in universe])
+            pulse_data = pulse.fetch()
+            if market_key in ("asx", "nasdaq"):
+                mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
 
-        # 1) Fibonacci pullback scan -> <market>.json
-        pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
-                              pulse_data=pulse_data, universe=universe, progress=False)
-        output.write(pb, args.out)
-        print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
+            # 1) Fibonacci pullback scan -> <market>.json
+            pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
+                                  pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(pb, args.out)
+            print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
 
-        # 2) Reversal / base-breakout scan -> <market>_reversal.json
-        if not args.no_reversal:
-            rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
+            # 2) Reversal / base-breakout scan -> <market>_reversal.json
+            if not args.no_reversal:
+                rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
+                                               pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(rv, args.out, name=f"{market_key}_reversal")
+                print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
+
+            # 3) Specs / volume-spike breakout scan -> <market>_spec.json
+            if not args.no_spec:
+                sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
                                            pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(rv, args.out, name=f"{market_key}_reversal")
-            print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
+                output.write(sp, args.out, name=f"{market_key}_spec")
+                print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
 
-        # 3) Specs / volume-spike breakout scan -> <market>_spec.json
-        if not args.no_spec:
-            sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
-                                       pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(sp, args.out, name=f"{market_key}_spec")
-            print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
-
-        # 4) Shorts / bearish pullback scan -> <market>_short.json
-        if not args.no_short:
-            sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
-                                        pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(sh, args.out, name=f"{market_key}_short")
-            print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+            # 4) Shorts / bearish pullback scan -> <market>_short.json
+            if not args.no_short:
+                sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
+                                            pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(sh, args.out, name=f"{market_key}_short")
+                print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+        except Exception as e:
+            print(f"  ERROR scanning {market_key}: {e}", flush=True)
 
     # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
     if not args.no_scalp:

@@ -31,6 +31,12 @@
 
   const $ = (s) => document.querySelector(s);
 
+  // Escape data-derived strings before injecting into innerHTML (incl. quotes
+  // so values are safe inside quoted attributes too).
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
+
   // ----------------------------------------------------------- watchlist
   function loadWatch() { try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")); } catch (_) { return new Set(); } }
   let watch = loadWatch();
@@ -108,12 +114,13 @@
     if (!pulse || !pulse.length) { sec.style.display = "none"; return; }
     sec.style.display = "";
     track.innerHTML = pulse.map((p) => {
-      const val = p.value.toLocaleString(undefined, { minimumFractionDigits: p.decimals, maximumFractionDigits: p.decimals });
+      const val = p.value == null ? "—"
+        : p.value.toLocaleString(undefined, { minimumFractionDigits: p.decimals, maximumFractionDigits: p.decimals });
       const dir = p.dir === "up" ? "up" : "down";
-      const day = (p.day_pct >= 0 ? "+" : "") + p.day_pct.toFixed(2) + "%";
-      const d5 = "5D " + (p.d5_pct >= 0 ? "+" : "") + p.d5_pct.toFixed(2) + "%";
+      const day = p.day_pct == null ? "" : (p.day_pct >= 0 ? "+" : "") + p.day_pct.toFixed(2) + "%";
+      const d5 = p.d5_pct == null ? "" : "5D " + (p.d5_pct >= 0 ? "+" : "") + p.d5_pct.toFixed(2) + "%";
       return `<div class="pulse-item">
-        <div class="pi-head"><span class="pi-key">${p.key}</span><span class="pi-val">${val}</span></div>
+        <div class="pi-head"><span class="pi-key">${esc(p.key)}</span><span class="pi-val">${val}</span></div>
         <div class="pi-change ${dir}">${day}<span class="pi-5d">${d5}</span></div>
         ${spark(p.spark, 120, 22, p.dir === "up" ? COLOR.green : COLOR.red, "pi-spark")}
       </div>`;
@@ -150,18 +157,18 @@
   // ----------------------------------------------------------- a row
   function rowHtml(r) {
     const chips = (r.chips || []).map((c) =>
-      `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
-    const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${r.rr_text})</span>` : "";
+      `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
+    const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
       ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
-    const sector = r.sector ? `<span class="badge sector">${r.sector}</span>` : "";
+    const sector = r.sector ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
     const seccount = (r.sector && r.sector_count > 1)
-      ? `<span class="badge seccount">${r.sector.toUpperCase()} ×${r.sector_count}</span>` : "";
+      ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
     const assetBadge = r.asset_type
-      ? `<span class="badge asset-${r.asset_type}">${r.asset_type.toUpperCase()}</span>` : "";
+      ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
     const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
     const p2 = r.p2_pct == null ? "—" : `${r.p2_pct}%`;
     const rrStar = r.target_2r ? "*" : "";
@@ -169,20 +176,20 @@
     const starred = isStarred(r.symbol);
 
     const chartHref = (state.mode === "scalp")
-      ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + r.dir.toLowerCase())}`
+      ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
       : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
-    return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
+    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
      <div class="row">
-      <div class="row-grade">${r.grade}</div>
+      <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
         <div class="row-line1">
-          <a class="tkr" href="${chartHref}" title="Open chart">${r.symbol}</a>
-          <span class="badge dir">${r.dir}</span>
+          <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
+          <span class="badge dir">${esc(r.dir)}</span>
           ${assetBadge}
-          <span class="cname">${r.name || ""}</span>
+          <span class="cname">${esc(r.name || "")}</span>
           ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
-          <span class="badge ${liqCls}">${r.liquidity}</span>
+          <span class="badge ${liqCls}">${esc(r.liquidity)}</span>
           ${seccount}
         </div>
         <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
@@ -201,7 +208,7 @@
         <span class="t-badge">T1</span>
         <div class="t-metric"><span class="tm-label">Stop</span><span class="tm-val red">${r.stop_pct}%</span></div>
         <div class="t-metric"><span class="tm-label">P2</span><span class="tm-val amber">${p2}</span></div>
-        <div class="t-metric"><span class="tm-label">R:R</span><span class="tm-val ${rrCls}">${r.rr.toFixed(2)}${rrStar}</span></div>
+        <div class="t-metric"><span class="tm-label">R:R</span><span class="tm-val ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(2) + rrStar}</span></div>
         <span class="t-score">${r.score}/${r.score_max}</span>
         <button class="t-star ${starred ? "starred" : ""}" data-sym="${r.symbol}" title="Watchlist" aria-label="Toggle watchlist">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -235,7 +242,7 @@
     const effCls = effRR >= 1 ? "green" : "pct-down";
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
 
       <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
       <div class="rd-levels">
@@ -313,7 +320,7 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
       <div class="rd-levels">
         ${lvl("SWING LOW", d.swing_low, d.swing_low_pct, "red")}
         ${lvl("EMA 55", d.ema55, d.ema55_pct)}
@@ -359,7 +366,7 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
       <div class="rd-levels">
         ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
         ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}

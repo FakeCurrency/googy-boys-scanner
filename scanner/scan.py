@@ -63,75 +63,78 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
-        sig = signals.evaluate(df)
-        if sig is None or not sig["uptrend"]:
-            continue
+        try:
+            sig = signals.evaluate(df)
+            if sig is None or not sig["uptrend"]:
+                continue
 
-        turnover = _liquidity(df, market)
-        if turnover < market.liquidity_min:
-            continue
+            turnover = _liquidity(df, market)
+            if turnover < market.liquidity_min:
+                continue
 
-        points, grade, fired = signals.score_and_grade(sig)
-        if grade is None:
-            continue
+            points, grade, fired = signals.score_and_grade(sig)
+            if grade is None:
+                continue
 
-        lv = levels.compute_levels(df, sig)
-        if lv["rr"] <= 0:
-            continue
+            lv = levels.compute_levels(df, sig)
+            if lv["rr"] <= 0:
+                continue
 
-        # Tuning toward R:R — a tradeable grade must clear the minimum reward-to-risk,
-        # otherwise it's a strong pattern but a poor trade, so demote it to the watch list.
-        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
-                and lv["rr"] < config.MIN_TRADEABLE_RR:
-            grade = "B"
+            # Tuning toward R:R — a tradeable grade must clear the minimum reward-to-risk,
+            # otherwise it's a strong pattern but a poor trade, so demote it to the watch list.
+            if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
+                    and lv["rr"] < config.MIN_TRADEABLE_RR:
+                grade = "B"
 
-        info = meta.get(yf_ticker, {})
-        close = sig["close"]
-        open_ = float(df["Open"].iloc[-1])
-        y_close = float(df["Close"].iloc[-2])
-        entry = lv["entry"]
+            info = meta.get(yf_ticker, {})
+            close = sig["close"]
+            open_ = float(df["Open"].iloc[-1])
+            y_close = float(df["Close"].iloc[-2])
+            entry = lv["entry"]
 
-        detail = analysis.build_detail(df, sig, lv)
-        row = {
-            "symbol": info.get("symbol", yf_ticker),
-            "name": info.get("name", yf_ticker),
-            "sector": info.get("sector", ""),
-            "dir": "LONG",
-            "grade": grade,
-            "score": points,
-            "score_max": config.SCORE_MAX,
-            "chips": _build_chips(fired, sig),
-            "weekly": sig["weekly"],
-            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-            "rr_text": f"{lv['rr']:.1f}:1",
-            "target_2r": lv["target_basis"] == "measured",
-            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 8),
-            "y_close": round(y_close, 8),
-            "open": round(open_, 8),
-            "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
-            "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
-            "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
-            "entry": entry,
-            "stop": lv["stop"],
-            "target": lv["target"],
-            "rr": lv["rr"],
-            "trail": lv["trail"],
-            # Stop% = risk to stop, P2% = reward to target — both from entry (R:R = P2/Stop).
-            "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
-            "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
-            "target_basis": lv["target_basis"],
-            "spark": _spark(df),
-            "trend": "green" if points >= 10 else "blue",
-            "turnover": round(turnover),
-            "detail": detail,
-            "analysis": analysis.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
-                                           market.currency_symbol),
-        }
-        results.append(row)
+            detail = analysis.build_detail(df, sig, lv)
+            row = {
+                "symbol": info.get("symbol", yf_ticker),
+                "name": info.get("name", yf_ticker),
+                "sector": info.get("sector", ""),
+                "dir": "LONG",
+                "grade": grade,
+                "score": points,
+                "score_max": config.SCORE_MAX,
+                "chips": _build_chips(fired, sig),
+                "weekly": sig["weekly"],
+                "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
+                "rr_text": f"{lv['rr']:.1f}:1",
+                "target_2r": lv["target_basis"] == "measured",
+                "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
+                "price": round(close, 8),
+                "y_close": round(y_close, 8),
+                "open": round(open_, 8),
+                "open_pct": round((open_ - y_close) / y_close * 100, 2) if y_close else 0.0,
+                "current_pct": round((close - open_) / open_ * 100, 2) if open_ else 0.0,
+                "day_pct": round((close - y_close) / y_close * 100, 2) if y_close else 0.0,
+                "entry": entry,
+                "stop": lv["stop"],
+                "target": lv["target"],
+                "rr": lv["rr"],
+                "trail": lv["trail"],
+                # Stop% = risk to stop, P2% = reward to target — both from entry (R:R = P2/Stop).
+                "stop_pct": round((entry - lv["stop"]) / entry * 100, 1) if entry else 0.0,
+                "p2_pct": round((lv["target"] - entry) / entry * 100, 1) if entry else None,
+                "target_basis": lv["target_basis"],
+                "spark": _spark(df),
+                "trend": "green" if points >= 10 else "blue",
+                "turnover": round(turnover),
+                "detail": detail,
+                "analysis": analysis.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
+                                               market.currency_symbol),
+            }
+            results.append(row)
 
-        if write_charts and out_root:
-            charts.write_chart(charts.build_chart(df, sig, lv, row, market), out_root, market_key)
+            if write_charts and out_root:
+                charts.write_chart(charts.build_chart(df, sig, lv, row, market), out_root, market_key)
+        except Exception as e:
+            print(f"  warning: {yf_ticker} → {e}", flush=True)
 
     # Sector counts across all results, attached to each row (e.g. "MATERIALS x16").
     sector_counts = Counter(r["sector"] for r in results if r["sector"])
