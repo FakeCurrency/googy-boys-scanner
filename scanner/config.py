@@ -227,6 +227,9 @@ SCALP_CORRELATION_GROUPS = {
     "AVGO": "us_tech", "NFLX": "us_tech", "PLTR": "us_tech", "CRM": "us_tech",
     "ORCL": "us_tech", "ADBE": "us_tech", "MU": "us_tech", "QCOM": "us_tech",
     "SPY": "us_tech", "QQQ": "us_tech",
+    # US index futures (NAS100 = NQ, US30 = YM). They ARE broad US-equity beta —
+    # grouped with us_tech so NAS100 + QQQ + a megacap can't stack as one giant bet.
+    "NAS100": "us_tech", "US30": "us_tech",
 }
 
 # ---------------------------------------------------------------------------

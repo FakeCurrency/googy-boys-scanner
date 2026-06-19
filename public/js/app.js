@@ -23,7 +23,7 @@
     view: "results",    // results | watch
     tab: "aplus",       // aplus | a | watch
     sort: "score",      // score | price | rr | az
-    scalp_type: "all",  // all | commodity | asx | nasdaq
+    scalp_type: "all",  // all | index | commodity | asx | nasdaq
     data: null,
     cache: {},
     cur: "$",
