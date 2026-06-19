@@ -11,6 +11,7 @@ then R:R, with a direct TradingView link for each.
 
 import argparse
 import datetime as dt
+import html as _html
 import json
 import os
 import pathlib
@@ -29,8 +30,9 @@ _SOURCES = [
     ("nasdaq", "Reversal", "public/data/nasdaq_reversal.json", "$",  "NASDAQ"),
 ]
 
-_ALERT_GRADES = {"A+", "A"}
-_MAX_PER_DIGEST = 10   # max signals shown per market in one message
+_ALERT_GRADES  = {"A+", "A"}
+_MAX_PER_DIGEST = 10       # max signals shown per market in one message
+_TG_MAX_CHARS   = 4000     # Telegram hard limit is 4096; leave headroom
 
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
@@ -102,12 +104,14 @@ def _load_signals() -> dict[str, list[dict]]:
             sig["_tv_prefix"]  = tv_prefix
             by_market[market].append(sig)
 
-    # Sort each market: A+ before A, then by R:R descending
     grade_order = {"A+": 0, "A": 1}
     for market in by_market:
         by_market[market].sort(
-            key=lambda s: (grade_order.get(s.get("grade", "A"), 9),
-                           -float(s.get("rr", 0)))
+            key=lambda s: (
+                grade_order.get(s.get("grade", "A"), 9),
+                -float(s.get("rr", 0) or 0),
+                s.get("symbol", ""),          # stable tiebreaker — never compares dicts
+            )
         )
 
     return by_market
@@ -122,22 +126,28 @@ def _decimals(price: float) -> int:
     return 0
 
 
-def _format_digest(market: str, signals: list[dict], today: str) -> str:
-    """Build a single digest message for one market."""
-    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
-    total      = len(signals)
-    shown      = signals[:_MAX_PER_DIGEST]
-    more       = total - len(shown)
+def _h(text: str) -> str:
+    """HTML-escape a string for Telegram's HTML parse mode."""
+    return _html.escape(str(text))
 
-    lines = [
+
+def _format_digest(market: str, signals: list[dict], today: str) -> str:
+    """Build a single digest message for one market, capped at _TG_MAX_CHARS."""
+    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
+    total     = len(signals)
+
+    header = [
         f"<b>{mkt_label} SWING SETUPS — {today}</b>",
         f"<i>{total} A+/A signal{'s' if total != 1 else ''} found</i>",
         "",
     ]
+    footer = "\n⚠️ <i>Check your own chart before entering. This is not financial advice.</i>"
 
-    for sig in shown:
+    body_lines: list[str] = []
+    shown = 0
+
+    for sig in signals[:_MAX_PER_DIGEST]:
         symbol     = sig.get("symbol", "")
-        name       = sig.get("name", symbol)
         grade      = sig.get("grade", "")
         direction  = sig.get("dir", "LONG")
         rr_text    = sig.get("rr_text", "")
@@ -154,22 +164,30 @@ def _format_digest(market: str, signals: list[dict], today: str) -> str:
         dir_icon   = "🟢" if direction == "LONG" else "🔴"
         grade_icon = "⭐" if grade == "A+" else "✅"
         weekly_str = " W✓" if weekly else ""
-        reason     = " · ".join(chips)
+        reason     = _h(" · ".join(chips))
         tv_url     = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
+        sym_safe   = _h(symbol)
 
-        lines += [
-            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{symbol}</a></b>  {grade}  ·  {setup_type}{weekly_str}",
+        sig_lines = [
+            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>  {grade}  ·  {_h(setup_type)}{weekly_str}",
             f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}",
             f"   <i>{reason}</i>",
             "",
         ]
 
-    if more > 0:
-        lines.append(f"<i>…and {more} more signal{'s' if more != 1 else ''}</i>")
-        lines.append("")
+        candidate = "\n".join(header + body_lines + sig_lines) + footer
+        if len(candidate) > _TG_MAX_CHARS:
+            break
 
-    lines.append("⚠️ <i>Check your own chart before entering. This is not financial advice.</i>")
-    return "\n".join(lines)
+        body_lines += sig_lines
+        shown += 1
+
+    more = total - shown
+    if more > 0:
+        body_lines.append(f"<i>…and {more} more signal{'s' if more != 1 else ''}</i>")
+        body_lines.append("")
+
+    return "\n".join(header + body_lines) + footer
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -178,6 +196,7 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
     today  = dt.date.today().isoformat()
     seen   = {} if reset else _load_seen()
     sent   = 0
+    skipped = 0
 
     by_market = _load_signals()
 
@@ -187,7 +206,7 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
 
         key = f"{market}_{today}"
         if seen.get(key):
-            print(f"  notify: {market.upper()} digest already sent today — skipping")
+            skipped += 1
             continue
 
         msg = _format_digest(market, signals, today)
@@ -209,10 +228,13 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
 
     _save_seen(seen)
 
-    if sent == 0 and not any(by_market.values()):
+    total_markets = sum(1 for v in by_market.values() if v)
+    if total_markets == 0:
         print("  notify: no A+/A swing signals in current scan")
+    elif skipped == total_markets:
+        print(f"  notify: digest already sent today for all {skipped} market(s) — skipping")
     else:
-        print(f"  notify: {sent} digest(s) sent today")
+        print(f"  notify: {sent} digest(s) sent, {skipped} already sent today")
 
 
 def main() -> None:

@@ -53,7 +53,13 @@ _DL_INTER_SLEEP  = 2.0  # seconds between tickers
 
 
 def _download_one(yf_ticker: str, period: str) -> "pd.DataFrame | None":
-    """Fetch 1H bars for one ticker with a hard wall-clock timeout."""
+    """Fetch 1H bars for one ticker with a hard wall-clock timeout.
+
+    Does NOT use the executor as a context manager: the context manager calls
+    shutdown(wait=True) on exit which blocks until the thread finishes even
+    after a TimeoutError, defeating the timeout. We call shutdown(wait=False)
+    explicitly so the main thread is immediately unblocked.
+    """
     def _fetch():
         df = yf.download(
             yf_ticker, period=period, interval="1h",
@@ -64,12 +70,15 @@ def _download_one(yf_ticker: str, period: str) -> "pd.DataFrame | None":
         df = df.dropna()
         return df if len(df) else None
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        fut = pool.submit(_fetch)
-        try:
-            return fut.result(timeout=_DL_TIMEOUT_S)
-        except Exception:
-            return None
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    fut  = pool.submit(_fetch)
+    try:
+        result = fut.result(timeout=_DL_TIMEOUT_S)
+        pool.shutdown(wait=False)
+        return result
+    except Exception:
+        pool.shutdown(wait=False, cancel_futures=True)
+        return None
 
 
 def _fetch_frames(tickers: list[str], period: str, progress: bool) -> "dict[str, pd.DataFrame]":
