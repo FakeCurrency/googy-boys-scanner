@@ -193,6 +193,9 @@ SCALP_LEVERAGE = 5              # 5× leverage → $5,000 notional per trade
 SCALP_MAX_TRADES_PER_DAY = 5    # max A-grade alerts shown per scan
 SCALP_STARTING_CAPITAL = 20_000 # starting account size (for display)
 SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
+# Pessimistic fill model: slippage applied on top of brokerage (one-way, as fraction of price).
+# Captures the gap between the last 1h close (scan price) and the next bar open.
+SCALP_FILL_SLIPPAGE_PCT = 0.0003  # 0.03% one-way — $1.50 on a $5,000 notional trade
 
 # ---------------------------------------------------------------------------
 # Data

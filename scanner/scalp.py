@@ -42,7 +42,9 @@ SCALP_POINTS = {
     "volume":         1,   # volume expansion vs 20-bar average
 }
 SCALP_SCORE_MAX  = sum(SCALP_POINTS.values())  # 10
-SCALP_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
+# A+ requires squeeze_fired (hard gate enforced in score_and_grade).
+# A raised to ≥7 (was 6) — reduces false positives when squeeze hasn't fired yet.
+SCALP_GRADE_CUTOFFS = [("A+", 8), ("A", 7), ("B", 4), ("C", 2)]
 
 SCALP_CHIP_ORDER = ["squeeze_fired", "squeeze_on", "momentum_dir", "momentum_accel", "pivot_ok", "volume"]
 SCALP_CHIP_BASE  = {
@@ -473,8 +475,11 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
             points += SCALP_POINTS[key]
             fired.append(key)
     grade = None
+    sq_fired = "squeeze_fired" in fired
     for name, cutoff in SCALP_GRADE_CUTOFFS:
         if points >= cutoff:
+            if name == "A+" and not sq_fired:
+                continue  # A+ is only valid when squeeze has just fired
             grade = name
             break
     return points, grade, fired

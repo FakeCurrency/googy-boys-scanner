@@ -24,6 +24,7 @@ NOTIONAL  = config.SCALP_POSITION_SIZE * config.SCALP_LEVERAGE  # $5,000
 BROK_RT   = config.SCALP_BROKERAGE_EACH_WAY * 2                  # $40
 MAX_DAILY = config.SCALP_MAX_TRADES_PER_DAY                       # 5
 MAX_LOSS  = config.SCALP_MAX_DAILY_LOSS                           # $500
+SLIP      = config.SCALP_FILL_SLIPPAGE_PCT                        # 0.03% one-way
 
 
 def _load() -> dict:
@@ -98,56 +99,109 @@ def _save(j: dict) -> None:
 def _close_pos(pos: dict, price: float, ts: str, reason: str, bars: int) -> dict:
     direction = pos["direction"]
     units     = pos["units"]
+    # use pessimistic fill_price if set, else original entry
+    entry     = pos.get("fill_price", pos["entry"])
+    # apply exit slippage — makes the exit worse (lower for long, higher for short)
+    exit_px   = price * (1 - SLIP) if direction == "long" else price * (1 + SLIP)
     if direction == "short":
-        risk  = pos["stop"] - pos["entry"]
-        r_val = round((pos["entry"] - price) / risk, 2) if risk > 0 else 0.0
-        gross = units * (pos["entry"] - price)
+        risk  = pos["stop"] - entry
+        r_val = round((entry - exit_px) / risk, 2) if risk > 0 else 0.0
+        gross = units * (entry - exit_px)
     else:
-        risk  = pos["entry"] - pos["stop"]
-        r_val = round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0
-        gross = units * (price - pos["entry"])
+        risk  = entry - pos["stop"]
+        r_val = round((exit_px - entry) / risk, 2) if risk > 0 else 0.0
+        gross = units * (exit_px - entry)
     pnl = round(gross - BROK_RT, 2)
-    return {**pos, "status": "closed", "exit": round(float(price), 8),
+    return {**pos, "status": "closed", "exit": round(float(exit_px), 8),
             "exit_ts": ts, "reason": reason, "bars": bars, "r": r_val, "pnl": pnl}
 
 
 def _walk_1h(df, pos: dict) -> dict:
-    """Walk a scalp position forward on 1h bars; close on stop or target."""
+    """Walk a scalp position forward on 1h bars using a pessimistic fill model.
+
+    Pessimistic rules:
+    - Entry fills at the OPEN of the first 1h bar after the scan timestamp, plus slippage.
+      This is more realistic than filling at the last bar's close (scan price).
+    - Gap-through on stop: if a bar opens beyond the stop, we fill at the bar open
+      (not the stop level) — models the real cost of a gap.
+    - Gap-through on target: same — if price gaps through target we take the bar open
+      (which is actually better than expected, a windfall).
+    - Exit slippage applied in _close_pos.
+    """
     if df is None or len(df) < 2:
         return pos
-    entry, stop, target = pos["entry"], pos["stop"], pos["target"]
-    direction = pos["direction"]
-    units     = pos["units"]
 
-    risk = (stop - entry) if direction == "short" else (entry - stop)
-    if risk <= 0:
-        return _close_pos(pos, entry, pos["opened_ts"], "invalid", 0)
+    direction = pos["direction"]
+    stop      = pos["stop"]
+    target    = pos["target"]
+    units     = pos["units"]
 
     if getattr(df.index, "tz", None) is not None:
         df = df.copy()
         df.index = df.index.tz_localize(None)
+
     ts_list = [t.isoformat() for t in df.index]
     closes  = df["Close"].to_numpy(dtype=float)
     highs   = df["High"].to_numpy(dtype=float)
     lows    = df["Low"].to_numpy(dtype=float)
+    opens   = df["Open"].to_numpy(dtype=float)
 
     opened = pos["opened_ts"][:19]
     start  = next((k for k, ts in enumerate(ts_list) if ts > opened), None)
+
+    # ── Pessimistic entry fill (first time only) ─────────────────────────────
+    if not pos.get("filled"):
+        if start is None:
+            # No new bars since scan — not yet filled; show zero unrealised
+            pos["unreal_r"]   = 0.0
+            pos["unreal_pnl"] = 0.0
+            return pos
+
+        raw_open = float(opens[start])
+        # Slippage makes entry worse: long fills higher, short fills lower
+        fill_px = raw_open * (1 + SLIP) if direction == "long" else raw_open * (1 - SLIP)
+
+        # Gapped straight through stop on the fill bar → immediate stop-out
+        if direction == "long" and fill_px <= stop:
+            return _close_pos({**pos, "fill_price": round(fill_px, 8)},
+                              raw_open, ts_list[start], "stop-gap", 0)
+        if direction == "short" and fill_px >= stop:
+            return _close_pos({**pos, "fill_price": round(fill_px, 8)},
+                              raw_open, ts_list[start], "stop-gap", 0)
+
+        pos   = {**pos, "entry": round(fill_px, 8), "fill_price": round(fill_px, 8), "filled": True}
+
+    # ── Use pessimistic entry for all P&L from here ──────────────────────────
+    entry = pos["entry"]
+    risk  = (stop - entry) if direction == "short" else (entry - stop)
+    if risk <= 0:
+        return _close_pos(pos, entry, pos["opened_ts"], "invalid", 0)
+
     if start is None:
+        # Already filled in a prior run — update unrealised from latest close
         c = float(closes[-1])
         pos["current"]    = round(c, 8)
-        pos["unreal_r"]   = round((c - entry) / risk if direction == "long" else (entry - c) / risk, 2)
-        pos["unreal_pnl"] = round((units * (c - entry) if direction == "long" else units * (entry - c)) - BROK_RT, 2)
+        pos["unreal_r"]   = round(((c - entry) if direction == "long" else (entry - c)) / risk, 2)
+        pos["unreal_pnl"] = round(units * ((c - entry) if direction == "long" else (entry - c)) - BROK_RT, 2)
         return pos
 
+    # ── Walk bars: check gap-through first, then intrabar high/low ───────────
     if direction == "short":
         for i in range(start, len(df)):
+            if opens[i] >= stop:                 # gapped through stop (unfavorable)
+                return _close_pos(pos, float(opens[i]), ts_list[i], "stop-gap",    i - start + 1)
+            if opens[i] <= target:               # gapped through target (bonus)
+                return _close_pos(pos, float(opens[i]), ts_list[i], "target-gap",  i - start + 1)
             if highs[i] >= stop:
                 return _close_pos(pos, stop,   ts_list[i], "stop",   i - start + 1)
             if lows[i]  <= target:
                 return _close_pos(pos, target, ts_list[i], "target", i - start + 1)
     else:
         for i in range(start, len(df)):
+            if opens[i] <= stop:                 # gapped through stop (unfavorable)
+                return _close_pos(pos, float(opens[i]), ts_list[i], "stop-gap",    i - start + 1)
+            if opens[i] >= target:               # gapped through target (bonus)
+                return _close_pos(pos, float(opens[i]), ts_list[i], "target-gap",  i - start + 1)
             if lows[i]  <= stop:
                 return _close_pos(pos, stop,   ts_list[i], "stop",   i - start + 1)
             if highs[i] >= target:
@@ -155,8 +209,8 @@ def _walk_1h(df, pos: dict) -> dict:
 
     c = float(closes[-1])
     pos["current"]    = round(c, 8)
-    pos["unreal_r"]   = round((c - entry) / risk if direction == "long" else (entry - c) / risk, 2)
-    pos["unreal_pnl"] = round((units * (c - entry) if direction == "long" else units * (entry - c)) - BROK_RT, 2)
+    pos["unreal_r"]   = round(((c - entry) if direction == "long" else (entry - c)) / risk, 2)
+    pos["unreal_pnl"] = round(units * ((c - entry) if direction == "long" else (entry - c)) - BROK_RT, 2)
     return pos
 
 
