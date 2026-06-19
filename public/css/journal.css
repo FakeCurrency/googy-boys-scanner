@@ -1,34 +1,73 @@
 /* Journal / track-record page */
 .jr-head { margin-bottom: 18px; }
 .jr-title { font: 800 26px/1 var(--sans); letter-spacing: -0.3px; margin: 6px 0 8px; }
-.jr-sub { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 720px; line-height: 1.55; }
+.jr-sub   { font-size: 13.5px; color: var(--muted); margin: 0 0 6px; max-width: 720px; line-height: 1.55; }
+.jr-config { font-size: 12px; color: var(--muted); margin: 0; letter-spacing: 0.2px; }
 
+/* ── LONGS / SHORTS tabs ── */
+.jr-tabs {
+  display: flex; gap: 4px; margin: 18px 0 20px;
+  border-bottom: 1px solid var(--border); padding-bottom: 0;
+}
+.jr-tab {
+  font: 700 12px/1 var(--sans); letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 9px 18px 10px; border-radius: 6px 6px 0 0;
+  border: 1px solid transparent; border-bottom: none;
+  background: transparent; color: var(--muted); cursor: pointer;
+  transition: color .15s, background .15s;
+  position: relative; bottom: -1px;
+}
+.jr-tab:hover { color: var(--text); }
+.jr-tab.is-active {
+  background: var(--panel); border-color: var(--border);
+  color: var(--green); border-bottom-color: var(--panel);
+}
+.jr-tab-short.is-active { color: var(--red); }
+.jr-tab-arrow { font-size: 14px; margin-right: 2px; }
+.jr-tab-label { font-size: 11px; opacity: .8; }
+
+.jr-hidden { display: none !important; }
+
+/* ── section titles ── */
 .jr-section-title { font: 700 13px/1 var(--sans); letter-spacing: 0.4px; color: var(--text-2); margin: 26px 0 12px; }
 .jr-section-title .muted { font-weight: 500; }
 
+/* ── equity curve ── */
 .jr-equity { margin-top: 8px; }
 .jr-equity-chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
 .jr-equity-chart svg { width: 100%; height: 180px; display: block; }
 
-.jr-table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+/* ── tables ── */
+.jr-table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
 .jr-table { width: 100%; border-collapse: collapse; }
 .jr-table th {
   font: 600 10.5px/1 var(--sans); letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted);
-  text-align: right; padding: 11px 14px; border-bottom: 1px solid var(--border);
+  text-align: right; padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
 }
 .jr-table th:first-child, .jr-table th:nth-child(2) { text-align: left; }
-.jr-table td { font: 500 12.5px/1 var(--mono); color: var(--text-2); text-align: right; padding: 11px 14px; border-bottom: 1px solid var(--border-soft); }
+.jr-table td {
+  font: 500 12.5px/1 var(--mono); color: var(--text-2); text-align: right;
+  padding: 11px 14px; border-bottom: 1px solid var(--border-soft); white-space: nowrap;
+}
 .jr-table tr:last-child td { border-bottom: 0; }
-.jr-table td:first-child { text-align: left; }
-.jr-table td:nth-child(2) { text-align: left; }
+.jr-table td:first-child, .jr-table td:nth-child(2) { text-align: left; }
+
 .jr-sym { font-weight: 700; color: var(--text); }
 .jr-grade { font-weight: 800; }
 .g-aplus { color: var(--grade-aplus); }
-.g-a { color: var(--grade-a); }
-.g-b { color: var(--grade-b); }
-.g-c { color: var(--grade-c); }
-.r-pos { color: var(--green); }
-.r-neg { color: var(--red); }
-.reason { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.g-a     { color: var(--grade-a); }
+.g-b     { color: var(--grade-b); }
+.g-c     { color: var(--grade-c); }
+.r-pos   { color: var(--green); }
+.r-neg   { color: var(--red); }
+.reason  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .jr-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+/* ── direction chips ── */
+.dir-chip {
+  display: inline-block; font: 700 9px/1 var(--sans); letter-spacing: 0.6px;
+  padding: 2px 5px; border-radius: 3px; text-transform: uppercase;
+}
+.dir-long  { background: rgba(45,208,127,.15); color: #2dd07f; }
+.dir-short { background: rgba(255,91,91,.15);  color: #ff5b5b; }

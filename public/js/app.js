@@ -19,10 +19,11 @@
 
   const state = {
     market: "asx",
-    mode: "pullback",  // pullback | reversal
-    view: "results",   // results | watch
-    tab: "aplus",      // aplus | a | watch
-    sort: "score",     // score | price | rr | az
+    mode: "pullback",   // pullback | reversal | spec | short | scalp
+    view: "results",    // results | watch
+    tab: "aplus",       // aplus | a | watch
+    sort: "score",      // score | price | rr | az
+    scalp_type: "all",  // all | commodity | asx | nasdaq
     data: null,
     cache: {},
     cur: "$",
@@ -77,12 +78,17 @@
     return String(v);
   }
 
+  const TZ_MAP = { AEST: "Australia/Sydney", ET: "America/New_York", UTC: "UTC" };
   function fmtTime(iso, tz) {
     try {
       const d = new Date(iso);
-      const date = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-      const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-      return `${date}, ${time} ${tz || ""}`.trim();
+      const zone = TZ_MAP[tz];
+      const opts = {
+        weekday: "short", day: "numeric", month: "short",
+        hour: "numeric", minute: "2-digit",
+        ...(zone ? { timeZone: zone } : {}),
+      };
+      return `${d.toLocaleString(undefined, opts)} ${tz || ""}`.trim();
     } catch (_) { return iso; }
   }
 
@@ -146,19 +152,25 @@
     const chips = (r.chips || []).map((c) =>
       `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${r.rr_text})</span>` : "";
+    const widestop = (r.stop_pct != null && r.stop_pct > 20)
+      ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
     const sector = r.sector ? `<span class="badge sector">${r.sector}</span>` : "";
     const seccount = (r.sector && r.sector_count > 1)
       ? `<span class="badge seccount">${r.sector.toUpperCase()} ×${r.sector_count}</span>` : "";
+    const assetBadge = r.asset_type
+      ? `<span class="badge asset-${r.asset_type}">${r.asset_type.toUpperCase()}</span>` : "";
     const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
     const p2 = r.p2_pct == null ? "—" : `${r.p2_pct}%`;
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "red" : "green";
     const starred = isStarred(r.symbol);
 
-    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
+    const chartHref = (state.mode === "scalp")
+      ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + r.dir.toLowerCase())}`
+      : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     return `<div class="row-wrap" data-sym="${r.symbol}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
      <div class="row">
       <div class="row-grade">${r.grade}</div>
@@ -166,13 +178,14 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${r.symbol}</a>
           <span class="badge dir">${r.dir}</span>
+          ${assetBadge}
           <span class="cname">${r.name || ""}</span>
           ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
           <span class="badge ${liqCls}">${r.liquidity}</span>
           ${seccount}
         </div>
-        <div class="row-chips">${chips}${lowrr}${t2r}</div>
+        <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
       </div>
       <a class="row-spark" href="${chartHref}" title="Open chart">
         ${spark(r.spark, 120, 30, COLOR[r.trend] || COLOR.blue)}
@@ -202,9 +215,87 @@
     </div>`;
   }
 
+  function detailHtmlScalp(r) {
+    const d       = r.detail || {};
+    const cur     = r.asset_type === "asx" ? "A$" : "$";
+    const isShort = r.dir === "SHORT";
+    const lvl = (label, val, pct, cls) => val == null ? "" :
+      `<div class="dl-row"><span class="dl-label ${cls||""}">${label}</span>
+        <span class="dl-val">${cur}${num(val)}</span>
+        <span class="dl-pct ${pct>=0?"pct-up":"pct-down"}">${fmtPct(pct)}</span></div>`;
+    const band = (label, val) => val == null ? "" :
+      `<div class="fl-row"><span class="fl-label">${label}</span><span class="fl-val">${cur}${num(val)}</span></div>`;
+    const sqCls  = d.sq_state === "FIRED" ? "green" : d.sq_state === "BUILDING" ? "accent-orange" : "muted";
+    const momAbs = Math.abs(d.mom_val || 0);
+    const momDir = (d.mom_val || 0) >= 0 ? "▲" : "▼";
+    const momCls = (d.mom_val || 0) >= 0 ? "green" : "pct-down";
+    const stopPct   = isShort ? +(d.stop_pct   || 0) : -(d.stop_pct   || 0);
+    const targetPct = isShort ? -(d.target_pct || 0) : +(d.target_pct || 0);
+    const effRR  = d.eff_rr || 0;
+    const effCls = effRR >= 1 ? "green" : "pct-down";
+    const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
+    return `<div class="row-detail">
+      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${r.analysis || ""}</p></div>
+
+      <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
+      <div class="rd-levels">
+        ${lvl("ENTRY",  d.entry,  0,         "")}
+        ${lvl("STOP",   d.stop,   stopPct,   "red")}
+        ${lvl("TARGET", d.target, targetPct, "green")}
+        ${band("ATR (14)", d.atr)}
+      </div>
+
+      <div class="rd-trail">
+        <span class="rd-trail-label">POSITION — ${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span>
+      </div>
+      <div class="rd-levels">
+        <div class="dl-row"><span class="dl-label red">$ RISK at stop</span>
+          <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
+          <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
+        <div class="dl-row"><span class="dl-label green">$ REWARD at target</span>
+          <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
+          <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
+        <div class="dl-row"><span class="dl-label red">NET LOSS (incl. brok)</span>
+          <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
+        <div class="dl-row"><span class="dl-label ${npCls}">NET PROFIT (incl. brok)</span>
+          <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
+        <div class="dl-row"><span class="dl-label">EFFECTIVE R:R</span>
+          <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
+          <span class="dl-pct muted">after brokerage</span></div>
+      </div>
+
+      <div class="rd-trail"><span class="rd-trail-label">KEY LEVELS</span></div>
+      <div class="rd-levels">
+        ${lvl("SWING LOW",   d.swing_low,          d.swing_low_pct,  "red")}
+        ${lvl("SUPPORT",     d.nearest_support,    d.support_pct,    "red")}
+        ${lvl("RESISTANCE",  d.nearest_resistance, d.resistance_pct, "green")}
+        ${lvl("SWING HIGH",  d.swing_high,         d.swing_high_pct, "green")}
+      </div>
+
+      <div class="rd-ema">
+        <div class="rd-ema-head">
+          <span class="rd-k">TTM SQUEEZE</span>
+          <span class="${sqCls}">${d.sq_state||"—"}</span>
+          <span class="rd-spread ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span>
+        </div>
+        <div class="rd-fast">
+          ${band("BB UPPER", d.bb_upper)}${band("BB MID", d.bb_mid)}${band("BB LOWER", d.bb_lower)}
+          ${band("KC UPPER", d.kc_upper)}${band("KC LOWER", d.kc_lower)}
+        </div>
+      </div>
+
+      <div class="rd-volume">
+        <span class="rd-k">VOLUME (1h)</span>
+        <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
+        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
+      </div>
+    </div>`;
+  }
+
   function detailHtml(r) {
     const stype = (r.detail || {}).setup_type;
     if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
+    if (stype === "scalp") return detailHtmlScalp(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>
@@ -315,6 +406,10 @@
     } else {
       list = all.filter((r) => r.grade === "B" || r.grade === "C");
     }
+    // Scalp: filter by asset type
+    if (state.mode === "scalp" && state.scalp_type && state.scalp_type !== "all") {
+      list = list.filter((r) => r.asset_type === state.scalp_type);
+    }
     const s = state.sort;
     list = list.slice();
     if (s === "price") list.sort((a, b) => b.price - a.price);
@@ -354,9 +449,11 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "reversal" ? `data/${market}_reversal.json`
-      : mode === "spec" ? `data/${market}_spec.json`
-        : `data/${market}.json`;
+    mode === "scalp"    ? `data/scalp.json`
+      : mode === "reversal" ? `data/${market}_reversal.json`
+      : mode === "spec"     ? `data/${market}_spec.json`
+      : mode === "short"    ? `data/${market}_short.json`
+      : `data/${market}.json`;
 
   async function load() {
     const { market, mode } = state;
@@ -394,16 +491,24 @@
       if (btn.disabled) return;
       btn.classList.add("spinning");
       btn.disabled = true;
+      flashScan("Requesting a fresh scan…", "info");
       // Kick off a fresh cloud scan (updates the "Last scanned" time once it
       // finishes). Falls back to just reloading the current data if the scan
-      // endpoint isn't configured yet.
+      // endpoint isn't configured yet. Aborts if the service hangs.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
       try {
-        const res = await fetch("/api/scan", { method: "POST" });
+        const res = await fetch("/api/scan", { method: "POST", signal: ctrl.signal });
         const data = await res.json().catch(() => ({}));
-        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."),
-                  res.ok ? "ok" : "warn");
-      } catch (_) {
-        flashScan("Couldn't reach the scan service — reloaded latest data.", "warn");
+        // 503 = not configured (info, not an error the user can fix at runtime).
+        const kind = res.ok ? "ok" : (res.status === 503 || data.configured === false) ? "info" : "warn";
+        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."), kind);
+      } catch (err) {
+        flashScan(err && err.name === "AbortError"
+          ? "Scan service timed out — reloaded latest data instead."
+          : "Couldn't reach the scan service — reloaded latest data.", "warn");
+      } finally {
+        clearTimeout(timer);
       }
       // always refresh what's on screen too
       delete state.cache[`${state.market}:${state.mode}`];
@@ -424,6 +529,7 @@
       }
       el.textContent = msg;
       el.classList.toggle("warn", kind === "warn");
+      el.classList.toggle("info", kind === "info");
       el.classList.add("show");
       clearTimeout(el._t);
       el._t = setTimeout(() => el.classList.remove("show"), 6000);
@@ -436,7 +542,21 @@
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
       state.mode = b.dataset.mode;
+      // Show/hide scalp banner + hide market switch in scalp mode
+      const isScalp = state.mode === "scalp";
+      const scalp_banner = $("#scalp-banner");
+      if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
+      document.querySelectorAll(".market-btn").forEach((mb) => {
+        mb.closest(".market-switch") && (mb.closest(".market-switch").style.opacity = isScalp ? "0.35" : "");
+      });
       load();
+    }));
+
+    // Scalp asset-type filter
+    document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
+      document.querySelectorAll("[data-scalp-type]").forEach((x) => x.classList.toggle("is-active", x === b));
+      state.scalp_type = b.dataset.scalpType || b.dataset.scalp_type || b.getAttribute("data-scalp-type") || "all";
+      renderRows();
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {

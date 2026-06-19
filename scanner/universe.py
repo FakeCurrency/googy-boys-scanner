@@ -134,6 +134,27 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
     return items
 
 
+def load_scalp_universe() -> list[dict]:
+    """Return the cross-asset scalp universe (commodities + ASX blue chips + NASDAQ)."""
+    path = UNIVERSE_DIR / "scalp_tickers.csv"
+    items: list[dict] = []
+    if not path.exists():
+        return items
+    with open(path, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            symbol = (row.get("symbol") or "").strip().upper()
+            if not symbol:
+                continue
+            items.append({
+                "symbol":  symbol,
+                "name":    (row.get("name") or symbol).strip(),
+                "type":    (row.get("type") or "").strip(),
+                "sector":  (row.get("sector") or "").strip(),
+                "yf":      (row.get("yf") or symbol).strip(),
+            })
+    return items
+
+
 def load_universe(market_key: str, full: bool = True) -> list[dict]:
     """Return [{symbol, name, yf}, ...] for a market.
 

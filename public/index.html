@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=5" />
+  <link rel="stylesheet" href="css/styles.css?v=10" />
 </head>
 <body>
   <header class="topbar">
@@ -35,6 +35,8 @@
       <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">Pullbacks</button>
       <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">Reversals</button>
       <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">Specs ⚡</button>
+      <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">Shorts ↓</button>
+      <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">Scalp 🎯</button>
     </div>
 
     <button class="reload-btn" id="reload-btn" title="Run a fresh cloud scan" aria-label="Run a fresh scan">
@@ -43,6 +45,7 @@
     </button>
     <a class="howto-link" href="sectors.html">Sectors</a>
     <a class="howto-link" href="journal.html">Journal</a>
+    <a class="howto-link" href="feeds.html">Feeds</a>
     <a class="howto-link" href="about.html">How it works</a>
   </header>
 
@@ -79,6 +82,23 @@
       </button>
     </nav>
 
+    <!-- scalp info banner (shown only in scalp mode) -->
+    <section class="scalp-banner" id="scalp-banner" style="display:none">
+      <div class="scalp-banner-inner">
+        <span class="scalp-banner-item">🎯 <strong>1h intraday</strong> · 4h confirmed</span>
+        <span class="scalp-banner-item">💰 <strong>$1,000 margin</strong> · 5× = $5,000 position</span>
+        <span class="scalp-banner-item">📊 <strong>$20 brokerage</strong> each way</span>
+        <span class="scalp-banner-item">⛔ Max <strong>5 trades/day</strong> · $500 daily stop</span>
+      </div>
+      <!-- scalp asset-type filter -->
+      <div class="scalp-type-filter" id="scalp-type-filter">
+        <button class="seg-btn is-active" data-scalp-type="all">All</button>
+        <button class="seg-btn" data-scalp-type="commodity">Commodities</button>
+        <button class="seg-btn" data-scalp-type="asx">ASX</button>
+        <button class="seg-btn" data-scalp-type="nasdaq">NASDAQ</button>
+      </div>
+    </section>
+
     <!-- filters -->
     <section class="controls">
       <div class="control-group">
@@ -112,6 +132,6 @@
     <p class="credit">Googy Boys Scanner · data via Yahoo Finance · refreshed daily after each market close</p>
   </footer>
 
-  <script src="js/app.js?v=6"></script>
+  <script src="js/app.js?v=12"></script>
 </body>
 </html>

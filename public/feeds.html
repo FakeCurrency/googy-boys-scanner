@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Feeds — Googy Boys Scanner</title>
+  <meta name="description" content="Live X/Twitter feeds from the traders worth watching." />
+  <meta name="theme-color" content="#080b11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <style>
+    .feeds-head { margin: 18px 0 14px; }
+    .feeds-title { font: 800 22px/1.1 Inter, sans-serif; color: #e8edf6; margin: 0 0 6px; }
+    .feeds-sub { font: 500 13px/1.5 Inter, sans-serif; color: #8a94a6; margin: 0; max-width: 760px; }
+    .feeds-toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 14px 0 18px; padding-bottom: 14px; border-bottom: 1px solid #1b2333;
+    }
+    .feeds-search {
+      flex: 1 1 220px; min-width: 180px; background: #0d1320; border: 1px solid #1b2333;
+      border-radius: 9px; padding: 9px 12px; color: #e8edf6; font: 500 13px Inter, sans-serif;
+    }
+    .feeds-search::placeholder { color: #5a6478; }
+    .feeds-count { font: 600 12px JetBrains Mono, monospace; color: #5a6478; white-space: nowrap; }
+    .feeds-grid {
+      display: grid; gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    }
+    .feed-card {
+      background: #0b101a; border: 1px solid #1b2333; border-radius: 13px;
+      overflow: hidden; display: flex; flex-direction: column; min-height: 120px;
+    }
+    .feed-card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 13px; border-bottom: 1px solid #161d2b; gap: 8px;
+    }
+    .feed-card-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .feed-card-name { font: 700 13px Inter, sans-serif; color: #e8edf6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-card-handle { font: 500 11px JetBrains Mono, monospace; color: #6ca8ff; text-decoration: none; }
+    .feed-card-handle:hover { text-decoration: underline; }
+    .feed-card-open {
+      font: 600 11px Inter, sans-serif; color: #8a94a6; text-decoration: none;
+      border: 1px solid #1b2333; border-radius: 7px; padding: 5px 9px; white-space: nowrap;
+      transition: border-color .15s, color .15s;
+    }
+    .feed-card-open:hover { color: #e8edf6; border-color: #2a3548; }
+    .feed-card-body { padding: 4px 6px 6px; }
+    .feed-card.is-hidden { display: none; }
+    .feeds-fallback {
+      margin: 16px 0; padding: 13px 15px; background: #0d1320; border: 1px solid #1b2333;
+      border-radius: 11px; font: 500 12px/1.6 Inter, sans-serif; color: #8a94a6;
+    }
+    .feeds-fallback b { color: #cdd6e4; }
+    @media (max-width: 560px) { .feeds-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
+      </span>
+      <div class="brand-text"><h1>GOOGY BOYS SCANNER</h1><span style="font:600 10px/1.2 -apple-system,Inter,sans-serif;color:#34c759;letter-spacing:.3px;margin-top:3px">Vivek has a beautiful son &#10084;</span></div>
+    </div>
+    <a class="howto-link" href="index.html">← Dashboard</a>
+  </header>
+
+  <main class="wrap">
+    <div class="feeds-head">
+      <h2 class="feeds-title">Traders worth watching</h2>
+      <p class="feeds-sub">Live X feeds from the accounts you follow, all in one place — refreshed by X each time you load the page. Click any handle to open the full profile.</p>
+    </div>
+
+    <div class="feeds-toolbar">
+      <input class="feeds-search" id="feeds-search" type="search" placeholder="Filter by name or @handle…" autocomplete="off" />
+      <span class="feeds-count" id="feeds-count"></span>
+    </div>
+
+    <div class="feeds-fallback">
+      If a feed shows blank, X is rate-limiting embeds — click <b>Open ↗</b> on that card to view the profile directly. Embeds load best on desktop; some networks/extensions block <b>platform.twitter.com</b>.
+    </div>
+
+    <div class="feeds-grid" id="feeds-grid"></div>
+  </main>
+
+  <footer class="site-footer">
+    <p class="disclaimer">General information only — not financial advice. These are third-party accounts; their views are their own.</p>
+  </footer>
+
+  <script>
+    // The accounts to follow. handle = X username (no @); name = display label.
+    const ACCOUNTS = [
+      { handle: "omzcharts",       name: "Omz" },
+      { handle: "CKCapitalxx",     name: "CK Capital" },
+      { handle: "DazzaBABA",       name: "R08" },
+      { handle: "Ruycorto",        name: "Rui" },
+      { handle: "ChifoiCristian",  name: "Cristian Chifoi" },
+      { handle: "_0_Trading",      name: "5.0 INVERTED.BULL" },
+      { handle: "BollingerBanter", name: "Bollinger Banter" },
+      { handle: "jakestrading18",  name: "Jakestrading" },
+      { handle: "aleabitoreddit",  name: "Serenity" },
+      { handle: "SailorManCrypto", name: "Popeye" },
+      { handle: "kevinxu",         name: "Kevin Xu" },
+      { handle: "TheBigBerbowski", name: "The Big Berbowski" },
+      { handle: "BULLOFBRITAIN",   name: "Bull of Britain" },
+      { handle: "PhotonBull",      name: "Photon Bull" },
+      { handle: "babyfolio",       name: "babyfolio" },
+      { handle: "mkfilko",         name: "leki" },
+      { handle: "retail_mourinho", name: "Retail Mourinho" },
+      { handle: "wolfgangkasper",  name: "Wolf Capital" },
+      { handle: "Guv999",          name: "Guv" },
+    ];
+
+    const grid = document.getElementById("feeds-grid");
+    const search = document.getElementById("feeds-search");
+    const countEl = document.getElementById("feeds-count");
+
+    function card(a) {
+      const url = `https://twitter.com/${a.handle}`;
+      const el = document.createElement("div");
+      el.className = "feed-card";
+      el.dataset.search = (a.name + " @" + a.handle).toLowerCase();
+      el.innerHTML = `
+        <div class="feed-card-head">
+          <div class="feed-card-id">
+            <span class="feed-card-name">${a.name}</span>
+            <a class="feed-card-handle" href="${url}" target="_blank" rel="noopener">@${a.handle}</a>
+          </div>
+          <a class="feed-card-open" href="${url}" target="_blank" rel="noopener">Open ↗</a>
+        </div>
+        <div class="feed-card-body">
+          <a class="twitter-timeline" data-theme="dark" data-height="520"
+             data-chrome="noheader nofooter transparent" href="${url}">Posts by @${a.handle}</a>
+        </div>`;
+      return el;
+    }
+
+    ACCOUNTS.forEach((a) => grid.appendChild(card(a)));
+    countEl.textContent = `${ACCOUNTS.length} accounts`;
+
+    function applyFilter() {
+      const q = search.value.trim().toLowerCase();
+      let shown = 0;
+      grid.querySelectorAll(".feed-card").forEach((c) => {
+        const hit = !q || c.dataset.search.includes(q);
+        c.classList.toggle("is-hidden", !hit);
+        if (hit) shown++;
+      });
+      countEl.textContent = q ? `${shown} of ${ACCOUNTS.length}` : `${ACCOUNTS.length} accounts`;
+    }
+    search.addEventListener("input", applyFilter);
+
+    // Load X widgets.js once, then render all embedded timelines.
+    (function loadWidgets() {
+      const s = document.createElement("script");
+      s.src = "https://platform.twitter.com/widgets.js";
+      s.async = true;
+      s.charset = "utf-8";
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

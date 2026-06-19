@@ -6,9 +6,9 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-18T14:03:02+10:00",
-  "scanned": 1715,
-  "universe_size": 1985,
+  "generated_at": "2026-06-19T10:21:13+10:00",
+  "scanned": 1836,
+  "universe_size": 1986,
   "score_max": 11,
   "sma_periods": [
     9,
@@ -18,14 +18,46 @@
   ],
   "pulse": [
     {
+      "key": "ASX200",
+      "label": "ASX 200",
+      "value": 8966.0,
+      "decimals": 0,
+      "day_pct": 0.54,
+      "d5_pct": 3.62,
+      "spark": [
+        8505.2998,
+        8604.7002,
+        8496.5996,
+        8621.7002,
+        8657.0,
+        8692.0,
+        8657.7998,
+        8717.7002,
+        8592.9004,
+        8731.7002,
+        8729.4004,
+        8724.4004,
+        8785.7002,
+        8686.0996,
+        8625.0996,
+        8604.2002,
+        8653.2998,
+        8633.2002,
+        8804.0,
+        8914.0,
+        8917.7002,
+        8966.2998
+      ],
+      "dir": "up"
+    },
+    {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4359.0,
+      "value": 4204.0,
       "decimals": 0,
-      "day_pct": 0.65,
-      "d5_pct": 6.1,
+      "day_pct": -3.56,
+      "d5_pct": 2.78,
       "spark": [
-        4552.5,
         4506.2998,
         4531.2998,
         4539.7998,
@@ -46,19 +78,19 @@
         4215.0,
         4328.0,
         4330.8999,
-        4358.8999
+        4358.8999,
+        4203.8999
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 70.7,
+      "value": 65.25,
       "decimals": 2,
-      "day_pct": 1.14,
-      "d5_pct": 9.44,
+      "day_pct": -7.71,
+      "d5_pct": 2.13,
       "spark": [
-        77.073,
         74.828,
         75.851,
         76.414,
@@ -79,19 +111,19 @@
         67.859,
         70.066,
         69.899,
-        70.696
+        70.696,
+        65.245
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "BRENT",
       "label": "Brent",
-      "value": 79.55,
+      "value": 78.99,
       "decimals": 2,
-      "day_pct": 0.75,
-      "d5_pct": -14.55,
+      "day_pct": -0.7,
+      "d5_pct": -12.6,
       "spark": [
-        112.1,
         111.28,
         105.02,
         102.58,
@@ -112,19 +144,19 @@
         87.33,
         83.17,
         78.96,
-        79.55
+        79.55,
+        78.99
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "WTI",
       "label": "WTI",
-      "value": 76.79,
+      "value": 75.14,
       "decimals": 2,
-      "day_pct": 0.97,
-      "d5_pct": -14.71,
+      "day_pct": -2.15,
+      "d5_pct": -14.33,
       "spark": [
-        108.66,
         107.77,
         98.26,
         96.35,
@@ -145,19 +177,19 @@
         84.88,
         80.75,
         76.05,
-        76.79
+        76.79,
+        75.14
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "NATGAS",
       "label": "Nat Gas",
-      "value": 3.14,
+      "value": 3.21,
       "decimals": 2,
-      "day_pct": -2.9,
-      "d5_pct": -1.26,
+      "day_pct": 2.1,
+      "d5_pct": 4.02,
       "spark": [
-        3.024,
         3.114,
         3.004,
         3.018,
@@ -178,19 +210,19 @@
         3.12,
         3.147,
         3.239,
-        3.145
+        3.145,
+        3.211
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "TECH",
       "label": "Tech",
-      "value": 26021.66,
+      "value": 26517.93,
       "decimals": 2,
-      "day_pct": -1.34,
-      "d5_pct": 3.39,
+      "day_pct": 1.91,
+      "d5_pct": 2.74,
       "spark": [
-        26090.7305,
         25870.7109,
         26270.3594,
         26293.0996,
@@ -211,19 +243,19 @@
         25888.8398,
         26683.9395,
         26376.3398,
-        26021.6602
+        26021.6602,
+        26517.9316
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "BIOTECH",
       "label": "Biotech",
-      "value": 139.39,
+      "value": 140.72,
       "decimals": 2,
-      "day_pct": 2.99,
-      "d5_pct": 8.18,
+      "day_pct": 0.95,
+      "d5_pct": 6.01,
       "spark": [
-        127.67,
         126.79,
         131.71,
         132.78,
@@ -244,17 +276,18 @@
         133.79,
         136.4,
         135.34,
-        139.39
+        139.39,
+        140.72
       ],
       "dir": "up"
     },
     {
       "key": "YIELDS",
       "label": "10Y",
-      "value": 4.463,
+      "value": 4.451,
       "decimals": 3,
-      "day_pct": -0.53,
-      "d5_pct": -1.96,
+      "day_pct": -0.8,
+      "d5_pct": -2.22,
       "spark": [
         4.461,
         4.595,
@@ -277,19 +310,18 @@
         4.542,
         4.463,
         4.487,
-        4.463
+        4.451
       ],
       "dir": "down"
     },
     {
       "key": "AUD",
       "label": "AUD/USD",
-      "value": 0.7043,
+      "value": 0.7014,
       "decimals": 4,
-      "day_pct": -0.31,
-      "d5_pct": 0.7,
+      "day_pct": -0.07,
+      "d5_pct": -0.49,
       "spark": [
-        0.7107,
         0.715,
         0.7148,
         0.7157,
@@ -310,15 +342,197 @@
         0.7075,
         0.7073,
         0.7066,
-        0.7043
+        0.7018,
+        0.7014
       ],
       "dir": "down"
+    },
+    {
+      "key": "VIX",
+      "label": "VIX",
+      "value": 16.4,
+      "decimals": 2,
+      "day_pct": -11.06,
+      "d5_pct": -15.64,
+      "spark": [
+        17.44,
+        16.76,
+        16.7,
+        16.59,
+        17.01,
+        16.29,
+        15.74,
+        15.32,
+        16.05,
+        15.77,
+        16.06,
+        15.4,
+        21.51,
+        18.92,
+        19.87,
+        22.22,
+        19.44,
+        17.68,
+        16.2,
+        16.41,
+        18.44,
+        16.4
+      ],
+      "dir": "down"
+    },
+    {
+      "key": "USD",
+      "label": "USD Idx",
+      "value": 100.79,
+      "decimals": 2,
+      "day_pct": 0.7,
+      "d5_pct": 0.93,
+      "spark": [
+        99.3,
+        99.11,
+        99.19,
+        99.32,
+        99.17,
+        99.21,
+        99.02,
+        98.91,
+        99.2,
+        99.22,
+        99.53,
+        99.41,
+        100.07,
+        100.05,
+        99.91,
+        99.95,
+        99.86,
+        99.75,
+        99.63,
+        99.54,
+        100.09,
+        100.789
+      ],
+      "dir": "up"
     }
   ],
   "sector_counts": {
-    "Energy": 1
+    "Energy": 2
   },
   "results": [
+    {
+      "symbol": "MCE",
+      "name": "Matrix Composites & Engineering Limited",
+      "sector": "Energy",
+      "dir": "LONG",
+      "setup_type": "spec",
+      "grade": "A+",
+      "score": 10,
+      "score_max": 11,
+      "chips": [
+        "VOLUME 29.1\u00d7 SPIKE",
+        "NEW 3-MONTH HIGH",
+        "9 \u203a 26 RECLAIM",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "OK",
+      "price": 0.39500001,
+      "y_close": 0.39250001,
+      "open": 0.39500001,
+      "open_pct": 0.64,
+      "current_pct": 0.0,
+      "day_pct": 0.64,
+      "entry": 0.39500001,
+      "stop": 0.38609999,
+      "target": 0.42170009,
+      "rr": 3.0,
+      "trail": 0.38162579,
+      "stop_pct": 2.3,
+      "p2_pct": 6.8,
+      "target_basis": "measured",
+      "spark": [
+        0.39500001,
+        0.39250001,
+        0.39250001,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.39250001,
+        0.39250001,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.38999999,
+        0.39250001,
+        0.38999999,
+        0.39250001,
+        0.39500001
+      ],
+      "trend": "green",
+      "turnover": 107631,
+      "detail": {
+        "setup_type": "spec",
+        "sma9": 0.39111111,
+        "sma9_pct": -1.0,
+        "sma26": 0.39057691,
+        "sma26_pct": -1.1,
+        "sma43": 0.39040697,
+        "sma43_pct": -1.2,
+        "sma200": 0.28215,
+        "sma200_pct": -28.6,
+        "cross_up": true,
+        "rsi": 72.6,
+        "rsi_ma": 69.0,
+        "rsi_up": true,
+        "volume_ratio": 6.1,
+        "volume_today": 3254810,
+        "volume_avg": 111812,
+        "volume_surge": true,
+        "off_high_pct": 1.2,
+        "base_high": 0.39500001,
+        "base_high_pct": 0.0,
+        "broken": true,
+        "swing_low": 0.38999999,
+        "swing_low_pct": -1.3,
+        "trailing_stop": 0.38162579,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -3.4,
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            0.39500001,
+            0.39500001,
+            0.39500001
+          ],
+          "swing_lows": [
+            0.38999999,
+            0.38999999,
+            0.38999999
+          ]
+        },
+        "risk_pct": 2.3,
+        "spike_ratio": 29.1,
+        "new_high_long": true
+      },
+      "analysis": "MCE just fired a speculative volume-spike breakout \u2014 volume hit 29.1\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.3950, stop A$0.3861, target A$0.4217 (3.00:1) \u2014 then trail it.",
+      "sector_count": 2
+    },
     {
       "symbol": "AGE",
       "name": "Alligator Energy Limited",
@@ -326,10 +540,10 @@
       "dir": "LONG",
       "setup_type": "spec",
       "grade": "A+",
-      "score": 9,
+      "score": 8,
       "score_max": 11,
       "chips": [
-        "VOLUME 5.6\u00d7 SPIKE",
+        "VOLUME 4.5\u00d7 SPIKE",
         "NEW 3-MONTH HIGH",
         "9 \u203a 26 RECLAIM",
         "RSI TURNING UP"
@@ -340,21 +554,20 @@
       "target_2r": true,
       "liquidity": "OK",
       "price": 0.0525,
-      "y_close": 0.041,
-      "open": 0.04,
-      "open_pct": -2.44,
-      "current_pct": 31.25,
-      "day_pct": 28.05,
+      "y_close": 0.0525,
+      "open": 0.0525,
+      "open_pct": 0.0,
+      "current_pct": 0.0,
+      "day_pct": 0.0,
       "entry": 0.0525,
       "stop": 0.03069,
       "target": 0.11792999,
       "rr": 3.0,
-      "trail": 0.03707409,
+      "trail": 0.04374737,
       "stop_pct": 41.5,
       "p2_pct": 124.6,
       "target_basis": "measured",
       "spark": [
-        0.041,
         0.043,
         0.044,
         0.045,
@@ -383,27 +596,28 @@
         0.037,
         0.04,
         0.041,
+        0.0525,
         0.0525
       ],
       "trend": "green",
-      "turnover": 507993,
+      "turnover": 498373,
       "detail": {
         "setup_type": "spec",
-        "sma9": 0.03827778,
-        "sma9_pct": -27.1,
-        "sma26": 0.03794231,
-        "sma26_pct": -27.7,
-        "sma43": 0.0400814,
-        "sma43_pct": -23.7,
-        "sma200": 0.0343075,
-        "sma200_pct": -34.7,
+        "sma9": 0.04,
+        "sma9_pct": -23.8,
+        "sma26": 0.03834615,
+        "sma26_pct": -27.0,
+        "sma43": 0.0402093,
+        "sma43_pct": -23.4,
+        "sma200": 0.03445,
+        "sma200_pct": -34.4,
         "cross_up": true,
         "rsi": 75.1,
-        "rsi_ma": 45.7,
+        "rsi_ma": 48.2,
         "rsi_up": true,
-        "volume_ratio": 2.4,
-        "volume_today": 57341158,
-        "volume_avg": 10302806,
+        "volume_ratio": 1.6,
+        "volume_today": 0,
+        "volume_avg": 12638640,
         "volume_surge": true,
         "off_high_pct": 6.3,
         "base_high": 0.0495,
@@ -411,9 +625,9 @@
         "broken": true,
         "swing_low": 0.031,
         "swing_low_pct": -41.0,
-        "trailing_stop": 0.03707409,
+        "trailing_stop": 0.04374737,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -29.4,
+        "trailing_pct": -16.7,
         "structure": {
           "trend": "Mixed / consolidating",
           "swing_highs": [
@@ -428,11 +642,11 @@
           ]
         },
         "risk_pct": 41.5,
-        "spike_ratio": 5.6,
+        "spike_ratio": 4.5,
         "new_high_long": true
       },
-      "analysis": "AGE just fired a speculative volume-spike breakout \u2014 volume hit 5.6\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0525, stop A$0.0307, target A$0.1179 (3.00:1) \u2014 then trail it.",
-      "sector_count": 1
+      "analysis": "AGE just fired a speculative volume-spike breakout \u2014 volume hit 4.5\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0525, stop A$0.0307, target A$0.1179 (3.00:1) \u2014 then trail it.",
+      "sector_count": 2
     }
   ]
 }

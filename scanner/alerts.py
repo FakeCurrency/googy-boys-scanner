@@ -43,12 +43,35 @@ def _save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
+def _dedup_by_symbol(items: list) -> list:
+    """Keep only the highest-scoring row per symbol.
+
+    Prevents alerting the same asset twice (e.g. a long and a short setup, or the
+    same name surfacing from more than one scan) — you get the best direction only.
+    """
+    best: dict[str, dict] = {}
+    for r in items:
+        sym = r["symbol"]
+        cur = best.get(sym)
+        if cur is None or r.get("score", 0) > cur.get("score", 0):
+            best[sym] = r
+    # preserve the original (already grade/score-sorted) ordering
+    seen, out = set(), []
+    for r in items:
+        sym = r["symbol"]
+        if sym not in seen and best[sym] is r:
+            seen.add(sym)
+            out.append(r)
+    return out
+
+
 def _collect(market_key: str, state: dict, send_all: bool) -> tuple[dict, list]:
     data_file = ROOT / "public" / "data" / f"{market_key}.json"
     if not data_file.exists():
         return {}, []
     scan = json.loads(data_file.read_text(encoding="utf-8"))
-    tradeable = [r for r in scan["results"] if r["grade"] in config.TRADEABLE_GRADES]
+    tradeable = _dedup_by_symbol(
+        [r for r in scan["results"] if r["grade"] in config.TRADEABLE_GRADES])
     prev = set(state.get(market_key, []))
     new = [r for r in tradeable if r["symbol"] not in prev]
     state[market_key] = [r["symbol"] for r in tradeable]

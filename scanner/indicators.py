@@ -97,3 +97,24 @@ def pivot_lows(df: pd.DataFrame, window: int = 3) -> pd.Series:
     for k in range(1, window + 1):
         cond &= (low <= low.shift(k)) & (low <= low.shift(-k))
     return low[cond]
+
+
+def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Average Directional Index — trend strength (0=flat, 25+=trending, 50+=strong)."""
+    high, low = df["High"], df["Low"]
+    prev_high = high.shift(1)
+    prev_low = low.shift(1)
+
+    plus_dm = (high - prev_high).clip(lower=0)
+    minus_dm = (prev_low - low).clip(lower=0)
+    # When +DM and -DM both positive, only the larger one counts.
+    plus_dm = plus_dm.where(plus_dm >= minus_dm, 0.0)
+    minus_dm = minus_dm.where(minus_dm > plus_dm, 0.0)
+
+    atr_ = atr(df, period)
+    plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr_.replace(0, float("nan"))
+    minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr_.replace(0, float("nan"))
+
+    di_sum = (plus_di + minus_di).replace(0, float("nan"))
+    dx = 100 * (plus_di - minus_di).abs() / di_sum
+    return dx.ewm(alpha=1 / period, adjust=False).mean().fillna(0)

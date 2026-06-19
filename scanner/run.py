@@ -48,6 +48,14 @@ def main() -> None:
         help="skip the Specs (volume-spike breakout) scan",
     )
     parser.add_argument(
+        "--no-short", action="store_true",
+        help="skip the Shorts (bearish pullback) scan",
+    )
+    parser.add_argument(
+        "--no-scalp", action="store_true",
+        help="skip the intraday scalp scan",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -95,6 +103,34 @@ def main() -> None:
             output.write(sp, args.out, name=f"{market_key}_spec")
             print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
 
+        # 4) Shorts / bearish pullback scan -> <market>_short.json
+        if not args.no_short:
+            sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
+                                        pulse_data=pulse_data, universe=universe, progress=False)
+            output.write(sh, args.out, name=f"{market_key}_short")
+            print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+
+    # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
+    if not args.no_scalp:
+        import json as _json2
+        print("Scanning SCALP (1h intraday) ...", flush=True)
+        sc = scan.scan_scalp(out_root=args.out)
+        (pathlib.Path(args.out) / "scalp.json").write_text(
+            _json2.dumps(sc, indent=2), encoding="utf-8")
+        tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
+        print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
+              f"across {sc['scanned']} instruments")
+
+        from . import scalp_journal as _sj
+        print("Updating scalp journal ...", flush=True)
+        sj = _sj._load()
+        sj = _sj.update_scalp(sj)
+        _sj._save(sj)
+        sj_s = _sj.summarize(sj)
+        print(f"  scalp journal: {sj_s['longs']['open'] + sj_s['shorts']['open']} open | "
+              f"{sj_s['longs']['closed'] + sj_s['shorts']['closed']} closed | "
+              f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
+
     # Sector & index dashboard (ASX + US) with an auto market read.
     import json as _json
     from . import sectors as _sectors
@@ -116,8 +152,11 @@ def main() -> None:
             j = journal.update_market(market_key, j)
         journal._save(j)
         s = journal.summarize(j)
-        print(f"  journal: {s['open']} open | {s['closed']} closed | "
-              f"win {s['win_rate']}% | realised {s['total_r']:+.1f}R")
+        sl, ss = s["longs"], s["shorts"]
+        print(f"  journal longs:  {sl['open']} open | {sl['closed']} closed | "
+              f"win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
+        print(f"  journal shorts: {ss['open']} open | {ss['closed']} closed | "
+              f"win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
 
     if args.alert:
         from . import alerts

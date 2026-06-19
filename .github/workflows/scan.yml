@@ -4,15 +4,13 @@ name: Scheduled scan
 # triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
-    # Five daily scans, in AEST (UTC+10). GitHub cron is fixed UTC, so during
-    # AEDT/daylight-saving (Oct–Apr) these effectively fire 1 hour later in
-    # Sydney local time. GitHub cron is also best-effort and can run a few
-    # minutes late under load.
-    - cron: "30 20 * * *"   # 06:30 AEST  (20:30 UTC prev day)
-    - cron: "30 2 * * *"    # 12:30 AEST  (02:30 UTC)
-    - cron: "30 6 * * *"    # 16:30 AEST  (06:30 UTC)
-    - cron: "30 14 * * *"   # 00:30 AEST  (14:30 UTC prev day)
-    - cron: "30 16 * * *"   # 02:30 AEST  (16:30 UTC prev day)
+    # Every 30 min during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
+    # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
+    # NASDAQ 9:30 AM–4:00 PM ET   = 13:30–21:00 UTC  (EDT; add 1h in EST winter)
+    - cron: "0,30 0-5 * * 1-5"   # ASX  00:00–05:30 UTC (every 30 min)
+    - cron: "30 13 * * 1-5"       # NASDAQ open  13:30 UTC
+    - cron: "0,30 14-20 * * 1-5"  # NASDAQ 14:00–20:30 UTC (every 30 min)
+    - cron: "0 21 * * 1-5"        # NASDAQ close 21:00 UTC
   workflow_dispatch:
     inputs:
       args:
@@ -54,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data journal/journal.json
+          git add public/data journal/journal.json journal/scalp_journal.json
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

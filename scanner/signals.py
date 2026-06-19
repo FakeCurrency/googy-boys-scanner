@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 
 from . import config
-from .indicators import ema, ema_ladder
+from .indicators import adx as calc_adx, ema, ema_ladder, rsi as calc_rsi
 
 # Signal key -> base display label (some get dynamic suffixes in scan.py).
-CHIP_ORDER = ["alignment", "compression", "pullback", "confluence", "weekly", "volume"]
+CHIP_ORDER = ["alignment", "compression", "pullback", "confluence", "weekly", "volume", "adx", "rsi_pullback"]
 CHIP_BASE = {
     "alignment": "FULL BULLISH ALIGNMENT",
     "compression": "EMA COMPRESSION",
@@ -19,6 +19,8 @@ CHIP_BASE = {
     "confluence": "STRONG FIB CONFLUENCE",
     "weekly": "WEEKLY BULLISH",
     "volume": "VOLUME EXPANSION",
+    "adx": "TRENDING MARKET (ADX)",
+    "rsi_pullback": "HEALTHY RSI PULLBACK",
 }
 
 
@@ -76,6 +78,14 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     # 6) Weekly (higher-timeframe) bullish confirmation.
     weekly = _weekly_bullish(df)
 
+    # 7) ADX — confirms the market is actually trending, not ranging sideways.
+    adx_val = float(calc_adx(df, config.ADX_PERIOD).iloc[-1])
+    adx_chip = adx_val >= config.ADX_TREND_MIN
+
+    # 8) RSI(21) pullback quality — Fibonacci RSI in the healthy dip zone.
+    rsi_val = float(calc_rsi(df["Close"], config.RSI_PERIOD).iloc[-1])
+    rsi_pullback = config.RSI_PULLBACK_LOW <= rsi_val <= config.RSI_PULLBACK_HIGH
+
     return {
         "close": close,
         "ema_last": ema_last,
@@ -86,11 +96,15 @@ def evaluate(df: pd.DataFrame) -> dict | None:
         "volume": volume,
         "confluence": confluence,
         "weekly": weekly,
+        "adx": adx_chip,
+        "rsi_pullback": rsi_pullback,
         "pullback_ema": config.PULLBACK_EMAS[nearest_idx],
         "confluence_level": confluence_level,
         "confluence_n": len(clustered),
         "vol": vol,
         "avg_vol": avg_vol,
+        "adx_val": round(adx_val, 1),
+        "rsi_val": round(rsi_val, 1),
     }
 
 

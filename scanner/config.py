@@ -22,8 +22,10 @@ POINTS = {
     "compression": 2,   # EMAs bunched tightly
     "weekly": 1,        # higher-timeframe (weekly) uptrend confirmation
     "volume": 1,        # volume expansion vs recent average
+    "adx": 1,           # ADX > threshold — market is actually trending, not ranging
+    "rsi_pullback": 1,  # RSI(21) in 38–62 zone — healthy dip, not washed out
 }
-SCORE_MAX = sum(POINTS.values())   # 13
+SCORE_MAX = sum(POINTS.values())   # 15
 
 # Grade cut-offs on total points (checked high -> low). Max possible = 13.
 GRADE_CUTOFFS = [
@@ -63,6 +65,15 @@ VOLUME_MULT = 1.4              # latest volume >= 1.4x its recent average
 VOLUME_LOOKBACK = 20
 LIQUIDITY_LOOKBACK = 20        # bars used for the average-turnover liquidity test
 
+# ADX — trend-strength chip
+ADX_PERIOD = 14
+ADX_TREND_MIN = 25             # ADX above this = trending (chip fires)
+
+# RSI(21) pullback quality chip
+RSI_PERIOD = 21                # Fibonacci period — more stable than 14 on daily bars
+RSI_PULLBACK_LOW = 38          # RSI must be above this (not washed out / capitulation)
+RSI_PULLBACK_HIGH = 62         # RSI must be below this (still has room to run)
+
 # ---------------------------------------------------------------------------
 # Entry / stop / target levels
 # ---------------------------------------------------------------------------
@@ -81,10 +92,19 @@ WEEKLY_SLOW = 20
 SPARK_BARS = 30
 
 # ---------------------------------------------------------------------------
+# Position sizing
+# ---------------------------------------------------------------------------
+POSITION_SIZE_USD = 1_000    # target dollar amount invested per trade (AUD for ASX, USD for NASDAQ/Crypto)
+BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
+MAX_POSITIONS_LONG = 10      # maximum concurrent open long positions across all markets
+MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across all markets
+
+# ---------------------------------------------------------------------------
 # PULSE — macro market indicators shown in the top bar.
 # (key, label, yfinance ticker, divide_by, decimals)
 # ---------------------------------------------------------------------------
 PULSE = [
+    ("ASX200",  "ASX 200",  "^AXJO",     1,  0),
     ("GOLD",    "Gold",     "GC=F",      1,  0),
     ("SILVER",  "Silver",   "SI=F",      1,  2),
     ("BRENT",   "Brent",    "BZ=F",      1,  2),
@@ -94,6 +114,8 @@ PULSE = [
     ("BIOTECH", "Biotech",  "XBI",       1,  2),
     ("YIELDS",  "10Y",      "^TNX",      1,  3),
     ("AUD",     "AUD/USD",  "AUDUSD=X",  1,  4),
+    ("VIX",     "VIX",      "^VIX",      1,  2),
+    ("USD",     "USD Idx",  "DX-Y.NYB",  1,  2),
 ]
 
 # ---------------------------------------------------------------------------
@@ -154,8 +176,58 @@ SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
+# Short scanner quality gates (hard filters — fail any one = skip the stock)
+SHORT_DOWNTREND_BARS = 15     # price must have been below EMA 144 for this many bars (no recent dips)
+SHORT_EMA_ALIGN_BARS = 10     # EMA 8 must have been below EMA 21 for this many bars
+SHORT_BOUNCE_VOL_WINDOW = 8   # bars to compare up-day vs down-day volume on the bounce
+
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
                               # disabled for crypto, where per-coin price is meaningless)
+
+# ---------------------------------------------------------------------------
+# SCALP — intraday scanner (1h bars, cross-asset)
+# ---------------------------------------------------------------------------
+SCALP_BROKERAGE_EACH_WAY = 20   # per-leg brokerage (CFD style)
+SCALP_POSITION_SIZE = 1_000     # margin per trade
+SCALP_LEVERAGE = 5              # 5× leverage → $5,000 notional per trade
+SCALP_MAX_TRADES_PER_DAY = 5    # max A-grade alerts shown per scan
+SCALP_STARTING_CAPITAL = 20_000 # starting account size (for display)
+SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
+# Pessimistic fill model: slippage applied on top of brokerage (one-way, as fraction of price).
+# Captures the gap between the last 1h close (scan price) and the next bar open.
+SCALP_FILL_SLIPPAGE_PCT = 0.0003  # 0.03% one-way — $1.50 on a $5,000 notional trade
+
+# Trading-day boundary. The daily trade count / loss limit reset once per 24h at
+# this fixed UTC hour. 08:00 UTC sits in the quiet window between ASX close
+# (~06:00 UTC) and NASDAQ open (13:30 UTC), so it NEVER bisects a live session —
+# even during AEDT (Oct–Apr) when the ASX session straddles 00:00 UTC.
+SCALP_DAY_ANCHOR_UTC = 8
+
+# Portfolio risk — correlation caps. Highly-correlated instruments (e.g. Gold +
+# Silver + Gold ETFs + a gold miner) are ONE bet, not five. Cap how many open
+# scalp positions may share a correlation group at once. Symbols not listed fall
+# back to a "<asset_type>:<sector>" bucket built from the universe CSV.
+SCALP_MAX_PER_GROUP = 2
+SCALP_CORRELATION_GROUPS = {
+    # Precious metals — futures, ETFs and a gold miner all move together
+    "GOLD": "metals", "SILVER": "metals", "GLD": "metals", "SLV": "metals", "NST": "metals",
+    # Energy complex — crude/gas futures + energy producers
+    "OIL": "energy", "BRENT": "energy", "NATGAS": "energy",
+    "WDS": "energy", "STO": "energy", "ORG": "energy",
+    # Base metals / diversified miners (iron ore tracks the broad materials bid)
+    "COPPER": "materials_au", "BHP": "materials_au", "RIO": "materials_au", "FMG": "materials_au",
+    # Soft commodities
+    "WHEAT": "ags", "COFFEE": "ags",
+    # Australian banks / financials
+    "CBA": "au_financials", "NAB": "au_financials", "WBC": "au_financials",
+    "ANZ": "au_financials", "MQG": "au_financials", "QBE": "au_financials", "SUN": "au_financials",
+    # US mega-cap tech & semis (incl. index ETFs — one big beta bet)
+    "AAPL": "us_tech", "MSFT": "us_tech", "NVDA": "us_tech", "META": "us_tech",
+    "GOOGL": "us_tech", "AMZN": "us_tech", "TSLA": "us_tech", "AMD": "us_tech",
+    "AVGO": "us_tech", "NFLX": "us_tech", "PLTR": "us_tech", "CRM": "us_tech",
+    "ORCL": "us_tech", "ADBE": "us_tech", "MU": "us_tech", "QCOM": "us_tech",
+    "SPY": "us_tech", "QQQ": "us_tech",
+}
 
 # ---------------------------------------------------------------------------
 # Data

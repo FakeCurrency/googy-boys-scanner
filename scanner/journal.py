@@ -37,18 +37,49 @@ def _load() -> dict:
     return {"open": [], "closed": []}
 
 
-def summarize(j: dict) -> dict:
-    closed = j["closed"]
-    rs = np.array([c["r"] for c in closed], dtype=float) if closed else np.array([])
+def _kelly(rs: np.ndarray) -> float | None:
+    """Half-Kelly position size as % of account. Returns None if < 20 closed trades."""
+    if len(rs) < 20:
+        return None
     wins = rs[rs > 0]
-    open_unreal = sum(p.get("unreal_r", 0) or 0 for p in j["open"])
+    losses = rs[rs < 0]
+    if not len(wins) or not len(losses):
+        return None
+    p = len(wins) / len(rs)
+    avg_win = float(wins.mean())
+    avg_loss = float(abs(losses.mean()))
+    b = avg_win / avg_loss
+    full_kelly = (p * b - (1 - p)) / b
+    return round(max(0.0, full_kelly * 0.5) * 100, 1)  # half-Kelly, as %
+
+
+def _dir_stats(closed_list: list, open_list: list) -> dict:
+    rs = np.array([c["r"] for c in closed_list], dtype=float) if closed_list else np.array([])
+    wins = rs[rs > 0]
     return {
-        "open": len(j["open"]),
-        "closed": len(closed),
+        "open": len(open_list),
+        "closed": len(closed_list),
         "win_rate": round(len(wins) / len(rs) * 100, 1) if len(rs) else 0.0,
-        "avg_r": round(float(rs.mean()), 3) if len(rs) else 0.0,
         "total_r": round(float(rs.sum()), 2) if len(rs) else 0.0,
-        "open_unrealised_r": round(open_unreal, 2),
+        "total_pnl": round(sum(c.get("pnl", 0) or 0 for c in closed_list), 2),
+        "open_unrealised_r": round(sum(p.get("unreal_r", 0) or 0 for p in open_list), 2),
+        "open_unrealised_pnl": round(sum(p.get("unreal_pnl", 0) or 0 for p in open_list), 2),
+        "kelly_pct": _kelly(rs),
+    }
+
+
+def summarize(j: dict) -> dict:
+    long_open   = [p for p in j["open"]   if p.get("direction", "long") == "long"]
+    short_open  = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    long_closed = [c for c in j["closed"] if c.get("direction", "long") == "long"]
+    short_closed= [c for c in j["closed"] if c.get("direction", "short") == "short"]
+    return {
+        "position_size": config.POSITION_SIZE_USD,
+        "brokerage": config.BROKERAGE_EACH_WAY,
+        "max_positions_long": config.MAX_POSITIONS_LONG,
+        "max_positions_short": config.MAX_POSITIONS_SHORT,
+        "longs": _dir_stats(long_closed, long_open),
+        "shorts": _dir_stats(short_closed, short_open),
     }
 
 
@@ -57,20 +88,37 @@ def _save(j: dict) -> None:
     JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
     JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
 
+    open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
+    open_shorts = [p for p in j["open"]   if p.get("direction", "short") == "short"]
+    cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
+    cl_shorts   = [c for c in j["closed"] if c.get("direction", "short") == "short"]
+
     PUBLIC_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
     PUBLIC_JOURNAL.write_text(json.dumps({
         "updated_at": j["updated_at"],
         "stats": summarize(j),
-        "open": j["open"],
-        "closed": j["closed"][-100:],
+        "open_longs":    open_longs,
+        "open_shorts":   open_shorts,
+        "closed_longs":  cl_longs[-100:],
+        "closed_shorts": cl_shorts[-100:],
     }, indent=2), encoding="utf-8")
 
 
 def _close(pos: dict, price: float, date: str, reason: str, bars: int) -> dict:
-    risk = pos["entry"] - pos["stop"]
+    direction = pos.get("direction", "long")
+    shares = pos.get("shares", 0)
+    brokerage = pos.get("brokerage", config.BROKERAGE_EACH_WAY)
+    if direction == "short":
+        risk = pos["stop"] - pos["entry"]
+        r_val = round((pos["entry"] - price) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (pos["entry"] - price) - 2 * brokerage, 2)
+    else:
+        risk = pos["entry"] - pos["stop"]
+        r_val = round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (price - pos["entry"]) - 2 * brokerage, 2)
     return {**pos, "status": "closed", "exit": round(price, 4),
             "exit_date": date, "reason": reason, "bars": bars,
-            "r": round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0}
+            "r": r_val, "pnl": pnl}
 
 
 def _walk(df, pos: dict) -> dict:
@@ -78,7 +126,13 @@ def _walk(df, pos: dict) -> dict:
     if df is None or len(df) < 2:
         return pos
     entry, stop, target = pos["entry"], pos["stop"], pos["target"]
-    risk = entry - stop
+    direction = pos.get("direction", "long")
+    shares = pos.get("shares", 0)
+
+    if direction == "short":
+        risk = stop - entry  # stop is above entry for shorts
+    else:
+        risk = entry - stop
     if risk <= 0:
         return _close(pos, entry, pos["opened"], "invalid", 0)
 
@@ -91,23 +145,41 @@ def _walk(df, pos: dict) -> dict:
     start = next((k for k, ds in enumerate(dates) if ds > pos["opened"]), None)
     if start is None:  # opened on the latest bar; nothing to evaluate yet
         pos["current"] = round(float(closes[-1]), 4)
-        pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+        if direction == "short":
+            pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
+            pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
+        else:
+            pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+            pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
         return pos
 
-    current_stop = stop
-    for j in range(start, len(df)):
-        st = st_arr[j]
-        if np.isfinite(st) and closes[j] > st > current_stop:
-            current_stop = st
-        if lows[j] <= current_stop:
-            return _close(pos, current_stop, dates[j],
-                          "trail" if current_stop > stop else "stop", j - start + 1)
-        if highs[j] >= target:
-            return _close(pos, target, dates[j], "target", j - start + 1)
-
-    pos["current"] = round(float(closes[-1]), 4)
-    pos["trail_stop"] = round(current_stop, 4)
-    pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+    if direction == "short":
+        current_stop = stop  # for shorts, trail stop moves DOWN
+        for j in range(start, len(df)):
+            if highs[j] >= current_stop:
+                return _close(pos, current_stop, dates[j],
+                              "trail" if current_stop < stop else "stop", j - start + 1)
+            if lows[j] <= target:
+                return _close(pos, target, dates[j], "target", j - start + 1)
+        pos["current"] = round(float(closes[-1]), 4)
+        pos["trail_stop"] = round(current_stop, 4)
+        pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
+        pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
+    else:
+        current_stop = stop
+        for j in range(start, len(df)):
+            st = st_arr[j]
+            if np.isfinite(st) and closes[j] > st > current_stop:
+                current_stop = st
+            if lows[j] <= current_stop:
+                return _close(pos, current_stop, dates[j],
+                              "trail" if current_stop > stop else "stop", j - start + 1)
+            if highs[j] >= target:
+                return _close(pos, target, dates[j], "target", j - start + 1)
+        pos["current"] = round(float(closes[-1]), 4)
+        pos["trail_stop"] = round(current_stop, 4)
+        pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
+        pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
     return pos
 
 
@@ -120,18 +192,61 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     scan = json.loads(data_file.read_text(encoding="utf-8"))
     scan_date = scan["generated_at"][:10]
 
+    # Also ingest short setups from <market>_short.json if it exists
+    short_file = ROOT / "public" / "data" / f"{market_key}_short.json"
+    short_results = []
+    if short_file.exists():
+        try:
+            short_scan = json.loads(short_file.read_text(encoding="utf-8"))
+            short_results = short_scan.get("results", [])
+        except Exception:
+            pass
+
     # 1) open a paper position for each new A+/A setup
-    open_keys = {(p["market"], p["symbol"]) for p in j["open"]}
+    open_keys = {(p["market"], p["symbol"], p.get("direction", "long")) for p in j["open"]}
+    open_long_count  = sum(1 for p in j["open"] if p.get("direction", "long")  == "long")
+    open_short_count = sum(1 for p in j["open"] if p.get("direction", "short") == "short")
     opened_now = 0
+
     for r in scan["results"]:
-        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"]) not in open_keys:
+        if open_long_count >= config.MAX_POSITIONS_LONG:
+            break
+        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "long") not in open_keys:
+            entry_price = r["price"]
+            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
                 "grade": r["grade"], "score": r["score"],
-                "entry": r["price"], "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
+                "direction": "long",
+                "shares": shares,
+                "brokerage": config.BROKERAGE_EACH_WAY,
+                "size_usd": config.POSITION_SIZE_USD,
             })
-            open_keys.add((market_key, r["symbol"]))
+            open_keys.add((market_key, r["symbol"], "long"))
+            open_long_count += 1
+            opened_now += 1
+
+    # open short positions from the short scan file
+    for r in short_results:
+        if open_short_count >= config.MAX_POSITIONS_SHORT:
+            break
+        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
+            entry_price = r["price"]
+            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
+            j["open"].append({
+                "market": market_key, "symbol": r["symbol"], "name": r["name"],
+                "grade": r["grade"], "score": r["score"],
+                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "opened": scan_date, "status": "open",
+                "direction": "short",
+                "shares": shares,
+                "brokerage": config.BROKERAGE_EACH_WAY,
+                "size_usd": config.POSITION_SIZE_USD,
+            })
+            open_keys.add((market_key, r["symbol"], "short"))
+            open_short_count += 1
             opened_now += 1
 
     # 2) walk this market's open positions against fresh prices
@@ -169,9 +284,11 @@ def main() -> None:
     _save(j)
 
     s = summarize(j)
-    print(f"\nJournal: {s['open']} open ({s['open_unrealised_r']:+.1f}R unrealised) | "
-          f"{s['closed']} closed | win {s['win_rate']}% | "
-          f"realised {s['total_r']:+.1f}R")
+    sl, ss = s["longs"], s["shorts"]
+    print(f"\nJournal 1 — LONGS:  {sl['open']} open ({sl['open_unrealised_r']:+.1f}R unrealised) | "
+          f"{sl['closed']} closed | win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
+    print(f"Journal 2 — SHORTS: {ss['open']} open ({ss['open_unrealised_r']:+.1f}R unrealised) | "
+          f"{ss['closed']} closed | win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
     print(f"Saved -> {JOURNAL_FILE}\n")
 
 

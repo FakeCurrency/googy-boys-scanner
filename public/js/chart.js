@@ -7,8 +7,8 @@
   "use strict";
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
-  const TF_LABEL = { "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
-  const TF_ORDER = ["1D", "3D", "1W", "1M", "3M"];
+  const TF_LABEL = { "1H": "1H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
+  const TF_ORDER = ["1H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
   const market = (params.get("m") || "asx").toLowerCase();
@@ -91,6 +91,20 @@
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
 
+    // TTM Squeeze momentum histogram (scalp 1H charts only) — its own pane band
+    // below the price, with LazyBear-style colouring baked into the data.
+    const hasMom = TF_ORDER.some((k) => tfs[k] && tfs[k].histogram);
+    let momSeries = null;
+    if (hasMom) {
+      // squeeze the price into the top, leave room for the momentum pane
+      chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.05, bottom: 0.30 } });
+      momSeries = chart.addHistogramSeries({
+        priceScaleId: "mom", priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
+        lastValueVisible: false, priceLineVisible: false,
+      });
+      chart.priceScale("mom").applyOptions({ scaleMargins: { top: 0.72, bottom: 0.06 } });
+    }
+
     // One line series per indicator (the set is the same across timeframes).
     const lineSeries = tfs[curTF].lines.map((l) => chart.addLineSeries({
       color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
@@ -114,6 +128,24 @@
       candle.setData(tf.candles);
       vol.setData(tf.volume);
       tf.lines.forEach((l, i) => lineSeries[i] && lineSeries[i].setData(l.data));
+
+      // Momentum histogram + squeeze on/off markers under the price bars
+      if (momSeries) momSeries.setData(tf.histogram || []);
+      if (tf.squeeze_dots && typeof candle.setMarkers === "function") {
+        // Mark only the transitions: squeeze turning ON (coiling) and FIRING.
+        const marks = [];
+        let prevOn = null;
+        tf.squeeze_dots.forEach((p) => {
+          const on = p.color === "#ff5b5b";
+          if (prevOn !== null && on !== prevOn) {
+            marks.push(on
+              ? { time: p.time, position: "belowBar", color: "#ff5b5b", shape: "circle", size: 1 }
+              : { time: p.time, position: "belowBar", color: "#2fd07f", shape: "arrowUp", size: 1, text: "fire" });
+          }
+          prevOn = on;
+        });
+        candle.setMarkers(marks);
+      }
       chart.timeScale().fitContent();
       legend(tf);
     }
