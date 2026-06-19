@@ -121,15 +121,8 @@ def _load_signals() -> dict[str, list[dict]]:
             sig["_tv_prefix"]  = tv_prefix
             by_market[market].append(sig)
 
-    grade_order = {"A+": 0, "A": 1}
     for market in by_market:
-        by_market[market].sort(
-            key=lambda s: (
-                grade_order.get(s.get("grade", "A"), 9),
-                -float(s.get("rr", 0) or 0),
-                s.get("symbol", ""),          # stable tiebreaker — never compares dicts
-            )
-        )
+        by_market[market].sort(key=lambda s: -float(s.get("rr", 0) or 0))
 
     return by_market
 
@@ -176,17 +169,19 @@ def _format_digest(market: str, signals: list[dict], today: str, slot_label: str
         setup_type = sig.get("_setup_type", "")
         currency   = sig.get("_currency", "$")
         tv_prefix  = sig.get("_tv_prefix", "")
+        sector     = sig.get("sector", "")
 
-        dec        = _decimals(entry)
-        dir_icon   = "🟢" if direction == "LONG" else "🔴"
-        grade_icon = "⭐" if grade == "A+" else "✅"
-        weekly_str = " W✓" if weekly else ""
-        reason     = _h(" · ".join(chips))
-        tv_url     = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
-        sym_safe   = _h(symbol)
+        dec         = _decimals(entry)
+        dir_icon    = "🟢" if direction == "LONG" else "🔴"
+        grade_icon  = "⭐" if grade == "A+" else "✅"
+        weekly_str  = " W✓" if weekly else ""
+        sector_str  = f"  ·  {_h(sector)}" if sector else ""
+        reason      = _h(" · ".join(chips))
+        tv_url      = f"https://www.tradingview.com/chart/?symbol={tv_prefix}:{symbol}"
+        sym_safe    = _h(symbol)
 
         sig_lines = [
-            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>  {grade}  ·  {_h(setup_type)}{weekly_str}",
+            f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{sym_safe}</a></b>{sector_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}",
             f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}",
             f"   <i>{reason}</i>",
             "",
