@@ -61,10 +61,25 @@ def main() -> None:
         help="skip daily market scans; run only the intraday scalp scan (and sectors ETF fetch)",
     )
     parser.add_argument(
+        "--crypto-scalp-only", action="store_true", dest="crypto_scalp_only",
+        help="run only the 24/7 crypto scalp scan; write scalp_crypto.json and exit",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
     args = parser.parse_args()
+
+    # Fast-path: crypto-only mode — download crypto 1h data, run scalp engine, write file, exit.
+    if args.crypto_scalp_only:
+        print("Scanning CRYPTO SCALP (1h, 24/7) ...", flush=True)
+        sc = scan.scan_scalp(type_filter="crypto")
+        out_path = pathlib.Path(args.out) / "scalp_crypto.json"
+        out_path.write_text(json.dumps(sc, indent=2), encoding="utf-8")
+        cnt = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
+        print(f"  crypto scalp: {len(sc['results'])} setups ({cnt} A+/A) "
+              f"across {sc['scanned']} instruments → {out_path}")
+        return
 
     def tradeable(payload):
         return sum(1 for r in payload["results"] if r["grade"] in config.TRADEABLE_GRADES)

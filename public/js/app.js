@@ -476,7 +476,8 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "scalp"    ? `data/scalp.json`
+    mode === "scalp" && state.scalp_type === "crypto" ? `data/scalp_crypto.json`
+      : mode === "scalp"    ? `data/scalp.json`
       : mode === "reversal" ? `data/${market}_reversal.json`
       : mode === "spec"     ? `data/${market}_spec.json`
       : mode === "short"    ? `data/${market}_short.json`
@@ -501,7 +502,8 @@
 
   async function load() {
     const { market, mode } = state;
-    const key = `${market}:${mode}`;
+    const key = mode === "scalp" && state.scalp_type === "crypto"
+      ? "scalp:crypto" : `${market}:${mode}`;
     $("#scan-title").textContent = "Loading latest scan…";
     skeleton();
     if (state.cache[key]) { applyPayload(state.cache[key]); return; }
@@ -598,9 +600,12 @@
 
     // Scalp asset-type filter
     document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
+      const prevType = state.scalp_type;
       document.querySelectorAll("[data-scalp-type]").forEach((x) => x.classList.toggle("is-active", x === b));
-      state.scalp_type = b.dataset.scalpType || b.dataset.scalp_type || b.getAttribute("data-scalp-type") || "all";
-      renderRows();
+      state.scalp_type = b.getAttribute("data-scalp-type") || "all";
+      // Switching to/from crypto means switching data files — reload. Otherwise just re-filter.
+      const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
+      if (needsReload) load(); else renderRows();
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
