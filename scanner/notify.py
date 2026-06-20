@@ -352,7 +352,7 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
             ]
             if small_sigs:
                 sc_pages = _build_pages(market, small_sigs, today, slot_label, caps,
-                                        title="SMALL CAPS <750M")
+                                        title="SMALL CAPS &lt;750M")
             elif caps:
                 # Cap data is good, just nothing under the threshold this slot.
                 sc_pages = [_notice_msg(market, slot_label, today,
