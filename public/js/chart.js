@@ -21,6 +21,79 @@
 
   const $ = (s) => document.querySelector(s);
 
+  // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
+  // <SYMBOL> -> Binance spot pair. All current crypto-scalp coins trade vs USDT.
+  const BINANCE_MAP = {
+    BTC: "BTCUSDT", ETH: "ETHUSDT", BNB: "BNBUSDT", SOL: "SOLUSDT",
+    XRP: "XRPUSDT", ADA: "ADAUSDT", DOGE: "DOGEUSDT", AVAX: "AVAXUSDT",
+    DOT: "DOTUSDT", LINK: "LINKUSDT", LTC: "LTCUSDT", BCH: "BCHUSDT",
+  };
+  // Shared with the simulate buttons so a buy/sell fills at the true live price.
+  const liveState = { price: null };
+
+  // Indicator math mirroring scanner/scalp.py exactly (BB20/2, KC20/1.5×ATR,
+  // EMA9/21, TTM momentum = linreg(12) of close−midline, Wilder ATR).
+  const SQ_P = 20, SQ_MOM = 12, BB_MULT = 2.0, KC_MULT = 1.5;
+  const emaArr = (s, span) => { const k = 2 / (span + 1), o = []; let p;
+    for (let i = 0; i < s.length; i++) { p = i === 0 ? s[i] : s[i] * k + p * (1 - k); o[i] = p; } return o; };
+  const smaArr = (s, p) => { const o = new Array(s.length).fill(NaN); let sum = 0;
+    for (let i = 0; i < s.length; i++) { sum += s[i]; if (i >= p) sum -= s[i - p]; if (i >= p - 1) o[i] = sum / p; } return o; };
+  const stdArr = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = 0; for (let k = i - p + 1; k <= i; k++) m += s[k]; m /= p;
+      let v = 0; for (let k = i - p + 1; k <= i; k++) { const d = s[k] - m; v += d * d; } o[i] = Math.sqrt(v / p); } return o; };
+  const atrArr = (hi, lo, cl, p) => { const tr = [];
+    for (let i = 0; i < cl.length; i++) tr[i] = i === 0 ? hi[i] - lo[i]
+      : Math.max(hi[i] - lo[i], Math.abs(hi[i] - cl[i - 1]), Math.abs(lo[i] - cl[i - 1]));
+    const a = 1 / p, o = []; let pv;
+    for (let i = 0; i < tr.length; i++) { pv = i === 0 ? tr[i] : tr[i] * a + pv * (1 - a); o[i] = pv; } return o; };
+  const rollMax = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = -Infinity; for (let k = i - p + 1; k <= i; k++) if (s[k] > m) m = s[k]; o[i] = m; } return o; };
+  const rollMin = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = Infinity; for (let k = i - p + 1; k <= i; k++) if (s[k] < m) m = s[k]; o[i] = m; } return o; };
+  const linregArr = (s, n) => { const o = new Array(s.length).fill(NaN);
+    let st = 0, stt = 0; for (let i = 0; i < n; i++) { st += i; stt += i * i; }
+    const denom = n * stt - st * st;
+    for (let i = n - 1; i < s.length; i++) { let sy = 0, sty = 0;
+      for (let j = 0; j < n; j++) { const y = s[i - n + 1 + j]; sy += y; sty += j * y; }
+      const slope = (n * sty - st * sy) / denom, intercept = (sy - slope * st) / n;
+      o[i] = slope * (n - 1) + intercept; } return o; };
+
+  // Compute the 7 overlay lines + momentum histogram + squeeze markers from bars.
+  function computeScalp(bars, nDisp) {
+    const hi = bars.map((b) => b.high), lo = bars.map((b) => b.low), cl = bars.map((b) => b.close);
+    const mid = smaArr(cl, SQ_P), std = stdArr(cl, SQ_P), kcR = atrArr(hi, lo, cl, SQ_P);
+    const bbU = mid.map((m, i) => m + BB_MULT * std[i]), bbL = mid.map((m, i) => m - BB_MULT * std[i]);
+    const kcU = mid.map((m, i) => m + KC_MULT * kcR[i]), kcL = mid.map((m, i) => m - KC_MULT * kcR[i]);
+    const ema9 = emaArr(cl, 9), ema21 = emaArr(cl, 21);
+    const hh = rollMax(hi, SQ_P), ll = rollMin(lo, SQ_P);
+    const val = cl.map((c, i) => c - (((hh[i] + ll[i]) / 2 + mid[i]) / 2));
+    const mom = linregArr(val, SQ_MOM);
+
+    const start = Math.max(0, bars.length - nDisp);
+    const t = (i) => bars[i].time;
+    const pack = (arr) => { const out = []; for (let i = start; i < bars.length; i++)
+      if (isFinite(arr[i])) out.push({ time: t(i), value: arr[i] }); return out; };
+    // order must match the static JSON: BB U/M/L, KC U/L, EMA9, EMA21
+    const lineData = [pack(bbU), pack(mid), pack(bbL), pack(kcU), pack(kcL), pack(ema9), pack(ema21)];
+
+    const hist = [];
+    for (let i = start; i < bars.length; i++) { const v = mom[i]; if (!isFinite(v)) continue;
+      const prev = isFinite(mom[i - 1]) ? mom[i - 1] : v;
+      const color = v >= 0 ? (v >= prev ? "#00e6cc" : "#127d70") : (v <= prev ? "#ff3b3b" : "#7d1f1f");
+      hist.push({ time: t(i), value: v, color }); }
+
+    const markers = []; let prevOn = null;
+    for (let i = start; i < bars.length; i++) {
+      const on = isFinite(bbU[i]) && bbU[i] < kcU[i] && bbL[i] > kcL[i];
+      if (prevOn !== null && on !== prevOn)
+        markers.push(on
+          ? { time: t(i), position: "belowBar", color: "#ff5b5b", shape: "circle", size: 1 }
+          : { time: t(i), position: "belowBar", color: "#2fd07f", shape: "arrowUp", size: 1, text: "fire" });
+      prevOn = on;
+    }
+    return { lineData, hist, markers };
+  }
+
   function fmt(v, cur) {
     if (v == null || isNaN(v)) return "—";
     const a = Math.abs(v);
@@ -119,7 +192,7 @@
 
     buyBtn.addEventListener("click", () => {
       if (openSimTrade()) return;
-      const px    = +d.price || +d.entry || 0;
+      const px    = +liveState.price || +d.price || +d.entry || 0;
       if (!px) { statusEl.textContent = "No price available."; return; }
       const size  = 1000;
       const data  = mjLoad();
@@ -138,7 +211,7 @@
     sellBtn.addEventListener("click", () => {
       const t = openSimTrade();
       if (!t) return;
-      const px = +d.price || +t.entry || 0;
+      const px = +liveState.price || +d.price || +t.entry || 0;
       const data = mjLoad();
       const rec  = data.trades.find((x) => x.id === t.id);
       if (rec) {
@@ -254,8 +327,94 @@
     }));
 
     applyTF(curTF);
+
+    // ── go LIVE for crypto scalp charts (1H, Binance stream) ──────────────────
+    const pair = BINANCE_MAP[(d.symbol || "").toUpperCase()];
+    if (pair && tfs["1H"]) startLive(d, pair, { chart, candle, vol, lineSeries, momSeries, fitOnce: true });
+
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
     ro.observe(el);
+  }
+
+  // Replace static 1H data with a live Binance feed; the forming candle ticks in
+  // real time and indicators recompute on each update. Falls back silently to the
+  // static chart if the network/stream is unavailable.
+  function startLive(d, pair, S) {
+    const cur = d.currency_symbol || "";
+    const N_DISP = 120, KEEP = 320, REST = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1h&limit=${KEEP}`;
+    const liveEl = $("#ct-live"), priceEl = $("#ct-price");
+    let bars = [], ws = null, stopped = false, lastCalc = 0, lastPx = null;
+
+    const applyAll = () => {
+      S.candle.setData(bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
+      S.vol.setData(bars.map((b) => ({ time: b.time, value: Math.round(b.volume),
+        color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" })));
+      const c = computeScalp(bars, N_DISP);
+      c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
+      if (S.momSeries) S.momSeries.setData(c.hist);
+      if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+    };
+
+    const setPrice = (px) => {
+      liveState.price = px;
+      if (priceEl) {
+        priceEl.textContent = fmt(px, cur);
+        if (lastPx != null && px !== lastPx) {
+          priceEl.classList.remove("tick-up", "tick-down");
+          void priceEl.offsetWidth;
+          priceEl.classList.add(px > lastPx ? "tick-up" : "tick-down");
+        }
+        lastPx = px;
+      }
+    };
+
+    fetch(REST, { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((rows) => {
+        bars = rows.map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2],
+          low: +k[3], close: +k[4], volume: +k[5] }));
+        if (!bars.length) return;
+        applyAll();
+        if (S.fitOnce) S.chart.timeScale().fitContent();
+        setPrice(bars[bars.length - 1].close);
+        if (liveEl) liveEl.hidden = false;
+        connect();
+      })
+      .catch(() => { /* keep static chart */ });
+
+    function connect() {
+      if (stopped) return;
+      try { ws = new WebSocket(`wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_1h`); }
+      catch (_) { return; }
+      ws.onmessage = (ev) => {
+        let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+        const k = m.k; if (!k) return;
+        const t = Math.floor(k.t / 1000);
+        const bar = { time: t, open: +k.o, high: +k.h, low: +k.l, close: +k.c, volume: +k.v };
+        const last = bars[bars.length - 1];
+        if (last && last.time === t) bars[bars.length - 1] = bar;
+        else if (!last || t > last.time) { bars.push(bar); if (bars.length > KEEP) bars.shift(); }
+        else return;
+
+        S.candle.update({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+        S.vol.update({ time: bar.time, value: Math.round(bar.volume),
+          color: bar.close >= bar.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" });
+        setPrice(bar.close);
+
+        const now = Date.now();               // throttle the heavier indicator recompute
+        if (now - lastCalc > 700) {
+          lastCalc = now;
+          const c = computeScalp(bars, N_DISP);
+          c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
+          if (S.momSeries) S.momSeries.setData(c.hist);
+          if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+        }
+      };
+      ws.onclose = () => { if (!stopped) setTimeout(connect, 3000); };
+      ws.onerror = () => { try { ws.close(); } catch (_) {} };
+    }
+
+    window.addEventListener("beforeunload", () => { stopped = true; if (ws) try { ws.close(); } catch (_) {} });
   }
 
   if (!symbol) { fail("No ticker specified."); return; }

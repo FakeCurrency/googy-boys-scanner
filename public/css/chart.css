@@ -52,6 +52,16 @@
 }
 .tv-btn:hover { background: color-mix(in srgb, var(--blue) 18%, transparent); }
 
+/* ── live badge ── */
+.ct-live {
+  font: 700 11px/1 var(--sans); letter-spacing: 0.04em; color: var(--green);
+  padding: 4px 8px; border-radius: 6px; background: var(--green-soft);
+  animation: ctLivePulse 1.6s ease-in-out infinite;
+}
+@keyframes ctLivePulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.ct-price.tick-up   { color: var(--green); transition: color .25s; }
+.ct-price.tick-down { color: var(--red);   transition: color .25s; }
+
 /* ── simulate buy / sell ── */
 .sim-btn {
   appearance: none; cursor: pointer;
