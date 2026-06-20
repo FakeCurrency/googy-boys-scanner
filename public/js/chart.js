@@ -220,6 +220,17 @@
   };
   const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
 
+  // ── Yahoo Finance proxy for ASX / NASDAQ live prices ──────────────────────
+  async function fetchStockQuote(sym, assetType) {
+    const ticket = assetType === "asx" ? sym + ".AX" : sym;
+    try {
+      const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`);
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j.price || null;
+    } catch (_) { return null; }
+  }
+
   function wireSim(d) {
     const buyBtn  = $("#cf-sim-buy");
     const sellBtn = $("#cf-sim-sell");
@@ -772,11 +783,29 @@
         .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
-      // Non-crypto: fall back to the static scan chart, with the position overlaid.
+      const isStock = trade.asset_type === "asx" || trade.asset_type === "nasdaq";
+      // Try to fetch the scan JSON for chart context, show static chart with live box overlay
       fetch(chartFile, { cache: "no-cache" })
         .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then((j) => render(j))
-        .catch(() => fail(`No live chart available for ${SYM} yet.`));
+        .catch(() => {
+          // No scan data: render with position-only "chart" (just the live box, no bars)
+          render(d);
+        });
+      // If it's an ASX/NASDAQ stock, start polling Yahoo Finance for live price
+      if (isStock) {
+        const liveBadge = $("#ct-live");
+        if (liveBadge) { liveBadge.textContent = "● LIVE"; liveBadge.hidden = false; }
+        async function stockTick() {
+          const price = await fetchStockQuote(SYM, trade.asset_type);
+          if (price == null) return;
+          liveState.price = price;
+          liveState.listeners.forEach((fn) => fn(price));
+        }
+        stockTick();
+        const pollIv = setInterval(stockTick, 15000);
+        window.addEventListener("beforeunload", () => clearInterval(pollIv), { once: true });
+      }
     }
   }
 
