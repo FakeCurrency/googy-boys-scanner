@@ -2,14 +2,17 @@
 
 Sends three digests per market per trading day at fixed AEST times.
 Only A+ signals are included to keep the list tight (~20 or fewer).
+Each slot sends two messages back-to-back:
+  1. All A+ signals (all market caps)
+  2. Sub-750M small cap A+ signals only
 
     python -m scanner.notify            # live send
     python -m scanner.notify --dry-run  # print without sending
     python -m scanner.notify --reset    # clear today's sent state (re-sends)
 
-Alert slots (AEST → UTC):
-  ASX    11:00 AM → 01:00 UTC   2:00 PM → 04:00 UTC   4:30 PM → 06:30 UTC
-  NASDAQ 12:00 AM → 14:00 UTC   3:00 AM → 17:00 UTC   7:00 AM → 21:00 UTC
+Alert slots (AEST -> UTC):
+  ASX    11:00 AM -> 01:00 UTC   2:00 PM -> 04:00 UTC   4:30 PM -> 06:30 UTC
+  NASDAQ 12:00 AM -> 14:00 UTC   3:00 AM -> 17:00 UTC   7:00 AM -> 21:00 UTC
 """
 
 import argparse
@@ -39,9 +42,10 @@ _SOURCES = [
     ("nasdaq", "Reversal", "public/data/nasdaq_reversal.json", "$",  "NASDAQ"),
 ]
 
-_ALERT_GRADES   = {"A+"}    # A+ only keeps the list tight
-_MAX_PER_DIGEST = 50        # hard cap per slot (paginated across multiple messages)
-_TG_MAX_CHARS   = 3800      # safe limit per message (Telegram hard cap is 4096)
+_ALERT_GRADES       = {"A+"}    # A+ only keeps the list tight
+_MAX_PER_DIGEST     = 50        # hard cap per slot (paginated across multiple messages)
+_TG_MAX_CHARS       = 3800      # safe limit per message (Telegram hard cap is 4096)
+_SMALLCAP_THRESHOLD = 750_000_000  # sub-750M market cap filter
 
 # Alert slots: (slot_key, utc_hour_min, utc_hour_max_exclusive, display_label)
 _SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
@@ -58,13 +62,13 @@ _SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
 }
 
 
-# ── Market cap helpers ────────────────────────────────────────────────────────
+# -- Market cap helpers --------------------------------------------------------
 
 def _yf_sym(market: str, symbol: str) -> str:
     return symbol + ".AX" if market == "asx" else symbol
 
 
-def _fmt_mcap(v: float | None) -> str:
+def _fmt_mcap(v: float) -> str:
     if not v or v <= 0:
         return ""
     if v >= 1e12: return f"{v/1e12:.1f}T"
@@ -73,34 +77,35 @@ def _fmt_mcap(v: float | None) -> str:
     return f"{v/1e3:.0f}K"
 
 
-def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, str]:
-    """Return {symbol: formatted_mcap} for signals[:_MAX_PER_DIGEST]."""
+def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, float]:
+    """Return {symbol: raw_market_cap} for all passed signals. 0.0 where unavailable."""
     if not _YF_AVAILABLE:
         return {}
-    syms = [s.get("symbol", "") for s in signals[:_MAX_PER_DIGEST] if s.get("symbol")]
+    syms = [s.get("symbol", "") for s in signals if s.get("symbol")]
     if not syms:
         return {}
     yf_syms = [_yf_sym(market, s) for s in syms]
-    caps: dict[str, str] = {}
+    caps: dict[str, float] = {}
     try:
         tickers_obj = yf.Tickers(" ".join(yf_syms))
         for sym, yft in zip(syms, yf_syms):
             try:
-                caps[sym] = _fmt_mcap(tickers_obj.tickers[yft].fast_info.market_cap)
+                raw = tickers_obj.tickers[yft].fast_info.market_cap
+                caps[sym] = float(raw) if raw else 0.0
             except Exception:
-                caps[sym] = ""
+                caps[sym] = 0.0
     except Exception:
         pass
     return caps
 
 
-# ── Telegram ──────────────────────────────────────────────────────────────────
+# -- Telegram ------------------------------------------------------------------
 
 def _tg_send(text: str) -> bool:
     token   = os.environ.get("TELEGRAM_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
-        print("  notify: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping")
+        print("  notify: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set -- skipping")
         return False
 
     url     = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -124,7 +129,7 @@ def _tg_send(text: str) -> bool:
         return False
 
 
-# ── Deduplication ─────────────────────────────────────────────────────────────
+# -- Deduplication -------------------------------------------------------------
 
 def _load_seen() -> dict:
     if _SEEN_FILE.exists():
@@ -140,10 +145,10 @@ def _save_seen(seen: dict) -> None:
     _SEEN_FILE.write_text(json.dumps(seen, indent=2))
 
 
-# ── Signal loading ────────────────────────────────────────────────────────────
+# -- Signal loading ------------------------------------------------------------
 
 def _load_signals() -> dict[str, list[dict]]:
-    """Return {market: [enriched_signal, ...]} for all A+/A setups, sorted."""
+    """Return {market: [enriched_signal, ...]} for all A+ setups, sorted by R:R."""
     by_market: dict[str, list[dict]] = {"asx": [], "nasdaq": []}
 
     for market, setup_type, rel_path, currency, tv_prefix in _SOURCES:
@@ -169,7 +174,7 @@ def _load_signals() -> dict[str, list[dict]]:
     return by_market
 
 
-# ── Message formatting ────────────────────────────────────────────────────────
+# -- Message formatting --------------------------------------------------------
 
 def _decimals(price: float) -> int:
     if price < 0.10:  return 4
@@ -179,12 +184,11 @@ def _decimals(price: float) -> int:
 
 
 def _h(text: str) -> str:
-    """HTML-escape a string for Telegram's HTML parse mode."""
     return _html.escape(str(text))
 
 
-def _sig_block(sig: dict, caps: dict[str, str]) -> str:
-    """Format one signal as a text block (no trailing newline)."""
+def _sig_block(sig: dict, caps: dict[str, float]) -> str:
+    """Format one signal as a 3-line text block (no trailing newline)."""
     symbol     = sig.get("symbol", "")
     grade      = sig.get("grade", "")
     direction  = sig.get("dir", "LONG")
@@ -198,7 +202,7 @@ def _sig_block(sig: dict, caps: dict[str, str]) -> str:
     currency   = sig.get("_currency", "$")
     tv_prefix  = sig.get("_tv_prefix", "")
     sector     = sig.get("sector", "")
-    mcap       = caps.get(symbol, "")
+    mcap       = _fmt_mcap(caps.get(symbol, 0.0))
 
     dec        = _decimals(entry)
     dir_icon   = "🟢" if direction == "LONG" else "🔴"
@@ -212,15 +216,16 @@ def _sig_block(sig: dict, caps: dict[str, str]) -> str:
     return (
         f"{dir_icon}{grade_icon} <b><a href=\"{tv_url}\">{_h(symbol)}</a></b>"
         f"{meta_str}  ·  {grade}  ·  {_h(setup_type)}{weekly_str}\n"
-        f"   Entry {currency}{entry:.{dec}f}  ·  Stop −{stop_pct:.1f}%"
+        f"   Entry {currency}{entry:.{dec}f}  ·  Stop -{stop_pct:.1f}%"
         f"  ·  Target +{p2_pct:.1f}%  ·  R:R {rr_text}\n"
         f"   <i>{reason}</i>"
     )
 
 
 def _build_pages(market: str, signals: list[dict], today: str, slot_label: str,
-                 caps: dict[str, str] | None = None) -> list[str]:
-    """Return one or more messages covering all signals, each under _TG_MAX_CHARS."""
+                 caps: dict[str, float] | None = None,
+                 title: str = "SWING SETUPS") -> list[str]:
+    """Return 1+ Telegram messages covering all signals, each under _TG_MAX_CHARS."""
     mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
     total     = len(signals)
     caps      = caps or {}
@@ -233,10 +238,10 @@ def _build_pages(market: str, signals: list[dict], today: str, slot_label: str,
     while i < len(blocks):
         page_n = len(pages) + 1
         if page_n == 1:
-            hdr = (f"<b>{mkt_label} SWING SETUPS — {slot_label}</b>\n"
-                   f"<i>{today}  ·  {total} A+ signal{'s' if total != 1 else ''} found</i>\n\n")
+            hdr = (f"<b>{mkt_label} {title} — {slot_label}</b>\n"
+                   f"<i>{today}  ·  {total} A+ signal{'s' if total != 1 else ''}</i>\n\n")
         else:
-            hdr = f"<b>{mkt_label} — {slot_label} (cont.)</b>\n\n"
+            hdr = f"<b>{mkt_label} {title} — {slot_label} (cont.)</b>\n\n"
 
         body = ""
         while i < len(blocks):
@@ -248,10 +253,27 @@ def _build_pages(market: str, signals: list[dict], today: str, slot_label: str,
 
         pages.append(hdr + body.rstrip() + footer)
 
-    return pages or [f"<b>{mkt_label} — {slot_label}</b>\n<i>No A+ signals.</i>"]
+    return pages or [f"<b>{mkt_label} {title} — {slot_label}</b>\n<i>No A+ signals.</i>"]
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Send helper ---------------------------------------------------------------
+
+def _send_digest(pages: list[str], label: str, dry_run: bool) -> bool:
+    """Send all pages for one digest. Returns True if all sent (or dry-run)."""
+    if dry_run:
+        for pg in pages:
+            print(f"\n{'='*62}")
+            print(pg)
+            print(f"{'='*62}\n")
+        return True
+
+    for pg in pages:
+        if not _tg_send(pg):
+            return False
+    return True
+
+
+# -- Main ----------------------------------------------------------------------
 
 def _slot(market: str, now: dt.datetime) -> tuple[str, str] | None:
     """Return (slot_key, display_label) for the current UTC hour, or None."""
@@ -263,10 +285,10 @@ def _slot(market: str, now: dt.datetime) -> tuple[str, str] | None:
 
 
 def run(dry_run: bool = False, reset: bool = False) -> None:
-    now    = dt.datetime.now(dt.timezone.utc)
-    today  = now.date().isoformat()
-    seen   = {} if reset else _load_seen()
-    sent   = 0
+    now     = dt.datetime.now(dt.timezone.utc)
+    today   = now.date().isoformat()
+    seen    = {} if reset else _load_seen()
+    sent    = 0
     skipped = 0
 
     by_market = _load_signals()
@@ -274,42 +296,59 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
     for market, signals in by_market.items():
         slot_info = _slot(market, now)
         if slot_info is None:
-            continue  # not in an alert window for this market right now
+            continue
 
         slot_key, slot_label = slot_info
 
         if not signals:
             continue
 
-        key = f"{market}_{today}_{slot_key}"
-        if seen.get(key):
+        reg_key = f"{market}_{today}_{slot_key}"
+        sc_key  = f"{market}_{today}_{slot_key}_sc750"
+
+        if seen.get(reg_key) and seen.get(sc_key):
             skipped += 1
             continue
 
-        caps  = _fetch_market_caps(market, signals)
-        pages = _build_pages(market, signals, today, slot_label, caps)
+        # Fetch raw market caps for ALL signals — used for display and sub-750M filter
+        caps = _fetch_market_caps(market, signals)
 
-        if dry_run:
-            for pg in pages:
-                print(f"\n{'═'*62}")
-                print(pg)
-                print(f"{'═'*62}\n")
-            seen[key] = now.isoformat(timespec="seconds")
-            sent += 1
-        else:
-            all_ok = True
-            for pg in pages:
-                if not _tg_send(pg):
-                    all_ok = False
-                    break
-            if all_ok:
-                seen[key] = now.isoformat(timespec="seconds")
+        # Regular digest (all market caps) ────────────────────────────────────
+        if not seen.get(reg_key):
+            pages = _build_pages(market, signals, today, slot_label, caps)
+            ok = _send_digest(pages, f"{market.upper()} {slot_label}", dry_run)
+            if ok:
+                seen[reg_key] = now.isoformat(timespec="seconds")
                 sent += 1
-                n_pages = len(pages)
-                print(f"  notify: ✓ {market.upper()} {slot_label} sent "
-                      f"({len(signals)} signals, {n_pages} message{'s' if n_pages > 1 else ''})")
+                if not dry_run:
+                    n = len(pages)
+                    print(f"  notify: ✓ {market.upper()} {slot_label} sent "
+                          f"({len(signals)} signals, {n} message{'s' if n > 1 else ''})")
             else:
                 print(f"  notify: ✗ {market.upper()} {slot_label} failed — will retry next scan")
+
+        # Sub-750M small cap digest ────────────────────────────────────────────
+        if not seen.get(sc_key):
+            small_sigs = [
+                s for s in signals
+                if 0 < caps.get(s.get("symbol", ""), 0.0) < _SMALLCAP_THRESHOLD
+            ]
+            if small_sigs:
+                sc_pages = _build_pages(market, small_sigs, today, slot_label, caps,
+                                        title="SMALL CAPS <750M")
+                ok = _send_digest(sc_pages, f"{market.upper()} {slot_label} <750M", dry_run)
+                if ok:
+                    seen[sc_key] = now.isoformat(timespec="seconds")
+                    sent += 1
+                    if not dry_run:
+                        n = len(sc_pages)
+                        print(f"  notify: ✓ {market.upper()} {slot_label} <750M sent "
+                              f"({len(small_sigs)} signals, {n} message{'s' if n > 1 else ''})")
+                else:
+                    print(f"  notify: ✗ {market.upper()} {slot_label} <750M failed — will retry")
+            else:
+                # No small cap signals this slot — mark done so we don't retry pointlessly
+                seen[sc_key] = now.isoformat(timespec="seconds")
 
     _save_seen(seen)
 

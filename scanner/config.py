@@ -245,7 +245,7 @@ SCALP_CORRELATION_GROUPS = {
 # ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
-DATA_PERIOD = "2y"            # history pulled per ticker (enough warm-up for EMA144)
+DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
 MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 
 

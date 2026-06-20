@@ -57,6 +57,10 @@ def main() -> None:
         help="skip the intraday scalp scan",
     )
     parser.add_argument(
+        "--scalp-only", action="store_true", dest="scalp_only",
+        help="skip daily market scans; run only the intraday scalp scan (and sectors ETF fetch)",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -71,7 +75,7 @@ def main() -> None:
     mover_inputs: dict[str, tuple] = {}
     MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
 
-    markets = args.market or list(config.MARKETS)
+    markets = [] if args.scalp_only else (args.market or list(config.MARKETS))
     for market_key in markets:
         market = config.MARKETS[market_key]
         print(f"Scanning {market.label} ...", flush=True)

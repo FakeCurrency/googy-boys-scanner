@@ -14,7 +14,7 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 
 def download(tickers: list[str], period: str | None = None,
-             interval: str = "1d", chunk: int = 75, retries: int = 2) -> dict[str, pd.DataFrame]:
+             interval: str = "1d", chunk: int = 150, retries: int = 2) -> dict[str, pd.DataFrame]:
     """Download OHLCV for many tickers, returned as {ticker: DataFrame}.
 
     Pass interval="1h" (with period="60d") for intraday scalp data.
@@ -25,7 +25,7 @@ def download(tickers: list[str], period: str | None = None,
 
     for start in range(0, len(tickers), chunk):
         if start:
-            time.sleep(0.3)
+            time.sleep(0.1)
         batch = tickers[start:start + chunk]
         data = None
         for attempt in range(retries + 1):
