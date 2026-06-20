@@ -273,6 +273,45 @@ def _notice_msg(market: str, slot_label: str, today: str, note: str) -> str:
             f"<i>{today}</i>\n\n{note}")
 
 
+def _write_watchlist_files(by_market: dict[str, list[dict]]) -> None:
+    """Write public/data/watchlist_<market>.txt in TradingView import format."""
+    out_dir = ROOT / "public" / "data"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for market, signals in by_market.items():
+        seen_syms: set[str] = set()
+        lines: list[str] = []
+        for s in signals[:_MAX_PER_DIGEST]:
+            prefix = s.get("_tv_prefix", "")
+            sym    = s.get("symbol", "")
+            key    = f"{prefix}:{sym}"
+            if sym and key not in seen_syms:
+                lines.append(key)
+                seen_syms.add(key)
+        if lines:
+            (out_dir / f"watchlist_{market}.txt").write_text(
+                "\n".join(lines), encoding="utf-8"
+            )
+
+
+def _build_tv_watchlist_msg(market: str, signals: list[dict], slot_label: str) -> str:
+    """Short Telegram message with A+ tickers in TradingView import format."""
+    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
+    seen_syms: set[str] = set()
+    lines: list[str] = []
+    for s in signals[:_MAX_PER_DIGEST]:
+        prefix = s.get("_tv_prefix", "")
+        sym    = s.get("symbol", "")
+        key    = f"{prefix}:{sym}"
+        if sym and key not in seen_syms:
+            lines.append(key)
+            seen_syms.add(key)
+    return (
+        f"<b>{mkt_label} {slot_label} · A+ watchlist</b>\n"
+        f"TradingView: Watchlists ➜ + ➜ Import symbols ➜ paste:\n\n"
+        f"<code>{chr(10).join(lines)}</code>"
+    )
+
+
 def _send_digest(pages: list[str], label: str, dry_run: bool) -> bool:
     """Send all pages for one digest. Returns True if all sent (or dry-run)."""
     if dry_run:
@@ -308,6 +347,9 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
 
     by_market = _load_signals()
 
+    # Write watchlist files now so they're staged in the same commit as the scan data.
+    _write_watchlist_files(by_market)
+
     for market, signals in by_market.items():
         slot_info = _slot(market, now)
         if slot_info is None:
@@ -339,6 +381,9 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
                     n = len(pages)
                     print(f"  notify: ✓ {market.upper()} {slot_label} sent "
                           f"({len(signals)} signals, {n} message{'s' if n > 1 else ''})")
+                # TradingView watchlist symbols — tap to copy, paste into TV Import
+                tv_msg = _build_tv_watchlist_msg(market, signals, slot_label)
+                _send_digest([tv_msg], f"{market.upper()} TV watchlist", dry_run)
             else:
                 print(f"  notify: ✗ {market.upper()} {slot_label} failed — will retry next scan")
 
