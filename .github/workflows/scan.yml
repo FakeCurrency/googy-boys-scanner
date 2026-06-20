@@ -29,7 +29,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Markets are closed on weekends, so scheduled stock scans there are pointless.
+  # GitHub's scheduler can also fire delayed/batched runs into Saturday/Sunday —
+  # this gate skips those. Manual (workflow_dispatch / SCAN button) runs are
+  # always allowed, any day. Crypto stays live 24/7 via crypto_scalp.yml.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -ge 6 ]; then
+            echo "Weekend scheduled run — skipping stock scan (crypto runs 24/7 separately)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   scan:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
