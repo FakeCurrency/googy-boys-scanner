@@ -65,6 +65,11 @@
     return normalize({
       capital: newer.capital,
       brokerage: newer.brokerage,
+      // Per-asset settings: take from whichever side has them (prefer newer).
+      stock_capital:    newer.stock_capital    ?? (a.stock_capital    ?? b.stock_capital),
+      stock_brokerage:  newer.stock_brokerage  ?? (a.stock_brokerage  ?? b.stock_brokerage),
+      crypto_capital:   newer.crypto_capital   ?? (a.crypto_capital   ?? b.crypto_capital),
+      crypto_brokerage: newer.crypto_brokerage ?? (a.crypto_brokerage ?? b.crypto_brokerage),
       trades: [...byId.values()],
       deleted: [...deleted],
       updated_at: Math.max(a.updated_at || 0, b.updated_at || 0),

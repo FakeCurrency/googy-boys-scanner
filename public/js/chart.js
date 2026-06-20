@@ -237,9 +237,11 @@
     const statusEl = $("#cf-sim-status");
     if (!buyBtn || !sellBtn) return;
 
-    const cur  = d.currency_symbol || "";
-    const dir  = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
-    const SYM  = (d.symbol || symbol).toUpperCase();
+    const cur     = d.currency_symbol || "";
+    const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
+    const SYM     = (d.symbol || symbol).toUpperCase();
+    const isCrypto = !!BINANCE_MAP[SYM];
+    const simBrok  = (data) => isCrypto ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
 
     // Re-label the entry button to match the setup direction.
     buyBtn.textContent  = dir === "short" ? "▲ Simulate Short" : "▲ Simulate Buy";
@@ -262,7 +264,7 @@
       if (px) {
         const m      = dir === "long" ? 1 : -1;
         const data   = mjLoad();
-        const brok   = data.brokerage || 0;
+        const brok   = simBrok(data);
         const unreal = t.shares * m * (px - t.entry);  // unrealised, before close brok
         const net    = unreal - 2 * brok;               // what you'd bank if closed now
         const pnlCls = net >= 0 ? " live" : " neg";
@@ -296,7 +298,7 @@
       rec.mtime = Date.now();
       mjSave(data);
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
-      const pnl = t.shares * m * (fillPx - t.entry) - 2 * (data.brokerage || 0);
+      const pnl = t.shares * m * (fillPx - t.entry) - 2 * simBrok(data);
       statusEl.className = `sim-status${pnl >= 0 ? " live" : " neg"}`;
       statusEl.textContent = `${stopped ? "🛑 Stopped out" : "🎯 Target hit"} @ ${fmt(fillPx, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)}`;
       buyBtn.disabled = false; sellBtn.disabled = true;
@@ -314,7 +316,6 @@
       if (openSimTrade()) return;
       const px    = +liveState.price || +d.price || +d.entry || 0;
       if (!px) { statusEl.textContent = "No price available."; return; }
-      const isCrypto = !!BINANCE_MAP[SYM];
       const margin   = isCrypto ? SIM_CRYPTO_MARGIN   : SIM_STOCK_SIZE;
       const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
       const exposure = margin * leverage;
@@ -345,7 +346,7 @@
       }
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
       const m   = dir === "long" ? 1 : -1;
-      const pnl = (t.shares * m * (px - t.entry) - 2 * (data.brokerage || 0));
+      const pnl = (t.shares * m * (px - t.entry) - 2 * simBrok(data));
       statusEl.className = "sim-status" + (pnl >= 0 ? " live" : "");
       statusEl.textContent = `Closed @ ${fmt(px, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} — logged to My Trades`;
       buyBtn.disabled = false; sellBtn.disabled = true;
@@ -702,7 +703,9 @@
   // current, P&L, R, move %, stop/target distance, time-in-trade) and updates on
   // every tick. Visible only while a matching position is open.
   function wireLiveBox(d, el, SYM, posDir, findOpen) {
-    const cur = d.currency_symbol || "";
+    const cur        = d.currency_symbol || "";
+    const isCryptoPos = !!BINANCE_MAP[SYM];
+    const posBrok    = (data) => isCryptoPos ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
     const box = document.createElement("div");
     box.className = "live-pos-box";
     box.style.display = "none";
@@ -748,7 +751,7 @@
       rec.mtime = Date.now();
       mjSave(data);
       const m   = posDir === "long" ? 1 : -1;
-      const pnl = t.shares * m * (fillPx - t.entry) - 2 * (data.brokerage || 0);
+      const pnl = t.shares * m * (fillPx - t.entry) - 2 * posBrok(data);
       banner.className = "lpb-banner " + (stopped ? "neg" : "pos");
       banner.innerHTML = `${stopped ? "🛑 STOP HIT" : "🎯 TARGET HIT"} — auto-closed @ ${fmt(fillPx, cur)} · ` +
         `P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} <small>(logged to your journal)</small>`;
@@ -763,7 +766,7 @@
       if (!t) { box.style.display = "none"; return; }
       box.style.display = "block";
       const m     = posDir === "long" ? 1 : -1;
-      const data  = mjLoad(), brok = data.brokerage || 0;
+      const data  = mjLoad(), brok = posBrok(data);
       const price = px || liveState.price || t.entry;
       const net   = t.shares * m * (price - t.entry) - 2 * brok;
       const move  = (price - t.entry) / t.entry * 100 * m;       // signed in trade's favour
@@ -823,28 +826,54 @@
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
       const isStock = trade.asset_type === "asx" || trade.asset_type === "nasdaq";
-      // Try to fetch the scan JSON for chart context, show static chart with live box overlay
-      fetch(chartFile, { cache: "no-cache" })
-        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then((j) => render(j))
-        .catch(() => {
-          // No scan data: render with position-only "chart" (just the live box, no bars)
-          render(d);
-        });
-      // If it's an ASX/NASDAQ stock, start polling Yahoo Finance for live price
+      let stockTick = null;
       if (isStock) {
         const liveBadge = $("#ct-live");
-        if (liveBadge) { liveBadge.textContent = "● LIVE"; liveBadge.hidden = false; }
-        async function stockTick() {
+        if (liveBadge) { liveBadge.hidden = false; }
+        let lastStockPx = null;
+        const priceHd = $("#ct-price");
+        stockTick = async () => {
           const price = await fetchStockQuote(SYM, trade.asset_type);
           if (price == null) return;
           liveState.price = price;
+          if (priceHd) {
+            if (lastStockPx != null && price !== lastStockPx) {
+              priceHd.classList.remove("tick-up", "tick-down");
+              void priceHd.offsetWidth;
+              priceHd.classList.add(price > lastStockPx ? "tick-up" : "tick-down");
+            }
+            priceHd.textContent = fmt(price, "$");
+            lastStockPx = price;
+          }
           liveState.listeners.forEach((fn) => fn(price));
-        }
-        stockTick();
+        };
         const pollIv = setInterval(stockTick, 15000);
         window.addEventListener("beforeunload", () => clearInterval(pollIv), { once: true });
       }
+
+      // Try to fetch the scan JSON for chart context; fall back to a minimal stub so
+      // the live position box and level lines still render when no scan JSON exists.
+      fetch(chartFile, { cache: "no-cache" })
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then((j) => { render(j); if (stockTick) stockTick(); })
+        .catch(() => {
+          const ts = Math.floor(Date.now() / 1000);
+          const ep = trade.entry;
+          d.timeframes["1D"] = {
+            candles: [
+              { time: ts - 86400, open: ep, high: ep * 1.001, low: ep * 0.999, close: ep },
+              { time: ts,         open: ep, high: ep * 1.001, low: ep * 0.999, close: ep },
+            ],
+            volume: [
+              { time: ts - 86400, value: 0, color: "rgba(47,208,127,0.5)" },
+              { time: ts,         value: 0, color: "rgba(47,208,127,0.5)" },
+            ],
+            lines: [],
+          };
+          d.default_tf = "1D";
+          render(d);
+          if (stockTick) stockTick();
+        });
     }
   }
 
