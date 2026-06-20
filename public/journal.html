@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=9" />
-  <link rel="stylesheet" href="css/journal.css?v=7" />
+  <link rel="stylesheet" href="css/journal.css?v=8" />
 </head>
 <body>
   <header class="topbar">
@@ -44,8 +44,11 @@
       <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
       </button>
-      <button class="jr-tab jr-tab-mine" data-journal="mine" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">✏️</span> My Trades &nbsp;<span class="jr-tab-label">REAL</span>
+      <button class="jr-tab jr-tab-stocks" data-journal="stocks" role="tab" aria-selected="false">
+        <span class="jr-tab-arrow">📈</span> My Stocks &nbsp;<span class="jr-tab-label">ASX/NAS</span>
+      </button>
+      <button class="jr-tab jr-tab-crypto" data-journal="crypto" role="tab" aria-selected="false">
+        <span class="jr-tab-arrow">₿</span> My Crypto &nbsp;<span class="jr-tab-label">MANUAL</span>
       </button>
     </div>
 
@@ -119,21 +122,9 @@
         <div class="jr-table-wrap" id="jr-scalp-closed"></div>
       </section>
     </div>
-    <!-- ── MY TRADES (real / manual) ── -->
-    <div id="jr-mine-section" class="jr-hidden">
 
-      <div class="mj-settings">
-        <label class="mj-setting">Starting capital
-          <span class="mj-currency-wrap">$<input id="mj-capital"   class="mj-input" type="number" min="0" step="100"  value="10000" /></span>
-        </label>
-        <label class="mj-setting">Brokerage / leg
-          <span class="mj-currency-wrap">$<input id="mj-brokerage" class="mj-input" type="number" min="0" step="1"    value="10" /></span>
-        </label>
-        <button id="mj-new-btn" class="mj-btn-primary">+ Log New Trade</button>
-        <button id="mj-clear-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
-      </div>
-
-      <!-- cross-device sync + backup -->
+    <!-- shared sync bar for all manual journals -->
+    <div id="jr-shared-sync" class="jr-hidden">
       <div class="mj-sync">
         <div class="mj-sync-row">
           <span class="mj-sync-label">📱 Sync across devices</span>
@@ -147,24 +138,61 @@
           <input id="mj-import-input" type="file" accept="application/json,.json" hidden />
         </div>
         <div id="mj-sync-status" class="mj-sync-status"></div>
-        <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. The code is private — anyone who knows it can see these paper trades. Backup saves a file; Restore merges one back in.</p>
+        <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. Backup saves a file; Restore merges one back in.</p>
       </div>
+    </div>
 
-      <section class="stats" id="jr-mine-stats"></section>
-
+    <!-- ── MY STOCKS ── -->
+    <div id="jr-stocks-section" class="jr-hidden">
+      <div class="mj-settings">
+        <label class="mj-setting">Starting capital
+          <span class="mj-currency-wrap">$<input id="mj-stock-capital" class="mj-input" type="number" min="0" step="100" value="10000" /></span>
+        </label>
+        <label class="mj-setting">Brokerage / leg
+          <span class="mj-currency-wrap">$<input id="mj-stock-brokerage" class="mj-input" type="number" min="0" step="1" value="10" /></span>
+        </label>
+        <button id="mj-new-stock-btn" class="mj-btn-primary">+ Log Stock Trade</button>
+        <button id="mj-clear-stock-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
+      </div>
+      <section class="stats" id="jr-stocks-stats"></section>
       <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed trades)</span></div>
-        <div id="jr-mine-equity" class="jr-equity-chart"></div>
+        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed stock trades)</span></div>
+        <div id="jr-stocks-equity" class="jr-equity-chart"></div>
       </section>
-
       <section>
-        <div class="jr-section-title">Open positions <span id="jr-mine-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-mine-open"></div>
+        <div class="jr-section-title">Open positions <span id="jr-stocks-open-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-stocks-open"></div>
       </section>
-
       <section>
-        <div class="jr-section-title">Closed trades <span id="jr-mine-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-mine-closed"></div>
+        <div class="jr-section-title">Closed trades <span id="jr-stocks-closed-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-stocks-closed"></div>
+      </section>
+    </div>
+
+    <!-- ── MY CRYPTO ── -->
+    <div id="jr-crypto-section" class="jr-hidden">
+      <div class="mj-settings">
+        <label class="mj-setting">Starting capital
+          <span class="mj-currency-wrap">$<input id="mj-crypto-capital" class="mj-input" type="number" min="0" step="100" value="10000" /></span>
+        </label>
+        <label class="mj-setting">Brokerage / leg
+          <span class="mj-currency-wrap">$<input id="mj-crypto-brokerage" class="mj-input" type="number" min="0" step="1" value="5" /></span>
+        </label>
+        <button id="mj-new-crypto-btn" class="mj-btn-primary">+ Log Crypto Trade</button>
+        <button id="mj-clear-crypto-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
+      </div>
+      <section class="stats" id="jr-crypto-stats"></section>
+      <section class="jr-equity">
+        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed crypto trades)</span></div>
+        <div id="jr-crypto-equity" class="jr-equity-chart"></div>
+      </section>
+      <section>
+        <div class="jr-section-title">Open positions <span id="jr-crypto-open-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-crypto-open"></div>
+      </section>
+      <section>
+        <div class="jr-section-title">Closed trades <span id="jr-crypto-closed-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-crypto-closed"></div>
       </section>
     </div>
 
@@ -181,6 +209,15 @@
           <!-- ── OPEN TRADE FIELDS ── -->
           <div id="mj-open-fields">
             <div class="mj-row">
+              <label class="mj-label mj-full">Asset type
+                <div class="mj-asset-switch" id="mj-asset-switch">
+                  <button type="button" class="mj-asset-btn mj-asset-asx" data-asset="asx">📈 ASX</button>
+                  <button type="button" class="mj-asset-btn mj-asset-nasdaq" data-asset="nasdaq">📊 NASDAQ</button>
+                  <button type="button" class="mj-asset-btn mj-asset-crypto mj-asset-active" data-asset="crypto">₿ Crypto</button>
+                </div>
+              </label>
+            </div>
+            <div class="mj-row">
               <label class="mj-label">Symbol
                 <input id="mj-symbol" class="mj-field" type="text" placeholder="e.g. BHP" required />
               </label>
@@ -195,9 +232,15 @@
               <label class="mj-label">Entry Price $
                 <input id="mj-entry" class="mj-field" type="number" step="any" min="0" placeholder="1.00" required />
               </label>
-              <label class="mj-label">$ to Invest
-                <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="1000" required />
-              </label>
+              <div class="mj-leverage-row" id="mj-leverage-row">
+                <label class="mj-label">$ Margin × Leverage
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="500" style="flex:1;min-width:0" required />
+                    <span style="font:700 14px/1 var(--sans);color:var(--muted);flex-shrink:0">×</span>
+                    <input id="mj-leverage" class="mj-field" type="number" step="1" min="1" max="500" value="10" style="width:60px;flex-shrink:0" title="Leverage multiplier" />
+                  </div>
+                </label>
+              </div>
             </div>
             <div class="mj-row">
               <label class="mj-label">Entry Date
@@ -256,6 +299,6 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=1"></script>
-  <script src="js/journal.js?v=8"></script>
+  <script src="js/journal.js?v=10"></script>
 </body>
 </html>

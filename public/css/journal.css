@@ -201,3 +201,22 @@
   padding: 4px 7px; margin-left: 4px; transition: color .15s;
 }
 .mj-del-btn:hover { color: var(--red); }
+
+/* ── My Stocks tab color ── */
+.jr-tab-stocks.is-active { color: var(--blue); }
+/* ── My Crypto tab color ── */
+.jr-tab-crypto.is-active { color: #f7931a; }
+
+/* ── asset-type toggle in modal ── */
+.mj-asset-switch { display: flex; gap: 4px; }
+.mj-asset-btn {
+  appearance: none; border: 1px solid var(--border); cursor: pointer;
+  flex: 1; height: 34px; border-radius: 8px; font: 700 11px/1 var(--sans); letter-spacing: 0.04em;
+  background: var(--fill-2); color: var(--muted); transition: all .15s; text-transform: uppercase;
+}
+.mj-asset-asx.mj-asset-active    { background: var(--blue-soft);  color: var(--blue);  border-color: var(--blue); }
+.mj-asset-nasdaq.mj-asset-active { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+.mj-asset-crypto.mj-asset-active { background: rgba(247,147,26,.12); color: #f7931a; border-color: #f7931a; }
+
+/* hide leverage row for non-crypto trades */
+.mj-leverage-row.mj-hidden { display: none !important; }

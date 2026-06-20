@@ -33,6 +33,11 @@
   // Intraday live timeframes for crypto (Binance kline intervals).
   const BINANCE_IV    = { "15M": "15m", "30M": "30m", "1H": "1h" };
   const LIVE_TF_ORDER = ["15M", "30M", "1H"];
+  // Default sim sizing. Crypto intraday/scalps are sized at $500 margin × 10×
+  // leverage (= $5,000 exposure); stocks stay at a flat $1,000 cash position.
+  const SIM_CRYPTO_MARGIN   = 500;
+  const SIM_CRYPTO_LEVERAGE = 10;
+  const SIM_STOCK_SIZE      = 1000;
   // Shared with the simulate buttons / live box so a buy/sell fills at the true
   // live price and every dependent widget reacts on each tick.
   const liveState = { price: null, entryLineFns: null, listeners: [] };
@@ -205,6 +210,26 @@
   function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
   const nowDate = () => new Date().toLocaleDateString("en-CA");          // YYYY-MM-DD (local)
   const nowTime = () => new Date().toTimeString().slice(0, 5);            // HH:MM (local)
+  // Tidy a (possibly fractional, possibly large) unit count for display.
+  const fmtUnits = (n) => {
+    if (n == null || isNaN(n)) return "—";
+    const a = Math.abs(n);
+    if (a >= 1000) return Math.round(n).toLocaleString();
+    if (a >= 1)    return (+n.toFixed(2)).toString();
+    return (+n.toFixed(4)).toString();
+  };
+  const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
+
+  // ── Yahoo Finance proxy for ASX / NASDAQ live prices ──────────────────────
+  async function fetchStockQuote(sym, assetType) {
+    const ticket = assetType === "asx" ? sym + ".AX" : sym;
+    try {
+      const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`);
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j.price || null;
+    } catch (_) { return null; }
+  }
 
   function wireSim(d) {
     const buyBtn  = $("#cf-sim-buy");
@@ -249,7 +274,7 @@
           `${fmt(px, cur)} now`;
       } else {
         statusEl.className = "sim-status live";
-        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${t.shares} units`;
+        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${fmtUnits(t.shares)} units${t.leverage > 1 ? ` ×${t.leverage}` : ""}`;
       }
     }
 
@@ -289,12 +314,15 @@
       if (openSimTrade()) return;
       const px    = +liveState.price || +d.price || +d.entry || 0;
       if (!px) { statusEl.textContent = "No price available."; return; }
-      const size  = 1000;
+      const isCrypto = !!BINANCE_MAP[SYM];
+      const margin   = isCrypto ? SIM_CRYPTO_MARGIN   : SIM_STOCK_SIZE;
+      const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
+      const exposure = margin * leverage;
       const data  = mjLoad();
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
         entry: px, entry_date: nowDate(), entry_time: nowTime(),
-        size_usd: size, shares: +(size / px).toFixed(4),
+        size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
         stop: d.stop ?? null, target: d.target ?? null,
         notes: `Simulated from chart · ${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
         status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
@@ -710,7 +738,7 @@
       const distTgt  = t.target != null ? Math.abs((t.target - price) / price * 100) : null;
       box.innerHTML =
         `<div class="lpb-head ${posDir}"><span class="lpb-dot"></span> IN ${posDir.toUpperCase()} · ${SYM}` +
-          `<span class="lpb-units">${t.shares} u</span></div>` +
+          `<span class="lpb-units">${fmtUnits(t.shares)} u${levTag(t)}</span></div>` +
         `<div class="lpb-pnl ${pnlCls}">${net >= 0 ? "+" : ""}${cur}${net.toFixed(2)}</div>` +
         `<div class="lpb-grid">` +
           `<span class="lpb-k">Entry</span><span class="lpb-v">${fmt(t.entry, cur)}</span>` +
@@ -755,11 +783,29 @@
         .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
-      // Non-crypto: fall back to the static scan chart, with the position overlaid.
+      const isStock = trade.asset_type === "asx" || trade.asset_type === "nasdaq";
+      // Try to fetch the scan JSON for chart context, show static chart with live box overlay
       fetch(chartFile, { cache: "no-cache" })
         .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then((j) => render(j))
-        .catch(() => fail(`No live chart available for ${SYM} yet.`));
+        .catch(() => {
+          // No scan data: render with position-only "chart" (just the live box, no bars)
+          render(d);
+        });
+      // If it's an ASX/NASDAQ stock, start polling Yahoo Finance for live price
+      if (isStock) {
+        const liveBadge = $("#ct-live");
+        if (liveBadge) { liveBadge.textContent = "● LIVE"; liveBadge.hidden = false; }
+        async function stockTick() {
+          const price = await fetchStockQuote(SYM, trade.asset_type);
+          if (price == null) return;
+          liveState.price = price;
+          liveState.listeners.forEach((fn) => fn(price));
+        }
+        stockTick();
+        const pollIv = setInterval(stockTick, 15000);
+        window.addEventListener("beforeunload", () => clearInterval(pollIv), { once: true });
+      }
     }
   }
 

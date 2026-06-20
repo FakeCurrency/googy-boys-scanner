@@ -215,10 +215,18 @@
       $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
       $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
       $("#jr-scalp-section").classList.toggle("jr-hidden", jrnl !== "scalp");
-      const mineSec = $("#jr-mine-section");
-      if (mineSec) {
-        mineSec.classList.toggle("jr-hidden", jrnl !== "mine");
-        if (jrnl === "mine") mjRender();
+
+      const syncBar = $("#jr-shared-sync");
+      if (syncBar) syncBar.classList.toggle("jr-hidden", jrnl !== "stocks" && jrnl !== "crypto");
+      const stocksSec = $("#jr-stocks-section");
+      if (stocksSec) {
+        stocksSec.classList.toggle("jr-hidden", jrnl !== "stocks");
+        if (jrnl === "stocks") mjRenderStocks();
+      }
+      const cryptoSec = $("#jr-crypto-section");
+      if (cryptoSec) {
+        cryptoSec.classList.toggle("jr-hidden", jrnl !== "crypto");
+        if (jrnl === "crypto") mjRenderCrypto();
       }
     });
   });
@@ -332,17 +340,19 @@
       <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
       <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
   }
-  // ═══════════════════════════════════ MY TRADES ═══════════════════════════════
+
+  // ═══════════════════════════════════ MY STOCKS + MY CRYPTO ═══════════════════════════════
   // Stored in localStorage via the shared GBSSync store; optionally mirrored to
-  // Cloudflare KV when a sync code is set (see gbs-sync.js). $10 brokerage each
-  // way, configurable. All P&L / R calculated on render.
+  // Cloudflare KV when a sync code is set (see gbs-sync.js).
+  // All P&L / R calculated on render.
+  // asset_type: "asx" | "nasdaq" | "crypto" (undefined/missing = "crypto" for backward compat)
 
   const MJ_KEY = "gbs:manual_journal";
 
   function mjLoad() {
     if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { capital: 10000, brokerage: 10, trades: [], deleted: [] };
+    return { stock_capital: 10000, stock_brokerage: 10, crypto_capital: 10000, crypto_brokerage: 5, trades: [], deleted: [] };
   }
   function mjSave(d) {
     if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
@@ -368,66 +378,71 @@
     return { pnl, r };
   }
 
-  function mjRender() {
-    const data = mjLoad();
-    const { capital, brokerage, trades } = data;
+  // ── shared equity-curve renderer ──────────────────────────────────────────
+  function mjDrawEquity(closed, elId) {
+    const el = $(`#${elId}`);
+    if (!el) return;
+    if (!closed.length) {
+      el.innerHTML = `<div class="jr-empty">Log your first closed trade — the curve appears here.</div>`;
+      return;
+    }
+    let cum = 0;
+    const pts = closed.map((t) => (cum += (t.pnl || 0)));
+    pts.unshift(0);
+    const w = 1000, h = 180, pad = 8;
+    const mn = Math.min(0, ...pts), mx = Math.max(0, ...pts), rng = (mx - mn) || 1;
+    const x  = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
+    const y  = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
+    const path  = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
+      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+  }
 
-    // Sync settings inputs
-    const capEl = $("#mj-capital"), brkEl = $("#mj-brokerage");
+  // ── shared manual journal renderer ────────────────────────────────────────
+  function mjRenderFor(assetFilter, capKey, brkKey, ids) {
+    const data      = mjLoad();
+    const capital   = data[capKey]   ?? 10000;
+    const brokerage = data[brkKey]   ?? 10;
+
+    const capEl = $(ids.capInput), brkEl = $(ids.brkInput);
     if (capEl) capEl.value = capital;
     if (brkEl) brkEl.value = brokerage;
 
-    const open   = trades.filter((t) => t.status === "open");
-    const closed = trades.filter((t) => t.status === "closed")
-                         .map((t) => ({ ...t, ...mjCalc(t, brokerage) }));
+    const myTrades = (data.trades || []).filter(assetFilter);
+    const open     = myTrades.filter((t) => t.status === "open");
+    const closed   = myTrades.filter((t) => t.status === "closed")
+                              .map((t) => ({ ...t, ...mjCalc(t, brokerage) }));
 
-    // stats
-    const pnls       = closed.map((t) => t.pnl).filter((p) => p != null);
-    const realised   = pnls.reduce((a, b) => a + b, 0);
-    const balance    = capital + realised;
-    const wins       = closed.filter((t) => (t.pnl || 0) > 0);
-    const win_rate   = closed.length ? (wins.length / closed.length * 100).toFixed(0) : 0;
-    const rs         = closed.map((t) => t.r).filter((r) => r != null);
-    const total_r    = rs.reduce((a, b) => a + b, 0);
-    const balCls     = balance >= capital ? "accent-green" : "";
+    const pnls     = closed.map((t) => t.pnl).filter((p) => p != null);
+    const realised = pnls.reduce((a, b) => a + b, 0);
+    const balance  = capital + realised;
+    const wins     = closed.filter((t) => (t.pnl || 0) > 0);
+    const winRate  = closed.length ? (wins.length / closed.length * 100).toFixed(0) : 0;
+    const rs       = closed.map((t) => t.r).filter((r) => r != null);
+    const totalR   = rs.reduce((a, b) => a + b, 0);
+    const balCls   = balance >= capital ? "accent-green" : "";
 
-    const statsEl = $("#jr-mine-stats");
+    const statsEl = $(ids.stats);
     if (statsEl) statsEl.innerHTML = [
-      statCard("Account balance", "$" + balance.toLocaleString(undefined, { maximumFractionDigits: 0 }), balCls),
+      statCard("Balance", "$" + balance.toLocaleString(undefined, { maximumFractionDigits: 0 }), balCls),
       statCard("Open positions", open.length),
       statCard("Closed trades", closed.length),
-      statCard("Win rate", `${win_rate}%`),
-      statCard("Realised R", (total_r >= 0 ? "+" : "") + total_r.toFixed(2) + "R", total_r >= 0 ? "accent-green" : ""),
+      statCard("Win rate", `${winRate}%`),
+      statCard("Realised R", (totalR >= 0 ? "+" : "") + totalR.toFixed(2) + "R", totalR >= 0 ? "accent-green" : ""),
       statCard("Realised $", pfmt(realised), pcls(realised)),
     ].join("");
 
-    // equity curve
-    const eqEl = $("#jr-mine-equity");
-    if (eqEl) {
-      if (!closed.length) {
-        eqEl.innerHTML = `<div class="jr-empty">Log your first closed trade — the curve appears here.</div>`;
-      } else {
-        let cum = 0;
-        const pts = closed.map((t) => (cum += (t.pnl || 0)));
-        pts.unshift(0);
-        const w = 1000, h = 180, pad = 8;
-        const mn = Math.min(0, ...pts), mx = Math.max(0, ...pts), rng = (mx - mn) || 1;
-        const x  = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
-        const y  = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
-        const path = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-        const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
-        eqEl.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-          <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
-          <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
-      }
-    }
+    mjDrawEquity(closed, ids.equity);
 
     // open table
-    const openEl = $("#jr-mine-open");
+    const openEl  = $(ids.open);
+    const openNEl = $(ids.openN);
     if (openEl) {
-      $("#jr-mine-open-n").textContent = `(${open.length})`;
+      if (openNEl) openNEl.textContent = `(${open.length})`;
       if (!open.length) {
-        openEl.innerHTML = `<div class="jr-empty">No open positions — tap "+ Log New Trade" to add one.</div>`;
+        openEl.innerHTML = `<div class="jr-empty">No open positions — tap the button above to log one.</div>`;
       } else {
         const rows = open.map((t) => {
           const dc  = t.direction === "long" ? "dir-long" : "dir-short";
@@ -438,15 +453,22 @@
             const rew  = t.direction === "long" ? t.target - t.entry : t.entry - t.target;
             if (risk > 0) rr = (rew / risk).toFixed(1) + "R";
           }
-          const chartHref = `chart.html?m=scalp&s=${encodeURIComponent(t.symbol + "_" + t.direction)}&pos=${encodeURIComponent(t.id)}`;
+          const aType = t.asset_type || "crypto";
+          const sParam = (aType !== "crypto") ? t.symbol : t.symbol + "_" + t.direction;
+          const m      = aType === "asx" ? "asx" : aType === "nasdaq" ? "nasdaq" : "scalp";
+          const chartHref = `chart.html?m=${m}&s=${encodeURIComponent(sParam)}&pos=${encodeURIComponent(t.id)}`;
+          const assetBadge = aType !== "crypto" ? `<span class="reason">${up(aType)}</span>` : "";
+          const sizeStr = t.shares != null
+            ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u \xd7${t.leverage}` : `${t.shares} sh`)
+            : "—";
           return `<tr>
-            <td class="jr-sym"><a class="jr-chart-link" href="${chartHref}" title="Open live chart with this position">${esc(t.symbol)} <span class="jr-chart-ico">📈</span></a></td>
+            <td class="jr-sym"><a class="jr-chart-link" href="${chartHref}" title="Open live chart">${esc(t.symbol)} <span class="jr-chart-ico">📈</span></a> ${assetBadge}</td>
             <td><span class="dir-chip ${dc}">${dir}</span></td>
             <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
             <td class="r-neg">${t.stop   != null ? "$" + num(t.stop)   : "—"}</td>
             <td class="r-pos">${t.target != null ? "$" + num(t.target) : "—"}</td>
             <td>${rr}</td>
-            <td>${t.shares != null ? t.shares + " sh" : "—"}</td>
+            <td>${sizeStr}</td>
             <td class="muted">${esc(t.entry_date)}${t.entry_time ? " " + t.entry_time : ""}</td>
             <td>${t.notes ? `<span class="reason">${esc(t.notes)}</span>` : "—"}</td>
             <td style="white-space:nowrap">
@@ -463,25 +485,31 @@
     }
 
     // closed table
-    const closedEl = $("#jr-mine-closed");
+    const closedEl  = $(ids.closed);
+    const closedNEl = $(ids.closedN);
     if (closedEl) {
-      $("#jr-mine-closed-n").textContent = `(${closed.length})`;
+      if (closedNEl) closedNEl.textContent = `(${closed.length})`;
       if (!closed.length) {
         closedEl.innerHTML = `<div class="jr-empty">No closed trades yet.</div>`;
       } else {
         const rows = closed.slice().reverse().map((t) => {
           const dc   = t.direction === "long" ? "dir-long" : "dir-short";
           const dir  = t.direction === "long" ? "↑ L" : "↓ S";
-          const rStr = t.r   != null ? (t.r   >= 0 ? "+" : "") + t.r.toFixed(2) + "R" : "—";
+          const rStr = t.r   != null ? (t.r   >= 0 ? "+" : "") + t.r.toFixed(2)   + "R" : "—";
           const pStr = t.pnl != null ? (t.pnl >= 0 ? "+" : "−") + "$" + Math.abs(t.pnl).toFixed(2) : "—";
           const rCls = (t.r   || 0) >= 0 ? "r-pos" : "r-neg";
           const pCls = (t.pnl || 0) >= 0 ? "r-pos" : "r-neg";
+          const aType = t.asset_type || "crypto";
+          const assetBadge = aType !== "crypto" ? `<span class="reason">${up(aType)}</span>` : "";
+          const sizeStr = t.shares != null
+            ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u \xd7${t.leverage}` : `${t.shares} sh`)
+            : "—";
           return `<tr>
-            <td class="jr-sym">${esc(t.symbol)}</td>
+            <td class="jr-sym">${esc(t.symbol)} ${assetBadge}</td>
             <td><span class="dir-chip ${dc}">${dir}</span></td>
             <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
             <td>${t.exit  != null ? "$" + num(t.exit)  : "—"}</td>
-            <td>${t.shares != null ? t.shares + " sh" : "—"}</td>
+            <td>${sizeStr}</td>
             <td class="${rCls}">${rStr}</td>
             <td class="${pCls}">${pStr}</td>
             <td class="muted">${esc(t.entry_date)} → ${esc(t.exit_date || "")}</td>
@@ -495,6 +523,55 @@
         </tr></thead><tbody>${rows}</tbody></table>`;
       }
     }
+  }
+
+  function mjRenderStocks() {
+    mjRenderFor(
+      (t) => t.asset_type === "asx" || t.asset_type === "nasdaq",
+      "stock_capital", "stock_brokerage",
+      {
+        capInput: "#mj-stock-capital", brkInput: "#mj-stock-brokerage",
+        stats: "#jr-stocks-stats",   equity: "jr-stocks-equity",
+        open:  "#jr-stocks-open",    openN:  "#jr-stocks-open-n",
+        closed:"#jr-stocks-closed",  closedN:"#jr-stocks-closed-n",
+      }
+    );
+  }
+
+  function mjRenderCrypto() {
+    mjRenderFor(
+      (t) => !t.asset_type || t.asset_type === "crypto",
+      "crypto_capital", "crypto_brokerage",
+      {
+        capInput: "#mj-crypto-capital", brkInput: "#mj-crypto-brokerage",
+        stats: "#jr-crypto-stats",   equity: "jr-crypto-equity",
+        open:  "#jr-crypto-open",    openN:  "#jr-crypto-open-n",
+        closed:"#jr-crypto-closed",  closedN:"#jr-crypto-closed-n",
+      }
+    );
+  }
+
+  // ── Asset type toggle helpers ──────────────────────────────────────────────
+  function mjSetAsset(type) {
+    document.querySelectorAll(".mj-asset-btn").forEach((b) => {
+      b.classList.toggle("mj-asset-active", b.dataset.asset === type);
+    });
+    const isCrypto  = type === "crypto";
+    const levRow    = $("#mj-leverage-row");
+    if (levRow) levRow.classList.toggle("mj-hidden", !isCrypto);
+    const sizeEl    = $("#mj-size");
+    const levEl     = $("#mj-leverage");
+    if (sizeEl && !sizeEl._manualEdit) sizeEl.value = isCrypto ? 500 : 1000;
+    if (levEl) levEl.value = isCrypto ? 10 : 1;
+    const symEl = $("#mj-symbol");
+    if (symEl) {
+      symEl.placeholder = isCrypto ? "ETH, BTC, DOGE…"
+        : type === "asx" ? "BHP, CBA, WES…" : "AAPL, TSLA, NVDA…";
+    }
+  }
+  function mjGetAsset() {
+    const a = document.querySelector(".mj-asset-btn.mj-asset-active");
+    return a ? a.dataset.asset : "crypto";
   }
 
   // ── Modal helpers ──────────────────────────────────────────────────────────
@@ -518,13 +595,11 @@
 
   function mjOpenModal() {
     const { date, time } = mjNow();
-    const { capital }    = mjLoad();
 
     $("#mj-modal-title").textContent = "Log New Trade";
     $("#mj-trade-id").value   = "";
     $("#mj-symbol").value     = "";
     $("#mj-entry").value      = "";
-    $("#mj-size").value       = 1000;
     $("#mj-entry-date").value = date;
     $("#mj-entry-time").value = time;
     $("#mj-stop").value       = "";
@@ -532,6 +607,15 @@
     $("#mj-notes").value      = "";
     $("#mj-shares-preview").textContent = "";
     mjSetDir("long");
+
+    // Determine default asset type from whichever manual tab is visible
+    const activeTab  = document.querySelector(".jr-tab.is-active");
+    const activeJrnl = activeTab ? activeTab.dataset.journal : "crypto";
+    const defaultAsset = activeJrnl === "stocks" ? "asx" : "crypto";
+    const sizeEl = $("#mj-size");
+    if (sizeEl) sizeEl._manualEdit = false;
+    mjSetAsset(defaultAsset);
+
     $("#mj-open-fields").classList.remove("mj-hidden");
     $("#mj-close-fields").classList.add("mj-hidden");
     $("#mj-modal").classList.remove("mj-hidden");
@@ -558,6 +642,7 @@
     $("#mj-close-preview").dataset.stop      = t.stop  || "";
     $("#mj-close-preview").dataset.shares    = t.shares || 0;
     $("#mj-close-preview").dataset.dir       = t.direction;
+    $("#mj-close-preview").dataset.asset     = t.asset_type || "crypto";
     setTimeout(() => $("#mj-exit") && $("#mj-exit").focus(), 60);
   }
 
@@ -567,24 +652,26 @@
 
   // Live preview: shares + P&L estimate while typing in the form
   function mjUpdateOpenPreview() {
-    const entry = parseFloat($("#mj-entry").value);
-    const size  = parseFloat($("#mj-size").value);
-    const prev  = $("#mj-shares-preview");
+    const entry    = parseFloat($("#mj-entry").value);
+    const size     = parseFloat($("#mj-size").value);
+    const levEl    = $("#mj-leverage");
+    const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
+    const prev     = $("#mj-shares-preview");
     if (!prev) return;
     if (!entry || !size) { prev.textContent = ""; return; }
-    const shares  = Math.floor(size / entry);
-    const { brokerage } = mjLoad();
-    const stopEl = parseFloat($("#mj-stop").value);
+    const exposure = size * leverage;
+    const units    = exposure / entry;
+    const stopEl   = parseFloat($("#mj-stop").value);
+    const tgtVal   = parseFloat($("#mj-target").value);
     let rr = "";
-    if (stopEl && $("#mj-target").value) {
+    if (stopEl && tgtVal) {
       const dir  = mjGetDir();
       const risk = dir === "long" ? entry - stopEl : stopEl - entry;
-      const tgt  = parseFloat($("#mj-target").value);
-      const rew  = dir === "long" ? tgt - entry : entry - tgt;
-      if (risk > 0) rr = ` · R:R ${(rew / risk).toFixed(1)}`;
+      const rew  = dir === "long" ? tgtVal - entry : entry - tgtVal;
+      if (risk > 0) rr = ` \xb7 R:R ${(rew / risk).toFixed(1)}`;
     }
-    prev.innerHTML = `<span class="hl">${shares} shares</span> · max risk <span class="hl">$${(shares * Math.abs((entry - (stopEl || 0))).toFixed ? "$" : "")}</span>${rr}`;
-    prev.textContent = `${shares} shares${rr ? "  ·  " + rr.trim() : ""}`;
+    const levStr = leverage > 1 ? ` \xb7 ${leverage}\xd7 leverage` : "";
+    prev.textContent = `${units.toFixed(4)} units \xb7 $${exposure.toFixed(0)} exposure${levStr}${rr}`;
   }
 
   function mjUpdateClosePreview() {
@@ -593,15 +680,19 @@
     if (!prev || !exit) { if (prev) prev.textContent = ""; return; }
     const entry    = parseFloat(prev.dataset.entry  || 0);
     const stop     = parseFloat(prev.dataset.stop   || 0);
-    const shares   = parseInt(prev.dataset.shares   || 0, 10);
+    const shares   = parseFloat(prev.dataset.shares  || 0);
     const dir      = prev.dataset.dir || "long";
-    const { brokerage } = mjLoad();
+    const aType    = prev.dataset.asset || "crypto";
+    const data     = mjLoad();
+    const brokerage = aType === "crypto"
+      ? (data.crypto_brokerage ?? 5)
+      : (data.stock_brokerage  ?? 10);
     const m   = dir === "long" ? 1 : -1;
     const pnl = shares * m * (exit - entry) - 2 * brokerage;
     let r = "";
     if (stop) {
       const risk = dir === "long" ? entry - stop : stop - entry;
-      if (risk > 0) r = ` · ${((m * (exit - entry)) / risk).toFixed(2)}R`;
+      if (risk > 0) r = ` \xb7 ${((m * (exit - entry)) / risk).toFixed(2)}R`;
     }
     const pCls = pnl >= 0 ? "pos" : "neg";
     prev.innerHTML = `P&amp;L: <span class="${pCls}">${pnl >= 0 ? "+" : "−"}$${Math.abs(pnl).toFixed(2)}</span>${r ? ` <span class="${pnl >= 0 ? "pos" : "neg"}">${r.trim()}</span>` : ""}`;
@@ -624,19 +715,23 @@
       t.mtime      = Date.now();
     } else {
       // Open a new position
-      const entry  = parseFloat($("#mj-entry").value);
-      const size   = parseFloat($("#mj-size").value);
-      const stop   = parseFloat($("#mj-stop").value)   || null;
-      const target = parseFloat($("#mj-target").value) || null;
+      const entry    = parseFloat($("#mj-entry").value);
+      const size     = parseFloat($("#mj-size").value);
+      const levEl    = $("#mj-leverage");
+      const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
+      const stop     = parseFloat($("#mj-stop").value)   || null;
+      const target   = parseFloat($("#mj-target").value) || null;
       data.trades.push({
         id:          mjUid(),
         symbol:      $("#mj-symbol").value.trim().toUpperCase(),
         direction:   mjGetDir(),
+        asset_type:  mjGetAsset(),
         entry,
         entry_date:  $("#mj-entry-date").value,
         entry_time:  $("#mj-entry-time").value,
         size_usd:    size,
-        shares:      entry > 0 ? Math.floor(size / entry) : 0,
+        leverage,
+        shares:      entry > 0 ? parseFloat((size * leverage / entry).toFixed(8)) : 0,
         stop,
         target,
         notes:       $("#mj-notes").value.trim(),
@@ -650,22 +745,35 @@
 
     mjSave(data);
     mjCloseModal();
-    mjRender();
+    mjRenderStocks();
+    mjRenderCrypto();
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
   (function mjInit() {
-    const newBtn = $("#mj-new-btn");
-    if (newBtn) newBtn.addEventListener("click", mjOpenModal);
+    const newStockBtn = $("#mj-new-stock-btn");
+    if (newStockBtn) newStockBtn.addEventListener("click", () => { mjSetAsset("asx"); mjOpenModal(); });
+    const newCryptoBtn = $("#mj-new-crypto-btn");
+    if (newCryptoBtn) newCryptoBtn.addEventListener("click", () => { mjSetAsset("crypto"); mjOpenModal(); });
 
-    const clearBtn = $("#mj-clear-btn");
-    if (clearBtn) clearBtn.addEventListener("click", () => {
-      if (confirm("Clear ALL your manual trades? This cannot be undone.")) {
+    const clearStockBtn = $("#mj-clear-stock-btn");
+    if (clearStockBtn) clearStockBtn.addEventListener("click", () => {
+      if (confirm("Clear ALL your stock trades? This cannot be undone.")) {
         const data = mjLoad();
-        data.trades.forEach((t) => mjTombstone(data, t.id));   // propagate the wipe across devices
-        data.trades = [];
-        mjSave(data);
-        mjRender();
+        data.trades.filter((t) => t.asset_type === "asx" || t.asset_type === "nasdaq")
+                   .forEach((t) => mjTombstone(data, t.id));
+        data.trades = data.trades.filter((t) => t.asset_type !== "asx" && t.asset_type !== "nasdaq");
+        mjSave(data); mjRenderStocks();
+      }
+    });
+    const clearCryptoBtn = $("#mj-clear-crypto-btn");
+    if (clearCryptoBtn) clearCryptoBtn.addEventListener("click", () => {
+      if (confirm("Clear ALL your crypto trades? This cannot be undone.")) {
+        const data = mjLoad();
+        data.trades.filter((t) => !t.asset_type || t.asset_type === "crypto")
+                   .forEach((t) => mjTombstone(data, t.id));
+        data.trades = data.trades.filter((t) => t.asset_type && t.asset_type !== "crypto");
+        mjSave(data); mjRenderCrypto();
       }
     });
 
@@ -685,24 +793,39 @@
       b.addEventListener("click", () => { mjSetDir(b.dataset.dir); mjUpdateOpenPreview(); });
     });
 
-    // Live preview on entry/size/stop/target change
-    ["#mj-entry", "#mj-size", "#mj-stop", "#mj-target"].forEach((sel) => {
+    // Asset type toggle
+    document.querySelectorAll(".mj-asset-btn").forEach((b) => {
+      b.addEventListener("click", () => mjSetAsset(b.dataset.asset));
+    });
+
+    // Track manual edits to the size field
+    const sizeEl2 = $("#mj-size");
+    if (sizeEl2) sizeEl2.addEventListener("input", () => { sizeEl2._manualEdit = true; });
+
+    // Live preview on entry/size/leverage/stop/target change
+    ["#mj-entry", "#mj-size", "#mj-leverage", "#mj-stop", "#mj-target"].forEach((sel) => {
       const el = $(sel);
       if (el) el.addEventListener("input", mjUpdateOpenPreview);
     });
     const exitEl = $("#mj-exit");
     if (exitEl) exitEl.addEventListener("input", mjUpdateClosePreview);
 
-    // Settings persistence
-    ["#mj-capital", "#mj-brokerage"].forEach((sel) => {
+    // Settings persistence for stocks + crypto capital/brokerage
+    ["#mj-stock-capital", "#mj-stock-brokerage", "#mj-crypto-capital", "#mj-crypto-brokerage"].forEach((sel) => {
       const el = $(sel);
       if (!el) return;
       el.addEventListener("change", () => {
-        const data       = mjLoad();
-        data.capital     = parseFloat($("#mj-capital").value)   || 10000;
-        data.brokerage   = parseFloat($("#mj-brokerage").value) || 10;
+        const data = mjLoad();
+        const scEl = $("#mj-stock-capital"),  sbEl = $("#mj-stock-brokerage");
+        const ccEl = $("#mj-crypto-capital"), cbEl = $("#mj-crypto-brokerage");
+        const sc = parseFloat(scEl ? scEl.value : "10000") || 10000;
+        const sb = parseFloat(sbEl ? sbEl.value : "10")    || 10;
+        const cc = parseFloat(ccEl ? ccEl.value : "10000") || 10000;
+        const cb = parseFloat(cbEl ? cbEl.value : "5")     || 5;
+        data.stock_capital   = sc; data.stock_brokerage   = sb;
+        data.crypto_capital  = cc; data.crypto_brokerage  = cb;
         mjSave(data);
-        mjRender();
+        mjRenderStocks(); mjRenderCrypto();
       });
     });
 
@@ -712,12 +835,15 @@
       const delBtn   = e.target.closest(".mj-del-btn");
       if (closeBtn) { mjOpenCloseModal(closeBtn.dataset.id); return; }
       if (delBtn) {
-        if (confirm("Delete this trade? This cannot be undone.")) {
-          const data   = mjLoad();
+        if (confirm("Delete this trade?")) {
+          const data  = mjLoad();
+          const t     = data.trades.find((x) => x.id === delBtn.dataset.id);
+          const aType = t ? (t.asset_type || "crypto") : "crypto";
           mjTombstone(data, delBtn.dataset.id);
-          data.trades  = data.trades.filter((t) => t.id !== delBtn.dataset.id);
+          data.trades = data.trades.filter((x) => x.id !== delBtn.dataset.id);
           mjSave(data);
-          mjRender();
+          if (aType === "asx" || aType === "nasdaq") mjRenderStocks();
+          else mjRenderCrypto();
         }
       }
     });
@@ -754,7 +880,7 @@
           // Merge rather than overwrite, so importing never wipes existing trades.
           const merged = window.GBSSync ? window.GBSSync.merge(mjLoad(), incoming) : incoming;
           mjSave(merged);
-          mjRender();
+          mjRenderStocks(); mjRenderCrypto();
           alert(`Imported — ${merged.trades.length} trade(s) now in your journal.`);
         };
         reader.readAsText(file);
@@ -800,7 +926,7 @@
           return;
         }
         await window.GBSSync.syncOut();
-        mjRender();
+        mjRenderStocks(); mjRenderCrypto();
         reflect();
       } catch (_) {
         mjSyncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg");
@@ -815,8 +941,11 @@
 
     async function syncNow() {
       mjSyncStatus("Syncing…");
-      try { await window.GBSSync.syncOut(); mjRender(); mjSyncStatus("Synced just now.", "live"); }
-      catch (_) { mjSyncStatus("Sync failed — will retry on the next change.", "neg"); }
+      try {
+        await window.GBSSync.syncOut();
+        mjRenderStocks(); mjRenderCrypto();
+        mjSyncStatus("Synced just now.", "live");
+      } catch (_) { mjSyncStatus("Sync failed — will retry on the next change.", "neg"); }
     }
 
     if (onBtn)  onBtn.addEventListener("click", enable);
@@ -827,7 +956,7 @@
     reflect();
     // On load, if sync is already on, pull the latest before first render.
     if (window.GBSSync.enabled()) {
-      window.GBSSync.syncIn().then(() => mjRender()).catch(() => {});
+      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); }).catch(() => {});
     }
   }
 
