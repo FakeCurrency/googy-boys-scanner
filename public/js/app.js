@@ -439,10 +439,11 @@
     }
     const s = state.sort;
     list = list.slice();
-    if (s === "price") list.sort((a, b) => b.price - a.price);
-    else if (s === "rr") list.sort((a, b) => b.rr - a.rr);
-    else if (s === "az") list.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score) || (b.rr - a.rr));
+    const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
+    if (s === "price") list.sort((a, b) => n(b.price) - n(a.price));
+    else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
+    else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
+    else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
     return list;
   }
 

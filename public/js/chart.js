@@ -20,6 +20,8 @@
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
   const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
   // <SYMBOL> -> Binance spot pair. All current crypto-scalp coins trade vs USDT.
@@ -164,7 +166,7 @@
     if (d.dir) { dirEl.textContent = d.dir; dirEl.classList.toggle("short", d.dir.toUpperCase() === "SHORT"); }
     dirEl.hidden = false;
     $("#ct-chips").innerHTML = (d.chips || [])
-      .map((c) => `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
+      .map((c) => `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
   }
 
   function footer(d) {
@@ -189,11 +191,17 @@
   // Writes straight into the same localStorage the "My Trades" journal reads
   // (gbs:manual_journal), so a simulated entry/exit shows up there with full P&L.
   const MJ_KEY = "gbs:manual_journal";
+  // Prefer the shared GBSSync store (handles schema + optional cloud sync); fall
+  // back to plain localStorage if the module didn't load for some reason.
   function mjLoad() {
+    if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
     return { capital: 10000, brokerage: 10, trades: [] };
   }
-  function mjSave(x) { localStorage.setItem(MJ_KEY, JSON.stringify(x)); }
+  function mjSave(x) {
+    if (window.GBSSync) { window.GBSSync.saveLocal(x); window.GBSSync.syncOutDebounced(); return; }
+    localStorage.setItem(MJ_KEY, JSON.stringify(x));
+  }
   function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
   const nowDate = () => new Date().toLocaleDateString("en-CA");          // YYYY-MM-DD (local)
   const nowTime = () => new Date().toTimeString().slice(0, 5);            // HH:MM (local)
@@ -253,8 +261,14 @@
       const data = mjLoad();
       const rec  = data.trades.find((x) => x.id === t.id);
       if (!rec || rec.status === "closed") return true;
-      const fillPx = stopped ? t.stop : t.target;
+      // Honest fills: a stop that gaps through fills at the worse live price
+      // (never better than the stop); a target never credits overshoot. This
+      // keeps the simulated P&L from being optimistic vs. real execution.
+      const fillPx = stopped
+        ? (dir === "long" ? Math.min(t.stop, livePx) : Math.max(t.stop, livePx))
+        : t.target;
       rec.status = "closed"; rec.exit = fillPx; rec.exit_date = nowDate(); rec.exit_time = nowTime();
+      rec.mtime = Date.now();
       mjSave(data);
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
       const pnl = t.shares * m * (fillPx - t.entry) - 2 * (data.brokerage || 0);
@@ -283,7 +297,7 @@
         size_usd: size, shares: +(size / px).toFixed(4),
         stop: d.stop ?? null, target: d.target ?? null,
         notes: `Simulated from chart · ${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
-        status: "open", exit: null, exit_date: null, exit_time: null, sim: true,
+        status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
       });
       mjSave(data);
       refresh();
@@ -298,6 +312,7 @@
       if (rec) {
         rec.status = "closed";
         rec.exit = px; rec.exit_date = nowDate(); rec.exit_time = nowTime();
+        rec.mtime = Date.now();
         mjSave(data);
       }
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
@@ -748,10 +763,20 @@
     }
   }
 
-  if (posId) { renderPosition(posId); return; }
-  if (!symbol) { fail("No ticker specified."); return; }
-  fetch(chartFile, { cache: "no-cache" })
-    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(render)
-    .catch(() => fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`));
+  function boot() {
+    if (posId) { renderPosition(posId); return; }
+    if (!symbol) { fail("No ticker specified."); return; }
+    fetch(chartFile, { cache: "no-cache" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(render)
+      .catch(() => fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`));
+  }
+
+  // If cloud sync is on, pull the latest journal first so positions taken on
+  // another device show here too. Never block rendering on it for long.
+  if (window.GBSSync && window.GBSSync.enabled()) {
+    Promise.race([window.GBSSync.syncIn(), new Promise((res) => setTimeout(res, 2500))]).finally(boot);
+  } else {
+    boot();
+  }
 })();

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=9" />
-  <link rel="stylesheet" href="css/journal.css?v=6" />
+  <link rel="stylesheet" href="css/journal.css?v=7" />
 </head>
 <body>
   <header class="topbar">
@@ -133,6 +133,23 @@
         <button id="mj-clear-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
       </div>
 
+      <!-- cross-device sync + backup -->
+      <div class="mj-sync">
+        <div class="mj-sync-row">
+          <span class="mj-sync-label">📱 Sync across devices</span>
+          <input id="mj-sync-code" class="mj-input mj-sync-input" type="text" placeholder="your private code" autocomplete="off" spellcheck="false" />
+          <button id="mj-sync-on"  class="mj-btn-primary">Turn on</button>
+          <button id="mj-sync-off" class="mj-btn-ghost mj-hidden">Turn off</button>
+          <button id="mj-sync-now" class="mj-btn-ghost mj-hidden">Sync now</button>
+          <span class="mj-sync-sep" aria-hidden="true"></span>
+          <button id="mj-export-btn" class="mj-btn-ghost">⬇ Backup</button>
+          <button id="mj-import-btn" class="mj-btn-ghost">⬆ Restore</button>
+          <input id="mj-import-input" type="file" accept="application/json,.json" hidden />
+        </div>
+        <div id="mj-sync-status" class="mj-sync-status"></div>
+        <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. The code is private — anyone who knows it can see these paper trades. Backup saves a file; Restore merges one back in.</p>
+      </div>
+
       <section class="stats" id="jr-mine-stats"></section>
 
       <section class="jr-equity">
@@ -238,6 +255,7 @@
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
   </footer>
 
-  <script src="js/journal.js?v=7"></script>
+  <script src="js/gbs-sync.js?v=1"></script>
+  <script src="js/journal.js?v=8"></script>
 </body>
 </html>
