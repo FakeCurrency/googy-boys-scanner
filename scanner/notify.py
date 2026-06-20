@@ -78,24 +78,58 @@ def _fmt_mcap(v: float) -> str:
 
 
 def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, float]:
-    """Return {symbol: raw_market_cap} for all passed signals. 0.0 where unavailable."""
+    """Return {symbol: raw_market_cap} for the passed signals.
+
+    Uses Yahoo's bulk quote endpoint (one HTTP request per ~100 symbols) rather
+    than per-ticker fast_info calls. Hammering fast_info 50× in a row gets
+    rate-limited from cloud IPs (e.g. GitHub Actions) and silently returns
+    nothing; a single bulk request is far more reliable. Falls back to
+    per-ticker fast_info only if the bulk call yields nothing.
+    """
     if not _YF_AVAILABLE:
         return {}
     syms = [s.get("symbol", "") for s in signals if s.get("symbol")]
     if not syms:
         return {}
-    yf_syms = [_yf_sym(market, s) for s in syms]
+    yf_to_plain = {_yf_sym(market, s): s for s in syms}
     caps: dict[str, float] = {}
+
+    # 1) Bulk quote endpoint — one request per 100 symbols.
     try:
-        tickers_obj = yf.Tickers(" ".join(yf_syms))
-        for sym, yft in zip(syms, yf_syms):
+        from yfinance.data import YfData
+        from yfinance.const import _QUERY1_URL_
+        yfd = YfData()
+        all_yf = list(yf_to_plain)
+        for i in range(0, len(all_yf), 100):
+            chunk = all_yf[i:i + 100]
+            params = {"symbols": ",".join(chunk), "formatted": "false",
+                      "lang": "en-US", "region": "US"}
             try:
-                raw = tickers_obj.tickers[yft].fast_info.market_cap
-                caps[sym] = float(raw) if raw else 0.0
+                res = yfd.get_raw_json(f"{_QUERY1_URL_}/v7/finance/quote?", params=params)
             except Exception:
-                caps[sym] = 0.0
+                continue
+            for item in (res or {}).get("quoteResponse", {}).get("result", []):
+                plain = yf_to_plain.get(item.get("symbol", ""))
+                mc = item.get("marketCap")
+                if plain and mc:
+                    caps[plain] = float(mc)
     except Exception:
         pass
+
+    # 2) Fallback: per-ticker fast_info (best effort) only if bulk gave nothing.
+    if not caps:
+        try:
+            tickers_obj = yf.Tickers(" ".join(yf_to_plain))
+            for ysym, plain in yf_to_plain.items():
+                try:
+                    raw = tickers_obj.tickers[ysym].fast_info.market_cap
+                    if raw:
+                        caps[plain] = float(raw)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
     return caps
 
 
@@ -258,6 +292,13 @@ def _build_pages(market: str, signals: list[dict], today: str, slot_label: str,
 
 # -- Send helper ---------------------------------------------------------------
 
+def _notice_msg(market: str, slot_label: str, today: str, note: str) -> str:
+    """A single short message for the small-cap slot when there's no list to show."""
+    mkt_label = "🇦🇺 ASX" if market == "asx" else "🇺🇸 NASDAQ"
+    return (f"<b>{mkt_label} SMALL CAPS &lt;750M — {slot_label}</b>\n"
+            f"<i>{today}</i>\n\n{note}")
+
+
 def _send_digest(pages: list[str], label: str, dry_run: bool) -> bool:
     """Send all pages for one digest. Returns True if all sent (or dry-run)."""
     if dry_run:
@@ -328,6 +369,8 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
                 print(f"  notify: ✗ {market.upper()} {slot_label} failed — will retry next scan")
 
         # Sub-750M small cap digest ────────────────────────────────────────────
+        # Always sends a message alongside the regular digest so the small-cap
+        # scan is never silently absent: the filtered list, or an explicit note.
         if not seen.get(sc_key):
             small_sigs = [
                 s for s in signals
@@ -336,19 +379,29 @@ def run(dry_run: bool = False, reset: bool = False) -> None:
             if small_sigs:
                 sc_pages = _build_pages(market, small_sigs, today, slot_label, caps,
                                         title="SMALL CAPS <750M")
-                ok = _send_digest(sc_pages, f"{market.upper()} {slot_label} <750M", dry_run)
-                if ok:
-                    seen[sc_key] = now.isoformat(timespec="seconds")
-                    sent += 1
-                    if not dry_run:
-                        n = len(sc_pages)
-                        print(f"  notify: ✓ {market.upper()} {slot_label} <750M sent "
-                              f"({len(small_sigs)} signals, {n} message{'s' if n > 1 else ''})")
-                else:
-                    print(f"  notify: ✗ {market.upper()} {slot_label} <750M failed — will retry")
+            elif caps:
+                # Cap data is good, just nothing under the threshold this slot.
+                sc_pages = [_notice_msg(market, slot_label, today,
+                                        "No A+ setups under 750M market cap this slot.")]
             else:
-                # No small cap signals this slot — mark done so we don't retry pointlessly
-                seen[sc_key] = now.isoformat(timespec="seconds")
+                # Couldn't get market caps at all — say so rather than imply none exist.
+                sc_pages = [_notice_msg(market, slot_label, today,
+                                        "Market-cap data was unavailable this slot, so the "
+                                        "&lt;750M filter couldn't run. It'll retry next alert.")]
+
+            ok = _send_digest(sc_pages, f"{market.upper()} {slot_label} <750M", dry_run)
+            if ok:
+                # Only lock in the dedup key when caps worked; if they didn't, leave
+                # it open so the next slot retries the fetch.
+                if small_sigs or caps:
+                    seen[sc_key] = now.isoformat(timespec="seconds")
+                sent += 1
+                if not dry_run:
+                    n = len(sc_pages)
+                    print(f"  notify: ✓ {market.upper()} {slot_label} <750M sent "
+                          f"({len(small_sigs)} signals, {n} message{'s' if n > 1 else ''})")
+            else:
+                print(f"  notify: ✗ {market.upper()} {slot_label} <750M failed — will retry")
 
     _save_seen(seen)
 
