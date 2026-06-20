@@ -177,18 +177,36 @@
       mjLoad().trades.find((t) => t.sim && t.status === "open" &&
         (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
 
-    function refresh() {
+    function refresh(livePx) {
       const t = openSimTrade();
-      if (t) {
-        buyBtn.disabled = true; sellBtn.disabled = false;
-        statusEl.className = "sim-status live";
-        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${t.shares} units`;
-      } else {
+      if (!t) {
         buyBtn.disabled = false; sellBtn.disabled = true;
         statusEl.className = "sim-status";
         statusEl.textContent = "";
+        return;
+      }
+      buyBtn.disabled = true; sellBtn.disabled = false;
+      const px = livePx || liveState.price;
+      if (px) {
+        const m      = dir === "long" ? 1 : -1;
+        const data   = mjLoad();
+        const brok   = data.brokerage || 0;
+        const unreal = t.shares * m * (px - t.entry);  // unrealised, before close brok
+        const net    = unreal - 2 * brok;               // what you'd bank if closed now
+        const pnlCls = net >= 0 ? " live" : " neg";
+        const sign   = net >= 0 ? "+" : "";
+        statusEl.className = `sim-status${pnlCls}`;
+        statusEl.innerHTML =
+          `● ${dir.toUpperCase()} @ ${fmt(t.entry, cur)} &nbsp;·&nbsp; ` +
+          `Live P&L <strong>${sign}${cur}${net.toFixed(2)}</strong> &nbsp;·&nbsp; ` +
+          `${fmt(px, cur)} now`;
+      } else {
+        statusEl.className = "sim-status live";
+        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${t.shares} units`;
       }
     }
+    // Hook into the live price stream so the P&L updates on every tick.
+    liveState.onTick = (px) => { if (openSimTrade()) refresh(px); };
 
     buyBtn.addEventListener("click", () => {
       if (openSimTrade()) return;
@@ -366,6 +384,7 @@
         }
         lastPx = px;
       }
+      if (liveState.onTick) liveState.onTick(px);
     };
 
     fetch(REST, { cache: "no-store" })
