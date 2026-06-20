@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-20T18:09:55+10:00",
-  "scanned": 1540,
+  "generated_at": "2026-06-20T18:33:37+10:00",
+  "scanned": 1429,
   "universe_size": 1985,
   "score_max": 13,
   "ema_periods": [
@@ -418,14 +418,14 @@
     }
   ],
   "sector_counts": {
-    "Materials": 24,
-    "Capital Goods": 5,
+    "Materials": 19,
     "Financial Services": 5,
-    "Pharmaceuticals, Biotechnology & Life Sciences": 5,
-    "Software & Services": 4,
-    "Equity Real Estate Investment Trusts (REITs)": 3,
+    "Capital Goods": 4,
+    "Pharmaceuticals, Biotechnology & Life Sciences": 4,
+    "Software & Services": 3,
     "Banks": 3,
     "Energy": 3,
+    "Equity Real Estate Investment Trusts (REITs)": 2,
     "Consumer Discretionary Distribution & Retail": 2,
     "Health Care Equipment & Services": 2,
     "Utilities": 2,
@@ -434,8 +434,7 @@
     "Consumer Services": 1,
     "Consumer Staples Distribution & Retail": 1,
     "Not Applic": 1,
-    "Technology Hardware & Equipment": 1,
-    "Real Estate Management & Development": 1
+    "Technology Hardware & Equipment": 1
   },
   "results": [
     {
@@ -584,7 +583,7 @@
       "turnover": 1584272,
       "detail": [],
       "analysis": "ASK is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.3938, stop above the swing high at A$1.4493 (4.0% risk). Target A$1.3500 (support), R:R 0.8:1.",
-      "sector_count": 3
+      "sector_count": 2
     },
     {
       "symbol": "LF1",
@@ -658,152 +657,6 @@
       "detail": [],
       "analysis": "LF1 is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.8858, stop above the swing high at A$1.9442 (3.1% risk). Target A$1.8400 (support), R:R 0.8:1.",
       "sector_count": 1
-    },
-    {
-      "symbol": "RMS",
-      "name": "Ramelius Resources Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 11,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 3.16810802",
-        "WEEKLY BEARISH",
-        "VOLUME EXPANSION"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 3.1400001,
-      "y_close": 3.22000003,
-      "open": 3.0999999,
-      "open_pct": -3.73,
-      "current_pct": 1.29,
-      "day_pct": -2.48,
-      "entry": 3.19365209,
-      "stop": 3.56529997,
-      "target": 3.0999999,
-      "rr": 0.25,
-      "trail": 2.82377415,
-      "stop_pct": 11.6,
-      "p2_pct": 2.9,
-      "target_basis": "support",
-      "spark": [
-        3.51999998,
-        3.45000005,
-        3.57999992,
-        3.57999992,
-        3.49000001,
-        3.3499999,
-        3.21000004,
-        3.22000003,
-        3.06999993,
-        3.17000008,
-        3.20000005,
-        3.41000009,
-        3.3900001,
-        3.38000011,
-        3.1099999,
-        3.22000003,
-        3.24000001,
-        3.31999993,
-        3.27999997,
-        3.1500001,
-        3.04999995,
-        2.93000007,
-        2.81999993,
-        2.86999989,
-        3.00999999,
-        3.19000006,
-        3.20000005,
-        3.31999993,
-        3.22000003,
-        3.1400001
-      ],
-      "trend": "green",
-      "turnover": 34350910,
-      "detail": [],
-      "analysis": "RMS is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$3.1937, stop above the swing high at A$3.5653 (11.6% risk). Target A$3.1000 (support), R:R 0.2:1.",
-      "sector_count": 24
-    },
-    {
-      "symbol": "SLX",
-      "name": "Silex Systems Limited",
-      "sector": "Capital Goods",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 11,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 5.71943607",
-        "WEEKLY BEARISH",
-        "VOLUME EXPANSION"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 5.73999977,
-      "y_close": 5.76999998,
-      "open": 5.9000001,
-      "open_pct": 2.25,
-      "current_pct": -2.71,
-      "day_pct": -0.52,
-      "entry": 5.73685706,
-      "stop": 6.92860013,
-      "target": 5.61999989,
-      "rr": 0.1,
-      "trail": 6.40043951,
-      "stop_pct": 20.8,
-      "p2_pct": 2.0,
-      "target_basis": "support",
-      "spark": [
-        5.84000015,
-        6.1500001,
-        5.96000004,
-        5.86000013,
-        5.73000002,
-        5.57999992,
-        5.46999979,
-        5.53999996,
-        5.38999987,
-        5.61999989,
-        5.96000004,
-        6.13999987,
-        6.21000004,
-        6.48999977,
-        6.05000019,
-        6.17000008,
-        6.05000019,
-        5.86999989,
-        6.32000017,
-        5.94999981,
-        6.03999996,
-        5.78999996,
-        5.21000004,
-        5.11000013,
-        5.11000013,
-        5.53999996,
-        5.59000015,
-        5.80999994,
-        5.76999998,
-        5.73999977
-      ],
-      "trend": "green",
-      "turnover": 6157380,
-      "detail": [],
-      "analysis": "SLX is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$5.7369, stop above the swing high at A$6.9286 (20.8% risk). Target A$5.6200 (support), R:R 0.1:1.",
-      "sector_count": 5
     },
     {
       "symbol": "ORG",
@@ -948,7 +801,7 @@
       "turnover": 452243,
       "detail": [],
       "analysis": "BCI is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.3494, stop above the swing high at A$0.3636 (4.1% risk). Target A$0.3375 (support), R:R 0.8:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "BOQ",
@@ -1093,79 +946,7 @@
       "turnover": 129888,
       "detail": [],
       "analysis": "LED is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.4793, stop above the swing high at A$0.5050 (5.4% risk). Target A$0.4650 (support), R:R 0.6:1.",
-      "sector_count": 3
-    },
-    {
-      "symbol": "REP",
-      "name": "Ram Essential Services Property Fund",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 10,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 0.45263909",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.5:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.44999999,
-      "y_close": 0.45500001,
-      "open": 0.44999999,
-      "open_pct": -1.1,
-      "current_pct": 0.0,
-      "day_pct": -1.1,
-      "entry": 0.45552319,
-      "stop": 0.48479999,
-      "target": 0.44,
-      "rr": 0.53,
-      "trail": 0.47172413,
-      "stop_pct": 6.4,
-      "p2_pct": 3.4,
-      "target_basis": "support",
-      "spark": [
-        0.47499999,
-        0.47499999,
-        0.47,
-        0.47499999,
-        0.47,
-        0.47,
-        0.4675,
-        0.46000001,
-        0.465,
-        0.46000001,
-        0.46000001,
-        0.465,
-        0.46000001,
-        0.46000001,
-        0.465,
-        0.47,
-        0.465,
-        0.46000001,
-        0.46000001,
-        0.46000001,
-        0.45500001,
-        0.44499999,
-        0.44999999,
-        0.44999999,
-        0.44999999,
-        0.44999999,
-        0.435,
-        0.44999999,
-        0.45500001,
-        0.44999999
-      ],
-      "trend": "green",
-      "turnover": 287516,
-      "detail": [],
-      "analysis": "REP is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.4555, stop above the swing high at A$0.4848 (6.4% risk). Target A$0.4400 (support), R:R 0.5:1.",
-      "sector_count": 3
+      "sector_count": 2
     },
     {
       "symbol": "NEC",
@@ -1251,7 +1032,7 @@
       "chips": [
         "EMA COMPRESSION",
         "RESISTANCE TOUCH EMA_34",
-        "STRONG RESISTANCE CONFLUENCE @ 35.06910694",
+        "STRONG RESISTANCE CONFLUENCE @ 35.06910695",
         "WEEKLY BEARISH",
         "VOLUME EXPANSION"
       ],
@@ -1382,7 +1163,7 @@
       "turnover": 707774,
       "detail": [],
       "analysis": "MYX is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.3711, stop above the swing high at A$2.6361 (11.2% risk). Target A$2.3100 (support), R:R 0.2:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "NST",
@@ -1454,78 +1235,7 @@
       "turnover": 162513255,
       "detail": [],
       "analysis": "NST is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 55 resistance zone. Short entry near A$21.1571, stop above the swing high at A$23.0179 (8.8% risk). Target A$20.2000 (support), R:R 0.5:1.",
-      "sector_count": 24
-    },
-    {
-      "symbol": "PPC",
-      "name": "Peet Limited",
-      "sector": "Real Estate Management & Development",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 7,
-      "score_max": 13,
-      "chips": [
-        "RESISTANCE TOUCH EMA_55",
-        "STRONG RESISTANCE CONFLUENCE @ 1.69672242",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "1.5:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 1.71000004,
-      "y_close": 1.72000003,
-      "open": 1.71000004,
-      "open_pct": -0.58,
-      "current_pct": 0.0,
-      "day_pct": -0.58,
-      "entry": 1.7254305,
-      "stop": 1.80284997,
-      "target": 1.61000001,
-      "rr": 1.49,
-      "trail": 1.51698478,
-      "stop_pct": 4.5,
-      "p2_pct": 6.7,
-      "target_basis": "support",
-      "spark": [
-        1.64499998,
-        1.64999998,
-        1.70500004,
-        1.75999999,
-        1.64499998,
-        1.66499996,
-        1.64499998,
-        1.66499996,
-        1.60500002,
-        1.58000004,
-        1.55499995,
-        1.57000005,
-        1.56500006,
-        1.59500003,
-        1.73000002,
-        1.73500001,
-        1.67499995,
-        1.65499997,
-        1.64999998,
-        1.65999997,
-        1.63999999,
-        1.64499998,
-        1.66499996,
-        1.61500001,
-        1.66499996,
-        1.64999998,
-        1.64499998,
-        1.66499996,
-        1.72000003,
-        1.71000004
-      ],
-      "trend": "blue",
-      "turnover": 1968473,
-      "detail": [],
-      "analysis": "PPC is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 55 resistance zone. Short entry near A$1.7254, stop above the swing high at A$1.8028 (4.5% risk). Target A$1.6100 (support), R:R 1.5:1.",
-      "sector_count": 1
+      "sector_count": 19
     },
     {
       "symbol": "LFG",
@@ -1668,78 +1378,7 @@
       "turnover": 137557,
       "detail": [],
       "analysis": "CVV is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 34 resistance zone. Short entry near A$0.2871, stop above the swing high at A$0.3282 (14.3% risk). Target A$0.2800 (support), R:R 0.2:1.",
-      "sector_count": 24
-    },
-    {
-      "symbol": "PSC",
-      "name": "Prospect Resources Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 7,
-      "score_max": 13,
-      "chips": [
-        "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 0.2957195",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.29499999,
-      "y_close": 0.27500001,
-      "open": 0.27500001,
-      "open_pct": 0.0,
-      "current_pct": 7.27,
-      "day_pct": 7.27,
-      "entry": 0.29545658,
-      "stop": 0.35349999,
-      "target": 0.28999999,
-      "rr": 0.09,
-      "trail": 0.33395774,
-      "stop_pct": 19.6,
-      "p2_pct": 1.8,
-      "target_basis": "support",
-      "spark": [
-        0.29499999,
-        0.28999999,
-        0.31,
-        0.31,
-        0.315,
-        0.29499999,
-        0.28999999,
-        0.28999999,
-        0.285,
-        0.30000001,
-        0.31,
-        0.31999999,
-        0.31999999,
-        0.33000001,
-        0.31999999,
-        0.31999999,
-        0.31,
-        0.30500001,
-        0.30000001,
-        0.29499999,
-        0.285,
-        0.28,
-        0.285,
-        0.27000001,
-        0.285,
-        0.30000001,
-        0.29499999,
-        0.29499999,
-        0.27500001,
-        0.29499999
-      ],
-      "trend": "blue",
-      "turnover": 171195,
-      "detail": [],
-      "analysis": "PSC is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.2955, stop above the swing high at A$0.3535 (19.6% risk). Target A$0.2900 (support), R:R 0.1:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "BPT",
@@ -1881,7 +1520,7 @@
       "turnover": 859734,
       "detail": [],
       "analysis": "EHL is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.0231, stop above the swing high at A$1.1110 (8.6% risk). Target A$0.8472 (measured), R:R 2.0:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "FCL",
@@ -1952,7 +1591,7 @@
       "turnover": 1288001,
       "detail": [],
       "analysis": "FCL is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.2861, stop above the swing high at A$2.7472 (20.2% risk). Target A$1.3638 (measured), R:R 2.0:1.",
-      "sector_count": 4
+      "sector_count": 3
     },
     {
       "symbol": "HUB",
@@ -2097,77 +1736,6 @@
       "sector_count": 1
     },
     {
-      "symbol": "QPM",
-      "name": "Qpm Energy Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 5,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "WEEKLY BEARISH",
-        "VOLUME EXPANSION"
-      ],
-      "weekly": true,
-      "low_rr": false,
-      "rr_text": "2.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 0.018,
-      "y_close": 0.02,
-      "open": 0.02,
-      "open_pct": 0.0,
-      "current_pct": -10.0,
-      "day_pct": -10.0,
-      "entry": 0.02196783,
-      "stop": 0.02626,
-      "target": 0.01338349,
-      "rr": 2.0,
-      "trail": 0.02428202,
-      "stop_pct": 19.5,
-      "p2_pct": 39.1,
-      "target_basis": "measured",
-      "spark": [
-        0.026,
-        0.027,
-        0.026,
-        0.026,
-        0.025,
-        0.024,
-        0.023,
-        0.023,
-        0.025,
-        0.024,
-        0.022,
-        0.023,
-        0.022,
-        0.022,
-        0.023,
-        0.023,
-        0.023,
-        0.025,
-        0.023,
-        0.023,
-        0.022,
-        0.022,
-        0.021,
-        0.02,
-        0.021,
-        0.022,
-        0.021,
-        0.021,
-        0.02,
-        0.018
-      ],
-      "trend": "blue",
-      "turnover": 185547,
-      "detail": [],
-      "analysis": "QPM is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0220, stop above the swing high at A$0.0263 (19.5% risk). Target A$0.0134 (measured), R:R 2.0:1.",
-      "sector_count": 24
-    },
-    {
       "symbol": "ZIM",
       "name": "Zimplats Holdings Limited",
       "sector": "Materials",
@@ -2236,7 +1804,7 @@
       "turnover": 279342,
       "detail": [],
       "analysis": "ZIM is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$15.3862, stop above the swing high at A$17.1801 (11.7% risk). Target A$11.7984 (measured), R:R 2.0:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "ANG",
@@ -2307,7 +1875,7 @@
       "turnover": 215352,
       "detail": [],
       "analysis": "ANG is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.1648, stop above the swing high at A$0.1818 (10.3% risk). Target A$0.1350 (support), R:R 1.8:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "FID",
@@ -2449,7 +2017,7 @@
       "turnover": 114876,
       "detail": [],
       "analysis": "KSN is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0640, stop above the swing high at A$0.0919 (43.5% risk). Target A$0.0300 (support), R:R 1.2:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "FAL",
@@ -2520,7 +2088,7 @@
       "turnover": 101313,
       "detail": [],
       "analysis": "FAL is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.5058, stop above the swing high at A$0.5706 (12.8% risk). Target A$0.4300 (support), R:R 1.2:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "CHN",
@@ -2591,7 +2159,7 @@
       "turnover": 2550618,
       "detail": [],
       "analysis": "CHN is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.4178, stop above the swing high at A$1.6160 (14.0% risk). Target A$1.2100 (support), R:R 1.1:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "KAU",
@@ -2662,7 +2230,7 @@
       "turnover": 252451,
       "detail": [],
       "analysis": "KAU is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.2218, stop above the swing high at A$0.2626 (18.4% risk). Target A$0.1850 (support), R:R 0.9:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "NWL",
@@ -2804,7 +2372,7 @@
       "turnover": 4021890,
       "detail": [],
       "analysis": "BC8 is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.0708, stop above the swing high at A$1.2877 (20.3% risk). Target A$0.8950 (support), R:R 0.8:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "ACE",
@@ -2875,7 +2443,7 @@
       "turnover": 428456,
       "detail": [],
       "analysis": "ACE is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.2721, stop above the swing high at A$1.4241 (11.9% risk). Target A$1.1575 (support), R:R 0.8:1.",
-      "sector_count": 4
+      "sector_count": 3
     },
     {
       "symbol": "AEE",
@@ -2949,77 +2517,6 @@
       "sector_count": 3
     },
     {
-      "symbol": "QOR",
-      "name": "Qoria Limited",
-      "sector": "Software & Services",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "B",
-      "score": 5,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "WEEKLY BEARISH",
-        "VOLUME EXPANSION"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.7:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 0.23999999,
-      "y_close": 0.25,
-      "open": 0.245,
-      "open_pct": -2.0,
-      "current_pct": -2.04,
-      "day_pct": -4.0,
-      "entry": 0.26201493,
-      "stop": 0.3131,
-      "target": 0.22750001,
-      "rr": 0.68,
-      "trail": 0.30065969,
-      "stop_pct": 19.5,
-      "p2_pct": 13.2,
-      "target_basis": "support",
-      "spark": [
-        0.285,
-        0.285,
-        0.285,
-        0.27500001,
-        0.27000001,
-        0.26499999,
-        0.255,
-        0.245,
-        0.25,
-        0.27500001,
-        0.28999999,
-        0.27000001,
-        0.285,
-        0.28999999,
-        0.28999999,
-        0.30000001,
-        0.29499999,
-        0.30000001,
-        0.26499999,
-        0.27000001,
-        0.27000001,
-        0.25999999,
-        0.255,
-        0.245,
-        0.255,
-        0.25999999,
-        0.245,
-        0.235,
-        0.25,
-        0.23999999
-      ],
-      "trend": "blue",
-      "turnover": 2057438,
-      "detail": [],
-      "analysis": "QOR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.2620, stop above the swing high at A$0.3131 (19.5% risk). Target A$0.2275 (support), R:R 0.7:1.",
-      "sector_count": 4
-    },
-    {
       "symbol": "MPW",
       "name": "Metal Powder Works Limited",
       "sector": "Capital Goods",
@@ -3088,7 +2585,7 @@
       "turnover": 199721,
       "detail": [],
       "analysis": "MPW is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.1050, stop above the swing high at A$2.3028 (9.4% risk). Target A$1.9900 (support), R:R 0.6:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "ARD",
@@ -3159,7 +2656,7 @@
       "turnover": 129644,
       "detail": [],
       "analysis": "ARD is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 55 resistance zone. Short entry near A$0.0269, stop above the swing high at A$0.0298 (10.6% risk). Target A$0.0260 (support), R:R 0.3:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "PAR",
@@ -3230,7 +2727,7 @@
       "turnover": 414228,
       "detail": [],
       "analysis": "PAR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 34 resistance zone. Short entry near A$0.1714, stop above the swing high at A$0.2071 (20.8% risk). Target A$0.1600 (support), R:R 0.3:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "AFG",
@@ -3303,76 +2800,6 @@
       "sector_count": 5
     },
     {
-      "symbol": "TAM",
-      "name": "Tanami Gold Nl",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "C",
-      "score": 4,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": false,
-      "rr_text": "2.2:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.058,
-      "y_close": 0.06,
-      "open": 0.06,
-      "open_pct": 0.0,
-      "current_pct": -3.33,
-      "day_pct": -3.33,
-      "entry": 0.06197136,
-      "stop": 0.06464,
-      "target": 0.056,
-      "rr": 2.24,
-      "trail": 0.06680962,
-      "stop_pct": 4.3,
-      "p2_pct": 9.6,
-      "target_basis": "support",
-      "spark": [
-        0.073357,
-        0.065,
-        0.071,
-        0.069,
-        0.068,
-        0.062,
-        0.063,
-        0.062,
-        0.063,
-        0.062,
-        0.062,
-        0.063,
-        0.063,
-        0.062,
-        0.062,
-        0.063,
-        0.062,
-        0.063,
-        0.06,
-        0.0595,
-        0.059,
-        0.0585,
-        0.059,
-        0.058,
-        0.059,
-        0.059,
-        0.059,
-        0.059,
-        0.06,
-        0.058
-      ],
-      "trend": "blue",
-      "turnover": 126650,
-      "detail": [],
-      "analysis": "TAM is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0620, stop above the swing high at A$0.0646 (4.3% risk). Target A$0.0560 (support), R:R 2.2:1.",
-      "sector_count": 24
-    },
-    {
       "symbol": "FND",
       "name": "Findi Limited",
       "sector": "Software & Services",
@@ -3440,7 +2867,7 @@
       "turnover": 104618,
       "detail": [],
       "analysis": "FND is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.4997, stop above the swing high at A$0.6918 (38.5% risk). Target A$0.1154 (measured), R:R 2.0:1.",
-      "sector_count": 4
+      "sector_count": 3
     },
     {
       "symbol": "TLG",
@@ -3510,7 +2937,7 @@
       "turnover": 158475,
       "detail": [],
       "analysis": "TLG is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.2581, stop above the swing high at A$0.3081 (19.4% risk). Target A$0.1581 (measured), R:R 2.0:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "GNC",
@@ -3583,76 +3010,6 @@
       "sector_count": 1
     },
     {
-      "symbol": "PNR",
-      "name": "Pantoro Gold Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "C",
-      "score": 4,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "1.4:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 2.74000001,
-      "y_close": 2.8499999,
-      "open": 2.76999998,
-      "open_pct": -2.81,
-      "current_pct": -1.08,
-      "day_pct": -3.86,
-      "entry": 2.87253465,
-      "stop": 3.31785009,
-      "target": 2.23000002,
-      "rr": 1.44,
-      "trail": 2.34746944,
-      "stop_pct": 15.5,
-      "p2_pct": 22.4,
-      "target_basis": "support",
-      "spark": [
-        3.3900001,
-        3.41000009,
-        3.43000007,
-        3.36999989,
-        3.28999996,
-        3.32999992,
-        3.1099999,
-        3.1500001,
-        3.00999999,
-        3.0999999,
-        3.13000011,
-        3.25999999,
-        3.21000004,
-        3.1500001,
-        2.91000009,
-        3.0,
-        3.03999996,
-        3.0,
-        3.04999995,
-        2.79999995,
-        2.6400001,
-        2.56999993,
-        2.4000001,
-        2.29999995,
-        2.51999998,
-        2.74000001,
-        2.81999993,
-        3.04999995,
-        2.8499999,
-        2.74000001
-      ],
-      "trend": "blue",
-      "turnover": 8850022,
-      "detail": [],
-      "analysis": "PNR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.8725, stop above the swing high at A$3.3179 (15.5% risk). Target A$2.2300 (support), R:R 1.4:1.",
-      "sector_count": 24
-    },
-    {
       "symbol": "AAR",
       "name": "Astral Resources Nl",
       "sector": "Materials",
@@ -3720,7 +3077,7 @@
       "turnover": 984320,
       "detail": [],
       "analysis": "AAR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.1349, stop above the swing high at A$0.1565 (16.1% risk). Target A$0.1050 (support), R:R 1.4:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "LGI",
@@ -3860,7 +3217,7 @@
       "turnover": 227826,
       "detail": [],
       "analysis": "LSR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0139, stop above the swing high at A$0.0182 (30.8% risk). Target A$0.0100 (support), R:R 0.9:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "LKY",
@@ -3930,7 +3287,7 @@
       "turnover": 312107,
       "detail": [],
       "analysis": "LKY is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0957, stop above the swing high at A$0.1263 (31.9% risk). Target A$0.0720 (support), R:R 0.8:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "CAY",
@@ -4000,7 +3357,7 @@
       "turnover": 103503,
       "detail": [],
       "analysis": "CAY is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.1207, stop above the swing high at A$0.1414 (17.2% risk). Target A$0.1050 (support), R:R 0.8:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "ASG",
@@ -4210,7 +3567,7 @@
       "turnover": 5221474,
       "detail": [],
       "analysis": "CU6 is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.3459, stop above the swing high at A$2.8583 (21.8% risk). Target A$2.0200 (support), R:R 0.6:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "EVO",
@@ -4490,7 +3847,7 @@
       "turnover": 151684,
       "detail": [],
       "analysis": "MAT is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.0709, stop above the swing high at A$0.0869 (22.5% risk). Target A$0.0630 (support), R:R 0.5:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "DRO",
@@ -4560,7 +3917,7 @@
       "turnover": 29060211,
       "detail": [],
       "analysis": "DRO is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.9762, stop above the swing high at A$3.5906 (20.6% risk). Target A$2.7000 (support), R:R 0.5:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "AIS",
@@ -4630,7 +3987,7 @@
       "turnover": 5684390,
       "detail": [],
       "analysis": "AIS is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.4079, stop above the swing high at A$0.4747 (16.4% risk). Target A$0.3800 (support), R:R 0.4:1.",
-      "sector_count": 24
+      "sector_count": 19
     },
     {
       "symbol": "AHC",
@@ -4770,7 +4127,7 @@
       "turnover": 497667,
       "detail": [],
       "analysis": "AVH is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$1.1404, stop above the swing high at A$1.3079 (14.7% risk). Target A$1.0800 (support), R:R 0.4:1.",
-      "sector_count": 5
+      "sector_count": 4
     },
     {
       "symbol": "MTH",
@@ -4840,77 +4197,7 @@
       "turnover": 110372,
       "detail": [],
       "analysis": "MTH is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.2912, stop above the swing high at A$0.3636 (24.9% risk). Target A$0.2675 (support), R:R 0.3:1.",
-      "sector_count": 24
-    },
-    {
-      "symbol": "RAC",
-      "name": "Racura Oncology Ltd",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "C",
-      "score": 4,
-      "score_max": 13,
-      "chips": [
-        "RESISTANCE TOUCH EMA_21",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 2.43000007,
-      "y_close": 2.4000001,
-      "open": 2.41000009,
-      "open_pct": 0.42,
-      "current_pct": 0.83,
-      "day_pct": 1.25,
-      "entry": 2.48743606,
-      "stop": 2.91890011,
-      "target": 2.38000011,
-      "rr": 0.25,
-      "trail": 2.94665886,
-      "stop_pct": 17.3,
-      "p2_pct": 4.3,
-      "target_basis": "support",
-      "spark": [
-        2.73000002,
-        2.75,
-        2.72000003,
-        2.61999989,
-        2.53999996,
-        2.75999999,
-        2.6099999,
-        2.47000003,
-        2.44000006,
-        2.45000005,
-        2.48000002,
-        2.49000001,
-        2.50999999,
-        2.69000006,
-        2.52999997,
-        2.57999992,
-        2.67000008,
-        2.48000002,
-        2.50999999,
-        2.75999999,
-        2.70000005,
-        2.54999995,
-        2.36999989,
-        2.3599999,
-        2.4000001,
-        2.3499999,
-        2.38000011,
-        2.3900001,
-        2.4000001,
-        2.43000007
-      ],
-      "trend": "blue",
-      "turnover": 337344,
-      "detail": [],
-      "analysis": "RAC is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$2.4874, stop above the swing high at A$2.9189 (17.3% risk). Target A$2.3800 (support), R:R 0.2:1.",
-      "sector_count": 5
+      "sector_count": 19
     },
     {
       "symbol": "IVZ",
@@ -5120,7 +4407,7 @@
       "turnover": 376933,
       "detail": [],
       "analysis": "CYM is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near A$0.3946, stop above the swing high at A$0.4494 (13.9% risk). Target A$0.3650 (support), R:R 0.5:1.",
-      "sector_count": 24
+      "sector_count": 19
     }
   ]
 }
