@@ -240,19 +240,19 @@ body {
 .ema-dot i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
 /* -------------------------------------------------------------------- rows */
-.rows { display: flex; flex-direction: column; gap: 12px; }
-.row-wrap { background: var(--panel); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: transform .15s; }
+.rows { display: flex; flex-direction: column; gap: 7px; }
+.row-wrap { background: var(--panel); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow); transition: transform .15s; }
 .row-wrap:hover { transform: translateY(-1px); }
 .row {
   display: grid;
-  grid-template-columns: 48px minmax(280px,1.4fr) 132px minmax(300px,0.9fr) minmax(320px,0.85fr);
-  align-items: center; gap: 14px; padding: 15px 18px; cursor: pointer;
+  grid-template-columns: 44px minmax(280px,1.4fr) 132px minmax(300px,0.9fr) minmax(320px,0.85fr);
+  align-items: center; gap: 14px; padding: 9px 16px; cursor: pointer;
 }
-.row-grade { font: 800 14px/1 var(--sans); color: var(--grade-color, var(--grade-c)); background: color-mix(in srgb, var(--grade-color, var(--grade-c)) 16%, transparent); border-radius: 100px; padding: 6px 0; text-align: center; }
+.row-grade { font: 800 13px/1 var(--sans); color: var(--grade-color, var(--grade-c)); background: color-mix(in srgb, var(--grade-color, var(--grade-c)) 16%, transparent); border-radius: 100px; padding: 4px 0; text-align: center; }
 
 .row-main { min-width: 0; }
 .row-line1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tkr { font: 800 16px/1 var(--sans); letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+.tkr { font: 800 15px/1 var(--sans); letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
 .tkr:hover { color: var(--blue); }
 .badge { font: 600 10px/1 var(--sans); letter-spacing: 0.02em; padding: 4px 8px; border-radius: 100px; white-space: nowrap; }
 .badge.dir { color: var(--green); background: var(--green-soft); }
@@ -260,17 +260,21 @@ body {
 .badge.liq-liquid { color: var(--green); background: var(--green-soft); }
 .badge.liq-ok { color: var(--muted); background: var(--fill); }
 .badge.seccount { color: var(--orange); background: var(--orange-soft); }
+/* market cap: neutral for large, orange for sub-750M, red for sub-500M (🔥) */
+.badge.mcap       { color: var(--text-2); background: var(--fill); font-weight: 700; }
+.badge.mcap-small { color: var(--orange); background: var(--orange-soft); font-weight: 700; }
+.badge.mcap-hot   { color: var(--red);    background: var(--red-soft);    font-weight: 700; }
 .cname { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 .rprice { font: 700 15px/1 var(--sans); color: var(--text); }
 
-.row-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.row-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .chip { font: 600 10px/1 var(--sans); letter-spacing: 0.01em; color: var(--blue); background: var(--blue-soft); padding: 5px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }
 .chip.info { color: var(--orange); background: var(--orange-soft); }
 
 .row-spark { display: flex; flex-direction: column; gap: 5px; text-decoration: none; }
-.row-spark svg { width: 100%; height: 30px; display: block; }
+.row-spark svg { width: 100%; height: 24px; display: block; }
 .trend-bar { height: 4px; border-radius: 2px; width: 60%; }
 .trend-bar.green { background: var(--green); } .trend-bar.blue { background: var(--blue); }
 

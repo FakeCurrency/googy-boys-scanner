@@ -543,9 +543,14 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
     }
 
 
-def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
-    """Cross-asset intraday scalp scan on 1h bars (commodities + ASX + NASDAQ)."""
-    universe = load_scalp_universe()
+def scan_scalp(progress: bool = True, out_root: str | None = None,
+               type_filter: str | None = None) -> dict:
+    """Cross-asset intraday scalp scan on 1h bars (commodities + ASX + NASDAQ + Crypto).
+
+    Pass ``type_filter="crypto"`` to restrict the universe to crypto tickers only,
+    which produces a separate payload suitable for writing to ``scalp_crypto.json``.
+    """
+    universe = load_scalp_universe(type_filter=type_filter)
     tickers  = [u["yf"] for u in universe]
     meta     = {u["yf"]: u for u in universe}
 
@@ -642,10 +647,13 @@ def scan_scalp(progress: bool = True, out_root: str | None = None) -> dict:
             deduped.append(r)
     results = deduped
 
+    market_key = "scalp_crypto" if type_filter == "crypto" else "scalp"
+    market_label = "CRYPTO SCALP" if type_filter == "crypto" else "SCALP"
+
     now = dt.datetime.now(dt.timezone.utc)
     return {
-        "market":         "scalp",
-        "label":          "SCALP",
+        "market":         market_key,
+        "label":          market_label,
         "setup_type":     "scalp",
         "currency":       "USD",
         "currency_symbol": "$",

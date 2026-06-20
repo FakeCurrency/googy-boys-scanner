@@ -1,0 +1,45 @@
+name: Crypto scalp scan (24/7)
+
+# Runs every 30 minutes, all hours, all days — crypto never sleeps.
+# Writes public/data/scalp_crypto.json and pushes to trigger a Cloudflare deploy.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crypto-scalp
+  cancel-in-progress: true   # if previous run is still going, the newer data wins
+
+jobs:
+  crypto-scalp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Crypto scalp scan
+        run: python -m scanner.run --crypto-scalp-only
+
+      - name: Commit & push fresh crypto data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/scalp_crypto.json
+          if git diff --cached --quiet; then
+            echo "No signal changes — skipping commit."
+          else
+            git commit -m "data: crypto scalp $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase origin main
+            git push
+          fi

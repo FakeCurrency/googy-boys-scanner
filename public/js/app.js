@@ -27,7 +27,11 @@
     data: null,
     cache: {},
     cur: "$",
+    caps: {},           // "<market>:<symbol>" -> raw market cap (float)
   };
+
+  const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
+  const HOTCAP   = 500e6;   // sub-500M = 🔥 micro-cap spec sweet spot
 
   const $ = (s) => document.querySelector(s);
 
@@ -83,6 +87,14 @@
     if (v >= 1e3) return Math.round(v / 1e3) + "K";
     return String(v);
   }
+  function fmtMcap(v) {
+    if (!v || v <= 0) return "";
+    if (v >= 1e12) return (v / 1e12).toFixed(1) + "T";
+    if (v >= 1e9)  return (v / 1e9).toFixed(1) + "B";
+    if (v >= 1e6)  return Math.round(v / 1e6) + "M";
+    return Math.round(v / 1e3) + "K";
+  }
+  const mcapOf = (sym) => state.caps[`${state.market}:${sym}`] || 0;
 
   const TZ_MAP = { AEST: "Australia/Sydney", ET: "America/New_York", UTC: "UTC" };
   function fmtTime(iso, tz) {
@@ -170,6 +182,13 @@
     const assetBadge = r.asset_type
       ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
     const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
+    const rawMcap = mcapOf(r.symbol);
+    const mcapTxt = fmtMcap(rawMcap);
+    const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
+      : rawMcap < SMALLCAP ? "mcap-small" : "mcap";
+    const mcapBadge = mcapTxt
+      ? `<span class="badge ${mcapCls}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
+      : "";
     const p2 = r.p2_pct == null ? "—" : `${r.p2_pct}%`;
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "red" : "green";
@@ -189,6 +208,7 @@
           <span class="cname">${esc(r.name || "")}</span>
           ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
+          ${mcapBadge}
           <span class="badge ${liqCls}">${esc(r.liquidity)}</span>
           ${seccount}
         </div>
@@ -456,15 +476,34 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "scalp"    ? `data/scalp.json`
+    mode === "scalp" && state.scalp_type === "crypto" ? `data/scalp_crypto.json`
+      : mode === "scalp"    ? `data/scalp.json`
       : mode === "reversal" ? `data/${market}_reversal.json`
       : mode === "spec"     ? `data/${market}_spec.json`
       : mode === "short"    ? `data/${market}_short.json`
       : `data/${market}.json`;
 
+  async function loadCaps() {
+    try {
+      const res = await fetch("data/market_caps.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const raw = await res.json();
+      // Cache stores {"asx:BHP": {"mcap": 1.2e9, "ts": "..."}}; flatten to floats.
+      const flat = {};
+      for (const k in raw) {
+        const v = raw[k];
+        const mc = v && typeof v === "object" ? v.mcap : v;
+        if (mc) flat[k] = +mc;
+      }
+      state.caps = flat;
+      if (state.data) renderRows();   // re-render if rows are already on screen
+    } catch (_) { /* caps are optional */ }
+  }
+
   async function load() {
     const { market, mode } = state;
-    const key = `${market}:${mode}`;
+    const key = mode === "scalp" && state.scalp_type === "crypto"
+      ? "scalp:crypto" : `${market}:${mode}`;
     $("#scan-title").textContent = "Loading latest scan…";
     skeleton();
     if (state.cache[key]) { applyPayload(state.cache[key]); return; }
@@ -561,9 +600,12 @@
 
     // Scalp asset-type filter
     document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
+      const prevType = state.scalp_type;
       document.querySelectorAll("[data-scalp-type]").forEach((x) => x.classList.toggle("is-active", x === b));
-      state.scalp_type = b.dataset.scalpType || b.dataset.scalp_type || b.getAttribute("data-scalp-type") || "all";
-      renderRows();
+      state.scalp_type = b.getAttribute("data-scalp-type") || "all";
+      // Switching to/from crypto means switching data files — reload. Otherwise just re-filter.
+      const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
+      if (needsReload) load(); else renderRows();
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
@@ -611,5 +653,6 @@
   }
 
   bind();
+  loadCaps();
   load();
 })();

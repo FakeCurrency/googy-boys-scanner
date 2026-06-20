@@ -44,6 +44,9 @@
       <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
       </button>
+      <button class="jr-tab jr-tab-mine" data-journal="mine" role="tab" aria-selected="false">
+        <span class="jr-tab-arrow">✏️</span> My Trades &nbsp;<span class="jr-tab-label">REAL</span>
+      </button>
     </div>
 
     <!-- ── OVERALL ── -->
@@ -116,6 +119,119 @@
         <div class="jr-table-wrap" id="jr-scalp-closed"></div>
       </section>
     </div>
+    <!-- ── MY TRADES (real / manual) ── -->
+    <div id="jr-mine-section" class="jr-hidden">
+
+      <div class="mj-settings">
+        <label class="mj-setting">Starting capital
+          <span class="mj-currency-wrap">$<input id="mj-capital"   class="mj-input" type="number" min="0" step="100"  value="10000" /></span>
+        </label>
+        <label class="mj-setting">Brokerage / leg
+          <span class="mj-currency-wrap">$<input id="mj-brokerage" class="mj-input" type="number" min="0" step="1"    value="10" /></span>
+        </label>
+        <button id="mj-new-btn" class="mj-btn-primary">+ Log New Trade</button>
+        <button id="mj-clear-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
+      </div>
+
+      <section class="stats" id="jr-mine-stats"></section>
+
+      <section class="jr-equity">
+        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed trades)</span></div>
+        <div id="jr-mine-equity" class="jr-equity-chart"></div>
+      </section>
+
+      <section>
+        <div class="jr-section-title">Open positions <span id="jr-mine-open-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-mine-open"></div>
+      </section>
+
+      <section>
+        <div class="jr-section-title">Closed trades <span id="jr-mine-closed-n" class="muted"></span></div>
+        <div class="jr-table-wrap" id="jr-mine-closed"></div>
+      </section>
+    </div>
+
+    <!-- ── MODAL (shared for open + close forms) ── -->
+    <div id="mj-modal" class="mj-overlay mj-hidden" role="dialog" aria-modal="true">
+      <div class="mj-modal">
+        <div class="mj-modal-head">
+          <span id="mj-modal-title" class="mj-modal-title">Log New Trade</span>
+          <button id="mj-modal-x" class="mj-modal-x" aria-label="Close">✕</button>
+        </div>
+        <form id="mj-form" class="mj-form" autocomplete="off" novalidate>
+          <input type="hidden" id="mj-trade-id" value="" />
+
+          <!-- ── OPEN TRADE FIELDS ── -->
+          <div id="mj-open-fields">
+            <div class="mj-row">
+              <label class="mj-label">Symbol
+                <input id="mj-symbol" class="mj-field" type="text" placeholder="e.g. BHP" required />
+              </label>
+              <label class="mj-label">Direction
+                <div class="mj-dir-switch" id="mj-dir-switch">
+                  <button type="button" class="mj-dir-btn mj-dir-long mj-dir-active" data-dir="long">↑ LONG</button>
+                  <button type="button" class="mj-dir-btn mj-dir-short" data-dir="short">↓ SHORT</button>
+                </div>
+              </label>
+            </div>
+            <div class="mj-row">
+              <label class="mj-label">Entry Price $
+                <input id="mj-entry" class="mj-field" type="number" step="any" min="0" placeholder="1.00" required />
+              </label>
+              <label class="mj-label">$ to Invest
+                <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="1000" required />
+              </label>
+            </div>
+            <div class="mj-row">
+              <label class="mj-label">Entry Date
+                <input id="mj-entry-date" class="mj-field" type="date" required />
+              </label>
+              <label class="mj-label">Entry Time
+                <input id="mj-entry-time" class="mj-field" type="time" value="10:00" />
+              </label>
+            </div>
+            <div class="mj-row">
+              <label class="mj-label">Stop Loss $
+                <input id="mj-stop" class="mj-field" type="number" step="any" min="0" placeholder="optional" />
+              </label>
+              <label class="mj-label">Target $
+                <input id="mj-target" class="mj-field" type="number" step="any" min="0" placeholder="optional" />
+              </label>
+            </div>
+            <div class="mj-row">
+              <label class="mj-label mj-full">Notes
+                <input id="mj-notes" class="mj-field" type="text" placeholder="e.g. A+ reversal from scanner" />
+              </label>
+            </div>
+            <div id="mj-shares-preview" class="mj-preview"></div>
+          </div>
+
+          <!-- ── CLOSE TRADE FIELDS ── -->
+          <div id="mj-close-fields" class="mj-hidden">
+            <div class="mj-row">
+              <label class="mj-label mj-full">Exit Price $
+                <input id="mj-exit" class="mj-field" type="number" step="any" min="0" placeholder="0.89" required />
+              </label>
+            </div>
+            <div class="mj-row">
+              <label class="mj-label">Exit Date
+                <input id="mj-exit-date" class="mj-field" type="date" required />
+              </label>
+              <label class="mj-label">Exit Time
+                <input id="mj-exit-time" class="mj-field" type="time" value="14:00" />
+              </label>
+            </div>
+            <div id="mj-close-preview" class="mj-preview"></div>
+          </div>
+
+          <div class="mj-actions">
+            <button type="button" id="mj-cancel" class="mj-btn-ghost">Cancel</button>
+            <button type="submit" id="mj-submit" class="mj-btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </main>
 
   <footer class="site-footer">

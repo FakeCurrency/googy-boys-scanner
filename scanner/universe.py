@@ -134,8 +134,11 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
     return items
 
 
-def load_scalp_universe() -> list[dict]:
-    """Return the cross-asset scalp universe (commodities + ASX blue chips + NASDAQ)."""
+def load_scalp_universe(type_filter: str | None = None) -> list[dict]:
+    """Return the cross-asset scalp universe (commodities + ASX + NASDAQ + Crypto).
+
+    Pass ``type_filter`` (e.g. ``"crypto"``) to return only a specific asset class.
+    """
     path = UNIVERSE_DIR / "scalp_tickers.csv"
     items: list[dict] = []
     if not path.exists():
@@ -145,10 +148,13 @@ def load_scalp_universe() -> list[dict]:
             symbol = (row.get("symbol") or "").strip().upper()
             if not symbol:
                 continue
+            t = (row.get("type") or "").strip()
+            if type_filter and t != type_filter:
+                continue
             items.append({
                 "symbol":  symbol,
                 "name":    (row.get("name") or symbol).strip(),
-                "type":    (row.get("type") or "").strip(),
+                "type":    t,
                 "sector":  (row.get("sector") or "").strip(),
                 "yf":      (row.get("yf") or symbol).strip(),
             })
