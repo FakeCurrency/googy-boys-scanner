@@ -42,6 +42,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Refresh the market-cap cache FIRST, on a fresh IP — Yahoo throttles its
+      # fundamentals endpoint after the heavy scan download, so fetching caps
+      # here (before the scan) is the reliable window. Reads the previous scan's
+      # A+/A symbols; the persistent cache fills in over a couple of runs.
+      - name: Refresh market-cap cache
+        continue-on-error: true
+        run: python -m scanner.marketcaps
+
       - name: Run market scans (ASX + NASDAQ in parallel)
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
@@ -75,7 +83,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json 2>/dev/null || true
+          git add public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json data/market_caps.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

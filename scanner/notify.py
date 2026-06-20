@@ -46,6 +46,7 @@ _ALERT_GRADES       = {"A+"}    # A+ only keeps the list tight
 _MAX_PER_DIGEST     = 50        # hard cap per slot (paginated across multiple messages)
 _TG_MAX_CHARS       = 3800      # safe limit per message (Telegram hard cap is 4096)
 _SMALLCAP_THRESHOLD = 750_000_000  # sub-750M market cap filter
+_HOT_SMALLCAP       = 500_000_000  # 🔥 marker: micro/small cap spec sweet spot
 
 # Alert slots: (slot_key, utc_hour_min, utc_hour_max_exclusive, display_label)
 _SLOTS: dict[str, list[tuple[str, int, int, str]]] = {
@@ -80,56 +81,24 @@ def _fmt_mcap(v: float) -> str:
 def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, float]:
     """Return {symbol: raw_market_cap} for the passed signals.
 
-    Uses Yahoo's bulk quote endpoint (one HTTP request per ~100 symbols) rather
-    than per-ticker fast_info calls. Hammering fast_info 50× in a row gets
-    rate-limited from cloud IPs (e.g. GitHub Actions) and silently returns
-    nothing; a single bulk request is far more reliable. Falls back to
-    per-ticker fast_info only if the bulk call yields nothing.
+    Reads from the persistent market-cap cache (data/market_caps.json), which is
+    refreshed by `scanner.marketcaps` from a fresh IP BEFORE the scan. Yahoo
+    throttles its fundamentals endpoint from cloud IPs right after a heavy scan,
+    so fetching live at alert time returns nothing — the cache is the reliable
+    source. Symbols missing from the cache simply show no cap (and won't appear
+    in the sub-750M digest until the cache picks them up on a later refresh).
     """
-    if not _YF_AVAILABLE:
-        return {}
-    syms = [s.get("symbol", "") for s in signals if s.get("symbol")]
-    if not syms:
-        return {}
-    yf_to_plain = {_yf_sym(market, s): s for s in syms}
     caps: dict[str, float] = {}
-
-    # 1) Bulk quote endpoint — one request per 100 symbols.
     try:
-        from yfinance.data import YfData
-        from yfinance.const import _QUERY1_URL_
-        yfd = YfData()
-        all_yf = list(yf_to_plain)
-        for i in range(0, len(all_yf), 100):
-            chunk = all_yf[i:i + 100]
-            params = {"symbols": ",".join(chunk), "formatted": "false",
-                      "lang": "en-US", "region": "US"}
-            try:
-                res = yfd.get_raw_json(f"{_QUERY1_URL_}/v7/finance/quote?", params=params)
-            except Exception:
-                continue
-            for item in (res or {}).get("quoteResponse", {}).get("result", []):
-                plain = yf_to_plain.get(item.get("symbol", ""))
-                mc = item.get("marketCap")
-                if plain and mc:
-                    caps[plain] = float(mc)
+        from . import marketcaps
+        cache = marketcaps.load_cache()
+        for s in signals:
+            sym = s.get("symbol", "")
+            mc = marketcaps.mcap_for(cache, market, sym)
+            if mc > 0:
+                caps[sym] = mc
     except Exception:
         pass
-
-    # 2) Fallback: per-ticker fast_info (best effort) only if bulk gave nothing.
-    if not caps:
-        try:
-            tickers_obj = yf.Tickers(" ".join(yf_to_plain))
-            for ysym, plain in yf_to_plain.items():
-                try:
-                    raw = tickers_obj.tickers[ysym].fast_info.market_cap
-                    if raw:
-                        caps[plain] = float(raw)
-                except Exception:
-                    continue
-        except Exception:
-            pass
-
     return caps
 
 
@@ -236,7 +205,12 @@ def _sig_block(sig: dict, caps: dict[str, float]) -> str:
     currency   = sig.get("_currency", "$")
     tv_prefix  = sig.get("_tv_prefix", "")
     sector     = sig.get("sector", "")
-    mcap       = _fmt_mcap(caps.get(symbol, 0.0))
+    raw_mcap   = caps.get(symbol, 0.0)
+    mcap       = _fmt_mcap(raw_mcap)
+    # 🔥 flags a micro/small cap under 500M — the spec-play sweet spot where a
+    # clean chart can precede an outsized breakout.
+    if 0 < raw_mcap < _HOT_SMALLCAP and mcap:
+        mcap = "🔥" + mcap
 
     dec        = _decimals(entry)
     dir_icon   = "🟢" if direction == "LONG" else "🔴"
