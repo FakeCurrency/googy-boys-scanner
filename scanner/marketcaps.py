@@ -25,6 +25,9 @@ import time
 
 ROOT       = pathlib.Path(__file__).resolve().parents[1]
 CACHE_FILE = ROOT / "data" / "market_caps.json"
+# A web-served copy so the dashboard (public/) can show caps inline. The canonical
+# cache stays in data/; this mirror is committed alongside the scan JSON.
+PUBLIC_FILE = ROOT / "public" / "data" / "market_caps.json"
 
 # Scan outputs we pull signal symbols from: (market_key, relative_path)
 _SCAN_FILES = [
@@ -63,8 +66,15 @@ def load_cache() -> dict:
 
 
 def save_cache(cache: dict) -> None:
+    payload = json.dumps(cache, indent=2, sort_keys=True)
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(json.dumps(cache, indent=2, sort_keys=True))
+    CACHE_FILE.write_text(payload)
+    # Mirror to the web-served folder so the dashboard can read caps directly.
+    try:
+        PUBLIC_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PUBLIC_FILE.write_text(payload)
+    except Exception:
+        pass
 
 
 def mcap_for(cache: dict, market: str, symbol: str) -> float:
