@@ -29,7 +29,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Markets are closed on weekends, so scheduled stock scans there are pointless.
+  # GitHub's scheduler can also fire delayed/batched runs into Saturday/Sunday —
+  # this gate skips those. Manual (workflow_dispatch / SCAN button) runs are
+  # always allowed, any day. Crypto stays live 24/7 via crypto_scalp.yml.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -ge 6 ]; then
+            echo "Weekend scheduled run — skipping stock scan (crypto runs 24/7 separately)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   scan:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,11 +104,30 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json data/market_caps.json 2>/dev/null || true
+          # Only this scan's generated outputs — never code or other files.
+          PATHS="public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json data/market_caps.json"
+          git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
-          else
-            git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git pull --rebase origin main
-            git push
+            exit 0
           fi
+          git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+          # Generated data is fully recomputed each run, so the latest scan simply
+          # wins: rebase onto the freshest main and re-apply our outputs on top.
+          # This avoids the merge/modify-delete conflicts a plain rebase hits when
+          # scans race. Retry the push in case another scan lands first.
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+              git checkout "$SHA" -- "$p" 2>/dev/null || true
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

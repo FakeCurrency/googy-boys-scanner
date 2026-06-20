@@ -78,6 +78,7 @@
 .sim-status.live { color: var(--green); }
 .sim-status.neg  { color: var(--red); }
 .sim-status strong { font-variant-numeric: tabular-nums; }
+
 /* ── ruler ── */
 .ruler-btn { margin-left: 8px; letter-spacing: 0; }
 .ruler-label {
@@ -86,6 +87,29 @@
   background: rgba(8,11,17,.88); border: 1px solid; border-radius: 6px;
   padding: 5px 10px; transform: translate(12px, -50%);
 }
+
+/* ── floating LIVE position box ── */
+.live-pos-box {
+  position: absolute; top: 14px; right: 16px; z-index: 16; min-width: 208px;
+  background: rgba(8,11,17,.9); border: 1px solid var(--border); border-radius: 12px;
+  padding: 11px 13px; backdrop-filter: blur(7px);
+  box-shadow: 0 8px 26px rgba(0,0,0,.4); pointer-events: none;
+}
+.lpb-head { display: flex; align-items: center; gap: 6px; font: 800 11.5px/1 var(--sans); letter-spacing: .04em; }
+.lpb-head.long  { color: var(--green); }
+.lpb-head.short { color: var(--red); }
+.lpb-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: ctLivePulse 1.6s ease-in-out infinite; }
+.lpb-units { margin-left: auto; color: var(--muted); font-weight: 600; }
+.lpb-pnl { font: 800 23px/1.1 var(--mono); margin: 7px 0 9px; font-variant-numeric: tabular-nums; }
+.lpb-pnl.pos { color: var(--green); }
+.lpb-pnl.neg { color: var(--red); }
+.lpb-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font: 600 11.5px/1.35 var(--mono); }
+.lpb-k { color: var(--muted); }
+.lpb-v { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.lpb-v.pos { color: var(--green); }
+.lpb-v.neg { color: var(--red); }
+.lpb-v small { color: var(--muted); font-size: 10px; }
+@media (max-width: 560px) { .live-pos-box { left: 16px; right: 16px; top: 10px; } }
 
 .sim-journal-link {
   display: inline-block; margin: 12px 0 0; color: var(--blue);
