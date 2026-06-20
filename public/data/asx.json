@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-20T18:33:15+10:00",
-  "scanned": 1429,
+  "generated_at": "2026-06-20T19:34:10+10:00",
+  "scanned": 1531,
   "universe_size": 1985,
   "universe_tickers": [
     "14D",
@@ -2406,18 +2406,18 @@
   ],
   "sector_counts": {
     "Materials": 78,
-    "Not Applic": 21,
-    "Capital Goods": 19,
-    "Financial Services": 14,
-    "Equity Real Estate Investment Trusts (REITs)": 13,
+    "Not Applic": 23,
+    "Capital Goods": 20,
+    "Financial Services": 15,
+    "Equity Real Estate Investment Trusts (REITs)": 15,
     "Software & Services": 12,
-    "Health Care Equipment & Services": 8,
-    "Commercial & Professional Services": 8,
+    "Health Care Equipment & Services": 10,
+    "Commercial & Professional Services": 7,
     "Energy": 7,
-    "Pharmaceuticals, Biotechnology & Life Sciences": 6,
+    "Transportation": 6,
     "Consumer Services": 5,
-    "Transportation": 5,
     "Insurance": 5,
+    "Pharmaceuticals, Biotechnology & Life Sciences": 4,
     "Utilities": 4,
     "Telecommunication Services": 3,
     "Media & Entertainment": 3,
@@ -2427,10 +2427,10 @@
     "Food, Beverage & Tobacco": 2,
     "Real Estate Management & Development": 2,
     "Banks": 2,
+    "Consumer Discretionary Distribution & Retail": 2,
     "Household & Personal Products": 1,
     "Consumer Durables & Apparel": 1,
-    "Class Pend": 1,
-    "Consumer Discretionary Distribution & Retail": 1
+    "Class Pend": 1
   },
   "results": [
     {
@@ -2462,7 +2462,7 @@
       "open_pct": 0.0,
       "current_pct": 0.49,
       "day_pct": 0.49,
-      "entry": 2.05321177,
+      "entry": 2.05321176,
       "stop": 2.02098534,
       "target": 2.06999993,
       "rr": 0.52,
@@ -2509,7 +2509,7 @@
         "swing_low_pct": -1.4,
         "swing_high": 2.06999993,
         "swing_high_pct": -0.0,
-        "ema55": 2.03549903,
+        "ema55": 2.03549902,
         "ema55_pct": -1.7,
         "ema89": 2.02352614,
         "ema89_pct": -2.2,
@@ -2538,7 +2538,7 @@
           {
             "label": "Support",
             "ema": 21,
-            "value": 2.05321177,
+            "value": 2.05321176,
             "pct": 0.8
           }
         ],
@@ -2558,7 +2558,133 @@
         "risk_pct": 1.6
       },
       "analysis": "GCI has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$2.0532. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$2.0505 where 5 levels cluster. Trade setup: entry A$2.0532, stop A$2.0210, target A$2.0700. Risk/reward is 0.52:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
+    },
+    {
+      "symbol": "QUB",
+      "name": "Qube Holdings Limited",
+      "sector": "Transportation",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 14,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_21",
+        "STRONG FIB CONFLUENCE @ 5.05425894",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.7:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 5.11000013,
+      "y_close": 5.11999989,
+      "open": 5.11999989,
+      "open_pct": 0.0,
+      "current_pct": -0.2,
+      "day_pct": -0.2,
+      "entry": 5.04699925,
+      "stop": 4.93020002,
+      "target": 5.13000011,
+      "rr": 0.71,
+      "trail": 5.02372993,
+      "stop_pct": 2.3,
+      "p2_pct": 1.6,
+      "target_basis": "resistance",
+      "spark": [
+        5.01999998,
+        5.01999998,
+        5.01000023,
+        5.01000023,
+        5.03999996,
+        5.01999998,
+        5.01000023,
+        5.01999998,
+        5.01999998,
+        5.01000023,
+        5.01000023,
+        5.01000023,
+        5.01000023,
+        5.01999998,
+        5.01000023,
+        5.01000023,
+        4.98999977,
+        5.01000023,
+        5.0,
+        5.0,
+        5.0,
+        5.01999998,
+        5.03999996,
+        5.09000015,
+        5.07000017,
+        5.03999996,
+        5.05000019,
+        5.09000015,
+        5.11999989,
+        5.11000013
+      ],
+      "trend": "green",
+      "turnover": 30983294,
+      "detail": {
+        "swing_low": 4.98000002,
+        "swing_low_pct": -2.5,
+        "swing_high": 5.13000011,
+        "swing_high_pct": 0.4,
+        "ema55": 5.00504323,
+        "ema55_pct": -2.1,
+        "ema89": 4.9481991,
+        "ema89_pct": -3.2,
+        "trailing_stop": 5.02372993,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -1.7,
+        "volume_ratio": 1.9,
+        "volume_today": 11171358,
+        "volume_avg": 5732714,
+        "volume_expanding": true,
+        "ema_spread_pct": 4.5,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 5.07715313,
+            "pct": 0.6
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 5.06155511,
+            "pct": 1.0
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 5.04699925,
+            "pct": 1.2
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            5.01999998,
+            5.01999998,
+            5.13000011
+          ],
+          "swing_lows": [
+            5.01000023,
+            4.99499989,
+            4.98000002
+          ]
+        },
+        "risk_pct": 2.3
+      },
+      "analysis": "QUB has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$5.0470. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$5.0543 where 4 levels cluster. Trade setup: entry A$5.0470, stop A$4.9302, target A$5.1300. Risk/reward is 0.71:1. Weekly EMAs are bullish.",
+      "sector_count": 6
     },
     {
       "symbol": "CVW",
@@ -2936,7 +3062,7 @@
         "risk_pct": 3.5
       },
       "analysis": "FGX has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$1.3445. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.3480 where 4 levels cluster. Trade setup: entry A$1.3445, stop A$1.2969, target A$1.3631. Risk/reward is 0.39:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "MPL",
@@ -3015,7 +3141,7 @@
         "swing_high_pct": 0.6,
         "ema55": 4.70424698,
         "ema55_pct": -3.0,
-        "ema89": 4.65527253,
+        "ema89": 4.65527254,
         "ema89_pct": -4.0,
         "trailing_stop": 4.70424435,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -3188,7 +3314,7 @@
         "risk_pct": 3.1
       },
       "analysis": "CDP has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$5.5064. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$5.5389 where 3 levels cluster. Trade setup: entry A$5.5064, stop A$5.3361, target A$5.5400. Risk/reward is 0.20:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "NHF",
@@ -3317,6 +3443,132 @@
       "sector_count": 5
     },
     {
+      "symbol": "PCX",
+      "name": "Pengana Global Private Credit Trust",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 14,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_21",
+        "STRONG FIB CONFLUENCE @ 1.97861233",
+        "WEEKLY BULLISH",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.2:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 1.99000001,
+      "y_close": 1.99000001,
+      "open": 1.98000002,
+      "open_pct": -0.5,
+      "current_pct": 0.51,
+      "day_pct": 0.0,
+      "entry": 1.98326592,
+      "stop": 1.88099998,
+      "target": 2.0,
+      "rr": 0.16,
+      "trail": 1.94348784,
+      "stop_pct": 5.2,
+      "p2_pct": 0.8,
+      "target_basis": "resistance",
+      "spark": [
+        1.96709776,
+        1.97206521,
+        1.97703266,
+        1.97703266,
+        1.97703266,
+        1.97206521,
+        1.97703266,
+        1.96213043,
+        1.96709776,
+        1.97206521,
+        1.98199999,
+        1.98199999,
+        1.98199999,
+        1.97703266,
+        1.96709776,
+        1.98199999,
+        1.99000001,
+        2.0,
+        1.98000002,
+        1.99000001,
+        1.995,
+        1.995,
+        1.98000002,
+        1.99000001,
+        1.97500002,
+        1.98000002,
+        1.98500001,
+        1.99000001,
+        1.99000001,
+        1.99000001
+      ],
+      "trend": "green",
+      "turnover": 261763,
+      "detail": {
+        "swing_low": 1.89999998,
+        "swing_low_pct": -4.5,
+        "swing_high": 2.0,
+        "swing_high_pct": 0.5,
+        "ema55": 1.97264329,
+        "ema55_pct": -0.9,
+        "ema89": 1.96402229,
+        "ema89_pct": -1.3,
+        "trailing_stop": 1.94348784,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -2.3,
+        "volume_ratio": 0.9,
+        "volume_today": 123017,
+        "volume_avg": 136939,
+        "volume_expanding": false,
+        "ema_spread_pct": 2.0,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.98715671,
+            "pct": 0.1
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.98587279,
+            "pct": 0.2
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.98326592,
+            "pct": 0.3
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "swing_lows": [
+            1.95716293,
+            1.98000002,
+            1.89999998
+          ]
+        },
+        "risk_pct": 5.2
+      },
+      "analysis": "PCX has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.9833. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.9786 where 6 levels cluster. Trade setup: entry A$1.9833, stop A$1.8810, target A$2.0000. Risk/reward is 0.16:1. Weekly EMAs are bullish.",
+      "sector_count": 23
+    },
+    {
       "symbol": "DOW",
       "name": "Downer Edi Limited",
       "sector": "Commercial & Professional Services",
@@ -3440,7 +3692,7 @@
         "risk_pct": 5.3
       },
       "analysis": "DOW has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$8.0090. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$8.0725 where 3 levels cluster. Trade setup: entry A$8.0090, stop A$7.5834, target A$8.0725. Risk/reward is 0.15:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "DN1",
@@ -3474,7 +3726,7 @@
       "stop": 94.39550141,
       "target": 99.23126228,
       "rr": 0.12,
-      "trail": 95.61950662,
+      "trail": 95.61950663,
       "stop_pct": 4.4,
       "p2_pct": 0.5,
       "target_basis": "resistance",
@@ -3519,9 +3771,9 @@
         "swing_high_pct": -0.8,
         "ema55": 98.28043636,
         "ema55_pct": -1.8,
-        "ema89": 97.94601035,
+        "ema89": 97.94601032,
         "ema89_pct": -2.1,
-        "trailing_stop": 95.61950662,
+        "trailing_stop": 95.61950663,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": -4.4,
         "volume_ratio": 0.7,
@@ -3566,7 +3818,7 @@
         "risk_pct": 4.4
       },
       "analysis": "DN1 has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$98.7077. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$98.6510 where 5 levels cluster. Trade setup: entry A$98.7077, stop A$94.3955, target A$99.2313. Risk/reward is 0.12:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "BWP",
@@ -3692,7 +3944,7 @@
         "risk_pct": 5.8
       },
       "analysis": "BWP has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$3.8455. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$3.8421 where 6 levels cluster. Trade setup: entry A$3.8455, stop A$3.6234, target A$3.8700. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "PIA",
@@ -3817,7 +4069,7 @@
         "risk_pct": 3.3
       },
       "analysis": "PIA has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.2541. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.2514 where 5 levels cluster. Trade setup: entry A$1.2541, stop A$1.2128, target A$1.2700. Risk/reward is 0.39:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "ALI",
@@ -3942,7 +4194,132 @@
         "risk_pct": 3.3
       },
       "analysis": "ALI has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$2.4583. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$2.4467 where 7 levels cluster. Trade setup: entry A$2.4583, stop A$2.3760, target A$2.4800. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
+    },
+    {
+      "symbol": "REV",
+      "name": "Revolution Private Credit Income Trust",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 13,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_21",
+        "STRONG FIB CONFLUENCE @ 1.97755131",
+        "WEEKLY BULLISH",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.3:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 2.0,
+      "y_close": 1.98500001,
+      "open": 1.99000001,
+      "open_pct": 0.25,
+      "current_pct": 0.5,
+      "day_pct": 0.76,
+      "entry": 1.97875953,
+      "stop": 1.93545004,
+      "target": 1.99000001,
+      "rr": 0.26,
+      "trail": 1.9468204,
+      "stop_pct": 2.2,
+      "p2_pct": 0.6,
+      "target_basis": "resistance",
+      "spark": [
+        1.95646608,
+        1.95646608,
+        1.95646608,
+        1.95150042,
+        1.95150042,
+        1.95150042,
+        1.95646608,
+        1.95150042,
+        1.96143174,
+        1.97136295,
+        1.97136295,
+        1.97136295,
+        1.96143174,
+        1.9663974,
+        1.97136295,
+        1.97136295,
+        1.99000001,
+        1.97500002,
+        1.98000002,
+        1.99000001,
+        1.995,
+        1.97000003,
+        1.97500002,
+        1.97500002,
+        1.99000001,
+        1.98000002,
+        1.99000001,
+        1.98500001,
+        1.98500001,
+        2.0
+      ],
+      "trend": "green",
+      "turnover": 773470,
+      "detail": {
+        "swing_low": 1.95500004,
+        "swing_low_pct": -2.2,
+        "swing_high": 1.99000001,
+        "swing_high_pct": -0.5,
+        "ema55": 1.96580975,
+        "ema55_pct": -1.7,
+        "ema89": 1.95879047,
+        "ema89_pct": -2.1,
+        "trailing_stop": 1.9468204,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -2.7,
+        "volume_ratio": 1.3,
+        "volume_today": 509303,
+        "volume_avg": 389642,
+        "volume_expanding": false,
+        "ema_spread_pct": 1.9,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.98709197,
+            "pct": 0.6
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.98367574,
+            "pct": 0.8
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.97875953,
+            "pct": 1.1
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            2.0,
+            1.99000001,
+            1.99000001
+          ],
+          "swing_lows": [
+            1.94653477,
+            1.95500004,
+            1.95500004
+          ]
+        },
+        "risk_pct": 2.2
+      },
+      "analysis": "REV has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.9788. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.9776 where 5 levels cluster. Trade setup: entry A$1.9788, stop A$1.9355, target A$1.9900. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
+      "sector_count": 23
     },
     {
       "symbol": "PAC",
@@ -4067,7 +4444,7 @@
         "risk_pct": 6.3
       },
       "analysis": "PAC has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$10.8455. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$10.8452 where 4 levels cluster. Trade setup: entry A$10.8455, stop A$10.1673, target A$10.9800. Risk/reward is 0.20:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "DNL",
@@ -4196,256 +4573,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "SFY",
-      "name": "State Street Spdr S&P/Asx 50 Etf",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 13,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "EMA COMPRESSION",
-        "CORE FIB PULLBACK EMA_21",
-        "STRONG FIB CONFLUENCE @ 76.73814718",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 77.22000122,
-      "y_close": 78.26999664,
-      "open": 77.80000305,
-      "open_pct": -0.6,
-      "current_pct": -0.75,
-      "day_pct": -1.34,
-      "entry": 76.91407357,
-      "stop": 73.91340363,
-      "target": 77.44000244,
-      "rr": 0.18,
-      "trail": 75.95748374,
-      "stop_pct": 3.9,
-      "p2_pct": 0.7,
-      "target_basis": "resistance",
-      "spark": [
-        76.72000122,
-        76.25,
-        76.01999664,
-        75.41000366,
-        75.40000153,
-        75.61000061,
-        74.86000061,
-        75.5,
-        74.73000336,
-        75.81999969,
-        76.12999725,
-        76.30999756,
-        75.95999908,
-        76.30999756,
-        75.52999878,
-        76.56999969,
-        76.63999939,
-        76.59999847,
-        77.41000366,
-        76.23999786,
-        75.65000153,
-        75.61000061,
-        75.68000031,
-        76.04000092,
-        77.26999664,
-        78.19999695,
-        78.16000366,
-        78.62000275,
-        78.26999664,
-        77.22000122
-      ],
-      "trend": "green",
-      "turnover": 508362,
-      "detail": {
-        "swing_low": 74.66000366,
-        "swing_low_pct": -3.3,
-        "swing_high": 77.44000244,
-        "swing_high_pct": 0.3,
-        "ema55": 76.55241365,
-        "ema55_pct": -0.9,
-        "ema89": 76.32138993,
-        "ema89_pct": -1.2,
-        "trailing_stop": 75.95748374,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -1.6,
-        "volume_ratio": 1.0,
-        "volume_today": 6530,
-        "volume_avg": 6678,
-        "volume_expanding": false,
-        "ema_spread_pct": 2.0,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 77.50720038,
-            "pct": -0.4
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 77.20203126,
-            "pct": 0.0
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 76.91407357,
-            "pct": 0.4
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            77.98000336,
-            76.55999756,
-            77.44000244
-          ],
-          "swing_lows": [
-            74.62000275,
-            75.30000305,
-            74.66000366
-          ]
-        },
-        "risk_pct": 3.9
-      },
-      "analysis": "SFY has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$76.9141. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$76.7381 where 7 levels cluster. Trade setup: entry A$76.9141, stop A$73.9134, target A$77.4400. Risk/reward is 0.18:1. Weekly EMAs are bullish.",
-      "sector_count": 21
-    },
-    {
-      "symbol": "WQG",
-      "name": "Wcm Global Growth Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 13,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "EMA COMPRESSION",
-        "CORE FIB PULLBACK EMA_21",
-        "STRONG FIB CONFLUENCE @ 1.8694534",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.89499998,
-      "y_close": 1.87,
-      "open": 1.87,
-      "open_pct": 0.0,
-      "current_pct": 1.34,
-      "day_pct": 1.34,
-      "entry": 1.86239899,
-      "stop": 1.76219997,
-      "target": 1.87301601,
-      "rr": 0.11,
-      "trail": 1.91125336,
-      "stop_pct": 5.4,
-      "p2_pct": 0.6,
-      "target_basis": "resistance",
-      "spark": [
-        1.82359612,
-        1.873016,
-        1.84830606,
-        1.82853806,
-        1.84336412,
-        1.84336412,
-        1.85819006,
-        1.83842206,
-        1.78900206,
-        1.83348012,
-        1.85819006,
-        1.84830606,
-        1.84830606,
-        1.873016,
-        1.86807406,
-        1.87795806,
-        1.88784194,
-        1.88784194,
-        1.912552,
-        1.892784,
-        1.90760994,
-        1.8829,
-        1.79999995,
-        1.79999995,
-        1.82500005,
-        1.88499999,
-        1.87,
-        1.90999997,
-        1.87,
-        1.89499998
-      ],
-      "trend": "green",
-      "turnover": 459393,
-      "detail": {
-        "swing_low": 1.77999997,
-        "swing_low_pct": -6.1,
-        "swing_high": 1.87301601,
-        "swing_high_pct": -1.2,
-        "ema55": 1.8318495,
-        "ema55_pct": -3.3,
-        "ema89": 1.82462037,
-        "ema89_pct": -3.7,
-        "trailing_stop": 1.91125336,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 0.9,
-        "volume_ratio": 1.1,
-        "volume_today": 262208,
-        "volume_avg": 248174,
-        "volume_expanding": false,
-        "ema_spread_pct": 2.8,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 1.87543319,
-            "pct": 1.0
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 1.87052802,
-            "pct": 1.3
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 1.86239899,
-            "pct": 1.8
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.87301601,
-            1.86807404,
-            1.9224361
-          ],
-          "swing_lows": [
-            1.78900206,
-            1.82853809,
-            1.77999997
-          ]
-        },
-        "risk_pct": 5.4
-      },
-      "analysis": "WQG has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.8624. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.8695 where 3 levels cluster. Trade setup: entry A$1.8624, stop A$1.7622, target A$1.8730. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 21
-    },
-    {
       "symbol": "CDA",
       "name": "Codan Limited",
       "sector": "Technology Hardware & Equipment",
@@ -4521,7 +4648,7 @@
         "swing_high_pct": 1.9,
         "ema55": 40.04722893,
         "ema55_pct": -7.2,
-        "ema89": 38.41077028,
+        "ema89": 38.41077027,
         "ema89_pct": -11.0,
         "trailing_stop": 39.33715634,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -4694,6 +4821,132 @@
       },
       "analysis": "GNG has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$5.5787. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$5.6538 where 3 levels cluster. Trade setup: entry A$5.5787, stop A$4.8807, target A$5.9000. Risk/reward is 0.46:1. Weekly EMAs are bullish.",
       "sector_count": 78
+    },
+    {
+      "symbol": "RIC",
+      "name": "Ridley Corporation Limited",
+      "sector": "Food, Beverage & Tobacco",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 12,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "STRONG FIB CONFLUENCE @ 2.79661479",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.4:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 2.77999997,
+      "y_close": 2.79999995,
+      "open": 2.78999996,
+      "open_pct": -0.36,
+      "current_pct": -0.36,
+      "day_pct": -0.71,
+      "entry": 2.78172611,
+      "stop": 2.65320007,
+      "target": 2.82999992,
+      "rr": 0.38,
+      "trail": 2.89465813,
+      "stop_pct": 4.6,
+      "p2_pct": 1.7,
+      "target_basis": "resistance",
+      "spark": [
+        2.71000004,
+        2.68000007,
+        2.67000008,
+        2.66000009,
+        2.67000008,
+        2.71000004,
+        2.67000008,
+        2.70000005,
+        2.70000005,
+        2.70000005,
+        2.69000006,
+        2.71000004,
+        2.75,
+        2.74000001,
+        2.74000001,
+        2.81999993,
+        2.78999996,
+        2.79999995,
+        2.81999993,
+        2.82999992,
+        2.82999992,
+        2.82999992,
+        2.8599999,
+        2.88000011,
+        2.86999989,
+        2.8599999,
+        2.8599999,
+        2.8499999,
+        2.79999995,
+        2.77999997
+      ],
+      "trend": "green",
+      "turnover": 1889566,
+      "detail": {
+        "swing_low": 2.68000007,
+        "swing_low_pct": -3.6,
+        "swing_high": 2.82999992,
+        "swing_high_pct": 1.8,
+        "ema55": 2.75175897,
+        "ema55_pct": -1.0,
+        "ema89": 2.72228164,
+        "ema89_pct": -2.1,
+        "trailing_stop": 2.89465813,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": 4.1,
+        "volume_ratio": 3.3,
+        "volume_today": 1981489,
+        "volume_avg": 601538,
+        "volume_expanding": true,
+        "ema_spread_pct": 4.2,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 2.82473709,
+            "pct": -1.6
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 2.82016482,
+            "pct": -1.4
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 2.80468694,
+            "pct": -0.9
+          }
+        ],
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            2.78999996,
+            2.8499999,
+            2.91499996
+          ],
+          "swing_lows": [
+            2.625,
+            2.625,
+            2.68000007
+          ]
+        },
+        "risk_pct": 4.6
+      },
+      "analysis": "RIC has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Strong confluence zone at A$2.7966 where 5 levels cluster. Trade setup: entry A$2.7817, stop A$2.6532, target A$2.8300. Risk/reward is 0.38:1. Weekly EMAs are bullish.",
+      "sector_count": 2
     },
     {
       "symbol": "MAQ",
@@ -4943,7 +5196,7 @@
         "risk_pct": 4.9
       },
       "analysis": "ALX has all Fibonacci EMAs in full bullish alignment. Price has pulled back and is testing the 21 EMA at A$5.0115. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$5.0544 where 3 levels cluster. Trade setup: entry A$5.0115, stop A$4.7669, target A$5.0800. Risk/reward is 0.28:1. Weekly EMAs are bullish.",
-      "sector_count": 5
+      "sector_count": 6
     },
     {
       "symbol": "FGG",
@@ -5068,7 +5321,7 @@
         "risk_pct": 5.9
       },
       "analysis": "FGG has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$1.6739. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.6904 where 3 levels cluster. Trade setup: entry A$1.6739, stop A$1.5757, target A$1.6997. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "SRJ",
@@ -5320,130 +5573,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "SPL",
-      "name": "Starpharma Holdings Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 11,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "CORE FIB PULLBACK EMA_21",
-        "STRONG FIB CONFLUENCE @ 0.69534316",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.5:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.69499999,
-      "y_close": 0.69999999,
-      "open": 0.69999999,
-      "open_pct": 0.0,
-      "current_pct": -0.71,
-      "day_pct": -0.71,
-      "entry": 0.69283283,
-      "stop": 0.59400002,
-      "target": 0.745,
-      "rr": 0.53,
-      "trail": 0.62688691,
-      "stop_pct": 14.3,
-      "p2_pct": 7.5,
-      "target_basis": "resistance",
-      "spark": [
-        0.72000003,
-        0.73500001,
-        0.745,
-        0.73500001,
-        0.66000003,
-        0.62,
-        0.55000001,
-        0.59500003,
-        0.61000001,
-        0.61500001,
-        0.62,
-        0.64499998,
-        0.67000002,
-        0.67500001,
-        0.67500001,
-        0.69999999,
-        0.72500002,
-        0.755,
-        0.75,
-        0.755,
-        0.755,
-        0.69999999,
-        0.69999999,
-        0.67000002,
-        0.68000001,
-        0.685,
-        0.69,
-        0.69999999,
-        0.69999999,
-        0.69499999
-      ],
-      "trend": "green",
-      "turnover": 798270,
-      "detail": {
-        "swing_low": 0.60000002,
-        "swing_low_pct": -13.7,
-        "swing_high": 0.745,
-        "swing_high_pct": 7.2,
-        "ema55": 0.64895899,
-        "ema55_pct": -6.6,
-        "ema89": 0.59733277,
-        "ema89_pct": -14.1,
-        "trailing_stop": 0.62688691,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -9.8,
-        "volume_ratio": 0.5,
-        "volume_today": 583517,
-        "volume_avg": 1174034,
-        "volume_expanding": false,
-        "ema_spread_pct": 24.6,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.69661751,
-            "pct": -0.2
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.69657915,
-            "pct": -0.2
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.69283283,
-            "pct": 0.3
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.75,
-            0.79000002,
-            0.76749998
-          ],
-          "swing_lows": [
-            0.66000003,
-            0.66000003,
-            0.66000003
-          ]
-        },
-        "risk_pct": 14.3
-      },
-      "analysis": "SPL has all Fibonacci EMAs in full bullish alignment. Price has pulled back and is testing the 21 EMA at A$0.6928. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$0.6953 where 3 levels cluster. Trade setup: entry A$0.6928, stop A$0.5940, target A$0.7450. Risk/reward is 0.53:1. Weekly EMAs are bullish.",
-      "sector_count": 6
-    },
-    {
       "symbol": "ORI",
       "name": "Orica Limited",
       "sector": "Materials",
@@ -5519,7 +5648,7 @@
         "swing_high_pct": 1.7,
         "ema55": 22.35534908,
         "ema55_pct": -2.2,
-        "ema89": 22.29554828,
+        "ema89": 22.29554829,
         "ema89_pct": -2.5,
         "trailing_stop": 21.91535016,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -5597,7 +5726,7 @@
       "day_pct": -1.76,
       "entry": 1.95849297,
       "stop": 1.91069995,
-      "target": 1.97985751,
+      "target": 1.97985763,
       "rr": 0.45,
       "trail": 1.93199932,
       "stop_pct": 2.4,
@@ -5640,7 +5769,7 @@
       "detail": {
         "swing_low": 1.92999995,
         "swing_low_pct": -1.3,
-        "swing_high": 1.97985751,
+        "swing_high": 1.97985763,
         "swing_high_pct": 1.3,
         "ema55": 1.95849297,
         "ema55_pct": 0.2,
@@ -5691,7 +5820,7 @@
         "risk_pct": 2.4
       },
       "analysis": "MA1 has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$1.9623 where 7 levels cluster. Trade setup: entry A$1.9585, stop A$1.9107, target A$1.9799. Risk/reward is 0.45:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "PLA",
@@ -5939,7 +6068,132 @@
         "risk_pct": 5.9
       },
       "analysis": "CCL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$4.8934. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$4.9435 where 3 levels cluster. Trade setup: entry A$4.8934, stop A$4.6035, target A$4.9800. Risk/reward is 0.30:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
+    },
+    {
+      "symbol": "PCI",
+      "name": "Perpetual Credit Income Trust",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 11,
+      "score_max": 15,
+      "chips": [
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_21",
+        "STRONG FIB CONFLUENCE @ 1.08219163",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.2:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 1.09500003,
+      "y_close": 1.08500004,
+      "open": 1.09000003,
+      "open_pct": 0.46,
+      "current_pct": 0.46,
+      "day_pct": 0.92,
+      "entry": 1.08316737,
+      "stop": 1.04444995,
+      "target": 1.08969774,
+      "rr": 0.17,
+      "trail": 1.05773545,
+      "stop_pct": 3.6,
+      "p2_pct": 0.6,
+      "target_basis": "resistance",
+      "spark": [
+        1.07909739,
+        1.07909739,
+        1.08407021,
+        1.07909739,
+        1.08904302,
+        1.08904302,
+        1.08904302,
+        1.08407021,
+        1.08407021,
+        1.07909739,
+        1.08407021,
+        1.08407021,
+        1.08904302,
+        1.08904302,
+        1.09000003,
+        1.08500004,
+        1.09000003,
+        1.08500004,
+        1.08500004,
+        1.09000003,
+        1.09000003,
+        1.07500005,
+        1.07000005,
+        1.07000005,
+        1.08500004,
+        1.07500005,
+        1.08000004,
+        1.08500004,
+        1.08500004,
+        1.09500003
+      ],
+      "trend": "green",
+      "turnover": 775720,
+      "detail": {
+        "swing_low": 1.05499995,
+        "swing_low_pct": -3.7,
+        "swing_high": 1.08969774,
+        "swing_high_pct": -0.5,
+        "ema55": 1.07944222,
+        "ema55_pct": -1.4,
+        "ema89": 1.07939536,
+        "ema89_pct": -1.4,
+        "trailing_stop": 1.05773545,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -3.4,
+        "volume_ratio": 1.6,
+        "volume_today": 1176442,
+        "volume_avg": 720988,
+        "volume_expanding": true,
+        "ema_spread_pct": 0.5,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.08456695,
+            "pct": 1.0
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.08370748,
+            "pct": 1.0
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.08316737,
+            "pct": 1.1
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            1.10000002,
+            1.10000002,
+            1.09500003
+          ],
+          "swing_lows": [
+            1.07909739,
+            1.08000004,
+            1.05499995
+          ]
+        },
+        "risk_pct": 3.6
+      },
+      "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.0832. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.0822 where 7 levels cluster. Trade setup: entry A$1.0832, stop A$1.0444, target A$1.0897. Risk/reward is 0.17:1. Weekly EMAs are bullish.",
+      "sector_count": 23
     },
     {
       "symbol": "MVF",
@@ -6064,7 +6318,7 @@
         "risk_pct": 12.6
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 34 EMA at A$0.7079. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$0.7059 where 7 levels cluster. Trade setup: entry A$0.7079, stop A$0.6188, target A$0.7219. Risk/reward is 0.16:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "AMI",
@@ -6685,7 +6939,7 @@
         "risk_pct": 7.3
       },
       "analysis": "RF1 has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$3.5994. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$3.6294 where 3 levels cluster. Trade setup: entry A$3.5994, stop A$3.3363, target A$3.6200. Risk/reward is 0.08:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "PNN",
@@ -6934,7 +7188,7 @@
         "risk_pct": 9.7
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$31.4091. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$31.4813 where 4 levels cluster. Trade setup: entry A$31.4091, stop A$28.3536, target A$31.6000. Risk/reward is 0.06:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "MM1",
@@ -7431,7 +7685,7 @@
         "risk_pct": 3.7
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.7680. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.7595 where 7 levels cluster. Trade setup: entry A$1.7680, stop A$1.7028, target A$1.8200. Risk/reward is 0.80:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "DBI",
@@ -7556,7 +7810,7 @@
         "risk_pct": 6.9
       },
       "analysis": "DBI has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$5.6580. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$5.6580, stop A$5.2668, target A$5.9400. Risk/reward is 0.72:1. Weekly EMAs are bullish.",
-      "sector_count": 5
+      "sector_count": 6
     },
     {
       "symbol": "GPT",
@@ -7680,7 +7934,7 @@
         "risk_pct": 6.9
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$4.9109. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$4.9485 where 4 levels cluster. Trade setup: entry A$4.9109, stop A$4.5738, target A$5.1200. Risk/reward is 0.62:1.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "BSL",
@@ -7758,7 +8012,7 @@
         "swing_high_pct": 1.2,
         "ema55": 30.77444498,
         "ema55_pct": -7.4,
-        "ema89": 29.60218122,
+        "ema89": 29.60218124,
         "ema89_pct": -10.9,
         "trailing_stop": 31.45475214,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -8006,7 +8260,7 @@
         "swing_high_pct": -0.6,
         "ema55": 8.77799321,
         "ema55_pct": -1.3,
-        "ema89": 8.8025316,
+        "ema89": 8.80253159,
         "ema89_pct": -1.0,
         "trailing_stop": 8.61173405,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -8053,7 +8307,7 @@
         "risk_pct": 3.2
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 55 EMA at A$8.7780. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$8.7809 where 7 levels cluster. Trade setup: entry A$8.7780, stop A$8.4942, target A$8.8400. Risk/reward is 0.22:1.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "EMR",
@@ -8180,130 +8434,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "WLE",
-      "name": "Wam Leaders Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 10,
-      "score_max": 15,
-      "chips": [
-        "EMA COMPRESSION",
-        "CORE FIB PULLBACK EMA_55",
-        "STRONG FIB CONFLUENCE @ 1.32070351",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 1.33500004,
-      "y_close": 1.33000004,
-      "open": 1.33000004,
-      "open_pct": 0.0,
-      "current_pct": 0.38,
-      "day_pct": 0.38,
-      "entry": 1.32152279,
-      "stop": 1.27709996,
-      "target": 1.33000004,
-      "rr": 0.19,
-      "trail": 1.35577691,
-      "stop_pct": 3.4,
-      "p2_pct": 0.6,
-      "target_basis": "resistance",
-      "spark": [
-        1.32000005,
-        1.31500006,
-        1.33500004,
-        1.34500003,
-        1.33000004,
-        1.32500005,
-        1.32500005,
-        1.32500005,
-        1.30999994,
-        1.32000005,
-        1.32000005,
-        1.30999994,
-        1.32500005,
-        1.32000005,
-        1.30499995,
-        1.30999994,
-        1.30999994,
-        1.32500005,
-        1.33500004,
-        1.33000004,
-        1.31500006,
-        1.30999994,
-        1.29999995,
-        1.29999995,
-        1.30999994,
-        1.31500006,
-        1.31500006,
-        1.33000004,
-        1.33000004,
-        1.33500004
-      ],
-      "trend": "green",
-      "turnover": 1309800,
-      "detail": {
-        "swing_low": 1.28999996,
-        "swing_low_pct": -3.4,
-        "swing_high": 1.33000004,
-        "swing_high_pct": -0.4,
-        "ema55": 1.32152279,
-        "ema55_pct": -1.0,
-        "ema89": 1.31859401,
-        "ema89_pct": -1.2,
-        "trailing_stop": 1.35577691,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 1.6,
-        "volume_ratio": 1.2,
-        "volume_today": 1130449,
-        "volume_avg": 968745,
-        "volume_expanding": false,
-        "ema_spread_pct": 1.2,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 1.32290551,
-            "pct": 0.9
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 1.32058592,
-            "pct": 1.1
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 1.31991306,
-            "pct": 1.1
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.33000004,
-            1.33000004,
-            1.34500003
-          ],
-          "swing_lows": [
-            1.30999994,
-            1.29999995,
-            1.28999996
-          ]
-        },
-        "risk_pct": 3.4
-      },
-      "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 55 EMA at A$1.3215. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.3207 where 6 levels cluster. Trade setup: entry A$1.3215, stop A$1.2771, target A$1.3300. Risk/reward is 0.19:1. Weekly EMAs are bullish.",
-      "sector_count": 21
-    },
-    {
       "symbol": "FPH",
       "name": "Fisher & Paykel Healthcare Corporation Limited",
       "sector": "Health Care Equipment & Services",
@@ -8314,7 +8444,7 @@
       "chips": [
         "EMA COMPRESSION",
         "CORE FIB PULLBACK EMA_21",
-        "STRONG FIB CONFLUENCE @ 31.2932824",
+        "STRONG FIB CONFLUENCE @ 31.29328243",
         "TRENDING MARKET (ADX)",
         "HEALTHY RSI PULLBACK"
       ],
@@ -8378,7 +8508,7 @@
         "swing_high_pct": 0.2,
         "ema55": 30.57632213,
         "ema55_pct": -3.0,
-        "ema89": 30.86060286,
+        "ema89": 30.86060287,
         "ema89_pct": -2.1,
         "trailing_stop": 29.7364978,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -8425,7 +8555,7 @@
         "risk_pct": 12.5
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$30.9095. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$31.2933 where 4 levels cluster. Trade setup: entry A$30.9095, stop A$27.0567, target A$31.5900. Risk/reward is 0.18:1.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "CDM",
@@ -8549,7 +8679,7 @@
         "risk_pct": 5.5
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 55 EMA at A$0.7539. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$0.7524 where 6 levels cluster. Trade setup: entry A$0.7539, stop A$0.7128, target A$0.7600. Risk/reward is 0.15:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "AUI",
@@ -8673,7 +8803,7 @@
         "risk_pct": 4.4
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$10.8934. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$10.9011 where 7 levels cluster. Trade setup: entry A$10.8934, stop A$10.4148, target A$10.9500. Risk/reward is 0.12:1.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "AMP",
@@ -8797,7 +8927,7 @@
         "risk_pct": 7.2
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$1.5524. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$1.5534 where 4 levels cluster. Trade setup: entry A$1.5524, stop A$1.4405, target A$1.5650. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "AIA",
@@ -8921,7 +9051,7 @@
         "risk_pct": 4.9
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$6.8619. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$6.8795 where 7 levels cluster. Trade setup: entry A$6.8619, stop A$6.5241, target A$6.9000. Risk/reward is 0.11:1.",
-      "sector_count": 5
+      "sector_count": 6
     },
     {
       "symbol": "EVN",
@@ -9046,6 +9176,130 @@
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 34 EMA at A$12.4549. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$12.5374 where 7 levels cluster. Trade setup: entry A$12.4549, stop A$10.1029, target A$12.6900. Risk/reward is 0.10:1.",
       "sector_count": 78
+    },
+    {
+      "symbol": "RFF",
+      "name": "Rural Funds Group",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 10,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_21",
+        "WEEKLY BULLISH",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 2.06999993,
+      "y_close": 2.03999996,
+      "open": 2.04999995,
+      "open_pct": 0.49,
+      "current_pct": 0.98,
+      "day_pct": 1.47,
+      "entry": 2.01912762,
+      "stop": 1.89089997,
+      "target": 2.02979518,
+      "rr": 0.08,
+      "trail": 1.94582428,
+      "stop_pct": 6.4,
+      "p2_pct": 0.5,
+      "target_basis": "resistance",
+      "spark": [
+        2.03999996,
+        2.02999997,
+        2.0,
+        1.99000001,
+        1.99000001,
+        2.02999997,
+        1.98000002,
+        1.995,
+        1.96500003,
+        1.99000001,
+        1.97500002,
+        1.98000002,
+        1.98000002,
+        1.98500001,
+        1.98000002,
+        1.98500001,
+        1.98500001,
+        1.95000005,
+        1.94500005,
+        1.93499994,
+        1.95500004,
+        1.97500002,
+        2.0,
+        2.05999994,
+        2.06999993,
+        2.05999994,
+        2.05999994,
+        2.05999994,
+        2.03999996,
+        2.06999993
+      ],
+      "trend": "green",
+      "turnover": 1191992,
+      "detail": {
+        "swing_low": 1.90999997,
+        "swing_low_pct": -7.7,
+        "swing_high": 2.02979518,
+        "swing_high_pct": -1.9,
+        "ema55": 2.01080161,
+        "ema55_pct": -2.9,
+        "ema89": 2.00392562,
+        "ema89_pct": -3.2,
+        "trailing_stop": 1.94582428,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -6.0,
+        "volume_ratio": 0.5,
+        "volume_today": 297786,
+        "volume_avg": 593801,
+        "volume_expanding": false,
+        "ema_spread_pct": 3.0,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 2.0442094,
+            "pct": 1.3
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 2.03047605,
+            "pct": 1.9
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 2.01912762,
+            "pct": 2.5
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            2.06999993,
+            2.06999993,
+            2.06999993
+          ],
+          "swing_lows": [
+            1.96500003,
+            1.96500003,
+            1.90999997
+          ]
+        },
+        "risk_pct": 6.4
+      },
+      "analysis": "RFF has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 21 EMA at A$2.0191. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$2.0191, stop A$1.8909, target A$2.0298. Risk/reward is 0.08:1. Weekly EMAs are bullish.",
+      "sector_count": 15
     },
     {
       "symbol": "BRN",
@@ -9665,6 +9919,130 @@
         "risk_pct": 18.5
       },
       "analysis": "Price has pulled back and is testing the 34 EMA at A$11.8371. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$11.9384 where 4 levels cluster. Trade setup: entry A$11.8371, stop A$9.6426, target A$13.4250. Risk/reward is 0.72:1. Weekly EMAs are bullish.",
+      "sector_count": 78
+    },
+    {
+      "symbol": "PEX",
+      "name": "Peel Mining Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 9,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "STRONG FIB CONFLUENCE @ 0.15975035",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.6:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 0.16,
+      "y_close": 0.16500001,
+      "open": 0.16,
+      "open_pct": -3.03,
+      "current_pct": 0.0,
+      "day_pct": -3.03,
+      "entry": 0.16034654,
+      "stop": 0.14355,
+      "target": 0.17,
+      "rr": 0.57,
+      "trail": 0.18387261,
+      "stop_pct": 10.5,
+      "p2_pct": 6.0,
+      "target_basis": "resistance",
+      "spark": [
+        0.16,
+        0.17,
+        0.175,
+        0.18000001,
+        0.18000001,
+        0.17,
+        0.16500001,
+        0.16500001,
+        0.16,
+        0.15000001,
+        0.16,
+        0.16500001,
+        0.16500001,
+        0.16,
+        0.15000001,
+        0.16,
+        0.155,
+        0.16,
+        0.185,
+        0.16500001,
+        0.16,
+        0.16,
+        0.155,
+        0.145,
+        0.16,
+        0.16500001,
+        0.16,
+        0.16,
+        0.16500001,
+        0.16
+      ],
+      "trend": "blue",
+      "turnover": 153544,
+      "detail": {
+        "swing_low": 0.145,
+        "swing_low_pct": -9.4,
+        "swing_high": 0.17,
+        "swing_high_pct": 6.3,
+        "ema55": 0.15767978,
+        "ema55_pct": -1.5,
+        "ema89": 0.1540502,
+        "ema89_pct": -3.7,
+        "trailing_stop": 0.18387261,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": 14.9,
+        "volume_ratio": 3.0,
+        "volume_today": 2558316,
+        "volume_avg": 843815,
+        "volume_expanding": true,
+        "ema_spread_pct": 9.1,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 0.16072741,
+            "pct": -0.5
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 0.16062351,
+            "pct": -0.4
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 0.16034654,
+            "pct": -0.2
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            0.185,
+            0.17,
+            0.185
+          ],
+          "swing_lows": [
+            0.15000001,
+            0.15000001,
+            0.145
+          ]
+        },
+        "risk_pct": 10.5
+      },
+      "analysis": "PEX has all Fibonacci EMAs in full bullish alignment. Strong confluence zone at A$0.1598 where 5 levels cluster. Trade setup: entry A$0.1603, stop A$0.1436, target A$0.1700. Risk/reward is 0.57:1. Weekly EMAs are bullish.",
       "sector_count": 78
     },
     {
@@ -10408,7 +10786,7 @@
         "risk_pct": 8.1
       },
       "analysis": "LSF has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$4.4437. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$4.4437, stop A$4.0845, target A$4.5500. Risk/reward is 0.30:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "MIN",
@@ -10656,7 +11034,7 @@
         "risk_pct": 3.5
       },
       "analysis": "MFF has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$4.9852. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$4.9852, stop A$4.8114, target A$5.0300. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "GGP",
@@ -10856,7 +11234,7 @@
         "swing_high_pct": -0.8,
         "ema55": 12.63960869,
         "ema55_pct": -3.5,
-        "ema89": 12.66366977,
+        "ema89": 12.66366976,
         "ema89_pct": -3.3,
         "trailing_stop": 12.54052101,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -10903,7 +11281,7 @@
         "risk_pct": 5.3
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$12.8593. This is a core Fibonacci pullback to a key trend EMA. Strong confluence zone at A$12.9767 where 3 levels cluster. Trade setup: entry A$12.8593, stop A$12.1770, target A$13.0000. Risk/reward is 0.21:1.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "KSL",
@@ -10980,7 +11358,7 @@
         "swing_high_pct": 0.7,
         "ema55": 1.30281672,
         "ema55_pct": -2.8,
-        "ema89": 1.2742992,
+        "ema89": 1.27429921,
         "ema89_pct": -4.9,
         "trailing_stop": 1.28000296,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -11028,6 +11406,130 @@
       },
       "analysis": "KSL has all Fibonacci EMAs in full bullish alignment. Strong confluence zone at A$1.3402 where 4 levels cluster. Trade setup: entry A$1.3405, stop A$1.2870, target A$1.3500. Risk/reward is 0.18:1. Weekly EMAs are bullish.",
       "sector_count": 2
+    },
+    {
+      "symbol": "PGF",
+      "name": "Pm Capital Global Opportunities Fund Limited",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 9,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "CORE FIB PULLBACK EMA_21",
+        "WEEKLY BULLISH",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 3.1099999,
+      "y_close": 3.1099999,
+      "open": 3.20000005,
+      "open_pct": 2.89,
+      "current_pct": -2.81,
+      "day_pct": 0.0,
+      "entry": 3.03335772,
+      "stop": 2.85120011,
+      "target": 3.05999994,
+      "rr": 0.15,
+      "trail": 2.96748198,
+      "stop_pct": 6.0,
+      "p2_pct": 0.9,
+      "target_basis": "resistance",
+      "spark": [
+        2.96000004,
+        2.95000005,
+        2.96000004,
+        2.95000005,
+        2.94000006,
+        2.97000003,
+        2.94000006,
+        2.93000007,
+        2.8900001,
+        2.8900001,
+        2.88000011,
+        2.98000002,
+        2.97000003,
+        2.96000004,
+        2.95000005,
+        2.96000004,
+        3.02999997,
+        3.01999998,
+        3.01999998,
+        3.04999995,
+        3.01999998,
+        2.99000001,
+        2.99000001,
+        2.99000001,
+        3.05999994,
+        3.08999991,
+        3.0999999,
+        3.1500001,
+        3.1099999,
+        3.1099999
+      ],
+      "trend": "blue",
+      "turnover": 1240800,
+      "detail": {
+        "swing_low": 2.88000011,
+        "swing_low_pct": -7.4,
+        "swing_high": 3.05999994,
+        "swing_high_pct": -1.6,
+        "ema55": 2.97881373,
+        "ema55_pct": -4.2,
+        "ema89": 2.94864367,
+        "ema89_pct": -5.2,
+        "trailing_stop": 2.96748198,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -4.6,
+        "volume_ratio": 1.2,
+        "volume_today": 481526,
+        "volume_avg": 407215,
+        "volume_expanding": false,
+        "ema_spread_pct": 6.0,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 3.08458913,
+            "pct": 0.8
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 3.06069368,
+            "pct": 1.6
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 3.03335772,
+            "pct": 2.5
+          }
+        ],
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            2.99000001,
+            3.06999993,
+            3.05999994
+          ],
+          "swing_lows": [
+            2.94000006,
+            2.88000011,
+            2.97000003
+          ]
+        },
+        "risk_pct": 6.0
+      },
+      "analysis": "PGF has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Price has pulled back and is testing the 21 EMA at A$3.0334. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$3.0334, stop A$2.8512, target A$3.0600. Risk/reward is 0.15:1. Weekly EMAs are bullish.",
+      "sector_count": 23
     },
     {
       "symbol": "NXT",
@@ -11523,7 +12025,7 @@
         "risk_pct": 3.6
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$1.6523 where 6 levels cluster. Trade setup: entry A$1.6535, stop A$1.5939, target A$1.6900. Risk/reward is 0.61:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "GNP",
@@ -11646,7 +12148,7 @@
         "risk_pct": 7.8
       },
       "analysis": "GNP has all Fibonacci EMAs in full bullish alignment. Strong confluence zone at A$10.1185 where 3 levels cluster. Trade setup: entry A$10.0336, stop A$9.2466, target A$10.4100. Risk/reward is 0.48:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "PC2",
@@ -12018,6 +12520,130 @@
       "sector_count": 78
     },
     {
+      "symbol": "RGN",
+      "name": "Region Group",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 8,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "EMA COMPRESSION",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.2:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 2.42000008,
+      "y_close": 2.4000001,
+      "open": 2.4000001,
+      "open_pct": 0.0,
+      "current_pct": 0.83,
+      "day_pct": 0.83,
+      "entry": 2.33898687,
+      "stop": 2.18790004,
+      "target": 2.36999989,
+      "rr": 0.21,
+      "trail": 2.30450976,
+      "stop_pct": 6.5,
+      "p2_pct": 1.3,
+      "target_basis": "resistance",
+      "spark": [
+        2.27999997,
+        2.25,
+        2.24000001,
+        2.24000001,
+        2.25,
+        2.26999998,
+        2.25,
+        2.27999997,
+        2.27999997,
+        2.28999996,
+        2.27999997,
+        2.25999999,
+        2.25999999,
+        2.27999997,
+        2.27999997,
+        2.26999998,
+        2.27999997,
+        2.25,
+        2.22000003,
+        2.23000002,
+        2.24000001,
+        2.26999998,
+        2.31999993,
+        2.38000011,
+        2.41000009,
+        2.43000007,
+        2.43000007,
+        2.42000008,
+        2.4000001,
+        2.42000008
+      ],
+      "trend": "blue",
+      "turnover": 8664769,
+      "detail": {
+        "swing_low": 2.21000004,
+        "swing_low_pct": -8.7,
+        "swing_high": 2.36999989,
+        "swing_high_pct": -2.1,
+        "ema55": 2.30118588,
+        "ema55_pct": -4.9,
+        "ema89": 2.2936767,
+        "ema89_pct": -5.2,
+        "trailing_stop": 2.30450976,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -4.8,
+        "volume_ratio": 3.4,
+        "volume_today": 11062460,
+        "volume_avg": 3226357,
+        "volume_expanding": true,
+        "ema_spread_pct": 4.0,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 2.3897223,
+            "pct": 1.3
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 2.36426238,
+            "pct": 2.4
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 2.33898687,
+            "pct": 3.5
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            2.30999994,
+            2.28999996,
+            2.28999996
+          ],
+          "swing_lows": [
+            2.21000004,
+            2.25,
+            2.21000004
+          ]
+        },
+        "risk_pct": 6.5
+      },
+      "analysis": "RGN has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Trade setup: entry A$2.3390, stop A$2.1879, target A$2.3700. Risk/reward is 0.21:1. Weekly EMAs are bullish.",
+      "sector_count": 15
+    },
+    {
       "symbol": "CMW",
       "name": "Cromwell Property Group",
       "sector": "Equity Real Estate Investment Trusts (REITs)",
@@ -12139,7 +12765,7 @@
         "risk_pct": 6.8
       },
       "analysis": "CMW has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Trade setup: entry A$0.4355, stop A$0.4059, target A$0.4413. Risk/reward is 0.20:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "EIQ",
@@ -12389,6 +13015,130 @@
       "sector_count": 5
     },
     {
+      "symbol": "PRU",
+      "name": "Perseus Mining Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 8,
+      "score_max": 15,
+      "chips": [
+        "EMA COMPRESSION",
+        "CORE FIB PULLBACK EMA_55",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 5.44999981,
+      "y_close": 5.53999996,
+      "open": 5.42999983,
+      "open_pct": -1.99,
+      "current_pct": 0.37,
+      "day_pct": -1.62,
+      "entry": 5.31600639,
+      "stop": 4.38569983,
+      "target": 5.46000004,
+      "rr": 0.15,
+      "trail": 4.87527958,
+      "stop_pct": 17.5,
+      "p2_pct": 2.7,
+      "target_basis": "resistance",
+      "spark": [
+        5.51999998,
+        5.46999979,
+        5.53000021,
+        5.6500001,
+        5.63999987,
+        5.53000021,
+        5.36999989,
+        5.38000011,
+        5.1500001,
+        5.25,
+        5.23999977,
+        5.40999985,
+        5.38000011,
+        5.38000011,
+        4.86000013,
+        5.17000008,
+        5.17999983,
+        5.19000006,
+        5.13999987,
+        5.07000017,
+        5.01000023,
+        4.80000019,
+        4.67000008,
+        4.65999985,
+        4.88000011,
+        5.30999994,
+        5.38999987,
+        5.63000011,
+        5.53999996,
+        5.44999981
+      ],
+      "trend": "blue",
+      "turnover": 23080613,
+      "detail": {
+        "swing_low": 4.42999983,
+        "swing_low_pct": -18.7,
+        "swing_high": 5.46000004,
+        "swing_high_pct": 0.2,
+        "ema55": 5.31600639,
+        "ema55_pct": -2.5,
+        "ema89": 5.33856344,
+        "ema89_pct": -2.0,
+        "trailing_stop": 4.87527958,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -10.5,
+        "volume_ratio": 3.3,
+        "volume_today": 13353693,
+        "volume_avg": 3991120,
+        "volume_expanding": true,
+        "ema_spread_pct": 1.8,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 5.31513957,
+            "pct": 2.5
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 5.25182371,
+            "pct": 3.8
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 5.2396975,
+            "pct": 4.0
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            5.67000008,
+            5.67000008,
+            5.46000004
+          ],
+          "swing_lows": [
+            5.13999987,
+            4.80999994,
+            4.42999983
+          ]
+        },
+        "risk_pct": 17.5
+      },
+      "analysis": "EMAs are compressed, suggesting a big move is building. Price has pulled back and is testing the 55 EMA at A$5.3160. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$5.3160, stop A$4.3857, target A$5.4600. Risk/reward is 0.15:1.",
+      "sector_count": 78
+    },
+    {
       "symbol": "ALQ",
       "name": "Als Limited",
       "sector": "Commercial & Professional Services",
@@ -12414,7 +13164,7 @@
       "open_pct": -0.04,
       "current_pct": -3.21,
       "day_pct": -3.25,
-      "entry": 22.61820152,
+      "entry": 22.61820153,
       "stop": 21.59337347,
       "target": 22.7615353,
       "rr": 0.14,
@@ -12461,9 +13211,9 @@
         "swing_low_pct": -3.5,
         "swing_high": 22.7615353,
         "swing_high_pct": 0.7,
-        "ema55": 22.61820152,
+        "ema55": 22.61820153,
         "ema55_pct": 0.1,
-        "ema89": 22.42622633,
+        "ema89": 22.42622634,
         "ema89_pct": -0.8,
         "trailing_stop": 21.43953843,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
@@ -12510,7 +13260,7 @@
         "risk_pct": 4.5
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Strong confluence zone at A$22.7770 where 5 levels cluster. Trade setup: entry A$22.6182, stop A$21.5934, target A$22.7615. Risk/reward is 0.14:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "MAD",
@@ -12634,7 +13384,7 @@
         "risk_pct": 3.8
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Strong confluence zone at A$8.1134 where 6 levels cluster. Trade setup: entry A$8.1545, stop A$7.8408, target A$8.2000. Risk/reward is 0.14:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "RG8",
@@ -12758,7 +13508,7 @@
         "risk_pct": 3.7
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$2.8311 where 6 levels cluster. Trade setup: entry A$2.8270, stop A$2.7225, target A$2.8413. Risk/reward is 0.14:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "DUG",
@@ -13004,7 +13754,7 @@
         "risk_pct": 4.4
       },
       "analysis": "BFG has all Fibonacci EMAs in full bullish alignment. Price has pulled back and is testing the 21 EMA at A$1.3930. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$1.3930, stop A$1.3316, target A$1.4000. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "MYS",
@@ -13252,7 +14002,7 @@
         "risk_pct": 6.5
       },
       "analysis": "KLS has all Fibonacci EMAs in full bullish alignment. EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$4.2760, stop A$3.9996, target A$4.3009. Risk/reward is 0.09:1. Weekly EMAs are bullish.",
-      "sector_count": 5
+      "sector_count": 6
     },
     {
       "symbol": "ORE",
@@ -13498,7 +14248,7 @@
         "risk_pct": 7.4
       },
       "analysis": "AYA has all Fibonacci EMAs in full bullish alignment. Price has pulled back and is testing the 21 EMA at A$4.6745. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$4.6745, stop A$4.3263, target A$4.7000. Risk/reward is 0.07:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "EXR",
@@ -13995,129 +14745,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "WIA",
-      "name": "Wia Gold Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 7,
-      "score_max": 15,
-      "chips": [
-        "EMA COMPRESSION",
-        "STRONG FIB CONFLUENCE @ 0.47393002",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 0.47,
-      "y_close": 0.47999999,
-      "open": 0.47,
-      "open_pct": -2.08,
-      "current_pct": 0.0,
-      "day_pct": -2.08,
-      "entry": 0.47398975,
-      "stop": 0.41084999,
-      "target": 0.49000001,
-      "rr": 0.25,
-      "trail": 0.42466173,
-      "stop_pct": 13.3,
-      "p2_pct": 3.4,
-      "target_basis": "resistance",
-      "spark": [
-        0.495,
-        0.495,
-        0.495,
-        0.5,
-        0.505,
-        0.5,
-        0.5,
-        0.5,
-        0.43000001,
-        0.47,
-        0.48500001,
-        0.5,
-        0.47499999,
-        0.48500001,
-        0.45500001,
-        0.47,
-        0.47,
-        0.49000001,
-        0.47,
-        0.47,
-        0.465,
-        0.44499999,
-        0.435,
-        0.43000001,
-        0.44,
-        0.49000001,
-        0.505,
-        0.50999999,
-        0.47999999,
-        0.47
-      ],
-      "trend": "blue",
-      "turnover": 1145149,
-      "detail": {
-        "swing_low": 0.41499999,
-        "swing_low_pct": -11.7,
-        "swing_high": 0.49000001,
-        "swing_high_pct": 4.3,
-        "ema55": 0.47462662,
-        "ema55_pct": 1.0,
-        "ema89": 0.46920413,
-        "ema89_pct": -0.2,
-        "trailing_stop": 0.42466173,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -9.6,
-        "volume_ratio": 0.2,
-        "volume_today": 513219,
-        "volume_avg": 2677621,
-        "volume_expanding": false,
-        "ema_spread_pct": 5.3,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.47670301,
-            "pct": -1.4
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.47434289,
-            "pct": -0.9
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.47398975,
-            "pct": -0.8
-          }
-        ],
-        "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
-          "swing_highs": [
-            0.5,
-            0.495,
-            0.495
-          ],
-          "swing_lows": [
-            0.41999999,
-            0.44,
-            0.41499999
-          ]
-        },
-        "risk_pct": 13.3
-      },
-      "analysis": "EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$0.4739 where 6 levels cluster. Trade setup: entry A$0.4740, stop A$0.4108, target A$0.4900. Risk/reward is 0.25:1. Weekly EMAs are bullish.",
-      "sector_count": 78
-    },
-    {
       "symbol": "FPR",
       "name": "Fleetpartners Group Limited",
       "sector": "Financial Services",
@@ -14239,7 +14866,7 @@
         "risk_pct": 4.1
       },
       "analysis": "FPR has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$2.8121, stop A$2.6977, target A$2.8377. Risk/reward is 0.22:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "DVP",
@@ -14732,7 +15359,7 @@
         "risk_pct": 13.5
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$1.8131 where 6 levels cluster. Trade setup: entry A$1.8306, stop A$1.5840, target A$1.8600. Risk/reward is 0.12:1.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "MM8",
@@ -14978,7 +15605,7 @@
         "risk_pct": 2.7
       },
       "analysis": "Price has pulled back and is testing the 55 EMA at A$6.7940. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$6.7940, stop A$6.6132, target A$7.6600. Risk/reward is 4.79:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "CCE",
@@ -15104,129 +15731,6 @@
       "sector_count": 4
     },
     {
-      "symbol": "SIQ",
-      "name": "Smartgroup Corporation Ltd",
-      "sector": "Commercial & Professional Services",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 6,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "WEEKLY BULLISH",
-        "VOLUME EXPANSION",
-        "TRENDING MARKET (ADX)"
-      ],
-      "weekly": true,
-      "low_rr": false,
-      "rr_text": "2.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 12.56999969,
-      "y_close": 12.44999981,
-      "open": 12.52000046,
-      "open_pct": 0.56,
-      "current_pct": 0.4,
-      "day_pct": 0.96,
-      "entry": 11.84053835,
-      "stop": 11.03849962,
-      "target": 13.4446158,
-      "rr": 2.0,
-      "trail": 11.66834173,
-      "stop_pct": 6.8,
-      "p2_pct": 13.5,
-      "target_basis": "measured",
-      "spark": [
-        10.67000008,
-        11.02000046,
-        11.18000031,
-        11.07999992,
-        11.0,
-        11.14000034,
-        11.27999973,
-        11.44999981,
-        11.53999996,
-        11.59000015,
-        11.64000034,
-        11.47000027,
-        11.59000015,
-        11.52000046,
-        11.48999977,
-        11.39000034,
-        11.60000038,
-        11.52000046,
-        11.43999958,
-        11.72000027,
-        11.92000008,
-        11.82999992,
-        12.14999962,
-        12.31999969,
-        12.18000031,
-        12.13000011,
-        12.34000015,
-        12.55000019,
-        12.44999981,
-        12.56999969
-      ],
-      "trend": "blue",
-      "turnover": 7314302,
-      "detail": {
-        "swing_low": 11.14999962,
-        "swing_low_pct": -11.3,
-        "swing_high": 13.4446158,
-        "swing_high_pct": 7.0,
-        "ema55": 10.7384393,
-        "ema55_pct": -14.6,
-        "ema89": 10.08114308,
-        "ema89_pct": -19.8,
-        "trailing_stop": 11.66834173,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -7.2,
-        "volume_ratio": 2.2,
-        "volume_today": 1329338,
-        "volume_avg": 593428,
-        "volume_expanding": true,
-        "ema_spread_pct": 22.7,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 12.31200475,
-            "pct": 2.1
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 12.13400842,
-            "pct": 3.6
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 11.84053835,
-            "pct": 6.2
-          }
-        ],
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            9.0,
-            11.31999969,
-            11.73999977
-          ],
-          "swing_lows": [
-            8.44999981,
-            8.71000004,
-            11.14999962
-          ]
-        },
-        "risk_pct": 6.8
-      },
-      "analysis": "SIQ has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$11.8405, stop A$11.0385, target A$13.4446. Risk/reward is 2.00:1. Weekly EMAs are bullish.",
-      "sector_count": 8
-    },
-    {
       "symbol": "ARX",
       "name": "Aroa Biosurgery Limited",
       "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
@@ -15346,7 +15850,7 @@
         "risk_pct": 6.8
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Strong confluence zone at A$0.6325 where 6 levels cluster. Trade setup: entry A$0.6318, stop A$0.5891, target A$0.6750. Risk/reward is 1.01:1.",
-      "sector_count": 6
+      "sector_count": 4
     },
     {
       "symbol": "KOV",
@@ -15469,7 +15973,7 @@
         "risk_pct": 13.5
       },
       "analysis": "KOV has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$18.7651, stop A$16.2360, target A$21.1500. Risk/reward is 0.94:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "AVR",
@@ -15592,7 +16096,7 @@
         "risk_pct": 11.2
       },
       "analysis": "AVR has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$12.4928, stop A$11.0880, target A$13.8000. Risk/reward is 0.93:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "MAU",
@@ -15838,7 +16342,7 @@
         "risk_pct": 38.4
       },
       "analysis": "ADO has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.0273, stop A$0.0168, target A$0.0340. Risk/reward is 0.64:1. Weekly EMAs are bullish.",
-      "sector_count": 6
+      "sector_count": 4
     },
     {
       "symbol": "QBE",
@@ -15962,6 +16466,129 @@
       },
       "analysis": "QBE has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$23.2828, stop A$21.5424, target A$24.3200. Risk/reward is 0.60:1. Weekly EMAs are bullish.",
       "sector_count": 5
+    },
+    {
+      "symbol": "SLC",
+      "name": "Superloop Limited",
+      "sector": "Telecommunication Services",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 6,
+      "score_max": 15,
+      "chips": [
+        "STRONG FIB CONFLUENCE @ 3.50193824",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.5:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 3.48000002,
+      "y_close": 3.43000007,
+      "open": 3.45000005,
+      "open_pct": 0.58,
+      "current_pct": 0.87,
+      "day_pct": 1.46,
+      "entry": 3.50559861,
+      "stop": 3.28679993,
+      "target": 3.61999989,
+      "rr": 0.52,
+      "trail": 3.2965635,
+      "stop_pct": 6.2,
+      "p2_pct": 3.3,
+      "target_basis": "resistance",
+      "spark": [
+        3.49000001,
+        3.45000005,
+        3.51999998,
+        3.49000001,
+        3.5,
+        3.48000002,
+        3.50999999,
+        3.54999995,
+        3.47000003,
+        3.51999998,
+        3.50999999,
+        3.47000003,
+        3.54999995,
+        3.69000006,
+        3.58999991,
+        3.47000003,
+        3.5,
+        3.57999992,
+        3.58999991,
+        3.48000002,
+        3.56999993,
+        3.66000009,
+        3.75999999,
+        3.5999999,
+        3.6400001,
+        3.61999989,
+        3.54999995,
+        3.55999994,
+        3.43000007,
+        3.48000002
+      ],
+      "trend": "blue",
+      "turnover": 12527177,
+      "detail": {
+        "swing_low": 3.31999993,
+        "swing_low_pct": -4.6,
+        "swing_high": 3.61999989,
+        "swing_high_pct": 4.0,
+        "ema55": 3.41863958,
+        "ema55_pct": -1.8,
+        "ema89": 3.29203226,
+        "ema89_pct": -5.4,
+        "trailing_stop": 3.2965635,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -5.3,
+        "volume_ratio": 2.2,
+        "volume_today": 6988120,
+        "volume_avg": 3207647,
+        "volume_expanding": true,
+        "ema_spread_pct": 10.9,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 3.53948982,
+            "pct": -1.7
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 3.55131201,
+            "pct": -2.0
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 3.54402495,
+            "pct": -1.8
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            3.76999998,
+            3.86999989,
+            3.79999995
+          ],
+          "swing_lows": [
+            3.3900001,
+            3.41000009,
+            3.31999993
+          ]
+        },
+        "risk_pct": 6.2
+      },
+      "analysis": "Strong confluence zone at A$3.5019 where 4 levels cluster. Trade setup: entry A$3.5056, stop A$3.2868, target A$3.6200. Risk/reward is 0.52:1. Weekly EMAs are bullish.",
+      "sector_count": 3
     },
     {
       "symbol": "BLG",
@@ -16333,6 +16960,129 @@
       "sector_count": 5
     },
     {
+      "symbol": "RDX",
+      "name": "Redox Limited",
+      "sector": "Capital Goods",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 6,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.4:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 3.96000004,
+      "y_close": 3.91000009,
+      "open": 3.94000006,
+      "open_pct": 0.77,
+      "current_pct": 0.51,
+      "day_pct": 1.28,
+      "entry": 3.53279888,
+      "stop": 2.88090008,
+      "target": 3.79999995,
+      "rr": 0.41,
+      "trail": 3.48888157,
+      "stop_pct": 18.5,
+      "p2_pct": 7.6,
+      "target_basis": "resistance",
+      "spark": [
+        3.25999999,
+        3.31999993,
+        3.27999997,
+        3.28999996,
+        3.23000002,
+        3.02999997,
+        3.01999998,
+        2.94000006,
+        2.83999991,
+        2.95000005,
+        2.97000003,
+        3.02999997,
+        3.01999998,
+        3.03999996,
+        2.98000002,
+        3.25,
+        3.31999993,
+        3.32999992,
+        3.32999992,
+        3.4000001,
+        3.5,
+        3.67000008,
+        3.72000003,
+        3.68000007,
+        3.70000005,
+        3.63000011,
+        3.69000006,
+        3.74000001,
+        3.91000009,
+        3.96000004
+      ],
+      "trend": "blue",
+      "turnover": 2007655,
+      "detail": {
+        "swing_low": 2.91000009,
+        "swing_low_pct": -26.5,
+        "swing_high": 3.79999995,
+        "swing_high_pct": -4.0,
+        "ema55": 3.34819682,
+        "ema55_pct": -15.4,
+        "ema89": 3.25228726,
+        "ema89_pct": -17.9,
+        "trailing_stop": 3.48888157,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -11.9,
+        "volume_ratio": 1.5,
+        "volume_today": 963586,
+        "volume_avg": 646850,
+        "volume_expanding": true,
+        "ema_spread_pct": 16.0,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 3.75040678,
+            "pct": 5.6
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 3.64606406,
+            "pct": 8.6
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 3.53279888,
+            "pct": 12.1
+          }
+        ],
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            3.4000001,
+            3.36999989,
+            3.79999995
+          ],
+          "swing_lows": [
+            2.71000004,
+            2.91000009,
+            3.58999991
+          ]
+        },
+        "risk_pct": 18.5
+      },
+      "analysis": "RDX has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$3.5328, stop A$2.8809, target A$3.8000. Risk/reward is 0.41:1. Weekly EMAs are bullish.",
+      "sector_count": 20
+    },
+    {
       "symbol": "ACQ",
       "name": "Acorn Capital Investment Fund Limited",
       "sector": "Not Applic",
@@ -16452,7 +17202,7 @@
         "risk_pct": 4.2
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Strong confluence zone at A$0.9158 where 7 levels cluster. Trade setup: entry A$0.9195, stop A$0.8811, target A$0.9345. Risk/reward is 0.39:1.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "MMA",
@@ -16698,7 +17448,7 @@
         "risk_pct": 3.3
       },
       "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Strong confluence zone at A$4.2300 where 5 levels cluster. Trade setup: entry A$4.2175, stop A$4.0788, target A$4.2700. Risk/reward is 0.38:1. Weekly EMAs are bullish.",
-      "sector_count": 5
+      "sector_count": 6
     },
     {
       "symbol": "A11",
@@ -17193,6 +17943,129 @@
       "sector_count": 5
     },
     {
+      "symbol": "PE1",
+      "name": "Pengana Private Equity Trust",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 6,
+      "score_max": 15,
+      "chips": [
+        "STRONG FIB CONFLUENCE @ 1.68815615",
+        "WEEKLY BULLISH",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.2:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 1.67999995,
+      "y_close": 1.64999998,
+      "open": 1.71000004,
+      "open_pct": 3.64,
+      "current_pct": -1.75,
+      "day_pct": 1.82,
+      "entry": 1.7047613,
+      "stop": 1.56420004,
+      "target": 1.74000001,
+      "rr": 0.25,
+      "trail": 1.89244733,
+      "stop_pct": 8.2,
+      "p2_pct": 2.1,
+      "target_basis": "resistance",
+      "spark": [
+        1.74000001,
+        1.72000003,
+        1.69000006,
+        1.71500003,
+        1.72000003,
+        1.75,
+        1.87,
+        1.86000001,
+        1.86000001,
+        1.86000001,
+        1.88,
+        1.91499996,
+        1.89999998,
+        1.89999998,
+        1.89999998,
+        1.87,
+        1.83000004,
+        1.80999994,
+        1.69500005,
+        1.69500005,
+        1.67999995,
+        1.72500002,
+        1.76999998,
+        1.77999997,
+        1.80499995,
+        1.61000001,
+        1.63,
+        1.64999998,
+        1.64999998,
+        1.67999995
+      ],
+      "trend": "blue",
+      "turnover": 1579336,
+      "detail": {
+        "swing_low": 1.58000004,
+        "swing_low_pct": -6.0,
+        "swing_high": 1.74000001,
+        "swing_high_pct": 3.6,
+        "ema55": 1.7047613,
+        "ema55_pct": 1.5,
+        "ema89": 1.65187229,
+        "ema89_pct": -1.7,
+        "trailing_stop": 1.89244733,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": 12.6,
+        "volume_ratio": 1.3,
+        "volume_today": 1128808,
+        "volume_avg": 890601,
+        "volume_expanding": false,
+        "ema_spread_pct": 9.3,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.68637264,
+            "pct": -0.4
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.70961835,
+            "pct": -1.7
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.72928897,
+            "pct": -2.9
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            1.99000001,
+            1.95000005,
+            1.89999998
+          ],
+          "swing_lows": [
+            1.69000006,
+            1.65999997,
+            1.58000004
+          ]
+        },
+        "risk_pct": 8.2
+      },
+      "analysis": "Strong confluence zone at A$1.6882 where 4 levels cluster. Trade setup: entry A$1.7048, stop A$1.5642, target A$1.7400. Risk/reward is 0.25:1. Weekly EMAs are bullish.",
+      "sector_count": 23
+    },
+    {
       "symbol": "ODY",
       "name": "Odyssey Gold Ltd",
       "sector": "Materials",
@@ -17681,7 +18554,131 @@
         "risk_pct": 10.5
       },
       "analysis": "EZL has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$1.2171, stop A$1.0890, target A$1.2400. Risk/reward is 0.18:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
+    },
+    {
+      "symbol": "RHC",
+      "name": "Ramsay Health Care Limited",
+      "sector": "Health Care Equipment & Services",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 6,
+      "score_max": 15,
+      "chips": [
+        "EMA COMPRESSION",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.2:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 39.49000168,
+      "y_close": 39.29999924,
+      "open": 39.5,
+      "open_pct": 0.51,
+      "current_pct": -0.03,
+      "day_pct": 0.48,
+      "entry": 38.23974273,
+      "stop": 35.12519955,
+      "target": 38.77999878,
+      "rr": 0.17,
+      "trail": 36.91504991,
+      "stop_pct": 8.1,
+      "p2_pct": 1.4,
+      "target_basis": "resistance",
+      "spark": [
+        36.83000183,
+        36.74000168,
+        36.83000183,
+        36.66999817,
+        36.29999924,
+        37.56000137,
+        37.11000061,
+        38.15000153,
+        38.29000092,
+        37.70999908,
+        38.06000137,
+        37.93000031,
+        37.36000061,
+        37.49000168,
+        37.0,
+        37.09000015,
+        36.54000092,
+        36.24000168,
+        36.40000153,
+        36.06999969,
+        36.61999893,
+        37.63999939,
+        38.43000031,
+        38.11999893,
+        38.81999969,
+        39.04000092,
+        38.83000183,
+        38.63000107,
+        39.29999924,
+        39.49000168
+      ],
+      "trend": "blue",
+      "turnover": 25178773,
+      "detail": {
+        "swing_low": 35.47999954,
+        "swing_low_pct": -10.2,
+        "swing_high": 38.77999878,
+        "swing_high_pct": -1.8,
+        "ema55": 38.23974273,
+        "ema55_pct": -3.2,
+        "ema89": 38.09390747,
+        "ema89_pct": -3.5,
+        "trailing_stop": 36.91504991,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -6.5,
+        "volume_ratio": 2.1,
+        "volume_today": 1504604,
+        "volume_avg": 712996,
+        "volume_expanding": true,
+        "ema_spread_pct": 2.9,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 38.73701378,
+            "pct": 1.9
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 38.3865957,
+            "pct": 2.9
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 38.14870852,
+            "pct": 3.5
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            40.99000168,
+            42.74000168,
+            38.77999878
+          ],
+          "swing_lows": [
+            36.68999863,
+            35.81999969,
+            35.47999954
+          ]
+        },
+        "risk_pct": 8.1
+      },
+      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$38.2397, stop A$35.1252, target A$38.7800. Risk/reward is 0.17:1. Weekly EMAs are bullish.",
+      "sector_count": 10
     },
     {
       "symbol": "CSC",
@@ -18050,7 +19047,7 @@
         "risk_pct": 11.8
       },
       "analysis": "CGS has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$2.6492, stop A$2.3364, target A$2.6900. Risk/reward is 0.13:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "FMR",
@@ -18297,129 +19294,6 @@
       },
       "analysis": "COL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$22.7250, stop A$20.8791, target A$22.8900. Risk/reward is 0.09:1. Weekly EMAs are bullish.",
       "sector_count": 3
-    },
-    {
-      "symbol": "VTM",
-      "name": "Victory Metals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 6,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "WEEKLY BULLISH",
-        "VOLUME EXPANSION",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.64999998,
-      "y_close": 1.53999996,
-      "open": 1.54999995,
-      "open_pct": 0.65,
-      "current_pct": 6.45,
-      "day_pct": 7.14,
-      "entry": 1.50587453,
-      "stop": 1.24739999,
-      "target": 1.52999997,
-      "rr": 0.09,
-      "trail": 1.29684574,
-      "stop_pct": 17.2,
-      "p2_pct": 1.6,
-      "target_basis": "resistance",
-      "spark": [
-        1.64999998,
-        1.53999996,
-        1.51999998,
-        1.53499997,
-        1.46000004,
-        1.47500002,
-        1.37,
-        1.30999994,
-        1.21500003,
-        1.24000001,
-        1.28999996,
-        1.41999996,
-        1.44500005,
-        1.38499999,
-        1.39499998,
-        1.42999995,
-        1.39499998,
-        1.36000001,
-        1.41999996,
-        1.55999994,
-        1.51999998,
-        1.50999999,
-        1.42999995,
-        1.48500001,
-        1.51999998,
-        1.54999995,
-        1.51999998,
-        1.56500006,
-        1.53999996,
-        1.64999998
-      ],
-      "trend": "blue",
-      "turnover": 277223,
-      "detail": {
-        "swing_low": 1.25999999,
-        "swing_low_pct": -23.6,
-        "swing_high": 1.52999997,
-        "swing_high_pct": -7.3,
-        "ema55": 1.49842052,
-        "ema55_pct": -9.2,
-        "ema89": 1.46803874,
-        "ema89_pct": -11.0,
-        "trailing_stop": 1.29684574,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -21.4,
-        "volume_ratio": 3.1,
-        "volume_today": 523821,
-        "volume_avg": 166467,
-        "volume_expanding": true,
-        "ema_spread_pct": 8.4,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 1.54822391,
-            "pct": 6.6
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 1.52186827,
-            "pct": 8.4
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 1.50587453,
-            "pct": 9.6
-          }
-        ],
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            1.47500002,
-            1.57000005,
-            1.57000005
-          ],
-          "swing_lows": [
-            1.20500004,
-            1.34500003,
-            1.39999998
-          ]
-        },
-        "risk_pct": 17.2
-      },
-      "analysis": "VTM has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$1.5059, stop A$1.2474, target A$1.5300. Risk/reward is 0.09:1. Weekly EMAs are bullish.",
-      "sector_count": 78
     },
     {
       "symbol": "WOW",
@@ -19036,6 +19910,129 @@
       "sector_count": 78
     },
     {
+      "symbol": "SFR",
+      "name": "Sandfire Resources Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 6,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.0:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 20.71999931,
+      "y_close": 21.25,
+      "open": 20.84000015,
+      "open_pct": -1.93,
+      "current_pct": -0.58,
+      "day_pct": -2.49,
+      "entry": 19.73464846,
+      "stop": 17.08740023,
+      "target": 19.85000038,
+      "rr": 0.04,
+      "trail": 18.62597313,
+      "stop_pct": 13.4,
+      "p2_pct": 0.6,
+      "target_basis": "resistance",
+      "spark": [
+        18.01000023,
+        18.53000069,
+        19.10000038,
+        19.95999908,
+        19.75,
+        18.93000031,
+        18.13999939,
+        18.07999992,
+        17.57999992,
+        18.01000023,
+        18.63999939,
+        19.04000092,
+        19.46999931,
+        19.77000046,
+        18.97999954,
+        19.62999916,
+        19.52000046,
+        20.0,
+        20.27000046,
+        19.51000023,
+        19.28000069,
+        18.67000008,
+        18.29999924,
+        18.35000038,
+        19.82999992,
+        20.87000084,
+        20.87999916,
+        21.5,
+        21.25,
+        20.71999931
+      ],
+      "trend": "blue",
+      "turnover": 33012245,
+      "detail": {
+        "swing_low": 17.26000023,
+        "swing_low_pct": -16.7,
+        "swing_high": 19.85000038,
+        "swing_high_pct": -4.2,
+        "ema55": 18.81522397,
+        "ema55_pct": -9.2,
+        "ema89": 18.36211416,
+        "ema89_pct": -11.4,
+        "trailing_stop": 18.62597313,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -10.1,
+        "volume_ratio": 1.5,
+        "volume_today": 2480282,
+        "volume_avg": 1647774,
+        "volume_expanding": true,
+        "ema_spread_pct": 13.5,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 20.49137662,
+            "pct": 1.1
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 20.14170182,
+            "pct": 2.9
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 19.73464846,
+            "pct": 5.0
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            20.47999954,
+            19.95999908,
+            20.63999939
+          ],
+          "swing_lows": [
+            17.42000008,
+            18.59000015,
+            17.26000023
+          ]
+        },
+        "risk_pct": 13.4
+      },
+      "analysis": "SFR has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$19.7346, stop A$17.0874, target A$19.8500. Risk/reward is 0.04:1. Weekly EMAs are bullish.",
+      "sector_count": 78
+    },
+    {
       "symbol": "KGN",
       "name": "Kogan.Com Ltd",
       "sector": "Consumer Discretionary Distribution & Retail",
@@ -19156,7 +20153,7 @@
         "risk_pct": 17.3
       },
       "analysis": "KGN has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$4.1036, stop A$3.3957, target A$4.1260. Risk/reward is 0.03:1. Weekly EMAs are bullish.",
-      "sector_count": 1
+      "sector_count": 2
     },
     {
       "symbol": "BOL",
@@ -19278,7 +20275,7 @@
         "risk_pct": 14.5
       },
       "analysis": "BOL has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$2.0194, stop A$1.7275, target A$2.6032. Risk/reward is 2.00:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "DSM",
@@ -19522,7 +20519,7 @@
         "risk_pct": 7.8
       },
       "analysis": "SSM has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$2.4164, stop A$2.2275, target A$2.7943. Risk/reward is 2.00:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "TEA",
@@ -19644,7 +20641,7 @@
         "risk_pct": 25.5
       },
       "analysis": "TEA has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$7.8395, stop A$5.8380, target A$11.8423. Risk/reward is 2.00:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "IFT",
@@ -19766,7 +20763,7 @@
         "risk_pct": 3.3
       },
       "analysis": "Strong confluence zone at A$12.3811 where 3 levels cluster. Trade setup: entry A$12.3544, stop A$11.9493, target A$12.9310. Risk/reward is 1.42:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "IPH",
@@ -19888,7 +20885,7 @@
         "risk_pct": 8.2
       },
       "analysis": "IPH has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$4.0183, stop A$3.6877, target A$4.3400. Risk/reward is 0.97:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "DXN",
@@ -20498,7 +21495,7 @@
         "risk_pct": 18.6
       },
       "analysis": "EVZ has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.6504, stop A$0.5297, target A$0.7500. Risk/reward is 0.82:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "14D",
@@ -20620,130 +21617,7 @@
         "risk_pct": 35.1
       },
       "analysis": "14D has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.0977, stop A$0.0634, target A$0.1250. Risk/reward is 0.80:1. Weekly EMAs are bullish.",
-      "sector_count": 19
-    },
-    {
-      "symbol": "TLX",
-      "name": "Telix Pharmaceuticals Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 5,
-      "score_max": 15,
-      "chips": [
-        "EMA COMPRESSION",
-        "WEEKLY BULLISH",
-        "VOLUME EXPANSION",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.8:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 14.5,
-      "y_close": 14.31999969,
-      "open": 14.64999962,
-      "open_pct": 2.3,
-      "current_pct": -1.02,
-      "day_pct": 1.26,
-      "entry": 13.76520546,
-      "stop": 12.04830008,
-      "target": 15.09000015,
-      "rr": 0.77,
-      "trail": 12.57566139,
-      "stop_pct": 12.5,
-      "p2_pct": 9.6,
-      "target_basis": "resistance",
-      "spark": [
-        14.75,
-        14.94999981,
-        14.43000031,
-        14.52000046,
-        14.85000038,
-        14.72000027,
-        14.26000023,
-        14.21000004,
-        14.0,
-        14.14000034,
-        13.31999969,
-        13.43000031,
-        13.22999954,
-        13.57999992,
-        13.02999973,
-        13.02999973,
-        13.02000046,
-        12.63000011,
-        12.19999981,
-        12.89000034,
-        13.31000042,
-        13.39000034,
-        13.52999973,
-        13.47000027,
-        13.60000038,
-        13.78999996,
-        13.85000038,
-        14.14999962,
-        14.31999969,
-        14.5
-      ],
-      "trend": "blue",
-      "turnover": 33448465,
-      "detail": {
-        "swing_low": 12.17000008,
-        "swing_low_pct": -16.1,
-        "swing_high": 15.09000015,
-        "swing_high_pct": 4.1,
-        "ema55": 13.62916475,
-        "ema55_pct": -6.0,
-        "ema89": 13.47340377,
-        "ema89_pct": -7.1,
-        "trailing_stop": 12.57566139,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -13.3,
-        "volume_ratio": 1.6,
-        "volume_today": 3759644,
-        "volume_avg": 2409339,
-        "volume_expanding": true,
-        "ema_spread_pct": 3.4,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 13.96636044,
-            "pct": 3.8
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 13.80689182,
-            "pct": 5.0
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 13.76520546,
-            "pct": 5.3
-          }
-        ],
-        "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
-          "swing_highs": [
-            15.97999954,
-            15.76000023,
-            15.09000015
-          ],
-          "swing_lows": [
-            13.93999958,
-            12.56999969,
-            12.17000008
-          ]
-        },
-        "risk_pct": 12.5
-      },
-      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$13.7652, stop A$12.0483, target A$15.0900. Risk/reward is 0.77:1. Weekly EMAs are bullish.",
-      "sector_count": 6
+      "sector_count": 20
     },
     {
       "symbol": "MMS",
@@ -20865,7 +21739,7 @@
         "risk_pct": 5.6
       },
       "analysis": "MMS has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$18.9485, stop A$17.8794, target A$19.7150. Risk/reward is 0.72:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "CUF",
@@ -21112,128 +21986,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "SRL",
-      "name": "Sunrise Energy Metals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 5,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "WEEKLY BULLISH",
-        "VOLUME EXPANSION"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.5:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 17.79999924,
-      "y_close": 17.97999954,
-      "open": 17.95000076,
-      "open_pct": -0.17,
-      "current_pct": -0.84,
-      "day_pct": -1.0,
-      "entry": 15.12944166,
-      "stop": 12.00870011,
-      "target": 16.67000008,
-      "rr": 0.49,
-      "trail": 14.57527,
-      "stop_pct": 20.6,
-      "p2_pct": 10.2,
-      "target_basis": "resistance",
-      "spark": [
-        12.76000023,
-        12.48999977,
-        13.38000011,
-        13.78999996,
-        13.51000023,
-        13.09000015,
-        13.06000042,
-        12.18999958,
-        12.43999958,
-        12.73999977,
-        14.65999985,
-        15.09000015,
-        15.72000027,
-        15.28999996,
-        15.85000038,
-        15.89999962,
-        15.02000046,
-        15.0,
-        15.0,
-        14.0,
-        13.72000027,
-        12.85000038,
-        13.65999985,
-        13.56000042,
-        13.86999989,
-        14.77999973,
-        16.87000084,
-        17.81999969,
-        17.97999954,
-        17.79999924
-      ],
-      "trend": "blue",
-      "turnover": 11823035,
-      "detail": {
-        "swing_low": 12.13000011,
-        "swing_low_pct": -31.9,
-        "swing_high": 16.67000008,
-        "swing_high_pct": -6.3,
-        "ema55": 13.3423242,
-        "ema55_pct": -25.0,
-        "ema89": 12.06182153,
-        "ema89_pct": -32.2,
-        "trailing_stop": 14.57527,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -18.1,
-        "volume_ratio": 1.7,
-        "volume_today": 1177730,
-        "volume_avg": 713356,
-        "volume_expanding": true,
-        "ema_spread_pct": 33.4,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 16.38765537,
-            "pct": 8.6
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 15.75752897,
-            "pct": 13.0
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 15.12944166,
-            "pct": 17.7
-          }
-        ],
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            13.48999977,
-            14.38000011,
-            16.67000008
-          ],
-          "swing_lows": [
-            12.05000019,
-            11.94999981,
-            12.13000011
-          ]
-        },
-        "risk_pct": 20.6
-      },
-      "analysis": "SRL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$15.1294, stop A$12.0087, target A$16.6700. Risk/reward is 0.49:1. Weekly EMAs are bullish.",
-      "sector_count": 78
-    },
-    {
       "symbol": "MFG",
       "name": "Magellan Financial Group Limited",
       "sector": "Financial Services",
@@ -21354,12 +22106,134 @@
         "risk_pct": 10.5
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$9.2067, stop A$8.2368, target A$9.6750. Risk/reward is 0.48:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
-      "symbol": "SRG",
-      "name": "Srg Global Limited",
-      "sector": "Capital Goods",
+      "symbol": "TBN",
+      "name": "Tamboran Resources Corporation",
+      "sector": "Energy",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 5,
+      "score_max": 15,
+      "chips": [
+        "STRONG FIB CONFLUENCE @ 0.24269564",
+        "WEEKLY BULLISH",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.5:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 0.23999999,
+      "y_close": 0.255,
+      "open": 0.255,
+      "open_pct": 0.0,
+      "current_pct": -5.88,
+      "day_pct": -5.88,
+      "entry": 0.24317006,
+      "stop": 0.22274999,
+      "target": 0.2525,
+      "rr": 0.46,
+      "trail": 0.2648482,
+      "stop_pct": 8.4,
+      "p2_pct": 3.8,
+      "target_basis": "resistance",
+      "spark": [
+        0.25,
+        0.245,
+        0.25,
+        0.25,
+        0.255,
+        0.25,
+        0.245,
+        0.23999999,
+        0.255,
+        0.25,
+        0.25,
+        0.245,
+        0.245,
+        0.23999999,
+        0.23,
+        0.23999999,
+        0.235,
+        0.23,
+        0.23,
+        0.245,
+        0.245,
+        0.235,
+        0.235,
+        0.245,
+        0.235,
+        0.255,
+        0.25,
+        0.245,
+        0.255,
+        0.23999999
+      ],
+      "trend": "blue",
+      "turnover": 1801480,
+      "detail": {
+        "swing_low": 0.22499999,
+        "swing_low_pct": -6.3,
+        "swing_high": 0.2525,
+        "swing_high_pct": 5.2,
+        "ema55": 0.24317006,
+        "ema55_pct": 1.3,
+        "ema89": 0.23787398,
+        "ema89_pct": -0.9,
+        "trailing_stop": 0.2648482,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": 10.4,
+        "volume_ratio": 0.6,
+        "volume_today": 4377329,
+        "volume_avg": 7229511,
+        "volume_expanding": false,
+        "ema_spread_pct": 6.9,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 0.24508815,
+            "pct": -2.1
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 0.24411634,
+            "pct": -1.7
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 0.24393559,
+            "pct": -1.6
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            0.26750001,
+            0.255,
+            0.27000001
+          ],
+          "swing_lows": [
+            0.23,
+            0.23,
+            0.22750001
+          ]
+        },
+        "risk_pct": 8.4
+      },
+      "analysis": "Strong confluence zone at A$0.2427 where 5 levels cluster. Trade setup: entry A$0.2432, stop A$0.2227, target A$0.2525. Risk/reward is 0.46:1. Weekly EMAs are bullish.",
+      "sector_count": 7
+    },
+    {
+      "symbol": "PKY",
+      "name": "Pathkey.Ai Ltd",
+      "sector": "Software & Services",
       "dir": "LONG",
       "grade": "B",
       "score": 5,
@@ -21373,110 +22247,110 @@
       "low_rr": true,
       "rr_text": "0.5:1",
       "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 3.97000003,
-      "y_close": 3.95000005,
-      "open": 4.0,
-      "open_pct": 1.27,
-      "current_pct": -0.75,
-      "day_pct": 0.51,
-      "entry": 3.633031,
-      "stop": 2.97989999,
-      "target": 3.94000006,
-      "rr": 0.47,
-      "trail": 3.61003897,
-      "stop_pct": 18.0,
-      "p2_pct": 8.4,
+      "liquidity": "OK",
+      "price": 0.06,
+      "y_close": 0.068,
+      "open": 0.067,
+      "open_pct": -1.47,
+      "current_pct": -10.45,
+      "day_pct": -11.76,
+      "entry": 0.04871399,
+      "stop": 0.03267,
+      "target": 0.056,
+      "rr": 0.45,
+      "trail": 0.04651351,
+      "stop_pct": 32.9,
+      "p2_pct": 15.0,
       "target_basis": "resistance",
       "spark": [
-        3.05999994,
-        3.06999993,
-        3.0999999,
-        3.1099999,
-        3.1099999,
-        3.1500001,
-        3.04999995,
-        3.04999995,
-        2.98000002,
-        3.02999997,
-        3.03999996,
-        3.05999994,
-        3.05999994,
-        3.0999999,
-        3.06999993,
-        3.1400001,
-        3.1400001,
-        3.66000009,
-        3.75,
-        3.80999994,
-        3.81999993,
-        3.93000007,
-        3.81999993,
-        3.71000004,
-        3.79999995,
-        3.88000011,
-        3.9000001,
-        4.01000023,
-        3.95000005,
-        3.97000003
+        0.053,
+        0.053,
+        0.046,
+        0.047,
+        0.041,
+        0.04,
+        0.043,
+        0.042,
+        0.041,
+        0.042,
+        0.039,
+        0.038,
+        0.0365,
+        0.036,
+        0.037,
+        0.041,
+        0.039,
+        0.039,
+        0.04,
+        0.041,
+        0.038,
+        0.038,
+        0.043,
+        0.043,
+        0.054,
+        0.058,
+        0.055,
+        0.06,
+        0.068,
+        0.06
       ],
       "trend": "blue",
-      "turnover": 8647174,
+      "turnover": 201872,
       "detail": {
-        "swing_low": 3.00999999,
-        "swing_low_pct": -24.2,
-        "swing_high": 3.94000006,
-        "swing_high_pct": -0.8,
-        "ema55": 3.27639481,
-        "ema55_pct": -17.5,
-        "ema89": 3.10776696,
-        "ema89_pct": -21.7,
-        "trailing_stop": 3.61003897,
+        "swing_low": 0.033,
+        "swing_low_pct": -45.0,
+        "swing_high": 0.056,
+        "swing_high_pct": -6.7,
+        "ema55": 0.04115047,
+        "ema55_pct": -31.4,
+        "ema89": 0.03655691,
+        "ema89_pct": -39.1,
+        "trailing_stop": 0.04651351,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -9.1,
-        "volume_ratio": 0.9,
-        "volume_today": 2152564,
-        "volume_avg": 2318022,
+        "trailing_pct": -22.5,
+        "volume_ratio": 1.1,
+        "volume_today": 3928101,
+        "volume_avg": 3712494,
         "volume_expanding": false,
-        "ema_spread_pct": 24.2,
+        "ema_spread_pct": 39.8,
         "ema_aligned": true,
         "fast_levels": [
           {
             "label": "Pullback",
             "ema": 8,
-            "value": 3.88058637,
-            "pct": 2.3
+            "value": 0.05602243,
+            "pct": 7.1
           },
           {
             "label": "Next level",
             "ema": 13,
-            "value": 3.77997069,
-            "pct": 5.0
+            "value": 0.05220497,
+            "pct": 14.9
           },
           {
             "label": "Support",
             "ema": 21,
-            "value": 3.633031,
-            "pct": 9.3
+            "value": 0.04871399,
+            "pct": 23.2
           }
         ],
         "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
+          "trend": "Mixed / consolidating",
           "swing_highs": [
-            3.00999999,
-            3.18000007,
-            3.94000006
+            0.056,
+            0.056,
+            0.046
           ],
           "swing_lows": [
-            2.79999995,
-            2.94499993,
-            3.67000008
+            0.033,
+            0.037,
+            0.037
           ]
         },
-        "risk_pct": 18.0
+        "risk_pct": 32.9
       },
-      "analysis": "SRG has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$3.6330, stop A$2.9799, target A$3.9400. Risk/reward is 0.47:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "analysis": "PKY has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$0.0487, stop A$0.0327, target A$0.0560. Risk/reward is 0.45:1. Weekly EMAs are bullish.",
+      "sector_count": 12
     },
     {
       "symbol": "BRG",
@@ -21724,6 +22598,128 @@
       "sector_count": 78
     },
     {
+      "symbol": "SND",
+      "name": "Saunders International Limited",
+      "sector": "Capital Goods",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 5,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "WEEKLY BULLISH",
+        "TRENDING MARKET (ADX)"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.4:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 1.10000002,
+      "y_close": 1.10000002,
+      "open": 1.10000002,
+      "open_pct": 0.0,
+      "current_pct": 0.0,
+      "day_pct": 0.0,
+      "entry": 1.00170319,
+      "stop": 0.85140001,
+      "target": 1.05999994,
+      "rr": 0.39,
+      "trail": 1.02977786,
+      "stop_pct": 15.0,
+      "p2_pct": 5.8,
+      "target_basis": "resistance",
+      "spark": [
+        0.85000002,
+        0.85000002,
+        0.85000002,
+        0.83999997,
+        0.83999997,
+        0.83999997,
+        0.86000001,
+        0.875,
+        0.85000002,
+        0.86500001,
+        0.86500001,
+        0.86000001,
+        0.87,
+        0.86500001,
+        0.86500001,
+        0.90499997,
+        0.88499999,
+        0.98000002,
+        0.95999998,
+        1.0,
+        1.04999995,
+        1.04999995,
+        1.04999995,
+        1.04999995,
+        1.03999996,
+        1.04999995,
+        1.05499995,
+        1.10000002,
+        1.10000002,
+        1.10000002
+      ],
+      "trend": "blue",
+      "turnover": 185464,
+      "detail": {
+        "swing_low": 0.86000001,
+        "swing_low_pct": -21.8,
+        "swing_high": 1.05999994,
+        "swing_high_pct": -3.6,
+        "ema55": 0.93232769,
+        "ema55_pct": -15.2,
+        "ema89": 0.90751416,
+        "ema89_pct": -17.5,
+        "trailing_stop": 1.02977786,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -6.4,
+        "volume_ratio": 0.0,
+        "volume_today": 8933,
+        "volume_avg": 194040,
+        "volume_expanding": false,
+        "ema_spread_pct": 16.7,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.066776,
+            "pct": 3.1
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.03850211,
+            "pct": 5.9
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.00170319,
+            "pct": 9.8
+          }
+        ],
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            0.92500001,
+            0.91000003,
+            1.05999994
+          ],
+          "swing_lows": [
+            0.83999997,
+            0.85000002,
+            1.01999998
+          ]
+        },
+        "risk_pct": 15.0
+      },
+      "analysis": "SND has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$1.0017, stop A$0.8514, target A$1.0600. Risk/reward is 0.39:1. Weekly EMAs are bullish.",
+      "sector_count": 20
+    },
+    {
       "symbol": "CGF",
       "name": "Challenger Limited",
       "sector": "Financial Services",
@@ -21843,7 +22839,7 @@
         "risk_pct": 8.8
       },
       "analysis": "CGF has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$9.3507, stop A$8.5239, target A$9.6200. Risk/reward is 0.33:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "DVL",
@@ -21965,7 +22961,7 @@
         "risk_pct": 25.8
       },
       "analysis": "DVL has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$0.0387, stop A$0.0287, target A$0.0420. Risk/reward is 0.33:1. Weekly EMAs are bullish.",
-      "sector_count": 6
+      "sector_count": 4
     },
     {
       "symbol": "FTI",
@@ -22331,129 +23327,7 @@
         "risk_pct": 11.1
       },
       "analysis": "SYL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$2.6941, stop A$2.3958, target A$2.7800. Risk/reward is 0.29:1. Weekly EMAs are bullish.",
-      "sector_count": 19
-    },
-    {
-      "symbol": "WEC",
-      "name": "White Energy Company Limited",
-      "sector": "Energy",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 5,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "WEEKLY BULLISH",
-        "TRENDING MARKET (ADX)"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.3:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.19499999,
-      "y_close": 0.19,
-      "open": 0.185,
-      "open_pct": -2.63,
-      "current_pct": 5.41,
-      "day_pct": 2.63,
-      "entry": 0.16813046,
-      "stop": 0.05445,
-      "target": 0.2,
-      "rr": 0.28,
-      "trail": 0.14503022,
-      "stop_pct": 67.6,
-      "p2_pct": 19.0,
-      "target_basis": "resistance",
-      "spark": [
-        0.055,
-        0.055,
-        0.045,
-        0.041,
-        0.04,
-        0.044,
-        0.044,
-        0.044,
-        0.043,
-        0.043,
-        0.066,
-        0.13,
-        0.17,
-        0.155,
-        0.155,
-        0.19499999,
-        0.235,
-        0.2,
-        0.2,
-        0.19499999,
-        0.19499999,
-        0.19499999,
-        0.2,
-        0.2,
-        0.19,
-        0.19,
-        0.2,
-        0.185,
-        0.19,
-        0.19499999
-      ],
-      "trend": "blue",
-      "turnover": 133376,
-      "detail": {
-        "swing_low": 0.055,
-        "swing_low_pct": -71.8,
-        "swing_high": 0.2,
-        "swing_high_pct": 2.6,
-        "ema55": 0.11732036,
-        "ema55_pct": -39.8,
-        "ema89": 0.09408423,
-        "ema89_pct": -51.8,
-        "trailing_stop": 0.14503022,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -25.6,
-        "volume_ratio": 0.3,
-        "volume_today": 225437,
-        "volume_avg": 773448,
-        "volume_expanding": false,
-        "ema_spread_pct": 59.4,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.19166357,
-            "pct": 1.7
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.18488005,
-            "pct": 5.5
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.16813046,
-            "pct": 16.0
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.27000001,
-            0.285,
-            0.2
-          ],
-          "swing_lows": [
-            0.185,
-            0.185,
-            0.185
-          ]
-        },
-        "risk_pct": 67.6
-      },
-      "analysis": "WEC has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$0.1681, stop A$0.0544, target A$0.2000. Risk/reward is 0.28:1. Weekly EMAs are bullish.",
-      "sector_count": 7
+      "sector_count": 20
     },
     {
       "symbol": "LYL",
@@ -22575,7 +23449,7 @@
         "risk_pct": 22.3
       },
       "analysis": "LYL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$15.9165, stop A$12.3750, target A$16.8600. Risk/reward is 0.27:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "IPG",
@@ -22697,7 +23571,7 @@
         "risk_pct": 14.8
       },
       "analysis": "IPG has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$5.9976, stop A$5.1084, target A$6.2300. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "MQG",
@@ -22819,7 +23693,129 @@
         "risk_pct": 5.1
       },
       "analysis": "MQG has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$241.9336, stop A$229.5414, target A$245.1771. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
+    },
+    {
+      "symbol": "SDI",
+      "name": "Sdi Limited",
+      "sector": "Health Care Equipment & Services",
+      "dir": "LONG",
+      "grade": "B",
+      "score": 5,
+      "score_max": 15,
+      "chips": [
+        "FULL BULLISH ALIGNMENT",
+        "WEEKLY BULLISH",
+        "TRENDING MARKET (ADX)"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.3:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 1.39250004,
+      "y_close": 1.38999999,
+      "open": 1.38999999,
+      "open_pct": 0.0,
+      "current_pct": 0.18,
+      "day_pct": 0.18,
+      "entry": 1.35106074,
+      "stop": 1.31670004,
+      "target": 1.36000001,
+      "rr": 0.26,
+      "trail": 1.34835018,
+      "stop_pct": 2.5,
+      "p2_pct": 0.7,
+      "target_basis": "resistance",
+      "spark": [
+        1.22500002,
+        1.22500002,
+        1.23500001,
+        1.23000002,
+        1.22500002,
+        1.245,
+        1.25,
+        1.34000003,
+        1.34500003,
+        1.34500003,
+        1.35000002,
+        1.35500002,
+        1.36000001,
+        1.35000002,
+        1.34500003,
+        1.35500002,
+        1.35000002,
+        1.36000001,
+        1.36000001,
+        1.35000002,
+        1.36000001,
+        1.36000001,
+        1.35500002,
+        1.36000001,
+        1.35500002,
+        1.36000001,
+        1.36000001,
+        1.38999999,
+        1.38999999,
+        1.39250004
+      ],
+      "trend": "blue",
+      "turnover": 250363,
+      "detail": {
+        "swing_low": 1.33000004,
+        "swing_low_pct": -4.5,
+        "swing_high": 1.36000001,
+        "swing_high_pct": -2.3,
+        "ema55": 1.28970694,
+        "ema55_pct": -7.4,
+        "ema89": 1.23329227,
+        "ema89_pct": -11.4,
+        "trailing_stop": 1.34835018,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -3.2,
+        "volume_ratio": 1.3,
+        "volume_today": 232822,
+        "volume_avg": 180624,
+        "volume_expanding": false,
+        "ema_spread_pct": 15.3,
+        "ema_aligned": true,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 1.37505112,
+            "pct": 1.3
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 1.3659913,
+            "pct": 1.9
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 1.35106074,
+            "pct": 3.1
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            1.38499999,
+            1.36500001,
+            1.36500001
+          ],
+          "swing_lows": [
+            1.35000002,
+            1.35000002,
+            1.35000002
+          ]
+        },
+        "risk_pct": 2.5
+      },
+      "analysis": "SDI has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$1.3511, stop A$1.3167, target A$1.3600. Risk/reward is 0.26:1. Weekly EMAs are bullish.",
+      "sector_count": 10
     },
     {
       "symbol": "HGO",
@@ -23064,7 +24060,7 @@
         "risk_pct": 6.6
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$1.2639, stop A$1.1806, target A$1.2850. Risk/reward is 0.25:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "BXN",
@@ -23431,7 +24427,7 @@
         "risk_pct": 11.9
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$1.1009, stop A$0.9702, target A$1.1305. Risk/reward is 0.23:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "ACF",
@@ -23554,7 +24550,7 @@
         "risk_pct": 13.0
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.8991, stop A$0.7821, target A$0.9249. Risk/reward is 0.22:1.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "AVE",
@@ -23676,7 +24672,7 @@
         "risk_pct": 13.7
       },
       "analysis": "AVE has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$0.0126, stop A$0.0109, target A$0.0130. Risk/reward is 0.22:1. Weekly EMAs are bullish.",
-      "sector_count": 6
+      "sector_count": 4
     },
     {
       "symbol": "GLN",
@@ -23920,129 +24916,7 @@
         "risk_pct": 8.9
       },
       "analysis": "MGH has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$5.1826, stop A$4.7223, target A$5.2700. Risk/reward is 0.19:1. Weekly EMAs are bullish.",
-      "sector_count": 19
-    },
-    {
-      "symbol": "VMC",
-      "name": "Venus Metals Corporation Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 5,
-      "score_max": 15,
-      "chips": [
-        "FULL BULLISH ALIGNMENT",
-        "WEEKLY BULLISH",
-        "TRENDING MARKET (ADX)"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.2:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.28999999,
-      "y_close": 0.28999999,
-      "open": 0.29499999,
-      "open_pct": 1.72,
-      "current_pct": -1.69,
-      "day_pct": 0.0,
-      "entry": 0.2667696,
-      "stop": 0.198,
-      "target": 0.28,
-      "rr": 0.19,
-      "trail": 0.26304616,
-      "stop_pct": 25.8,
-      "p2_pct": 5.0,
-      "target_basis": "resistance",
-      "spark": [
-        0.23,
-        0.23,
-        0.23,
-        0.23,
-        0.235,
-        0.23,
-        0.215,
-        0.20999999,
-        0.2,
-        0.205,
-        0.20999999,
-        0.20999999,
-        0.205,
-        0.205,
-        0.2,
-        0.215,
-        0.29499999,
-        0.285,
-        0.28,
-        0.28,
-        0.28,
-        0.27500001,
-        0.28,
-        0.27500001,
-        0.28,
-        0.28,
-        0.285,
-        0.29499999,
-        0.28999999,
-        0.28999999
-      ],
-      "trend": "blue",
-      "turnover": 293707,
-      "detail": {
-        "swing_low": 0.2,
-        "swing_low_pct": -31.0,
-        "swing_high": 0.28,
-        "swing_high_pct": -3.4,
-        "ema55": 0.2475763,
-        "ema55_pct": -14.6,
-        "ema89": 0.23684457,
-        "ema89_pct": -18.3,
-        "trailing_stop": 0.26304616,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -9.3,
-        "volume_ratio": 0.8,
-        "volume_today": 829392,
-        "volume_avg": 998833,
-        "volume_expanding": false,
-        "ema_spread_pct": 21.9,
-        "ema_aligned": true,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.28418601,
-            "pct": 2.0
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.2768251,
-            "pct": 4.8
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.2667696,
-            "pct": 8.7
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.215,
-            0.31,
-            0.28999999
-          ],
-          "swing_lows": [
-            0.27500001,
-            0.27500001,
-            0.27500001
-          ]
-        },
-        "risk_pct": 25.8
-      },
-      "analysis": "VMC has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$0.2668, stop A$0.1980, target A$0.2800. Risk/reward is 0.19:1. Weekly EMAs are bullish.",
-      "sector_count": 78
+      "sector_count": 20
     },
     {
       "symbol": "EVT",
@@ -24287,129 +25161,7 @@
         "risk_pct": 10.3
       },
       "analysis": "CVL has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$1.8161, stop A$1.6285, target A$1.8450. Risk/reward is 0.15:1. Weekly EMAs are bullish.",
-      "sector_count": 19
-    },
-    {
-      "symbol": "TAS",
-      "name": "Tasman Resources Ltd",
-      "sector": "Materials",
-      "dir": "LONG",
-      "grade": "B",
-      "score": 5,
-      "score_max": 15,
-      "chips": [
-        "CORE FIB PULLBACK EMA_34",
-        "WEEKLY BULLISH",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.058,
-      "y_close": 0.057,
-      "open": 0.06,
-      "open_pct": 5.26,
-      "current_pct": -3.33,
-      "day_pct": 1.75,
-      "entry": 0.05742578,
-      "stop": 0.04059,
-      "target": 0.06,
-      "rr": 0.15,
-      "trail": 0.0745012,
-      "stop_pct": 29.3,
-      "p2_pct": 4.5,
-      "target_basis": "resistance",
-      "spark": [
-        0.052,
-        0.054,
-        0.05,
-        0.052,
-        0.046,
-        0.047,
-        0.047,
-        0.047,
-        0.042,
-        0.044,
-        0.041,
-        0.061,
-        0.065,
-        0.06,
-        0.058,
-        0.071,
-        0.077,
-        0.077,
-        0.067,
-        0.068,
-        0.061,
-        0.06,
-        0.054,
-        0.06,
-        0.059,
-        0.06,
-        0.059,
-        0.06,
-        0.057,
-        0.058
-      ],
-      "trend": "blue",
-      "turnover": 118911,
-      "detail": {
-        "swing_low": 0.041,
-        "swing_low_pct": -29.3,
-        "swing_high": 0.06,
-        "swing_high_pct": 3.4,
-        "ema55": 0.05515404,
-        "ema55_pct": -4.9,
-        "ema89": 0.05160404,
-        "ema89_pct": -11.0,
-        "trailing_stop": 0.0745012,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 28.5,
-        "volume_ratio": 0.1,
-        "volume_today": 120435,
-        "volume_avg": 1935301,
-        "volume_expanding": false,
-        "ema_spread_pct": 23.0,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.05918948,
-            "pct": -2.0
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.05957622,
-            "pct": -2.6
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.05898426,
-            "pct": -1.7
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.077,
-            0.077,
-            0.063
-          ],
-          "swing_lows": [
-            0.041,
-            0.054,
-            0.054
-          ]
-        },
-        "risk_pct": 29.3
-      },
-      "analysis": "Price has pulled back and is testing the 34 EMA at A$0.0574. This is a core Fibonacci pullback to a key trend EMA. Trade setup: entry A$0.0574, stop A$0.0406, target A$0.0600. Risk/reward is 0.15:1. Weekly EMAs are bullish.",
-      "sector_count": 78
+      "sector_count": 20
     },
     {
       "symbol": "AXE",
@@ -24898,7 +25650,7 @@
         "risk_pct": 11.7
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$5.0092, stop A$4.4253, target A$5.0800. Risk/reward is 0.12:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "ATV",
@@ -25142,7 +25894,7 @@
         "risk_pct": 19.4
       },
       "analysis": "DUR has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$2.6724, stop A$2.1532, target A$2.7300. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "COD",
@@ -25387,7 +26139,7 @@
         "risk_pct": 6.6
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$2.2261, stop A$2.0790, target A$2.2400. Risk/reward is 0.09:1.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "GLS",
@@ -25509,7 +26261,7 @@
         "risk_pct": 10.0
       },
       "analysis": "GLS has all Fibonacci EMAs in full bullish alignment. Trade setup: entry A$1.8538, stop A$1.6681, target A$1.8705. Risk/reward is 0.09:1. Weekly EMAs are bullish.",
-      "sector_count": 21
+      "sector_count": 23
     },
     {
       "symbol": "BCM",
@@ -25997,7 +26749,7 @@
         "risk_pct": 35.9
       },
       "analysis": "KLV has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.0803, stop A$0.0515, target A$0.0810. Risk/reward is 0.02:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "EGH",
@@ -26240,7 +26992,7 @@
         "risk_pct": 9.3
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$2.9477, stop A$2.6730, target A$3.1100. Risk/reward is 0.59:1.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "AI1",
@@ -26608,7 +27360,7 @@
         "risk_pct": 8.3
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$3.5931, stop A$3.2967, target A$3.7194. Risk/reward is 0.43:1.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "AMC",
@@ -27095,7 +27847,7 @@
         "risk_pct": 9.0
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$28.3933, stop A$25.8291, target A$29.0000. Risk/reward is 0.24:1.",
-      "sector_count": 8
+      "sector_count": 10
     },
     {
       "symbol": "CAR",
@@ -27218,6 +27970,128 @@
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$26.4941, stop A$23.2848, target A$27.0100. Risk/reward is 0.16:1.",
       "sector_count": 3
+    },
+    {
+      "symbol": "SNL",
+      "name": "Supply Network Limited",
+      "sector": "Consumer Discretionary Distribution & Retail",
+      "dir": "LONG",
+      "grade": "C",
+      "score": 4,
+      "score_max": 15,
+      "chips": [
+        "EMA COMPRESSION",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 33.45999908,
+      "y_close": 34.0,
+      "open": 35.0,
+      "open_pct": 2.94,
+      "current_pct": -4.4,
+      "day_pct": -1.59,
+      "entry": 32.09988928,
+      "stop": 27.88830008,
+      "target": 32.72999954,
+      "rr": 0.15,
+      "trail": 30.65899105,
+      "stop_pct": 13.1,
+      "p2_pct": 2.0,
+      "target_basis": "resistance",
+      "spark": [
+        32.31999969,
+        32.40000153,
+        31.46999931,
+        31.10000038,
+        30.77000046,
+        30.89999962,
+        29.64999962,
+        28.79999924,
+        28.0,
+        28.42000008,
+        29.15999985,
+        29.18000031,
+        29.70000076,
+        30.40999985,
+        30.65999985,
+        31.0,
+        30.76000023,
+        31.07999992,
+        30.79000092,
+        30.97999954,
+        31.20999908,
+        30.64999962,
+        31.68000031,
+        32.52000046,
+        32.5,
+        33.38999939,
+        33.49000168,
+        34.41999817,
+        34.0,
+        33.45999908
+      ],
+      "trend": "blue",
+      "turnover": 2185497,
+      "detail": {
+        "swing_low": 28.17000008,
+        "swing_low_pct": -15.8,
+        "swing_high": 32.72999954,
+        "swing_high_pct": -2.2,
+        "ema55": 31.87971149,
+        "ema55_pct": -4.7,
+        "ema89": 32.18597066,
+        "ema89_pct": -3.8,
+        "trailing_stop": 30.65899105,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -8.4,
+        "volume_ratio": 1.3,
+        "volume_today": 93069,
+        "volume_avg": 70772,
+        "volume_expanding": false,
+        "ema_spread_pct": 3.9,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 33.14034503,
+            "pct": 1.0
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 32.59861309,
+            "pct": 2.6
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 32.09988928,
+            "pct": 4.2
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            33.40999985,
+            32.72999954,
+            31.87999916
+          ],
+          "swing_lows": [
+            30.31999969,
+            27.89999962,
+            29.62000084
+          ]
+        },
+        "risk_pct": 13.1
+      },
+      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$32.0999, stop A$27.8883, target A$32.7300. Risk/reward is 0.15:1.",
+      "sector_count": 2
     },
     {
       "symbol": "HCH",
@@ -27460,7 +28334,7 @@
         "risk_pct": 5.2
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.6163, stop A$0.5841, target A$0.6200. Risk/reward is 0.12:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "MYG",
@@ -27581,7 +28455,130 @@
         "risk_pct": 8.3
       },
       "analysis": "MYG has all Fibonacci EMAs in full bullish alignment. Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$3.0003, stop A$2.7522, target A$3.0289. Risk/reward is 0.12:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
+    },
+    {
+      "symbol": "PDI",
+      "name": "Predictive Discovery Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "grade": "C",
+      "score": 4,
+      "score_max": 15,
+      "chips": [
+        "WEEKLY BULLISH",
+        "VOLUME EXPANSION",
+        "TRENDING MARKET (ADX)",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": true,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 0.94499999,
+      "y_close": 0.95999998,
+      "open": 0.94,
+      "open_pct": -2.08,
+      "current_pct": 0.53,
+      "day_pct": -1.56,
+      "entry": 0.85018243,
+      "stop": 0.67815,
+      "target": 0.87,
+      "rr": 0.12,
+      "trail": 0.79353726,
+      "stop_pct": 20.2,
+      "p2_pct": 2.3,
+      "target_basis": "resistance",
+      "spark": [
+        0.94499999,
+        0.98000002,
+        1.01499999,
+        1.02999997,
+        1.005,
+        0.93000001,
+        0.90499997,
+        0.83499998,
+        0.75999999,
+        0.72500002,
+        0.72000003,
+        0.73000002,
+        0.74000001,
+        0.745,
+        0.70999998,
+        0.74000001,
+        0.75,
+        0.77999997,
+        0.76499999,
+        0.78500003,
+        0.77499998,
+        0.77999997,
+        0.75999999,
+        0.73500001,
+        0.78500003,
+        0.86500001,
+        0.935,
+        0.96499997,
+        0.95999998,
+        0.94499999
+      ],
+      "trend": "blue",
+      "turnover": 26664099,
+      "detail": {
+        "swing_low": 0.685,
+        "swing_low_pct": -27.5,
+        "swing_high": 0.87,
+        "swing_high_pct": -7.9,
+        "ema55": 0.85018243,
+        "ema55_pct": -10.0,
+        "ema89": 0.83832623,
+        "ema89_pct": -11.3,
+        "trailing_stop": 0.79353726,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -16.0,
+        "volume_ratio": 8.6,
+        "volume_today": 202777098,
+        "volume_avg": 23625627,
+        "volume_expanding": true,
+        "ema_spread_pct": 10.0,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 0.89198053,
+            "pct": 5.9
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 0.86272346,
+            "pct": 9.5
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 0.8476738,
+            "pct": 11.5
+          }
+        ],
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            1.02999997,
+            1.04499996,
+            0.80000001
+          ],
+          "swing_lows": [
+            0.685,
+            0.685,
+            0.70499998
+          ]
+        },
+        "risk_pct": 20.2
+      },
+      "analysis": "Trade setup: entry A$0.8502, stop A$0.6782, target A$0.8700. Risk/reward is 0.12:1. Weekly EMAs are bullish.",
+      "sector_count": 78
     },
     {
       "symbol": "A1M",
@@ -27946,7 +28943,129 @@
         "risk_pct": 8.3
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$3.8448, stop A$3.5244, target A$3.8700. Risk/reward is 0.08:1.",
-      "sector_count": 13
+      "sector_count": 15
+    },
+    {
+      "symbol": "PNI",
+      "name": "Pinnacle Investment Management Group Limited",
+      "sector": "Financial Services",
+      "dir": "LONG",
+      "grade": "C",
+      "score": 4,
+      "score_max": 15,
+      "chips": [
+        "EMA COMPRESSION",
+        "VOLUME EXPANSION",
+        "HEALTHY RSI PULLBACK"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "rr_text": "0.1:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 16.80999947,
+      "y_close": 17.12000084,
+      "open": 17.04999924,
+      "open_pct": -0.41,
+      "current_pct": -1.41,
+      "day_pct": -1.81,
+      "entry": 16.01783068,
+      "stop": 14.355,
+      "target": 16.14999962,
+      "rr": 0.08,
+      "trail": 15.34977523,
+      "stop_pct": 10.4,
+      "p2_pct": 0.8,
+      "target_basis": "resistance",
+      "spark": [
+        16.26000023,
+        16.32999992,
+        15.90999985,
+        15.52999973,
+        15.53999996,
+        15.56000042,
+        15.07999992,
+        15.5,
+        15.17000008,
+        15.56999969,
+        15.47999954,
+        15.07999992,
+        14.88000011,
+        15.03999996,
+        14.94999981,
+        15.39999962,
+        15.71000004,
+        15.60000038,
+        15.57999992,
+        14.96000004,
+        14.97999954,
+        15.27999973,
+        15.55000019,
+        15.46000004,
+        15.69999981,
+        16.59000015,
+        17.13999939,
+        17.36000061,
+        17.12000084,
+        16.80999947
+      ],
+      "trend": "blue",
+      "turnover": 16027820,
+      "detail": {
+        "swing_low": 14.5,
+        "swing_low_pct": -13.7,
+        "swing_high": 16.14999962,
+        "swing_high_pct": -3.9,
+        "ema55": 15.71027031,
+        "ema55_pct": -6.5,
+        "ema89": 15.79698489,
+        "ema89_pct": -6.0,
+        "trailing_stop": 15.34977523,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -8.7,
+        "volume_ratio": 3.0,
+        "volume_today": 2736709,
+        "volume_avg": 900343,
+        "volume_expanding": true,
+        "ema_spread_pct": 5.1,
+        "ema_aligned": false,
+        "fast_levels": [
+          {
+            "label": "Pullback",
+            "ema": 8,
+            "value": 16.56136678,
+            "pct": 1.5
+          },
+          {
+            "label": "Next level",
+            "ema": 13,
+            "value": 16.26843019,
+            "pct": 3.3
+          },
+          {
+            "label": "Support",
+            "ema": 21,
+            "value": 16.01783068,
+            "pct": 4.9
+          }
+        ],
+        "structure": {
+          "trend": "LH/LL \u2014 Downtrend",
+          "swing_highs": [
+            16.62000084,
+            15.85000038,
+            15.88000011
+          ],
+          "swing_lows": [
+            14.89000034,
+            14.5,
+            14.76000023
+          ]
+        },
+        "risk_pct": 10.4
+      },
+      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$16.0178, stop A$14.3550, target A$16.1500. Risk/reward is 0.08:1.",
+      "sector_count": 15
     },
     {
       "symbol": "PRN",
@@ -28192,125 +29311,125 @@
       "sector_count": 78
     },
     {
-      "symbol": "VAU",
-      "name": "Vault Minerals Limited",
+      "symbol": "RIO",
+      "name": "Rio Tinto Limited",
       "sector": "Materials",
       "dir": "LONG",
       "grade": "C",
-      "score": 4,
+      "score": 3,
       "score_max": 15,
       "chips": [
-        "EMA COMPRESSION",
+        "WEEKLY BULLISH",
         "VOLUME EXPANSION",
         "HEALTHY RSI PULLBACK"
       ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "0.0:1",
+      "weekly": true,
+      "low_rr": false,
+      "rr_text": "4.2:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 4.80000019,
-      "y_close": 5.05999994,
-      "open": 4.9000001,
-      "open_pct": -3.16,
-      "current_pct": -2.04,
-      "day_pct": -5.14,
-      "entry": 4.5326351,
-      "stop": 3.63330008,
-      "target": 4.57000017,
-      "rr": 0.04,
-      "trail": 4.27295424,
-      "stop_pct": 19.8,
-      "p2_pct": 0.8,
+      "price": 177.36999512,
+      "y_close": 183.08999634,
+      "open": 178.55000305,
+      "open_pct": -2.48,
+      "current_pct": -0.66,
+      "day_pct": -3.12,
+      "entry": 177.86396235,
+      "stop": 174.99239456,
+      "target": 189.99000549,
+      "rr": 4.22,
+      "trail": 192.88561163,
+      "stop_pct": 1.6,
+      "p2_pct": 6.8,
       "target_basis": "resistance",
       "spark": [
-        4.69999981,
-        4.61000013,
-        4.75,
-        4.82000017,
-        4.71000004,
-        4.63999987,
-        4.38000011,
-        4.48999977,
-        4.26999998,
-        4.3499999,
-        4.4000001,
-        4.51000023,
-        4.42999983,
-        4.36000013,
-        4.05000019,
-        4.19999981,
-        4.25,
-        4.38000011,
-        4.40999985,
-        4.23999977,
-        4.13999987,
-        4.01000023,
-        3.79999995,
-        3.83999991,
-        4.01000023,
-        4.5999999,
-        4.71000004,
-        4.98999977,
-        5.05999994,
-        4.80000019
+        178.72000122,
+        179.78999329,
+        185.41999817,
+        189.0,
+        191.97000122,
+        185.75,
+        179.00999451,
+        178.66000366,
+        176.07000732,
+        181.67999268,
+        184.80999756,
+        187.80999756,
+        188.30999756,
+        188.22000122,
+        183.46000671,
+        185.63000488,
+        188.50999451,
+        191.36999512,
+        194.47000122,
+        188.08000183,
+        184.58000183,
+        181.22999573,
+        179.44000244,
+        180.0,
+        184.32000732,
+        189.30999756,
+        188.72000122,
+        186.91000366,
+        183.08999634,
+        177.36999512
       ],
       "trend": "blue",
-      "turnover": 35672494,
+      "turnover": 275362022,
       "detail": {
-        "swing_low": 3.67000008,
-        "swing_low_pct": -23.5,
-        "swing_high": 4.57000017,
-        "swing_high_pct": -4.8,
-        "ema55": 4.5326351,
-        "ema55_pct": -5.6,
-        "ema89": 4.61446957,
-        "ema89_pct": -3.9,
-        "trailing_stop": 4.27295424,
+        "swing_low": 176.75999451,
+        "swing_low_pct": -0.3,
+        "swing_high": 189.99000549,
+        "swing_high_pct": 7.1,
+        "ema55": 177.86396235,
+        "ema55_pct": 0.3,
+        "ema89": 171.20104905,
+        "ema89_pct": -3.5,
+        "trailing_stop": 192.88561163,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -11.0,
-        "volume_ratio": 7.8,
-        "volume_today": 45012829,
-        "volume_avg": 5755010,
+        "trailing_pct": 8.7,
+        "volume_ratio": 3.4,
+        "volume_today": 4492791,
+        "volume_avg": 1326921,
         "volume_expanding": true,
-        "ema_spread_pct": 3.4,
+        "ema_spread_pct": 12.7,
         "ema_aligned": false,
         "fast_levels": [
           {
             "label": "Pullback",
             "ema": 8,
-            "value": 4.63155493,
-            "pct": 3.6
+            "value": 183.63184038,
+            "pct": -3.4
           },
           {
             "label": "Next level",
             "ema": 13,
-            "value": 4.52178151,
-            "pct": 6.2
+            "value": 184.17864223,
+            "pct": -3.7
           },
           {
             "label": "Support",
             "ema": 21,
-            "value": 4.46777093,
-            "pct": 7.4
+            "value": 183.85490398,
+            "pct": -3.5
           }
         ],
         "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
+          "trend": "HH/HL \u2014 Uptrend",
           "swing_highs": [
-            4.57000017,
-            4.57000017,
-            4.44000006
+            189.99000549,
+            195.83999634,
+            190.31500244
           ],
           "swing_lows": [
-            4.21999979,
-            4.0,
-            3.67000008
+            174.41000366,
+            182.21000671,
+            176.75999451
           ]
         },
-        "risk_pct": 19.8
+        "risk_pct": 1.6
       },
-      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$4.5326, stop A$3.6333, target A$4.5700. Risk/reward is 0.04:1.",
+      "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$177.8640, stop A$174.9924, target A$189.9900. Risk/reward is 4.22:1. Weekly EMAs are bullish.",
       "sector_count": 78
     },
     {
@@ -28798,129 +29917,129 @@
         "risk_pct": 12.2
       },
       "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$21.6180, stop A$18.9882, target A$22.2500. Risk/reward is 0.24:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
-      "symbol": "SDR",
-      "name": "Siteminder Limited",
-      "sector": "Software & Services",
+      "symbol": "PMT",
+      "name": "Pmet Resources Inc.",
+      "sector": "Materials",
       "dir": "LONG",
       "grade": "C",
       "score": 3,
       "score_max": 15,
       "chips": [
+        "WEEKLY BULLISH",
         "VOLUME EXPANSION",
-        "TRENDING MARKET (ADX)",
         "HEALTHY RSI PULLBACK"
       ],
-      "weekly": false,
+      "weekly": true,
       "low_rr": true,
       "rr_text": "0.2:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 4.05000019,
-      "y_close": 4.11999989,
-      "open": 4.21000004,
-      "open_pct": 2.18,
-      "current_pct": -3.8,
-      "day_pct": -1.7,
-      "entry": 3.65535992,
-      "stop": 2.69280003,
-      "target": 3.82999992,
-      "rr": 0.18,
-      "trail": 3.48983758,
-      "stop_pct": 26.3,
-      "p2_pct": 4.8,
+      "price": 0.62,
+      "y_close": 0.625,
+      "open": 0.62,
+      "open_pct": -0.8,
+      "current_pct": 0.0,
+      "day_pct": -0.8,
+      "entry": 0.63771164,
+      "stop": 0.51974998,
+      "target": 0.66000003,
+      "rr": 0.19,
+      "trail": 0.69479481,
+      "stop_pct": 18.5,
+      "p2_pct": 3.5,
       "target_basis": "resistance",
       "spark": [
-        3.11999989,
-        3.1500001,
-        2.96000004,
-        3.0,
-        2.94000006,
-        2.8900001,
-        2.83999991,
-        2.76999998,
-        2.66000009,
-        2.77999997,
-        2.77999997,
-        2.91000009,
-        2.8499999,
-        3.01999998,
-        3.27999997,
-        3.5,
-        3.88000011,
-        3.88000011,
-        3.75,
-        3.83999991,
-        3.8499999,
-        3.6400001,
-        3.57999992,
-        3.47000003,
-        3.74000001,
-        3.91000009,
-        3.8599999,
-        4.25,
-        4.11999989,
-        4.05000019
+        0.73500001,
+        0.755,
+        0.75999999,
+        0.79500002,
+        0.79000002,
+        0.70999998,
+        0.66000003,
+        0.67000002,
+        0.66000003,
+        0.66000003,
+        0.68000001,
+        0.68000001,
+        0.65499997,
+        0.66000003,
+        0.68000001,
+        0.72500002,
+        0.73500001,
+        0.72500002,
+        0.75,
+        0.75999999,
+        0.69499999,
+        0.63999999,
+        0.56,
+        0.57499999,
+        0.61000001,
+        0.66500002,
+        0.65499997,
+        0.66500002,
+        0.625,
+        0.62
       ],
       "trend": "blue",
-      "turnover": 10442221,
+      "turnover": 2910676,
       "detail": {
-        "swing_low": 2.72000003,
-        "swing_low_pct": -32.8,
-        "swing_high": 3.82999992,
-        "swing_high_pct": -5.4,
-        "ema55": 3.4677766,
-        "ema55_pct": -14.4,
-        "ema89": 3.65371724,
-        "ema89_pct": -9.8,
-        "trailing_stop": 3.48983758,
+        "swing_low": 0.52499998,
+        "swing_low_pct": -15.3,
+        "swing_high": 0.66000003,
+        "swing_high_pct": 6.5,
+        "ema55": 0.63771164,
+        "ema55_pct": 2.9,
+        "ema89": 0.61333589,
+        "ema89_pct": -1.1,
+        "trailing_stop": 0.69479481,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -13.8,
-        "volume_ratio": 3.7,
-        "volume_today": 8935297,
-        "volume_avg": 2424959,
+        "trailing_pct": 12.1,
+        "volume_ratio": 2.6,
+        "volume_today": 10244833,
+        "volume_avg": 3924219,
         "volume_expanding": true,
-        "ema_spread_pct": 13.8,
+        "ema_spread_pct": 12.7,
         "ema_aligned": false,
         "fast_levels": [
           {
             "label": "Pullback",
             "ema": 8,
-            "value": 3.93504676,
-            "pct": 2.9
+            "value": 0.63986286,
+            "pct": -3.1
           },
           {
             "label": "Next level",
             "ema": 13,
-            "value": 3.81223044,
-            "pct": 6.2
+            "value": 0.64918537,
+            "pct": -4.5
           },
           {
             "label": "Support",
             "ema": 21,
-            "value": 3.65535992,
-            "pct": 10.8
+            "value": 0.65677721,
+            "pct": -5.6
           }
         ],
         "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
+          "trend": "LH/LL \u2014 Downtrend",
           "swing_highs": [
-            3.1500001,
-            3.17000008,
-            4.03999996
+            0.81999999,
+            0.70499998,
+            0.77999997
           ],
           "swing_lows": [
-            2.88000011,
-            2.6500001,
-            3.41000009
+            0.64499998,
+            0.64499998,
+            0.52499998
           ]
         },
-        "risk_pct": 26.3
+        "risk_pct": 18.5
       },
-      "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$3.6554, stop A$2.6928, target A$3.8300. Risk/reward is 0.18:1.",
-      "sector_count": 12
+      "analysis": "Trade setup: entry A$0.6377, stop A$0.5197, target A$0.6600. Risk/reward is 0.19:1. Weekly EMAs are bullish.",
+      "sector_count": 78
     },
     {
       "symbol": "CXO",
@@ -29286,7 +30405,7 @@
         "risk_pct": 17.8
       },
       "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$9.7602, stop A$8.0190, target A$10.0000. Risk/reward is 0.14:1. Weekly EMAs are bullish.",
-      "sector_count": 19
+      "sector_count": 20
     },
     {
       "symbol": "4DX",
@@ -29408,129 +30527,7 @@
         "risk_pct": 20.5
       },
       "analysis": "Trade setup: entry A$4.0605, stop A$3.2274, target A$4.1700. Risk/reward is 0.13:1. Weekly EMAs are bullish.",
-      "sector_count": 8
-    },
-    {
-      "symbol": "SKK",
-      "name": "Stakk Limited",
-      "sector": "Telecommunication Services",
-      "dir": "LONG",
-      "grade": "C",
-      "score": 3,
-      "score_max": 15,
-      "chips": [
-        "WEEKLY BULLISH",
-        "TRENDING MARKET (ADX)",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": true,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.028,
-      "y_close": 0.029,
-      "open": 0.028,
-      "open_pct": -3.45,
-      "current_pct": 0.0,
-      "day_pct": -3.45,
-      "entry": 0.02595776,
-      "stop": 0.01782,
-      "target": 0.027,
-      "rr": 0.13,
-      "trail": 0.02312816,
-      "stop_pct": 31.4,
-      "p2_pct": 4.0,
-      "target_basis": "resistance",
-      "spark": [
-        0.021,
-        0.019,
-        0.02,
-        0.021,
-        0.022,
-        0.023,
-        0.021,
-        0.022,
-        0.02,
-        0.021,
-        0.019,
-        0.02,
-        0.019,
-        0.018,
-        0.02,
-        0.019,
-        0.026,
-        0.029,
-        0.027,
-        0.031,
-        0.03,
-        0.027,
-        0.029,
-        0.029,
-        0.028,
-        0.027,
-        0.026,
-        0.028,
-        0.029,
-        0.028
-      ],
-      "trend": "blue",
-      "turnover": 522924,
-      "detail": {
-        "swing_low": 0.018,
-        "swing_low_pct": -35.7,
-        "swing_high": 0.027,
-        "swing_high_pct": -3.6,
-        "ema55": 0.02375767,
-        "ema55_pct": -15.2,
-        "ema89": 0.0239053,
-        "ema89_pct": -14.6,
-        "trailing_stop": 0.02312816,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -17.4,
-        "volume_ratio": 0.3,
-        "volume_today": 6106319,
-        "volume_avg": 18794006,
-        "volume_expanding": false,
-        "ema_spread_pct": 14.3,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 0.02777018,
-            "pct": 0.8
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 0.02710532,
-            "pct": 3.3
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 0.02595776,
-            "pct": 7.9
-          }
-        ],
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            0.025,
-            0.034,
-            0.03
-          ],
-          "swing_lows": [
-            0.018,
-            0.026,
-            0.025
-          ]
-        },
-        "risk_pct": 31.4
-      },
-      "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$0.0260, stop A$0.0178, target A$0.0270. Risk/reward is 0.13:1. Weekly EMAs are bullish.",
-      "sector_count": 3
+      "sector_count": 10
     },
     {
       "symbol": "AGR",
@@ -29654,127 +30651,6 @@
       "sector_count": 78
     },
     {
-      "symbol": "SHV",
-      "name": "Select Harvests Limited",
-      "sector": "Food, Beverage & Tobacco",
-      "dir": "LONG",
-      "grade": "C",
-      "score": 3,
-      "score_max": 15,
-      "chips": [
-        "EMA COMPRESSION",
-        "HEALTHY RSI PULLBACK"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "0.1:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 4.01000023,
-      "y_close": 3.82999992,
-      "open": 3.82999992,
-      "open_pct": 0.0,
-      "current_pct": 4.7,
-      "day_pct": 4.7,
-      "entry": 3.83522262,
-      "stop": 3.48359361,
-      "target": 3.87561575,
-      "rr": 0.11,
-      "trail": 3.44939762,
-      "stop_pct": 9.2,
-      "p2_pct": 1.1,
-      "target_basis": "resistance",
-      "spark": [
-        3.98464823,
-        3.81614327,
-        3.72693467,
-        3.50886941,
-        3.53860545,
-        3.57825375,
-        3.56834173,
-        3.58816576,
-        3.56834173,
-        3.64763832,
-        3.81614327,
-        3.71702266,
-        3.51878142,
-        3.58816576,
-        3.86570358,
-        3.89543986,
-        3.93508816,
-        3.75667095,
-        3.68728662,
-        3.78640699,
-        3.82605529,
-        3.85579157,
-        3.86570358,
-        3.77649498,
-        3.89543986,
-        3.87561584,
-        3.94500017,
-        3.97000003,
-        3.82999992,
-        4.01000023
-      ],
-      "trend": "blue",
-      "turnover": 3181411,
-      "detail": {
-        "swing_low": 3.51878142,
-        "swing_low_pct": -12.2,
-        "swing_high": 3.87561575,
-        "swing_high_pct": -3.4,
-        "ema55": 3.82144026,
-        "ema55_pct": -4.7,
-        "ema89": 3.87431952,
-        "ema89_pct": -3.4,
-        "trailing_stop": 3.44939762,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -14.0,
-        "volume_ratio": 0.6,
-        "volume_today": 509989,
-        "volume_avg": 811089,
-        "volume_expanding": false,
-        "ema_spread_pct": 3.2,
-        "ema_aligned": false,
-        "fast_levels": [
-          {
-            "label": "Pullback",
-            "ema": 8,
-            "value": 3.90248082,
-            "pct": 2.8
-          },
-          {
-            "label": "Next level",
-            "ema": 13,
-            "value": 3.87008335,
-            "pct": 3.6
-          },
-          {
-            "label": "Support",
-            "ema": 21,
-            "value": 3.83522262,
-            "pct": 4.6
-          }
-        ],
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            4.03420885,
-            4.10854917,
-            3.95491204
-          ],
-          "swing_lows": [
-            3.51878142,
-            3.54851766,
-            3.70711062
-          ]
-        },
-        "risk_pct": 9.2
-      },
-      "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$3.8352, stop A$3.4836, target A$3.8756. Risk/reward is 0.11:1.",
-      "sector_count": 2
-    },
-    {
       "symbol": "ZIP",
       "name": "Zip Co Limited..",
       "sector": "Financial Services",
@@ -29894,7 +30770,7 @@
         "risk_pct": 17.2
       },
       "analysis": "Trade setup: entry A$2.5722, stop A$2.1285, target A$2.6200. Risk/reward is 0.11:1. Weekly EMAs are bullish.",
-      "sector_count": 14
+      "sector_count": 15
     },
     {
       "symbol": "APZ",
@@ -30015,7 +30891,7 @@
         "risk_pct": 15.3
       },
       "analysis": "EMAs are compressed, suggesting a big move is building. Trade setup: entry A$4.8985, stop A$4.1481, target A$4.9750. Risk/reward is 0.10:1.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "ALK",
@@ -30259,7 +31135,7 @@
         "risk_pct": 7.1
       },
       "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$35.1584, stop A$32.6700, target A$35.3500. Risk/reward is 0.08:1. Weekly EMAs are bullish.",
-      "sector_count": 8
+      "sector_count": 7
     },
     {
       "symbol": "JHX",
@@ -30503,7 +31379,7 @@
         "risk_pct": 18.4
       },
       "analysis": "Price making higher highs and higher lows \u2014 healthy uptrend structure. Trade setup: entry A$2.0060, stop A$1.6360, target A$2.0200. Risk/reward is 0.04:1. Weekly EMAs are bullish.",
-      "sector_count": 13
+      "sector_count": 15
     },
     {
       "symbol": "FLT",
