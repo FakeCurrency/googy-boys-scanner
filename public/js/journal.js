@@ -428,8 +428,9 @@
             const rew  = t.direction === "long" ? t.target - t.entry : t.entry - t.target;
             if (risk > 0) rr = (rew / risk).toFixed(1) + "R";
           }
+          const chartHref = `chart.html?m=scalp&s=${encodeURIComponent(t.symbol + "_" + t.direction)}&pos=${encodeURIComponent(t.id)}`;
           return `<tr>
-            <td class="jr-sym">${esc(t.symbol)}</td>
+            <td class="jr-sym"><a class="jr-chart-link" href="${chartHref}" title="Open live chart with this position">${esc(t.symbol)} <span class="jr-chart-ico">📈</span></a></td>
             <td><span class="dir-chip ${dc}">${dir}</span></td>
             <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
             <td class="r-neg">${t.stop   != null ? "$" + num(t.stop)   : "—"}</td>

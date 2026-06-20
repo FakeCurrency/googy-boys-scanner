@@ -28,8 +28,15 @@
     XRP: "XRPUSDT", ADA: "ADAUSDT", DOGE: "DOGEUSDT", AVAX: "AVAXUSDT",
     DOT: "DOTUSDT", LINK: "LINKUSDT", LTC: "LTCUSDT", BCH: "BCHUSDT",
   };
-  // Shared with the simulate buttons so a buy/sell fills at the true live price.
-  const liveState = { price: null, entryLineFns: null };
+  // Intraday live timeframes for crypto (Binance kline intervals).
+  const BINANCE_IV    = { "15M": "15m", "30M": "30m", "1H": "1h" };
+  const LIVE_TF_ORDER = ["15M", "30M", "1H"];
+  // Shared with the simulate buttons / live box so a buy/sell fills at the true
+  // live price and every dependent widget reacts on each tick.
+  const liveState = { price: null, entryLineFns: null, listeners: [] };
+  const onLiveTick = (fn) => { liveState.listeners.push(fn); };
+
+  const posId = params.get("pos");   // open-position id passed from the journal
 
   // Indicator math mirroring scanner/scalp.py exactly (BB20/2, KC20/1.5×ATR,
   // EMA9/21, TTM momentum = linreg(12) of close−midline, Wilder ATR).
@@ -92,6 +99,38 @@
       prevOn = on;
     }
     return { lineData, hist, markers };
+  }
+
+  // Pull raw klines from Binance and shape them into bar objects.
+  function binanceKlines(pair, interval, limit) {
+    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
+    return fetch(url, { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((rows) => rows.map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1],
+        high: +k[2], low: +k[3], close: +k[4], volume: +k[5] })));
+  }
+
+  // Build a chart-page "timeframe" object (candles + volume + 7 overlays + mom)
+  // straight from live bars — lets a position chart render with no static JSON.
+  function barsToTF(bars) {
+    const n = Math.min(120, bars.length), slice = bars.slice(-n);
+    const candles = slice.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
+    const volume  = slice.map((b) => ({ time: b.time, value: Math.round(b.volume),
+      color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" }));
+    const c = computeScalp(bars, 120);
+    const meta = [["BB Upper", "#4477cc"], ["BB Mid", "#888888"], ["BB Lower", "#4477cc"],
+                  ["KC Upper", "#cc7700"], ["KC Lower", "#cc7700"], ["EMA 9", "#ffd23f"], ["EMA 21", "#2fd07f"]];
+    const lines = c.lineData.map((data, i) => ({ name: meta[i][0], color: meta[i][1], data }));
+    return { candles, volume, histogram: c.hist, squeeze_dots: [], lines };
+  }
+
+  // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
+  // up on whatever interval is showing (15m/30m/1h).
+  function buildEntryMarker(epoch, intervalSec, dir) {
+    if (!epoch || !intervalSec) return null;
+    const t = Math.floor(epoch / intervalSec) * intervalSec;
+    return { time: t, position: dir === "long" ? "belowBar" : "aboveBar",
+      color: "#a78bfa", shape: dir === "long" ? "arrowUp" : "arrowDown", text: "ENTRY" };
   }
 
   function fmt(v, cur) {
@@ -225,12 +264,12 @@
       return true;
     }
     // Hook into the live price stream — auto-close on stop/target, then refresh P&L.
-    liveState.onTick = (px) => {
+    onLiveTick((px) => {
       const t = openSimTrade();
       if (!t) return;
       if (checkAutoClose(t, px)) return;
       refresh(px);
-    };
+    });
 
     buyBtn.addEventListener("click", () => {
       if (openSimTrade()) return;
@@ -360,6 +399,19 @@
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: L.title });
     });
 
+    // ── open-position context (entry marker + floating LIVE box) ──────────────
+    const SYM    = (d.symbol || symbol).toUpperCase();
+    const posDir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
+    // Any open trade (sim OR manually logged) for this symbol+direction.
+    const findOpen = () => mjLoad().trades.find(
+      (t) => t.status === "open" && (t.symbol || "").toUpperCase() === SYM && t.direction === posDir);
+    const entryEpochOf = (t) => {
+      if (!t || !t.entry_date) return null;
+      const ms = new Date(`${t.entry_date}T${(t.entry_time || "00:00")}:00`).getTime();
+      return isFinite(ms) ? Math.floor(ms / 1000) : null;
+    };
+    const entryEpoch = entryEpochOf(findOpen());
+
     function legend(tf) {
       $("#chart-legend").innerHTML = tf.lines.map((l) => {
         const last = l.data.length ? l.data[l.data.length - 1].value : null;
@@ -388,22 +440,42 @@
           }
           prevOn = on;
         });
-        candle.setMarkers(marks);
+        const em = buildEntryMarker(entryEpoch, 3600, posDir);
+        candle.setMarkers(em ? [...marks, em] : marks);
       }
       chart.timeScale().fitContent();
       legend(tf);
     }
 
     const toggle = $("#tf-toggle");
-    toggle.innerHTML = available.map((k) =>
-      `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}">${TF_LABEL[k]}</button>`).join("");
-    toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
-      toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
-      applyTF(b.dataset.tf);
-    }));
+    const pair = BINANCE_MAP[SYM];
+    const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch };
 
-    applyTF(curTF);
+    if (pair) {
+      // Crypto → live intraday timeframes streamed from Binance (15M / 30M / 1H).
+      curTF = "1H";
+      if (tfs["1H"]) applyTF("1H");                 // instant paint while REST loads
+      const live = makeLive(d, pair, liveCtx);
+      live.start();
+      toggle.innerHTML = LIVE_TF_ORDER.map((k) =>
+        `<button class="tf-btn${k === "1H" ? " is-active" : ""}" data-tf="${k}">${k}</button>`).join("");
+      toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
+        toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+        live.switchTo(b.dataset.tf);
+      }));
+    } else {
+      // Everything else → static multi-timeframe data from the scan JSON.
+      toggle.innerHTML = available.map((k) =>
+        `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}">${TF_LABEL[k]}</button>`).join("");
+      toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
+        toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+        applyTF(b.dataset.tf);
+      }));
+      applyTF(curTF);
+    }
+
     wireChartPosition(candle, d);
+    wireLiveBox(d, el, SYM, posDir, findOpen);
 
     // ── Ruler / measurement tool ──────────────────────────────────────────────
     // Click once to anchor, move to see the range, click again to lock it.
@@ -478,31 +550,39 @@
       showLabel(param.point, anchor, price);
     });
 
-    // ── go LIVE for crypto scalp charts (1H, Binance stream) ──────────────────
-    const pair = BINANCE_MAP[(d.symbol || "").toUpperCase()];
-    if (pair && tfs["1H"]) startLive(d, pair, { chart, candle, vol, lineSeries, momSeries, fitOnce: true });
-
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
     ro.observe(el);
   }
 
-  // Replace static 1H data with a live Binance feed; the forming candle ticks in
-  // real time and indicators recompute on each update. Falls back silently to the
-  // static chart if the network/stream is unavailable.
-  function startLive(d, pair, S) {
+  // Live Binance feed controller. The forming candle ticks in real time, the
+  // indicators recompute on each update, and the timeframe (15m/30m/1h) can be
+  // switched on the fly. Falls back silently to whatever was painted if the
+  // network/stream is unavailable.
+  function makeLive(d, pair, S) {
     const cur = d.currency_symbol || "";
-    const N_DISP = 120, KEEP = 320, REST = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1h&limit=${KEEP}`;
+    const N_DISP = 120, KEEP = 320;
     const liveEl = $("#ct-live"), priceEl = $("#ct-price");
     let bars = [], ws = null, stopped = false, lastCalc = 0, lastPx = null;
+    let iv = "1h", ivSec = 3600;
 
-    const applyAll = () => {
+    const restURL   = () => `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${iv}&limit=${KEEP}`;
+    const streamURL = () => `wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_${iv}`;
+
+    const setMarks = (marks) => {
+      if (typeof S.candle.setMarkers !== "function") return;
+      const em = buildEntryMarker(S.entryEpoch, ivSec, S.posDir);
+      S.candle.setMarkers(em ? [...marks, em] : marks);
+    };
+
+    const applyAll = (fit) => {
       S.candle.setData(bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
       S.vol.setData(bars.map((b) => ({ time: b.time, value: Math.round(b.volume),
         color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" })));
       const c = computeScalp(bars, N_DISP);
       c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
       if (S.momSeries) S.momSeries.setData(c.hist);
-      if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+      setMarks(c.markers);
+      if (fit) S.chart.timeScale().fitContent();
     };
 
     const setPrice = (px) => {
@@ -516,27 +596,22 @@
         }
         lastPx = px;
       }
-      if (liveState.onTick) liveState.onTick(px);
+      liveState.listeners.forEach((fn) => { try { fn(px); } catch (_) {} });
     };
 
-    fetch(REST, { cache: "no-store" })
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then((rows) => {
-        bars = rows.map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2],
-          low: +k[3], close: +k[4], volume: +k[5] }));
+    function load() {
+      return binanceKlines(pair, iv, KEEP).then((rows) => {
+        bars = rows;
         if (!bars.length) return;
-        applyAll();
-        if (S.fitOnce) S.chart.timeScale().fitContent();
+        applyAll(true);
         setPrice(bars[bars.length - 1].close);
         if (liveEl) liveEl.hidden = false;
-        connect();
-      })
-      .catch(() => { /* keep static chart */ });
+      });
+    }
 
     function connect() {
       if (stopped) return;
-      try { ws = new WebSocket(`wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_1h`); }
-      catch (_) { return; }
+      try { ws = new WebSocket(streamURL()); } catch (_) { return; }
       ws.onmessage = (ev) => {
         let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
         const k = m.k; if (!k) return;
@@ -558,16 +633,122 @@
           const c = computeScalp(bars, N_DISP);
           c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
           if (S.momSeries) S.momSeries.setData(c.hist);
-          if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+          setMarks(c.markers);
         }
       };
       ws.onclose = () => { if (!stopped) setTimeout(connect, 3000); };
       ws.onerror = () => { try { ws.close(); } catch (_) {} };
     }
 
-    window.addEventListener("beforeunload", () => { stopped = true; if (ws) try { ws.close(); } catch (_) {} });
+    function closeWs() { if (ws) { try { ws.onclose = null; ws.close(); } catch (_) {} } ws = null; }
+
+    function start() { load().then(connect).catch(() => {}); }
+    function switchTo(ivKey) {
+      const niv = BINANCE_IV[ivKey];
+      if (!niv || niv === iv) return;
+      iv = niv; ivSec = niv === "15m" ? 900 : niv === "30m" ? 1800 : 3600;
+      closeWs(); lastPx = null;
+      load().then(connect).catch(() => {});
+    }
+
+    window.addEventListener("beforeunload", () => { stopped = true; closeWs(); });
+    return { start, switchTo };
   }
 
+  // Floating LIVE box — shows the full state of the open position (entry, time,
+  // current, P&L, R, move %, stop/target distance, time-in-trade) and updates on
+  // every tick. Visible only while a matching position is open.
+  function wireLiveBox(d, el, SYM, posDir, findOpen) {
+    const cur = d.currency_symbol || "";
+    const box = document.createElement("div");
+    box.className = "live-pos-box";
+    box.style.display = "none";
+    el.style.position = "relative";
+    el.appendChild(box);
+
+    const dur = (t) => {
+      if (!t || !t.entry_date) return "—";
+      const start = new Date(`${t.entry_date}T${(t.entry_time || "00:00")}:00`).getTime();
+      let s = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      const dd = Math.floor(s / 86400); s -= dd * 86400;
+      const hh = Math.floor(s / 3600);  s -= hh * 3600;
+      const mm = Math.floor(s / 60);
+      return (dd ? dd + "d " : "") + (hh ? hh + "h " : "") + mm + "m";
+    };
+
+    function update(px) {
+      const t = findOpen();
+      if (!t) { box.style.display = "none"; return; }
+      box.style.display = "block";
+      const m     = posDir === "long" ? 1 : -1;
+      const data  = mjLoad(), brok = data.brokerage || 0;
+      const price = px || liveState.price || t.entry;
+      const net   = t.shares * m * (price - t.entry) - 2 * brok;
+      const move  = (price - t.entry) / t.entry * 100 * m;       // signed in trade's favour
+      let rStr = "—", rCls = "";
+      if (t.stop != null) {
+        const risk = posDir === "long" ? t.entry - t.stop : t.stop - t.entry;
+        if (risk > 0) { const r = (m * (price - t.entry)) / risk; rStr = (r >= 0 ? "+" : "") + r.toFixed(2) + "R"; rCls = r >= 0 ? "pos" : "neg"; }
+      }
+      const pnlCls   = net >= 0 ? "pos" : "neg";
+      const distStop = t.stop   != null ? Math.abs((price - t.stop) / price * 100)   : null;
+      const distTgt  = t.target != null ? Math.abs((t.target - price) / price * 100) : null;
+      box.innerHTML =
+        `<div class="lpb-head ${posDir}"><span class="lpb-dot"></span> IN ${posDir.toUpperCase()} · ${SYM}` +
+          `<span class="lpb-units">${t.shares} u</span></div>` +
+        `<div class="lpb-pnl ${pnlCls}">${net >= 0 ? "+" : ""}${cur}${net.toFixed(2)}</div>` +
+        `<div class="lpb-grid">` +
+          `<span class="lpb-k">Entry</span><span class="lpb-v">${fmt(t.entry, cur)}</span>` +
+          `<span class="lpb-k">Now</span><span class="lpb-v">${fmt(price, cur)}</span>` +
+          `<span class="lpb-k">Move</span><span class="lpb-v ${move >= 0 ? "pos" : "neg"}">${move >= 0 ? "+" : ""}${move.toFixed(2)}%</span>` +
+          `<span class="lpb-k">R mult</span><span class="lpb-v ${rCls}">${rStr}</span>` +
+          `<span class="lpb-k">Stop</span><span class="lpb-v neg">${t.stop != null ? fmt(t.stop, cur) : "—"}${distStop != null ? ` <small>(${distStop.toFixed(2)}%)</small>` : ""}</span>` +
+          `<span class="lpb-k">Target</span><span class="lpb-v pos">${t.target != null ? fmt(t.target, cur) : "—"}${distTgt != null ? ` <small>(${distTgt.toFixed(2)}%)</small>` : ""}</span>` +
+          `<span class="lpb-k">Opened</span><span class="lpb-v">${t.entry_date || "—"} ${t.entry_time || ""}</span>` +
+          `<span class="lpb-k">In trade</span><span class="lpb-v">${dur(t)}</span>` +
+        `</div>`;
+    }
+
+    onLiveTick(update);
+    update();
+    setInterval(() => { if (findOpen()) update(); }, 30000);   // keep "in trade" fresh
+  }
+
+  // ── entry point ────────────────────────────────────────────────────────────
+  // A `pos` param means "open the chart for this journal position" — render it
+  // live (crypto) with the entry, entry time and a floating LIVE box.
+  function renderPosition(id) {
+    const trade = mjLoad().trades.find((t) => t.id === id);
+    if (!trade) { fail("That position is no longer in your journal."); return; }
+    const SYM = (trade.symbol || "").toUpperCase();
+    const d = {
+      symbol: SYM, name: SYM, price: trade.entry, entry: trade.entry,
+      stop: trade.stop ?? null, target: trade.target ?? null,
+      grade: "", score: 0, score_max: 0, chips: [], sector: "",
+      currency_symbol: "$", dir: trade.direction === "short" ? "SHORT" : "LONG",
+      rr: 0, low_rr: false, rr_text: "", risk_pct: null,
+      analysis: trade.notes || "Your open position — live view.",
+      default_tf: "1H", tv_symbol: SYM, level_lines: [], timeframes: {},
+    };
+    if (trade.stop   != null) d.level_lines.push({ price: trade.stop,   color: "#ff5b5b", title: "STOP" });
+    d.level_lines.push({ price: trade.entry, color: "#f0a500", title: "ENTRY" });
+    if (trade.target != null) d.level_lines.push({ price: trade.target, color: "#2fd07f", title: "TARGET" });
+
+    const pair = BINANCE_MAP[SYM];
+    if (pair) {
+      binanceKlines(pair, "1h", 320)
+        .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
+        .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
+    } else {
+      // Non-crypto: fall back to the static scan chart, with the position overlaid.
+      fetch(chartFile, { cache: "no-cache" })
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then((j) => render(j))
+        .catch(() => fail(`No live chart available for ${SYM} yet.`));
+    }
+  }
+
+  if (posId) { renderPosition(posId); return; }
   if (!symbol) { fail("No ticker specified."); return; }
   fetch(chartFile, { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })

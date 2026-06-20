@@ -53,6 +53,10 @@
 .jr-table td:first-child, .jr-table td:nth-child(2) { text-align: left; }
 
 .jr-sym { font-weight: 700; color: var(--text); }
+.jr-chart-link { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.jr-chart-link:hover { color: var(--blue); }
+.jr-chart-ico { font-size: 11px; opacity: .55; }
+.jr-chart-link:hover .jr-chart-ico { opacity: 1; }
 .jr-grade { font-weight: 800; }
 .g-aplus { color: var(--grade-aplus); }
 .g-a     { color: var(--grade-a); }
