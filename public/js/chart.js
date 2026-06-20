@@ -21,6 +21,79 @@
 
   const $ = (s) => document.querySelector(s);
 
+  // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
+  // <SYMBOL> -> Binance spot pair. All current crypto-scalp coins trade vs USDT.
+  const BINANCE_MAP = {
+    BTC: "BTCUSDT", ETH: "ETHUSDT", BNB: "BNBUSDT", SOL: "SOLUSDT",
+    XRP: "XRPUSDT", ADA: "ADAUSDT", DOGE: "DOGEUSDT", AVAX: "AVAXUSDT",
+    DOT: "DOTUSDT", LINK: "LINKUSDT", LTC: "LTCUSDT", BCH: "BCHUSDT",
+  };
+  // Shared with the simulate buttons so a buy/sell fills at the true live price.
+  const liveState = { price: null, entryLineFns: null };
+
+  // Indicator math mirroring scanner/scalp.py exactly (BB20/2, KC20/1.5×ATR,
+  // EMA9/21, TTM momentum = linreg(12) of close−midline, Wilder ATR).
+  const SQ_P = 20, SQ_MOM = 12, BB_MULT = 2.0, KC_MULT = 1.5;
+  const emaArr = (s, span) => { const k = 2 / (span + 1), o = []; let p;
+    for (let i = 0; i < s.length; i++) { p = i === 0 ? s[i] : s[i] * k + p * (1 - k); o[i] = p; } return o; };
+  const smaArr = (s, p) => { const o = new Array(s.length).fill(NaN); let sum = 0;
+    for (let i = 0; i < s.length; i++) { sum += s[i]; if (i >= p) sum -= s[i - p]; if (i >= p - 1) o[i] = sum / p; } return o; };
+  const stdArr = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = 0; for (let k = i - p + 1; k <= i; k++) m += s[k]; m /= p;
+      let v = 0; for (let k = i - p + 1; k <= i; k++) { const d = s[k] - m; v += d * d; } o[i] = Math.sqrt(v / p); } return o; };
+  const atrArr = (hi, lo, cl, p) => { const tr = [];
+    for (let i = 0; i < cl.length; i++) tr[i] = i === 0 ? hi[i] - lo[i]
+      : Math.max(hi[i] - lo[i], Math.abs(hi[i] - cl[i - 1]), Math.abs(lo[i] - cl[i - 1]));
+    const a = 1 / p, o = []; let pv;
+    for (let i = 0; i < tr.length; i++) { pv = i === 0 ? tr[i] : tr[i] * a + pv * (1 - a); o[i] = pv; } return o; };
+  const rollMax = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = -Infinity; for (let k = i - p + 1; k <= i; k++) if (s[k] > m) m = s[k]; o[i] = m; } return o; };
+  const rollMin = (s, p) => { const o = new Array(s.length).fill(NaN);
+    for (let i = p - 1; i < s.length; i++) { let m = Infinity; for (let k = i - p + 1; k <= i; k++) if (s[k] < m) m = s[k]; o[i] = m; } return o; };
+  const linregArr = (s, n) => { const o = new Array(s.length).fill(NaN);
+    let st = 0, stt = 0; for (let i = 0; i < n; i++) { st += i; stt += i * i; }
+    const denom = n * stt - st * st;
+    for (let i = n - 1; i < s.length; i++) { let sy = 0, sty = 0;
+      for (let j = 0; j < n; j++) { const y = s[i - n + 1 + j]; sy += y; sty += j * y; }
+      const slope = (n * sty - st * sy) / denom, intercept = (sy - slope * st) / n;
+      o[i] = slope * (n - 1) + intercept; } return o; };
+
+  // Compute the 7 overlay lines + momentum histogram + squeeze markers from bars.
+  function computeScalp(bars, nDisp) {
+    const hi = bars.map((b) => b.high), lo = bars.map((b) => b.low), cl = bars.map((b) => b.close);
+    const mid = smaArr(cl, SQ_P), std = stdArr(cl, SQ_P), kcR = atrArr(hi, lo, cl, SQ_P);
+    const bbU = mid.map((m, i) => m + BB_MULT * std[i]), bbL = mid.map((m, i) => m - BB_MULT * std[i]);
+    const kcU = mid.map((m, i) => m + KC_MULT * kcR[i]), kcL = mid.map((m, i) => m - KC_MULT * kcR[i]);
+    const ema9 = emaArr(cl, 9), ema21 = emaArr(cl, 21);
+    const hh = rollMax(hi, SQ_P), ll = rollMin(lo, SQ_P);
+    const val = cl.map((c, i) => c - (((hh[i] + ll[i]) / 2 + mid[i]) / 2));
+    const mom = linregArr(val, SQ_MOM);
+
+    const start = Math.max(0, bars.length - nDisp);
+    const t = (i) => bars[i].time;
+    const pack = (arr) => { const out = []; for (let i = start; i < bars.length; i++)
+      if (isFinite(arr[i])) out.push({ time: t(i), value: arr[i] }); return out; };
+    // order must match the static JSON: BB U/M/L, KC U/L, EMA9, EMA21
+    const lineData = [pack(bbU), pack(mid), pack(bbL), pack(kcU), pack(kcL), pack(ema9), pack(ema21)];
+
+    const hist = [];
+    for (let i = start; i < bars.length; i++) { const v = mom[i]; if (!isFinite(v)) continue;
+      const prev = isFinite(mom[i - 1]) ? mom[i - 1] : v;
+      const color = v >= 0 ? (v >= prev ? "#00e6cc" : "#127d70") : (v <= prev ? "#ff3b3b" : "#7d1f1f");
+      hist.push({ time: t(i), value: v, color }); }
+
+    const markers = []; let prevOn = null;
+    for (let i = start; i < bars.length; i++) {
+      const on = isFinite(bbU[i]) && bbU[i] < kcU[i] && bbL[i] > kcL[i];
+      if (prevOn !== null && on !== prevOn)
+        markers.push(on
+          ? { time: t(i), position: "belowBar", color: "#ff5b5b", shape: "circle", size: 1 }
+          : { time: t(i), position: "belowBar", color: "#2fd07f", shape: "arrowUp", size: 1, text: "fire" });
+      prevOn = on;
+    }
+    return { lineData, hist, markers };
+  }
+
   function fmt(v, cur) {
     if (v == null || isNaN(v)) return "—";
     const a = Math.abs(v);
@@ -48,7 +121,9 @@
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";
-    $("#ct-dir").hidden = false;
+    const dirEl = $("#ct-dir");
+    if (d.dir) { dirEl.textContent = d.dir; dirEl.classList.toggle("short", d.dir.toUpperCase() === "SHORT"); }
+    dirEl.hidden = false;
     $("#ct-chips").innerHTML = (d.chips || [])
       .map((c) => `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
   }
@@ -71,8 +146,167 @@
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
+  // ----------------------------------------------------------- simulate buy/sell
+  // Writes straight into the same localStorage the "My Trades" journal reads
+  // (gbs:manual_journal), so a simulated entry/exit shows up there with full P&L.
+  const MJ_KEY = "gbs:manual_journal";
+  function mjLoad() {
+    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
+    return { capital: 10000, brokerage: 10, trades: [] };
+  }
+  function mjSave(x) { localStorage.setItem(MJ_KEY, JSON.stringify(x)); }
+  function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  const nowDate = () => new Date().toLocaleDateString("en-CA");          // YYYY-MM-DD (local)
+  const nowTime = () => new Date().toTimeString().slice(0, 5);            // HH:MM (local)
+
+  function wireSim(d) {
+    const buyBtn  = $("#cf-sim-buy");
+    const sellBtn = $("#cf-sim-sell");
+    const statusEl = $("#cf-sim-status");
+    if (!buyBtn || !sellBtn) return;
+
+    const cur  = d.currency_symbol || "";
+    const dir  = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
+    const SYM  = (d.symbol || symbol).toUpperCase();
+
+    // Re-label the entry button to match the setup direction.
+    buyBtn.textContent  = dir === "short" ? "▲ Simulate Short" : "▲ Simulate Buy";
+    sellBtn.textContent = dir === "short" ? "▼ Cover / Close"  : "▼ Simulate Sell";
+
+    const openSimTrade = () =>
+      mjLoad().trades.find((t) => t.sim && t.status === "open" &&
+        (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
+
+    function refresh(livePx) {
+      const t = openSimTrade();
+      if (!t) {
+        buyBtn.disabled = false; sellBtn.disabled = true;
+        statusEl.className = "sim-status";
+        statusEl.textContent = "";
+        return;
+      }
+      buyBtn.disabled = true; sellBtn.disabled = false;
+      const px = livePx || liveState.price;
+      if (px) {
+        const m      = dir === "long" ? 1 : -1;
+        const data   = mjLoad();
+        const brok   = data.brokerage || 0;
+        const unreal = t.shares * m * (px - t.entry);  // unrealised, before close brok
+        const net    = unreal - 2 * brok;               // what you'd bank if closed now
+        const pnlCls = net >= 0 ? " live" : " neg";
+        const sign   = net >= 0 ? "+" : "";
+        statusEl.className = `sim-status${pnlCls}`;
+        statusEl.innerHTML =
+          `● ${dir.toUpperCase()} @ ${fmt(t.entry, cur)} &nbsp;·&nbsp; ` +
+          `Live P&L <strong>${sign}${cur}${net.toFixed(2)}</strong> &nbsp;·&nbsp; ` +
+          `${fmt(px, cur)} now`;
+      } else {
+        statusEl.className = "sim-status live";
+        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${t.shares} units`;
+      }
+    }
+
+    function checkAutoClose(t, livePx) {
+      const m        = dir === "long" ? 1 : -1;
+      const stopped  = t.stop   != null && (dir === "long" ? livePx <= t.stop   : livePx >= t.stop);
+      const targeted = t.target != null && (dir === "long" ? livePx >= t.target : livePx <= t.target);
+      if (!stopped && !targeted) return false;
+      const data = mjLoad();
+      const rec  = data.trades.find((x) => x.id === t.id);
+      if (!rec || rec.status === "closed") return true;
+      const fillPx = stopped ? t.stop : t.target;
+      rec.status = "closed"; rec.exit = fillPx; rec.exit_date = nowDate(); rec.exit_time = nowTime();
+      mjSave(data);
+      if (liveState.entryLineFns) liveState.entryLineFns.remove();
+      const pnl = t.shares * m * (fillPx - t.entry) - 2 * (data.brokerage || 0);
+      statusEl.className = `sim-status${pnl >= 0 ? " live" : " neg"}`;
+      statusEl.textContent = `${stopped ? "🛑 Stopped out" : "🎯 Target hit"} @ ${fmt(fillPx, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)}`;
+      buyBtn.disabled = false; sellBtn.disabled = true;
+      return true;
+    }
+    // Hook into the live price stream — auto-close on stop/target, then refresh P&L.
+    liveState.onTick = (px) => {
+      const t = openSimTrade();
+      if (!t) return;
+      if (checkAutoClose(t, px)) return;
+      refresh(px);
+    };
+
+    buyBtn.addEventListener("click", () => {
+      if (openSimTrade()) return;
+      const px    = +liveState.price || +d.price || +d.entry || 0;
+      if (!px) { statusEl.textContent = "No price available."; return; }
+      const size  = 1000;
+      const data  = mjLoad();
+      data.trades.push({
+        id: mjUid(), symbol: SYM, direction: dir,
+        entry: px, entry_date: nowDate(), entry_time: nowTime(),
+        size_usd: size, shares: +(size / px).toFixed(4),
+        stop: d.stop ?? null, target: d.target ?? null,
+        notes: `Simulated from chart · ${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
+        status: "open", exit: null, exit_date: null, exit_time: null, sim: true,
+      });
+      mjSave(data);
+      refresh();
+    });
+
+    sellBtn.addEventListener("click", () => {
+      const t = openSimTrade();
+      if (!t) return;
+      const px = +liveState.price || +d.price || +t.entry || 0;
+      const data = mjLoad();
+      const rec  = data.trades.find((x) => x.id === t.id);
+      if (rec) {
+        rec.status = "closed";
+        rec.exit = px; rec.exit_date = nowDate(); rec.exit_time = nowTime();
+        mjSave(data);
+      }
+      if (liveState.entryLineFns) liveState.entryLineFns.remove();
+      const m   = dir === "long" ? 1 : -1;
+      const pnl = (t.shares * m * (px - t.entry) - 2 * (data.brokerage || 0));
+      statusEl.className = "sim-status" + (pnl >= 0 ? " live" : "");
+      statusEl.textContent = `Closed @ ${fmt(px, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} — logged to My Trades`;
+      buyBtn.disabled = false; sellBtn.disabled = true;
+    });
+
+    refresh();
+  }
+
+  // Draw a purple entry-price line on the chart while a sim position is open.
+  // Must be called after the candle series is created (inside render).
+  function wireChartPosition(candle, d) {
+    const dir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
+    const SYM = (d.symbol || symbol).toUpperCase();
+    let entryLine = null;
+
+    const getOpenTrade = () => mjLoad().trades.find(
+      (t) => t.sim && t.status === "open" && (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
+
+    function addLine(price) {
+      if (entryLine) return;
+      entryLine = candle.createPriceLine({
+        price, color: "#a78bfa", lineWidth: 2, lineStyle: 0,
+        axisLabelVisible: true, title: `▶ IN ${dir.toUpperCase()}`,
+      });
+    }
+    function removeLine() {
+      if (!entryLine) return;
+      try { candle.removePriceLine(entryLine); } catch (_) {}
+      entryLine = null;
+    }
+    liveState.entryLineFns = { add: addLine, remove: removeLine };
+
+    const t = getOpenTrade();
+    if (t) addLine(t.entry);
+
+    const buy  = $("#cf-sim-buy");
+    const sell = $("#cf-sim-sell");
+    if (buy)  buy.addEventListener("click",  () => setTimeout(() => { const t2 = getOpenTrade(); if (t2) addLine(t2.entry); }, 60));
+    if (sell) sell.addEventListener("click", () => setTimeout(removeLine, 60));
+  }
+
   function render(d) {
-    header(d); footer(d);
+    header(d); footer(d); wireSim(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
     if (!available.length) { fail("No chart data for this ticker yet."); return; }
@@ -169,8 +403,169 @@
     }));
 
     applyTF(curTF);
+    wireChartPosition(candle, d);
+
+    // ── Ruler / measurement tool ──────────────────────────────────────────────
+    // Click once to anchor, move to see the range, click again to lock it.
+    // Click a third time (or toggle off) to clear.
+    const cur = d.currency_symbol || "";
+    let rulerOn = false, anchor = null, anchorLine = null, hoverLine = null;
+
+    const rulerBtn = document.createElement("button");
+    rulerBtn.className = "tf-btn ruler-btn"; rulerBtn.title = "Measure price range";
+    rulerBtn.innerHTML = "📏 Ruler";
+    toggle.appendChild(rulerBtn);
+
+    // Floating label that sits inside the chart canvas area.
+    const measureLabel = Object.assign(document.createElement("div"), { className: "ruler-label" });
+    el.style.position = "relative";
+    el.appendChild(measureLabel);
+
+    function clearRuler() {
+      anchor = null;
+      if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
+      if (hoverLine)  { try { candle.removePriceLine(hoverLine);  } catch (_) {} hoverLine  = null; }
+      measureLabel.style.display = "none";
+    }
+
+    function showLabel(pt, p1, p2) {
+      const delta = p2 - p1;
+      const pct   = (delta / p1 * 100);
+      const sign  = delta >= 0 ? "+" : "";
+      const col   = delta >= 0 ? "#2fd07f" : "#ff5b5b";
+      const dp    = Math.abs(p1) >= 100 ? 2 : Math.abs(p1) >= 1 ? 3 : 4;
+      measureLabel.style.cssText =
+        `display:block; top:${pt.y}px; left:${pt.x}px; border-color:${col}; color:${col}`;
+      measureLabel.innerHTML =
+        `${sign}${pct.toFixed(2)}% &nbsp; ${sign}${cur}${Math.abs(delta).toFixed(dp)}`;
+    }
+
+    rulerBtn.addEventListener("click", () => {
+      rulerOn = !rulerOn;
+      rulerBtn.classList.toggle("is-active", rulerOn);
+      el.style.cursor = rulerOn ? "crosshair" : "";
+      if (!rulerOn) clearRuler();
+    });
+
+    chart.subscribeClick((param) => {
+      if (!rulerOn || !param.point) return;
+      const price = candle.coordinateToPrice(param.point.y);
+      if (price == null) return;
+      if (!anchor) {
+        anchor = price;
+        anchorLine = candle.createPriceLine({
+          price: anchor, color: "#f0a500", lineWidth: 1,
+          lineStyle: 2, axisLabelVisible: true, title: fmt(anchor, cur),
+        });
+      } else {
+        // Lock the measurement — replace hover line with a permanent one.
+        if (hoverLine) { try { candle.removePriceLine(hoverLine); } catch (_) {} hoverLine = null; }
+        candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+        showLabel(param.point, anchor, price);
+        anchor = null;
+        if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
+        // Auto-hide the label after 6 s; user can click again to measure next range.
+        setTimeout(() => { measureLabel.style.display = "none"; }, 6000);
+      }
+    });
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!rulerOn || !anchor || !param.point) return;
+      const price = candle.coordinateToPrice(param.point.y);
+      if (price == null) return;
+      if (hoverLine) hoverLine.applyOptions({ price, title: `${price > anchor ? "+" : ""}${((price - anchor) / anchor * 100).toFixed(2)}%` });
+      else hoverLine = candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+      showLabel(param.point, anchor, price);
+    });
+
+    // ── go LIVE for crypto scalp charts (1H, Binance stream) ──────────────────
+    const pair = BINANCE_MAP[(d.symbol || "").toUpperCase()];
+    if (pair && tfs["1H"]) startLive(d, pair, { chart, candle, vol, lineSeries, momSeries, fitOnce: true });
+
     const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
     ro.observe(el);
+  }
+
+  // Replace static 1H data with a live Binance feed; the forming candle ticks in
+  // real time and indicators recompute on each update. Falls back silently to the
+  // static chart if the network/stream is unavailable.
+  function startLive(d, pair, S) {
+    const cur = d.currency_symbol || "";
+    const N_DISP = 120, KEEP = 320, REST = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1h&limit=${KEEP}`;
+    const liveEl = $("#ct-live"), priceEl = $("#ct-price");
+    let bars = [], ws = null, stopped = false, lastCalc = 0, lastPx = null;
+
+    const applyAll = () => {
+      S.candle.setData(bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
+      S.vol.setData(bars.map((b) => ({ time: b.time, value: Math.round(b.volume),
+        color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" })));
+      const c = computeScalp(bars, N_DISP);
+      c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
+      if (S.momSeries) S.momSeries.setData(c.hist);
+      if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+    };
+
+    const setPrice = (px) => {
+      liveState.price = px;
+      if (priceEl) {
+        priceEl.textContent = fmt(px, cur);
+        if (lastPx != null && px !== lastPx) {
+          priceEl.classList.remove("tick-up", "tick-down");
+          void priceEl.offsetWidth;
+          priceEl.classList.add(px > lastPx ? "tick-up" : "tick-down");
+        }
+        lastPx = px;
+      }
+      if (liveState.onTick) liveState.onTick(px);
+    };
+
+    fetch(REST, { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((rows) => {
+        bars = rows.map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2],
+          low: +k[3], close: +k[4], volume: +k[5] }));
+        if (!bars.length) return;
+        applyAll();
+        if (S.fitOnce) S.chart.timeScale().fitContent();
+        setPrice(bars[bars.length - 1].close);
+        if (liveEl) liveEl.hidden = false;
+        connect();
+      })
+      .catch(() => { /* keep static chart */ });
+
+    function connect() {
+      if (stopped) return;
+      try { ws = new WebSocket(`wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_1h`); }
+      catch (_) { return; }
+      ws.onmessage = (ev) => {
+        let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+        const k = m.k; if (!k) return;
+        const t = Math.floor(k.t / 1000);
+        const bar = { time: t, open: +k.o, high: +k.h, low: +k.l, close: +k.c, volume: +k.v };
+        const last = bars[bars.length - 1];
+        if (last && last.time === t) bars[bars.length - 1] = bar;
+        else if (!last || t > last.time) { bars.push(bar); if (bars.length > KEEP) bars.shift(); }
+        else return;
+
+        S.candle.update({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+        S.vol.update({ time: bar.time, value: Math.round(bar.volume),
+          color: bar.close >= bar.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" });
+        setPrice(bar.close);
+
+        const now = Date.now();               // throttle the heavier indicator recompute
+        if (now - lastCalc > 700) {
+          lastCalc = now;
+          const c = computeScalp(bars, N_DISP);
+          c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
+          if (S.momSeries) S.momSeries.setData(c.hist);
+          if (typeof S.candle.setMarkers === "function") S.candle.setMarkers(c.markers);
+        }
+      };
+      ws.onclose = () => { if (!stopped) setTimeout(connect, 3000); };
+      ws.onerror = () => { try { ws.close(); } catch (_) {} };
+    }
+
+    window.addEventListener("beforeunload", () => { stopped = true; if (ws) try { ws.close(); } catch (_) {} });
   }
 
   if (!symbol) { fail("No ticker specified."); return; }
