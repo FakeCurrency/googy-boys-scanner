@@ -111,6 +111,18 @@
 .lpb-v small { color: var(--muted); font-size: 10px; }
 @media (max-width: 560px) { .live-pos-box { left: 16px; right: 16px; top: 10px; } }
 
+/* Auto-close banner (manual position hit its stop/target) */
+.lpb-banner {
+  position: absolute; top: 14px; left: 16px; z-index: 17; max-width: 60%;
+  font: 800 12.5px/1.4 var(--sans); letter-spacing: .01em;
+  padding: 10px 13px; border-radius: 10px; backdrop-filter: blur(7px);
+  box-shadow: 0 8px 26px rgba(0,0,0,.45);
+}
+.lpb-banner small { font-weight: 600; opacity: .8; }
+.lpb-banner.pos { background: rgba(47,208,127,.16); border: 1px solid var(--green); color: var(--green); }
+.lpb-banner.neg { background: rgba(255,91,91,.16);  border: 1px solid var(--red);   color: var(--red); }
+@media (max-width: 560px) { .lpb-banner { max-width: calc(100% - 32px); top: auto; bottom: 16px; } }
+
 .sim-journal-link {
   display: inline-block; margin: 12px 0 0; color: var(--blue);
   text-decoration: none; font: 600 12.5px/1 var(--sans);
