@@ -61,13 +61,6 @@ jobs:
       - name: Scalp scan
         run: python -m scanner.run --scalp-only
 
-      - name: Broker sync (Alpaca paper — no-op if secrets not configured)
-        env:
-          ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
-          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-          # ALPACA_LIVE: set to "true" only at deliberate go-live
-        run: python -m scanner.broker.paper_run
-
       - name: Update paper-trade journal
         run: python -m scanner.journal
 
