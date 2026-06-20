@@ -709,6 +709,11 @@
     el.style.position = "relative";
     el.appendChild(box);
 
+    // Banner shown when a manual position auto-closes on stop/target.
+    const banner = document.createElement("div");
+    banner.style.display = "none";
+    el.appendChild(banner);
+
     const dur = (t) => {
       if (!t || !t.entry_date) return "—";
       const start = new Date(`${t.entry_date}T${(t.entry_time || "00:00")}:00`).getTime();
@@ -719,7 +724,41 @@
       return (dd ? dd + "d " : "") + (hh ? hh + "h " : "") + mm + "m";
     };
 
+    // Auto-close a MANUALLY-logged position when the live price hits its stop or
+    // target. Sim trades are handled separately by wireSim(); we skip them here
+    // to avoid double-closing. Fires only while this chart page is open — it is a
+    // simulator, not a resting exchange order. A banner shows when it triggers.
+    function maybeAutoClose(px) {
+      const t = findOpen();
+      if (!t || t.sim || px == null) return false;
+      const stopped  = t.stop   != null && (posDir === "long" ? px <= t.stop   : px >= t.stop);
+      const targeted = t.target != null && (posDir === "long" ? px >= t.target : px <= t.target);
+      if (!stopped && !targeted) return false;
+      const data = mjLoad();
+      const rec  = data.trades.find((x) => x.id === t.id);
+      if (!rec || rec.status === "closed") return true;
+      // Honest fills: a stop that gaps through fills at the worse live price
+      // (never better than the stop); a target never credits overshoot.
+      const fillPx = stopped
+        ? (posDir === "long" ? Math.min(t.stop, px) : Math.max(t.stop, px))
+        : t.target;
+      rec.status = "closed"; rec.exit = fillPx;
+      rec.exit_date = nowDate(); rec.exit_time = nowTime();
+      rec.auto_closed = stopped ? "stop" : "target";
+      rec.mtime = Date.now();
+      mjSave(data);
+      const m   = posDir === "long" ? 1 : -1;
+      const pnl = t.shares * m * (fillPx - t.entry) - 2 * (data.brokerage || 0);
+      banner.className = "lpb-banner " + (stopped ? "neg" : "pos");
+      banner.innerHTML = `${stopped ? "🛑 STOP HIT" : "🎯 TARGET HIT"} — auto-closed @ ${fmt(fillPx, cur)} · ` +
+        `P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} <small>(logged to your journal)</small>`;
+      banner.style.display = "block";
+      if (liveState.entryLineFns) liveState.entryLineFns.remove();
+      return true;
+    }
+
     function update(px) {
+      if (maybeAutoClose(px)) { box.style.display = "none"; return; }
       const t = findOpen();
       if (!t) { box.style.display = "none"; return; }
       box.style.display = "block";

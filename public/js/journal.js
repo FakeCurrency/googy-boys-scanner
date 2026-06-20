@@ -212,6 +212,7 @@
       const jrnl = btn.dataset.journal;
       const allSec = $("#jr-all-section");
       if (allSec) allSec.classList.toggle("jr-hidden", jrnl !== "all");
+      if (jrnl === "all") renderScoreboard();   // refresh "You" side with latest manual trades
       $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
       $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
       $("#jr-scalp-section").classList.toggle("jr-hidden", jrnl !== "scalp");
@@ -298,8 +299,64 @@
         No scalp journal yet — it populates on the next scan.</div>`;
     });
 
+  // Closed manual trades (the "You" side of the scoreboard), with $ P&L.
+  function mjClosedPnls() {
+    const data = mjLoad();
+    const brk  = (assetCrypto) => assetCrypto
+      ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
+    return (data.trades || [])
+      .filter((t) => t.status === "closed" && t.exit != null)
+      .map((t) => {
+        const isCrypto = !t.asset_type || t.asset_type === "crypto";
+        return mjCalc(t, brk(isCrypto)).pnl;
+      })
+      .filter((p) => p != null);
+  }
+
+  // Side-by-side scoreboard summarising a list of $ P&L numbers.
+  function sbSide(name, pnls) {
+    const n   = pnls.length;
+    const tot = pnls.reduce((a, b) => a + b, 0);
+    const wins = pnls.filter((p) => p > 0).length;
+    const wr  = n ? (wins / n * 100).toFixed(0) : 0;
+    return { name, n, tot, wr, totStr: pfmt(tot), cls: tot >= 0 ? "pos" : "neg" };
+  }
+
+  function renderScoreboard() {
+    const el = $("#jr-scoreboard");
+    if (!el) return;
+    const machinePnls = [...overall.swing, ...overall.scalp]
+      .map((t) => t.pnl).filter((p) => p != null);
+    const machine = sbSide("🤖 Machine", machinePnls);
+    const you     = sbSide("✏️ You", mjClosedPnls());
+
+    let badge = `<span class="sb-vs-badge tie">Dead heat</span>`;
+    let mLead = false, yLead = false;
+    const diff = Math.abs(machine.tot - you.tot);
+    if (you.n === 0 && machine.n === 0) {
+      badge = `<span class="sb-vs-badge tie">No trades yet</span>`;
+    } else if (you.tot > machine.tot) {
+      yLead = true; badge = `<span class="sb-vs-badge pos">You lead by ${pfmt(diff).replace("+", "")}</span>`;
+    } else if (machine.tot > you.tot) {
+      mLead = true; badge = `<span class="sb-vs-badge pos">Machine leads by ${pfmt(diff).replace("+", "")}</span>`;
+    }
+
+    const sideHtml = (s, lead) => `
+      <div class="sb-side${lead ? " sb-lead" : ""}">
+        <span class="sb-name">${s.name}</span>
+        <span class="sb-pnl ${s.cls}">${s.totStr}</span>
+        <span class="sb-meta">${s.n} trade${s.n === 1 ? "" : "s"} · ${s.wr}% win</span>
+      </div>`;
+
+    el.innerHTML =
+      sideHtml(machine, mLead) +
+      `<div class="sb-vs"><span>VS</span>${badge}</div>` +
+      sideHtml(you, yLead);
+  }
+
   // ── Combined Overall dashboard (all journals, by $ P&L) ──────────────────
   function renderOverall() {
+    renderScoreboard();
     const trades = [...overall.swing, ...overall.scalp]
       .filter((t) => t.pnl != null)
       .sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
