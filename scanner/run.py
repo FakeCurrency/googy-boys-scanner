@@ -74,6 +74,9 @@ def main() -> None:
     if args.crypto_scalp_only:
         print("Scanning CRYPTO SCALP (1h, 24/7) ...", flush=True)
         sc = scan.scan_scalp(type_filter="crypto")
+        if not sc.get("scanned"):
+            print("  no data (download blocked/empty) — keeping existing scalp_crypto.json", flush=True)
+            return
         out_path = pathlib.Path(args.out) / "scalp_crypto.json"
         out_path.write_text(json.dumps(sc, indent=2), encoding="utf-8")
         cnt = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
@@ -100,6 +103,13 @@ def main() -> None:
                 universe = universe[:args.limit]
             print(f"  downloading {len(universe)} tickers ...", flush=True)
             frames = download([u["yf"] for u in universe])
+            # Guard: a fully-empty download means the data source was blocked
+            # (e.g. Yahoo 403/429), not a genuine "no setups" day. Writing now
+            # would clobber yesterday's good JSON, so skip this market instead.
+            if not frames:
+                print(f"  no data for {market_key} (download blocked/empty) — "
+                      f"keeping existing JSON", flush=True)
+                continue
             pulse_data = pulse.fetch()
             if market_key in ("asx", "nasdaq"):
                 mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
@@ -137,21 +147,24 @@ def main() -> None:
     if not args.no_scalp:
         print("Scanning SCALP (1h intraday) ...", flush=True)
         sc = scan.scan_scalp(out_root=args.out)
-        (pathlib.Path(args.out) / "scalp.json").write_text(
-            json.dumps(sc, indent=2), encoding="utf-8")
-        tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
-        print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
-              f"across {sc['scanned']} instruments")
+        if not sc.get("scanned"):
+            print("  no scalp data (download blocked/empty) — keeping existing scalp.json", flush=True)
+        else:
+            (pathlib.Path(args.out) / "scalp.json").write_text(
+                json.dumps(sc, indent=2), encoding="utf-8")
+            tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
+            print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
+                  f"across {sc['scanned']} instruments")
 
-        from . import scalp_journal as _sj
-        print("Updating scalp journal ...", flush=True)
-        sj = _sj._load()
-        sj = _sj.update_scalp(sj)
-        _sj._save(sj)
-        sj_s = _sj.summarize(sj)
-        print(f"  scalp journal: {sj_s['longs']['open'] + sj_s['shorts']['open']} open | "
-              f"{sj_s['longs']['closed'] + sj_s['shorts']['closed']} closed | "
-              f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
+            from . import scalp_journal as _sj
+            print("Updating scalp journal ...", flush=True)
+            sj = _sj._load()
+            sj = _sj.update_scalp(sj)
+            _sj._save(sj)
+            sj_s = _sj.summarize(sj)
+            print(f"  scalp journal: {sj_s['longs']['open'] + sj_s['shorts']['open']} open | "
+                  f"{sj_s['longs']['closed'] + sj_s['shorts']['closed']} closed | "
+                  f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     from . import sectors as _sectors

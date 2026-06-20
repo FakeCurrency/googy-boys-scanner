@@ -333,17 +333,27 @@
       <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
   }
   // ═══════════════════════════════════ MY TRADES ═══════════════════════════════
-  // Fully local — stored in localStorage, never sent to the server.
-  // $10 brokerage each way, configurable. All P&L / R calculated on render.
+  // Stored in localStorage via the shared GBSSync store; optionally mirrored to
+  // Cloudflare KV when a sync code is set (see gbs-sync.js). $10 brokerage each
+  // way, configurable. All P&L / R calculated on render.
 
   const MJ_KEY = "gbs:manual_journal";
 
   function mjLoad() {
+    if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { capital: 10000, brokerage: 10, trades: [] };
+    return { capital: 10000, brokerage: 10, trades: [], deleted: [] };
   }
-  function mjSave(d) { localStorage.setItem(MJ_KEY, JSON.stringify(d)); }
+  function mjSave(d) {
+    if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
+    localStorage.setItem(MJ_KEY, JSON.stringify(d));
+  }
   function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  // Tombstone an id so the deletion propagates across devices on the next sync.
+  function mjTombstone(d, id) {
+    if (!Array.isArray(d.deleted)) d.deleted = [];
+    if (!d.deleted.includes(id)) d.deleted.push(id);
+  }
 
   // Compute realised P&L and R for one closed trade.
   function mjCalc(t, brokerage) {
@@ -611,6 +621,7 @@
       t.exit_date  = $("#mj-exit-date").value;
       t.exit_time  = $("#mj-exit-time").value;
       t.status     = "closed";
+      t.mtime      = Date.now();
     } else {
       // Open a new position
       const entry  = parseFloat($("#mj-entry").value);
@@ -633,6 +644,7 @@
         exit:        null,
         exit_date:   null,
         exit_time:   null,
+        mtime:       Date.now(),
       });
     }
 
@@ -650,6 +662,7 @@
     if (clearBtn) clearBtn.addEventListener("click", () => {
       if (confirm("Clear ALL your manual trades? This cannot be undone.")) {
         const data = mjLoad();
+        data.trades.forEach((t) => mjTombstone(data, t.id));   // propagate the wipe across devices
         data.trades = [];
         mjSave(data);
         mjRender();
@@ -701,12 +714,121 @@
       if (delBtn) {
         if (confirm("Delete this trade? This cannot be undone.")) {
           const data   = mjLoad();
+          mjTombstone(data, delBtn.dataset.id);
           data.trades  = data.trades.filter((t) => t.id !== delBtn.dataset.id);
           mjSave(data);
           mjRender();
         }
       }
     });
+
+    mjInitSync();
+    mjInitBackup();
   })();
+
+  // ── Backup / Restore (export & import JSON) ─────────────────────────────────
+  function mjInitBackup() {
+    const exportBtn = $("#mj-export-btn");
+    if (exportBtn) exportBtn.addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(mjLoad(), null, 2)], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement("a"), {
+        href: url, download: `my-trades-${new Date().toISOString().slice(0, 10)}.json`,
+      });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    const importBtn = $("#mj-import-btn");
+    const importInput = $("#mj-import-input");
+    if (importBtn && importInput) {
+      importBtn.addEventListener("click", () => importInput.click());
+      importInput.addEventListener("change", () => {
+        const file = importInput.files && importInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          let incoming;
+          try { incoming = JSON.parse(reader.result); } catch (_) { alert("That file isn't valid trade backup JSON."); return; }
+          if (!incoming || !Array.isArray(incoming.trades)) { alert("That file doesn't look like a trades backup."); return; }
+          // Merge rather than overwrite, so importing never wipes existing trades.
+          const merged = window.GBSSync ? window.GBSSync.merge(mjLoad(), incoming) : incoming;
+          mjSave(merged);
+          mjRender();
+          alert(`Imported — ${merged.trades.length} trade(s) now in your journal.`);
+        };
+        reader.readAsText(file);
+        importInput.value = "";
+      });
+    }
+  }
+
+  // ── Cross-device cloud sync (private code → Cloudflare KV) ───────────────────
+  function mjSyncStatus(msg, cls) {
+    const el = $("#mj-sync-status");
+    if (el) { el.textContent = msg || ""; el.className = "mj-sync-status" + (cls ? " " + cls : ""); }
+  }
+
+  function mjInitSync() {
+    const codeEl   = $("#mj-sync-code");
+    const onBtn    = $("#mj-sync-on");
+    const offBtn   = $("#mj-sync-off");
+    const nowBtn   = $("#mj-sync-now");
+    if (!codeEl || !window.GBSSync) return;
+
+    function reflect() {
+      const on = window.GBSSync.enabled();
+      codeEl.value = on ? window.GBSSync.getCode() : "";
+      if (onBtn)  onBtn.classList.toggle("mj-hidden", on);
+      if (offBtn) offBtn.classList.toggle("mj-hidden", !on);
+      if (nowBtn) nowBtn.classList.toggle("mj-hidden", !on);
+      mjSyncStatus(on ? "Sync ON — same trades on every device with this code." : "", on ? "live" : "");
+    }
+
+    async function enable() {
+      const code = (codeEl.value || "").trim();
+      if (code.length < 4) { mjSyncStatus("Pick a code with at least 4 characters.", "neg"); return; }
+      window.GBSSync.setCode(code);
+      mjSyncStatus("Connecting…");
+      // Pull anything already stored under this code, merge, then push the union.
+      try {
+        const probe = await window.GBSSync.pull();
+        if (probe.configured === false) {
+          window.GBSSync.setCode("");
+          mjSyncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg");
+          reflect();
+          return;
+        }
+        await window.GBSSync.syncOut();
+        mjRender();
+        reflect();
+      } catch (_) {
+        mjSyncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg");
+      }
+    }
+
+    function disable() {
+      window.GBSSync.setCode("");
+      reflect();
+      mjSyncStatus("Sync off — this device keeps its own copy.");
+    }
+
+    async function syncNow() {
+      mjSyncStatus("Syncing…");
+      try { await window.GBSSync.syncOut(); mjRender(); mjSyncStatus("Synced just now.", "live"); }
+      catch (_) { mjSyncStatus("Sync failed — will retry on the next change.", "neg"); }
+    }
+
+    if (onBtn)  onBtn.addEventListener("click", enable);
+    if (offBtn) offBtn.addEventListener("click", disable);
+    if (nowBtn) nowBtn.addEventListener("click", syncNow);
+    codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
+
+    reflect();
+    // On load, if sync is already on, pull the latest before first render.
+    if (window.GBSSync.enabled()) {
+      window.GBSSync.syncIn().then(() => mjRender()).catch(() => {});
+    }
+  }
 
 })();

@@ -113,6 +113,22 @@
 .mj-btn-ghost:hover { border-color: var(--text-2); color: var(--text); }
 .mj-btn-danger { margin-left: auto; color: var(--red); border-color: var(--red-soft); }
 .mj-btn-danger:hover { border-color: var(--red); }
+.mj-hidden { display: none !important; }
+
+/* ── cross-device sync + backup bar ── */
+.mj-sync {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 18px; margin: -8px 0 20px;
+}
+.mj-sync-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mj-sync-label { font: 700 12px/1 var(--sans); color: var(--text); letter-spacing: .2px; }
+.mj-sync-input { width: 170px; }
+.mj-sync-sep { flex: 1 1 auto; }
+.mj-sync-status { font: 600 12px/1.4 var(--sans); color: var(--muted); margin-top: 8px; min-height: 16px; }
+.mj-sync-status.live { color: var(--green); }
+.mj-sync-status.neg  { color: var(--red); }
+.mj-sync-hint { font-size: 11.5px; color: var(--muted-2); margin: 6px 0 0; line-height: 1.5; max-width: 760px; }
+@media (max-width: 560px) { .mj-sync-sep { display: none; } .mj-sync-input { width: 100%; } }
 
 /* modal overlay */
 .mj-overlay {
