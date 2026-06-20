@@ -51,6 +51,27 @@
   padding: 9px 16px; border-radius: 8px; font: 600 13px/1 var(--sans);
 }
 .tv-btn:hover { background: color-mix(in srgb, var(--blue) 18%, transparent); }
+
+/* ── simulate buy / sell ── */
+.sim-btn {
+  appearance: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 8px; font: 700 13px/1 var(--sans);
+  transition: filter .15s, opacity .15s;
+}
+.sim-buy  { background: var(--green-soft); color: var(--green);
+            border: 1px solid color-mix(in srgb, var(--green) 38%, transparent); }
+.sim-sell { background: var(--red-soft);   color: var(--red);
+            border: 1px solid color-mix(in srgb, var(--red) 38%, transparent); }
+.sim-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.sim-btn:disabled { opacity: .4; cursor: not-allowed; }
+.sim-status { font: 600 12.5px/1.4 var(--sans); color: var(--muted); }
+.sim-status.live { color: var(--green); }
+.sim-journal-link {
+  display: inline-block; margin: 12px 0 0; color: var(--blue);
+  text-decoration: none; font: 600 12.5px/1 var(--sans);
+}
+.sim-journal-link:hover { text-decoration: underline; }
+
 .cf-disclaimer { color: var(--muted-2); font-size: 11.5px; margin: 14px 0 0; }
 
 .chart-error { padding: 60px 22px; text-align: center; color: var(--muted); }

@@ -48,7 +48,9 @@
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";
-    $("#ct-dir").hidden = false;
+    const dirEl = $("#ct-dir");
+    if (d.dir) { dirEl.textContent = d.dir; dirEl.classList.toggle("short", d.dir.toUpperCase() === "SHORT"); }
+    dirEl.hidden = false;
     $("#ct-chips").innerHTML = (d.chips || [])
       .map((c) => `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${c}</span>`).join("");
   }
@@ -71,8 +73,91 @@
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
+  // ----------------------------------------------------------- simulate buy/sell
+  // Writes straight into the same localStorage the "My Trades" journal reads
+  // (gbs:manual_journal), so a simulated entry/exit shows up there with full P&L.
+  const MJ_KEY = "gbs:manual_journal";
+  function mjLoad() {
+    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
+    return { capital: 10000, brokerage: 10, trades: [] };
+  }
+  function mjSave(x) { localStorage.setItem(MJ_KEY, JSON.stringify(x)); }
+  function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  const nowDate = () => new Date().toLocaleDateString("en-CA");          // YYYY-MM-DD (local)
+  const nowTime = () => new Date().toTimeString().slice(0, 5);            // HH:MM (local)
+
+  function wireSim(d) {
+    const buyBtn  = $("#cf-sim-buy");
+    const sellBtn = $("#cf-sim-sell");
+    const statusEl = $("#cf-sim-status");
+    if (!buyBtn || !sellBtn) return;
+
+    const cur  = d.currency_symbol || "";
+    const dir  = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
+    const SYM  = (d.symbol || symbol).toUpperCase();
+
+    // Re-label the entry button to match the setup direction.
+    buyBtn.textContent  = dir === "short" ? "▲ Simulate Short" : "▲ Simulate Buy";
+    sellBtn.textContent = dir === "short" ? "▼ Cover / Close"  : "▼ Simulate Sell";
+
+    const openSimTrade = () =>
+      mjLoad().trades.find((t) => t.sim && t.status === "open" &&
+        (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
+
+    function refresh() {
+      const t = openSimTrade();
+      if (t) {
+        buyBtn.disabled = true; sellBtn.disabled = false;
+        statusEl.className = "sim-status live";
+        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${t.shares} units`;
+      } else {
+        buyBtn.disabled = false; sellBtn.disabled = true;
+        statusEl.className = "sim-status";
+        statusEl.textContent = "";
+      }
+    }
+
+    buyBtn.addEventListener("click", () => {
+      if (openSimTrade()) return;
+      const px    = +d.price || +d.entry || 0;
+      if (!px) { statusEl.textContent = "No price available."; return; }
+      const size  = 1000;
+      const data  = mjLoad();
+      data.trades.push({
+        id: mjUid(), symbol: SYM, direction: dir,
+        entry: px, entry_date: nowDate(), entry_time: nowTime(),
+        size_usd: size, shares: +(size / px).toFixed(4),
+        stop: d.stop ?? null, target: d.target ?? null,
+        notes: `Simulated from chart · ${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
+        status: "open", exit: null, exit_date: null, exit_time: null, sim: true,
+      });
+      mjSave(data);
+      refresh();
+    });
+
+    sellBtn.addEventListener("click", () => {
+      const t = openSimTrade();
+      if (!t) return;
+      const px = +d.price || +t.entry || 0;
+      const data = mjLoad();
+      const rec  = data.trades.find((x) => x.id === t.id);
+      if (rec) {
+        rec.status = "closed";
+        rec.exit = px; rec.exit_date = nowDate(); rec.exit_time = nowTime();
+        mjSave(data);
+      }
+      const m   = dir === "long" ? 1 : -1;
+      const pnl = (t.shares * m * (px - t.entry) - 2 * (data.brokerage || 0));
+      statusEl.className = "sim-status" + (pnl >= 0 ? " live" : "");
+      statusEl.textContent = `Closed @ ${fmt(px, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} — logged to My Trades`;
+      buyBtn.disabled = false; sellBtn.disabled = true;
+    });
+
+    refresh();
+  }
+
   function render(d) {
-    header(d); footer(d);
+    header(d); footer(d); wireSim(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
     if (!available.length) { fail("No chart data for this ticker yet."); return; }
