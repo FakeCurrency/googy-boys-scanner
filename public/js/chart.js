@@ -346,6 +346,79 @@
 
     applyTF(curTF);
 
+    // ── Ruler / measurement tool ──────────────────────────────────────────────
+    // Click once to anchor, move to see the range, click again to lock it.
+    // Click a third time (or toggle off) to clear.
+    const cur = d.currency_symbol || "";
+    let rulerOn = false, anchor = null, anchorLine = null, hoverLine = null;
+
+    const rulerBtn = document.createElement("button");
+    rulerBtn.className = "tf-btn ruler-btn"; rulerBtn.title = "Measure price range";
+    rulerBtn.innerHTML = "📏 Ruler";
+    toggle.appendChild(rulerBtn);
+
+    // Floating label that sits inside the chart canvas area.
+    const measureLabel = Object.assign(document.createElement("div"), { className: "ruler-label" });
+    el.style.position = "relative";
+    el.appendChild(measureLabel);
+
+    function clearRuler() {
+      anchor = null;
+      if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
+      if (hoverLine)  { try { candle.removePriceLine(hoverLine);  } catch (_) {} hoverLine  = null; }
+      measureLabel.style.display = "none";
+    }
+
+    function showLabel(pt, p1, p2) {
+      const delta = p2 - p1;
+      const pct   = (delta / p1 * 100);
+      const sign  = delta >= 0 ? "+" : "";
+      const col   = delta >= 0 ? "#2fd07f" : "#ff5b5b";
+      const dp    = Math.abs(p1) >= 100 ? 2 : Math.abs(p1) >= 1 ? 3 : 4;
+      measureLabel.style.cssText =
+        `display:block; top:${pt.y}px; left:${pt.x}px; border-color:${col}; color:${col}`;
+      measureLabel.innerHTML =
+        `${sign}${pct.toFixed(2)}% &nbsp; ${sign}${cur}${Math.abs(delta).toFixed(dp)}`;
+    }
+
+    rulerBtn.addEventListener("click", () => {
+      rulerOn = !rulerOn;
+      rulerBtn.classList.toggle("is-active", rulerOn);
+      el.style.cursor = rulerOn ? "crosshair" : "";
+      if (!rulerOn) clearRuler();
+    });
+
+    chart.subscribeClick((param) => {
+      if (!rulerOn || !param.point) return;
+      const price = candle.coordinateToPrice(param.point.y);
+      if (price == null) return;
+      if (!anchor) {
+        anchor = price;
+        anchorLine = candle.createPriceLine({
+          price: anchor, color: "#f0a500", lineWidth: 1,
+          lineStyle: 2, axisLabelVisible: true, title: fmt(anchor, cur),
+        });
+      } else {
+        // Lock the measurement — replace hover line with a permanent one.
+        if (hoverLine) { try { candle.removePriceLine(hoverLine); } catch (_) {} hoverLine = null; }
+        candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+        showLabel(param.point, anchor, price);
+        anchor = null;
+        if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
+        // Auto-hide the label after 6 s; user can click again to measure next range.
+        setTimeout(() => { measureLabel.style.display = "none"; }, 6000);
+      }
+    });
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!rulerOn || !anchor || !param.point) return;
+      const price = candle.coordinateToPrice(param.point.y);
+      if (price == null) return;
+      if (hoverLine) hoverLine.applyOptions({ price, title: `${price > anchor ? "+" : ""}${((price - anchor) / anchor * 100).toFixed(2)}%` });
+      else hoverLine = candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+      showLabel(param.point, anchor, price);
+    });
+
     // ── go LIVE for crypto scalp charts (1H, Binance stream) ──────────────────
     const pair = BINANCE_MAP[(d.symbol || "").toUpperCase()];
     if (pair && tfs["1H"]) startLive(d, pair, { chart, candle, vol, lineSeries, momSeries, fitOnce: true });

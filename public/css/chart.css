@@ -78,6 +78,15 @@
 .sim-status.live { color: var(--green); }
 .sim-status.neg  { color: var(--red); }
 .sim-status strong { font-variant-numeric: tabular-nums; }
+/* ── ruler ── */
+.ruler-btn { margin-left: 8px; letter-spacing: 0; }
+.ruler-label {
+  display: none; position: absolute; pointer-events: none; z-index: 20;
+  font: 700 12px/1 var(--mono); white-space: nowrap;
+  background: rgba(8,11,17,.88); border: 1px solid; border-radius: 6px;
+  padding: 5px 10px; transform: translate(12px, -50%);
+}
+
 .sim-journal-link {
   display: inline-block; margin: 12px 0 0; color: var(--blue);
   text-decoration: none; font: 600 12.5px/1 var(--sans);
