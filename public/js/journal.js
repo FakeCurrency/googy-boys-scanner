@@ -446,7 +446,7 @@
             <td class="r-neg">${t.stop   != null ? "$" + num(t.stop)   : "—"}</td>
             <td class="r-pos">${t.target != null ? "$" + num(t.target) : "—"}</td>
             <td>${rr}</td>
-            <td>${t.shares != null ? t.shares + " sh" : "—"}</td>
+            <td>${t.shares != null ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u ×${t.leverage}` : `${t.shares} sh`) : "—"}</td>
             <td class="muted">${esc(t.entry_date)}${t.entry_time ? " " + t.entry_time : ""}</td>
             <td>${t.notes ? `<span class="reason">${esc(t.notes)}</span>` : "—"}</td>
             <td style="white-space:nowrap">
@@ -481,7 +481,7 @@
             <td><span class="dir-chip ${dc}">${dir}</span></td>
             <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
             <td>${t.exit  != null ? "$" + num(t.exit)  : "—"}</td>
-            <td>${t.shares != null ? t.shares + " sh" : "—"}</td>
+            <td>${t.shares != null ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u ×${t.leverage}` : `${t.shares} sh`) : "—"}</td>
             <td class="${rCls}">${rStr}</td>
             <td class="${pCls}">${pStr}</td>
             <td class="muted">${esc(t.entry_date)} → ${esc(t.exit_date || "")}</td>
@@ -524,7 +524,8 @@
     $("#mj-trade-id").value   = "";
     $("#mj-symbol").value     = "";
     $("#mj-entry").value      = "";
-    $("#mj-size").value       = 1000;
+    $("#mj-size").value       = 500;
+    const levEl = $("#mj-leverage"); if (levEl) levEl.value = 10;
     $("#mj-entry-date").value = date;
     $("#mj-entry-time").value = time;
     $("#mj-stop").value       = "";
@@ -567,24 +568,26 @@
 
   // Live preview: shares + P&L estimate while typing in the form
   function mjUpdateOpenPreview() {
-    const entry = parseFloat($("#mj-entry").value);
-    const size  = parseFloat($("#mj-size").value);
-    const prev  = $("#mj-shares-preview");
+    const entry    = parseFloat($("#mj-entry").value);
+    const size     = parseFloat($("#mj-size").value);
+    const levEl    = $("#mj-leverage");
+    const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
+    const prev     = $("#mj-shares-preview");
     if (!prev) return;
     if (!entry || !size) { prev.textContent = ""; return; }
-    const shares  = Math.floor(size / entry);
-    const { brokerage } = mjLoad();
-    const stopEl = parseFloat($("#mj-stop").value);
+    const exposure = size * leverage;
+    const units    = exposure / entry;
+    const stopEl   = parseFloat($("#mj-stop").value);
+    const tgtVal   = parseFloat($("#mj-target").value);
     let rr = "";
-    if (stopEl && $("#mj-target").value) {
+    if (stopEl && tgtVal) {
       const dir  = mjGetDir();
       const risk = dir === "long" ? entry - stopEl : stopEl - entry;
-      const tgt  = parseFloat($("#mj-target").value);
-      const rew  = dir === "long" ? tgt - entry : entry - tgt;
+      const rew  = dir === "long" ? tgtVal - entry : entry - tgtVal;
       if (risk > 0) rr = ` · R:R ${(rew / risk).toFixed(1)}`;
     }
-    prev.innerHTML = `<span class="hl">${shares} shares</span> · max risk <span class="hl">$${(shares * Math.abs((entry - (stopEl || 0))).toFixed ? "$" : "")}</span>${rr}`;
-    prev.textContent = `${shares} shares${rr ? "  ·  " + rr.trim() : ""}`;
+    const levStr = leverage > 1 ? ` · ${leverage}× leverage` : "";
+    prev.textContent = `${units.toFixed(4)} units · $${exposure.toFixed(0)} AUD exposure${levStr}${rr}`;
   }
 
   function mjUpdateClosePreview() {
@@ -593,7 +596,7 @@
     if (!prev || !exit) { if (prev) prev.textContent = ""; return; }
     const entry    = parseFloat(prev.dataset.entry  || 0);
     const stop     = parseFloat(prev.dataset.stop   || 0);
-    const shares   = parseInt(prev.dataset.shares   || 0, 10);
+    const shares   = parseFloat(prev.dataset.shares  || 0);
     const dir      = prev.dataset.dir || "long";
     const { brokerage } = mjLoad();
     const m   = dir === "long" ? 1 : -1;
@@ -624,10 +627,12 @@
       t.mtime      = Date.now();
     } else {
       // Open a new position
-      const entry  = parseFloat($("#mj-entry").value);
-      const size   = parseFloat($("#mj-size").value);
-      const stop   = parseFloat($("#mj-stop").value)   || null;
-      const target = parseFloat($("#mj-target").value) || null;
+      const entry    = parseFloat($("#mj-entry").value);
+      const size     = parseFloat($("#mj-size").value);
+      const levEl    = $("#mj-leverage");
+      const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
+      const stop     = parseFloat($("#mj-stop").value)   || null;
+      const target   = parseFloat($("#mj-target").value) || null;
       data.trades.push({
         id:          mjUid(),
         symbol:      $("#mj-symbol").value.trim().toUpperCase(),
@@ -636,7 +641,8 @@
         entry_date:  $("#mj-entry-date").value,
         entry_time:  $("#mj-entry-time").value,
         size_usd:    size,
-        shares:      entry > 0 ? Math.floor(size / entry) : 0,
+        leverage,
+        shares:      entry > 0 ? parseFloat((size * leverage / entry).toFixed(8)) : 0,
         stop,
         target,
         notes:       $("#mj-notes").value.trim(),
@@ -686,7 +692,7 @@
     });
 
     // Live preview on entry/size/stop/target change
-    ["#mj-entry", "#mj-size", "#mj-stop", "#mj-target"].forEach((sel) => {
+    ["#mj-entry", "#mj-size", "#mj-leverage", "#mj-stop", "#mj-target"].forEach((sel) => {
       const el = $(sel);
       if (el) el.addEventListener("input", mjUpdateOpenPreview);
     });

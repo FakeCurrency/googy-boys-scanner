@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=9" />
-  <link rel="stylesheet" href="css/journal.css?v=7" />
+  <link rel="stylesheet" href="css/journal.css?v=8" />
 </head>
 <body>
   <header class="topbar">
@@ -195,8 +195,12 @@
               <label class="mj-label">Entry Price $
                 <input id="mj-entry" class="mj-field" type="number" step="any" min="0" placeholder="1.00" required />
               </label>
-              <label class="mj-label">$ to Invest
-                <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="1000" required />
+              <label class="mj-label">$ Margin × Leverage
+                <div style="display:flex;gap:6px;align-items:center">
+                  <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="500" style="flex:1;min-width:0" required />
+                  <span style="font:700 14px/1 var(--sans);color:var(--muted);flex-shrink:0">×</span>
+                  <input id="mj-leverage" class="mj-field" type="number" step="1" min="1" max="500" value="10" style="width:60px;flex-shrink:0" title="Leverage (1 = spot/no leverage)" />
+                </div>
               </label>
             </div>
             <div class="mj-row">
@@ -256,6 +260,6 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=1"></script>
-  <script src="js/journal.js?v=8"></script>
+  <script src="js/journal.js?v=9"></script>
 </body>
 </html>
