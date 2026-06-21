@@ -219,6 +219,7 @@
         <div class="trend-bar ${r.trend}"></div>
       </a>
       <div class="row-prices">
+        <div class="pcell"><div class="pcell-label">Mkt Cap</div><div class="pcell-val ${mcapCls}">${mcapTxt || "—"}</div></div>
         <div class="pcell"><div class="pcell-label">Y Close</div><div class="pcell-val">${fmtPrice(r.y_close)}</div></div>
         <div class="pcell"><div class="pcell-label">Open</div><div class="pcell-val">${fmtPrice(r.open)} <span class="pcell-pct ${pctCls(r.open_pct)}">${fmtPct(r.open_pct)}</span></div></div>
         <div class="pcell"><div class="pcell-label">Current</div><div class="pcell-val">${fmtPrice(r.price)} <span class="pcell-pct ${pctCls(r.current_pct)}">${fmtPct(r.current_pct)}</span></div></div>

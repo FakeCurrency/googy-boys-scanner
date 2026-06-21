@@ -285,11 +285,13 @@ body {
 .trend-bar { height: 4px; border-radius: 2px; width: 60%; }
 .trend-bar.green { background: var(--green); } .trend-bar.blue { background: var(--blue); }
 
-.row-prices { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.row-prices { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
 .pcell { min-width: 0; }
 .pcell-label { font: 600 9.5px/1 var(--sans); letter-spacing: 0.04em; color: var(--muted-2); text-transform: uppercase; }
 .pcell-val { font: 600 12.5px/1.2 var(--sans); color: var(--text); margin-top: 5px; }
 .pcell-pct { font-size: 10.5px; font-weight: 600; }
+.pcell-val.mcap-small { color: var(--orange); }
+.pcell-val.mcap-hot   { color: var(--red); }
 .pct-up { color: var(--green); } .pct-down { color: var(--red); }
 
 .row-trade { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
@@ -376,7 +378,7 @@ body {
 @media (max-width: 560px) {
   .wrap { padding: 14px 12px 48px; }
   .row { grid-template-columns: 40px 1fr; padding: 13px; }
-  .row-prices { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .row-prices { grid-template-columns: repeat(3,1fr); gap: 10px; }
   .cname { max-width: 120px; }
   /* hide less-essential columns on small screens */
   .scan-switch { order: 4; width: 100%; overflow-x: auto; }
