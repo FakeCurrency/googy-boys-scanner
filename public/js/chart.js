@@ -700,6 +700,71 @@
     return { start, switchTo };
   }
 
+  // Let the user drag the floating LIVE box anywhere on the chart; its spot is
+  // remembered across reloads (and across symbols). Works with mouse and touch.
+  function makeLiveBoxDraggable(box, container) {
+    const KEY = "gbs:livebox_pos";
+    const clamp = (v, max) => Math.max(0, Math.min(v, Math.max(0, max)));
+
+    function place(left, top) {
+      const cr = container.getBoundingClientRect();
+      box.style.left  = clamp(left, cr.width  - box.offsetWidth)  + "px";
+      box.style.top   = clamp(top,  cr.height - box.offsetHeight) + "px";
+      box.style.right = "auto";
+    }
+    // Restore a saved position once the box has real dimensions (it starts hidden).
+    function restore() {
+      let p = null;
+      try { p = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
+      if (p && box.offsetWidth) place(p.left, p.top);
+    }
+
+    let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+    const pointOf = (e) => (e.touches && e.touches[0]) ? e.touches[0] : e;
+
+    function onDown(e) {
+      const pt = pointOf(e);
+      const r = box.getBoundingClientRect();
+      const cr = container.getBoundingClientRect();
+      ox = r.left - cr.left; oy = r.top - cr.top;
+      sx = pt.clientX; sy = pt.clientY;
+      dragging = true;
+      box.classList.add("dragging");
+      place(ox, oy);
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      document.addEventListener("touchmove", onMove, { passive: false });
+      document.addEventListener("touchend", onUp);
+      e.preventDefault();
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      const pt = pointOf(e);
+      place(ox + (pt.clientX - sx), oy + (pt.clientY - sy));
+      if (e.cancelable) e.preventDefault();
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      box.classList.remove("dragging");
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onUp);
+      try {
+        localStorage.setItem(KEY, JSON.stringify({
+          left: parseFloat(box.style.left) || 0,
+          top:  parseFloat(box.style.top)  || 0,
+        }));
+      } catch (_) {}
+    }
+    box.addEventListener("mousedown", onDown);
+    box.addEventListener("touchstart", onDown, { passive: false });
+    // Re-apply the saved spot the first time the box is shown and on resize.
+    box.__restorePos = restore;
+    window.addEventListener("resize", restore);
+  }
+
   // Floating LIVE box — shows the full state of the open position (entry, time,
   // current, P&L, R, move %, stop/target distance, time-in-trade) and updates on
   // every tick. Visible only while a matching position is open.
@@ -712,6 +777,7 @@
     box.style.display = "none";
     el.style.position = "relative";
     el.appendChild(box);
+    makeLiveBoxDraggable(box, el);
 
     // Banner shown when a manual position auto-closes on stop/target.
     const banner = document.createElement("div");
@@ -765,7 +831,10 @@
       if (maybeAutoClose(px)) { box.style.display = "none"; return; }
       const t = findOpen();
       if (!t) { box.style.display = "none"; return; }
+      const wasHidden = box.style.display === "none";
       box.style.display = "block";
+      // Apply the saved drag position once the box has real dimensions.
+      if (wasHidden && box.__restorePos) box.__restorePos();
       const m     = posDir === "long" ? 1 : -1;
       const data  = mjLoad(), brok = posBrok(data);
       const price = px || liveState.price || t.entry;

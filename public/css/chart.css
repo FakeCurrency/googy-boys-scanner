@@ -99,8 +99,10 @@
   position: absolute; top: 14px; right: 16px; z-index: 16; min-width: 208px;
   background: rgba(8,11,17,.9); border: 1px solid var(--border); border-radius: 12px;
   padding: 11px 13px; backdrop-filter: blur(7px);
-  box-shadow: 0 8px 26px rgba(0,0,0,.4); pointer-events: none;
+  box-shadow: 0 8px 26px rgba(0,0,0,.4);
+  pointer-events: auto; cursor: move; touch-action: none; user-select: none; -webkit-user-select: none;
 }
+.live-pos-box.dragging { opacity: .92; box-shadow: 0 12px 34px rgba(0,0,0,.55); }
 .lpb-head { display: flex; align-items: center; gap: 6px; font: 800 11.5px/1 var(--sans); letter-spacing: .04em; }
 .lpb-head.long  { color: var(--green); }
 .lpb-head.short { color: var(--red); }
