@@ -65,8 +65,9 @@ def _load_scan() -> dict | None:
 
 
 def _save(j: dict) -> None:
-    _atomic_write(SCALP_JOURNAL_FILE, j)
-    _atomic_write(PUBLIC_SCALP_JOURNAL, j)
+    payload = json.dumps(j, indent=2)
+    _atomic_write(SCALP_JOURNAL_FILE, payload)
+    _atomic_write(PUBLIC_SCALP_JOURNAL, payload)
 
 
 def run(dry_run: bool = False) -> None:
