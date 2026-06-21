@@ -240,7 +240,7 @@
     const cur     = d.currency_symbol || "";
     const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
     const SYM     = (d.symbol || symbol).toUpperCase();
-    const isCrypto = !!BINANCE_MAP[SYM] || market === "scalp";
+    const isCrypto = !!BINANCE_MAP[SYM] || market === "scalp" || market === "crypto";
     const simBrok  = (data) => isCrypto ? data.crypto_brokerage : data.stock_brokerage;
 
     // Re-label the entry button to match the setup direction.
@@ -705,7 +705,7 @@
   // every tick. Visible only while a matching position is open.
   function wireLiveBox(d, el, SYM, posDir, findOpen) {
     const cur        = d.currency_symbol || "";
-    const isCryptoPos = !!BINANCE_MAP[SYM] || market === "scalp";
+    const isCryptoPos = !!BINANCE_MAP[SYM] || market === "scalp" || market === "crypto";
     const posBrok    = (data) => isCryptoPos ? data.crypto_brokerage : data.stock_brokerage;
     const box = document.createElement("div");
     box.className = "live-pos-box";

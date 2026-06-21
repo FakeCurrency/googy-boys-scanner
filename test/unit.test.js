@@ -63,7 +63,7 @@ const BINANCE_MAP = {
 
 // isCrypto flag — mirrors wireSim / wireLiveBox in chart.js.
 function isCrypto(sym, market) {
-  return !!BINANCE_MAP[sym.toUpperCase()] || market === "scalp";
+  return !!BINANCE_MAP[sym.toUpperCase()] || market === "scalp" || market === "crypto";
 }
 
 // Brokerage routing — mirrors simBrok / posBrok in chart.js.
@@ -336,6 +336,11 @@ test("BTC in market=asx still → crypto_brokerage (BINANCE_MAP takes precedence
   assert.equal(routeBrok(defData, isCrypto("BTC", "asx")), 5);
 });
 
+test("non-map coin + market=crypto → crypto_brokerage (regular crypto scan)", () => {
+  // INJ is not in BINANCE_MAP but is opened from the top-level CRYPTO market.
+  assert.equal(routeBrok(defData, isCrypto("INJ", "crypto")), 5);
+});
+
 // ── sim trade asset_type assignment ──────────────────────────────────────────
 suite("sim trade asset_type (wireSim buy handler)");
 
@@ -353,6 +358,12 @@ test("sim buy on scalp crypto → asset_type 'crypto'", () => {
 
 test("sim buy on BINANCE_MAP coin → asset_type 'crypto' regardless of market", () => {
   assert.equal(simAssetType(true,  "asx"),    "crypto");
+});
+
+test("sim buy on non-map coin from crypto market → asset_type 'crypto'", () => {
+  // Regression: INJ from the CRYPTO market used to fall through to 'nasdaq'
+  // and vanish from the My Crypto tab. It must now classify as crypto.
+  assert.equal(simAssetType(isCrypto("INJ", "crypto"), "crypto"), "crypto");
 });
 
 // Prove the scoreboard uses the right brokerage per asset_type

@@ -200,37 +200,49 @@
     ].join("");
   }
 
-  // Tab switching
-  document.querySelectorAll(".jr-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".jr-tab").forEach((b) => {
-        b.classList.remove("is-active");
-        b.setAttribute("aria-selected", "false");
-      });
-      btn.classList.add("is-active");
-      btn.setAttribute("aria-selected", "true");
-      const jrnl = btn.dataset.journal;
-      const allSec = $("#jr-all-section");
-      if (allSec) allSec.classList.toggle("jr-hidden", jrnl !== "all");
-      if (jrnl === "all") renderScoreboard();   // refresh "You" side with latest manual trades
-      $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
-      $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
-      $("#jr-scalp-section").classList.toggle("jr-hidden", jrnl !== "scalp");
-
-      const syncBar = $("#jr-shared-sync");
-      if (syncBar) syncBar.classList.toggle("jr-hidden", jrnl !== "stocks" && jrnl !== "crypto");
-      const stocksSec = $("#jr-stocks-section");
-      if (stocksSec) {
-        stocksSec.classList.toggle("jr-hidden", jrnl !== "stocks");
-        if (jrnl === "stocks") mjRenderStocks();
-      }
-      const cryptoSec = $("#jr-crypto-section");
-      if (cryptoSec) {
-        cryptoSec.classList.toggle("jr-hidden", jrnl !== "crypto");
-        if (jrnl === "crypto") mjRenderCrypto();
-      }
+  // Tab switching — remembers the active tab so a reload stays put.
+  const TAB_KEY = "gbs:journal_tab";
+  function activateTab(jrnl) {
+    let matched = false;
+    document.querySelectorAll(".jr-tab").forEach((b) => {
+      const on = b.dataset.journal === jrnl;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      if (on) matched = true;
     });
+    if (!matched) jrnl = "all";   // unknown saved value → fall back to Overall
+
+    const allSec = $("#jr-all-section");
+    if (allSec) allSec.classList.toggle("jr-hidden", jrnl !== "all");
+    if (jrnl === "all") renderScoreboard();   // refresh "You" side with latest manual trades
+    $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
+    $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
+    $("#jr-scalp-section").classList.toggle("jr-hidden", jrnl !== "scalp");
+
+    const syncBar = $("#jr-shared-sync");
+    if (syncBar) syncBar.classList.toggle("jr-hidden", jrnl !== "stocks" && jrnl !== "crypto");
+    const stocksSec = $("#jr-stocks-section");
+    if (stocksSec) {
+      stocksSec.classList.toggle("jr-hidden", jrnl !== "stocks");
+      if (jrnl === "stocks") mjRenderStocks();
+    }
+    const cryptoSec = $("#jr-crypto-section");
+    if (cryptoSec) {
+      cryptoSec.classList.toggle("jr-hidden", jrnl !== "crypto");
+      if (jrnl === "crypto") mjRenderCrypto();
+    }
+    try { localStorage.setItem(TAB_KEY, jrnl); } catch (_) {}
+  }
+
+  document.querySelectorAll(".jr-tab").forEach((btn) => {
+    btn.addEventListener("click", () => activateTab(btn.dataset.journal));
   });
+
+  // Restore the last-used tab on load (default to Overall on first visit).
+  try {
+    const saved = localStorage.getItem(TAB_KEY);
+    if (saved && saved !== "all") activateTab(saved);
+  } catch (_) {}
 
   // Holds each journal's closed-trade $ P&L for the combined Overall view.
   const overall = { swing: [], scalp: [] };
