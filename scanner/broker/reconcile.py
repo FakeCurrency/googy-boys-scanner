@@ -68,7 +68,7 @@ def _close_from_broker(pos: dict, exit_price: float, reason: str, now_ts: str) -
 def reconcile_journal(j: dict) -> dict:
     """Mutates the journal in-place: sync every broker-tracked position."""
     orders_by_id = _fetch_all_orders()
-    now_ts = dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    now_ts = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds") + "Z"
 
     survivors = []
     for pos in j.get("open", []):

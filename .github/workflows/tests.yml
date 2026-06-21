@@ -1,0 +1,52 @@
+name: Tests
+
+# Runs the JS pure-function tests and the Python scanner/broker tests on every
+# push and PR. Fast, no network — pure unit tests only.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: JS unit tests
+        run: node test/unit.test.js
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Python unit tests
+        run: python -m pytest test/ -q
+
+  broker-dry-run:
+    # Exercises the Alpaca order path end-to-end in dry-run (no creds, no orders)
+    # so the broker modules import and run without ever touching the API.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: paper_run --dry-run (no creds)
+        run: python -m scanner.broker.paper_run --dry-run

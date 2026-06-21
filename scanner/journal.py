@@ -104,28 +104,52 @@ def _save(j: dict) -> None:
     }, indent=2), encoding="utf-8")
 
 
+SLIP = config.SWING_FILL_SLIPPAGE_PCT
+
+
 def _close(pos: dict, price: float, date: str, reason: str, bars: int) -> dict:
     direction = pos.get("direction", "long")
     shares = pos.get("shares", 0)
     brokerage = pos.get("brokerage", config.BROKERAGE_EACH_WAY)
-    if direction == "short":
-        risk = pos["stop"] - pos["entry"]
-        r_val = round((pos["entry"] - price) / risk, 2) if risk > 0 else 0.0
-        pnl = round(shares * (pos["entry"] - price) - 2 * brokerage, 2)
+    # Risk & P&L use the pessimistic fill price (entry slippage), falling back to
+    # the signal entry for legacy positions opened before slippage modelling.
+    entry = pos.get("fill_price", pos["entry"])
+    # Market exits (stop / trail / invalid) slip worse; limit exits (target) don't.
+    is_market_exit = reason not in ("target", "target-gap")
+    if is_market_exit:
+        exit_px = price * (1 - SLIP) if direction == "long" else price * (1 + SLIP)
     else:
-        risk = pos["entry"] - pos["stop"]
-        r_val = round((price - pos["entry"]) / risk, 2) if risk > 0 else 0.0
-        pnl = round(shares * (price - pos["entry"]) - 2 * brokerage, 2)
-    return {**pos, "status": "closed", "exit": round(price, 4),
+        exit_px = price
+    if direction == "short":
+        risk = pos["stop"] - entry
+        r_val = round((entry - exit_px) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (entry - exit_px) - 2 * brokerage, 2)
+    else:
+        risk = entry - pos["stop"]
+        r_val = round((exit_px - entry) / risk, 2) if risk > 0 else 0.0
+        pnl = round(shares * (exit_px - entry) - 2 * brokerage, 2)
+    return {**pos, "status": "closed", "exit": round(exit_px, 4),
             "exit_date": date, "reason": reason, "bars": bars,
             "r": r_val, "pnl": pnl}
 
 
 def _walk(df, pos: dict) -> dict:
-    """Advance one open position against fresh data; returns it open or closed."""
+    """Advance one open position against fresh data; returns it open or closed.
+
+    Honest fill model (mirrors the scalp journal):
+    - P&L uses ``fill_price`` (entry + slippage), set once when the position is
+      opened; falls back to the signal ``entry`` for legacy positions.
+    - Gap-through: if a bar OPENS beyond the stop (or target) we fill at the bar
+      open, not the level — so a gap-down through a stop books the real, larger
+      loss instead of the optimistic stop price.
+    - The SuperTrend trail is ratcheted using a bar's close but only applied to
+      LATER bars (ratchet happens at the end of the loop body), removing the
+      same-bar trail-then-test intrabar lookahead.
+    """
     if df is None or len(df) < 2:
         return pos
-    entry, stop, target = pos["entry"], pos["stop"], pos["target"]
+    entry = pos.get("fill_price", pos["entry"])
+    stop, target = pos["stop"], pos["target"]
     direction = pos.get("direction", "long")
     shares = pos.get("shares", 0)
 
@@ -140,6 +164,7 @@ def _walk(df, pos: dict) -> dict:
     closes = df["Close"].to_numpy()
     highs = df["High"].to_numpy()
     lows = df["Low"].to_numpy()
+    opens = df["Open"].to_numpy()
     st_arr = supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT).to_numpy()
 
     start = next((k for k, ds in enumerate(dates) if ds > pos["opened"]), None)
@@ -156,14 +181,20 @@ def _walk(df, pos: dict) -> dict:
     if direction == "short":
         current_stop = stop  # trail ratchets DOWN as price falls
         for j in range(start, len(df)):
-            st = st_arr[j]
-            if np.isfinite(st) and closes[j] < st < current_stop:
-                current_stop = st
+            trailing = current_stop < stop
+            if opens[j] >= current_stop:        # gapped up through stop (unfavourable)
+                return _close(pos, float(opens[j]), dates[j],
+                              "trail-gap" if trailing else "stop-gap", j - start + 1)
+            if opens[j] <= target:              # gapped down through target (windfall)
+                return _close(pos, float(opens[j]), dates[j], "target-gap", j - start + 1)
             if highs[j] >= current_stop:
                 return _close(pos, current_stop, dates[j],
-                              "trail" if current_stop < stop else "stop", j - start + 1)
+                              "trail" if trailing else "stop", j - start + 1)
             if lows[j] <= target:
                 return _close(pos, target, dates[j], "target", j - start + 1)
+            st = st_arr[j]                       # ratchet AFTER tests → applies next bar only
+            if np.isfinite(st) and closes[j] < st < current_stop:
+                current_stop = st
         pos["current"] = round(float(closes[-1]), 4)
         pos["trail_stop"] = round(current_stop, 4)
         pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
@@ -171,14 +202,20 @@ def _walk(df, pos: dict) -> dict:
     else:
         current_stop = stop
         for j in range(start, len(df)):
-            st = st_arr[j]
-            if np.isfinite(st) and closes[j] > st > current_stop:
-                current_stop = st
+            trailing = current_stop > stop
+            if opens[j] <= current_stop:        # gapped down through stop (unfavourable)
+                return _close(pos, float(opens[j]), dates[j],
+                              "trail-gap" if trailing else "stop-gap", j - start + 1)
+            if opens[j] >= target:              # gapped up through target (windfall)
+                return _close(pos, float(opens[j]), dates[j], "target-gap", j - start + 1)
             if lows[j] <= current_stop:
                 return _close(pos, current_stop, dates[j],
-                              "trail" if current_stop > stop else "stop", j - start + 1)
+                              "trail" if trailing else "stop", j - start + 1)
             if highs[j] >= target:
                 return _close(pos, target, dates[j], "target", j - start + 1)
+            st = st_arr[j]                       # ratchet AFTER tests → applies next bar only
+            if np.isfinite(st) and closes[j] > st > current_stop:
+                current_stop = st
         pos["current"] = round(float(closes[-1]), 4)
         pos["trail_stop"] = round(current_stop, 4)
         pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
@@ -216,11 +253,13 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
             break
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "long") not in open_keys:
             entry_price = r["entry"]
-            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
+            fill_price = round(entry_price * (1 + SLIP), 6)   # long pays slightly worse
+            shares = int(config.POSITION_SIZE_USD / fill_price) if fill_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
                 "grade": r["grade"], "score": r["score"],
-                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "entry": entry_price, "fill_price": fill_price,
+                "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
                 "direction": "long",
                 "shares": shares,
@@ -237,11 +276,13 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
             break
         if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
             entry_price = r["entry"]
-            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
+            fill_price = round(entry_price * (1 - SLIP), 6)   # short fills slightly worse (lower)
+            shares = int(config.POSITION_SIZE_USD / fill_price) if fill_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
                 "grade": r["grade"], "score": r["score"],
-                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
+                "entry": entry_price, "fill_price": fill_price,
+                "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
                 "direction": "short",
                 "shares": shares,

@@ -108,6 +108,10 @@ POSITION_SIZE_USD = 1_000    # target dollar amount invested per trade (AUD for 
 BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
 MAX_POSITIONS_LONG = 10      # maximum concurrent open long positions across all markets
 MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across all markets
+# Conservative one-way slippage applied to swing fills so the paper track record
+# is not flattered: entries fill slightly worse than the ideal trigger, and
+# market exits (stops/trails) slip worse too. Targets are limit orders → no slip.
+SWING_FILL_SLIPPAGE_PCT = 0.0005   # 0.05% one-way
 
 # ---------------------------------------------------------------------------
 # PULSE — macro market indicators shown in the top bar.

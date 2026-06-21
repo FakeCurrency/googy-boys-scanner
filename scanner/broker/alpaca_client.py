@@ -17,7 +17,12 @@ _LIVE  = "https://api.alpaca.markets/v2"
 
 
 def _base() -> str:
-    return _LIVE if os.environ.get("ALPACA_LIVE", "").lower() == "true" else _PAPER
+    if os.environ.get("ALPACA_LIVE", "").lower() == "true":
+        # Fail-closed: refuse the live endpoint unless the proven-edge gate passes.
+        from .safety import assert_live_allowed
+        assert_live_allowed()
+        return _LIVE
+    return _PAPER
 
 
 def _headers() -> dict:

@@ -72,6 +72,20 @@ def run(dry_run: bool = False) -> None:
     mode = "LIVE ⚠️" if live else "PAPER"
     print(f"  paper_run: mode={mode}  dry_run={dry_run}")
 
+    # Fail-closed live gate: surface blockers up front rather than erroring deep
+    # in the first API call. Any live API call also re-checks this in _base().
+    if live:
+        from scanner.broker.safety import live_blockers, edge_summary
+        blockers = live_blockers()
+        s = edge_summary()
+        print(f"  paper_run: edge so far — {s['n']} trades over {s['days']}d, "
+              f"${s['total_pnl']:.2f} / {s['total_r']:.2f}R")
+        if blockers:
+            print("  paper_run: LIVE BLOCKED (fail-closed) — staying safe, not trading:")
+            for b in blockers:
+                print(f"    - {b}")
+            return
+
     j = _load_journal()
 
     # ── 1. Reconcile existing broker positions ────────────────────────────────

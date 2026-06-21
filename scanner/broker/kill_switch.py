@@ -17,6 +17,28 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
+def _broker_day_pnl() -> float | None:
+    """Today's P&L from the broker account (equity − last-close equity).
+
+    This is the *ground truth* — real account equity, not journal bookkeeping.
+    Returns None when no creds are set or the account can't be read, so the
+    caller falls back to the journal estimate.
+    """
+    if not os.environ.get("ALPACA_API_KEY"):
+        return None
+    try:
+        from scanner.broker import alpaca_client as ac
+        a = ac.account()
+        equity = float(a.get("equity", 0) or 0)
+        last   = float(a.get("last_equity", 0) or 0)
+        if last <= 0:
+            return None
+        return equity - last
+    except Exception as e:
+        print(f"  kill_switch: broker equity unavailable ({e}) — using journal estimate")
+        return None
+
+
 def check_and_kill(j: dict, dry_run: bool = False) -> bool:
     """Return True if the kill switch fired (caller must abort new orders).
 
@@ -25,17 +47,22 @@ def check_and_kill(j: dict, dry_run: bool = False) -> bool:
     from scanner.config import SCALP_MAX_DAILY_LOSS
     from scanner.scalp_journal import _session_day
 
-    today        = _session_day()
-    today_closed = [c for c in j.get("closed", []) if c.get("session_day") == today]
-    today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
-    unrealised   = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
-    total_session = today_pnl + unrealised
+    # Prefer real broker account equity; fall back to journal P&L if unavailable.
+    broker_pnl = _broker_day_pnl()
+    if broker_pnl is not None:
+        total_session, source = broker_pnl, "broker equity"
+    else:
+        today        = _session_day()
+        today_closed = [c for c in j.get("closed", []) if c.get("session_day") == today]
+        today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
+        unrealised   = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
+        total_session, source = today_pnl + unrealised, "journal estimate"
 
     if total_session >= -SCALP_MAX_DAILY_LOSS:
         return False
 
     print(f"  KILL SWITCH TRIGGERED — session P&L = ${total_session:.2f} "
-          f"(limit -${SCALP_MAX_DAILY_LOSS})")
+          f"(limit -${SCALP_MAX_DAILY_LOSS}, source={source})")
 
     if not os.environ.get("ALPACA_API_KEY"):
         print("  KILL SWITCH: ALPACA_API_KEY not set — skipping broker flatten")

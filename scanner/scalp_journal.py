@@ -29,6 +29,11 @@ DAY_ANCHOR = config.SCALP_DAY_ANCHOR_UTC                           # 08:00 UTC r
 MAX_GROUP  = config.SCALP_MAX_PER_GROUP                            # correlated positions cap
 
 
+def _utcnow_naive() -> dt.datetime:
+    """Timezone-naive UTC 'now' (utcnow() is deprecated in 3.12+)."""
+    return dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+
+
 def _session_day(ts: str | None = None) -> str:
     """Trading-day key anchored at SCALP_DAY_ANCHOR_UTC so it never resets mid-session.
 
@@ -39,9 +44,9 @@ def _session_day(ts: str | None = None) -> str:
         try:
             t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19])
         except ValueError:
-            t = dt.datetime.utcnow()
+            t = _utcnow_naive()
     else:
-        t = dt.datetime.utcnow()
+        t = _utcnow_naive()
     return (t - dt.timedelta(hours=DAY_ANCHOR)).strftime("%Y-%m-%d")
 
 
@@ -115,7 +120,7 @@ def summarize(j: dict) -> dict:
 
 
 def _save(j: dict) -> None:
-    j["updated_at"] = dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    j["updated_at"] = _utcnow_naive().isoformat(timespec="seconds") + "Z"
     SCALP_JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
     SCALP_JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
 
