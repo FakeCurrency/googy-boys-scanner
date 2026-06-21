@@ -58,6 +58,10 @@
 
   // Union two journals by trade id; tombstoned ids are dropped from both.
   function merge(a, b) {
+    // Capture raw inputs before normalizing so we can distinguish an explicitly
+    // set value (present in raw) from a normalize()-filled default (absent in raw).
+    const rawA = a && typeof a === "object" ? { ...a } : {};
+    const rawB = b && typeof b === "object" ? { ...b } : {};
     a = normalize(a); b = normalize(b);
     const deleted = new Set([...(a.deleted || []), ...(b.deleted || [])]);
     const byId = new Map();
@@ -67,14 +71,20 @@
       if (!ex || (t.mtime || 0) >= (ex.mtime || 0)) byId.set(t.id, t);
     }
     const newer = (b.updated_at || 0) >= (a.updated_at || 0) ? b : a;
+    const rNewer = newer === b ? rawB : rawA;
+    const rOlder = newer === b ? rawA : rawB;
+    // Explicit user setting (present as a number in raw) beats a normalize()
+    // default. Prefer newer's explicit value, then older's, then normalized default.
+    const pick = (f) => typeof rNewer[f] === "number" ? rNewer[f]
+                      : typeof rOlder[f] === "number" ? rOlder[f]
+                      : newer[f];
     return normalize({
-      capital: newer.capital,
-      brokerage: newer.brokerage,
-      // Per-asset settings: take from whichever side has them (prefer newer).
-      stock_capital:    newer.stock_capital    ?? (a.stock_capital    ?? b.stock_capital),
-      stock_brokerage:  newer.stock_brokerage  ?? (a.stock_brokerage  ?? b.stock_brokerage),
-      crypto_capital:   newer.crypto_capital   ?? (a.crypto_capital   ?? b.crypto_capital),
-      crypto_brokerage: newer.crypto_brokerage ?? (a.crypto_brokerage ?? b.crypto_brokerage),
+      capital:          pick("capital"),
+      brokerage:        pick("brokerage"),
+      stock_capital:    pick("stock_capital"),
+      stock_brokerage:  pick("stock_brokerage"),
+      crypto_capital:   pick("crypto_capital"),
+      crypto_brokerage: pick("crypto_brokerage"),
       trades: [...byId.values()],
       deleted: [...deleted],
       updated_at: Math.max(a.updated_at || 0, b.updated_at || 0),
