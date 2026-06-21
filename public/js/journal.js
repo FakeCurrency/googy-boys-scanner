@@ -582,8 +582,8 @@
             if (risk > 0) rr = (rew / risk).toFixed(1) + "R";
           }
           const aType = t.asset_type || "crypto";
-          const sParam = (aType !== "crypto") ? t.symbol : t.symbol + "_" + t.direction;
-          const m      = aType === "asx" ? "asx" : aType === "nasdaq" ? "nasdaq" : "scalp";
+          const sParam = t.chart_symbol || t.symbol;
+          const m      = t.chart_market || (aType === "asx" ? "asx" : aType === "nasdaq" ? "nasdaq" : "crypto");
           const chartHref = `chart.html?m=${m}&s=${encodeURIComponent(sParam)}&pos=${encodeURIComponent(t.id)}`;
           const assetBadge = aType !== "crypto" ? `<span class="reason">${up(aType)}</span>` : "";
           const sizeStr = t.shares != null

@@ -119,16 +119,36 @@
 
   // Build a chart-page "timeframe" object (candles + volume + 7 overlays + mom)
   // straight from live bars — lets a position chart render with no static JSON.
-  function barsToTF(bars) {
-    const n = Math.min(120, bars.length), slice = bars.slice(-n);
+  function barsToTF(bars, nDisp = 120) {
+    const n = Math.min(nDisp, bars.length), slice = bars.slice(-n);
     const candles = slice.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
     const volume  = slice.map((b) => ({ time: b.time, value: Math.round(b.volume),
       color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" }));
-    const c = computeScalp(bars, 120);
+    const c = computeScalp(bars, nDisp);
     const meta = [["BB Upper", "#4477cc"], ["BB Mid", "#888888"], ["BB Lower", "#4477cc"],
                   ["KC Upper", "#cc7700"], ["KC Lower", "#cc7700"], ["EMA 9", "#ffd23f"], ["EMA 21", "#2fd07f"]];
     const lines = c.lineData.map((data, i) => ({ name: meta[i][0], color: meta[i][1], data }));
     return { candles, volume, histogram: c.hist, squeeze_dots: [], lines };
+  }
+
+  // Resample daily bars into weekly bars (keyed to Monday of each week).
+  function resampleWeekly(bars) {
+    const weeks = new Map();
+    for (const b of bars) {
+      const date = new Date(b.time * 1000);
+      const dow = date.getUTCDay();
+      const mon = b.time - (dow === 0 ? 6 : dow - 1) * 86400;
+      if (!weeks.has(mon)) {
+        weeks.set(mon, { time: mon, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume });
+      } else {
+        const w = weeks.get(mon);
+        w.high = Math.max(w.high, b.high);
+        w.low  = Math.min(w.low,  b.low);
+        w.close  = b.close;
+        w.volume += b.volume;
+      }
+    }
+    return [...weeks.values()].sort((a, b) => a.time - b.time);
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -323,6 +343,7 @@
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
         asset_type: isCrypto ? "crypto" : (market === "asx" ? "asx" : "nasdaq"),
+        chart_market: market, chart_symbol: symbol,
         entry: px, entry_date: nowDate(), entry_time: nowTime(),
         size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
         stop: d.stop ?? null, target: d.target ?? null,
@@ -532,6 +553,32 @@
     rulerBtn.className = "tf-btn ruler-btn"; rulerBtn.title = "Measure price range";
     rulerBtn.innerHTML = "📏 Ruler";
     toggle.appendChild(rulerBtn);
+
+    // For scalp charts (1H only), asynchronously fetch daily+weekly bars from
+    // Yahoo Finance so the user can toggle to D / W context views. Reuses the
+    // same 7-indicator computeScalp path, so lineSeries count stays stable.
+    if (market === "scalp" && !pair && available.length === 1 && curTF === "1H") {
+      const assetType = d.currency_symbol === "A$" ? "asx" : "nasdaq";
+      const ticket = assetType === "asx" && !SYM.includes(".") ? SYM + ".AX" : SYM;
+      fetch(`/api/bars?sym=${encodeURIComponent(ticket)}&interval=1d&range=2y`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((j) => {
+          if (!j || !Array.isArray(j.bars) || j.bars.length < 30) return;
+          tfs["1D"] = barsToTF(j.bars, 300);
+          const weekly = resampleWeekly(j.bars);
+          if (weekly.length >= 15) tfs["1W"] = barsToTF(weekly, 150);
+          const all = TF_ORDER.filter((k) => tfs[k]);
+          toggle.innerHTML = all.map((k) =>
+            `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}">${TF_LABEL[k]}</button>`
+          ).join("");
+          toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
+            toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+            applyTF(b.dataset.tf);
+          }));
+          toggle.appendChild(rulerBtn);
+        })
+        .catch(() => {});
+    }
 
     // Floating label that sits inside the chart canvas area.
     const measureLabel = Object.assign(document.createElement("div"), { className: "ruler-label" });
