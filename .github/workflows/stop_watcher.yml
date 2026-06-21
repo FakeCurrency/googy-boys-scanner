@@ -1,0 +1,38 @@
+name: Paper stop/target watcher (24/7)
+
+# Pings the cloud watcher (/api/tick) every 5 minutes so paper-position stops
+# and targets fire even when no chart page is open on any device. 100% paper —
+# the endpoint never places a real order. 5 min is the GitHub cron minimum; for
+# tighter granularity point an external uptime cron or a Cloudflare cron Worker
+# at the same URL.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: stop-watcher
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fire the cloud stop/target watcher
+        env:
+          # Optional override; defaults to the production Pages URL.
+          TICK_URL: ${{ vars.TICK_URL }}
+          # Optional: set this (and a matching TICK_SECRET env var in Cloudflare)
+          # to require a bearer token. Leave unset to run open.
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+        run: |
+          URL="${TICK_URL:-https://googy-boys-scanner.pages.dev/api/tick}"
+          echo "Pinging $URL"
+          AUTH=()
+          if [ -n "$TICK_SECRET" ]; then AUTH=(-H "Authorization: Bearer ${TICK_SECRET}"); fi
+          code=$(curl -sS -m 60 -o /tmp/tick.json -w "%{http_code}" "${AUTH[@]}" "$URL" || echo "000")
+          echo "HTTP $code"
+          cat /tmp/tick.json 2>/dev/null || true
+          echo
+          # Transient upstream hiccups shouldn't fail the workflow / spam alerts.
+          if [ "$code" != "200" ]; then echo "::warning::watcher returned HTTP $code"; fi

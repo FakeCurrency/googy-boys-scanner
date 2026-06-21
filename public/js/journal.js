@@ -481,9 +481,10 @@
       return j && j.price != null ? +j.price : null;
     } catch (_) { return null; }
   }
-  async function stockPrice(sym) {
+  async function stockPrice(sym, aType) {
     try {
-      const r = await fetch(`/api/quote?sym=${encodeURIComponent(sym)}`, { cache: "no-store" });
+      const ticket = aType === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym;
+      const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`, { cache: "no-store" });
       if (!r.ok) return null;
       const j = await r.json();
       return j && j.price != null ? +j.price : null;
@@ -502,7 +503,7 @@
     const aType   = t.asset_type || "crypto";
     const isStock = aType === "asx" || aType === "nasdaq";
     const brokerage = isStock ? (data.stock_brokerage ?? 10) : (data.crypto_brokerage ?? 5);
-    const px = await (isStock ? stockPrice(t.symbol) : cryptoPrice(t.symbol));
+    const px = await (isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol));
     if (!document.body.contains(nowCell)) return;   // table re-rendered meanwhile
     if (px == null) {
       nowCell.textContent = "—"; nowCell.className = "jr-now muted";
