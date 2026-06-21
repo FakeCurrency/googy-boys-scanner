@@ -280,6 +280,20 @@ def _walk_1h(df, pos: dict) -> dict:
     return pos
 
 
+def close_manual(j: dict, symbol: str, direction: str, price: float, exit_date: str) -> bool:
+    """Manually close a scalp position by symbol+direction. Returns True if found."""
+    import datetime as _dt
+    ts = (exit_date + "T00:00:00Z") if exit_date else (_dt.datetime.utcnow().isoformat(timespec="seconds") + "Z")
+    for i, p in enumerate(j["open"]):
+        if (p["symbol"].upper() == symbol.upper()
+                and p.get("direction", "long") == direction):
+            closed = _close_pos(p, price, ts, "manual", 0)
+            j["closed"].append(closed)
+            j["open"].pop(i)
+            return True
+    return False
+
+
 def update_scalp(j: dict, progress: bool = True) -> dict:
     """Open new scalp paper-trades from scalp.json; walk existing ones on 1h data."""
     from .data import download

@@ -61,7 +61,19 @@
     </svg>`;
   }
 
-  function openTable(open) {
+  function closeBtn(p, journalType) {
+    const d = JSON.stringify({
+      symbol:       p.symbol,
+      direction:    p.direction || "long",
+      market:       p.market || "",
+      yf_ticker:    p.yf_ticker || p.symbol,
+      current:      p.current   || p.entry || 0,
+      journal_type: journalType,
+    }).replace(/'/g, "&#39;");
+    return `<button class="jr-close-btn" onclick='openCloseModal(${d})'>Close</button>`;
+  }
+
+  function openTable(open, journalType) {
     if (!open.length) return `<div class="jr-empty">No open positions.</div>`;
     const rows = open.map((p) => `<tr>
       <td class="jr-sym">${esc(p.symbol)}</td>
@@ -74,10 +86,11 @@
       <td class="${rcls(p.unreal_r || 0)}">${rfmt(p.unreal_r)}</td>
       <td class="${pcls(p.unreal_pnl || 0)}">${pfmt(p.unreal_pnl)}</td>
       <td>${esc(p.opened)}</td>
+      <td>${closeBtn(p, journalType || "swing")}</td>
     </tr>`).join("");
     return `<table class="jr-table"><thead><tr>
       <th>Symbol</th><th>Grade</th><th>Entry</th><th>Stop</th><th>Target</th>
-      <th>Current</th><th>Size</th><th>Unreal. R</th><th>Unreal. $</th><th>Opened</th>
+      <th>Current</th><th>Size</th><th>Unreal. R</th><th>Unreal. $</th><th>Opened</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table>`;
   }
 
@@ -125,11 +138,12 @@
         <td class="${rcls(p.unreal_r || 0)}">${rfmt(p.unreal_r)}</td>
         <td class="${pcls(p.unreal_pnl || 0)}">${pfmt(p.unreal_pnl)}</td>
         <td class="muted">${fmtTs(p.opened_ts)}</td>
+        <td>${closeBtn(p, "scalp")}</td>
       </tr>`;
     }).join("");
     return `<table class="jr-table"><thead><tr>
       <th>Symbol</th><th>Dir</th><th>Grade</th><th>Entry</th><th>Stop</th><th>Target</th>
-      <th>Current</th><th>Size</th><th>Unreal. R</th><th>Unreal. $</th><th>Opened</th>
+      <th>Current</th><th>Size</th><th>Unreal. R</th><th>Unreal. $</th><th>Opened</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table>`;
   }
 
@@ -235,7 +249,7 @@
       equity(cl, "jr-long-equity");
       $("#jr-long-open-n").textContent   = `(${ol.length})`;
       $("#jr-long-closed-n").textContent = `(${cl.length})`;
-      $("#jr-long-open").innerHTML   = openTable(ol);
+      $("#jr-long-open").innerHTML   = openTable(ol, "swing");
       $("#jr-long-closed").innerHTML = closedTable(cl);
 
       // SHORTS
@@ -243,7 +257,7 @@
       equity(cs, "jr-short-equity");
       $("#jr-short-open-n").textContent   = `(${os.length})`;
       $("#jr-short-closed-n").textContent = `(${cs.length})`;
-      $("#jr-short-open").innerHTML   = openTable(os);
+      $("#jr-short-open").innerHTML   = openTable(os, "swing");
       $("#jr-short-closed").innerHTML = closedTable(cs);
 
       // Feed the Overall view (timestamped $ P&L from closed swing trades)
@@ -327,4 +341,115 @@
       <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
       <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
   }
+  // ── Close-position modal ─────────────────────────────────────────────────
+  const overlay   = $("#jr-close-overlay");
+  const titleEl   = $("#jr-modal-title");
+  const priceIn   = $("#jr-exit-price");
+  const priceTag  = $("#jr-price-tag");
+  const dateIn    = $("#jr-exit-date");
+  const timeIn    = $("#jr-exit-time");
+  const saveBtn   = $("#jr-modal-save");
+
+  let _modalPos = null;   // current position being closed
+
+  function closeModal() {
+    overlay.hidden = true;
+    _modalPos = null;
+  }
+
+  $("#jr-modal-x").addEventListener("click", closeModal);
+  $("#jr-modal-cancel").addEventListener("click", closeModal);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+  // Exposed globally so inline onclick handlers (generated in innerHTML) can reach it.
+  window.openCloseModal = function(pos) {
+    _modalPos = pos;
+
+    const dirLabel = (pos.direction || "long").toUpperCase();
+    titleEl.textContent = `Close ${pos.symbol} ${dirLabel}`;
+
+    // Pre-fill with last-known price immediately
+    if (pos.current && pos.current > 0) {
+      priceIn.value = pos.current;
+      priceTag.textContent = "last known";
+      priceTag.className   = "jr-price-tag stale";
+    } else {
+      priceIn.value = "";
+      priceTag.textContent = "";
+    }
+
+    // Pre-fill date/time with now (local)
+    const now = new Date();
+    dateIn.value = now.toLocaleDateString("en-CA");   // YYYY-MM-DD
+    timeIn.value = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+    overlay.hidden = false;
+    priceIn.focus();
+    priceIn.select();
+
+    // Fetch live price in the background — update field if it arrives
+    if (pos.yf_ticker) {
+      priceTag.textContent = "fetching…";
+      priceTag.className   = "jr-price-tag stale";
+      fetch(`/api/price?symbol=${encodeURIComponent(pos.yf_ticker)}`)
+        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+        .then((d) => {
+          if (!d.ok || !d.price) throw new Error("no price");
+          // Only update the field if the user hasn't manually edited it yet
+          if (!priceIn.dataset.userEdited) {
+            priceIn.value = d.price;
+          }
+          priceTag.textContent = "live ✓";
+          priceTag.className   = "jr-price-tag";
+        })
+        .catch(() => {
+          priceTag.textContent = "last known";
+          priceTag.className   = "jr-price-tag stale";
+        });
+    }
+  };
+
+  // Track if the user manually edited the price so we don't overwrite it
+  priceIn.addEventListener("input", () => { priceIn.dataset.userEdited = "1"; });
+
+  saveBtn.addEventListener("click", async () => {
+    const price = parseFloat(priceIn.value);
+    if (!_modalPos || !isFinite(price) || price <= 0) {
+      priceIn.focus();
+      return;
+    }
+
+    saveBtn.disabled    = true;
+    saveBtn.textContent = "Saving…";
+
+    try {
+      const res = await fetch("/api/close", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol:       _modalPos.symbol,
+          direction:    _modalPos.direction || "long",
+          market:       _modalPos.market    || "",
+          price,
+          exit_date:    dateIn.value,
+          journal_type: _modalPos.journal_type || "swing",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (data.ok) {
+        saveBtn.textContent = "Saved ✓";
+        setTimeout(closeModal, 900);
+      } else {
+        saveBtn.disabled    = false;
+        saveBtn.textContent = "Save";
+        alert(data.message || "Something went wrong — try again.");
+      }
+    } catch (err) {
+      saveBtn.disabled    = false;
+      saveBtn.textContent = "Save";
+      alert(`Network error: ${err}`);
+    }
+  });
 })();
