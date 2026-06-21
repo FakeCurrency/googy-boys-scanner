@@ -322,6 +322,7 @@
       const data  = mjLoad();
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
+        asset_type: isCrypto ? "crypto" : (market === "asx" ? "asx" : "nasdaq"),
         entry: px, entry_date: nowDate(), entry_time: nowTime(),
         size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
         stop: d.stop ?? null, target: d.target ?? null,
