@@ -10,7 +10,9 @@ Different from the swing journal:
 
 import datetime as dt
 import json
+import os
 import pathlib
+import tempfile
 
 import numpy as np
 
@@ -46,11 +48,18 @@ def _session_day(ts: str | None = None) -> str:
 
 
 def _corr_group(symbol: str, asset_type: str = "", sector: str = "") -> str:
-    """Correlation bucket for a symbol — explicit override, else <type>:<sector>."""
+    """Correlation bucket for a symbol — explicit override, else <type>:<sector>.
+
+    When both type and sector are unknown every symbol would share "?:?" and hit
+    the correlation cap against each other. Fall back to a per-symbol bucket so
+    unknown tickers are treated as uncorrelated (no cap applied between them).
+    """
     g = config.SCALP_CORRELATION_GROUPS.get(symbol)
     if g:
         return g
-    return f"{asset_type or '?'}:{sector or '?'}".lower()
+    if asset_type or sector:
+        return f"{asset_type or '?'}:{sector or '?'}".lower()
+    return f"solo:{symbol.lower()}"
 
 
 def _load() -> dict:
@@ -83,7 +92,8 @@ def _trade_day(item: dict) -> str:
 
 def summarize(j: dict) -> dict:
     today        = _session_day()
-    today_closed = [c for c in j["closed"] if _trade_day(c) == today]
+    today_closed = [c for c in j["closed"]
+                    if _trade_day(c) == today and not c.get("skip_daily_count")]
     today_open   = [p for p in j["open"]   if _trade_day(p) == today]
     today_pnl    = round(sum(c.get("pnl", 0) for c in today_closed), 2)
     trades_used  = len(today_closed) + len(today_open)
@@ -114,10 +124,20 @@ def summarize(j: dict) -> dict:
     }
 
 
+def _atomic_write(path: pathlib.Path, payload: str) -> None:
+    """Write payload to path atomically via a temp file + rename (POSIX-safe)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
+    ) as f:
+        f.write(payload)
+        tmp = f.name
+    os.replace(tmp, path)
+
+
 def _save(j: dict) -> None:
     j["updated_at"] = dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
-    SCALP_JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    SCALP_JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
+    _atomic_write(SCALP_JOURNAL_FILE, json.dumps(j, indent=2))
 
     long_open    = [p for p in j["open"]   if p["direction"] == "long"]
     short_open   = [p for p in j["open"]   if p["direction"] == "short"]
@@ -126,8 +146,7 @@ def _save(j: dict) -> None:
 
     all_closed = sorted(j["closed"], key=lambda c: c.get("opened_ts", ""))
 
-    PUBLIC_SCALP_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
-    PUBLIC_SCALP_JOURNAL.write_text(json.dumps({
+    _atomic_write(PUBLIC_SCALP_JOURNAL, json.dumps({
         "updated_at":    j["updated_at"],
         "stats":         summarize(j),
         "open_longs":    long_open,
@@ -135,7 +154,7 @@ def _save(j: dict) -> None:
         "closed_longs":  long_closed[-200:],
         "closed_shorts": short_closed[-200:],
         "all_closed":    all_closed[-400:],
-    }, indent=2), encoding="utf-8")
+    }, indent=2))
 
 
 def _close_pos(pos: dict, price: float, ts: str, reason: str, bars: int) -> dict:
@@ -203,13 +222,18 @@ def _walk_1h(df, pos: dict) -> dict:
         # Slippage makes entry worse: long fills higher, short fills lower
         fill_px = raw_open * (1 + SLIP) if direction == "long" else raw_open * (1 - SLIP)
 
-        # Gapped straight through stop on the fill bar → immediate stop-out
+        # Gapped straight through stop on the fill bar → immediate stop-out.
+        # Mark skip_daily_count=True so this phantom trade doesn't consume a daily slot.
         if direction == "long" and fill_px <= stop:
-            return _close_pos({**pos, "fill_price": round(fill_px, 8)},
-                              raw_open, ts_list[start], "stop-gap", 0)
+            closed = _close_pos({**pos, "fill_price": round(fill_px, 8)},
+                                raw_open, ts_list[start], "stop-gap", 0)
+            closed["skip_daily_count"] = True
+            return closed
         if direction == "short" and fill_px >= stop:
-            return _close_pos({**pos, "fill_price": round(fill_px, 8)},
-                              raw_open, ts_list[start], "stop-gap", 0)
+            closed = _close_pos({**pos, "fill_price": round(fill_px, 8)},
+                                raw_open, ts_list[start], "stop-gap", 0)
+            closed["skip_daily_count"] = True
+            return closed
 
         pos   = {**pos, "entry": round(fill_px, 8), "fill_price": round(fill_px, 8), "filled": True}
 
@@ -256,6 +280,20 @@ def _walk_1h(df, pos: dict) -> dict:
     return pos
 
 
+def close_manual(j: dict, symbol: str, direction: str, price: float, exit_date: str) -> bool:
+    """Manually close a scalp position by symbol+direction. Returns True if found."""
+    import datetime as _dt
+    ts = (exit_date + "T00:00:00Z") if exit_date else (_dt.datetime.utcnow().isoformat(timespec="seconds") + "Z")
+    for i, p in enumerate(j["open"]):
+        if (p["symbol"].upper() == symbol.upper()
+                and p.get("direction", "long") == direction):
+            closed = _close_pos(p, price, ts, "manual", 0)
+            j["closed"].append(closed)
+            j["open"].pop(i)
+            return True
+    return False
+
+
 def update_scalp(j: dict, progress: bool = True) -> dict:
     """Open new scalp paper-trades from scalp.json; walk existing ones on 1h data."""
     from .data import download
@@ -276,7 +314,10 @@ def update_scalp(j: dict, progress: bool = True) -> dict:
     # Daily caps are scoped to the SESSION day (anchored at 08:00 UTC), derived
     # from the scan timestamp so a scan never resets the count mid-session.
     sess_day     = _session_day(scan_ts)
-    today_closed = [c for c in j["closed"] if _trade_day(c) == sess_day]
+    # Exclude stop-gap phantom trades (gapped through stop on fill bar) from the cap —
+    # those never had real market exposure so shouldn't burn a daily trade slot.
+    today_closed = [c for c in j["closed"]
+                    if _trade_day(c) == sess_day and not c.get("skip_daily_count")]
     today_open   = [p for p in j["open"]   if _trade_day(p) == sess_day]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
     trades_used  = len(today_closed) + len(today_open)

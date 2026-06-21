@@ -15,7 +15,9 @@ public/data/journal.json so a UI can show the track record.
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
+import tempfile
 
 import numpy as np
 
@@ -83,25 +85,34 @@ def summarize(j: dict) -> dict:
     }
 
 
+def _atomic_write(path: pathlib.Path, payload: str) -> None:
+    """Write payload to path atomically via a temp file + rename (POSIX-safe)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
+    ) as f:
+        f.write(payload)
+        tmp = f.name
+    os.replace(tmp, path)
+
+
 def _save(j: dict) -> None:
     j["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
-    JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    JOURNAL_FILE.write_text(json.dumps(j, indent=2), encoding="utf-8")
+    _atomic_write(JOURNAL_FILE, json.dumps(j, indent=2))
 
     open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
     open_shorts = [p for p in j["open"]   if p.get("direction", "long") == "short"]
     cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
     cl_shorts   = [c for c in j["closed"] if c.get("direction", "long") == "short"]
 
-    PUBLIC_JOURNAL.parent.mkdir(parents=True, exist_ok=True)
-    PUBLIC_JOURNAL.write_text(json.dumps({
+    _atomic_write(PUBLIC_JOURNAL, json.dumps({
         "updated_at": j["updated_at"],
         "stats": summarize(j),
         "open_longs":    open_longs,
         "open_shorts":   open_shorts,
         "closed_longs":  cl_longs[-100:],
         "closed_shorts": cl_shorts[-100:],
-    }, indent=2), encoding="utf-8")
+    }, indent=2))
 
 
 def _close(pos: dict, price: float, date: str, reason: str, bars: int) -> dict:
@@ -219,6 +230,7 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
+                "yf_ticker": r["symbol"] + market.suffix,
                 "grade": r["grade"], "score": r["score"],
                 "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
@@ -240,6 +252,7 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
                 "market": market_key, "symbol": r["symbol"], "name": r["name"],
+                "yf_ticker": r["symbol"] + market.suffix,
                 "grade": r["grade"], "score": r["score"],
                 "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
@@ -276,10 +289,58 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     return j
 
 
+def close_manual(j: dict, symbol: str, direction: str, market: str,
+                 price: float, exit_date: str) -> bool:
+    """Manually close a swing position by symbol+direction+market. Returns True if found."""
+    import datetime as _dt
+    date_str = exit_date or _dt.date.today().isoformat()
+    for i, p in enumerate(j["open"]):
+        if (p["symbol"].upper() == symbol.upper()
+                and p.get("direction", "long") == direction
+                and (not market or p.get("market", "") == market)):
+            closed = _close(p, price, date_str, "manual", 0)
+            j["closed"].append(closed)
+            j["open"].pop(i)
+            return True
+    return False
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Forward-test paper-trade journal")
     ap.add_argument("--market", action="append", choices=list(config.MARKETS))
+    # Manual close subcommand (used by the close_position GitHub Actions workflow)
+    ap.add_argument("--close-manual", action="store_true", help="Manually close one open position")
+    ap.add_argument("--symbol",       default="",    help="Symbol to close (--close-manual)")
+    ap.add_argument("--direction",    default="long", choices=["long", "short"])
+    ap.add_argument("--price",        type=float,    default=0.0,  help="Exit price")
+    ap.add_argument("--date",         default="",    help="Exit date YYYY-MM-DD (default: today)")
+    ap.add_argument("--journal-type", default="swing", choices=["swing", "scalp"])
     args = ap.parse_args()
+
+    if args.close_manual:
+        if not args.symbol or args.price <= 0:
+            print("--close-manual requires --symbol and a positive --price")
+            raise SystemExit(1)
+
+        if args.journal_type == "scalp":
+            from . import scalp_journal as _sj
+            sj = _sj._load()
+            found = _sj.close_manual(sj, args.symbol, args.direction, args.price, args.date)
+            if found:
+                _sj._save(sj)
+                print(f"Scalp journal: closed {args.symbol} {args.direction} @ {args.price}")
+            else:
+                print(f"Scalp journal: no open {args.symbol} {args.direction} found — nothing changed")
+        else:
+            j = _load()
+            mk = (args.market or [None])[0]
+            found = close_manual(j, args.symbol, args.direction, mk or "", args.price, args.date)
+            if found:
+                _save(j)
+                print(f"Swing journal: closed {args.symbol} {args.direction} @ {args.price}")
+            else:
+                print(f"Swing journal: no open {args.symbol} {args.direction} found — nothing changed")
+        return
 
     j = _load()
     for mk in (args.market or list(config.MARKETS)):

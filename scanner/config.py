@@ -160,6 +160,8 @@ REV_BREAKOUT_BASE = (45, 5)    # base = highs from bar -45 to -5; break = close 
 REV_RSI_BAND = (48, 72)        # RSI turned up but not yet overbought
 REV_STOP_LOOKBACK = 12         # recent swing low for the stop
 REV_MIN_HISTORY = 230          # need warm-up for SMA200 + base lookbacks
+REV_BREAKOUT_TOL = 0.999       # price >= base_high * this => breakout (0.1% tolerance)
+REV_STOP_FALLBACK_PCT = 0.95   # fallback stop = entry * this when swing low is above entry
 
 # ---------------------------------------------------------------------------
 # SPECS scanner — speculative volume-spike breakouts from a base (ASX-style).
@@ -188,6 +190,8 @@ SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
 # Short scanner quality gates (hard filters — fail any one = skip the stock)
 SHORT_DOWNTREND_BARS = 15     # price must have been below EMA 144 for this many bars (no recent dips)
+SHORT_RESISTANCE_TOL = 0.005  # price may be up to 0.5% above resistance EMA and still count as a touch
+SHORT_STOP_FALLBACK_PCT = 0.03  # fallback stop = entry * (1 + this) when swing high is below entry
 SHORT_EMA_ALIGN_BARS = 10     # EMA 8 must have been below EMA 21 for this many bars
 SHORT_BOUNCE_VOL_WINDOW = 8   # bars to compare up-day vs down-day volume on the bounce
 

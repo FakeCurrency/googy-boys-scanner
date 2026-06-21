@@ -1,0 +1,72 @@
+name: Close position (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: "Ticker symbol (e.g. JST)"
+        required: true
+      direction:
+        description: "long or short"
+        required: true
+        default: long
+      market:
+        description: "asx | nasdaq | crypto (swing) — leave blank for scalp"
+        required: false
+        default: ""
+      price:
+        description: "Exit price"
+        required: true
+      exit_date:
+        description: "Exit date YYYY-MM-DD (leave blank for today UTC)"
+        required: false
+        default: ""
+      journal_type:
+        description: "swing or scalp"
+        required: true
+        default: swing
+
+permissions:
+  contents: write
+
+concurrency:
+  group: close-${{ github.event.inputs.symbol }}-${{ github.event.inputs.direction }}
+  cancel-in-progress: false
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Close position in journal
+        run: |
+          python -m scanner.journal \
+            --close-manual \
+            --symbol "${{ github.event.inputs.symbol }}" \
+            --direction "${{ github.event.inputs.direction }}" \
+            --market "${{ github.event.inputs.market }}" \
+            --price "${{ github.event.inputs.price }}" \
+            --date "${{ github.event.inputs.exit_date }}" \
+            --journal-type "${{ github.event.inputs.journal_type }}"
+
+      - name: Commit updated journal
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data journal/journal.json journal/scalp_journal.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit (position not found or already closed)."
+          else
+            git commit -m "journal: manual close ${{ github.event.inputs.symbol }} ${{ github.event.inputs.direction }} @ ${{ github.event.inputs.price }}"
+            git pull --rebase origin main
+            git push
+          fi

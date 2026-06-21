@@ -36,7 +36,9 @@ def download(tickers: list[str], period: str | None = None,
                     threads=True, progress=False,
                 )
                 break
-            except Exception:
+            except Exception as e:
+                print(f"  warning: batch download attempt {attempt + 1} failed: "
+                      f"{type(e).__name__}: {e}", flush=True)
                 if attempt < retries:
                     time.sleep(2 * (attempt + 1))
 
@@ -52,7 +54,8 @@ def download(tickers: list[str], period: str | None = None,
                 df = df.dropna()
                 if len(df):
                     frames[ticker] = df
-            except Exception:
+            except Exception as e:
+                print(f"  warning: {ticker}: {type(e).__name__}: {e}", flush=True)
                 continue
 
     return frames

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Journal — Googy Boys Scanner</title>
+  <title>Journal — Vivek's Beta Scanner</title>
   <meta name="theme-color" content="#080b11" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,7 +17,7 @@
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
       </span>
-      <div class="brand-text"><h1>GOOGY BOYS SCANNER</h1><span style="font:600 10px/1.2 -apple-system,Inter,sans-serif;color:#34c759;letter-spacing:.3px;margin-top:3px">Vivek has a beautiful son &#10084;</span></div>
+      <div class="brand-text"><h1>VIVEK'S BETA SCANNER</h1></div>
     </div>
     <a class="howto-link" href="feeds.html">Feeds</a>
     <a class="howto-link" href="index.html">← Dashboard</a>
@@ -302,7 +302,38 @@
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
   </footer>
 
+  <!-- ── Close-position modal ── -->
+  <div id="jr-close-overlay" class="jr-overlay" hidden aria-modal="true" role="dialog">
+    <div class="jr-modal">
+      <div class="jr-modal-hd">
+        <span id="jr-modal-title">Close SYMBOL</span>
+        <button class="jr-modal-x" id="jr-modal-x" aria-label="Cancel">✕</button>
+      </div>
+      <div class="jr-modal-bd">
+        <label class="jr-modal-label" for="jr-exit-price">EXIT PRICE $</label>
+        <div class="jr-price-wrap">
+          <input id="jr-exit-price" class="jr-modal-input" type="number" step="any" min="0" placeholder="0.00" />
+          <span id="jr-price-tag" class="jr-price-tag"></span>
+        </div>
+        <div class="jr-modal-row">
+          <div>
+            <label class="jr-modal-label" for="jr-exit-date">EXIT DATE</label>
+            <input id="jr-exit-date" class="jr-modal-input" type="date" />
+          </div>
+          <div>
+            <label class="jr-modal-label" for="jr-exit-time">EXIT TIME</label>
+            <input id="jr-exit-time" class="jr-modal-input" type="time" />
+          </div>
+        </div>
+      </div>
+      <div class="jr-modal-ft">
+        <button class="jr-modal-cancel" id="jr-modal-cancel">Cancel</button>
+        <button class="jr-modal-save"   id="jr-modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/journal.js?v=16"></script>
+  <script src="js/journal.js?v=17"></script>
 </body>
 </html>
