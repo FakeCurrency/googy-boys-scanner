@@ -523,7 +523,39 @@
 
   // ----------------------------------------------------------- events
   function bind() {
+    // In scalp mode the top switch reflects the scalp asset filter (asx/nasdaq/
+    // crypto); outside scalp it reflects the chosen market.
+    function syncScalpUI() {
+      document.querySelectorAll(".market-btn").forEach((x) => {
+        const on = x.dataset.market === state.scalp_type;
+        x.classList.toggle("is-active", on);
+        x.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.querySelectorAll("[data-scalp-type]").forEach((x) => {
+        x.classList.toggle("is-active", (x.getAttribute("data-scalp-type") || "all") === state.scalp_type);
+      });
+    }
+    function syncMarketUI() {
+      document.querySelectorAll(".market-btn").forEach((x) => {
+        const on = x.dataset.market === state.market;
+        x.classList.toggle("is-active", on);
+        x.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+    // Apply a scalp asset filter, reloading only when the data file changes
+    // (crypto scalps live in a separate file from the rest).
+    function setScalpType(type) {
+      if (state.scalp_type === type) return;
+      const prevType = state.scalp_type;
+      state.scalp_type = type;
+      syncScalpUI();
+      const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
+      if (needsReload) load(); else renderRows();
+    }
+
     document.querySelectorAll(".market-btn").forEach((b) => b.addEventListener("click", () => {
+      // In scalp mode the market switch doubles as the scalp asset-type filter.
+      if (state.mode === "scalp") { setScalpType(b.dataset.market); return; }
       if (b.classList.contains("is-active")) return;
       document.querySelectorAll(".market-btn").forEach((x) => {
         x.classList.toggle("is-active", x === b);
@@ -589,24 +621,19 @@
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
       state.mode = b.dataset.mode;
-      // Show/hide scalp banner + hide market switch in scalp mode
       const isScalp = state.mode === "scalp";
       const scalp_banner = $("#scalp-banner");
       if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
-      document.querySelectorAll(".market-btn").forEach((mb) => {
-        mb.closest(".market-switch") && (mb.closest(".market-switch").style.opacity = isScalp ? "0.35" : "");
-      });
+      // Top switch stays fully active in scalp mode, where it acts as the scalp
+      // asset filter; otherwise it reflects the chosen market.
+      if (isScalp) syncScalpUI(); else syncMarketUI();
       load();
     }));
 
-    // Scalp asset-type filter
+    // Scalp asset-type filter (banner row) — shares logic + UI sync with the
+    // top market switch so the two never disagree.
     document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
-      const prevType = state.scalp_type;
-      document.querySelectorAll("[data-scalp-type]").forEach((x) => x.classList.toggle("is-active", x === b));
-      state.scalp_type = b.getAttribute("data-scalp-type") || "all";
-      // Switching to/from crypto means switching data files — reload. Otherwise just re-filter.
-      const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
-      if (needsReload) load(); else renderRows();
+      setScalpType(b.getAttribute("data-scalp-type") || "all");
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
