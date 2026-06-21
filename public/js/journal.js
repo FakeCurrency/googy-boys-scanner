@@ -469,6 +469,64 @@
       <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
   }
 
+  // ── live prices for open positions ────────────────────────────────────────
+  // Crypto: Binance public ticker (keyless, CORS-ok — same host the chart uses).
+  // Most coins trade as <SYM>USDT; if a pair doesn't exist we just show "—".
+  async function cryptoPrice(sym) {
+    try {
+      const pair = encodeURIComponent(String(sym || "").toUpperCase() + "USDT");
+      const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`, { cache: "no-store" });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j && j.price != null ? +j.price : null;
+    } catch (_) { return null; }
+  }
+  async function stockPrice(sym) {
+    try {
+      const r = await fetch(`/api/quote?sym=${encodeURIComponent(sym)}`, { cache: "no-store" });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j && j.price != null ? +j.price : null;
+    } catch (_) { return null; }
+  }
+
+  // Fill the "Now" + "Unreal $" cells for every open-position row on the page.
+  // Self-contained: reads each trade by id from the store and uses the matching
+  // per-asset brokerage, so it works for whichever manual section is visible.
+  async function mjUpdateLiveRow(tr, data) {
+    const id = tr.getAttribute("data-tid");
+    const t  = (data.trades || []).find((x) => x.id === id);
+    const nowCell  = tr.querySelector(".jr-now");
+    const upnlCell = tr.querySelector(".jr-upnl");
+    if (!t || !nowCell || !upnlCell || t.status !== "open") return;
+    const aType   = t.asset_type || "crypto";
+    const isStock = aType === "asx" || aType === "nasdaq";
+    const brokerage = isStock ? (data.stock_brokerage ?? 10) : (data.crypto_brokerage ?? 5);
+    const px = await (isStock ? stockPrice(t.symbol) : cryptoPrice(t.symbol));
+    if (!document.body.contains(nowCell)) return;   // table re-rendered meanwhile
+    if (px == null) {
+      nowCell.textContent = "—"; nowCell.className = "jr-now muted";
+      upnlCell.textContent = "—"; upnlCell.className = "jr-upnl muted";
+      return;
+    }
+    const m    = t.direction === "long" ? 1 : -1;
+    const sh   = t.shares != null ? t.shares : 0;
+    const upnl = sh * m * (px - t.entry) - 2 * brokerage;   // net of round-trip brokerage
+    nowCell.textContent  = "$" + num(px);
+    nowCell.className     = "jr-now";
+    upnlCell.textContent  = pfmt(upnl);
+    upnlCell.className     = "jr-upnl " + pcls(upnl);
+  }
+  function mjUpdateLivePrices() {
+    const rows = document.querySelectorAll("table.jr-table tbody tr[data-tid]");
+    if (!rows.length) return;
+    const data = mjLoad();
+    rows.forEach((tr) => { if (tr.querySelector(".jr-now")) mjUpdateLiveRow(tr, data); });
+  }
+  // Keep prices fresh while the tab is in view.
+  setInterval(() => { if (!document.hidden) mjUpdateLivePrices(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) mjUpdateLivePrices(); });
+
   // ── shared manual journal renderer ────────────────────────────────────────
   function mjRenderFor(assetFilter, capKey, brkKey, ids) {
     const data      = mjLoad();
@@ -530,7 +588,7 @@
           const sizeStr = t.shares != null
             ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u \xd7${t.leverage}` : `${t.shares} sh`)
             : "—";
-          return `<tr>
+          return `<tr data-tid="${esc(t.id)}">
             <td class="jr-sym"><a class="jr-chart-link" href="${chartHref}" title="Open live chart">${esc(t.symbol)} <span class="jr-chart-ico">📈</span></a> ${assetBadge}</td>
             <td><span class="dir-chip ${dc}">${dir}</span></td>
             <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
@@ -538,6 +596,8 @@
             <td class="r-pos">${t.target != null ? "$" + num(t.target) : "—"}</td>
             <td>${rr}</td>
             <td>${sizeStr}</td>
+            <td class="jr-now muted">…</td>
+            <td class="jr-upnl muted">…</td>
             <td class="muted">${esc(t.entry_date)}${t.entry_time ? " " + t.entry_time : ""}</td>
             <td>${t.notes ? `<span class="reason">${esc(t.notes)}</span>` : "—"}</td>
             <td style="white-space:nowrap">
@@ -548,8 +608,9 @@
         }).join("");
         openEl.innerHTML = `<table class="jr-table"><thead><tr>
           <th>Symbol</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th>
-          <th>R:R</th><th>Size</th><th>Opened</th><th>Notes</th><th></th>
+          <th>R:R</th><th>Size</th><th>Now</th><th>Unreal $</th><th>Opened</th><th>Notes</th><th></th>
         </tr></thead><tbody>${rows}</tbody></table>`;
+        mjUpdateLivePrices();   // kick off live price + unrealised P&L fill
       }
     }
 
