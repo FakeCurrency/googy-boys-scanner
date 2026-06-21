@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-21T13:03:10+10:00",
-  "scanned": 1538,
+  "generated_at": "2026-06-21T21:25:59+10:00",
+  "scanned": 1433,
   "universe_size": 1985,
   "score_max": 11,
   "sma_periods": [
@@ -53,10 +53,10 @@
     {
       "key": "GOLD",
       "label": "Gold",
-      "value": 4246.0,
+      "value": 4173.0,
       "decimals": 0,
-      "day_pct": 0.52,
-      "d5_pct": 0.73,
+      "day_pct": -1.21,
+      "d5_pct": -1.0,
       "spark": [
         4531.2998,
         4539.7998,
@@ -79,17 +79,17 @@
         4330.8999,
         4358.8999,
         4224.1001,
-        4245.8999
+        4172.8999
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "SILVER",
       "label": "Silver",
-      "value": 66.32,
+      "value": 64.91,
       "decimals": 2,
-      "day_pct": 0.1,
-      "d5_pct": -2.27,
+      "day_pct": -2.03,
+      "d5_pct": -4.35,
       "spark": [
         75.851,
         76.414,
@@ -112,9 +112,9 @@
         69.899,
         70.696,
         66.255,
-        66.319
+        64.91
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "BRENT",
@@ -284,15 +284,11 @@
     {
       "key": "YIELDS",
       "label": "10Y",
-      "value": 4.487,
+      "value": 4.451,
       "decimals": 3,
-      "day_pct": 0.54,
-      "d5_pct": -1.08,
+      "day_pct": -0.27,
+      "d5_pct": -0.27,
       "spark": [
-        4.481,
-        4.461,
-        4.595,
-        4.623,
         4.667,
         4.572,
         4.586,
@@ -310,9 +306,13 @@
         4.528,
         4.542,
         4.463,
-        4.487
+        4.487,
+        4.469,
+        4.428,
+        4.463,
+        4.451
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "AUD",
@@ -385,9 +385,10 @@
       "label": "USD Idx",
       "value": 100.85,
       "decimals": 2,
-      "day_pct": -0.0,
-      "d5_pct": 1.1,
+      "day_pct": 0.76,
+      "d5_pct": 0.99,
       "spark": [
+        99.3,
         99.11,
         99.19,
         99.32,
@@ -408,10 +409,9 @@
         99.63,
         99.54,
         100.09,
-        100.85,
-        100.849
+        100.85
       ],
-      "dir": "down"
+      "dir": "up"
     }
   ],
   "sector_counts": {
