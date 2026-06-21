@@ -31,11 +31,19 @@ jobs:
       - name: Crypto scalp scan
         run: python -m scanner.run --crypto-scalp-only
 
+      - name: Bybit execution (testnet by default — set BYBIT_TESTNET=false for live)
+        if: ${{ env.BYBIT_API_KEY != '' }}
+        env:
+          BYBIT_API_KEY:    ${{ secrets.BYBIT_API_KEY }}
+          BYBIT_API_SECRET: ${{ secrets.BYBIT_API_SECRET }}
+          BYBIT_TESTNET:    ${{ secrets.BYBIT_TESTNET }}
+        run: python -m scanner.broker.bybit_run
+
       - name: Commit & push fresh crypto data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          PATHS="public/data/scalp_crypto.json"
+          PATHS="public/data/scalp_crypto.json public/data/scalp_journal.json journal/scalp_journal.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No signal changes — skipping commit."

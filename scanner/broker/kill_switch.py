@@ -37,27 +37,39 @@ def check_and_kill(j: dict, dry_run: bool = False) -> bool:
     print(f"  KILL SWITCH TRIGGERED — session P&L = ${total_session:.2f} "
           f"(limit -${SCALP_MAX_DAILY_LOSS})")
 
-    if not os.environ.get("ALPACA_API_KEY"):
-        print("  KILL SWITCH: ALPACA_API_KEY not set — skipping broker flatten")
-        return True
-
     if dry_run:
         print("  KILL SWITCH: dry_run=True — not flattening")
         return True
 
-    from scanner.broker import alpaca_client as ac
+    # Flatten whichever broker is configured
+    if os.environ.get("BYBIT_API_KEY"):
+        from scanner.broker import bybit_client as bc
+        try:
+            bc.cancel_all_orders()
+            print("  KILL SWITCH: Bybit orders cancelled")
+        except Exception as e:
+            print(f"  KILL SWITCH: ERROR cancelling Bybit orders → {e}")
+        try:
+            bc.close_all_positions()
+            print("  KILL SWITCH: Bybit positions closed")
+        except Exception as e:
+            print(f"  KILL SWITCH: ERROR closing Bybit positions → {e}")
 
-    try:
-        resp = ac.close_all_positions()
-        print(f"  KILL SWITCH: closed all positions → {resp}")
-    except Exception as e:
-        print(f"  KILL SWITCH: ERROR closing positions → {e}")
+    elif os.environ.get("ALPACA_API_KEY"):
+        from scanner.broker import alpaca_client as ac
+        try:
+            resp = ac.close_all_positions()
+            print(f"  KILL SWITCH: Alpaca positions closed → {resp}")
+        except Exception as e:
+            print(f"  KILL SWITCH: ERROR closing Alpaca positions → {e}")
+        try:
+            resp = ac.cancel_all_orders()
+            print(f"  KILL SWITCH: Alpaca orders cancelled → {resp}")
+        except Exception as e:
+            print(f"  KILL SWITCH: ERROR cancelling Alpaca orders → {e}")
 
-    try:
-        resp = ac.cancel_all_orders()
-        print(f"  KILL SWITCH: cancelled all orders → {resp}")
-    except Exception as e:
-        print(f"  KILL SWITCH: ERROR cancelling orders → {e}")
+    else:
+        print("  KILL SWITCH: no broker API keys set — skipping flatten")
 
     return True
 

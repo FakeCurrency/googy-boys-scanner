@@ -247,6 +247,14 @@ SCALP_CORRELATION_GROUPS = {
 }
 
 # ---------------------------------------------------------------------------
+# Bybit broker — crypto futures execution
+# ---------------------------------------------------------------------------
+# BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).
+# Set BYBIT_TESTNET=false in GitHub Secrets only when ready for real capital.
+BYBIT_MIN_QTY_USD = 5.0        # skip signals where notional qty < $5 (Bybit min order)
+BYBIT_ORDER_TYPE  = "Limit"    # "Limit" recommended; "Market" for instant fill
+
+# ---------------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
