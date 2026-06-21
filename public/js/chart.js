@@ -201,7 +201,7 @@
   function mjLoad() {
     if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { capital: 10000, brokerage: 10, trades: [] };
+    return { capital: 10000, brokerage: 10, stock_capital: 10000, stock_brokerage: 10, crypto_capital: 10000, crypto_brokerage: 5, trades: [] };
   }
   function mjSave(x) {
     if (window.GBSSync) { window.GBSSync.saveLocal(x); window.GBSSync.syncOutDebounced(); return; }
@@ -227,7 +227,7 @@
       const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`);
       if (!r.ok) return null;
       const j = await r.json();
-      return j.price || null;
+      return j.price != null ? j.price : null;
     } catch (_) { return null; }
   }
 
@@ -797,7 +797,8 @@
 
     onLiveTick(update);
     update();
-    setInterval(() => { if (findOpen()) update(); }, 30000);   // keep "in trade" fresh
+    const durIv = setInterval(() => { if (findOpen()) update(); }, 30000);
+    window.addEventListener("beforeunload", () => clearInterval(durIv), { once: true });
   }
 
   // ── entry point ────────────────────────────────────────────────────────────

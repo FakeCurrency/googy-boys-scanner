@@ -228,6 +228,29 @@ test("merge of two empty journals produces valid normalized result", () => {
   assert.equal(m.trades.length, 0);
 });
 
+test("per-asset settings: when newer side never set the field, older's explicit value is preserved", () => {
+  // b is newer (updated_at=200) but never set crypto_brokerage (raw field absent).
+  // a (older) explicitly set it to 3.
+  // Before this fix, normalize(b) filled 5 as default and newer(b).?? never fell through.
+  const a = { crypto_brokerage: 3, updated_at: 100, trades: [] };
+  const b = {                       updated_at: 200, trades: [] };
+  const m = merge(a, b);
+  assert.equal(m.crypto_brokerage, 3);   // a's explicit value survives
+});
+
+test("per-asset settings: when both sides explicitly set the field, newer wins", () => {
+  const a = { crypto_brokerage: 3, updated_at: 100, trades: [] };
+  const b = { crypto_brokerage: 6, updated_at: 200, trades: [] };
+  const m = merge(a, b);
+  assert.equal(m.crypto_brokerage, 6);   // b is newer and explicitly set 6
+});
+
+test("per-asset settings: when neither side set the field, normalize default is used", () => {
+  const m = merge({ updated_at: 200, trades: [] }, { updated_at: 100, trades: [] });
+  assert.equal(m.crypto_brokerage, 5);   // normalize() default
+  assert.equal(m.stock_brokerage,  10);
+});
+
 // ── mjCalc() — P&L and R ─────────────────────────────────────────────────────
 suite("mjCalc() — P&L and R");
 

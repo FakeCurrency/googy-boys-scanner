@@ -1013,7 +1013,7 @@
     reflect();
     // On load, if sync is already on, pull the latest before first render.
     if (window.GBSSync.enabled()) {
-      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); }).catch(() => {});
+      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); renderScoreboard(); }).catch(() => {});
     }
   }
 
