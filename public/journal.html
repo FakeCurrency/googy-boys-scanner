@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=12" />
-  <link rel="stylesheet" href="css/journal.css?v=9" />
+  <link rel="stylesheet" href="css/journal.css?v=10" />
 </head>
 <body>
   <header class="topbar">
@@ -30,26 +30,43 @@
       <p class="jr-config">Max 10 positions per journal &nbsp;·&nbsp; $1,000 AUD per trade &nbsp;·&nbsp; $5 brokerage each way</p>
     </div>
 
-    <!-- OVERALL / LONGS / SHORTS / SCALP tab selector -->
+    <!-- OVERALL / LONGS / SHORTS / SCALP tab selector, grouped by who trades -->
     <div class="jr-tabs" role="tablist">
-      <button class="jr-tab jr-tab-all is-active" data-journal="all" role="tab" aria-selected="true">
-        <span class="jr-tab-arrow">Σ</span> Overall &nbsp;<span class="jr-tab-label">ALL</span>
-      </button>
-      <button class="jr-tab" data-journal="long" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">↑</span> Journal 1 &nbsp;<span class="jr-tab-label">LONGS</span>
-      </button>
-      <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">↓</span> Journal 2 &nbsp;<span class="jr-tab-label">SHORTS</span>
-      </button>
-      <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
-      </button>
-      <button class="jr-tab jr-tab-stocks" data-journal="stocks" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">📈</span> My Stocks &nbsp;<span class="jr-tab-label">ASX/NAS</span>
-      </button>
-      <button class="jr-tab jr-tab-crypto" data-journal="crypto" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">₿</span> My Crypto &nbsp;<span class="jr-tab-label">MANUAL</span>
-      </button>
+      <div class="jr-tab-group">
+        <span class="jr-group-label">&nbsp;</span>
+        <div class="jr-tab-row">
+          <button class="jr-tab jr-tab-all is-active" data-journal="all" role="tab" aria-selected="true">
+            <span class="jr-tab-arrow">Σ</span> Overall &nbsp;<span class="jr-tab-label">ALL</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="jr-tab-group jr-group-auto">
+        <span class="jr-group-label">🤖 Automated <span class="jr-group-sub">scanner trades these for you</span></span>
+        <div class="jr-tab-row">
+          <button class="jr-tab" data-journal="long" role="tab" aria-selected="false">
+            <span class="jr-tab-arrow">↑</span> Journal 1 &nbsp;<span class="jr-tab-label">LONGS</span>
+          </button>
+          <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
+            <span class="jr-tab-arrow">↓</span> Journal 2 &nbsp;<span class="jr-tab-label">SHORTS</span>
+          </button>
+          <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
+            <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="jr-tab-group jr-group-manual">
+        <span class="jr-group-label">✏️ Manual Trading <span class="jr-group-sub">you click Simulate Buy</span></span>
+        <div class="jr-tab-row">
+          <button class="jr-tab jr-tab-stocks" data-journal="stocks" role="tab" aria-selected="false">
+            <span class="jr-tab-arrow">📈</span> My Stocks &nbsp;<span class="jr-tab-label">ASX/NAS</span>
+          </button>
+          <button class="jr-tab jr-tab-crypto" data-journal="crypto" role="tab" aria-selected="false">
+            <span class="jr-tab-arrow">₿</span> My Crypto &nbsp;<span class="jr-tab-label">MANUAL</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ── OVERALL ── -->
@@ -58,6 +75,7 @@
       <div class="jr-section-title">🤖 Machine vs ✏️ You <span class="muted">(realised $, closed trades)</span></div>
       <div id="jr-scoreboard" class="jr-scoreboard"></div>
 
+      <div class="jr-section-title" style="margin-top:22px">🤖 Automated track record <span class="muted">(scanner's closed trades only — Longs + Shorts + Scalp)</span></div>
       <section class="stats" id="jr-all-stats"></section>
 
       <section class="jr-equity">
@@ -303,6 +321,6 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/journal.js?v=17"></script>
+  <script src="js/journal.js?v=18"></script>
 </body>
 </html>

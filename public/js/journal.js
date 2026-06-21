@@ -387,12 +387,12 @@
     const tot = pnls.reduce((a, b) => a + b, 0);
 
     $("#jr-all-stats").innerHTML = [
-      statCard("Total trades", trades.length),
-      statCard("Win rate", `${(wins.length / trades.length * 100).toFixed(1)}%`),
-      statCard("Profit factor", pf, grossWin >= grossLoss ? "accent-green" : ""),
-      statCard("Realised $", pfmt(tot), pcls(tot)),
+      statCard("Machine trades", trades.length),
+      statCard("Machine win rate", `${(wins.length / trades.length * 100).toFixed(1)}%`),
+      statCard("Machine profit factor", pf, grossWin >= grossLoss ? "accent-green" : ""),
+      statCard("Machine realised $", pfmt(tot), pcls(tot)),
       statCard("Swing / Scalp", `${overall.swing.length} / ${overall.scalp.length}`),
-      statCard("Expectancy", pfmt(tot / trades.length), pcls(tot)),
+      statCard("Machine expectancy", pfmt(tot / trades.length), pcls(tot)),
     ].join("");
 
     // Combined cumulative $ equity curve
