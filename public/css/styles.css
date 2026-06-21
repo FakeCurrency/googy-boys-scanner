@@ -138,9 +138,16 @@ body {
 .badge.asset-index     { background: rgba(178,128,255,.15); color: #b280ff; }
 
 .howto-link {
-  margin-left: 0; color: var(--blue); text-decoration: none; font-size: 15px; font-weight: 500;
+  display: inline-flex; align-items: center;
+  height: 32px; padding: 0 13px;
+  border: 1.5px solid var(--blue); border-radius: 20px;
+  background: var(--blue-soft);
+  color: var(--blue); text-decoration: none;
+  font-size: 13.5px; font-weight: 600; letter-spacing: .01em;
+  transition: background .15s, opacity .15s;
+  white-space: nowrap;
 }
-.howto-link:hover { opacity: .65; }
+.howto-link:hover { background: rgba(0,122,255,.22); opacity: 1; }
 
 .reload-btn {
   margin-left: auto; appearance: none; cursor: pointer;
@@ -374,7 +381,7 @@ body {
   /* hide less-essential columns on small screens */
   .scan-switch { order: 4; width: 100%; overflow-x: auto; }
   .topbar { gap: 8px; }
-  .howto-link { font-size: 13px; }
+  .howto-link { height: 28px; padding: 0 10px; font-size: 12px; }
   /* Stack the trade row so numbers don't overflow */
   .row-trade { flex-wrap: wrap; gap: 12px; }
   .t-score { margin-left: auto; }
