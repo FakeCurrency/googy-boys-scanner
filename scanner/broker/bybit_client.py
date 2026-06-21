@@ -1,8 +1,16 @@
 """Thin wrapper around the Bybit V5 Unified Trading API.
 
-Auth via env vars — both must be set:
-  BYBIT_API_KEY      Bybit key ID
-  BYBIT_API_SECRET   Bybit secret key
+Auth via env vars:
+  BYBIT_API_KEY       Bybit key ID (always required)
+
+  RSA auth (new Bybit API keys — paste public key on Bybit, store private key here):
+  BYBIT_PRIVATE_KEY   Full PEM content of your private key
+                      (-----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----)
+
+  HMAC auth (older keys that have an API secret):
+  BYBIT_API_SECRET    Bybit secret key
+
+  RSA is used when BYBIT_PRIVATE_KEY is set; HMAC otherwise.
 
 Mode:
   BYBIT_TESTNET=false  → live endpoint (api.bybit.com)
@@ -11,10 +19,9 @@ Mode:
 Create testnet API keys at: https://testnet.bybit.com/app/user/api-management
 Create live API keys at:    https://www.bybit.com/app/user/api-management
 
-Scopes needed on the key:
-  - Contract: Order, Position (Read + Write)
-  - Unified Trade: Order, Position (Read + Write)
-DO NOT grant withdrawal permissions.
+Permissions needed on the key (Unified Trading, Read-Write):
+  - Orders + Positions
+DO NOT grant Withdrawal permissions.
 """
 
 import os
@@ -27,11 +34,24 @@ def _testnet() -> bool:
 
 
 def _session() -> HTTP:
-    return HTTP(
-        testnet=_testnet(),
-        api_key=os.environ["BYBIT_API_KEY"],
-        api_secret=os.environ["BYBIT_API_SECRET"],
-    )
+    api_key     = os.environ["BYBIT_API_KEY"]
+    private_key = os.environ.get("BYBIT_PRIVATE_KEY", "").strip()
+    api_secret  = os.environ.get("BYBIT_API_SECRET", "").strip()
+
+    if private_key:
+        # RSA auth — new Bybit API keys use RSA public/private key pairs
+        return HTTP(
+            testnet=_testnet(),
+            api_key=api_key,
+            private_key=private_key,
+        )
+    else:
+        # HMAC auth — older Bybit API keys with an API secret
+        return HTTP(
+            testnet=_testnet(),
+            api_key=api_key,
+            api_secret=api_secret,
+        )
 
 
 # ── order management ──────────────────────────────────────────────────────────
