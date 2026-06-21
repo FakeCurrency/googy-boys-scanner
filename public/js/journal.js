@@ -996,13 +996,27 @@
       mjSyncStatus("Sync off — this device keeps its own copy.");
     }
 
+    function syncedAt() {
+      const t = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      mjSyncStatus(`Synced at ${t}`, "live");
+    }
+
     async function syncNow() {
       mjSyncStatus("Syncing…");
       try {
         await window.GBSSync.syncOut();
-        mjRenderStocks(); mjRenderCrypto();
-        mjSyncStatus("Synced just now.", "live");
+        mjRenderStocks(); mjRenderCrypto(); renderScoreboard();
+        syncedAt();
       } catch (_) { mjSyncStatus("Sync failed — will retry on the next change.", "neg"); }
+    }
+
+    async function silentPull() {
+      if (!window.GBSSync.enabled()) return;
+      try {
+        await window.GBSSync.syncIn();
+        mjRenderStocks(); mjRenderCrypto(); renderScoreboard();
+        syncedAt();
+      } catch (_) {}
     }
 
     if (onBtn)  onBtn.addEventListener("click", enable);
@@ -1010,10 +1024,16 @@
     if (nowBtn) nowBtn.addEventListener("click", syncNow);
     codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
 
+    // Pull when the user switches back to this tab (phone/PC waking from background).
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) silentPull(); });
+
+    // Background poll every 60 s so both devices stay in sync while the page is open.
+    setInterval(() => { if (!document.hidden) silentPull(); }, 60_000);
+
     reflect();
     // On load, if sync is already on, pull the latest before first render.
     if (window.GBSSync.enabled()) {
-      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); renderScoreboard(); }).catch(() => {});
+      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); renderScoreboard(); syncedAt(); }).catch(() => {});
     }
   }
 

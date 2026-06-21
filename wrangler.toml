@@ -1,0 +1,25 @@
+# Cloudflare Pages + Workers configuration
+# Deploy via: Cloudflare dashboard → Workers & Pages → googy-boys-scanner
+
+name = "googy-boys-scanner"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "public"
+
+# ── KV namespace for cross-device journal sync ──────────────────────────────
+# One-time setup in the Cloudflare dashboard:
+#   1. Workers & Pages → KV → Create namespace → name it "gbs-journal"
+#   2. Your Pages project → Settings → Functions → KV namespace bindings → Add:
+#        Variable name:  JOURNAL_KV
+#        KV namespace:   gbs-journal   (the one you just created)
+#   3. Redeploy (or it picks up on next push to main).
+#
+# Once bound, users enter a private code on the journal page and their trades
+# sync across phone + desktop automatically.  The raw code is never stored —
+# only its SHA-256 hash is used as the KV key.
+#
+# Fill in the id below with the KV namespace ID shown in the dashboard.
+# Leave preview_id blank unless you want a separate KV for preview deployments.
+[[kv_namespaces]]
+binding = "JOURNAL_KV"
+id = ""            # ← paste your KV namespace ID here
+preview_id = ""    # ← optional: separate namespace for preview branches
