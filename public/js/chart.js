@@ -240,8 +240,8 @@
     const cur     = d.currency_symbol || "";
     const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
     const SYM     = (d.symbol || symbol).toUpperCase();
-    const isCrypto = !!BINANCE_MAP[SYM];
-    const simBrok  = (data) => isCrypto ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
+    const isCrypto = !!BINANCE_MAP[SYM] || market === "scalp";
+    const simBrok  = (data) => isCrypto ? data.crypto_brokerage : data.stock_brokerage;
 
     // Re-label the entry button to match the setup direction.
     buyBtn.textContent  = dir === "short" ? "▲ Simulate Short" : "▲ Simulate Buy";
@@ -704,8 +704,8 @@
   // every tick. Visible only while a matching position is open.
   function wireLiveBox(d, el, SYM, posDir, findOpen) {
     const cur        = d.currency_symbol || "";
-    const isCryptoPos = !!BINANCE_MAP[SYM];
-    const posBrok    = (data) => isCryptoPos ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
+    const isCryptoPos = !!BINANCE_MAP[SYM] || market === "scalp";
+    const posBrok    = (data) => isCryptoPos ? data.crypto_brokerage : data.stock_brokerage;
     const box = document.createElement("div");
     box.className = "live-pos-box";
     box.style.display = "none";
@@ -845,7 +845,7 @@
             priceHd.textContent = fmt(price, "$");
             lastStockPx = price;
           }
-          liveState.listeners.forEach((fn) => fn(price));
+          liveState.listeners.forEach((fn) => { try { fn(price); } catch (_) {} });
         };
         const pollIv = setInterval(stockTick, 15000);
         window.addEventListener("beforeunload", () => clearInterval(pollIv), { once: true });
@@ -857,12 +857,18 @@
         .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then((j) => { render(j); if (stockTick) stockTick(); })
         .catch(() => {
-          const ts = Math.floor(Date.now() / 1000);
-          const ep = trade.entry;
+          const ts  = Math.floor(Date.now() / 1000);
+          const ep  = trade.entry;
+          // Use exactly 1 minMove unit as the high/low spread so the stub is valid
+          // even for sub-micro-cap prices where a % spread collapses to zero after
+          // lightweight-charts' internal quantisation.
+          const absEp  = Math.abs(ep || 1);
+          const prec0  = absEp >= 100 ? 2 : absEp >= 1 ? 3 : absEp >= 0.1 ? 4 : absEp >= 0.01 ? 5 : absEp >= 0.001 ? 6 : 8;
+          const mv     = Math.pow(10, -prec0);
           d.timeframes["1D"] = {
             candles: [
-              { time: ts - 86400, open: ep, high: ep * 1.001, low: ep * 0.999, close: ep },
-              { time: ts,         open: ep, high: ep * 1.001, low: ep * 0.999, close: ep },
+              { time: ts - 86400, open: ep, high: ep + mv, low: Math.max(ep - mv, 0), close: ep },
+              { time: ts,         open: ep, high: ep + mv, low: Math.max(ep - mv, 0), close: ep },
             ],
             volume: [
               { time: ts - 86400, value: 0, color: "rgba(47,208,127,0.5)" },

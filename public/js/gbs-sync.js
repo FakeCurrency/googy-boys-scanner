@@ -28,6 +28,11 @@
     if (!Array.isArray(d.deleted)) d.deleted = [];
     if (typeof d.capital !== "number") d.capital = 10000;
     if (typeof d.brokerage !== "number") d.brokerage = 10;
+    // Per-asset defaults — canonical here so every caller gets consistent values.
+    if (typeof d.stock_capital !== "number") d.stock_capital = 10000;
+    if (typeof d.stock_brokerage !== "number") d.stock_brokerage = 10;
+    if (typeof d.crypto_capital !== "number") d.crypto_capital = 10000;
+    if (typeof d.crypto_brokerage !== "number") d.crypto_brokerage = 5;
     if (typeof d.updated_at !== "number") d.updated_at = 0;
     return d;
   }
