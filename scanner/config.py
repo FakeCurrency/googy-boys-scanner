@@ -296,7 +296,7 @@ LIVE_DEPLOYMENT_STAGE = 1           # advance manually after each stage's exit c
 # Stage 3 — small live capital: position sizes are scaled down
 LIVE_STAGE3_CAPITAL_MAX_USD  = 8_000   # never fund the live account above this during Stage 3
 LIVE_STAGE3_POSITION_MULT    = 0.35    # 35% of normal calculated size (30–50% range; conservative)
-LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # informational: target ≤ 0.5% of account per trade
+LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # enforced: effective risk per trade capped at 0.5% of account in Stage 3
 
 # Stage 4 — scaling milestones (all require profitable weeks + controlled drawdown)
 LIVE_STAGE4_L1_MIN_WEEKS     = 4       # Level 1 unlock: 4+ profitable completed weeks
@@ -346,6 +346,7 @@ ALERT_RATE_LIMITS = {
     "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
     "circuit_breaker": 1800,
     "daily_report":    82800,    # max 1 per 23h
+    "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
     "DEFAULT":         300,
 }
@@ -358,6 +359,34 @@ HEALTH_LOG_SIZE_CRIT_MB  = 200  # critical if any log file exceeds this size (MB
 
 # Phase 7: Expectancy tracking
 EXPECTANCY_MIN_TRADES = 20      # minimum sample before expectancy estimate is reliable
+
+# ---------------------------------------------------------------------------
+# Phase 8: Enhanced Monitoring & Alerting
+# ---------------------------------------------------------------------------
+
+# Strategy degradation anomaly thresholds (used by anomaly.check_strategy_degradation)
+ANOMALY_WIN_RATE_WINDOW    = 20    # rolling trade window for degradation checks
+ANOMALY_WIN_RATE_DROP      = 15.0  # alert if rolling WR drops > 15 pp vs all-time
+ANOMALY_EXPECTANCY_DROP    = 0.3   # alert if rolling E drops > 0.3R vs all-time expectancy
+
+# Weekly report rate-limit bucket (separate from daily_report so each has its own cadence)
+ALERT_RATE_LIMITS_EXTRA: dict = {
+    "weekly_report": 518_400,  # max 1 per 6 days (604800 = 7d; 518400 = 6d allows a little slack)
+}
+
+# ---------------------------------------------------------------------------
+# Phase 9: Capital Scaling Framework
+# ---------------------------------------------------------------------------
+
+# Hard cap on total capital under live management.  If the total notional
+# of open positions reaches this value, new orders are blocked.  Set to 0
+# to disable the cap entirely.
+MAX_MANAGED_CAPITAL_USD  = 50_000   # USD; 0 = disabled
+
+# If current scaling_advisor level >= this value, log a prominent warning
+# reminding the operator to manually increase the funded capital before
+# continuing.  Set to 0 to keep the advisor fully advisory (no blocking).
+SCALING_ADVISORY_WARN_LEVEL = 1     # warn from Level 1 onward
 
 # ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution

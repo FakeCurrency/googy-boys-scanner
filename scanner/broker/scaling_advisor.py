@@ -18,28 +18,13 @@ Called from bybit_run.run() at the end of every execution cycle so the
 recommendation is always fresh in the log.
 """
 
-import datetime as dt
 import logging
 
 from scanner import config as _cfg
 from scanner.broker.risk_manager import current_drawdown
+from scanner.broker.journal_utils import _iso_week, _current_iso_week
 
 log = logging.getLogger(__name__)
-
-
-def _iso_week(day: str) -> str:
-    """Return 'YYYY-WNN' from a YYYY-MM-DD session_day."""
-    try:
-        d   = dt.date.fromisoformat(day[:10])
-        iso = d.isocalendar()
-        return f"{iso[0]}-W{iso[1]:02d}"
-    except Exception:
-        return ""
-
-
-def _current_iso_week() -> str:
-    iso = dt.date.today().isocalendar()
-    return f"{iso[0]}-W{iso[1]:02d}"
 
 
 def _weekly_pnl(closed: list[dict]) -> dict[str, float]:
@@ -165,11 +150,31 @@ def check_stage4_milestones(journal: dict) -> dict:
             "You may scale more aggressively with discipline."
         )
 
+    warn_level = int(getattr(_cfg, "SCALING_ADVISORY_WARN_LEVEL", 1))
+
     if current_level >= 1:
         log.info(
             "scaling advisor: Level %d conditions met — %s",
             current_level, reco,
         )
+
+    # If the level meets or exceeds the warn threshold, remind the operator
+    # to manually increase funded capital before the next run.
+    if warn_level > 0 and current_level >= warn_level:
+        log.warning(
+            "SCALING ADVISOR: Level %d conditions met — "
+            "consider increasing live capital before the next run.  %s",
+            current_level, reco,
+        )
+        try:
+            from .alert_router import smart_send
+            smart_send(
+                "info",
+                f"Scaling milestone reached (Level {current_level})",
+                reco,
+            )
+        except Exception:
+            pass
 
     return {
         "current_level":             current_level,

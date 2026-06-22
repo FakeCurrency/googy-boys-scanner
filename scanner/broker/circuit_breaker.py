@@ -91,8 +91,10 @@ def check_anomaly_breaker(last_anomaly_fired: bool = False) -> dict:
 def check_all(journal: dict, last_anomaly_fired: bool = False) -> dict:
     """Run all circuit breakers; return aggregated {ok, checks, failed, reason}.
 
-    Stops short of running drawdown if the consecutive-loss breaker fires, since
-    both call alert_dispatch and we don't want duplicate alerts.
+    All three checks always run unconditionally so the caller gets a complete
+    picture of every active breaker in a single call.  Alerts may fire in
+    multiple checks on the same run — that is intentional (each breaker owns its
+    own alert so the log contains a full diagnosis).
     """
     checks: dict[str, dict] = {}
 

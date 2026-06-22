@@ -16,8 +16,9 @@ from scanner.scalp_journal import _session_day, _atomic_write
 
 log = logging.getLogger(__name__)
 
-ROOT      = pathlib.Path(__file__).resolve().parents[2]
-PERF_FILE = ROOT / "public" / "data" / "performance.json"
+ROOT             = pathlib.Path(__file__).resolve().parents[2]
+PERF_FILE        = ROOT / "public" / "data" / "performance.json"
+HEALTH_SNAP_FILE = ROOT / "public" / "data" / "health_runtime.json"
 
 
 def _win_rate(trades: list[dict]) -> float:
@@ -163,6 +164,46 @@ def write_report(j: dict) -> dict:
         log.warning("expectancy report failed: %s", e)
 
     return report
+
+
+def write_health_runtime(j: dict) -> None:
+    """Write public/data/health_runtime.json with live system-state indicators.
+
+    Provides the health dashboard with data that is only available during a
+    bybit_run execution: open risk, circuit-breaker state, recent warnings.
+
+    This is a complement to health.json (written by the scanner) and the
+    health_check.py script (which reads both files).
+    """
+    from .risk_manager import portfolio_heat, current_drawdown
+    from .circuit_breaker import check_all as _cb_check
+
+    open_positions = j.get("open", [])
+    heat = round(portfolio_heat(open_positions) * 100, 2)
+    dd   = round(current_drawdown(j) * 100, 2)
+
+    cb = {"ok": True, "failed": [], "reason": ""}
+    try:
+        result = _cb_check(j)
+        cb = {"ok": result["ok"], "failed": result["failed"], "reason": result["reason"]}
+    except Exception as e:
+        cb = {"ok": False, "failed": ["check_error"], "reason": str(e)}
+
+    snapshot = {
+        "generated_at":        dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "open_positions":      len(open_positions),
+        "open_risk_pct":       heat,
+        "current_drawdown_pct": dd,
+        "circuit_breakers":    cb,
+        "open_symbols":        [p.get("symbol") for p in open_positions],
+    }
+
+    HEALTH_SNAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write(HEALTH_SNAP_FILE, json.dumps(snapshot, indent=2))
+    log.info(
+        "health runtime snapshot  open=%d  heat=%.1f%%  dd=%.1f%%  cb_ok=%s",
+        len(open_positions), heat, dd, cb["ok"],
+    )
 
 
 def maybe_send_daily_report(report: dict) -> None:

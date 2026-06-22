@@ -189,6 +189,38 @@ def check_max_positions(journal: dict) -> dict:
 
 # ── order size validation ─────────────────────────────────────────────────────
 
+def check_max_capital(journal: dict) -> dict:
+    """Check whether total open notional is within the MAX_MANAGED_CAPITAL_USD cap.
+
+    Computes total notional as the sum of (units × entry) for all open positions.
+    This is a rough proxy for deployed capital that catches over-funding before
+    an order is submitted.
+
+    Returns {"ok": True} when the cap is disabled (MAX_MANAGED_CAPITAL_USD = 0).
+    """
+    cap = float(getattr(_cfg, "MAX_MANAGED_CAPITAL_USD", 50_000))
+    if cap <= 0:
+        return {"ok": True, "deployed": 0.0, "cap": 0.0, "reason": ""}
+
+    open_positions = journal.get("open", [])
+    deployed = sum(
+        float(p.get("units", 0)) * float(p.get("entry", 0))
+        for p in open_positions
+    )
+    ok = deployed < cap
+    if not ok:
+        log.warning(
+            "MAX CAPITAL CAP: open notional $%.0f ≥ cap $%.0f — blocking new order",
+            deployed, cap,
+        )
+    return {
+        "ok":       ok,
+        "deployed": round(deployed, 2),
+        "cap":      cap,
+        "reason":   f"open notional ${deployed:.0f} ≥ max capital cap ${cap:.0f}" if not ok else "",
+    }
+
+
 def check_order_size(units: float, entry: float) -> dict:
     """Validate order notional value is within sane bounds.
 

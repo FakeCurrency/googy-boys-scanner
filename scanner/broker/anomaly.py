@@ -12,6 +12,8 @@ Fires alert_dispatch events when anomalies are detected.
 import logging
 import statistics
 
+from scanner import config as _cfg
+
 log = logging.getLogger(__name__)
 
 _MIN_HISTORY_RUNS    = 5     # need this many prior scan runs before comparing
@@ -96,6 +98,51 @@ def check_journal_anomalies(j: dict) -> list[str]:
     return anomalies
 
 
+def check_strategy_degradation(journal: dict) -> list[str]:
+    """Detect degradation in recent performance vs the all-time baseline.
+
+    Fires when the rolling win rate or expectancy over the last
+    ANOMALY_WIN_RATE_WINDOW trades drops materially below all-time values.
+    Requires at least EXPECTANCY_MIN_TRADES closed trades before comparing.
+
+    Returns a list of anomaly description strings (empty = no degradation).
+    """
+    from scanner.broker.expectancy import calc_expectancy
+
+    min_t   = int(getattr(_cfg, "EXPECTANCY_MIN_TRADES", 20))
+    window  = int(getattr(_cfg, "ANOMALY_WIN_RATE_WINDOW", 20))
+    wr_drop = float(getattr(_cfg, "ANOMALY_WIN_RATE_DROP", 15.0))   # percentage points
+    e_drop  = float(getattr(_cfg, "ANOMALY_EXPECTANCY_DROP", 0.3))  # R units
+
+    closed = [t for t in journal.get("closed", []) if not t.get("skip_daily_count")]
+    if len(closed) < min_t:
+        return []
+
+    all_time = calc_expectancy(closed)
+    recent   = calc_expectancy(closed[-window:])
+    anomalies: list[str] = []
+
+    drop_wr = all_time["win_rate"] - recent["win_rate"]
+    if drop_wr > wr_drop:
+        anomalies.append(
+            f"strategy degradation: rolling win rate {recent['win_rate']:.0f}% "
+            f"vs all-time {all_time['win_rate']:.0f}% "
+            f"(drop {drop_wr:.0f}pp over last {window} trades)"
+        )
+
+    drop_e = all_time["expectancy_r"] - recent["expectancy_r"]
+    if drop_e > e_drop and all_time["expectancy_r"] > 0:
+        anomalies.append(
+            f"strategy degradation: rolling expectancy {recent['expectancy_r']:.4f}R "
+            f"vs all-time {all_time['expectancy_r']:.4f}R "
+            f"(drop {drop_e:.4f}R over last {window} trades)"
+        )
+
+    for a in anomalies:
+        log.warning("strategy degradation: %s", a)
+    return anomalies
+
+
 def run_checks(scan: dict, j: dict, history_counts: list[int]) -> bool:
     """Run all anomaly checks, dispatch alerts for any found.
 
@@ -111,6 +158,10 @@ def run_checks(scan: dict, j: dict, history_counts: list[int]) -> bool:
 
     for issue in check_journal_anomalies(j):
         _send("anomaly", "Journal anomaly detected", issue)
+        fired = True
+
+    for issue in check_strategy_degradation(j):
+        _send("anomaly", "Strategy degradation detected", issue)
         fired = True
 
     return fired

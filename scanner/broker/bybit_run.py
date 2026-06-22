@@ -255,11 +255,13 @@ def run(dry_run: bool = False) -> None:
 
         # Dynamic sizing: base qty × drawdown/regime multiplier × stage-3 reduction
         base_units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
-        size_mult  = dynamic_size_multiplier(j, regime)
+        size_mult  = dynamic_size_multiplier(j, regime)  # already floors at 0.25
 
         if live_stage == 3:
             s3_mult   = float(getattr(_cfg, "LIVE_STAGE3_POSITION_MULT", 0.35))
-            size_mult = size_mult * s3_mult
+            # Re-apply the 0.25 floor after the Stage 3 reduction so the minimum
+            # size guarantee from dynamic_size_multiplier is still respected.
+            size_mult = max(size_mult * s3_mult, 0.25)
             log.info("Stage 3 sizing  %s  stage3_mult=%.2f  combined_mult=%.3f",
                      symbol, s3_mult, size_mult)
 
@@ -278,6 +280,23 @@ def run(dry_run: bool = False) -> None:
 
         effective_risk = _cfg.SCALP_RISK_PER_TRADE * size_mult
 
+        # Stage 3: also enforce the per-trade risk cap (% of account size).
+        # This is a secondary guard on top of the position multiplier — if the
+        # base risk or account size makes effective_risk exceed the cap, clamp it.
+        if live_stage == 3:
+            from scanner.broker.risk_manager import account_size as _account_size
+            max_risk_s3 = _account_size() * float(getattr(_cfg, "LIVE_STAGE3_RISK_PCT_MAX", 0.005))
+            if effective_risk > max_risk_s3:
+                log.info(
+                    "Stage 3 risk cap: clamping effective_risk $%.2f → $%.2f "
+                    "(%.1f%% of account)",
+                    effective_risk, max_risk_s3,
+                    float(getattr(_cfg, "LIVE_STAGE3_RISK_PCT_MAX", 0.005)) * 100,
+                )
+                effective_risk = max_risk_s3
+                stop_dist = abs(entry - stop)
+                units = effective_risk / stop_dist if stop_dist > 0 else 0
+
         log.info("sizing  %s  entry=%.6f  stop=%.6f  base_risk=$%.2f  "
                  "size_mult=%.2f  effective_risk=$%.2f  qty=%.4f  regime=%s",
                  symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE,
@@ -292,6 +311,7 @@ def run(dry_run: bool = False) -> None:
             "direction":             direction,
             "grade":                 r["grade"],
             "score":                 r["score"],
+            "engine":                r.get("scan_type", "scalp"),  # Phase 10: attribution
             "entry":                 entry,
             "intended_entry_price":  entry,   # Stage 2: preserved for fill-analysis comparison
             "stop":                  stop,
@@ -371,13 +391,24 @@ def run(dry_run: bool = False) -> None:
     broker_mode = "SIMULATED" if simulated else bc.mode()
     _save(j, broker_mode=broker_mode)
 
-    # ── 8. Performance report + live-vs-backtest reconciliation ──────────────
+    # ── 8. Performance report + health snapshot + digest ─────────────────────
+    report = None
     try:
-        from scanner.broker.performance_report import write_report, maybe_send_daily_report
+        from scanner.broker.performance_report import (
+            write_report, maybe_send_daily_report, write_health_runtime,
+        )
         report = write_report(j)
         maybe_send_daily_report(report)
+        write_health_runtime(j)
     except Exception as e:
         log.warning("performance report failed: %s", e)
+
+    try:
+        from scanner.broker.alert_digest import maybe_send_digest
+        if report:
+            maybe_send_digest(report)
+    except Exception as e:
+        log.warning("alert digest failed: %s", e)
 
     try:
         from scanner.broker.live_vs_backtest import reconcile as lvb_reconcile
@@ -406,6 +437,13 @@ def run(dry_run: bool = False) -> None:
         )
     except Exception as e:
         log.warning("scaling advisor failed: %s", e)
+
+    # ── 11. Performance attribution (Phase 10) ────────────────────────────────
+    try:
+        from scanner.broker.attribution import write_attribution
+        write_attribution(j)
+    except Exception as e:
+        log.warning("attribution report failed: %s", e)
 
 
 if __name__ == "__main__":
