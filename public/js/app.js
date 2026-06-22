@@ -7,6 +7,13 @@
 (() => {
   "use strict";
 
+  // ---- constants -----------------------------------------------------------
+  const CACHE_PREFIX   = "gbs:cache:";
+  const CACHE_TTL_MS   = 5 * 60 * 1000;   // 5 min localStorage cache
+  const PREFS_KEY      = "gbs:prefs";
+  const AUTO_REFRESH_S = 5 * 60;           // auto-refresh interval in seconds
+  const DEBUG_KEY      = "gbs:debug";
+
   const COLOR = { green: "#2fd07f", blue: "#4d9fff", red: "#ff5b5b" };
   const EMA_COLOR = {
     8: "#ff5c8a", 13: "#ff9f43", 21: "#ffd23f", 34: "#2fd07f",
@@ -16,6 +23,80 @@
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
   const GRADE_RANK = { "A+": 0, "A": 1, "B": 2, "C": 3 };
   const WATCH_KEY = "gbs:watch";
+
+  // ---- persistent preferences (survive page refresh) ----------------------
+  function loadPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+      if (p.market) state.market = p.market;
+      if (p.mode)   state.mode   = p.mode;
+      if (p.tab)    state.tab    = p.tab;
+      if (p.sort)   state.sort   = p.sort;
+      if (p.scalp_type) state.scalp_type = p.scalp_type;
+    } catch (_) {}
+  }
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        market: state.market, mode: state.mode,
+        tab: state.tab, sort: state.sort, scalp_type: state.scalp_type,
+      }));
+    } catch (_) {}
+  }
+
+  // ---- localStorage scan cache with TTL -----------------------------------
+  function cacheSet(key, data) {
+    try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ ts: Date.now(), data })); }
+    catch (_) {}
+  }
+  function cacheGet(key) {
+    try {
+      const item = JSON.parse(localStorage.getItem(CACHE_PREFIX + key) || "null");
+      if (item && Date.now() - item.ts < CACHE_TTL_MS) return item.data;
+    } catch (_) {}
+    return null;
+  }
+
+  // ---- debug mode ---------------------------------------------------------
+  const isDebug = () =>
+    new URLSearchParams(location.search).has("debug") ||
+    localStorage.getItem(DEBUG_KEY) === "1";
+  function toggleDebug() {
+    const next = isDebug() ? null : "1";
+    if (next) localStorage.setItem(DEBUG_KEY, "1"); else localStorage.removeItem(DEBUG_KEY);
+    document.body.classList.toggle("debug-mode", Boolean(next));
+    if (state.data) renderRows();
+  }
+  if (isDebug()) document.body.classList.add("debug-mode");
+
+  // ---- auto-refresh -------------------------------------------------------
+  let _refreshTimer = null;
+  let _refreshRemaining = AUTO_REFRESH_S;
+  function _updateRefreshBadge() {
+    const el = document.getElementById("refresh-timer");
+    if (!el) return;
+    const m = Math.floor(_refreshRemaining / 60);
+    const s = String(_refreshRemaining % 60).padStart(2, "0");
+    el.textContent = `${m}:${s}`;
+    el.title = `Auto-refresh in ${m}m ${_refreshRemaining % 60}s`;
+  }
+  function startAutoRefresh() {
+    if (_refreshTimer) clearInterval(_refreshTimer);
+    _refreshRemaining = AUTO_REFRESH_S;
+    _updateRefreshBadge();
+    _refreshTimer = setInterval(() => {
+      _refreshRemaining -= 1;
+      _updateRefreshBadge();
+      if (_refreshRemaining <= 0) {
+        _refreshRemaining = AUTO_REFRESH_S;
+        const key = state.mode === "scalp" && state.scalp_type === "crypto"
+          ? "scalp:crypto" : `${state.market}:${state.mode}`;
+        delete state.cache[key];
+        localStorage.removeItem(CACHE_PREFIX + key);
+        load(true);
+      }
+    }, 1000);
+  }
 
   const state = {
     market: "asx",
@@ -29,6 +110,26 @@
     cur: "$",
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
   };
+
+  loadPrefs();
+  // Sync UI controls to restored preferences
+  (function syncPrefsUI() {
+    document.querySelectorAll(".market-btn").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.market === state.market);
+      b.setAttribute("aria-selected", b.dataset.market === state.market ? "true" : "false");
+    });
+    document.querySelectorAll(".scan-btn").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.mode === state.mode);
+      b.setAttribute("aria-selected", b.dataset.mode === state.mode ? "true" : "false");
+    });
+    document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
+    document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.sort === state.sort));
+    const isScalp = state.mode === "scalp";
+    const scalp_banner = document.getElementById("scalp-banner");
+    if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
+    const riskDash = document.getElementById("risk-dashboard");
+    if (riskDash) riskDash.style.display = isScalp ? "" : "none";
+  })();
 
   const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
   const HOTCAP   = 500e6;   // sub-500M = 🔥 micro-cap spec sweet spot
@@ -233,12 +334,16 @@
         <button class="t-star ${starred ? "starred" : ""}" data-sym="${r.symbol}" title="Watchlist" aria-label="Toggle watchlist">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
+        <button class="row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy debug info" aria-label="Copy raw data">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
         <button class="row-expand" title="Details" aria-label="Toggle details">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
       </div>
      </div>
      ${detailHtml(r)}
+     ${debugDetailHtml(r)}
     </div>`;
   }
 
@@ -317,6 +422,30 @@
         <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
       </div>
     </div>`;
+  }
+
+  function debugDetailHtml(r) {
+    const d = r.detail || {};
+    const fields = [
+      ["Score", `${r.score} / ${r.score_max}`],
+      ["Grade", r.grade],
+      ["R:R", r.rr],
+      ["ATR", r.atr],
+      ["ADX", r.adx],
+      ["Regime", r.market_regime],
+      ["Entry", r.entry],
+      ["Stop", r.stop],
+      ["Target", r.target],
+      ["Momentum", d.mom_val],
+      ["Squeeze", d.sq_state],
+      ["BB Mid", d.bb_mid],
+      ["Volume ratio", d.volume_ratio],
+      ["Chips", (r.chips || []).join(", ")],
+    ].filter(([, v]) => v != null && v !== "");
+    const rows = fields.map(([k, v]) =>
+      `<div class="dbg-row"><span class="dbg-k">${esc(k)}</span><span class="dbg-v">${esc(String(v))}</span></div>`
+    ).join("");
+    return `<div class="debug-panel"><div class="dbg-title">DEBUG</div>${rows}</div>`;
   }
 
   function detailHtml(r) {
@@ -584,24 +713,93 @@
     } catch (_) {}
   }
 
-  async function load() {
+  async function load(silent = false) {
     const { market, mode } = state;
     const key = mode === "scalp" && state.scalp_type === "crypto"
       ? "scalp:crypto" : `${market}:${mode}`;
-    $("#scan-title").textContent = "Loading latest scan…";
-    skeleton();
+    if (!silent) {
+      $("#scan-title").textContent = "Loading latest scan…";
+      skeleton();
+    }
+    // Check localStorage cache first (5-min TTL)
+    if (!state.cache[key]) {
+      const lsCached = cacheGet(key);
+      if (lsCached) state.cache[key] = lsCached;
+    }
     if (state.cache[key]) { applyPayload(state.cache[key]); return; }
     try {
       const res = await fetch(dataFile(market, mode), { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
       const d = await res.json();
       state.cache[key] = d;
+      cacheSet(key, d);
       applyPayload(d);
     } catch (e) {
-      $("#scan-title").textContent = "No scan data yet";
-      $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
-        <p>Run the scanner to generate the data, then refresh.</p></div>`;
+      if (!silent) {
+        $("#scan-title").textContent = "No scan data yet";
+        $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
+          <p>Run the scanner to generate the data, then refresh.</p></div>`;
+      }
     }
+  }
+
+  // ----------------------------------------------------------- search overlay
+  function openSearch() {
+    const overlay = document.getElementById("search-overlay");
+    const input   = document.getElementById("search-input");
+    if (!overlay) return;
+    overlay.removeAttribute("hidden");
+    if (input) { input.value = ""; input.focus(); }
+    const res = document.getElementById("search-results");
+    if (res) res.innerHTML = "";
+  }
+  function closeSearch() {
+    const overlay = document.getElementById("search-overlay");
+    if (!overlay) return;
+    overlay.setAttribute("hidden", "");
+    const input = document.getElementById("search-input");
+    if (input) input.value = "";
+    const res = document.getElementById("search-results");
+    if (res) res.innerHTML = "";
+  }
+
+  // ----------------------------------------------------------- keyboard
+  function initKeyboard() {
+    document.addEventListener("keydown", (e) => {
+      const overlay = document.getElementById("search-overlay");
+      const isSearchOpen = overlay && !overlay.hasAttribute("hidden");
+      const inInput = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName);
+
+      if (e.key === "/" && !isSearchOpen && !inInput) {
+        e.preventDefault(); openSearch(); return;
+      }
+      if (e.key === "Escape") {
+        if (isSearchOpen) { closeSearch(); return; }
+        document.querySelectorAll(".row-wrap.open").forEach((w) => w.classList.remove("open"));
+        return;
+      }
+      if (e.key === "D" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault(); toggleDebug(); return;
+      }
+      if ((e.key === "j" || e.key === "ArrowDown") && !isSearchOpen && !inInput) {
+        e.preventDefault();
+        const rows = [...document.querySelectorAll(".row-wrap")];
+        const cur = document.querySelector(".row-wrap:focus");
+        const idx = cur ? rows.indexOf(cur) : -1;
+        const next = rows[idx + 1];
+        if (next) { next.setAttribute("tabindex", "0"); next.focus(); }
+        return;
+      }
+      if ((e.key === "k" || e.key === "ArrowUp") && !isSearchOpen && !inInput) {
+        e.preventDefault();
+        const rows = [...document.querySelectorAll(".row-wrap")];
+        const cur = document.querySelector(".row-wrap:focus");
+        const idx = cur ? rows.indexOf(cur) : rows.length;
+        const prev = rows[idx - 1];
+        if (prev) { prev.setAttribute("tabindex", "0"); prev.focus(); }
+        return;
+      }
+    });
   }
 
   // ----------------------------------------------------------- events
@@ -631,6 +829,7 @@
       if (state.scalp_type === type) return;
       const prevType = state.scalp_type;
       state.scalp_type = type;
+      savePrefs();
       syncScalpUI();
       const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
       if (needsReload) load(); else renderRows();
@@ -645,6 +844,7 @@
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
       state.market = b.dataset.market;
+      savePrefs();
       load();
     }));
 
@@ -704,6 +904,7 @@
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
       state.mode = b.dataset.mode;
+      savePrefs();
       const isScalp = state.mode === "scalp";
       const scalp_banner = $("#scalp-banner");
       if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
@@ -732,6 +933,7 @@
 
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.addEventListener("click", () => {
       state.tab = b.dataset.tab;
+      savePrefs();
       if (state.view !== "results") {
         state.view = "results";
         document.querySelectorAll(".view-tab").forEach((x) => x.classList.toggle("is-active", x.dataset.view === "results"));
@@ -742,12 +944,61 @@
 
     document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.addEventListener("click", () => {
       state.sort = b.dataset.sort;
+      savePrefs();
       document.querySelectorAll("#sorts .seg-btn").forEach((x) => x.classList.toggle("is-active", x === b));
       renderRows();
     }));
 
-    // Row interactions (delegated): star toggle, chart link, expand details.
+    // Search overlay wiring
+    const searchTrigger = document.getElementById("search-trigger");
+    const searchInput   = document.getElementById("search-input");
+    const searchResults = document.getElementById("search-results");
+    const searchOverlay = document.getElementById("search-overlay");
+    if (searchTrigger) searchTrigger.addEventListener("click", openSearch);
+    if (searchOverlay) searchOverlay.addEventListener("click", (e) => {
+      if (e.target === searchOverlay) closeSearch();
+    });
+    if (searchInput) searchInput.addEventListener("input", () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) { searchResults.innerHTML = ""; return; }
+      const all = (state.data && state.data.results) || [];
+      const hits = all.filter((r) =>
+        r.symbol.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q)
+      ).slice(0, 12);
+      if (!hits.length) {
+        searchResults.innerHTML = `<div class="sr-empty">No results for "${esc(searchInput.value)}"</div>`;
+        return;
+      }
+      searchResults.innerHTML = hits.map((r) => {
+        const href = state.mode === "scalp"
+          ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
+          : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
+        return `<a class="sr-row" href="${href}">
+          <span class="sr-grade" style="color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">${esc(r.grade)}</span>
+          <span class="sr-sym">${esc(r.symbol)}</span>
+          <span class="sr-name">${esc(r.name || "")}</span>
+          <span class="sr-price">${fmtPrice(r.price)}</span>
+        </a>`;
+      }).join("");
+      // Close overlay when user clicks a result link
+      searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", closeSearch));
+    });
+
+    // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
+      const copyBtn = e.target.closest(".row-copy-debug");
+      if (copyBtn) {
+        const sym = copyBtn.dataset.sym;
+        const r = (state.data && state.data.results || []).find((x) => x.symbol === sym);
+        if (r && navigator.clipboard) {
+          navigator.clipboard.writeText(JSON.stringify(r, null, 2)).then(() => {
+            copyBtn.style.color = "var(--green)";
+            setTimeout(() => { copyBtn.style.color = ""; }, 1400);
+          }).catch(() => {});
+        }
+        e.stopPropagation();
+        return;
+      }
       const star = e.target.closest(".t-star");
       if (star) {
         toggleStar(star.dataset.sym);
@@ -765,7 +1016,8 @@
     });
   }
 
+  initKeyboard();
   bind();
   loadCaps();
-  load();
+  load().then(() => startAutoRefresh());
 })();

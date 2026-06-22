@@ -247,6 +247,119 @@ SCALP_CORRELATION_GROUPS = {
 }
 
 # ---------------------------------------------------------------------------
+# Version tracking — bump SCANNER_VERSION on breaking engine or config changes
+# so every scan output and health.json record carries the exact logic version.
+# ---------------------------------------------------------------------------
+SCANNER_VERSION = "7.0.0"   # <major>.<phase>.<patch>
+
+# ---------------------------------------------------------------------------
+# Phase 5: Risk Management — portfolio-level limits
+# ---------------------------------------------------------------------------
+# Note: SCALP_STARTING_CAPITAL (20_000) is used as the account baseline for
+# drawdown and heat calculations. Override ACCOUNT_OVERRIDE_USD to use a
+# different value if the live account size differs from the starting capital.
+ACCOUNT_OVERRIDE_USD      = 0       # 0 = use SCALP_STARTING_CAPITAL; set to real balance to override
+
+PORTFOLIO_HEAT_LIMIT      = 0.07    # max 7% of account at risk at any time across all open positions
+MAX_DRAWDOWN_PAUSE        = 0.12    # pause new trades when drawdown from equity peak reaches 12%
+MAX_DRAWDOWN_CLOSE        = 0.15    # close all positions when drawdown from peak reaches 15%
+DRAWDOWN_HALVE_SIZE_AT    = 0.08    # apply 0.5× size multiplier once drawdown exceeds 8%
+SECTOR_EXPOSURE_CAP       = 0.40    # max 40% of account in any single sector/theme
+MAX_OPEN_POSITIONS        = 10      # hard cap on total concurrent open positions
+
+# Phase 5: Circuit Breakers
+CONSEC_LOSS_PAUSE         = 4       # pause after N consecutive losing trades
+ANOMALY_PAUSE_ON_TRIGGER  = True    # block new orders when anomaly detector fires
+
+# Phase 5: Live Execution Safeguards
+SLIPPAGE_WARN_PCT         = 0.003   # warn (but allow) when expected slippage > 0.3%
+SLIPPAGE_REJECT_PCT       = 0.01    # block order when expected slippage > 1%
+ORDER_SIZE_MIN_USD        = 10      # minimum order notional value — below this is a data error
+ORDER_SIZE_MAX_USD        = 5_000   # maximum order notional value — fat-finger guard
+
+# Phase 5: Environment guard — MUST be explicitly set to enable live capital.
+# Set env var BYBIT_LIVE_CONFIRMED=true as a GitHub Secret alongside BYBIT_API_KEY.
+# Without this, the system falls back to dry-run if BYBIT_TESTNET=false is detected.
+REQUIRE_LIVE_CONFIRMED    = True    # set to False only in automated testing
+
+# ---------------------------------------------------------------------------
+# Phase 6: Live Deployment Protocol
+# ---------------------------------------------------------------------------
+# Stage controls how the system behaves during the gradual capital ramp-up.
+#   1 = Structured Testnet Validation  (testnet only, no real capital)
+#   2 = Live vs Expected Fill Analysis (testnet, full slippage tracking enabled)
+#   3 = Small Live Capital Deployment  (live, reduced position sizes)
+#   4 = Gradual Capital Scaling        (live, milestone-driven capital increases)
+#   5 = Post-Trade Review & Refinement (live, full normal parameters)
+LIVE_DEPLOYMENT_STAGE = 1           # advance manually after each stage's exit criteria are met
+
+# Stage 3 — small live capital: position sizes are scaled down
+LIVE_STAGE3_CAPITAL_MAX_USD  = 8_000   # never fund the live account above this during Stage 3
+LIVE_STAGE3_POSITION_MULT    = 0.35    # 35% of normal calculated size (30–50% range; conservative)
+LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # informational: target ≤ 0.5% of account per trade
+
+# Stage 4 — scaling milestones (all require profitable weeks + controlled drawdown)
+LIVE_STAGE4_L1_MIN_WEEKS     = 4       # Level 1 unlock: 4+ profitable completed weeks
+LIVE_STAGE4_L1_MAX_DD        = 0.05    # Level 1 unlock: drawdown must be < 5%
+LIVE_STAGE4_L1_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
+LIVE_STAGE4_L2_MIN_WEEKS     = 4       # Level 2 unlock: another 4+ profitable weeks
+LIVE_STAGE4_L2_MAX_DD        = 0.06    # Level 2 unlock: drawdown must be < 6%
+LIVE_STAGE4_L2_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
+
+# Stage 2 — fill analysis: minimum trades before weekly slippage averages are meaningful
+FILL_ANALYSIS_MIN_TRADES     = 5       # skip weekly averages if fewer than this many filled trades
+
+# ---------------------------------------------------------------------------
+# Phase 7: Advanced Monitoring & Alerting
+# ---------------------------------------------------------------------------
+
+# Map event_type → severity level (CRITICAL / WARNING / INFO)
+ALERT_SEVERITY = {
+    "kill_switch":     "CRITICAL",
+    "daily_loss":      "CRITICAL",
+    "order_failed":    "CRITICAL",
+    "scan_error":      "CRITICAL",
+    "order_placed":    "INFO",
+    "order_rejected":  "WARNING",
+    "anomaly":         "WARNING",
+    "circuit_breaker": "WARNING",
+    "daily_report":    "INFO",
+    "health":          "WARNING",
+    "info":            "INFO",
+}
+
+# Map severity → alert channels (telegram / discord / email)
+ALERT_CHANNELS = {
+    "CRITICAL": ["telegram", "discord", "email"],
+    "WARNING":  ["telegram", "discord"],
+    "INFO":     [],  # log only — no push notification for routine events
+}
+
+# Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
+ALERT_RATE_LIMITS = {
+    "kill_switch":     0,        # always send — life-safety critical
+    "daily_loss":      0,        # always send
+    "order_failed":    0,        # always send
+    "scan_error":      0,        # always send
+    "order_placed":    300,      # max 1 per 5 min
+    "order_rejected":  300,
+    "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
+    "circuit_breaker": 1800,
+    "daily_report":    82800,    # max 1 per 23h
+    "health":          3600,     # max 1 per hour
+    "DEFAULT":         300,
+}
+
+# Phase 7: Health check thresholds
+HEALTH_SCAN_STALE_WARN_H = 2    # warn if health.json is older than this many hours
+HEALTH_SCAN_STALE_CRIT_H = 4    # critical if older than this
+HEALTH_LOG_SIZE_WARN_MB  = 50   # warn if any log file exceeds this size (MB)
+HEALTH_LOG_SIZE_CRIT_MB  = 200  # critical if any log file exceeds this size (MB)
+
+# Phase 7: Expectancy tracking
+EXPECTANCY_MIN_TRADES = 20      # minimum sample before expectancy estimate is reliable
+
+# ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution
 # ---------------------------------------------------------------------------
 # BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).
@@ -271,7 +384,20 @@ SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (m
 # ---------------------------------------------------------------------------
 # Market regime classification
 # ---------------------------------------------------------------------------
-REGIME_ADX_THRESHOLD = 25     # ADX > 25 → "trending"; ≤ 25 → "ranging"
+REGIME_ADX_THRESHOLD    = 25    # ADX > 25 → "trending"; ≤ 25 → "ranging"
+REGIME_RANGING_RISK_MULT = 0.5  # scale position size to this fraction in ranging markets
+REGIME_RANGING_SKIP      = False # True = skip signals entirely in ranging; False = reduce size
+
+# ---------------------------------------------------------------------------
+# Execution robustness
+# ---------------------------------------------------------------------------
+ORDER_RETRY_ATTEMPTS     = 3    # retry Bybit API calls this many times on failure
+ORDER_RETRY_BACKOFF_BASE = 2    # base seconds for exponential backoff (2s, 4s, 8s…)
+
+# ---------------------------------------------------------------------------
+# News/event calendar filter
+# ---------------------------------------------------------------------------
+EVENT_BLACKOUT_ENABLED   = True  # skip new orders on high-impact economic event days
 
 
 @dataclass(frozen=True)
