@@ -12,10 +12,14 @@ NASDAQ and ASX signals are skipped — those go via IBKR (future).
 Symbol mapping: yfinance "BTC-USD" → Bybit "BTCUSDT" (drop "-USD", add "USDT").
 """
 
+import logging
 import os
+import time
 
 from . import bybit_client as bc
 from scanner import config
+
+log = logging.getLogger(__name__)
 
 _CRYPTO_ASSET_TYPE = "crypto"
 
@@ -117,24 +121,39 @@ def submit(pos: dict) -> dict:
 
     order_link_id = _order_link_id(symbol, direction, sess_day)
 
-    try:
-        result = bc.place_order(
-            category="linear",
-            symbol=symbol,
-            side=side,
-            orderType="Limit",
-            qty=_fmt_qty(units),
-            price=_fmt_price(entry),
-            timeInForce="GTC",
-            orderLinkId=order_link_id,
-            takeProfit=_fmt_price(target),
-            stopLoss=_fmt_price(stop),
-            tpTriggerBy="LastPrice",
-            slTriggerBy="LastPrice",
-            tpslMode="Full",
-        )
-    except Exception as e:
-        return {"skipped": True, "reason": f"Bybit API error: {e}"}
+    order_kwargs = dict(
+        category="linear",
+        symbol=symbol,
+        side=side,
+        orderType="Limit",
+        qty=_fmt_qty(units),
+        price=_fmt_price(entry),
+        timeInForce="GTC",
+        orderLinkId=order_link_id,
+        takeProfit=_fmt_price(target),
+        stopLoss=_fmt_price(stop),
+        tpTriggerBy="LastPrice",
+        slTriggerBy="LastPrice",
+        tpslMode="Full",
+    )
+
+    result   = None
+    last_exc = None
+    attempts = config.ORDER_RETRY_ATTEMPTS
+    for attempt in range(1, attempts + 1):
+        try:
+            result = bc.place_order(**order_kwargs)
+            break
+        except Exception as e:
+            last_exc = e
+            if attempt < attempts:
+                wait = config.ORDER_RETRY_BACKOFF_BASE ** attempt
+                log.warning("order attempt %d/%d failed (%s) — retrying in %ds",
+                            attempt, attempts, e, wait)
+                time.sleep(wait)
+
+    if result is None:
+        return {"skipped": True, "reason": f"Bybit API error after {attempts} attempts: {last_exc}"}
 
     return {
         "order_id":      result.get("orderId", ""),

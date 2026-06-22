@@ -271,7 +271,20 @@ SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (m
 # ---------------------------------------------------------------------------
 # Market regime classification
 # ---------------------------------------------------------------------------
-REGIME_ADX_THRESHOLD = 25     # ADX > 25 → "trending"; ≤ 25 → "ranging"
+REGIME_ADX_THRESHOLD    = 25    # ADX > 25 → "trending"; ≤ 25 → "ranging"
+REGIME_RANGING_RISK_MULT = 0.5  # scale position size to this fraction in ranging markets
+REGIME_RANGING_SKIP      = False # True = skip signals entirely in ranging; False = reduce size
+
+# ---------------------------------------------------------------------------
+# Execution robustness
+# ---------------------------------------------------------------------------
+ORDER_RETRY_ATTEMPTS     = 3    # retry Bybit API calls this many times on failure
+ORDER_RETRY_BACKOFF_BASE = 2    # base seconds for exponential backoff (2s, 4s, 8s…)
+
+# ---------------------------------------------------------------------------
+# News/event calendar filter
+# ---------------------------------------------------------------------------
+EVENT_BLACKOUT_ENABLED   = True  # skip new orders on high-impact economic event days
 
 
 @dataclass(frozen=True)

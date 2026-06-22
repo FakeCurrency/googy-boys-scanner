@@ -123,6 +123,21 @@ def close_all_positions() -> list[dict]:
     return results
 
 
+# ── order status ─────────────────────────────────────────────────────────────
+
+def get_order_status(symbol: str, order_id: str) -> dict:
+    """Fetch current status of a specific order (open or historical)."""
+    sess = _session()
+    resp = sess.get_open_orders(category="linear", symbol=symbol, orderId=order_id)
+    orders = resp["result"].get("list", [])
+    if orders:
+        return orders[0]
+    # Not in open orders — look up in order history
+    resp2 = sess.get_order_history(category="linear", symbol=symbol, orderId=order_id, limit=1)
+    hist = resp2["result"].get("list", [])
+    return hist[0] if hist else {}
+
+
 # ── closed P&L history ────────────────────────────────────────────────────────
 
 def get_closed_pnl(symbol: str | None = None, limit: int = 50) -> list[dict]:

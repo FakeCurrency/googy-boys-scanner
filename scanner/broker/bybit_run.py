@@ -15,10 +15,14 @@ Flow each run:
   1. Load scalp_journal.json
   2. Reconcile: pull Bybit positions/closed-PnL, update journal
   3. Kill-switch: halt and flatten if daily loss limit breached
-  4. Load scalp.json (latest crypto scan output)
-  5. Pre-trade gate: daily cap + correlation caps + daily loss cap
-  6. Submit Bybit bracket orders for new A+/A crypto signals
-  7. Save updated journal (journal/ and public/data/)
+  4. Event-calendar check: skip new orders on high-impact event days
+  5. Load scalp.json (latest crypto scan output)
+  6. Anomaly detection on scan + journal
+  7. Pre-trade gate: daily cap + correlation caps + daily loss cap
+  8. Submit Bybit bracket orders for new A+/A crypto signals
+     (regime-aware: size reduced in ranging markets, or skipped entirely)
+  9. Save updated journal (journal/ and public/data/)
+  10. Write performance report + live-vs-backtest reconciliation
 """
 
 import json
@@ -67,15 +71,14 @@ def _load_journal() -> dict:
 
 
 def _load_scan() -> dict | None:
-    # Try crypto-specific file first, fall back to combined scalp.json
     for fname in ("scalp_crypto.json", "scalp.json"):
         f = ROOT / "public" / "data" / fname
         if f.exists():
             try:
                 return json.loads(f.read_text())
             except Exception as e:
-                print(f"  bybit_run: could not read {fname} — {e}")
-    print("  bybit_run: no scalp scan output found — run the scanner first")
+                log.error("could not read %s: %s", fname, e)
+    log.warning("no scalp scan output found — run the scanner first")
     return None
 
 
@@ -85,6 +88,29 @@ def _save(j: dict, broker_mode: str = "") -> None:
     payload = json.dumps(j, indent=2)
     _atomic_write(SCALP_JOURNAL_FILE, payload)
     _atomic_write(PUBLIC_SCALP_JOURNAL, payload)
+
+
+def _regime_adjusted_units(units: float, regime: str) -> float:
+    """Apply regime-aware risk scaling: reduce size in ranging markets."""
+    if regime == "ranging":
+        if getattr(_cfg, "REGIME_RANGING_SKIP", False):
+            return 0.0
+        mult = getattr(_cfg, "REGIME_RANGING_RISK_MULT", 0.5)
+        return units * mult
+    return units
+
+
+def _load_setup_history() -> list[int]:
+    """Load recent A+/A signal counts from health.json for anomaly baseline."""
+    health_file = ROOT / "public" / "data" / "health.json"
+    if not health_file.exists():
+        return []
+    try:
+        health = json.loads(health_file.read_text())
+        history = health.get("setup_count_history", [])
+        return [int(x) for x in history if isinstance(x, (int, float))]
+    except Exception:
+        return []
 
 
 def run(dry_run: bool = False) -> None:
@@ -112,7 +138,19 @@ def run(dry_run: bool = False) -> None:
         _save(j)
         return
 
-    # ── 3. Load latest scan ───────────────────────────────────────────────────
+    # ── 3. Event-calendar check ───────────────────────────────────────────────
+    try:
+        from scanner.broker.event_calendar import is_blackout_day, today_events
+        if is_blackout_day():
+            events = today_events()
+            names  = ", ".join(e.get("event", "?") for e in events)
+            log.warning("blackout day — high-impact event(s): %s — no new orders", names)
+            _save(j)
+            return
+    except Exception as e:
+        log.warning("event calendar check failed: %s — continuing", e)
+
+    # ── 4. Load latest scan ───────────────────────────────────────────────────
     scan = _load_scan()
     if not scan:
         _save(j)
@@ -122,7 +160,14 @@ def run(dry_run: bool = False) -> None:
     sess_day = _session_day(scan_ts)
     log.info("scan ts=%s  session_day=%s", scan_ts, sess_day)
 
-    # ── 4. Pre-trade gate ─────────────────────────────────────────────────────
+    # ── 5. Anomaly detection ──────────────────────────────────────────────────
+    try:
+        from scanner.broker.anomaly import run_checks as _anomaly_checks
+        _anomaly_checks(scan, j, _load_setup_history())
+    except Exception as e:
+        log.warning("anomaly check failed: %s", e)
+
+    # ── 6. Pre-trade gate ─────────────────────────────────────────────────────
     today_closed = [c for c in j["closed"] if c.get("session_day") == sess_day
                     and not c.get("skip_daily_count")]
     today_open   = [p for p in j["open"]   if p.get("session_day") == sess_day]
@@ -138,9 +183,9 @@ def run(dry_run: bool = False) -> None:
             p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
         group_count[g] = group_count.get(g, 0) + 1
 
-    submitted = skipped_cap = skipped_asset = 0
+    submitted = skipped_cap = skipped_asset = skipped_regime = 0
 
-    # ── 5. Evaluate each A+/A crypto signal ──────────────────────────────────
+    # ── 7. Evaluate each A+/A crypto signal ──────────────────────────────────
     for r in scan.get("results", []):
         if r.get("grade") not in ("A+", "A"):
             continue
@@ -168,40 +213,50 @@ def run(dry_run: bool = False) -> None:
             skipped_cap += 1
             continue
 
-        entry = float(r["entry"])
-        stop  = float(r["stop"])
+        entry  = float(r["entry"])
+        stop   = float(r["stop"])
+        regime = r.get("market_regime", "unknown")
+
         units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
+        units = _regime_adjusted_units(units, regime)
         if units <= 0:
-            log.warning("skip %s — qty=0 at entry=%.6f  stop=%.6f  risk_per_trade=%.2f",
-                        symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE)
+            if regime == "ranging" and getattr(_cfg, "REGIME_RANGING_SKIP", False):
+                log.info("skip %s — ranging market and REGIME_RANGING_SKIP=True", symbol)
+                skipped_regime += 1
+            else:
+                log.warning("skip %s — qty=0 at entry=%.6f  stop=%.6f  risk_per_trade=%.2f",
+                            symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE)
             continue
 
-        regime = r.get("market_regime", "unknown")
-        log.info("sizing  %s  entry=%.6f  stop=%.6f  stop_dist=%.6f  risk=$%.2f  qty=%.4f  regime=%s",
-                 symbol, entry, stop, abs(entry - stop), _cfg.SCALP_RISK_PER_TRADE, units, regime)
+        effective_risk = _cfg.SCALP_RISK_PER_TRADE
+        if regime == "ranging":
+            effective_risk *= getattr(_cfg, "REGIME_RANGING_RISK_MULT", 0.5)
+
+        log.info("sizing  %s  entry=%.6f  stop=%.6f  risk=$%.2f  qty=%.4f  regime=%s",
+                 symbol, entry, stop, effective_risk, units, regime)
 
         pos = {
-            "symbol":        symbol,
-            "name":          r.get("name", symbol),
-            "asset_type":    "crypto",
-            "sector":        r.get("sector", "crypto"),
-            "corr_group":    group,
-            "direction":     direction,
-            "grade":         r["grade"],
-            "score":         r["score"],
-            "entry":         entry,
-            "stop":          stop,
-            "target":        float(r["target"]),
-            "rr":            r["rr"],
-            "units":         units,
-            "risk_per_trade": _cfg.SCALP_RISK_PER_TRADE,
-            "atr":           r.get("atr", 0.0),
-            "adx":           r.get("adx", 0.0),
-            "market_regime": regime,
-            "yf_ticker":     r.get("yf_ticker", symbol + "-USD"),
-            "opened_ts":     scan_ts,
-            "session_day":   sess_day,
-            "status":        "open",
+            "symbol":         symbol,
+            "name":           r.get("name", symbol),
+            "asset_type":     "crypto",
+            "sector":         r.get("sector", "crypto"),
+            "corr_group":     group,
+            "direction":      direction,
+            "grade":          r["grade"],
+            "score":          r["score"],
+            "entry":          entry,
+            "stop":           stop,
+            "target":         float(r["target"]),
+            "rr":             r["rr"],
+            "units":          units,
+            "risk_per_trade": effective_risk,
+            "atr":            r.get("atr", 0.0),
+            "adx":            r.get("adx", 0.0),
+            "market_regime":  regime,
+            "yf_ticker":      r.get("yf_ticker", symbol + "-USD"),
+            "opened_ts":      scan_ts,
+            "session_day":    sess_day,
+            "status":         "open",
         }
 
         if dry_run:
@@ -213,8 +268,6 @@ def run(dry_run: bool = False) -> None:
             continue
 
         if simulated:
-            # No API key — record as a simulated position so the full pipeline
-            # (gate checks, correlation caps, journal, risk dashboard) still runs.
             pos["broker_order_id"] = f"SIM-{symbol}-{direction}-{sess_day}"
             pos["broker_status"]   = "SIMULATED"
             j["open"].append(pos)
@@ -231,6 +284,13 @@ def run(dry_run: bool = False) -> None:
 
         if result.get("skipped"):
             log.warning("order skipped  %s — %s", symbol, result["reason"])
+            # Alert on order rejection (not just log)
+            try:
+                from scanner.broker.alert_dispatch import send as _alert
+                _alert("order_rejected", f"Order rejected: {symbol} {direction}",
+                       result["reason"])
+            except Exception:
+                pass
             skipped_asset += 1
             continue
 
@@ -246,11 +306,26 @@ def run(dry_run: bool = False) -> None:
         log.info("ORDER PLACED  %s %s → order_id=%s  link_id=%s",
                  symbol, direction, result["order_id"], result.get("order_link_id", ""))
 
-    log.info("run complete  submitted=%d  skipped_corr_cap=%d  skipped_non_crypto=%d",
-             submitted, skipped_cap, skipped_asset)
+    log.info("run complete  submitted=%d  skipped_corr_cap=%d  "
+             "skipped_non_crypto=%d  skipped_regime=%d",
+             submitted, skipped_cap, skipped_asset, skipped_regime)
 
     broker_mode = "SIMULATED" if simulated else bc.mode()
     _save(j, broker_mode=broker_mode)
+
+    # ── 8. Performance report + live-vs-backtest reconciliation ──────────────
+    try:
+        from scanner.broker.performance_report import write_report, maybe_send_daily_report
+        report = write_report(j)
+        maybe_send_daily_report(report)
+    except Exception as e:
+        log.warning("performance report failed: %s", e)
+
+    try:
+        from scanner.broker.live_vs_backtest import reconcile as lvb_reconcile
+        lvb_reconcile(j)
+    except Exception as e:
+        log.warning("live-vs-backtest reconciliation failed: %s", e)
 
 
 if __name__ == "__main__":
