@@ -26,6 +26,7 @@ ASX and commodity signals are logged as skipped; IBKR integration TBD.
 """
 
 import json
+import logging
 import os
 import pathlib
 import sys
@@ -33,10 +34,22 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+LOG_FILE = ROOT / "journal" / "paper_run.log"
+LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-7s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S UTC",
+    handlers=[logging.FileHandler(LOG_FILE, encoding="utf-8"), logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger("paper_run")
+
 from scanner.scalp_journal import (
     SCALP_JOURNAL_FILE, _session_day, _corr_group, _save,
-    MAX_DAILY, MAX_LOSS, MAX_GROUP, NOTIONAL,
+    MAX_DAILY, MAX_LOSS, MAX_GROUP,
 )
+from scanner import config as _cfg
+from scanner.broker.bybit_bracket import calc_qty_risk
 from scanner.broker.reconcile import reconcile_journal
 from scanner.broker.bracket_order import submit as submit_bracket
 from scanner.broker.kill_switch import check_and_kill
@@ -65,22 +78,22 @@ def _load_scan() -> dict | None:
 
 def run(dry_run: bool = False) -> None:
     if not os.environ.get("ALPACA_API_KEY"):
-        print("  paper_run: ALPACA_API_KEY not set — broker sync skipped")
+        log.warning("ALPACA_API_KEY not set — broker sync skipped")
         return
 
     live = os.environ.get("ALPACA_LIVE", "").lower() == "true"
     mode = "LIVE ⚠️" if live else "PAPER"
-    print(f"  paper_run: mode={mode}  dry_run={dry_run}")
+    log.info("starting  mode=%s  dry_run=%s", mode, dry_run)
 
     j = _load_journal()
 
     # ── 1. Reconcile existing broker positions ────────────────────────────────
-    print("  paper_run: reconciling Alpaca state...")
+    log.info("reconciling Alpaca state…")
     j = reconcile_journal(j)
 
     # ── 2. Kill-switch ────────────────────────────────────────────────────────
     if check_and_kill(j, dry_run=dry_run):
-        print("  paper_run: kill-switch active — halting new orders")
+        log.warning("kill-switch active — halting new orders")
         _save(j)
         return
 
@@ -92,15 +105,19 @@ def run(dry_run: bool = False) -> None:
 
     scan_ts  = scan.get("generated_at", "")
     sess_day = _session_day(scan_ts)
+    log.info("scan ts=%s  session_day=%s", scan_ts, sess_day)
 
     # ── 4. Pre-trade gate ─────────────────────────────────────────────────────
-    today_closed = [c for c in j["closed"] if c.get("session_day") == sess_day]
+    today_closed = [c for c in j["closed"]
+                    if c.get("session_day") == sess_day and not c.get("skip_daily_count")]
     today_open   = [p for p in j["open"]   if p.get("session_day") == sess_day]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
     trades_used  = len(today_closed) + len(today_open)
+    log.info("pre-trade gate  trades_used=%d/%d  today_pnl=%.2f  loss_limit=%.2f",
+             trades_used, MAX_DAILY, today_pnl, -MAX_LOSS)
 
     open_keys   = {(p["symbol"], p["direction"]) for p in j["open"]}
-    group_count = {}
+    group_count: dict[str, int] = {}
     for p in j["open"]:
         g = p.get("corr_group") or _corr_group(
             p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
@@ -114,57 +131,63 @@ def run(dry_run: bool = False) -> None:
             continue
 
         direction = r["dir"].lower()
-        if (r["symbol"], direction) in open_keys:
+        symbol    = r["symbol"]
+        if (symbol, direction) in open_keys:
             continue
 
         if trades_used + submitted >= MAX_DAILY:
-            print(f"  paper_run: daily cap ({MAX_DAILY} trades) reached")
+            log.warning("daily cap (%d) reached", MAX_DAILY)
             break
         if today_pnl < -MAX_LOSS:
-            print(f"  paper_run: daily loss cap (-${MAX_LOSS}) reached")
+            log.warning("daily loss cap (-$%.2f) reached", MAX_LOSS)
             break
 
-        group = _corr_group(r["symbol"], r.get("asset_type", ""), r.get("sector", ""))
+        group = _corr_group(symbol, r.get("asset_type", ""), r.get("sector", ""))
         if group_count.get(group, 0) >= MAX_GROUP:
+            log.info("skip %s — corr group '%s' at cap", symbol, group)
             skipped_cap += 1
             continue
 
         entry = float(r["entry"])
-        units = int(NOTIONAL / entry) if entry > 0 else 0
-        if units == 0:
+        stop  = float(r["stop"])
+        units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
+        if units <= 0:
+            log.warning("skip %s — qty=0  entry=%.6f  stop=%.6f", symbol, entry, stop)
             continue
 
         pos = {
-            "symbol":      r["symbol"],
-            "name":        r.get("name", r["symbol"]),
-            "asset_type":  r.get("asset_type", ""),
-            "sector":      r.get("sector", ""),
-            "corr_group":  group,
-            "direction":   direction,
-            "grade":       r["grade"],
-            "score":       r["score"],
-            "entry":       entry,
-            "stop":        float(r["stop"]),
-            "target":      float(r["target"]),
-            "rr":          r["rr"],
-            "units":       units,
-            "yf_ticker":   r["symbol"],
-            "opened_ts":   scan_ts,
-            "session_day": sess_day,
-            "status":      "open",
+            "symbol":        symbol,
+            "name":          r.get("name", symbol),
+            "asset_type":    r.get("asset_type", ""),
+            "sector":        r.get("sector", ""),
+            "corr_group":    group,
+            "direction":     direction,
+            "grade":         r["grade"],
+            "score":         r["score"],
+            "entry":         entry,
+            "stop":          stop,
+            "target":        float(r["target"]),
+            "rr":            r["rr"],
+            "units":         units,
+            "risk_per_trade": _cfg.SCALP_RISK_PER_TRADE,
+            "atr":           r.get("atr", 0.0),
+            "market_regime": r.get("market_regime", "unknown"),
+            "yf_ticker":     symbol,
+            "opened_ts":     scan_ts,
+            "session_day":   sess_day,
+            "status":        "open",
         }
 
         if dry_run:
-            print(f"  paper_run [DRY]: {r['symbol']} {direction} "
-                  f"entry={entry:.4f}  stop={r['stop']:.4f}  target={r['target']:.4f}  "
-                  f"units={units}  group={group}")
+            log.info("[DRY] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  group=%s  rr=%s",
+                     symbol, direction, entry, stop, float(r["target"]), units, group, r["rr"])
             submitted += 1
             continue
 
         result = submit_bracket(pos)
 
         if result.get("skipped"):
-            print(f"  paper_run: {r['symbol']} skipped — {result['reason']}")
+            log.warning("order skipped  %s — %s", symbol, result["reason"])
             skipped_asset += 1
             continue
 
@@ -173,14 +196,13 @@ def run(dry_run: bool = False) -> None:
         pos["broker_status"]     = result.get("status", "new")
 
         j["open"].append(pos)
-        open_keys.add((r["symbol"], direction))
+        open_keys.add((symbol, direction))
         group_count[group] = group_count.get(group, 0) + 1
         submitted += 1
-        print(f"  paper_run: ✓ {r['symbol']} {direction} — order {result['order_id']}")
+        log.info("ORDER PLACED  %s %s → order_id=%s", symbol, direction, result["order_id"])
 
-    print(f"  paper_run: {submitted} submitted, "
-          f"{skipped_cap} skipped (corr cap), "
-          f"{skipped_asset} skipped (asset type)")
+    log.info("run complete  submitted=%d  skipped_corr_cap=%d  skipped_asset=%d",
+             submitted, skipped_cap, skipped_asset)
 
     _save(j)
 

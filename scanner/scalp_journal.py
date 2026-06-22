@@ -367,29 +367,35 @@ def update_scalp(j: dict, progress: bool = True) -> dict:
             skipped_group += 1
             continue
 
-        entry = r["entry"]
-        units = int(NOTIONAL / entry) if entry > 0 else 0
-        if units == 0:
+        entry = float(r["entry"])
+        stop  = float(r["stop"])
+        # ATR/stop-based sizing: risk a fixed dollar amount per trade
+        from .broker.bybit_bracket import calc_qty_risk
+        units = calc_qty_risk(entry, stop, config.SCALP_RISK_PER_TRADE)
+        if units <= 0:
             continue
 
         j["open"].append({
-            "symbol":      r["symbol"],
-            "name":        r["name"],
-            "asset_type":  r.get("asset_type", ""),
-            "sector":      r.get("sector", ""),
-            "corr_group":  group,
-            "direction":   direction,
-            "grade":       r["grade"],
-            "score":       r["score"],
-            "entry":       entry,
-            "stop":        r["stop"],
-            "target":      r["target"],
-            "rr":          r["rr"],
-            "units":       units,
-            "yf_ticker":   sym_to_yf.get(r["symbol"], r["symbol"]),
-            "opened_ts":   scan_ts,
-            "session_day": sess_day,
-            "status":      "open",
+            "symbol":        r["symbol"],
+            "name":          r["name"],
+            "asset_type":    r.get("asset_type", ""),
+            "sector":        r.get("sector", ""),
+            "corr_group":    group,
+            "direction":     direction,
+            "grade":         r["grade"],
+            "score":         r["score"],
+            "entry":         entry,
+            "stop":          stop,
+            "target":        float(r["target"]),
+            "rr":            r["rr"],
+            "units":         units,
+            "risk_per_trade": config.SCALP_RISK_PER_TRADE,
+            "atr":            r.get("atr", 0.0),
+            "market_regime":  r.get("market_regime", "unknown"),
+            "yf_ticker":     sym_to_yf.get(r["symbol"], r["symbol"]),
+            "opened_ts":     scan_ts,
+            "session_day":   sess_day,
+            "status":        "open",
         })
         open_keys.add((r["symbol"], direction))
         group_count[group] = group_count.get(group, 0) + 1

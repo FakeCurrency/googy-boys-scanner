@@ -88,20 +88,26 @@ def _save(j: dict, broker_mode: str = "") -> None:
 
 
 def run(dry_run: bool = False) -> None:
-    if not os.environ.get("BYBIT_API_KEY"):
-        log.warning("BYBIT_API_KEY not set — skipping broker execution")
-        return
+    has_api_key = bool(os.environ.get("BYBIT_API_KEY"))
+    simulated   = not has_api_key
 
-    log.info("starting  mode=%s  dry_run=%s", bc.mode(), dry_run)
+    if simulated:
+        log.warning("BYBIT_API_KEY not set — running in SIMULATED mode "
+                    "(orders logged but NOT submitted to any broker)")
+    else:
+        log.info("starting  mode=%s  dry_run=%s", bc.mode(), dry_run)
 
     j = _load_journal()
 
     # ── 1. Reconcile ─────────────────────────────────────────────────────────
-    log.info("reconciling Bybit positions…")
-    j = reconcile_journal(j)
+    if simulated:
+        log.info("skipping Bybit reconcile (no API key — SIMULATED mode)")
+    else:
+        log.info("reconciling Bybit positions…")
+        j = reconcile_journal(j)
 
     # ── 2. Kill-switch ────────────────────────────────────────────────────────
-    if check_and_kill(j, dry_run=dry_run):
+    if check_and_kill(j, dry_run=dry_run or simulated):
         log.warning("kill-switch active — halting new orders")
         _save(j)
         return
@@ -206,6 +212,19 @@ def run(dry_run: bool = False) -> None:
             submitted += 1
             continue
 
+        if simulated:
+            # No API key — record as a simulated position so the full pipeline
+            # (gate checks, correlation caps, journal, risk dashboard) still runs.
+            pos["broker_order_id"] = f"SIM-{symbol}-{direction}-{sess_day}"
+            pos["broker_status"]   = "SIMULATED"
+            j["open"].append(pos)
+            open_keys.add((symbol, direction))
+            group_count[group] = group_count.get(group, 0) + 1
+            submitted += 1
+            log.info("[SIM] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  regime=%s",
+                     symbol, direction, entry, stop, float(r["target"]), units, regime)
+            continue
+
         log.info("submitting bracket  %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f",
                  symbol, direction, entry, stop, float(r["target"]), units)
         result = submit_bracket(pos)
@@ -230,7 +249,8 @@ def run(dry_run: bool = False) -> None:
     log.info("run complete  submitted=%d  skipped_corr_cap=%d  skipped_non_crypto=%d",
              submitted, skipped_cap, skipped_asset)
 
-    _save(j, broker_mode=bc.mode())
+    broker_mode = "SIMULATED" if simulated else bc.mode()
+    _save(j, broker_mode=broker_mode)
 
 
 if __name__ == "__main__":

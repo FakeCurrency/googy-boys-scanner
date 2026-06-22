@@ -575,7 +575,11 @@
       const modeEl = $("#rd-mode");
       if (modeEl) {
         const mode = j.broker_mode || "";
-        if (mode) { modeEl.textContent = mode; modeEl.className = "rd-mode" + (mode === "LIVE ⚠️" ? " live-mode" : " testnet-mode"); }
+        if (mode) {
+          modeEl.textContent = mode;
+          const cls = mode === "LIVE ⚠️" ? " live-mode" : mode === "SIMULATED" ? " sim-mode" : " testnet-mode";
+          modeEl.className = "rd-mode" + cls;
+        }
       }
     } catch (_) {}
   }
