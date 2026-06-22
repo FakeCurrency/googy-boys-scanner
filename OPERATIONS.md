@@ -330,6 +330,175 @@ Complete every item before switching from TESTNET to LIVE capital.
 
 ---
 
+## Phase 6 — Live Validation & Gradual Capital Deployment
+
+Complete this protocol before committing real capital to the system.
+The goal is to validate execution under real market conditions while limiting downside risk.
+
+### Stage overview
+
+| Stage | Name | Duration | Capital | Goal |
+|-------|------|----------|---------|------|
+| 1 | Structured Testnet Validation | 3–4 weeks | Testnet only | Validate execution layer |
+| 2 | Live vs Expected Fill Analysis | Ongoing during Stage 1–2 | N/A | Understand real slippage |
+| 3 | Small Live Capital Deployment | 4–8 weeks | Very small ($3k–$8k) | First real-money test |
+| 4 | Gradual Capital Scaling | Ongoing | Increasing slowly | Controlled growth |
+| 5 | Post-Trade Review & Refinement | Ongoing | Live capital | Continuous improvement |
+
+Set `LIVE_DEPLOYMENT_STAGE` in `scanner/config.py` to reflect your current stage (1–5).
+
+---
+
+### Stage 1 — Structured Testnet Validation (3–4 weeks)
+
+**Objective:** Run the system on Bybit Testnet with real order flow (fake money) to validate execution.
+
+**Preparation checklist:**
+- [ ] Set `BYBIT_TESTNET=true` (GitHub Secret)
+- [ ] Set very conservative risk parameters: reduce `SCALP_RISK_PER_TRADE` to $25–$50
+- [ ] Enable all alert channels (Telegram + Discord + Email) and verify they fire
+- [ ] Turn on detailed logging (`LOG_LEVEL=DEBUG` or similar)
+- [ ] Enable pre-trade risk checks (they are enabled by default in Phase 5)
+- [ ] Test Kill Switch manually: `FORCE_KILL=1 python -m scanner.broker.kill_switch`
+- [ ] Test Daily Loss Circuit Breaker: add a fake -$600 PnL entry to the journal and verify the breaker fires
+
+**During testnet:**
+- Let it run without manual interference
+- Monitor alerts daily
+- Log any issues in a running document
+- Do not override any risk rules
+
+**Weekly review during testnet:**
+1. Review all trades taken that week
+2. Check slippage vs expected (`public/data/fill_analysis.json`)
+3. Review any circuit breaker or kill-switch triggers
+4. Check `public/data/health.json` for anomalies
+
+**Exit criteria (must pass all before Stage 3):**
+- Minimum 40–60 completed testnet trades
+- At least 3–4 weeks of runtime
+- No unhandled errors or system crashes
+- Kill switch and circuit breakers tested at least once
+- Slippage data collected (`fill_analysis.json` has at least 20 entries)
+
+---
+
+### Stage 2 — Live vs Expected Fill Analysis (runs parallel with Stage 1)
+
+Every live/testnet trade records `entry` (intended price from scan) and `fill_price` (actual broker fill).
+The fill analysis module computes weekly summaries in `public/data/fill_analysis.json`.
+
+**Metrics tracked automatically:**
+
+| Metric | Field | Description |
+|--------|-------|-------------|
+| Entry slippage | `entry_slip_pct` | (fill − entry) / entry × 100 — positive = worse fill |
+| Slippage in R | `slip_in_r` | Slippage as fraction of the trade's risk distance |
+| Weekly averages | `by_week[].avg_slip_pct` | Mean slippage per completed week |
+
+**Weekly review protocol:**
+1. Check `public/data/fill_analysis.json` → `all_time.avg_slip_pct`
+2. If avg slippage is consistently > 0.3%, investigate:
+   - Reduce `SCALP_RISK_PER_TRADE` (smaller orders fill better)
+   - Tighten `SLIPPAGE_REJECT_PCT` in config
+   - Avoid trading assets with wide spreads at open/close
+3. Update expectancy calculations — subtract real slippage from expected R
+
+---
+
+### Stage 3 — Small Live Capital Deployment (4–8 weeks)
+
+**Only start after successfully completing Stage 1 exit criteria.**
+
+**Rules:**
+
+| Rule | Value | Reasoning |
+|------|-------|-----------|
+| Starting capital | $3,000–$8,000 max | Set `LIVE_STAGE3_CAPITAL_MAX_USD` in config |
+| Position size | 35% of normal (`LIVE_STAGE3_POSITION_MULT = 0.35`) | Applied automatically when `LIVE_DEPLOYMENT_STAGE=3` |
+| Risk per trade | Max 0.5% of account | With $5k account + 35% mult + $100 risk → $35 effective risk |
+| Weekly review | Every Sunday | Mandatory — see Stage 5 review template |
+| Scaling rule | Only increase capital after 4+ profitable weeks with max DD < 5% | `check_stage4_milestones()` in `scaling_advisor.py` |
+
+**Setup:**
+1. Set `LIVE_DEPLOYMENT_STAGE=3` in `scanner/config.py`
+2. Set `BYBIT_TESTNET=false` in GitHub Secrets
+3. Set `BYBIT_LIVE_CONFIRMED=true` in GitHub Secrets
+4. Fund the Bybit account with $3,000–$8,000 max
+5. Run `python -m scanner.broker.bybit_run --dry-run` and verify Stage 3 sizing logs appear
+
+**Protocol:**
+1. Run the system exactly as configured — no manual order overrides
+2. Review every trade at the end of each week
+3. Log lessons learned in a running document
+4. Only increase risk/capital after meeting Stage 4 milestones
+
+---
+
+### Stage 4 — Gradual Capital Scaling
+
+The scaling advisor checks milestone conditions automatically after each run.
+Check the log for `scaling advisor` lines or read `journal/bybit_run.log`.
+
+**Milestone framework:**
+
+| Level | Condition | Action |
+|-------|-----------|--------|
+| 1 | 4+ consecutive profitable weeks + max DD < 5% | Increase capital by ~37.5% (`LIVE_STAGE4_L1_BUMP`) |
+| 2 | Another 4+ profitable weeks + DD < 6% | Increase capital by another ~37.5% (`LIVE_STAGE4_L2_BUMP`) |
+| 3 | Consistent performance over 3+ months (13+ data weeks) | Move to normal risk parameters (`LIVE_DEPLOYMENT_STAGE=5`) |
+| 4 | Proven over 6+ months (26+ data weeks) with controlled drawdowns | Scale more aggressively |
+
+**Check milestone status:**
+```bash
+python -c "
+import json, pathlib
+from scanner.broker.scaling_advisor import check_stage4_milestones
+j = json.loads((pathlib.Path('journal/scalp_journal.json')).read_text())
+import pprint; pprint.pprint(check_stage4_milestones(j))
+"
+```
+
+**Golden rule:** Never increase capital after a winning streak out of excitement.
+Only scale after consistent, controlled performance verified by `check_stage4_milestones()`.
+
+---
+
+### Stage 5 — Post-Trade Review & Continuous Improvement
+
+This should become a permanent weekly habit once the system is in production.
+
+**Weekly review (every Sunday):**
+
+| Area | What to review | Question |
+|------|---------------|---------|
+| Trade quality | All closed trades this week | Did setups play out as expected? Any patterns in winners/losers? |
+| Slippage | `public/data/fill_analysis.json` → `by_week[0]` | Is it worse than expected? Any bad assets or time slots? |
+| Risk management | `journal/bybit_run.log` for circuit breaker lines | Were they appropriate? Should thresholds be adjusted? |
+| Regime performance | `public/data/performance.json` → `regime_breakdown` | Should risk be adjusted based on regime? |
+| System health | `public/data/health.json` | Any errors, delays, or anomalies? |
+
+**Monthly review:**
+- Overall P&L and expectancy (compare to backtest baseline)
+- Max drawdown and recovery time
+- Performance by market regime
+- Any strategy or parameter changes needed
+- Review alert volume (too many? too few? useful?)
+
+---
+
+### Final recommendations before going live
+
+| Area | Advice |
+|------|--------|
+| Don't rush Stage 3 | Many people go live too early and trade emotionally. Take your time in testnet. |
+| Document everything | Keep a running log of lessons, issues, and changes. Invaluable over 6+ months. |
+| Stay conservative on capital | It's better to start too small than too big. You can always scale up. |
+| Treat first 2–3 months as data collection | Focus on learning, not making maximum profit. |
+| Have a clear scaling plan | Decide your rules before you start making money — not during a winning streak. |
+
+---
+
 ## Architecture in one paragraph
 
 GitHub Actions runs the Python scanner on a cron. Results are written as JSON

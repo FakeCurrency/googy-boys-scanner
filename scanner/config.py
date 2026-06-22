@@ -283,6 +283,33 @@ ORDER_SIZE_MAX_USD        = 5_000   # maximum order notional value — fat-finge
 REQUIRE_LIVE_CONFIRMED    = True    # set to False only in automated testing
 
 # ---------------------------------------------------------------------------
+# Phase 6: Live Deployment Protocol
+# ---------------------------------------------------------------------------
+# Stage controls how the system behaves during the gradual capital ramp-up.
+#   1 = Structured Testnet Validation  (testnet only, no real capital)
+#   2 = Live vs Expected Fill Analysis (testnet, full slippage tracking enabled)
+#   3 = Small Live Capital Deployment  (live, reduced position sizes)
+#   4 = Gradual Capital Scaling        (live, milestone-driven capital increases)
+#   5 = Post-Trade Review & Refinement (live, full normal parameters)
+LIVE_DEPLOYMENT_STAGE = 1           # advance manually after each stage's exit criteria are met
+
+# Stage 3 — small live capital: position sizes are scaled down
+LIVE_STAGE3_CAPITAL_MAX_USD  = 8_000   # never fund the live account above this during Stage 3
+LIVE_STAGE3_POSITION_MULT    = 0.35    # 35% of normal calculated size (30–50% range; conservative)
+LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # informational: target ≤ 0.5% of account per trade
+
+# Stage 4 — scaling milestones (all require profitable weeks + controlled drawdown)
+LIVE_STAGE4_L1_MIN_WEEKS     = 4       # Level 1 unlock: 4+ profitable completed weeks
+LIVE_STAGE4_L1_MAX_DD        = 0.05    # Level 1 unlock: drawdown must be < 5%
+LIVE_STAGE4_L1_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
+LIVE_STAGE4_L2_MIN_WEEKS     = 4       # Level 2 unlock: another 4+ profitable weeks
+LIVE_STAGE4_L2_MAX_DD        = 0.06    # Level 2 unlock: drawdown must be < 6%
+LIVE_STAGE4_L2_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
+
+# Stage 2 — fill analysis: minimum trades before weekly slippage averages are meaningful
+FILL_ANALYSIS_MIN_TRADES     = 5       # skip weekly averages if fewer than this many filled trades
+
+# ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution
 # ---------------------------------------------------------------------------
 # BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).

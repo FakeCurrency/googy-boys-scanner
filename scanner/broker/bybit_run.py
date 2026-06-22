@@ -215,7 +215,9 @@ def run(dry_run: bool = False) -> None:
             p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
         group_count[g] = group_count.get(g, 0) + 1
 
-    submitted = skipped_cap = skipped_asset = skipped_regime = 0
+    submitted  = skipped_cap = skipped_asset = skipped_regime = 0
+    live_stage = int(getattr(_cfg, "LIVE_DEPLOYMENT_STAGE", 1))
+    log.info("live_deployment_stage=%d", live_stage)
 
     # ── 7. Evaluate each A+/A crypto signal ──────────────────────────────────
     for r in scan.get("results", []):
@@ -251,10 +253,17 @@ def run(dry_run: bool = False) -> None:
         stop   = float(r["stop"])
         regime = r.get("market_regime", "unknown")
 
-        # Dynamic sizing: base qty × drawdown/regime multiplier
+        # Dynamic sizing: base qty × drawdown/regime multiplier × stage-3 reduction
         base_units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
         size_mult  = dynamic_size_multiplier(j, regime)
-        units      = base_units * size_mult
+
+        if live_stage == 3:
+            s3_mult   = float(getattr(_cfg, "LIVE_STAGE3_POSITION_MULT", 0.35))
+            size_mult = size_mult * s3_mult
+            log.info("Stage 3 sizing  %s  stage3_mult=%.2f  combined_mult=%.3f",
+                     symbol, s3_mult, size_mult)
+
+        units = base_units * size_mult
 
         if units <= 0:
             if regime == "ranging" and getattr(_cfg, "REGIME_RANGING_SKIP", False):
@@ -275,27 +284,29 @@ def run(dry_run: bool = False) -> None:
                  size_mult, effective_risk, units, regime)
 
         pos = {
-            "symbol":         symbol,
-            "name":           r.get("name", symbol),
-            "asset_type":     "crypto",
-            "sector":         r.get("sector", "crypto"),
-            "corr_group":     group,
-            "direction":      direction,
-            "grade":          r["grade"],
-            "score":          r["score"],
-            "entry":          entry,
-            "stop":           stop,
-            "target":         float(r["target"]),
-            "rr":             r["rr"],
-            "units":          units,
-            "risk_per_trade": effective_risk,
-            "atr":            r.get("atr", 0.0),
-            "adx":            r.get("adx", 0.0),
-            "market_regime":  regime,
-            "yf_ticker":      r.get("yf_ticker", symbol + "-USD"),
-            "opened_ts":      scan_ts,
-            "session_day":    sess_day,
-            "status":         "open",
+            "symbol":                symbol,
+            "name":                  r.get("name", symbol),
+            "asset_type":            "crypto",
+            "sector":                r.get("sector", "crypto"),
+            "corr_group":            group,
+            "direction":             direction,
+            "grade":                 r["grade"],
+            "score":                 r["score"],
+            "entry":                 entry,
+            "intended_entry_price":  entry,   # Stage 2: preserved for fill-analysis comparison
+            "stop":                  stop,
+            "target":                float(r["target"]),
+            "rr":                    r["rr"],
+            "units":                 units,
+            "risk_per_trade":        effective_risk,
+            "live_stage":            live_stage,
+            "atr":                   r.get("atr", 0.0),
+            "adx":                   r.get("adx", 0.0),
+            "market_regime":         regime,
+            "yf_ticker":             r.get("yf_ticker", symbol + "-USD"),
+            "opened_ts":             scan_ts,
+            "session_day":           sess_day,
+            "status":                "open",
         }
 
         # ── Pre-trade risk gate ───────────────────────────────────────────────
@@ -373,6 +384,28 @@ def run(dry_run: bool = False) -> None:
         lvb_reconcile(j)
     except Exception as e:
         log.warning("live-vs-backtest reconciliation failed: %s", e)
+
+    # ── 9. Fill analysis (Stage 2) ────────────────────────────────────────────
+    try:
+        from scanner.broker.fill_analysis import write_fill_analysis
+        write_fill_analysis(j)
+    except Exception as e:
+        log.warning("fill analysis failed: %s", e)
+
+    # ── 10. Scaling advisor (Stage 4) ─────────────────────────────────────────
+    try:
+        from scanner.broker.scaling_advisor import check_stage4_milestones
+        advice = check_stage4_milestones(j)
+        log.info(
+            "scaling advisor  stage=%d  level=%d  streak=%d wk  dd=%.1f%%  %s",
+            live_stage,
+            advice["current_level"],
+            advice["profitable_weeks_streak"],
+            advice["current_dd_pct"],
+            advice["recommendation"][:120],
+        )
+    except Exception as e:
+        log.warning("scaling advisor failed: %s", e)
 
 
 if __name__ == "__main__":
