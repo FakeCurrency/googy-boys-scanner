@@ -16,7 +16,7 @@
   const market = VALID_MARKETS.has(marketRaw) ? marketRaw : "asx";
   const symbol = params.get("s") || "";
   const mode = (params.get("mode") || "pullback").toLowerCase();
-  const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : "";
+  const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
   const $ = (s) => document.querySelector(s);
@@ -153,10 +153,11 @@
     h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
     const d = document.createElement("div");
     d.className = "chart-error";
-    d.innerHTML = "<h2>Chart unavailable</h2>";
-    const p = document.createElement("p");
-    p.textContent = msg;
-    d.appendChild(p);
+    const tvSym = symbol
+      ? encodeURIComponent(market === "crypto" ? `CRYPTO:${symbol}USD` : market === "asx" ? `ASX:${symbol}` : symbol)
+      : "";
+    d.innerHTML = `<h2>Chart unavailable</h2><p>${esc(msg)}</p>` +
+      (symbol ? `<p><a class="tv-link" href="https://www.tradingview.com/chart/?symbol=${tvSym}" target="_blank" rel="noopener">View ${esc(symbol.toUpperCase())} on TradingView →</a></p>` : "");
     document.body.replaceChildren(h, d);
   }
 
@@ -972,7 +973,18 @@
     fetch(chartFile, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(render)
-      .catch(() => fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`));
+      .catch(() => {
+        // For mode-specific subdirs, try the base pullback chart as a fallback
+        if (modeDir) {
+          const baseFile = `data/charts/${market}/${encodeURIComponent(symbol)}.json`;
+          fetch(baseFile, { cache: "no-cache" })
+            .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(render)
+            .catch(() => fail(`No chart data for ${symbol.toUpperCase()} yet. Run a scan first.`));
+        } else {
+          fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`);
+        }
+      });
   }
 
   // If cloud sync is on, pull the latest journal first so positions taken on

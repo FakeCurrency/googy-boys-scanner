@@ -16,11 +16,11 @@ from .indicators import ema, sma, supertrend
 
 # (label, pandas resample rule [None = daily], max candles to send)
 TIMEFRAMES = [
-    ("1D", None, 320),
-    ("3D", "3D", 240),
-    ("1W", "W-FRI", 220),
-    ("1M", "ME", 120),
-    ("3M", "QE", 60),
+    ("1D", None, 500),    # ≈ 2 years of daily bars
+    ("3D", "3D", 320),    # ≈ 2.6 years
+    ("1W", "W-FRI", 260), # ≈ 5 years
+    ("1M", "ME", 150),    # ≈ 12.5 years
+    ("3M", "QE", 80),     # ≈ 20 years
 ]
 _AGG = {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
 
@@ -122,6 +122,19 @@ def build_chart_reversal(df, sig: dict, lv: dict, result: dict, market) -> dict:
         {"price": lv["stop"], "color": "#ff5b5b", "title": "STOP"},
     ]
     return {**_meta(result, market), "level_lines": level_lines, "timeframes": _timeframes(df, "reversal")}
+
+
+def build_chart_short(df, sig: dict, lv: dict, result: dict, market) -> dict:
+    """Short pullback chart — EMA 34/55/89 + SuperTrend. Stop above entry, target below."""
+    win = df.iloc[-config.SWING_LOOKBACK:]
+    level_lines = [
+        {"price": round(float(win["High"].max()), 8), "color": "#ff9500", "title": "LEG HIGH"},
+        {"price": lv["stop"],   "color": "#ff5b5b", "title": "STOP"},
+        {"price": lv["entry"],  "color": "#e5e9f0", "title": "ENTRY"},
+        {"price": round(float(df["Low"].iloc[-260:].min()), 8), "color": "#2fd0c4", "title": "LOW"},
+        {"price": lv["target"], "color": "#2fd07f", "title": "TARGET"},
+    ]
+    return {**_meta(result, market), "level_lines": level_lines, "timeframes": _timeframes(df, "pullback")}
 
 
 def chart_dir(out_root: str | pathlib.Path, market_key: str) -> pathlib.Path:

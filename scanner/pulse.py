@@ -50,6 +50,8 @@ def fetch() -> list[dict]:
             out.append({
                 "key": key,
                 "label": label,
+                "ticker": ticker,
+                "divide": div,
                 "value": round(last, decimals),
                 "decimals": decimals,
                 "day_pct": round(day_pct, 2),

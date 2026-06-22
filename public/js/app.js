@@ -232,12 +232,44 @@
       const dir = p.dir === "up" ? "up" : "down";
       const day = p.day_pct == null ? "" : (p.day_pct >= 0 ? "+" : "") + p.day_pct.toFixed(2) + "%";
       const d5 = p.d5_pct == null ? "" : "5D " + (p.d5_pct >= 0 ? "+" : "") + p.d5_pct.toFixed(2) + "%";
-      return `<div class="pulse-item">
+      return `<div class="pulse-item" data-pkey="${esc(p.key)}">
         <div class="pi-head"><span class="pi-key">${esc(p.key)}</span><span class="pi-val">${val}</span></div>
         <div class="pi-change ${dir}">${day}<span class="pi-5d">${d5}</span></div>
         ${spark(p.spark, 120, 22, p.dir === "up" ? COLOR.green : COLOR.red, "pi-spark")}
       </div>`;
     }).join("");
+  }
+
+  // Silently refresh PULSE values from Yahoo Finance after the static scan data renders.
+  // Staggers requests so we don't hammer the proxy. Runs once per page load.
+  async function refreshPulseLive(pulse) {
+    if (!pulse || !pulse.length) return;
+    const track = $("#pulse-track");
+    if (!track) return;
+    for (let i = 0; i < pulse.length; i++) {
+      const p = pulse[i];
+      if (!p.ticker) continue;
+      await new Promise((r) => setTimeout(r, i * 350));
+      try {
+        const res = await fetch(`/api/quote?sym=${encodeURIComponent(p.ticker)}`);
+        if (!res.ok) continue;
+        const j = await res.json();
+        if (j.price == null) continue;
+        const divide = p.divide || 1;
+        const price = j.price / divide;
+        const decimals = p.decimals ?? 2;
+        const valStr = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        const item = track.querySelector(`[data-pkey="${CSS.escape(p.key)}"]`);
+        if (!item) continue;
+        const valEl = item.querySelector(".pi-val");
+        if (valEl) {
+          valEl.textContent = valStr;
+          // Yahoo Finance is ~15 min delayed for non-crypto; show last update time as tooltip
+          const refreshedAt = j.time ? new Date(j.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+          valEl.title = refreshedAt ? `~15min delayed · as of ${refreshedAt}` : "~15min delayed";
+        }
+      } catch (_) { /* silent — stale scan value is fine */ }
+    }
   }
 
   // ------------------------------------------------------- EMA / SMA legend
@@ -608,6 +640,7 @@
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · updates after each market close`;
     if (state.mode === "scalp") loadHealthStatus();
     renderPulse(d.pulse);
+    refreshPulseLive(d.pulse);
     renderLegend(d);
     renderStats(d);
     renderRows();

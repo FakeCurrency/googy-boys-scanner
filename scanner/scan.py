@@ -438,7 +438,7 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
 
 
 def scan_short_market(market_key: str, limit: int | None = None, full: bool = True,
-                      write_charts: bool = False, out_root: str | None = None,
+                      write_charts: bool = True, out_root: str | None = None,
                       progress: bool = True, frames: dict | None = None,
                       pulse_data: list | None = None, universe: list | None = None) -> dict:
     """Scan a market for bearish pullback (short) setups — the Shorts tab."""
@@ -452,6 +452,10 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
     meta = {u["yf"]: u for u in universe}
     if frames is None:
         frames = download([u["yf"] for u in universe])
+
+    chart_key = market_key + "_short"
+    if write_charts and out_root:
+        charts.reset_dir(out_root, chart_key)
 
     results: list[dict] = []
     scanned = 0
@@ -521,6 +525,13 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
                                         market.currency_symbol),
         }
         results.append(row)
+        if write_charts and out_root:
+            try:
+                charts.write_chart(
+                    charts.build_chart_short(df, sig, lv, row, market), out_root, chart_key
+                )
+            except Exception:
+                pass
 
     sector_counts = _finalize(results)
 

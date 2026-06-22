@@ -5,8 +5,8 @@
 export async function onRequestGet(ctx) {
   const sym = new URL(ctx.request.url).searchParams.get("sym") || "";
 
-  // Validate: only safe ticker characters allowed.
-  if (!/^[A-Za-z0-9.]{1,20}$/.test(sym)) {
+  // Validate: allow letters, digits, and common ticker punctuation (^=-._ for indices/futures).
+  if (!/^[A-Za-z0-9.\^=\-_]{1,20}$/.test(sym)) {
     return new Response(JSON.stringify({ error: "Invalid symbol" }), {
       status: 400,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
