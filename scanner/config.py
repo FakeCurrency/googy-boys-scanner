@@ -250,7 +250,7 @@ SCALP_CORRELATION_GROUPS = {
 # Version tracking — bump SCANNER_VERSION on breaking engine or config changes
 # so every scan output and health.json record carries the exact logic version.
 # ---------------------------------------------------------------------------
-SCANNER_VERSION = "5.0.0"   # <major>.<phase>.<patch>
+SCANNER_VERSION = "7.0.0"   # <major>.<phase>.<patch>
 
 # ---------------------------------------------------------------------------
 # Phase 5: Risk Management — portfolio-level limits
@@ -308,6 +308,56 @@ LIVE_STAGE4_L2_BUMP          = 0.375   # capital increase (midpoint of 25–50% 
 
 # Stage 2 — fill analysis: minimum trades before weekly slippage averages are meaningful
 FILL_ANALYSIS_MIN_TRADES     = 5       # skip weekly averages if fewer than this many filled trades
+
+# ---------------------------------------------------------------------------
+# Phase 7: Advanced Monitoring & Alerting
+# ---------------------------------------------------------------------------
+
+# Map event_type → severity level (CRITICAL / WARNING / INFO)
+ALERT_SEVERITY = {
+    "kill_switch":     "CRITICAL",
+    "daily_loss":      "CRITICAL",
+    "order_failed":    "CRITICAL",
+    "scan_error":      "CRITICAL",
+    "order_placed":    "INFO",
+    "order_rejected":  "WARNING",
+    "anomaly":         "WARNING",
+    "circuit_breaker": "WARNING",
+    "daily_report":    "INFO",
+    "health":          "WARNING",
+    "info":            "INFO",
+}
+
+# Map severity → alert channels (telegram / discord / email)
+ALERT_CHANNELS = {
+    "CRITICAL": ["telegram", "discord", "email"],
+    "WARNING":  ["telegram", "discord"],
+    "INFO":     [],  # log only — no push notification for routine events
+}
+
+# Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
+ALERT_RATE_LIMITS = {
+    "kill_switch":     0,        # always send — life-safety critical
+    "daily_loss":      0,        # always send
+    "order_failed":    0,        # always send
+    "scan_error":      0,        # always send
+    "order_placed":    300,      # max 1 per 5 min
+    "order_rejected":  300,
+    "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
+    "circuit_breaker": 1800,
+    "daily_report":    82800,    # max 1 per 23h
+    "health":          3600,     # max 1 per hour
+    "DEFAULT":         300,
+}
+
+# Phase 7: Health check thresholds
+HEALTH_SCAN_STALE_WARN_H = 2    # warn if health.json is older than this many hours
+HEALTH_SCAN_STALE_CRIT_H = 4    # critical if older than this
+HEALTH_LOG_SIZE_WARN_MB  = 50   # warn if any log file exceeds this size (MB)
+HEALTH_LOG_SIZE_CRIT_MB  = 200  # critical if any log file exceeds this size (MB)
+
+# Phase 7: Expectancy tracking
+EXPECTANCY_MIN_TRADES = 20      # minimum sample before expectancy estimate is reliable
 
 # ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution

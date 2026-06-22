@@ -82,6 +82,8 @@ def _direction_breakdown(trades: list[dict]) -> dict:
 
 def build_report(j: dict) -> dict:
     """Build a performance summary dict from the full journal."""
+    from .expectancy import calc_expectancy
+
     now        = dt.datetime.now(dt.timezone.utc)
     today_key  = _session_day(now.isoformat())
     countable  = [t for t in j.get("closed", []) if not t.get("skip_daily_count")]
@@ -97,11 +99,11 @@ def build_report(j: dict) -> dict:
     win_s, loss_s = _streak(countable)
 
     return {
-        "generated_at":       now.isoformat(timespec="seconds"),
-        "session_day":        today_key,
-        "open_positions":     len(j.get("open", [])),
-        "open_unrealised":    open_unreal,
-        "current_win_streak": win_s,
+        "generated_at":        now.isoformat(timespec="seconds"),
+        "session_day":         today_key,
+        "open_positions":      len(j.get("open", [])),
+        "open_unrealised":     open_unreal,
+        "current_win_streak":  win_s,
         "current_loss_streak": loss_s,
 
         "today": {
@@ -131,6 +133,7 @@ def build_report(j: dict) -> dict:
             "avg_r":    _avg_r(countable),
         },
 
+        "expectancy":          calc_expectancy(countable),
         "regime_breakdown":    _regime_breakdown(week_t),
         "direction_breakdown": _direction_breakdown(week_t),
     }
@@ -142,10 +145,23 @@ def write_report(j: dict) -> dict:
     payload = json.dumps(report, indent=2)
     PERF_FILE.parent.mkdir(parents=True, exist_ok=True)
     _atomic_write(PERF_FILE, payload)
-    log.info("performance report written  trades_all=%d  total_pnl=%.2f  "
-             "week_wr=%.1f%%  week_avg_r=%.2f",
-             report["all_time"]["trades"], report["all_time"]["pnl"],
-             report["week"]["win_rate"], report["week"]["avg_r"])
+
+    exp = report.get("expectancy", {})
+    log.info(
+        "performance report written  trades_all=%d  total_pnl=%.2f  "
+        "week_wr=%.1f%%  week_avg_r=%.2f  expectancy=%.4fR",
+        report["all_time"]["trades"], report["all_time"]["pnl"],
+        report["week"]["win_rate"], report["week"]["avg_r"],
+        exp.get("expectancy_r", 0),
+    )
+
+    # Write detailed expectancy breakdown separately
+    try:
+        from .expectancy import write_expectancy
+        write_expectancy(j)
+    except Exception as e:
+        log.warning("expectancy report failed: %s", e)
+
     return report
 
 

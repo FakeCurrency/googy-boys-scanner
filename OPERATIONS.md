@@ -499,6 +499,97 @@ This should become a permanent weekly habit once the system is in production.
 
 ---
 
+## Phase 7 — Operational Maturity
+
+Phase 7 adds smart alert routing, expectancy tracking, and a system health check.
+
+### Smart alert routing
+
+All alerts now go through `scanner/broker/alert_router.smart_send()` which applies:
+
+| Severity | Channels | Events |
+|----------|----------|--------|
+| CRITICAL | Telegram + Discord + Email | kill_switch, daily_loss, order_failed, scan_error |
+| WARNING  | Telegram + Discord | anomaly, circuit_breaker, order_rejected, health |
+| INFO     | Log only (no push) | order_placed, daily_report |
+
+Rate limits prevent alert storms. Limits are per event type (e.g. `anomaly` → max 1 per 30 min).
+State is persisted in `journal/alert_state.json` so limits survive between GitHub Actions runs.
+
+**Tuning:** edit `ALERT_SEVERITY`, `ALERT_CHANNELS`, and `ALERT_RATE_LIMITS` in `scanner/config.py`.
+
+---
+
+### Expectancy tracking
+
+After every bybit_run cycle, `public/data/expectancy.json` is written with:
+
+```json
+{
+  "all_time":   { "trades": 47, "win_rate": 58.3, "expectancy_r": 0.18, "expectancy_usd": 18.0, ... },
+  "by_regime":  { "trending": {...}, "ranging": {...} },
+  "by_hour_utc":{ 8: {...}, 14: {...}, ... }
+}
+```
+
+**What to look for:**
+- `all_time.expectancy_r` should be positive — if it turns negative after 20+ trades, investigate.
+- `by_regime.ranging.expectancy_r` is usually worse — consider tightening `REGIME_RANGING_RISK_MULT`.
+- `by_hour_utc` reveals which UTC hours perform worst — avoid those with `EVENT_BLACKOUT_ENABLED`.
+
+A WARNING alert fires automatically when `expectancy_r < 0` and `trades >= EXPECTANCY_MIN_TRADES (20)`.
+
+---
+
+### System health check
+
+Run manually or add as a GitHub Actions step after each scan:
+
+```bash
+# Human-readable
+python scripts/health_check.py
+
+# JSON output (for CI / monitoring integrations)
+python scripts/health_check.py --json
+
+# Fire smart_send alert if WARNING or CRITICAL
+python scripts/health_check.py --alert
+```
+
+Exit codes: `0` = OK, `1` = WARNING, `2` = CRITICAL.
+
+**Checks:**
+
+| Check | Warn threshold | Critical threshold |
+|-------|---------------|-------------------|
+| scan_freshness | health.json > 2h old | > 4h old |
+| journal | open positions ≥ 8 | journal parse error |
+| circuit_breakers | any breaker active | — |
+| log_sizes | any log > 50 MB | any log > 200 MB |
+| fill_analysis | avg slippage > 0.3% | — |
+
+**Adding to GitHub Actions** (optional):
+
+```yaml
+- name: Health check
+  run: python scripts/health_check.py --alert
+  continue-on-error: true   # don't block the workflow; alert will fire
+```
+
+---
+
+### Weekly Phase 7 review checklist
+
+Every Sunday:
+
+1. `public/data/expectancy.json` — is `all_time.expectancy_r` positive? Any regime worse than -0.1?
+2. `public/data/fill_analysis.json` → `by_week[0]` — is avg slippage creeping up?
+3. `journal/alert_state.json` — which events fired this week? Any surprising rate-limit hits?
+4. Run `python scripts/health_check.py` — confirm all green
+5. Check `scaling_advisor`: `python -c "import json,pathlib; from scanner.broker.scaling_advisor import check_stage4_milestones; j=json.loads(pathlib.Path('journal/scalp_journal.json').read_text()); import pprint; pprint.pprint(check_stage4_milestones(j))"`
+
+---
+
 ## Architecture in one paragraph
 
 GitHub Actions runs the Python scanner on a cron. Results are written as JSON
