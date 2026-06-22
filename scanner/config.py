@@ -254,11 +254,24 @@ SCALP_CORRELATION_GROUPS = {
 BYBIT_MIN_QTY_USD = 5.0        # skip signals where notional qty < $5 (Bybit min order)
 BYBIT_ORDER_TYPE  = "Limit"    # "Limit" recommended; "Market" for instant fill
 
+# ATR-based position sizing: risk a fixed dollar amount per trade (stop-distance method).
+# qty = SCALP_RISK_PER_TRADE / |entry - stop|
+# With SCALP_ATR_STOP_MULT=1.5, a $100 risk on a 2% stop → qty controls $5,000 notional
+# implicitly — but sizing now adjusts to volatility rather than fixing notional.
+SCALP_RISK_PER_TRADE = 100     # USD to risk per trade (loss if stopped out before brokerage)
+
 # ---------------------------------------------------------------------------
-# Data
+# Data quality
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
 MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
+DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
+SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
+
+# ---------------------------------------------------------------------------
+# Market regime classification
+# ---------------------------------------------------------------------------
+REGIME_ADX_THRESHOLD = 25     # ADX > 25 → "trending"; ≤ 25 → "ranging"
 
 
 @dataclass(frozen=True)

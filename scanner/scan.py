@@ -2,14 +2,17 @@
 
 import datetime as dt
 import json
+import logging
 import pathlib
 import shutil
 from collections import Counter
 from zoneinfo import ZoneInfo
 
 from . import analysis, charts, config, levels, pulse, reversal, scalp, short, signals, spec
-from .data import download
+from .data import download, validate_bars, DataQualityError
 from .universe import load_scalp_universe, load_universe
+
+log = logging.getLogger(__name__)
 
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
 
@@ -566,17 +569,30 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
 
     results: list[dict] = []
     scanned = 0
+    quality_skipped = 0
     for yf_ticker, df in frames.items():
         scanned += 1
         info = meta.get(yf_ticker, {})
         asset_type = info.get("type", "")
+        sym = info.get("symbol", yf_ticker)
+
+        # ── Data quality gate ──────────────────────────────────────────────────
+        try:
+            validate_bars(df, symbol=sym, interval="1h",
+                          min_bars=config.SCALP_DATA_MIN_BARS,
+                          staleness_hours=config.DATA_STALENESS_HOURS)
+        except DataQualityError as e:
+            log.warning("data quality: %s", e)
+            quality_skipped += 1
+            continue
 
         for direction in ("long", "short"):
-            sig = scalp.evaluate(df, direction=direction)
+            sig = scalp.evaluate(df, direction=direction, symbol=sym)
             if sig is None:
                 continue
             points, grade, fired = scalp.score_and_grade(sig)
             if grade is None:
+                log.debug("%s %s: score=%d → no grade", sym, direction, points)
                 continue
             lv = scalp.compute_levels(df, sig)
             if lv["rr"] <= 0:
@@ -589,40 +605,47 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
             close = sig["close"]
             spark = [round(float(c), 8) for c in df["Close"].iloc[-30:].tolist()]
 
+            log.info("SIGNAL  %s %s  grade=%s  score=%d/%d  rr=%.1f  atr=%.6f  regime=%s",
+                     sym, direction.upper(), grade, points, scalp.SCALP_SCORE_MAX,
+                     lv["rr"], lv.get("atr", 0), lv.get("market_regime", "unknown"))
+
             results.append({
-                "symbol":      info.get("symbol", yf_ticker),
-                "name":        info.get("name", yf_ticker),
-                "sector":      info.get("sector", ""),
-                "asset_type":  asset_type,
-                "dir":         direction.upper(),
-                "grade":       grade,
-                "score":       points,
-                "score_max":   scalp.SCALP_SCORE_MAX,
-                "chips":       scalp.build_chips(fired, sig),
-                "weekly":      sig.get("squeeze_fired", False),
-                "low_rr":      lv["rr"] < 1.5,
-                "rr_text":     f"{lv['rr']:.1f}:1",
-                "target_2r":   False,
-                "liquidity":   "LIQUID",
-                "price":       round(close, 8),
-                "y_close":     round(close, 8),
-                "open":        round(close, 8),
-                "open_pct":    0.0,
-                "current_pct": 0.0,
-                "day_pct":     0.0,
-                "entry":       entry,
-                "stop":        lv["stop"],
-                "target":      lv["target"],
-                "rr":          lv["rr"],
-                "trail":       lv["stop"],
-                "stop_pct":    stop_pct,
-                "p2_pct":      p2_pct,
-                "target_basis": "atr",
-                "spark":       spark,
-                "trend":       "green" if points >= config.TREND_THRESHOLDS["scalp"] else "blue",
-                "turnover":    0,
-                "detail":      scalp.build_detail(df, sig, lv),
-                "analysis":    scalp.narrative(
+                "symbol":        info.get("symbol", yf_ticker),
+                "name":          info.get("name", yf_ticker),
+                "sector":        info.get("sector", ""),
+                "asset_type":    asset_type,
+                "dir":           direction.upper(),
+                "grade":         grade,
+                "score":         points,
+                "score_max":     scalp.SCALP_SCORE_MAX,
+                "chips":         scalp.build_chips(fired, sig),
+                "weekly":        sig.get("squeeze_fired", False),
+                "low_rr":        lv["rr"] < 1.5,
+                "rr_text":       f"{lv['rr']:.1f}:1",
+                "target_2r":     False,
+                "liquidity":     "LIQUID",
+                "price":         round(close, 8),
+                "y_close":       round(close, 8),
+                "open":          round(close, 8),
+                "open_pct":      0.0,
+                "current_pct":   0.0,
+                "day_pct":       0.0,
+                "entry":         entry,
+                "stop":          lv["stop"],
+                "target":        lv["target"],
+                "rr":            lv["rr"],
+                "atr":           lv.get("atr", 0.0),
+                "adx":           lv.get("adx", 0.0),
+                "market_regime": lv.get("market_regime", "unknown"),
+                "trail":         lv["stop"],
+                "stop_pct":      stop_pct,
+                "p2_pct":        p2_pct,
+                "target_basis":  "atr",
+                "spark":         spark,
+                "trend":         "green" if points >= config.TREND_THRESHOLDS["scalp"] else "blue",
+                "turnover":      0,
+                "detail":        scalp.build_detail(df, sig, lv),
+                "analysis":      scalp.narrative(
                     info.get("symbol", yf_ticker), sig, lv, asset_type, cur),
             })
 
@@ -647,27 +670,63 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
             deduped.append(r)
     results = deduped
 
+    tradeable = sum(1 for r in results if r["grade"] in ("A+", "A"))
+    log.info("scan_scalp done  scanned=%d  quality_skipped=%d  signals=%d  tradeable=%d",
+             scanned, quality_skipped, len(results), tradeable)
+
     market_key = "scalp_crypto" if type_filter == "crypto" else "scalp"
     market_label = "CRYPTO SCALP" if type_filter == "crypto" else "SCALP"
 
     now = dt.datetime.now(dt.timezone.utc)
+
+    # ── Write system health record (#16) ──────────────────────────────────────
+    if out_root:
+        _write_health(pathlib.Path(out_root), market_key, now, scanned,
+                      quality_skipped, tradeable)
+
     return {
-        "market":         market_key,
-        "label":          market_label,
-        "setup_type":     "scalp",
-        "currency":       "USD",
-        "currency_symbol": "$",
-        "timezone":       "UTC",
-        "tz_label":       "UTC",
-        "generated_at":   now.isoformat(timespec="seconds"),
-        "timeframe":      "1h",
-        "scanned":        scanned,
-        "universe_size":  len(universe),
-        "score_max":      scalp.SCALP_SCORE_MAX,
-        "brokerage":      config.SCALP_BROKERAGE_EACH_WAY,
-        "position_size":  config.SCALP_POSITION_SIZE,
-        "leverage":       config.SCALP_LEVERAGE,
+        "market":           market_key,
+        "label":            market_label,
+        "setup_type":       "scalp",
+        "currency":         "USD",
+        "currency_symbol":  "$",
+        "timezone":         "UTC",
+        "tz_label":         "UTC",
+        "generated_at":     now.isoformat(timespec="seconds"),
+        "timeframe":        "1h",
+        "scanned":          scanned,
+        "quality_skipped":  quality_skipped,
+        "universe_size":    len(universe),
+        "score_max":        scalp.SCALP_SCORE_MAX,
+        "brokerage":        config.SCALP_BROKERAGE_EACH_WAY,
+        "position_size":    config.SCALP_POSITION_SIZE,
+        "leverage":         config.SCALP_LEVERAGE,
+        "risk_per_trade":   config.SCALP_RISK_PER_TRADE,
         "max_daily_trades": config.SCALP_MAX_TRADES_PER_DAY,
-        "pulse":          [],
-        "results":        results,
+        "pulse":            [],
+        "results":          results,
     }
+
+
+def _write_health(out_root: pathlib.Path, scan_key: str,
+                  now: dt.datetime, scanned: int,
+                  quality_skipped: int, tradeable: int) -> None:
+    """Append/update health.json with the latest scan metadata (#16)."""
+    health_file = out_root / "health.json"
+    try:
+        health = json.loads(health_file.read_text()) if health_file.exists() else {}
+    except Exception:
+        health = {}
+
+    health[scan_key] = {
+        "generated_at":    now.isoformat(timespec="seconds"),
+        "scanned":         scanned,
+        "quality_skipped": quality_skipped,
+        "tradeable":       tradeable,
+        "age_minutes":     0,
+    }
+    health["updated_at"] = now.isoformat(timespec="seconds")
+    try:
+        health_file.write_text(json.dumps(health, indent=2))
+    except Exception as e:
+        log.warning("could not write health.json: %s", e)

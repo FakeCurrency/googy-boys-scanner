@@ -13,7 +13,11 @@ Target: 3× ATR → automatic 2:1 R:R
 import numpy as np
 import pandas as pd
 
-from .indicators import atr
+import logging
+
+from .indicators import atr, adx as _adx
+
+log = logging.getLogger(__name__)
 
 # ── TTM Squeeze parameters ─────────────────────────────────────────────────────
 SQ_PERIOD        = 20    # BB and KC lookback
@@ -142,9 +146,12 @@ def _find_pivot_levels(df: pd.DataFrame, last: float):
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
-def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
+def evaluate(df: pd.DataFrame, direction: str = "long",
+             symbol: str = "") -> dict | None:
     """Evaluate a single instrument for a scalp setup.  Returns a signal dict or None."""
     if df is None or len(df) < SCALP_MIN_BARS:
+        log.debug("%s %s: skip — only %d bars (need %d)",
+                  symbol, direction, len(df) if df is not None else 0, SCALP_MIN_BARS)
         return None
 
     # Strip timezone — rolling / resampling ops need tz-naive index
@@ -155,6 +162,7 @@ def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
     close = df["Close"]
     last  = float(close.iloc[-1])
     if not np.isfinite(last) or last <= 0:
+        log.debug("%s %s: skip — invalid last close (%r)", symbol, direction, last)
         return None
 
     # ── Squeeze signals ────────────────────────────────────────────────────────
@@ -165,16 +173,21 @@ def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
     mom_now  = float(mom.iloc[-1])
     mom_prev = float(mom.iloc[-2])
     if not (np.isfinite(mom_now) and np.isfinite(mom_prev)):
+        log.debug("%s %s: skip — non-finite momentum (now=%r prev=%r)",
+                  symbol, direction, mom_now, mom_prev)
         return None
 
     # Direction gate: price above (long) / below (short) the BB midline (SMA 20).
     # More stable than momentum sign — allows transitioning / coiling setups.
     bb_mid_now = float(sigs["bb_mid"].iloc[-1])
     if not np.isfinite(bb_mid_now) or bb_mid_now <= 0:
+        log.debug("%s %s: skip — invalid BB midline (%r)", symbol, direction, bb_mid_now)
         return None
     if direction == "long"  and last < bb_mid_now:
+        log.debug("%s long: skip — price %.6f below BB mid %.6f", symbol, last, bb_mid_now)
         return None
     if direction == "short" and last > bb_mid_now:
+        log.debug("%s short: skip — price %.6f above BB mid %.6f", symbol, last, bb_mid_now)
         return None
 
     # Squeeze fired = was compressed recently, now released
@@ -220,7 +233,9 @@ def evaluate(df: pd.DataFrame, direction: str = "long") -> dict | None:
 
 
 def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
-    """ATR-based stop and 2:1 target from entry."""
+    """ATR-based stop/target + market regime from ADX."""
+    from . import config as cfg
+
     entry     = sig["close"]
     direction = sig["direction"]
 
@@ -239,12 +254,19 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
         target = entry - SCALP_ATR_TARGET_MULT * atr_val
 
     rr = round(abs(target - entry) / risk, 2) if risk > 0 else 0.0
+
+    # ADX-based market regime (for position sizing and logging)
+    adx_val = float(_adx(df, 14).iloc[-1]) if len(df) >= 28 else 0.0
+    regime  = "trending" if adx_val >= cfg.REGIME_ADX_THRESHOLD else "ranging"
+
     return {
-        "entry":  round(entry, 8),
-        "stop":   round(stop,  8),
-        "target": round(target, 8),
-        "rr":     rr,
-        "atr":    round(atr_val, 8),
+        "entry":          round(entry, 8),
+        "stop":           round(stop,  8),
+        "target":         round(target, 8),
+        "rr":             rr,
+        "atr":            round(atr_val, 8),
+        "adx":            round(adx_val, 2),
+        "market_regime":  regime,
     }
 
 

@@ -112,6 +112,18 @@ def summarize(j: dict) -> dict:
         g = p.get("corr_group") or _corr_group(p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
         group_exposure[g] = group_exposure.get(g, 0) + 1
 
+    # Regime breakdown — how many closed trades were in trending vs ranging markets
+    regime_stats: dict[str, dict] = {}
+    for c in j["closed"]:
+        r = c.get("market_regime", "unknown")
+        if r not in regime_stats:
+            regime_stats[r] = {"trades": 0, "wins": 0, "total_pnl": 0.0}
+        regime_stats[r]["trades"] += 1
+        pnl = c.get("pnl", 0.0)
+        if pnl > 0:
+            regime_stats[r]["wins"] += 1
+        regime_stats[r]["total_pnl"] = round(regime_stats[r]["total_pnl"] + pnl, 2)
+
     return {
         "notional":          NOTIONAL,
         "brokerage_rt":      BROK_RT,
@@ -123,8 +135,9 @@ def summarize(j: dict) -> dict:
         "today_pnl":         today_pnl,
         "trades_left_today": max(0, MAX_DAILY - trades_used),
         "group_exposure":    dict(sorted(group_exposure.items(), key=lambda kv: -kv[1])),
-        "longs":  _dir_stats(long_closed,  long_open),
-        "shorts": _dir_stats(short_closed, short_open),
+        "longs":             _dir_stats(long_closed,  long_open),
+        "shorts":            _dir_stats(short_closed, short_open),
+        "regime_stats":      regime_stats,
     }
 
 

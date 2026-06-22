@@ -58,8 +58,23 @@ def _fmt_price(price: float) -> str:
 
 
 def calc_qty(entry: float, notional: float) -> float:
-    """Position size in base-asset units given notional dollar exposure."""
+    """Position size in base-asset units given notional dollar exposure (legacy)."""
     return notional / entry if entry > 0 else 0.0
+
+
+def calc_qty_risk(entry: float, stop: float, risk_per_trade: float) -> float:
+    """ATR/stop-based position sizing: risk a fixed dollar amount per trade.
+
+    qty = risk_per_trade / |entry - stop|
+
+    This gives consistent dollar risk per trade regardless of instrument
+    volatility, unlike fixed-notional sizing which lets risk vary with ATR.
+    Falls back to 0.0 if stop == entry (zero risk distance) or entry <= 0.
+    """
+    stop_dist = abs(entry - stop)
+    if stop_dist <= 0 or entry <= 0:
+        return 0.0
+    return risk_per_trade / stop_dist
 
 
 def _order_link_id(symbol: str, direction: str, session_day: str) -> str:

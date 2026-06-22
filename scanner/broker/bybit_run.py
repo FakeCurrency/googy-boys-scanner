@@ -45,11 +45,12 @@ log = logging.getLogger("bybit_run")
 
 from scanner.scalp_journal import (
     SCALP_JOURNAL_FILE, _atomic_write, _session_day, _corr_group,
-    MAX_DAILY, MAX_LOSS, MAX_GROUP, NOTIONAL,
+    MAX_DAILY, MAX_LOSS, MAX_GROUP,
 )
+from scanner import config as _cfg
 from scanner.broker import bybit_client as bc
 from scanner.broker.bybit_reconcile import reconcile_journal
-from scanner.broker.bybit_bracket import submit as submit_bracket, calc_qty
+from scanner.broker.bybit_bracket import submit as submit_bracket, calc_qty_risk
 from scanner.broker.kill_switch import check_and_kill
 
 
@@ -162,40 +163,51 @@ def run(dry_run: bool = False) -> None:
             continue
 
         entry = float(r["entry"])
-        units = calc_qty(entry, NOTIONAL)
+        stop  = float(r["stop"])
+        units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
         if units <= 0:
-            log.warning("skip %s — qty=0 at entry=%.6f  notional=%.2f", symbol, entry, NOTIONAL)
+            log.warning("skip %s — qty=0 at entry=%.6f  stop=%.6f  risk_per_trade=%.2f",
+                        symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE)
             continue
 
+        regime = r.get("market_regime", "unknown")
+        log.info("sizing  %s  entry=%.6f  stop=%.6f  stop_dist=%.6f  risk=$%.2f  qty=%.4f  regime=%s",
+                 symbol, entry, stop, abs(entry - stop), _cfg.SCALP_RISK_PER_TRADE, units, regime)
+
         pos = {
-            "symbol":      symbol,
-            "name":        r.get("name", symbol),
-            "asset_type":  "crypto",
-            "sector":      r.get("sector", "crypto"),
-            "corr_group":  group,
-            "direction":   direction,
-            "grade":       r["grade"],
-            "score":       r["score"],
-            "entry":       entry,
-            "stop":        float(r["stop"]),
-            "target":      float(r["target"]),
-            "rr":          r["rr"],
-            "units":       units,
-            "yf_ticker":   r.get("yf_ticker", symbol + "-USD"),
-            "opened_ts":   scan_ts,
-            "session_day": sess_day,
-            "status":      "open",
+            "symbol":        symbol,
+            "name":          r.get("name", symbol),
+            "asset_type":    "crypto",
+            "sector":        r.get("sector", "crypto"),
+            "corr_group":    group,
+            "direction":     direction,
+            "grade":         r["grade"],
+            "score":         r["score"],
+            "entry":         entry,
+            "stop":          stop,
+            "target":        float(r["target"]),
+            "rr":            r["rr"],
+            "units":         units,
+            "risk_per_trade": _cfg.SCALP_RISK_PER_TRADE,
+            "atr":           r.get("atr", 0.0),
+            "adx":           r.get("adx", 0.0),
+            "market_regime": regime,
+            "yf_ticker":     r.get("yf_ticker", symbol + "-USD"),
+            "opened_ts":     scan_ts,
+            "session_day":   sess_day,
+            "status":        "open",
         }
 
         if dry_run:
-            log.info("[DRY] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  group=%s  rr=%s",
-                     symbol, direction, entry, float(r["stop"]), float(r["target"]),
-                     units, group, r["rr"])
+            log.info("[DRY] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  "
+                     "group=%s  rr=%s  regime=%s",
+                     symbol, direction, entry, stop, float(r["target"]),
+                     units, group, r["rr"], regime)
             submitted += 1
             continue
 
         log.info("submitting bracket  %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f",
-                 symbol, direction, entry, float(r["stop"]), float(r["target"]), units)
+                 symbol, direction, entry, stop, float(r["target"]), units)
         result = submit_bracket(pos)
 
         if result.get("skipped"):

@@ -465,7 +465,10 @@
     state.data = d;
     state.cur = d.currency_symbol || "$";
     $("#scan-title").textContent = `Last scanned: ${fmtTime(d.generated_at, d.tz_label)}`;
-    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups · updates after each market close`;
+    const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
+    const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
+    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · updates after each market close`;
+    if (state.mode === "scalp") loadHealthStatus();
     renderPulse(d.pulse);
     renderLegend(d);
     renderStats(d);
@@ -499,6 +502,30 @@
       state.caps = flat;
       if (state.data) renderRows();   // re-render if rows are already on screen
     } catch (_) { /* caps are optional */ }
+  }
+
+  async function loadHealthStatus() {
+    try {
+      const r = await fetch("data/health.json", { cache: "no-cache" });
+      if (!r.ok) return;
+      const h = await r.json();
+      const el = $("#scan-sub");
+      if (!el) return;
+      const entries = Object.entries(h).filter(([k]) => k !== "updated_at");
+      if (!entries.length) return;
+      const parts = entries.map(([key, info]) => {
+        const label = key === "scalp_crypto" ? "Crypto" : key === "scalp" ? "Scalp" : key.toUpperCase();
+        const ts = info.generated_at || "";
+        let age = "";
+        if (ts) {
+          const mins = Math.round((Date.now() - new Date(ts + "Z").getTime()) / 60000);
+          age = mins < 60 ? ` ${mins}m ago` : ` ${Math.round(mins/60)}h ago`;
+        }
+        const dq = info.quality_skipped ? ` · ${info.quality_skipped} dq` : "";
+        return `${label}: ${info.tradeable ?? "?"} A+/A${dq}${age}`;
+      });
+      el.textContent = parts.join("  ·  ");
+    } catch (_) {}
   }
 
   async function loadRiskDashboard() {

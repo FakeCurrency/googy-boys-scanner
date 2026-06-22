@@ -1,110 +1,97 @@
-# Roadmap — path to real capital
+# Vivek's Beta Scanner — Roadmap
 
-Status of the work needed before the Scalp engine could trade real money, plus
-the broader backlog. The scanner + paper journals are a **forward test**; the
-Alpaca paper-trading integration (step 4) is now wired — real orders rest at the
-broker, but on the **paper** endpoint until the 1-month parallel-run agrees.
-
-Legend: 🔴 blocker · 🟠 important · 🟡 nice-to-have · ✅ done · 🚧 in progress
+Phases toward a fully autonomous scalp trading bot.
 
 ---
 
-## High priority — required before real capital
+## Phase 1 — Foundation ✅ Complete
 
-| # | Item | Status | Notes |
-|---|------|--------|-------|
-| 1 | **Out-of-sample scalp backtest** with the live pessimistic fill model | ✅ | `scanner/scalp_backtest.py` + weekly `backtest.yml`. Re-evaluates the engine bar-by-bar (no look-ahead); same next-bar-open + slippage + gap-through fills; reports win rate, profit factor, max drawdown, expectancy. **Next:** review the numbers once the first CI run publishes `scalp_backtest.json`, then decide if the edge survives costs. |
-| 2 | **Session-boundary daily reset** | ✅ | Daily trade/loss limits reset at a fixed **08:00 UTC** anchor (quiet window between NASDAQ close and ASX open), so they never reset mid-session — even during AEDT when the ASX session straddles 00:00 UTC. |
-| 3 | **Portfolio correlation caps** | ✅ | Max 2 open positions per correlation group (metals, energy, materials_au, ags, au_financials, us_tech…). Stops Gold + Silver + GLD + a miner counting as one oversized bet. |
-| 4 | **Resting bracket orders at the broker** | 🚧 | `scanner/broker/` module built. Alpaca paper API wired: OCO bracket orders submitted after every scan; reconcile step syncs fills/closures back into the journal; kill-switch workflow flattens everything if daily loss limit breaches between scans. **Next:** add `ALPACA_API_KEY` + `ALPACA_SECRET_KEY` to GitHub Secrets; run for ≥1 month in parallel with the JSON journal; confirm the two agree before going live. ASX/commodities require IBKR — TBD. |
-| 5 | **Walk-forward / out-of-sample split** | 🟠 | The backtest is a single in-sample pass. Before sizing up, split into train/validate windows (or rolling walk-forward) so the grade cut-offs aren't overfit. |
-
-## Medium priority
-
-| # | Item | Status | Notes |
-|---|------|--------|-------|
-| 6 | Momentum histogram / TTM-squeeze visual on the 1H chart | ✅ | LazyBear-coloured momentum histogram in its own pane + squeeze ON/FIRE markers on the candles. |
-| 7 | Clearer entry/stop/target labels with % distance on the chart | ✅ | Level lines labelled with % from entry and R (e.g. "TARGET +2.5% (2.0R)", "STOP -1.2% (1R)"). |
-| 8 | Scalp-output dedup (same asset, both directions) | ✅ | Highest-scoring direction per **symbol** kept in `scan_scalp` (scanner output) and the journal. Correlated **cross-symbol** exposure handled by #3. |
-| 9 | Alert dedup (highest-scoring direction per asset) | ✅ | `alerts._dedup_by_symbol` keeps the best-scoring row per symbol before the digest is built. |
-| 10 | SCAN button robustness | ✅ | Timeouts (client + Cloudflare Function), mapped GitHub error codes to actionable messages, three toast states (ok/info/warn). |
-
-## Lower priority
-
-| # | Item | Status | Notes |
-|---|------|--------|-------|
-| 11 | Combined journal dashboard (overall equity + stats, not just per tab) | ✅ | "Overall" tab aggregates all journals by $ P&L: combined stats + one equity curve. (Also fixed: the Scalp tab was never wired to its data.) |
-| 12 | This `ROADMAP.md` | ✅ | |
-| 13 | Shorts scanner refinement | 🟡 | Known weak; deferred. |
+| Item | Status |
+|------|--------|
+| Daily scanners: Pullback, Reversal, Spec, Short | ✅ |
+| Scalp 1h TTM-Squeeze scanner (crypto + NASDAQ + ASX) | ✅ |
+| Paper-trade journal (swing + scalp) | ✅ |
+| Pessimistic fill model (next-bar open + slippage + gap detection) | ✅ |
+| Correlation group caps (max 2 open per group) | ✅ |
+| AEST daily reset (midnight Sydney, DST-aware via `zoneinfo`) | ✅ |
+| Kill switch + daily loss circuit breaker | ✅ |
+| Cloud stop/target watcher (GitHub Actions) | ✅ |
+| Scalp backtest (out-of-sample) | ✅ |
+| Email digest alerts | ✅ |
 
 ---
 
-## Broker integration design — resting bracket orders (item #4)
+## Phase 2 — Live Execution: Crypto via Bybit 🔜 In Progress
 
-### The problem with today's model
+| Item | Status |
+|------|--------|
+| Bybit V5 API client (RSA auth, USDT perpetuals) | ✅ |
+| Bracket orders: entry + embedded TP/SL | ✅ |
+| Reconciliation: pull fills + closed PnL from Bybit | ✅ |
+| ATR/stop-based position sizing (consistent dollar risk per trade) | ✅ |
+| Market regime tagging (ADX trending/ranging per trade) | ✅ |
+| Structured logging (decisions, qty, PnL, gate reasons) | ✅ |
+| Data quality gates (bar count, staleness, NaN checks) | ✅ |
+| System health dashboard (scan age, quality-skip count, A+/A count) | ✅ |
+| Unit test suite (sizing, grading, fill model, data quality, AEST) | ✅ |
+| **Testnet validation: ≥2 weeks, ≥20 trades, confirm reconcile loop** | 🔜 |
+| **Live capital enable** (`BYBIT_TESTNET=false` in GitHub Secrets) | 🔜 |
 
-The paper journals "manage" exits by re-checking price each time a scan runs
-(~every 30 minutes). That is fine for a forward test but **unsafe for real
-money**: a stop hit at 14:11 would not be acted on until the 14:30 scan, and
-nothing protects the position if the scanner is down. Live trading needs the
-exit orders to **rest at the broker** so they fire on the exchange in real time,
-independent of our cron.
+**Next steps for Phase 2:**
+1. Watch journal for testnet fills + reconcile cycles — confirm PnL math is correct
+2. Check ATR-sized qty makes sense for each crypto (BTC needs tiny qty, SOL needs more)
+3. Confirm Bybit doesn't reject orders for min-qty reasons (`BYBIT_MIN_QTY_USD`)
+4. Enable live capital once ≥2 weeks of clean testnet execution confirmed
 
-### Target order model — OCO bracket
+---
 
-Each entry is submitted as a **bracket** (a.k.a. OCO — one-cancels-other):
+## Phase 3 — ASX + Commodity Futures via IBKR 📅 Planned
 
-```
-ENTRY  (limit @ pessimistic price, or market-on-next-bar)
-  ├── STOP-LOSS   (stop / stop-limit @ ATR stop)      ─┐ linked:
-  └── TAKE-PROFIT (limit @ ATR target)                 ─┘ filling one cancels the other
-```
+| Item | Status |
+|------|--------|
+| IBKR account + IB Gateway on VPS (always-on) | ⬜ |
+| `ib_insync` client: connect, place bracket orders, receive fills | ⬜ |
+| Symbol mapping: ASX stocks (e.g. `BHP.AX`), CME futures (e.g. `GC1!`) | ⬜ |
+| Reconcile IBKR fills into swing journal | ⬜ |
+| ASX scalp execution (1h CFD-style via IBKR) | ⬜ |
+| Commodity futures execution: Gold (GC), Oil (CL), NatGas (NG) | ⬜ |
+| Cross-broker correlation cap (Bybit crypto + IBKR combined exposure) | ⬜ |
 
-- The stop and target are submitted **with** the entry and live at the broker.
-- When either fills, the other is auto-cancelled (OCO), so there's no orphaned
-  resting order and no double-fill.
-- The daily loss limit and per-group caps are enforced **before** submission
-  (pre-trade risk gate) and a separate kill-switch flattens everything if the
-  account breaches the daily loss limit.
+---
 
-### Broker requirements / candidates
+## Phase 4 — Real-Time Data + Signal Improvement 📅 Planned
 
-| Need | Requirement |
-|------|-------------|
-| Native bracket / OCO orders | So stop+target rest atomically |
-| REST + streaming API | REST to submit/cancel; websocket to know fills immediately |
-| CFD or margin for 5× leverage | Current model assumes $1k margin → $5k notional |
-| Cross-asset (metals, energy, US equities) | Universe spans futures-like + equities |
-| Sandbox / paper endpoint | Run live-paper in parallel with the JSON journal to reconcile before real funds |
+| Item | Status |
+|------|--------|
+| Real-time crypto prices via Bybit WebSocket | ⬜ |
+| Real-time NASDAQ/ASX prices via IBKR streaming | ⬜ |
+| Replace yfinance 1h bars with live streaming for tighter entry | ⬜ |
+| News/economic calendar filter (avoid FOMC, CPI, RBA days) | ⬜ |
+| ATR-based trailing stop (tighten SL as trade moves in favour) | ⬜ |
+| Performance tracking by market regime (trending vs ranging edge) | 🟡 partial |
+| Multi-timeframe confirmation (4h trend + 1h entry) | ⬜ |
 
-Candidates: **Alpaca** (US equities + crypto, native brackets, free paper API —
-best for a first cut), **Interactive Brokers** (broadest asset coverage incl.
-futures/CFD, native brackets, but heavier API), or a CFD provider with an API
-(IG / OANDA) for the leveraged commodities legs.
+---
 
-### State machine to build
+## Phase 5 — Site Privacy + Multi-User 📅 Future
 
-```
-PENDING_ENTRY → OPEN → (PENDING_EXIT) → CLOSED
-                  └────────────────────→ CANCELLED
-```
+| Item | Status |
+|------|--------|
+| Cloudflare Access: password-protect the dashboard | ⬜ |
+| KV-backed manual journal sync (already wired, needs CF KV setup) | ⬜ |
+| Push alerts: Telegram / Discord webhook on new A+/A signals | ⬜ |
 
-- **Idempotency:** every order tagged with a `client_order_id` derived from
-  `{symbol}_{direction}_{session_day}` so a retried scan never double-submits.
-- **Reconciliation:** on every run, fetch the broker's actual positions/orders
-  and treat *that* as truth — the local JSON mirrors it, never leads it.
-- **Kill-switch:** a scheduled check (independent of the scanner) that flattens
-  all positions and halts new entries if the session loss limit is breached.
+---
 
-### Staged rollout (do not skip steps)
+## Risk Management Principles
 
-1. ✅ Harden the forward test with pessimistic fills *(done)*.
-2. ✅ Build the backtest with the same fills *(done)* — **review the numbers**.
-3. 🚧 Wire a **broker paper/sandbox** account; submit real bracket orders against
-   it and run it **in parallel** with the JSON journal for ≥1 month. The two
-   must agree. (`scanner/broker/` is built — add secrets to enable it)
-4. 🚧 Pre-trade risk gate + kill-switch — **done in code** (`kill_switch.py` +
-   `kill_switch.yml` runs every 30 min). Kill-switch flattens at the broker,
-   independent of the scanner schedule.
-5. 🔴 Go live with **tiny** size; scale only if live results track the paper +
-   backtest numbers. Switch `ALPACA_LIVE=true` in GitHub Secrets when ready.
+- **Max 5 trades per AEST day** — resets at midnight Sydney time
+- **Max $100 USD risk per trade** — ATR/stop-distance sized, not fixed notional
+- **Max $500 USD daily loss** — kill switch flattens all positions if breached
+- **Max 2 open positions per correlation group** — prevents stacking correlated bets
+- **Testnet-first always** — `BYBIT_TESTNET=true` by default; live requires explicit opt-in
+- **Reconcile on every run** — journal never drifts from broker state
+
+---
+
+*Last updated: 2026-06-22*
