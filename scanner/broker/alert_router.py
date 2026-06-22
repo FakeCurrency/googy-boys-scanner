@@ -112,6 +112,11 @@ def should_send(event_type: str) -> bool:
     state = _load_state()
     now   = dt.datetime.now(dt.timezone.utc)
 
+    # Check acknowledgment — user has seen and dismissed this alert class
+    if _is_acknowledged(event_type, state):
+        log.debug("alert acknowledged (suppressed)  event=%s", event_type)
+        return False
+
     if limit_s > 0:
         last_raw = state.get("last_sent", {}).get(event_type)
         if last_raw:
@@ -137,6 +142,47 @@ def reset_rate_limit(event_type: str) -> None:
     state = _load_state()
     state.get("last_sent", {}).pop(event_type, None)
     _save_state(state)
+
+
+# ── acknowledgment ────────────────────────────────────────────────────────────
+
+def acknowledge(event_type: str, duration_h: float = 24.0) -> None:
+    """Suppress an alert type for duration_h hours (user acknowledgment).
+
+    Example: acknowledge("circuit_breaker", 4.0) stops circuit-breaker
+    alerts for 4 hours after the user has reviewed the issue.
+
+    The acknowledgment is stored in journal/alert_state.json under the
+    "acknowledged" key so it persists across GitHub Actions runs.
+    """
+    state     = _load_state()
+    ack_until = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=duration_h)
+    state.setdefault("acknowledged", {})[event_type] = ack_until.isoformat(timespec="seconds")
+    _save_state(state)
+    log.info(
+        "alert acknowledged  event=%s  until=%s",
+        event_type, ack_until.isoformat(timespec="seconds"),
+    )
+
+
+def clear_acknowledgment(event_type: str) -> None:
+    """Re-enable a previously acknowledged alert type immediately."""
+    state = _load_state()
+    state.get("acknowledged", {}).pop(event_type, None)
+    _save_state(state)
+    log.info("acknowledgment cleared  event=%s", event_type)
+
+
+def _is_acknowledged(event_type: str, state: dict) -> bool:
+    """Return True if event_type is within its acknowledgment window."""
+    ack_until_raw = state.get("acknowledged", {}).get(event_type)
+    if not ack_until_raw:
+        return False
+    try:
+        ack_until = dt.datetime.fromisoformat(ack_until_raw)
+        return dt.datetime.now(dt.timezone.utc) < ack_until
+    except Exception:
+        return False
 
 
 # ── main entry point ──────────────────────────────────────────────────────────

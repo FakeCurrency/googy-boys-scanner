@@ -346,6 +346,7 @@ ALERT_RATE_LIMITS = {
     "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
     "circuit_breaker": 1800,
     "daily_report":    82800,    # max 1 per 23h
+    "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
     "DEFAULT":         300,
 }
@@ -358,6 +359,20 @@ HEALTH_LOG_SIZE_CRIT_MB  = 200  # critical if any log file exceeds this size (MB
 
 # Phase 7: Expectancy tracking
 EXPECTANCY_MIN_TRADES = 20      # minimum sample before expectancy estimate is reliable
+
+# ---------------------------------------------------------------------------
+# Phase 8: Enhanced Monitoring & Alerting
+# ---------------------------------------------------------------------------
+
+# Strategy degradation anomaly thresholds (used by anomaly.check_strategy_degradation)
+ANOMALY_WIN_RATE_WINDOW    = 20    # rolling trade window for degradation checks
+ANOMALY_WIN_RATE_DROP      = 15.0  # alert if rolling WR drops > 15 pp vs all-time
+ANOMALY_EXPECTANCY_DROP    = 0.3   # alert if rolling E drops > 0.3R vs all-time expectancy
+
+# Weekly report rate-limit bucket (separate from daily_report so each has its own cadence)
+ALERT_RATE_LIMITS_EXTRA: dict = {
+    "weekly_report": 518_400,  # max 1 per 6 days (604800 = 7d; 518400 = 6d allows a little slack)
+}
 
 # ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution

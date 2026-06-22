@@ -390,13 +390,24 @@ def run(dry_run: bool = False) -> None:
     broker_mode = "SIMULATED" if simulated else bc.mode()
     _save(j, broker_mode=broker_mode)
 
-    # ── 8. Performance report + live-vs-backtest reconciliation ──────────────
+    # ── 8. Performance report + health snapshot + digest ─────────────────────
+    report = None
     try:
-        from scanner.broker.performance_report import write_report, maybe_send_daily_report
+        from scanner.broker.performance_report import (
+            write_report, maybe_send_daily_report, write_health_runtime,
+        )
         report = write_report(j)
         maybe_send_daily_report(report)
+        write_health_runtime(j)
     except Exception as e:
         log.warning("performance report failed: %s", e)
+
+    try:
+        from scanner.broker.alert_digest import maybe_send_digest
+        if report:
+            maybe_send_digest(report)
+    except Exception as e:
+        log.warning("alert digest failed: %s", e)
 
     try:
         from scanner.broker.live_vs_backtest import reconcile as lvb_reconcile
