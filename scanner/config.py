@@ -375,6 +375,20 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 }
 
 # ---------------------------------------------------------------------------
+# Phase 9: Capital Scaling Framework
+# ---------------------------------------------------------------------------
+
+# Hard cap on total capital under live management.  If the total notional
+# of open positions reaches this value, new orders are blocked.  Set to 0
+# to disable the cap entirely.
+MAX_MANAGED_CAPITAL_USD  = 50_000   # USD; 0 = disabled
+
+# If current scaling_advisor level >= this value, log a prominent warning
+# reminding the operator to manually increase the funded capital before
+# continuing.  Set to 0 to keep the advisor fully advisory (no blocking).
+SCALING_ADVISORY_WARN_LEVEL = 1     # warn from Level 1 onward
+
+# ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution
 # ---------------------------------------------------------------------------
 # BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).

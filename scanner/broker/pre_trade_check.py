@@ -13,7 +13,8 @@ Checks (in order):
   7.  corr_cap         — correlation group position limit (SCALP_MAX_PER_GROUP)
   8.  sector_cap       — sector/theme exposure limit (SECTOR_EXPOSURE_CAP)
   9.  order_size       — fat-finger / minimum notional guard
-  10. slippage         — expected slippage tolerance (warn/reject)
+  10. max_capital      — total open notional vs MAX_MANAGED_CAPITAL_USD cap
+  11. slippage         — expected slippage tolerance (warn/reject)
 
 bybit_run.py still owns the "already_open" and "not_crypto" gates since those
 are signal-selection concerns, not portfolio risk.
@@ -28,6 +29,7 @@ from scanner.broker.risk_manager import (
     check_sector_cap,
     check_max_positions,
     check_order_size,
+    check_max_capital,
 )
 from scanner.broker.circuit_breaker import check_consecutive_losses
 
@@ -125,7 +127,10 @@ def pre_trade_check(
     # 9. Order size validation
     checks["order_size"] = check_order_size(units, entry)
 
-    # 10. Slippage tolerance
+    # 10. Max managed capital cap
+    checks["max_capital"] = check_max_capital(journal)
+
+    # 11. Slippage tolerance
     slippage_pct  = float(pos.get("slippage_pct", 0))
     reject_slip   = float(getattr(_cfg, "SLIPPAGE_REJECT_PCT", 0.01))
     warn_slip     = float(getattr(_cfg, "SLIPPAGE_WARN_PCT", 0.003))

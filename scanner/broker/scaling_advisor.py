@@ -150,11 +150,31 @@ def check_stage4_milestones(journal: dict) -> dict:
             "You may scale more aggressively with discipline."
         )
 
+    warn_level = int(getattr(_cfg, "SCALING_ADVISORY_WARN_LEVEL", 1))
+
     if current_level >= 1:
         log.info(
             "scaling advisor: Level %d conditions met — %s",
             current_level, reco,
         )
+
+    # If the level meets or exceeds the warn threshold, remind the operator
+    # to manually increase funded capital before the next run.
+    if warn_level > 0 and current_level >= warn_level:
+        log.warning(
+            "SCALING ADVISOR: Level %d conditions met — "
+            "consider increasing live capital before the next run.  %s",
+            current_level, reco,
+        )
+        try:
+            from .alert_router import smart_send
+            smart_send(
+                "info",
+                f"Scaling milestone reached (Level {current_level})",
+                reco,
+            )
+        except Exception:
+            pass
 
     return {
         "current_level":             current_level,
