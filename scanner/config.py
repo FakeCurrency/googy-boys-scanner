@@ -211,11 +211,11 @@ SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
 # Captures the gap between the last 1h close (scan price) and the next bar open.
 SCALP_FILL_SLIPPAGE_PCT = 0.0003  # 0.03% one-way — $1.50 on a $5,000 notional trade
 
-# Trading-day boundary. The daily trade count / loss limit reset once per 24h at
-# this fixed UTC hour. 08:00 UTC sits in the quiet window between ASX close
-# (~06:00 UTC) and NASDAQ open (13:30 UTC), so it NEVER bisects a live session —
-# even during AEDT (Oct–Apr) when the ASX session straddles 00:00 UTC.
-SCALP_DAY_ANCHOR_UTC = 8
+# Trading-day boundary. Daily trade count / loss limit reset at calendar-day
+# rollover in AEST (Australia/Sydney). Midnight AEST = 14:00 UTC standard /
+# 13:00 UTC daylight — falls in the quiet window before the Sydney open (23:00 UTC).
+SCALP_DAY_TZ = "Australia/Sydney"
+SCALP_DAY_ANCHOR_UTC = 8  # kept for backward-compat; ignored when SCALP_DAY_TZ is set
 
 # Portfolio risk — correlation caps. Highly-correlated instruments (e.g. Gold +
 # Silver + Gold ETFs + a gold miner) are ONE bet, not five. Cap how many open

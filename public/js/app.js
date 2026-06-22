@@ -501,6 +501,58 @@
     } catch (_) { /* caps are optional */ }
   }
 
+  async function loadRiskDashboard() {
+    try {
+      const r = await fetch("data/scalp_journal.json", { cache: "no-cache" });
+      if (!r.ok) return;
+      const j = await r.json();
+      const s = j.stats || {};
+      const longs  = s.longs  || {};
+      const shorts = s.shorts || {};
+
+      // Trades today
+      const tradesEl  = $("#rd-trades"), tradesSub = $("#rd-trades-sub");
+      const tradesToday = s.today_trades || 0, maxTrades = s.max_daily_trades || 5;
+      if (tradesEl) { tradesEl.textContent = `${tradesToday} / ${maxTrades}`; tradesEl.className = "rd-tile-val" + (tradesToday >= maxTrades ? " red" : tradesToday >= 3 ? " accent-orange" : " green"); }
+      if (tradesSub) tradesSub.textContent = `${s.trades_left_today ?? (maxTrades - tradesToday)} remaining`;
+
+      // Today P&L
+      const pnlEl = $("#rd-pnl"), pnlSub = $("#rd-pnl-sub");
+      const todayPnl = s.today_pnl || 0, maxLoss = s.max_daily_loss || 500;
+      if (pnlEl) { pnlEl.textContent = `${todayPnl >= 0 ? "+" : ""}$${todayPnl.toFixed(2)}`; pnlEl.className = "rd-tile-val" + (todayPnl <= -maxLoss ? " red" : todayPnl < 0 ? " accent-orange" : " green"); }
+      if (pnlSub) { const pct = Math.min(100, Math.abs(todayPnl) / maxLoss * 100); pnlSub.textContent = `${pct.toFixed(0)}% of $${maxLoss} limit`; }
+
+      // Open longs
+      const longsEl = $("#rd-longs"), longsSub = $("#rd-longs-sub");
+      if (longsEl) longsEl.textContent = longs.open ?? "0";
+      if (longsSub) { const unreal = longs.open_unrealised_pnl || 0; longsSub.textContent = `Unreal: ${unreal >= 0 ? "+" : ""}$${unreal.toFixed(2)}`; longsSub.className = "rd-tile-sub" + (unreal >= 0 ? " green" : " red"); }
+
+      // Open shorts
+      const shortsEl = $("#rd-shorts"), shortsSub = $("#rd-shorts-sub");
+      if (shortsEl) shortsEl.textContent = shorts.open ?? "0";
+      if (shortsSub) { const unreal = shorts.open_unrealised_pnl || 0; shortsSub.textContent = `Unreal: ${unreal >= 0 ? "+" : ""}$${unreal.toFixed(2)}`; shortsSub.className = "rd-tile-sub" + (unreal >= 0 ? " green" : " red"); }
+
+      // Correlation group exposure
+      const groups = s.group_exposure || {};
+      const groupsEl = $("#rd-groups");
+      if (groupsEl) {
+        const maxPerGroup = s.max_per_group || 2;
+        const html = Object.entries(groups).map(([g, n]) => {
+          const cls = n >= maxPerGroup ? "rg-cap" : "";
+          return `<span class="rg-chip ${cls}">${g.toUpperCase()} <strong>${n}/${maxPerGroup}</strong></span>`;
+        }).join("") || `<span class="rg-chip muted">No open positions</span>`;
+        groupsEl.innerHTML = `<span class="rd-groups-label">GROUP EXPOSURE</span>${html}`;
+      }
+
+      // Mode badge (#7)
+      const modeEl = $("#rd-mode");
+      if (modeEl) {
+        const mode = j.broker_mode || "";
+        if (mode) { modeEl.textContent = mode; modeEl.className = "rd-mode" + (mode === "LIVE ⚠️" ? " live-mode" : " testnet-mode"); }
+      }
+    } catch (_) {}
+  }
+
   async function load() {
     const { market, mode } = state;
     const key = mode === "scalp" && state.scalp_type === "crypto"
@@ -624,6 +676,8 @@
       const isScalp = state.mode === "scalp";
       const scalp_banner = $("#scalp-banner");
       if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
+      const riskDash = $("#risk-dashboard");
+      if (riskDash) { riskDash.style.display = isScalp ? "" : "none"; if (isScalp) loadRiskDashboard(); }
       // Top switch stays fully active in scalp mode, where it acts as the scalp
       // asset filter; otherwise it reflects the chosen market.
       if (isScalp) syncScalpUI(); else syncMarketUI();

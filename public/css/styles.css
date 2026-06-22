@@ -124,6 +124,30 @@ body {
 .scan-btn-scalp.is-active { background: #9b59b6; }
 .scan-btn-scalp:not(.is-active) { color: #c39bd3; }
 
+/* ---------------------------------------------------------------- Portfolio Risk Dashboard */
+.risk-dashboard { background: var(--panel); border: 1px solid var(--separator); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.rd-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.rd-title { font: 700 11px/1 var(--sans); letter-spacing: 0.1em; color: var(--muted); }
+.rd-mode { font: 700 10.5px/1 var(--sans); letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; }
+.rd-mode.testnet-mode { background: rgba(77,159,255,.15); color: #4d9fff; }
+.rd-mode.live-mode { background: rgba(255,90,90,.18); color: #ff6b6b; }
+.rd-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 10px; }
+.rd-tile { background: var(--fill-2); border-radius: var(--radius-md); padding: 10px 12px; }
+.rd-tile-label { font: 600 10px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+.rd-tile-val { font: 700 18px/1 var(--sans); color: var(--text); margin-bottom: 4px; }
+.rd-tile-val.green { color: var(--green); }
+.rd-tile-val.red { color: var(--red, #ff6b6b); }
+.rd-tile-val.accent-orange { color: var(--orange); }
+.rd-tile-sub { font: 500 11px/1 var(--sans); color: var(--muted); }
+.rd-tile-sub.green { color: var(--green); }
+.rd-tile-sub.red { color: var(--red, #ff6b6b); }
+.rd-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rd-groups-label { font: 700 10px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; }
+.rg-chip { font: 600 11.5px/1 var(--sans); padding: 4px 10px; background: var(--fill-2); border: 1px solid var(--separator); border-radius: 20px; color: var(--text-2); }
+.rg-chip.rg-cap { background: rgba(255,90,90,.15); border-color: rgba(255,90,90,.35); color: #ff6b6b; }
+.rg-chip.muted { color: var(--muted); }
+@media (max-width: 560px) { .rd-grid { grid-template-columns: repeat(2,1fr); } }
+
 /* Scalp info banner */
 .scalp-banner { background: rgba(155,89,182,.1); border: 1px solid rgba(155,89,182,.3); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px; }
 .scalp-banner-inner { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 10px; }

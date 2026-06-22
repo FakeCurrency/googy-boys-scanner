@@ -440,8 +440,20 @@
     }));
 
     (d.level_lines || []).forEach((L) => {
-      if (L.price != null) candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
-        lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: L.title });
+      if (L.price == null) return;
+      let title = L.title || "";
+      const ep = d.entry;
+      if (ep && ep > 0 && L.price !== ep) {
+        const pct = ((L.price - ep) / ep * 100);
+        title += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+        const riskDist = d.stop && d.stop > 0 ? Math.abs(ep - d.stop) : 0;
+        if (riskDist > 0) {
+          const rMult = Math.abs(L.price - ep) / riskDist;
+          title += ` · ${rMult.toFixed(1)}R`;
+        }
+      }
+      candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
+        lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
     });
 
     // ── open-position context (entry marker + floating LIVE box) ──────────────

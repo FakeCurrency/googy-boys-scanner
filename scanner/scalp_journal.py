@@ -13,6 +13,7 @@ import json
 import os
 import pathlib
 import tempfile
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
@@ -27,24 +28,27 @@ BROK_RT    = config.SCALP_BROKERAGE_EACH_WAY * 2                  # $40
 MAX_DAILY  = config.SCALP_MAX_TRADES_PER_DAY                       # 5
 MAX_LOSS   = config.SCALP_MAX_DAILY_LOSS                           # $500
 SLIP       = config.SCALP_FILL_SLIPPAGE_PCT                        # 0.03% one-way
-DAY_ANCHOR = config.SCALP_DAY_ANCHOR_UTC                           # 08:00 UTC rollover
+DAY_ANCHOR = config.SCALP_DAY_ANCHOR_UTC                           # kept for compat
 MAX_GROUP  = config.SCALP_MAX_PER_GROUP                            # correlated positions cap
+_AEST      = ZoneInfo(config.SCALP_DAY_TZ)                        # Australia/Sydney
 
 
 def _session_day(ts: str | None = None) -> str:
-    """Trading-day key anchored at SCALP_DAY_ANCHOR_UTC so it never resets mid-session.
+    """Trading-day key expressed as the calendar date in AEST (Australia/Sydney).
 
-    Pass an ISO timestamp (UTC) or None for 'now'. Subtracting the anchor shifts the
-    day boundary into the quiet window between NASDAQ close and ASX open.
+    Pass an ISO timestamp (UTC) or None for 'now'. The day rolls over at midnight
+    Sydney time — naturally avoids bisecting the ASX or crypto sessions.
     """
     if ts:
         try:
-            t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19])
+            t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19]).replace(
+                tzinfo=dt.timezone.utc
+            )
         except ValueError:
-            t = dt.datetime.utcnow()
+            t = dt.datetime.now(dt.timezone.utc)
     else:
-        t = dt.datetime.utcnow()
-    return (t - dt.timedelta(hours=DAY_ANCHOR)).strftime("%Y-%m-%d")
+        t = dt.datetime.now(dt.timezone.utc)
+    return t.astimezone(_AEST).strftime("%Y-%m-%d")
 
 
 def _corr_group(symbol: str, asset_type: str = "", sector: str = "") -> str:
@@ -148,6 +152,7 @@ def _save(j: dict) -> None:
 
     _atomic_write(PUBLIC_SCALP_JOURNAL, json.dumps({
         "updated_at":    j["updated_at"],
+        "broker_mode":   j.get("broker_mode", ""),
         "stats":         summarize(j),
         "open_longs":    long_open,
         "open_shorts":   short_open,

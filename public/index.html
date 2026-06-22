@@ -82,6 +82,37 @@
       </button>
     </nav>
 
+    <!-- RISK DASHBOARD (shown only in scalp mode) -->
+    <section class="risk-dashboard" id="risk-dashboard" style="display:none">
+      <div class="rd-header">
+        <span class="rd-title">PORTFOLIO RISK</span>
+        <span class="rd-mode" id="rd-mode"></span>
+      </div>
+      <div class="rd-grid">
+        <div class="rd-tile">
+          <div class="rd-tile-label">Trades Today</div>
+          <div class="rd-tile-val" id="rd-trades">—</div>
+          <div class="rd-tile-sub" id="rd-trades-sub"></div>
+        </div>
+        <div class="rd-tile">
+          <div class="rd-tile-label">Today P&amp;L</div>
+          <div class="rd-tile-val" id="rd-pnl">—</div>
+          <div class="rd-tile-sub" id="rd-pnl-sub"></div>
+        </div>
+        <div class="rd-tile">
+          <div class="rd-tile-label">Open Long</div>
+          <div class="rd-tile-val green" id="rd-longs">—</div>
+          <div class="rd-tile-sub" id="rd-longs-sub"></div>
+        </div>
+        <div class="rd-tile">
+          <div class="rd-tile-label">Open Short</div>
+          <div class="rd-tile-val red" id="rd-shorts">—</div>
+          <div class="rd-tile-sub" id="rd-shorts-sub"></div>
+        </div>
+      </div>
+      <div class="rd-groups" id="rd-groups"></div>
+    </section>
+
     <!-- scalp info banner (shown only in scalp mode) -->
     <section class="scalp-banner" id="scalp-banner" style="display:none">
       <div class="scalp-banner-inner">

@@ -22,12 +22,26 @@ Flow each run:
 """
 
 import json
+import logging
 import os
 import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+
+LOG_FILE = ROOT / "journal" / "bybit_run.log"
+LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-7s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S UTC",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)
+log = logging.getLogger("bybit_run")
 
 from scanner.scalp_journal import (
     SCALP_JOURNAL_FILE, _atomic_write, _session_day, _corr_group,
@@ -64,7 +78,9 @@ def _load_scan() -> dict | None:
     return None
 
 
-def _save(j: dict) -> None:
+def _save(j: dict, broker_mode: str = "") -> None:
+    if broker_mode:
+        j["broker_mode"] = broker_mode
     payload = json.dumps(j, indent=2)
     _atomic_write(SCALP_JOURNAL_FILE, payload)
     _atomic_write(PUBLIC_SCALP_JOURNAL, payload)
@@ -72,20 +88,20 @@ def _save(j: dict) -> None:
 
 def run(dry_run: bool = False) -> None:
     if not os.environ.get("BYBIT_API_KEY"):
-        print("  bybit_run: BYBIT_API_KEY not set — skipping broker execution")
+        log.warning("BYBIT_API_KEY not set — skipping broker execution")
         return
 
-    print(f"  bybit_run: mode={bc.mode()}  dry_run={dry_run}")
+    log.info("starting  mode=%s  dry_run=%s", bc.mode(), dry_run)
 
     j = _load_journal()
 
     # ── 1. Reconcile ─────────────────────────────────────────────────────────
-    print("  bybit_run: reconciling Bybit positions…")
+    log.info("reconciling Bybit positions…")
     j = reconcile_journal(j)
 
     # ── 2. Kill-switch ────────────────────────────────────────────────────────
     if check_and_kill(j, dry_run=dry_run):
-        print("  bybit_run: kill-switch active — halting new orders")
+        log.warning("kill-switch active — halting new orders")
         _save(j)
         return
 
@@ -97,6 +113,7 @@ def run(dry_run: bool = False) -> None:
 
     scan_ts  = scan.get("generated_at", "")
     sess_day = _session_day(scan_ts)
+    log.info("scan ts=%s  session_day=%s", scan_ts, sess_day)
 
     # ── 4. Pre-trade gate ─────────────────────────────────────────────────────
     today_closed = [c for c in j["closed"] if c.get("session_day") == sess_day
@@ -104,6 +121,8 @@ def run(dry_run: bool = False) -> None:
     today_open   = [p for p in j["open"]   if p.get("session_day") == sess_day]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
     trades_used  = len(today_closed) + len(today_open)
+    log.info("pre-trade gate  trades_used=%d/%d  today_pnl=%.2f  loss_limit=%.2f",
+             trades_used, MAX_DAILY, today_pnl, -MAX_LOSS)
 
     open_keys   = {(p["symbol"], p["direction"]) for p in j["open"]}
     group_count: dict[str, int] = {}
@@ -120,28 +139,32 @@ def run(dry_run: bool = False) -> None:
             continue
         if r.get("asset_type", "").lower() != "crypto":
             skipped_asset += 1
+            log.debug("skip %s — not crypto (asset_type=%s)", r.get("symbol"), r.get("asset_type"))
             continue
 
         direction = r["dir"].lower()
         symbol    = r["symbol"]
         if (symbol, direction) in open_keys:
+            log.debug("skip %s %s — already open", symbol, direction)
             continue
 
         if trades_used + submitted >= MAX_DAILY:
-            print(f"  bybit_run: daily cap ({MAX_DAILY}) reached")
+            log.warning("daily cap (%d) reached — no more orders this session", MAX_DAILY)
             break
         if today_pnl < -MAX_LOSS:
-            print(f"  bybit_run: daily loss cap (-${MAX_LOSS}) reached")
+            log.warning("daily loss cap (-$%.2f) reached — no more orders this session", MAX_LOSS)
             break
 
         group = _corr_group(symbol, r.get("asset_type", ""), r.get("sector", ""))
         if group_count.get(group, 0) >= MAX_GROUP:
+            log.info("skip %s — corr group '%s' at cap (%d)", symbol, group, MAX_GROUP)
             skipped_cap += 1
             continue
 
         entry = float(r["entry"])
         units = calc_qty(entry, NOTIONAL)
         if units <= 0:
+            log.warning("skip %s — qty=0 at entry=%.6f  notional=%.2f", symbol, entry, NOTIONAL)
             continue
 
         pos = {
@@ -165,16 +188,18 @@ def run(dry_run: bool = False) -> None:
         }
 
         if dry_run:
-            print(f"  bybit_run [DRY]: {symbol} {direction}  "
-                  f"entry={entry:.4f}  stop={r['stop']:.4f}  target={r['target']:.4f}  "
-                  f"qty={units:.4f}  group={group}")
+            log.info("[DRY] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  group=%s  rr=%s",
+                     symbol, direction, entry, float(r["stop"]), float(r["target"]),
+                     units, group, r["rr"])
             submitted += 1
             continue
 
+        log.info("submitting bracket  %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f",
+                 symbol, direction, entry, float(r["stop"]), float(r["target"]), units)
         result = submit_bracket(pos)
 
         if result.get("skipped"):
-            print(f"  bybit_run: {symbol} skipped — {result['reason']}")
+            log.warning("order skipped  %s — %s", symbol, result["reason"])
             skipped_asset += 1
             continue
 
@@ -187,13 +212,13 @@ def run(dry_run: bool = False) -> None:
         open_keys.add((symbol, direction))
         group_count[group] = group_count.get(group, 0) + 1
         submitted += 1
-        print(f"  bybit_run: ✓ {symbol} {direction} → order {result['order_id']}")
+        log.info("ORDER PLACED  %s %s → order_id=%s  link_id=%s",
+                 symbol, direction, result["order_id"], result.get("order_link_id", ""))
 
-    print(f"  bybit_run: {submitted} submitted, "
-          f"{skipped_cap} skipped (corr cap), "
-          f"{skipped_asset} skipped (non-crypto)")
+    log.info("run complete  submitted=%d  skipped_corr_cap=%d  skipped_non_crypto=%d",
+             submitted, skipped_cap, skipped_asset)
 
-    _save(j)
+    _save(j, broker_mode=bc.mode())
 
 
 if __name__ == "__main__":
