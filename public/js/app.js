@@ -290,9 +290,8 @@
     const mcapBadge = mcapTxt
       ? `<span class="badge ${mcapCls}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
       : "";
-    const p2 = r.p2_pct == null ? "—" : `${r.p2_pct}%`;
     const rrStar = r.target_2r ? "*" : "";
-    const rrCls = r.low_rr ? "red" : "green";
+    const rrCls = r.low_rr ? "low" : "";
     const starred = isStarred(r.symbol);
 
     const chartHref = (state.mode === "scalp")
@@ -315,23 +314,15 @@
         </div>
         <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
       </div>
-      <a class="row-spark" href="${chartHref}" title="Open chart">
-        ${spark(r.spark, 120, 30, COLOR[r.trend] || COLOR.blue)}
-        <div class="trend-bar ${r.trend}"></div>
-      </a>
-      <div class="row-prices">
-        <div class="pcell"><div class="pcell-label">Y Close</div><div class="pcell-val">${fmtPrice(r.y_close)}</div></div>
-        <div class="pcell"><div class="pcell-label">Open</div><div class="pcell-val">${fmtPrice(r.open)} <span class="pcell-pct ${pctCls(r.open_pct)}">${fmtPct(r.open_pct)}</span></div></div>
-        <div class="pcell"><div class="pcell-label">Current</div><div class="pcell-val">${fmtPrice(r.price)} <span class="pcell-pct ${pctCls(r.current_pct)}">${fmtPct(r.current_pct)}</span></div></div>
-        <div class="pcell"><div class="pcell-label">Day</div><div class="pcell-val ${pctCls(r.day_pct)}">${fmtPct(r.day_pct)}</div></div>
-      </div>
-      <div class="row-trade">
-        <span class="t-badge">T1</span>
-        <div class="t-metric"><span class="tm-label">Stop</span><span class="tm-val red">${r.stop_pct}%</span></div>
-        <div class="t-metric"><span class="tm-label">P2</span><span class="tm-val amber">${p2}</span></div>
-        <div class="t-metric"><span class="tm-label">R:R</span><span class="tm-val ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(2) + rrStar}</span></div>
-        <span class="t-score">${r.score}/${r.score_max}</span>
-        <button class="t-star ${starred ? "starred" : ""}" data-sym="${r.symbol}" title="Watchlist" aria-label="Toggle watchlist">
+      <div class="row-right">
+        <a class="row-spark" href="${chartHref}" title="Open chart">
+          ${spark(r.spark, 64, 28, COLOR[r.trend] || COLOR.blue)}
+        </a>
+        <div class="row-kpis">
+          <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
+          <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + rrStar}</span>
+        </div>
+        <button class="t-star ${starred ? "starred" : ""}" data-sym="${esc(r.symbol)}" title="Watchlist" aria-label="Toggle watchlist">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
         <button class="row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy debug info" aria-label="Copy raw data">
@@ -342,8 +333,23 @@
         </button>
       </div>
      </div>
-     ${detailHtml(r)}
-     ${debugDetailHtml(r)}
+     <div class="detail-anim">
+       <div class="detail-inner">
+         ${detailHtml(r)}
+         ${debugDetailHtml(r)}
+       </div>
+     </div>
+    </div>`;
+  }
+
+  function priceStrip(r) {
+    const openPct  = r.open_pct    != null ? ` <span class="pcell-pct ${pctCls(r.open_pct)}">${fmtPct(r.open_pct)}</span>`    : "";
+    const currPct  = r.current_pct != null ? ` <span class="pcell-pct ${pctCls(r.current_pct)}">${fmtPct(r.current_pct)}</span>` : "";
+    return `<div class="detail-prices">
+      <div class="dp-cell"><span class="dp-lbl">Y Close</span><span class="dp-val">${fmtPrice(r.y_close)}</span></div>
+      <div class="dp-cell"><span class="dp-lbl">Open</span><span class="dp-val">${fmtPrice(r.open)}${openPct}</span></div>
+      <div class="dp-cell"><span class="dp-lbl">Current</span><span class="dp-val">${fmtPrice(r.price)}${currPct}</span></div>
+      <div class="dp-cell"><span class="dp-lbl">Day</span><span class="dp-val ${pctCls(r.day_pct)}">${fmtPct(r.day_pct)}</span></div>
     </div>`;
   }
 
@@ -367,6 +373,7 @@
     const effCls = effRR >= 1 ? "green" : "pct-down";
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
+      ${priceStrip(r)}
       <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
 
       <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
@@ -469,6 +476,7 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${priceStrip(r)}
       <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
       <div class="rd-levels">
         ${lvl("SWING LOW", d.swing_low, d.swing_low_pct, "red")}
@@ -515,6 +523,7 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${priceStrip(r)}
       <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
       <div class="rd-levels">
         ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
