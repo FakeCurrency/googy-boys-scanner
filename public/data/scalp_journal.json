@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-22T18:02:22Z",
+  "updated_at": "2026-06-22T19:03:07Z",
   "broker_mode": "",
   "stats": {
     "notional": 5000,
@@ -11,16 +11,14 @@
     "today_trades": 0,
     "today_pnl": 0,
     "trades_left_today": 5,
-    "group_exposure": {
-      "asx:consumer staples": 1
-    },
+    "group_exposure": {},
     "longs": {
-      "open": 1,
-      "closed": 5,
+      "open": 0,
+      "closed": 6,
       "win_rate": 0.0,
-      "total_r": -5.13,
-      "total_pnl": -654.73,
-      "open_unrealised_pnl": 17.01
+      "total_r": -6.28,
+      "total_pnl": -706.18,
+      "open_unrealised_pnl": 0
     },
     "shorts": {
       "open": 0,
@@ -32,9 +30,9 @@
     },
     "regime_stats": {
       "unknown": {
-        "trades": 11,
+        "trades": 12,
         "wins": 2,
-        "total_pnl": -402.14
+        "total_pnl": -453.59
       },
       "ranging": {
         "trades": 2,
@@ -43,32 +41,7 @@
       }
     }
   },
-  "open_longs": [
-    {
-      "symbol": "WOW",
-      "name": "Woolworths Group",
-      "asset_type": "asx",
-      "sector": "Consumer Staples",
-      "corr_group": "asx:consumer staples",
-      "direction": "long",
-      "grade": "A+",
-      "score": 9,
-      "entry": 38.11142847,
-      "stop": 38.03479801,
-      "target": 38.89040305,
-      "rr": 2.0,
-      "units": 130,
-      "yf_ticker": "WOW.AX",
-      "opened_ts": "2026-06-19T09:55:50+00:00",
-      "session_day": "2026-06-19",
-      "status": "open",
-      "unreal_r": 5.72,
-      "unreal_pnl": 17.01,
-      "fill_price": 38.11142847,
-      "filled": true,
-      "current": 38.54999924
-    }
-  ],
+  "open_longs": [],
   "open_shorts": [],
   "closed_longs": [
     {
@@ -219,6 +192,36 @@
       "bars": 3,
       "r": -1.03,
       "pnl": -169.9
+    },
+    {
+      "symbol": "WOW",
+      "name": "Woolworths Group",
+      "asset_type": "asx",
+      "sector": "Consumer Staples",
+      "corr_group": "asx:consumer staples",
+      "direction": "long",
+      "grade": "A+",
+      "score": 9,
+      "entry": 38.11142847,
+      "stop": 38.03479801,
+      "target": 38.89040305,
+      "rr": 2.0,
+      "units": 130,
+      "yf_ticker": "WOW.AX",
+      "opened_ts": "2026-06-19T09:55:50+00:00",
+      "session_day": "2026-06-19",
+      "status": "closed",
+      "unreal_r": 5.72,
+      "unreal_pnl": 17.01,
+      "fill_price": 38.11142847,
+      "filled": true,
+      "current": 38.54999924,
+      "exit": 38.02338757,
+      "exit_ts": "2026-06-19T10:00:00",
+      "reason": "stop",
+      "bars": 1,
+      "r": -1.15,
+      "pnl": -51.45
     }
   ],
   "closed_shorts": [
@@ -640,6 +643,36 @@
       "bars": 1,
       "r": -1.23,
       "pnl": -48.08
+    },
+    {
+      "symbol": "WOW",
+      "name": "Woolworths Group",
+      "asset_type": "asx",
+      "sector": "Consumer Staples",
+      "corr_group": "asx:consumer staples",
+      "direction": "long",
+      "grade": "A+",
+      "score": 9,
+      "entry": 38.11142847,
+      "stop": 38.03479801,
+      "target": 38.89040305,
+      "rr": 2.0,
+      "units": 130,
+      "yf_ticker": "WOW.AX",
+      "opened_ts": "2026-06-19T09:55:50+00:00",
+      "session_day": "2026-06-19",
+      "status": "closed",
+      "unreal_r": 5.72,
+      "unreal_pnl": 17.01,
+      "fill_price": 38.11142847,
+      "filled": true,
+      "current": 38.54999924,
+      "exit": 38.02338757,
+      "exit_ts": "2026-06-19T10:00:00",
+      "reason": "stop",
+      "bars": 1,
+      "r": -1.15,
+      "pnl": -51.45
     },
     {
       "symbol": "ETH",
