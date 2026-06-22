@@ -772,10 +772,12 @@
     const t = trades.find((x) => x.id === tradeId);
     if (!t) return;
     const { date, time } = mjNow();
+    const aType = t.asset_type || "crypto";
 
     $("#mj-modal-title").textContent = `Close ${t.symbol} ${t.direction === "long" ? "LONG" : "SHORT"}`;
     $("#mj-trade-id").value   = tradeId;
     $("#mj-exit").value       = "";
+    delete $("#mj-exit").dataset.userEdited;   // clear so live price can populate freely
     $("#mj-exit-date").value  = date;
     $("#mj-exit-time").value  = time;
     $("#mj-close-preview").textContent = "";
@@ -787,9 +789,27 @@
     $("#mj-close-preview").dataset.stop      = t.stop  || "";
     $("#mj-close-preview").dataset.shares    = t.shares || 0;
     $("#mj-close-preview").dataset.dir       = t.direction;
-    $("#mj-close-preview").dataset.asset     = t.asset_type || "crypto";
+    $("#mj-close-preview").dataset.asset     = aType;
     setTimeout(() => $("#mj-exit") && $("#mj-exit").focus(), 60);
+
+    // Default the exit price to the LIVE price (user can still override).
+    const isStock = aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index";
+    const exitEl  = $("#mj-exit");
+    exitEl.placeholder = "fetching live…";
+    Promise.resolve(isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol))
+      .then((px) => {
+        if ($("#mj-trade-id").value !== tradeId) return;   // modal switched
+        if (px == null) { exitEl.placeholder = "live price unavailable"; return; }
+        if (!exitEl.dataset.userEdited) {
+          exitEl.value = px;
+          exitEl.select();
+          mjUpdateClosePreview();
+        }
+        exitEl.placeholder = "0.00";
+      })
+      .catch(() => { exitEl.placeholder = "live price unavailable"; });
   }
+
 
   function mjCloseModal() {
     $("#mj-modal").classList.add("mj-hidden");
@@ -953,7 +973,10 @@
       if (el) el.addEventListener("input", mjUpdateOpenPreview);
     });
     const exitEl = $("#mj-exit");
-    if (exitEl) exitEl.addEventListener("input", mjUpdateClosePreview);
+    if (exitEl) exitEl.addEventListener("input", () => {
+      exitEl.dataset.userEdited = "1";   // stop live fetch from overwriting manual input
+      mjUpdateClosePreview();
+    });
 
     // Settings persistence for stocks + crypto capital/brokerage
     ["#mj-stock-capital", "#mj-stock-brokerage", "#mj-crypto-capital", "#mj-crypto-brokerage"].forEach((sel) => {
