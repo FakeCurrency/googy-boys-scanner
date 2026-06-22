@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Debug — Vivek's Beta Scanner</title>
+  <meta name="theme-color" content="#080b11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <style>
+    .dbg-page { max-width: 980px; margin: 0 auto; padding: 22px 22px 60px; }
+    .dbg-h1 { font: 800 22px/1.2 var(--sans); letter-spacing: -0.03em; margin: 0 0 6px; color: var(--text); }
+    .dbg-sub { font: 500 13.5px/1.5 var(--sans); color: var(--muted); margin: 0 0 24px; }
+    .dbg-section { background: var(--panel); border-radius: var(--radius-md); margin-bottom: 16px; box-shadow: var(--shadow); overflow: hidden; }
+    .dbg-section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; border-bottom: 0.5px solid var(--separator);
+      cursor: pointer; user-select: none;
+    }
+    .dbg-section-head h2 { margin: 0; font: 700 13.5px/1 var(--sans); color: var(--text); }
+    .dbg-section-head .dbg-meta { font: 500 11.5px/1 var(--sans); color: var(--muted); }
+    .dbg-section-body { padding: 14px 16px; font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.65; }
+    .dbg-section-body pre { margin: 0; white-space: pre-wrap; word-break: break-all; color: var(--text-2); }
+    .dbg-kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; }
+    .dbg-kv .k { color: var(--muted); font-weight: 600; }
+    .dbg-kv .v { color: var(--text); word-break: break-all; }
+    .dbg-kv .v.ok { color: var(--green); }
+    .dbg-kv .v.warn { color: var(--orange); }
+    .dbg-kv .v.err { color: var(--red); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .dbg-btn {
+      appearance: none; border: 1px solid var(--border); cursor: pointer;
+      background: var(--panel); color: var(--text);
+      font: 600 12.5px/1 var(--sans); padding: 8px 14px; border-radius: var(--radius-sm);
+      transition: background .15s; box-shadow: var(--shadow-pill);
+    }
+    .dbg-btn:hover { background: var(--panel-2); }
+    .dbg-btn.danger { border-color: var(--red); color: var(--red); }
+    .dbg-btn.danger:hover { background: var(--red-soft); }
+    .dbg-chip { display: inline-block; font: 600 10.5px/1 monospace; padding: 3px 8px; border-radius: 4px; }
+    .dbg-chip.ok { background: var(--green-soft); color: var(--green); }
+    .dbg-chip.warn { background: var(--orange-soft); color: var(--orange); }
+    .dbg-chip.err { background: var(--red-soft); color: var(--red); }
+    .log-line { padding: 3px 0; border-bottom: 0.5px solid var(--border-soft); }
+    .log-line:last-child { border-bottom: 0; }
+    .log-ts { color: var(--muted-2); margin-right: 10px; }
+    .log-level-INFO { color: var(--blue); }
+    .log-level-WARN { color: var(--orange); }
+    .log-level-ERROR { color: var(--red); }
+    #debug-toggle-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 12px 16px; background: var(--panel); border-radius: var(--radius-md); border: 1px solid var(--separator); }
+    #debug-toggle-bar label { font: 600 13px/1 var(--sans); color: var(--text); cursor: pointer; }
+    .toggle-switch { position: relative; width: 42px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; inset: 0; background: var(--fill); border-radius: 100px; transition: background .2s; cursor: pointer; }
+    .toggle-track::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .toggle-switch input:checked + .toggle-track { background: var(--blue); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+    .collapsible-body { display: none; }
+    .collapsible-body.open { display: block; }
+    .chevron { transition: transform .2s; }
+    .section-open .chevron { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
+        </svg>
+      </span>
+      <div class="brand-text"><h1>DEBUG — VIVEK'S BETA SCANNER</h1></div>
+    </div>
+    <a class="howto-link" href="index.html">← Scanner</a>
+    <a class="howto-link" href="journal.html">Journal</a>
+    <a class="howto-link" href="about.html">How it works</a>
+  </header>
+
+  <main class="dbg-page">
+    <h1 class="dbg-h1">Debug &amp; Observability</h1>
+    <p class="dbg-sub">Inspect scan health, engine metrics, localStorage state, and scanner internals. Nothing here triggers real trades.</p>
+
+    <!-- debug mode toggle -->
+    <div id="debug-toggle-bar">
+      <label class="toggle-switch" for="debug-mode-toggle">
+        <input type="checkbox" id="debug-mode-toggle" />
+        <span class="toggle-track"></span>
+      </label>
+      <label for="debug-mode-toggle" style="cursor:pointer">Debug mode on main scanner (shows raw scores, debug panels)</label>
+      <span id="debug-mode-status" class="dbg-chip warn" style="margin-left:auto">OFF</span>
+    </div>
+
+    <div class="btn-row">
+      <button class="dbg-btn" id="btn-reload-health">Reload health.json</button>
+      <button class="dbg-btn" id="btn-reload-perf">Reload performance.json</button>
+      <button class="dbg-btn" id="btn-copy-state">Copy localStorage state</button>
+      <button class="dbg-btn danger" id="btn-clear-cache">Clear scan cache</button>
+    </div>
+
+    <!-- Health -->
+    <div class="dbg-section" id="sec-health">
+      <div class="dbg-section-head" onclick="toggleSection('sec-health')">
+        <h2>Scan Health <span id="health-status-chip" class="dbg-chip" style="margin-left:8px">—</span></h2>
+        <div>
+          <span class="dbg-meta" id="health-updated">—</span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:8px"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="collapsible-body open" id="sec-health-body">
+        <div class="dbg-section-body">
+          <div class="dbg-kv" id="health-kv">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance -->
+    <div class="dbg-section" id="sec-perf">
+      <div class="dbg-section-head" onclick="toggleSection('sec-perf')">
+        <h2>Performance Report</h2>
+        <div>
+          <span class="dbg-meta" id="perf-updated">—</span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:8px"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="collapsible-body open" id="sec-perf-body">
+        <div class="dbg-section-body">
+          <div class="dbg-kv" id="perf-kv">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live vs Backtest -->
+    <div class="dbg-section" id="sec-lvb">
+      <div class="dbg-section-head" onclick="toggleSection('sec-lvb')">
+        <h2>Live vs Backtest Reconciliation</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="collapsible-body open" id="sec-lvb-body">
+        <div class="dbg-section-body">
+          <div class="dbg-kv" id="lvb-kv">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- localStorage -->
+    <div class="dbg-section" id="sec-ls">
+      <div class="dbg-section-head" onclick="toggleSection('sec-ls')">
+        <h2>localStorage State</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="collapsible-body" id="sec-ls-body">
+        <div class="dbg-section-body">
+          <pre id="ls-dump">—</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw JSON viewer -->
+    <div class="dbg-section" id="sec-raw">
+      <div class="dbg-section-head" onclick="toggleSection('sec-raw')">
+        <h2>Raw Scan JSON</h2>
+        <select id="raw-file-sel" style="font:600 12px var(--sans);background:var(--fill);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px" onclick="event.stopPropagation()">
+          <option value="data/asx.json">ASX Pullback</option>
+          <option value="data/nasdaq.json">NASDAQ Pullback</option>
+          <option value="data/asx_reversal.json">ASX Reversal</option>
+          <option value="data/asx_spec.json">ASX Spec</option>
+          <option value="data/asx_short.json">ASX Short</option>
+          <option value="data/scalp.json">Scalp</option>
+          <option value="data/scalp_crypto.json">Scalp Crypto</option>
+          <option value="data/health.json">health.json</option>
+        </select>
+        <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="collapsible-body" id="sec-raw-body">
+        <div class="dbg-section-body">
+          <button class="dbg-btn" id="btn-load-raw" style="margin-bottom:12px">Load file</button>
+          <pre id="raw-json" style="max-height:600px;overflow:auto">Select a file and click Load.</pre>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (() => {
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+      (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+    // ---- debug mode toggle ----
+    const DEBUG_KEY = "gbs:debug";
+    const toggle = document.getElementById("debug-mode-toggle");
+    const status  = document.getElementById("debug-mode-status");
+    const isOn = localStorage.getItem(DEBUG_KEY) === "1";
+    toggle.checked = isOn;
+    status.textContent = isOn ? "ON" : "OFF";
+    status.className = "dbg-chip " + (isOn ? "ok" : "warn");
+    toggle.addEventListener("change", () => {
+      if (toggle.checked) { localStorage.setItem(DEBUG_KEY, "1"); } else { localStorage.removeItem(DEBUG_KEY); }
+      status.textContent = toggle.checked ? "ON" : "OFF";
+      status.className = "dbg-chip " + (toggle.checked ? "ok" : "warn");
+    });
+
+    // ---- collapsible sections ----
+    window.toggleSection = function(id) {
+      const sec = document.getElementById(id);
+      const body = document.getElementById(id + "-body");
+      if (!body) return;
+      const open = body.classList.toggle("open");
+      sec.classList.toggle("section-open", open);
+    };
+
+    // ---- render k/v grid ----
+    function renderKV(el, obj, depth) {
+      if (!obj || typeof obj !== "object") { el.textContent = String(obj ?? "—"); return; }
+      const rows = Object.entries(obj).map(([k, v]) => {
+        let cls = "";
+        if (typeof v === "number" && v < 0) cls = "err";
+        else if (typeof v === "boolean") cls = v ? "ok" : "warn";
+        const val = typeof v === "object" ? `<span class="dbg-chip" style="background:var(--fill)">object</span>` : esc(String(v));
+        return `<span class="k">${esc(k)}</span><span class="v ${cls}">${val}</span>`;
+      }).join("");
+      el.innerHTML = rows;
+    }
+
+    // ---- health.json ----
+    async function loadHealth() {
+      const kvEl = document.getElementById("health-kv");
+      const chipEl = document.getElementById("health-status-chip");
+      const updEl = document.getElementById("health-updated");
+      try {
+        const r = await fetch("data/health.json", { cache: "no-cache" });
+        if (!r.ok) throw new Error(r.status);
+        const h = await r.json();
+        if (h.updated_at) updEl.textContent = new Date(h.updated_at + "Z").toLocaleString();
+        const entries = Object.entries(h).filter(([k]) => k !== "updated_at");
+        if (!entries.length) { kvEl.textContent = "No health data yet"; return; }
+        // flatten first level for display
+        const flat = {};
+        for (const [name, info] of entries) {
+          flat[name + " · A+/A"] = info.tradeable ?? "?";
+          flat[name + " · DQ skipped"] = info.quality_skipped ?? 0;
+          flat[name + " · scanned"] = info.scanned ?? "?";
+          flat[name + " · trace_id"] = info.trace_id ?? "—";
+          flat[name + " · elapsed_s"] = info.scan_elapsed_s != null ? info.scan_elapsed_s + "s" : "—";
+          flat[name + " · scanner_version"] = info.scanner_version ?? "—";
+        }
+        renderKV(kvEl, flat);
+        chipEl.textContent = "OK";
+        chipEl.className = "dbg-chip ok";
+      } catch (e) {
+        kvEl.textContent = "Error loading health.json: " + e.message;
+        chipEl.textContent = "ERR";
+        chipEl.className = "dbg-chip err";
+      }
+    }
+    loadHealth();
+    document.getElementById("btn-reload-health").addEventListener("click", loadHealth);
+
+    // ---- performance.json ----
+    async function loadPerf() {
+      const kvEl = document.getElementById("perf-kv");
+      const updEl = document.getElementById("perf-updated");
+      try {
+        const r = await fetch("data/performance.json", { cache: "no-cache" });
+        if (!r.ok) throw new Error(r.status);
+        const p = await r.json();
+        if (p.generated_at) updEl.textContent = new Date(p.generated_at + "Z").toLocaleString();
+        const today = p.today || {};
+        const alltime = p.all_time || {};
+        const flat = {
+          "today · trades": today.trades ?? 0,
+          "today · P&L": today.total_pnl != null ? "$" + today.total_pnl.toFixed(2) : "—",
+          "today · win rate": today.win_rate != null ? (today.win_rate * 100).toFixed(1) + "%" : "—",
+          "today · avg R": today.avg_r != null ? today.avg_r.toFixed(2) + "R" : "—",
+          "all-time · trades": alltime.trades ?? 0,
+          "all-time · P&L": alltime.total_pnl != null ? "$" + alltime.total_pnl.toFixed(2) : "—",
+          "all-time · win rate": alltime.win_rate != null ? (alltime.win_rate * 100).toFixed(1) + "%" : "—",
+          "all-time · avg R": alltime.avg_r != null ? alltime.avg_r.toFixed(2) + "R" : "—",
+          "all-time · streak": alltime.streak != null ? alltime.streak : "—",
+          "broker_mode": p.broker_mode ?? "—",
+          "scanner_version": p.scanner_version ?? "—",
+        };
+        renderKV(kvEl, flat);
+      } catch (e) {
+        kvEl.textContent = "No performance report yet. Run bybit_run.py to generate.";
+      }
+    }
+    loadPerf();
+    document.getElementById("btn-reload-perf").addEventListener("click", loadPerf);
+
+    // ---- live vs backtest ----
+    async function loadLVB() {
+      const kvEl = document.getElementById("lvb-kv");
+      try {
+        const r = await fetch("data/live_vs_backtest.json", { cache: "no-cache" });
+        if (!r.ok) throw new Error(r.status);
+        const d = await r.json();
+        if (d.status === "no_backtest_data") { kvEl.textContent = "No backtest data file found. Expected: public/data/backtest_results.json"; return; }
+        const flat = {
+          "matched trades": d.matched_trades ?? 0,
+          "avg entry slip %": d.avg_entry_slip_pct != null ? d.avg_entry_slip_pct.toFixed(3) + "%" : "—",
+          "win rate delta": d.win_rate_delta != null ? (d.win_rate_delta >= 0 ? "+" : "") + (d.win_rate_delta * 100).toFixed(1) + "%" : "—",
+          "avg R delta": d.r_delta != null ? (d.r_delta >= 0 ? "+" : "") + d.r_delta.toFixed(3) + "R" : "—",
+          "generated at": d.generated_at ?? "—",
+        };
+        renderKV(kvEl, flat);
+      } catch (e) {
+        kvEl.textContent = "No live vs backtest data yet.";
+      }
+    }
+    loadLVB();
+
+    // ---- localStorage dump ----
+    function dumpLS() {
+      const snap = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("gbs:")) {
+          try {
+            const raw = localStorage.getItem(k);
+            const val = JSON.parse(raw);
+            if (val && val.ts && val.data) {
+              snap[k] = { _type: "cache", age_s: Math.round((Date.now() - val.ts) / 1000) };
+            } else {
+              snap[k] = val;
+            }
+          } catch (_) {
+            snap[k] = localStorage.getItem(k);
+          }
+        }
+      }
+      document.getElementById("ls-dump").textContent = JSON.stringify(snap, null, 2);
+    }
+    dumpLS();
+
+    document.getElementById("btn-copy-state").addEventListener("click", () => {
+      dumpLS();
+      const txt = document.getElementById("ls-dump").textContent;
+      navigator.clipboard && navigator.clipboard.writeText(txt).then(() => {
+        const btn = document.getElementById("btn-copy-state");
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy localStorage state"; }, 2000);
+      });
+    });
+
+    document.getElementById("btn-clear-cache").addEventListener("click", () => {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("gbs:cache:")) keys.push(k);
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+      dumpLS();
+      const btn = document.getElementById("btn-clear-cache");
+      btn.textContent = `Cleared ${keys.length} entries`;
+      setTimeout(() => { btn.textContent = "Clear scan cache"; }, 2000);
+    });
+
+    // ---- raw JSON viewer ----
+    document.getElementById("btn-load-raw").addEventListener("click", async () => {
+      const file = document.getElementById("raw-file-sel").value;
+      const pre  = document.getElementById("raw-json");
+      pre.textContent = "Loading…";
+      try {
+        const r = await fetch(file, { cache: "no-cache" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const d = await r.json();
+        pre.textContent = JSON.stringify(d, null, 2);
+      } catch (e) {
+        pre.textContent = "Error: " + e.message;
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

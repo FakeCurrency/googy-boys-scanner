@@ -247,6 +247,12 @@ SCALP_CORRELATION_GROUPS = {
 }
 
 # ---------------------------------------------------------------------------
+# Version tracking — bump SCANNER_VERSION on breaking engine or config changes
+# so every scan output and health.json record carries the exact logic version.
+# ---------------------------------------------------------------------------
+SCANNER_VERSION = "4.0.0"   # <major>.<phase>.<patch>
+
+# ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution
 # ---------------------------------------------------------------------------
 # BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).

@@ -100,6 +100,12 @@ def _regime_adjusted_units(units: float, regime: str) -> float:
     return units
 
 
+def _log_skip(symbol: str, direction: str, reason: str, **ctx) -> None:
+    """Log a signal rejection with full context for traceability."""
+    ctx_str = "  ".join(f"{k}={v}" for k, v in ctx.items())
+    log.info("SKIP  %s %s  reason=%s  %s", symbol, direction, reason, ctx_str)
+
+
 def _load_setup_history() -> list[int]:
     """Load recent A+/A signal counts from health.json for anomaly baseline."""
     health_file = ROOT / "public" / "data" / "health.json"
@@ -158,7 +164,9 @@ def run(dry_run: bool = False) -> None:
 
     scan_ts  = scan.get("generated_at", "")
     sess_day = _session_day(scan_ts)
-    log.info("scan ts=%s  session_day=%s", scan_ts, sess_day)
+    log.info("scan ts=%s  session_day=%s  trace_id=%s  scanner_version=%s",
+             scan_ts, sess_day,
+             scan.get("trace_id", "?"), scan.get("scanner_version", "?"))
 
     # ── 5. Anomaly detection ──────────────────────────────────────────────────
     try:
@@ -191,13 +199,14 @@ def run(dry_run: bool = False) -> None:
             continue
         if r.get("asset_type", "").lower() != "crypto":
             skipped_asset += 1
-            log.debug("skip %s — not crypto (asset_type=%s)", r.get("symbol"), r.get("asset_type"))
+            _log_skip(r.get("symbol", "?"), r.get("dir", "?").lower(),
+                      "not_crypto", asset_type=r.get("asset_type", ""))
             continue
 
         direction = r["dir"].lower()
         symbol    = r["symbol"]
         if (symbol, direction) in open_keys:
-            log.debug("skip %s %s — already open", symbol, direction)
+            _log_skip(symbol, direction, "already_open")
             continue
 
         if trades_used + submitted >= MAX_DAILY:
@@ -209,7 +218,8 @@ def run(dry_run: bool = False) -> None:
 
         group = _corr_group(symbol, r.get("asset_type", ""), r.get("sector", ""))
         if group_count.get(group, 0) >= MAX_GROUP:
-            log.info("skip %s — corr group '%s' at cap (%d)", symbol, group, MAX_GROUP)
+            _log_skip(symbol, direction, "corr_cap",
+                      group=group, group_count=group_count.get(group, 0), max=MAX_GROUP)
             skipped_cap += 1
             continue
 
@@ -221,11 +231,12 @@ def run(dry_run: bool = False) -> None:
         units = _regime_adjusted_units(units, regime)
         if units <= 0:
             if regime == "ranging" and getattr(_cfg, "REGIME_RANGING_SKIP", False):
-                log.info("skip %s — ranging market and REGIME_RANGING_SKIP=True", symbol)
+                _log_skip(symbol, direction, "regime_ranging_skip", regime=regime)
                 skipped_regime += 1
             else:
-                log.warning("skip %s — qty=0 at entry=%.6f  stop=%.6f  risk_per_trade=%.2f",
-                            symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE)
+                _log_skip(symbol, direction, "qty_zero",
+                          entry=f"{entry:.6f}", stop=f"{stop:.6f}",
+                          risk=_cfg.SCALP_RISK_PER_TRADE, regime=regime)
             continue
 
         effective_risk = _cfg.SCALP_RISK_PER_TRADE

@@ -5,6 +5,8 @@ import json
 import logging
 import pathlib
 import shutil
+import time as _time
+import uuid as _uuid
 from collections import Counter
 from zoneinfo import ZoneInfo
 
@@ -553,6 +555,10 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
     Pass ``type_filter="crypto"`` to restrict the universe to crypto tickers only,
     which produces a separate payload suitable for writing to ``scalp_crypto.json``.
     """
+    t_start  = _time.monotonic()
+    trace_id = _uuid.uuid4().hex[:8]
+    log.info("scan_scalp start  trace_id=%s  type_filter=%s", trace_id, type_filter)
+
     universe = load_scalp_universe(type_filter=type_filter)
     tickers  = [u["yf"] for u in universe]
     meta     = {u["yf"]: u for u in universe}
@@ -670,19 +676,20 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
             deduped.append(r)
     results = deduped
 
-    tradeable = sum(1 for r in results if r["grade"] in ("A+", "A"))
-    log.info("scan_scalp done  scanned=%d  quality_skipped=%d  signals=%d  tradeable=%d",
-             scanned, quality_skipped, len(results), tradeable)
+    tradeable    = sum(1 for r in results if r["grade"] in ("A+", "A"))
+    elapsed_s    = round(_time.monotonic() - t_start, 2)
+    log.info("scan_scalp done  trace_id=%s  scanned=%d  quality_skipped=%d  "
+             "signals=%d  tradeable=%d  elapsed=%.2fs",
+             trace_id, scanned, quality_skipped, len(results), tradeable, elapsed_s)
 
-    market_key = "scalp_crypto" if type_filter == "crypto" else "scalp"
+    market_key   = "scalp_crypto" if type_filter == "crypto" else "scalp"
     market_label = "CRYPTO SCALP" if type_filter == "crypto" else "SCALP"
 
     now = dt.datetime.now(dt.timezone.utc)
 
-    # ── Write system health record (#16) ──────────────────────────────────────
     if out_root:
         _write_health(pathlib.Path(out_root), market_key, now, scanned,
-                      quality_skipped, tradeable)
+                      quality_skipped, tradeable, trace_id=trace_id, elapsed_s=elapsed_s)
 
     return {
         "market":           market_key,
@@ -703,27 +710,41 @@ def scan_scalp(progress: bool = True, out_root: str | None = None,
         "leverage":         config.SCALP_LEVERAGE,
         "risk_per_trade":   config.SCALP_RISK_PER_TRADE,
         "max_daily_trades": config.SCALP_MAX_TRADES_PER_DAY,
+        "trace_id":         trace_id,
+        "scanner_version":  config.SCANNER_VERSION,
+        "scan_elapsed_s":   elapsed_s,
         "pulse":            [],
         "results":          results,
     }
 
 
 def _write_health(out_root: pathlib.Path, scan_key: str,
-                  now: dt.datetime, scanned: int,
-                  quality_skipped: int, tradeable: int) -> None:
-    """Append/update health.json with the latest scan metadata (#16)."""
+                  now: dt.datetime, scanned: int, quality_skipped: int, tradeable: int,
+                  trace_id: str = "", elapsed_s: float = 0.0) -> None:
+    """Append/update health.json with the latest scan metadata and rolling history."""
     health_file = out_root / "health.json"
     try:
         health = json.loads(health_file.read_text()) if health_file.exists() else {}
     except Exception:
         health = {}
 
+    # Rolling history of tradeable (A+/A) signal counts — used by anomaly detection
+    prev_entry = health.get(scan_key, {})
+    history = list(prev_entry.get("setup_count_history", []))
+    history.append(tradeable)
+    if len(history) > 20:
+        history = history[-20:]
+
     health[scan_key] = {
-        "generated_at":    now.isoformat(timespec="seconds"),
-        "scanned":         scanned,
-        "quality_skipped": quality_skipped,
-        "tradeable":       tradeable,
-        "age_minutes":     0,
+        "generated_at":        now.isoformat(timespec="seconds"),
+        "scanned":             scanned,
+        "quality_skipped":     quality_skipped,
+        "tradeable":           tradeable,
+        "age_minutes":         0,
+        "trace_id":            trace_id,
+        "scan_elapsed_s":      elapsed_s,
+        "scanner_version":     config.SCANNER_VERSION,
+        "setup_count_history": history,
     }
     health["updated_at"] = now.isoformat(timespec="seconds")
     try:
