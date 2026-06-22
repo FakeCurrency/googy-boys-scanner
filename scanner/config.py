@@ -296,7 +296,7 @@ LIVE_DEPLOYMENT_STAGE = 1           # advance manually after each stage's exit c
 # Stage 3 — small live capital: position sizes are scaled down
 LIVE_STAGE3_CAPITAL_MAX_USD  = 8_000   # never fund the live account above this during Stage 3
 LIVE_STAGE3_POSITION_MULT    = 0.35    # 35% of normal calculated size (30–50% range; conservative)
-LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # informational: target ≤ 0.5% of account per trade
+LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # enforced: effective risk per trade capped at 0.5% of account in Stage 3
 
 # Stage 4 — scaling milestones (all require profitable weeks + controlled drawdown)
 LIVE_STAGE4_L1_MIN_WEEKS     = 4       # Level 1 unlock: 4+ profitable completed weeks

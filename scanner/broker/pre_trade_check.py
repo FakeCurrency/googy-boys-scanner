@@ -56,6 +56,11 @@ def pre_trade_check(
         c for c in journal.get("closed", [])
         if c.get("session_day") == sess_day and not c.get("skip_daily_count")
     ]
+    # today_open filters by session_day intentionally: overnight holds opened on a
+    # previous session day are NOT counted here because the daily trade cap (check 6)
+    # tracks new trades entered today, not total open positions.  Those older
+    # positions ARE counted by portfolio_heat (check 1) and max_positions (check 2),
+    # which use all open positions regardless of when they were opened.
     today_open  = [p for p in journal.get("open", []) if p.get("session_day") == sess_day]
     today_pnl   = sum(c.get("pnl", 0) for c in today_closed)
     trades_used = len(today_closed) + len(today_open) + submitted_this_run

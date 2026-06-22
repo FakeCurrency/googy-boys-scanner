@@ -25,20 +25,11 @@ import statistics
 
 from scanner.scalp_journal import _atomic_write
 from scanner import config as _cfg
+from scanner.broker.journal_utils import _iso_week
 
 log      = logging.getLogger(__name__)
 ROOT     = pathlib.Path(__file__).resolve().parents[2]
 OUT_FILE = ROOT / "public" / "data" / "fill_analysis.json"
-
-
-def _iso_week(day: str) -> str:
-    """Return 'YYYY-WNN' ISO week key from a YYYY-MM-DD session_day."""
-    try:
-        d   = dt.date.fromisoformat(day[:10])
-        iso = d.isocalendar()
-        return f"{iso[0]}-W{iso[1]:02d}"
-    except Exception:
-        return "unknown"
 
 
 def _slip_in_r(slip_pct: float, entry: float, stop: float) -> float | None:

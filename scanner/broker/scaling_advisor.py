@@ -18,28 +18,13 @@ Called from bybit_run.run() at the end of every execution cycle so the
 recommendation is always fresh in the log.
 """
 
-import datetime as dt
 import logging
 
 from scanner import config as _cfg
 from scanner.broker.risk_manager import current_drawdown
+from scanner.broker.journal_utils import _iso_week, _current_iso_week
 
 log = logging.getLogger(__name__)
-
-
-def _iso_week(day: str) -> str:
-    """Return 'YYYY-WNN' from a YYYY-MM-DD session_day."""
-    try:
-        d   = dt.date.fromisoformat(day[:10])
-        iso = d.isocalendar()
-        return f"{iso[0]}-W{iso[1]:02d}"
-    except Exception:
-        return ""
-
-
-def _current_iso_week() -> str:
-    iso = dt.date.today().isocalendar()
-    return f"{iso[0]}-W{iso[1]:02d}"
 
 
 def _weekly_pnl(closed: list[dict]) -> dict[str, float]:
