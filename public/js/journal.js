@@ -1149,11 +1149,12 @@
   // Exposed globally so inline onclick handlers (generated in innerHTML) can reach it.
   window.openCloseModal = function(pos) {
     _modalPos = pos;
+    delete priceIn.dataset.userEdited;   // clear so live price can populate freely
 
     const dirLabel = (pos.direction || "long").toUpperCase();
     titleEl.textContent = `Close ${pos.symbol} ${dirLabel}`;
 
-    // Pre-fill with last-known price immediately
+    // Pre-fill with last-known price immediately while live fetch is in-flight
     if (pos.current && pos.current > 0) {
       priceIn.value = pos.current;
       priceTag.textContent = "last known";
@@ -1172,7 +1173,7 @@
     priceIn.focus();
     priceIn.select();
 
-    // Fetch live price in the background — update field if it arrives
+    // Fetch live price — overwrite field unless user edits first
     if (pos.yf_ticker) {
       priceTag.textContent = "fetching…";
       priceTag.className   = "jr-price-tag stale";
@@ -1180,15 +1181,15 @@
         .then((r) => r.ok ? r.json() : Promise.reject(r.status))
         .then((d) => {
           if (!d.ok || !d.price) throw new Error("no price");
-          // Only update the field if the user hasn't manually edited it yet
           if (!priceIn.dataset.userEdited) {
             priceIn.value = d.price;
+            priceIn.select();
           }
           priceTag.textContent = "live ✓";
           priceTag.className   = "jr-price-tag";
         })
         .catch(() => {
-          priceTag.textContent = "last known";
+          priceTag.textContent = pos.current > 0 ? "last known" : "unavailable";
           priceTag.className   = "jr-price-tag stale";
         });
     }
