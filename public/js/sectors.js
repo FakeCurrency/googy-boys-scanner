@@ -186,7 +186,10 @@
 
       <div class="sec-box eli5">
         <div class="sec-box-title">🧒 Explain like I'm 5</div>
-        <p class="sec-box-text">${esc(m.eli5) || "—"}</p>
+        <p class="sec-box-text">${esc(m.eli5) || (key === "asx"
+          ? "The ASX is Australia's stock exchange — 2,200+ companies from BHP and CBA down to tiny explorers. It opens 10 AM Sydney time and closes 4 PM. Because it trades after the US closes, overnight Wall Street moves set the tone each morning. Commodity prices (iron ore, gold, oil) drive the miners and energy stocks that make up a huge chunk of the index. A strong US session + rising commodity prices = tailwind for ASX longs."
+          : "The US market (NYSE + NASDAQ) is the biggest in the world. It opens 9:30 AM New York time. What happens here ripples through every other market the next day. Tech (NASDAQ) leads when money is flowing into growth; when investors get nervous they sell tech and buy Utilities or Healthcare. Watch the S&P 500 trend: above the 200-day EMA = bull market, below it = be cautious with longs and consider shorts."
+        )}</p>
       </div>
 
       <div class="sec-sub-title">Biggest winners &amp; losers</div>

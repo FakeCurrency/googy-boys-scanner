@@ -96,6 +96,43 @@ body {
   backdrop-filter: saturate(180%) blur(22px);
   position: sticky; top: 0; z-index: 30;
 }
+/* two-row variant (index.html) */
+.topbar:has(.topbar-row1) { flex-direction: column; gap: 0; padding: 0; }
+.topbar-row1 {
+  display: flex; align-items: center; gap: 14px; position: relative;
+  padding: 9px 20px; width: 100%;
+}
+.topbar-row2 {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 20px 5px; width: 100%;
+  background: var(--fill); border-top: 0.5px solid var(--separator);
+}
+/* city clocks — left side of row 1 */
+.topbar-clocks { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.clock-city { display: flex; align-items: baseline; gap: 7px; }
+.clock-city-name {
+  font: 700 9px/1 var(--sans); letter-spacing: 0.1em; color: var(--muted); min-width: 66px;
+}
+.clock-time { font: 600 13px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.clock-date { font: 500 10.5px/1 var(--sans); color: var(--muted); }
+/* centred brand — absolute within row 1 */
+.topbar-brand {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  text-align: center; pointer-events: none; z-index: 2;
+}
+.topbar-brand > * { pointer-events: auto; }
+.topbar-quote {
+  font: 400 italic 11px/1.3 var(--sans); color: var(--muted);
+  max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* market-switch + nav links — right side of row 1 */
+.topbar-nav {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: auto; flex-shrink: 0;
+}
+/* push search/reload to the right in row 2 */
+.topbar-row2 .search-trigger { margin-left: auto; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px;
@@ -176,7 +213,7 @@ body {
 .howto-link:hover { background: rgba(0,122,255,.22); }
 
 .reload-btn {
-  margin-left: auto; appearance: none; cursor: pointer;
+  appearance: none; cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px;
   border: none; border-radius: 9px;
   background: var(--blue); color: #fff; transition: filter .15s, opacity .15s;
@@ -679,8 +716,20 @@ body.debug-mode .debug-panel {
   .market-switch { order: 3; }
   .cname { max-width: 130px; }
 }
+@media (max-width: 900px) {
+  /* hide clocks and quote on medium screens; brand drops back into flex flow */
+  .topbar-clocks { display: none; }
+  .topbar-brand {
+    position: static; transform: none;
+    flex-direction: row; align-items: center; gap: 0;
+    pointer-events: auto; text-align: left;
+  }
+  .topbar-quote { display: none; }
+}
 @media (max-width: 768px) {
-  .topbar { padding: 10px 14px; gap: 8px; }
+  .topbar-row1 { padding: 9px 14px; gap: 8px; }
+  .topbar-row2 { padding: 4px 14px 5px; }
+  .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
   .refresh-timer { display: none; }
   .howto-link:not(:last-of-type) { display: none; }
@@ -702,9 +751,9 @@ body.debug-mode .debug-panel {
   .fl-row { grid-template-columns: 80px 60px 100px 1fr; }
 }
 @media (max-width: 480px) {
-  .topbar { flex-wrap: wrap; }
-  .scan-switch { order: 10; width: 100%; overflow-x: auto; padding-bottom: 2px; }
-  .market-switch { order: 5; }
+  .topbar-row1 { flex-wrap: wrap; padding: 8px 12px; }
+  .topbar-row2 { padding: 4px 12px 5px; overflow-x: auto; }
+  .topbar { flex-wrap: wrap; } /* legacy single-row pages */
   .reload-btn .reload-label { display: none; }
   .reload-btn { padding: 0 10px; }
   .stats { grid-template-columns: 1fr 1fr; }

@@ -1058,6 +1058,82 @@
     });
   }
 
+  // ---- daily rotating quote + live clocks --------------------------------
+  const TRADER_QUOTES = [
+    ["The big money is not in the individual fluctuations but in the main movements.", "Jesse Livermore"],
+    ["The market is never wrong — opinions often are.", "Jesse Livermore"],
+    ["There is only one side of the market, and it is not the bull side or the bear side, but the right side.", "Jesse Livermore"],
+    ["Profits always take care of themselves but losses never do.", "Jesse Livermore"],
+    ["There is a time to go long, a time to go short, and a time to go fishing.", "Jesse Livermore"],
+    ["I'm always thinking about losing money as opposed to making money.", "Paul Tudor Jones"],
+    ["The most important rule of trading is to play great defence, not great offence.", "Paul Tudor Jones"],
+    ["Every day I assume every position I have is wrong.", "Paul Tudor Jones"],
+    ["Be fearful when others are greedy, and greedy when others are fearful.", "Warren Buffett"],
+    ["Price is what you pay. Value is what you get.", "Warren Buffett"],
+    ["It's not whether you're right or wrong, but how much money you make when you're right.", "George Soros"],
+    ["Markets are constantly in a state of uncertainty. Money is made by discounting the obvious and betting on the unexpected.", "George Soros"],
+    ["The trend is your friend until the end when it bends.", "Ed Seykota"],
+    ["Win or lose, everybody gets what they want out of the market.", "Ed Seykota"],
+    ["If you can't take a small loss, sooner or later you will take the mother of all losses.", "Ed Seykota"],
+    ["Ride your winners and cut your losers.", "Ed Seykota"],
+    ["Know what you own and know why you own it.", "Peter Lynch"],
+    ["In this business, if you're good, you're right six times out of ten. You're never going to be right nine times out of ten.", "Peter Lynch"],
+    ["The key to trading success is emotional discipline. If intelligence were the key, there would be a lot more people making money trading.", "Victor Sperandeo"],
+    ["The whole secret to winning in the stock market is to lose the least amount possible when you're wrong.", "William O'Neil"],
+    ["I buy on the way up, not on the way down.", "Nicolas Darvas"],
+    ["Don't try to buy at the bottom and sell at the top. It can't be done except by liars.", "Bernard Baruch"],
+    ["Whenever I enter a position, I have a predetermined stop. That's the only way I can sleep.", "Bruce Kovner"],
+    ["I just wait until there is money lying in the corner, and all I have to do is go over there and pick it up.", "Jim Rogers"],
+    ["The time of maximum pessimism is the best time to buy, and the time of maximum optimism is the best time to sell.", "John Templeton"],
+    ["Preserve capital. You can't trade if you don't have any capital.", "Stan Druckenmiller"],
+    ["Risk comes from not knowing what you're doing.", "Warren Buffett"],
+    ["Markets can remain irrational longer than you can remain solvent.", "John Maynard Keynes"],
+    ["Trading is a waiting game. You sit, you wait, and you make a lot of money all at once.", "Jim Rogers"],
+    ["The goal of a successful trader is to make the best trades. Money is secondary.", "Alexander Elder"],
+    ["An investment in knowledge pays the best interest.", "Benjamin Franklin"],
+    ["The stock market is filled with individuals who know the price of everything, but the value of nothing.", "Philip Fisher"],
+    ["In the short run the market is a voting machine, but in the long run it is a weighing machine.", "Benjamin Graham"],
+    ["Compound interest is the eighth wonder of the world. He who understands it, earns it; he who doesn't, pays it.", "Albert Einstein"],
+    ["The four most dangerous words in investing are: 'This time it's different.'", "John Templeton"],
+    ["Successful investing is about managing risk, not avoiding it.", "Benjamin Graham"],
+  ];
+
+  function initDailyQuote() {
+    const el = document.getElementById("topbar-quote");
+    if (!el) return;
+    const idx = Math.floor(Date.now() / 86400000) % TRADER_QUOTES.length;
+    const [text, author] = TRADER_QUOTES[idx];
+    el.textContent = `"${text}" — ${author}`;
+    el.title = `"${text}" — ${author}`;
+  }
+
+  const _melFmt  = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const _melDate = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", day: "2-digit", month: "short", year: "numeric" });
+  const _nyFmt   = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const _nyDate  = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    day: "2-digit",   month: "short", year: "numeric" });
+
+  function _fmtClock(fmt, dateFmt, now) {
+    const parts = fmt.formatToParts(now);
+    const get = (t) => (parts.find((p) => p.type === t) || {}).value || "";
+    const time = `${get("weekday")} ${get("hour")}:${get("minute")}:${get("second")}`;
+    const date = dateFmt.format(now);
+    return [time, date];
+  }
+
+  function updateClocks() {
+    const now = new Date();
+    const [melTime, melDate] = _fmtClock(_melFmt, _melDate, now);
+    const [nyTime,  nyDate]  = _fmtClock(_nyFmt,  _nyDate,  now);
+    const mt = document.getElementById("clk-mel-time"); if (mt) mt.textContent = melTime;
+    const md = document.getElementById("clk-mel-date"); if (md) md.textContent = melDate;
+    const nt = document.getElementById("clk-ny-time");  if (nt) nt.textContent = nyTime;
+    const nd = document.getElementById("clk-ny-date");  if (nd) nd.textContent = nyDate;
+  }
+
+  initDailyQuote();
+  updateClocks();
+  setInterval(updateClocks, 1000);
+
   initKeyboard();
   bind();
   loadCaps();

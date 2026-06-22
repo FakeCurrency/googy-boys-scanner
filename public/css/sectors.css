@@ -1,3 +1,37 @@
+/* NEWS — Markets, Sectors & ELI5 guide. */
+
+/* ---- ELI5 static guide ---- */
+.eli5-guide {
+  background: var(--panel); border-radius: var(--radius);
+  padding: 22px 24px; margin-bottom: 24px; box-shadow: var(--shadow);
+  border-left: 5px solid var(--green);
+}
+.eli5-guide-title {
+  font: 800 17px/1.2 var(--sans); color: var(--text); margin: 0 0 16px;
+}
+.eli5-guide-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.eli5-guide-card {
+  background: var(--fill-2); border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.eli5-guide-card h4 {
+  font: 700 13px/1.2 var(--sans); color: var(--text); margin: 0 0 8px;
+}
+.eli5-guide-card p {
+  font: 500 13px/1.6 var(--sans); color: var(--text-2); margin: 0;
+}
+.eli5-guide-card strong { color: var(--text); font-weight: 700; }
+.eli5-guide-card em { font-style: italic; color: var(--text); }
+@media (max-width: 900px) {
+  .eli5-guide-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .eli5-guide-grid { grid-template-columns: 1fr; }
+  .eli5-guide { padding: 16px; }
+}
+
 /* Markets & Sectors — single page, ASX (left) + US (right). */
 .sec-head { margin-bottom: 18px; }
 .sec-title { font: 800 26px/1.1 var(--sans); letter-spacing: -0.4px; margin: 6px 0 6px; color: var(--text); }
