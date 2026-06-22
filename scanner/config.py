@@ -406,6 +406,7 @@ SCALP_RISK_PER_TRADE = 100     # USD to risk per trade (loss if stopped out befo
 # Data quality
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
+CHART_PERIOD = "10y"          # extended history fetched for result tickers only (powers weekly/monthly chart TFs)
 MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
 SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)

@@ -75,6 +75,36 @@ def _spark(df) -> list[float]:
     return [round(float(c), 8) for c in closes]
 
 
+def _write_extended_charts(
+    pending: list[tuple],
+    scan_frames: dict,
+    chart_key: str,
+    out_root: str,
+    builder,
+    market,
+) -> None:
+    """Fetch extended history for chart-qualifying tickers, then write chart files.
+
+    Uses config.CHART_PERIOD so weekly/monthly/quarterly frames get full history.
+    Falls back silently to the scan-period data if the extended download fails.
+    """
+    if not pending:
+        return
+    tickers = [t for t, *_ in pending]
+    try:
+        ext = download(tickers, period=config.CHART_PERIOD)
+    except Exception:
+        ext = {}
+    for yf_ticker, sig, lv, row in pending:
+        df_chart = ext.get(yf_ticker) or scan_frames.get(yf_ticker)
+        if df_chart is None or len(df_chart) < 6:
+            continue
+        try:
+            charts.write_chart(builder(df_chart, sig, lv, row, market), out_root, chart_key)
+        except Exception:
+            pass
+
+
 def scan_market(market_key: str, limit: int | None = None, full: bool = True,
                 write_charts: bool = True, out_root: str | None = None,
                 progress: bool = True, frames: dict | None = None,
@@ -98,6 +128,7 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         charts.reset_dir(out_root, market_key)
 
     results: list[dict] = []
+    pending_charts: list[tuple] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
@@ -169,11 +200,14 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
                                                market.currency_symbol),
             }
             results.append(row)
-
             if write_charts and out_root:
-                charts.write_chart(charts.build_chart(df, sig, lv, row, market), out_root, market_key)
+                pending_charts.append((yf_ticker, sig, lv, row))
         except Exception as e:
             print(f"  warning: {yf_ticker} → {e}", flush=True)
+
+    if write_charts and out_root:
+        _write_extended_charts(pending_charts, frames, market_key, out_root,
+                               charts.build_chart, market)
 
     # Sector counts across all results, attached to each row (e.g. "MATERIALS x16").
     sector_counts = _finalize(results)
@@ -225,6 +259,7 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
         charts.reset_dir(out_root, chart_key)
 
     results: list[dict] = []
+    pending_charts: list[tuple] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
@@ -289,10 +324,12 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
                                            market.currency_symbol),
         }
         results.append(row)
-
         if write_charts and out_root:
-            charts.write_chart(charts.build_chart_reversal(df, sig, lv, row, market),
-                               out_root, chart_key)
+            pending_charts.append((yf_ticker, sig, lv, row))
+
+    if write_charts and out_root:
+        _write_extended_charts(pending_charts, frames, chart_key, out_root,
+                               charts.build_chart_reversal, market)
 
     sector_counts = _finalize(results)
 
@@ -343,6 +380,7 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
     max_price = None if getattr(market, "volume_is_usd", False) else config.SPEC_MAX_PRICE
 
     results: list[dict] = []
+    pending_charts: list[tuple] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
@@ -407,10 +445,12 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
                                             market.currency_symbol),
         }
         results.append(row)
-
         if write_charts and out_root:
-            charts.write_chart(charts.build_chart_reversal(df, sig, lv, row, market),
-                               out_root, chart_key)
+            pending_charts.append((yf_ticker, sig, lv, row))
+
+    if write_charts and out_root:
+        _write_extended_charts(pending_charts, frames, chart_key, out_root,
+                               charts.build_chart_reversal, market)
 
     sector_counts = _finalize(results)
 
@@ -458,6 +498,7 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         charts.reset_dir(out_root, chart_key)
 
     results: list[dict] = []
+    pending_charts: list[tuple] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
@@ -526,12 +567,11 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         }
         results.append(row)
         if write_charts and out_root:
-            try:
-                charts.write_chart(
-                    charts.build_chart_short(df, sig, lv, row, market), out_root, chart_key
-                )
-            except Exception:
-                pass
+            pending_charts.append((yf_ticker, sig, lv, row))
+
+    if write_charts and out_root:
+        _write_extended_charts(pending_charts, frames, chart_key, out_root,
+                               charts.build_chart_short, market)
 
     sector_counts = _finalize(results)
 

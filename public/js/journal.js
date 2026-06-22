@@ -333,7 +333,7 @@
     return (data.trades || [])
       .filter((t) => t.status === "closed" && t.exit != null)
       .map((t) => {
-        const isCrypto = !t.asset_type || t.asset_type === "crypto";
+        const isCrypto = t.asset_type == null || t.asset_type === "crypto";
         return mjCalc(t, brk(isCrypto)).pnl;
       })
       .filter((p) => p != null);
@@ -515,7 +515,7 @@
     const upnlCell = tr.querySelector(".jr-upnl");
     if (!t || !nowCell || !upnlCell || t.status !== "open") return;
     const aType   = t.asset_type || "crypto";
-    const isStock = aType === "asx" || aType === "nasdaq";
+    const isStock = aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index";
     const brokerage = isStock ? (data.stock_brokerage ?? 10) : (data.crypto_brokerage ?? 5);
     const px = await (isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol));
     if (!document.body.contains(nowCell)) return;   // table re-rendered meanwhile
@@ -672,7 +672,7 @@
 
   function mjRenderStocks() {
     mjRenderFor(
-      (t) => t.asset_type === "asx" || t.asset_type === "nasdaq",
+      (t) => t.asset_type === "asx" || t.asset_type === "nasdaq" || t.asset_type === "commodity" || t.asset_type === "index",
       "stock_capital", "stock_brokerage",
       {
         capInput: "#mj-stock-capital", brkInput: "#mj-stock-brokerage",
@@ -685,7 +685,7 @@
 
   function mjRenderCrypto() {
     mjRenderFor(
-      (t) => !t.asset_type || t.asset_type === "crypto",
+      (t) => t.asset_type == null || t.asset_type === "crypto",
       "crypto_capital", "crypto_brokerage",
       {
         capInput: "#mj-crypto-capital", brkInput: "#mj-crypto-brokerage",
@@ -915,9 +915,9 @@
     if (clearCryptoBtn) clearCryptoBtn.addEventListener("click", () => {
       if (confirm("Clear ALL your crypto trades? This cannot be undone.")) {
         const data = mjLoad();
-        data.trades.filter((t) => !t.asset_type || t.asset_type === "crypto")
+        data.trades.filter((t) => t.asset_type == null || t.asset_type === "crypto")
                    .forEach((t) => mjTombstone(data, t.id));
-        data.trades = data.trades.filter((t) => t.asset_type && t.asset_type !== "crypto");
+        data.trades = data.trades.filter((t) => t.asset_type != null && t.asset_type !== "crypto");
         mjSave(data); mjRenderCrypto();
       }
     });
@@ -987,7 +987,7 @@
           mjTombstone(data, delBtn.dataset.id);
           data.trades = data.trades.filter((x) => x.id !== delBtn.dataset.id);
           mjSave(data);
-          if (aType === "asx" || aType === "nasdaq") mjRenderStocks();
+          if (aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index") mjRenderStocks();
           else mjRenderCrypto();
         }
       }
