@@ -250,7 +250,37 @@ SCALP_CORRELATION_GROUPS = {
 # Version tracking — bump SCANNER_VERSION on breaking engine or config changes
 # so every scan output and health.json record carries the exact logic version.
 # ---------------------------------------------------------------------------
-SCANNER_VERSION = "4.0.0"   # <major>.<phase>.<patch>
+SCANNER_VERSION = "5.0.0"   # <major>.<phase>.<patch>
+
+# ---------------------------------------------------------------------------
+# Phase 5: Risk Management — portfolio-level limits
+# ---------------------------------------------------------------------------
+# Note: SCALP_STARTING_CAPITAL (20_000) is used as the account baseline for
+# drawdown and heat calculations. Override ACCOUNT_OVERRIDE_USD to use a
+# different value if the live account size differs from the starting capital.
+ACCOUNT_OVERRIDE_USD      = 0       # 0 = use SCALP_STARTING_CAPITAL; set to real balance to override
+
+PORTFOLIO_HEAT_LIMIT      = 0.07    # max 7% of account at risk at any time across all open positions
+MAX_DRAWDOWN_PAUSE        = 0.12    # pause new trades when drawdown from equity peak reaches 12%
+MAX_DRAWDOWN_CLOSE        = 0.15    # close all positions when drawdown from peak reaches 15%
+DRAWDOWN_HALVE_SIZE_AT    = 0.08    # apply 0.5× size multiplier once drawdown exceeds 8%
+SECTOR_EXPOSURE_CAP       = 0.40    # max 40% of account in any single sector/theme
+MAX_OPEN_POSITIONS        = 10      # hard cap on total concurrent open positions
+
+# Phase 5: Circuit Breakers
+CONSEC_LOSS_PAUSE         = 4       # pause after N consecutive losing trades
+ANOMALY_PAUSE_ON_TRIGGER  = True    # block new orders when anomaly detector fires
+
+# Phase 5: Live Execution Safeguards
+SLIPPAGE_WARN_PCT         = 0.003   # warn (but allow) when expected slippage > 0.3%
+SLIPPAGE_REJECT_PCT       = 0.01    # block order when expected slippage > 1%
+ORDER_SIZE_MIN_USD        = 10      # minimum order notional value — below this is a data error
+ORDER_SIZE_MAX_USD        = 5_000   # maximum order notional value — fat-finger guard
+
+# Phase 5: Environment guard — MUST be explicitly set to enable live capital.
+# Set env var BYBIT_LIVE_CONFIRMED=true as a GitHub Secret alongside BYBIT_API_KEY.
+# Without this, the system falls back to dry-run if BYBIT_TESTNET=false is detected.
+REQUIRE_LIVE_CONFIRMED    = True    # set to False only in automated testing
 
 # ---------------------------------------------------------------------------
 # Bybit broker — crypto futures execution

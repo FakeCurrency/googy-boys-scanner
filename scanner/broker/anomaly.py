@@ -96,12 +96,21 @@ def check_journal_anomalies(j: dict) -> list[str]:
     return anomalies
 
 
-def run_checks(scan: dict, j: dict, history_counts: list[int]) -> None:
-    """Run all anomaly checks and dispatch alerts for any found."""
+def run_checks(scan: dict, j: dict, history_counts: list[int]) -> bool:
+    """Run all anomaly checks, dispatch alerts for any found.
+
+    Returns True if any anomaly was detected (circuit_breaker can use this
+    to pause new orders when ANOMALY_PAUSE_ON_TRIGGER is enabled).
+    """
     from .alert_dispatch import send as _send
 
+    fired = False
     for issue in check_scan_anomalies(scan, history_counts):
         _send("anomaly", "Scan anomaly detected", issue)
+        fired = True
 
     for issue in check_journal_anomalies(j):
         _send("anomaly", "Journal anomaly detected", issue)
+        fired = True
+
+    return fired

@@ -56,6 +56,9 @@ from scanner.broker import bybit_client as bc
 from scanner.broker.bybit_reconcile import reconcile_journal
 from scanner.broker.bybit_bracket import submit as submit_bracket, calc_qty_risk
 from scanner.broker.kill_switch import check_and_kill
+from scanner.broker.pre_trade_check import pre_trade_check
+from scanner.broker.circuit_breaker import check_all as _circuit_breakers
+from scanner.broker.risk_manager import dynamic_size_multiplier
 
 
 PUBLIC_SCALP_JOURNAL = ROOT / "public" / "data" / "scalp_journal.json"
@@ -127,6 +130,19 @@ def run(dry_run: bool = False) -> None:
         log.warning("BYBIT_API_KEY not set — running in SIMULATED mode "
                     "(orders logged but NOT submitted to any broker)")
     else:
+        # ── Live-mode safety guard ─────────────────────────────────────────
+        # BYBIT_TESTNET=false alone is NOT sufficient to enable real-capital
+        # execution. BYBIT_LIVE_CONFIRMED=true must also be set as a secret.
+        if not bc._testnet() and getattr(_cfg, "REQUIRE_LIVE_CONFIRMED", True):
+            confirmed = os.environ.get("BYBIT_LIVE_CONFIRMED", "").lower() == "true"
+            if not confirmed:
+                log.error(
+                    "LIVE MODE SAFETY GUARD: BYBIT_TESTNET=false but "
+                    "BYBIT_LIVE_CONFIRMED env var is not 'true'. "
+                    "Falling back to dry_run=True. "
+                    "Set BYBIT_LIVE_CONFIRMED=true in GitHub Secrets to enable real orders."
+                )
+                dry_run = True
         log.info("starting  mode=%s  dry_run=%s", bc.mode(), dry_run)
 
     j = _load_journal()
@@ -169,11 +185,19 @@ def run(dry_run: bool = False) -> None:
              scan.get("trace_id", "?"), scan.get("scanner_version", "?"))
 
     # ── 5. Anomaly detection ──────────────────────────────────────────────────
+    _anomaly_fired = False
     try:
         from scanner.broker.anomaly import run_checks as _anomaly_checks
-        _anomaly_checks(scan, j, _load_setup_history())
+        _anomaly_fired = bool(_anomaly_checks(scan, j, _load_setup_history()))
     except Exception as e:
         log.warning("anomaly check failed: %s", e)
+
+    # ── 5b. Circuit breakers ──────────────────────────────────────────────────
+    cb = _circuit_breakers(j, last_anomaly_fired=_anomaly_fired)
+    if not cb["ok"]:
+        log.warning("circuit breaker(s) active: %s — halting new orders", cb["reason"])
+        _save(j)
+        return
 
     # ── 6. Pre-trade gate ─────────────────────────────────────────────────────
     today_closed = [c for c in j["closed"] if c.get("session_day") == sess_day
@@ -227,8 +251,11 @@ def run(dry_run: bool = False) -> None:
         stop   = float(r["stop"])
         regime = r.get("market_regime", "unknown")
 
-        units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
-        units = _regime_adjusted_units(units, regime)
+        # Dynamic sizing: base qty × drawdown/regime multiplier
+        base_units = calc_qty_risk(entry, stop, _cfg.SCALP_RISK_PER_TRADE)
+        size_mult  = dynamic_size_multiplier(j, regime)
+        units      = base_units * size_mult
+
         if units <= 0:
             if regime == "ranging" and getattr(_cfg, "REGIME_RANGING_SKIP", False):
                 _log_skip(symbol, direction, "regime_ranging_skip", regime=regime)
@@ -236,15 +263,16 @@ def run(dry_run: bool = False) -> None:
             else:
                 _log_skip(symbol, direction, "qty_zero",
                           entry=f"{entry:.6f}", stop=f"{stop:.6f}",
-                          risk=_cfg.SCALP_RISK_PER_TRADE, regime=regime)
+                          risk=_cfg.SCALP_RISK_PER_TRADE, regime=regime,
+                          size_mult=f"{size_mult:.2f}")
             continue
 
-        effective_risk = _cfg.SCALP_RISK_PER_TRADE
-        if regime == "ranging":
-            effective_risk *= getattr(_cfg, "REGIME_RANGING_RISK_MULT", 0.5)
+        effective_risk = _cfg.SCALP_RISK_PER_TRADE * size_mult
 
-        log.info("sizing  %s  entry=%.6f  stop=%.6f  risk=$%.2f  qty=%.4f  regime=%s",
-                 symbol, entry, stop, effective_risk, units, regime)
+        log.info("sizing  %s  entry=%.6f  stop=%.6f  base_risk=$%.2f  "
+                 "size_mult=%.2f  effective_risk=$%.2f  qty=%.4f  regime=%s",
+                 symbol, entry, stop, _cfg.SCALP_RISK_PER_TRADE,
+                 size_mult, effective_risk, units, regime)
 
         pos = {
             "symbol":         symbol,
@@ -270,11 +298,19 @@ def run(dry_run: bool = False) -> None:
             "status":         "open",
         }
 
+        # ── Pre-trade risk gate ───────────────────────────────────────────────
+        ptc = pre_trade_check(pos, j, sess_day=sess_day, submitted_this_run=submitted)
+        if not ptc["ok"]:
+            _log_skip(symbol, direction, "pre_trade_check",
+                      failed=",".join(ptc["failed"]), reason=ptc["reason"][:120])
+            skipped_cap += 1
+            continue
+
         if dry_run:
             log.info("[DRY] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  "
-                     "group=%s  rr=%s  regime=%s",
+                     "group=%s  rr=%s  regime=%s  size_mult=%.2f",
                      symbol, direction, entry, stop, float(r["target"]),
-                     units, group, r["rr"], regime)
+                     units, group, r["rr"], regime, size_mult)
             submitted += 1
             continue
 
