@@ -90,7 +90,7 @@ def _meta(result, market):
         "grade": result["grade"], "dir": result["dir"], "price": result["price"],
         "chips": result["chips"], "score": result["score"], "score_max": result["score_max"],
         "rr": result["rr"], "low_rr": result["low_rr"], "rr_text": result["rr_text"],
-        "risk_pct": result.get("detail", {}).get("risk_pct"),
+        "risk_pct": (result.get("detail") or {}).get("risk_pct"),
         "analysis": result.get("analysis", ""),
         "tv_symbol": _tv(market, result["symbol"]),
         "entry": result["entry"], "stop": result["stop"], "target": result["target"],

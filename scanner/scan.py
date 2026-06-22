@@ -561,7 +561,7 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
             "spark": _spark(df),
             "trend": "green" if points >= config.TREND_THRESHOLDS["short"] else "blue",
             "turnover": round(turnover),
-            "detail": [],
+            "detail": {},
             "analysis": short.narrative(info.get("symbol", yf_ticker), sig, lv,
                                         market.currency_symbol),
         }
