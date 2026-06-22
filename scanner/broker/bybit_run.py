@@ -311,6 +311,7 @@ def run(dry_run: bool = False) -> None:
             "direction":             direction,
             "grade":                 r["grade"],
             "score":                 r["score"],
+            "engine":                r.get("scan_type", "scalp"),  # Phase 10: attribution
             "entry":                 entry,
             "intended_entry_price":  entry,   # Stage 2: preserved for fill-analysis comparison
             "stop":                  stop,
@@ -436,6 +437,13 @@ def run(dry_run: bool = False) -> None:
         )
     except Exception as e:
         log.warning("scaling advisor failed: %s", e)
+
+    # ── 11. Performance attribution (Phase 10) ────────────────────────────────
+    try:
+        from scanner.broker.attribution import write_attribution
+        write_attribution(j)
+    except Exception as e:
+        log.warning("attribution report failed: %s", e)
 
 
 if __name__ == "__main__":
