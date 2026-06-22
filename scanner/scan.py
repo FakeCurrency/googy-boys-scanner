@@ -96,7 +96,12 @@ def _write_extended_charts(
     except Exception:
         ext = {}
     for yf_ticker, sig, lv, row in pending:
-        df_chart = ext.get(yf_ticker) or scan_frames.get(yf_ticker)
+        # NB: never use `ext.get(t) or scan_frames.get(t)` — `bool(DataFrame)`
+        # raises "truth value is ambiguous", which would crash this whole pass
+        # *after* reset_dir() already wiped the chart dir, deleting good charts.
+        df_chart = ext.get(yf_ticker)
+        if df_chart is None:
+            df_chart = scan_frames.get(yf_ticker)
         if df_chart is None or len(df_chart) < 6:
             continue
         try:
