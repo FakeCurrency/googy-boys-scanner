@@ -463,3 +463,44 @@ MARKETS = {
         liquidity_min=3_000_000, volume_is_usd=True,
     ),
 }
+
+# ---------------------------------------------------------------------------
+# Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)
+# ---------------------------------------------------------------------------
+# Each entry: name (display), handle (YouTube @handle, no @), channel_id
+# (leave "" to auto-resolve on first run — feeds.py will populate it).
+YOUTUBE_CHANNELS = [
+    {"name": "Camel Finance", "handle": "CamelFinance", "channel_id": ""},
+]
+
+# How many recent videos to pull per channel (RSS returns the latest 15 max).
+FEEDS_MAX_VIDEOS = 8
+
+# Max tokens for the Claude narrative (~400 words is plenty).
+FEEDS_NARRATIVE_MAX_TOKENS = 600
+
+# Model used for narrative generation (Haiku = cheapest/fastest).
+FEEDS_NARRATIVE_MODEL = "claude-haiku-4-5-20251001"
+
+# X/Twitter accounts preserved on the feeds page below the YouTube section.
+X_ACCOUNTS = [
+    {"handle": "omzcharts",       "name": "Omz"},
+    {"handle": "CKCapitalxx",     "name": "CK Capital"},
+    {"handle": "DazzaBABA",       "name": "R08"},
+    {"handle": "Ruycorto",        "name": "Rui"},
+    {"handle": "ChifoiCristian",  "name": "Cristian Chifoi"},
+    {"handle": "_0_Trading",      "name": "5.0 INVERTED.BULL"},
+    {"handle": "BollingerBanter", "name": "Bollinger Banter"},
+    {"handle": "jakestrading18",  "name": "Jakestrading"},
+    {"handle": "aleabitoreddit",  "name": "Serenity"},
+    {"handle": "SailorManCrypto", "name": "Popeye"},
+    {"handle": "kevinxu",         "name": "Kevin Xu"},
+    {"handle": "TheBigBerbowski", "name": "The Big Berbowski"},
+    {"handle": "BULLOFBRITAIN",   "name": "Bull of Britain"},
+    {"handle": "PhotonBull",      "name": "Photon Bull"},
+    {"handle": "babyfolio",       "name": "babyfolio"},
+    {"handle": "mkfilko",         "name": "leki"},
+    {"handle": "retail_mourinho", "name": "Retail Mourinho"},
+    {"handle": "wolfgangkasper",  "name": "Wolf Capital"},
+    {"handle": "Guv999",          "name": "Guv"},
+]

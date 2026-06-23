@@ -1,0 +1,192 @@
+/* feeds.css — YouTube + AI narrative feeds page */
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.feeds-head        { margin: 18px 0 20px; }
+.feeds-title       { font: 800 22px/1.1 Inter, sans-serif; color: #e8edf6; margin: 0 0 6px; }
+.feeds-sub         { font: 500 13px/1.5 Inter, sans-serif; color: #8a94a6; margin: 0; max-width: 760px; }
+
+/* ── Narrative hero card ─────────────────────────────────────────────────── */
+.narrative-card {
+  background: linear-gradient(135deg, #0d1525 0%, #0b1220 100%);
+  border: 1px solid #2a3d5e;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.narrative-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6 0%, #818cf8 50%, #a78bfa 100%);
+  border-radius: 16px 16px 0 0;
+}
+.narrative-label {
+  display: flex; align-items: center; gap: 8px;
+  font: 700 11px/1 JetBrains Mono, monospace;
+  color: #818cf8;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+}
+.narrative-label svg { opacity: .85; flex-shrink: 0; }
+.narrative-text {
+  font: 400 15px/1.75 Inter, sans-serif;
+  color: #cdd6e4;
+  margin: 0 0 14px;
+  max-width: 860px;
+}
+.narrative-text.loading {
+  color: #5a6478;
+  font-style: italic;
+}
+.narrative-meta {
+  font: 500 11px/1 JetBrains Mono, monospace;
+  color: #5a6478;
+}
+.narrative-meta span { color: #3b82f6; }
+
+/* ── Section headings ────────────────────────────────────────────────────── */
+.feeds-section-head {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 14px;
+}
+.feeds-section-title {
+  font: 700 14px/1 Inter, sans-serif;
+  color: #8a94a6;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin: 0;
+}
+.feeds-section-badge {
+  font: 600 11px/1 JetBrains Mono, monospace;
+  color: #5a6478;
+  background: #0d1320;
+  border: 1px solid #1b2333;
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+.feeds-section-rule {
+  flex: 1; height: 1px; background: #1b2333;
+}
+.feeds-section-updated {
+  font: 500 11px JetBrains Mono, monospace;
+  color: #3d4a5e;
+}
+
+/* ── YouTube video grid ──────────────────────────────────────────────────── */
+.videos-section  { margin-bottom: 36px; }
+.channel-block   { margin-bottom: 24px; }
+.channel-heading {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 12px;
+}
+.channel-name {
+  font: 700 13px/1 Inter, sans-serif;
+  color: #e8edf6;
+}
+.channel-link {
+  font: 500 11px JetBrains Mono, monospace;
+  color: #3b82f6;
+  text-decoration: none;
+}
+.channel-link:hover { text-decoration: underline; }
+
+.videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.video-card {
+  background: #0b101a;
+  border: 1px solid #1b2333;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color .15s;
+  text-decoration: none;
+}
+.video-card:hover { border-color: #2a3d5e; }
+.video-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: #0d1320;
+  display: block;
+}
+.video-info   { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.video-title  { font: 600 13px/1.4 Inter, sans-serif; color: #e8edf6; margin: 0; }
+.video-date   { font: 500 11px JetBrains Mono, monospace; color: #5a6478; }
+.video-desc   { font: 400 12px/1.5 Inter, sans-serif; color: #6b7894; margin: 0; }
+
+.videos-empty {
+  font: 500 13px/1.6 Inter, sans-serif; color: #5a6478;
+  padding: 14px 0;
+}
+
+/* ── X / Twitter section ─────────────────────────────────────────────────── */
+.x-section    { margin-top: 8px; }
+.x-toolbar    { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.x-search {
+  flex: 1 1 220px; min-width: 180px; background: #0d1320;
+  border: 1px solid #1b2333; border-radius: 9px;
+  padding: 9px 12px; color: #e8edf6;
+  font: 500 13px Inter, sans-serif;
+}
+.x-search::placeholder { color: #5a6478; }
+.x-search:focus { outline: none; border-color: #2a3d5e; }
+.x-count { font: 600 12px JetBrains Mono, monospace; color: #5a6478; white-space: nowrap; }
+
+.x-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+}
+.x-card {
+  background: #0b101a; border: 1px solid #1b2333;
+  border-radius: 13px; overflow: hidden;
+  display: flex; flex-direction: column; min-height: 120px;
+}
+.x-card.is-hidden { display: none; }
+.x-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 13px; border-bottom: 1px solid #161d2b; gap: 8px;
+}
+.x-card-id     { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.x-card-name   { font: 700 13px Inter, sans-serif; color: #e8edf6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.x-card-handle { font: 500 11px JetBrains Mono, monospace; color: #6ca8ff; text-decoration: none; }
+.x-card-handle:hover { text-decoration: underline; }
+.x-card-open {
+  font: 600 11px Inter, sans-serif; color: #8a94a6; text-decoration: none;
+  border: 1px solid #1b2333; border-radius: 7px; padding: 5px 9px; white-space: nowrap;
+  transition: border-color .15s, color .15s;
+}
+.x-card-open:hover { color: #e8edf6; border-color: #2a3548; }
+.x-card-body   { padding: 4px 6px 6px; }
+
+.x-fallback {
+  margin: 0 0 16px; padding: 13px 15px;
+  background: #0d1320; border: 1px solid #1b2333;
+  border-radius: 11px; font: 500 12px/1.6 Inter, sans-serif; color: #8a94a6;
+}
+.x-fallback b { color: #cdd6e4; }
+
+/* ── Loading / error state ───────────────────────────────────────────────── */
+.feeds-loading {
+  text-align: center; padding: 40px 0;
+  font: 500 14px Inter, sans-serif; color: #5a6478;
+}
+.feeds-error {
+  margin: 16px 0; padding: 13px 15px;
+  background: #130a0a; border: 1px solid #3d1515;
+  border-radius: 11px; font: 500 12px/1.6 Inter, sans-serif; color: #c87070;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .videos-grid { grid-template-columns: 1fr; }
+  .x-grid      { grid-template-columns: 1fr; }
+  .narrative-card { padding: 16px 16px; }
+}

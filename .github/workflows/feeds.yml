@@ -1,0 +1,57 @@
+name: Feeds update (YouTube + AI narrative)
+
+# Runs every 6 hours and on manual dispatch.
+# Fetches latest YouTube videos from configured channels, generates a
+# Claude Haiku market narrative, writes public/data/feeds.json, commits + pushes.
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feeds-update
+  cancel-in-progress: true
+
+jobs:
+  feeds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build feeds.json
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m scanner.feeds_run
+
+      - name: Commit & push feeds data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/feeds.json
+          if git diff --cached --quiet; then
+            echo "No changes to feeds.json — skipping commit."
+            exit 0
+          fi
+          git commit -m "data: feeds update $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            git checkout HEAD@{1} -- public/data/feeds.json 2>/dev/null || true
+            git add public/data/feeds.json
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: feeds update $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
