@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-23T11:48:32Z",
+  "updated_at": "2026-06-23T16:19:51Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -7,15 +7,17 @@
     "max_daily_trades": 5,
     "max_daily_loss": 500,
     "max_per_group": 2,
-    "session_day": "2026-06-23",
-    "today_trades": 2,
-    "today_pnl": -50.53,
-    "trades_left_today": 3,
+    "session_day": "2026-06-24",
+    "today_trades": 3,
+    "today_pnl": 0,
+    "trades_left_today": 2,
     "group_exposure": {
-      "energy": 1
+      "energy": 2,
+      "crypto:crypto": 1,
+      "ags": 1
     },
     "longs": {
-      "open": 1,
+      "open": 2,
       "closed": 8,
       "win_rate": 0.0,
       "total_r": -7.85,
@@ -23,7 +25,7 @@
       "open_unrealised_pnl": -56.29
     },
     "shorts": {
-      "open": 0,
+      "open": 2,
       "closed": 10,
       "win_rate": 40.0,
       "total_r": 1.69,
@@ -75,9 +77,82 @@
       "current": 7.30999994,
       "unreal_r": -0.14,
       "unreal_pnl": -56.29
+    },
+    {
+      "symbol": "AVAX",
+      "name": "Avalanche",
+      "asset_type": "crypto",
+      "sector": "Crypto",
+      "corr_group": "crypto:crypto",
+      "direction": "long",
+      "grade": "A+",
+      "score": 9,
+      "entry": 6.36999989,
+      "stop": 6.2519418,
+      "target": 6.60611607,
+      "rr": 2.0,
+      "units": 847.0406390616695,
+      "risk_per_trade": 100,
+      "atr": 0.07870539,
+      "market_regime": "ranging",
+      "yf_ticker": "AVAX-USD",
+      "opened_ts": "2026-06-23T16:19:51+00:00",
+      "session_day": "2026-06-24",
+      "status": "open",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0
     }
   ],
-  "open_shorts": [],
+  "open_shorts": [
+    {
+      "symbol": "BRENT",
+      "name": "Brent Crude Oil",
+      "asset_type": "commodity",
+      "sector": "Commodities",
+      "corr_group": "energy",
+      "direction": "short",
+      "grade": "A+",
+      "score": 8,
+      "entry": 77.02999878,
+      "stop": 78.49429369,
+      "target": 74.10140896,
+      "rr": 2.0,
+      "units": 68.29225405147352,
+      "risk_per_trade": 100,
+      "atr": 0.97619661,
+      "market_regime": "trending",
+      "yf_ticker": "BZ=F",
+      "opened_ts": "2026-06-23T16:19:51+00:00",
+      "session_day": "2026-06-24",
+      "status": "open",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0
+    },
+    {
+      "symbol": "WHEAT",
+      "name": "Wheat Futures",
+      "asset_type": "commodity",
+      "sector": "Commodities",
+      "corr_group": "ags",
+      "direction": "short",
+      "grade": "A+",
+      "score": 8,
+      "entry": 601.0,
+      "stop": 605.88660982,
+      "target": 591.22678036,
+      "rr": 2.0,
+      "units": 20.464085262285217,
+      "risk_per_trade": 100,
+      "atr": 3.25773988,
+      "market_regime": "ranging",
+      "yf_ticker": "ZW=F",
+      "opened_ts": "2026-06-23T16:19:51+00:00",
+      "session_day": "2026-06-24",
+      "status": "open",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0
+    }
+  ],
   "closed_longs": [
     {
       "symbol": "ETH",
