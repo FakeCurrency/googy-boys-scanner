@@ -270,26 +270,26 @@ def _walk_1h(df, pos: dict) -> dict:
         return pos
 
     # ── Walk bars: check gap-through first, then intrabar high/low ───────────
-    if direction == "short":
-        for i in range(start, len(df)):
-            if opens[i] >= stop:                 # gapped through stop (unfavorable)
-                return _close_pos(pos, float(opens[i]), ts_list[i], "stop-gap",    i - start + 1)
-            if opens[i] <= target:               # gapped through target (bonus)
-                return _close_pos(pos, float(opens[i]), ts_list[i], "target-gap",  i - start + 1)
-            if highs[i] >= stop:
-                return _close_pos(pos, stop,   ts_list[i], "stop",   i - start + 1)
-            if lows[i]  <= target:
-                return _close_pos(pos, target, ts_list[i], "target", i - start + 1)
-    else:
-        for i in range(start, len(df)):
-            if opens[i] <= stop:                 # gapped through stop (unfavorable)
-                return _close_pos(pos, float(opens[i]), ts_list[i], "stop-gap",    i - start + 1)
-            if opens[i] >= target:               # gapped through target (bonus)
-                return _close_pos(pos, float(opens[i]), ts_list[i], "target-gap",  i - start + 1)
-            if lows[i]  <= stop:
-                return _close_pos(pos, stop,   ts_list[i], "stop",   i - start + 1)
-            if highs[i] >= target:
-                return _close_pos(pos, target, ts_list[i], "target", i - start + 1)
+    # Long and short are mirror images: a long's stop is below entry (hit when
+    # price falls), a short's stop is above (hit when price rises). Parameterise
+    # the comparisons by direction so the precedence — gap-stop, gap-target,
+    # intrabar-stop, intrabar-target — lives in exactly one place.
+    is_long   = direction == "long"
+    stop_bar  = lows  if is_long else highs   # extreme that moves toward the stop
+    tgt_bar   = highs if is_long else lows     # extreme that moves toward the target
+    hit_stop   = (lambda px: px <= stop)   if is_long else (lambda px: px >= stop)
+    hit_target = (lambda px: px >= target) if is_long else (lambda px: px <= target)
+
+    for i in range(start, len(df)):
+        o = float(opens[i])
+        if hit_stop(o):                          # gapped through stop (unfavorable)
+            return _close_pos(pos, o, ts_list[i], "stop-gap",   i - start + 1)
+        if hit_target(o):                        # gapped through target (bonus)
+            return _close_pos(pos, o, ts_list[i], "target-gap", i - start + 1)
+        if hit_stop(float(stop_bar[i])):
+            return _close_pos(pos, stop,   ts_list[i], "stop",   i - start + 1)
+        if hit_target(float(tgt_bar[i])):
+            return _close_pos(pos, target, ts_list[i], "target", i - start + 1)
 
     c = float(closes[-1])
     pos["current"]    = round(c, 8)

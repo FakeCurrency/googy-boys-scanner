@@ -97,7 +97,9 @@ def _atomic_write(path: pathlib.Path, payload: str) -> None:
 
 
 def _save(j: dict) -> None:
-    j["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
+    # UTC to stay consistent with scalp_journal — a naive local timestamp here
+    # would be silently offset by ~10h vs the scalp journal's UTC stamps.
+    j["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     _atomic_write(JOURNAL_FILE, json.dumps(j, indent=2))
 
     open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]

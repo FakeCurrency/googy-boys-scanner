@@ -20,13 +20,12 @@ _TERMINAL = {"filled", "canceled", "expired", "rejected", "done_for_day", "repla
 
 
 def _fetch_all_orders() -> dict:
-    """Fetch open + recent closed orders, indexed by id and client_order_id."""
-    by_id, by_coid = {}, {}
+    """Fetch open + recent closed orders, indexed by order id."""
+    by_id: dict = {}
     for batch in (ac.open_orders, ac.closed_orders):
         try:
             for o in batch():
-                by_id[o["id"]]                 = o
-                by_coid[o["client_order_id"]]  = o
+                by_id[o["id"]] = o
         except Exception as e:
             print(f"  reconcile: warning — could not fetch orders ({batch.__name__}): {e}")
     return by_id

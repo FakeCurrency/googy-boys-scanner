@@ -432,6 +432,12 @@
 
   const MJ_KEY = "gbs:manual_journal";
 
+  // Recognised stock-style asset types. Anything NOT in this set (null,
+  // undefined, "", "crypto", or any unknown value) is treated as crypto so a
+  // trade can never fall through both render filters and vanish.
+  const MJ_STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
+  const mjIsStockType = (a) => MJ_STOCK_TYPES.includes(a);
+
   function mjLoad() {
     if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
@@ -672,7 +678,7 @@
 
   function mjRenderStocks() {
     mjRenderFor(
-      (t) => t.asset_type === "asx" || t.asset_type === "nasdaq" || t.asset_type === "commodity" || t.asset_type === "index",
+      (t) => mjIsStockType(t.asset_type),
       "stock_capital", "stock_brokerage",
       {
         capInput: "#mj-stock-capital", brkInput: "#mj-stock-brokerage",
@@ -685,7 +691,7 @@
 
   function mjRenderCrypto() {
     mjRenderFor(
-      (t) => t.asset_type == null || t.asset_type === "crypto",
+      (t) => !mjIsStockType(t.asset_type),
       "crypto_capital", "crypto_brokerage",
       {
         capInput: "#mj-crypto-capital", brkInput: "#mj-crypto-brokerage",

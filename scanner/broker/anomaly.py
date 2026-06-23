@@ -115,7 +115,9 @@ def check_strategy_degradation(journal: dict) -> list[str]:
     e_drop  = float(getattr(_cfg, "ANOMALY_EXPECTANCY_DROP", 0.3))  # R units
 
     closed = [t for t in journal.get("closed", []) if not t.get("skip_daily_count")]
-    if len(closed) < min_t:
+    # Need more than `window` trades, otherwise closed[-window:] == closed and the
+    # rolling slice is identical to the all-time set — no drop could ever register.
+    if len(closed) <= max(min_t, window):
         return []
 
     all_time = calc_expectancy(closed)

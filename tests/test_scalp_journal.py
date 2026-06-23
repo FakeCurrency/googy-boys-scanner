@@ -8,7 +8,7 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import pytest
-from scanner.scalp_journal import _session_day, _corr_group
+from scanner.scalp_journal import _session_day, _corr_group, _walk_1h, SLIP
 
 
 class TestSessionDay:
@@ -75,3 +75,84 @@ class TestCorrGroup:
     def test_us_tech_group(self):
         g = _corr_group("AAPL", "nasdaq", "tech")
         assert g == "us_tech"
+
+
+class TestWalkExits:
+    """_walk_1h exit precedence + long/short mirroring.
+
+    Locks the refactored single-loop exit logic: gap-stop, gap-target,
+    intrabar-stop, intrabar-target — checked in that order, mirrored by side.
+    """
+
+    @staticmethod
+    def _df(bars):
+        """bars: list of (open, high, low, close). Hourly index starting 01:00."""
+        pd = pytest.importorskip("pandas")
+        idx = pd.date_range("2026-01-01 01:00", periods=len(bars), freq="h")
+        return pd.DataFrame(
+            {"Open":  [b[0] for b in bars],
+             "High":  [b[1] for b in bars],
+             "Low":   [b[2] for b in bars],
+             "Close": [b[3] for b in bars]},
+            index=idx,
+        )
+
+    @staticmethod
+    def _pos(direction, entry, stop, target):
+        return {"direction": direction, "entry": entry, "fill_price": entry,
+                "stop": stop, "target": target, "units": 10, "filled": True,
+                "opened_ts": "2026-01-01T00:00:00"}
+
+    # ── LONG ──────────────────────────────────────────────────────────────────
+    def test_long_intrabar_target(self):
+        df  = self._df([(100, 101, 99, 100), (100, 111, 100, 105)])
+        out = _walk_1h(df, self._pos("long", 100, 95, 110))
+        assert out["reason"] == "target"
+        assert out["exit"] == pytest.approx(110 * (1 - SLIP), rel=1e-6)
+
+    def test_long_intrabar_stop(self):
+        df  = self._df([(100, 101, 99, 100), (100, 101, 94, 96)])
+        out = _walk_1h(df, self._pos("long", 100, 95, 110))
+        assert out["reason"] == "stop"
+        assert out["exit"] == pytest.approx(95 * (1 - SLIP), rel=1e-6)
+
+    def test_long_stop_gap_takes_open(self):
+        df  = self._df([(100, 101, 99, 100), (93, 94, 92, 93)])
+        out = _walk_1h(df, self._pos("long", 100, 95, 110))
+        assert out["reason"] == "stop-gap"
+        assert out["exit"] == pytest.approx(93 * (1 - SLIP), rel=1e-6)
+
+    def test_long_target_gap_takes_open(self):
+        df  = self._df([(100, 101, 99, 100), (112, 113, 111, 112)])
+        out = _walk_1h(df, self._pos("long", 100, 95, 110))
+        assert out["reason"] == "target-gap"
+
+    def test_long_stop_checked_before_target_within_bar(self):
+        # A bar that touches both stop and target: stop must win (precedence).
+        df  = self._df([(100, 101, 99, 100), (100, 111, 94, 100)])
+        out = _walk_1h(df, self._pos("long", 100, 95, 110))
+        assert out["reason"] == "stop"
+
+    # ── SHORT (mirror) ─────────────────────────────────────────────────────────
+    def test_short_intrabar_target(self):
+        df  = self._df([(100, 101, 99, 100), (100, 100, 89, 95)])
+        out = _walk_1h(df, self._pos("short", 100, 105, 90))
+        assert out["reason"] == "target"
+        assert out["exit"] == pytest.approx(90 * (1 + SLIP), rel=1e-6)
+
+    def test_short_intrabar_stop(self):
+        df  = self._df([(100, 101, 99, 100), (100, 106, 99, 104)])
+        out = _walk_1h(df, self._pos("short", 100, 105, 90))
+        assert out["reason"] == "stop"
+        assert out["exit"] == pytest.approx(105 * (1 + SLIP), rel=1e-6)
+
+    def test_short_stop_gap_takes_open(self):
+        df  = self._df([(100, 101, 99, 100), (107, 108, 106, 107)])
+        out = _walk_1h(df, self._pos("short", 100, 105, 90))
+        assert out["reason"] == "stop-gap"
+        assert out["exit"] == pytest.approx(107 * (1 + SLIP), rel=1e-6)
+
+    def test_short_target_gap_takes_open(self):
+        df  = self._df([(100, 101, 99, 100), (88, 89, 87, 88)])
+        out = _walk_1h(df, self._pos("short", 100, 105, 90))
+        assert out["reason"] == "target-gap"
