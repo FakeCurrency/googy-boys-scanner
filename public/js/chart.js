@@ -656,7 +656,7 @@
   // network/stream is unavailable.
   function makeLive(d, pair, S) {
     const cur = d.currency_symbol || "";
-    const N_DISP = 120, KEEP = 320;
+    const N_DISP = 120, KEEP = 1000;   // KEEP = Binance max per request → deepest intraday history
     const liveEl = $("#ct-live"), priceEl = $("#ct-price");
     let bars = [], ws = null, stopped = false, lastCalc = 0, lastPx = null;
     let iv = "1h", ivSec = 3600;
@@ -951,7 +951,7 @@
     const STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
     const pair = STOCK_TYPES.includes(trade.asset_type) ? null : cryptoPair(SYM);
     if (pair) {
-      binanceKlines(pair, "1h", 320)
+      binanceKlines(pair, "1h", 1000)
         .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
@@ -1013,9 +1013,53 @@
     }
   }
 
+  // ── prev / next through the scanner result list ──────────────────────────────
+  // Lets you step down the same scan (e.g. all ASX reversals) without bouncing
+  // back to the dashboard. Reads the scan-results JSON that backs this chart,
+  // finds the current symbol's position, and wires the header arrows + ←/→ keys.
+  function wireScanNav() {
+    const nav = $("#ct-nav"), prevB = $("#ct-prev"), nextB = $("#ct-next"), posEl = $("#ct-nav-pos");
+    if (!nav || !symbol) return;
+
+    const isScalp = market === "scalp";
+    const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
+                  : mode === "short"    ? "_short"    : "";
+    const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
+    const sOf     = isScalp
+      ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
+      : (r) => r.symbol;
+    const hrefFor = (s) => isScalp
+      ? `chart.html?m=scalp&s=${encodeURIComponent(s)}`
+      : `chart.html?m=${market}&s=${encodeURIComponent(s)}${mode !== "pullback" ? `&mode=${mode}` : ""}`;
+
+    fetch(file, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const list = ((j && j.results) || []).map(sOf);
+        const cur  = decodeURIComponent(symbol).toUpperCase();
+        const idx  = list.findIndex((s) => String(s).toUpperCase() === cur);
+        if (idx < 0 || list.length < 2) return;   // not in this list → leave nav hidden
+
+        nav.hidden = false;
+        posEl.textContent = `${idx + 1} / ${list.length}`;
+        const go = (i) => { if (i >= 0 && i < list.length) location.href = hrefFor(list[i]); };
+        prevB.disabled = idx === 0;
+        nextB.disabled = idx === list.length - 1;
+        prevB.onclick = () => go(idx - 1);
+        nextB.onclick = () => go(idx + 1);
+        document.addEventListener("keydown", (e) => {
+          if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+          if (e.key === "ArrowLeft"  && idx > 0)               go(idx - 1);
+          if (e.key === "ArrowRight" && idx < list.length - 1) go(idx + 1);
+        });
+      })
+      .catch(() => {});
+  }
+
   function boot() {
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
+    wireScanNav();
     fetch(chartFile, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(render)

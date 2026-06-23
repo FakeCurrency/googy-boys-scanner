@@ -14,6 +14,23 @@
   transition: background .15s;
 }
 .back-link:hover { background: rgba(120,120,128,.2); color: var(--text); }
+
+/* Prev / next navigation through the scanner result list */
+.ct-nav { display: inline-flex; align-items: center; gap: 6px; }
+.ct-nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 15px;
+  border: 1.5px solid rgba(60,60,67,.25); background: var(--fill);
+  color: var(--text); font: 700 18px/1 var(--sans); cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.ct-nav-btn:hover:not(:disabled) { background: rgba(120,120,128,.2); }
+.ct-nav-btn:disabled { opacity: .35; cursor: default; }
+.ct-nav-pos {
+  min-width: 46px; text-align: center;
+  font: 600 12px/1 var(--mono); color: var(--text-2); white-space: nowrap;
+}
+
 .ct-sym { font: 800 20px/1 var(--sans); letter-spacing: 0.4px; color: var(--text); }
 .ct-price { font: 700 18px/1 var(--mono); color: var(--text); }
 .ct-grade { font: 800 15px/1 var(--sans); }

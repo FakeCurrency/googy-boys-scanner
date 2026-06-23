@@ -15,12 +15,14 @@ from . import config
 from .indicators import ema, sma, supertrend
 
 # (label, pandas resample rule [None = daily], max candles to send)
+# Source history is CHART_PERIOD (10y), so these caps are what actually trims
+# the view. Daily/3-Day were the binding limits — extended for deeper context.
 TIMEFRAMES = [
-    ("1D", None, 500),    # ≈ 2 years of daily bars
-    ("3D", "3D", 320),    # ≈ 2.6 years
-    ("1W", "W-FRI", 260), # ≈ 5 years
-    ("1M", "ME", 150),    # ≈ 12.5 years
-    ("3M", "QE", 80),     # ≈ 20 years
+    ("1D", None, 1000),   # ≈ 4 years of daily bars
+    ("3D", "3D", 650),    # ≈ 7.5 years
+    ("1W", "W-FRI", 520), # ≈ 10 years (full source)
+    ("1M", "ME", 240),    # ≈ 20 years (full source)
+    ("3M", "QE", 120),    # ≈ 30 years (full source)
 ]
 _AGG = {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
 

@@ -9,12 +9,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=12" />
-  <link rel="stylesheet" href="css/chart.css?v=10" />
+  <link rel="stylesheet" href="css/chart.css?v=11" />
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body class="chart-body">
   <header class="chart-top">
     <a class="back-link" href="index.html">← Dashboard</a>
+    <span class="ct-nav" id="ct-nav" hidden>
+      <button class="ct-nav-btn" id="ct-prev" type="button" title="Previous setup (←)" aria-label="Previous setup">‹</button>
+      <span class="ct-nav-pos" id="ct-nav-pos"></span>
+      <button class="ct-nav-btn" id="ct-next" type="button" title="Next setup (→)" aria-label="Next setup">›</button>
+    </span>
     <span class="ct-sym" id="ct-sym">—</span>
     <span class="badge sector" id="ct-sector" hidden></span>
     <span class="ct-price" id="ct-price">—</span>
@@ -46,6 +51,6 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/chart.js?v=23"></script>
+  <script src="js/chart.js?v=24"></script>
 </body>
 </html>
