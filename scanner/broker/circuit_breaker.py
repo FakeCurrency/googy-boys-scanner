@@ -165,7 +165,7 @@ def check_all(journal: dict, last_anomaly_fired: bool = False) -> dict:
     failed = {k: v for k, v in checks.items() if not v.get("ok")}
     ok     = len(failed) == 0
     if not ok:
-        reasons = "; ".join(v.get("reason", k) for v in failed.values())
+        reasons = "; ".join(v.get("reason", k) for k, v in failed.items())
         log.warning("circuit breaker(s) active: %s", reasons)
 
     return {
