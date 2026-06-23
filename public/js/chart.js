@@ -24,12 +24,14 @@
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
-  // <SYMBOL> -> Binance spot pair. All current crypto-scalp coins trade vs USDT.
-  const BINANCE_MAP = {
-    BTC: "BTCUSDT", ETH: "ETHUSDT", BNB: "BNBUSDT", SOL: "SOLUSDT",
-    XRP: "XRPUSDT", ADA: "ADAUSDT", DOGE: "DOGEUSDT", AVAX: "AVAXUSDT",
-    DOT: "DOTUSDT", LINK: "LINKUSDT", LTC: "LTCUSDT", BCH: "BCHUSDT",
-  };
+  // Every crypto-scalp coin trades as <SYMBOL>USDT on Binance, so we derive the
+  // pair generically (same as the journal) instead of hardcoding a list that
+  // silently drifts out of date. BINANCE_MAP is only for the rare symbol whose
+  // Binance pair differs from <SYMBOL>USDT.
+  const BINANCE_MAP = {};
+  const cryptoPair = (sym) =>
+    BINANCE_MAP[String(sym || "").toUpperCase()] ||
+    (String(sym || "").toUpperCase() + "USDT");
   // Intraday live timeframes for crypto (Binance kline intervals).
   const BINANCE_IV    = { "15M": "15m", "30M": "30m", "1H": "1h" };
   const LIVE_TF_ORDER = ["15M", "30M", "1H"];
@@ -241,7 +243,10 @@
     const cur     = d.currency_symbol || "";
     const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
     const SYM     = (d.symbol || symbol).toUpperCase();
-    const isCrypto = !!BINANCE_MAP[SYM] || market === "scalp" || market === "crypto";
+    // Crypto is identified by the row's asset_type — NOT by market==="scalp",
+    // because the scalp universe also contains commodities (GOLD, OIL) and ASX
+    // stocks (BHP, CBA) which must NOT be sized/priced as 10× crypto.
+    const isCrypto = d.asset_type === "crypto" || market === "crypto";
     const simBrok  = (data) => isCrypto ? data.crypto_brokerage : data.stock_brokerage;
 
     // Re-label the entry button to match the setup direction.
@@ -313,10 +318,34 @@
       refresh(px);
     });
 
-    buyBtn.addEventListener("click", () => {
+    // Always fill at the TRUE live price. Never fall back to the scan price
+    // (d.entry/d.price), which can be hours stale — that was booking trades at a
+    // phantom entry so the journal showed an instant loss the moment it marked
+    // the position against the real live price.
+    async function livePriceNow() {
+      if (+liveState.price) return +liveState.price;     // streaming feed already has it
+      if (isCrypto) {
+        try {
+          const r = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(cryptoPair(SYM))}`,
+            { cache: "no-store" });
+          if (r.ok) { const j = await r.json(); if (j && j.price != null) return +j.price; }
+        } catch (_) {}
+        return null;
+      }
+      return await fetchStockQuote(SYM, market === "asx" ? "asx" : "nasdaq");
+    }
+
+    buyBtn.addEventListener("click", async () => {
       if (openSimTrade()) return;
-      const px    = +liveState.price || +d.price || +d.entry || 0;
-      if (!px) { statusEl.textContent = "No price available."; return; }
+      buyBtn.disabled = true;
+      statusEl.className = "sim-status"; statusEl.textContent = "Fetching live price…";
+      const px = await livePriceNow();
+      if (!px) {
+        statusEl.textContent = "Couldn't fetch a live price — try again in a moment.";
+        buyBtn.disabled = false;
+        return;
+      }
       const margin   = isCrypto ? SIM_CRYPTO_MARGIN   : SIM_STOCK_SIZE;
       const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
       const exposure = margin * leverage;
@@ -331,13 +360,20 @@
         status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
       });
       mjSave(data);
-      refresh();
+      refresh(px);
     });
 
-    sellBtn.addEventListener("click", () => {
+    sellBtn.addEventListener("click", async () => {
       const t = openSimTrade();
       if (!t) return;
-      const px = +liveState.price || +d.price || +t.entry || 0;
+      sellBtn.disabled = true;
+      statusEl.textContent = "Fetching live price…";
+      const px = await livePriceNow();
+      if (!px) {
+        statusEl.textContent = "Couldn't fetch a live price to close — try again in a moment.";
+        sellBtn.disabled = false;
+        return;
+      }
       const data = mjLoad();
       const rec  = data.trades.find((x) => x.id === t.id);
       if (rec) {
@@ -506,7 +542,9 @@
     }
 
     const toggle = $("#tf-toggle");
-    const pair = BINANCE_MAP[SYM];
+    // Live Binance feed only for genuine crypto (by asset_type) — commodities and
+    // stocks in the scalp universe stay on static scan data.
+    const pair = (d.asset_type === "crypto" || market === "crypto") ? cryptoPair(SYM) : null;
     const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch };
 
     if (pair) {
@@ -783,7 +821,11 @@
   // every tick. Visible only while a matching position is open.
   function wireLiveBox(d, el, SYM, posDir, findOpen) {
     const cur        = d.currency_symbol || "";
-    const isCryptoPos = !!BINANCE_MAP[SYM] || market === "scalp" || market === "crypto";
+    // Crypto when the row says so, or the market is crypto. Pullback stock charts
+    // carry no asset_type and market is "asx"/"nasdaq", so they stay stock.
+    const isCryptoPos = d.asset_type === "crypto"
+                        || market === "crypto"
+                        || (market === "scalp" && d.asset_type == null);
     const posBrok    = (data) => isCryptoPos ? data.crypto_brokerage : data.stock_brokerage;
     const box = document.createElement("div");
     box.className = "live-pos-box";
@@ -894,6 +936,7 @@
       symbol: SYM, name: SYM, price: trade.entry, entry: trade.entry,
       stop: trade.stop ?? null, target: trade.target ?? null,
       grade: "", score: 0, score_max: 0, chips: [], sector: "",
+      asset_type: trade.asset_type,
       currency_symbol: "$", dir: trade.direction === "short" ? "SHORT" : "LONG",
       rr: 0, low_rr: false, rr_text: "", risk_pct: null,
       analysis: trade.notes || "Your open position — live view.",
@@ -903,7 +946,10 @@
     d.level_lines.push({ price: trade.entry, color: "#f0a500", title: "ENTRY" });
     if (trade.target != null) d.level_lines.push({ price: trade.target, color: "#2fd07f", title: "TARGET" });
 
-    const pair = BINANCE_MAP[SYM];
+    // Crypto = anything that isn't a known stock-style asset type (matches the
+    // journal's bucketing; legacy crypto trades have null/"" asset_type).
+    const STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
+    const pair = STOCK_TYPES.includes(trade.asset_type) ? null : cryptoPair(SYM);
     if (pair) {
       binanceKlines(pair, "1h", 320)
         .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
