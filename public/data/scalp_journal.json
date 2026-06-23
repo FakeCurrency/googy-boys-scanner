@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-23T21:17:57Z",
+  "updated_at": "2026-06-23T22:22:11Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -23,7 +23,7 @@
       "win_rate": 0.0,
       "total_r": -7.85,
       "total_pnl": -805.38,
-      "open_unrealised_pnl": -89.45
+      "open_unrealised_pnl": -30.16
     },
     "shorts": {
       "open": 3,
@@ -31,7 +31,7 @@
       "win_rate": 40.0,
       "total_r": 1.69,
       "total_pnl": -202.52,
-      "open_unrealised_pnl": 0
+      "open_unrealised_pnl": -40.89
     },
     "regime_stats": {
       "unknown": {
@@ -100,11 +100,11 @@
       "opened_ts": "2026-06-23T16:19:51+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 0.05,
-      "unreal_pnl": -33.16,
+      "unreal_r": 0.49,
+      "unreal_pnl": 26.13,
       "fill_price": 6.41192285,
       "filled": true,
-      "current": 6.42000008
+      "current": 6.48999977
     },
     {
       "symbol": "ADBE",
@@ -141,7 +141,7 @@
       "direction": "short",
       "grade": "A+",
       "score": 8,
-      "entry": 77.02999878,
+      "entry": 76.9769,
       "stop": 78.49429369,
       "target": 74.10140896,
       "rr": 2.0,
@@ -153,8 +153,11 @@
       "opened_ts": "2026-06-23T16:19:51+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 0.0,
-      "unreal_pnl": 0.0
+      "unreal_r": -0.01,
+      "unreal_pnl": -40.89,
+      "fill_price": 76.9769,
+      "filled": true,
+      "current": 76.98999786
     },
     {
       "symbol": "WHEAT",
