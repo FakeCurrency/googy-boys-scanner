@@ -309,17 +309,18 @@
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
-    const sector = r.sector ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
-    const seccount = (r.sector && r.sector_count > 1)
+    const hasSectorCount = r.sector && r.sector_count > 1;
+    const sector = (r.sector && !hasSectorCount) ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
+    const seccount = hasSectorCount
       ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
     const assetBadge = r.asset_type
       ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
-    const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
+    const liqBadge = r.liquidity === "LIQUID" ? `<span class="badge liq-liquid">Liquid</span>` : "";
     const rawMcap = mcapOf(r.symbol);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
       : rawMcap < SMALLCAP ? "mcap-small" : "mcap";
-    const mcapBadge = mcapTxt
+    const mcapBadge = (mcapTxt && mcapCls !== "mcap")
       ? `<span class="badge ${mcapCls}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
       : "";
     const rrStar = r.target_2r ? "*" : "";
@@ -341,7 +342,7 @@
           ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
           ${mcapBadge}
-          <span class="badge ${liqCls}">${esc(r.liquidity)}</span>
+          ${liqBadge}
           ${seccount}
         </div>
         <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>

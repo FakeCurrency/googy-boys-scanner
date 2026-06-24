@@ -189,7 +189,7 @@ body {
 @media (max-width: 560px) { .rd-grid { grid-template-columns: repeat(2,1fr); } }
 
 /* Scalp info banner */
-.scalp-banner { background: rgba(155,89,182,.09); border: 1px solid rgba(155,89,182,.25); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px; }
+.scalp-banner { background: var(--fill-2); border: 1px solid var(--separator); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 14px; }
 .scalp-banner-inner { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 10px; }
 .scalp-banner-item { font: 500 12px/1.4 var(--sans); color: var(--text-2); }
 .scalp-banner-item strong { color: var(--text); }
@@ -375,7 +375,7 @@ body {
 .row-line1 {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 .tkr {
@@ -401,7 +401,7 @@ body {
 .rprice { font: 700 16px/1 var(--sans); color: var(--text); }
 
 .row-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.chip { font: 600 10px/1 var(--sans); letter-spacing: 0.01em; color: var(--blue); background: var(--blue-soft); padding: 5px 9px; border-radius: 100px; white-space: nowrap; }
+.chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }
 .chip.info { color: var(--orange); background: var(--orange-soft); }
