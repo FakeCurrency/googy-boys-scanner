@@ -173,7 +173,8 @@ def main() -> None:
     for page_key, (frames, universe) in mover_inputs.items():
         if page_key in sec["markets"]:
             _sectors.enrich(sec["markets"][page_key], frames, universe,
-                            MOVER_MIN_DVOL.get(page_key, 1_000_000))
+                            MOVER_MIN_DVOL.get(page_key, 1_000_000),
+                            market_key=page_key)
     (pathlib.Path(args.out) / "sectors.json").write_text(json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")

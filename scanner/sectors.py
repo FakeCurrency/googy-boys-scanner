@@ -115,13 +115,62 @@ def _read(label, sectors, indices):
     return summary, rotation
 
 
-def enrich(m, frames, universe, min_dollar_vol):
+def _split_movers(rows, market_key):
+    """Pick each side's biggest movers split into MEGA vs SMALL companies.
+
+    Up to ``MOVER_PER_TIER`` mega + ``MOVER_PER_TIER`` small per side, so the
+    reader sees big-money rotation (mega) and small-cap discovery side by side.
+    Company size comes from the pre-scan market-cap cache; when a name isn't
+    cached we fall back to its 20-day average dollar volume (mega names trade
+    vastly more $ than small caps) so the split always works without an extra,
+    throttle-prone Yahoo call at scan time.
+    """
+    from . import config as _cfg
+    from . import marketcaps as _mc
+
+    cap_market = "nasdaq" if market_key in ("us", "nasdaq") else "asx"
+    dvol_key   = "us" if cap_market == "nasdaq" else "asx"
+    mega_dvol  = _cfg.MOVER_MEGA_DVOL.get(dvol_key, 30_000_000)
+    try:
+        cap_cache = _mc.load_cache()
+    except Exception:
+        cap_cache = {}
+
+    def tier_of(r):
+        cap = _mc.mcap_for(cap_cache, cap_market, r["symbol"]) if cap_cache else 0.0
+        if cap > 0:
+            return ("mega" if cap >= _cfg.MOVER_MEGA_CAP_USD else "small"), cap
+        return ("mega" if r.get("dvol", 0) >= mega_dvol else "small"), 0.0
+
+    def pick(ordered):
+        per = _cfg.MOVER_PER_TIER
+        mega, small = [], []
+        for r in ordered:
+            if len(mega) >= per and len(small) >= per:
+                break
+            tier, cap = tier_of(r)
+            bucket = mega if tier == "mega" else small
+            if len(bucket) >= per:
+                continue
+            bucket.append({"symbol": r["symbol"], "name": r["name"],
+                           "sector": r["sector"], "last": r["last"],
+                           "pct": r["pct"], "mcap": round(cap), "tier": tier})
+        return mega + small
+
+    if not rows:
+        return {"winners": [], "losers": []}
+    return {"winners": pick(rows), "losers": pick(rows[::-1])}
+
+
+def enrich(m, frames, universe, min_dollar_vol, market_key=None):
     """Add stock-level depth to a market read: biggest winners/losers, a deeper
     sector-rotation line (which stocks drove it), and an 'explain like I'm 5' note.
 
     Computed from the scan's already-downloaded daily frames so it costs no extra
     network. ``frames`` is {yf_ticker: OHLCV DataFrame}; ``universe`` carries the
-    per-stock GICS sector (ASX) used for the rotation breakdown.
+    per-stock GICS sector (ASX) used for the rotation breakdown. ``market_key``
+    ('asx' / 'us') selects the market-cap cache used to split movers into mega
+    vs small companies.
     """
     rows = []
     for u in universe:
@@ -149,12 +198,11 @@ def enrich(m, frames, universe, min_dollar_vol):
                      "last": round(last, 2 if last >= 1 else 4),
                      "pct": round(pct, 2),
                      "turnover": round(turnover_today),
+                     "dvol": round(dvol),
                      "spike": round(spike, 1)})
 
     rows.sort(key=lambda r: r["pct"], reverse=True)
-    winners = [{k: v for k, v in r.items() if k != "turnover"} for r in rows[:6]]
-    losers = [{k: v for k, v in r.items() if k != "turnover"} for r in rows[-6:][::-1]] if rows else []
-    m["top_movers"] = {"winners": winners, "losers": losers}
+    m["top_movers"] = _split_movers(rows, market_key)
 
     # biggest volume = most $ traded today, with how unusual that volume is (× avg)
     by_vol = sorted(rows, key=lambda r: r["turnover"], reverse=True)[:6]

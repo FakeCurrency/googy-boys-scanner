@@ -115,9 +115,10 @@ body {
 }
 .clock-time { font: 600 17px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
 .clock-date { font: 500 12px/1 var(--sans); color: var(--muted); }
-/* centred brand — absolute within row 1 */
+/* centred brand — absolute within row 1, nudged left so the wordmark clears
+   the market switch (ASX / NASDAQ / CRYPTO) on the right. */
 .topbar-brand {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: 50%; transform: translate(calc(-50% - 150px), -50%);
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   text-align: center; pointer-events: none; z-index: 2;
 }
@@ -153,7 +154,8 @@ body {
 .scan-switch { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill); border-radius: 9px; }
 .scan-btn {
   appearance: none; border: 0; cursor: pointer; background: transparent;
-  color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: -0.01em;
+  color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: 0.04em;
+  text-transform: uppercase;
   padding: 6px 13px; border-radius: 7px; transition: all .18s;
 }
 .scan-btn.is-active { background: var(--orange); color: #fff; box-shadow: var(--shadow-pill); }
