@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=15" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
 </head>
 <body>
   <header class="topbar">
@@ -60,11 +60,11 @@
     <!-- ROW 2 — scan type · search · run scan · timer -->
     <div class="topbar-row2">
       <div class="scan-switch" role="tablist" aria-label="Scan type">
-        <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">PULLBACKS</button>
-        <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">REVERSALS</button>
-        <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">SPECS ⚡</button>
-        <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">SHORTS ↓</button>
-        <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">SCALP 🎯</button>
+        <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">Pullback</button>
+        <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">Reversal</button>
+        <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">Spec</button>
+        <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">Short</button>
+        <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">Scalp</button>
       </div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -173,20 +173,18 @@
     <!-- filters -->
     <section class="controls">
       <div class="control-group">
-        <span class="control-label">TAB</span>
         <div class="seg" id="tabs">
           <button class="seg-btn is-active" data-tab="aplus">A+ <span class="seg-count" id="count-aplus">0</span></button>
           <button class="seg-btn" data-tab="a">A <span class="seg-count" id="count-a">0</span></button>
-          <button class="seg-btn" data-tab="watch">WATCH <span class="seg-count" id="count-watch">0</span></button>
+          <button class="seg-btn" data-tab="watch">Watch <span class="seg-count" id="count-watch">0</span></button>
         </div>
       </div>
       <div class="control-group">
-        <span class="control-label">SORT</span>
         <div class="seg" id="sorts">
           <button class="seg-btn is-active" data-sort="score">Score</button>
           <button class="seg-btn" data-sort="price">Price</button>
           <button class="seg-btn" data-sort="rr">R:R</button>
-          <button class="seg-btn" data-sort="az">A-Z</button>
+          <button class="seg-btn" data-sort="az">A–Z</button>
         </div>
       </div>
     </section>
