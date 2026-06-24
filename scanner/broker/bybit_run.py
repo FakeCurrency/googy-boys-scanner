@@ -333,7 +333,7 @@ def run(dry_run: bool = False) -> None:
         ptc = pre_trade_check(pos, j, sess_day=sess_day, submitted_this_run=submitted)
         if not ptc["ok"]:
             _log_skip(symbol, direction, "pre_trade_check",
-                      failed=",".join(ptc["failed"]), reason=ptc["reason"][:120])
+                      failed=",".join(ptc["failed"]), detail=ptc["reason"][:120])
             skipped_cap += 1
             continue
 
