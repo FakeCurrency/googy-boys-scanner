@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=12" />
-  <link rel="stylesheet" href="css/chart.css?v=11" />
+  <link rel="stylesheet" href="css/styles.css?v=20" />
+  <link rel="stylesheet" href="css/chart.css?v=12" />
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body class="chart-body">
@@ -24,6 +24,7 @@
     <span class="badge sector" id="ct-sector" hidden></span>
     <span class="ct-price" id="ct-price">—</span>
     <span class="ct-live" id="ct-live" hidden>● LIVE</span>
+    <span class="ct-delayed" id="ct-delayed" hidden title="Yahoo Finance quotes are delayed ~15 minutes">~15m delayed</span>
     <span class="ct-grade" id="ct-grade"></span>
     <span class="badge dir" id="ct-dir" hidden>LONG</span>
     <span class="ct-chips" id="ct-chips"></span>
@@ -51,6 +52,6 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/chart.js?v=24"></script>
+  <script src="js/chart.js?v=25"></script>
 </body>
 </html>

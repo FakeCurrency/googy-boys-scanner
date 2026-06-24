@@ -492,6 +492,12 @@ def build_chart_data(
     return {
         "symbol":          symbol,
         "name":            info.get("name", symbol),
+        # asset_type is what the frontend uses to branch crypto vs index/
+        # commodity vs stock — without it, scalp charts default everything to a
+        # generic guess, which broke the live-feed selection (crypto wasn't
+        # getting Binance) and the journal categorisation (non-crypto landing in
+        # the Crypto bucket). Always carry the universe's true type.
+        "asset_type":      asset_type,
         "price":           lv["entry"],
         "grade":           grade,
         "score":           points,

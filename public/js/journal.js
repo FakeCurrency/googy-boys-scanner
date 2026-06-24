@@ -333,8 +333,7 @@
     return (data.trades || [])
       .filter((t) => t.status === "closed" && t.exit != null)
       .map((t) => {
-        const isCrypto = t.asset_type == null || t.asset_type === "crypto";
-        return mjCalc(t, brk(isCrypto)).pnl;
+        return mjCalc(t, brk(mjIsCrypto(t))).pnl;
       })
       .filter((p) => p != null);
   }
@@ -438,6 +437,39 @@
   const MJ_STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
   const mjIsStockType = (a) => MJ_STOCK_TYPES.includes(a);
 
+  // Scalp index/commodity symbols that must NEVER be bucketed as crypto, even on
+  // legacy trades saved before asset_type was tracked reliably. Without this a
+  // null-typed GOLD or NAS100 trade falls into the crypto catch-all below.
+  const MJ_NONCRYPTO_SYMBOLS = new Set([
+    "NAS100", "US30", "SPX500", "GER40", "UK100", "JP225",
+    "GOLD", "SILVER", "OIL", "WTI", "BRENT", "NATGAS",
+    "COPPER", "PLATINUM", "PALLADIUM", "WHEAT", "COFFEE",
+  ]);
+
+  // Single source of truth for "is this a crypto position?". A trade is crypto
+  // only when explicitly tagged "crypto", or it's a legacy trade (null/"" type)
+  // whose symbol isn't a known index/commodity. Any other explicit type
+  // (asx/nasdaq/commodity/index or anything unknown) is treated as non-crypto,
+  // so non-crypto positions can no longer leak into the Crypto journal.
+  function mjIsCrypto(t) {
+    const a = t && t.asset_type;
+    if (mjIsStockType(a)) return false;
+    if (a === "crypto") return true;
+    if (a == null || a === "") {
+      return !MJ_NONCRYPTO_SYMBOLS.has(String((t && t.symbol) || "").toUpperCase());
+    }
+    return false;
+  }
+
+  // Yahoo Finance tickers for scalp index/commodity instruments — the scanner's
+  // internal symbol (NAS100, GOLD…) isn't what Yahoo uses, so a live quote needs
+  // the real ticker. Quotes are ~15-min delayed but beat showing a dash.
+  const MJ_YF_TICKER = {
+    NAS100: "^NDX", US30: "^DJI", SPX500: "^GSPC", GER40: "^GDAXI", UK100: "^FTSE", JP225: "^N225",
+    GOLD: "GC=F", SILVER: "SI=F", COPPER: "HG=F", PLATINUM: "PL=F", PALLADIUM: "PA=F",
+    OIL: "CL=F", WTI: "CL=F", BRENT: "BZ=F", NATGAS: "NG=F", WHEAT: "ZW=F", COFFEE: "KC=F",
+  };
+
   function mjLoad() {
     if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
@@ -503,7 +535,9 @@
   }
   async function stockPrice(sym, aType) {
     try {
-      const ticket = aType === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym;
+      const up = String(sym || "").toUpperCase();
+      const ticket = MJ_YF_TICKER[up]
+        || (aType === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
       const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`, { cache: "no-store" });
       if (!r.ok) return null;
       const j = await r.json();
@@ -520,8 +554,8 @@
     const nowCell  = tr.querySelector(".jr-now");
     const upnlCell = tr.querySelector(".jr-upnl");
     if (!t || !nowCell || !upnlCell || t.status !== "open") return;
-    const aType   = t.asset_type || "crypto";
-    const isStock = aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index";
+    const isStock = !mjIsCrypto(t);
+    const aType   = t.asset_type || (isStock ? "nasdaq" : "crypto");
     const brokerage = isStock ? (data.stock_brokerage ?? 10) : (data.crypto_brokerage ?? 5);
     const px = await (isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol));
     if (!document.body.contains(nowCell)) return;   // table re-rendered meanwhile
@@ -678,7 +712,7 @@
 
   function mjRenderStocks() {
     mjRenderFor(
-      (t) => mjIsStockType(t.asset_type),
+      (t) => !mjIsCrypto(t),
       "stock_capital", "stock_brokerage",
       {
         capInput: "#mj-stock-capital", brkInput: "#mj-stock-brokerage",
@@ -691,7 +725,7 @@
 
   function mjRenderCrypto() {
     mjRenderFor(
-      (t) => !mjIsStockType(t.asset_type),
+      (t) => mjIsCrypto(t),
       "crypto_capital", "crypto_brokerage",
       {
         capInput: "#mj-crypto-capital", brkInput: "#mj-crypto-brokerage",
@@ -778,7 +812,7 @@
     const t = trades.find((x) => x.id === tradeId);
     if (!t) return;
     const { date, time } = mjNow();
-    const aType = t.asset_type || "crypto";
+    const aType = t.asset_type || (mjIsCrypto(t) ? "crypto" : "nasdaq");
 
     $("#mj-modal-title").textContent = `Close ${t.symbol} ${t.direction === "long" ? "LONG" : "SHORT"}`;
     $("#mj-trade-id").value   = tradeId;
@@ -799,7 +833,7 @@
     setTimeout(() => $("#mj-exit") && $("#mj-exit").focus(), 60);
 
     // Default the exit price to the LIVE price (user can still override).
-    const isStock = aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index";
+    const isStock = !mjIsCrypto(t);
     const exitEl  = $("#mj-exit");
     exitEl.placeholder = "fetching live…";
     Promise.resolve(isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol))

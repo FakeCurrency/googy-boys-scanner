@@ -47,6 +47,23 @@
 
   const posId = params.get("pos");   // open-position id passed from the journal
 
+  // Yahoo Finance tickers for scalp index/commodity instruments — the scanner's
+  // internal symbol (NAS100, GOLD…) isn't what Yahoo uses. Shared shape with the
+  // journal's map so live (~15-min delayed) quotes resolve consistently.
+  const YF_TICKER = {
+    NAS100: "^NDX", US30: "^DJI", SPX500: "^GSPC", GER40: "^GDAXI", UK100: "^FTSE", JP225: "^N225",
+    GOLD: "GC=F", SILVER: "SI=F", COPPER: "HG=F", PLATINUM: "PL=F", PALLADIUM: "PA=F",
+    OIL: "CL=F", WTI: "CL=F", BRENT: "BZ=F", NATGAS: "NG=F", WHEAT: "ZW=F", COFFEE: "KC=F",
+  };
+  // Resolve the Yahoo ticker for a non-crypto instrument given its asset_type.
+  function yfTickerFor(sym, assetType) {
+    const up = String(sym || "").toUpperCase();
+    if (YF_TICKER[up]) return YF_TICKER[up];
+    if (assetType === "asx" || market === "asx") return up.includes(".") ? up : up + ".AX";
+    return up;   // nasdaq / index symbols Yahoo already knows
+  }
+  const isCryptoMarket = (assetType) => assetType === "crypto" || market === "crypto";
+
   // Indicator math mirroring scanner/scalp.py exactly (BB20/2, KC20/1.5×ATR,
   // EMA9/21, TTM momentum = linreg(12) of close−midline, Wilder ATR).
   const SQ_P = 20, SQ_MOM = 12, BB_MULT = 2.0, KC_MULT = 1.5;
@@ -131,6 +148,81 @@
                   ["KC Upper", "#cc7700"], ["KC Lower", "#cc7700"], ["EMA 9", "#ffd23f"], ["EMA 21", "#2fd07f"]];
     const lines = c.lineData.map((data, i) => ({ name: meta[i][0], color: meta[i][1], data }));
     return { candles, volume, histogram: c.hist, squeeze_dots: [], lines };
+  }
+
+  // ── graceful live fallback (no saved scan chart) ───────────────────────────
+  // Pull OHLCV history from the Yahoo proxy for a non-crypto instrument. Used to
+  // draw a real chart when the per-ticker scan JSON is missing or empty, instead
+  // of dead-ending on "Chart unavailable".
+  function yahooBars(yfTicker, range, interval) {
+    return fetch(`/api/price?symbol=${encodeURIComponent(yfTicker)}&range=${range}&interval=${interval}`,
+      { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
+  }
+
+  // Build a daily timeframe block (candles + volume + EMA 34/55/89) from plain
+  // OHLCV bars — the user's same EMA system, on whatever history we can fetch.
+  function barsToStockTF(bars) {
+    const candles = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
+    const volume  = bars.map((b) => ({ time: b.time, value: Math.round(b.volume || 0),
+      color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" }));
+    const cl = bars.map((b) => b.close);
+    const mkLine = (span, name, color) => {
+      const e = emaArr(cl, span);
+      // Drop the warm-up region so the EMA doesn't render as a misleading flat
+      // line before it has enough data behind it.
+      const data = [];
+      for (let i = span - 1; i < bars.length; i++) data.push({ time: bars[i].time, value: e[i] });
+      return { name, color, data };
+    };
+    const lines = bars.length >= 35
+      ? [mkLine(34, "EMA 34", "#2fd07f"), mkLine(55, "EMA 55", "#4d9fff"), mkLine(89, "EMA 89", "#a78bfa")]
+      : [];
+    return { candles, volume, lines };
+  }
+
+  // Render a chart purely from live history when no static JSON exists. `meta`
+  // (optional) is the scan-results row, which still carries grade / entry / stop
+  // / target even when the per-ticker chart file is missing.
+  function liveFallback(SYM, meta) {
+    const assetType = (meta && meta.asset_type) || (market === "crypto" ? "crypto" : null);
+    const dir = (meta && meta.dir) || "LONG";
+    const cur = (meta && meta.currency_symbol) || (market === "asx" || assetType === "asx" ? "A$" : "$");
+    const d = {
+      symbol: SYM, name: (meta && meta.name) || SYM,
+      asset_type: assetType,
+      price: (meta && meta.price) ?? null,
+      grade: (meta && meta.grade) || "", score: (meta && meta.score) || 0,
+      score_max: (meta && meta.score_max) || 0, chips: (meta && meta.chips) || [],
+      sector: (meta && meta.sector) || "", currency_symbol: cur,
+      tv_symbol: (meta && meta.tv_symbol) || SYM, dir,
+      rr: (meta && meta.rr) || 0, low_rr: (meta && meta.low_rr) || false,
+      rr_text: (meta && meta.rr_text) || "", risk_pct: (meta && meta.risk_pct) ?? null,
+      entry: meta && meta.entry, stop: meta && meta.stop, target: meta && meta.target,
+      analysis: (meta && meta.analysis)
+        || "Live fallback chart — no saved scan data for this ticker, showing recent history.",
+      default_tf: "1D", level_lines: [], timeframes: {}, _fallback: true,
+    };
+    if (d.stop   != null) d.level_lines.push({ price: d.stop,   color: "#ff5b5b", title: "STOP" });
+    if (d.entry  != null) d.level_lines.push({ price: d.entry,  color: "#e5e9f0", title: "ENTRY" });
+    if (d.target != null) d.level_lines.push({ price: d.target, color: "#2fd07f", title: "TARGET" });
+
+    if (isCryptoMarket(assetType)) {
+      binanceKlines(cryptoPair(SYM), "1h", 1000)
+        .then((bars) => { if (!bars.length) throw new Error("no bars"); d.timeframes["1H"] = barsToTF(bars); d.default_tf = "1H"; render(d); })
+        .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
+    } else {
+      const yf = yfTickerFor(SYM, assetType);
+      yahooBars(yf, "2y", "1d")
+        .then((bars) => {
+          if (bars.length < 6) throw new Error("thin");
+          d.timeframes["1D"] = barsToStockTF(bars);
+          if (d.price == null) d.price = bars[bars.length - 1].close;
+          render(d);
+        })
+        .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+    }
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -352,7 +444,11 @@
       const data  = mjLoad();
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
-        asset_type: isCrypto ? "crypto" : (market === "asx" ? "asx" : "nasdaq"),
+        // Preserve the instrument's true type so it buckets correctly in the
+        // journal: a scalp index/commodity (NAS100, GOLD) must keep "index" /
+        // "commodity" and never be coerced to a stock or crypto.
+        asset_type: isCrypto ? "crypto"
+          : (d.asset_type || (market === "asx" ? "asx" : "nasdaq")),
         entry: px, entry_date: nowDate(), entry_time: nowTime(),
         size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
         stop: d.stop ?? null, target: d.target ?? null,
@@ -426,11 +522,62 @@
     if (sell) sell.addEventListener("click", () => setTimeout(removeLine, 60));
   }
 
+  // Poll a delayed live quote for a non-crypto instrument and push it into the
+  // header price + liveState (so the sim box, auto-close and entry P&L all react
+  // to a moving price instead of the static scan close). Shows a "~15m delayed"
+  // badge since Yahoo isn't real-time for stocks / futures.
+  function startStockLive(d, SYM) {
+    const cur      = d.currency_symbol || "";
+    const yf       = yfTickerFor(SYM, d.asset_type);
+    const priceEl  = $("#ct-price");
+    const delayEl  = $("#ct-delayed");
+    let lastPx = null;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}`, { cache: "no-store" });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j == null || j.price == null) return;
+        const px = +j.price;
+        liveState.price = px;
+        if (delayEl) delayEl.hidden = false;
+        if (priceEl) {
+          if (lastPx != null && px !== lastPx) {
+            priceEl.classList.remove("tick-up", "tick-down");
+            void priceEl.offsetWidth;
+            priceEl.classList.add(px > lastPx ? "tick-up" : "tick-down");
+          }
+          priceEl.textContent = fmt(px, cur);
+          lastPx = px;
+        }
+        liveState.listeners.forEach((fn) => { try { fn(px); } catch (_) {} });
+      } catch (_) { /* keep the last good price */ }
+    };
+    tick();
+    const iv = setInterval(tick, 20000);
+    window.addEventListener("beforeunload", () => clearInterval(iv), { once: true });
+  }
+
   function render(d) {
     header(d); footer(d); wireSim(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
-    if (!available.length) { fail("No chart data for this ticker yet."); return; }
+    if (!available.length) {
+      // Static JSON had no usable timeframes — try live history before failing
+      // (but don't loop if we're already rendering a live fallback).
+      if (d._fallback) { fail("No chart data for this ticker yet."); }
+      else { fallbackFromLive(); }
+      return;
+    }
+    // Surface that this is a live-built chart rather than the saved scan view.
+    if (d._fallback) {
+      const note = document.createElement("span");
+      note.className = "ct-fallback-note";
+      note.textContent = "live fallback";
+      note.title = "No saved scan chart for this ticker — showing recent history pulled live.";
+      const priceEl = $("#ct-price");
+      if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
+    }
     let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
 
     const el = $("#chart");
@@ -568,6 +715,10 @@
         applyTF(b.dataset.tf);
       }));
       applyTF(curTF);
+      // Poll a live (~15-min delayed) quote so the header price isn't frozen at
+      // the last scan close. Covers ASX / NASDAQ stocks and scalp index /
+      // commodity instruments (NAS100, US30, GOLD, SILVER, OIL).
+      startStockLive(d, SYM);
     }
 
     wireChartPosition(candle, d);
@@ -821,11 +972,10 @@
   // every tick. Visible only while a matching position is open.
   function wireLiveBox(d, el, SYM, posDir, findOpen) {
     const cur        = d.currency_symbol || "";
-    // Crypto when the row says so, or the market is crypto. Pullback stock charts
-    // carry no asset_type and market is "asx"/"nasdaq", so they stay stock.
-    const isCryptoPos = d.asset_type === "crypto"
-                        || market === "crypto"
-                        || (market === "scalp" && d.asset_type == null);
+    // Crypto when the row says so, or the market is crypto. Scalp charts now
+    // always carry a real asset_type, so an index/commodity (NAS100, GOLD) is
+    // correctly treated as a stock-style position rather than crypto.
+    const isCryptoPos = d.asset_type === "crypto" || market === "crypto";
     const posBrok    = (data) => isCryptoPos ? data.crypto_brokerage : data.stock_brokerage;
     const box = document.createElement("div");
     box.className = "live-pos-box";
@@ -1056,6 +1206,43 @@
       .catch(() => {});
   }
 
+  // The base instrument symbol (scalp charts are keyed "<SYM>_<dir>", but the
+  // live feeds want just "<SYM>").
+  const baseSymbol = market === "scalp"
+    ? decodeURIComponent(symbol).replace(/_(long|short)$/i, "")
+    : decodeURIComponent(symbol);
+
+  // Pull the scan-results row for this symbol so the live fallback can still
+  // show grade / entry / stop / target even when the per-ticker chart JSON is
+  // missing. Resolves to null if the results file or row isn't found.
+  function fetchResultMeta() {
+    const isScalp = market === "scalp";
+    const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
+                  : mode === "short"    ? "_short"    : "";
+    const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
+    const sOf     = isScalp
+      ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
+      : (r) => r.symbol;
+    const want = decodeURIComponent(symbol).toUpperCase();
+    return fetch(file, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const rows = (j && j.results) || [];
+        const row  = rows.find((r) => String(sOf(r)).toUpperCase() === want);
+        if (row && j) {
+          // Carry the per-scan currency onto the row so the fallback labels match.
+          row.currency_symbol = row.currency_symbol || j.currency_symbol || "$";
+        }
+        return row || null;
+      })
+      .catch(() => null);
+  }
+
+  // No static chart anywhere → render from live history instead of dead-ending.
+  function fallbackFromLive() {
+    fetchResultMeta().then((meta) => liveFallback(baseSymbol, meta));
+  }
+
   function boot() {
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
@@ -1064,15 +1251,15 @@
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(render)
       .catch(() => {
-        // For mode-specific subdirs, try the base pullback chart as a fallback
+        // For mode-specific subdirs, try the base pullback chart first.
         if (modeDir) {
           const baseFile = `data/charts/${market}/${encodeURIComponent(symbol)}.json`;
           fetch(baseFile, { cache: "no-cache" })
             .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(render)
-            .catch(() => fail(`No chart data for ${symbol.toUpperCase()} yet. Run a scan first.`));
+            .catch(fallbackFromLive);
         } else {
-          fail(`No chart data for ${symbol.toUpperCase()} (${market.toUpperCase()}). Run a scan first.`);
+          fallbackFromLive();
         }
       });
   }

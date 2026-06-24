@@ -240,36 +240,62 @@
     }).join("");
   }
 
-  // Silently refresh PULSE values from Yahoo Finance after the static scan data renders.
-  // Staggers requests so we don't hammer the proxy. Runs once per page load.
-  async function refreshPulseLive(pulse) {
-    if (!pulse || !pulse.length) return;
+  // Refresh PULSE values from Yahoo Finance after the static scan data renders,
+  // then keep them current on a slow interval. Staggers requests so we don't
+  // hammer the proxy, retries once on a transient failure, and reveals a visible
+  // "~15m delayed" badge once at least one live value lands (Yahoo isn't
+  // real-time for indices / futures / FX).
+  let _pulseTimer = null;
+  async function _pulseQuote(ticker) {
+    // One retry — Yahoo/proxy occasionally returns a transient non-200.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(`/api/quote?sym=${encodeURIComponent(ticker)}`, { cache: "no-store" });
+        if (res.ok) {
+          const j = await res.json();
+          if (j && j.price != null) return j;
+        }
+      } catch (_) { /* fall through to retry */ }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
+    }
+    return null;
+  }
+  async function _pulsePass(pulse) {
     const track = $("#pulse-track");
     if (!track) return;
+    let anyLive = false;
     for (let i = 0; i < pulse.length; i++) {
       const p = pulse[i];
       if (!p.ticker) continue;
       await new Promise((r) => setTimeout(r, i * 350));
-      try {
-        const res = await fetch(`/api/quote?sym=${encodeURIComponent(p.ticker)}`);
-        if (!res.ok) continue;
-        const j = await res.json();
-        if (j.price == null) continue;
-        const divide = p.divide || 1;
-        const price = j.price / divide;
-        const decimals = p.decimals ?? 2;
-        const valStr = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-        const item = track.querySelector(`[data-pkey="${CSS.escape(p.key)}"]`);
-        if (!item) continue;
-        const valEl = item.querySelector(".pi-val");
-        if (valEl) {
-          valEl.textContent = valStr;
-          // Yahoo Finance is ~15 min delayed for non-crypto; show last update time as tooltip
-          const refreshedAt = j.time ? new Date(j.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-          valEl.title = refreshedAt ? `~15min delayed · as of ${refreshedAt}` : "~15min delayed";
-        }
-      } catch (_) { /* silent — stale scan value is fine */ }
+      const j = await _pulseQuote(p.ticker);
+      if (!j) continue;
+      const divide = p.divide || 1;
+      const price = j.price / divide;
+      const decimals = p.decimals ?? 2;
+      const valStr = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      const item = track.querySelector(`[data-pkey="${CSS.escape(p.key)}"]`);
+      if (!item) continue;
+      const valEl = item.querySelector(".pi-val");
+      if (valEl && valEl.textContent !== valStr) {
+        valEl.textContent = valStr;
+        const refreshedAt = j.time ? new Date(j.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+        valEl.title = refreshedAt ? `~15min delayed · as of ${refreshedAt}` : "~15min delayed";
+      }
+      anyLive = true;
     }
+    if (anyLive) {
+      const badge = $("#pulse-delayed");
+      if (badge) badge.hidden = false;
+    }
+  }
+  function refreshPulseLive(pulse) {
+    if (!pulse || !pulse.length) return;
+    if (_pulseTimer) { clearInterval(_pulseTimer); _pulseTimer = null; }
+    _pulsePass(pulse);
+    // Keep the macro row live without reloading the page (Yahoo is ~15m delayed,
+    // so a 90s cadence is plenty fresh and gentle on the proxy).
+    _pulseTimer = setInterval(() => _pulsePass(pulse), 90000);
   }
 
   // ------------------------------------------------------- EMA / SMA legend
@@ -389,8 +415,10 @@
     </div>`;
   }
 
-  // Hero metrics strip — the trade thesis at a glance: Grade · Entry · Stop · Target · R:R.
-  // Shared by every setup type so the key numbers always lead the detail panel.
+  // Hero metrics strip — the trade thesis at a glance:
+  // Grade · Score · Entry · Stop · Target · R:R. Shared by every setup type so
+  // the key numbers always lead the detail panel and stand out from the
+  // supporting detail below.
   function heroStrip(r, cur, entry, stop, target, stopPct, targetPct) {
     const rrTxt   = r.rr == null ? "—" : r.rr.toFixed(1);
     const rrCls   = r.low_rr ? "low" : "";
@@ -398,9 +426,11 @@
     const sp = stopPct   != null && stopPct   !== "" ? Math.abs(+stopPct).toFixed(1)   : null;
     const tp = targetPct != null && targetPct !== "" ? Math.abs(+targetPct).toFixed(1) : null;
     const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
+    const scoreMax = r.score_max ? `<span class="dh-unit">/${r.score_max}</span>` : "";
     return `<div class="detail-hero">
       <div class="dh-cell dh-grade" style="--gc:${gColor}">
         <span class="dh-lbl">Grade</span><span class="dh-val" style="color:${gColor}">${esc(r.grade)}</span></div>
+      <div class="dh-cell"><span class="dh-lbl">Score</span><span class="dh-val">${r.score != null ? r.score : "—"}${scoreMax}</span></div>
       <div class="dh-cell"><span class="dh-lbl">Entry</span><span class="dh-val">${cur}${num(entry)}</span></div>
       <div class="dh-cell dh-stop"><span class="dh-lbl">Stop</span><span class="dh-val">${cur}${num(stop)}</span>${sp ? `<span class="dh-sub neg">−${sp}%</span>` : ""}</div>
       <div class="dh-cell dh-target"><span class="dh-lbl">Target</span><span class="dh-val">${cur}${num(target)}</span>${tp ? `<span class="dh-sub pos">+${tp}%</span>` : ""}</div>

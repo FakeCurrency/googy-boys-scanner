@@ -252,9 +252,13 @@ body {
   background: var(--panel); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow);
 }
 .pulse-label {
-  display: grid; place-items: center; padding: 0 12px;
+  display: grid; place-items: center; gap: 5px; padding: 0 12px;
   font: 600 10px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted-2);
   border-right: 0.5px solid var(--separator);
+}
+.pulse-delayed {
+  font: 600 8.5px/1 var(--sans); letter-spacing: 0.02em; color: var(--muted-2);
+  background: var(--fill); padding: 3px 5px; border-radius: 5px; white-space: nowrap;
 }
 .pulse-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px,1fr); overflow-x: auto; flex: 1; }
 .pulse-item { padding: 11px 15px; border-right: 0.5px solid var(--separator); min-width: 0; }
@@ -513,7 +517,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 /* ── hero metrics strip — Grade · Entry · Stop · Target · R:R ── */
 .detail-hero {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 1px;
   background: var(--separator);
   border-radius: var(--radius-md);
@@ -878,27 +882,54 @@ body.debug-mode .debug-panel {
   .topbar-quote { display: none; }
 }
 @media (max-width: 768px) {
-  .topbar-row1 { padding: 9px 14px; gap: 8px; }
-  .topbar-row2 { padding: 5px 14px 6px; }
+  .topbar-row1 { padding: 9px 12px; gap: 10px; }
+  .topbar-row2 { padding: 6px 12px 7px; }
   .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
   .refresh-timer { display: none; }
-  .howto-link:not(:last-of-type) { display: none; }
+  /* Keep every nav link reachable on mobile: scroll the row horizontally
+     instead of hiding all but the last link (which buried Journal / News). */
+  .topbar-nav {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; -ms-overflow-style: none;
+    margin-left: 0; flex: 1; justify-content: flex-end;
+  }
+  .topbar-nav::-webkit-scrollbar { display: none; }
+  .howto-link { padding: 8px 6px; }            /* taller tap target */
+  .market-btn { padding: 8px 14px; }           /* taller tap target */
+  /* Scan-type row scrolls as one strip; buttons keep their size + tap area. */
+  .topbar-row2 { overflow-x: auto; scrollbar-width: none; }
+  .topbar-row2::-webkit-scrollbar { display: none; }
+  .scan-switch { flex: 0 0 auto; }
+  .scan-btn { padding: 8px 13px; }
   .stats { grid-template-columns: repeat(2,1fr); }
   .stat-card:nth-child(2) { border-right: 0; }
   .stat-card:nth-child(1), .stat-card:nth-child(2) { border-bottom: 0.5px solid var(--separator); }
   .stat-value { font-size: 22px; }
   .row-spark { width: 52px; }
+  /* roomier tap targets on the filter segments */
+  .seg-btn { padding: 9px 13px; }
+  .view-tab { padding: 6px 0 13px; }
 }
 @media (max-width: 600px) {
   .wrap { padding: 14px 12px 52px; }
-  .row { grid-template-columns: 46px 1fr auto; min-height: 64px; }
+  .row { grid-template-columns: 44px 1fr auto; min-height: 64px; }
   .row-main { padding: 11px 12px 10px; gap: 6px; }
   .row-right { padding: 10px 10px 10px 6px; gap: 6px; }
   .row-spark { width: 46px; height: 24px; }
   .tkr { font-size: 15px; }
   .rprice { font-size: 15px; }
   .cname { display: none; }
+  /* tighter, quieter secondary badges so the ticker + price stay the focus */
+  .badge { font-size: 9.5px; padding: 3px 7px; }
+  .row-chips { gap: 4px; }
+  .chip { font-size: 10px; padding: 3px 7px; }
+  /* filter + sort segments scroll as one strip instead of wrapping messily */
+  .controls { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
+  .controls::-webkit-scrollbar { display: none; }
+  .control-group { flex: 0 0 auto; }
+  .ema-legend { gap: 10px; overflow-x: auto; scrollbar-width: none; }
+  .ema-legend::-webkit-scrollbar { display: none; }
   .row-detail { padding: 4px 14px 16px; }
   .detail-hero { grid-template-columns: repeat(3, 1fr); }
   .detail-prices { grid-template-columns: repeat(2, 1fr); }
