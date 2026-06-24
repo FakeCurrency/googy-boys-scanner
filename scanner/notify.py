@@ -105,6 +105,10 @@ def _fetch_market_caps(market: str, signals: list[dict]) -> dict[str, float]:
 # -- Telegram ------------------------------------------------------------------
 
 def _tg_send(text: str) -> bool:
+    from . import config as _cfg
+    if not getattr(_cfg, "TELEGRAM_ENABLED", True):
+        print("  notify: Telegram disabled (TELEGRAM_ENABLED=False) -- skipping")
+        return False
     token   = os.environ.get("TELEGRAM_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:

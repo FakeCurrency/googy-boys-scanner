@@ -33,6 +33,12 @@ _EMOJI = {
 
 
 def _telegram(text: str) -> bool:
+    try:
+        from scanner import config as _cfg
+        if not getattr(_cfg, "TELEGRAM_ENABLED", True):
+            return False
+    except Exception:
+        pass
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat  = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not (token and chat):

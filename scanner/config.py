@@ -328,6 +328,10 @@ ALERT_SEVERITY = {
     "info":            "INFO",
 }
 
+# Set False to silence all Telegram sends without touching secrets.
+# Flip back to True when the bot is ready to go live again.
+TELEGRAM_ENABLED = False
+
 # Map severity → alert channels (telegram / discord / email)
 ALERT_CHANNELS = {
     "CRITICAL": ["telegram", "discord", "email"],
