@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-24T19:28:08Z",
+  "updated_at": "2026-06-24T20:31:44Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -22,7 +22,7 @@
       "win_rate": 0.0,
       "total_r": -9.88,
       "total_pnl": -1141.67,
-      "open_unrealised_pnl": 17.54
+      "open_unrealised_pnl": -77.38
     },
     "shorts": {
       "open": 2,
@@ -30,7 +30,7 @@
       "win_rate": 38.5,
       "total_r": 1.51,
       "total_pnl": -369.7,
-      "open_unrealised_pnl": 0
+      "open_unrealised_pnl": -169.85
     },
     "regime_stats": {
       "unknown": {
@@ -72,11 +72,11 @@
       "opened_ts": "2026-06-23T21:17:57+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 1.0,
-      "unreal_pnl": 17.54,
+      "unreal_r": 0.28,
+      "unreal_pnl": -24.15,
       "fill_price": 195.94376001,
       "filled": true,
-      "current": 198.0
+      "current": 196.51010132
     },
     {
       "symbol": "NATGAS",
@@ -87,7 +87,7 @@
       "direction": "long",
       "grade": "A",
       "score": 7,
-      "entry": 3.25099993,
+      "entry": 3.26497914,
       "stop": 3.213352,
       "target": 3.3262958,
       "rr": 2.0,
@@ -99,8 +99,11 @@
       "opened_ts": "2026-06-24T15:46:53+00:00",
       "session_day": "2026-06-25",
       "status": "open",
-      "unreal_r": 0.0,
-      "unreal_pnl": 0.0
+      "unreal_r": -0.1,
+      "unreal_pnl": -53.23,
+      "fill_price": 3.26497914,
+      "filled": true,
+      "current": 3.25999999
     }
   ],
   "open_shorts": [
@@ -113,7 +116,7 @@
       "direction": "short",
       "grade": "A+",
       "score": 9,
-      "entry": 60319.23046875,
+      "entry": 59852.66771758,
       "stop": 60992.72447172,
       "target": 58972.24246282,
       "rr": 2.0,
@@ -125,8 +128,11 @@
       "opened_ts": "2026-06-24T15:46:53+00:00",
       "session_day": "2026-06-25",
       "status": "open",
-      "unreal_r": 0.0,
-      "unreal_pnl": 0.0
+      "unreal_r": -0.77,
+      "unreal_pnl": -169.85,
+      "fill_price": 59852.66771758,
+      "filled": true,
+      "current": 60727.2109375
     },
     {
       "symbol": "AAPL",
