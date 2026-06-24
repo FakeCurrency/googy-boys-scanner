@@ -6,8 +6,8 @@
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-06-23T20:16:40-04:00",
-  "scanned": 97,
+  "generated_at": "2026-06-23T22:01:24-04:00",
+  "scanned": 98,
   "universe_size": 98,
   "score_max": 13,
   "ema_periods": [
@@ -25,13 +25,11 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8816.0,
+      "value": 8812.0,
       "decimals": 0,
-      "day_pct": -0.14,
-      "d5_pct": -1.1,
+      "day_pct": 0.29,
+      "d5_pct": -1.72,
       "spark": [
-        8621.7002,
-        8657.0,
         8692.0,
         8657.7998,
         8717.7002,
@@ -51,19 +49,21 @@
         8966.2998,
         8911.0996,
         8828.7002,
-        8816.0996
+        8816.0996,
+        8787.0,
+        8812.5
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4119.0,
+      "value": 4103.0,
       "decimals": 0,
-      "day_pct": -1.51,
-      "d5_pct": -4.84,
+      "day_pct": -1.89,
+      "d5_pct": -5.21,
       "spark": [
         4539.7998,
         4521.0,
@@ -86,7 +86,7 @@
         4358.8999,
         4224.1001,
         4181.8999,
-        4118.7002
+        4102.7002
       ],
       "dir": "down"
     },
@@ -95,10 +95,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 61.66,
+      "value": 61.62,
       "decimals": 2,
-      "day_pct": -5.9,
-      "d5_pct": -12.0,
+      "day_pct": -5.96,
+      "d5_pct": -12.05,
       "spark": [
         76.414,
         75.893,
@@ -121,7 +121,7 @@
         70.696,
         66.255,
         65.527,
-        61.66
+        61.62
       ],
       "dir": "down"
     },
@@ -130,10 +130,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 76.67,
+      "value": 76.76,
       "decimals": 2,
-      "day_pct": -1.58,
-      "d5_pct": -7.82,
+      "day_pct": -1.46,
+      "d5_pct": -7.71,
       "spark": [
         102.58,
         103.54,
@@ -156,7 +156,7 @@
         79.55,
         79.85,
         77.9,
-        76.67
+        76.76
       ],
       "dir": "down"
     },
@@ -165,10 +165,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 72.83,
+      "value": 72.8,
       "decimals": 2,
-      "day_pct": -2.66,
-      "d5_pct": -9.81,
+      "day_pct": -2.7,
+      "d5_pct": -9.85,
       "spark": [
         96.35,
         96.6,
@@ -191,7 +191,7 @@
         76.79,
         76.6,
         74.82,
-        72.83
+        72.8
       ],
       "dir": "down"
     },
@@ -202,8 +202,8 @@
       "divide": 1,
       "value": 3.19,
       "decimals": 2,
-      "day_pct": -1.81,
-      "d5_pct": 1.49,
+      "day_pct": -1.84,
+      "d5_pct": 1.46,
       "spark": [
         3.018,
         2.907,
@@ -226,7 +226,7 @@
         3.145,
         3.233,
         3.253,
-        3.194
+        3.193
       ],
       "dir": "down"
     },
@@ -342,7 +342,7 @@
       "divide": 1,
       "value": 0.6919,
       "decimals": 4,
-      "day_pct": -1.08,
+      "day_pct": -1.07,
       "d5_pct": -2.07,
       "spark": [
         0.717,
@@ -410,10 +410,10 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.38,
+      "value": 101.42,
       "decimals": 2,
-      "day_pct": 0.36,
-      "d5_pct": 1.76,
+      "day_pct": 0.39,
+      "d5_pct": 1.79,
       "spark": [
         99.19,
         99.32,
@@ -436,7 +436,7 @@
         100.09,
         100.85,
         101.02,
-        101.381
+        101.415
       ],
       "dir": "up"
     }
@@ -545,7 +545,7 @@
       "stop": 1037.775,
       "target": 936.51000977,
       "rr": 0.7,
-      "trail": 1011.86182403,
+      "trail": 1011.86182405,
       "stop_pct": 6.1,
       "p2_pct": 4.3,
       "target_basis": "support",
@@ -614,7 +614,7 @@
       "day_pct": -2.1,
       "entry": 49.62857137,
       "stop": 58.22650154,
-      "target": 32.43271102,
+      "target": 32.43271103,
       "rr": 2.0,
       "trail": 48.91069545,
       "stop_pct": 17.3,
@@ -826,7 +826,7 @@
       "stop": 366.8117926,
       "target": 159.76672029,
       "rr": 2.0,
-      "trail": 308.67152569,
+      "trail": 308.67152568,
       "stop_pct": 23.2,
       "p2_pct": 46.4,
       "target_basis": "measured",

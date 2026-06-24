@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-24T10:20:14+10:00",
-  "scanned": 1447,
+  "generated_at": "2026-06-24T12:04:04+10:00",
+  "scanned": 1349,
   "universe_size": 1987,
   "score_max": 11,
   "sma_periods": [
@@ -22,13 +22,11 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8816.0,
+      "value": 8813.0,
       "decimals": 0,
-      "day_pct": -0.14,
-      "d5_pct": -1.1,
+      "day_pct": 0.3,
+      "d5_pct": -1.71,
       "spark": [
-        8621.7002,
-        8657.0,
         8692.0,
         8657.7998,
         8717.7002,
@@ -48,19 +46,21 @@
         8966.2998,
         8911.0996,
         8828.7002,
-        8816.0996
+        8816.0996,
+        8787.0,
+        8813.2998
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4125.0,
+      "value": 4103.0,
       "decimals": 0,
-      "day_pct": -1.37,
-      "d5_pct": -4.7,
+      "day_pct": -1.88,
+      "d5_pct": -5.19,
       "spark": [
         4539.7998,
         4521.0,
@@ -83,7 +83,7 @@
         4358.8999,
         4224.1001,
         4181.8999,
-        4124.7002
+        4103.2998
       ],
       "dir": "down"
     },
@@ -92,10 +92,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 61.83,
+      "value": 61.62,
       "decimals": 2,
-      "day_pct": -5.65,
-      "d5_pct": -11.76,
+      "day_pct": -5.97,
+      "d5_pct": -12.06,
       "spark": [
         76.414,
         75.893,
@@ -118,7 +118,7 @@
         70.696,
         66.255,
         65.527,
-        61.825
+        61.615
       ],
       "dir": "down"
     },
@@ -127,10 +127,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 76.65,
+      "value": 76.76,
       "decimals": 2,
-      "day_pct": -1.6,
-      "d5_pct": -7.84,
+      "day_pct": -1.46,
+      "d5_pct": -7.71,
       "spark": [
         102.58,
         103.54,
@@ -153,7 +153,7 @@
         79.55,
         79.85,
         77.9,
-        76.65
+        76.76
       ],
       "dir": "down"
     },
@@ -162,10 +162,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 72.78,
+      "value": 72.76,
       "decimals": 2,
-      "day_pct": -2.73,
-      "d5_pct": -9.87,
+      "day_pct": -2.75,
+      "d5_pct": -9.89,
       "spark": [
         96.35,
         96.6,
@@ -188,7 +188,7 @@
         76.79,
         76.6,
         74.82,
-        72.78
+        72.76
       ],
       "dir": "down"
     },
@@ -199,8 +199,8 @@
       "divide": 1,
       "value": 3.19,
       "decimals": 2,
-      "day_pct": -1.84,
-      "d5_pct": 1.46,
+      "day_pct": -1.88,
+      "d5_pct": 1.43,
       "spark": [
         3.018,
         2.907,
@@ -223,7 +223,7 @@
         3.145,
         3.233,
         3.253,
-        3.193
+        3.192
       ],
       "dir": "down"
     },
@@ -337,10 +337,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.692,
+      "value": 0.6919,
       "decimals": 4,
-      "day_pct": -1.06,
-      "d5_pct": -2.05,
+      "day_pct": -1.07,
+      "d5_pct": -2.07,
       "spark": [
         0.717,
         0.7171,
@@ -363,7 +363,7 @@
         0.7013,
         0.7003,
         0.6995,
-        0.692
+        0.6919
       ],
       "dir": "down"
     },
@@ -407,10 +407,10 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.37,
+      "value": 101.41,
       "decimals": 2,
-      "day_pct": 0.35,
-      "d5_pct": 1.75,
+      "day_pct": 0.39,
+      "d5_pct": 1.79,
       "spark": [
         99.19,
         99.32,
@@ -433,14 +433,13 @@
         100.09,
         100.85,
         101.02,
-        101.369
+        101.413
       ],
       "dir": "up"
     }
   ],
   "sector_counts": {
-    "Health Care Equipment & Services": 1,
-    "Materials": 1
+    "Health Care Equipment & Services": 1
   },
   "results": [
     {
@@ -449,36 +448,34 @@
       "sector": "Health Care Equipment & Services",
       "dir": "LONG",
       "setup_type": "spec",
-      "grade": "A+",
-      "score": 9,
+      "grade": "A",
+      "score": 7,
       "score_max": 11,
       "chips": [
-        "VOLUME 5.5\u00d7 SPIKE",
+        "VOLUME 4.8\u00d7 SPIKE",
         "NEW 3-MONTH HIGH",
-        "9 \u203a 26 RECLAIM",
-        "RSI TURNING UP"
+        "9 \u203a 26 RECLAIM"
       ],
       "weekly": false,
       "low_rr": false,
       "rr_text": "3.0:1",
       "target_2r": true,
       "liquidity": "OK",
-      "price": 0.5,
-      "y_close": 0.53500003,
-      "open": 0.53500003,
+      "price": 0.47999999,
+      "y_close": 0.5,
+      "open": 0.5,
       "open_pct": 0.0,
-      "current_pct": -6.54,
-      "day_pct": -6.54,
-      "entry": 0.5,
+      "current_pct": -4.0,
+      "day_pct": -4.0,
+      "entry": 0.47999999,
       "stop": 0.29204999,
-      "target": 1.12385004,
+      "target": 1.04385,
       "rr": 3.0,
       "trail": 0.41447436,
-      "stop_pct": 41.6,
-      "p2_pct": 124.8,
+      "stop_pct": 39.2,
+      "p2_pct": 117.5,
       "target_basis": "measured",
       "spark": [
-        0.31999999,
         0.32499999,
         0.31999999,
         0.31999999,
@@ -507,37 +504,38 @@
         0.38499999,
         0.41999999,
         0.53500003,
-        0.5
+        0.5,
+        0.47999999
       ],
-      "trend": "green",
-      "turnover": 140351,
+      "trend": "blue",
+      "turnover": 140691,
       "detail": {
         "setup_type": "spec",
-        "sma9": 0.38388889,
-        "sma9_pct": -23.2,
-        "sma26": 0.34836538,
-        "sma26_pct": -30.3,
-        "sma43": 0.33994186,
-        "sma43_pct": -32.0,
-        "sma200": 0.3541375,
-        "sma200_pct": -29.2,
+        "sma9": 0.40222222,
+        "sma9_pct": -16.2,
+        "sma26": 0.35451923,
+        "sma26_pct": -26.1,
+        "sma43": 0.34319767,
+        "sma43_pct": -28.5,
+        "sma200": 0.3545625,
+        "sma200_pct": -26.1,
         "cross_up": true,
-        "rsi": 74.6,
-        "rsi_ma": 55.5,
-        "rsi_up": true,
-        "volume_ratio": 3.7,
-        "volume_today": 959369,
-        "volume_avg": 284750,
+        "rsi": 69.6,
+        "rsi_ma": 56.7,
+        "rsi_up": false,
+        "volume_ratio": 2.5,
+        "volume_today": 48715,
+        "volume_avg": 327873,
         "volume_surge": true,
-        "off_high_pct": 11.5,
-        "base_high": 0.38999999,
-        "base_high_pct": -22.0,
+        "off_high_pct": 15.0,
+        "base_high": 0.44,
+        "base_high_pct": -8.3,
         "broken": true,
         "swing_low": 0.29499999,
-        "swing_low_pct": -41.0,
+        "swing_low_pct": -38.5,
         "trailing_stop": 0.41447436,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -17.1,
+        "trailing_pct": -13.7,
         "structure": {
           "trend": "Mixed / consolidating",
           "swing_highs": [
@@ -551,126 +549,11 @@
             0.29499999
           ]
         },
-        "risk_pct": 41.6,
-        "spike_ratio": 5.5,
+        "risk_pct": 39.2,
+        "spike_ratio": 4.8,
         "new_high_long": true
       },
-      "analysis": "IIQ just fired a speculative volume-spike breakout \u2014 volume hit 5.5\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.5000, stop A$0.2920, target A$1.1239 (3.00:1) \u2014 then trail it.",
-      "sector_count": 1
-    },
-    {
-      "symbol": "IBR",
-      "name": "Iron Bear Resources Ltd",
-      "sector": "Materials",
-      "dir": "LONG",
-      "setup_type": "spec",
-      "grade": "A+",
-      "score": 8,
-      "score_max": 11,
-      "chips": [
-        "VOLUME 3.2\u00d7 SPIKE",
-        "NEW 3-MONTH HIGH",
-        "9 \u203a 26 RECLAIM",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 0.078,
-      "y_close": 0.076,
-      "open": 0.078,
-      "open_pct": 2.63,
-      "current_pct": 0.0,
-      "day_pct": 2.63,
-      "entry": 0.078,
-      "stop": 0.05643,
-      "target": 0.14271001,
-      "rr": 3.0,
-      "trail": 0.06384571,
-      "stop_pct": 27.7,
-      "p2_pct": 83.0,
-      "target_basis": "measured",
-      "spark": [
-        0.057,
-        0.056,
-        0.056,
-        0.057,
-        0.066,
-        0.072,
-        0.064,
-        0.063,
-        0.065,
-        0.068,
-        0.066,
-        0.064,
-        0.06,
-        0.062,
-        0.062,
-        0.06,
-        0.062,
-        0.062,
-        0.06,
-        0.058,
-        0.057,
-        0.059,
-        0.057,
-        0.062,
-        0.058,
-        0.065,
-        0.068,
-        0.073,
-        0.076,
-        0.078
-      ],
-      "trend": "green",
-      "turnover": 150226,
-      "detail": {
-        "setup_type": "spec",
-        "sma9": 0.06622222,
-        "sma9_pct": -15.1,
-        "sma26": 0.06411538,
-        "sma26_pct": -17.8,
-        "sma43": 0.06039535,
-        "sma43_pct": -22.6,
-        "sma200": 0.054385,
-        "sma200_pct": -30.3,
-        "cross_up": true,
-        "rsi": 69.1,
-        "rsi_ma": 54.8,
-        "rsi_up": true,
-        "volume_ratio": 1.6,
-        "volume_today": 2587862,
-        "volume_avg": 2439628,
-        "volume_surge": true,
-        "off_high_pct": 6.0,
-        "base_high": 0.073,
-        "base_high_pct": -6.4,
-        "broken": true,
-        "swing_low": 0.057,
-        "swing_low_pct": -26.9,
-        "trailing_stop": 0.06384571,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -18.1,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.073,
-            0.073,
-            0.067
-          ],
-          "swing_lows": [
-            0.057,
-            0.057,
-            0.057
-          ]
-        },
-        "risk_pct": 27.7,
-        "spike_ratio": 3.2,
-        "new_high_long": true
-      },
-      "analysis": "IBR just fired a speculative volume-spike breakout \u2014 volume hit 3.2\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0780, stop A$0.0564, target A$0.1427 (3.00:1) \u2014 then trail it.",
+      "analysis": "IIQ just fired a speculative volume-spike breakout \u2014 volume hit 4.8\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.4800, stop A$0.2920, target A$1.0438 (3.00:1) \u2014 then trail it.",
       "sector_count": 1
     }
   ]

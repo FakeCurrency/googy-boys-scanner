@@ -1,33 +1,6 @@
 {
   "open": [
     {
-      "symbol": "STO",
-      "name": "Santos",
-      "asset_type": "asx",
-      "sector": "Energy",
-      "corr_group": "energy",
-      "direction": "long",
-      "grade": "A",
-      "score": 7,
-      "entry": 7.32219617,
-      "stop": 7.23514288,
-      "target": 7.45971406,
-      "rr": 2.0,
-      "units": 1335.8793412404877,
-      "risk_per_trade": 100,
-      "atr": 0.04990471,
-      "market_regime": "ranging",
-      "yf_ticker": "STO.AX",
-      "opened_ts": "2026-06-23T08:52:25+00:00",
-      "session_day": "2026-06-23",
-      "status": "open",
-      "fill_price": 7.32219617,
-      "filled": true,
-      "current": 7.30000019,
-      "unreal_r": -0.25,
-      "unreal_pnl": -69.65
-    },
-    {
       "symbol": "AVAX",
       "name": "Avalanche",
       "asset_type": "crypto",
@@ -48,11 +21,11 @@
       "opened_ts": "2026-06-23T16:19:51+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 0.55,
-      "unreal_pnl": 34.6,
+      "unreal_r": 0.18,
+      "unreal_pnl": -16.22,
       "fill_price": 6.41192285,
       "filled": true,
-      "current": 6.5
+      "current": 6.44000006
     },
     {
       "symbol": "BRENT",
@@ -75,11 +48,11 @@
       "opened_ts": "2026-06-23T16:19:51+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 0.22,
-      "unreal_pnl": -17.68,
+      "unreal_r": 0.24,
+      "unreal_pnl": -14.94,
       "fill_price": 76.9769,
       "filled": true,
-      "current": 76.65000153
+      "current": 76.61000061
     },
     {
       "symbol": "WHEAT",
@@ -102,11 +75,11 @@
       "opened_ts": "2026-06-23T16:19:51+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 0.04,
-      "unreal_pnl": -33.44,
+      "unreal_r": 0.1,
+      "unreal_pnl": -23.21,
       "fill_price": 597.8206,
       "filled": true,
-      "current": 597.5
+      "current": 597.0
     },
     {
       "symbol": "ADBE",
@@ -680,8 +653,41 @@
       "bars": 1,
       "r": -1.57,
       "pnl": -50.53
+    },
+    {
+      "symbol": "STO",
+      "name": "Santos",
+      "asset_type": "asx",
+      "sector": "Energy",
+      "corr_group": "energy",
+      "direction": "long",
+      "grade": "A",
+      "score": 7,
+      "entry": 7.32219617,
+      "stop": 7.23514288,
+      "target": 7.45971406,
+      "rr": 2.0,
+      "units": 1335.8793412404877,
+      "risk_per_trade": 100,
+      "atr": 0.04990471,
+      "market_regime": "ranging",
+      "yf_ticker": "STO.AX",
+      "opened_ts": "2026-06-23T08:52:25+00:00",
+      "session_day": "2026-06-23",
+      "status": "closed",
+      "fill_price": 7.32219617,
+      "filled": true,
+      "current": 7.30000019,
+      "unreal_r": -0.25,
+      "unreal_pnl": -69.65,
+      "exit": 7.23297234,
+      "exit_ts": "2026-06-23T20:00:00",
+      "reason": "stop",
+      "bars": 1,
+      "r": -1.02,
+      "pnl": -159.19
     }
   ],
-  "updated_at": "2026-06-24T00:20:52Z",
+  "updated_at": "2026-06-24T02:04:51Z",
   "broker_mode": "TESTNET"
 }
