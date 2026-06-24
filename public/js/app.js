@@ -385,6 +385,25 @@
     </div>`;
   }
 
+  // Hero metrics strip — the trade thesis at a glance: Grade · Entry · Stop · Target · R:R.
+  // Shared by every setup type so the key numbers always lead the detail panel.
+  function heroStrip(r, cur, entry, stop, target, stopPct, targetPct) {
+    const rrTxt   = r.rr == null ? "—" : r.rr.toFixed(1);
+    const rrCls   = r.low_rr ? "low" : "";
+    const rrUnit  = r.rr == null ? "" : `<span class="dh-unit">:1</span>`;
+    const sp = stopPct   != null && stopPct   !== "" ? Math.abs(+stopPct).toFixed(1)   : null;
+    const tp = targetPct != null && targetPct !== "" ? Math.abs(+targetPct).toFixed(1) : null;
+    const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
+    return `<div class="detail-hero">
+      <div class="dh-cell dh-grade" style="--gc:${gColor}">
+        <span class="dh-lbl">Grade</span><span class="dh-val" style="color:${gColor}">${esc(r.grade)}</span></div>
+      <div class="dh-cell"><span class="dh-lbl">Entry</span><span class="dh-val">${cur}${num(entry)}</span></div>
+      <div class="dh-cell dh-stop"><span class="dh-lbl">Stop</span><span class="dh-val">${cur}${num(stop)}</span>${sp ? `<span class="dh-sub neg">−${sp}%</span>` : ""}</div>
+      <div class="dh-cell dh-target"><span class="dh-lbl">Target</span><span class="dh-val">${cur}${num(target)}</span>${tp ? `<span class="dh-sub pos">+${tp}%</span>` : ""}</div>
+      <div class="dh-cell dh-rr"><span class="dh-lbl">R:R</span><span class="dh-val ${rrCls}">${rrTxt}${rrUnit}</span></div>
+    </div>`;
+  }
+
   function detailHtmlScalp(r) {
     const d       = r.detail || {};
     const cur     = r.asset_type === "asx" ? "A$" : "$";
@@ -405,60 +424,53 @@
     const effCls = effRR >= 1 ? "green" : "pct-down";
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
+      ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
 
-      <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
-      <div class="rd-levels">
-        ${lvl("ENTRY",  d.entry,  0,         "")}
-        ${lvl("STOP",   d.stop,   stopPct,   "red")}
-        ${lvl("TARGET", d.target, targetPct, "green")}
-        ${band("ATR (14)", d.atr)}
-      </div>
-
-      <div class="rd-trail">
-        <span class="rd-trail-label">POSITION — ${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span>
-      </div>
-      <div class="rd-levels">
-        <div class="dl-row"><span class="dl-label red">$ RISK at stop</span>
-          <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
-          <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
-        <div class="dl-row"><span class="dl-label green">$ REWARD at target</span>
-          <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
-          <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
-        <div class="dl-row"><span class="dl-label red">NET LOSS (incl. brok)</span>
-          <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
-        <div class="dl-row"><span class="dl-label ${npCls}">NET PROFIT (incl. brok)</span>
-          <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
-        <div class="dl-row"><span class="dl-label">EFFECTIVE R:R</span>
-          <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
-          <span class="dl-pct muted">after brokerage</span></div>
-      </div>
-
-      <div class="rd-trail"><span class="rd-trail-label">KEY LEVELS</span></div>
-      <div class="rd-levels">
-        ${lvl("SWING LOW",   d.swing_low,          d.swing_low_pct,  "red")}
-        ${lvl("SUPPORT",     d.nearest_support,    d.support_pct,    "red")}
-        ${lvl("RESISTANCE",  d.nearest_resistance, d.resistance_pct, "green")}
-        ${lvl("SWING HIGH",  d.swing_high,         d.swing_high_pct, "green")}
-      </div>
-
-      <div class="rd-ema">
-        <div class="rd-ema-head">
-          <span class="rd-k">TTM SQUEEZE</span>
-          <span class="${sqCls}">${d.sq_state||"—"}</span>
-          <span class="rd-spread ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span>
+      <div class="rd-group">
+        <div class="rd-section">Key levels</div>
+        <div class="rd-levels">
+          ${lvl("Swing low",   d.swing_low,          d.swing_low_pct,  "red")}
+          ${lvl("Support",     d.nearest_support,    d.support_pct,    "red")}
+          ${lvl("Resistance",  d.nearest_resistance, d.resistance_pct, "green")}
+          ${lvl("Swing high",  d.swing_high,         d.swing_high_pct, "green")}
+          ${band("ATR (14)", d.atr)}
         </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">Position <span class="rd-section-note">${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span></div>
+        <div class="rd-levels">
+          <div class="dl-row"><span class="dl-label red">Risk at stop</span>
+            <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
+            <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
+          <div class="dl-row"><span class="dl-label green">Reward at target</span>
+            <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
+            <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
+          <div class="dl-row"><span class="dl-label">Net loss (incl. brok)</span>
+            <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
+          <div class="dl-row"><span class="dl-label">Net profit (incl. brok)</span>
+            <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
+          <div class="dl-row"><span class="dl-label">Effective R:R</span>
+            <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
+            <span class="dl-pct muted">after brokerage</span></div>
+        </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">TTM squeeze
+          <span class="rd-section-note ${sqCls}">${d.sq_state||"—"}</span>
+          <span class="rd-section-note ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span></div>
         <div class="rd-fast">
-          ${band("BB UPPER", d.bb_upper)}${band("BB MID", d.bb_mid)}${band("BB LOWER", d.bb_lower)}
-          ${band("KC UPPER", d.kc_upper)}${band("KC LOWER", d.kc_lower)}
+          ${band("BB upper", d.bb_upper)}${band("BB mid", d.bb_mid)}${band("BB lower", d.bb_lower)}
+          ${band("KC upper", d.kc_upper)}${band("KC lower", d.kc_lower)}
         </div>
-      </div>
-
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME (1h)</span>
-        <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume (1h)</span>
+          <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
       </div>
     </div>`;
   }
@@ -508,36 +520,42 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
-      <div class="rd-levels">
-        ${lvl("SWING LOW", d.swing_low, d.swing_low_pct, "red")}
-        ${lvl("EMA 55", d.ema55, d.ema55_pct)}
-        ${lvl("EMA 89", d.ema89, d.ema89_pct)}
-        ${lvl("SWING HIGH", d.swing_high, d.swing_high_pct, "green")}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+
+      <div class="rd-group">
+        <div class="rd-section">Key levels</div>
+        <div class="rd-levels">
+          ${lvl("Swing low", d.swing_low, d.swing_low_pct, "red")}
+          ${lvl("EMA 55", d.ema55, d.ema55_pct)}
+          ${lvl("EMA 89", d.ema89, d.ema89_pct)}
+          ${lvl("Swing high", d.swing_high, d.swing_high_pct, "green")}
+        </div>
+        <div class="rd-trail">
+          <span class="rd-trail-label">Trailing stop</span>
+          <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+          <span class="rd-trail-note">${d.trailing_label || ""}</span>
+          <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+        </div>
       </div>
-      <div class="rd-trail">
-        <span class="rd-trail-label">TRAILING STOP</span>
-        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
-        <span class="rd-trail-note">${d.trailing_label || ""}</span>
-        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME</span>
-        <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
-      </div>
-      <div class="rd-ema">
-        <div class="rd-ema-head"><span class="rd-k">EMA STATUS</span>
-          <span class="${d.ema_aligned ? "green" : "muted"}">${d.ema_aligned ? "ALIGNED ✓" : "NOT ALIGNED"}</span>
-          <span class="rd-spread">${d.ema_spread_pct}% spread</span></div>
+
+      <div class="rd-group">
+        <div class="rd-section">Trend &amp; structure
+          <span class="rd-section-note ${d.ema_aligned ? "green" : "muted"}">${d.ema_aligned ? "Aligned ✓" : "Not aligned"}</span>
+          <span class="rd-section-note">${d.ema_spread_pct}% spread</span></div>
         <div class="rd-ladder">${ladder}</div>
         <div class="rd-fast">${fast}</div>
-      </div>
-      <div class="rd-structure">
-        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
-        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
-          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume</span>
+          <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+        <div class="rd-structure">
+          <span class="rd-k">Structure</span> <span class="${trendCls}">${trend}</span>
+          <div class="rd-swings"><span class="muted">Swing highs:</span> ${series(st.swing_highs)}
+            <span class="muted" style="margin-left:18px">Swing lows:</span> ${series(st.swing_lows)}</div>
+        </div>
       </div>
     </div>`;
   }
@@ -555,37 +573,46 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
-      <div class="rd-levels">
-        ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
-        ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+
+      <div class="rd-group">
+        <div class="rd-section">Moving averages</div>
+        <div class="rd-levels">
+          ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
+          ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}
+        </div>
       </div>
-      <div class="rd-volume">
-        <span class="rd-k">RSI 14</span>
-        <span class="rd-vol ${d.rsi_up ? "green" : ""}">${d.rsi} ${d.rsi_up ? "↑ rising" : "flat"}</span>
-        <span class="rd-vol-note">signal MA ${d.rsi_ma}</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME</span>
-        <span class="rd-vol ${d.volume_surge ? "green" : ""}">${d.volume_ratio}× ${d.volume_surge ? "Surge" : "Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">BASE</span>
-        <span class="rd-vol">${d.off_high_pct}% off 1-year high</span>
-        <span class="rd-vol-note">base high ${cur}${num(d.base_high)}${d.broken ? " · broken ✓" : ""}</span>
-      </div>
-      <div class="rd-trail">
-        <span class="rd-trail-label">TRAILING STOP</span>
-        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
-        <span class="rd-trail-note">${d.trailing_label || ""}</span>
-        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
-      </div>
-      <div class="rd-structure">
-        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
-        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
-          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
+
+      <div class="rd-group">
+        <div class="rd-section">Momentum &amp; volume</div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">RSI 14</span>
+          <span class="rd-vol ${d.rsi_up ? "green" : ""}">${d.rsi} ${d.rsi_up ? "↑ rising" : "flat"}</span>
+          <span class="rd-vol-note">signal MA ${d.rsi_ma}</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume</span>
+          <span class="rd-vol ${d.volume_surge ? "green" : ""}">${d.volume_ratio}× ${d.volume_surge ? "Surge" : "Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Base</span>
+          <span class="rd-vol">${d.off_high_pct}% off 1-year high</span>
+          <span class="rd-vol-note">base high ${cur}${num(d.base_high)}${d.broken ? " · broken ✓" : ""}</span>
+        </div>
+        <div class="rd-trail">
+          <span class="rd-trail-label">Trailing stop</span>
+          <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+          <span class="rd-trail-note">${d.trailing_label || ""}</span>
+          <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+        </div>
+        <div class="rd-structure">
+          <span class="rd-k">Structure</span> <span class="${trendCls}">${trend}</span>
+          <div class="rd-swings"><span class="muted">Swing highs:</span> ${series(st.swing_highs)}
+            <span class="muted" style="margin-left:18px">Swing lows:</span> ${series(st.swing_lows)}</div>
+        </div>
       </div>
     </div>`;
   }
