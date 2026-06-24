@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-24T15:46:53Z",
+  "updated_at": "2026-06-24T19:28:08Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -8,11 +8,11 @@
     "max_daily_loss": 500,
     "max_per_group": 2,
     "session_day": "2026-06-25",
-    "today_trades": 2,
+    "today_trades": 3,
     "today_pnl": 0,
-    "trades_left_today": 3,
+    "trades_left_today": 2,
     "group_exposure": {
-      "us_tech": 1,
+      "us_tech": 2,
       "crypto:crypto": 1,
       "energy": 1
     },
@@ -22,10 +22,10 @@
       "win_rate": 0.0,
       "total_r": -9.88,
       "total_pnl": -1141.67,
-      "open_unrealised_pnl": 53.63
+      "open_unrealised_pnl": 17.54
     },
     "shorts": {
-      "open": 1,
+      "open": 2,
       "closed": 13,
       "win_rate": 38.5,
       "total_r": 1.51,
@@ -72,11 +72,11 @@
       "opened_ts": "2026-06-23T21:17:57+00:00",
       "session_day": "2026-06-24",
       "status": "open",
-      "unreal_r": 1.63,
-      "unreal_pnl": 53.63,
+      "unreal_r": 1.0,
+      "unreal_pnl": 17.54,
       "fill_price": 195.94376001,
       "filled": true,
-      "current": 199.28999329
+      "current": 198.0
     },
     {
       "symbol": "NATGAS",
@@ -123,6 +123,30 @@
       "market_regime": "trending",
       "yf_ticker": "BTC-USD",
       "opened_ts": "2026-06-24T15:46:53+00:00",
+      "session_day": "2026-06-25",
+      "status": "open",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple",
+      "asset_type": "nasdaq",
+      "sector": "Technology",
+      "corr_group": "us_tech",
+      "direction": "short",
+      "grade": "A+",
+      "score": 8,
+      "entry": 295.0098877,
+      "stop": 298.48364828,
+      "target": 288.06236654,
+      "rr": 2.0,
+      "units": 28.787245895915795,
+      "risk_per_trade": 100,
+      "atr": 2.31584039,
+      "market_regime": "ranging",
+      "yf_ticker": "AAPL",
+      "opened_ts": "2026-06-24T19:28:08+00:00",
       "session_day": "2026-06-25",
       "status": "open",
       "unreal_r": 0.0,
