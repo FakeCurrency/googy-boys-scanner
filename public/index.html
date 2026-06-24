@@ -12,46 +12,69 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=13" />
+  <link rel="stylesheet" href="css/styles.css?v=21" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
-        </svg>
-      </span>
-      <div class="brand-text"><h1>VIVEK'S BETA SCANNER</h1></div>
+    <!-- ROW 1 — clocks · brand (centred) · market switch + nav links -->
+    <div class="topbar-row1">
+      <div class="topbar-clocks">
+        <div class="clock-city">
+          <span class="clock-city-name">MELBOURNE</span>
+          <span class="clock-time" id="clk-mel-time">—</span>
+          <span class="clock-date" id="clk-mel-date">—</span>
+        </div>
+        <div class="clock-city">
+          <span class="clock-city-name">NEW YORK</span>
+          <span class="clock-time" id="clk-ny-time">—</span>
+          <span class="clock-date" id="clk-ny-date">—</span>
+        </div>
+      </div>
+
+      <div class="topbar-brand">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
+            </svg>
+          </span>
+          <div class="brand-text"><h1>VIVEK'S BETA SCANNER</h1></div>
+        </div>
+        <div class="topbar-quote" id="topbar-quote"></div>
+      </div>
+
+      <div class="topbar-nav">
+        <div class="market-switch" role="tablist" aria-label="Market">
+          <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+          <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+          <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+        </div>
+        <a class="howto-link" href="sectors.html">NEWS</a>
+        <a class="howto-link" href="journal.html">JOURNAL</a>
+        <a class="howto-link" href="feeds.html">FEEDS</a>
+        <a class="howto-link" href="debug.html">DEBUG</a>
+        <a class="howto-link" href="about.html">HOW IT WORKS</a>
+      </div>
     </div>
 
-    <div class="market-switch" role="tablist" aria-label="Market">
-      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
-      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
-      <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+    <!-- ROW 2 — scan type · search · run scan · timer -->
+    <div class="topbar-row2">
+      <div class="scan-switch" role="tablist" aria-label="Scan type">
+        <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">Pullback</button>
+        <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">Reversal</button>
+        <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">Spec</button>
+        <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">Short</button>
+        <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">Scalp</button>
+      </div>
+      <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="reload-btn" id="reload-btn" title="Run a fresh cloud scan" aria-label="Run a fresh scan">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span class="reload-label">SCAN</span>
+      </button>
+      <span class="refresh-timer" id="refresh-timer" title="Auto-refresh countdown"></span>
     </div>
-
-    <div class="scan-switch" role="tablist" aria-label="Scan type">
-      <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">Pullbacks</button>
-      <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">Reversals</button>
-      <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">Specs ⚡</button>
-      <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">Shorts ↓</button>
-      <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">Scalp 🎯</button>
-    </div>
-
-    <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    </button>
-    <button class="reload-btn" id="reload-btn" title="Run a fresh cloud scan" aria-label="Run a fresh scan">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      <span class="reload-label">SCAN</span>
-    </button>
-    <span class="refresh-timer" id="refresh-timer" title="Auto-refresh countdown"></span>
-    <a class="howto-link" href="sectors.html">Sectors</a>
-    <a class="howto-link" href="journal.html">Journal</a>
-    <a class="howto-link" href="feeds.html">Feeds</a>
-    <a class="howto-link" href="debug.html">Debug</a>
-    <a class="howto-link" href="about.html">How it works</a>
   </header>
 
   <!-- Search overlay -->
@@ -73,7 +96,7 @@
 
     <!-- PULSE -->
     <section class="pulse" id="pulse">
-      <div class="pulse-label">PULSE</div>
+      <div class="pulse-label">PULSE<span class="pulse-delayed" id="pulse-delayed" hidden>~15m delayed</span></div>
       <div class="pulse-track" id="pulse-track"></div>
     </section>
 
@@ -131,10 +154,10 @@
     <!-- scalp info banner (shown only in scalp mode) -->
     <section class="scalp-banner" id="scalp-banner" style="display:none">
       <div class="scalp-banner-inner">
-        <span class="scalp-banner-item">🎯 <strong>1h intraday</strong> · 4h confirmed</span>
-        <span class="scalp-banner-item">💰 <strong>$1,000 margin</strong> · 5× = $5,000 position</span>
-        <span class="scalp-banner-item">📊 <strong>$20 brokerage</strong> each way</span>
-        <span class="scalp-banner-item">⛔ Max <strong>5 trades/day</strong> · $500 daily stop</span>
+        <span class="scalp-banner-item"><strong>1h intraday</strong> · 4h confirmed</span>
+        <span class="scalp-banner-item"><strong>$1,000 margin</strong> · 5× = $5,000</span>
+        <span class="scalp-banner-item"><strong>$20 brokerage</strong> each way</span>
+        <span class="scalp-banner-item">Max <strong>5 trades/day</strong> · $500 daily stop</span>
       </div>
       <!-- scalp asset-type filter -->
       <div class="scalp-type-filter" id="scalp-type-filter">
@@ -150,20 +173,18 @@
     <!-- filters -->
     <section class="controls">
       <div class="control-group">
-        <span class="control-label">TAB</span>
         <div class="seg" id="tabs">
           <button class="seg-btn is-active" data-tab="aplus">A+ <span class="seg-count" id="count-aplus">0</span></button>
           <button class="seg-btn" data-tab="a">A <span class="seg-count" id="count-a">0</span></button>
-          <button class="seg-btn" data-tab="watch">WATCH <span class="seg-count" id="count-watch">0</span></button>
+          <button class="seg-btn" data-tab="watch">Watch <span class="seg-count" id="count-watch">0</span></button>
         </div>
       </div>
       <div class="control-group">
-        <span class="control-label">SORT</span>
         <div class="seg" id="sorts">
           <button class="seg-btn is-active" data-sort="score">Score</button>
           <button class="seg-btn" data-sort="price">Price</button>
           <button class="seg-btn" data-sort="rr">R:R</button>
-          <button class="seg-btn" data-sort="az">A-Z</button>
+          <button class="seg-btn" data-sort="az">A–Z</button>
         </div>
       </div>
     </section>
@@ -180,6 +201,6 @@
     <p class="credit">Vivek's Beta Scanner · data via Yahoo Finance · refreshed daily after each market close</p>
   </footer>
 
-  <script src="js/app.js?v=16"></script>
+  <script src="js/app.js?v=23"></script>
 </body>
 </html>

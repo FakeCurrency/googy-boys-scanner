@@ -232,12 +232,70 @@
       const dir = p.dir === "up" ? "up" : "down";
       const day = p.day_pct == null ? "" : (p.day_pct >= 0 ? "+" : "") + p.day_pct.toFixed(2) + "%";
       const d5 = p.d5_pct == null ? "" : "5D " + (p.d5_pct >= 0 ? "+" : "") + p.d5_pct.toFixed(2) + "%";
-      return `<div class="pulse-item">
+      return `<div class="pulse-item" data-pkey="${esc(p.key)}">
         <div class="pi-head"><span class="pi-key">${esc(p.key)}</span><span class="pi-val">${val}</span></div>
         <div class="pi-change ${dir}">${day}<span class="pi-5d">${d5}</span></div>
         ${spark(p.spark, 120, 22, p.dir === "up" ? COLOR.green : COLOR.red, "pi-spark")}
       </div>`;
     }).join("");
+  }
+
+  // Refresh PULSE values from Yahoo Finance after the static scan data renders,
+  // then keep them current on a slow interval. Staggers requests so we don't
+  // hammer the proxy, retries once on a transient failure, and reveals a visible
+  // "~15m delayed" badge once at least one live value lands (Yahoo isn't
+  // real-time for indices / futures / FX).
+  let _pulseTimer = null;
+  async function _pulseQuote(ticker) {
+    // One retry — Yahoo/proxy occasionally returns a transient non-200.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(`/api/quote?sym=${encodeURIComponent(ticker)}`, { cache: "no-store" });
+        if (res.ok) {
+          const j = await res.json();
+          if (j && j.price != null) return j;
+        }
+      } catch (_) { /* fall through to retry */ }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
+    }
+    return null;
+  }
+  async function _pulsePass(pulse) {
+    const track = $("#pulse-track");
+    if (!track) return;
+    let anyLive = false;
+    for (let i = 0; i < pulse.length; i++) {
+      const p = pulse[i];
+      if (!p.ticker) continue;
+      await new Promise((r) => setTimeout(r, i * 350));
+      const j = await _pulseQuote(p.ticker);
+      if (!j) continue;
+      const divide = p.divide || 1;
+      const price = j.price / divide;
+      const decimals = p.decimals ?? 2;
+      const valStr = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      const item = track.querySelector(`[data-pkey="${CSS.escape(p.key)}"]`);
+      if (!item) continue;
+      const valEl = item.querySelector(".pi-val");
+      if (valEl && valEl.textContent !== valStr) {
+        valEl.textContent = valStr;
+        const refreshedAt = j.time ? new Date(j.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+        valEl.title = refreshedAt ? `~15min delayed · as of ${refreshedAt}` : "~15min delayed";
+      }
+      anyLive = true;
+    }
+    if (anyLive) {
+      const badge = $("#pulse-delayed");
+      if (badge) badge.hidden = false;
+    }
+  }
+  function refreshPulseLive(pulse) {
+    if (!pulse || !pulse.length) return;
+    if (_pulseTimer) { clearInterval(_pulseTimer); _pulseTimer = null; }
+    _pulsePass(pulse);
+    // Keep the macro row live without reloading the page (Yahoo is ~15m delayed,
+    // so a 90s cadence is plenty fresh and gentle on the proxy).
+    _pulseTimer = setInterval(() => _pulsePass(pulse), 90000);
   }
 
   // ------------------------------------------------------- EMA / SMA legend
@@ -268,8 +326,12 @@
   }
 
   // ----------------------------------------------------------- a row
-  function rowHtml(r) {
-    const chips = (r.chips || []).map((c) =>
+  function rowHtml(r, i) {
+    // Stagger index drives the entrance animation delay (capped so long lists
+    // don't trail off into a slow cascade).
+    const stagger = Math.min(i || 0, 12);
+    // Cap at 5 chips in row view — the detail panel shows all of them.
+    const chips = (r.chips || []).slice(0, 5).map((c) =>
       `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
@@ -277,17 +339,19 @@
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
-    const sector = r.sector ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
-    const seccount = (r.sector && r.sector_count > 1)
+    const hasSectorCount = r.sector && r.sector_count > 1;
+    const sector = (r.sector && !hasSectorCount) ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
+    const seccount = hasSectorCount
       ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
-    const assetBadge = r.asset_type
+    // Asset badge is meaningful for scalp (crypto vs index vs commodity); suppress
+    // for daily scanners where the market tab already conveys this.
+    const assetBadge = (r.asset_type && state.mode === "scalp")
       ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
-    const liqCls = r.liquidity === "LIQUID" ? "liq-liquid" : "liq-ok";
     const rawMcap = mcapOf(r.symbol);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
       : rawMcap < SMALLCAP ? "mcap-small" : "mcap";
-    const mcapBadge = mcapTxt
+    const mcapBadge = (mcapTxt && mcapCls !== "mcap")
       ? `<span class="badge ${mcapCls}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
       : "";
     const rrStar = r.target_2r ? "*" : "";
@@ -297,22 +361,17 @@
     const chartHref = (state.mode === "scalp")
       ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
       : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
-    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
+    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="badge dir">${esc(r.dir)}</span>
-          ${assetBadge}
           <span class="cname">${esc(r.name || "")}</span>
-          ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
-          ${mcapBadge}
-          <span class="badge ${liqCls}">${esc(r.liquidity)}</span>
-          ${seccount}
         </div>
-        <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${assetBadge}${sector}${seccount}${mcapBadge}${chips}${lowrr}${widestop}${t2r}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -353,6 +412,29 @@
     </div>`;
   }
 
+  // Hero metrics strip — the trade thesis at a glance:
+  // Grade · Score · Entry · Stop · Target · R:R. Shared by every setup type so
+  // the key numbers always lead the detail panel and stand out from the
+  // supporting detail below.
+  function heroStrip(r, cur, entry, stop, target, stopPct, targetPct) {
+    const rrTxt   = r.rr == null ? "—" : r.rr.toFixed(1);
+    const rrCls   = r.low_rr ? "low" : "";
+    const rrUnit  = r.rr == null ? "" : `<span class="dh-unit">:1</span>`;
+    const sp = stopPct   != null && stopPct   !== "" ? Math.abs(+stopPct).toFixed(1)   : null;
+    const tp = targetPct != null && targetPct !== "" ? Math.abs(+targetPct).toFixed(1) : null;
+    const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
+    const scoreMax = r.score_max ? `<span class="dh-unit">/${r.score_max}</span>` : "";
+    return `<div class="detail-hero">
+      <div class="dh-cell dh-grade" style="--gc:${gColor}">
+        <span class="dh-lbl">Grade</span><span class="dh-val" style="color:${gColor}">${esc(r.grade)}</span></div>
+      <div class="dh-cell"><span class="dh-lbl">Score</span><span class="dh-val">${r.score != null ? r.score : "—"}${scoreMax}</span></div>
+      <div class="dh-cell"><span class="dh-lbl">Entry</span><span class="dh-val">${cur}${num(entry)}</span></div>
+      <div class="dh-cell dh-stop"><span class="dh-lbl">Stop</span><span class="dh-val">${cur}${num(stop)}</span>${sp ? `<span class="dh-sub neg">−${sp}%</span>` : ""}</div>
+      <div class="dh-cell dh-target"><span class="dh-lbl">Target</span><span class="dh-val">${cur}${num(target)}</span>${tp ? `<span class="dh-sub pos">+${tp}%</span>` : ""}</div>
+      <div class="dh-cell dh-rr"><span class="dh-lbl">R:R</span><span class="dh-val ${rrCls}">${rrTxt}${rrUnit}</span></div>
+    </div>`;
+  }
+
   function detailHtmlScalp(r) {
     const d       = r.detail || {};
     const cur     = r.asset_type === "asx" ? "A$" : "$";
@@ -373,60 +455,53 @@
     const effCls = effRR >= 1 ? "green" : "pct-down";
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
+      ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
 
-      <div class="rd-trail"><span class="rd-trail-label">TRADE SETUP</span></div>
-      <div class="rd-levels">
-        ${lvl("ENTRY",  d.entry,  0,         "")}
-        ${lvl("STOP",   d.stop,   stopPct,   "red")}
-        ${lvl("TARGET", d.target, targetPct, "green")}
-        ${band("ATR (14)", d.atr)}
-      </div>
-
-      <div class="rd-trail">
-        <span class="rd-trail-label">POSITION — ${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span>
-      </div>
-      <div class="rd-levels">
-        <div class="dl-row"><span class="dl-label red">$ RISK at stop</span>
-          <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
-          <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
-        <div class="dl-row"><span class="dl-label green">$ REWARD at target</span>
-          <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
-          <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
-        <div class="dl-row"><span class="dl-label red">NET LOSS (incl. brok)</span>
-          <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
-        <div class="dl-row"><span class="dl-label ${npCls}">NET PROFIT (incl. brok)</span>
-          <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
-        <div class="dl-row"><span class="dl-label">EFFECTIVE R:R</span>
-          <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
-          <span class="dl-pct muted">after brokerage</span></div>
-      </div>
-
-      <div class="rd-trail"><span class="rd-trail-label">KEY LEVELS</span></div>
-      <div class="rd-levels">
-        ${lvl("SWING LOW",   d.swing_low,          d.swing_low_pct,  "red")}
-        ${lvl("SUPPORT",     d.nearest_support,    d.support_pct,    "red")}
-        ${lvl("RESISTANCE",  d.nearest_resistance, d.resistance_pct, "green")}
-        ${lvl("SWING HIGH",  d.swing_high,         d.swing_high_pct, "green")}
-      </div>
-
-      <div class="rd-ema">
-        <div class="rd-ema-head">
-          <span class="rd-k">TTM SQUEEZE</span>
-          <span class="${sqCls}">${d.sq_state||"—"}</span>
-          <span class="rd-spread ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span>
+      <div class="rd-group">
+        <div class="rd-section">Key levels</div>
+        <div class="rd-levels">
+          ${lvl("Swing low",   d.swing_low,          d.swing_low_pct,  "red")}
+          ${lvl("Support",     d.nearest_support,    d.support_pct,    "red")}
+          ${lvl("Resistance",  d.nearest_resistance, d.resistance_pct, "green")}
+          ${lvl("Swing high",  d.swing_high,         d.swing_high_pct, "green")}
+          ${band("ATR (14)", d.atr)}
         </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">Position <span class="rd-section-note">${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span></div>
+        <div class="rd-levels">
+          <div class="dl-row"><span class="dl-label red">Risk at stop</span>
+            <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
+            <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
+          <div class="dl-row"><span class="dl-label green">Reward at target</span>
+            <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
+            <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
+          <div class="dl-row"><span class="dl-label">Net loss (incl. brok)</span>
+            <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
+          <div class="dl-row"><span class="dl-label">Net profit (incl. brok)</span>
+            <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
+          <div class="dl-row"><span class="dl-label">Effective R:R</span>
+            <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
+            <span class="dl-pct muted">after brokerage</span></div>
+        </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">TTM squeeze
+          <span class="rd-section-note ${sqCls}">${d.sq_state||"—"}</span>
+          <span class="rd-section-note ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span></div>
         <div class="rd-fast">
-          ${band("BB UPPER", d.bb_upper)}${band("BB MID", d.bb_mid)}${band("BB LOWER", d.bb_lower)}
-          ${band("KC UPPER", d.kc_upper)}${band("KC LOWER", d.kc_lower)}
+          ${band("BB upper", d.bb_upper)}${band("BB mid", d.bb_mid)}${band("BB lower", d.bb_lower)}
+          ${band("KC upper", d.kc_upper)}${band("KC lower", d.kc_lower)}
         </div>
-      </div>
-
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME (1h)</span>
-        <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume (1h)</span>
+          <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
       </div>
     </div>`;
   }
@@ -476,36 +551,42 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
-      <div class="rd-levels">
-        ${lvl("SWING LOW", d.swing_low, d.swing_low_pct, "red")}
-        ${lvl("EMA 55", d.ema55, d.ema55_pct)}
-        ${lvl("EMA 89", d.ema89, d.ema89_pct)}
-        ${lvl("SWING HIGH", d.swing_high, d.swing_high_pct, "green")}
+
+      <div class="rd-group">
+        <div class="rd-section">Key levels</div>
+        <div class="rd-levels">
+          ${lvl("Swing low", d.swing_low, d.swing_low_pct, "red")}
+          ${lvl("EMA 55", d.ema55, d.ema55_pct)}
+          ${lvl("EMA 89", d.ema89, d.ema89_pct)}
+          ${lvl("Swing high", d.swing_high, d.swing_high_pct, "green")}
+        </div>
+        <div class="rd-trail">
+          <span class="rd-trail-label">Trailing stop</span>
+          <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+          <span class="rd-trail-note">${d.trailing_label || ""}</span>
+          <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+        </div>
       </div>
-      <div class="rd-trail">
-        <span class="rd-trail-label">TRAILING STOP</span>
-        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
-        <span class="rd-trail-note">${d.trailing_label || ""}</span>
-        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME</span>
-        <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
-      </div>
-      <div class="rd-ema">
-        <div class="rd-ema-head"><span class="rd-k">EMA STATUS</span>
-          <span class="${d.ema_aligned ? "green" : "muted"}">${d.ema_aligned ? "ALIGNED ✓" : "NOT ALIGNED"}</span>
-          <span class="rd-spread">${d.ema_spread_pct}% spread</span></div>
+
+      <div class="rd-group">
+        <div class="rd-section">Trend &amp; structure
+          <span class="rd-section-note ${d.ema_aligned ? "green" : "muted"}">${d.ema_aligned ? "Aligned ✓" : "Not aligned"}</span>
+          <span class="rd-section-note">${d.ema_spread_pct}% spread</span></div>
         <div class="rd-ladder">${ladder}</div>
         <div class="rd-fast">${fast}</div>
-      </div>
-      <div class="rd-structure">
-        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
-        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
-          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume</span>
+          <span class="rd-vol ${d.volume_expanding ? "green" : ""}">${d.volume_ratio}× ${d.volume_expanding ? "Expanding" : "Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+        <div class="rd-structure">
+          <span class="rd-k">Structure</span> <span class="${trendCls}">${trend}</span>
+          <div class="rd-swings"><span class="muted">Swing highs:</span> ${series(st.swing_highs)}
+            <span class="muted" style="margin-left:18px">Swing lows:</span> ${series(st.swing_lows)}</div>
+        </div>
       </div>
     </div>`;
   }
@@ -523,37 +604,46 @@
     const series = (arr) => (arr || []).map((v) => `${cur}${num(v)}`).join(" → ");
 
     return `<div class="row-detail">
+      ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
-      <div class="rd-analysis"><div class="rd-tag">ANALYSIS</div><p>${esc(r.analysis || "")}</p></div>
-      <div class="rd-levels">
-        ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
-        ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}
+
+      <div class="rd-group">
+        <div class="rd-section">Moving averages</div>
+        <div class="rd-levels">
+          ${sma(9, d.sma9, d.sma9_pct)}${sma(26, d.sma26, d.sma26_pct)}
+          ${sma(43, d.sma43, d.sma43_pct)}${sma(200, d.sma200, d.sma200_pct)}
+        </div>
       </div>
-      <div class="rd-volume">
-        <span class="rd-k">RSI 14</span>
-        <span class="rd-vol ${d.rsi_up ? "green" : ""}">${d.rsi} ${d.rsi_up ? "↑ rising" : "flat"}</span>
-        <span class="rd-vol-note">signal MA ${d.rsi_ma}</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">VOLUME</span>
-        <span class="rd-vol ${d.volume_surge ? "green" : ""}">${d.volume_ratio}× ${d.volume_surge ? "Surge" : "Normal"}</span>
-        <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
-      </div>
-      <div class="rd-volume">
-        <span class="rd-k">BASE</span>
-        <span class="rd-vol">${d.off_high_pct}% off 1-year high</span>
-        <span class="rd-vol-note">base high ${cur}${num(d.base_high)}${d.broken ? " · broken ✓" : ""}</span>
-      </div>
-      <div class="rd-trail">
-        <span class="rd-trail-label">TRAILING STOP</span>
-        <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
-        <span class="rd-trail-note">${d.trailing_label || ""}</span>
-        <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
-      </div>
-      <div class="rd-structure">
-        <span class="rd-k">STRUCTURE</span> <span class="${trendCls}">${trend}</span>
-        <div class="rd-swings"><span class="muted">Swing Highs:</span> ${series(st.swing_highs)}
-          <span class="muted" style="margin-left:18px">Swing Lows:</span> ${series(st.swing_lows)}</div>
+
+      <div class="rd-group">
+        <div class="rd-section">Momentum &amp; volume</div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">RSI 14</span>
+          <span class="rd-vol ${d.rsi_up ? "green" : ""}">${d.rsi} ${d.rsi_up ? "↑ rising" : "flat"}</span>
+          <span class="rd-vol-note">signal MA ${d.rsi_ma}</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume</span>
+          <span class="rd-vol ${d.volume_surge ? "green" : ""}">${d.volume_ratio}× ${d.volume_surge ? "Surge" : "Normal"}</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Base</span>
+          <span class="rd-vol">${d.off_high_pct}% off 1-year high</span>
+          <span class="rd-vol-note">base high ${cur}${num(d.base_high)}${d.broken ? " · broken ✓" : ""}</span>
+        </div>
+        <div class="rd-trail">
+          <span class="rd-trail-label">Trailing stop</span>
+          <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+          <span class="rd-trail-note">${d.trailing_label || ""}</span>
+          <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+        </div>
+        <div class="rd-structure">
+          <span class="rd-k">Structure</span> <span class="${trendCls}">${trend}</span>
+          <div class="rd-swings"><span class="muted">Swing highs:</span> ${series(st.swing_highs)}
+            <span class="muted" style="margin-left:18px">Swing lows:</span> ${series(st.swing_lows)}</div>
+        </div>
       </div>
     </div>`;
   }
@@ -608,6 +698,7 @@
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · updates after each market close`;
     if (state.mode === "scalp") loadHealthStatus();
     renderPulse(d.pulse);
+    refreshPulseLive(d.pulse);
     renderLegend(d);
     renderStats(d);
     renderRows();
@@ -1024,6 +1115,82 @@
       if (wrap) wrap.classList.toggle("open");
     });
   }
+
+  // ---- daily rotating quote + live clocks --------------------------------
+  const TRADER_QUOTES = [
+    ["The big money is not in the individual fluctuations but in the main movements.", "Jesse Livermore"],
+    ["The market is never wrong — opinions often are.", "Jesse Livermore"],
+    ["There is only one side of the market, and it is not the bull side or the bear side, but the right side.", "Jesse Livermore"],
+    ["Profits always take care of themselves but losses never do.", "Jesse Livermore"],
+    ["There is a time to go long, a time to go short, and a time to go fishing.", "Jesse Livermore"],
+    ["I'm always thinking about losing money as opposed to making money.", "Paul Tudor Jones"],
+    ["The most important rule of trading is to play great defence, not great offence.", "Paul Tudor Jones"],
+    ["Every day I assume every position I have is wrong.", "Paul Tudor Jones"],
+    ["Be fearful when others are greedy, and greedy when others are fearful.", "Warren Buffett"],
+    ["Price is what you pay. Value is what you get.", "Warren Buffett"],
+    ["It's not whether you're right or wrong, but how much money you make when you're right.", "George Soros"],
+    ["Markets are constantly in a state of uncertainty. Money is made by discounting the obvious and betting on the unexpected.", "George Soros"],
+    ["The trend is your friend until the end when it bends.", "Ed Seykota"],
+    ["Win or lose, everybody gets what they want out of the market.", "Ed Seykota"],
+    ["If you can't take a small loss, sooner or later you will take the mother of all losses.", "Ed Seykota"],
+    ["Ride your winners and cut your losers.", "Ed Seykota"],
+    ["Know what you own and know why you own it.", "Peter Lynch"],
+    ["In this business, if you're good, you're right six times out of ten. You're never going to be right nine times out of ten.", "Peter Lynch"],
+    ["The key to trading success is emotional discipline. If intelligence were the key, there would be a lot more people making money trading.", "Victor Sperandeo"],
+    ["The whole secret to winning in the stock market is to lose the least amount possible when you're wrong.", "William O'Neil"],
+    ["I buy on the way up, not on the way down.", "Nicolas Darvas"],
+    ["Don't try to buy at the bottom and sell at the top. It can't be done except by liars.", "Bernard Baruch"],
+    ["Whenever I enter a position, I have a predetermined stop. That's the only way I can sleep.", "Bruce Kovner"],
+    ["I just wait until there is money lying in the corner, and all I have to do is go over there and pick it up.", "Jim Rogers"],
+    ["The time of maximum pessimism is the best time to buy, and the time of maximum optimism is the best time to sell.", "John Templeton"],
+    ["Preserve capital. You can't trade if you don't have any capital.", "Stan Druckenmiller"],
+    ["Risk comes from not knowing what you're doing.", "Warren Buffett"],
+    ["Markets can remain irrational longer than you can remain solvent.", "John Maynard Keynes"],
+    ["Trading is a waiting game. You sit, you wait, and you make a lot of money all at once.", "Jim Rogers"],
+    ["The goal of a successful trader is to make the best trades. Money is secondary.", "Alexander Elder"],
+    ["An investment in knowledge pays the best interest.", "Benjamin Franklin"],
+    ["The stock market is filled with individuals who know the price of everything, but the value of nothing.", "Philip Fisher"],
+    ["In the short run the market is a voting machine, but in the long run it is a weighing machine.", "Benjamin Graham"],
+    ["Compound interest is the eighth wonder of the world. He who understands it, earns it; he who doesn't, pays it.", "Albert Einstein"],
+    ["The four most dangerous words in investing are: 'This time it's different.'", "John Templeton"],
+    ["Successful investing is about managing risk, not avoiding it.", "Benjamin Graham"],
+  ];
+
+  function initDailyQuote() {
+    const el = document.getElementById("topbar-quote");
+    if (!el) return;
+    const idx = Math.floor(Date.now() / 86400000) % TRADER_QUOTES.length;
+    const [text, author] = TRADER_QUOTES[idx];
+    el.textContent = `"${text}" — ${author}`;
+    el.title = `"${text}" — ${author}`;
+  }
+
+  const _melFmt  = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const _melDate = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", day: "2-digit", month: "short", year: "numeric" });
+  const _nyFmt   = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const _nyDate  = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    day: "2-digit",   month: "short", year: "numeric" });
+
+  function _fmtClock(fmt, dateFmt, now) {
+    const parts = fmt.formatToParts(now);
+    const get = (t) => (parts.find((p) => p.type === t) || {}).value || "";
+    const time = `${get("weekday")} ${get("hour")}:${get("minute")}:${get("second")}`;
+    const date = dateFmt.format(now);
+    return [time, date];
+  }
+
+  function updateClocks() {
+    const now = new Date();
+    const [melTime, melDate] = _fmtClock(_melFmt, _melDate, now);
+    const [nyTime,  nyDate]  = _fmtClock(_nyFmt,  _nyDate,  now);
+    const mt = document.getElementById("clk-mel-time"); if (mt) mt.textContent = melTime;
+    const md = document.getElementById("clk-mel-date"); if (md) md.textContent = melDate;
+    const nt = document.getElementById("clk-ny-time");  if (nt) nt.textContent = nyTime;
+    const nd = document.getElementById("clk-ny-date");  if (nd) nd.textContent = nyDate;
+  }
+
+  initDailyQuote();
+  updateClocks();
+  setInterval(updateClocks, 1000);
 
   initKeyboard();
   bind();
