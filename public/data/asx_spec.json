@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-24T12:04:04+10:00",
-  "scanned": 1349,
+  "generated_at": "2026-06-24T20:42:30+10:00",
+  "scanned": 1195,
   "universe_size": 1987,
   "score_max": 11,
   "sma_periods": [
@@ -22,10 +22,10 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8813.0,
+      "value": 8808.0,
       "decimals": 0,
-      "day_pct": 0.3,
-      "d5_pct": -1.71,
+      "day_pct": 0.24,
+      "d5_pct": -1.76,
       "spark": [
         8692.0,
         8657.7998,
@@ -48,7 +48,7 @@
         8828.7002,
         8816.0996,
         8787.0,
-        8813.2998
+        8808.4004
       ],
       "dir": "up"
     },
@@ -57,12 +57,11 @@
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4103.0,
+      "value": 4078.0,
       "decimals": 0,
-      "day_pct": -1.88,
-      "d5_pct": -5.19,
+      "day_pct": -1.25,
+      "d5_pct": -5.83,
       "spark": [
-        4539.7998,
         4521.0,
         4500.3999,
         4447.5,
@@ -83,7 +82,8 @@
         4358.8999,
         4224.1001,
         4181.8999,
-        4103.2998
+        4129.8999,
+        4078.3999
       ],
       "dir": "down"
     },
@@ -92,12 +92,11 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 61.62,
+      "value": 60.99,
       "decimals": 2,
-      "day_pct": -5.97,
-      "d5_pct": -12.06,
+      "day_pct": -1.65,
+      "d5_pct": -12.74,
       "spark": [
-        76.414,
         75.893,
         76.305,
         74.599,
@@ -118,7 +117,8 @@
         70.696,
         66.255,
         65.527,
-        61.615
+        62.02,
+        60.995
       ],
       "dir": "down"
     },
@@ -127,12 +127,11 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 76.76,
+      "value": 75.8,
       "decimals": 2,
-      "day_pct": -1.46,
-      "d5_pct": -7.71,
+      "day_pct": -1.66,
+      "d5_pct": -4.0,
       "spark": [
-        102.58,
         103.54,
         99.58,
         94.29,
@@ -153,7 +152,8 @@
         79.55,
         79.85,
         77.9,
-        76.76
+        77.08,
+        75.8
       ],
       "dir": "down"
     },
@@ -162,12 +162,11 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 72.76,
+      "value": 71.99,
       "decimals": 2,
-      "day_pct": -2.75,
-      "d5_pct": -9.89,
+      "day_pct": -1.67,
+      "d5_pct": -5.34,
       "spark": [
-        96.35,
         96.6,
         93.89,
         88.68,
@@ -188,7 +187,8 @@
         76.79,
         76.6,
         74.82,
-        72.76
+        73.21,
+        71.99
       ],
       "dir": "down"
     },
@@ -197,12 +197,11 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.19,
+      "value": 3.21,
       "decimals": 2,
-      "day_pct": -1.88,
-      "d5_pct": 1.43,
+      "day_pct": 2.16,
+      "d5_pct": -0.74,
       "spark": [
-        3.018,
         2.907,
         2.894,
         3.04,
@@ -223,9 +222,10 @@
         3.145,
         3.233,
         3.253,
-        3.192
+        3.147,
+        3.215
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "TECH",
@@ -302,11 +302,12 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.493,
+      "value": 4.451,
       "decimals": 3,
-      "day_pct": 0.94,
-      "d5_pct": 0.13,
+      "day_pct": -0.27,
+      "d5_pct": -0.27,
       "spark": [
+        4.667,
         4.572,
         4.586,
         4.558,
@@ -327,20 +328,19 @@
         4.469,
         4.428,
         4.463,
-        4.451,
-        4.493
+        4.451
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "AUD",
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6919,
+      "value": 0.689,
       "decimals": 4,
-      "day_pct": -1.07,
-      "d5_pct": -2.07,
+      "day_pct": -1.5,
+      "d5_pct": -2.49,
       "spark": [
         0.717,
         0.7171,
@@ -363,7 +363,7 @@
         0.7013,
         0.7003,
         0.6995,
-        0.6919
+        0.689
       ],
       "dir": "down"
     },
@@ -372,12 +372,11 @@
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 19.49,
+      "value": 19.23,
       "decimals": 2,
-      "day_pct": 12.79,
-      "d5_pct": 20.31,
+      "day_pct": -1.33,
+      "d5_pct": 17.18,
       "spark": [
-        16.7,
         16.59,
         17.01,
         16.29,
@@ -398,21 +397,21 @@
         18.44,
         16.4,
         17.28,
-        19.49
+        19.49,
+        19.23
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "USD",
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.41,
+      "value": 101.69,
       "decimals": 2,
-      "day_pct": 0.39,
-      "d5_pct": 1.79,
+      "day_pct": 0.27,
+      "d5_pct": 2.16,
       "spark": [
-        99.19,
         99.32,
         99.17,
         99.21,
@@ -433,128 +432,12 @@
         100.09,
         100.85,
         101.02,
-        101.413
+        101.41,
+        101.686
       ],
       "dir": "up"
     }
   ],
-  "sector_counts": {
-    "Health Care Equipment & Services": 1
-  },
-  "results": [
-    {
-      "symbol": "IIQ",
-      "name": "Inoviq Ltd",
-      "sector": "Health Care Equipment & Services",
-      "dir": "LONG",
-      "setup_type": "spec",
-      "grade": "A",
-      "score": 7,
-      "score_max": 11,
-      "chips": [
-        "VOLUME 4.8\u00d7 SPIKE",
-        "NEW 3-MONTH HIGH",
-        "9 \u203a 26 RECLAIM"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 0.47999999,
-      "y_close": 0.5,
-      "open": 0.5,
-      "open_pct": 0.0,
-      "current_pct": -4.0,
-      "day_pct": -4.0,
-      "entry": 0.47999999,
-      "stop": 0.29204999,
-      "target": 1.04385,
-      "rr": 3.0,
-      "trail": 0.41447436,
-      "stop_pct": 39.2,
-      "p2_pct": 117.5,
-      "target_basis": "measured",
-      "spark": [
-        0.32499999,
-        0.31999999,
-        0.31999999,
-        0.31999999,
-        0.34,
-        0.33000001,
-        0.32249999,
-        0.32499999,
-        0.32499999,
-        0.33000001,
-        0.33000001,
-        0.31999999,
-        0.32499999,
-        0.34,
-        0.33500001,
-        0.33500001,
-        0.34,
-        0.34,
-        0.33000001,
-        0.315,
-        0.315,
-        0.315,
-        0.315,
-        0.29499999,
-        0.375,
-        0.38499999,
-        0.41999999,
-        0.53500003,
-        0.5,
-        0.47999999
-      ],
-      "trend": "blue",
-      "turnover": 140691,
-      "detail": {
-        "setup_type": "spec",
-        "sma9": 0.40222222,
-        "sma9_pct": -16.2,
-        "sma26": 0.35451923,
-        "sma26_pct": -26.1,
-        "sma43": 0.34319767,
-        "sma43_pct": -28.5,
-        "sma200": 0.3545625,
-        "sma200_pct": -26.1,
-        "cross_up": true,
-        "rsi": 69.6,
-        "rsi_ma": 56.7,
-        "rsi_up": false,
-        "volume_ratio": 2.5,
-        "volume_today": 48715,
-        "volume_avg": 327873,
-        "volume_surge": true,
-        "off_high_pct": 15.0,
-        "base_high": 0.44,
-        "base_high_pct": -8.3,
-        "broken": true,
-        "swing_low": 0.29499999,
-        "swing_low_pct": -38.5,
-        "trailing_stop": 0.41447436,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -13.7,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            0.34,
-            0.33500001,
-            0.345
-          ],
-          "swing_lows": [
-            0.315,
-            0.31999999,
-            0.29499999
-          ]
-        },
-        "risk_pct": 39.2,
-        "spike_ratio": 4.8,
-        "new_high_long": true
-      },
-      "analysis": "IIQ just fired a speculative volume-spike breakout \u2014 volume hit 4.8\u00d7 its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 \u2014 short-term momentum is up. These are high-risk speculative names \u2014 they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.4800, stop A$0.2920, target A$1.0438 (3.00:1) \u2014 then trail it.",
-      "sector_count": 1
-    }
-  ]
+  "sector_counts": {},
+  "results": []
 }
