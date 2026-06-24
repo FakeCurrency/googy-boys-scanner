@@ -300,7 +300,10 @@
   }
 
   // ----------------------------------------------------------- a row
-  function rowHtml(r) {
+  function rowHtml(r, i) {
+    // Stagger index drives the entrance animation delay (capped so long lists
+    // don't trail off into a slow cascade).
+    const stagger = Math.min(i || 0, 12);
     const chips = (r.chips || []).map((c) =>
       `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
@@ -330,7 +333,7 @@
     const chartHref = (state.mode === "scalp")
       ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
       : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
-    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">
+    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
