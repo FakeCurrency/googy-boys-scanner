@@ -1,24 +1,24 @@
-"""Googy Scan — consolidation breakout scanner.
+"""Googy Scan — fresh consolidation breakout scanner.
 
 Finds stocks where price has just broken above the highest high of the last
-N bars, confirmed by RSI momentum and at least one SMA trend filter.
+N bars, confirmed by volume expansion, RSI momentum, and SMA trend filter.
+All 5 gates below are mandatory — any miss drops the stock entirely.
 
-Unlike the Pullback scanner (continuation in an uptrend) or the Reversal
-scanner (9-over-26 reclaim from a downtrend), Googy Scan focuses on the raw
-breakout from a range/consolidation — more aggressive, more tolerant of lower
-liquidity names, no beaten-down requirement, no price cap.
-
-Mandatory gates:
-  - Price > highest high of last GOOGY_BREAKOUT_LOOKBACK bars (the breakout)
-  - RSI(14) > 50 (basic momentum — no weak/exhausted breakouts)
-  - Price > SMA(20) OR SMA(50) (at least one trend filter)
+Mandatory gates (per image rules):
+  Rule 1 — Recent Breakout:  range high was set within last 5 bars (fresh, not stale)
+  Rule 2 — Breakout:         price > range high of last 25 bars
+  Rule 3 — Not Extended:     price no more than 10% above the range high
+  Rule 4 — Volume Expansion: volume >= 1.8× 20-bar average (hard gate, not optional)
+  Rule 5 — Basic Momentum:   close > SMA(20) AND RSI(14) > 50  (AND, not OR)
 
 Scoring out of 12:
-  breakout_strength  up to 3   (how far above the range high?)
-  volume             up to 3   (1.5x avg → +1, 2.5x → +2, 4x → +3)
-  rsi_strength       up to 2   (RSI 50-60 → +1, RSI > 60 → +2)
-  trend_alignment    up to 2   (above SMA50 → +1, SMA20 > SMA50 → +1)
-  range_quality      up to 2   (tight range → +1, ≥10 bars consolidation → +1)
+  breakout_strength  up to 2   (5–10% above → 2, 0.5–5% → 1)
+  volume             up to 3   (≥1.8× → 1, ≥2.5× → 2, ≥4× → 3)
+  compression        up to 2   (ATR contracted → +1, tight range → +1)
+  rsi_strength       up to 2   (50–60 → 1, >60 → 2)
+  sma_alignment      up to 1   (above SMA50 → +1)
+  freshness_bonus    up to 1   (range high set within last 2 bars → +1)
+  adx                up to 1   (ADX > 18 AND rising over 5 bars → +1)  [Rule 6]
 
 Low-liquidity names still appear but carry a LOW LIQUIDITY chip.
 """
@@ -28,7 +28,7 @@ import pandas as pd
 
 from . import config
 from .grading import grade_from_points
-from .indicators import pivot_highs, rsi, sma, supertrend
+from .indicators import adx as calc_adx, atr, pivot_highs, rsi, sma, supertrend
 
 
 def evaluate(df: pd.DataFrame, min_turnover: float = 0.0) -> dict | None:
@@ -46,7 +46,7 @@ def evaluate(df: pd.DataFrame, min_turnover: float = 0.0) -> dict | None:
     s50 = sma(close, config.GOOGY_SMA_SLOW)
     s20l = float(s20.iloc[-1])
     s50l = float(s50.iloc[-1])
-    if not (np.isfinite(s20l) and np.isfinite(s50l) and s20l > 0 and s50l > 0):
+    if not (np.isfinite(s20l) and s20l > 0):
         return None
 
     # ── RSI ───────────────────────────────────────────────────────────────────
@@ -65,50 +65,87 @@ def evaluate(df: pd.DataFrame, min_turnover: float = 0.0) -> dict | None:
     if len(df) < lookback + 2:
         return None
     range_slice = df.iloc[-(lookback + 1):-1]
-    range_high = float(range_slice["High"].max())
+    range_high_series = range_slice["High"]
+    range_high = float(range_high_series.max())
     range_low = float(range_slice["Low"].min())
 
-    # ── Mandatory gates ───────────────────────────────────────────────────────
-    # 1. Price must close above the range high (the actual breakout)
+    # ── Rule 1: Freshness — range high must have been set within last N bars ──
+    # argmax within the window gives position from start of range_slice (0-indexed)
+    high_idx = int(range_high_series.values.argmax())   # 0 = oldest bar in window
+    bars_since_high = (lookback - 1) - high_idx          # 0 = most recent bar in window
+    if bars_since_high > config.GOOGY_FRESH_LOOKBACK:
+        return None
+
+    # ── Rule 2: Breakout — price must close above the range high ─────────────
     if c <= range_high:
-        return None
-
-    # 2. RSI must be above 50 (momentum, not a fakeout)
-    if rsil < config.GOOGY_RSI_MIN:
-        return None
-
-    # 3. Price must be above at least one SMA (trend filter)
-    if c < s20l and c < s50l:
         return None
 
     # ── Breakout magnitude ────────────────────────────────────────────────────
     bo_pct = (c - range_high) / range_high if range_high > 0 else 0.0
 
+    # ── Rule 3: Not extended — price no more than 10% above range high ────────
+    if bo_pct > config.GOOGY_NOT_EXTENDED_PCT:
+        return None
+
+    # ── Rule 4: Volume expansion — mandatory 1.8× hard gate ──────────────────
+    if vol_ratio < config.GOOGY_VOL_MULT:
+        return None
+
+    # ── Rule 5: Momentum — close > SMA(20) AND RSI > 50 (both required) ──────
+    if c <= s20l or rsil < config.GOOGY_RSI_MIN:
+        return None
+
+    # ── ATR compression (Rule 3 — volatility was contracting before breakout) ─
+    atr_series = atr(df, config.GOOGY_RSI_PERIOD)
+    atr_now = float(atr_series.iloc[-2])          # yesterday (before breakout bar)
+    atr_before = float(atr_series.iloc[-config.GOOGY_COMPRESS_LOOKBACK - 1])
+    atr_contracted = np.isfinite(atr_before) and atr_before > 0 and atr_now < atr_before
+    atr_now_rel = round(atr_now / c * 100, 2) if c > 0 else 0.0
+    atr_before_rel = round(atr_before / c * 100, 2) if c > 0 else 0.0
+
     # ── Range quality ─────────────────────────────────────────────────────────
     range_span = (range_high - range_low) / range_high if range_high > 0 else 1.0
     tight_range = range_span < config.GOOGY_RANGE_TIGHT_PCT
 
-    # Count consecutive bars of consolidation (bars where close was <= range_high)
+    # Count bars where close stayed within the range (consolidation depth)
     consol_bars = 0
     for i in range(2, min(lookback + 2, len(df))):
-        if float(close.iloc[-(i)]) <= range_high:
+        if float(close.iloc[-i]) <= range_high:
             consol_bars += 1
         else:
             break
 
+    # ── ADX (Rule 6 — optional strength bonus) ────────────────────────────────
+    adx_series = calc_adx(df, config.GOOGY_RSI_PERIOD)
+    adx_now = float(adx_series.iloc[-1])
+    adx_valid = np.isfinite(adx_now)
+    adx_strong = adx_valid and adx_now > config.GOOGY_ADX_MIN
+    # Rising: current ADX > ADX N bars ago
+    adx_n = float(adx_series.iloc[-config.GOOGY_ADX_RISING_BARS - 1]) if len(adx_series) > config.GOOGY_ADX_RISING_BARS else float("nan")
+    adx_rising = adx_valid and np.isfinite(adx_n) and adx_now > adx_n
+
+    s50_valid = np.isfinite(s50l) and s50l > 0
+
     return {
         "close": c, "ok": True,
-        "sma20": s20l, "sma50": s50l,
+        "sma20": s20l, "sma50": s50l if s50_valid else None,
         "rsi": rsil,
         "vol": vol_l, "vol_avg": vol_avg, "vol_ratio": vol_ratio,
         "range_high": range_high, "range_low": range_low,
         "bo_pct": bo_pct,
+        "bars_since_high": bars_since_high,
         "tight_range": tight_range,
         "consol_bars": consol_bars,
         "range_span_pct": round(range_span * 100, 1),
+        "atr_contracted": atr_contracted,
+        "atr_now_rel": atr_now_rel,
+        "atr_before_rel": atr_before_rel,
+        "adx": round(adx_now, 1) if adx_valid else None,
+        "adx_strong": adx_strong,
+        "adx_rising": adx_rising,
         # flags for scoring
-        "above_sma50": c > s50l,
-        "sma20_above_sma50": s20l > s50l,
+        "above_sma50": s50_valid and c > s50l,
+        "sma20_above_sma50": s50_valid and s20l > s50l,
         "volume_expanding": vol_ratio >= config.GOOGY_VOL_MULT,
         "volume_strong": vol_ratio >= config.GOOGY_VOL_STRONG,
         "volume_surge": vol_ratio >= config.GOOGY_VOL_SURGE,
@@ -121,16 +158,14 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     points = 0
     fired = []
 
-    # breakout_strength: how much above the range high? (0–3 pts)
+    # breakout_strength: 5–10% → 2pts, 0.5–5% → 1pt (0–2)
     bo = sig["bo_pct"]
-    if bo >= config.GOOGY_BREAKOUT_STR_PCT:
-        points += 3; fired.append("breakout_surge")
-    elif bo >= config.GOOGY_BREAKOUT_MOD_PCT:
+    if bo >= 0.05:
         points += 2; fired.append("breakout_strong")
     elif bo > 0.005:
         points += 1; fired.append("breakout")
 
-    # volume (0–3 pts)
+    # volume (0–3 pts) — gate already enforced at 1.8×
     if sig["volume_surge"]:
         points += 3; fired.append("volume_surge")
     elif sig["volume_strong"]:
@@ -138,23 +173,29 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     elif sig["volume_expanding"]:
         points += 1; fired.append("volume")
 
-    # rsi_strength (0–2 pts)
+    # compression: ATR contracted (+1) + tight range (+1) = 0–2
+    if sig["atr_contracted"]:
+        points += 1; fired.append("atr_compression")
+    if sig["tight_range"]:
+        points += 1; fired.append("tight_range")
+
+    # rsi_strength: >60 → 2, 50–60 → 1 (gate already ensures >= 50)
     if sig["rsi_strong"]:
         points += 2; fired.append("rsi_strong")
     else:
         points += 1; fired.append("rsi")
 
-    # trend_alignment (0–2 pts)
+    # sma_alignment: above SMA50 → +1 (0–1)
     if sig["above_sma50"]:
         points += 1; fired.append("above_sma50")
-    if sig["sma20_above_sma50"]:
-        points += 1; fired.append("sma_aligned")
 
-    # range_quality (0–2 pts)
-    if sig["tight_range"]:
-        points += 1; fired.append("tight_range")
-    if sig["consol_bars"] >= config.GOOGY_RANGE_MIN_BARS:
-        points += 1; fired.append("consolidation")
+    # freshness_bonus: range high set within last 2 bars → extra +1
+    if sig["bars_since_high"] <= 2:
+        points += 1; fired.append("freshness_bonus")
+
+    # adx bonus: strong AND rising → +1 (Rule 6)
+    if sig["adx_strong"] and sig["adx_rising"]:
+        points += 1; fired.append("adx_rising")
 
     return points, grade_from_points(points, config.GOOGY_GRADE_CUTOFFS), fired
 
@@ -162,10 +203,8 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
 def build_chips(fired: list[str], sig: dict) -> list[str]:
     chips = []
     for key in fired:
-        if key == "breakout_surge":
-            chips.append(f"BREAKOUT +{sig['bo_pct'] * 100:.1f}% ABOVE RANGE")
-        elif key == "breakout_strong":
-            chips.append(f"CLEAN BREAKOUT +{sig['bo_pct'] * 100:.1f}%")
+        if key == "breakout_strong":
+            chips.append(f"STRONG BREAKOUT +{sig['bo_pct'] * 100:.1f}%")
         elif key == "breakout":
             chips.append(f"RANGE BREAKOUT +{sig['bo_pct'] * 100:.1f}%")
         elif key == "volume_surge":
@@ -174,18 +213,21 @@ def build_chips(fired: list[str], sig: dict) -> list[str]:
             chips.append(f"VOLUME EXPANSION {sig['vol_ratio']:.1f}×")
         elif key == "volume":
             chips.append(f"VOLUME {sig['vol_ratio']:.1f}× AVG")
+        elif key == "atr_compression":
+            chips.append("VOLATILITY COMPRESSION")
+        elif key == "tight_range":
+            chips.append(f"TIGHT BASE ({sig['range_span_pct']:.0f}% RANGE)")
         elif key == "rsi_strong":
             chips.append(f"RSI {sig['rsi']:.0f} STRONG MOMENTUM")
         elif key == "rsi":
             chips.append(f"RSI {sig['rsi']:.0f} BULLISH")
         elif key == "above_sma50":
             chips.append("ABOVE SMA 50")
-        elif key == "sma_aligned":
-            chips.append("SMA 20 › 50 BULLISH")
-        elif key == "tight_range":
-            chips.append(f"TIGHT BASE ({sig['range_span_pct']:.0f}% RANGE)")
-        elif key == "consolidation":
-            chips.append(f"{sig['consol_bars']}+ BAR CONSOLIDATION")
+        elif key == "freshness_bonus":
+            chips.append("FRESH BREAKOUT")
+        elif key == "adx_rising":
+            adx_val = sig.get("adx")
+            chips.append(f"ADX {adx_val:.0f} RISING" if adx_val is not None else "ADX RISING")
     return chips
 
 
@@ -219,7 +261,6 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     above = piv[piv > close * 1.05]
     if len(above) > 0:
         resist_target = float(above.min())
-        # Use whichever is closer and gives at least 1.5:1 RR
         if (resist_target - entry) / risk >= 1.5:
             target = min(target_measured, resist_target)
             basis = "resistance" if target == resist_target else "measured"
@@ -241,7 +282,9 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     }
 
 
-def _pct(level: float, close: float) -> float:
+def _pct(level: float | None, close: float) -> float:
+    if level is None:
+        return 0.0
     return round((level - close) / close * 100, 1) if close else 0.0
 
 
@@ -252,7 +295,8 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     return {
         "setup_type": "googy",
         "sma20": round(sig["sma20"], 8), "sma20_pct": _pct(sig["sma20"], close),
-        "sma50": round(sig["sma50"], 8), "sma50_pct": _pct(sig["sma50"], close),
+        "sma50": round(sig["sma50"], 8) if sig["sma50"] is not None else None,
+        "sma50_pct": _pct(sig["sma50"], close),
         "rsi": round(sig["rsi"], 1),
         "volume_ratio": round(sig["vol_ratio"], 1),
         "volume_today": int(sig["vol"]),
@@ -264,7 +308,14 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
         "range_low_pct": _pct(sig["range_low"], close),
         "range_span_pct": sig["range_span_pct"],
         "bo_pct": round(sig["bo_pct"] * 100, 2),
+        "bars_since_high": sig["bars_since_high"],
         "consol_bars": sig["consol_bars"],
+        "compression": sig["atr_contracted"],
+        "atr_now_rel": sig["atr_now_rel"],
+        "atr_before_rel": sig["atr_before_rel"],
+        "adx": sig["adx"],
+        "adx_strong": sig["adx_strong"],
+        "adx_rising": sig["adx_rising"],
         "swing_low": round(swing_low, 8),
         "swing_low_pct": _pct(swing_low, close),
         "trailing_stop": lv["trail"],
@@ -277,23 +328,37 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
 def narrative(symbol: str, sig: dict, lv: dict, detail: dict, cur: str = "$") -> str:
     """Generate the analysis text shown in the detail panel."""
     p = []
+
+    freshness = sig["bars_since_high"]
+    fresh_str = "yesterday" if freshness == 1 else f"{freshness} bars ago"
     p.append(
-        f"{symbol} has broken out above its {config.GOOGY_BREAKOUT_LOOKBACK}-bar range high "
-        f"({cur}{sig['range_high']:.4f}) by {sig['bo_pct'] * 100:.1f}%."
+        f"{symbol} set its {config.GOOGY_BREAKOUT_LOOKBACK}-bar range high {fresh_str} "
+        f"and has just broken out above {cur}{sig['range_high']:.4f} "
+        f"by +{sig['bo_pct'] * 100:.1f}% — a fresh, not stale, breakout."
     )
+
+    if sig["atr_contracted"]:
+        p.append(
+            f"ATR contracted from {sig['atr_before_rel']:.2f}% to {sig['atr_now_rel']:.2f}% of price "
+            "in the {config.GOOGY_COMPRESS_LOOKBACK} bars before the breakout — "
+            "classic volatility coil before the expansion."
+        )
+
     if sig["volume_surge"]:
         p.append(f"Volume surged to {sig['vol_ratio']:.1f}× its 20-day average — strong institutional participation.")
     elif sig["volume_strong"]:
         p.append(f"Volume is running at {sig['vol_ratio']:.1f}× its average — solid confirmation of the move.")
-    elif sig["volume_expanding"]:
-        p.append(f"Volume is expanding at {sig['vol_ratio']:.1f}× average — the breakout has some participation.")
     else:
-        p.append("Volume is below average — watch for a re-test of the breakout level with better volume.")
+        p.append(f"Volume is at {sig['vol_ratio']:.1f}× average — the minimum required gate is cleared.")
 
     if sig["rsi_strong"]:
         p.append(f"RSI is at {sig['rsi']:.0f} — momentum is genuinely strong, not yet overbought.")
     else:
         p.append(f"RSI at {sig['rsi']:.0f} is above 50 — momentum is with the bulls.")
+
+    if sig["adx_strong"] and sig["adx_rising"]:
+        adx_val = sig.get("adx")
+        p.append(f"ADX at {adx_val:.0f} and rising confirms a trending market — not a false breakout from noise.")
 
     if sig["sma20_above_sma50"]:
         p.append("The 20-SMA is above the 50-SMA — the medium-term trend structure is bullish.")
@@ -309,6 +374,6 @@ def narrative(symbol: str, sig: dict, lv: dict, detail: dict, cur: str = "$") ->
     p.append(
         f"Trade idea: entry {cur}{lv['entry']:.4f}, stop {cur}{lv['stop']:.4f} "
         f"(below range low), target {cur}{lv['target']:.4f} "
-        f"(measured move — {lv['rr']:.2f}:1) — then trail it."
+        f"(measured move — {lv['rr']:.2f}:1) — then trail with the SuperTrend."
     )
     return " ".join(p)

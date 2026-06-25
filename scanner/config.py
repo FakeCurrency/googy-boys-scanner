@@ -205,23 +205,26 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
 # liquidity than the Pullback/Reversal scanners — surfaces aggressive breakouts
 # that may not qualify for the tighter screens. No price cap, no beaten-down gate.
 # ---------------------------------------------------------------------------
-GOOGY_BREAKOUT_LOOKBACK = 25   # bars to define the consolidation range (mandatory gate)
-GOOGY_VOL_LOOKBACK = 20        # bars for the volume average baseline
-GOOGY_VOL_MULT = 1.5           # volume > 1.5x avg = volume chip fires
-GOOGY_VOL_STRONG = 2.5         # volume > 2.5x avg = strong volume bonus
-GOOGY_VOL_SURGE = 4.0          # volume > 4x avg = surge bonus
-GOOGY_RSI_PERIOD = 14          # RSI period
-GOOGY_RSI_MIN = 50             # RSI must be above this (mandatory gate)
-GOOGY_SMA_FAST = 20            # fast SMA (short-term trend)
-GOOGY_SMA_SLOW = 50            # slow SMA (medium-term trend)
-GOOGY_BREAKOUT_MOD_PCT = 0.03  # moderate breakout: 0.5%–3% above range high → 1 pt
-GOOGY_BREAKOUT_STR_PCT = 0.07  # strong breakout: 3%–7% → 2 pts; >7% → 3 pts
-GOOGY_RANGE_TIGHT_PCT = 0.20   # tight range: (high-low)/high < 20% → quality bonus
-GOOGY_RANGE_MIN_BARS = 10      # minimum bars of consolidation for quality bonus
-GOOGY_STOP_LOOKBACK = 20       # bars to find the recent swing low for the stop
-GOOGY_STOP_BUFFER = 0.01       # place stop 1% below the swing low
-GOOGY_STOP_FALLBACK_PCT = 0.93 # fallback stop = entry * this when swing low >= entry
-GOOGY_MIN_HISTORY = 60         # minimum bars needed (much shorter than other scanners)
+GOOGY_BREAKOUT_LOOKBACK  = 25  # bars to define the consolidation range (mandatory gate)
+GOOGY_FRESH_LOOKBACK     = 5   # range high must have been set within last N bars (Rule 1)
+GOOGY_NOT_EXTENDED_PCT   = 0.10 # price no more than 10% above range high (Rule 2)
+GOOGY_VOL_LOOKBACK       = 20  # bars for the volume average baseline
+GOOGY_VOL_MULT           = 1.8 # volume ≥ 1.8× avg — mandatory gate (Rule 4)
+GOOGY_VOL_STRONG         = 2.5 # volume > 2.5× avg = strong volume bonus
+GOOGY_VOL_SURGE          = 4.0 # volume > 4× avg = surge bonus
+GOOGY_RSI_PERIOD         = 14  # RSI / ATR / ADX period
+GOOGY_RSI_MIN            = 50  # RSI must be above this AND price > SMA20 (Rule 5)
+GOOGY_SMA_FAST           = 20  # fast SMA — mandatory trend filter (Rule 5)
+GOOGY_SMA_SLOW           = 50  # slow SMA — display only (above → bonus point)
+GOOGY_COMPRESS_LOOKBACK  = 15  # bars ago to compare ATR for compression check (Rule 3)
+GOOGY_ADX_MIN            = 18  # ADX must exceed this to score the strength bonus (Rule 6)
+GOOGY_ADX_RISING_BARS    = 5   # ADX rising over last N bars = rising confirmation
+GOOGY_RANGE_TIGHT_PCT    = 0.20 # tight range: (high-low)/high < 20% → quality bonus
+GOOGY_RANGE_MIN_BARS     = 10  # minimum bars of consolidation for quality bonus
+GOOGY_STOP_LOOKBACK      = 20  # bars to find the recent swing low for the stop
+GOOGY_STOP_BUFFER        = 0.01 # place stop 1% below the swing low
+GOOGY_STOP_FALLBACK_PCT  = 0.93 # fallback stop = entry * this when swing low >= entry
+GOOGY_MIN_HISTORY        = 80  # minimum bars needed (increased to support ATR lookback)
 # Turnover below this gets a LOW LIQUIDITY warning chip (but still shows up)
 GOOGY_LOW_LIQ_TURNOVER = {"asx": 200_000, "nasdaq": 500_000, "crypto": 1_000_000}
 # Hard minimum — below this, skip entirely (basically zero-activity tickers)
