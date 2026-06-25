@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-25T05:46:57Z",
+  "updated_at": "2026-06-25T08:43:09Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -9,21 +9,20 @@
     "max_per_group": 2,
     "session_day": "2026-06-25",
     "today_trades": 5,
-    "today_pnl": -211.99,
+    "today_pnl": -91.77,
     "trades_left_today": 0,
     "group_exposure": {
       "us_tech": 2,
-      "energy": 1,
       "asx:consumer staples": 1,
       "au_financials": 1
     },
     "longs": {
-      "open": 4,
-      "closed": 10,
-      "win_rate": 0.0,
-      "total_r": -9.88,
-      "total_pnl": -1141.67,
-      "open_unrealised_pnl": -32.22
+      "open": 3,
+      "closed": 11,
+      "win_rate": 9.1,
+      "total_r": -8.71,
+      "total_pnl": -1021.45,
+      "open_unrealised_pnl": -24.15
     },
     "shorts": {
       "open": 1,
@@ -40,9 +39,9 @@
         "total_pnl": -453.59
       },
       "ranging": {
-        "trades": 8,
-        "wins": 0,
-        "total_pnl": -1114.73
+        "trades": 9,
+        "wins": 1,
+        "total_pnl": -994.51
       },
       "trending": {
         "trades": 4,
@@ -78,33 +77,6 @@
       "fill_price": 195.94376001,
       "filled": true,
       "current": 196.51010132
-    },
-    {
-      "symbol": "NATGAS",
-      "name": "Natural Gas",
-      "asset_type": "commodity",
-      "sector": "Commodities",
-      "corr_group": "energy",
-      "direction": "long",
-      "grade": "A",
-      "score": 7,
-      "entry": 3.26497914,
-      "stop": 3.213352,
-      "target": 3.3262958,
-      "rr": 2.0,
-      "units": 2656.1885341372104,
-      "risk_per_trade": 100,
-      "atr": 0.02509862,
-      "market_regime": "ranging",
-      "yf_ticker": "NG=F",
-      "opened_ts": "2026-06-24T15:46:53+00:00",
-      "session_day": "2026-06-25",
-      "status": "open",
-      "unreal_r": 0.23,
-      "unreal_pnl": -8.07,
-      "fill_price": 3.26497914,
-      "filled": true,
-      "current": 3.27699995
     },
     {
       "symbol": "COL",
@@ -486,6 +458,39 @@
       "bars": 19,
       "r": -1.01,
       "pnl": -177.1
+    },
+    {
+      "symbol": "NATGAS",
+      "name": "Natural Gas",
+      "asset_type": "commodity",
+      "sector": "Commodities",
+      "corr_group": "energy",
+      "direction": "long",
+      "grade": "A",
+      "score": 7,
+      "entry": 3.26497914,
+      "stop": 3.213352,
+      "target": 3.3262958,
+      "rr": 2.0,
+      "units": 2656.1885341372104,
+      "risk_per_trade": 100,
+      "atr": 0.02509862,
+      "market_regime": "ranging",
+      "yf_ticker": "NG=F",
+      "opened_ts": "2026-06-24T15:46:53+00:00",
+      "session_day": "2026-06-25",
+      "status": "closed",
+      "unreal_r": 0.23,
+      "unreal_pnl": -8.07,
+      "fill_price": 3.26497914,
+      "filled": true,
+      "current": 3.27699995,
+      "exit": 3.32529791,
+      "exit_ts": "2026-06-25T03:00:00",
+      "reason": "target",
+      "bars": 11,
+      "r": 1.17,
+      "pnl": 120.22
     }
   ],
   "closed_shorts": [
@@ -1625,6 +1630,39 @@
       "bars": 1,
       "r": -1.02,
       "pnl": -211.99
+    },
+    {
+      "symbol": "NATGAS",
+      "name": "Natural Gas",
+      "asset_type": "commodity",
+      "sector": "Commodities",
+      "corr_group": "energy",
+      "direction": "long",
+      "grade": "A",
+      "score": 7,
+      "entry": 3.26497914,
+      "stop": 3.213352,
+      "target": 3.3262958,
+      "rr": 2.0,
+      "units": 2656.1885341372104,
+      "risk_per_trade": 100,
+      "atr": 0.02509862,
+      "market_regime": "ranging",
+      "yf_ticker": "NG=F",
+      "opened_ts": "2026-06-24T15:46:53+00:00",
+      "session_day": "2026-06-25",
+      "status": "closed",
+      "unreal_r": 0.23,
+      "unreal_pnl": -8.07,
+      "fill_price": 3.26497914,
+      "filled": true,
+      "current": 3.27699995,
+      "exit": 3.32529791,
+      "exit_ts": "2026-06-25T03:00:00",
+      "reason": "target",
+      "bars": 11,
+      "r": 1.17,
+      "pnl": 120.22
     }
   ]
 }
