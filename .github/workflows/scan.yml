@@ -6,13 +6,13 @@ name: Scheduled scan
 # Pushing to main triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
-    # Every 30 min during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
+    # Hourly during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
     # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
     # NASDAQ 9:30 AM–4:00 PM ET   = 13:30–21:00 UTC  (EDT; add 1h in EST winter)
-    - cron: "0,30 0-5 * * 1-5"   # ASX  00:00–05:30 UTC (every 30 min)
+    - cron: "0 0-5 * * 1-5"      # ASX  00:00–05:00 UTC (hourly)
     - cron: "30 6 * * 1-5"        # ASX  06:30 UTC = 4:30 PM AEST (closing alert)
     - cron: "30 13 * * 1-5"       # NASDAQ open  13:30 UTC
-    - cron: "0,30 14-20 * * 1-5"  # NASDAQ 14:00–20:30 UTC (every 30 min)
+    - cron: "0 14-20 * * 1-5"     # NASDAQ 14:00–20:00 UTC (hourly)
     - cron: "0 21 * * 1-5"        # NASDAQ close 21:00 UTC
   workflow_dispatch:
     inputs:

@@ -825,7 +825,7 @@
     $("#scan-title").textContent = `Last scanned: ${fmtTime(d.generated_at, d.tz_label)}`;
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
-    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · updates after each market close`;
+    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     if (state.mode === "scalp") loadHealthStatus();
     renderPulse(d.pulse);
     refreshPulseLive(d.pulse);
@@ -1079,23 +1079,45 @@
       load();
     }));
 
+    // Poll for a new generated_at after triggering a cloud scan.
+    // Checks every 30s for up to 5 minutes, then gives up quietly.
+    async function pollForFreshScan(oldGenAt) {
+      for (let i = 0; i < 10; i++) {
+        await new Promise(r => setTimeout(r, 30000));
+        try {
+          const url = dataFile(state.market, state.mode);
+          const r = await fetch(url, { cache: "no-cache" });
+          if (!r.ok) continue;
+          const d = await r.json();
+          if (d.generated_at && d.generated_at !== oldGenAt) {
+            const key = `${state.market}:${state.mode}`;
+            state.cache[key] = d;
+            applyPayload(d);
+            startAutoRefresh();
+            flashScan(`Scan complete — updated to ${fmtTime(d.generated_at, d.tz_label)}.`, "ok");
+            return;
+          }
+        } catch (_) {}
+      }
+    }
+
     $("#reload-btn").addEventListener("click", async () => {
       const btn = $("#reload-btn");
       if (btn.disabled) return;
       btn.classList.add("spinning");
       btn.disabled = true;
+      const oldGenAt = state.data && state.data.generated_at;
       flashScan("Requesting a fresh scan…", "info");
-      // Kick off a fresh cloud scan (updates the "Last scanned" time once it
-      // finishes). Falls back to just reloading the current data if the scan
-      // endpoint isn't configured yet. Aborts if the service hangs.
+      // Kick off a fresh cloud scan. Falls back gracefully if not configured.
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 12000);
+      let scanTriggered = false;
       try {
         const res = await fetch("/api/scan", { method: "POST", signal: ctrl.signal });
         const data = await res.json().catch(() => ({}));
-        // 503 = not configured (info, not an error the user can fix at runtime).
         const kind = res.ok ? "ok" : (res.status === 503 || data.configured === false) ? "info" : "warn";
-        flashScan(data.message || (res.ok ? "Scan started." : "Couldn't start a scan — reloaded latest data."), kind);
+        flashScan(data.message || (res.ok ? "Scan started — results will update in ~3 min." : "Couldn't start a scan — reloaded latest data."), kind);
+        scanTriggered = res.ok;
       } catch (err) {
         flashScan(err && err.name === "AbortError"
           ? "Scan service timed out — reloaded latest data instead."
@@ -1103,13 +1125,14 @@
       } finally {
         clearTimeout(timer);
       }
-      // always refresh what's on screen too
+      // Show current data immediately; then poll for the fresh data in the background
       delete state.cache[`${state.market}:${state.mode}`];
       await load();
       setTimeout(() => {
         btn.classList.remove("spinning");
         btn.disabled = false;
       }, 800);
+      if (scanTriggered) pollForFreshScan(oldGenAt);
     });
 
     function flashScan(msg, kind) {
