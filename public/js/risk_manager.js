@@ -20,7 +20,7 @@
      3. The loss counter ONLY resets on a winning trade (net P/L > 0) or a
         manual reset. Break-even (net == 0) leaves it unchanged.
      4. An active kill switch also blocks all new entries.
-     5. Position sizing respects the 2% rule AND per-instrument point values.
+     5. Position sizing respects the 0.25% rule AND per-instrument point values.
    =========================================================================== */
 (function (global) {
   "use strict";
@@ -80,7 +80,7 @@
      */
     constructor(cfg = {}) {
       this.config = {
-        maxRiskPerTradePct: cfg.maxRiskPerTradePct != null ? cfg.maxRiskPerTradePct : 2.0,
+        maxRiskPerTradePct: cfg.maxRiskPerTradePct != null ? cfg.maxRiskPerTradePct : 0.25,
         maxConsecutiveLosses: cfg.maxConsecutiveLosses != null ? cfg.maxConsecutiveLosses : 3,
       };
       this.instruments = Object.assign({}, DEFAULT_INSTRUMENTS, cfg.instruments || {});

@@ -435,7 +435,7 @@
 
   <main class="bot-wrap">
     <div class="bot-roadmap-notice">
-      ⚡ <strong>Risk engine live</strong> — the 2% position-sizing rule and 3-consecutive-loss hard stop are now <strong>enforced in code</strong> by <code>risk_manager.js</code>, and the state persists across reloads. Use the <strong>Sim Win / Sim Loss / Attempt Entry</strong> buttons in Risk Status to watch it block entries. The remaining gap is broker execution — see the roadmap.
+      ⚡ <strong>Trading system configured</strong> — <strong>Weekly+3D bias · H4 entry · 0.25% risk per trade · 2.5× leverage</strong> · scale 25% at TP1 → move SL to BE → risk-free runner to final target. The <strong>0.25% sizing rule</strong> and <strong>3-loss hard stop</strong> are enforced live by <code>risk_manager.js</code>. Use <strong>Sim Win / Sim Loss / Attempt Entry</strong> in Risk Status to test the engine.
     </div>
 
     <div class="bot-grid">
@@ -499,8 +499,8 @@
             <div class="rule-section">
               <span class="rule-section-label">Timeframes</span>
               <div class="rule-tf-row">
-                <div class="rule-tf-item"><div class="rule-tf-k">Bias</div><div class="rule-tf-v" id="rule-bias-tf">Daily</div></div>
-                <div class="rule-tf-item"><div class="rule-tf-k">Entry</div><div class="rule-tf-v" id="rule-entry-tf">4H</div></div>
+                <div class="rule-tf-item"><div class="rule-tf-k">Bias</div><div class="rule-tf-v" id="rule-bias-tf">Weekly+3D</div></div>
+                <div class="rule-tf-item"><div class="rule-tf-k">Entry</div><div class="rule-tf-v" id="rule-entry-tf">H4</div></div>
               </div>
             </div>
 
@@ -517,7 +517,7 @@
               <div class="rule-row">
                 <span class="rule-label">Bias filter</span>
                 <select class="rule-control" id="rule-bias">
-                  <option value="daily">Daily only</option><option value="3d">3-Day only</option><option value="both">Daily + 3D</option>
+                  <option value="weekly_3d">Weekly + 3D</option><option value="daily">Daily only</option><option value="3d">3-Day only</option><option value="both">Daily + 3D</option>
                 </select>
               </div>
             </div>
@@ -529,7 +529,7 @@
               <div class="rule-row">
                 <span class="rule-label">Risk per trade</span>
                 <select class="rule-control" id="rule-risk-pct">
-                  <option value="1">1.0%</option><option value="1.5">1.5%</option><option value="2">2.0%</option>
+                  <option value="0.25">0.25%</option><option value="0.5">0.5%</option><option value="1">1.0%</option><option value="1.5">1.5%</option><option value="2">2.0%</option>
                 </select>
               </div>
               <div class="rule-row">
@@ -544,6 +544,12 @@
                   <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
+              <div class="rule-row">
+                <span class="rule-label">Leverage</span>
+                <select class="rule-control" id="rule-leverage">
+                  <option value="1">1×</option><option value="2">2×</option><option value="2.5">2.5×</option><option value="3">3×</option><option value="5">5×</option>
+                </select>
+              </div>
             </div>
 
             <div class="rule-divider"></div>
@@ -552,7 +558,9 @@
               <span class="rule-section-label">Exit rules</span>
               <div class="rule-toggle-row"><span class="rule-toggle-label">Use scanner targets</span><input type="checkbox" class="rule-toggle" id="rule-scanner-targets" /></div>
               <div class="rule-toggle-row"><span class="rule-toggle-label">Trail with SuperTrend</span><input type="checkbox" class="rule-toggle" id="rule-trail-st" /></div>
-              <div class="rule-toggle-row"><span class="rule-toggle-label">Move to break-even at 1R</span><input type="checkbox" class="rule-toggle" id="rule-be-1r" /></div>
+              <div class="rule-toggle-row"><span class="rule-toggle-label">Scale out 25% at TP1</span><input type="checkbox" class="rule-toggle" id="rule-scale-tp1" /></div>
+              <div class="rule-toggle-row"><span class="rule-toggle-label">Move SL to BE after TP1</span><input type="checkbox" class="rule-toggle" id="rule-be-after-tp1" /></div>
+              <div class="rule-toggle-row"><span class="rule-toggle-label">Multiple entries on pullbacks</span><input type="checkbox" class="rule-toggle" id="rule-multi-entry" /></div>
             </div>
 
             <div class="rules-btn-row">
@@ -568,7 +576,7 @@
           <div class="bot-panel-body">
             <div class="sizing-readout">
               <div class="sizing-line"><span class="sizing-line-k">Account equity</span><span class="sizing-line-v num" id="sz-equity">$10,342</span></div>
-              <div class="sizing-line"><span class="sizing-line-k">Max risk / trade (<span id="sz-risk-pct">2%</span>)</span><span class="sizing-line-v accent num" id="sz-max-risk">$206.84</span></div>
+              <div class="sizing-line"><span class="sizing-line-k">Max risk / trade (<span id="sz-risk-pct">0.25%</span>)</span><span class="sizing-line-v accent num" id="sz-max-risk">$25.86</span></div>
               <div class="sizing-line"><span class="sizing-line-k">Open risk (live)</span><span class="sizing-line-v num" id="sz-open-risk">$614</span></div>
             </div>
             <div class="sizing-line" style="margin-top:6px"><span class="sizing-line-k" style="font-size:10px">Daily risk budget</span></div>
@@ -768,7 +776,7 @@
     <p class="credit">Vivek's Beta Scanner · AI Bot terminal · risk-first autonomous execution</p>
   </footer>
 
-  <script src="js/risk_manager.js?v=1"></script>
-  <script src="js/bot.js?v=3"></script>
+  <script src="js/risk_manager.js?v=2"></script>
+  <script src="js/bot.js?v=4"></script>
 </body>
 </html>

@@ -19,11 +19,13 @@
   // ── Default rules ──────────────────────────────────────────────────────────
   const DEFAULT_RULES = {
     markets: ["NAS100", "US30", "XAU", "CL"],
-    strategies: ["trend_pullback", "breakout"],
-    bias_tf: "Daily", entry_tf: "4H",
-    min_rr: 2, bias: "daily",
-    risk_pct: 2, loss_limit: 3, max_positions: 3,
-    use_scanner_targets: true, trail_supertrend: true, be_1r: true,
+    strategies: ["trend_pullback"],
+    bias_tf: "Weekly+3D", entry_tf: "H4",
+    min_rr: 2, bias: "weekly_3d",
+    risk_pct: 0.25, loss_limit: 3, max_positions: 5,
+    leverage: 2.5,
+    use_scanner_targets: true, trail_supertrend: true,
+    scale_out_tp1: true, be_after_tp1: true, multi_entry: true,
   };
   const loadRules = () => { try { return { ...DEFAULT_RULES, ...JSON.parse(localStorage.getItem(RULES_KEY)) }; } catch (_) { return { ...DEFAULT_RULES }; } };
   const saveRules = r => localStorage.setItem(RULES_KEY, JSON.stringify(r));
@@ -198,6 +200,7 @@
           <span class="pos-lev num">${p.leverage}×</span>
           <span class="pos-strat-chip">${p.strategy}</span>
           <span class="pos-tf-chip">${p.bias_tf}→${p.entry_tf}</span>
+          ${p.entry_count > 1 ? `<span class="pos-tf-chip">×${p.entry_count} entries</span>` : ""}
           <button class="pos-close-btn" data-symbol="${p.symbol}">Close</button>
         </div>
         <div class="pos-body">
@@ -206,8 +209,10 @@
             <div class="pos-metric"><span class="pos-metric-k">Current</span><span class="pos-metric-v num">${px(p.current)}</span></div>
             <div class="pos-metric"><span class="pos-metric-k">Size</span><span class="pos-metric-v num">${p.size}</span></div>
             <div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v stop num">${px(p.stop)}</span><span class="pos-metric-sub num">${stopBufR.toFixed(1)}R buffer</span></div>
-            <div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>
-            <div class="pos-metric"><span class="pos-metric-k">Risk at entry</span><span class="pos-metric-v num">${money(p.risk_usd, 0)}</span><span class="pos-metric-sub num">${p.risk_pct.toFixed(1)}% · ${plannedR.toFixed(1)}R plan</span></div>
+            ${p.tp1
+              ? `<div class="pos-metric"><span class="pos-metric-k">TP1 (25%→BE)</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
+              : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`}
+            <div class="pos-metric"><span class="pos-metric-k">Risk at entry</span><span class="pos-metric-v num">${money(p.risk_usd, 0)}</span><span class="pos-metric-sub num">${p.risk_pct.toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>
           </div>
           <div class="pos-side">
             <div class="pos-pnl-box ${pnlPos ? "pos-pnl-green" : "pos-pnl-red"}">
@@ -222,7 +227,7 @@
           <div class="pos-progress-labels">
             <span class="pos-progress-lab stop">SL ${px(p.stop)}</span>
             <span class="pos-progress-lab num">${p.bars_4h} bars · ${fmtAge(p.opened_at)} open</span>
-            <span class="pos-progress-lab target">TP ${px(p.target)}</span>
+            <span class="pos-progress-lab target">${p.tp1 ? `TP1 ${px(p.tp1)} · Final ${px(p.target)}` : `TP ${px(p.target)}`}</span>
           </div>
         </div>
       </div>`;
@@ -338,11 +343,15 @@
     const set = (id, v) => { const el = $(id); if (el) el.value = v; };
     set("#rule-min-rr", r.min_rr); set("#rule-bias", r.bias); set("#rule-risk-pct", r.risk_pct);
     set("#rule-loss-limit", r.loss_limit); set("#rule-max-positions", r.max_positions);
-    $("#rule-scanner-targets").checked = r.use_scanner_targets;
-    $("#rule-trail-st").checked = r.trail_supertrend;
-    $("#rule-be-1r").checked = r.be_1r;
-    $("#rule-bias-tf").textContent = r.bias_tf || "Daily";
-    $("#rule-entry-tf").textContent = r.entry_tf || "4H";
+    set("#rule-leverage", r.leverage);
+    const chk = (id, v) => { const el = $(id); if (el) el.checked = !!v; };
+    chk("#rule-scanner-targets", r.use_scanner_targets);
+    chk("#rule-trail-st", r.trail_supertrend);
+    chk("#rule-scale-tp1", r.scale_out_tp1);
+    chk("#rule-be-after-tp1", r.be_after_tp1);
+    chk("#rule-multi-entry", r.multi_entry);
+    $("#rule-bias-tf").textContent = r.bias_tf || "Weekly+3D";
+    $("#rule-entry-tf").textContent = r.entry_tf || "H4";
   }
   function collectRules() {
     const markets = $$("[data-market]").filter(e => e.checked).map(e => e.dataset.market);
@@ -350,9 +359,12 @@
     const g = (id, p = v => v) => { const el = $(id); return el ? p(el.value) : null; };
     return {
       markets: markets.length ? markets : ["NAS100"], strategies: strategies.length ? strategies : ["trend_pullback"],
-      bias_tf: "Daily", entry_tf: "4H", min_rr: g("#rule-min-rr", Number), bias: g("#rule-bias"),
+      bias_tf: "Weekly+3D", entry_tf: "H4", min_rr: g("#rule-min-rr", Number), bias: g("#rule-bias"),
       risk_pct: g("#rule-risk-pct", Number), loss_limit: g("#rule-loss-limit", Number), max_positions: g("#rule-max-positions", Number),
-      use_scanner_targets: $("#rule-scanner-targets").checked, trail_supertrend: $("#rule-trail-st").checked, be_1r: $("#rule-be-1r").checked,
+      leverage: g("#rule-leverage", Number),
+      use_scanner_targets: $("#rule-scanner-targets").checked, trail_supertrend: $("#rule-trail-st").checked,
+      scale_out_tp1: $("#rule-scale-tp1").checked, be_after_tp1: $("#rule-be-after-tp1").checked,
+      multi_entry: $("#rule-multi-entry").checked,
     };
   }
 
