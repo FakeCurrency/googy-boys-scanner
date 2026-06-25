@@ -300,7 +300,7 @@
 
   // ------------------------------------------------------- EMA / SMA legend
   function renderLegend(d) {
-    const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec";
+    const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec" || d.setup_type === "googy";
     const periods = smaSetup ? (d.sma_periods || []) : (d.ema_periods || []);
     const colors = smaSetup ? SMA_COLOR : EMA_COLOR;
     const label = smaSetup ? "SMA" : "EMA";
@@ -575,6 +575,7 @@
     const stype = (r.detail || {}).setup_type;
     if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
     if (stype === "scalp") return detailHtmlScalp(r);
+    if (stype === "googy") return detailHtmlGoogy(r);
     const d = r.detail || {};
     const cur = state.cur;
     const lvl = (label, val, pct, cls) =>
@@ -693,6 +694,69 @@
     </div>`;
   }
 
+  function detailHtmlGoogy(r) {
+    const d = r.detail || {};
+    const cur = state.cur;
+    const smRow = (p, val, pct, color) =>
+      `<div class="dl-row"><span class="dl-label" style="color:${color}">SMA ${p}</span>
+        <span class="dl-val">${cur}${num(val)}</span>
+        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+    const volCls = d.volume_ratio >= 2.5 ? "green" : d.volume_ratio >= 1.5 ? "accent-orange" : "";
+    const boPct = d.bo_pct != null ? `+${d.bo_pct.toFixed(1)}%` : "—";
+    const boLabel = d.bo_pct >= 7 ? "Surge" : d.bo_pct >= 3 ? "Strong" : "Clean";
+    const rsiNum = d.rsi != null ? d.rsi.toFixed(1) : "—";
+    const rsiCls = d.rsi >= 60 ? "green" : d.rsi >= 50 ? "accent-orange" : "";
+    const rsiNote = d.rsi >= 60 ? "Strong momentum" : "Positive momentum";
+
+    return `<div class="row-detail">
+      ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
+      ${chipsBar(r)}
+      ${metaBar(r)}
+      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+      ${priceStrip(r)}
+
+      <div class="rd-group">
+        <div class="rd-section">Breakout levels</div>
+        <div class="rd-levels">
+          <div class="dl-row"><span class="dl-label green">Range high</span>
+            <span class="dl-val">${cur}${num(d.range_high)}</span>
+            <span class="dl-pct pct-up">${boPct} above · ${boLabel}</span></div>
+          <div class="dl-row"><span class="dl-label red">Range low / stop zone</span>
+            <span class="dl-val">${cur}${num(d.range_low)}</span>
+            <span class="dl-pct muted">${d.consol_bars || "—"} bar base · ${d.range_span_pct || "—"}% range</span></div>
+        </div>
+        <div class="rd-trail">
+          <span class="rd-trail-label">Trailing stop</span>
+          <span class="rd-trail-val">${cur}${num(d.trailing_stop)}</span>
+          <span class="rd-trail-note">${d.trailing_label || ""}</span>
+          <span class="dl-pct ${d.trailing_pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(d.trailing_pct)}</span>
+        </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">Moving averages</div>
+        <div class="rd-levels">
+          ${smRow(20, d.sma20, d.sma20_pct, "#4d9fff")}
+          ${smRow(50, d.sma50, d.sma50_pct, "#a78bfa")}
+        </div>
+      </div>
+
+      <div class="rd-group">
+        <div class="rd-section">Momentum &amp; volume</div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">RSI 14</span>
+          <span class="rd-vol ${rsiCls}">${rsiNum}</span>
+          <span class="rd-vol-note">${rsiNote}</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">Volume</span>
+          <span class="rd-vol ${volCls}">${d.volume_ratio != null ? d.volume_ratio.toFixed(1) : "—"}×</span>
+          <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // ----------------------------------------------------------- list build
   function buildList() {
     const all = (state.data && state.data.results) || [];
@@ -759,6 +823,7 @@
       : mode === "reversal" ? `data/${market}_reversal.json`
       : mode === "spec"     ? `data/${market}_spec.json`
       : mode === "short"    ? `data/${market}_short.json`
+      : mode === "googy"    ? `data/${market}_googy.json`
       : `data/${market}.json`;
 
   async function loadCaps() {

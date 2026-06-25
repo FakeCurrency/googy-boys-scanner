@@ -57,6 +57,10 @@ def main() -> None:
         help="skip the intraday scalp scan",
     )
     parser.add_argument(
+        "--no-googy", action="store_true",
+        help="skip the Googy consolidation breakout scan",
+    )
+    parser.add_argument(
         "--scalp-only", action="store_true", dest="scalp_only",
         help="skip daily market scans; run only the intraday scalp scan (and sectors ETF fetch)",
     )
@@ -140,6 +144,13 @@ def main() -> None:
                                             pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(sh, args.out, name=f"{market_key}_short")
                 print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
+
+            # 5) Googy consolidation breakout scan -> <market>_googy.json
+            if not args.no_googy:
+                gg = scan.scan_googy_market(market_key, out_root=args.out, frames=frames,
+                                            pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(gg, args.out, name=f"{market_key}_googy")
+                print(f"  googy: {len(gg['results'])} setups ({tradeable(gg)} A+/A)")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 

@@ -47,6 +47,7 @@ TREND_THRESHOLDS = {
     "spec": 8,
     "short": 10,
     "scalp": 8,
+    "googy": 9,
 }
 
 # Reward-to-risk below this is flagged with a red "LOW R:R" chip.
@@ -196,6 +197,37 @@ SHORT_EMA_ALIGN_BARS = 10     # EMA 8 must have been below EMA 21 for this many 
 SHORT_BOUNCE_VOL_WINDOW = 8   # bars to compare up-day vs down-day volume on the bounce
 
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
+
+# ---------------------------------------------------------------------------
+# GOOGY scanner — consolidation breakout setups.
+# Finds price breaking above the highest high of the last N bars, confirmed by
+# momentum (RSI > 50) and at least one SMA trend filter. More tolerant of low
+# liquidity than the Pullback/Reversal scanners — surfaces aggressive breakouts
+# that may not qualify for the tighter screens. No price cap, no beaten-down gate.
+# ---------------------------------------------------------------------------
+GOOGY_BREAKOUT_LOOKBACK = 25   # bars to define the consolidation range (mandatory gate)
+GOOGY_VOL_LOOKBACK = 20        # bars for the volume average baseline
+GOOGY_VOL_MULT = 1.5           # volume > 1.5x avg = volume chip fires
+GOOGY_VOL_STRONG = 2.5         # volume > 2.5x avg = strong volume bonus
+GOOGY_VOL_SURGE = 4.0          # volume > 4x avg = surge bonus
+GOOGY_RSI_PERIOD = 14          # RSI period
+GOOGY_RSI_MIN = 50             # RSI must be above this (mandatory gate)
+GOOGY_SMA_FAST = 20            # fast SMA (short-term trend)
+GOOGY_SMA_SLOW = 50            # slow SMA (medium-term trend)
+GOOGY_BREAKOUT_MOD_PCT = 0.03  # moderate breakout: 0.5%–3% above range high → 1 pt
+GOOGY_BREAKOUT_STR_PCT = 0.07  # strong breakout: 3%–7% → 2 pts; >7% → 3 pts
+GOOGY_RANGE_TIGHT_PCT = 0.20   # tight range: (high-low)/high < 20% → quality bonus
+GOOGY_RANGE_MIN_BARS = 10      # minimum bars of consolidation for quality bonus
+GOOGY_STOP_LOOKBACK = 20       # bars to find the recent swing low for the stop
+GOOGY_STOP_BUFFER = 0.01       # place stop 1% below the swing low
+GOOGY_STOP_FALLBACK_PCT = 0.93 # fallback stop = entry * this when swing low >= entry
+GOOGY_MIN_HISTORY = 60         # minimum bars needed (much shorter than other scanners)
+# Turnover below this gets a LOW LIQUIDITY warning chip (but still shows up)
+GOOGY_LOW_LIQ_TURNOVER = {"asx": 200_000, "nasdaq": 500_000, "crypto": 1_000_000}
+# Hard minimum — below this, skip entirely (basically zero-activity tickers)
+GOOGY_MIN_TURNOVER = {"asx": 5_000, "nasdaq": 10_000, "crypto": 50_000}
+GOOGY_SCORE_MAX = 12
+GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
