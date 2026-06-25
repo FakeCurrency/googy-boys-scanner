@@ -72,6 +72,9 @@
     BIAS_CONFLICT: "BIAS_CONFLICT",
     PORTFOLIO_RISK_LIMIT: "PORTFOLIO_RISK_LIMIT",
     MAX_POSITIONS: "MAX_POSITIONS",
+    // SOFT block from the Portfolio Intelligence layer — the hard rules all
+    // passed, but the current book context says "not now / not this one".
+    STANCE_DEFERRED: "STANCE_DEFERRED",
   };
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -115,6 +118,23 @@
         // when it closes. Used by closePosition() to compute net P/L for the
         // journal. Override per-close via opts.costs if you have exact fills.
         roundTurnFeeUsd: cfg.roundTurnFeeUsd != null ? cfg.roundTurnFeeUsd : 2.0,
+
+        // ── Portfolio Intelligence (book-context layer) ───────────────────
+        // A SOFT layer over the hard rules. It tunes how aggressively freed
+        // risk is redeployed based on book health. It can only make the bot
+        // MORE selective or size DOWN — it never raises per-trade risk above
+        // maxRiskPerTradePct nor total risk above maxPortfolioRiskPct.
+        //
+        // stanceCapFraction: fraction of the HARD portfolio cap the bot will
+        //   actually deploy in each posture (aggressive uses it all; neutral
+        //   keeps a buffer; defensive deploys half).
+        stanceCapFraction: cfg.stanceCapFraction || { aggressive: 1.0, neutral: 0.85, defensive: 0.5, locked: 0 },
+        // stanceSizeMult: per-trade size multiplier by posture (advisory; the
+        //   caller applies it). Capped at 1.0 so it can only ever size DOWN.
+        stanceSizeMult: cfg.stanceSizeMult || { aggressive: 1.0, neutral: 1.0, defensive: 0.5, locked: 0 },
+        // Book-health thresholds (0..100) that map to posture labels.
+        healthAggressiveAt: cfg.healthAggressiveAt != null ? cfg.healthAggressiveAt : 68,
+        healthDefensiveAt: cfg.healthDefensiveAt != null ? cfg.healthDefensiveAt : 42,
       };
       this.instruments = Object.assign({}, DEFAULT_INSTRUMENTS, cfg.instruments || {});
       this.equity = this._num(cfg.equity, 0);
@@ -795,11 +815,233 @@
       };
     }
 
+    /* ===================================================================
+       PORTFOLIO INTELLIGENCE LAYER
+       -------------------------------------------------------------------
+       Most bots are reactive and myopic: signal → rule check → enter or not,
+       each trade in isolation. This layer gives the engine a sense of the
+       WHOLE BOOK it is managing — how much risk is real vs already risk-free,
+       whether runners are still working with the higher-timeframe trend, and
+       whether the book's health argues for pressing or protecting. That
+       context produces a POSTURE (aggressive / neutral / defensive / locked)
+       which softly modulates new-risk appetite.
+
+       Invariant: this layer NEVER loosens a hard rule. It can only defer or
+       down-size. Every entry still passes evaluateEntry() (0.25% sizing,
+       Weekly+3D bias, portfolio cap, max positions, 3-loss stop, kill switch)
+       before the intelligence layer is even consulted.
+       =================================================================== */
+
+    /** Unrealized P/L ($) on a single position at its current price. */
+    getPositionUnrealized(pos) {
+      if (!pos) return 0;
+      const spec = this.getInstrumentSpec(pos.symbol);
+      const dpp = this._num(pos.dollarsPerPoint, spec ? spec.dollarsPerPoint : 1);
+      const sign = pos.direction === "long" ? 1 : -1;
+      return this._round(sign * (this._num(pos.current, pos.entry) - this._num(pos.entry, 0)) * dpp * this._num(pos.units, 0), 2);
+    }
+
+    /** Initial (as-sized) risk ($) on a position, measured off its ORIGINAL stop. */
+    _initialRiskUsd(pos) {
+      const spec = this.getInstrumentSpec(pos.symbol);
+      const dpp = this._num(pos.dollarsPerPoint, spec ? spec.dollarsPerPoint : 1);
+      const denom = (pos.initialStop != null && pos.initialStop !== pos.entry) ? pos.initialStop : pos.stop;
+      return Math.abs(this._num(pos.entry, 0) - this._num(denom, 0)) * dpp * this._num(pos.units, 0);
+    }
+
+    /**
+     * RUNNER AWARENESS — review every break-even runner against live HTF bias.
+     * A runner that has turned counter to Weekly+3D is "weak" and a candidate
+     * to scale out of / tighten (recycle its slot); a strong aligned runner in
+     * good profit is a candidate to trail harder. Returns advisory actions the
+     * dashboard (or a future executor) can act on.
+     * @returns {Array<{symbol,direction,unrealizedR,biasStrength,status,action,reason}>}
+     */
+    reviewRunners() {
+      return this.getOpenPositions().filter(p => p.stopAtBreakeven).map(p => {
+        const align = this.checkBiasAlignment(p.symbol, p.direction);
+        const ir = this._initialRiskUsd(p);
+        const unrealR = ir > 0 ? this._round(this.getPositionUnrealized(p) / ir, 2) : 0;
+        let status, action, reason;
+        if (align.strength === "counter") {
+          status = "weak"; action = "scale_out";
+          reason = "Runner turned counter to Weekly+3D — scale out / tighten to recycle the slot";
+        } else if (unrealR >= 2 && align.strength === "aligned") {
+          status = "healthy"; action = "trail";
+          reason = "Strong, fully-aligned runner — trail harder to lock more profit";
+        } else {
+          status = "healthy"; action = "hold";
+          reason = "Aligned runner — hold toward the final target";
+        }
+        return { symbol: p.symbol, direction: p.direction, unrealizedR: unrealR, biasStrength: align.strength, status, action, reason };
+      });
+    }
+
+    /**
+     * BOOK HEALTH SNAPSHOT — the shape of the portfolio right now.
+     * Separates "real" open risk from risk-free runners, aggregates unrealized
+     * P/L (in $ and R), counts how the book lines up with HTF bias, flags weak
+     * runners, and rolls it all into a 0..100 health score (50 = flat/neutral).
+     */
+    getBookHealth() {
+      const positions = this.getOpenPositions();
+      const n = positions.length;
+      const portfolioCapUsd = this._round(this.equity * this.config.maxPortfolioRiskPct / 100, 2);
+      const openRiskUsd = this.getOpenRiskUsd();
+      const freeBudgetUsd = this._round(Math.max(0, portfolioCapUsd - openRiskUsd), 2);
+      const budgetUsedPct = portfolioCapUsd > 0 ? this._round(openRiskUsd / portfolioCapUsd * 100, 1) : 0;
+
+      let riskOnCount = 0, riskFreeCount = 0, unrealizedUsd = 0, unrealizedR = 0;
+      const bias = { aligned: 0, partial: 0, counter: 0, unknown: 0 };
+      const weakRunners = [];
+      positions.forEach(p => {
+        const atBE = !!p.stopAtBreakeven;
+        if (atBE || this.getPositionOpenRisk(p) <= 0) riskFreeCount++; else riskOnCount++;
+        const u = this.getPositionUnrealized(p); unrealizedUsd += u;
+        const ir = this._initialRiskUsd(p); if (ir > 0) unrealizedR += u / ir;
+        const strength = this.checkBiasAlignment(p.symbol, p.direction).strength;
+        bias[strength] = (bias[strength] || 0) + 1;
+        if (atBE && strength === "counter") weakRunners.push(p.symbol);
+      });
+      unrealizedUsd = this._round(unrealizedUsd, 2);
+      unrealizedR = this._round(unrealizedR, 2);
+
+      // ── Health score 0..100 (50 = neutral / flat book) ──────────────────
+      let score = 50;
+      if (n > 0) {
+        score += (riskFreeCount / n) * 20;                            // de-risked runners = healthy
+        score += Math.max(-18, Math.min(18, (unrealizedR / n) * 6));  // avg position in profit (R)
+        const biasNet = bias.aligned + 0.5 * bias.partial - bias.counter;
+        score += (biasNet / n) * 16;                                  // book aligned with HTF
+        score -= weakRunners.length * 8;                              // runners gone counter-trend
+        if (budgetUsedPct > 70) score -= 10;                          // book heavy with real risk
+      }
+      score -= this._state.consecutiveLossCount * 12;                 // recent losses sap conviction
+      score = Math.max(0, Math.min(100, Math.round(score)));
+
+      return {
+        positionCount: n, riskOnCount, riskFreeCount,
+        openRiskUsd, freeBudgetUsd, budgetUsedPct, portfolioCapUsd,
+        unrealizedUsd, unrealizedR,
+        biasBreakdown: bias, weakRunners,
+        healthScore: score,
+        summary: this._bookSummary(n, riskOnCount, riskFreeCount, weakRunners, unrealizedUsd),
+      };
+    }
+    _bookSummary(n, on, free, weak, unreal) {
+      if (n === 0) return "Flat book — no open risk.";
+      const parts = [`${n} open · ${free} risk-free · ${on} carrying risk`];
+      if (weak.length) parts.push(`${weak.length} weak runner${weak.length > 1 ? "s" : ""}`);
+      parts.push(`${unreal >= 0 ? "+" : "−"}$${Math.abs(unreal).toFixed(0)} unrealized`);
+      return parts.join(" · ");
+    }
+
+    /**
+     * PORTFOLIO STANCE — context-aware aggression.
+     * Maps book health + safety state into a posture and the concrete knobs it
+     * implies (how much of the portfolio cap to deploy, and a per-trade size
+     * multiplier). Pass a precomputed health object to avoid recomputation.
+     * @returns {{stance,reason,healthScore,riskMult,capFraction,effectiveCapUsd,effectiveCapPct}}
+     */
+    getPortfolioStance(health) {
+      health = health || this.getBookHealth();
+      const gate = this.canEnterNewTradeQuiet();
+      const score = health.healthScore;
+      const max = this.config.maxConsecutiveLosses;
+      const warning = max > 1 && this._state.consecutiveLossCount === max - 1;
+      const noCounter = health.biasBreakdown.counter === 0;
+      const headroom = health.budgetUsedPct < 80;
+
+      let stance, reason;
+      if (!gate.allowed) {
+        stance = "locked"; reason = gate.reason;
+      } else if (warning) {
+        stance = "defensive"; reason = "One loss from the hard stop — protect capital, take only A+ setups";
+      } else if (health.weakRunners.length > 0) {
+        stance = "defensive"; reason = `${health.weakRunners.length} runner(s) turned counter-trend — tidy the book before adding risk`;
+      } else if (score >= this.config.healthAggressiveAt && noCounter && headroom) {
+        stance = "aggressive"; reason = "Healthy de-risked book + clean HTF bias — open to redeploying freed risk";
+      } else if (score <= this.config.healthDefensiveAt) {
+        stance = "defensive"; reason = "Weak book health — be selective with new risk";
+      } else {
+        stance = "neutral"; reason = "Balanced book — standard selectivity";
+      }
+
+      const capFraction = this.config.stanceCapFraction[stance] != null ? this.config.stanceCapFraction[stance] : (stance === "locked" ? 0 : 1);
+      const riskMult = this.config.stanceSizeMult[stance] != null ? this.config.stanceSizeMult[stance] : (stance === "locked" ? 0 : 1);
+      return {
+        stance, reason, healthScore: score,
+        riskMult, capFraction,
+        effectiveCapUsd: this._round(health.portfolioCapUsd * capFraction, 2),
+        effectiveCapPct: this._round(this.config.maxPortfolioRiskPct * capFraction, 3),
+      };
+    }
+
+    /**
+     * INTELLIGENT RISK RECYCLING — the smart entry decision.
+     * Runs the hard gate (evaluateEntry) first; if it blocks, that block is
+     * returned untouched (hard:true). Only if the trade is hard-legal does the
+     * intelligence layer weigh in, possibly DEFERRING it (hard:false) when the
+     * current posture says the freed budget shouldn't be redeployed yet, or
+     * when a defensive book demands full bias conviction. Also returns the
+     * stance-scaled size multiplier the caller should apply.
+     * @param {Object} intent {symbol, direction, riskUsd?, units?, entry?, stop?}
+     */
+    adviseEntry(intent) {
+      const health = this.getBookHealth();
+      const stance = this.getPortfolioStance(health);
+      const hard = this.evaluateEntry(intent);
+
+      // Hard rules ALWAYS win — the intelligence layer can never override them.
+      if (!hard.allowed) {
+        return Object.assign({}, hard, { hard: true, stance: stance.stance, healthScore: stance.healthScore, bookSummary: health.summary });
+      }
+
+      const sizeMult = stance.riskMult;                          // ≤ 1.0 → only sizes down
+      const intentRisk = this._round(this._intentRiskUsd(intent) * sizeMult, 2);
+      const projected = this._round(this.getOpenRiskUsd() + intentRisk, 2);
+
+      // Soft gate 1 — stance-scaled budget (always ≤ the hard portfolio cap).
+      if (projected > stance.effectiveCapUsd + 1e-6) {
+        return {
+          allowed: false, hard: false, code: REASON.STANCE_DEFERRED,
+          reason: `${stance.stance} stance limits new risk to $${stance.effectiveCapUsd.toFixed(0)} (book health ${stance.healthScore}/100); this would take it to $${projected.toFixed(0)}`,
+          stance: stance.stance, healthScore: stance.healthScore, bias: hard.bias,
+          sizeMult, suggestedRiskUsd: intentRisk, projectedRiskUsd: projected,
+          effectiveCapUsd: stance.effectiveCapUsd, bookSummary: health.summary,
+        };
+      }
+      // Soft gate 2 — a defensive book demands FULL Weekly+3D conviction.
+      if (stance.stance === "defensive" && hard.bias && hard.bias.strength === "partial") {
+        return {
+          allowed: false, hard: false, code: REASON.STANCE_DEFERRED,
+          reason: `Defensive stance — only fully Weekly+3D-aligned entries; this one is partial (${hard.bias.reason})`,
+          stance: stance.stance, healthScore: stance.healthScore, bias: hard.bias,
+          sizeMult, suggestedRiskUsd: intentRisk, bookSummary: health.summary,
+        };
+      }
+      return {
+        allowed: true, hard: false, code: REASON.OK,
+        reason: `${stance.stance} stance endorses entry — ${stance.reason}`,
+        stance: stance.stance, healthScore: stance.healthScore, bias: hard.bias,
+        sizeMult, suggestedRiskUsd: intentRisk, projectedRiskUsd: projected,
+        effectiveCapUsd: stance.effectiveCapUsd, portfolioCapUsd: health.portfolioCapUsd,
+        bookSummary: health.summary,
+      };
+    }
+
+    /** One-call aggregate for the dashboard: health + stance + runner reviews. */
+    getPortfolioIntel() {
+      const health = this.getBookHealth();
+      return { health, stance: this.getPortfolioStance(health), runners: this.reviewRunners() };
+    }
+
     /* --------------------------------------------------------------- state */
     getCurrentRiskState() {
       const gate = this.canEnterNewTradeQuiet();
       const count = this._state.consecutiveLossCount;
       const max = this.config.maxConsecutiveLosses;
+      const stance = this.getPortfolioStance();
       return {
         consecutiveLossCount: count,
         maxConsecutiveLosses: max,
@@ -823,6 +1065,11 @@
         maxPortfolioRiskPct: this.config.maxPortfolioRiskPct,
         portfolioCapUsd: this._round(this.equity * this.config.maxPortfolioRiskPct / 100, 2),
         scaleOutPct: this.config.scaleOutPct,
+        // Portfolio Intelligence (lightweight) — full detail via getPortfolioIntel().
+        bookPosture: stance.stance,
+        bookHealthScore: stance.healthScore,
+        bookEffectiveCapUsd: stance.effectiveCapUsd,
+        bookStanceReason: stance.reason,
       };
     }
 

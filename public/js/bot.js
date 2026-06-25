@@ -188,6 +188,43 @@
     updateSizeCalc(); // recompute calculator with the engine
   }
 
+  /* ===========================================================================
+     BOOK INTELLIGENCE — renders the portfolio posture, health score, one-line
+     book summary and per-runner advisories from risk.getPortfolioIntel().
+     Bound to the engine via risk.subscribe() so it re-reads on every mutation
+     (TP1→BE, add-on, close, loss). Pure render off engine state.
+     =========================================================================== */
+  function renderPortfolioIntel() {
+    if (!risk) return;
+    const { health, stance, runners } = risk.getPortfolioIntel();
+
+    const badge = $("#intel-stance");
+    if (badge) { badge.textContent = stance.stance.toUpperCase(); badge.className = "intel-stance stance-" + stance.stance; badge.title = stance.reason; }
+
+    const bar = $("#intel-health-bar");
+    if (bar) {
+      bar.style.width = health.healthScore + "%";
+      const cls = health.healthScore >= 68 ? "hb-strong" : health.healthScore <= 42 ? "hb-weak" : "hb-mid";
+      bar.className = "intel-health-bar " + cls;
+    }
+    if ($("#intel-health-score")) $("#intel-health-score").textContent = health.healthScore + "/100";
+    if ($("#intel-summary")) $("#intel-summary").textContent = health.summary + " — " + stance.reason;
+
+    const rwrap = $("#intel-runners");
+    if (rwrap) {
+      if (!runners.length) {
+        rwrap.innerHTML = health.positionCount ? `<div class="intel-empty">No break-even runners yet — risk-recycling kicks in once a position scales out at TP1.</div>` : "";
+      } else {
+        rwrap.innerHTML = runners.map(r =>
+          `<div class="intel-runner intel-${r.status}" title="${r.reason}">
+             <span class="intel-runner-sym num">${r.symbol}</span>
+             <span class="intel-runner-act">${r.action.replace("_", " ")}</span>
+             <span class="intel-runner-why">${r.reason}${r.unrealizedR != null ? ` · ${signed(r.unrealizedR, 1)}R` : ""}</span>
+           </div>`).join("");
+      }
+    }
+  }
+
   // ── Position sizing calculator (routed through the engine) ─────────────────
   function updateSizeCalc() {
     if (!risk) return;
@@ -517,6 +554,9 @@
     // …and the open-position book re-renders on any engine mutation (a TP1→BE,
     // an add-on, or a close all flow through here — the cards are never stale).
     risk.subscribe(renderPositionsFromEngine);
+    // …and the Book Intelligence panel re-reads posture/health/runners on every
+    // mutation so the portfolio context is always live.
+    risk.subscribe(renderPortfolioIntel);
     window.risk = risk; // exposed for console inspection / manual testing
 
     // rules buttons
@@ -560,21 +600,28 @@
       if (st.isPausedByLosses) prependLog({ ts: new Date().toISOString(), type: "kill", msg: `HARD STOP — ${st.consecutiveLossCount} consecutive losses. New entries blocked until manual reset.` });
       showToast(st.isPausedByLosses ? "Hard stop tripped — entries blocked." : `Loss −${money(Math.abs(pnl), 0)} — count ${st.consecutiveLossCount}.`, st.isPausedByLosses ? "err" : "warn");
     });
-    // Full pre-trade decision (base gate + Weekly+3D bias + portfolio risk).
-    // Dry-run only (commit:false) — exercises the same path the bot uses.
+    // Full SMART pre-trade decision: hard rules (base gate + Weekly+3D bias +
+    // portfolio cap) AND the Portfolio Intelligence layer (book-context stance).
+    // Dry-run only — exercises the same adviseEntry() path the live bot uses.
     const sampleIntent = direction => {
       const st = risk.getCurrentRiskState();
       return { symbol: "/NQ", direction, riskUsd: st.maxRiskUsd };
     };
     const attempt = direction => {
-      const d = risk.evaluateEntry(sampleIntent(direction));
+      const d = risk.adviseEntry(sampleIntent(direction));
       const tag = `/NQ ${direction.toUpperCase()}`;
+      const ctx = d.stance ? ` · book ${d.stance}/${d.healthScore}` : "";
       if (d.allowed) {
-        prependLog({ ts: new Date().toISOString(), type: "enter", msg: `Entry check PASSED — ${tag} · ${d.bias ? d.bias.reason : "no bias"} · open risk would be ${money(d.projectedRiskUsd || 0, 0)}/${money(d.portfolioCapUsd || 0, 0)} cap` });
-        showToast(`${tag}: entry allowed ✓`, "ok");
-      } else {
-        prependLog({ ts: new Date().toISOString(), type: "system", msg: `Entry BLOCKED — ${tag} · ${d.reason} [${d.code}]` });
+        prependLog({ ts: new Date().toISOString(), type: "enter", msg: `Entry ENDORSED — ${tag}${ctx} · ${d.reason}` });
+        showToast(`${tag}: entry allowed ✓ (${d.stance})`, "ok");
+      } else if (d.hard) {
+        // A hard rule blocked it — non-negotiable.
+        prependLog({ ts: new Date().toISOString(), type: "system", msg: `Entry BLOCKED (hard rule) — ${tag} · ${d.reason} [${d.code}]` });
         showToast(`${tag} blocked: ${d.reason}`, "err");
+      } else {
+        // Hard rules passed, but the book context says "not now".
+        prependLog({ ts: new Date().toISOString(), type: "system", msg: `Entry DEFERRED by book context — ${tag}${ctx} · ${d.reason} [${d.code}]` });
+        showToast(`${tag} deferred: ${d.stance} book`, "warn");
       }
     };
     $("#attempt-entry").addEventListener("click", () => attempt("long"));
@@ -677,9 +724,10 @@
       // engine subscriptions; nudge them so equity-derived readouts refresh.
       renderRiskUI(risk.getCurrentRiskState());
       renderPositionsFromEngine();
+      renderPortfolioIntel();
     } catch (e) {
       showToast("Bot data unavailable — showing empty state.", "warn");
-      renderPositionsFromEngine(); renderLog([]);
+      renderPositionsFromEngine(); renderPortfolioIntel(); renderLog([]);
     }
   }
 

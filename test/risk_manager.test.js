@@ -375,6 +375,117 @@ test("setPersistHook receives the journalEntry on close (backend-ready)", () => 
   assert.ok(captured.opened !== undefined && captured.net !== undefined, "entry carries timing + P/L");
 });
 
+suite("portfolio intelligence layer");
+
+test("flat book is neutral (~50 health, no open risk)", () => {
+  const e = mk();
+  const h = e.getBookHealth();
+  assert.equal(h.positionCount, 0);
+  assert.equal(h.openRiskUsd, 0);
+  assert.equal(h.healthScore, 50);
+  assert.equal(e.getPortfolioStance(h).stance, "neutral");
+});
+
+test("getBookHealth separates risk-free runners from risk-on positions", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  e.setBias("GC", { weekly: "bull", threeDay: "bull" });
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, tp1: 20100, target: 20400, units: 0.1 });
+  e.addEntry({ symbol: "GC", direction: "long", entry: 2600, stop: 2590, tp1: 2620, target: 2660, units: 0.1, dollarsPerPoint: 100 });
+  e.onPrice("/NQ", 20100); // → break-even (risk-free)
+  const h = e.getBookHealth();
+  assert.equal(h.positionCount, 2);
+  assert.equal(h.riskFreeCount, 1, "/NQ is now risk-free");
+  assert.equal(h.riskOnCount, 1, "GC still carries risk");
+});
+
+test("a strong de-risked book reads AGGRESSIVE", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  e.setBias("GC", { weekly: "bull", threeDay: "bull" });
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, tp1: 20100, target: 20400, units: 0.1 });
+  e.addEntry({ symbol: "GC", direction: "long", entry: 2600, stop: 2590, tp1: 2620, target: 2660, units: 0.1, dollarsPerPoint: 100 });
+  e.onPrice("/NQ", 20200); // both to BE + in profit
+  e.onPrice("GC", 2630);
+  const s = e.getPortfolioStance();
+  assert.equal(s.stance, "aggressive");
+  assert.ok(s.healthScore >= 68, "health should clear the aggressive threshold");
+});
+
+test("a break-even runner that turns counter-trend is flagged weak → defensive", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, tp1: 20100, target: 20400, units: 0.1 });
+  e.onPrice("/NQ", 20100);              // runner at break-even
+  e.setBias("/NQ", { weekly: "bear", threeDay: "bear" }); // HTF flips against it
+  const h = e.getBookHealth();
+  assert.deepEqual(h.weakRunners, ["/NQ"]);
+  const runners = e.reviewRunners();
+  assert.equal(runners[0].status, "weak");
+  assert.equal(runners[0].action, "scale_out");
+  assert.equal(e.getPortfolioStance(h).stance, "defensive");
+});
+
+test("warning state (one loss from the hard stop) forces DEFENSIVE", () => {
+  const e = mk(); // maxConsecutiveLosses = 3
+  e.registerTradeClosed(-100);
+  e.registerTradeClosed(-100); // 2 losses → warning
+  assert.equal(e.getPortfolioStance().stance, "defensive");
+});
+
+test("hard stop → posture LOCKED", () => {
+  const e = mk();
+  for (let i = 0; i < 3; i++) e.registerTradeClosed(-100);
+  assert.equal(e.getPortfolioStance().stance, "locked");
+});
+
+test("adviseEntry NEVER overrides a hard block (3-loss stop)", () => {
+  const e = mk();
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  for (let i = 0; i < 3; i++) e.registerTradeClosed(-100);
+  const d = e.adviseEntry({ symbol: "/NQ", direction: "long", riskUsd: 10 });
+  assert.equal(d.allowed, false);
+  assert.equal(d.hard, true, "block is a HARD rule, not a soft stance defer");
+  assert.equal(d.code, "CONSECUTIVE_LOSS_LIMIT");
+});
+
+test("adviseEntry passes a bias conflict straight through as a hard block", () => {
+  const e = mk();
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  const d = e.adviseEntry({ symbol: "/NQ", direction: "short", riskUsd: 10 });
+  assert.equal(d.allowed, false);
+  assert.equal(d.hard, true);
+  assert.equal(d.code, "BIAS_CONFLICT");
+});
+
+test("defensive book DEFERS a partial-bias entry (soft, not hard)", () => {
+  const e = mk();
+  e.registerTradeClosed(-100); e.registerTradeClosed(-100); // → defensive (warning)
+  e.setBias("GC", { weekly: "bull", threeDay: "neutral" }); // partial alignment
+  const d = e.adviseEntry({ symbol: "GC", direction: "long", riskUsd: 5 });
+  assert.equal(d.allowed, false);
+  assert.equal(d.hard, false, "soft stance defer, not a hard rule break");
+  assert.equal(d.code, "STANCE_DEFERRED");
+  assert.equal(d.stance, "defensive");
+});
+
+test("neutral book endorses a clean, in-budget entry with a size multiplier", () => {
+  const e = mk();
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  const d = e.adviseEntry({ symbol: "/NQ", direction: "long", riskUsd: 10 });
+  assert.equal(d.allowed, true);
+  assert.equal(d.hard, false);
+  assert.equal(d.stance, "neutral");
+  assert.equal(d.sizeMult, 1, "neutral does not size down");
+  assert.ok(d.bookSummary, "carries an observable book summary");
+});
+
+test("stance soft-cap is always ≤ the hard portfolio cap", () => {
+  const e = mk(); // equity 10000, maxPortfolioRiskPct 2 → hard cap $200
+  const s = e.getPortfolioStance();
+  assert.ok(s.effectiveCapUsd <= 200 + 1e-6, "soft cap never exceeds the hard cap");
+});
+
 // ─────────────────────────────── summary ─────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);
 if (failed) { console.error(`FAILED  ${failed} failed, ${passed} passed`); process.exit(1); }

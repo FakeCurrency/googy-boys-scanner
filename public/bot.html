@@ -139,6 +139,29 @@
     .risk-reset-btn:hover { border-color: var(--text-2); color: var(--text); }
     .risk-status-card.is-warn { border-color: var(--orange); }
     .risk-status-card.is-danger { border-color: var(--red); }
+    /* ── Book Intelligence panel ── */
+    .intel-stance { font: 800 10px/1 var(--sans); letter-spacing: 0.08em; padding: 5px 10px; border-radius: 999px; text-transform: uppercase; }
+    .intel-stance.stance-aggressive { background: rgba(48,209,88,0.16); color: var(--green); }
+    .intel-stance.stance-neutral { background: rgba(10,132,255,0.16); color: #0a84ff; }
+    .intel-stance.stance-defensive { background: rgba(255,159,10,0.16); color: var(--orange); }
+    .intel-stance.stance-locked { background: rgba(255,69,58,0.18); color: var(--red); }
+    .intel-health { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .intel-health-bar-wrap { flex: 1; height: 7px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+    .intel-health-bar { height: 100%; border-radius: 999px; transition: width 0.4s ease, background 0.4s; }
+    .intel-health-bar.hb-strong { background: var(--green); }
+    .intel-health-bar.hb-mid { background: #0a84ff; }
+    .intel-health-bar.hb-weak { background: var(--orange); }
+    .intel-health-score { font: 700 12px/1 var(--mono, monospace); color: var(--text); min-width: 54px; text-align: right; }
+    .intel-summary { font: 500 11px/1.5 var(--sans); color: var(--text-2); margin-bottom: 10px; }
+    .intel-runners { display: flex; flex-direction: column; gap: 6px; }
+    .intel-runner { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: baseline; font: 500 10.5px/1.4 var(--sans); padding: 6px 8px; border-radius: 7px; background: var(--fill); border-left: 2px solid var(--separator); }
+    .intel-runner.intel-weak { border-left-color: var(--orange); }
+    .intel-runner.intel-healthy { border-left-color: var(--green); }
+    .intel-runner-sym { font-weight: 700; color: var(--text); }
+    .intel-runner-act { font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.05em; color: var(--text-2); }
+    .intel-runner.intel-weak .intel-runner-act { color: var(--orange); }
+    .intel-runner-why { color: var(--muted); }
+    .intel-empty { font: 500 11px/1.5 var(--sans); color: var(--muted); }
     /* live engine controls */
     .engine-demo { margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--separator); }
     .engine-demo-label { font: 600 9px/1 var(--sans); letter-spacing: 0.07em; color: var(--muted); text-transform: uppercase; margin-bottom: 9px; }
@@ -585,6 +608,22 @@
           </div>
         </div>
 
+        <!-- Book Intelligence -->
+        <div class="bot-panel" id="intel-panel">
+          <div class="bot-panel-header">
+            <span class="bot-panel-title">Book Intelligence</span>
+            <span class="intel-stance stance-neutral" id="intel-stance" title="">NEUTRAL</span>
+          </div>
+          <div class="bot-panel-body">
+            <div class="intel-health">
+              <div class="intel-health-bar-wrap"><div class="intel-health-bar hb-mid" id="intel-health-bar" style="width:50%"></div></div>
+              <span class="intel-health-score num" id="intel-health-score">50/100</span>
+            </div>
+            <div class="intel-summary" id="intel-summary">Flat book — no open risk.</div>
+            <div class="intel-runners" id="intel-runners"></div>
+          </div>
+        </div>
+
         <!-- Position Sizing & Risk -->
         <div class="bot-panel">
           <div class="bot-panel-header"><span class="bot-panel-title">Position Sizing &amp; Risk</span></div>
@@ -791,7 +830,7 @@
     <p class="credit">Vivek's Beta Scanner · AI Bot terminal · risk-first autonomous execution</p>
   </footer>
 
-  <script src="js/risk_manager.js?v=5"></script>
-  <script src="js/bot.js?v=7"></script>
+  <script src="js/risk_manager.js?v=6"></script>
+  <script src="js/bot.js?v=8"></script>
 </body>
 </html>
