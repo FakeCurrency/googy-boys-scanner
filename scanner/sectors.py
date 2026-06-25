@@ -203,6 +203,8 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
 
     rows.sort(key=lambda r: r["pct"], reverse=True)
     m["top_movers"] = _split_movers(rows, market_key)
+    winners = m["top_movers"]["winners"]
+    losers  = m["top_movers"]["losers"]
 
     # biggest volume = most $ traded today, with how unusual that volume is (× avg)
     by_vol = sorted(rows, key=lambda r: r["turnover"], reverse=True)[:6]
