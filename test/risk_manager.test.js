@@ -348,6 +348,33 @@ test("closePosition R-multiple uses the INITIAL stop, not the break-even stop", 
   assert.equal(r.r, 2, "200 pt gain / 100 pt initial risk = 2R (not div-by-zero)");
 });
 
+suite("live price feed (onPrices batch) + persist hook");
+
+test("onPrices applies a batch and fires TP1→BE per symbol", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  e.setBias("GC", { weekly: "bull", threeDay: "bull" });
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, tp1: 20100, target: 20400, units: 0.1 });
+  e.addEntry({ symbol: "GC", direction: "long", entry: 2600, stop: 2590, tp1: 2620, target: 2660, units: 0.1, dollarsPerPoint: 100 });
+  const fired = e.onPrices({ "/NQ": 20100, "GC": 2605 }); // only /NQ reaches TP1
+  assert.deepEqual(fired, ["/NQ"]);
+  assert.equal(e.getOpenPositions().find(p => p.symbol === "/NQ").stopAtBreakeven, true);
+  assert.equal(e.getOpenPositions().find(p => p.symbol === "GC").stopAtBreakeven, false);
+});
+
+test("setPersistHook receives the journalEntry on close (backend-ready)", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  let captured = null;
+  e.setPersistHook(entry => { captured = entry; });
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, target: 20400, units: 0.1 });
+  e.closePosition("/NQ", 20100, { reason: "Target hit" });
+  assert.ok(captured, "persist hook fired");
+  assert.equal(captured.symbol, "/NQ");
+  assert.equal(captured.reason, "Target hit");
+  assert.ok(captured.opened !== undefined && captured.net !== undefined, "entry carries timing + P/L");
+});
+
 // ─────────────────────────────── summary ─────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);
 if (failed) { console.error(`FAILED  ${failed} failed, ${passed} passed`); process.exit(1); }

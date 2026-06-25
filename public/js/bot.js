@@ -13,6 +13,13 @@
   // for risk/kill state — it all goes through `risk`.
   let risk = null;
 
+  // Last-resort equity ONLY if bot_status.json can't be fetched on boot (e.g.
+  // offline first load). The real starting equity always comes from the feed
+  // (d.equity / d.capital) — see init() which fetches it BEFORE constructing
+  // the engine so we never run on a hardcoded number when data is available.
+  const FALLBACK_EQUITY = 10000;
+  const STATUS_URL = "data/bot_status.json";
+
   // Sizing-calculator instrument list (engine resolves aliases like YM→/YM).
   const CALC_INSTRUMENTS = ["/NQ", "YM", "GC", "SI", "CL", "NG"];
 
@@ -492,9 +499,15 @@
     RULES = loadRules();
     populateRulesForm(RULES);
 
-    // Create the risk engine. Equity is seeded on first JSON load.
+    // Fetch the status feed ONCE up front so the engine is constructed with the
+    // REAL starting equity from bot_status.json, not a hardcoded placeholder.
+    // The fallback is used only if this initial fetch fails (offline boot).
+    const seed = await fetchStatus();
+    const startingEquity = seed ? Number(seed.equity ?? seed.capital) || FALLBACK_EQUITY : FALLBACK_EQUITY;
+
+    // Create the risk engine with the loaded equity.
     risk = new RiskManager({
-      equity: 10000,
+      equity: startingEquity,
       maxRiskPerTradePct: RULES.risk_pct,
       maxConsecutiveLosses: RULES.loss_limit,
       maxPositions: RULES.max_positions,
@@ -613,16 +626,27 @@
     $("#export-xls").addEventListener("click", exportExcel);
     $("#export-html").addEventListener("click", exportHTMLReport);
 
-    await loadData();
+    // Reuse the payload we already fetched for the first render (no double-fetch).
+    await loadData(seed);
     setInterval(loadData, 30000);
     startClocks();
   }
 
-  async function loadData() {
+  // Fetch the bot status feed. Returns the parsed object, or null on failure.
+  async function fetchStatus() {
     try {
-      const r = await fetch("data/bot_status.json", { cache: "no-cache" });
+      const r = await fetch(STATUS_URL, { cache: "no-cache" });
       if (!r.ok) throw new Error("no data");
-      const d = await r.json();
+      return await r.json();
+    } catch (_) { return null; }
+  }
+
+  // Render from the status feed. Pass a prefetched payload (from init) to avoid
+  // re-fetching on the very first render; later interval calls fetch fresh.
+  async function loadData(prefetched) {
+    try {
+      const d = prefetched || await fetchStatus();
+      if (!d) throw new Error("no data");
       window.__DATA = d; window.__JSUMMARY = d.journal_summary;
       window.__EQUITY = d.equity || d.capital;
       JOURNAL = d.journal || []; LOG = d.log || [];

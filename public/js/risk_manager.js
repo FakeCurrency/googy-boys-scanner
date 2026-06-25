@@ -77,17 +77,31 @@
   // ───────────────────────────────────────────────────────────────────────────
   class RiskManager {
     /**
-     * @param {Object} cfg
-     * @param {number} cfg.equity                Current account equity (USD).
-     * @param {number} [cfg.maxRiskPerTradePct]  Default 0.25.
-     * @param {number} [cfg.maxConsecutiveLosses] Default 3.
-     * @param {Object} [cfg.instruments]         Override/extend instrument specs.
-     * @param {Storage} [cfg.storage]            Defaults to window.localStorage.
-     * @param {boolean} [cfg.verbose]            Console logging (default true).
+     * @param {Object}  cfg
+     * @param {number}  cfg.equity                 Account equity (USD). Seed from
+     *                                             bot_status.json / broker wallet;
+     *                                             never hardcode in production.
+     * @param {number}  [cfg.maxRiskPerTradePct]   Max risk per trade as % of equity.
+     *                                             Default 0.25 (the trader's rule).
+     * @param {number}  [cfg.maxConsecutiveLosses] Hard-stop after N losses in a row.
+     *                                             Default 3.
+     * @param {number}  [cfg.maxPortfolioRiskPct]  Cap on TOTAL open risk across the
+     *                                             whole book, as % of equity. Default 2.0.
+     * @param {number}  [cfg.scaleOutPct]          Fraction booked at TP1 (rest runs).
+     *                                             Default 0.25 (25%).
+     * @param {number}  [cfg.maxPositions]         Hard cap on concurrent open
+     *                                             positions. Default 5.
+     * @param {number}  [cfg.roundTurnFeeUsd]      Entry+exit fees booked on close,
+     *                                             used for net P/L. Default 2.0.
+     * @param {Object}  [cfg.instruments]          Override/extend instrument specs.
+     * @param {Storage} [cfg.storage]              Defaults to window.localStorage.
+     * @param {boolean} [cfg.verbose]              Console logging (default true).
      */
     constructor(cfg = {}) {
       this.config = {
+        // Risk budget per trade as a % of CURRENT equity (the trader's 0.25% rule).
         maxRiskPerTradePct: cfg.maxRiskPerTradePct != null ? cfg.maxRiskPerTradePct : 0.25,
+        // Block all new entries once this many consecutive losses is reached.
         maxConsecutiveLosses: cfg.maxConsecutiveLosses != null ? cfg.maxConsecutiveLosses : 3,
         // Total open risk across ALL positions may not exceed this % of equity.
         // With 0.25%/trade this allows a basket of several concurrent trades
@@ -117,6 +131,9 @@
       // Higher-timeframe bias per instrument: { weekly, threeDay } each
       // "bull" | "bear" | "neutral". Drives the Weekly+3D entry filter.
       this._bias = {};
+      // Optional callback fired with each closed trade's journalEntry, for
+      // backend persistence. Null = browser-only (default). See setPersistHook.
+      this._persistHook = null;
 
       // Default state, then hydrate from storage / legacy keys.
       this._state = {
@@ -260,8 +277,11 @@
 
     /* --------------------------------------------------------- position size */
     /**
-     * Size a trade so the loss-at-stop equals (at most) the 2% budget, adjusted
-     * by the instrument's volatility factor.
+     * POSITION SIZING — the 0.25% rule in code.
+     * Sizes a trade so the loss-if-stopped equals AT MOST the per-trade risk
+     * budget (maxRiskPerTradePct % of equity), scaled down by the instrument's
+     * volatility factor and converted to units via its $/point value. Units are
+     * always floored, so the realised risk can never exceed the budget.
      *
      * @param {string} instrument          e.g. "/NQ", "GC", "NAS100".
      * @param {number} stopDistancePoints  Distance from entry to stop, in points.
@@ -348,8 +368,12 @@
 
     /* ------------------------------------------------------- trade lifecycle */
     /**
-     * Record a closed trade's net P/L and update the loss counter.
-     * Win (net>0) → reset to 0. Loss (net<0) → +1. Break-even → unchanged.
+     * CONSECUTIVE-LOSS HARD STOP — the counter that gates new entries.
+     * Records a closed trade's net P/L and updates the loss counter:
+     *   Win (net>0) → reset to 0. Loss (net<0) → +1. Break-even → unchanged.
+     * When the counter reaches maxConsecutiveLosses the entry gate
+     * (canEnterNewTrade) blocks ALL new entries until a manual reset. The
+     * counter is persisted so the hard stop survives a page refresh.
      * @returns {Object} the new risk state.
      */
     registerTradeClosed(netPnl) {
@@ -427,7 +451,12 @@
     getBias(symbol) { return this._bias[symbol] || null; }
 
     /**
-     * Is `direction` aligned with the instrument's Weekly+3D bias?
+     * WEEKLY+3D BIAS FILTER — blocks counter-trend entries.
+     * Compares the intended `direction` against the instrument's stored Weekly
+     * and 3-Day bias. If EITHER higher timeframe points against the trade it's a
+     * hard block (strength "counter", aligned:false → evaluateEntry rejects it).
+     * Both-confirm = "aligned"; mixed-but-not-opposing = "partial" (allowed,
+     * flagged for the UI). No bias set = "unknown" (not filtered).
      * @returns {{aligned:boolean, strength:"aligned"|"partial"|"counter"|"unknown", reason:string}}
      */
     checkBiasAlignment(symbol, direction) {
@@ -500,7 +529,15 @@
       return this.getOpenPositions();
     }
 
-    /** Internal: apply the TP1 → break-even rule. Returns true if it fired. */
+    /**
+     * TP1 → SCALE OUT → BREAK-EVEN (the risk-free-runner rule), in code.
+     * When `price` reaches a position's TP1, this books `scaleOutPct` (25%) of
+     * the size and moves the stop to the entry price, so the remaining runner
+     * carries ~zero downside (see getPositionOpenRisk). Fires at most once per
+     * position (guarded by tp1Hit). Called from onPrice() on every fresh tick
+     * and from loadPositions() when restoring state.
+     * @returns {boolean} true if the rule fired on this call.
+     */
     _applyTP1(pos, price) {
       if (!pos || pos.tp1Hit || pos.tp1 == null) return false;
       const reached = pos.direction === "long" ? price >= pos.tp1 : price <= pos.tp1;
@@ -514,9 +551,32 @@
       return true;
     }
 
+    /* ===================================================================
+       LIVE PRICE FEED — single entry point for market data.
+       -------------------------------------------------------------------
+       onPrice() is the ONLY place a fresh market price enters the engine.
+       Today it is called manually (the dashboard "Sim → TP1" button). To go
+       live, a price-feed adapter just needs to call onPrice() / onPrices() on
+       every tick — no other engine code changes.
+
+       TODO (integration phase): wire a Bybit or Binance WebSocket adapter, e.g.
+         const ws = new WebSocket("wss://stream.bybit.com/v5/public/linear");
+         ws.onmessage = (ev) => {
+           const { symbol, price } = parseTick(ev.data);  // map venue symbol → engine symbol
+           risk.onPrice(symbol, price);                   // TP1→BE fires automatically
+         };
+       The adapter is responsible ONLY for connection + symbol mapping; all
+       risk/exit logic stays here. Keep the same contract for a Node/backend
+       feed so this engine ports unchanged (see DESIGN NOTES at top of file).
+       =================================================================== */
+
     /**
-     * Feed a fresh price for an instrument. The engine checks TP1 and, if hit,
-     * automatically books the partial and moves the stop to break-even.
+     * Feed a fresh price for ONE instrument. The engine checks TP1 and, if hit,
+     * automatically books the partial and moves the stop to break-even, then
+     * emits so the UI + entry gates refresh.
+     * @param {string} symbol  Engine symbol (e.g. "/NQ", "GC") — already mapped
+     *                         from the venue's symbol by the feed adapter.
+     * @param {number} price   Latest traded/mark price.
      * @returns {{event:string|null, position:Object|null}}
      */
     onPrice(symbol, price) {
@@ -526,6 +586,25 @@
       const fired = this._applyTP1(pos, pos.current);
       if (fired) this._emit(); // open risk just dropped — UI + gates must refresh
       return { event: fired ? "tp1_breakeven" : null, position: Object.assign({}, pos) };
+    }
+
+    /**
+     * Batch variant of onPrice() for a WebSocket adapter that receives a
+     * snapshot of several symbols per frame. Applies each tick and emits ONCE
+     * if any position changed (avoids a render storm on busy frames).
+     * @param {Object<string,number>} priceMap  { "/NQ": 20440, "GC": 2620, … }
+     * @returns {string[]} symbols whose TP1→BE fired on this batch.
+     */
+    onPrices(priceMap) {
+      const fired = [];
+      Object.keys(priceMap || {}).forEach(sym => {
+        const pos = this._positions[sym];
+        if (!pos) return;
+        pos.current = this._num(priceMap[sym], pos.current);
+        if (this._applyTP1(pos, pos.current)) fired.push(sym);
+      });
+      if (fired.length) this._emit();
+      return fired;
     }
 
     /**
@@ -615,9 +694,16 @@
     }
 
     /**
-     * Close a position at exitPrice, register the net P/L against the loss
-     * counter, remove it from the book, and produce a full journal entry
+     * CLOSE A TRADE — books P/L, updates the loss counter, journals the result.
+     * Closes a position at exitPrice, registers net P/L against the consecutive-
+     * loss counter, removes it from the book, and returns a full `journalEntry`
      * (start time, duration, gross, costs/fees, realized net P/L, R-multiple).
+     *
+     * The returned `journalEntry` is the single source of truth for one closed
+     * trade. The browser prepends it to the on-page journal today; the SAME
+     * object is the intended payload for backend persistence later (see the
+     * JOURNAL PERSISTENCE block below for the snake_case mapping to
+     * journal/scalp_journal.json).
      *
      * @param {string} symbol
      * @param {number} exitPrice
@@ -657,9 +743,44 @@
 
       delete this._positions[symbol];
       const state = this.registerTradeClosed(netPnl); // persists + emits + loss counter
+      // Optional backend persistence (no-op unless setPersistHook() was called).
+      if (this._persistHook) { try { this._persistHook(journalEntry); } catch (e) { this._log("warn", "persist hook failed", e); } }
       this._log("info", `CLOSE ${symbol} @ ${exit} — gross $${gross}, costs $${costs}, net $${netPnl} (${r}R)`);
       return { closed: true, netPnl, gross, costs, r, state, journalEntry };
     }
+
+    /* ===================================================================
+       JOURNAL PERSISTENCE — readiness hook (browser today, backend later).
+       -------------------------------------------------------------------
+       Closed trades are recorded in the browser today (bot.js prepends the
+       journalEntry to the on-page table). To persist server-side, send the
+       SAME journalEntry to a writer that appends to journal/scalp_journal.json.
+
+       Engine (camelCase)        →  scalp_journal.json (snake_case)
+         symbol                  →  symbol
+         direction               →  direction
+         entry / exit            →  entry / exit_price
+         units                   →  units
+         entryCount              →  entry_count
+         opened / closed (ISO)   →  opened_ts / closed_ts
+         durationMs              →  (derive hold_minutes)
+         gross / costs / net     →  gross_pnl / fees / pnl
+         r                       →  r_multiple
+         reason                  →  exit_reason
+         win                     →  (derive: pnl > 0)
+
+       TODO (integration phase): implement ONE of —
+         (a) Python: have bybit_run.py / reconcile.py append the broker fill
+             (it already owns scalp_journal.json with _atomic_write); OR
+         (b) Browser → backend: POST journalEntry to a Cloudflare Function that
+             commits to the repo, e.g. setPersistHook(fn) wired in bot.js:
+               risk.setPersistHook(e => fetch("/api/journal", {
+                 method: "POST", body: JSON.stringify(e) }));
+       Until then setPersistHook() is a no-op so the browser flow is unchanged.
+       =================================================================== */
+
+    /** Register an optional persistence callback for closed trades (see above). */
+    setPersistHook(fn) { this._persistHook = (typeof fn === "function") ? fn : null; return this; }
 
     /** Snapshot of the open book for the UI. */
     getPortfolioState() {
