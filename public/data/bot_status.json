@@ -31,6 +31,13 @@
     }
   },
 
+  "htf_bias": {
+    "/NQ": { "weekly": "bull", "threeDay": "bull" },
+    "GC":  { "weekly": "bull", "threeDay": "bull" },
+    "CL":  { "weekly": "bear", "threeDay": "bear" },
+    "SI":  { "weekly": "bull", "threeDay": "neutral" }
+  },
+
   "equity_curve": [
     10000, 10000, 9988, 10042, 10110, 10086, 10140, 10222, 10190, 10168,
     10240, 10312, 10288, 10260, 10334, 10402, 10380, 10356, 10298, 10342,
@@ -48,19 +55,18 @@
       "stop": 19920.0,
       "tp1": 20440.0,
       "target": 20800.0,
-      "size": "0.5 micro",
-      "size_units": 0.5,
+      "size": "0.05 micro",
+      "size_units": 0.05,
       "point_value": 2,
-      "risk_usd": 27.5,
-      "risk_pct": 0.25,
+      "risk_usd": 22.0,
+      "risk_pct": 0.21,
       "opened_at": "2026-06-25T00:00:00+10:00",
       "bars_4h": 14,
       "entry_count": 1,
       "strategy": "Trend Pullback",
       "bias_tf": "Weekly+3D",
       "entry_tf": "H4",
-      "unrealized_pnl": 146.5,
-      "unrealized_pct": 1.42,
+      "bias": { "weekly": "bull", "threeDay": "bull" },
       "sparkline": [20140, 20128, 20156, 20180, 20162, 20210, 20244, 20228, 20260, 20286]
     },
     {
@@ -73,19 +79,18 @@
       "stop": 2604.0,
       "tp1": 2685.0,
       "target": 2728.0,
-      "size": "0.1 lot",
-      "size_units": 0.1,
+      "size": "0.06 lot",
+      "size_units": 0.06,
       "point_value": 10,
-      "risk_usd": 25.5,
-      "risk_pct": 0.25,
+      "risk_usd": 22.8,
+      "risk_pct": 0.22,
       "opened_at": "2026-06-24T18:00:00+10:00",
       "bars_4h": 22,
       "entry_count": 2,
       "strategy": "Breakout",
       "bias_tf": "Weekly+3D",
       "entry_tf": "H4",
-      "unrealized_pnl": -11.0,
-      "unrealized_pct": -0.11,
+      "bias": { "weekly": "bull", "threeDay": "bull" },
       "sparkline": [2642, 2648, 2655, 2640, 2636, 2644, 2629, 2634, 2626, 2631]
     },
     {
@@ -98,9 +103,9 @@
       "stop": 73.10,
       "tp1": 69.80,
       "target": 67.20,
-      "size": "15 CFD",
-      "size_units": 15,
-      "point_value": 1,
+      "size": "1.5 CFD",
+      "size_units": 1.5,
+      "point_value": 10,
       "risk_usd": 25.5,
       "risk_pct": 0.25,
       "opened_at": "2026-06-25T08:00:00+10:00",
@@ -109,15 +114,14 @@
       "strategy": "Mean Reversion",
       "bias_tf": "Weekly+3D",
       "entry_tf": "H4",
-      "unrealized_pnl": 8.25,
-      "unrealized_pct": 0.08,
+      "bias": { "weekly": "bear", "threeDay": "bear" },
       "sparkline": [71.40, 71.55, 71.20, 71.05, 71.30, 70.95, 71.10, 70.80, 70.92, 70.85]
     }
   ],
 
   "today": {
     "realized_pnl": 24.00,
-    "unrealized_pnl": 56.75,
+    "unrealized_pnl": 16.50,
     "trades_closed": 3,
     "wins": 2,
     "losses": 1,
@@ -129,29 +133,19 @@
     "daily_loss_used": 25.50
   },
 
-  "sizing": {
-    "equity": 10342.18,
-    "max_risk_pct": 0.25,
-    "max_risk_usd": 25.86,
-    "open_risk_usd": 78.50,
-    "open_risk_pct": 0.76,
-    "daily_budget_usd": 200,
-    "daily_budget_used": 25.50
-  },
-
   "journal": [
-    { "id": "T-1048", "opened": "2026-06-25T09:30:00+10:00", "closed": "2026-06-25T12:48:00+10:00", "duration": "3h 18m", "symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2618.0, "exit": 2685.0, "size": "0.1 lot", "gross": 48.0,  "costs": 2.0,  "net": 46.00,  "reason": "TP1 hit (scale 25%)", "r": 2.0,  "win": true,  "strategy": "Breakout" },
-    { "id": "T-1047", "opened": "2026-06-25T06:00:00+10:00", "closed": "2026-06-25T10:15:00+10:00", "duration": "4h 15m", "symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 20020.0,"exit": 20220.0,"size": "0.5 micro", "gross": 40.0,  "costs": 1.0,  "net": 39.00,  "reason": "Target hit",   "r": 1.9,  "win": true,  "strategy": "Trend Pullback" },
+    { "id": "T-1048", "opened": "2026-06-25T09:30:00+10:00", "closed": "2026-06-25T12:48:00+10:00", "duration": "3h 18m", "symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2618.0, "exit": 2685.0, "size": "0.06 lot", "gross": 48.0,  "costs": 2.0,  "net": 46.00,  "reason": "TP1 hit (scale 25%)", "r": 2.0,  "win": true,  "strategy": "Breakout" },
+    { "id": "T-1047", "opened": "2026-06-25T06:00:00+10:00", "closed": "2026-06-25T10:15:00+10:00", "duration": "4h 15m", "symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 20020.0,"exit": 20220.0,"size": "0.05 micro", "gross": 40.0,  "costs": 1.0,  "net": 39.00,  "reason": "Target hit",   "r": 1.9,  "win": true,  "strategy": "Trend Pullback" },
     { "id": "T-1046", "opened": "2026-06-24T20:00:00+10:00", "closed": "2026-06-25T04:30:00+10:00", "duration": "8h 30m", "symbol": "NG",  "name": "NatGas", "dir": "long",  "entry": 2.84,   "exit": 2.78,   "size": "300 CFD", "gross": -25.0,  "costs": 0.5,  "net": -25.50, "reason": "Stop hit",     "r": -1.0, "win": false, "strategy": "Breakout" },
     { "id": "T-1045", "opened": "2026-06-24T14:00:00+10:00", "closed": "2026-06-24T22:00:00+10:00", "duration": "8h 00m", "symbol": "SI",  "name": "Silver", "dir": "long",  "entry": 30.40,  "exit": 31.05,  "size": "0.5 lot", "gross": 47.0,  "costs": 1.5,  "net": 45.50,  "reason": "Target hit",   "r": 2.1,  "win": true,  "strategy": "Trend Pullback" },
     { "id": "T-1044", "opened": "2026-06-24T10:00:00+10:00", "closed": "2026-06-24T16:45:00+10:00", "duration": "6h 45m", "symbol": "YM",  "name": "US30",   "dir": "short", "entry": 43200.0,"exit": 43480.0,"size": "0.1 micro", "gross": -35.0,  "costs": 1.0,  "net": -36.00, "reason": "Stop hit",     "r": -1.0, "win": false, "strategy": "Mean Reversion" },
-    { "id": "T-1043", "opened": "2026-06-23T22:00:00+10:00", "closed": "2026-06-24T12:30:00+10:00", "duration": "14h 30m","symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 19840.0,"exit": 20180.0,"size": "0.5 micro", "gross": 85.0,  "costs": 1.0,  "net": 84.00,  "reason": "Trail stop",   "r": 3.4,  "win": true,  "strategy": "Trend Pullback" },
-    { "id": "T-1042", "opened": "2026-06-23T16:00:00+10:00", "closed": "2026-06-23T20:00:00+10:00", "duration": "4h 00m", "symbol": "CL",  "name": "Crude Oil","dir": "short","entry": 72.80,  "exit": 71.90,  "size": "15 CFD",  "gross": 13.5,  "costs": 0.5,  "net": 13.00,  "reason": "TP1 + trail",  "r": 0.8,  "win": true,  "strategy": "Mean Reversion" },
-    { "id": "T-1041", "opened": "2026-06-23T08:00:00+10:00", "closed": "2026-06-23T14:00:00+10:00", "duration": "6h 00m", "symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2598.0, "exit": 2588.0, "size": "0.1 lot", "gross": -7.5,  "costs": 1.5,  "net": -9.00,  "reason": "Stop hit",     "r": -0.5, "win": false, "strategy": "Breakout" },
-    { "id": "T-1040", "opened": "2026-06-22T20:00:00+10:00", "closed": "2026-06-23T06:00:00+10:00", "duration": "10h 00m","symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 19620.0,"exit": 19880.0,"size": "0.5 micro", "gross": 65.0,  "costs": 1.0,  "net": 64.00,  "reason": "Target hit",   "r": 2.6,  "win": true,  "strategy": "Trend Pullback" },
+    { "id": "T-1043", "opened": "2026-06-23T22:00:00+10:00", "closed": "2026-06-24T12:30:00+10:00", "duration": "14h 30m","symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 19840.0,"exit": 20180.0,"size": "0.05 micro", "gross": 85.0,  "costs": 1.0,  "net": 84.00,  "reason": "Trail stop",   "r": 3.4,  "win": true,  "strategy": "Trend Pullback" },
+    { "id": "T-1042", "opened": "2026-06-23T16:00:00+10:00", "closed": "2026-06-23T20:00:00+10:00", "duration": "4h 00m", "symbol": "CL",  "name": "Crude Oil","dir": "short","entry": 72.80,  "exit": 71.90,  "size": "1.5 CFD", "gross": 13.5,  "costs": 0.5,  "net": 13.00,  "reason": "TP1 + trail",  "r": 0.8,  "win": true,  "strategy": "Mean Reversion" },
+    { "id": "T-1041", "opened": "2026-06-23T08:00:00+10:00", "closed": "2026-06-23T14:00:00+10:00", "duration": "6h 00m", "symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2598.0, "exit": 2588.0, "size": "0.06 lot", "gross": -7.5,  "costs": 1.5,  "net": -9.00,  "reason": "Stop hit",     "r": -0.5, "win": false, "strategy": "Breakout" },
+    { "id": "T-1040", "opened": "2026-06-22T20:00:00+10:00", "closed": "2026-06-23T06:00:00+10:00", "duration": "10h 00m","symbol": "/NQ", "name": "NAS100", "dir": "long",  "entry": 19620.0,"exit": 19880.0,"size": "0.05 micro", "gross": 65.0,  "costs": 1.0,  "net": 64.00,  "reason": "Target hit",   "r": 2.6,  "win": true,  "strategy": "Trend Pullback" },
     { "id": "T-1039", "opened": "2026-06-22T14:00:00+10:00", "closed": "2026-06-22T19:30:00+10:00", "duration": "5h 30m", "symbol": "SI",  "name": "Silver", "dir": "short", "entry": 31.20,  "exit": 31.60,  "size": "0.5 lot", "gross": -30.0,  "costs": 1.5,  "net": -31.50, "reason": "Stop hit",     "r": -1.0, "win": false, "strategy": "Mean Reversion" },
-    { "id": "T-1038", "opened": "2026-06-22T08:00:00+10:00", "closed": "2026-06-22T18:00:00+10:00", "duration": "10h 00m","symbol": "CL",  "name": "Crude Oil","dir": "long", "entry": 70.10,  "exit": 71.40,  "size": "15 CFD",  "gross": 19.5,  "costs": 0.5,  "net": 19.00,  "reason": "Target hit",   "r": 1.3,  "win": true,  "strategy": "Breakout" },
-    { "id": "T-1037", "opened": "2026-06-21T18:00:00+10:00", "closed": "2026-06-22T04:00:00+10:00", "duration": "10h 00m","symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2560.0, "exit": 2612.0, "size": "0.1 lot", "gross": 32.0,  "costs": 1.5,  "net": 30.50,  "reason": "Target hit",   "r": 2.0,  "win": true,  "strategy": "Trend Pullback" }
+    { "id": "T-1038", "opened": "2026-06-22T08:00:00+10:00", "closed": "2026-06-22T18:00:00+10:00", "duration": "10h 00m","symbol": "CL",  "name": "Crude Oil","dir": "long", "entry": 70.10,  "exit": 71.40,  "size": "1.5 CFD", "gross": 19.5,  "costs": 0.5,  "net": 19.00,  "reason": "Target hit",   "r": 1.3,  "win": true,  "strategy": "Breakout" },
+    { "id": "T-1037", "opened": "2026-06-21T18:00:00+10:00", "closed": "2026-06-22T04:00:00+10:00", "duration": "10h 00m","symbol": "GC",  "name": "Gold",   "dir": "long",  "entry": 2560.0, "exit": 2612.0, "size": "0.06 lot", "gross": 32.0,  "costs": 1.5,  "net": 30.50,  "reason": "Target hit",   "r": 2.0,  "win": true,  "strategy": "Trend Pullback" }
   ],
 
   "journal_summary": {
@@ -163,16 +157,16 @@
   },
 
   "log": [
-    { "ts": "2026-06-25T14:32:00+10:00", "type": "enter",  "msg": "ENTERED /NQ LONG · 20,140.0 · Trend Pullback (Weekly+3D bias · H4 entry) · 0.5 micro · risk $27.50 (0.25%) · TP1 20,440 · Final 20,800" },
-    { "ts": "2026-06-25T14:31:00+10:00", "type": "signal", "msg": "SIGNAL /NQ — H4 pullback to rising 20-EMA · Weekly+3D trend up · R:R 3.0 · TP1 at 1.4R" },
-    { "ts": "2026-06-25T08:02:00+10:00", "type": "enter",  "msg": "ENTERED CL SHORT · 71.40 · Mean Reversion (Weekly+3D bias · H4 entry) · 15 CFD · risk $25.50 (0.25%) · TP1 69.80 · Final 67.20" },
-    { "ts": "2026-06-25T08:00:00+10:00", "type": "signal", "msg": "SIGNAL CL — H4 stretched 2.4σ above mean · Weekly resistance zone · fade setup" },
+    { "ts": "2026-06-25T14:32:00+10:00", "type": "enter",  "msg": "ENTERED /NQ LONG · 20,140.0 · Trend Pullback (Weekly+3D bias · H4 entry) · 0.05 micro · risk $22 (0.21%) · TP1 20,440 → BE · Final 20,800" },
+    { "ts": "2026-06-25T14:31:00+10:00", "type": "signal", "msg": "SIGNAL /NQ — H4 pullback to rising 20-EMA · Weekly+3D trend up (aligned) · R:R 3.0 · TP1 at 1.4R" },
+    { "ts": "2026-06-25T08:02:00+10:00", "type": "enter",  "msg": "ENTERED CL SHORT · 71.40 · Mean Reversion (Weekly+3D bias · H4 entry) · 1.5 CFD · risk $25.50 (0.25%) · bias bear/bear (aligned) · TP1 69.80 → BE · Final 67.20" },
+    { "ts": "2026-06-25T08:00:00+10:00", "type": "signal", "msg": "SIGNAL CL — H4 stretched 2.4σ above mean · Weekly+3D both bearish · fade setup aligned with HTF" },
     { "ts": "2026-06-25T04:30:00+10:00", "type": "loss",   "msg": "CLOSED NG LONG · exit 2.78 (stop hit) · −$25.50 · −1.0R · hold 8h 30m · consec losses: 1" },
-    { "ts": "2026-06-25T00:01:00+10:00", "type": "enter",  "msg": "ENTERED GC LONG · 2,642.0 (add-on entry #2) · Breakout · 0.1 lot · TP1 2,685" },
+    { "ts": "2026-06-25T00:01:00+10:00", "type": "enter",  "msg": "ENTERED GC LONG · 2,642.0 (add-on entry #2 on pullback) · Breakout · 0.06 lot · TP1 2,685 → BE" },
     { "ts": "2026-06-24T22:10:00+10:00", "type": "kill",   "msg": "KILL SWITCH (manual) — all positions closed by Vivek · trading re-enabled 22:40" },
-    { "ts": "2026-06-24T18:00:00+10:00", "type": "enter",  "msg": "ENTERED GC LONG · 2,642.0 · Breakout (Weekly+3D bias · H4 entry) · 0.1 lot · risk $25.50 (0.25%)" },
+    { "ts": "2026-06-24T18:00:00+10:00", "type": "enter",  "msg": "ENTERED GC LONG · 2,642.0 · Breakout (Weekly+3D bias · H4 entry) · 0.06 lot · risk $22.80 (0.22%)" },
     { "ts": "2026-06-24T16:45:00+10:00", "type": "loss",   "msg": "CLOSED YM SHORT · exit 43,480 (stop hit) · −$36 · −1.0R · hold 6h 45m" },
-    { "ts": "2026-06-24T12:48:00+10:00", "type": "win",    "msg": "CLOSED GC LONG · exit 2,685.0 (TP1 scale 25%) · +$46 · +2.0R · hold 3h 18m · SL moved to BE" },
-    { "ts": "2026-06-24T10:00:00+10:00", "type": "system", "msg": "BOT STARTED · Paper mode · Bybit Testnet · Equity $10,342 · 0.25% risk · 2.5× leverage · 3-loss hard stop armed" }
+    { "ts": "2026-06-24T12:48:00+10:00", "type": "win",    "msg": "CLOSED GC LONG · exit 2,685.0 (TP1 scale 25%) · +$46 · +2.0R · hold 3h 18m · SL moved to BE → runner risk-free" },
+    { "ts": "2026-06-24T10:00:00+10:00", "type": "system", "msg": "BOT STARTED · Paper mode · Bybit Testnet · Equity $10,342 · 0.25% risk · 2.5× leverage · 3-loss hard stop armed · Weekly+3D bias filter on" }
   ]
 }

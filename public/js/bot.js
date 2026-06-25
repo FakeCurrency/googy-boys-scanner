@@ -143,10 +143,19 @@
       $("#roadmap-kill-line").innerHTML = `Last kill switch: <strong>${fmtDateShort(state.lastKillSwitchTime)} · ${state.lastKillSwitchReason || "manual"}</strong>${state.lastKillSwitchAction ? " — " + state.lastKillSwitchAction : ""}`;
     }
 
-    // ── Sizing readout (2% rule live from the engine) ─────────────────────
+    // ── Sizing readout (0.25% rule live from the engine) ──────────────────
     $("#sz-risk-pct").textContent = state.maxRiskPerTradePct + "%";
     $("#sz-max-risk").textContent = money(state.maxRiskUsd);
     $("#sz-equity").textContent = moneyK(state.equity);
+
+    // ── Portfolio open-risk (live, book-level) ────────────────────────────
+    // Aggregated from every open position; a runner at break-even contributes
+    // $0, so this falls as TP1s are hit — that's what frees basket capacity.
+    $("#sz-open-risk").textContent = money(state.openRiskUsd, 0) + ` · ${state.openRiskPct.toFixed(2)}%`;
+    const usePct = state.portfolioCapUsd ? Math.min(100, state.openRiskUsd / state.portfolioCapUsd * 100) : 0;
+    const pbar = $("#sz-budget-bar"); if (pbar) { pbar.style.width = usePct + "%"; pbar.classList.toggle("over", usePct > 80); }
+    if ($("#sz-budget-sub")) $("#sz-budget-sub").textContent = `${money(state.openRiskUsd, 0)} of ${money(state.portfolioCapUsd, 0)} cap (${state.maxPortfolioRiskPct}%) · ${state.positionCount}/${state.maxPositions} positions`;
+
     updateSizeCalc(); // recompute calculator with the engine
   }
 
@@ -170,22 +179,49 @@
     if ($("#sz-result-note")) $("#sz-result-note").textContent = r.feasibleWholeContract ? `${r.wholeContracts} whole contract(s)` : (r.note || "recommended size");
   }
 
-  // ── Portfolio aggregates (open risk / daily budget) come from JSON feed ────
-  function renderSizingAggregates(d) {
-    const sz = d.sizing || {};
-    $("#sz-open-risk").textContent = money(sz.open_risk_usd || 0, 0) + (sz.open_risk_pct ? ` · ${sz.open_risk_pct.toFixed(1)}%` : "");
-    const budgetPct = sz.daily_budget_usd ? Math.min(100, sz.daily_budget_used / sz.daily_budget_usd * 100) : 0;
-    const bar = $("#sz-budget-bar"); bar.style.width = budgetPct + "%"; bar.classList.toggle("over", budgetPct > 80);
-    $("#sz-budget-sub").textContent = `${money(sz.daily_budget_used || 0, 0)} of ${money(sz.daily_budget_usd || 0, 0)} used`;
+  // ── Positions (swing cards) — rendered from ENGINE state ───────────────────
+  // Cosmetic-only fields (name, strategy, sparkline …) live in POS_META keyed by
+  // symbol; the authoritative numbers (entry, stop, tp1Hit, units, open risk)
+  // come from the risk engine so breakeven / add-ons / risk are always live.
+  let POS_META = {};
+
+  function biasChip(align) {
+    if (!align || align.strength === "unknown") return "";
+    const cls = align.strength === "counter" ? "bias-counter" : align.strength === "partial" ? "bias-partial" : "bias-aligned";
+    const b = align.bias || {};
+    const arr = v => v === "bull" ? "▲" : v === "bear" ? "▼" : "■";
+    return `<span class="pos-bias-chip ${cls}" title="${align.reason}">HTF W${arr(b.weekly)} 3D${arr(b.threeDay)}</span>`;
   }
 
-  // ── Positions (swing cards) ────────────────────────────────────────────────
-  function renderPositions(positions) {
+  // Merge engine positions with cosmetic metadata + derived live numbers.
+  function mergedBook() {
+    if (!risk) return [];
+    return risk.getOpenPositions().map(p => {
+      const m = POS_META[p.symbol] || {};
+      const dpp = p.dollarsPerPoint || 1, sign = p.direction === "long" ? 1 : -1;
+      const unrealized_pnl = sign * (p.current - p.entry) * dpp * p.units;
+      const unrealized_pct = p.entry ? sign * (p.current - p.entry) / p.entry * 100 : 0;
+      const denomStop = p.initialStop != null && p.initialStop !== p.entry ? p.initialStop : p.stop;
+      const riskPerR = Math.abs(p.entry - denomStop) || 1;
+      return Object.assign({}, m, {
+        symbol: p.symbol, direction: p.direction,
+        entry: p.entry, current: p.current, stop: p.stop, tp1: p.tp1, target: p.target,
+        units: p.units, entry_count: p.entryCount,
+        tp1Hit: p.tp1Hit, stopAtBreakeven: p.stopAtBreakeven, remainingFraction: p.remainingFraction,
+        openRiskUsd: risk.getPositionOpenRisk(p),
+        unrealized_pnl, unrealized_pct, riskPerR,
+        biasAlign: Object.assign({ bias: risk.getBias(p.symbol) }, risk.checkBiasAlignment(p.symbol, p.direction)),
+      });
+    });
+  }
+
+  function renderPositionsFromEngine() {
+    const book = mergedBook();
     const wrap = $("#positions-body"), countEl = $("#positions-count"); if (!wrap) return;
-    if (countEl) countEl.textContent = `${positions ? positions.length : 0} open`;
-    if (!positions || !positions.length) { wrap.innerHTML = `<div class="bot-empty">No open positions — bot is scanning 4H charts for setups.</div>`; return; }
-    wrap.innerHTML = positions.map(p => {
-      const isLong = p.direction === "long", risk_ = Math.abs(p.entry - p.stop) || 1;
+    if (countEl) countEl.textContent = `${book.length} open`;
+    if (!book.length) { wrap.innerHTML = `<div class="bot-empty">No open positions — bot is scanning H4 charts for Weekly+3D-aligned setups.</div>`; return; }
+    wrap.innerHTML = book.map(p => {
+      const isLong = p.direction === "long", risk_ = p.riskPerR;
       const profitR = (isLong ? (p.current - p.entry) : (p.entry - p.current)) / risk_;
       const stopBufR = (isLong ? (p.current - p.stop) : (p.stop - p.current)) / risk_;
       const toTargetR = (isLong ? (p.target - p.current) : (p.current - p.target)) / risk_;
@@ -193,26 +229,37 @@
       let prog = isLong ? (p.current - p.entry) / (p.target - p.entry) : (p.entry - p.current) / (p.entry - p.target);
       prog = Math.max(-30, Math.min(100, prog * 100));
       const pnlPos = p.unrealized_pnl >= 0, sparkColor = pnlPos ? getCSS("--green") : getCSS("--red");
-      return `<div class="pos-card">
+      const beBadge = p.stopAtBreakeven ? `<span class="pos-be-badge">● BE · risk-free runner</span>` : "";
+      const stopMetric = p.stopAtBreakeven
+        ? `<div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v num" style="color:var(--green)">${px(p.stop)} · BE</span><span class="pos-metric-sub num" style="color:var(--green)">break-even</span></div>`
+        : `<div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v stop num">${px(p.stop)}</span><span class="pos-metric-sub num">${stopBufR.toFixed(1)}R buffer</span></div>`;
+      const riskMetric = p.stopAtBreakeven
+        ? `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num" style="color:var(--green)">$0</span><span class="pos-metric-sub num" style="color:var(--green)">runner · ${plannedR.toFixed(1)}R plan</span></div>`
+        : `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num">${money(p.openRiskUsd, 0)}</span><span class="pos-metric-sub num">${(p.openRiskUsd / (window.__EQUITY || 10000) * 100).toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>`;
+      const tpMetric = p.tp1
+        ? `<div class="pos-metric"><span class="pos-metric-k">${p.tp1Hit ? "TP1 ✓ (booked 25%)" : "TP1 (25%→BE)"}</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
+        : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`;
+      const simBtn = (!p.tp1Hit && p.tp1 != null) ? `<button class="pos-sim-btn" data-symbol="${p.symbol}" data-tp1="${p.tp1}" title="Simulate price reaching TP1">▶ Sim → TP1</button>` : "";
+      return `<div class="pos-card${p.stopAtBreakeven ? " is-breakeven" : ""}">
         <div class="pos-card-top">
           <span class="pos-ticker num">${p.symbol}</span><span class="pos-name">${p.name || ""}</span>
           <span class="pos-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
-          <span class="pos-lev num">${p.leverage}×</span>
-          <span class="pos-strat-chip">${p.strategy}</span>
-          <span class="pos-tf-chip">${p.bias_tf}→${p.entry_tf}</span>
+          ${p.leverage ? `<span class="pos-lev num">${p.leverage}×</span>` : ""}
+          ${p.strategy ? `<span class="pos-strat-chip">${p.strategy}</span>` : ""}
+          ${p.bias_tf ? `<span class="pos-tf-chip">${p.bias_tf}→${p.entry_tf || "H4"}</span>` : ""}
+          ${biasChip(p.biasAlign)}
           ${p.entry_count > 1 ? `<span class="pos-tf-chip">×${p.entry_count} entries</span>` : ""}
+          ${beBadge}
           <button class="pos-close-btn" data-symbol="${p.symbol}">Close</button>
         </div>
         <div class="pos-body">
           <div class="pos-metrics">
-            <div class="pos-metric"><span class="pos-metric-k">Entry</span><span class="pos-metric-v num">${px(p.entry)}</span></div>
+            <div class="pos-metric"><span class="pos-metric-k">Entry${p.entry_count > 1 ? " (avg)" : ""}</span><span class="pos-metric-v num">${px(p.entry)}</span></div>
             <div class="pos-metric"><span class="pos-metric-k">Current</span><span class="pos-metric-v num">${px(p.current)}</span></div>
-            <div class="pos-metric"><span class="pos-metric-k">Size</span><span class="pos-metric-v num">${p.size}</span></div>
-            <div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v stop num">${px(p.stop)}</span><span class="pos-metric-sub num">${stopBufR.toFixed(1)}R buffer</span></div>
-            ${p.tp1
-              ? `<div class="pos-metric"><span class="pos-metric-k">TP1 (25%→BE)</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
-              : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`}
-            <div class="pos-metric"><span class="pos-metric-k">Risk at entry</span><span class="pos-metric-v num">${money(p.risk_usd, 0)}</span><span class="pos-metric-sub num">${p.risk_pct.toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>
+            <div class="pos-metric"><span class="pos-metric-k">Size</span><span class="pos-metric-v num">${p.size || p.units}</span></div>
+            ${stopMetric}
+            ${tpMetric}
+            ${riskMetric}
           </div>
           <div class="pos-side">
             <div class="pos-pnl-box ${pnlPos ? "pos-pnl-green" : "pos-pnl-red"}">
@@ -220,20 +267,35 @@
               <div class="pos-pnl-pct num">${pct(p.unrealized_pct)} · ${signed(profitR, 1)}R</div>
             </div>
             ${sparkline(p.sparkline, 130, 34, sparkColor)}
+            ${simBtn}
           </div>
         </div>
         <div class="pos-progress">
           <div class="pos-progress-track"><div class="pos-progress-fill ${prog >= 0 ? "green" : "red"}" style="width:${Math.abs(prog)}%"></div></div>
           <div class="pos-progress-labels">
-            <span class="pos-progress-lab stop">SL ${px(p.stop)}</span>
-            <span class="pos-progress-lab num">${p.bars_4h} bars · ${fmtAge(p.opened_at)} open</span>
+            <span class="pos-progress-lab stop">SL ${px(p.stop)}${p.stopAtBreakeven ? " (BE)" : ""}</span>
+            <span class="pos-progress-lab num">${p.bars_4h ? p.bars_4h + " bars · " : ""}${p.opened_at ? fmtAge(p.opened_at) + " open" : ""}</span>
             <span class="pos-progress-lab target">${p.tp1 ? `TP1 ${px(p.tp1)} · Final ${px(p.target)}` : `TP ${px(p.target)}`}</span>
           </div>
         </div>
       </div>`;
     }).join("");
+    // Sim → TP1: feed the engine the TP1 price; breakeven fires in the engine.
+    $$(".pos-sim-btn", wrap).forEach(btn => btn.addEventListener("click", () => {
+      const sym = btn.dataset.symbol, tp1 = Number(btn.dataset.tp1);
+      const res = risk.onPrice(sym, tp1);
+      if (res.event === "tp1_breakeven") {
+        prependLog({ ts: new Date().toISOString(), type: "win", msg: `${sym} TP1 hit @ ${tp1} — booked 25%, stop → break-even. Runner is now risk-free.` });
+        showToast(`${sym}: TP1 hit → stop moved to break-even.`, "ok");
+      }
+    }));
+    // Close → engine books the trade (feeds the loss counter) and removes it.
     $$(".pos-close-btn", wrap).forEach(btn => btn.addEventListener("click", () => {
-      if (confirm(`Close ${btn.dataset.symbol}? (paper trade)`)) { btn.closest(".pos-card").style.opacity = "0.4"; btn.disabled = true; btn.textContent = "Closing…"; showToast(`Close order sent for ${btn.dataset.symbol}`, "ok"); }
+      const sym = btn.dataset.symbol;
+      if (!confirm(`Close ${sym} at current price? (paper trade)`)) return;
+      const r = risk.closePosition(sym, (risk.getOpenPositions().find(x => x.symbol === sym) || {}).current);
+      prependLog({ ts: new Date().toISOString(), type: r.netPnl >= 0 ? "win" : "loss", msg: `CLOSED ${sym} · net ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)} · consec losses: ${r.state.consecutiveLossCount}` });
+      showToast(`${sym} closed · ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)}`, r.netPnl >= 0 ? "ok" : "warn");
     }));
   }
 
@@ -391,21 +453,25 @@
       equity: 10000,
       maxRiskPerTradePct: RULES.risk_pct,
       maxConsecutiveLosses: RULES.loss_limit,
+      maxPositions: RULES.max_positions,
     });
     // The engine drives ALL risk/kill/sizing UI via this subscription.
     risk.subscribe(renderRiskUI);
+    // …and the open-position book re-renders on any engine mutation (a TP1→BE,
+    // an add-on, or a close all flow through here — the cards are never stale).
+    risk.subscribe(renderPositionsFromEngine);
     window.risk = risk; // exposed for console inspection / manual testing
 
     // rules buttons
     $("#rules-save-btn").addEventListener("click", () => {
       RULES = collectRules(); saveRules(RULES); populateRulesForm(RULES);
-      risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit });
+      risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit, maxPositions: RULES.max_positions });
       showToast("Rules saved.", "ok");
     });
     $("#rules-reset-btn").addEventListener("click", () => {
       if (confirm("Reset all rules to defaults?")) {
         RULES = { ...DEFAULT_RULES }; saveRules(RULES); populateRulesForm(RULES);
-        risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit });
+        risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit, maxPositions: RULES.max_positions });
         showToast("Rules reset.", "ok");
       }
     });
@@ -437,11 +503,26 @@
       if (st.isPausedByLosses) prependLog({ ts: new Date().toISOString(), type: "kill", msg: `HARD STOP — ${st.consecutiveLossCount} consecutive losses. New entries blocked until manual reset.` });
       showToast(st.isPausedByLosses ? "Hard stop tripped — entries blocked." : `Loss −${money(Math.abs(pnl), 0)} — count ${st.consecutiveLossCount}.`, st.isPausedByLosses ? "err" : "warn");
     });
-    $("#attempt-entry").addEventListener("click", () => {
-      const gate = risk.canEnterNewTrade(); // logs the decision
-      if (gate.allowed) { prependLog({ ts: new Date().toISOString(), type: "enter", msg: "Entry check PASSED — bot may open a new position" }); showToast("Entry allowed ✓", "ok"); }
-      else { prependLog({ ts: new Date().toISOString(), type: "system", msg: `Entry check BLOCKED — ${gate.reason}` }); showToast(`Entry blocked: ${gate.reason}`, "err"); }
-    });
+    // Full pre-trade decision (base gate + Weekly+3D bias + portfolio risk).
+    // Dry-run only (commit:false) — exercises the same path the bot uses.
+    const sampleIntent = direction => {
+      const st = risk.getCurrentRiskState();
+      return { symbol: "/NQ", direction, riskUsd: st.maxRiskUsd };
+    };
+    const attempt = direction => {
+      const d = risk.evaluateEntry(sampleIntent(direction));
+      const tag = `/NQ ${direction.toUpperCase()}`;
+      if (d.allowed) {
+        prependLog({ ts: new Date().toISOString(), type: "enter", msg: `Entry check PASSED — ${tag} · ${d.bias ? d.bias.reason : "no bias"} · open risk would be ${money(d.projectedRiskUsd || 0, 0)}/${money(d.portfolioCapUsd || 0, 0)} cap` });
+        showToast(`${tag}: entry allowed ✓`, "ok");
+      } else {
+        prependLog({ ts: new Date().toISOString(), type: "system", msg: `Entry BLOCKED — ${tag} · ${d.reason} [${d.code}]` });
+        showToast(`${tag} blocked: ${d.reason}`, "err");
+      }
+    };
+    $("#attempt-entry").addEventListener("click", () => attempt("long"));
+    const counterBtn = $("#attempt-counter");
+    if (counterBtn) counterBtn.addEventListener("click", () => attempt("short"));
 
     // bot toggle
     $("#bot-toggle").addEventListener("click", () => {
@@ -499,26 +580,38 @@
       if (!r.ok) throw new Error("no data");
       const d = await r.json();
       window.__DATA = d; window.__JSUMMARY = d.journal_summary;
+      window.__EQUITY = d.equity || d.capital;
       JOURNAL = d.journal || []; LOG = d.log || [];
 
       // Feed live equity to the engine; seed the loss counter on first run only.
       risk.setEquity(d.equity || d.capital);
       risk.seedConsecutiveLosses((d.risk_status && d.risk_status.consecutive_losses) || 0);
 
+      // ── Seed the engine with bias + positions (only on first load) ─────────
+      // Re-seeding every 30s would clobber an in-session breakeven the user
+      // triggered, so we only seed positions once. Bias is cheap to refresh.
+      POS_META = {};
+      (d.positions || []).forEach(p => { POS_META[p.symbol] = p; });
+      // HTF bias: per-position `bias` block, plus an optional instrument map.
+      const biasMap = Object.assign({}, d.htf_bias || {});
+      (d.positions || []).forEach(p => { if (p.bias) biasMap[p.symbol] = p.bias; });
+      Object.keys(biasMap).forEach(sym => risk.setBias(sym, biasMap[sym]));
+      window.__BIAS_MAP = biasMap;
+      if (!window.__POS_SEEDED) { risk.loadPositions(d.positions || []); window.__POS_SEEDED = true; }
+
       renderConnections(d.connections);
-      renderPositions(d.positions);
       renderStats(d);
       renderLog(LOG);
-      renderSizingAggregates(d);
       renderJournalSummary(d.journal_summary);
       populateJournalFilters(JOURNAL);
       renderJournalTable();
-      // Risk/kill/sizing UI is rendered by the engine subscription; nudge it
-      // so any equity-derived readouts (max risk $) refresh after the feed.
+      // Risk/kill/sizing/portfolio UI + the position book are rendered by the
+      // engine subscriptions; nudge them so equity-derived readouts refresh.
       renderRiskUI(risk.getCurrentRiskState());
+      renderPositionsFromEngine();
     } catch (e) {
       showToast("Bot data unavailable — showing empty state.", "warn");
-      renderPositions([]); renderLog([]);
+      renderPositionsFromEngine(); renderLog([]);
     }
   }
 

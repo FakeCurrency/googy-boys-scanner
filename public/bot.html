@@ -152,6 +152,17 @@
     .engine-btn.entry { background: var(--blue); color: #fff; border-color: transparent; }
     .engine-btn.entry:hover { opacity: 0.85; }
     .engine-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .engine-demo-hint { font: 500 9.5px/1.4 var(--sans); color: var(--muted); margin-top: 7px; text-align: left; }
+
+    /* ── Position breakeven / bias / sim affordances ──────────────────── */
+    .pos-card.is-breakeven { border-color: var(--green); }
+    .pos-be-badge { font: 700 9px/1 var(--sans); padding: 4px 8px; border-radius: 6px; background: var(--green-soft); color: var(--green); letter-spacing: 0.04em; }
+    .pos-bias-chip { font: 600 9px/1 var(--bot-mono); padding: 4px 7px; border-radius: 6px; letter-spacing: 0.02em; }
+    .pos-bias-chip.bias-aligned { background: var(--green-soft); color: var(--green); }
+    .pos-bias-chip.bias-partial { background: var(--orange-soft); color: var(--orange); }
+    .pos-bias-chip.bias-counter { background: var(--red-soft); color: var(--red); }
+    .pos-sim-btn { font: 600 9.5px/1 var(--sans); padding: 6px 9px; border-radius: 8px; border: 0.5px solid var(--border); background: var(--fill); color: var(--text-2); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+    .pos-sim-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-soft); }
 
     /* ── Rules form ───────────────────────────────────────────────────── */
     .rule-section { margin-bottom: 16px; }
@@ -464,8 +475,12 @@
               <div class="engine-demo-btns">
                 <button class="engine-btn win" id="sim-win" title="Register a winning trade">Sim Win</button>
                 <button class="engine-btn loss" id="sim-loss" title="Register a losing trade">Sim Loss</button>
-                <button class="engine-btn entry" id="attempt-entry" title="Try a new entry">Attempt Entry</button>
               </div>
+              <div class="engine-demo-btns" style="margin-top:6px">
+                <button class="engine-btn entry" id="attempt-entry" title="Try a with-trend /NQ long">Try /NQ Long</button>
+                <button class="engine-btn" id="attempt-counter" title="Try a counter-trend /NQ short — blocked by Weekly+3D bias">Try /NQ Short</button>
+              </div>
+              <div class="engine-demo-hint">Short is counter to the Weekly+3D bias → the engine blocks it.</div>
             </div>
           </div>
         </div>
@@ -577,11 +592,11 @@
             <div class="sizing-readout">
               <div class="sizing-line"><span class="sizing-line-k">Account equity</span><span class="sizing-line-v num" id="sz-equity">$10,342</span></div>
               <div class="sizing-line"><span class="sizing-line-k">Max risk / trade (<span id="sz-risk-pct">0.25%</span>)</span><span class="sizing-line-v accent num" id="sz-max-risk">$25.86</span></div>
-              <div class="sizing-line"><span class="sizing-line-k">Open risk (live)</span><span class="sizing-line-v num" id="sz-open-risk">$614</span></div>
+              <div class="sizing-line"><span class="sizing-line-k">Open risk (live, all positions)</span><span class="sizing-line-v num" id="sz-open-risk">$0</span></div>
             </div>
-            <div class="sizing-line" style="margin-top:6px"><span class="sizing-line-k" style="font-size:10px">Daily risk budget</span></div>
-            <div class="sizing-bar-wrap"><div class="sizing-bar" id="sz-budget-bar" style="width:41%"></div></div>
-            <div class="sizing-line"><span class="stat-tile-sub" id="sz-budget-sub">$204 of $500 used</span></div>
+            <div class="sizing-line" style="margin-top:6px"><span class="sizing-line-k" style="font-size:10px">Portfolio risk vs cap</span></div>
+            <div class="sizing-bar-wrap"><div class="sizing-bar" id="sz-budget-bar" style="width:0%"></div></div>
+            <div class="sizing-line"><span class="stat-tile-sub" id="sz-budget-sub">aggregated from the risk engine</span></div>
 
             <div class="sizing-calc">
               <div class="sizing-calc-title">Size Calculator</div>
@@ -776,7 +791,7 @@
     <p class="credit">Vivek's Beta Scanner · AI Bot terminal · risk-first autonomous execution</p>
   </footer>
 
-  <script src="js/risk_manager.js?v=2"></script>
-  <script src="js/bot.js?v=4"></script>
+  <script src="js/risk_manager.js?v=3"></script>
+  <script src="js/bot.js?v=5"></script>
 </body>
 </html>
