@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-26T06:58:51+10:00",
-  "scanned": 1446,
+  "generated_at": "2026-06-26T07:11:38+10:00",
+  "scanned": 1516,
   "universe_size": 1987,
   "score_max": 12,
   "sma_periods": [
@@ -55,10 +55,10 @@
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4040.0,
+      "value": 4041.0,
       "decimals": 0,
-      "day_pct": 1.25,
-      "d5_pct": -7.31,
+      "day_pct": 1.28,
+      "d5_pct": -7.29,
       "spark": [
         4500.3999,
         4447.5,
@@ -81,7 +81,7 @@
         4181.8999,
         4129.8999,
         3990.3,
-        4040.3
+        4041.2
       ],
       "dir": "up"
     },
@@ -90,10 +90,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 57.87,
+      "value": 57.9,
       "decimals": 2,
-      "day_pct": -0.31,
-      "d5_pct": -18.14,
+      "day_pct": -0.27,
+      "d5_pct": -18.11,
       "spark": [
         76.305,
         74.599,
@@ -116,7 +116,7 @@
         65.527,
         62.02,
         58.052,
-        57.87
+        57.895
       ],
       "dir": "down"
     },
@@ -125,10 +125,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 75.16,
+      "value": 74.99,
       "decimals": 2,
-      "day_pct": 1.93,
-      "d5_pct": -5.52,
+      "day_pct": 1.7,
+      "d5_pct": -5.73,
       "spark": [
         99.58,
         94.29,
@@ -151,7 +151,7 @@
         77.9,
         77.08,
         73.74,
-        75.16
+        74.99
       ],
       "dir": "up"
     },
@@ -160,10 +160,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 71.57,
+      "value": 71.44,
       "decimals": 2,
-      "day_pct": 1.75,
-      "d5_pct": -6.8,
+      "day_pct": 1.56,
+      "d5_pct": -6.97,
       "spark": [
         93.89,
         88.68,
@@ -186,7 +186,7 @@
         74.82,
         73.21,
         70.34,
-        71.57
+        71.44
       ],
       "dir": "up"
     },
@@ -197,8 +197,8 @@
       "divide": 1,
       "value": 3.27,
       "decimals": 2,
-      "day_pct": 1.49,
-      "d5_pct": 3.94,
+      "day_pct": 1.61,
+      "d5_pct": 4.07,
       "spark": [
         2.894,
         3.04,
@@ -221,7 +221,7 @@
         3.253,
         3.147,
         3.221,
-        3.269
+        3.273
       ],
       "dir": "up"
     },
@@ -335,10 +335,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6912,
+      "value": 0.6915,
       "decimals": 4,
-      "day_pct": -0.05,
-      "d5_pct": -1.51,
+      "day_pct": -0.01,
+      "d5_pct": -1.48,
       "spark": [
         0.7171,
         0.7133,
@@ -361,7 +361,7 @@
         0.7003,
         0.6995,
         0.6916,
-        0.6912
+        0.6915
       ],
       "dir": "down"
     },
@@ -405,10 +405,10 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.44,
+      "value": 101.46,
       "decimals": 2,
-      "day_pct": -0.17,
-      "d5_pct": 1.35,
+      "day_pct": -0.15,
+      "d5_pct": 1.37,
       "spark": [
         99.17,
         99.21,
@@ -431,7 +431,7 @@
         101.02,
         101.41,
         101.61,
-        101.441
+        101.457
       ],
       "dir": "down"
     }
@@ -439,7 +439,8 @@
   "sector_counts": {
     "Materials": 1,
     "Consumer Services": 1,
-    "Media & Entertainment": 1
+    "Media & Entertainment": 1,
+    "Transportation": 1
   },
   "results": [
     {
@@ -654,6 +655,113 @@
         "risk_pct": 17.8
       },
       "analysis": "ALL set its 25-bar range high 0 bars ago and has just broken out above A$58.2300 by +2.0% \u2014 a fresh, not stale, breakout. Volume is at 2.4\u00d7 average \u2014 the minimum required gate is cleared. RSI is at 79 \u2014 momentum is genuinely strong, not yet overbought. ADX at 22 and rising confirms a trending market \u2014 not a false breakout from noise. The 20-SMA is above the 50-SMA \u2014 the medium-term trend structure is bullish. The 25-bar consolidation was tight (18% range) \u2014 compressed setups often release with force. Trade idea: entry A$59.3800, stop A$48.8367 (below range low), target A$68.4600 (measured move \u2014 0.86:1) \u2014 then trail with the SuperTrend.",
+      "sector_count": 1
+    },
+    {
+      "symbol": "QAN",
+      "name": "Qantas Airways Limited",
+      "sector": "Transportation",
+      "dir": "LONG",
+      "setup_type": "googy",
+      "grade": "B",
+      "score": 8,
+      "score_max": 12,
+      "chips": [
+        "RANGE BREAKOUT +3.5%",
+        "VOLUME 2.2\u00d7 AVG",
+        "TIGHT BASE (19% RANGE)",
+        "RSI 79 STRONG MOMENTUM",
+        "ABOVE SMA 50",
+        "FRESH BREAKOUT",
+        "ADX 29 RISING"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "low_liquidity": false,
+      "rr_text": "0.8:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 10.71000004,
+      "y_close": 10.28999996,
+      "open": 10.59000015,
+      "open_pct": 2.92,
+      "current_pct": 1.13,
+      "day_pct": 4.08,
+      "entry": 10.71000004,
+      "stop": 8.78129989,
+      "target": 12.27000046,
+      "rr": 0.81,
+      "trail": 9.88888429,
+      "stop_pct": 18.0,
+      "p2_pct": 14.6,
+      "target_basis": "measured",
+      "spark": [
+        8.59000015,
+        8.53999996,
+        8.43999958,
+        8.55000019,
+        8.44999981,
+        8.71000004,
+        8.68000031,
+        9.18000031,
+        9.18000031,
+        9.28999996,
+        9.14999962,
+        9.43999958,
+        9.39999962,
+        9.21000004,
+        9.15999985,
+        9.14999962,
+        9.18999958,
+        9.22000027,
+        9.31999969,
+        9.01000023,
+        9.35000038,
+        9.93999958,
+        9.96000004,
+        9.97999954,
+        9.98999977,
+        10.06000042,
+        10.09000015,
+        10.13000011,
+        10.28999996,
+        10.71000004
+      ],
+      "trend": "blue",
+      "turnover": 66124820,
+      "detail": {
+        "setup_type": "googy",
+        "sma20": 9.6374999,
+        "sma20_pct": -10.0,
+        "sma50": 9.08239994,
+        "sma50_pct": -15.2,
+        "rsi": 79.3,
+        "volume_ratio": 2.2,
+        "volume_today": 13566465,
+        "volume_avg": 6292508,
+        "volume_expanding": true,
+        "range_high": 10.35000038,
+        "range_high_pct": -3.4,
+        "range_low": 8.43000031,
+        "range_low_pct": -21.3,
+        "range_span_pct": 18.6,
+        "bo_pct": 3.48,
+        "bars_since_high": 0,
+        "consol_bars": 25,
+        "compression": false,
+        "atr_now_rel": 2.25,
+        "atr_before_rel": 2.2,
+        "adx": 28.6,
+        "adx_strong": true,
+        "adx_rising": true,
+        "swing_low": 8.86999989,
+        "swing_low_pct": -17.2,
+        "trailing_stop": 9.88888429,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -7.7,
+        "risk_pct": 18.0
+      },
+      "analysis": "QAN set its 25-bar range high 0 bars ago and has just broken out above A$10.3500 by +3.5% \u2014 a fresh, not stale, breakout. Volume is at 2.2\u00d7 average \u2014 the minimum required gate is cleared. RSI is at 79 \u2014 momentum is genuinely strong, not yet overbought. ADX at 29 and rising confirms a trending market \u2014 not a false breakout from noise. The 20-SMA is above the 50-SMA \u2014 the medium-term trend structure is bullish. The 25-bar consolidation was tight (19% range) \u2014 compressed setups often release with force. Trade idea: entry A$10.7100, stop A$8.7813 (below range low), target A$12.2700 (measured move \u2014 0.81:1) \u2014 then trail with the SuperTrend.",
       "sector_count": 1
     },
     {
