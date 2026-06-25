@@ -370,7 +370,7 @@
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
-        <div class="row-chips">${assetBadge}${seccount}${mcapBadge}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${assetBadge}${lowrr}${widestop}${t2r}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -452,6 +452,18 @@
     </div>`;
   }
 
+  // Quiet metadata row shown below the hero in the detail panel.
+  // Sector, market cap, sector-count — kept out of the row card for cleanliness.
+  function metaBar(r) {
+    const parts = [];
+    if (r.sector) parts.push(`<span class="meta-item">${esc(r.sector)}</span>`);
+    const rawMcap = mcapOf(r.symbol);
+    const mcapTxt = fmtMcap(rawMcap);
+    if (mcapTxt) parts.push(`<span class="meta-item">${mcapTxt} mkt cap</span>`);
+    if (r.sector_count > 1) parts.push(`<span class="meta-item accent-orange">${r.sector_count} setups in sector</span>`);
+    return parts.length ? `<div class="detail-meta">${parts.join("")}</div>` : "";
+  }
+
   // Render all signal chips for the detail panel — shows every chip, not just
   // the 3 shown in the row card. Returns empty string if no chips.
   function chipsBar(r) {
@@ -484,6 +496,7 @@
     return `<div class="row-detail">
       ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
       ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
@@ -571,7 +584,7 @@
     const ladder = (state.data.ema_periods || []).map((p, i, a) =>
       `<span class="el-ema" style="color:${EMA_COLOR[p]}">${p}</span>${i < a.length - 1 ? '<span class="el-gt">›</span>' : ""}`).join("");
     const fast = (d.fast_levels || []).map((f) =>
-      `<div class="fl-row"><span class="fl-label">${f.label}</span><span class="fl-ema" style="color:${EMA_COLOR[f.ema]}">EMA ${f.ema}</span>
+      `<div class="fl-row"><span class="fl-label">${f.label} <span class="fl-ema" style="color:${EMA_COLOR[f.ema]}">· EMA ${f.ema}</span></span>
         <span class="fl-val">${cur}${num(f.value)}</span><span class="fl-pct ${f.pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(f.pct)}</span></div>`).join("");
     const st = d.structure || {};
     const trend = st.trend || "";
@@ -581,6 +594,7 @@
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
       ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
@@ -635,6 +649,7 @@
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
       ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
