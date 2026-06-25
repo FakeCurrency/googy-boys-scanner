@@ -6,7 +6,7 @@
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-06-24T16:26:03-04:00",
+  "generated_at": "2026-06-24T23:00:56-04:00",
   "scanned": 98,
   "universe_size": 98,
   "score_max": 13,
@@ -25,13 +25,11 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8787.0,
+      "value": 8779.0,
       "decimals": 0,
       "day_pct": -0.33,
-      "d5_pct": -1.47,
+      "d5_pct": -1.48,
       "spark": [
-        8657.0,
-        8692.0,
         8657.7998,
         8717.7002,
         8592.9004,
@@ -51,7 +49,9 @@
         8911.0996,
         8828.7002,
         8816.0996,
-        8787.0
+        8787.0,
+        8808.4004,
+        8779.0996
       ],
       "dir": "down"
     },
@@ -60,10 +60,10 @@
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4013.0,
+      "value": 3998.0,
       "decimals": 0,
-      "day_pct": -2.84,
-      "d5_pct": -7.34,
+      "day_pct": -3.19,
+      "d5_pct": -7.69,
       "spark": [
         4521.0,
         4500.3999,
@@ -86,7 +86,7 @@
         4224.1001,
         4181.8999,
         4129.8999,
-        4012.8
+        3998.0
       ],
       "dir": "down"
     },
@@ -95,10 +95,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 57.51,
+      "value": 56.76,
       "decimals": 2,
-      "day_pct": -7.27,
-      "d5_pct": -17.72,
+      "day_pct": -8.48,
+      "d5_pct": -18.8,
       "spark": [
         75.893,
         76.305,
@@ -121,7 +121,7 @@
         66.255,
         65.527,
         62.02,
-        57.51
+        56.76
       ],
       "dir": "down"
     },
@@ -130,10 +130,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 73.1,
+      "value": 72.72,
       "decimals": 2,
-      "day_pct": -5.16,
-      "d5_pct": -7.42,
+      "day_pct": -5.66,
+      "d5_pct": -7.9,
       "spark": [
         103.54,
         99.58,
@@ -156,7 +156,7 @@
         79.85,
         77.9,
         77.08,
-        73.1
+        72.72
       ],
       "dir": "down"
     },
@@ -165,10 +165,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 69.77,
+      "value": 69.39,
       "decimals": 2,
-      "day_pct": -4.7,
-      "d5_pct": -8.26,
+      "day_pct": -5.22,
+      "d5_pct": -8.76,
       "spark": [
         96.6,
         93.89,
@@ -191,7 +191,7 @@
         76.6,
         74.82,
         73.21,
-        69.77
+        69.39
       ],
       "dir": "down"
     },
@@ -200,10 +200,10 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.26,
+      "value": 3.29,
       "decimals": 2,
-      "day_pct": 3.59,
-      "d5_pct": 0.65,
+      "day_pct": 4.51,
+      "d5_pct": 1.54,
       "spark": [
         2.907,
         2.894,
@@ -226,7 +226,7 @@
         3.233,
         3.253,
         3.147,
-        3.26
+        3.289
       ],
       "dir": "up"
     },
@@ -340,12 +340,11 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.69,
+      "value": 0.6895,
       "decimals": 4,
-      "day_pct": -1.35,
-      "d5_pct": -2.34,
+      "day_pct": -0.3,
+      "d5_pct": -1.76,
       "spark": [
-        0.717,
         0.7171,
         0.7133,
         0.7164,
@@ -366,7 +365,8 @@
         0.7013,
         0.7003,
         0.6995,
-        0.69
+        0.6916,
+        0.6895
       ],
       "dir": "down"
     },
@@ -375,10 +375,10 @@
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 18.68,
+      "value": 18.63,
       "decimals": 2,
-      "day_pct": -4.16,
-      "d5_pct": 13.83,
+      "day_pct": -4.41,
+      "d5_pct": 13.53,
       "spark": [
         16.59,
         17.01,
@@ -401,7 +401,7 @@
         16.4,
         17.28,
         19.49,
-        18.68
+        18.63
       ],
       "dir": "down"
     },
@@ -410,10 +410,10 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.62,
+      "value": 101.54,
       "decimals": 2,
-      "day_pct": 0.2,
-      "d5_pct": 2.09,
+      "day_pct": 0.13,
+      "d5_pct": 2.01,
       "spark": [
         99.32,
         99.17,
@@ -436,7 +436,7 @@
         100.85,
         101.02,
         101.41,
-        101.616
+        101.537
       ],
       "dir": "up"
     }
@@ -511,7 +511,7 @@
         87.81999969
       ],
       "trend": "green",
-      "turnover": 701141461,
+      "turnover": 701248439,
       "detail": {},
       "analysis": "ORLY is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $88.9998, stop above the swing high at $92.8089 (4.3% risk). Target $86.7700 (support), R:R 0.6:1.",
       "sector_count": 0
@@ -528,7 +528,7 @@
       "chips": [
         "EMA COMPRESSION",
         "RESISTANCE TOUCH EMA_21",
-        "STRONG RESISTANCE CONFLUENCE @ 971.90653848"
+        "STRONG RESISTANCE CONFLUENCE @ 971.90653932"
       ],
       "weekly": false,
       "low_rr": true,
@@ -537,9 +537,9 @@
       "liquidity": "LIQUID",
       "price": 961.09002686,
       "y_close": 957.67999268,
-      "open": 962.0300293,
-      "open_pct": 0.45,
-      "current_pct": -0.1,
+      "open": 963.0,
+      "open_pct": 0.56,
+      "current_pct": -0.2,
       "day_pct": 0.36,
       "entry": 976.71153239,
       "stop": 1023.64510986,
@@ -607,15 +607,15 @@
       "liquidity": "LIQUID",
       "price": 262.23498535,
       "y_close": 258.04998779,
-      "open": 258.11999512,
-      "open_pct": 0.03,
-      "current_pct": 1.59,
+      "open": 258.20999146,
+      "open_pct": 0.06,
+      "current_pct": 1.56,
       "day_pct": 1.62,
       "entry": 294.56387912,
       "stop": 366.8117926,
       "target": 150.06805216,
       "rr": 2.0,
-      "trail": 308.67152556,
+      "trail": 308.67152557,
       "stop_pct": 24.5,
       "p2_pct": 49.1,
       "target_basis": "measured",
@@ -677,9 +677,9 @@
       "liquidity": "LIQUID",
       "price": 41.43999863,
       "y_close": 40.95000076,
-      "open": 40.95999908,
-      "open_pct": 0.02,
-      "current_pct": 1.17,
+      "open": 41.0,
+      "open_pct": 0.12,
+      "current_pct": 1.07,
       "day_pct": 1.2,
       "entry": 48.88415566,
       "stop": 58.22650154,
@@ -747,9 +747,9 @@
       "liquidity": "LIQUID",
       "price": 131.41999817,
       "y_close": 131.75,
-      "open": 132.5,
-      "open_pct": 0.57,
-      "current_pct": -0.82,
+      "open": 131.7250061,
+      "open_pct": -0.02,
+      "current_pct": -0.23,
       "day_pct": -0.25,
       "entry": 138.50095378,
       "stop": 151.6817926,
