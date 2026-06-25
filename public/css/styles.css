@@ -517,23 +517,56 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 /* ========================================================== detail panel */
 .row-detail { padding: 6px 24px 36px; }
 
-/* ── hero metrics strip — Grade · Score · Entry · Stop · Target · R:R ── */
+/* ── hero trade card — full-color Grade badge + Entry · Stop · Target · R:R ── */
 .detail-hero {
   display: grid;
-  grid-template-columns: 96px repeat(5, 1fr);
-  gap: 1px;
-  background: var(--separator);
+  grid-template-columns: 100px 1fr;
   border-radius: var(--radius-md);
   overflow: hidden;
-  margin: 18px 0 24px;
+  margin: 18px 0 20px;
   box-shadow: var(--shadow);
+  border: 0.5px solid var(--separator);
 }
-.dh-cell {
-  background: var(--panel);
-  padding: 22px 24px;
+/* Left: full-color grade badge — immediately signals A+/A/B/C */
+.dh-grade-block {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 12px;
+  gap: 7px;
+  background: var(--gc, var(--grade-c));
+}
+.dh-grade-lbl {
+  font: 700 9px/1 var(--sans);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.62);
+  text-transform: uppercase;
+}
+.dh-grade-val {
+  font: 900 54px/0.9 var(--sans);
+  letter-spacing: -0.04em;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+.dh-score-val {
+  font: 700 13px/1 var(--sans);
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.76);
+}
+/* Right: 4-cell metrics grid — Entry, Stop, Target, R:R */
+.dh-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--separator);
+}
+.dh-metric {
+  background: var(--panel);
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
 }
 .dh-lbl {
@@ -543,28 +576,32 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   text-transform: uppercase;
 }
 .dh-val {
-  font: 800 24px/1 var(--sans);
-  letter-spacing: -0.035em;
+  font: 800 22px/1 var(--sans);
+  letter-spacing: -0.03em;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .dh-val.low { color: var(--red); }
-.dh-unit { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+.dh-unit { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 2px; }
 .dh-sub { font: 600 12px/1 var(--sans); }
 .dh-sub.pos { color: var(--green); }
 .dh-sub.neg { color: var(--red); }
-.dh-grade {
-  background: color-mix(in srgb, var(--gc, var(--grade-c)) 10%, var(--panel));
-}
-.dh-grade .dh-val { font-size: 46px; letter-spacing: -0.04em; }
-.dh-stop   { background: color-mix(in srgb, var(--red)   6%, var(--panel)); }
+.dh-stop   { background: color-mix(in srgb, var(--red)   7%, var(--panel)); }
 .dh-stop   .dh-val { color: var(--red); }
-.dh-target { background: color-mix(in srgb, var(--green) 6%, var(--panel)); }
+.dh-target { background: color-mix(in srgb, var(--green) 7%, var(--panel)); }
 .dh-target .dh-val { color: var(--green); }
-.dh-rr     { background: color-mix(in srgb, var(--blue)  6%, var(--panel)); }
+.dh-rr     { background: color-mix(in srgb, var(--blue)  7%, var(--panel)); }
 .dh-rr     .dh-val { color: var(--blue); }
+
+/* Signal chips inside the detail panel — calmer, quieter than in row view */
+.detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 22px;
+}
 
 /* price strip — quiet contextual market data */
 .detail-prices {
@@ -942,11 +979,13 @@ body.debug-mode .debug-panel {
   .ema-legend { gap: 10px; overflow-x: auto; scrollbar-width: none; }
   .ema-legend::-webkit-scrollbar { display: none; }
   .row-detail { padding: 4px 16px 24px; }
-  /* 3-col hero on mobile: Grade + 2 per row; grade gets full left column */
-  .detail-hero { grid-template-columns: 80px repeat(2, 1fr); }
-  .dh-cell { padding: 16px 14px; gap: 8px; }
+  /* hero: keep grade block, stack metrics 2×2 */
+  .detail-hero { grid-template-columns: 80px 1fr; }
+  .dh-grade-val { font-size: 40px; }
+  .dh-grade-block { padding: 18px 10px; }
+  .dh-metrics { grid-template-columns: repeat(2, 1fr); }
+  .dh-metric { padding: 14px 14px; gap: 8px; }
   .dh-val { font-size: 18px; }
-  .dh-grade .dh-val { font-size: 36px; }
   .detail-prices { grid-template-columns: repeat(2, 1fr); }
   .rd-group { padding: 0 14px 16px; }
   .rd-section { padding: 16px 0 11px; font-size: 11px; }
@@ -972,7 +1011,8 @@ body.debug-mode .debug-panel {
   .row-spark { display: none; }
   .row-right { gap: 5px; padding: 12px 10px 12px 4px; }
   .search-overlay { padding-top: 60px; }
-  /* 2-col hero on very small screens */
-  .detail-hero { grid-template-columns: repeat(2, 1fr); }
-  .dh-grade .dh-val { font-size: 32px; }
+  /* narrow grade block on very small screens */
+  .detail-hero { grid-template-columns: 70px 1fr; }
+  .dh-grade-val { font-size: 34px; }
+  .dh-grade-block { padding: 16px 8px; }
 }
