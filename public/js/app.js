@@ -330,9 +330,8 @@
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
     const stagger = Math.min(i || 0, 12);
-    // Cap at 5 chips in row view — the detail panel shows all of them.
-    const chips = (r.chips || []).slice(0, 5).map((c) =>
-      `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
+    // Row view shows NO regular signal chips — only critical warnings below.
+    // All chips appear in the expanded detail panel via chipsBar().
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
       ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
@@ -371,7 +370,7 @@
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
-        <div class="row-chips">${assetBadge}${sector}${seccount}${mcapBadge}${chips}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${assetBadge}${lowrr}${widestop}${t2r}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -412,27 +411,67 @@
     </div>`;
   }
 
-  // Hero metrics strip — the trade thesis at a glance:
-  // Grade · Score · Entry · Stop · Target · R:R. Shared by every setup type so
-  // the key numbers always lead the detail panel and stand out from the
-  // supporting detail below.
+  // Hero trade card — full-color grade badge (left) + 4 key metrics (right).
+  // Grade letter + score live in the badge; Entry / Stop / Target / R:R get
+  // their own metric cells with colour-coded backgrounds for instant scanning.
   function heroStrip(r, cur, entry, stop, target, stopPct, targetPct) {
-    const rrTxt   = r.rr == null ? "—" : r.rr.toFixed(1);
-    const rrCls   = r.low_rr ? "low" : "";
-    const rrUnit  = r.rr == null ? "" : `<span class="dh-unit">:1</span>`;
+    const rrTxt  = r.rr == null ? "—" : r.rr.toFixed(1);
+    const rrCls  = r.low_rr ? "low" : "";
+    const rrUnit = r.rr == null ? "" : `<span class="dh-unit">:1</span>`;
     const sp = stopPct   != null && stopPct   !== "" ? Math.abs(+stopPct).toFixed(1)   : null;
     const tp = targetPct != null && targetPct !== "" ? Math.abs(+targetPct).toFixed(1) : null;
-    const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
-    const scoreMax = r.score_max ? `<span class="dh-unit">/${r.score_max}</span>` : "";
+    const gColor    = GRADE_VAR[r.grade] || "var(--grade-c)";
+    const scoreTxt  = r.score != null ? r.score : "—";
+    const scoreMax  = r.score_max ? `/${r.score_max}` : "";
     return `<div class="detail-hero">
-      <div class="dh-cell dh-grade" style="--gc:${gColor}">
-        <span class="dh-lbl">Grade</span><span class="dh-val" style="color:${gColor}">${esc(r.grade)}</span></div>
-      <div class="dh-cell"><span class="dh-lbl">Score</span><span class="dh-val">${r.score != null ? r.score : "—"}${scoreMax}</span></div>
-      <div class="dh-cell"><span class="dh-lbl">Entry</span><span class="dh-val">${cur}${num(entry)}</span></div>
-      <div class="dh-cell dh-stop"><span class="dh-lbl">Stop</span><span class="dh-val">${cur}${num(stop)}</span>${sp ? `<span class="dh-sub neg">−${sp}%</span>` : ""}</div>
-      <div class="dh-cell dh-target"><span class="dh-lbl">Target</span><span class="dh-val">${cur}${num(target)}</span>${tp ? `<span class="dh-sub pos">+${tp}%</span>` : ""}</div>
-      <div class="dh-cell dh-rr"><span class="dh-lbl">R:R</span><span class="dh-val ${rrCls}">${rrTxt}${rrUnit}</span></div>
+      <div class="dh-grade-block" style="--gc:${gColor};background:${gColor}">
+        <span class="dh-grade-lbl">GRADE</span>
+        <span class="dh-grade-val">${esc(r.grade)}</span>
+        <span class="dh-score-val">${scoreTxt}${scoreMax}</span>
+      </div>
+      <div class="dh-metrics">
+        <div class="dh-metric">
+          <span class="dh-lbl">Entry</span>
+          <span class="dh-val">${cur}${num(entry)}</span>
+        </div>
+        <div class="dh-metric dh-stop">
+          <span class="dh-lbl">Stop</span>
+          <span class="dh-val">${cur}${num(stop)}</span>
+          ${sp ? `<span class="dh-sub neg">−${sp}%</span>` : ""}
+        </div>
+        <div class="dh-metric dh-target">
+          <span class="dh-lbl">Target</span>
+          <span class="dh-val">${cur}${num(target)}</span>
+          ${tp ? `<span class="dh-sub pos">+${tp}%</span>` : ""}
+        </div>
+        <div class="dh-metric dh-rr">
+          <span class="dh-lbl">R:R</span>
+          <span class="dh-val ${rrCls}">${rrTxt}${rrUnit}</span>
+        </div>
+      </div>
     </div>`;
+  }
+
+  // Quiet metadata row shown below the hero in the detail panel.
+  // Sector, market cap, sector-count — kept out of the row card for cleanliness.
+  function metaBar(r) {
+    const parts = [];
+    if (r.sector) parts.push(`<span class="meta-item">${esc(r.sector)}</span>`);
+    const rawMcap = mcapOf(r.symbol);
+    const mcapTxt = fmtMcap(rawMcap);
+    if (mcapTxt) parts.push(`<span class="meta-item">${mcapTxt} mkt cap</span>`);
+    if (r.sector_count > 1) parts.push(`<span class="meta-item accent-orange">${r.sector_count} setups in sector</span>`);
+    return parts.length ? `<div class="detail-meta">${parts.join("")}</div>` : "";
+  }
+
+  // Render all signal chips for the detail panel — shows every chip, not just
+  // the 3 shown in the row card. Returns empty string if no chips.
+  function chipsBar(r) {
+    const all = r.chips || [];
+    if (!all.length) return "";
+    return `<div class="detail-chips">${all.map((c) =>
+      `<span class="chip${c.startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`
+    ).join("")}</div>`;
   }
 
   function detailHtmlScalp(r) {
@@ -456,6 +495,8 @@
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
       ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
+      ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
@@ -543,7 +584,7 @@
     const ladder = (state.data.ema_periods || []).map((p, i, a) =>
       `<span class="el-ema" style="color:${EMA_COLOR[p]}">${p}</span>${i < a.length - 1 ? '<span class="el-gt">›</span>' : ""}`).join("");
     const fast = (d.fast_levels || []).map((f) =>
-      `<div class="fl-row"><span class="fl-label">${f.label}</span><span class="fl-ema" style="color:${EMA_COLOR[f.ema]}">EMA ${f.ema}</span>
+      `<div class="fl-row"><span class="fl-label">${f.label} <span class="fl-ema" style="color:${EMA_COLOR[f.ema]}">· EMA ${f.ema}</span></span>
         <span class="fl-val">${cur}${num(f.value)}</span><span class="fl-pct ${f.pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(f.pct)}</span></div>`).join("");
     const st = d.structure || {};
     const trend = st.trend || "";
@@ -552,6 +593,8 @@
 
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
+      ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
@@ -605,6 +648,8 @@
 
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
+      ${chipsBar(r)}
+      ${metaBar(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
       ${priceStrip(r)}
 
