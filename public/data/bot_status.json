@@ -1,0 +1,68 @@
+{
+  "status": "paper",
+  "broker": "Bybit Testnet",
+  "capital": 10000,
+  "generated_at": "2026-06-25T14:32:00+10:00",
+  "positions": [
+    {
+      "symbol": "BTC/USDT",
+      "direction": "long",
+      "entry": 95420,
+      "current": 97240,
+      "stop": 92800,
+      "target": 101500,
+      "size_usd": 1000,
+      "leverage": 5,
+      "unrealized_pnl": 190.20,
+      "unrealized_pct": 1.91,
+      "opened_at": "2026-06-25T14:32:00+10:00",
+      "scan": "googy",
+      "grade": "A+",
+      "score": "10/12",
+      "rr": 2.4
+    },
+    {
+      "symbol": "ETH/USDT",
+      "direction": "long",
+      "entry": 3840,
+      "current": 3792,
+      "stop": 3660,
+      "target": 4200,
+      "size_usd": 1000,
+      "leverage": 5,
+      "unrealized_pnl": -48.00,
+      "unrealized_pct": -1.25,
+      "opened_at": "2026-06-25T13:15:00+10:00",
+      "scan": "googy",
+      "grade": "A+",
+      "score": "9/12",
+      "rr": 2.1
+    }
+  ],
+  "today": {
+    "realized_pnl": 200.00,
+    "unrealized_pnl": 142.20,
+    "trades_closed": 2,
+    "wins": 1,
+    "losses": 1,
+    "best_trade": 280.00,
+    "best_symbol": "SOL/USDT",
+    "worst_trade": -80.00,
+    "worst_symbol": "AVAX/USDT",
+    "daily_loss_limit": 500,
+    "daily_loss_used": 80
+  },
+  "log": [
+    { "ts": "2026-06-25T14:32:00+10:00", "type": "enter", "msg": "ENTERED BTC/USDT LONG · $95,420 · A+ Googy 10/12 · 5× lev · risk $260" },
+    { "ts": "2026-06-25T14:31:00+10:00", "type": "signal", "msg": "SIGNAL: BTC/USDT A+ Googy — fresh breakout 1 bar ago · volume surge 3.2×" },
+    { "ts": "2026-06-25T13:15:00+10:00", "type": "enter", "msg": "ENTERED ETH/USDT LONG · $3,840 · A+ Googy 9/12 · 5× lev · risk $180" },
+    { "ts": "2026-06-25T13:14:00+10:00", "type": "signal", "msg": "SIGNAL: ETH/USDT A+ Googy — ATR compression confirmed · RSI 58" },
+    { "ts": "2026-06-25T12:48:00+10:00", "type": "win", "msg": "CLOSED SOL/USDT LONG · exit $190.40 (target hit) · +$280 · hold 2h 18m" },
+    { "ts": "2026-06-25T11:30:00+10:00", "type": "loss", "msg": "CLOSED AVAX/USDT LONG · exit $38.20 (stop hit) · −$80 · hold 47m" },
+    { "ts": "2026-06-25T11:28:00+10:00", "type": "signal", "msg": "SIGNAL: AVAX/USDT A Scalp 7/8 — TTM squeeze fired long" },
+    { "ts": "2026-06-25T10:30:00+10:00", "type": "enter", "msg": "ENTERED SOL/USDT LONG · $183.20 · A+ Googy 11/12 · 5× lev · risk $340" },
+    { "ts": "2026-06-25T10:28:00+10:00", "type": "signal", "msg": "SIGNAL: SOL/USDT A+ Googy — volume surge 4.1× · ADX 22 rising · fresh 1 bar" },
+    { "ts": "2026-06-25T10:01:00+10:00", "type": "enter", "msg": "ENTERED AVAX/USDT LONG · $39.00 · A Scalp 7/8 · 5× lev · risk $80" },
+    { "ts": "2026-06-25T10:00:00+10:00", "type": "system", "msg": "BOT STARTED · Paper mode · Bybit Testnet · Capital: $10,000 · Max 3 positions" }
+  ]
+}

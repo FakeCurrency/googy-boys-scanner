@@ -214,6 +214,17 @@ body {
   transition: color .15s;
 }
 .howto-link:hover { color: var(--text); }
+.howto-link.bot-nav-link { color: var(--blue); font-weight: 600; }
+.howto-link.bot-nav-link:hover { color: var(--blue); opacity: 0.8; }
+.bot-nav-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--blue); vertical-align: middle; margin-right: 4px; flex-shrink: 0;
+  animation: pulse-bot-dot 2.4s infinite;
+}
+@keyframes pulse-bot-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 
 .reload-btn {
   appearance: none; cursor: pointer;
