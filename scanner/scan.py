@@ -10,7 +10,7 @@ import uuid as _uuid
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import analysis, charts, config, levels, pulse, reversal, scalp, short, signals, spec
+from . import analysis, charts, config, googy, levels, pulse, reversal, scalp, short, signals, spec
 from .data import download, validate_bars, DataQualityError
 from .universe import load_scalp_universe, load_universe
 
@@ -598,6 +598,139 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
         "universe_size": len(universe),
         "score_max": short.SHORT_SCORE_MAX,
         "ema_periods": config.EMA_PERIODS,
+        "pulse": pulse_data,
+        "sector_counts": dict(sector_counts.most_common()),
+        "results": results,
+    }
+
+
+def scan_googy_market(market_key: str, limit: int | None = None, full: bool = True,
+                      write_charts: bool = True, out_root: str | None = None,
+                      progress: bool = True, frames: dict | None = None,
+                      pulse_data: list | None = None, universe: list | None = None) -> dict:
+    """Scan a market for consolidation breakout setups (the 'Googy Scan' tab).
+
+    More tolerant of low-liquidity names than other daily scanners.  Low-turnover
+    results appear with a LOW LIQUIDITY chip rather than being filtered out.
+    """
+    market = config.MARKETS[market_key]
+    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
+    low_liq_threshold = config.GOOGY_LOW_LIQ_TURNOVER.get(market_key, 200_000)
+    hard_min = config.GOOGY_MIN_TURNOVER.get(market_key, 5_000)
+    if universe is None:
+        universe = load_universe(market_key, full=full)
+        if limit:
+            universe = universe[:limit]
+
+    meta = {u["yf"]: u for u in universe}
+    if frames is None:
+        frames = download([u["yf"] for u in universe])
+
+    chart_key = f"{market_key}_googy"
+    if write_charts and out_root:
+        charts.reset_dir(out_root, chart_key)
+
+    results: list[dict] = []
+    pending_charts: list[tuple] = []
+    scanned = 0
+    for yf_ticker, df in frames.items():
+        scanned += 1
+        sig = googy.evaluate(df)
+        if sig is None or not sig.get("ok"):
+            continue
+
+        turnover = _liquidity(df, market)
+        if turnover < hard_min:
+            continue
+
+        points, grade, fired = googy.score_and_grade(sig)
+        if grade is None:
+            continue
+
+        lv = googy.compute_levels(df, sig)
+        if lv["rr"] <= 0:
+            continue
+
+        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
+                and lv["rr"] < config.MIN_TRADEABLE_RR:
+            grade = "B"
+
+        info = meta.get(yf_ticker, {})
+        close = sig["close"]
+        open_ = float(df["Open"].iloc[-1])
+        y_close = float(df["Close"].iloc[-2])
+        entry = lv["entry"]
+        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
+
+        chips = googy.build_chips(fired, sig)
+        if turnover < low_liq_threshold:
+            chips.insert(0, "LOW LIQUIDITY")
+
+        detail = googy.build_detail(df, sig, lv)
+        row = {
+            "symbol": info.get("symbol", yf_ticker),
+            "name": info.get("name", yf_ticker),
+            "sector": info.get("sector", ""),
+            "dir": "LONG",
+            "setup_type": "googy",
+            "grade": grade,
+            "score": points,
+            "score_max": config.GOOGY_SCORE_MAX,
+            "chips": chips,
+            "weekly": False,
+            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
+            "low_liquidity": turnover < low_liq_threshold,
+            "rr_text": f"{lv['rr']:.1f}:1",
+            "target_2r": lv["target_basis"] == "measured",
+            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
+            "price": round(close, 8),
+            "y_close": round(y_close, 8),
+            "open": round(open_, 8),
+            "open_pct": _pct(open_, y_close),
+            "current_pct": _pct(close, open_),
+            "day_pct": _pct(close, y_close),
+            "entry": entry,
+            "stop": lv["stop"],
+            "target": lv["target"],
+            "rr": lv["rr"],
+            "trail": lv["trail"],
+            "stop_pct": stop_pct,
+            "p2_pct": p2_pct,
+            "target_basis": lv["target_basis"],
+            "spark": _spark(df),
+            "trend": "green" if points >= config.TREND_THRESHOLDS["googy"] else "blue",
+            "turnover": round(turnover),
+            "detail": detail,
+            "analysis": googy.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
+                                        market.currency_symbol),
+        }
+        results.append(row)
+        if write_charts and out_root:
+            pending_charts.append((yf_ticker, sig, lv, row))
+
+    if write_charts and out_root:
+        _write_extended_charts(pending_charts, frames, chart_key, out_root,
+                               charts.build_chart_reversal, market)
+
+    sector_counts = _finalize(results)
+
+    if pulse_data is None:
+        pulse_data = pulse.fetch()
+
+    now = dt.datetime.now(ZoneInfo(market.timezone))
+    return {
+        "market": market.key,
+        "label": market.label,
+        "setup_type": "googy",
+        "currency": market.currency,
+        "currency_symbol": market.currency_symbol,
+        "timezone": market.timezone,
+        "tz_label": market.tz_label,
+        "generated_at": now.isoformat(timespec="seconds"),
+        "scanned": scanned,
+        "universe_size": len(universe),
+        "score_max": config.GOOGY_SCORE_MAX,
+        "sma_periods": [config.GOOGY_SMA_FAST, config.GOOGY_SMA_SLOW],
         "pulse": pulse_data,
         "sector_counts": dict(sector_counts.most_common()),
         "results": results,
