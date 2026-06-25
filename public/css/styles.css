@@ -1,5 +1,5 @@
 /* ===========================================================================
-   Vivek's Beta Scanner — premium redesign v16
+   Vivek's Beta Scanner — premium redesign v21
    iOS-inspired: calm, spacious, smooth. Card-first layout.
    =========================================================================== */
 :root {
@@ -115,9 +115,10 @@ body {
 }
 .clock-time { font: 600 17px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
 .clock-date { font: 500 12px/1 var(--sans); color: var(--muted); }
-/* centred brand — absolute within row 1 */
+/* centred brand — absolute within row 1, nudged left so the wordmark clears
+   the market switch (ASX / NASDAQ / CRYPTO) on the right. */
 .topbar-brand {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: 50%; transform: translate(calc(-50% - 150px), -50%);
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   text-align: center; pointer-events: none; z-index: 2;
 }
@@ -153,7 +154,8 @@ body {
 .scan-switch { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill); border-radius: 9px; }
 .scan-btn {
   appearance: none; border: 0; cursor: pointer; background: transparent;
-  color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: -0.01em;
+  color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: 0.04em;
+  text-transform: uppercase;
   padding: 6px 13px; border-radius: 7px; transition: all .18s;
 }
 .scan-btn.is-active { background: var(--orange); color: #fff; box-shadow: var(--shadow-pill); }
@@ -391,7 +393,8 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 .tkr {
   font: 800 16px/1 var(--sans);
@@ -412,8 +415,8 @@ body {
 .badge.mcap       { color: var(--text-2); background: var(--fill); font-weight: 700; }
 .badge.mcap-small { color: var(--orange); background: var(--orange-soft); font-weight: 700; }
 .badge.mcap-hot   { color: var(--red);    background: var(--red-soft);    font-weight: 700; }
-.cname { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-.rprice { font: 700 16px/1 var(--sans); color: var(--text); }
+.cname { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.rprice { font: 700 16px/1 var(--sans); color: var(--text); flex-shrink: 0; }
 
 .row-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
@@ -512,7 +515,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .row-wrap.open .detail-inner > .debug-panel { opacity: 1; transform: none; }
 
 /* ========================================================== detail panel */
-.row-detail { padding: 4px 20px 20px; }
+.row-detail { padding: 4px 22px 28px; }
 
 /* ── hero metrics strip — Grade · Entry · Stop · Target · R:R ── */
 .detail-hero {
@@ -527,10 +530,10 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 }
 .dh-cell {
   background: var(--panel);
-  padding: 14px 16px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
   min-width: 0;
 }
 .dh-lbl {
@@ -540,7 +543,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   text-transform: uppercase;
 }
 .dh-val {
-  font: 800 19px/1.05 var(--sans);
+  font: 800 20px/1.05 var(--sans);
   letter-spacing: -0.03em;
   color: var(--text);
   white-space: nowrap;
@@ -553,7 +556,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .dh-sub.pos { color: var(--green); }
 .dh-sub.neg { color: var(--red); }
 .dh-grade { box-shadow: inset 3px 0 0 var(--gc, var(--grade-c)); }
-.dh-grade .dh-val { font-size: 21px; }
+.dh-grade .dh-val { font-size: 27px; }
 .dh-stop   .dh-val { color: var(--red); }
 .dh-target .dh-val { color: var(--green); }
 .dh-rr     .dh-val { color: var(--blue); }
@@ -590,17 +593,18 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .dp-val.pct-down { color: var(--red); }
 
 /* analysis section */
-.rd-analysis { margin: 0 2px 20px; }
+.rd-analysis { margin: 0 0 22px; }
 .rd-tag { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
-.rd-analysis p { margin: 0; font-size: 14px; line-height: 1.68; color: var(--text-2); }
+.rd-analysis p { margin: 0; font-size: 15px; line-height: 1.78; color: var(--text); }
 .rd-k { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); }
 
 /* ── logical grouping: each related cluster sits in its own calm card ── */
 .rd-group {
   background: var(--fill-2);
-  border-radius: var(--radius);
-  padding: 4px 16px 14px;
-  margin-bottom: 14px;
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-md);
+  padding: 0 18px 18px;
+  margin-bottom: 12px;
 }
 .rd-group:last-child { margin-bottom: 0; }
 .rd-group > .rd-volume-bare:last-child,
@@ -614,7 +618,9 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 14px 0 4px;
+  padding: 18px 0 12px;
+  border-bottom: 0.5px solid var(--separator);
+  margin-bottom: 4px;
 }
 .rd-section-note {
   font: 600 11px/1 var(--sans);
@@ -635,7 +641,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   grid-template-columns: 140px 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
+  padding: 13px 0;
   border-bottom: 0.5px solid var(--separator);
 }
 .rd-levels .dl-row:last-child { border-bottom: 0; }
@@ -892,7 +898,7 @@ body.debug-mode .debug-panel {
   .topbar-nav {
     overflow-x: auto; -webkit-overflow-scrolling: touch;
     scrollbar-width: none; -ms-overflow-style: none;
-    margin-left: 0; flex: 1; justify-content: flex-end;
+    margin-left: 0; flex: 1; justify-content: flex-start;
   }
   .topbar-nav::-webkit-scrollbar { display: none; }
   .howto-link { padding: 8px 6px; }            /* taller tap target */
@@ -930,10 +936,13 @@ body.debug-mode .debug-panel {
   .control-group { flex: 0 0 auto; }
   .ema-legend { gap: 10px; overflow-x: auto; scrollbar-width: none; }
   .ema-legend::-webkit-scrollbar { display: none; }
-  .row-detail { padding: 4px 14px 16px; }
+  .row-detail { padding: 4px 14px 20px; }
   .detail-hero { grid-template-columns: repeat(3, 1fr); }
+  .dh-cell { padding: 14px 14px; gap: 7px; }
   .detail-prices { grid-template-columns: repeat(2, 1fr); }
-  .rd-group { padding: 4px 13px 13px; }
+  .rd-group { padding: 0 14px 16px; }
+  .rd-section { padding: 14px 0 10px; }
+  .dl-row { padding: 11px 0; }
   .rd-levels .dl-row { grid-template-columns: 110px 1fr auto; }
   .fl-row { grid-template-columns: 80px 60px 100px 1fr; }
 }

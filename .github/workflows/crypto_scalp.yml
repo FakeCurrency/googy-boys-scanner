@@ -33,6 +33,7 @@ jobs:
 
       - name: Bybit execution (testnet by default — set BYBIT_TESTNET=false for live)
         if: ${{ env.BYBIT_API_KEY != '' }}
+        continue-on-error: true   # broker errors must never block data publishing
         env:
           BYBIT_API_KEY:    ${{ secrets.BYBIT_API_KEY }}
           BYBIT_API_SECRET: ${{ secrets.BYBIT_API_SECRET }}

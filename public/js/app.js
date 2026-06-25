@@ -330,7 +330,8 @@
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
     const stagger = Math.min(i || 0, 12);
-    const chips = (r.chips || []).map((c) =>
+    // Cap at 5 chips in row view — the detail panel shows all of them.
+    const chips = (r.chips || []).slice(0, 5).map((c) =>
       `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
@@ -342,9 +343,10 @@
     const sector = (r.sector && !hasSectorCount) ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
     const seccount = hasSectorCount
       ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
-    const assetBadge = r.asset_type
+    // Asset badge is meaningful for scalp (crypto vs index vs commodity); suppress
+    // for daily scanners where the market tab already conveys this.
+    const assetBadge = (r.asset_type && state.mode === "scalp")
       ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
-    const liqBadge = r.liquidity === "LIQUID" ? `<span class="badge liq-liquid">Liquid</span>` : "";
     const rawMcap = mcapOf(r.symbol);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
@@ -366,15 +368,10 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="badge dir">${esc(r.dir)}</span>
-          ${assetBadge}
           <span class="cname">${esc(r.name || "")}</span>
-          ${sector}
           <span class="rprice">${fmtPrice(r.price)}</span>
-          ${mcapBadge}
-          ${liqBadge}
-          ${seccount}
         </div>
-        <div class="row-chips">${chips}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${assetBadge}${sector}${seccount}${mcapBadge}${chips}${lowrr}${widestop}${t2r}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -459,8 +456,8 @@
     const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
     return `<div class="row-detail">
       ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
-      ${priceStrip(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+      ${priceStrip(r)}
 
       <div class="rd-group">
         <div class="rd-section">Key levels</div>
@@ -555,8 +552,8 @@
 
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
-      ${priceStrip(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+      ${priceStrip(r)}
 
       <div class="rd-group">
         <div class="rd-section">Key levels</div>
@@ -608,8 +605,8 @@
 
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
-      ${priceStrip(r)}
       <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
+      ${priceStrip(r)}
 
       <div class="rd-group">
         <div class="rd-section">Moving averages</div>

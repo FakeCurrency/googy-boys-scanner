@@ -111,17 +111,32 @@
   }
 
   // ---- winners / losers ---------------------------------------------------
+  // Each side is split into MEGA companies (big-money rotation) and SMALL caps
+  // (discovery), grouped under their own sub-header.
   function moversHTML(tm) {
     if (!tm) return "";
-    const list = (arr) => (arr || []).map((m) => `
+    const item = (m) => `
       <li class="mv-item">
         <span class="mv-sym">${esc(m.symbol)}</span>
         <span class="mv-name">${esc(m.name)}${m.sector ? ` · ${esc(m.sector)}` : ""}</span>
+        <span class="mv-cap">${m.mcap ? fmtMoney(m.mcap) : ""}</span>
         <span class="mv-pct ${cls(m.pct)}">${fmtPct(m.pct)}</span>
-      </li>`).join("");
+      </li>`;
+    const tierBlock = (arr, tier, label) => {
+      const picks = (arr || []).filter((m) => (m.tier || "small") === tier);
+      if (!picks.length) return "";
+      return `<div class="mv-tier-label">${label}</div>
+        <ul class="mv-list">${picks.map(item).join("")}</ul>`;
+    };
+    const col = (arr, dir, head) => {
+      const mega  = tierBlock(arr, "mega",  "Mega caps");
+      const small = tierBlock(arr, "small", "Small caps");
+      const body = (mega + small) || '<ul class="mv-list"><li class="mv-empty">—</li></ul>';
+      return `<div class="mv-col"><div class="mv-head ${dir}">${head}</div>${body}</div>`;
+    };
     return `<div class="mv-wrap">
-      <div class="mv-col"><div class="mv-head up">▲ Biggest winners</div><ul class="mv-list">${list(tm.winners) || '<li class="mv-empty">—</li>'}</ul></div>
-      <div class="mv-col"><div class="mv-head down">▼ Biggest losers</div><ul class="mv-list">${list(tm.losers) || '<li class="mv-empty">—</li>'}</ul></div>
+      ${col(tm.winners, "up", "▲ Biggest winners")}
+      ${col(tm.losers, "down", "▼ Biggest losers")}
     </div>`;
   }
 

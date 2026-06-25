@@ -199,6 +199,17 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# MOVERS — biggest winners/losers on the NEWS page, split by company size so
+# you can read big-money rotation (mega) AND discovery (small caps) separately.
+# ---------------------------------------------------------------------------
+MOVER_PER_TIER = 5            # up to this many MEGA + this many SMALL per side
+MOVER_TARGET_PER_SIDE = 10    # aim for ~this many names per side (mega+small)
+MOVER_MEGA_CAP_USD = 10e9     # market cap >= $10B counts as a "mega" company
+# Fallback when a name's market cap isn't cached: tier by 20-day average dollar
+# volume (mega names trade vastly more $ than small caps). Per-market floors.
+MOVER_MEGA_DVOL = {"asx": 30_000_000, "us": 300_000_000}
+
+# ---------------------------------------------------------------------------
 # SCALP — intraday scanner (1h bars, cross-asset)
 # ---------------------------------------------------------------------------
 SCALP_BROKERAGE_EACH_WAY = 20   # per-leg brokerage (CFD style)
