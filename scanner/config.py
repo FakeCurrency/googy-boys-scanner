@@ -314,8 +314,11 @@ SECTOR_EXPOSURE_CAP       = 0.40    # max 40% of account in any single sector/th
 MAX_OPEN_POSITIONS        = 10      # hard cap on total concurrent open positions
 
 # Phase 5: Circuit Breakers
-CONSEC_LOSS_PAUSE         = 4       # pause after N consecutive losing trades
+CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (matches JS engine)
 ANOMALY_PAUSE_ON_TRIGGER  = True    # block new orders when anomaly detector fires
+
+# HTF bias filter — Weekly + 3D must not oppose trade direction
+HTF_BIAS_REQUIRED         = True    # enforce bias alignment before placing any order
 
 # Phase 5: Live Execution Safeguards
 SLIPPAGE_WARN_PCT         = 0.003   # warn (but allow) when expected slippage > 0.3%

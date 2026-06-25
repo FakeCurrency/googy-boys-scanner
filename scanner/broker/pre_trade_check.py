@@ -30,6 +30,7 @@ from scanner.broker.risk_manager import (
     check_max_positions,
     check_order_size,
     check_max_capital,
+    check_htf_bias,
 )
 from scanner.broker.circuit_breaker import check_consecutive_losses
 
@@ -41,6 +42,7 @@ def pre_trade_check(
     journal: dict,
     sess_day: str = "",
     submitted_this_run: int = 0,
+    bias_map: dict | None = None,
 ) -> dict:
     """Return {ok, reason, checks, failed} for a candidate position.
 
@@ -50,6 +52,8 @@ def pre_trade_check(
     journal — live scalp journal dict (open + closed lists)
     sess_day — optional session-day override (YYYY-MM-DD); defaults to today
     submitted_this_run — orders already submitted in the current bybit_run loop
+    bias_map — optional {symbol: {weekly, threeDay}} HTF bias map; pass None to
+               skip the bias check (treated as "no data — allowed")
     """
     if not sess_day:
         sess_day = _session_day()
@@ -145,6 +149,9 @@ def pre_trade_check(
         checks["slippage"] = {"ok": True}
     else:
         checks["slippage"] = {"ok": True}
+
+    # 12. HTF bias alignment (Weekly + 3D must not oppose direction)
+    checks["htf_bias"] = check_htf_bias(symbol, direction, bias_map or {})
 
     # Aggregate
     failed = {k: v for k, v in checks.items() if not v.get("ok")}

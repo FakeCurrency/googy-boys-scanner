@@ -62,6 +62,7 @@ from scanner.broker.risk_manager import dynamic_size_multiplier
 
 
 PUBLIC_SCALP_JOURNAL = ROOT / "public" / "data" / "scalp_journal.json"
+_BOT_STATUS_FILE     = ROOT / "public" / "data" / "bot_status.json"
 
 
 def _load_journal() -> dict:
@@ -71,6 +72,25 @@ def _load_journal() -> dict:
         except Exception:
             pass
     return {"open": [], "closed": []}
+
+
+def _load_htf_bias() -> dict:
+    """Load the Weekly+3D bias map from bot_status.json.
+
+    Returns {symbol: {weekly, threeDay}} or {} if the file is unavailable.
+    This map is built by the scanner and published alongside the frontend data.
+    """
+    if _BOT_STATUS_FILE.exists():
+        try:
+            data = json.loads(_BOT_STATUS_FILE.read_text(encoding="utf-8"))
+            bias = data.get("htf_bias", {})
+            if bias:
+                log.info("htf_bias loaded for %d symbol(s): %s",
+                         len(bias), ", ".join(bias.keys()))
+            return bias
+        except Exception as e:
+            log.warning("could not load htf_bias from bot_status.json: %s", e)
+    return {}
 
 
 def _load_scan() -> dict | None:
@@ -172,7 +192,8 @@ def run(dry_run: bool = False) -> None:
     except Exception as e:
         log.warning("event calendar check failed: %s — continuing", e)
 
-    # ── 4. Load latest scan ───────────────────────────────────────────────────
+    # ── 4. Load latest scan + HTF bias map ───────────────────────────────────
+    htf_bias = _load_htf_bias()
     scan = _load_scan()
     if not scan:
         _save(j)
@@ -330,7 +351,8 @@ def run(dry_run: bool = False) -> None:
         }
 
         # ── Pre-trade risk gate ───────────────────────────────────────────────
-        ptc = pre_trade_check(pos, j, sess_day=sess_day, submitted_this_run=submitted)
+        ptc = pre_trade_check(pos, j, sess_day=sess_day,
+                              submitted_this_run=submitted, bias_map=htf_bias)
         if not ptc["ok"]:
             _log_skip(symbol, direction, "pre_trade_check",
                       failed=",".join(ptc["failed"]), detail=ptc["reason"][:120])

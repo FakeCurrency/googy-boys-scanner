@@ -66,8 +66,22 @@ def current_drawdown(journal: dict) -> float:
 # ── portfolio heat ────────────────────────────────────────────────────────────
 
 def portfolio_heat(open_positions: list[dict]) -> float:
-    """Total open risk (sum of risk_per_trade) as a fraction of account size."""
-    total_risk = sum(p.get("risk_per_trade", 0) for p in open_positions)
+    """Total open risk as a fraction of account size.
+
+    Positions that have moved to break-even (stop_at_breakeven=True, or whose
+    recorded stop equals their entry) contribute zero — their runner is risk-free
+    and the freed budget is available for new entries.  This mirrors the JS
+    engine's getPositionOpenRisk() which returns 0 when stop == entry.
+    """
+    total_risk = 0.0
+    for p in open_positions:
+        at_be = p.get("stop_at_breakeven") or (
+            p.get("stop") is not None
+            and p.get("entry") is not None
+            and float(p.get("stop", 0)) == float(p.get("entry", 0))
+        )
+        if not at_be:
+            total_risk += p.get("risk_per_trade", 0)
     return total_risk / max(account_size(), 1)
 
 
@@ -219,6 +233,53 @@ def check_max_capital(journal: dict) -> dict:
         "cap":      cap,
         "reason":   f"open notional ${deployed:.0f} ≥ max capital cap ${cap:.0f}" if not ok else "",
     }
+
+
+def check_htf_bias(symbol: str, direction: str, bias_map: dict) -> dict:
+    """Verify Weekly + 3D bias aligns with the intended trade direction.
+
+    bias_map format:  { "BTCUSDT": {"weekly": "bull", "threeDay": "bear"}, ... }
+
+    Returns {ok, aligned, strength, reason}.  Blocks ("ok": False) when either
+    HTF timeframe explicitly opposes the direction — mirrors JS checkBiasAlignment().
+    If no bias data exists for the symbol, the check passes (unknown = no block).
+
+    Controlled by config.HTF_BIAS_REQUIRED.
+    """
+    if not getattr(_cfg, "HTF_BIAS_REQUIRED", True):
+        return {"ok": True, "aligned": True, "strength": "disabled", "reason": ""}
+
+    bias = bias_map.get(symbol)
+    if not bias:
+        return {"ok": True, "aligned": True, "strength": "unknown",
+                "reason": "no bias data — assuming aligned"}
+
+    d         = direction.lower()
+    weekly    = (bias.get("weekly") or "").lower()
+    three_day = (bias.get("threeDay") or bias.get("three_day") or "").lower()
+
+    w_opposes  = (d == "long" and weekly == "bear") or (d == "short" and weekly == "bull")
+    td_opposes = (d == "long" and three_day == "bear") or (d == "short" and three_day == "bull")
+
+    if w_opposes or td_opposes:
+        log.warning(
+            "HTF bias BLOCKED  %s %s  weekly=%s  3d=%s",
+            symbol, direction, weekly, three_day,
+        )
+        return {
+            "ok":      False,
+            "aligned": False,
+            "strength": "counter",
+            "reason":  (
+                f"HTF bias conflict — Weekly={bias.get('weekly')} "
+                f"3D={bias.get('threeDay')} vs {direction}"
+            ),
+        }
+
+    w_aligned  = (d == "long" and weekly == "bull") or (d == "short" and weekly == "bear")
+    td_aligned = (d == "long" and three_day == "bull") or (d == "short" and three_day == "bear")
+    strength   = "aligned" if (w_aligned and td_aligned) else "partial"
+    return {"ok": True, "aligned": True, "strength": strength, "reason": ""}
 
 
 def check_order_size(units: float, entry: float) -> dict:
