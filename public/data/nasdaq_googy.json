@@ -6,7 +6,7 @@
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-06-25T08:37:05-04:00",
+  "generated_at": "2026-06-25T12:09:04-04:00",
   "scanned": 98,
   "universe_size": 98,
   "score_max": 12,
@@ -20,11 +20,12 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8749.0,
+      "value": 8808.0,
       "decimals": 0,
-      "day_pct": -0.68,
-      "d5_pct": -1.82,
+      "day_pct": 0.24,
+      "d5_pct": -1.76,
       "spark": [
+        8692.0,
         8657.7998,
         8717.7002,
         8592.9004,
@@ -45,20 +46,19 @@
         8828.7002,
         8816.0996,
         8787.0,
-        8808.4004,
-        8748.7002
+        8808.4004
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 3995.0,
+      "value": 4056.0,
       "decimals": 0,
-      "day_pct": 0.12,
-      "d5_pct": -8.35,
+      "day_pct": 1.66,
+      "d5_pct": -6.94,
       "spark": [
         4500.3999,
         4447.5,
@@ -81,7 +81,7 @@
         4181.8999,
         4129.8999,
         3990.3,
-        3995.1001
+        4056.5
       ],
       "dir": "up"
     },
@@ -90,10 +90,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 57.08,
+      "value": 58.78,
       "decimals": 2,
-      "day_pct": -1.67,
-      "d5_pct": -19.25,
+      "day_pct": 1.25,
+      "d5_pct": -16.86,
       "spark": [
         76.305,
         74.599,
@@ -116,19 +116,19 @@
         65.527,
         62.02,
         58.052,
-        57.085
+        58.775
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "BRENT",
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 73.45,
+      "value": 74.92,
       "decimals": 2,
-      "day_pct": -0.39,
-      "d5_pct": -7.67,
+      "day_pct": 1.6,
+      "d5_pct": -5.82,
       "spark": [
         99.58,
         94.29,
@@ -151,19 +151,19 @@
         77.9,
         77.08,
         73.74,
-        73.45
+        74.92
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "WTI",
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 69.83,
+      "value": 71.42,
       "decimals": 2,
-      "day_pct": -0.73,
-      "d5_pct": -9.06,
+      "day_pct": 1.54,
+      "d5_pct": -6.99,
       "spark": [
         93.89,
         88.68,
@@ -186,19 +186,19 @@
         74.82,
         73.21,
         70.34,
-        69.83
+        71.42
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "NATGAS",
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.32,
+      "value": 3.29,
       "decimals": 2,
-      "day_pct": 3.14,
-      "d5_pct": 5.63,
+      "day_pct": 2.27,
+      "d5_pct": 4.74,
       "spark": [
         2.894,
         3.04,
@@ -221,7 +221,7 @@
         3.253,
         3.147,
         3.221,
-        3.322
+        3.294
       ],
       "dir": "up"
     },
@@ -230,12 +230,11 @@
       "label": "Tech",
       "ticker": "^IXIC",
       "divide": 1,
-      "value": 25476.64,
+      "value": 25396.1,
       "decimals": 2,
-      "day_pct": -0.43,
-      "d5_pct": -3.41,
+      "day_pct": -0.32,
+      "d5_pct": -2.4,
       "spark": [
-        26343.9707,
         26656.1797,
         26674.7305,
         26917.4707,
@@ -256,7 +255,8 @@
         26517.9297,
         26166.5996,
         25587.0391,
-        25476.6406
+        25476.6406,
+        25396.1035
       ],
       "dir": "down"
     },
@@ -265,12 +265,11 @@
       "label": "Biotech",
       "ticker": "XBI",
       "divide": 1,
-      "value": 149.71,
+      "value": 151.54,
       "decimals": 2,
-      "day_pct": 1.82,
-      "d5_pct": 10.62,
+      "day_pct": 1.23,
+      "d5_pct": 8.72,
       "spark": [
-        131.66,
         133.35,
         134.45,
         135.99,
@@ -291,7 +290,8 @@
         140.72,
         145.86,
         147.03,
-        149.71
+        149.71,
+        151.545
       ],
       "dir": "up"
     },
@@ -300,10 +300,10 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.41,
+      "value": 4.378,
       "decimals": 3,
-      "day_pct": -0.92,
-      "d5_pct": -1.72,
+      "day_pct": -1.64,
+      "d5_pct": -2.43,
       "spark": [
         4.572,
         4.586,
@@ -326,7 +326,7 @@
         4.428,
         4.463,
         4.451,
-        4.41
+        4.378
       ],
       "dir": "down"
     },
@@ -335,10 +335,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6898,
+      "value": 0.6924,
       "decimals": 4,
-      "day_pct": -0.26,
-      "d5_pct": -1.72,
+      "day_pct": 0.12,
+      "d5_pct": -1.35,
       "spark": [
         0.7171,
         0.7133,
@@ -361,19 +361,19 @@
         0.7003,
         0.6995,
         0.6916,
-        0.6898
+        0.6924
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "VIX",
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 18.07,
+      "value": 18.97,
       "decimals": 2,
-      "day_pct": -3.01,
-      "d5_pct": -2.01,
+      "day_pct": 1.83,
+      "d5_pct": 2.87,
       "spark": [
         17.01,
         16.29,
@@ -396,19 +396,19 @@
         17.28,
         19.49,
         18.63,
-        18.07
+        18.97
       ],
-      "dir": "down"
+      "dir": "up"
     },
     {
       "key": "USD",
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.71,
+      "value": 101.35,
       "decimals": 2,
-      "day_pct": 0.09,
-      "d5_pct": 1.61,
+      "day_pct": -0.26,
+      "d5_pct": 1.25,
       "spark": [
         99.17,
         99.21,
@@ -431,9 +431,9 @@
         101.02,
         101.41,
         101.61,
-        101.706
+        101.346
       ],
-      "dir": "up"
+      "dir": "down"
     }
   ],
   "sector_counts": {},
