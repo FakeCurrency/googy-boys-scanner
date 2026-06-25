@@ -698,15 +698,25 @@
     const d = r.detail || {};
     const cur = state.cur;
     const smRow = (p, val, pct, color) =>
-      `<div class="dl-row"><span class="dl-label" style="color:${color}">SMA ${p}</span>
-        <span class="dl-val">${cur}${num(val)}</span>
-        <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`;
+      val != null
+        ? `<div class="dl-row"><span class="dl-label" style="color:${color}">SMA ${p}</span>
+            <span class="dl-val">${cur}${num(val)}</span>
+            <span class="dl-pct ${pct >= 0 ? "pct-up" : "pct-down"}">${fmtPct(pct)}</span></div>`
+        : "";
     const volCls = d.volume_ratio >= 2.5 ? "green" : d.volume_ratio >= 1.5 ? "accent-orange" : "";
     const boPct = d.bo_pct != null ? `+${d.bo_pct.toFixed(1)}%` : "—";
     const boLabel = d.bo_pct >= 7 ? "Surge" : d.bo_pct >= 3 ? "Strong" : "Clean";
     const rsiNum = d.rsi != null ? d.rsi.toFixed(1) : "—";
     const rsiCls = d.rsi >= 60 ? "green" : d.rsi >= 50 ? "accent-orange" : "";
     const rsiNote = d.rsi >= 60 ? "Strong momentum" : "Positive momentum";
+    const freshBars = d.bars_since_high != null ? d.bars_since_high : "—";
+    const freshNote = d.bars_since_high <= 2 ? "Very fresh" : d.bars_since_high <= 5 ? "Recent" : "Older";
+    const freshCls = d.bars_since_high <= 2 ? "green" : d.bars_since_high <= 5 ? "accent-orange" : "";
+    const comprNote = d.compression ? `ATR ${d.atr_before_rel}% → ${d.atr_now_rel}% · coiling` : `ATR ${d.atr_now_rel || "—"}% · no contraction`;
+    const comprCls = d.compression ? "green" : "muted";
+    const adxVal = d.adx != null ? d.adx.toFixed(1) : "—";
+    const adxCls = d.adx_strong && d.adx_rising ? "green" : d.adx_strong ? "accent-orange" : "";
+    const adxNote = d.adx_strong && d.adx_rising ? "Strong + rising" : d.adx_strong ? "Strong (flat)" : "Below threshold";
 
     return `<div class="row-detail">
       ${heroStrip(r, cur, r.entry, r.stop, r.target, r.stop_pct, r.p2_pct)}
@@ -716,14 +726,20 @@
       ${priceStrip(r)}
 
       <div class="rd-group">
-        <div class="rd-section">Breakout levels</div>
+        <div class="rd-section">Breakout quality</div>
         <div class="rd-levels">
-          <div class="dl-row"><span class="dl-label green">Range high</span>
+          <div class="dl-row"><span class="dl-label green">Range high (breakout level)</span>
             <span class="dl-val">${cur}${num(d.range_high)}</span>
             <span class="dl-pct pct-up">${boPct} above · ${boLabel}</span></div>
           <div class="dl-row"><span class="dl-label red">Range low / stop zone</span>
             <span class="dl-val">${cur}${num(d.range_low)}</span>
             <span class="dl-pct muted">${d.consol_bars || "—"} bar base · ${d.range_span_pct || "—"}% range</span></div>
+          <div class="dl-row"><span class="dl-label ${freshCls}">Freshness</span>
+            <span class="dl-val">${freshBars} bar${freshBars === 1 ? "" : "s"} ago</span>
+            <span class="dl-pct ${freshCls}">${freshNote}</span></div>
+          <div class="dl-row"><span class="dl-label ${comprCls}">Volatility compression</span>
+            <span class="dl-val">${d.compression ? "Yes" : "No"}</span>
+            <span class="dl-pct muted">${comprNote}</span></div>
         </div>
         <div class="rd-trail">
           <span class="rd-trail-label">Trailing stop</span>
@@ -752,6 +768,11 @@
           <span class="rd-k">Volume</span>
           <span class="rd-vol ${volCls}">${d.volume_ratio != null ? d.volume_ratio.toFixed(1) : "—"}×</span>
           <span class="rd-vol-note">${fmtK(d.volume_today)} today vs ${fmtK(d.volume_avg)} avg</span>
+        </div>
+        <div class="rd-volume rd-volume-bare">
+          <span class="rd-k">ADX 14</span>
+          <span class="rd-vol ${adxCls}">${adxVal}</span>
+          <span class="rd-vol-note">${adxNote}</span>
         </div>
       </div>
     </div>`;
