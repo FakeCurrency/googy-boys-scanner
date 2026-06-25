@@ -15,12 +15,16 @@
      only a seed on first run and a feed for live equity.
 
    HARD RULES ENFORCED
-     1. Max risk per trade = 2% of CURRENT equity (configurable).
+     1. Max risk per trade = 0.25% of CURRENT equity (configurable).
      2. Block all new entries when consecutive losses >= 3 (configurable).
      3. The loss counter ONLY resets on a winning trade (net P/L > 0) or a
         manual reset. Break-even (net == 0) leaves it unchanged.
      4. An active kill switch also blocks all new entries.
      5. Position sizing respects the 0.25% rule AND per-instrument point values.
+     6. TP1 → book 25% + move stop to break-even → risk-free runner.
+     7. Weekly+3D higher-timeframe bias blocks counter-trend entries.
+     8. closePosition() computes start time, duration, fees and realized P/L
+        for the trade journal.
    =========================================================================== */
 (function (global) {
   "use strict";
@@ -75,7 +79,7 @@
     /**
      * @param {Object} cfg
      * @param {number} cfg.equity                Current account equity (USD).
-     * @param {number} [cfg.maxRiskPerTradePct]  Default 2.0.
+     * @param {number} [cfg.maxRiskPerTradePct]  Default 0.25.
      * @param {number} [cfg.maxConsecutiveLosses] Default 3.
      * @param {Object} [cfg.instruments]         Override/extend instrument specs.
      * @param {Storage} [cfg.storage]            Defaults to window.localStorage.
@@ -93,6 +97,10 @@
         scaleOutPct: cfg.scaleOutPct != null ? cfg.scaleOutPct : 0.25,
         // Hard cap on number of concurrent open positions.
         maxPositions: cfg.maxPositions != null ? cfg.maxPositions : 5,
+        // Round-turn cost (entry + exit fees/commission) booked against a trade
+        // when it closes. Used by closePosition() to compute net P/L for the
+        // journal. Override per-close via opts.costs if you have exact fills.
+        roundTurnFeeUsd: cfg.roundTurnFeeUsd != null ? cfg.roundTurnFeeUsd : 2.0,
       };
       this.instruments = Object.assign({}, DEFAULT_INSTRUMENTS, cfg.instruments || {});
       this.equity = this._num(cfg.equity, 0);
@@ -223,6 +231,10 @@
         const v = Math.min(1, Math.max(0, this._num(patch.scaleOutPct, this.config.scaleOutPct)));
         if (v !== this.config.scaleOutPct) { this.config.scaleOutPct = v; changed = true; }
       }
+      if (patch.roundTurnFeeUsd != null) {
+        const v = Math.max(0, this._num(patch.roundTurnFeeUsd, this.config.roundTurnFeeUsd));
+        if (v !== this.config.roundTurnFeeUsd) { this.config.roundTurnFeeUsd = v; changed = true; }
+      }
       if (changed) { this._log("info", "Config updated.", this.config); this._emit(); }
       return this.config;
     }
@@ -277,14 +289,14 @@
       if (!Number.isFinite(stop) || stop <= 0) { out.error = "Stop distance must be > 0"; return out; }
       if (stop < spec.minStopPoints) { out.note = `Stop below ${spec.name} minimum (${spec.minStopPoints} pts)`; }
 
-      // ── The 2% rule, volatility-adjusted ─────────────────────────────────
+      // ── The per-trade risk rule (0.25% default), volatility-adjusted ─────
       const maxRiskUsd = this.equity * (this.config.maxRiskPerTradePct / 100) * spec.volatilityFactor;
       const riskPerUnit = stop * spec.dollarsPerPoint;
       const rawUnits = riskPerUnit > 0 ? maxRiskUsd / riskPerUnit : 0;
 
       // Whole futures contracts (floor) + a CFD/micro-friendly fractional size.
       const wholeContracts = Math.floor(rawUnits);
-      // Always FLOOR so the resulting risk can never exceed the 2% budget.
+      // Always FLOOR so the resulting risk can never exceed the risk budget.
       const recommendedUnits = rawUnits >= 1
         ? Math.floor(rawUnits * 10) / 10      // 0.1-lot granularity once >= 1
         : Math.max(0, Math.floor(rawUnits * 100) / 100); // 0.01 granularity sub-1
@@ -604,17 +616,49 @@
 
     /**
      * Close a position at exitPrice, register the net P/L against the loss
-     * counter, and remove it from the book.
+     * counter, remove it from the book, and produce a full journal entry
+     * (start time, duration, gross, costs/fees, realized net P/L, R-multiple).
+     *
+     * @param {string} symbol
+     * @param {number} exitPrice
+     * @param {Object} [opts]  {reason, costs}  — override exit reason / fees.
+     * @returns {{closed, netPnl, gross, costs, r, state, journalEntry}}
      */
-    closePosition(symbol, exitPrice) {
+    closePosition(symbol, exitPrice, opts = {}) {
       const pos = this._positions[symbol];
-      if (!pos) return { closed: false, netPnl: 0, state: this.getCurrentRiskState() };
+      if (!pos) return { closed: false, netPnl: 0, gross: 0, costs: 0, r: 0, state: this.getCurrentRiskState(), journalEntry: null };
+
+      const exit = this._num(exitPrice, pos.current);
       const m = pos.direction === "long" ? 1 : -1;
-      const netPnl = this._round(m * (this._num(exitPrice, pos.current) - pos.entry) * pos.dollarsPerPoint * pos.units, 2);
+      // Gross = raw price move × point value × units. Costs = round-turn fees.
+      const gross = this._round(m * (exit - pos.entry) * pos.dollarsPerPoint * pos.units, 2);
+      const costs = this._round(opts.costs != null ? this._num(opts.costs, this.config.roundTurnFeeUsd) : this.config.roundTurnFeeUsd, 2);
+      const netPnl = this._round(gross - costs, 2);
+
+      // R-multiple measured off the INITIAL stop (pre-breakeven), so a runner
+      // closed beyond TP1 still reports the true reward-to-risk it was sized at.
+      const denomStop = (pos.initialStop != null && pos.initialStop !== pos.entry) ? pos.initialStop : pos.stop;
+      const riskUsd = Math.abs(pos.entry - denomStop) * pos.dollarsPerPoint * pos.units;
+      const r = riskUsd > 0 ? this._round(gross / riskUsd, 2) : 0;
+
+      const closedAt = new Date().toISOString();
+      const openedAt = pos.openedAt || null;
+      const durationMs = openedAt ? (Date.parse(closedAt) - Date.parse(openedAt)) : null;
+
+      const journalEntry = {
+        symbol, direction: pos.direction,
+        entry: pos.entry, exit,
+        units: pos.units, entryCount: pos.entryCount,
+        opened: openedAt, closed: closedAt, durationMs,
+        gross, costs, net: netPnl, r,
+        win: netPnl > 0,
+        reason: opts.reason || (pos.tp1Hit ? "Closed after TP1 (runner)" : "Manual close"),
+      };
+
       delete this._positions[symbol];
-      const state = this.registerTradeClosed(netPnl); // persists + emits
-      this._log("info", `CLOSE ${symbol} @ ${exitPrice} — net $${netPnl}`);
-      return { closed: true, netPnl, state };
+      const state = this.registerTradeClosed(netPnl); // persists + emits + loss counter
+      this._log("info", `CLOSE ${symbol} @ ${exit} — gross $${gross}, costs $${costs}, net $${netPnl} (${r}R)`);
+      return { closed: true, netPnl, gross, costs, r, state, journalEntry };
     }
 
     /** Snapshot of the open book for the UI. */

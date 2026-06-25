@@ -306,14 +306,46 @@ test("add-on does NOT count against the max-positions cap", () => {
   assert.equal(r.committed, true, "add-on allowed even at max positions");
 });
 
-test("closePosition books P/L and feeds the loss counter", () => {
-  const e = mk({ maxPortfolioRiskPct: 99 });
+test("closePosition books P/L (net of fees) and feeds the loss counter", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 }); // default roundTurnFeeUsd = $2
   e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
   e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, target: 20600, units: 0.1 });
-  const r = e.closePosition("/NQ", 19900); // -100 pts * 20 * 0.1 = -$200
-  assert.equal(r.netPnl, -200);
+  const r = e.closePosition("/NQ", 19900); // -100 pts * 20 * 0.1 = -$200 gross
+  assert.equal(r.gross, -200, "gross before fees");
+  assert.equal(r.costs, 2, "round-turn fee booked");
+  assert.equal(r.netPnl, -202, "net = gross − fees");
   assert.equal(e.getCurrentRiskState().consecutiveLossCount, 1);
   assert.equal(e.positionCount(), 0);
+});
+
+test("closePosition produces a journal entry with time, duration, fees, P/L, R", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("GC", { weekly: "bull", threeDay: "bull" });
+  e.addEntry({ symbol: "GC", direction: "long", entry: 2600, stop: 2590, target: 2630, units: 0.1, dollarsPerPoint: 100 });
+  const r = e.closePosition("GC", 2620, { reason: "Target hit" });
+  const je = r.journalEntry;
+  assert.ok(je, "journal entry returned");
+  assert.equal(je.symbol, "GC");
+  assert.equal(je.exit, 2620);
+  assert.equal(je.gross, 200, "20 pts * $100 * 0.1 = $200");
+  assert.equal(je.costs, 2);
+  assert.equal(je.net, 198);
+  assert.equal(je.r, 2, "20 pt gain / 10 pt initial risk = 2R");
+  assert.equal(je.win, true);
+  assert.equal(je.reason, "Target hit");
+  assert.ok(je.opened && je.closed, "start + close timestamps present");
+  assert.ok(typeof je.durationMs === "number", "duration computed");
+});
+
+test("closePosition R-multiple uses the INITIAL stop, not the break-even stop", () => {
+  const e = mk({ maxPortfolioRiskPct: 99 });
+  e.setBias("/NQ", { weekly: "bull", threeDay: "bull" });
+  // entry 20000, initial stop 19900 (100 pt risk), tp1 at 20100
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, tp1: 20100, target: 20400, units: 0.1 });
+  e.onPrice("/NQ", 20100); // TP1 → stop moves to break-even (20000)
+  const r = e.closePosition("/NQ", 20200); // +200 pts gross
+  // R must be measured off the 100 pt initial risk, not the 0-risk BE stop.
+  assert.equal(r.r, 2, "200 pt gain / 100 pt initial risk = 2R (not div-by-zero)");
 });
 
 // ─────────────────────────────── summary ─────────────────────────────────────

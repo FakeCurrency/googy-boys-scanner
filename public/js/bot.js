@@ -40,6 +40,28 @@
   function fmtTs(iso) { if (!iso) return "—"; try { return new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Australia/Sydney" }); } catch (_) { return iso; } }
   function fmtDateShort(iso) { if (!iso) return "—"; try { return new Date(iso).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Australia/Sydney" }); } catch (_) { return iso; } }
   function fmtAge(iso) { if (!iso) return ""; const s = Math.floor((Date.now() - new Date(iso)) / 1000); if (s < 0) return "just now"; if (s < 3600) return `${Math.floor(s / 60)}m`; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h < 24 ? `${h}h ${m}m` : `${Math.floor(h / 24)}d ${h % 24}h`; }
+  function fmtDuration(ms) { if (ms == null || !Number.isFinite(ms) || ms < 0) return "—"; const mins = Math.round(ms / 60000); if (mins < 60) return `${mins}m`; const h = Math.floor(mins / 60), m = mins % 60; return h < 24 ? `${h}h ${m}m` : `${Math.floor(h / 24)}d ${h % 24}h`; }
+
+  // Recompute the journal summary tiles live from the JOURNAL array so a trade
+  // closed through the engine updates win-rate / profit-factor / expectancy /
+  // max-consecutive-losses immediately (not just the static seed from JSON).
+  function computeJournalSummary(trades) {
+    if (!trades || !trades.length) return { win_rate: 0, profit_factor: 0, expectancy: 0, max_consec_losses: 0, period_trades: 0 };
+    const wins = trades.filter(t => t.net > 0), losses = trades.filter(t => t.net <= 0);
+    const grossWin = wins.reduce((a, t) => a + t.net, 0);
+    const grossLoss = Math.abs(losses.reduce((a, t) => a + t.net, 0));
+    // max consecutive losses across the (closed-desc) journal
+    const chrono = [...trades].sort((a, b) => new Date(a.closed) - new Date(b.closed));
+    let run = 0, maxRun = 0;
+    chrono.forEach(t => { if (t.net <= 0) { run += 1; maxRun = Math.max(maxRun, run); } else run = 0; });
+    return {
+      win_rate: Math.round(wins.length / trades.length * 100),
+      profit_factor: grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? 99 : 0),
+      expectancy: trades.reduce((a, t) => a + t.net, 0) / trades.length,
+      max_consec_losses: maxRun,
+      period_trades: trades.length,
+    };
+  }
 
   // ── SVG sparkline / equity curve ───────────────────────────────────────────
   function sparkline(vals, w, h, color) {
@@ -289,13 +311,35 @@
         showToast(`${sym}: TP1 hit → stop moved to break-even.`, "ok");
       }
     }));
-    // Close → engine books the trade (feeds the loss counter) and removes it.
+    // Close → engine books the trade (feeds the loss counter + journal) and
+    // removes it. The returned journalEntry carries the realized P/L breakdown.
     $$(".pos-close-btn", wrap).forEach(btn => btn.addEventListener("click", () => {
       const sym = btn.dataset.symbol;
       if (!confirm(`Close ${sym} at current price? (paper trade)`)) return;
+      const meta = POS_META[sym] || {};
       const r = risk.closePosition(sym, (risk.getOpenPositions().find(x => x.symbol === sym) || {}).current);
-      prependLog({ ts: new Date().toISOString(), type: r.netPnl >= 0 ? "win" : "loss", msg: `CLOSED ${sym} · net ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)} · consec losses: ${r.state.consecutiveLossCount}` });
-      showToast(`${sym} closed · ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)}`, r.netPnl >= 0 ? "ok" : "warn");
+      // Record the closed trade in the journal with start time, duration,
+      // total cost (fees) and realized net P/L — rule 11 enforced in logic.
+      if (r.journalEntry) {
+        const je = r.journalEntry;
+        JOURNAL.unshift({
+          id: "T-" + String(Date.now()).slice(-4),
+          opened: je.opened, closed: je.closed,
+          duration: fmtDuration(je.durationMs),
+          symbol: je.symbol, name: meta.name || je.symbol,
+          dir: je.direction, entry: je.entry, exit: je.exit,
+          size: meta.size || je.units,
+          gross: je.gross, costs: je.costs, net: je.net,
+          reason: je.reason, r: je.r, win: je.win,
+          strategy: meta.strategy || "",
+        });
+        window.__JSUMMARY = computeJournalSummary(JOURNAL);
+        populateJournalFilters(JOURNAL);
+        renderJournalTable();
+        renderJournalSummary(window.__JSUMMARY);
+      }
+      prependLog({ ts: new Date().toISOString(), type: r.netPnl >= 0 ? "win" : "loss", msg: `CLOSED ${sym} · gross ${r.gross >= 0 ? "+" : "−"}${money(Math.abs(r.gross), 0)} − ${money(r.costs, 0)} fees = net ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)} (${r.r}R) · consec losses: ${r.state.consecutiveLossCount}` });
+      showToast(`${sym} closed · net ${r.netPnl >= 0 ? "+" : "−"}${money(Math.abs(r.netPnl), 0)}`, r.netPnl >= 0 ? "ok" : "warn");
     }));
   }
 
