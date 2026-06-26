@@ -6,9 +6,9 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-26T23:42:49+10:00",
-  "scanned": 1601,
-  "universe_size": 1987,
+  "generated_at": "2026-06-27T05:30:42+10:00",
+  "scanned": 1485,
+  "universe_size": 1985,
   "score_max": 14,
   "sma_periods": [
     9,
@@ -22,11 +22,12 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8764.0,
+      "value": 8749.0,
       "decimals": 0,
-      "day_pct": 0.18,
-      "d5_pct": -0.73,
+      "day_pct": -0.68,
+      "d5_pct": -1.82,
       "spark": [
+        8657.7998,
         8717.7002,
         8592.9004,
         8731.7002,
@@ -47,20 +48,19 @@
         8816.0996,
         8787.0,
         8808.4004,
-        8748.7002,
-        8764.2002
+        8748.7002
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4067.0,
+      "value": 4083.0,
       "decimals": 0,
-      "day_pct": 0.9,
-      "d5_pct": -3.72,
+      "day_pct": 1.29,
+      "d5_pct": -3.35,
       "spark": [
         4447.5,
         4499.2998,
@@ -83,7 +83,7 @@
         4129.8999,
         3990.3,
         4030.5,
-        4066.8999
+        4082.6001
       ],
       "dir": "up"
     },
@@ -92,10 +92,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 58.79,
+      "value": 59.4,
       "decimals": 2,
-      "day_pct": 0.76,
-      "d5_pct": -11.27,
+      "day_pct": 1.81,
+      "d5_pct": -10.34,
       "spark": [
         74.599,
         75.645,
@@ -118,7 +118,7 @@
         62.02,
         58.052,
         58.348,
-        58.79
+        59.405
       ],
       "dir": "up"
     },
@@ -127,10 +127,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 73.21,
+      "value": 72.47,
       "decimals": 2,
-      "day_pct": -2.72,
-      "d5_pct": -8.32,
+      "day_pct": -3.71,
+      "d5_pct": -9.24,
       "spark": [
         94.29,
         93.71,
@@ -153,7 +153,7 @@
         77.08,
         73.74,
         75.26,
-        73.21
+        72.47
       ],
       "dir": "down"
     },
@@ -162,10 +162,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 69.91,
+      "value": 69.15,
       "decimals": 2,
-      "day_pct": -2.79,
-      "d5_pct": -8.73,
+      "day_pct": -3.85,
+      "d5_pct": -9.73,
       "spark": [
         88.68,
         88.9,
@@ -188,7 +188,7 @@
         73.21,
         70.34,
         71.92,
-        69.91
+        69.15
       ],
       "dir": "down"
     },
@@ -197,10 +197,10 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.34,
+      "value": 3.3,
       "decimals": 2,
-      "day_pct": 0.0,
-      "d5_pct": 3.4,
+      "day_pct": -1.41,
+      "d5_pct": 1.95,
       "spark": [
         3.04,
         3.285,
@@ -223,19 +223,19 @@
         3.147,
         3.221,
         3.343,
-        3.343
+        3.296
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "TECH",
       "label": "Tech",
       "ticker": "^IXIC",
       "divide": 1,
-      "value": 25095.45,
+      "value": 25284.39,
       "decimals": 2,
-      "day_pct": -1.04,
-      "d5_pct": -5.36,
+      "day_pct": -0.29,
+      "d5_pct": -4.65,
       "spark": [
         26674.7305,
         26917.4707,
@@ -258,7 +258,7 @@
         25587.0391,
         25476.6406,
         25358.5996,
-        25095.4453
+        25284.3887
       ],
       "dir": "down"
     },
@@ -267,10 +267,10 @@
       "label": "Biotech",
       "ticker": "XBI",
       "divide": 1,
-      "value": 153.27,
+      "value": 153.22,
       "decimals": 2,
-      "day_pct": 1.11,
-      "d5_pct": 8.92,
+      "day_pct": 1.07,
+      "d5_pct": 8.88,
       "spark": [
         134.45,
         135.99,
@@ -293,7 +293,7 @@
         147.03,
         149.71,
         151.59,
-        153.275
+        153.2189
       ],
       "dir": "up"
     },
@@ -302,10 +302,10 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.4,
+      "value": 4.372,
       "decimals": 3,
-      "day_pct": -1.15,
-      "d5_pct": -1.94,
+      "day_pct": -1.77,
+      "d5_pct": -2.56,
       "spark": [
         4.572,
         4.586,
@@ -328,7 +328,7 @@
         4.428,
         4.463,
         4.451,
-        4.4
+        4.372
       ],
       "dir": "down"
     },
@@ -337,10 +337,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6908,
+      "value": 0.6897,
       "decimals": 4,
-      "day_pct": 0.12,
-      "d5_pct": -1.5,
+      "day_pct": -0.04,
+      "d5_pct": -1.66,
       "spark": [
         0.7133,
         0.7164,
@@ -363,19 +363,19 @@
         0.6995,
         0.6916,
         0.69,
-        0.6908
+        0.6897
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "VIX",
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 20.24,
+      "value": 18.83,
       "decimals": 2,
-      "day_pct": 7.15,
-      "d5_pct": 23.41,
+      "day_pct": -0.32,
+      "d5_pct": 14.82,
       "spark": [
         16.29,
         15.74,
@@ -398,19 +398,19 @@
         19.49,
         18.63,
         18.89,
-        20.24
+        18.83
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "USD",
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.1,
+      "value": 101.36,
       "decimals": 2,
-      "day_pct": -0.33,
-      "d5_pct": 0.25,
+      "day_pct": -0.07,
+      "d5_pct": 0.5,
       "spark": [
         99.21,
         99.02,
@@ -433,31 +433,31 @@
         101.41,
         101.61,
         101.43,
-        101.1
+        101.358
       ],
       "dir": "down"
     }
   ],
   "sector_counts": {
-    "Materials": 26,
-    "Equity Real Estate Investment Trusts (REITs)": 21,
-    "Not Applic": 14,
-    "Financial Services": 14,
-    "Consumer Discretionary Distribution & Retail": 10,
+    "Materials": 25,
+    "Equity Real Estate Investment Trusts (REITs)": 18,
+    "Not Applic": 12,
+    "Financial Services": 12,
+    "Consumer Discretionary Distribution & Retail": 11,
     "Pharmaceuticals, Biotechnology & Life Sciences": 9,
-    "Health Care Equipment & Services": 9,
-    "Consumer Services": 7,
-    "Transportation": 6,
+    "Health Care Equipment & Services": 8,
+    "Consumer Services": 5,
     "Software & Services": 5,
     "Media & Entertainment": 5,
+    "Transportation": 5,
+    "Insurance": 5,
     "Energy": 4,
-    "Insurance": 4,
+    "Real Estate Management & Development": 4,
     "Capital Goods": 4,
-    "Food, Beverage & Tobacco": 2,
     "Commercial & Professional Services": 2,
     "Consumer Durables & Apparel": 2,
-    "Real Estate Management & Development": 2,
     "Technology Hardware & Equipment": 1,
+    "Food, Beverage & Tobacco": 1,
     "Telecommunication Services": 1,
     "Consumer Staples Distribution & Retail": 1,
     "Class Pend": 1,
@@ -579,6 +579,120 @@
       "sector_count": 5
     },
     {
+      "symbol": "PIA",
+      "name": "Pengana International Equities Limited",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "A+",
+      "score": 14,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM",
+        "BASE -1% OFF HIGH",
+        "VOLUME 1.7\u00d7 SURGE",
+        "BASE BREAKOUT",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "OK",
+      "price": 1.29499996,
+      "y_close": 1.255,
+      "open": 1.26999998,
+      "open_pct": 1.2,
+      "current_pct": 1.97,
+      "day_pct": 3.19,
+      "entry": 1.29499996,
+      "stop": 1.21275002,
+      "target": 1.54174976,
+      "rr": 3.0,
+      "trail": 1.24590958,
+      "stop_pct": 6.4,
+      "p2_pct": 19.1,
+      "target_basis": "measured",
+      "spark": [
+        1.24632561,
+        1.2364341,
+        1.24137986,
+        1.2364341,
+        1.25127137,
+        1.24632561,
+        1.256217,
+        1.25127137,
+        1.256217,
+        1.27600002,
+        1.27499998,
+        1.27499998,
+        1.25999999,
+        1.26499999,
+        1.25999999,
+        1.26499999,
+        1.25,
+        1.24000001,
+        1.23000002,
+        1.245,
+        1.25999999,
+        1.26499999,
+        1.26999998,
+        1.25999999,
+        1.25999999,
+        1.255,
+        1.25999999,
+        1.25,
+        1.255,
+        1.29499996
+      ],
+      "trend": "green",
+      "turnover": 200336,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 1.26333332,
+        "sma9_pct": -2.4,
+        "sma26": 1.2589347,
+        "sma26_pct": -2.8,
+        "sma43": 1.24802632,
+        "sma43_pct": -3.6,
+        "sma200": 1.22672924,
+        "sma200_pct": -5.3,
+        "cross_up": true,
+        "rsi": 65.7,
+        "rsi_ma": 53.1,
+        "rsi_up": true,
+        "volume_ratio": 1.7,
+        "volume_today": 384685,
+        "volume_avg": 146296,
+        "volume_surge": true,
+        "off_high_pct": 1.1,
+        "base_high": 1.28499997,
+        "base_high_pct": -0.8,
+        "broken": true,
+        "swing_low": 1.22500002,
+        "swing_low_pct": -5.4,
+        "trailing_stop": 1.24590958,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -3.8,
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            1.26999998,
+            1.26999998,
+            1.26999998
+          ],
+          "swing_lows": [
+            1.23148837,
+            1.255,
+            1.22500002
+          ]
+        },
+        "risk_pct": 6.4
+      },
+      "analysis": "PIA has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 1% below its one-year high, so there is room to run. Volume is expanding (1.7\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$1.2850. RSI has turned up through its signal line. Trade idea: entry A$1.2950, stop A$1.2128, target A$1.5417 (3.00:1) \u2014 then trail it.",
+      "sector_count": 12
+    },
+    {
       "symbol": "CQE",
       "name": "Charter Hall Social Infrastructure Reit",
       "sector": "Equity Real Estate Investment Trusts (REITs)",
@@ -655,7 +769,7 @@
         "sma26_pct": -6.3,
         "sma43": 2.58139534,
         "sma43_pct": -6.5,
-        "sma200": 2.86807847,
+        "sma200": 2.86807848,
         "sma200_pct": 3.9,
         "cross_up": true,
         "rsi": 66.8,
@@ -690,7 +804,7 @@
         "risk_pct": 7.8
       },
       "analysis": "CQE has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 17% below its one-year high, so there is room to run. Volume is expanding (1.4\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$2.7200. RSI has turned up through its signal line. Trade idea: entry A$2.7600, stop A$2.5443, target A$3.0688 (1.43:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "BLX",
@@ -803,7 +917,7 @@
         "risk_pct": 11.9
       },
       "analysis": "BLX has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 53% below its one-year high, so there is room to run. Volume is expanding (1.6\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$1.7250, stop A$1.5196, target A$2.6155 (4.34:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "CUP",
@@ -1255,7 +1369,7 @@
         "risk_pct": 46.4
       },
       "analysis": "IIQ has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 4% below its one-year high, so there is room to run. Volume is expanding (3.3\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$0.4400. Trade idea: entry A$0.5450, stop A$0.2920, target A$1.3039 (3.00:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "PLA",
@@ -1368,7 +1482,120 @@
         "risk_pct": 12.6
       },
       "analysis": "PLA has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 4% below its one-year high, so there is room to run. Volume is expanding (1.6\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$0.3850, stop A$0.3366, target A$0.5302 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
+    },
+    {
+      "symbol": "PCI",
+      "name": "Perpetual Credit Income Trust",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "A+",
+      "score": 12,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM",
+        "BASE -8% OFF HIGH",
+        "VOLUME 1.4\u00d7 SURGE",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "OK",
+      "price": 1.09500003,
+      "y_close": 1.09000003,
+      "open": 1.09000003,
+      "open_pct": 0.0,
+      "current_pct": 0.46,
+      "day_pct": 0.46,
+      "entry": 1.09500003,
+      "stop": 1.04444995,
+      "target": 1.24665027,
+      "rr": 3.0,
+      "trail": 1.05773545,
+      "stop_pct": 4.6,
+      "p2_pct": 13.8,
+      "target_basis": "measured",
+      "spark": [
+        1.08904302,
+        1.08904302,
+        1.08904302,
+        1.08407021,
+        1.08407021,
+        1.07909739,
+        1.08407021,
+        1.08407021,
+        1.08904302,
+        1.08904302,
+        1.09000003,
+        1.08500004,
+        1.09000003,
+        1.08500004,
+        1.08500004,
+        1.09000003,
+        1.09000003,
+        1.07500005,
+        1.07000005,
+        1.07000005,
+        1.08500004,
+        1.07500005,
+        1.08000004,
+        1.08500004,
+        1.08500004,
+        1.09500003,
+        1.09000003,
+        1.07500005,
+        1.09000003,
+        1.09500003
+      ],
+      "trend": "green",
+      "turnover": 852615,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 1.08555559,
+        "sma9_pct": -0.9,
+        "sma26": 1.0843998,
+        "sma26_pct": -1.0,
+        "sma43": 1.0846881,
+        "sma43_pct": -0.9,
+        "sma200": 1.09418584,
+        "sma200_pct": -0.1,
+        "cross_up": true,
+        "rsi": 56.5,
+        "rsi_ma": 50.1,
+        "rsi_up": true,
+        "volume_ratio": 1.4,
+        "volume_today": 812471,
+        "volume_avg": 778794,
+        "volume_surge": true,
+        "off_high_pct": 8.0,
+        "base_high": 1.10000002,
+        "base_high_pct": 0.5,
+        "broken": false,
+        "swing_low": 1.05499995,
+        "swing_low_pct": -3.7,
+        "trailing_stop": 1.05773545,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -3.4,
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            1.10000002,
+            1.09500003,
+            1.10000002
+          ],
+          "swing_lows": [
+            1.07909739,
+            1.08000004,
+            1.05499995
+          ]
+        },
+        "risk_pct": 4.6
+      },
+      "analysis": "PCI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 8% below its one-year high, so there is room to run. Volume is expanding (1.4\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$1.0950, stop A$1.0444, target A$1.2467 (3.00:1) \u2014 then trail it.",
+      "sector_count": 12
     },
     {
       "symbol": "BCI",
@@ -1481,7 +1708,7 @@
         "risk_pct": 20.6
       },
       "analysis": "BCI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 14% below its one-year high, so there is room to run. Volume is expanding (1.2\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$0.4000. Trade idea: entry A$0.4050, stop A$0.3217, target A$0.4700 (0.78:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "BNZ",
@@ -1594,7 +1821,7 @@
         "risk_pct": 33.6
       },
       "analysis": "BNZ has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 29% below its one-year high, so there is room to run. Volume is expanding (1.8\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$2.3900. Trade idea: entry A$2.4000, stop A$1.5939, target A$2.7200 (0.40:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "COH",
@@ -1663,7 +1890,7 @@
         118.02999878
       ],
       "trend": "green",
-      "turnover": 76509859,
+      "turnover": 76637137,
       "detail": {
         "setup_type": "reversal",
         "sma9": 113.82111104,
@@ -1679,7 +1906,7 @@
         "rsi_ma": 57.1,
         "rsi_up": true,
         "volume_ratio": 0.9,
-        "volume_today": 577552,
+        "volume_today": 599119,
         "volume_avg": 737544,
         "volume_surge": false,
         "off_high_pct": 62.3,
@@ -1707,7 +1934,7 @@
         "risk_pct": 14.3
       },
       "analysis": "COH has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 62% below its one-year high, so there is room to run. Price has broken above the base high at A$118.1400. RSI has turned up through its signal line. Trade idea: entry A$118.0300, stop A$101.1780, target A$179.7800 (3.66:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "ARG",
@@ -1820,7 +2047,7 @@
         "risk_pct": 6.5
       },
       "analysis": "ARG has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 3% below its one-year high, so there is room to run. Price has broken above the base high at A$8.9700. RSI has turned up through its signal line. Trade idea: entry A$9.0800, stop A$8.4942, target A$10.8374 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "AFI",
@@ -1933,7 +2160,7 @@
         "risk_pct": 9.0
       },
       "analysis": "AFI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 6% below its one-year high, so there is room to run. Price has broken above the base high at A$6.7600. RSI has turned up through its signal line. Trade idea: entry A$6.8900, stop A$6.2667, target A$8.7599 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "CIP",
@@ -2002,7 +2229,7 @@
         3.13000011
       ],
       "trend": "green",
-      "turnover": 4596999,
+      "turnover": 4598473,
       "detail": {
         "setup_type": "reversal",
         "sma9": 3.05666664,
@@ -2018,7 +2245,7 @@
         "rsi_ma": 59.1,
         "rsi_up": true,
         "volume_ratio": 0.9,
-        "volume_today": 1541344,
+        "volume_today": 1550761,
         "volume_avg": 1527248,
         "volume_surge": false,
         "off_high_pct": 10.4,
@@ -2046,7 +2273,7 @@
         "risk_pct": 6.4
       },
       "analysis": "CIP has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 10% below its one-year high, so there is room to run. Price has broken above the base high at A$3.0850. RSI has turned up through its signal line. Trade idea: entry A$3.1300, stop A$2.9304, target A$3.7288 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "CLW",
@@ -2115,7 +2342,7 @@
         3.82999992
       ],
       "trend": "green",
-      "turnover": 7496498,
+      "turnover": 7498735,
       "detail": {
         "setup_type": "reversal",
         "sma9": 3.75888888,
@@ -2131,7 +2358,7 @@
         "rsi_ma": 66.5,
         "rsi_up": true,
         "volume_ratio": 0.9,
-        "volume_today": 1932488,
+        "volume_today": 1944167,
         "volume_avg": 2049116,
         "volume_surge": false,
         "off_high_pct": 13.7,
@@ -2159,7 +2386,7 @@
         "risk_pct": 8.5
       },
       "analysis": "CLW has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 14% below its one-year high, so there is room to run. Price has broken above the base high at A$3.7850. RSI has turned up through its signal line. Trade idea: entry A$3.8300, stop A$3.5046, target A$4.8062 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "CQR",
@@ -2228,7 +2455,7 @@
         4.03999996
       ],
       "trend": "green",
-      "turnover": 6435992,
+      "turnover": 6437809,
       "detail": {
         "setup_type": "reversal",
         "sma9": 3.97888894,
@@ -2244,7 +2471,7 @@
         "rsi_ma": 61.2,
         "rsi_up": true,
         "volume_ratio": 1.1,
-        "volume_today": 2360968,
+        "volume_today": 2369963,
         "volume_avg": 1612853,
         "volume_surge": false,
         "off_high_pct": 1.8,
@@ -2272,7 +2499,7 @@
         "risk_pct": 7.1
       },
       "analysis": "CQR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 2% below its one-year high, so there is room to run. Price has broken above the base high at A$4.0000. RSI has turned up through its signal line. Trade idea: entry A$4.0400, stop A$3.7521, target A$4.9037 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "HLI",
@@ -2341,7 +2568,7 @@
         5.59000015
       ],
       "trend": "green",
-      "turnover": 5431849,
+      "turnover": 5433203,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.33444442,
@@ -2357,7 +2584,7 @@
         "rsi_ma": 59.6,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 547789,
+        "volume_today": 552636,
         "volume_avg": 1089195,
         "volume_surge": false,
         "off_high_pct": 1.1,
@@ -2385,7 +2612,7 @@
         "risk_pct": 14.1
       },
       "analysis": "HLI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 1% below its one-year high, so there is room to run. Price has broken above the base high at A$5.5400. RSI has turned up through its signal line. Trade idea: entry A$5.5900, stop A$4.8015, target A$7.9555 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "HDN",
@@ -2454,7 +2681,7 @@
         1.32500005
       ],
       "trend": "green",
-      "turnover": 5512847,
+      "turnover": 5515013,
       "detail": {
         "setup_type": "reversal",
         "sma9": 1.30277774,
@@ -2463,14 +2690,14 @@
         "sma26_pct": -4.5,
         "sma43": 1.2572093,
         "sma43_pct": -5.1,
-        "sma200": 1.28105519,
+        "sma200": 1.28105518,
         "sma200_pct": -3.3,
         "cross_up": true,
         "rsi": 65.1,
         "rsi_ma": 61.9,
         "rsi_up": true,
         "volume_ratio": 1.3,
-        "volume_today": 4808204,
+        "volume_today": 4840896,
         "volume_avg": 4219443,
         "volume_surge": false,
         "off_high_pct": 3.1,
@@ -2498,7 +2725,7 @@
         "risk_pct": 5.9
       },
       "analysis": "HDN has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 3% below its one-year high, so there is room to run. Price has broken above the base high at A$1.3150. RSI has turned up through its signal line. Trade idea: entry A$1.3250, stop A$1.2474, target A$1.5578 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "PKY",
@@ -2614,119 +2841,6 @@
       "sector_count": 5
     },
     {
-      "symbol": "VCX",
-      "name": "Vicinity Centres",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A+",
-      "score": 11,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -0% OFF HIGH",
-        "BASE BREAKOUT",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 2.6400001,
-      "y_close": 2.5999999,
-      "open": 2.6099999,
-      "open_pct": 0.38,
-      "current_pct": 1.15,
-      "day_pct": 1.54,
-      "entry": 2.6400001,
-      "stop": 2.51459996,
-      "target": 3.01620053,
-      "rr": 3.0,
-      "trail": 2.46281528,
-      "stop_pct": 4.8,
-      "p2_pct": 14.3,
-      "target_basis": "measured",
-      "spark": [
-        2.50999999,
-        2.50999999,
-        2.54999995,
-        2.5,
-        2.54999995,
-        2.56999993,
-        2.56999993,
-        2.54999995,
-        2.54999995,
-        2.51999998,
-        2.52999997,
-        2.51999998,
-        2.42000008,
-        2.42000008,
-        2.44000006,
-        2.43000007,
-        2.5,
-        2.55999994,
-        2.57999992,
-        2.57999992,
-        2.58999991,
-        2.5999999,
-        2.57999992,
-        2.54999995,
-        2.56999993,
-        2.56999993,
-        2.55999994,
-        2.57999992,
-        2.5999999,
-        2.6400001
-      ],
-      "trend": "green",
-      "turnover": 34175164,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 2.58333328,
-        "sma9_pct": -2.1,
-        "sma26": 2.54346151,
-        "sma26_pct": -3.7,
-        "sma43": 2.5276744,
-        "sma43_pct": -4.3,
-        "sma200": 2.47418148,
-        "sma200_pct": -6.3,
-        "cross_up": true,
-        "rsi": 64.9,
-        "rsi_ma": 57.8,
-        "rsi_up": true,
-        "volume_ratio": 0.6,
-        "volume_today": 9517389,
-        "volume_avg": 13509588,
-        "volume_surge": false,
-        "off_high_pct": 0.4,
-        "base_high": 2.5999999,
-        "base_high_pct": -1.5,
-        "broken": true,
-        "swing_low": 2.53999996,
-        "swing_low_pct": -3.8,
-        "trailing_stop": 2.46281528,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -6.7,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            2.5999999,
-            2.5999999,
-            2.5999999
-          ],
-          "swing_lows": [
-            2.53999996,
-            2.53999996,
-            2.53999996
-          ]
-        },
-        "risk_pct": 4.8
-      },
-      "analysis": "VCX has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 0% below its one-year high, so there is room to run. Price has broken above the base high at A$2.6000. RSI has turned up through its signal line. Trade idea: entry A$2.6400, stop A$2.5146, target A$3.0162 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
-    },
-    {
       "symbol": "INA",
       "name": "Ingenia Communities Group",
       "sector": "Equity Real Estate Investment Trusts (REITs)",
@@ -2793,7 +2907,7 @@
         4.38000011
       ],
       "trend": "green",
-      "turnover": 6037225,
+      "turnover": 6038747,
       "detail": {
         "setup_type": "reversal",
         "sma9": 4.2577778,
@@ -2809,7 +2923,7 @@
         "rsi_ma": 62.8,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 1337546,
+        "volume_today": 1344497,
         "volume_avg": 1478774,
         "volume_surge": false,
         "off_high_pct": 28.5,
@@ -2837,7 +2951,7 @@
         "risk_pct": 12.1
       },
       "analysis": "INA has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 29% below its one-year high, so there is room to run. Price has broken above the base high at A$4.2800. RSI has turned up through its signal line. Trade idea: entry A$4.3800, stop A$3.8511, target A$5.2152 (1.58:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "JBH",
@@ -2906,7 +3020,7 @@
         81.83999634
       ],
       "trend": "green",
-      "turnover": 40696524,
+      "turnover": 40704508,
       "detail": {
         "setup_type": "reversal",
         "sma9": 79.05777825,
@@ -2922,7 +3036,7 @@
         "rsi_ma": 61.7,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 560429,
+        "volume_today": 562380,
         "volume_avg": 541274,
         "volume_surge": false,
         "off_high_pct": 30.3,
@@ -2950,7 +3064,120 @@
         "risk_pct": 10.2
       },
       "analysis": "JBH has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 30% below its one-year high, so there is room to run. Price has broken above the base high at A$79.9600. RSI has turned up through its signal line. Trade idea: entry A$81.8400, stop A$73.4976, target A$92.3732 (1.26:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
+    },
+    {
+      "symbol": "TPW",
+      "name": "Temple & Webster Group Ltd",
+      "sector": "Consumer Discretionary Distribution & Retail",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "A+",
+      "score": 11,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM",
+        "BASE -79% OFF HIGH",
+        "BASE BREAKOUT",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "rr_text": "1.2:1",
+      "target_2r": false,
+      "liquidity": "LIQUID",
+      "price": 6.15999985,
+      "y_close": 6.03999996,
+      "open": 6.0,
+      "open_pct": -0.66,
+      "current_pct": 2.67,
+      "day_pct": 1.99,
+      "entry": 6.15999985,
+      "stop": 4.89060006,
+      "target": 7.73999977,
+      "rr": 1.24,
+      "trail": 5.11122506,
+      "stop_pct": 20.6,
+      "p2_pct": 25.6,
+      "target_basis": "resistance",
+      "spark": [
+        4.86999989,
+        4.76999998,
+        4.94999981,
+        4.75,
+        5.01000023,
+        5.03999996,
+        5.0999999,
+        5.09000015,
+        5.23999977,
+        5.28000021,
+        5.40999985,
+        5.19000006,
+        5.05999994,
+        4.80999994,
+        4.75,
+        4.65999985,
+        4.9000001,
+        5.07999992,
+        5.09000015,
+        5.26999998,
+        5.36999989,
+        5.57999992,
+        5.92000008,
+        5.69999981,
+        5.67000008,
+        5.65999985,
+        5.92999983,
+        5.71999979,
+        6.03999996,
+        6.15999985
+      ],
+      "trend": "green",
+      "turnover": 7620252,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 5.81999991,
+        "sma9_pct": -5.5,
+        "sma26": 5.33576919,
+        "sma26_pct": -13.4,
+        "sma43": 5.34906973,
+        "sma43_pct": -13.2,
+        "sma200": 12.53844999,
+        "sma200_pct": 103.5,
+        "cross_up": true,
+        "rsi": 63.9,
+        "rsi_ma": 55.2,
+        "rsi_up": true,
+        "volume_ratio": 0.7,
+        "volume_today": 942888,
+        "volume_avg": 1427118,
+        "volume_surge": false,
+        "off_high_pct": 78.8,
+        "base_high": 6.16499996,
+        "base_high_pct": 0.1,
+        "broken": true,
+        "swing_low": 4.94000006,
+        "swing_low_pct": -19.8,
+        "trailing_stop": 5.11122506,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -17.0,
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            5.19000006,
+            5.55000019,
+            6.11999989
+          ],
+          "swing_lows": [
+            5.28999996,
+            4.53999996,
+            4.53000021
+          ]
+        },
+        "risk_pct": 20.6
+      },
+      "analysis": "TPW has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 79% below its one-year high, so there is room to run. Price has broken above the base high at A$6.1650. RSI has turned up through its signal line. Trade idea: entry A$6.1600, stop A$4.8906, target A$7.7400 (1.24:1) \u2014 then trail it.",
+      "sector_count": 11
     },
     {
       "symbol": "MYR",
@@ -3063,7 +3290,120 @@
         "risk_pct": 21.8
       },
       "analysis": "MYR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 53% below its one-year high, so there is room to run. Price has broken above the base high at A$0.2975. RSI has turned up through its signal line. Trade idea: entry A$0.3100, stop A$0.2425, target A$0.3651 (0.82:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
+    },
+    {
+      "symbol": "QAL",
+      "name": "Qualitas Limited",
+      "sector": "Real Estate Management & Development",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "A+",
+      "score": 11,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM",
+        "BASE -26% OFF HIGH",
+        "BASE BREAKOUT",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": true,
+      "rr_text": "0.8:1",
+      "target_2r": false,
+      "liquidity": "OK",
+      "price": 3.00999999,
+      "y_close": 3.07999992,
+      "open": 3.0999999,
+      "open_pct": 0.65,
+      "current_pct": -2.9,
+      "day_pct": -2.27,
+      "entry": 3.00999999,
+      "stop": 2.53439994,
+      "target": 3.40078184,
+      "rr": 0.82,
+      "trail": 2.72952167,
+      "stop_pct": 15.8,
+      "p2_pct": 13.0,
+      "target_basis": "resistance",
+      "spark": [
+        2.81999993,
+        2.80999994,
+        2.83999991,
+        2.9000001,
+        2.8900001,
+        2.92000008,
+        2.9000001,
+        2.86999989,
+        2.86999989,
+        2.83999991,
+        2.8599999,
+        2.76999998,
+        2.73000002,
+        2.73000002,
+        2.68000007,
+        2.6400001,
+        2.53999996,
+        2.61999989,
+        2.75999999,
+        2.75999999,
+        2.86999989,
+        2.88000011,
+        2.8900001,
+        2.91000009,
+        2.88000011,
+        2.88000011,
+        2.86999989,
+        2.93000007,
+        3.07999992,
+        3.00999999
+      ],
+      "trend": "green",
+      "turnover": 734626,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 2.9255556,
+        "sma9_pct": -2.8,
+        "sma26": 2.83000001,
+        "sma26_pct": -6.0,
+        "sma43": 2.74093023,
+        "sma43_pct": -8.9,
+        "sma200": 3.14155654,
+        "sma200_pct": 4.4,
+        "cross_up": true,
+        "rsi": 64.3,
+        "rsi_ma": 58.1,
+        "rsi_up": true,
+        "volume_ratio": 0.7,
+        "volume_today": 112328,
+        "volume_avg": 263365,
+        "volume_surge": false,
+        "off_high_pct": 25.7,
+        "base_high": 2.99000001,
+        "base_high_pct": -0.7,
+        "broken": true,
+        "swing_low": 2.55999994,
+        "swing_low_pct": -15.0,
+        "trailing_stop": 2.72952167,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -9.3,
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            2.95000005,
+            2.93000007,
+            2.99000001
+          ],
+          "swing_lows": [
+            2.25999999,
+            2.53500009,
+            2.79999995
+          ]
+        },
+        "risk_pct": 15.8
+      },
+      "analysis": "QAL has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 26% below its one-year high, so there is room to run. Price has broken above the base high at A$2.9900. RSI has turned up through its signal line. Trade idea: entry A$3.0100, stop A$2.5344, target A$3.4008 (0.82:1) \u2014 then trail it.",
+      "sector_count": 4
     },
     {
       "symbol": "UNI",
@@ -3176,7 +3516,7 @@
         "risk_pct": 16.7
       },
       "analysis": "UNI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 21% below its one-year high, so there is room to run. Price has broken above the base high at A$7.6500. RSI has turned up through its signal line. Trade idea: entry A$7.7000, stop A$6.4152, target A$8.4833 (0.61:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "NOR",
@@ -3512,7 +3852,7 @@
         "risk_pct": 12.9
       },
       "analysis": "MVF has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 19% below its one-year high, so there is room to run. Volume is expanding (0.8\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.7100, stop A$0.6188, target A$0.8000 (0.99:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "SKC",
@@ -3624,7 +3964,7 @@
         "risk_pct": 18.2
       },
       "analysis": "SKC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 53% below its one-year high, so there is room to run. Volume is expanding (1.1\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.4600, stop A$0.3762, target A$0.5200 (0.72:1) \u2014 then trail it.",
-      "sector_count": 7
+      "sector_count": 5
     },
     {
       "symbol": "INR",
@@ -3736,120 +4076,7 @@
         "risk_pct": 20.8
       },
       "analysis": "INR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 47% below its one-year high, so there is room to run. Volume is expanding (2.1\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.1500, stop A$0.1188, target A$0.1700 (0.64:1) \u2014 then trail it.",
-      "sector_count": 26
-    },
-    {
-      "symbol": "VGN",
-      "name": "Virgin Australia Holdings Limited.",
-      "sector": "Transportation",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 10,
-      "score_max": 14,
-      "chips": [
-        "BASE -19% OFF HIGH",
-        "VOLUME 1.0\u00d7 SURGE",
-        "BASE BREAKOUT",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "0.5:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 3.08999991,
-      "y_close": 3.03999996,
-      "open": 3.04999995,
-      "open_pct": 0.33,
-      "current_pct": 1.31,
-      "day_pct": 1.64,
-      "entry": 3.08999991,
-      "stop": 2.50469997,
-      "target": 3.4000001,
-      "rr": 0.53,
-      "trail": 2.71456392,
-      "stop_pct": 18.9,
-      "p2_pct": 10.0,
-      "target_basis": "resistance",
-      "spark": [
-        2.3900001,
-        2.28999996,
-        2.3599999,
-        2.25,
-        2.46000004,
-        2.45000005,
-        2.5999999,
-        2.55999994,
-        2.63000011,
-        2.5999999,
-        2.75999999,
-        2.74000001,
-        2.6400001,
-        2.66000009,
-        2.66000009,
-        2.6099999,
-        2.6500001,
-        2.6500001,
-        2.55999994,
-        2.55999994,
-        2.8900001,
-        2.8599999,
-        2.9000001,
-        2.86999989,
-        2.83999991,
-        2.79999995,
-        2.83999991,
-        2.81999993,
-        3.03999996,
-        3.08999991
-      ],
-      "trend": "blue",
-      "turnover": 3482157,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 2.8955555,
-        "sma9_pct": -6.3,
-        "sma26": 2.72076922,
-        "sma26_pct": -11.9,
-        "sma43": 2.56860466,
-        "sma43_pct": -16.9,
-        "sma200": 2.99935,
-        "sma200_pct": -2.9,
-        "cross_up": true,
-        "rsi": 70.0,
-        "rsi_ma": 60.9,
-        "rsi_up": true,
-        "volume_ratio": 1.0,
-        "volume_today": 762522,
-        "volume_avg": 1267708,
-        "volume_surge": true,
-        "off_high_pct": 18.7,
-        "base_high": 2.93000007,
-        "base_high_pct": -5.2,
-        "broken": true,
-        "swing_low": 2.52999997,
-        "swing_low_pct": -18.1,
-        "trailing_stop": 2.71456392,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -12.2,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            2.55999994,
-            2.76999998,
-            2.93000007
-          ],
-          "swing_lows": [
-            2.24000001,
-            2.5,
-            2.75999999
-          ]
-        },
-        "risk_pct": 18.9
-      },
-      "analysis": "VGN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 19% below its one-year high, so there is room to run. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$2.9300. RSI has turned up through its signal line. Trade idea: entry A$3.0900, stop A$2.5047, target A$3.4000 (0.53:1) \u2014 then trail it.",
-      "sector_count": 6
+      "sector_count": 25
     },
     {
       "symbol": "OSL",
@@ -4045,7 +4272,7 @@
         "rsi_ma": 52.1,
         "rsi_up": true,
         "volume_ratio": 1.1,
-        "volume_today": 2172220,
+        "volume_today": 2172221,
         "volume_avg": 1809817,
         "volume_surge": false,
         "off_high_pct": 24.4,
@@ -4073,7 +4300,7 @@
         "risk_pct": 4.2
       },
       "analysis": "COF has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 24% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.9300, stop A$0.8910, target A$1.0612 (3.36:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "ALI",
@@ -4185,7 +4412,7 @@
         "risk_pct": 6.8
       },
       "analysis": "ALI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 3% below its one-year high, so there is room to run. Price has broken above the base high at A$2.5700. Trade idea: entry A$2.5700, stop A$2.3958, target A$3.0926 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "AYA",
@@ -4297,7 +4524,7 @@
         "risk_pct": 17.0
       },
       "analysis": "AYA has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Volume is expanding (1.5\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$5.1500. Trade idea: entry A$5.2100, stop A$4.3263, target A$7.8611 (3.00:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "BWP",
@@ -4365,7 +4592,7 @@
         3.96000004
       ],
       "trend": "blue",
-      "turnover": 6425418,
+      "turnover": 6427602,
       "detail": {
         "setup_type": "reversal",
         "sma9": 3.90777787,
@@ -4381,7 +4608,7 @@
         "rsi_ma": 59.1,
         "rsi_up": true,
         "volume_ratio": 0.7,
-        "volume_today": 1633592,
+        "volume_today": 1644619,
         "volume_avg": 1766560,
         "volume_surge": false,
         "off_high_pct": 1.7,
@@ -4409,7 +4636,7 @@
         "risk_pct": 4.3
       },
       "analysis": "BWP has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 2% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$3.9600, stop A$3.7917, target A$4.4649 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "DRR",
@@ -4477,7 +4704,7 @@
         4.57999992
       ],
       "trend": "blue",
-      "turnover": 9926926,
+      "turnover": 9966542,
       "detail": {
         "setup_type": "reversal",
         "sma9": 4.53777774,
@@ -4493,7 +4720,7 @@
         "rsi_ma": 53.7,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 1700665,
+        "volume_today": 1873663,
         "volume_avg": 2279001,
         "volume_surge": false,
         "off_high_pct": 3.4,
@@ -4521,7 +4748,7 @@
         "risk_pct": 7.8
       },
       "analysis": "DRR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 3% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$4.5800, stop A$4.2223, target A$5.6530 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "DXI",
@@ -4633,7 +4860,7 @@
         "risk_pct": 5.4
       },
       "analysis": "DXI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 13% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.5000, stop A$2.3661, target A$2.9017 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "EIQ",
@@ -4776,7 +5003,7 @@
       "stop": 0.02475,
       "target": 0.14575,
       "rr": 3.0,
-      "trail": 0.04238477,
+      "trail": 0.04263477,
       "stop_pct": 55.0,
       "p2_pct": 165.0,
       "target_basis": "measured",
@@ -4838,9 +5065,9 @@
         "broken": true,
         "swing_low": 0.025,
         "swing_low_pct": -54.5,
-        "trailing_stop": 0.04238477,
+        "trailing_stop": 0.04263477,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -22.9,
+        "trailing_pct": -22.5,
         "structure": {
           "trend": "Mixed / consolidating",
           "swing_highs": [
@@ -4857,7 +5084,7 @@
         "risk_pct": 55.0
       },
       "analysis": "KRR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Volume is expanding (2.6\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$0.0410. Trade idea: entry A$0.0550, stop A$0.0248, target A$0.1457 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "LLM",
@@ -4969,7 +5196,7 @@
         "risk_pct": 2.2
       },
       "analysis": "LLM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Volume is expanding (0.9\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$0.4300. Trade idea: entry A$0.4300, stop A$0.4208, target A$0.4577 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "NHF",
@@ -5037,7 +5264,7 @@
         7.0
       ],
       "trend": "blue",
-      "turnover": 6638910,
+      "turnover": 6641967,
       "detail": {
         "setup_type": "reversal",
         "sma9": 6.95555549,
@@ -5053,7 +5280,7 @@
         "rsi_ma": 60.2,
         "rsi_up": true,
         "volume_ratio": 1.1,
-        "volume_today": 762418,
+        "volume_today": 771152,
         "volume_avg": 974998,
         "volume_surge": false,
         "off_high_pct": 11.5,
@@ -5081,7 +5308,7 @@
         "risk_pct": 4.4
       },
       "analysis": "NHF has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 12% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$7.0000, stop A$6.6924, target A$7.9228 (3.00:1) \u2014 then trail it.",
-      "sector_count": 4
+      "sector_count": 5
     },
     {
       "symbol": "OML",
@@ -5149,7 +5376,7 @@
         1.46000004
       ],
       "trend": "blue",
-      "turnover": 1803788,
+      "turnover": 1803789,
       "detail": {
         "setup_type": "reversal",
         "sma9": 1.45777782,
@@ -5165,7 +5392,7 @@
         "rsi_ma": 62.6,
         "rsi_up": true,
         "volume_ratio": 0.3,
-        "volume_today": 451651,
+        "volume_today": 451652,
         "volume_avg": 1336401,
         "volume_surge": false,
         "off_high_pct": 15.8,
@@ -5261,7 +5488,7 @@
         5.63000011
       ],
       "trend": "blue",
-      "turnover": 27139326,
+      "turnover": 27150523,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.57444451,
@@ -5277,7 +5504,7 @@
         "rsi_ma": 59.5,
         "rsi_up": true,
         "volume_ratio": 0.7,
-        "volume_today": 2814007,
+        "volume_today": 2853782,
         "volume_avg": 5179643,
         "volume_surge": false,
         "off_high_pct": 4.8,
@@ -5305,343 +5532,7 @@
         "risk_pct": 4.3
       },
       "analysis": "TLC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 5% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$5.6300, stop A$5.3906, target A$6.3483 (3.00:1) \u2014 then trail it.",
-      "sector_count": 7
-    },
-    {
-      "symbol": "WPR",
-      "name": "Waypoint Reit",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -7% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 2.5,
-      "y_close": 2.48000002,
-      "open": 2.48000002,
-      "open_pct": 0.0,
-      "current_pct": 0.81,
-      "day_pct": 0.81,
-      "entry": 2.5,
-      "stop": 2.3661001,
-      "target": 2.90169969,
-      "rr": 3.0,
-      "trail": 2.3540135,
-      "stop_pct": 5.4,
-      "p2_pct": 16.1,
-      "target_basis": "measured",
-      "spark": [
-        2.43000007,
-        2.41000009,
-        2.45000005,
-        2.4000001,
-        2.42000008,
-        2.41000009,
-        2.4000001,
-        2.3900001,
-        2.4000001,
-        2.38000011,
-        2.38000011,
-        2.3599999,
-        2.32999992,
-        2.32999992,
-        2.36999989,
-        2.3900001,
-        2.41000009,
-        2.45000005,
-        2.48000002,
-        2.47000003,
-        2.48000002,
-        2.48000002,
-        2.51999998,
-        2.43000007,
-        2.47000003,
-        2.49000001,
-        2.46000004,
-        2.48000002,
-        2.48000002,
-        2.5
-      ],
-      "trend": "blue",
-      "turnover": 4141044,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 2.47888891,
-        "sma9_pct": -0.8,
-        "sma26": 2.4292308,
-        "sma26_pct": -2.8,
-        "sma43": 2.43093027,
-        "sma43_pct": -2.8,
-        "sma200": 2.48955603,
-        "sma200_pct": -0.4,
-        "cross_up": true,
-        "rsi": 58.6,
-        "rsi_ma": 58.2,
-        "rsi_up": true,
-        "volume_ratio": 0.9,
-        "volume_today": 911861,
-        "volume_avg": 1721220,
-        "volume_surge": false,
-        "off_high_pct": 6.8,
-        "base_high": 2.51999998,
-        "base_high_pct": 0.8,
-        "broken": false,
-        "swing_low": 2.3900001,
-        "swing_low_pct": -4.4,
-        "trailing_stop": 2.3540135,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -5.8,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            2.47000003,
-            2.41000009,
-            2.51999998
-          ],
-          "swing_lows": [
-            2.36999989,
-            2.28999996,
-            2.3900001
-          ]
-        },
-        "risk_pct": 5.4
-      },
-      "analysis": "WPR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 7% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.5000, stop A$2.3661, target A$2.9017 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
-    },
-    {
-      "symbol": "WQG",
-      "name": "Wcm Global Growth Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -9% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 1.90999997,
-      "y_close": 1.875,
-      "open": 1.88499999,
-      "open_pct": 0.53,
-      "current_pct": 1.33,
-      "day_pct": 1.87,
-      "entry": 1.90999997,
-      "stop": 1.76219997,
-      "target": 2.35339995,
-      "rr": 3.0,
-      "trail": 1.91125335,
-      "stop_pct": 7.7,
-      "p2_pct": 23.2,
-      "target_basis": "measured",
-      "spark": [
-        1.84336412,
-        1.85819006,
-        1.83842206,
-        1.78900206,
-        1.83348012,
-        1.85819006,
-        1.84830606,
-        1.84830606,
-        1.873016,
-        1.86807406,
-        1.87795806,
-        1.88784194,
-        1.88784194,
-        1.912552,
-        1.892784,
-        1.90760994,
-        1.8829,
-        1.79999995,
-        1.79999995,
-        1.82500005,
-        1.88499999,
-        1.87,
-        1.90999997,
-        1.87,
-        1.89499998,
-        1.89999998,
-        1.88999999,
-        1.87,
-        1.875,
-        1.90999997
-      ],
-      "trend": "blue",
-      "turnover": 477117,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 1.88777777,
-        "sma9_pct": -1.2,
-        "sma26": 1.87226385,
-        "sma26_pct": -2.0,
-        "sma43": 1.85233353,
-        "sma43_pct": -3.0,
-        "sma200": 1.85554389,
-        "sma200_pct": -2.9,
-        "cross_up": true,
-        "rsi": 57.6,
-        "rsi_ma": 52.8,
-        "rsi_up": true,
-        "volume_ratio": 0.9,
-        "volume_today": 176869,
-        "volume_avg": 253894,
-        "volume_surge": false,
-        "off_high_pct": 8.9,
-        "base_high": 1.94000006,
-        "base_high_pct": 1.6,
-        "broken": false,
-        "swing_low": 1.77999997,
-        "swing_low_pct": -6.8,
-        "trailing_stop": 1.91125335,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 0.1,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.9224361,
-            1.94000006,
-            1.92499995
-          ],
-          "swing_lows": [
-            1.78900206,
-            1.82853809,
-            1.77999997
-          ]
-        },
-        "risk_pct": 7.7
-      },
-      "analysis": "WQG has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 9% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.9100, stop A$1.7622, target A$2.3534 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "WHI",
-      "name": "Whitefield Income Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -13% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 1.31500006,
-      "y_close": 1.30499995,
-      "open": 1.30499995,
-      "open_pct": 0.0,
-      "current_pct": 0.77,
-      "day_pct": 0.77,
-      "entry": 1.31500006,
-      "stop": 1.23502494,
-      "target": 1.5549254,
-      "rr": 3.0,
-      "trail": 1.33462753,
-      "stop_pct": 6.1,
-      "p2_pct": 18.2,
-      "target_basis": "measured",
-      "spark": [
-        1.35878289,
-        1.35380566,
-        1.27416992,
-        1.27416992,
-        1.27914715,
-        1.25923836,
-        1.25923836,
-        1.23435223,
-        1.24928391,
-        1.23932946,
-        1.24928391,
-        1.25426114,
-        1.29407883,
-        1.28412437,
-        1.29407883,
-        1.27416992,
-        1.29999995,
-        1.26999998,
-        1.28499997,
-        1.27499998,
-        1.255,
-        1.26999998,
-        1.28999996,
-        1.29999995,
-        1.30499995,
-        1.29499996,
-        1.28999996,
-        1.30499995,
-        1.30499995,
-        1.31500006
-      ],
-      "trend": "blue",
-      "turnover": 651655,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 1.29722219,
-        "sma9_pct": -1.4,
-        "sma26": 1.27809946,
-        "sma26_pct": -2.8,
-        "sma43": 1.30798304,
-        "sma43_pct": -0.5,
-        "sma200": 1.34769369,
-        "sma200_pct": 2.5,
-        "cross_up": true,
-        "rsi": 55.9,
-        "rsi_ma": 49.5,
-        "rsi_up": true,
-        "volume_ratio": 1.2,
-        "volume_today": 658671,
-        "volume_avg": 503061,
-        "volume_surge": false,
-        "off_high_pct": 13.4,
-        "base_high": 1.4075975,
-        "base_high_pct": 7.0,
-        "broken": false,
-        "swing_low": 1.24749994,
-        "swing_low_pct": -5.1,
-        "trailing_stop": 1.33462753,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 1.5,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.30999994,
-            1.31500006,
-            1.31500006
-          ],
-          "swing_lows": [
-            1.25426104,
-            1.23435223,
-            1.24430659
-          ]
-        },
-        "risk_pct": 6.1
-      },
-      "analysis": "WHI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 13% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.3150, stop A$1.2350, target A$1.5549 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 5
     },
     {
       "symbol": "LOV",
@@ -5709,7 +5600,7 @@
         23.25
       ],
       "trend": "blue",
-      "turnover": 7332639,
+      "turnover": 7358121,
       "detail": {
         "setup_type": "reversal",
         "sma9": 22.95777787,
@@ -5724,8 +5615,8 @@
         "rsi": 56.5,
         "rsi_ma": 53.1,
         "rsi_up": true,
-        "volume_ratio": 0.8,
-        "volume_today": 191204,
+        "volume_ratio": 0.9,
+        "volume_today": 213124,
         "volume_avg": 333991,
         "volume_surge": false,
         "off_high_pct": 45.1,
@@ -5753,7 +5644,7 @@
         "risk_pct": 11.5
       },
       "analysis": "LOV has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 45% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$23.2500, stop A$20.5821, target A$30.2693 (2.63:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "ABG",
@@ -5776,9 +5667,9 @@
       "liquidity": "LIQUID",
       "price": 1.03499997,
       "y_close": 1.01999998,
-      "open": 1.02199996,
-      "open_pct": 0.2,
-      "current_pct": 1.27,
+      "open": 1.02250004,
+      "open_pct": 0.25,
+      "current_pct": 1.22,
       "day_pct": 1.47,
       "entry": 1.03499997,
       "stop": 0.97515001,
@@ -5865,7 +5756,7 @@
         "risk_pct": 5.8
       },
       "analysis": "ABG has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 17% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.0350, stop A$0.9752, target A$1.1750 (2.34:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "ARF",
@@ -5933,7 +5824,7 @@
         3.25999999
       ],
       "trend": "blue",
-      "turnover": 3444006,
+      "turnover": 3445170,
       "detail": {
         "setup_type": "reversal",
         "sma9": 3.22111114,
@@ -5948,8 +5839,8 @@
         "rsi": 54.9,
         "rsi_ma": 50.1,
         "rsi_up": true,
-        "volume_ratio": 0.9,
-        "volume_today": 1195493,
+        "volume_ratio": 1.0,
+        "volume_today": 1202631,
         "volume_avg": 1088998,
         "volume_surge": false,
         "off_high_pct": 17.2,
@@ -5977,7 +5868,7 @@
         "risk_pct": 4.3
       },
       "analysis": "ARF has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 17% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$3.2600, stop A$3.1185, target A$3.5864 (2.31:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "MGR",
@@ -6045,7 +5936,7 @@
         1.78499997
       ],
       "trend": "blue",
-      "turnover": 23248329,
+      "turnover": 23372541,
       "detail": {
         "setup_type": "reversal",
         "sma9": 1.75888888,
@@ -6061,7 +5952,7 @@
         "rsi_ma": 56.8,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 13257663,
+        "volume_today": 14649401,
         "volume_avg": 13223872,
         "volume_surge": false,
         "off_high_pct": 25.8,
@@ -6089,7 +5980,7 @@
         "risk_pct": 6.3
       },
       "analysis": "MGR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 26% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.7850, stop A$1.6731, target A$2.0200 (2.10:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "LAU",
@@ -6201,7 +6092,7 @@
         "risk_pct": 6.9
       },
       "analysis": "LAU has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 22% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.5850, stop A$0.5445, target A$0.6660 (2.00:1) \u2014 then trail it.",
-      "sector_count": 6
+      "sector_count": 5
     },
     {
       "symbol": "LFG",
@@ -6313,119 +6204,7 @@
         "risk_pct": 5.6
       },
       "analysis": "LFG has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 26% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$3.2300, stop A$3.0492, target A$3.5636 (1.85:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "SGP",
-      "name": "Stockland",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -35% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "1.7:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 4.32000017,
-      "y_close": 4.21999979,
-      "open": 4.1500001,
-      "open_pct": -1.66,
-      "current_pct": 4.1,
-      "day_pct": 2.37,
-      "entry": 4.32000017,
-      "stop": 3.8511001,
-      "target": 5.11000013,
-      "rr": 1.68,
-      "trail": 3.93445995,
-      "stop_pct": 10.9,
-      "p2_pct": 18.3,
-      "target_basis": "resistance",
-      "spark": [
-        3.97000003,
-        3.82999992,
-        3.95000005,
-        3.9000001,
-        4.01000023,
-        3.97000003,
-        4.05000019,
-        4.03000021,
-        4.05999994,
-        4.03000021,
-        4.0999999,
-        3.96000004,
-        3.78999996,
-        3.72000003,
-        3.78999996,
-        3.82999992,
-        3.8599999,
-        3.97000003,
-        4.0999999,
-        4.23000002,
-        4.36999989,
-        4.26000023,
-        4.30000019,
-        4.23000002,
-        4.30000019,
-        4.17999983,
-        4.15999985,
-        4.17000008,
-        4.21999979,
-        4.32000017
-      ],
-      "trend": "blue",
-      "turnover": 60170499,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 4.23777782,
-        "sma9_pct": -1.9,
-        "sma26": 4.07730772,
-        "sma26_pct": -5.6,
-        "sma43": 4.04488377,
-        "sma43_pct": -6.4,
-        "sma200": 5.15684029,
-        "sma200_pct": 19.4,
-        "cross_up": true,
-        "rsi": 59.9,
-        "rsi_ma": 56.5,
-        "rsi_up": true,
-        "volume_ratio": 0.7,
-        "volume_today": 11994549,
-        "volume_avg": 14652725,
-        "volume_surge": false,
-        "off_high_pct": 35.0,
-        "base_high": 4.36999989,
-        "base_high_pct": 1.2,
-        "broken": false,
-        "swing_low": 3.8900001,
-        "swing_low_pct": -10.0,
-        "trailing_stop": 3.93445995,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -8.9,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            4.11999989,
-            4.36999989,
-            4.36999989
-          ],
-          "swing_lows": [
-            3.82999992,
-            3.79999995,
-            3.71000004
-          ]
-        },
-        "risk_pct": 10.9
-      },
-      "analysis": "SGP has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 35% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$4.3200, stop A$3.8511, target A$5.1100 (1.68:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 12
     },
     {
       "symbol": "CWP",
@@ -6493,7 +6272,7 @@
         7.05000019
       ],
       "trend": "blue",
-      "turnover": 1427285,
+      "turnover": 1429470,
       "detail": {
         "setup_type": "reversal",
         "sma9": 6.94666672,
@@ -6502,14 +6281,14 @@
         "sma26_pct": -3.2,
         "sma43": 6.94465123,
         "sma43_pct": -1.5,
-        "sma200": 7.69548576,
+        "sma200": 7.69548577,
         "sma200_pct": 9.2,
         "cross_up": true,
         "rsi": 55.0,
         "rsi_ma": 50.2,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 156730,
+        "volume_today": 162930,
         "volume_avg": 205814,
         "volume_surge": false,
         "off_high_pct": 21.9,
@@ -6537,7 +6316,7 @@
         "risk_pct": 7.9
       },
       "analysis": "CWP has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 22% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$7.0500, stop A$6.4944, target A$7.8014 (1.35:1) \u2014 then trail it.",
-      "sector_count": 2
+      "sector_count": 4
     },
     {
       "symbol": "BXB",
@@ -6605,7 +6384,7 @@
         19.63999939
       ],
       "trend": "blue",
-      "turnover": 116356451,
+      "turnover": 116390709,
       "detail": {
         "setup_type": "reversal",
         "sma9": 19.05666627,
@@ -6621,7 +6400,7 @@
         "rsi_ma": 52.1,
         "rsi_up": true,
         "volume_ratio": 0.6,
-        "volume_today": 2782361,
+        "volume_today": 2817247,
         "volume_avg": 6630901,
         "volume_surge": false,
         "off_high_pct": 25.1,
@@ -6717,7 +6496,7 @@
         51.79000092
       ],
       "trend": "blue",
-      "turnover": 62647578,
+      "turnover": 62666605,
       "detail": {
         "setup_type": "reversal",
         "sma9": 51.55888875,
@@ -6733,7 +6512,7 @@
         "rsi_ma": 45.2,
         "rsi_up": true,
         "volume_ratio": 0.7,
-        "volume_today": 751233,
+        "volume_today": 758581,
         "volume_avg": 1416001,
         "volume_surge": false,
         "off_high_pct": 25.8,
@@ -6761,12 +6540,12 @@
         "risk_pct": 8.6
       },
       "analysis": "ASX has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 26% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$51.7900, stop A$47.3418, target A$57.1801 (1.21:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
-      "symbol": "SVR",
-      "name": "Solvar Limited",
-      "sector": "Financial Services",
+      "symbol": "PPC",
+      "name": "Peet Limited",
+      "sector": "Real Estate Management & Development",
       "dir": "LONG",
       "setup_type": "reversal",
       "grade": "A",
@@ -6774,119 +6553,7 @@
       "score_max": 14,
       "chips": [
         "9 \u203a 26 RECLAIM",
-        "BASE -20% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "1.2:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.51999998,
-      "y_close": 1.5,
-      "open": 1.505,
-      "open_pct": 0.33,
-      "current_pct": 1.0,
-      "day_pct": 1.33,
-      "entry": 1.51999998,
-      "stop": 1.37114999,
-      "target": 1.69500005,
-      "rr": 1.18,
-      "trail": 1.42638129,
-      "stop_pct": 9.8,
-      "p2_pct": 11.5,
-      "target_basis": "resistance",
-      "spark": [
-        1.495,
-        1.46000004,
-        1.46000004,
-        1.46000004,
-        1.40999997,
-        1.39999998,
-        1.45000005,
-        1.41999996,
-        1.42999995,
-        1.48000002,
-        1.45000005,
-        1.47000003,
-        1.44000006,
-        1.44000006,
-        1.42499995,
-        1.41499996,
-        1.39999998,
-        1.39999998,
-        1.44500005,
-        1.47000003,
-        1.50999999,
-        1.48500001,
-        1.5,
-        1.5,
-        1.495,
-        1.53499997,
-        1.53999996,
-        1.505,
-        1.5,
-        1.51999998
-      ],
-      "trend": "blue",
-      "turnover": 362963,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 1.50888888,
-        "sma9_pct": -0.7,
-        "sma26": 1.46288461,
-        "sma26_pct": -3.8,
-        "sma43": 1.48732558,
-        "sma43_pct": -2.1,
-        "sma200": 1.58771789,
-        "sma200_pct": 4.5,
-        "cross_up": true,
-        "rsi": 56.1,
-        "rsi_ma": 51.9,
-        "rsi_up": true,
-        "volume_ratio": 0.5,
-        "volume_today": 180339,
-        "volume_avg": 258103,
-        "volume_surge": false,
-        "off_high_pct": 19.6,
-        "base_high": 1.625,
-        "base_high_pct": 6.9,
-        "broken": false,
-        "swing_low": 1.38499999,
-        "swing_low_pct": -8.9,
-        "trailing_stop": 1.42638129,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -6.2,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.49000001,
-            1.53499997,
-            1.57000005
-          ],
-          "swing_lows": [
-            1.38499999,
-            1.38499999,
-            1.38499999
-          ]
-        },
-        "risk_pct": 9.8
-      },
-      "analysis": "SVR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 20% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.5200, stop A$1.3711, target A$1.6950 (1.18:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "WEB",
-      "name": "Web Travel Group Limited",
-      "sector": "Consumer Services",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -41% OFF HIGH",
+        "BASE -17% OFF HIGH",
         "RSI TURNING UP"
       ],
       "weekly": false,
@@ -6894,98 +6561,98 @@
       "rr_text": "1.0:1",
       "target_2r": false,
       "liquidity": "LIQUID",
-      "price": 2.98000002,
-      "y_close": 2.93000007,
-      "open": 2.93000007,
+      "price": 1.78999996,
+      "y_close": 1.745,
+      "open": 1.745,
       "open_pct": 0.0,
-      "current_pct": 1.71,
-      "day_pct": 1.71,
-      "entry": 2.98000002,
-      "stop": 2.29679993,
-      "target": 3.66000009,
-      "rr": 1.0,
-      "trail": 2.6014107,
-      "stop_pct": 22.9,
-      "p2_pct": 22.8,
+      "current_pct": 2.58,
+      "day_pct": 2.58,
+      "entry": 1.78999996,
+      "stop": 1.59390001,
+      "target": 1.98500001,
+      "rr": 0.99,
+      "trail": 1.58613006,
+      "stop_pct": 11.0,
+      "p2_pct": 10.9,
       "target_basis": "resistance",
       "spark": [
-        2.44000006,
-        2.3900001,
-        2.38000011,
-        2.23000002,
-        2.33999991,
-        2.31999993,
-        2.42000008,
-        2.38000011,
-        2.43000007,
-        2.53999996,
-        2.6099999,
-        2.53999996,
-        2.52999997,
-        2.44000006,
-        2.41000009,
-        2.38000011,
-        2.42000008,
-        2.41000009,
-        2.3599999,
-        2.45000005,
-        2.67000008,
-        2.71000004,
-        3.00999999,
-        3.0,
-        3.00999999,
-        2.94000006,
-        2.91000009,
-        2.8499999,
-        2.93000007,
-        2.98000002
+        1.66499996,
+        1.64499998,
+        1.66499996,
+        1.60500002,
+        1.58000004,
+        1.55499995,
+        1.57000005,
+        1.56500006,
+        1.59500003,
+        1.73000002,
+        1.73500001,
+        1.67499995,
+        1.65499997,
+        1.64999998,
+        1.65999997,
+        1.63999999,
+        1.64499998,
+        1.66499996,
+        1.61500001,
+        1.66499996,
+        1.64999998,
+        1.64499998,
+        1.66499996,
+        1.72000003,
+        1.71000004,
+        1.71500003,
+        1.74000001,
+        1.74000001,
+        1.745,
+        1.78999996
       ],
       "trend": "blue",
-      "turnover": 13280897,
+      "turnover": 1891316,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 2.92666668,
-        "sma9_pct": -1.8,
-        "sma26": 2.61500002,
-        "sma26_pct": -12.2,
-        "sma43": 2.61209304,
-        "sma43_pct": -12.3,
-        "sma200": 3.6375,
-        "sma200_pct": 22.1,
+        "sma9": 1.71888889,
+        "sma9_pct": -4.0,
+        "sma26": 1.66615384,
+        "sma26_pct": -6.9,
+        "sma43": 1.6766279,
+        "sma43_pct": -6.3,
+        "sma200": 1.84685507,
+        "sma200_pct": 3.2,
         "cross_up": true,
-        "rsi": 64.7,
-        "rsi_ma": 58.5,
+        "rsi": 64.1,
+        "rsi_ma": 52.3,
         "rsi_up": true,
-        "volume_ratio": 0.6,
-        "volume_today": 2741742,
-        "volume_avg": 5082378,
+        "volume_ratio": 0.3,
+        "volume_today": 475061,
+        "volume_avg": 1160495,
         "volume_surge": false,
-        "off_high_pct": 40.9,
-        "base_high": 3.1099999,
-        "base_high_pct": 4.4,
+        "off_high_pct": 17.4,
+        "base_high": 1.90999997,
+        "base_high_pct": 6.7,
         "broken": false,
-        "swing_low": 2.31999993,
-        "swing_low_pct": -22.1,
-        "trailing_stop": 2.6014107,
+        "swing_low": 1.61000001,
+        "swing_low_pct": -10.1,
+        "trailing_stop": 1.58613006,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -12.7,
+        "trailing_pct": -11.4,
         "structure": {
           "trend": "Mixed / consolidating",
           "swing_highs": [
-            2.9000001,
-            2.72000003,
-            3.1099999
+            1.79499996,
+            1.78499997,
+            1.68499994
           ],
           "swing_lows": [
-            2.6099999,
-            2.17000008,
-            2.31999993
+            1.49000001,
+            1.61000001,
+            1.625
           ]
         },
-        "risk_pct": 22.9
+        "risk_pct": 11.0
       },
-      "analysis": "WEB has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 41% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.9800, stop A$2.2968, target A$3.6600 (1.00:1) \u2014 then trail it.",
-      "sector_count": 7
+      "analysis": "PPC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 17% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.7900, stop A$1.5939, target A$1.9850 (0.99:1) \u2014 then trail it.",
+      "sector_count": 4
     },
     {
       "symbol": "APZ",
@@ -7053,7 +6720,7 @@
         5.28000021
       ],
       "trend": "blue",
-      "turnover": 3390039,
+      "turnover": 3391359,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.19222228,
@@ -7069,7 +6736,7 @@
         "rsi_ma": 62.6,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 824157,
+        "volume_today": 829157,
         "volume_avg": 650503,
         "volume_surge": false,
         "off_high_pct": 17.9,
@@ -7097,7 +6764,7 @@
         "risk_pct": 13.0
       },
       "analysis": "APZ has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 18% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$5.2800, stop A$4.5936, target A$5.8300 (0.80:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "IMR",
@@ -7209,119 +6876,7 @@
         "risk_pct": 13.2
       },
       "analysis": "IMR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 17% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.8650, stop A$1.6186, target A$2.0600 (0.79:1) \u2014 then trail it.",
-      "sector_count": 9
-    },
-    {
-      "symbol": "VTM",
-      "name": "Victory Metals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "A",
-      "score": 9,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -13% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "0.8:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.67499995,
-      "y_close": 1.70000005,
-      "open": 1.71000004,
-      "open_pct": 0.59,
-      "current_pct": -2.05,
-      "day_pct": -1.47,
-      "entry": 1.67499995,
-      "stop": 1.38599998,
-      "target": 1.89999998,
-      "rr": 0.78,
-      "trail": 1.4010685,
-      "stop_pct": 17.3,
-      "p2_pct": 13.4,
-      "target_basis": "resistance",
-      "spark": [
-        1.47500002,
-        1.37,
-        1.30999994,
-        1.21500003,
-        1.24000001,
-        1.28999996,
-        1.41999996,
-        1.44500005,
-        1.38499999,
-        1.39499998,
-        1.42999995,
-        1.39499998,
-        1.36000001,
-        1.41999996,
-        1.55999994,
-        1.51999998,
-        1.50999999,
-        1.42999995,
-        1.48500001,
-        1.51999998,
-        1.54999995,
-        1.51999998,
-        1.56500006,
-        1.53999996,
-        1.64999998,
-        1.66499996,
-        1.70000005,
-        1.65499997,
-        1.70000005,
-        1.67499995
-      ],
-      "trend": "blue",
-      "turnover": 267525,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 1.63,
-        "sma9_pct": -2.7,
-        "sma26": 1.50096152,
-        "sma26_pct": -10.4,
-        "sma43": 1.52011627,
-        "sma43_pct": -9.2,
-        "sma200": 1.34805,
-        "sma200_pct": -19.5,
-        "cross_up": true,
-        "rsi": 59.6,
-        "rsi_ma": 56.2,
-        "rsi_up": true,
-        "volume_ratio": 0.8,
-        "volume_today": 111142,
-        "volume_avg": 168605,
-        "volume_surge": false,
-        "off_high_pct": 13.0,
-        "base_high": 1.84000003,
-        "base_high_pct": 9.9,
-        "broken": false,
-        "swing_low": 1.39999998,
-        "swing_low_pct": -16.4,
-        "trailing_stop": 1.4010685,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -16.4,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            1.57000005,
-            1.57000005,
-            1.77999997
-          ],
-          "swing_lows": [
-            1.34500003,
-            1.39999998,
-            1.46000004
-          ]
-        },
-        "risk_pct": 17.3
-      },
-      "analysis": "VTM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 13% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.6750, stop A$1.3860, target A$1.9000 (0.78:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 8
     },
     {
       "symbol": "AGR",
@@ -7433,7 +6988,7 @@
         "risk_pct": 19.9
       },
       "analysis": "AGR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 36% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.0210, stop A$0.0168, target A$0.0240 (0.72:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "LLC",
@@ -7501,7 +7056,7 @@
         3.16000009
       ],
       "trend": "blue",
-      "turnover": 13071320,
+      "turnover": 13073172,
       "detail": {
         "setup_type": "reversal",
         "sma9": 2.99555561,
@@ -7517,7 +7072,7 @@
         "rsi_ma": 52.0,
         "rsi_up": true,
         "volume_ratio": 0.7,
-        "volume_today": 4068314,
+        "volume_today": 4080035,
         "volume_avg": 4745067,
         "volume_surge": false,
         "off_high_pct": 45.2,
@@ -7545,7 +7100,7 @@
         "risk_pct": 21.1
       },
       "analysis": "LLC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 45% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$3.1600, stop A$2.4948, target A$3.4900 (0.50:1) \u2014 then trail it.",
-      "sector_count": 2
+      "sector_count": 4
     },
     {
       "symbol": "EQR",
@@ -7657,7 +7212,7 @@
         "risk_pct": 29.8
       },
       "analysis": "EQR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 29% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.2750, stop A$0.1930, target A$0.3100 (0.43:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "BCN",
@@ -7769,7 +7324,7 @@
         "risk_pct": 27.9
       },
       "analysis": "BCN has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 45% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.5900, stop A$1.8661, target A$2.8900 (0.41:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "ALL",
@@ -7837,7 +7392,7 @@
         58.68999863
       ],
       "trend": "blue",
-      "turnover": 113823687,
+      "turnover": 114095870,
       "detail": {
         "setup_type": "reversal",
         "sma9": 56.02111138,
@@ -7853,7 +7408,7 @@
         "rsi_ma": 69.5,
         "rsi_up": false,
         "volume_ratio": 1.5,
-        "volume_today": 1999961,
+        "volume_today": 2092714,
         "volume_avg": 2029010,
         "volume_surge": true,
         "off_high_pct": 18.4,
@@ -7881,7 +7436,7 @@
         "risk_pct": 12.9
       },
       "analysis": "ALL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 18% below its one-year high, so there is room to run. Volume is expanding (1.5\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$54.9500. Trade idea: entry A$58.6900, stop A$51.1038, target A$81.4486 (3.00:1) \u2014 then trail it.",
-      "sector_count": 7
+      "sector_count": 5
     },
     {
       "symbol": "HM1",
@@ -7993,7 +7548,7 @@
         "risk_pct": 4.5
       },
       "analysis": "HM1's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 16% below its one-year high, so there is room to run. Volume is expanding (1.3\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$2.8600, stop A$2.7324, target A$3.2428 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "MMI",
@@ -8105,7 +7660,7 @@
         "risk_pct": 20.1
       },
       "analysis": "MMI's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 9% below its one-year high, so there is room to run. Volume is expanding (1.5\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$1.6450. Trade idea: entry A$1.7350, stop A$1.3860, target A$2.7820 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "MFF",
@@ -8217,7 +7772,343 @@
         "risk_pct": 4.3
       },
       "analysis": "MFF's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 1% below its one-year high, so there is room to run. Volume is expanding (1.1\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$5.0700, stop A$4.8510, target A$5.7270 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
+    },
+    {
+      "symbol": "PMV",
+      "name": "Premier Investments Limited",
+      "sector": "Consumer Discretionary Distribution & Retail",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "B",
+      "score": 8,
+      "score_max": 14,
+      "chips": [
+        "BASE -34% OFF HIGH",
+        "VOLUME 1.4\u00d7 SURGE",
+        "BASE BREAKOUT"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 14.64999962,
+      "y_close": 14.78999996,
+      "open": 14.85000038,
+      "open_pct": 0.41,
+      "current_pct": -1.35,
+      "day_pct": -0.95,
+      "entry": 14.64999962,
+      "stop": 13.41450019,
+      "target": 18.35649791,
+      "rr": 3.0,
+      "trail": 13.44004798,
+      "stop_pct": 8.4,
+      "p2_pct": 25.3,
+      "target_basis": "measured",
+      "spark": [
+        11.27000046,
+        11.28999996,
+        11.56000042,
+        11.35999966,
+        11.60000038,
+        11.71000004,
+        11.59000015,
+        11.80000019,
+        12.25,
+        12.31999969,
+        12.52999973,
+        12.68999958,
+        12.71000004,
+        12.64000034,
+        12.69999981,
+        12.89999962,
+        13.39999962,
+        13.89000034,
+        14.03999996,
+        14.13000011,
+        14.06000042,
+        14.11999989,
+        14.06999969,
+        14.17000008,
+        14.30000019,
+        14.63000011,
+        14.31999969,
+        14.18999958,
+        14.78999996,
+        14.64999962
+      ],
+      "trend": "blue",
+      "turnover": 5235814,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 14.35999987,
+        "sma9_pct": -2.0,
+        "sma26": 13.31538457,
+        "sma26_pct": -9.1,
+        "sma43": 12.77883716,
+        "sma43_pct": -12.8,
+        "sma200": 14.63919451,
+        "sma200_pct": -0.1,
+        "cross_up": true,
+        "rsi": 70.4,
+        "rsi_ma": 75.0,
+        "rsi_up": true,
+        "volume_ratio": 1.4,
+        "volume_today": 721062,
+        "volume_avg": 358187,
+        "volume_surge": true,
+        "off_high_pct": 33.9,
+        "base_high": 14.39999962,
+        "base_high_pct": -1.7,
+        "broken": true,
+        "swing_low": 13.55000019,
+        "swing_low_pct": -7.5,
+        "trailing_stop": 13.44004798,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -8.3,
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            13.14000034,
+            12.46000004,
+            14.39999962
+          ],
+          "swing_lows": [
+            11.82999992,
+            10.97000027,
+            13.55000019
+          ]
+        },
+        "risk_pct": 8.4
+      },
+      "analysis": "PMV's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 34% below its one-year high, so there is room to run. Volume is expanding (1.4\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$14.4000. Trade idea: entry A$14.6500, stop A$13.4145, target A$18.3565 (3.00:1) \u2014 then trail it.",
+      "sector_count": 11
+    },
+    {
+      "symbol": "QAN",
+      "name": "Qantas Airways Limited",
+      "sector": "Transportation",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "B",
+      "score": 8,
+      "score_max": 14,
+      "chips": [
+        "BASE -11% OFF HIGH",
+        "VOLUME 1.2\u00d7 SURGE",
+        "BASE BREAKOUT"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 10.68000031,
+      "y_close": 10.71000004,
+      "open": 10.76000023,
+      "open_pct": 0.47,
+      "current_pct": -0.74,
+      "day_pct": -0.28,
+      "entry": 10.68000031,
+      "stop": 8.78129989,
+      "target": 16.37610156,
+      "rr": 3.0,
+      "trail": 9.90182138,
+      "stop_pct": 17.8,
+      "p2_pct": 53.3,
+      "target_basis": "measured",
+      "spark": [
+        8.53999996,
+        8.43999958,
+        8.55000019,
+        8.44999981,
+        8.71000004,
+        8.68000031,
+        9.18000031,
+        9.18000031,
+        9.28999996,
+        9.14999962,
+        9.43999958,
+        9.39999962,
+        9.21000004,
+        9.15999985,
+        9.14999962,
+        9.18999958,
+        9.22000027,
+        9.31999969,
+        9.01000023,
+        9.35000038,
+        9.93999958,
+        9.96000004,
+        9.97999954,
+        9.98999977,
+        10.06000042,
+        10.09000015,
+        10.13000011,
+        10.28999996,
+        10.71000004,
+        10.68000031
+      ],
+      "trend": "blue",
+      "turnover": 66788448,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 10.21000004,
+        "sma9_pct": -4.4,
+        "sma26": 9.55653844,
+        "sma26_pct": -10.5,
+        "sma43": 9.16302322,
+        "sma43_pct": -14.2,
+        "sma200": 9.63937962,
+        "sma200_pct": -9.7,
+        "cross_up": true,
+        "rsi": 78.1,
+        "rsi_ma": 67.7,
+        "rsi_up": true,
+        "volume_ratio": 1.2,
+        "volume_today": 5810104,
+        "volume_avg": 6765341,
+        "volume_surge": true,
+        "off_high_pct": 11.3,
+        "base_high": 10.14999962,
+        "base_high_pct": -5.0,
+        "broken": true,
+        "swing_low": 8.86999989,
+        "swing_low_pct": -16.9,
+        "trailing_stop": 9.90182138,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -7.3,
+        "structure": {
+          "trend": "HH/HL \u2014 Uptrend",
+          "swing_highs": [
+            9.30000019,
+            9.0,
+            9.5
+          ],
+          "swing_lows": [
+            8.23999977,
+            8.39999962,
+            8.86999989
+          ]
+        },
+        "risk_pct": 17.8
+      },
+      "analysis": "QAN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 11% below its one-year high, so there is room to run. Volume is expanding (1.2\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$10.1500. Trade idea: entry A$10.6800, stop A$8.7813, target A$16.3761 (3.00:1) \u2014 then trail it.",
+      "sector_count": 5
+    },
+    {
+      "symbol": "QBE",
+      "name": "Qbe Insurance Group Limited",
+      "sector": "Insurance",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "B",
+      "score": 8,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM",
+        "BASE BREAKOUT",
+        "RSI TURNING UP"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 24.84000015,
+      "y_close": 24.87999916,
+      "open": 24.69000053,
+      "open_pct": -0.76,
+      "current_pct": 0.61,
+      "day_pct": -0.16,
+      "entry": 24.84000015,
+      "stop": 23.06205008,
+      "target": 30.17385038,
+      "rr": 3.0,
+      "trail": 23.45565288,
+      "stop_pct": 7.2,
+      "p2_pct": 21.5,
+      "target_basis": "measured",
+      "spark": [
+        23.04000092,
+        23.26000023,
+        23.93000031,
+        23.68000031,
+        23.88999939,
+        23.56999969,
+        23.06999969,
+        23.03000069,
+        23.09000015,
+        22.45000076,
+        22.63999939,
+        22.37999916,
+        22.10000038,
+        22.12999916,
+        22.39999962,
+        22.67000008,
+        22.87000084,
+        23.42000008,
+        24.28000069,
+        24.05999947,
+        23.45000076,
+        23.46999931,
+        23.56999969,
+        24.01000023,
+        24.05999947,
+        24.43000031,
+        24.38999939,
+        24.55999947,
+        24.87999916,
+        24.84000015
+      ],
+      "trend": "blue",
+      "turnover": 91749918,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 24.24555524,
+        "sma9_pct": -2.4,
+        "sma26": 23.45038451,
+        "sma26_pct": -5.6,
+        "sma43": 23.13534879,
+        "sma43_pct": -6.9,
+        "sma200": 20.60467259,
+        "sma200_pct": -17.1,
+        "cross_up": true,
+        "rsi": 69.0,
+        "rsi_ma": 62.9,
+        "rsi_up": true,
+        "volume_ratio": 0.9,
+        "volume_today": 3268163,
+        "volume_avg": 3858424,
+        "volume_surge": false,
+        "off_high_pct": 1.0,
+        "base_high": 24.60000038,
+        "base_high_pct": -1.0,
+        "broken": true,
+        "swing_low": 23.29500008,
+        "swing_low_pct": -6.2,
+        "trailing_stop": 23.45565288,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -5.6,
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            23.07999992,
+            24.31999969,
+            24.60000038
+          ],
+          "swing_lows": [
+            22.01000023,
+            22.03499985,
+            21.76000023
+          ]
+        },
+        "risk_pct": 7.2
+      },
+      "analysis": "QBE has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Price has broken above the base high at A$24.6000. RSI has turned up through its signal line. Trade idea: entry A$24.8400, stop A$23.0621, target A$30.1739 (3.00:1) \u2014 then trail it.",
+      "sector_count": 5
     },
     {
       "symbol": "CCV",
@@ -8329,7 +8220,7 @@
         "risk_pct": 6.0
       },
       "analysis": "It is coming off a base, 15% below its one-year high, so there is room to run. Volume is expanding (1.9\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$0.3000, stop A$0.2822, target A$0.3320 (1.79:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "GYG",
@@ -8397,7 +8288,7 @@
         20.27000046
       ],
       "trend": "blue",
-      "turnover": 10955061,
+      "turnover": 10955651,
       "detail": {
         "setup_type": "reversal",
         "sma9": 19.33444468,
@@ -8413,7 +8304,7 @@
         "rsi_ma": 53.1,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 254353,
+        "volume_today": 254935,
         "volume_avg": 588444,
         "volume_surge": true,
         "off_high_pct": 40.3,
@@ -8441,7 +8332,7 @@
         "risk_pct": 10.8
       },
       "analysis": "It is coming off a base, 40% below its one-year high, so there is room to run. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$20.2700, stop A$18.0774, target A$24.1211 (1.76:1) \u2014 then trail it.",
-      "sector_count": 7
+      "sector_count": 5
     },
     {
       "symbol": "PWR",
@@ -8553,7 +8444,7 @@
         "risk_pct": 11.9
       },
       "analysis": "It is coming off a base, 52% below its one-year high, so there is room to run. Volume is expanding (1.3\u00d7 the 20-day average) \u2014 real participation. RSI has turned up through its signal line. Trade idea: entry A$0.9550, stop A$0.8415, target A$1.1300 (1.54:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "MYX",
@@ -8957,7 +8848,7 @@
         107.77999878
       ],
       "trend": "blue",
-      "turnover": 24510299,
+      "turnover": 24573010,
       "detail": {
         "setup_type": "reversal",
         "sma9": 106.01555464,
@@ -8973,7 +8864,7 @@
         "rsi_ma": 56.5,
         "rsi_up": true,
         "volume_ratio": 0.6,
-        "volume_today": 152783,
+        "volume_today": 164420,
         "volume_avg": 233276,
         "volume_surge": false,
         "off_high_pct": 15.7,
@@ -9001,7 +8892,7 @@
         "risk_pct": 13.1
       },
       "analysis": "XYZ's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 16% below its one-year high, so there is room to run. Price has broken above the base high at A$106.9900. RSI has turned up through its signal line. Trade idea: entry A$107.7800, stop A$93.6441, target A$150.1877 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "COL",
@@ -9069,7 +8960,7 @@
         24.40999985
       ],
       "trend": "blue",
-      "turnover": 76151037,
+      "turnover": 76337239,
       "detail": {
         "setup_type": "reversal",
         "sma9": 23.70777808,
@@ -9085,7 +8976,7 @@
         "rsi_ma": 68.0,
         "rsi_up": true,
         "volume_ratio": 0.7,
-        "volume_today": 1951789,
+        "volume_today": 2104351,
         "volume_avg": 3346963,
         "volume_surge": false,
         "off_high_pct": 0.0,
@@ -9189,7 +9080,7 @@
         "sma26_pct": -1.6,
         "sma43": 2.6667442,
         "sma43_pct": -0.1,
-        "sma200": 2.74006632,
+        "sma200": 2.7400663,
         "sma200_pct": 2.6,
         "cross_up": true,
         "rsi": 53.1,
@@ -9224,7 +9115,7 @@
         "risk_pct": 6.2
       },
       "analysis": "DXC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 10% below its one-year high, so there is room to run. Trade idea: entry A$2.6700, stop A$2.5047, target A$3.1659 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "DN1",
@@ -9254,7 +9145,7 @@
       "stop": 96.36659637,
       "target": 109.90021088,
       "rr": 3.0,
-      "trail": 95.61950707,
+      "trail": 95.61950717,
       "stop_pct": 3.4,
       "p2_pct": 10.2,
       "target_basis": "measured",
@@ -9300,7 +9191,7 @@
         "sma26_pct": -0.9,
         "sma43": 98.80488906,
         "sma43_pct": -0.9,
-        "sma200": 97.05493679,
+        "sma200": 97.05493629,
         "sma200_pct": -2.7,
         "cross_up": true,
         "rsi": 54.2,
@@ -9316,7 +9207,7 @@
         "broken": false,
         "swing_low": 97.33999634,
         "swing_low_pct": -2.4,
-        "trailing_stop": 95.61950707,
+        "trailing_stop": 95.61950717,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
         "trailing_pct": -4.1,
         "structure": {
@@ -9335,7 +9226,7 @@
         "risk_pct": 3.4
       },
       "analysis": "DN1 has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 1% below its one-year high, so there is room to run. Trade idea: entry A$99.7500, stop A$96.3666, target A$109.9002 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "GOZ",
@@ -9446,7 +9337,7 @@
         "risk_pct": 7.0
       },
       "analysis": "GOZ has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 11% below its one-year high, so there is room to run. Trade idea: entry A$2.3100, stop A$2.1483, target A$2.7951 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "IBR",
@@ -9557,7 +9448,7 @@
         "risk_pct": 22.2
       },
       "analysis": "IBR has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 13% below its one-year high, so there is room to run. Trade idea: entry A$0.0725, stop A$0.0564, target A$0.1207 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "GLS",
@@ -9668,7 +9559,7 @@
         "risk_pct": 13.0
       },
       "analysis": "GLS has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 5% below its one-year high, so there is room to run. Trade idea: entry A$1.9800, stop A$1.7226, target A$2.7522 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "MCE",
@@ -9891,7 +9782,7 @@
         "risk_pct": 32.6
       },
       "analysis": "SLS's 9-SMA is above the 26 and price has reclaimed them. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. Price has broken above the base high at A$1.7400. RSI has turned up through its signal line. Trade idea: entry A$2.0200, stop A$1.3613, target A$3.9962 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "TLX",
@@ -9958,7 +9849,7 @@
         15.32999992
       ],
       "trend": "blue",
-      "turnover": 31953070,
+      "turnover": 31962476,
       "detail": {
         "setup_type": "reversal",
         "sma9": 14.70333332,
@@ -9974,7 +9865,7 @@
         "rsi_ma": 57.3,
         "rsi_up": false,
         "volume_ratio": 0.9,
-        "volume_today": 1317325,
+        "volume_today": 1329596,
         "volume_avg": 2309347,
         "volume_surge": false,
         "off_high_pct": 40.7,
@@ -10003,117 +9894,6 @@
       },
       "analysis": "TLX has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 41% below its one-year high, so there is room to run. Trade idea: entry A$15.3300, stop A$13.0284, target A$22.2348 (3.00:1) \u2014 then trail it.",
       "sector_count": 9
-    },
-    {
-      "symbol": "WMI",
-      "name": "Wam Microcap Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "B",
-      "score": 7,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -18% OFF HIGH"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "2.3:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.42499995,
-      "y_close": 1.42499995,
-      "open": 1.42999995,
-      "open_pct": 0.35,
-      "current_pct": -0.35,
-      "day_pct": 0.0,
-      "entry": 1.42499995,
-      "stop": 1.3563,
-      "target": 1.58446834,
-      "rr": 2.32,
-      "trail": 1.45513649,
-      "stop_pct": 4.8,
-      "p2_pct": 11.2,
-      "target_basis": "resistance",
-      "spark": [
-        1.50999999,
-        1.48000002,
-        1.47500002,
-        1.46000004,
-        1.47500002,
-        1.46000004,
-        1.45000005,
-        1.40999997,
-        1.41499996,
-        1.41999996,
-        1.40999997,
-        1.41499996,
-        1.39999998,
-        1.40999997,
-        1.41499996,
-        1.38999999,
-        1.38499999,
-        1.37,
-        1.37,
-        1.38,
-        1.42999995,
-        1.44000006,
-        1.42999995,
-        1.39999998,
-        1.38499999,
-        1.42499995,
-        1.43499994,
-        1.42499995,
-        1.42499995,
-        1.42499995
-      ],
-      "trend": "blue",
-      "turnover": 386571,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 1.42111108,
-        "sma9_pct": -0.3,
-        "sma26": 1.41519229,
-        "sma26_pct": -0.7,
-        "sma43": 1.4547637,
-        "sma43_pct": 2.1,
-        "sma200": 1.5408945,
-        "sma200_pct": 8.1,
-        "cross_up": true,
-        "rsi": 49.1,
-        "rsi_ma": 42.7,
-        "rsi_up": false,
-        "volume_ratio": 0.9,
-        "volume_today": 121711,
-        "volume_avg": 280435,
-        "volume_surge": false,
-        "off_high_pct": 17.8,
-        "base_high": 1.58446834,
-        "base_high_pct": 11.2,
-        "broken": false,
-        "swing_low": 1.37,
-        "swing_low_pct": -3.9,
-        "trailing_stop": 1.45513649,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 2.1,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            1.44000006,
-            1.44000006,
-            1.45000005
-          ],
-          "swing_lows": [
-            1.39999998,
-            1.36500001,
-            1.38
-          ]
-        },
-        "risk_pct": 4.8
-      },
-      "analysis": "WMI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 18% below its one-year high, so there is room to run. Trade idea: entry A$1.4250, stop A$1.3563, target A$1.5845 (2.32:1) \u2014 then trail it.",
-      "sector_count": 14
     },
     {
       "symbol": "ORI",
@@ -10181,7 +9961,7 @@
         23.63999939
       ],
       "trend": "blue",
-      "turnover": 36250713,
+      "turnover": 36260566,
       "detail": {
         "setup_type": "reversal",
         "sma9": 23.17444441,
@@ -10190,14 +9970,14 @@
         "sma26_pct": -2.5,
         "sma43": 22.461619,
         "sma43_pct": -5.0,
-        "sma200": 22.53290337,
+        "sma200": 22.53290339,
         "sma200_pct": -4.7,
         "cross_up": true,
         "rsi": 62.8,
         "rsi_ma": 58.4,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 1186105,
+        "volume_today": 1194441,
         "volume_avg": 1574809,
         "volume_surge": false,
         "off_high_pct": 9.6,
@@ -10225,7 +10005,7 @@
         "risk_pct": 5.6
       },
       "analysis": "ORI's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 10% below its one-year high, so there is room to run. Price has broken above the base high at A$23.6100. RSI has turned up through its signal line. Trade idea: entry A$23.6400, stop A$22.3245, target A$26.0582 (1.84:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "BIS",
@@ -10336,7 +10116,7 @@
         "risk_pct": 6.4
       },
       "analysis": "BIS has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 26% below its one-year high, so there is room to run. Trade idea: entry A$4.5700, stop A$4.2768, target A$5.0600 (1.67:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "ZIP",
@@ -10403,7 +10183,7 @@
         2.88000011
       ],
       "trend": "blue",
-      "turnover": 43792062,
+      "turnover": 43812820,
       "detail": {
         "setup_type": "reversal",
         "sma9": 2.88000003,
@@ -10419,7 +10199,7 @@
         "rsi_ma": 64.9,
         "rsi_up": false,
         "volume_ratio": 0.8,
-        "volume_today": 15177825,
+        "volume_today": 15321973,
         "volume_avg": 16272349,
         "volume_surge": false,
         "off_high_pct": 41.6,
@@ -10447,7 +10227,7 @@
         "risk_pct": 19.9
       },
       "analysis": "ZIP has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 42% below its one-year high, so there is room to run. Trade idea: entry A$2.8800, stop A$2.3067, target A$3.8100 (1.62:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "GWA",
@@ -10780,7 +10560,7 @@
         "risk_pct": 17.9
       },
       "analysis": "CYM has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 36% below its one-year high, so there is room to run. Trade idea: entry A$0.4100, stop A$0.3366, target A$0.4900 (1.09:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "NGI",
@@ -10891,7 +10671,7 @@
         "risk_pct": 9.6
       },
       "analysis": "NGI has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 24% below its one-year high, so there is room to run. Trade idea: entry A$2.5300, stop A$2.2869, target A$2.7900 (1.07:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "OFX",
@@ -11002,7 +10782,7 @@
         "risk_pct": 13.6
       },
       "analysis": "OFX has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 36% below its one-year high, so there is room to run. Trade idea: entry A$0.5900, stop A$0.5098, target A$0.6650 (0.94:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "CSL",
@@ -11069,7 +10849,7 @@
         114.87000275
       ],
       "trend": "blue",
-      "turnover": 266484339,
+      "turnover": 267769412,
       "detail": {
         "setup_type": "reversal",
         "sma9": 112.20777808,
@@ -11085,7 +10865,7 @@
         "rsi_ma": 56.6,
         "rsi_up": false,
         "volume_ratio": 0.8,
-        "volume_today": 2084885,
+        "volume_today": 2308629,
         "volume_avg": 2485522,
         "volume_surge": false,
         "off_high_pct": 57.3,
@@ -11114,117 +10894,6 @@
       },
       "analysis": "CSL has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 57% below its one-year high, so there is room to run. Trade idea: entry A$114.8700, stop A$101.1285, target A$126.4900 (0.85:1) \u2014 then trail it.",
       "sector_count": 9
-    },
-    {
-      "symbol": "A2M",
-      "name": "The A2 Milk Company Limited",
-      "sector": "Food, Beverage & Tobacco",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "B",
-      "score": 7,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE -27% OFF HIGH"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "rr_text": "0.7:1",
-      "target_2r": false,
-      "liquidity": "LIQUID",
-      "price": 7.19000006,
-      "y_close": 7.0999999,
-      "open": 7.11000013,
-      "open_pct": 0.14,
-      "current_pct": 1.13,
-      "day_pct": 1.27,
-      "entry": 7.19000006,
-      "stop": 5.30145002,
-      "target": 8.55715148,
-      "rr": 0.72,
-      "trail": 6.31441824,
-      "stop_pct": 26.3,
-      "p2_pct": 19.0,
-      "target_basis": "resistance",
-      "spark": [
-        6.13000011,
-        5.80999994,
-        5.86999989,
-        5.63999987,
-        5.61000013,
-        5.65999985,
-        5.53000021,
-        5.55999994,
-        5.59000015,
-        5.42999983,
-        5.36999989,
-        5.32000017,
-        5.48000002,
-        5.3499999,
-        5.28000021,
-        5.19000006,
-        5.21999979,
-        5.44999981,
-        5.5,
-        6.05999994,
-        6.01999998,
-        5.90999985,
-        6.01000023,
-        6.11000013,
-        6.71000004,
-        6.76999998,
-        6.78000021,
-        6.8499999,
-        7.0999999,
-        7.19000006
-      ],
-      "trend": "blue",
-      "turnover": 33294217,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 6.60333337,
-        "sma9_pct": -8.2,
-        "sma26": 5.88653847,
-        "sma26_pct": -18.1,
-        "sma43": 6.12813954,
-        "sma43_pct": -14.8,
-        "sma200": 8.35496972,
-        "sma200_pct": 16.2,
-        "cross_up": true,
-        "rsi": 74.3,
-        "rsi_ma": 55.5,
-        "rsi_up": true,
-        "volume_ratio": 1.0,
-        "volume_today": 2920223,
-        "volume_avg": 5425454,
-        "volume_surge": false,
-        "off_high_pct": 27.3,
-        "base_high": 7.51000023,
-        "base_high_pct": 4.5,
-        "broken": false,
-        "swing_low": 5.35500002,
-        "swing_low_pct": -25.5,
-        "trailing_stop": 6.31441824,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -12.2,
-        "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
-          "swing_highs": [
-            7.51000023,
-            5.55000019,
-            6.23999977
-          ],
-          "swing_lows": [
-            5.88999987,
-            4.88000011,
-            5.13999987
-          ]
-        },
-        "risk_pct": 26.3
-      },
-      "analysis": "A2M has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 27% below its one-year high, so there is room to run. Trade idea: entry A$7.1900, stop A$5.3015, target A$8.5572 (0.72:1) \u2014 then trail it.",
-      "sector_count": 2
     },
     {
       "symbol": "EXR",
@@ -11557,7 +11226,7 @@
         "risk_pct": 26.5
       },
       "analysis": "LOT has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. It is coming off a base, 80% below its one-year high, so there is room to run. Trade idea: entry A$0.6600, stop A$0.4851, target A$0.7375 (0.44:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "ART",
@@ -11890,7 +11559,7 @@
         "risk_pct": 4.1
       },
       "analysis": "EZL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 13% below its one-year high, so there is room to run. Volume is expanding (1.1\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$1.2600, stop A$1.2078, target A$1.4400 (3.45:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "ALX",
@@ -11903,7 +11572,7 @@
       "score_max": 14,
       "chips": [
         "BASE -1% OFF HIGH",
-        "VOLUME 2.2\u00d7 SURGE"
+        "VOLUME 2.3\u00d7 SURGE"
       ],
       "weekly": false,
       "low_rr": false,
@@ -11957,7 +11626,7 @@
         5.07999992
       ],
       "trend": "blue",
-      "turnover": 73096126,
+      "turnover": 73814192,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.09777774,
@@ -11972,8 +11641,8 @@
         "rsi": 68.7,
         "rsi_ma": 75.8,
         "rsi_up": false,
-        "volume_ratio": 2.2,
-        "volume_today": 17403784,
+        "volume_ratio": 2.3,
+        "volume_today": 20230814,
         "volume_avg": 13596634,
         "volume_surge": true,
         "off_high_pct": 0.8,
@@ -12000,8 +11669,8 @@
         },
         "risk_pct": 1.4
       },
-      "analysis": "ALX's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 1% below its one-year high, so there is room to run. Volume is expanding (2.2\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$5.0800, stop A$5.0094, target A$5.2918 (3.00:1) \u2014 then trail it.",
-      "sector_count": 6
+      "analysis": "ALX's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 1% below its one-year high, so there is room to run. Volume is expanding (2.3\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$5.0800, stop A$5.0094, target A$5.2918 (3.00:1) \u2014 then trail it.",
+      "sector_count": 5
     },
     {
       "symbol": "BFG",
@@ -12112,7 +11781,7 @@
         "risk_pct": 6.5
       },
       "analysis": "BFG has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. RSI has turned up through its signal line. Trade idea: entry A$1.4400, stop A$1.3464, target A$1.7208 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "GDI",
@@ -12193,7 +11862,7 @@
         "cross_up": true,
         "rsi": 59.6,
         "rsi_ma": 59.7,
-        "rsi_up": true,
+        "rsi_up": false,
         "volume_ratio": 1.0,
         "volume_today": 907383,
         "volume_avg": 452440,
@@ -12223,7 +11892,7 @@
         "risk_pct": 4.1
       },
       "analysis": "GDI's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 10% below its one-year high, so there is room to run. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.6300, stop A$0.6039, target A$0.7083 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "LYL",
@@ -12445,118 +12114,7 @@
         "risk_pct": 12.5
       },
       "analysis": "PAC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. RSI has turned up through its signal line. Trade idea: entry A$12.0000, stop A$10.4940, target A$16.5180 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "RHC",
-      "name": "Ramsay Health Care Limited",
-      "sector": "Health Care Equipment & Services",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "B",
-      "score": 6,
-      "score_max": 14,
-      "chips": [
-        "9 \u203a 26 RECLAIM",
-        "BASE BREAKOUT"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 43.09999847,
-      "y_close": 42.74000168,
-      "open": 42.33000183,
-      "open_pct": -0.96,
-      "current_pct": 1.82,
-      "day_pct": 0.84,
-      "entry": 43.09999847,
-      "stop": 37.60019955,
-      "target": 59.59939526,
-      "rr": 3.0,
-      "trail": 40.04331223,
-      "stop_pct": 12.8,
-      "p2_pct": 38.3,
-      "target_basis": "measured",
-      "spark": [
-        37.56000137,
-        37.11000061,
-        38.15000153,
-        38.29000092,
-        37.70999908,
-        38.06000137,
-        37.93000031,
-        37.36000061,
-        37.49000168,
-        37.0,
-        37.09000015,
-        36.54000092,
-        36.24000168,
-        36.40000153,
-        36.06999969,
-        36.61999893,
-        37.63999939,
-        38.43000031,
-        38.11999893,
-        38.81999969,
-        39.04000092,
-        38.83000183,
-        38.63000107,
-        39.29999924,
-        39.49000168,
-        39.77999878,
-        39.83000183,
-        41.22999954,
-        42.74000168,
-        43.09999847
-      ],
-      "trend": "blue",
-      "turnover": 29623023,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 40.32555601,
-        "sma9_pct": -6.4,
-        "sma26": 38.44192343,
-        "sma26_pct": -10.8,
-        "sma43": 38.14604693,
-        "sma43_pct": -11.5,
-        "sma200": 36.23735105,
-        "sma200_pct": -15.9,
-        "cross_up": true,
-        "rsi": 78.9,
-        "rsi_ma": 62.8,
-        "rsi_up": true,
-        "volume_ratio": 1.2,
-        "volume_today": 849935,
-        "volume_avg": 748785,
-        "volume_surge": false,
-        "off_high_pct": 2.7,
-        "base_high": 40.0,
-        "base_high_pct": -7.2,
-        "broken": true,
-        "swing_low": 37.97999954,
-        "swing_low_pct": -11.9,
-        "trailing_stop": 40.04331223,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -7.1,
-        "structure": {
-          "trend": "LH/LL \u2014 Downtrend",
-          "swing_highs": [
-            40.99000168,
-            42.74000168,
-            38.77999878
-          ],
-          "swing_lows": [
-            36.68999863,
-            35.81999969,
-            35.47999954
-          ]
-        },
-        "risk_pct": 12.8
-      },
-      "analysis": "RHC has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Price has broken above the base high at A$40.0000. Trade idea: entry A$43.1000, stop A$37.6002, target A$59.5994 (3.00:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 12
     },
     {
       "symbol": "WGN",
@@ -12623,7 +12181,7 @@
         4.86000013
       ],
       "trend": "blue",
-      "turnover": 3635910,
+      "turnover": 3643743,
       "detail": {
         "setup_type": "reversal",
         "sma9": 4.79333337,
@@ -12639,7 +12197,7 @@
         "rsi_ma": 53.5,
         "rsi_up": true,
         "volume_ratio": 0.4,
-        "volume_today": 244866,
+        "volume_today": 277098,
         "volume_avg": 810743,
         "volume_surge": false,
         "off_high_pct": 3.6,
@@ -12667,7 +12225,7 @@
         "risk_pct": 15.7
       },
       "analysis": "WGN has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. RSI has turned up through its signal line. Trade idea: entry A$4.8600, stop A$4.0986, target A$7.1442 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "AFG",
@@ -12778,7 +12336,7 @@
         "risk_pct": 4.6
       },
       "analysis": "AFG's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 41% below its one-year high, so there is room to run. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$1.6400, stop A$1.5642, target A$1.8125 (2.28:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "JMS",
@@ -12889,7 +12447,7 @@
         "risk_pct": 4.7
       },
       "analysis": "JMS's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 11% below its one-year high, so there is room to run. Volume is expanding (1.8\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.2700, stop A$0.2574, target A$0.2987 (2.28:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "MTO",
@@ -13000,7 +12558,7 @@
         "risk_pct": 7.9
       },
       "analysis": "MTO's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 36% below its one-year high, so there is room to run. Volume is expanding (1.2\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$2.4500, stop A$2.2572, target A$2.8379 (2.01:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "3PL",
@@ -13111,7 +12669,7 @@
         "risk_pct": 12.6
       },
       "analysis": "3PL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 57% below its one-year high, so there is room to run. Volume is expanding (4.0\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.3000, stop A$0.2623, target A$0.3600 (1.59:1) \u2014 then trail it.",
-      "sector_count": 7
+      "sector_count": 5
     },
     {
       "symbol": "MMA",
@@ -13222,7 +12780,7 @@
         "risk_pct": 18.5
       },
       "analysis": "MMA's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 39% below its one-year high, so there is room to run. Volume is expanding (1.0\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.4250, stop A$0.3465, target A$0.5150 (1.15:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "CXU",
@@ -13457,7 +13015,7 @@
       "score_max": 14,
       "chips": [
         "BASE -79% OFF HIGH",
-        "VOLUME 1.8\u00d7 SURGE"
+        "VOLUME 1.7\u00d7 SURGE"
       ],
       "weekly": false,
       "low_rr": true,
@@ -13511,7 +13069,7 @@
         0.56999999
       ],
       "trend": "blue",
-      "turnover": 260218,
+      "turnover": 258223,
       "detail": {
         "setup_type": "reversal",
         "sma9": 0.53999999,
@@ -13526,8 +13084,8 @@
         "rsi": 54.8,
         "rsi_ma": 42.1,
         "rsi_up": false,
-        "volume_ratio": 1.8,
-        "volume_today": 650950,
+        "volume_ratio": 1.7,
+        "volume_today": 580966,
         "volume_avg": 460281,
         "volume_surge": true,
         "off_high_pct": 78.9,
@@ -13554,8 +13112,8 @@
         },
         "risk_pct": 16.6
       },
-      "analysis": "It is coming off a base, 79% below its one-year high, so there is room to run. Volume is expanding (1.8\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.5700, stop A$0.4752, target A$0.6300 (0.63:1) \u2014 then trail it.",
-      "sector_count": 6
+      "analysis": "It is coming off a base, 79% below its one-year high, so there is room to run. Volume is expanding (1.7\u00d7 the 20-day average) \u2014 real participation. Trade idea: entry A$0.5700, stop A$0.4752, target A$0.6300 (0.63:1) \u2014 then trail it.",
+      "sector_count": 5
     },
     {
       "symbol": "LTP",
@@ -13733,7 +13291,7 @@
         4.88000011
       ],
       "trend": "blue",
-      "turnover": 10795953,
+      "turnover": 10830943,
       "detail": {
         "setup_type": "reversal",
         "sma9": 4.82555559,
@@ -13749,7 +13307,7 @@
         "rsi_ma": 61.7,
         "rsi_up": true,
         "volume_ratio": 0.6,
-        "volume_today": 1033158,
+        "volume_today": 1176558,
         "volume_avg": 2420420,
         "volume_surge": false,
         "off_high_pct": 34.7,
@@ -13777,7 +13335,7 @@
         "risk_pct": 4.9
       },
       "analysis": "HVN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 35% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$4.8800, stop A$4.6431, target A$6.2603 (5.83:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "ANN",
@@ -13844,7 +13402,7 @@
         31.46999931
       ],
       "trend": "blue",
-      "turnover": 11221415,
+      "turnover": 11225402,
       "detail": {
         "setup_type": "reversal",
         "sma9": 30.17555534,
@@ -13860,7 +13418,7 @@
         "rsi_ma": 71.3,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 475532,
+        "volume_today": 478066,
         "volume_avg": 384885,
         "volume_surge": false,
         "off_high_pct": 15.2,
@@ -13888,7 +13446,7 @@
         "risk_pct": 10.0
       },
       "analysis": "ANN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 15% below its one-year high, so there is room to run. Price has broken above the base high at A$30.1400. Trade idea: entry A$31.4700, stop A$28.3239, target A$40.9083 (3.00:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "CHC",
@@ -13955,7 +13513,7 @@
         23.62000084
       ],
       "trend": "blue",
-      "turnover": 39769821,
+      "turnover": 39909741,
       "detail": {
         "setup_type": "reversal",
         "sma9": 23.21777768,
@@ -13971,7 +13529,7 @@
         "rsi_ma": 69.3,
         "rsi_up": true,
         "volume_ratio": 0.9,
-        "volume_today": 1837720,
+        "volume_today": 1956196,
         "volume_avg": 1796569,
         "volume_surge": false,
         "off_high_pct": 8.1,
@@ -13999,7 +13557,7 @@
         "risk_pct": 11.4
       },
       "analysis": "CHC's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 8% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$23.6200, stop A$20.9187, target A$31.7239 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "CNU",
@@ -14066,7 +13624,7 @@
         8.15999985
       ],
       "trend": "blue",
-      "turnover": 4938540,
+      "turnover": 4940990,
       "detail": {
         "setup_type": "reversal",
         "sma9": 8.04000001,
@@ -14075,14 +13633,14 @@
         "sma26_pct": -1.3,
         "sma43": 8.12395351,
         "sma43_pct": -0.4,
-        "sma200": 7.96105847,
+        "sma200": 7.96105848,
         "sma200_pct": -2.4,
         "cross_up": false,
         "rsi": 54.7,
         "rsi_ma": 50.4,
         "rsi_up": true,
         "volume_ratio": 0.8,
-        "volume_today": 526649,
+        "volume_today": 532653,
         "volume_avg": 618662,
         "volume_surge": false,
         "off_high_pct": 4.0,
@@ -14186,7 +13744,7 @@
         "sma26_pct": -0.8,
         "sma43": 2.7971443,
         "sma43_pct": -0.1,
-        "sma200": 2.90272308,
+        "sma200": 2.9027231,
         "sma200_pct": 3.7,
         "cross_up": false,
         "rsi": 54.7,
@@ -14221,7 +13779,7 @@
         "risk_pct": 4.2
       },
       "analysis": "It is coming off a base, 9% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.8000, stop A$2.6829, target A$3.1513 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "DXN",
@@ -14510,7 +14068,7 @@
         5.1500001
       ],
       "trend": "blue",
-      "turnover": 26863972,
+      "turnover": 27619863,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.05111117,
@@ -14525,8 +14083,8 @@
         "rsi": 64.7,
         "rsi_ma": 62.2,
         "rsi_up": true,
-        "volume_ratio": 0.8,
-        "volume_today": 3726601,
+        "volume_ratio": 0.9,
+        "volume_today": 6662100,
         "volume_avg": 5440310,
         "volume_surge": false,
         "off_high_pct": 8.5,
@@ -14554,7 +14112,7 @@
         "risk_pct": 5.4
       },
       "analysis": "GPT's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 8% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$5.1500, stop A$4.8708, target A$5.9876 (3.00:1) \u2014 then trail it.",
-      "sector_count": 21
+      "sector_count": 18
     },
     {
       "symbol": "JHX",
@@ -14621,7 +14179,7 @@
         37.47000122
       ],
       "trend": "blue",
-      "turnover": 96121814,
+      "turnover": 96133143,
       "detail": {
         "setup_type": "reversal",
         "sma9": 35.55111101,
@@ -14636,8 +14194,8 @@
         "rsi": 72.2,
         "rsi_ma": 66.3,
         "rsi_up": true,
-        "volume_ratio": 0.8,
-        "volume_today": 2641341,
+        "volume_ratio": 0.9,
+        "volume_today": 2647388,
         "volume_avg": 2869718,
         "volume_surge": false,
         "off_high_pct": 18.5,
@@ -14665,7 +14223,7 @@
         "risk_pct": 17.6
       },
       "analysis": "JHX's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 19% below its one-year high, so there is room to run. Price has broken above the base high at A$36.1100. Trade idea: entry A$37.4700, stop A$30.8781, target A$57.2457 (3.00:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "MPL",
@@ -14732,7 +14290,7 @@
         4.96999979
       ],
       "trend": "blue",
-      "turnover": 35030348,
+      "turnover": 35042636,
       "detail": {
         "setup_type": "reversal",
         "sma9": 4.89666663,
@@ -14748,7 +14306,7 @@
         "rsi_ma": 59.7,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 7880325,
+        "volume_today": 7929773,
         "volume_avg": 7083206,
         "volume_surge": false,
         "off_high_pct": 2.6,
@@ -14776,118 +14334,7 @@
         "risk_pct": 4.6
       },
       "analysis": "MPL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 3% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$4.9700, stop A$4.7421, target A$5.6537 (3.00:1) \u2014 then trail it.",
-      "sector_count": 4
-    },
-    {
-      "symbol": "PME",
-      "name": "Pro Medicus Limited",
-      "sector": "Health Care Equipment & Services",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 5,
-      "score_max": 14,
-      "chips": [
-        "BASE -44% OFF HIGH",
-        "BASE BREAKOUT"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 188.88000488,
-      "y_close": 185.38999939,
-      "open": 180.19000244,
-      "open_pct": -2.8,
-      "current_pct": 4.82,
-      "day_pct": 1.88,
-      "entry": 188.88000488,
-      "stop": 158.61780121,
-      "target": 279.66661591,
-      "rr": 3.0,
-      "trail": 164.04966934,
-      "stop_pct": 16.0,
-      "p2_pct": 48.1,
-      "target_basis": "measured",
-      "spark": [
-        122.11000061,
-        125.51999664,
-        130.25999451,
-        128.69999695,
-        128.46000671,
-        127.94999695,
-        127.09999847,
-        127.31999969,
-        130.6000061,
-        130.17999268,
-        132.25999451,
-        144.46000671,
-        160.08000183,
-        159.63000488,
-        159.22999573,
-        165.63999939,
-        165.78999329,
-        161.58000183,
-        162.78999329,
-        164.0,
-        164.55000305,
-        164.11000061,
-        168.8999939,
-        167.61000061,
-        172.80000305,
-        174.63999939,
-        172.92999268,
-        178.99000549,
-        185.38999939,
-        188.88000488
-      ],
-      "trend": "blue",
-      "turnover": 72756615,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 174.91666667,
-        "sma9_pct": -7.4,
-        "sma26": 157.14884597,
-        "sma26_pct": -16.8,
-        "sma43": 146.59627852,
-        "sma43_pct": -22.4,
-        "sma200": 195.34628731,
-        "sma200_pct": 3.4,
-        "cross_up": true,
-        "rsi": 83.2,
-        "rsi_ma": 76.8,
-        "rsi_up": true,
-        "volume_ratio": 1.1,
-        "volume_today": 484698,
-        "volume_avg": 425049,
-        "volume_surge": false,
-        "off_high_pct": 43.6,
-        "base_high": 174.13999939,
-        "base_high_pct": -7.8,
-        "broken": true,
-        "swing_low": 160.22000122,
-        "swing_low_pct": -15.2,
-        "trailing_stop": 164.04966934,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -13.1,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            140.41999817,
-            132.69999695,
-            167.77999878
-          ],
-          "swing_lows": [
-            124.70999908,
-            160.22000122,
-            160.83999634
-          ]
-        },
-        "risk_pct": 16.0
-      },
-      "analysis": "PME's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 44% below its one-year high, so there is room to run. Price has broken above the base high at A$174.1400. Trade idea: entry A$188.8800, stop A$158.6178, target A$279.6666 (3.00:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 5
     },
     {
       "symbol": "SLF",
@@ -14963,7 +14410,7 @@
         "sma26_pct": -3.6,
         "sma43": 12.7055814,
         "sma43_pct": -4.8,
-        "sma200": 13.13417618,
+        "sma200": 13.13417619,
         "sma200_pct": -1.5,
         "cross_up": true,
         "rsi": 63.0,
@@ -14998,7 +14445,7 @@
         "risk_pct": 5.2
       },
       "analysis": "SLF's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 9% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$13.3400, stop A$12.6423, target A$15.4331 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     },
     {
       "symbol": "SUN",
@@ -15065,7 +14512,7 @@
         18.94000053
       ],
       "trend": "blue",
-      "turnover": 56612189,
+      "turnover": 56636832,
       "detail": {
         "setup_type": "reversal",
         "sma9": 18.80000008,
@@ -15081,7 +14528,7 @@
         "rsi_ma": 68.6,
         "rsi_up": false,
         "volume_ratio": 1.0,
-        "volume_today": 2370670,
+        "volume_today": 2396692,
         "volume_avg": 3088038,
         "volume_surge": false,
         "off_high_pct": 12.6,
@@ -15109,340 +14556,7 @@
         "risk_pct": 5.3
       },
       "analysis": "SUN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 13% below its one-year high, so there is room to run. Price has broken above the base high at A$18.8650. Trade idea: entry A$18.9400, stop A$17.9388, target A$21.9436 (3.00:1) \u2014 then trail it.",
-      "sector_count": 4
-    },
-    {
-      "symbol": "THL",
-      "name": "Tourism Holdings Rentals Limited",
-      "sector": "Transportation",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 5,
-      "score_max": 14,
-      "chips": [
-        "BASE -5% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 2.26999998,
-      "y_close": 2.25,
-      "open": 2.38000011,
-      "open_pct": 5.78,
-      "current_pct": -4.62,
-      "day_pct": 0.89,
-      "entry": 2.26999998,
-      "stop": 2.00969997,
-      "target": 3.05090001,
-      "rr": 3.0,
-      "trail": 2.04430232,
-      "stop_pct": 11.5,
-      "p2_pct": 34.4,
-      "target_basis": "measured",
-      "spark": [
-        1.71500003,
-        1.78999996,
-        1.78999996,
-        1.78499997,
-        1.65499997,
-        1.73000002,
-        1.745,
-        1.85000002,
-        1.745,
-        1.745,
-        2.20000005,
-        2.18000007,
-        2.1500001,
-        2.0999999,
-        2.0999999,
-        2.02999997,
-        2.06999993,
-        2.17000008,
-        2.1500001,
-        2.26999998,
-        2.22000003,
-        2.18000007,
-        2.16000009,
-        2.17000008,
-        2.0999999,
-        2.04999995,
-        2.02999997,
-        2.08999991,
-        2.25,
-        2.26999998
-      ],
-      "trend": "blue",
-      "turnover": 122690,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 2.14444444,
-        "sma9_pct": -5.5,
-        "sma26": 2.05423077,
-        "sma26_pct": -9.5,
-        "sma43": 1.92087209,
-        "sma43_pct": -15.4,
-        "sma200": 2.05833549,
-        "sma200_pct": -9.3,
-        "cross_up": true,
-        "rsi": 63.6,
-        "rsi_ma": 60.1,
-        "rsi_up": true,
-        "volume_ratio": 0.4,
-        "volume_today": 18234,
-        "volume_avg": 55651,
-        "volume_surge": false,
-        "off_high_pct": 5.4,
-        "base_high": 2.32500005,
-        "base_high_pct": 2.4,
-        "broken": false,
-        "swing_low": 2.02999997,
-        "swing_low_pct": -10.6,
-        "trailing_stop": 2.04430232,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -9.9,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            1.85000002,
-            2.32500005,
-            2.28999996
-          ],
-          "swing_lows": [
-            1.65499997,
-            2.02999997,
-            2.02999997
-          ]
-        },
-        "risk_pct": 11.5
-      },
-      "analysis": "THL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 5% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$2.2700, stop A$2.0097, target A$3.0509 (3.00:1) \u2014 then trail it.",
-      "sector_count": 6
-    },
-    {
-      "symbol": "TCL",
-      "name": "Transurban Group",
-      "sector": "Transportation",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 5,
-      "score_max": 14,
-      "chips": [
-        "BASE -1% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 15.39000034,
-      "y_close": 15.17000008,
-      "open": 15.22000027,
-      "open_pct": 0.33,
-      "current_pct": 1.12,
-      "day_pct": 1.45,
-      "entry": 15.39000034,
-      "stop": 14.49360034,
-      "target": 18.07920035,
-      "rr": 3.0,
-      "trail": 14.7115667,
-      "stop_pct": 5.8,
-      "p2_pct": 17.5,
-      "target_basis": "measured",
-      "spark": [
-        14.60000038,
-        14.47999954,
-        14.47000027,
-        14.28999996,
-        14.47999954,
-        14.52000046,
-        14.48999977,
-        14.51000023,
-        14.51000023,
-        14.53999996,
-        14.97999954,
-        14.71000004,
-        14.94999981,
-        15.03999996,
-        15.0,
-        15.07999992,
-        15.13000011,
-        15.53999996,
-        15.47000027,
-        15.60999966,
-        15.35000038,
-        15.06999969,
-        14.89000034,
-        14.92000008,
-        15.06000042,
-        15.11999989,
-        15.18999958,
-        15.15999985,
-        15.17000008,
-        15.39000034
-      ],
-      "trend": "blue",
-      "turnover": 113660359,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 15.10777781,
-        "sma9_pct": -1.8,
-        "sma26": 14.99538462,
-        "sma26_pct": -2.6,
-        "sma43": 14.72767442,
-        "sma43_pct": -4.3,
-        "sma200": 14.22732766,
-        "sma200_pct": -7.6,
-        "cross_up": true,
-        "rsi": 63.1,
-        "rsi_ma": 61.9,
-        "rsi_up": true,
-        "volume_ratio": 0.6,
-        "volume_today": 4928050,
-        "volume_avg": 7577311,
-        "volume_surge": false,
-        "off_high_pct": 1.5,
-        "base_high": 15.61999989,
-        "base_high_pct": 1.5,
-        "broken": false,
-        "swing_low": 14.64000034,
-        "swing_low_pct": -4.9,
-        "trailing_stop": 14.7115667,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -4.4,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            14.67000008,
-            14.77499962,
-            15.61999989
-          ],
-          "swing_lows": [
-            14.18500042,
-            14.30000019,
-            14.64000034
-          ]
-        },
-        "risk_pct": 5.8
-      },
-      "analysis": "TCL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 1% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$15.3900, stop A$14.4936, target A$18.0792 (3.00:1) \u2014 then trail it.",
-      "sector_count": 6
-    },
-    {
-      "symbol": "WES",
-      "name": "Wesfarmers Limited",
-      "sector": "Consumer Discretionary Distribution & Retail",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 5,
-      "score_max": 14,
-      "chips": [
-        "BASE -3% OFF HIGH",
-        "BASE BREAKOUT"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 90.73999786,
-      "y_close": 89.47000122,
-      "open": 89.61000061,
-      "open_pct": 0.16,
-      "current_pct": 1.26,
-      "day_pct": 1.42,
-      "entry": 90.73999786,
-      "stop": 81.62549698,
-      "target": 118.08350052,
-      "rr": 3.0,
-      "trail": 85.13565826,
-      "stop_pct": 10.0,
-      "p2_pct": 30.1,
-      "target_basis": "measured",
-      "spark": [
-        71.66999817,
-        71.26000214,
-        72.98000336,
-        73.72000122,
-        74.75,
-        74.68000031,
-        75.80000305,
-        76.48000336,
-        77.55999756,
-        78.48000336,
-        79.79000092,
-        79.75,
-        79.15000153,
-        79.02999878,
-        78.61000061,
-        78.93000031,
-        79.98999786,
-        83.38999939,
-        84.30999756,
-        86.47000122,
-        86.23000336,
-        85.26000214,
-        85.48999786,
-        85.77999878,
-        85.76000214,
-        86.15000153,
-        86.44000244,
-        87.26999664,
-        89.47000122,
-        90.73999786
-      ],
-      "trend": "blue",
-      "turnover": 192806524,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 86.92888896,
-        "sma9_pct": -4.2,
-        "sma26": 82.14461576,
-        "sma26_pct": -9.5,
-        "sma43": 78.30558191,
-        "sma43_pct": -13.7,
-        "sma200": 81.02029781,
-        "sma200_pct": -10.7,
-        "cross_up": true,
-        "rsi": 85.9,
-        "rsi_ma": 79.5,
-        "rsi_up": true,
-        "volume_ratio": 0.9,
-        "volume_today": 2734068,
-        "volume_avg": 2276524,
-        "volume_surge": false,
-        "off_high_pct": 3.0,
-        "base_high": 87.11000061,
-        "base_high_pct": -4.0,
-        "broken": true,
-        "swing_low": 82.44999695,
-        "swing_low_pct": -9.1,
-        "trailing_stop": 85.13565826,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -6.2,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            74.33999634,
-            80.41999817,
-            87.11000061
-          ],
-          "swing_lows": [
-            71.87999725,
-            71.30999756,
-            70.80000305
-          ]
-        },
-        "risk_pct": 10.0
-      },
-      "analysis": "WES's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 3% below its one-year high, so there is room to run. Price has broken above the base high at A$87.1100. Trade idea: entry A$90.7400, stop A$81.6255, target A$118.0835 (3.00:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 5
     },
     {
       "symbol": "ADH",
@@ -15525,7 +14639,7 @@
         "rsi_ma": 54.7,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 1098552,
+        "volume_today": 1098553,
         "volume_avg": 588494,
         "volume_surge": false,
         "off_high_pct": 50.4,
@@ -15553,7 +14667,7 @@
         "risk_pct": 11.0
       },
       "analysis": "ADH's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 50% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.3800, stop A$1.2276, target A$1.7350 (2.33:1) \u2014 then trail it.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "ORG",
@@ -15620,7 +14734,7 @@
         10.96000004
       ],
       "trend": "blue",
-      "turnover": 44523796,
+      "turnover": 44561718,
       "detail": {
         "setup_type": "reversal",
         "sma9": 10.84444438,
@@ -15636,7 +14750,7 @@
         "rsi_ma": 43.0,
         "rsi_up": true,
         "volume_ratio": 1.0,
-        "volume_today": 3859793,
+        "volume_today": 3928994,
         "volume_avg": 4080126,
         "volume_surge": false,
         "off_high_pct": 14.6,
@@ -15667,226 +14781,115 @@
       "sector_count": 1
     },
     {
-      "symbol": "WHF",
-      "name": "Whitefield Industrials Limited",
-      "sector": "Not Applic",
+      "symbol": "SHL",
+      "name": "Sonic Healthcare Limited",
+      "sector": "Health Care Equipment & Services",
       "dir": "LONG",
       "setup_type": "reversal",
       "grade": "C",
       "score": 5,
       "score_max": 14,
       "chips": [
-        "BASE -18% OFF HIGH",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "2.0:1",
-      "target_2r": false,
-      "liquidity": "OK",
-      "price": 4.69000006,
-      "y_close": 4.67999983,
-      "open": 4.69999981,
-      "open_pct": 0.43,
-      "current_pct": -0.21,
-      "day_pct": 0.21,
-      "entry": 4.69000006,
-      "stop": 4.41540004,
-      "target": 5.23247908,
-      "rr": 1.98,
-      "trail": 4.73347835,
-      "stop_pct": 5.9,
-      "p2_pct": 11.6,
-      "target_basis": "resistance",
-      "spark": [
-        4.70434093,
-        4.694561,
-        4.72390175,
-        4.67500019,
-        4.66521978,
-        4.66521978,
-        4.7630229,
-        4.72390175,
-        4.74346209,
-        4.72390175,
-        4.7630229,
-        4.73368216,
-        4.70434093,
-        4.694561,
-        4.67500019,
-        4.55999994,
-        4.55999994,
-        4.51000023,
-        4.51000023,
-        4.51999998,
-        4.5999999,
-        4.59000015,
-        4.51999998,
-        4.57000017,
-        4.6500001,
-        4.63000011,
-        4.63999987,
-        4.67999983,
-        4.67999983,
-        4.69000006
-      ],
-      "trend": "blue",
-      "turnover": 526805,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 4.62777779,
-        "sma9_pct": -1.3,
-        "sma26": 4.6448206,
-        "sma26_pct": -1.0,
-        "sma43": 4.68359109,
-        "sma43_pct": -0.1,
-        "sma200": 5.08387921,
-        "sma200_pct": 8.4,
-        "cross_up": false,
-        "rsi": 54.3,
-        "rsi_ma": 42.7,
-        "rsi_up": true,
-        "volume_ratio": 1.1,
-        "volume_today": 96663,
-        "volume_avg": 110485,
-        "volume_surge": false,
-        "off_high_pct": 18.1,
-        "base_high": 4.89016724,
-        "base_high_pct": 4.3,
-        "broken": false,
-        "swing_low": 4.46000004,
-        "swing_low_pct": -4.9,
-        "trailing_stop": 4.73347835,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 0.9,
-        "structure": {
-          "trend": "Mixed / consolidating",
-          "swing_highs": [
-            4.78258354,
-            4.79236426,
-            4.71999979
-          ],
-          "swing_lows": [
-            4.46000004,
-            4.5,
-            4.5
-          ]
-        },
-        "risk_pct": 5.9
-      },
-      "analysis": "It is coming off a base, 18% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$4.6900, stop A$4.4154, target A$5.2325 (1.98:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "VVA",
-      "name": "Viva Leisure Limited",
-      "sector": "Consumer Services",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 5,
-      "score_max": 14,
-      "chips": [
-        "BASE -16% OFF HIGH",
+        "BASE -27% OFF HIGH",
         "RSI TURNING UP"
       ],
       "weekly": false,
       "low_rr": false,
       "rr_text": "1.8:1",
       "target_2r": false,
-      "liquidity": "OK",
-      "price": 1.57000005,
-      "y_close": 1.53999996,
-      "open": 1.56500006,
-      "open_pct": 1.62,
-      "current_pct": 0.32,
-      "day_pct": 1.95,
-      "entry": 1.57000005,
-      "stop": 1.47510001,
-      "target": 1.745,
-      "rr": 1.84,
-      "trail": 1.49770308,
-      "stop_pct": 6.0,
-      "p2_pct": 11.1,
+      "liquidity": "LIQUID",
+      "price": 20.42000008,
+      "y_close": 20.57999992,
+      "open": 20.42000008,
+      "open_pct": -0.78,
+      "current_pct": 0.0,
+      "day_pct": -0.78,
+      "entry": 20.42000008,
+      "stop": 19.12185053,
+      "target": 22.74856597,
+      "rr": 1.79,
+      "trail": 19.14502099,
+      "stop_pct": 6.4,
+      "p2_pct": 11.4,
       "target_basis": "resistance",
       "spark": [
-        1.48500001,
-        1.48000002,
-        1.47000003,
-        1.42999995,
-        1.42999995,
-        1.44000006,
-        1.41999996,
-        1.53999996,
-        1.57000005,
-        1.57500005,
-        1.58000004,
-        1.58500004,
-        1.57000005,
-        1.59500003,
-        1.70000005,
-        1.69500005,
-        1.59000003,
-        1.55499995,
-        1.5,
-        1.57500005,
-        1.59000003,
-        1.54999995,
-        1.59000003,
-        1.57000005,
-        1.59000003,
-        1.58000004,
-        1.58500004,
-        1.55499995,
-        1.53999996,
-        1.57000005
+        18.72999954,
+        18.38999939,
+        18.43000031,
+        18.44000053,
+        18.61000061,
+        18.68000031,
+        18.92000008,
+        19.02000046,
+        18.87999916,
+        18.81999969,
+        19.52000046,
+        19.25,
+        18.70999908,
+        18.79000092,
+        19.05999947,
+        19.34000015,
+        19.75,
+        20.28000069,
+        20.28000069,
+        20.20000076,
+        19.94000053,
+        19.65999985,
+        19.87999916,
+        19.84000015,
+        20.04999924,
+        19.80999947,
+        19.82999992,
+        19.86000061,
+        20.57999992,
+        20.42000008
       ],
       "trend": "blue",
-      "turnover": 290689,
+      "turnover": 39060036,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 1.57000001,
-        "sma9_pct": -0.0,
-        "sma26": 1.56307694,
-        "sma26_pct": -0.4,
-        "sma43": 1.54441861,
-        "sma43_pct": -1.6,
-        "sma200": 1.6234125,
-        "sma200_pct": 3.4,
+        "sma9": 19.99222204,
+        "sma9_pct": -2.1,
+        "sma26": 19.53769236,
+        "sma26_pct": -4.3,
+        "sma43": 19.37046517,
+        "sma43_pct": -5.1,
+        "sma200": 21.08599542,
+        "sma200_pct": 3.3,
         "cross_up": true,
-        "rsi": 50.9,
-        "rsi_ma": 50.8,
+        "rsi": 61.7,
+        "rsi_ma": 58.9,
         "rsi_up": true,
-        "volume_ratio": 0.6,
-        "volume_today": 41080,
-        "volume_avg": 190142,
+        "volume_ratio": 0.9,
+        "volume_today": 1460462,
+        "volume_avg": 1964245,
         "volume_surge": false,
-        "off_high_pct": 16.3,
-        "base_high": 1.71000004,
-        "base_high_pct": 8.9,
+        "off_high_pct": 26.9,
+        "base_high": 20.54000092,
+        "base_high_pct": 0.6,
         "broken": false,
-        "swing_low": 1.49000001,
-        "swing_low_pct": -5.1,
-        "trailing_stop": 1.49770308,
+        "swing_low": 19.31500053,
+        "swing_low_pct": -5.4,
+        "trailing_stop": 19.14502099,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -4.6,
+        "trailing_pct": -6.2,
         "structure": {
-          "trend": "Mixed / consolidating",
+          "trend": "HH/HL \u2014 Uptrend",
           "swing_highs": [
-            1.71000004,
-            1.63499999,
-            1.63
+            19.10000038,
+            19.57999992,
+            20.54000092
           ],
           "swing_lows": [
-            1.38,
-            1.505,
-            1.49000001
+            18.26000023,
+            18.45000076,
+            19.31500053
           ]
         },
-        "risk_pct": 6.0
+        "risk_pct": 6.4
       },
-      "analysis": "VVA's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 16% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$1.5700, stop A$1.4751, target A$1.7450 (1.84:1) \u2014 then trail it.",
-      "sector_count": 7
+      "analysis": "SHL's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 27% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$20.4200, stop A$19.1219, target A$22.7486 (1.79:1) \u2014 then trail it.",
+      "sector_count": 8
     },
     {
       "symbol": "BGA",
@@ -15953,7 +14956,7 @@
         5.78999996
       ],
       "trend": "blue",
-      "turnover": 3848953,
+      "turnover": 3850372,
       "detail": {
         "setup_type": "reversal",
         "sma9": 5.67111111,
@@ -15969,7 +14972,7 @@
         "rsi_ma": 58.5,
         "rsi_up": true,
         "volume_ratio": 1.2,
-        "volume_today": 590860,
+        "volume_today": 595759,
         "volume_avg": 727193,
         "volume_surge": false,
         "off_high_pct": 12.9,
@@ -15997,7 +15000,7 @@
         "risk_pct": 6.0
       },
       "analysis": "BGA's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 13% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$5.7900, stop A$5.4450, target A$6.3700 (1.68:1) \u2014 then trail it.",
-      "sector_count": 2
+      "sector_count": 1
     },
     {
       "symbol": "BRG",
@@ -16064,7 +15067,7 @@
         31.43000031
       ],
       "trend": "blue",
-      "turnover": 10614134,
+      "turnover": 10616985,
       "detail": {
         "setup_type": "reversal",
         "sma9": 31.28777779,
@@ -16080,7 +15083,7 @@
         "rsi_ma": 61.1,
         "rsi_up": true,
         "volume_ratio": 1.1,
-        "volume_today": 203758,
+        "volume_today": 205572,
         "volume_avg": 354524,
         "volume_surge": false,
         "off_high_pct": 14.2,
@@ -16111,8 +15114,8 @@
       "sector_count": 2
     },
     {
-      "symbol": "TGN",
-      "name": "Tungsten Mining Nl",
+      "symbol": "PRN",
+      "name": "Perenti Limited",
       "sector": "Materials",
       "dir": "LONG",
       "setup_type": "reversal",
@@ -16120,106 +15123,106 @@
       "score": 5,
       "score_max": 14,
       "chips": [
-        "BASE -43% OFF HIGH",
-        "RSI TURNING UP"
+        "BASE -24% OFF HIGH",
+        "BASE BREAKOUT"
       ],
       "weekly": false,
       "low_rr": true,
-      "rr_text": "1.3:1",
+      "rr_text": "1.4:1",
       "target_2r": false,
-      "liquidity": "OK",
-      "price": 0.215,
-      "y_close": 0.215,
-      "open": 0.22,
-      "open_pct": 2.33,
-      "current_pct": -2.27,
-      "day_pct": 0.0,
-      "entry": 0.215,
-      "stop": 0.19552501,
-      "target": 0.23999999,
-      "rr": 1.28,
-      "trail": 0.24430972,
-      "stop_pct": 9.1,
-      "p2_pct": 11.6,
+      "liquidity": "LIQUID",
+      "price": 2.31999993,
+      "y_close": 2.28999996,
+      "open": 2.32999992,
+      "open_pct": 1.75,
+      "current_pct": -0.43,
+      "day_pct": 1.31,
+      "entry": 2.31999993,
+      "stop": 1.98,
+      "target": 2.79050927,
+      "rr": 1.38,
+      "trail": 2.09036228,
+      "stop_pct": 14.7,
+      "p2_pct": 20.3,
       "target_basis": "resistance",
       "spark": [
-        0.22499999,
-        0.205,
-        0.2,
-        0.205,
-        0.205,
-        0.19499999,
-        0.2,
-        0.19,
-        0.20999999,
-        0.19499999,
-        0.20999999,
-        0.2,
-        0.2,
-        0.20999999,
-        0.22,
-        0.22,
-        0.20999999,
-        0.2,
-        0.2,
-        0.20999999,
-        0.22499999,
-        0.235,
-        0.23999999,
-        0.215,
-        0.215,
-        0.215,
-        0.2,
-        0.20999999,
-        0.215,
-        0.215
+        2.08999991,
+        2.03999996,
+        2.06999993,
+        2.02999997,
+        2.08999991,
+        2.0999999,
+        2.11999989,
+        2.13000011,
+        2.11999989,
+        2.05999994,
+        2.1099999,
+        2.11999989,
+        2.07999992,
+        2.11999989,
+        2.11999989,
+        2.1500001,
+        2.1400001,
+        2.08999991,
+        2.05999994,
+        2.06999993,
+        2.21000004,
+        2.24000001,
+        2.26999998,
+        2.24000001,
+        2.28999996,
+        2.4000001,
+        2.28999996,
+        2.31999993,
+        2.28999996,
+        2.31999993
       ],
       "trend": "blue",
-      "turnover": 231770,
+      "turnover": 7938704,
       "detail": {
         "setup_type": "reversal",
-        "sma9": 0.21777778,
-        "sma9_pct": 1.3,
-        "sma26": 0.21,
-        "sma26_pct": -2.3,
-        "sma43": 0.21906977,
-        "sma43_pct": 1.9,
-        "sma200": 0.202895,
-        "sma200_pct": -5.6,
+        "sma9": 2.29555554,
+        "sma9_pct": -1.1,
+        "sma26": 2.17499996,
+        "sma26_pct": -6.2,
+        "sma43": 2.09883718,
+        "sma43_pct": -9.5,
+        "sma200": 2.43722173,
+        "sma200_pct": 5.1,
         "cross_up": true,
-        "rsi": 49.1,
-        "rsi_ma": 48.4,
-        "rsi_up": true,
-        "volume_ratio": 0.9,
-        "volume_today": 2070770,
-        "volume_avg": 1060822,
+        "rsi": 60.8,
+        "rsi_ma": 59.6,
+        "rsi_up": false,
+        "volume_ratio": 1.1,
+        "volume_today": 3599498,
+        "volume_avg": 3528079,
         "volume_surge": false,
-        "off_high_pct": 42.7,
-        "base_high": 0.28999999,
-        "base_high_pct": 34.9,
-        "broken": false,
-        "swing_low": 0.19750001,
-        "swing_low_pct": -8.1,
-        "trailing_stop": 0.24430972,
+        "off_high_pct": 24.3,
+        "base_high": 2.29999995,
+        "base_high_pct": -0.9,
+        "broken": true,
+        "swing_low": 2.0,
+        "swing_low_pct": -13.8,
+        "trailing_stop": 2.09036228,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": 13.6,
+        "trailing_pct": -9.9,
         "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
+          "trend": "Mixed / consolidating",
           "swing_highs": [
-            0.23,
-            0.23999999,
-            0.23999999
+            2.16000009,
+            2.17000008,
+            2.42000008
           ],
           "swing_lows": [
-            0.19,
-            0.19750001,
-            0.2
+            2.01999998,
+            2.03999996,
+            2.0
           ]
         },
-        "risk_pct": 9.1
+        "risk_pct": 14.7
       },
-      "analysis": "TGN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 43% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.2150, stop A$0.1955, target A$0.2400 (1.28:1) \u2014 then trail it.",
-      "sector_count": 26
+      "analysis": "PRN's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 24% below its one-year high, so there is room to run. Price has broken above the base high at A$2.3000. Trade idea: entry A$2.3200, stop A$1.9800, target A$2.7905 (1.38:1) \u2014 then trail it.",
+      "sector_count": 25
     },
     {
       "symbol": "FBU",
@@ -16286,7 +15289,7 @@
         2.75999999
       ],
       "trend": "blue",
-      "turnover": 2516786,
+      "turnover": 2518004,
       "detail": {
         "setup_type": "reversal",
         "sma9": 2.71888892,
@@ -16302,7 +15305,7 @@
         "rsi_ma": 59.9,
         "rsi_up": false,
         "volume_ratio": 1.0,
-        "volume_today": 612436,
+        "volume_today": 621261,
         "volume_avg": 968606,
         "volume_surge": false,
         "off_high_pct": 19.8,
@@ -16397,7 +15400,7 @@
         61.66999817
       ],
       "trend": "blue",
-      "turnover": 35386336,
+      "turnover": 35424874,
       "detail": {
         "setup_type": "reversal",
         "sma9": 58.9688886,
@@ -16413,7 +15416,7 @@
         "rsi_ma": 63.7,
         "rsi_up": true,
         "volume_ratio": 0.9,
-        "volume_today": 707929,
+        "volume_today": 720427,
         "volume_avg": 626490,
         "volume_surge": false,
         "off_high_pct": 14.2,
@@ -16441,7 +15444,7 @@
         "risk_pct": 12.8
       },
       "analysis": "AMC's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 14% below its one-year high, so there is room to run. Price has broken above the base high at A$58.9600. Trade idea: entry A$61.6700, stop A$53.7966, target A$69.8905 (1.04:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "DGT",
@@ -16619,7 +15622,7 @@
         20.59000015
       ],
       "trend": "blue",
-      "turnover": 154516164,
+      "turnover": 154557324,
       "detail": {
         "setup_type": "reversal",
         "sma9": 20.93777805,
@@ -16635,7 +15638,7 @@
         "rsi_ma": 50.0,
         "rsi_up": true,
         "volume_ratio": 0.6,
-        "volume_today": 3782452,
+        "volume_today": 3822433,
         "volume_avg": 7830963,
         "volume_surge": false,
         "off_high_pct": 35.0,
@@ -16663,7 +15666,7 @@
         "risk_pct": 15.6
       },
       "analysis": "NST's 9-SMA is above the 26 and price has reclaimed them. It is coming off a base, 35% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$20.5900, stop A$17.3745, target A$22.7900 (0.68:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "LDX",
@@ -16685,9 +15688,9 @@
       "liquidity": "OK",
       "price": 0.115,
       "y_close": 0.105,
-      "open": 0.115,
-      "open_pct": 9.52,
-      "current_pct": 0.0,
+      "open": 0.105,
+      "open_pct": 0.0,
+      "current_pct": 9.52,
       "day_pct": 9.52,
       "entry": 0.115,
       "stop": 0.09108,
@@ -16774,7 +15777,7 @@
         "risk_pct": 20.8
       },
       "analysis": "It is coming off a base, 65% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.1150, stop A$0.0911, target A$0.1300 (0.63:1) \u2014 then trail it.",
-      "sector_count": 9
+      "sector_count": 8
     },
     {
       "symbol": "FHE",
@@ -16796,9 +15799,9 @@
       "liquidity": "OK",
       "price": 0.25999999,
       "y_close": 0.25,
-      "open": 0.252,
-      "open_pct": 0.8,
-      "current_pct": 3.17,
+      "open": 0.2525,
+      "open_pct": 1.0,
+      "current_pct": 2.97,
       "day_pct": 4.0,
       "entry": 0.25999999,
       "stop": 0.198,
@@ -16885,7 +15888,7 @@
         "risk_pct": 23.8
       },
       "analysis": "It is coming off a base, 30% below its one-year high, so there is room to run. RSI has turned up through its signal line. Trade idea: entry A$0.2600, stop A$0.1980, target A$0.2900 (0.48:1) \u2014 then trail it.",
-      "sector_count": 26
+      "sector_count": 25
     },
     {
       "symbol": "CVW",
@@ -16996,7 +15999,7 @@
         "risk_pct": 3.3
       },
       "analysis": "CVW's 9-SMA is above the 26 and price has reclaimed them. Price has broken above the base high at A$0.6450. RSI has turned up through its signal line. Trade idea: entry A$0.6500, stop A$0.6286, target A$0.7140 (3.00:1) \u2014 then trail it.",
-      "sector_count": 4
+      "sector_count": 5
     },
     {
       "symbol": "GNP",
@@ -17110,6 +16113,116 @@
       "sector_count": 4
     },
     {
+      "symbol": "QUB",
+      "name": "Qube Holdings Limited",
+      "sector": "Transportation",
+      "dir": "LONG",
+      "setup_type": "reversal",
+      "grade": "C",
+      "score": 4,
+      "score_max": 14,
+      "chips": [
+        "9 \u203a 26 RECLAIM"
+      ],
+      "weekly": false,
+      "low_rr": false,
+      "rr_text": "3.0:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 5.11000013,
+      "y_close": 5.11000013,
+      "open": 5.11000013,
+      "open_pct": 0.0,
+      "current_pct": 0.0,
+      "day_pct": 0.0,
+      "entry": 5.11000013,
+      "stop": 4.97970021,
+      "target": 5.50089991,
+      "rr": 3.0,
+      "trail": 5.03210635,
+      "stop_pct": 2.5,
+      "p2_pct": 7.6,
+      "target_basis": "measured",
+      "spark": [
+        5.01999998,
+        5.01000023,
+        5.01999998,
+        5.01999998,
+        5.01000023,
+        5.01000023,
+        5.01000023,
+        5.01000023,
+        5.01999998,
+        5.01000023,
+        5.01000023,
+        4.98999977,
+        5.01000023,
+        5.0,
+        5.0,
+        5.0,
+        5.01999998,
+        5.03999996,
+        5.09000015,
+        5.07000017,
+        5.03999996,
+        5.05000019,
+        5.09000015,
+        5.11999989,
+        5.11000013,
+        5.11999989,
+        5.11999989,
+        5.0999999,
+        5.11000013,
+        5.11000013
+      ],
+      "trend": "blue",
+      "turnover": 37265939,
+      "detail": {
+        "setup_type": "reversal",
+        "sma9": 5.10333337,
+        "sma9_pct": -0.1,
+        "sma26": 5.04884623,
+        "sma26_pct": -1.2,
+        "sma43": 5.03744192,
+        "sma43_pct": -1.4,
+        "sma200": 4.70771973,
+        "sma200_pct": -7.9,
+        "cross_up": true,
+        "rsi": 63.0,
+        "rsi_ma": 63.0,
+        "rsi_up": true,
+        "volume_ratio": 1.1,
+        "volume_today": 12513325,
+        "volume_avg": 6839689,
+        "volume_surge": false,
+        "off_high_pct": 0.4,
+        "base_high": 5.13000011,
+        "base_high_pct": 0.4,
+        "broken": false,
+        "swing_low": 5.03000021,
+        "swing_low_pct": -1.6,
+        "trailing_stop": 5.03210635,
+        "trailing_label": "SuperTrend 3\u00d7 ATR",
+        "trailing_pct": -1.5,
+        "structure": {
+          "trend": "Mixed / consolidating",
+          "swing_highs": [
+            5.11999989,
+            5.11999989,
+            5.11999989
+          ],
+          "swing_lows": [
+            5.01000023,
+            4.99499989,
+            4.98000002
+          ]
+        },
+        "risk_pct": 2.5
+      },
+      "analysis": "QUB has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Trade idea: entry A$5.1100, stop A$4.9797, target A$5.5009 (3.00:1) \u2014 then trail it.",
+      "sector_count": 5
+    },
+    {
       "symbol": "WLE",
       "name": "Wam Leaders Limited",
       "sector": "Not Applic",
@@ -17217,118 +16330,7 @@
         "risk_pct": 4.0
       },
       "analysis": "WLE has reclaimed its short-term moving averages \u2014 the 9 has crossed up through the 26 and price is back above both. Trade idea: entry A$1.3300, stop A$1.2771, target A$1.4887 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
-    },
-    {
-      "symbol": "SOL",
-      "name": "Washington H. Soul Pattinson And Company Limited",
-      "sector": "Financial Services",
-      "dir": "LONG",
-      "setup_type": "reversal",
-      "grade": "C",
-      "score": 4,
-      "score_max": 14,
-      "chips": [
-        "BASE BREAKOUT",
-        "RSI TURNING UP"
-      ],
-      "weekly": false,
-      "low_rr": false,
-      "rr_text": "3.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 45.43000031,
-      "y_close": 45.02999878,
-      "open": 45.45000076,
-      "open_pct": 0.93,
-      "current_pct": -0.04,
-      "day_pct": 0.89,
-      "entry": 45.43000031,
-      "stop": 42.62940136,
-      "target": 53.83179714,
-      "rr": 3.0,
-      "trail": 42.79707483,
-      "stop_pct": 6.2,
-      "p2_pct": 18.5,
-      "target_basis": "measured",
-      "spark": [
-        42.61000061,
-        41.90000153,
-        42.61000061,
-        41.83000183,
-        42.15999985,
-        42.40999985,
-        42.54999924,
-        42.31000137,
-        42.84999847,
-        42.68000031,
-        43.5,
-        42.93000031,
-        43.02999878,
-        43.18999863,
-        42.81000137,
-        42.90999985,
-        43.24000168,
-        43.56999969,
-        43.93999863,
-        44.36000061,
-        43.59999847,
-        43.83000183,
-        44.09999847,
-        44.43999863,
-        44.15999985,
-        44.29000092,
-        45.15000153,
-        45.15000153,
-        45.02999878,
-        45.43000031
-      ],
-      "trend": "blue",
-      "turnover": 26706022,
-      "detail": {
-        "setup_type": "reversal",
-        "sma9": 44.6200002,
-        "sma9_pct": -1.8,
-        "sma26": 43.60076919,
-        "sma26_pct": -4.0,
-        "sma43": 43.1713955,
-        "sma43_pct": -5.0,
-        "sma200": 39.11997314,
-        "sma200_pct": -13.9,
-        "cross_up": true,
-        "rsi": 67.8,
-        "rsi_ma": 61.9,
-        "rsi_up": true,
-        "volume_ratio": 1.0,
-        "volume_today": 616249,
-        "volume_avg": 593577,
-        "volume_surge": false,
-        "off_high_pct": 0.5,
-        "base_high": 45.36000061,
-        "base_high_pct": -0.2,
-        "broken": true,
-        "swing_low": 43.06000137,
-        "swing_low_pct": -5.2,
-        "trailing_stop": 42.79707483,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -5.8,
-        "structure": {
-          "trend": "HH/HL \u2014 Uptrend",
-          "swing_highs": [
-            43.5,
-            43.5,
-            44.65999985
-          ],
-          "swing_lows": [
-            42.00999832,
-            42.21500015,
-            43.06000137
-          ]
-        },
-        "risk_pct": 6.2
-      },
-      "analysis": "SOL's 9-SMA is above the 26 and price has reclaimed them. Price has broken above the base high at A$45.3600. RSI has turned up through its signal line. Trade idea: entry A$45.4300, stop A$42.6294, target A$53.8318 (3.00:1) \u2014 then trail it.",
-      "sector_count": 14
+      "sector_count": 12
     }
   ]
 }

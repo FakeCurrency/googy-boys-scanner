@@ -6,9 +6,9 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-26T23:43:26+10:00",
-  "scanned": 1601,
-  "universe_size": 1987,
+  "generated_at": "2026-06-27T05:31:12+10:00",
+  "scanned": 1485,
+  "universe_size": 1985,
   "score_max": 12,
   "sma_periods": [
     20,
@@ -20,11 +20,12 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8764.0,
+      "value": 8749.0,
       "decimals": 0,
-      "day_pct": 0.18,
-      "d5_pct": -0.73,
+      "day_pct": -0.68,
+      "d5_pct": -1.82,
       "spark": [
+        8657.7998,
         8717.7002,
         8592.9004,
         8731.7002,
@@ -45,20 +46,19 @@
         8816.0996,
         8787.0,
         8808.4004,
-        8748.7002,
-        8764.2002
+        8748.7002
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4067.0,
+      "value": 4083.0,
       "decimals": 0,
-      "day_pct": 0.9,
-      "d5_pct": -3.72,
+      "day_pct": 1.29,
+      "d5_pct": -3.35,
       "spark": [
         4447.5,
         4499.2998,
@@ -81,7 +81,7 @@
         4129.8999,
         3990.3,
         4030.5,
-        4066.8999
+        4082.6001
       ],
       "dir": "up"
     },
@@ -90,10 +90,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 58.79,
+      "value": 59.4,
       "decimals": 2,
-      "day_pct": 0.76,
-      "d5_pct": -11.27,
+      "day_pct": 1.81,
+      "d5_pct": -10.34,
       "spark": [
         74.599,
         75.645,
@@ -116,7 +116,7 @@
         62.02,
         58.052,
         58.348,
-        58.79
+        59.405
       ],
       "dir": "up"
     },
@@ -125,10 +125,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 73.21,
+      "value": 72.47,
       "decimals": 2,
-      "day_pct": -2.72,
-      "d5_pct": -8.32,
+      "day_pct": -3.71,
+      "d5_pct": -9.24,
       "spark": [
         94.29,
         93.71,
@@ -151,7 +151,7 @@
         77.08,
         73.74,
         75.26,
-        73.21
+        72.47
       ],
       "dir": "down"
     },
@@ -160,10 +160,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 69.91,
+      "value": 69.15,
       "decimals": 2,
-      "day_pct": -2.79,
-      "d5_pct": -8.73,
+      "day_pct": -3.85,
+      "d5_pct": -9.73,
       "spark": [
         88.68,
         88.9,
@@ -186,7 +186,7 @@
         73.21,
         70.34,
         71.92,
-        69.91
+        69.15
       ],
       "dir": "down"
     },
@@ -195,10 +195,10 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.34,
+      "value": 3.3,
       "decimals": 2,
-      "day_pct": 0.0,
-      "d5_pct": 3.4,
+      "day_pct": -1.41,
+      "d5_pct": 1.95,
       "spark": [
         3.04,
         3.285,
@@ -221,19 +221,19 @@
         3.147,
         3.221,
         3.343,
-        3.343
+        3.296
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "TECH",
       "label": "Tech",
       "ticker": "^IXIC",
       "divide": 1,
-      "value": 25095.45,
+      "value": 25284.39,
       "decimals": 2,
-      "day_pct": -1.04,
-      "d5_pct": -5.36,
+      "day_pct": -0.29,
+      "d5_pct": -4.65,
       "spark": [
         26674.7305,
         26917.4707,
@@ -256,7 +256,7 @@
         25587.0391,
         25476.6406,
         25358.5996,
-        25095.4453
+        25284.3887
       ],
       "dir": "down"
     },
@@ -265,10 +265,10 @@
       "label": "Biotech",
       "ticker": "XBI",
       "divide": 1,
-      "value": 153.27,
+      "value": 153.22,
       "decimals": 2,
-      "day_pct": 1.11,
-      "d5_pct": 8.92,
+      "day_pct": 1.07,
+      "d5_pct": 8.88,
       "spark": [
         134.45,
         135.99,
@@ -291,7 +291,7 @@
         147.03,
         149.71,
         151.59,
-        153.275
+        153.2189
       ],
       "dir": "up"
     },
@@ -300,10 +300,10 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.4,
+      "value": 4.372,
       "decimals": 3,
-      "day_pct": -1.15,
-      "d5_pct": -1.94,
+      "day_pct": -1.77,
+      "d5_pct": -2.56,
       "spark": [
         4.572,
         4.586,
@@ -326,7 +326,7 @@
         4.428,
         4.463,
         4.451,
-        4.4
+        4.372
       ],
       "dir": "down"
     },
@@ -335,10 +335,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6908,
+      "value": 0.6897,
       "decimals": 4,
-      "day_pct": 0.12,
-      "d5_pct": -1.5,
+      "day_pct": -0.04,
+      "d5_pct": -1.66,
       "spark": [
         0.7133,
         0.7164,
@@ -361,19 +361,19 @@
         0.6995,
         0.6916,
         0.69,
-        0.6908
+        0.6897
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "VIX",
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 20.24,
+      "value": 18.83,
       "decimals": 2,
-      "day_pct": 7.15,
-      "d5_pct": 23.41,
+      "day_pct": -0.32,
+      "d5_pct": 14.82,
       "spark": [
         16.29,
         15.74,
@@ -396,19 +396,19 @@
         19.49,
         18.63,
         18.89,
-        20.24
+        18.83
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "USD",
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.1,
+      "value": 101.36,
       "decimals": 2,
-      "day_pct": -0.33,
-      "d5_pct": 0.25,
+      "day_pct": -0.07,
+      "d5_pct": 0.5,
       "spark": [
         99.21,
         99.02,
@@ -431,7 +431,7 @@
         101.41,
         101.61,
         101.43,
-        101.1
+        101.358
       ],
       "dir": "down"
     }
@@ -691,7 +691,7 @@
       "stop": 0.02079,
       "target": 0.085,
       "rr": 0.88,
-      "trail": 0.04238477,
+      "trail": 0.04263477,
       "stop_pct": 62.2,
       "p2_pct": 54.5,
       "target_basis": "measured",
@@ -756,9 +756,9 @@
         "adx_rising": true,
         "swing_low": 0.021,
         "swing_low_pct": -61.8,
-        "trailing_stop": 0.04238477,
+        "trailing_stop": 0.04263477,
         "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -22.9,
+        "trailing_pct": -22.5,
         "risk_pct": 62.2
       },
       "analysis": "KRR set its 25-bar range high 0 bars ago and has just broken out above A$0.0530 by +3.8% \u2014 a fresh, not stale, breakout. Volume is at 2.2\u00d7 average \u2014 the minimum required gate is cleared. RSI is at 80 \u2014 momentum is genuinely strong, not yet overbought. ADX at 43 and rising confirms a trending market \u2014 not a false breakout from noise. The 20-SMA is above the 50-SMA \u2014 the medium-term trend structure is bullish. Trade idea: entry A$0.0550, stop A$0.0208 (below range low), target A$0.0850 (measured move \u2014 0.88:1) \u2014 then trail with the SuperTrend.",
