@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-26T11:27:59Z",
+  "updated_at": "2026-06-26T13:43:41Z",
   "broker_mode": "TESTNET",
   "stats": {
     "notional": 5000,
@@ -9,11 +9,10 @@
     "max_per_group": 2,
     "session_day": "2026-06-26",
     "today_trades": 5,
-    "today_pnl": -487.54,
+    "today_pnl": -577.28,
     "trades_left_today": 0,
     "group_exposure": {
-      "asx:consumer staples": 1,
-      "us_tech": 1
+      "asx:consumer staples": 1
     },
     "longs": {
       "open": 1,
@@ -24,11 +23,11 @@
       "open_unrealised_pnl": 114.66
     },
     "shorts": {
-      "open": 1,
-      "closed": 15,
-      "win_rate": 33.3,
-      "total_r": 0.47,
-      "total_pnl": -626.66,
+      "open": 0,
+      "closed": 16,
+      "win_rate": 31.2,
+      "total_r": -0.56,
+      "total_pnl": -716.4,
       "open_unrealised_pnl": 0
     },
     "regime_stats": {
@@ -38,9 +37,9 @@
         "total_pnl": -453.59
       },
       "ranging": {
-        "trades": 11,
+        "trades": 12,
         "wins": 1,
-        "total_pnl": -1102.81
+        "total_pnl": -1192.55
       },
       "trending": {
         "trades": 9,
@@ -78,32 +77,7 @@
       "current": 24.40999985
     }
   ],
-  "open_shorts": [
-    {
-      "symbol": "ADBE",
-      "name": "Adobe",
-      "asset_type": "nasdaq",
-      "sector": "Technology",
-      "corr_group": "us_tech",
-      "direction": "short",
-      "grade": "A",
-      "score": 7,
-      "entry": 193.47999573,
-      "stop": 197.22498389,
-      "target": 185.99001941,
-      "rr": 2.0,
-      "units": 26.702354113717742,
-      "risk_per_trade": 100,
-      "atr": 2.49665877,
-      "market_regime": "ranging",
-      "yf_ticker": "ADBE",
-      "opened_ts": "2026-06-25T20:59:05+00:00",
-      "session_day": "2026-06-26",
-      "status": "open",
-      "unreal_r": 0.0,
-      "unreal_pnl": 0.0
-    }
-  ],
+  "open_shorts": [],
   "closed_longs": [
     {
       "symbol": "ETH",
@@ -1084,6 +1058,38 @@
       "bars": 1,
       "r": -0.02,
       "pnl": -44.97
+    },
+    {
+      "symbol": "ADBE",
+      "name": "Adobe",
+      "asset_type": "nasdaq",
+      "sector": "Technology",
+      "corr_group": "us_tech",
+      "direction": "short",
+      "grade": "A",
+      "score": 7,
+      "entry": 195.42135173,
+      "stop": 197.22498389,
+      "target": 185.99001941,
+      "rr": 2.0,
+      "units": 26.702354113717742,
+      "risk_per_trade": 100,
+      "atr": 2.49665877,
+      "market_regime": "ranging",
+      "yf_ticker": "ADBE",
+      "opened_ts": "2026-06-25T20:59:05+00:00",
+      "session_day": "2026-06-26",
+      "status": "closed",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0,
+      "fill_price": 195.42135173,
+      "filled": true,
+      "exit": 197.28415139,
+      "exit_ts": "2026-06-26T09:30:00",
+      "reason": "stop",
+      "bars": 1,
+      "r": -1.03,
+      "pnl": -89.74
     }
   ],
   "all_closed": [
@@ -2064,6 +2070,38 @@
       "bars": 1,
       "r": -1.19,
       "pnl": -63.33
+    },
+    {
+      "symbol": "ADBE",
+      "name": "Adobe",
+      "asset_type": "nasdaq",
+      "sector": "Technology",
+      "corr_group": "us_tech",
+      "direction": "short",
+      "grade": "A",
+      "score": 7,
+      "entry": 195.42135173,
+      "stop": 197.22498389,
+      "target": 185.99001941,
+      "rr": 2.0,
+      "units": 26.702354113717742,
+      "risk_per_trade": 100,
+      "atr": 2.49665877,
+      "market_regime": "ranging",
+      "yf_ticker": "ADBE",
+      "opened_ts": "2026-06-25T20:59:05+00:00",
+      "session_day": "2026-06-26",
+      "status": "closed",
+      "unreal_r": 0.0,
+      "unreal_pnl": 0.0,
+      "fill_price": 195.42135173,
+      "filled": true,
+      "exit": 197.28415139,
+      "exit_ts": "2026-06-26T09:30:00",
+      "reason": "stop",
+      "bars": 1,
+      "r": -1.03,
+      "pnl": -89.74
     }
   ]
 }
