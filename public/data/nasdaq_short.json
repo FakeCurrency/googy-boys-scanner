@@ -6,8 +6,8 @@
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-06-25T17:06:26-04:00",
-  "scanned": 98,
+  "generated_at": "2026-06-26T04:43:04-04:00",
+  "scanned": 97,
   "universe_size": 98,
   "score_max": 13,
   "ema_periods": [
@@ -25,13 +25,11 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8808.0,
+      "value": 8764.0,
       "decimals": 0,
-      "day_pct": 0.24,
-      "d5_pct": -1.76,
+      "day_pct": 0.18,
+      "d5_pct": -0.73,
       "spark": [
-        8692.0,
-        8657.7998,
         8717.7002,
         8592.9004,
         8731.7002,
@@ -51,7 +49,9 @@
         8828.7002,
         8816.0996,
         8787.0,
-        8808.4004
+        8808.4004,
+        8748.7002,
+        8764.2002
       ],
       "dir": "up"
     },
@@ -60,12 +60,11 @@
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4039.0,
+      "value": 4049.0,
       "decimals": 0,
-      "day_pct": 1.23,
-      "d5_pct": -7.33,
+      "day_pct": 0.47,
+      "d5_pct": -4.14,
       "spark": [
-        4500.3999,
         4447.5,
         4499.2998,
         4560.5,
@@ -86,7 +85,8 @@
         4181.8999,
         4129.8999,
         3990.3,
-        4039.3999
+        4030.5,
+        4049.3
       ],
       "dir": "up"
     },
@@ -95,12 +95,11 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 57.83,
+      "value": 58.34,
       "decimals": 2,
-      "day_pct": -0.39,
-      "d5_pct": -18.21,
+      "day_pct": -0.01,
+      "d5_pct": -11.95,
       "spark": [
-        76.305,
         74.599,
         75.645,
         75.616,
@@ -121,7 +120,8 @@
         65.527,
         62.02,
         58.052,
-        57.825
+        58.348,
+        58.34
       ],
       "dir": "down"
     },
@@ -130,12 +130,11 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 74.96,
+      "value": 72.76,
       "decimals": 2,
-      "day_pct": 1.65,
-      "d5_pct": -5.77,
+      "day_pct": -3.32,
+      "d5_pct": -8.88,
       "spark": [
-        99.58,
         94.29,
         93.71,
         92.05,
@@ -156,21 +155,21 @@
         77.9,
         77.08,
         73.74,
-        74.96
+        75.26,
+        72.76
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "WTI",
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 71.38,
+      "value": 69.2,
       "decimals": 2,
-      "day_pct": 1.48,
-      "d5_pct": -7.05,
+      "day_pct": -3.78,
+      "d5_pct": -9.66,
       "spark": [
-        93.89,
         88.68,
         88.9,
         87.36,
@@ -191,21 +190,21 @@
         74.82,
         73.21,
         70.34,
-        71.38
+        71.92,
+        69.2
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "NATGAS",
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.27,
+      "value": 3.33,
       "decimals": 2,
-      "day_pct": 1.52,
-      "d5_pct": 3.97,
+      "day_pct": -0.48,
+      "d5_pct": 2.91,
       "spark": [
-        2.894,
         3.04,
         3.285,
         3.29,
@@ -226,9 +225,10 @@
         3.253,
         3.147,
         3.221,
-        3.27
+        3.343,
+        3.327
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "TECH",
@@ -261,7 +261,7 @@
         26166.5996,
         25587.0391,
         25476.6406,
-        25358.6035
+        25358.5996
       ],
       "dir": "down"
     },
@@ -305,11 +305,12 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.392,
+      "value": 4.451,
       "decimals": 3,
-      "day_pct": -1.33,
-      "d5_pct": -2.12,
+      "day_pct": -0.27,
+      "d5_pct": -0.27,
       "spark": [
+        4.667,
         4.572,
         4.586,
         4.558,
@@ -330,8 +331,7 @@
         4.469,
         4.428,
         4.463,
-        4.451,
-        4.392
+        4.451
       ],
       "dir": "down"
     },
@@ -340,12 +340,11 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.6914,
+      "value": 0.6898,
       "decimals": 4,
-      "day_pct": -0.03,
-      "d5_pct": -1.49,
+      "day_pct": -0.02,
+      "d5_pct": -1.63,
       "spark": [
-        0.7171,
         0.7133,
         0.7164,
         0.718,
@@ -366,7 +365,8 @@
         0.7003,
         0.6995,
         0.6916,
-        0.6914
+        0.69,
+        0.6898
       ],
       "dir": "down"
     },
@@ -375,12 +375,11 @@
       "label": "VIX",
       "ticker": "^VIX",
       "divide": 1,
-      "value": 18.89,
+      "value": 19.74,
       "decimals": 2,
-      "day_pct": 1.4,
-      "d5_pct": 2.44,
+      "day_pct": 4.5,
+      "d5_pct": 20.37,
       "spark": [
-        17.01,
         16.29,
         15.74,
         15.32,
@@ -401,7 +400,8 @@
         17.28,
         19.49,
         18.63,
-        18.89
+        18.89,
+        19.74
       ],
       "dir": "up"
     },
@@ -410,12 +410,11 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.45,
+      "value": 101.26,
       "decimals": 2,
-      "day_pct": -0.16,
-      "d5_pct": 1.36,
+      "day_pct": -0.17,
+      "d5_pct": 0.41,
       "spark": [
-        99.17,
         99.21,
         99.02,
         98.91,
@@ -436,7 +435,8 @@
         101.02,
         101.41,
         101.61,
-        101.45
+        101.43,
+        101.261
       ],
       "dir": "down"
     }
@@ -465,9 +465,9 @@
       "liquidity": "LIQUID",
       "price": 86.90000153,
       "y_close": 87.81999969,
-      "open": 86.75499725,
+      "open": 86.76000214,
       "open_pct": -1.21,
-      "current_pct": 0.17,
+      "current_pct": 0.16,
       "day_pct": -1.05,
       "entry": 88.80891553,
       "stop": 92.80889938,
@@ -510,9 +510,80 @@
         86.90000153
       ],
       "trend": "blue",
-      "turnover": 698236109,
+      "turnover": 707389512,
       "detail": {},
       "analysis": "ORLY is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $88.8089, stop above the swing high at $92.8089 (4.5% risk). Target $85.3500 (support), R:R 0.9:1.",
+      "sector_count": 0
+    },
+    {
+      "symbol": "PLTR",
+      "name": "Palantir Technologies",
+      "sector": "",
+      "dir": "SHORT",
+      "setup_type": "short",
+      "grade": "B",
+      "score": 5,
+      "score_max": 13,
+      "chips": [
+        "FULL BEARISH ALIGNMENT",
+        "WEEKLY BEARISH",
+        "VOLUME EXPANSION"
+      ],
+      "weekly": true,
+      "low_rr": false,
+      "rr_text": "2.0:1",
+      "target_2r": true,
+      "liquidity": "LIQUID",
+      "price": 107.26999664,
+      "y_close": 113.5,
+      "open": 111.37999725,
+      "open_pct": -1.87,
+      "current_pct": -3.69,
+      "day_pct": -5.49,
+      "entry": 128.76517774,
+      "stop": 165.33699692,
+      "target": 55.62153938,
+      "rr": 2.0,
+      "trail": 128.85449087,
+      "stop_pct": 28.4,
+      "p2_pct": 56.8,
+      "target_basis": "measured",
+      "spark": [
+        130.05000305,
+        133.72999573,
+        133.99000549,
+        135.13999939,
+        135.25999451,
+        137.1499939,
+        137.41499329,
+        136.88000488,
+        136.6000061,
+        132.50999451,
+        143.33999634,
+        156.53999329,
+        160.6499939,
+        152.16999817,
+        142.19999695,
+        141.69999695,
+        135.52999878,
+        136.47000122,
+        132.07000732,
+        130.21000671,
+        131.08000183,
+        127.98999786,
+        134.71000671,
+        133.25,
+        130.63000488,
+        128.47000122,
+        119.5,
+        116.69999695,
+        113.5,
+        107.26999664
+      ],
+      "trend": "blue",
+      "turnover": 6018082014,
+      "detail": {},
+      "analysis": "PLTR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $128.7652, stop above the swing high at $165.3370 (28.4% risk). Target $55.6215 (measured), R:R 2.0:1.",
       "sector_count": 0
     },
     {
@@ -535,15 +606,15 @@
       "liquidity": "LIQUID",
       "price": 73.30000305,
       "y_close": 75.73999786,
-      "open": 74.93499756,
+      "open": 74.94000244,
       "open_pct": -1.06,
-      "current_pct": -2.18,
+      "current_pct": -2.19,
       "day_pct": -3.22,
       "entry": 82.47846226,
       "stop": 90.9908963,
       "target": 65.45359417,
       "rr": 2.0,
-      "trail": 82.55641244,
+      "trail": 82.55891488,
       "stop_pct": 10.3,
       "p2_pct": 20.6,
       "target_basis": "measured",
@@ -580,7 +651,7 @@
         73.30000305
       ],
       "trend": "blue",
-      "turnover": 913616269,
+      "turnover": 914414341,
       "detail": {},
       "analysis": "PDD is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $82.4785, stop above the swing high at $90.9909 (10.3% risk). Target $65.4536 (measured), R:R 2.0:1.",
       "sector_count": 0
@@ -650,79 +721,9 @@
         39.15000153
       ],
       "trend": "blue",
-      "turnover": 661990903,
+      "turnover": 664528709,
       "detail": {},
       "analysis": "CTSH is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $47.9992, stop above the swing high at $58.2265 (21.3% risk). Target $27.5447 (measured), R:R 2.0:1.",
-      "sector_count": 0
-    },
-    {
-      "symbol": "PLTR",
-      "name": "Palantir Technologies",
-      "sector": "",
-      "dir": "SHORT",
-      "setup_type": "short",
-      "grade": "C",
-      "score": 4,
-      "score_max": 13,
-      "chips": [
-        "FULL BEARISH ALIGNMENT",
-        "WEEKLY BEARISH"
-      ],
-      "weekly": true,
-      "low_rr": false,
-      "rr_text": "2.0:1",
-      "target_2r": true,
-      "liquidity": "LIQUID",
-      "price": 107.26999664,
-      "y_close": 113.5,
-      "open": 111.37999725,
-      "open_pct": -1.87,
-      "current_pct": -3.69,
-      "day_pct": -5.49,
-      "entry": 128.76517774,
-      "stop": 165.33699692,
-      "target": 55.62153938,
-      "rr": 2.0,
-      "trail": 128.85091758,
-      "stop_pct": 28.4,
-      "p2_pct": 56.8,
-      "target_basis": "measured",
-      "spark": [
-        130.05000305,
-        133.72999573,
-        133.99000549,
-        135.13999939,
-        135.25999451,
-        137.1499939,
-        137.41499329,
-        136.88000488,
-        136.6000061,
-        132.50999451,
-        143.33999634,
-        156.53999329,
-        160.6499939,
-        152.16999817,
-        142.19999695,
-        141.69999695,
-        135.52999878,
-        136.47000122,
-        132.07000732,
-        130.21000671,
-        131.08000183,
-        127.98999786,
-        134.71000671,
-        133.25,
-        130.63000488,
-        128.47000122,
-        119.5,
-        116.69999695,
-        113.5,
-        107.26999664
-      ],
-      "trend": "blue",
-      "turnover": 6005249868,
-      "detail": {},
-      "analysis": "PLTR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $128.7652, stop above the swing high at $165.3370 (28.4% risk). Target $55.6215 (measured), R:R 2.0:1.",
       "sector_count": 0
     },
     {
@@ -790,7 +791,7 @@
         129.6499939
       ],
       "trend": "blue",
-      "turnover": 487112503,
+      "turnover": 487356128,
       "detail": {},
       "analysis": "CHTR is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $137.6963, stop above the swing high at $150.2577 (9.1% risk). Target $126.7000 (support), R:R 0.9:1.",
       "sector_count": 0
@@ -860,7 +861,7 @@
         22.69000053
       ],
       "trend": "blue",
-      "turnover": 824269954,
+      "turnover": 824521259,
       "detail": {},
       "analysis": "CMCSA is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $23.6879, stop above the swing high at $25.5934 (8.0% risk). Target $22.1300 (support), R:R 0.8:1.",
       "sector_count": 0
@@ -893,7 +894,7 @@
       "stop": 278.19440247,
       "target": 190.11999512,
       "rr": 0.47,
-      "trail": 224.70254938,
+      "trail": 224.70326873,
       "stop_pct": 27.5,
       "p2_pct": 12.9,
       "target_basis": "support",
@@ -930,7 +931,7 @@
         193.41000366
       ],
       "trend": "blue",
-      "turnover": 1932344667,
+      "turnover": 1932682777,
       "detail": {},
       "analysis": "ADBE is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $218.2669, stop above the swing high at $278.1944 (27.5% risk). Target $190.1200 (support), R:R 0.5:1.",
       "sector_count": 0
@@ -1000,7 +1001,7 @@
         113.76999664
       ],
       "trend": "blue",
-      "turnover": 753193426,
+      "turnover": 753608032,
       "detail": {},
       "analysis": "WDAY is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $126.3534, stop above the swing high at $160.2264 (26.8% risk). Target $112.5500 (support), R:R 0.4:1.",
       "sector_count": 0
@@ -1033,7 +1034,7 @@
       "stop": 1022.12,
       "target": 936.51000977,
       "rr": 0.76,
-      "trail": 1006.98181561,
+      "trail": 1006.97461345,
       "stop_pct": 5.0,
       "p2_pct": 3.8,
       "target_basis": "support",
@@ -1070,7 +1071,7 @@
         942.23999023
       ],
       "trend": "blue",
-      "turnover": 2422078321,
+      "turnover": 2425429162,
       "detail": {},
       "analysis": "COST is in a confirmed downtrend (below EMA 144) and has bounced back up to the EMA 21 resistance zone. Short entry near $973.5778, stop above the swing high at $1022.1200 (5.0% risk). Target $936.5100 (support), R:R 0.8:1.",
       "sector_count": 0
