@@ -234,6 +234,33 @@ GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# VIVEK — 5.0Trading.Bull style: reactions at the 200 SMA on higher timeframes
+# ---------------------------------------------------------------------------
+# Core idea: price reacting (bounce / reject / break+retest) at the 200 SMA on
+# the Weekly (and a higher-TF daily proxy for H4). Low leverage, tiny risk,
+# pre-defined TP1/TP2/TP3 with structured scale-outs and SL that only ever moves
+# in the trade's favour.
+VIVEK_SMA              = 200       # the moving average everything keys off
+VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
+VIVEK_NEAR_TOL         = 0.06      # within 6% = "in play" (lower conviction)
+VIVEK_DATA_PERIOD      = "5y"      # long history so a Weekly SMA200 is meaningful
+VIVEK_MIN_WEEKLY_BARS  = 60        # need at least this many weekly bars to use Weekly SMA
+VIVEK_MIN_HISTORY      = 220       # min daily bars to compute a Daily SMA200 (~H4 proxy)
+VIVEK_ATR_STOP_MULT    = 1.0       # stop sits ATR×this beyond the reaction extreme
+VIVEK_TP_R             = [1.5, 3.0, 5.0]   # TP1 / TP2 / TP3 as R-multiples of risk
+VIVEK_PIVOT_WINDOW     = 4         # swing pivot lookback for structure + stops
+VIVEK_SCORE_MAX        = 10
+# Grade ladder (note: B+ and WATCH, not B/C, per 5.0 grading)
+VIVEK_GRADE_CUTOFFS    = [("A+", 8), ("A", 6), ("B+", 4), ("WATCH", 2)]
+
+# 5.0 execution rules (used by the autonomous bot + dashboard)
+VIVEK_RISK_PCT_DEFAULT = 0.25      # % of equity risked per trade (0.25–0.5 range)
+VIVEK_RISK_PCT_MAX     = 0.5
+VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
+VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)
+VIVEK_TP_SCALE_SHORT   = [0.50, 0.25, 0.15]   # shorts bank more, sooner
+
+# ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so
 # you can read big-money rotation (mega) AND discovery (small caps) separately.
 # ---------------------------------------------------------------------------

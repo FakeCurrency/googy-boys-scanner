@@ -439,6 +439,116 @@ def scan_googy_market(market_key: str, limit: int | None = None, full: bool = Tr
                         out_root, progress, frames, pulse_data, universe)
 
 
+# VIVEK grade ordering (A+/A/B+/WATCH — distinct from the A+/A/B/C scanners).
+_VIVEK_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}
+
+
+def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = True,
+                      out_root: str | None = None, progress: bool = True,
+                      universe: list | None = None) -> dict:
+    """VIVEK (5.0-style) scan: 200 SMA reactions on the higher timeframes.
+
+    Uses a long (VIVEK_DATA_PERIOD) daily history so a real Weekly 200 SMA can be
+    computed. Produces rows carrying Entry / SL / TP1 / TP2 / TP3 + scale-outs and
+    an A+/A/B+/WATCH grade with a plain-English reason.
+    """
+    from . import vivek
+    market = config.MARKETS[market_key]
+    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
+    if universe is None:
+        universe = load_universe(market_key, full=full)
+        if limit:
+            universe = universe[:limit]
+    meta = {u["yf"]: u for u in universe}
+
+    if progress:
+        print(f"  downloading {len(universe)} {market.label} tickers "
+              f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
+    frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
+
+    results: list[dict] = []
+    scanned = 0
+    for yf_ticker, df in frames.items():
+        scanned += 1
+        try:
+            sig = vivek.evaluate(df)
+            if sig is None:
+                continue
+            turnover = _liquidity(df, market)
+            if turnover < market.liquidity_min:
+                continue
+            points, grade, fired = vivek.score_and_grade(sig)
+            if grade is None:
+                continue
+            lv = vivek.compute_levels(df, sig)
+            if lv.get("rr", 0) <= 0:
+                continue
+
+            info = meta.get(yf_ticker, {})
+            close = sig["close"]
+            detail = vivek.build_detail(df, sig, lv)
+            is_long = sig["direction"] == "long"
+            results.append({
+                "symbol": info.get("symbol", yf_ticker),
+                "name": info.get("name", yf_ticker),
+                "sector": info.get("sector", ""),
+                "dir": "LONG" if is_long else "SHORT",
+                "setup_type": "vivek",
+                "grade": grade,
+                "score": points,
+                "score_max": config.VIVEK_SCORE_MAX,
+                "chips": fired,
+                "level_tf": sig["level_tf"],
+                "level": sig["level"],
+                "at_level": sig["at_level"],
+                "reaction": sig["reaction"],
+                "confluence": sig["confluence"],
+                "price": round(close, 8),
+                "entry": lv["entry"], "stop": lv["stop"],
+                "tp1": lv["tp1"], "tp2": lv["tp2"], "tp3": lv["tp3"],
+                "scale": lv["scale"], "risk": lv["risk"],
+                "rr": lv["rr"],
+                "rr_text": f"{lv['rr']:.1f}:1",
+                "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
+                "turnover": round(turnover),
+                "spark": _spark(df),
+                "detail": detail,
+                "analysis": vivek.narrative(info.get("symbol", yf_ticker), sig, lv,
+                                            detail, market.currency_symbol),
+            })
+        except Exception as e:
+            if progress:
+                print(f"  warning: VIVEK {yf_ticker} → {e}", flush=True)
+
+    # Rank by VIVEK grade, then score, then R:R.
+    counts = _finalize_vivek(results)
+    now = dt.datetime.now(ZoneInfo(market.timezone))
+    return {
+        "market": market.key,
+        "label": market.label,
+        "setup_type": "vivek",
+        "currency": market.currency,
+        "currency_symbol": market.currency_symbol,
+        "timezone": market.timezone,
+        "tz_label": market.tz_label,
+        "generated_at": now.isoformat(timespec="seconds"),
+        "scanned": scanned,
+        "universe_size": len(universe),
+        "score_max": config.VIVEK_SCORE_MAX,
+        "sma": config.VIVEK_SMA,
+        "sector_counts": dict(counts.most_common()),
+        "results": results,
+    }
+
+
+def _finalize_vivek(results: list[dict]) -> Counter:
+    counts = Counter(r["sector"] for r in results if r["sector"])
+    for r in results:
+        r["sector_count"] = counts.get(r["sector"], 0)
+    results.sort(key=lambda r: (_VIVEK_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    return counts
+
+
 def _write_health(out_root: pathlib.Path, scan_key: str,
                   now: dt.datetime, scanned: int, quality_skipped: int, tradeable: int,
                   trace_id: str = "", elapsed_s: float = 0.0) -> None:

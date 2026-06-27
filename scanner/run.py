@@ -57,6 +57,10 @@ def main() -> None:
         help="skip the Googy consolidation breakout scan",
     )
     parser.add_argument(
+        "--no-vivek", action="store_true",
+        help="skip the VIVEK (5.0-style 200 SMA) scan",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -125,6 +129,15 @@ def main() -> None:
                                             pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(gg, args.out, name=f"{market_key}_googy")
                 print(f"  googy: {len(gg['results'])} setups ({tradeable(gg)} A+/A)")
+
+            # 6) VIVEK (5.0-style 200 SMA reactions) -> <market>_vivek.json
+            #    Runs its own longer download (Weekly 200 SMA needs deep history),
+            #    so it does NOT reuse the 1y `frames` above.
+            if not args.no_vivek:
+                vk = scan.scan_vivek_market(market_key, out_root=args.out,
+                                            universe=universe, progress=False)
+                output.write(vk, args.out, name=f"{market_key}_vivek")
+                print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A)")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 

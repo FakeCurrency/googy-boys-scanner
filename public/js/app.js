@@ -20,8 +20,8 @@
     55: "#2fd0c4", 89: "#4d9fff", 144: "#a78bfa",
   };
   const SMA_COLOR = { 9: "#e5e9f0", 26: "#ffd23f", 43: "#a78bfa", 200: "#ff5b5b" };
-  const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
-  const GRADE_RANK = { "A+": 0, "A": 1, "B": 2, "C": 3 };
+  const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
+  const GRADE_RANK = { "A+": 0, "A": 1, "B+": 2, "B": 2, "WATCH": 3, "C": 3 };
   const WATCH_KEY = "gbs:watch";
 
   // ---- persistent preferences (survive page refresh) ----------------------
@@ -485,8 +485,63 @@
     return `<div class="debug-panel"><div class="dbg-title">DEBUG</div>${rows}</div>`;
   }
 
+  // ── VIVEK (5.0 style) detail — Entry / SL / TP1 / TP2 / TP3 front & centre ──
+  function detailHtmlVivek(r) {
+    const cur = state.cur;
+    const d = r.detail || {};
+    const isLong = r.dir !== "SHORT";
+    const scale = (r.scale || d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
+    const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
+    const tfTxt = r.level_tf === "weekly" ? "Weekly 200 SMA" : "H4 200 SMA";
+    const pctFrom = (v) => (r.entry ? ((v - r.entry) / r.entry) * 100 : 0);
+    const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=vivek`;
+
+    // A vertical price ladder: SL → Entry → TP1 → TP2 → TP3 (ordered by price).
+    const lvl = (key, label, val, cls, sub) => `
+      <div class="vk-lvl vk-${cls}">
+        <span class="vk-lvl-key">${key}</span>
+        <span class="vk-lvl-label">${label}</span>
+        <span class="vk-lvl-price num">${cur}${num(val)}</span>
+        <span class="vk-lvl-sub">${sub}</span>
+      </div>`;
+    const tps = [
+      lvl("TP3", "Take profit 3", r.tp3, "tp", `${sgn(pctFrom(r.tp3))} · book ${scale[2]}%`),
+      lvl("TP2", "Take profit 2", r.tp2, "tp", `${sgn(pctFrom(r.tp2))} · book ${scale[1]}% · SL → support`),
+      lvl("TP1", "Take profit 1", r.tp1, "tp", `${sgn(pctFrom(r.tp1))} · book ${scale[0]}% · SL → break-even`),
+      lvl("IN",  "Entry", r.entry, "entry", `${tfTxt} reaction`),
+      lvl("SL",  "Stop loss", r.stop, "sl", `${sgn(pctFrom(r.stop))} · risk ${cur}${num(r.risk)}`),
+    ];
+    // Longs read top-down TP3→SL; shorts invert so price still descends visually.
+    const ladder = isLong ? tps : tps.slice().reverse();
+
+    return `<div class="row-detail vk-detail">
+      <div class="vk-hero" style="--gc:${gColor}">
+        <div class="vk-grade-block">
+          <span class="vk-grade-lbl">GRADE</span>
+          <span class="vk-grade-val">${esc(r.grade)}</span>
+          <span class="vk-grade-score">${r.score}/${r.score_max}</span>
+        </div>
+        <div class="vk-hero-body">
+          <div class="vk-hero-top">
+            <span class="vk-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
+            <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
+            <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
+            <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
+          </div>
+          <p class="vk-why">${esc(r.analysis || "")}</p>
+        </div>
+      </div>
+
+      <div class="vk-ladder">${ladder.join("")}</div>
+
+      <div class="vk-chips">${(r.chips || []).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
+    </div>`;
+  }
+
   function detailHtml(r) {
     const stype = (r.detail || {}).setup_type;
+    if (stype === "vivek") return detailHtmlVivek(r);
     if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
     if (stype === "googy") return detailHtmlGoogy(r);
     const d = r.detail || {};
@@ -702,7 +757,8 @@
     } else if (state.tab === "a") {
       list = all.filter((r) => r.grade === "A");
     } else {
-      list = all.filter((r) => r.grade === "B" || r.grade === "C");
+      // Watch tab: B/C for the daily scanners; B+/WATCH for VIVEK.
+      list = all.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade));
     }
     const s = state.sort;
     list = list.slice();
@@ -751,6 +807,7 @@
       : mode === "spec"     ? `data/${market}_spec.json`
       : mode === "short"    ? `data/${market}_short.json`
       : mode === "googy"    ? `data/${market}_googy.json`
+      : mode === "vivek"    ? `data/${market}_vivek.json`
       : `data/${market}.json`;
 
   async function loadCaps() {
