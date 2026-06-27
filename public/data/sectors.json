@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-27T19:50:13+10:00",
+  "generated_at": "2026-06-27T20:02:13+10:00",
   "tz_label": "AEST",
   "markets": {
     "asx": {
@@ -127,6 +127,24 @@
       "top_movers": {
         "winners": [
           {
+            "symbol": "RMS",
+            "name": "Ramelius Resources Limited",
+            "sector": "Materials",
+            "last": 3.0,
+            "pct": 3.81,
+            "mcap": 0,
+            "tier": "mega"
+          },
+          {
+            "symbol": "RRL",
+            "name": "Regis Resources Limited",
+            "sector": "Materials",
+            "last": 6.59,
+            "pct": 3.45,
+            "mcap": 0,
+            "tier": "mega"
+          },
+          {
             "symbol": "NST",
             "name": "Northern Star Resources Ltd",
             "sector": "Materials",
@@ -145,31 +163,22 @@
             "tier": "mega"
           },
           {
-            "symbol": "AMC",
-            "name": "Amcor Plc",
-            "sector": "Materials",
-            "last": 61.67,
-            "pct": 1.77,
-            "mcap": 28512858112,
+            "symbol": "SGP",
+            "name": "Stockland",
+            "sector": "Equity Real Estate Investment Trusts (REITs)",
+            "last": 4.32,
+            "pct": 2.37,
+            "mcap": 10504702976,
             "tier": "mega"
           },
           {
-            "symbol": "XRO",
-            "name": "Xero Limited",
-            "sector": "Software & Services",
-            "last": 69.05,
-            "pct": 1.77,
+            "symbol": "SLS",
+            "name": "Solstice Minerals Limited",
+            "sector": "Materials",
+            "last": 2.02,
+            "pct": 29.07,
             "mcap": 0,
-            "tier": "mega"
-          },
-          {
-            "symbol": "JHX",
-            "name": "James Hardie Industries Plc",
-            "sector": "Materials",
-            "last": 37.47,
-            "pct": 1.68,
-            "mcap": 21396197376,
-            "tier": "mega"
+            "tier": "small"
           },
           {
             "symbol": "BTR",
@@ -205,15 +214,6 @@
             "last": 0.275,
             "pct": 5.77,
             "mcap": 1403485568,
-            "tier": "small"
-          },
-          {
-            "symbol": "DGT",
-            "name": "Digico Infrastructure Reit",
-            "sector": "Class Pend",
-            "last": 2.57,
-            "pct": 5.76,
-            "mcap": 1361620224,
             "tier": "small"
           }
         ],
@@ -344,24 +344,24 @@
           "spike": 1.2
         },
         {
+          "symbol": "RIO",
+          "name": "Rio Tinto Limited",
+          "sector": "Materials",
+          "pct": 2.15,
+          "turnover": 254967071,
+          "spike": 1.0
+        },
+        {
           "symbol": "NAB",
           "name": "National Australia Bank Limited",
           "sector": "Banks",
           "pct": 0.16,
           "turnover": 191091348,
           "spike": 0.7
-        },
-        {
-          "symbol": "MQG",
-          "name": "Macquarie Group Limited",
-          "sector": "Financial Services",
-          "pct": -0.25,
-          "turnover": 167938225,
-          "spike": 0.8
         }
       ],
-      "rotation_detail": "Utilities led the session (avg +0.9% across its big names): APA +1.3%, ORG +0.9%, AGL +0.5%. Pharmaceuticals, Biotechnology & Life Sciences was the weakest (avg -4.6%): CU6 -11.0%, MSB -9.4%, NEU -4.4%.",
-      "eli5": "The ASX market went up a bit today (+0.2%). Gold companies did the best, and Health Care companies did the worst. The biggest winner was NST (up 3.4%), and the biggest faller was PLS (down 6.3%)."
+      "rotation_detail": "Utilities led the session (avg +0.9% across its big names): APA +1.3%, ORG +0.9%, AGL +0.5%. Pharmaceuticals, Biotechnology & Life Sciences was the weakest (avg -4.3%): CU6 -11.0%, MSB -9.4%, NEU -4.4%.",
+      "eli5": "The ASX market went up a bit today (+0.2%). Gold companies did the best, and Health Care companies did the worst. The biggest winner was RMS (up 3.8%), and the biggest faller was PLS (down 6.3%)."
     },
     "us": {
       "label": "US",
@@ -383,9 +383,9 @@
         {
           "symbol": "DJI",
           "name": "Dow Jones",
-          "last": 51920.6,
-          "chg": 71.72,
-          "chg_pct": 0.14
+          "last": 51876.1,
+          "chg": -44.51,
+          "chg_pct": -0.09
         },
         {
           "symbol": "RUT",
@@ -434,16 +434,16 @@
         {
           "symbol": "XLV",
           "name": "Health Care",
-          "last": 155.63,
-          "chg": 2.28,
-          "chg_pct": 1.49
+          "last": 160.34,
+          "chg": 4.71,
+          "chg_pct": 3.03
         },
         {
           "symbol": "XLI",
           "name": "Industrials",
-          "last": 184.12,
-          "chg": 3.91,
-          "chg_pct": 2.17
+          "last": 181.2,
+          "chg": -2.92,
+          "chg_pct": -1.59
         },
         {
           "symbol": "XLY",
@@ -488,8 +488,8 @@
           "chg_pct": 0.57
         }
       ],
-      "summary": "S&P 500 -0.1%; Nasdaq -0.2%; Dow Jones +0.1%; Russell 2000 +0.1%. VIX 18.41 (-2.5%) \u00b7 10Y 4.45% (-0.3%). Breadth 8 up / 3 down across sectors \u2014 Industrials led (+2.2%), Technology lagged (-1.9%). Tone reads risk-off / defensive \u2014 cyclicals +0.2% vs defensives +1.2%. See the calendar & news below for the events behind it.",
-      "rotation": "Money rotated INTO XLI (+2.2%), XLV (+1.5%), XLRE (+1.5%) and OUT OF XLK (-1.9%), XLB (-0.5%), XLE (-0.5%). Defensives & gold leading \u2014 a cautious, risk-off lean.",
+      "summary": "S&P 500 -0.1%; Nasdaq -0.2%; Dow Jones -0.1%; Russell 2000 +0.1%. VIX 18.41 (-2.5%) \u00b7 10Y 4.45% (-0.3%). Breadth 7 up / 4 down across sectors \u2014 Health Care led (+3.0%), Technology lagged (-1.9%). Tone reads risk-off / defensive \u2014 cyclicals -0.4% vs defensives +1.5%. See the calendar & news below for the events behind it.",
+      "rotation": "Money rotated INTO XLV (+3.0%), XLRE (+1.5%), XLP (+0.9%) and OUT OF XLK (-1.9%), XLI (-1.6%), XLB (-0.5%). Defensives & gold leading \u2014 a cautious, risk-off lean.",
       "upcoming": [],
       "latest_event": null
     }
