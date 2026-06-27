@@ -69,6 +69,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Last-good per-ticker frame cache: tickers Yahoo throttles out of one run
+      # are reused from here so coverage stays high. Keyed by run number so each
+      # run restores the most recent cache and writes an updated one.
+      - name: Restore frame cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames
+          key: vivek-frames-${{ github.run_id }}
+          restore-keys: |
+            vivek-frames-
+
       # Refresh the market-cap cache FIRST, on a fresh IP — Yahoo throttles its
       # fundamentals endpoint after the heavy scan download, so fetching caps
       # here (before the scan) is the reliable window. Reads the previous scan's
@@ -112,6 +123,28 @@ jobs:
           echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+
+      # Schema gate: every freshly written *_vivek.json must carry the current
+      # schema_version. Catches a code/data drift (the bug that hid the entry-type
+      # filter) before it ships, instead of after.
+      - name: Verify VIVEK data schema
+        run: |
+          python - <<'PY'
+          import json, glob, sys
+          from scanner import config
+          want = config.VIVEK_SCHEMA_VERSION
+          bad = []
+          for f in glob.glob("public/data/*_vivek.json"):
+              try:
+                  v = json.load(open(f)).get("schema_version")
+              except Exception as e:
+                  bad.append(f"{f}: unreadable ({e})"); continue
+              if v != want:
+                  bad.append(f"{f}: schema_version {v} != expected {want}")
+          if bad:
+              print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
+          print(f"schema gate OK — all *_vivek.json at v{want}")
+          PY
 
       # NOTE: the paper-trade journal, Telegram alerts and Discord digest read the
       # retired pullback/reversal/short scans, which the VIVEK-only pipeline no

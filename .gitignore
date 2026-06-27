@@ -22,3 +22,6 @@ firebase-debug.log
 
 # Claude Code internal (agent worktrees, session state)
 .claude/worktrees/
+
+# Last-good per-ticker frame cache (restored across CI runs via actions/cache)
+.cache/

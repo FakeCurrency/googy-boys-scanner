@@ -1,7 +1,10 @@
 """Batched OHLCV download from Yahoo Finance via yfinance."""
 
 import datetime as dt
+import gzip
 import logging
+import pathlib
+import pickle
 import random
 import time
 
@@ -12,6 +15,83 @@ import yfinance as yf
 from . import config
 
 log = logging.getLogger(__name__)
+
+# Last-good per-ticker frame cache. Yahoo throttling drops a variable slice of the
+# universe every run; rather than letting those tickers vanish from the scan, we
+# keep the last successful deep frame for each and reuse it (with honest aging)
+# when a fresh download fails. The cache lives outside the committed tree and is
+# restored across CI runs via actions/cache.
+_CACHE_DIR = pathlib.Path(__file__).resolve().parents[1] / ".cache" / "frames"
+
+
+def _cache_path(market_key: str) -> pathlib.Path:
+    return _CACHE_DIR / f"{market_key}.pkl.gz"
+
+
+def load_frame_cache(market_key: str) -> dict[str, pd.DataFrame]:
+    """Last-good {ticker: DataFrame} for a market, or {} if no cache yet."""
+    p = _cache_path(market_key)
+    if not p.exists():
+        return {}
+    try:
+        with gzip.open(p, "rb") as f:
+            data = pickle.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        log.warning("frame cache: failed to load %s (%s) — ignoring", p, e)
+        return {}
+
+
+def save_frame_cache(market_key: str, frames: dict[str, pd.DataFrame]) -> None:
+    """Persist the last-good frames for a market (atomic write)."""
+    if not frames:
+        return
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    p = _cache_path(market_key)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    try:
+        with gzip.open(tmp, "wb") as f:
+            pickle.dump(frames, f, protocol=pickle.HIGHEST_PROTOCOL)
+        tmp.replace(p)
+    except Exception as e:
+        log.warning("frame cache: failed to save %s (%s)", p, e)
+
+
+def _frame_age_days(df: pd.DataFrame) -> int:
+    """How many days old the frame's most recent bar is (0 = today)."""
+    try:
+        last = df.index[-1]
+        last = last.to_pydatetime() if hasattr(last, "to_pydatetime") else last
+        return max(0, (dt.datetime.now().date() - last.date()).days)
+    except Exception:
+        return 0
+
+
+def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
+                     tickers: list[str]) -> tuple[dict[str, pd.DataFrame], dict]:
+    """Fill tickers Yahoo dropped this run from the last-good cache, then refresh
+    the cache with everything we now hold (capped to the current universe).
+
+    Returns (merged_frames, stats) where stats reports fresh vs reused counts so
+    the scan can stamp honest coverage/aging.
+    """
+    cache = load_frame_cache(market_key)
+    merged = dict(fresh)
+    reused = 0
+    wanted = set(tickers)
+    for t in wanted:
+        if t not in merged and t in cache:
+            merged[t] = cache[t]
+            reused += 1
+    # Persist only current-universe tickers so the cache doesn't accumulate
+    # delisted names forever; freshly downloaded frames overwrite stale ones.
+    save_frame_cache(market_key, {t: df for t, df in merged.items() if t in wanted})
+    stats = {"fresh": len(fresh), "reused": reused, "merged": len(merged),
+             "universe": len(tickers)}
+    if reused:
+        log.info("frame cache: reused %d cached tickers Yahoo dropped (now %d/%d)",
+                 reused, len(merged), len(tickers))
+    return merged, stats
 
 # The full ASX universe has many thin/suspended names; silence yfinance's noisy
 # per-ticker "possibly delisted" warnings — we skip those tickers anyway.

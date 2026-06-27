@@ -224,31 +224,31 @@ def _structural_targets(df: pd.DataFrame, direction: str, entry: float, risk: fl
     return picked
 
 
-def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
-    """Entry, SL, TP1/TP2/TP3 (5.0 style) + R:R and per-TP scale-outs.
+def _build_levels(df: pd.DataFrame, direction: str, entry: float, level: float,
+                  swing_low: float, swing_high: float, atr: float) -> dict:
+    """The shared SL + TP1/TP2/TP3 construction, given a known entry.
 
     TPs land on real prior structure where it exists; any remaining slots fall
     back to R-multiples placed strictly beyond the last target so ordering holds.
     R:R is measured to the ACTUAL TP2, so it genuinely varies between setups.
+    Returns {} (caller treats as "no plan") when the stop gives non-positive risk.
     """
-    direction = sig["direction"]
-    entry = sig["close"]
-    atr = max(sig["atr"], entry * 0.001)
+    atr = max(atr, entry * 0.001)
     buf = atr * config.VIVEK_ATR_STOP_MULT
 
     if direction == "long":
-        stop = min(sig["swing_low"], sig["level"]) - buf
+        stop = min(swing_low, level) - buf
         risk = entry - stop
         scale = config.VIVEK_TP_SCALE_LONG
         sign = 1
     else:
-        stop = max(sig["swing_high"], sig["level"]) + buf
+        stop = max(swing_high, level) + buf
         risk = stop - entry
         scale = config.VIVEK_TP_SCALE_SHORT
         sign = -1
 
     if risk <= 0:
-        return {"rr": 0}
+        return {}
 
     struct = _structural_targets(df, direction, entry, risk)
     tps: list[float] = []
@@ -295,20 +295,196 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     }
 
 
-def gate_grade(grade: str | None, sig: dict, rr: float) -> tuple[str | None, list[str]]:
-    """Apply 5.0's hard requirements that the raw structural score can't see.
+def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
+    """Entry (= last close), SL, TP1/TP2/TP3 for a signal. Kept for callers/tests
+    that want the detection-price plan; the live scan uses build_tf_plan (which
+    sets the entry from the fired trigger instead)."""
+    lv = _build_levels(df, sig["direction"], sig["close"], sig["level"],
+                       sig["swing_low"], sig["swing_high"], sig["atr"])
+    return lv or {"rr": 0}
 
-    A tradeable grade (A+/A) needs BOTH a real reaction (a clean bounce/reject,
-    not price merely sitting near the SMA) AND enough room to TP2. Otherwise the
-    setup is demoted to B+ (watch-list) with a chip explaining why. This is what
-    keeps the A+/A list short and trustworthy.
+
+def _resample_weekly_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
+    """Daily OHLCV -> a true Weekly (W-FRI) OHLCV frame, for the Weekly plan."""
+    try:
+        wk = pd.DataFrame({
+            "Open":   df["Open"].resample("W-FRI").first(),
+            "High":   df["High"].resample("W-FRI").max(),
+            "Low":    df["Low"].resample("W-FRI").min(),
+            "Close":  df["Close"].resample("W-FRI").last(),
+            "Volume": df["Volume"].resample("W-FRI").sum(),
+        }).dropna()
+        return wk if len(wk) else None
+    except Exception:
+        return None
+
+
+def detect_trigger(frame: pd.DataFrame, direction: str, level: float) -> dict | None:
+    """Has a mechanical entry trigger fired on the LAST bar of `frame`?
+
+    Three triggers, checked in VIVEK_TRIGGER_PRIORITY order (first match wins):
+      * reclaim — price pierced the 200 SMA within the lookback and the last bar
+        closed back through it (a bounce reclaim / rejection close-through).
+      * retest  — the last bar tagged the level and closed back the right side of
+        it on calm (<= average) volume — a retest that held.
+      * break   — the last bar closed beyond the most recent minor swing pivot
+        with >= BREAK_VOL_MULT x average volume — a break of small structure.
+
+    Returns {type, entry, bar} (bar = integer index of the trigger bar) or None
+    when the setup is merely WATCHING. `entry` is the trigger price, NOT just the
+    close — a retest enters at the level, a break enters at the broken pivot.
+    """
+    n = len(frame)
+    if n < 3:
+        return None
+    high = frame["High"].to_numpy(dtype=float)
+    low = frame["Low"].to_numpy(dtype=float)
+    close = frame["Close"].to_numpy(dtype=float)
+    vol = frame["Volume"].to_numpy(dtype=float)
+    last = n - 1
+    lc = close[last]
+    is_long = direction == "long"
+    k = min(config.VIVEK_TRIGGER_LOOKBACK, n - 1)
+    avg_vol = float(np.nanmean(vol[-20:])) if n >= 5 else float(np.nanmean(vol) or 0.0)
+    at_tol = level * config.VIVEK_AT_LEVEL_TOL
+
+    candidates: dict[str, dict] = {}
+
+    # reclaim — pierced the level recently, last bar closed back through it.
+    if is_long:
+        pierced = any(low[i] <= level for i in range(last - k, last + 1))
+        if pierced and lc > level:
+            candidates["reclaim"] = {"type": "reclaim", "entry": float(lc), "bar": last}
+    else:
+        pierced = any(high[i] >= level for i in range(last - k, last + 1))
+        if pierced and lc < level:
+            candidates["reclaim"] = {"type": "reclaim", "entry": float(lc), "bar": last}
+
+    # retest — last bar tagged the level and held, on calm volume. Enter at the level.
+    if is_long:
+        held = low[last] <= level + at_tol and lc > level
+    else:
+        held = high[last] >= level - at_tol and lc < level
+    if held and avg_vol > 0 and vol[last] <= avg_vol * config.VIVEK_RETEST_VOL_MULT:
+        candidates["retest"] = {"type": "retest", "entry": float(level), "bar": last}
+
+    # break — last bar closed beyond the most recent minor pivot with volume.
+    piv = (pivot_highs if is_long else pivot_lows)(frame, config.VIVEK_PIVOT_WINDOW).dropna()
+    if len(piv):
+        brk = float(piv.iloc[-1])
+        broke = (lc > brk) if is_long else (lc < brk)
+        if broke and avg_vol > 0 and vol[last] >= avg_vol * config.VIVEK_BREAK_VOL_MULT:
+            candidates["break"] = {"type": "break", "entry": brk, "bar": last}
+
+    for name in config.VIVEK_TRIGGER_PRIORITY:
+        if name in candidates:
+            return candidates[name]
+    return None
+
+
+def _recent_reaction_bar(frame: pd.DataFrame, direction: str, level: float) -> int | None:
+    """Index of the most recent bar that reacted AT the level (within AT_LEVEL_TOL)."""
+    n = len(frame)
+    low = frame["Low"].to_numpy(dtype=float)
+    high = frame["High"].to_numpy(dtype=float)
+    for i in range(n - 1, max(-1, n - 60) - 1, -1):
+        near = (abs(low[i] - level) / level <= config.VIVEK_AT_LEVEL_TOL) if direction == "long" \
+            else (abs(high[i] - level) / level <= config.VIVEK_AT_LEVEL_TOL)
+        if near:
+            return i
+    return None
+
+
+def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
+    """A full timeframe plan for `frame`: the 200 SMA level, structural SL/TPs,
+    and the trigger state — all from ONE place (Python), so the row, chart and
+    bot read identical numbers. Returns None when the frame is too short."""
+    n = len(frame)
+    if n < config.VIVEK_MIN_TF_BARS:
+        return None
+    close = frame["Close"]
+    w = min(config.VIVEK_SMA, n)
+    level = float(sma(close, w).iloc[-1])
+    if not np.isfinite(level) or level <= 0:
+        return None
+    atr = float(calc_atr(frame, 14).iloc[-1])
+    pw = config.VIVEK_PIVOT_WINDOW
+    recent = frame.tail(max(2 * pw + 1, 12))
+    swing_low = float(recent["Low"].min())
+    swing_high = float(recent["High"].max())
+
+    trigger = detect_trigger(frame, direction, level)
+    entry = trigger["entry"] if trigger else float(close.iloc[-1])
+    lv = _build_levels(frame, direction, entry, level, swing_low, swing_high, atr)
+    if not lv:
+        return None
+
+    def _date(i):
+        try:
+            return frame.index[i].strftime("%Y-%m-%d")
+        except Exception:
+            return None
+
+    react_i = _recent_reaction_bar(frame, direction, level)
+    return {
+        **lv,
+        "level": round(level, 8),
+        "swing_high": round(swing_high, 8),
+        "swing_low": round(swing_low, 8),
+        "sma_window": w,                                  # < 200 on short histories
+        "armed": trigger is not None,
+        "entry_trigger": trigger["type"] if trigger else None,
+        "trigger_bar": _date(trigger["bar"]) if trigger else None,
+        "reaction_bar": _date(react_i) if react_i is not None else None,
+        "bars": n,
+    }
+
+
+def build_plans(df: pd.DataFrame, sig: dict) -> dict:
+    """Per-timeframe plans (Daily + Weekly) for a signal's direction. The Daily
+    plan is the row/bot headline; the Weekly plan drives the chart's W toggle."""
+    direction = sig["direction"]
+    plans: dict[str, dict] = {}
+    p1d = build_tf_plan(df, direction)
+    if p1d:
+        plans["1D"] = p1d
+    wk = _resample_weekly_ohlc(df)
+    if wk is not None:
+        p1w = build_tf_plan(wk, direction)
+        if p1w:
+            plans["1W"] = p1w
+    return plans
+
+
+def build_markers(plans: dict) -> dict:
+    """Chart markers per timeframe, derived from the plans so the chart no longer
+    computes its own. At most two per TF (the reaction at the level + the trigger
+    bar) — deliberately minimal to keep the chart readable."""
+    out: dict[str, list] = {}
+    for tf, p in plans.items():
+        ms = []
+        if p.get("reaction_bar"):
+            ms.append({"date": p["reaction_bar"], "kind": "reaction"})
+        if p.get("trigger_bar"):
+            ms.append({"date": p["trigger_bar"], "kind": "trigger", "label": p.get("entry_trigger")})
+        out[tf] = ms
+    return out
+
+
+def gate_grade(grade: str | None, sig: dict, rr: float, armed: bool = True) -> tuple[str | None, list[str]]:
+    """Apply 5.0's hard requirements the raw structural score can't see.
+
+    A tradeable grade (A+/A) needs BOTH a fired trigger (ARMED — not price merely
+    sitting near the SMA) AND enough room to TP2. Otherwise the setup is demoted
+    to B+ (WATCHING) with a chip explaining why. This keeps the A+/A list short
+    and genuinely actionable.
     """
     if grade not in ("A+", "A"):
         return grade, []
     notes: list[str] = []
-    if sig.get("reaction") not in ("bounce", "reject"):
+    if not armed:
         grade = "B+"
-        notes.append("NO CLEAN REACTION")
+        notes.append("WATCHING (no trigger)")
     if rr < config.VIVEK_MIN_TRADEABLE_RR:
         grade = "B+"
         notes.append(f"LOW R:R ({rr:.1f})")

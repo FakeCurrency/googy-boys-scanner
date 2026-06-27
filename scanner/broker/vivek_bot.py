@@ -62,12 +62,14 @@ def evaluate_setup(row: dict, min_grade: str | None = None, min_rr: float | None
     if rr < min_rr:
         return skip("low_rr", f"R:R {rr:.1f} < min {min_rr:.1f}")
 
-    # Must be a genuine reaction at the 200 SMA, not just "near it".
-    if not (row.get("at_level") or row.get("reaction") in ("bounce", "reject")):
-        return skip("no_clean_reaction", "not at the level / no clean 200-SMA reaction")
+    # Must be ARMED — a mechanical trigger fired, not just "near the level". The
+    # scan only grades a setup A/A+ when armed, but the bot enforces it directly
+    # too so it never trades a WATCHING setup.
+    if not row.get("armed"):
+        return skip("not_armed", "WATCHING — no trigger fired")
 
     why = (f"{grade} {direction} · {row.get('level_tf', '?')} 200 SMA "
-           f"{row.get('reaction', '?')} · R:R {rr:.1f}")
+           f"{row.get('entry_trigger', '?')} · R:R {rr:.1f}")
     log.info("TAKE  %s  %s", sym, why)
     return {"take": True, "grade": grade, "reason": why, "code": "OK", "direction": direction}
 

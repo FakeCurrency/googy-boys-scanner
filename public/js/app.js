@@ -849,7 +849,12 @@
     const warn = behind || tooOld || lowCov;
     const bits = [];
     if (age) bits.push(`⟳ ${age}`);
-    if (typeof cov === "number") bits.push(`${cov}% coverage`);
+    if (typeof cov === "number") {
+      // Show how much of the coverage is fresh vs reused from the last-good cache.
+      const cached = d.from_cache || 0;
+      bits.push(cached > 0 ? `${cov}% coverage (${d.fresh ?? "?"} fresh · ${cached} cached)`
+                           : `${cov}% coverage`);
+    }
     if (ver != null) bits.push(`schema v${ver}`);
     if (behind) bits.push("rescan to enable latest features");
     box.hidden = false;
@@ -937,7 +942,7 @@
   // Schema the frontend expects. When committed data stamps an older version (a
   // scan ran on an older build), we tell the user to rescan rather than silently
   // dropping features that depend on newer fields.
-  const EXPECTED_SCHEMA = 2;
+  const EXPECTED_SCHEMA = 3;
 
   // "2h ago" / "just now" / "3d ago" from an ISO timestamp, for the freshness badge.
   function timeAgo(iso) {

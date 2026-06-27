@@ -244,7 +244,7 @@ GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
 # shape the frontend depends on changes (e.g. a new per-row field). The UI reads
 # this to tell "old data, missing fields" apart from "no setups", instead of
 # silently hiding features. v2 = adds entry_types + freshness/version stamping.
-VIVEK_SCHEMA_VERSION   = 2
+VIVEK_SCHEMA_VERSION   = 3
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
@@ -267,6 +267,15 @@ VIVEK_TP_CLUSTER_R     = 0.6       # merge structural levels within this many R 
 VIVEK_TP_R             = [1.5, 3.0, 5.0]   # fallback TP1/TP2/TP3 when structure is thin
 VIVEK_MIN_TRADEABLE_RR = 1.5       # A/A+ need at least this R:R to TP2, else demote to B+
 VIVEK_SHORT_TP_FLOOR   = 0.05      # a short's targets can't fall below 5% of entry (price→0 floor)
+
+# Trigger model — a setup is ARMED only when one of three mechanical triggers has
+# fired on the latest completed bar; otherwise it is merely WATCHING (caps at B+).
+# This replaces "entry = last close" with condition -> trigger -> armed.
+VIVEK_TRIGGER_LOOKBACK = 5         # bars to look back for the pierce that precedes a reclaim
+VIVEK_RETEST_VOL_MULT  = 1.0       # a retest should come on <= average volume (calm test)
+VIVEK_BREAK_VOL_MULT   = 1.5       # a structure break needs >= this x average volume to count
+VIVEK_TRIGGER_PRIORITY = ["reclaim", "retest", "break"]   # first match wins
+VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g. Weekly)
 
 # 5.0 execution rules (used by the autonomous bot + dashboard)
 VIVEK_RISK_PCT_DEFAULT = 0.25      # % of equity risked per trade (0.25–0.5 range)

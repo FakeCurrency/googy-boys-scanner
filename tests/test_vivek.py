@@ -150,24 +150,82 @@ def test_short_targets_never_go_negative():
 
 # ── #2 selectivity gate ─────────────────────────────────────────────────────────
 
-def test_gate_keeps_clean_high_rr_setup():
-    grade, notes = vivek.gate_grade("A+", {"reaction": "bounce"}, rr=3.0)
+def test_gate_keeps_armed_high_rr_setup():
+    grade, notes = vivek.gate_grade("A+", {}, rr=3.0, armed=True)
     assert grade == "A+" and notes == []
 
 
-def test_gate_demotes_when_no_clean_reaction():
-    grade, notes = vivek.gate_grade("A", {"reaction": "hold"}, rr=3.0)
-    assert grade == "B+" and any("REACTION" in n for n in notes)
+def test_gate_demotes_when_not_armed():
+    grade, notes = vivek.gate_grade("A", {}, rr=3.0, armed=False)
+    assert grade == "B+" and any("WATCHING" in n for n in notes)
 
 
 def test_gate_demotes_low_rr():
-    grade, notes = vivek.gate_grade("A+", {"reaction": "reject"}, rr=1.0)
+    grade, notes = vivek.gate_grade("A+", {}, rr=1.0, armed=True)
     assert grade == "B+" and any("R:R" in n for n in notes)
 
 
 def test_gate_leaves_lower_grades_untouched():
-    assert vivek.gate_grade("B+", {"reaction": "hold"}, rr=1.0) == ("B+", [])
-    assert vivek.gate_grade("WATCH", {"reaction": "fade"}, rr=0.5) == ("WATCH", [])
+    assert vivek.gate_grade("B+", {}, rr=1.0, armed=False) == ("B+", [])
+    assert vivek.gate_grade("WATCH", {}, rr=0.5, armed=False) == ("WATCH", [])
+
+
+# ── trigger model + per-timeframe plans ─────────────────────────────────────────
+
+def test_long_reclaim_trigger_fires_and_arms():
+    """Price pierced the level then closed back above it on the last bar → reclaim."""
+    df = _frame("long_bounce")
+    sig = vivek.evaluate(df)
+    plan = vivek.build_tf_plan(df, "long")
+    assert plan is not None
+    # The dip-then-bounce fixture closes back above its ~100 level → an armed reclaim.
+    assert plan["armed"] is True
+    assert plan["entry_trigger"] in ("reclaim", "retest", "break")
+    assert plan["trigger_bar"] is not None
+    assert plan["stop"] < plan["entry"] < plan["tp1"] < plan["tp2"] < plan["tp3"]
+
+
+def test_break_trigger_requires_volume():
+    """A close beyond the prior pivot only triggers `break` with volume support."""
+    n = 60
+    # Gently declining highs so there is exactly one clean prior pivot (the 103
+    # spike) — a flat plateau would make every bar a pivot under the >= rule.
+    hi = np.linspace(102.0, 100.2, n); hi[40] = 103.0
+    lo = hi - 0.6; o = hi - 0.3; cl = hi - 0.3
+    # Last bar trades well ABOVE the level (low 102) so it neither pierces nor
+    # retests it — only a structure break is eligible.
+    o[-1] = 102.5; lo[-1] = 102.0; cl[-1] = 104.0; hi[-1] = 104.5
+    vol = np.full(n, 1e6)
+    df = pd.DataFrame({"Open": o, "High": hi, "Low": lo, "Close": cl, "Volume": vol},
+                      index=pd.date_range("2021-01-01", periods=n, freq="D"))
+    assert vivek.detect_trigger(df, "long", level=99.0) is None    # volume == average → no break
+    df.iloc[-1, df.columns.get_loc("Volume")] = 2e6                # 2x average
+    trig = vivek.detect_trigger(df, "long", level=99.0)
+    assert trig is not None and trig["type"] == "break" and trig["entry"] == pytest.approx(103.0)
+
+
+def test_watching_setup_not_armed():
+    """Price sitting above the level with no pierce/retest/break → WATCHING."""
+    n = 60
+    cl = np.full(n, 105.0); o = cl.copy(); hi = cl * 1.001; lo = cl * 0.999
+    df = pd.DataFrame({"Open": o, "High": hi, "Low": lo, "Close": cl, "Volume": np.full(n, 1e6)},
+                      index=pd.date_range("2021-01-01", periods=n, freq="D"))
+    assert vivek.detect_trigger(df, "long", level=99.0) is None
+    plan = vivek.build_tf_plan(df, "long")
+    assert plan is not None and plan["armed"] is False and plan["entry_trigger"] is None
+
+
+def test_build_plans_emits_daily_and_weekly():
+    df = _frame("long_bounce")
+    sig = vivek.evaluate(df)
+    plans = vivek.build_plans(df, sig)
+    assert "1D" in plans                                   # daily always present
+    assert "1W" in plans                                   # 340 daily bars → enough weeks
+    for p in plans.values():
+        assert p["stop"] < p["entry"] < p["tp1"] < p["tp2"] < p["tp3"]
+        assert "armed" in p and "level" in p
+    markers = vivek.build_markers(plans)
+    assert set(markers) == set(plans)                      # one marker list per plan TF
 
 
 # ── entry-type categories (filter chips) ────────────────────────────────────────
@@ -190,7 +248,7 @@ def test_entry_types_always_returns_at_least_one():
 def _row(**kw):
     r = {"symbol": "BHP", "dir": "LONG", "grade": "A", "rr": 3.0,
          "entry": 100.0, "stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
-         "at_level": True, "reaction": "bounce",
+         "at_level": True, "reaction": "bounce", "armed": True, "entry_trigger": "reclaim",
          "scale": config.VIVEK_TP_SCALE_LONG}
     r.update(kw)
     return r
@@ -217,9 +275,9 @@ def test_bot_skips_bad_level_order():
     assert d["take"] is False and d["code"] == "bad_level_order"
 
 
-def test_bot_skips_when_not_a_reaction():
-    d = vivek_bot.evaluate_setup(_row(at_level=False, reaction="hold"))
-    assert d["take"] is False and d["code"] == "no_clean_reaction"
+def test_bot_skips_when_not_armed():
+    d = vivek_bot.evaluate_setup(_row(armed=False))
+    assert d["take"] is False and d["code"] == "not_armed"
 
 
 # ── bot: sizing ───────────────────────────────────────────────────────────────

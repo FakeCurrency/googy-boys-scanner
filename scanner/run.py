@@ -12,7 +12,7 @@ import json
 import pathlib
 
 from . import config, output, pulse, scan
-from .data import download
+from .data import download, merge_with_cache
 from .universe import load_universe
 
 DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
@@ -74,14 +74,19 @@ def main() -> None:
             # second Yahoo pass either way.
             dl_period = config.VIVEK_DATA_PERIOD
             print(f"  downloading {len(universe)} tickers ({dl_period}) ...", flush=True)
-            deep_frames = download([u["yf"] for u in universe], period=dl_period)
+            fresh = download([u["yf"] for u in universe], period=dl_period)
+            # Reuse last-good cached frames for tickers Yahoo dropped this run, so
+            # transient throttling no longer shrinks coverage (the cache refreshes
+            # with whatever we DID get). Aging is reported honestly per row.
+            deep_frames, cache_stats = merge_with_cache(
+                market_key, fresh, [u["yf"] for u in universe])
             cov = 100 * len(deep_frames) // max(len(universe), 1)
-            print(f"  coverage: {len(deep_frames)}/{len(universe)} downloaded ({cov}%)"
-                  f"{'  ⚠️ LOW — likely Yahoo throttling' if cov < 80 and len(universe) > 50 else ''}",
-                  flush=True)
-            # Guard: a fully-empty download means the data source was blocked
-            # (e.g. Yahoo 403/429), not a genuine "no setups" day. Writing now
-            # would clobber yesterday's good JSON, so skip this market instead.
+            reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
+            print(f"  coverage: {len(deep_frames)}/{len(universe)} ({cov}%)  "
+                  f"{cache_stats['fresh']} fresh{reused_note}"
+                  f"{'  ⚠️ LOW' if cov < 80 and len(universe) > 50 else ''}", flush=True)
+            # Guard: nothing fresh AND nothing cached → the source is fully blocked.
+            # Skip rather than clobber yesterday's good JSON.
             if not deep_frames:
                 print(f"  no data for {market_key} (download blocked/empty) — "
                       f"keeping existing JSON", flush=True)
@@ -96,7 +101,8 @@ def main() -> None:
             # only scan the app consumes.
             vk = scan.scan_vivek_market(market_key, out_root=args.out,
                                         universe=universe, frames=deep_frames,
-                                        pulse_data=pulse_data, progress=False)
+                                        pulse_data=pulse_data, progress=False,
+                                        from_cache=cache_stats["reused"])
             output.write(vk, args.out, name=f"{market_key}_vivek")
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")

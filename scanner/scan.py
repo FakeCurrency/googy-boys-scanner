@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
 from . import analysis, charts, config, googy, levels, pulse, reversal, short, signals, spec
-from .data import download, validate_bars, DataQualityError
+from .data import download, validate_bars, DataQualityError, _frame_age_days
 from .universe import load_universe
 
 log = logging.getLogger(__name__)
@@ -466,7 +466,8 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                       out_root: str | None = None, progress: bool = True,
                       universe: list | None = None,
                       frames: dict | None = None,
-                      pulse_data: list | None = None) -> dict:
+                      pulse_data: list | None = None,
+                      from_cache: int = 0) -> dict:
     """VIVEK (5.0-style) scan: 200 SMA reactions on the higher timeframes.
 
     Uses a long (VIVEK_DATA_PERIOD) daily history so a real Weekly 200 SMA can be
@@ -506,13 +507,25 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             points, grade, fired = vivek.score_and_grade(sig)
             if grade is None:
                 continue
-            lv = vivek.compute_levels(df, sig)
-            if lv.get("rr", 0) <= 0:
+            # Per-timeframe plans (Daily + Weekly) from the ONE engine — the Daily
+            # plan is the row/bot headline; both feed the chart so the row, chart
+            # and bot read identical numbers. The Daily plan also carries the
+            # trigger state (armed / entry_trigger / trigger_bar).
+            plans = vivek.build_plans(df, sig)
+            lv = plans.get("1D")
+            if not lv or lv.get("rr", 0) <= 0:
                 continue
-            # Selectivity gate: demote A/A+ that lack a clean reaction or enough
-            # room to TP2 (keeps the tradeable list short and trustworthy).
-            grade, gate_notes = vivek.gate_grade(grade, sig, lv["rr"])
+            armed = bool(lv.get("armed"))
+            markers = vivek.build_markers(plans)
+            # Selectivity gate: only ARMED setups (a trigger fired) earn A/A+;
+            # otherwise the setup is WATCHING and capped at B+. Also demote on low
+            # R:R. Keeps the tradeable list short and genuinely actionable.
+            grade, gate_notes = vivek.gate_grade(grade, sig, lv["rr"], armed)
             fired = fired + gate_notes
+            # Entry-type chips reflect the FIRED trigger when armed; fall back to
+            # the descriptive heuristic for watching setups.
+            entry_types = ([lv["entry_trigger"]] if armed and lv.get("entry_trigger")
+                           else vivek.entry_types(sig))
 
             info = meta.get(yf_ticker, {})
             close = sig["close"]
@@ -532,7 +545,12 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "level": sig["level"],
                 "at_level": sig["at_level"],
                 "reaction": sig["reaction"],
-                "entry_types": vivek.entry_types(sig),
+                "entry_types": entry_types,
+                "armed": armed,
+                "entry_trigger": lv.get("entry_trigger"),
+                "trigger_bar": lv.get("trigger_bar"),
+                "plans": plans,
+                "markers": markers,
                 "confluence": sig["confluence"],
                 "price": round(close, 8),
                 "entry": lv["entry"], "stop": lv["stop"],
@@ -542,6 +560,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "rr_text": f"{lv['rr']:.1f}:1",
                 "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
                 "turnover": round(turnover),
+                "data_age_days": _frame_age_days(df),   # 0 = fresh; >0 = reused cache
                 "spark": _spark(df),
                 "detail": detail,
                 "analysis": vivek.narrative(info.get("symbol", yf_ticker), sig, lv,
@@ -573,6 +592,8 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "generated_at": now.isoformat(timespec="seconds"),
         "scanned": scanned,
         "downloaded": downloaded,
+        "from_cache": from_cache,                 # tickers reused from last-good cache
+        "fresh": max(0, downloaded - from_cache),
         "universe_size": len(universe),
         "coverage_pct": round(100 * downloaded / max(len(universe), 1)),
         "score_max": config.VIVEK_SCORE_MAX,
