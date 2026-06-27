@@ -114,6 +114,7 @@ def download(tickers: list[str], period: str | None = None,
     frames: dict[str, pd.DataFrame] = {}
     failed_batches = 0        # whole batches that yielded nothing after retries
     skipped_tickers = 0       # individual tickers with no usable rows
+    consecutive_fail = 0      # run of failed batches => Yahoo is throttling hard
     n_batches = (len(tickers) + chunk - 1) // chunk
 
     for bi, start in enumerate(range(0, len(tickers), chunk)):
@@ -126,9 +127,19 @@ def download(tickers: list[str], period: str | None = None,
         if data is None or len(data) == 0:
             failed_batches += 1
             skipped_tickers += len(batch)
+            consecutive_fail += 1
             log.warning("batch %d/%d (%d tickers) returned no data after %d attempts — skipping",
                         bi + 1, n_batches, len(batch), retries + 1)
+            # Only now — when several batches in a row have failed — do we assume
+            # heavy rate-limiting and pause longer to let Yahoo recover. Normal
+            # operation never hits this, so healthy runs stay fast.
+            if consecutive_fail >= config.DATA_HEAVY_AFTER and bi + 1 < n_batches:
+                cooldown = config.DATA_HEAVY_COOLDOWN * (0.8 + 0.4 * random.random())
+                log.warning("heavy throttling (%d batches failed in a row) — cooling down %.0fs",
+                            consecutive_fail, cooldown)
+                time.sleep(cooldown)
             continue
+        consecutive_fail = 0   # recovered — back to fast cadence
 
         for ticker in batch:
             try:

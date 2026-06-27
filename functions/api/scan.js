@@ -18,11 +18,20 @@
  *      (optionally GH_REPO and GH_WORKFLOW to override the defaults below).
  *   3. Redeploy. The SCAN button now kicks off a fresh scan.
  */
-export const onRequestPost = async ({ env }) => {
+export const onRequestPost = async ({ env, request }) => {
   const token = env.GH_DISPATCH_TOKEN;
   const repo = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const workflow = env.GH_WORKFLOW || "scan.yml";
   const ref = env.GH_REF || "main";
+
+  // Per-market scan: the dashboard sends the market it's currently showing so a
+  // single tab (e.g. ASX) refreshes fast, without re-scanning everything.
+  let market = "all";
+  try {
+    const body = await request.json();
+    const m = String((body && body.market) || "").toLowerCase();
+    if (["asx", "nasdaq", "crypto", "all"].includes(m)) market = m;
+  } catch (_) { /* no/invalid body → full scan */ }
 
   const json = (status, body) =>
     new Response(JSON.stringify(body), {
@@ -54,15 +63,18 @@ export const onRequestPost = async ({ env }) => {
         "User-Agent": "googy-boys-scanner",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ref }),
+      body: JSON.stringify({ ref, inputs: { market } }),
       signal: ctrl.signal,
     });
 
     if (res.status === 204) {
+      const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;
+      const eta = market === "all" ? "~6–10 minutes" : "~2–4 minutes";
       return json(202, {
         ok: true,
         configured: true,
-        message: "Scan started — fresh data in ~6–10 minutes.",
+        market,
+        message: `${scope} started — fresh data in ${eta}.`,
       });
     }
 

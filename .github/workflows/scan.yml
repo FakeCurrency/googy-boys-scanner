@@ -16,8 +16,14 @@ on:
     - cron: "0 21 * * 1-5"        # NASDAQ close 21:00 UTC
   workflow_dispatch:
     inputs:
+      market:
+        description: "Market to scan"
+        default: "all"
+        required: false
+        type: choice
+        options: ["all", "asx", "nasdaq", "crypto"]
       args:
-        description: "Extra args for scanner.run (e.g. --market asx --limit 12 for a quick test)"
+        description: "Extra args for scanner.run (e.g. --limit 12 for a quick test)"
         default: ""
         required: false
 
@@ -79,14 +85,21 @@ jobs:
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: |
-          # Yahoo throttles concurrent requests, and EACH market downloads twice
-          # (daily scanners + VIVEK's deep-history pass). Running all three at once
-          # starved the huge ASX universe (only ~316/1985 got through). So scan the
-          # two SMALL markets (≈100 names each) together first — they finish in a
-          # couple of minutes — THEN run ASX alone with Yahoo to itself, restoring
-          # near-full ASX coverage. set +e so one market's failure doesn't abort
-          # the others; the final test gates the job.
           set +e
+          MARKET="${{ github.event.inputs.market }}"
+          MARKET="${MARKET:-all}"     # scheduled runs have no input -> full cycle
+
+          if [ "$MARKET" != "all" ]; then
+            # Single-market scan (fast path) — just the one the user asked for.
+            echo "Single-market scan: $MARKET"
+            python -m scanner.run --market "$MARKET" ${{ github.event.inputs.args }}
+            exit $?
+          fi
+
+          # Full cycle. Yahoo throttles concurrent requests and each market now
+          # downloads ONCE (deep history reused for VIVEK). Still, scan the two
+          # SMALL markets (≈100 names) together first — they finish in a couple of
+          # minutes — THEN run ASX alone with Yahoo to itself for best coverage.
           python -m scanner.run --market nasdaq ${{ github.event.inputs.args }} &
           PID_NAS=$!
           python -m scanner.run --market crypto ${{ github.event.inputs.args }} &

@@ -1001,13 +1001,19 @@
       btn.classList.add("spinning");
       btn.disabled = true;
       const oldGenAt = state.data && state.data.generated_at;
-      flashScan("Requesting a fresh scan…", "info");
+      // Scan only the market currently being viewed — fast, targeted refresh.
+      const mkt = state.market || "all";
+      flashScan(`Requesting a fresh ${mkt.toUpperCase()} scan…`, "info");
       // Kick off a fresh cloud scan. Falls back gracefully if not configured.
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 12000);
       let scanTriggered = false;
       try {
-        const res = await fetch("/api/scan", { method: "POST", signal: ctrl.signal });
+        const res = await fetch("/api/scan", {
+          method: "POST", signal: ctrl.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ market: mkt }),
+        });
         const data = await res.json().catch(() => ({}));
         const kind = res.ok ? "ok" : (res.status === 503 || data.configured === false) ? "info" : "warn";
         flashScan(data.message || (res.ok ? "Scan started — results will update in ~3 min." : "Couldn't start a scan — reloaded latest data."), kind);

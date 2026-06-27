@@ -33,6 +33,19 @@ def test_download_recovers_throttled_batches(monkeypatch):
     assert len(frames) == len(tickers)     # every batch recovered on retry — full coverage
 
 
+def test_download_stays_fast_until_heavy_throttling(monkeypatch):
+    """Healthy batches incur no long waits; a long cooldown only kicks in after a
+    run of consecutive failures (clear heavy throttling)."""
+    from scanner import config
+    sleeps = []
+    monkeypatch.setattr(data.time, "sleep", lambda s: sleeps.append(s))
+    monkeypatch.setattr(data.yf, "download", lambda *a, **k: pd.DataFrame())  # everything throttled
+    tickers = [f"T{i}.AX" for i in range(config.DATA_CHUNK * 5)]              # 5 dead batches
+    assert data.download(tickers) == {}
+    # The big recovery cooldown only appears after DATA_HEAVY_AFTER failures in a row.
+    assert any(s >= config.DATA_HEAVY_COOLDOWN * 0.7 for s in sleeps)
+
+
 def test_download_skips_dead_batch_but_keeps_the_rest(monkeypatch):
     monkeypatch.setattr(data.time, "sleep", lambda *a: None)
     tickers = [f"T{i}.AX" for i in range(240)]                 # 2 chunks at chunk=120

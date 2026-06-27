@@ -523,20 +523,23 @@ SCALP_RISK_PER_TRADE = 100     # USD to risk per trade (loss if stopped out befo
 # Data quality
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
+DATA_DAILY_BARS = 252         # bars the daily scanners see (tail-slice of VIVEK's deep download = 1y, unchanged behaviour)
 CHART_PERIOD = "10y"          # extended history fetched for result tickers only (powers weekly/monthly chart TFs)
 MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
 SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
 
 # Yahoo download throttling control. Yahoo rate-limits bursty/concurrent
-# requests (HTTP 429); when a whole batch is throttled the old code dropped all
-# its tickers after a 2–4s wait. These make the downloader patient instead:
-# smaller batches, a pause between them, and a long escalating back-off on a
-# throttled batch so coverage stays high even under rate limiting.
+# requests (HTTP 429). The downloader stays FAST when Yahoo is healthy (short
+# retry waits, no penalty on success) and only gets patient when it's clearly
+# being throttled hard (a run of consecutive failed batches triggers a longer
+# cooldown). This keeps coverage high without the old fixed 5→75s crawl.
 DATA_CHUNK         = 120      # tickers per yfinance request (smaller = lighter, less likely to be throttled)
-DATA_BATCH_PAUSE   = 0.6      # base seconds to pause between successive batches (+ jitter)
-DATA_RETRIES       = 4        # attempts per batch before giving up on it
-DATA_BACKOFF       = [5, 15, 40, 75]   # seconds to wait after each failed attempt (throttle recovery)
+DATA_BATCH_PAUSE   = 0.4      # base seconds to pause between successive batches (+ jitter)
+DATA_RETRIES       = 3        # attempts per batch before giving up on it
+DATA_BACKOFF       = [2, 5, 12]        # short, escalating waits within a single batch's retries
+DATA_HEAVY_AFTER   = 3        # consecutive failed batches => treat as heavy throttling
+DATA_HEAVY_COOLDOWN = 25      # seconds to let Yahoo recover once heavy throttling is detected
 
 # ---------------------------------------------------------------------------
 # Market regime classification

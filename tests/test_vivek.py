@@ -60,6 +60,18 @@ def test_far_from_sma_is_no_setup():
     assert vivek.evaluate(df) is None
 
 
+def test_vivek_reuses_caller_frames_no_second_download(monkeypatch):
+    """When the runner passes deep frames, VIVEK must NOT download again."""
+    from scanner import scan
+    monkeypatch.setattr(scan, "download",
+                        lambda *a, **k: pytest.fail("VIVEK downloaded despite being given frames"))
+    uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP Group", "sector": "Materials"}]
+    frames = {"BHP.AX": _frame("long_bounce")}
+    out = scan.scan_vivek_market("asx", universe=uni, frames=frames, progress=False)
+    assert out["scanned"] == 1                      # used the provided frame
+    assert out["setup_type"] == "vivek"
+
+
 def test_grade_ladder_reaches_each_tier():
     from scanner.grading import grade_from_points
     assert grade_from_points(9, config.VIVEK_GRADE_CUTOFFS) == "A+"

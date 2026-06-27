@@ -21,8 +21,8 @@ DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fibonacci-EMA market scanner")
     parser.add_argument(
-        "--market", action="append", choices=list(config.MARKETS),
-        help="market to scan (repeatable); default = all markets",
+        "--market", action="append", choices=[*config.MARKETS, "all"],
+        help="market to scan: asx | nasdaq | crypto | all (repeatable); default = all",
     )
     parser.add_argument(
         "--limit", type=int, default=None,
@@ -75,7 +75,7 @@ def main() -> None:
     mover_inputs: dict[str, tuple] = {}
     MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
 
-    markets = args.market or list(config.MARKETS)
+    markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
     for market_key in markets:
         market = config.MARKETS[market_key]
         print(f"Scanning {market.label} ...", flush=True)
@@ -83,8 +83,19 @@ def main() -> None:
             universe = load_universe(market_key, full=not args.curated)
             if args.limit:
                 universe = universe[:args.limit]
-            print(f"  downloading {len(universe)} tickers ...", flush=True)
-            frames = download([u["yf"] for u in universe])
+            # Single download per market. VIVEK needs deep (5y) history for a
+            # Weekly 200 SMA; the daily scanners only need ~1y. So download ONCE
+            # at the deep period and tail-slice it for the daily scanners —
+            # eliminating the second Yahoo pass entirely (was 2 downloads/market).
+            # When VIVEK is skipped, just pull the cheaper 1y history.
+            want_vivek = not args.no_vivek
+            dl_period = config.VIVEK_DATA_PERIOD if want_vivek else config.DATA_PERIOD
+            print(f"  downloading {len(universe)} tickers ({dl_period}) ...", flush=True)
+            deep_frames = download([u["yf"] for u in universe], period=dl_period)
+            # Daily scanners see the same ~1y window as before (tail of the deep
+            # frame == a fresh 1y download), so their setups/grading are unchanged.
+            frames = ({t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
+                      if want_vivek else deep_frames)
             cov = 100 * len(frames) // max(len(universe), 1)
             print(f"  coverage: {len(frames)}/{len(universe)} downloaded ({cov}%)"
                   f"{'  ⚠️ LOW — likely Yahoo throttling' if cov < 80 and len(universe) > 50 else ''}",
@@ -139,7 +150,8 @@ def main() -> None:
             #    so it does NOT reuse the 1y `frames` above.
             if not args.no_vivek:
                 vk = scan.scan_vivek_market(market_key, out_root=args.out,
-                                            universe=universe, progress=False)
+                                            universe=universe, frames=deep_frames,
+                                            progress=False)
                 output.write(vk, args.out, name=f"{market_key}_vivek")
                 print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                       f"{vk['scanned']}/{vk['universe_size']} scanned")

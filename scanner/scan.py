@@ -445,12 +445,17 @@ _VIVEK_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}
 
 def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = True,
                       out_root: str | None = None, progress: bool = True,
-                      universe: list | None = None) -> dict:
+                      universe: list | None = None,
+                      frames: dict | None = None) -> dict:
     """VIVEK (5.0-style) scan: 200 SMA reactions on the higher timeframes.
 
     Uses a long (VIVEK_DATA_PERIOD) daily history so a real Weekly 200 SMA can be
     computed. Produces rows carrying Entry / SL / TP1 / TP2 / TP3 + scale-outs and
     an A+/A/B+/WATCH grade with a plain-English reason.
+
+    `frames` (deep daily history) may be passed in by the caller to AVOID a second
+    Yahoo download — the runner already pulls this market's 5y history for the
+    daily scanners, so VIVEK reuses it instead of fetching the same data again.
     """
     from . import vivek
     market = config.MARKETS[market_key]
@@ -461,10 +466,11 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             universe = universe[:limit]
     meta = {u["yf"]: u for u in universe}
 
-    if progress:
-        print(f"  downloading {len(universe)} {market.label} tickers "
-              f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
-    frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
+    if frames is None:
+        if progress:
+            print(f"  downloading {len(universe)} {market.label} tickers "
+                  f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
+        frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
 
     results: list[dict] = []
     scanned = 0
