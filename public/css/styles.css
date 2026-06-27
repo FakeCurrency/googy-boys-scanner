@@ -388,7 +388,7 @@ body {
 .ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 0.5px solid var(--separator); }
 .legend-tag { font: 700 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }
 .ema-dot { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--sans); color: var(--text-2); }
-.ema-dot i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.ema-dot i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 0.5px var(--separator); }
 
 /* ======================================================================= rows */
 .rows { display: flex; flex-direction: column; gap: 14px; }

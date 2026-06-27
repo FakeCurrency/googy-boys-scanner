@@ -294,10 +294,10 @@
   function renderLegend(d) {
     let periods, colors, label;
     if (d.setup_type === "vivek") {
-      // VIVEK keys off the 200 SMA (the level) with the 50 SMA for trend
-      // structure — the same two lines the chart draws (amber 200, blue 50).
-      periods = [50, 200];
-      colors = { 50: "#4d9fff", 200: "#ffb020" };
+      // VIVEK lines: fast SMA 10 (white) / 20 (yellow), 50 (blue) for trend
+      // structure, and 200 (amber) — the level — matching the chart overlays.
+      periods = [10, 20, 50, 200];
+      colors = { 10: "#e5e9f0", 20: "#ffd23f", 50: "#4d9fff", 200: "#ffb020" };
       label = "SMA";
     } else {
       const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec" || d.setup_type === "googy";

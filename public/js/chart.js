@@ -197,9 +197,9 @@
     return { candles, volume, lines };
   }
 
-  // Build a VIVEK (5.0-style) timeframe block: candles + volume + the 200 SMA
-  // (the level the whole setup pivots on) and a 50 SMA for trend structure —
-  // deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
+  // Build a VIVEK (5.0-style) timeframe block: candles + volume + the moving
+  // averages VIVEK reads — fast SMA 10/20 plus the 50 (structure) and 200 (the
+  // level) — deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
   function barsToVivekTF(bars) {
     const candles = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
     const volume  = bars.map((b) => ({ time: b.time, value: Math.round(b.volume || 0),
@@ -212,6 +212,8 @@
       return { name, color, data };
     };
     const lines = [];
+    if (bars.length >= 10) lines.push(mkSma(10, "SMA 10", "#e5e9f0"));     // fast (white)
+    if (bars.length >= 20) lines.push(mkSma(20, "SMA 20", "#ffd23f"));     // fast (yellow)
     if (bars.length >= 50) lines.push(mkSma(50, "SMA 50", "#4d9fff"));     // trend structure
     if (bars.length >= 200) lines.push(mkSma(200, "SMA 200", "#ffb020"));  // the 200 SMA — the level
     return { candles, volume, lines };
