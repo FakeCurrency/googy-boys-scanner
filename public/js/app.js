@@ -988,6 +988,7 @@
             `${ov.n ? `${(ov.expectancy_r >= 0 ? "+" : "")}${ov.expectancy_r}R expectancy · ${ov.win_rate}% win · ${ov.n} closed` : "no closed trades yet"}` +
           `</span>` +
           `<span class="trk-open">${nOpen} open</span>` +
+          `<a class="trk-more" href="track.html">Full track record →</a>` +
         `</div>` +
         `<div class="trk-groups">` +
           group("Entry type", e.by_entry_type || {}, ["reclaim", "retest", "break"]) +

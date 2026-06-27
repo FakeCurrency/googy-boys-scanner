@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Track Record — Vivek's Beta Scanner</title>
+  <meta name="theme-color" content="#080b11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=40" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK'S BETA SCANNER</h1></div>
+    </div>
+    <a class="howto-link" href="index.html">← Dashboard</a>
+    <a class="howto-link bot-nav-link" href="bot.html"><span class="bot-nav-dot"></span>AI BOT</a>
+  </header>
+
+  <main class="wrap">
+    <div class="trkp-head">
+      <h2 class="trkp-title">VIVEK track record <span class="trkp-tag">paper</span></h2>
+      <p class="trkp-sub">A bias-free forward test: every <strong>ARMED A+/A</strong> setup is paper-traded from its trigger price and resolved by the same 5.0 scale-out / SL-movement rules the bot uses. No real orders. Early data — read directionally until sample sizes grow.</p>
+    </div>
+
+    <!-- headline summary -->
+    <section class="stats trkp-stats" id="trkp-summary"></section>
+
+    <!-- expectancy breakdown -->
+    <section class="trkp-section">
+      <h3 class="trkp-h3">Expectancy breakdown</h3>
+      <div class="trkp-breakdown" id="trkp-breakdown"></div>
+    </section>
+
+    <!-- equity curve -->
+    <section class="trkp-section">
+      <h3 class="trkp-h3">Equity curve <span class="trkp-h3-sub">cumulative realized R, closed trades</span></h3>
+      <div class="trkp-equity" id="trkp-equity"></div>
+    </section>
+
+    <!-- open positions -->
+    <section class="trkp-section">
+      <h3 class="trkp-h3">Open positions <span class="trkp-count" id="trkp-open-count">0</span></h3>
+      <div class="trkp-tablewrap" id="trkp-open"></div>
+    </section>
+
+    <!-- closed trades -->
+    <section class="trkp-section">
+      <h3 class="trkp-h3">Closed trades <span class="trkp-count" id="trkp-closed-count">0</span></h3>
+      <div class="trkp-tablewrap" id="trkp-closed"></div>
+    </section>
+
+    <p class="cf-disclaimer">Paper trades only — general information, not financial advice.</p>
+  </main>
+
+  <script src="js/track.js?v=1"></script>
+</body>
+</html>
