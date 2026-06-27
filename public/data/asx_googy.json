@@ -6,8 +6,8 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-27T13:08:37+10:00",
-  "scanned": 1407,
+  "generated_at": "2026-06-27T15:21:29+10:00",
+  "scanned": 1364,
   "universe_size": 1985,
   "score_max": 12,
   "sma_periods": [
@@ -55,10 +55,10 @@
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 4103.0,
+      "value": 4079.0,
       "decimals": 0,
-      "day_pct": 1.8,
-      "d5_pct": -2.87,
+      "day_pct": 1.2,
+      "d5_pct": -3.44,
       "spark": [
         4447.5,
         4499.2998,
@@ -81,7 +81,7 @@
         4129.8999,
         3990.3,
         4030.5,
-        4103.0
+        4078.7
       ],
       "dir": "up"
     },
@@ -90,10 +90,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 59.6,
+      "value": 59.22,
       "decimals": 2,
-      "day_pct": 2.15,
-      "d5_pct": -10.04,
+      "day_pct": 1.49,
+      "d5_pct": -10.62,
       "spark": [
         74.599,
         75.645,
@@ -116,7 +116,7 @@
         62.02,
         58.052,
         58.348,
-        59.605
+        59.217
       ],
       "dir": "up"
     },
@@ -125,10 +125,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 73.57,
+      "value": 71.99,
       "decimals": 2,
-      "day_pct": -2.25,
-      "d5_pct": -7.86,
+      "day_pct": -4.34,
+      "d5_pct": -9.84,
       "spark": [
         94.29,
         93.71,
@@ -151,7 +151,7 @@
         77.08,
         73.74,
         75.26,
-        73.57
+        71.99
       ],
       "dir": "down"
     },
@@ -160,10 +160,10 @@
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 70.24,
+      "value": 69.23,
       "decimals": 2,
-      "day_pct": -2.34,
-      "d5_pct": -8.3,
+      "day_pct": -3.74,
+      "d5_pct": -9.62,
       "spark": [
         88.68,
         88.9,
@@ -186,7 +186,7 @@
         73.21,
         70.34,
         71.92,
-        70.24
+        69.23
       ],
       "dir": "down"
     },
@@ -195,10 +195,10 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 3.29,
+      "value": 3.23,
       "decimals": 2,
-      "day_pct": -1.68,
-      "d5_pct": 1.67,
+      "day_pct": -3.35,
+      "d5_pct": -0.06,
       "spark": [
         3.04,
         3.285,
@@ -221,7 +221,7 @@
         3.147,
         3.221,
         3.343,
-        3.287
+        3.231
       ],
       "dir": "down"
     },
@@ -256,7 +256,7 @@
         25587.0391,
         25476.6406,
         25358.5996,
-        25297.6172
+        25297.6191
       ],
       "dir": "down"
     },
@@ -300,11 +300,12 @@
       "label": "10Y",
       "ticker": "^TNX",
       "divide": 1,
-      "value": 4.372,
+      "value": 4.451,
       "decimals": 3,
-      "day_pct": -1.77,
-      "d5_pct": -2.56,
+      "day_pct": -0.27,
+      "d5_pct": -0.27,
       "spark": [
+        4.667,
         4.572,
         4.586,
         4.558,
@@ -325,8 +326,7 @@
         4.469,
         4.428,
         4.463,
-        4.451,
-        4.372
+        4.451
       ],
       "dir": "down"
     },
@@ -337,10 +337,9 @@
       "divide": 1,
       "value": 0.6901,
       "decimals": 4,
-      "day_pct": 0.02,
-      "d5_pct": -1.59,
+      "day_pct": 0.01,
+      "d5_pct": -1.45,
       "spark": [
-        0.7133,
         0.7164,
         0.718,
         0.7164,
@@ -361,6 +360,7 @@
         0.6995,
         0.6916,
         0.69,
+        0.6901,
         0.6901
       ],
       "dir": "up"
@@ -405,9 +405,9 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 101.37,
+      "value": 101.36,
       "decimals": 2,
-      "day_pct": -0.06,
+      "day_pct": -0.07,
       "d5_pct": 0.51,
       "spark": [
         99.21,
@@ -431,7 +431,7 @@
         101.41,
         101.61,
         101.43,
-        101.366
+        101.36
       ],
       "dir": "down"
     }
@@ -439,8 +439,7 @@
   "sector_counts": {
     "Materials": 2,
     "Equity Real Estate Investment Trusts (REITs)": 1,
-    "Transportation": 1,
-    "Software & Services": 1
+    "Transportation": 1
   },
   "results": [
     {
@@ -869,110 +868,6 @@
         "risk_pct": 7.0
       },
       "analysis": "CDP set its 25-bar range high 0 bars ago and has just broken out above A$5.7300 by +0.2% \u2014 a fresh, not stale, breakout. Volume is at 2.5\u00d7 average \u2014 the minimum required gate is cleared. RSI is at 71 \u2014 momentum is genuinely strong, not yet overbought. ADX at 56 and rising confirms a trending market \u2014 not a false breakout from noise. The 20-SMA is above the 50-SMA \u2014 the medium-term trend structure is bullish. The 25-bar consolidation was tight (6% range) \u2014 compressed setups often release with force. Trade idea: entry A$5.7400, stop A$5.3361 (below range low), target A$6.0700 (measured move \u2014 0.82:1) \u2014 then trail with the SuperTrend.",
-      "sector_count": 1
-    },
-    {
-      "symbol": "PKY",
-      "name": "Pathkey.Ai Ltd",
-      "sector": "Software & Services",
-      "dir": "LONG",
-      "setup_type": "googy",
-      "grade": "B",
-      "score": 6,
-      "score_max": 12,
-      "chips": [
-        "RANGE BREAKOUT +4.4%",
-        "VOLUME EXPANSION 2.8\u00d7",
-        "RSI 67 STRONG MOMENTUM",
-        "ABOVE SMA 50"
-      ],
-      "weekly": false,
-      "low_rr": true,
-      "low_liquidity": false,
-      "rr_text": "0.8:1",
-      "target_2r": true,
-      "liquidity": "OK",
-      "price": 0.071,
-      "y_close": 0.06,
-      "open": 0.059,
-      "open_pct": -1.67,
-      "current_pct": 20.34,
-      "day_pct": 18.33,
-      "entry": 0.071,
-      "stop": 0.03267,
-      "target": 0.10300001,
-      "rr": 0.83,
-      "trail": 0.04651351,
-      "stop_pct": 54.0,
-      "p2_pct": 45.1,
-      "target_basis": "measured",
-      "spark": [
-        0.04,
-        0.043,
-        0.042,
-        0.041,
-        0.042,
-        0.039,
-        0.038,
-        0.0365,
-        0.036,
-        0.037,
-        0.041,
-        0.039,
-        0.039,
-        0.04,
-        0.041,
-        0.038,
-        0.038,
-        0.043,
-        0.043,
-        0.054,
-        0.058,
-        0.055,
-        0.06,
-        0.068,
-        0.06,
-        0.061,
-        0.051,
-        0.056,
-        0.06,
-        0.071
-      ],
-      "trend": "blue",
-      "turnover": 318392,
-      "detail": {
-        "setup_type": "googy",
-        "sma20": 0.0508,
-        "sma20_pct": -28.5,
-        "sma50": 0.04515,
-        "sma50_pct": -36.4,
-        "rsi": 67.3,
-        "volume_ratio": 2.8,
-        "volume_today": 13657718,
-        "volume_avg": 4942810,
-        "volume_expanding": true,
-        "range_high": 0.068,
-        "range_high_pct": -4.2,
-        "range_low": 0.033,
-        "range_low_pct": -53.5,
-        "range_span_pct": 51.5,
-        "bo_pct": 4.41,
-        "bars_since_high": 5,
-        "consol_bars": 25,
-        "compression": false,
-        "atr_now_rel": 9.74,
-        "atr_before_rel": 6.1,
-        "adx": 28.2,
-        "adx_strong": true,
-        "adx_rising": false,
-        "swing_low": 0.033,
-        "swing_low_pct": -53.5,
-        "trailing_stop": 0.04651351,
-        "trailing_label": "SuperTrend 3\u00d7 ATR",
-        "trailing_pct": -34.5,
-        "risk_pct": 54.0
-      },
-      "analysis": "PKY set its 25-bar range high 5 bars ago and has just broken out above A$0.0680 by +4.4% \u2014 a fresh, not stale, breakout. Volume is running at 2.8\u00d7 its average \u2014 solid confirmation of the move. RSI is at 67 \u2014 momentum is genuinely strong, not yet overbought. The 20-SMA is above the 50-SMA \u2014 the medium-term trend structure is bullish. Trade idea: entry A$0.0710, stop A$0.0327 (below range low), target A$0.1030 (measured move \u2014 0.83:1) \u2014 then trail with the SuperTrend.",
       "sector_count": 1
     }
   ]
