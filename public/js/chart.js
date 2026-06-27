@@ -240,6 +240,77 @@
     return out;
   }
 
+  // ── 5.0 level math, mirrored from scanner/vivek.py ──────────────────────────
+  // Lets the chart recompute the trade plan PER timeframe: the 200 SMA, the
+  // recent swings and the prior structure all differ on 4H vs Daily vs Weekly,
+  // so the Entry/SL/TP levels should too. Constants match scanner/config.py.
+  const VK_ATR_MULT = 1.0, VK_PW = 4, VK_TP_R = [1.5, 3.0, 5.0],
+        VK_TP_MIN_R = 0.8, VK_TP_MAX_R = 10.0, VK_CLUSTER_R = 0.6,
+        VK_LOOKBACK = 180, VK_SHORT_FLOOR = 0.05;
+
+  function vkPivots(vals, w, isHigh) {
+    const out = [];
+    for (let i = w; i < vals.length - w; i++) {
+      let ok = true;
+      for (let k = 1; k <= w; k++) {
+        const l = vals[i - k], r = vals[i + k];
+        if (isHigh ? !(vals[i] >= l && vals[i] >= r) : !(vals[i] <= l && vals[i] <= r)) { ok = false; break; }
+      }
+      if (ok) out.push(vals[i]);
+    }
+    return out;
+  }
+
+  // Recompute Entry / SL / TP1-3 + the 200 SMA level for a single timeframe's
+  // bars, for a fixed trade direction (the setup is long or short regardless of
+  // the chart timeframe). Returns null if it can't form a sane plan.
+  function vivekLevels(bars, direction) {
+    const n = bars && bars.length;
+    if (!n || n < 12) return null;
+    const cl = bars.map((b) => b.close), hi = bars.map((b) => b.high), lo = bars.map((b) => b.low);
+    const w = Math.min(200, n);
+    let s = 0; for (let i = n - w; i < n; i++) s += cl[i];
+    const level = s / w;                                    // 200 SMA on this timeframe
+    const entry = cl[n - 1];
+    const atrS = atrArr(hi, lo, cl, 14);
+    const atr = Math.max(atrS[n - 1] || entry * 0.001, entry * 0.001);
+    const buf = atr * VK_ATR_MULT;
+    const recent = bars.slice(-Math.max(2 * VK_PW + 1, 12));
+    const swingLow = Math.min(...recent.map((b) => b.low));
+    const swingHigh = Math.max(...recent.map((b) => b.high));
+    const isLong = direction === "long";
+    let stop, risk, sign;
+    if (isLong) { stop = Math.min(swingLow, level) - buf; risk = entry - stop; sign = 1; }
+    else { stop = Math.max(swingHigh, level) + buf; risk = stop - entry; sign = -1; }
+    if (!(risk > 0)) return null;
+    // Structural targets — prior pivot resistance (long) / support (short).
+    const look = bars.slice(-VK_LOOKBACK);
+    let cands;
+    if (isLong) {
+      const a = entry + VK_TP_MIN_R * risk, b = entry + VK_TP_MAX_R * risk;
+      cands = vkPivots(look.map((x) => x.high), VK_PW, true).filter((p) => p >= a && p <= b).sort((x, y) => x - y);
+    } else {
+      const a = entry - VK_TP_MAX_R * risk, b = entry - VK_TP_MIN_R * risk;
+      cands = vkPivots(look.map((x) => x.low), VK_PW, false).filter((p) => p >= a && p <= b).sort((x, y) => y - x);
+    }
+    const picked = [];
+    for (const p of cands) {
+      if (picked.every((q) => Math.abs(p - q) >= VK_CLUSTER_R * risk)) picked.push(p);
+      if (picked.length === 3) break;
+    }
+    const tps = [], basis = [];
+    for (let i = 0; i < 3; i++) {
+      if (i < picked.length) { tps.push(picked[i]); basis.push("structural"); continue; }
+      let cand = entry + sign * risk * VK_TP_R[i];
+      if (tps.length) { const mn = tps[tps.length - 1] + sign * risk * 0.5; cand = isLong ? Math.max(cand, mn) : Math.min(cand, mn); }
+      tps.push(cand); basis.push("measured");
+    }
+    if (!isLong) { const fl = entry * VK_SHORT_FLOOR, eps = entry * 0.001; for (let i = 0; i < 3; i++) tps[i] = Math.max(tps[i], fl + (2 - i) * eps); }
+    const rr = Math.round(Math.abs(tps[1] - entry) / risk * 100) / 100;
+    return { level, entry, stop, tp1: tps[0], tp2: tps[1], tp3: tps[2], risk, rr,
+             swingHigh, swingLow, structural_tps: basis.filter((b) => b === "structural").length };
+  }
+
   // Build a VIVEK (5.0-style) timeframe block: candles + volume + the moving
   // averages VIVEK reads — fast SMA 10/20 plus the 50 (structure) and 200 (the
   // level) — deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
@@ -350,10 +421,22 @@
     // Build the 4H / Daily / Weekly views, then render once. The DEEP daily pull
     // drives both the Daily view and a resampled Weekly view (so the Weekly 200
     // SMA is real, not a proxy); a best-effort hourly pull drives a resampled 4H
-    // view. Each timeframe computes its OWN 200/50/20/10 SMA. The trade levels
-    // (entry/SL/TP1-3) are the plan and stay constant across timeframes.
+    // view. EACH timeframe computes its own 10/20/50/200 SMA AND its own trade
+    // plan (vivekLevels): the 200 SMA, swings and structure are re-read on that
+    // TF, so Entry/SL/TP1-3 are appropriate for it. The scan row's plan is the
+    // fallback if a TF can't form one.
     // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
     // and intervals incl. 1h/1d — keep fetches on whitelisted values.
+    const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
+    const scanLv = { level: m.level, entry: m.entry, stop: m.stop, tp1: m.tp1, tp2: m.tp2,
+                     tp3: m.tp3, risk: m.risk, rr: m.rr || 0,
+                     swingHigh: null, swingLow: null,
+                     structural_tps: (m.detail || {}).structural_tps || 0 };
+    const makeTF = (bars) => {
+      const tf = barsToVivekTF(bars);
+      tf.levels = vivekLevels(bars, direction) || scanLv;
+      return tf;
+    };
     const isCrypto = isCryptoMarket(assetType);
     const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
                              : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
@@ -362,14 +445,14 @@
 
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
-      d.timeframes["1D"] = barsToVivekTF(daily);
+      d.timeframes["1D"] = makeTF(daily);
       const wk = resampleWeekly(daily);
-      if (wk.length >= 6) d.timeframes["1W"] = barsToVivekTF(wk);
+      if (wk.length >= 6) d.timeframes["1W"] = makeTF(wk);
       if (d.price == null) d.price = daily[daily.length - 1].close;
       return hourlyP.then((hourly) => {
         if (hourly && hourly.length >= 24) {
           const h4 = bucketBars(hourly, 4 * 3600);
-          if (h4.length >= 6) d.timeframes["4H"] = barsToVivekTF(h4);
+          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4);
         }
         d.default_tf = "1D";   // reliable basis; user can toggle to 4H / Weekly
         console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
@@ -429,31 +512,42 @@
       .map((c) => `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
   }
 
+  // VIVEK footer — the 5.0 metric set for a GIVEN set of levels (so it can be
+  // re-rendered when the user switches timeframe). `tfKey` labels the 200 SMA.
+  function renderVivekFooter(d, lv, tfKey) {
+    const cur = d.currency_symbol || "";
+    const metric = (label, val, cls) =>
+      `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
+    const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
+    const tfName = tfKey === "1W" ? "Weekly" : tfKey === "4H" ? "4H" : "Daily";
+    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : tfKey === "4H" ? "4H" : "D"})`;
+    const rr = lv.rr || 0;
+    $("#cf-metrics").innerHTML = [
+      metric(tfTxt, fmt(lv.level, cur), "amber"),
+      metric("Entry", fmt(lv.entry, cur)),
+      metric("SL", fmt(lv.stop, cur), "red"),
+      metric(`TP1 · ${sc[0]}%`, fmt(lv.tp1, cur), "green"),
+      metric(`TP2 · ${sc[1]}%`, fmt(lv.tp2, cur), "green"),
+      metric(`TP3 · ${sc[2]}%`, fmt(lv.tp3, cur), "green"),
+      metric("R:R → TP2", rr.toFixed(2), rr && rr < 1.5 ? "red" : "green"),
+      metric("Grade", `${d.grade} · ${d.score}/${d.score_max}`),
+    ].join("");
+    $("#cf-analysis").textContent =
+      (d.analysis ? d.analysis + "  " : "") +
+      `Levels shown for the ${tfName} timeframe (200 SMA, swings and structure re-read on that TF). ` +
+      "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
+    if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
+    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
+  }
+
   function footer(d) {
     const cur = d.currency_symbol || "";
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
 
-    // VIVEK setups get the 5.0 metric set: the 200 SMA level, the full TP ladder
-    // with its scale-out %, and the SL-movement rules spelled out underneath.
+    // VIVEK: render the default-TF levels now; applyTF re-renders per timeframe.
     if (d._vivek) {
-      const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-      const tfTxt = d.level_tf === "weekly" ? "200 SMA (W)" : "200 SMA (H4)";
-      $("#cf-metrics").innerHTML = [
-        metric(tfTxt, fmt(d.level, cur), "amber"),
-        metric("Entry", fmt(d.entry, cur)),
-        metric("SL", fmt(d.stop, cur), "red"),
-        metric(`TP1 · ${sc[0]}%`, fmt(d.tp1, cur), "green"),
-        metric(`TP2 · ${sc[1]}%`, fmt(d.tp2, cur), "green"),
-        metric(`TP3 · ${sc[2]}%`, fmt(d.tp3, cur), "green"),
-        metric("R:R → TP2", (d.rr || 0).toFixed(2), d.low_rr ? "red" : "green"),
-        metric("Grade", `${d.grade} · ${d.score}/${d.score_max}`),
-      ].join("");
-      $("#cf-analysis").textContent =
-        (d.analysis ? d.analysis + "  " : "") +
-        "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
-      if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
-      $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
+      renderVivekFooter(d, d, d.default_tf || "1D");
       return;
     }
 
@@ -808,7 +902,9 @@
       priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
     }));
 
-    (d.level_lines || []).forEach((L) => {
+    // Non-VIVEK: static level lines drawn once. VIVEK draws its levels PER
+    // timeframe (applyVivekLevels) so they update when you switch 4H / D / W.
+    if (!d._vivek) (d.level_lines || []).forEach((L) => {
       if (L.price == null) return;
       let title = L.title || "";
       const ep = d.entry;
@@ -824,6 +920,38 @@
       candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
     });
+
+    // VIVEK: per-timeframe trade levels (200 SMA · swing high/low · SL · Entry ·
+    // TP1/2/3), redrawn whenever the timeframe changes, plus the matching footer.
+    let vkHandles = [];
+    function applyVivekLevels(key) {
+      const lv = (tfs[key] || {}).levels;
+      if (!lv) return;
+      vkHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
+      vkHandles = [];
+      const ep = lv.entry;
+      const line = (price, color, label, dotted) => {
+        if (price == null || !isFinite(price)) return;
+        let t = label;
+        if (ep && ep > 0 && price !== ep) {
+          const pct = (price - ep) / ep * 100;
+          t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+          const rd = lv.stop ? Math.abs(ep - lv.stop) : 0;
+          if (rd > 0) t += ` · ${(Math.abs(price - ep) / rd).toFixed(1)}R`;
+        }
+        vkHandles.push(candle.createPriceLine({ price, color, lineWidth: 1,
+          lineStyle: dotted ? LC.LineStyle.Dotted : LC.LineStyle.Dashed, axisLabelVisible: true, title: t }));
+      };
+      line(lv.level, "#ffb020", key === "1W" ? "200 SMA·W" : key === "4H" ? "200 SMA·4H" : "200 SMA·D");
+      line(lv.swingHigh, "#8a93a6", "swing high", true);
+      line(lv.swingLow,  "#8a93a6", "swing low",  true);
+      line(lv.stop,  "#ff5b5b", "SL");
+      line(lv.entry, "#e5e9f0", "ENTRY");
+      line(lv.tp1,   "#2fd07f", "TP1");
+      line(lv.tp2,   "#2fd07f", "TP2");
+      line(lv.tp3,   "#2fd07f", "TP3");
+      renderVivekFooter(d, lv, key);
+    }
 
     // ── open-position context (entry marker + floating LIVE box) ──────────────
     const SYM    = (d.symbol || symbol).toUpperCase();
@@ -871,6 +999,7 @@
       }
       chart.timeScale().fitContent();
       legend(tf);
+      if (d._vivek) applyVivekLevels(key);   // re-read trade levels for this timeframe
     }
 
     const toggle = $("#tf-toggle");
