@@ -240,6 +240,11 @@ GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
 # the Weekly (and a higher-TF daily proxy for H4). Low leverage, tiny risk,
 # pre-defined TP1/TP2/TP3 with structured scale-outs and SL that only ever moves
 # in the trade's favour.
+# Schema version stamped into every *_vivek.json. Bump when the row/payload
+# shape the frontend depends on changes (e.g. a new per-row field). The UI reads
+# this to tell "old data, missing fields" apart from "no setups", instead of
+# silently hiding features. v2 = adds entry_types + freshness/version stamping.
+VIVEK_SCHEMA_VERSION   = 2
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)

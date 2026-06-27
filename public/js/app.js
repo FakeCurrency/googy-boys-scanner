@@ -832,14 +832,48 @@
     ["retest",  "Retest + confirmation",   "Retest with confirmation"],
     ["break",   "Break of structure",      "Break of small structure near 200 SMA"],
   ];
+  // Data freshness + version badge. Surfaces scan age, coverage and schema so a
+  // stale/old-build dataset is visible at a glance instead of silently dropping
+  // features. Turns amber when coverage is low, the scan is old, or the committed
+  // data was produced by an older build than the frontend expects.
+  function renderFreshness(d) {
+    const box = $("#scan-fresh");
+    if (!box) return;
+    if (!d || d.setup_type !== "vivek") { box.hidden = true; box.innerHTML = ""; return; }
+    const age = timeAgo(d.generated_at);
+    const cov = d.coverage_pct;
+    const ver = d.schema_version;
+    const behind = ver != null && ver < EXPECTED_SCHEMA;
+    const tooOld = /\dd ago/.test(age) && parseInt(age) >= 2;            // ≥2 days stale
+    const lowCov = typeof cov === "number" && cov < 80 && (d.universe_size || 0) > 50;
+    const warn = behind || tooOld || lowCov;
+    const bits = [];
+    if (age) bits.push(`⟳ ${age}`);
+    if (typeof cov === "number") bits.push(`${cov}% coverage`);
+    if (ver != null) bits.push(`schema v${ver}`);
+    if (behind) bits.push("rescan to enable latest features");
+    box.hidden = false;
+    box.className = `scan-fresh${warn ? " warn" : ""}`;
+    box.textContent = bits.join("  ·  ");
+    box.title = d.code_sha ? `Built from ${d.code_sha}` : "";
+  }
+
   function renderEntryFilters(d) {
     const box = $("#vk-filters");
     if (!box) return;
     if (!d || d.setup_type !== "vivek") { box.hidden = true; box.innerHTML = ""; return; }
     const all = d.results || [];
-    // Only show once the scan has categorised setups (older data lacks the field).
+    // If the scan hasn't categorised setups (data from an older build), don't
+    // silently vanish — tell the user a rescan unlocks the filters.
     if (!all.some((r) => Array.isArray(r.entry_types) && r.entry_types.length)) {
-      box.hidden = true; box.innerHTML = ""; return;
+      if (all.length) {
+        box.hidden = false;
+        box.innerHTML = `<span class="vkf-label">200 SMA interaction</span>` +
+          `<span class="vkf-note">Entry-type filters unlock after the next scan</span>`;
+      } else {
+        box.hidden = true; box.innerHTML = "";
+      }
+      return;
     }
     box.hidden = false;
     const count = (code) => all.filter((r) => (r.entry_types || []).includes(code)).length;
@@ -883,6 +917,7 @@
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
+    renderFreshness(d);
     renderPulse(d.pulse);
     refreshPulseLive(d.pulse);
     renderEntryFilters(d);
@@ -895,13 +930,25 @@
     $("#results").innerHTML = Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join("");
   }
 
-  const dataFile = (market, mode) =>
-    mode === "reversal" ? `data/${market}_reversal.json`
-      : mode === "spec"     ? `data/${market}_spec.json`
-      : mode === "short"    ? `data/${market}_short.json`
-      : mode === "googy"    ? `data/${market}_googy.json`
-      : mode === "vivek"    ? `data/${market}_vivek.json`
-      : `data/${market}.json`;
+  // The app is VIVEK-only; the retired pullback/reversal/spec/short/googy feeds
+  // are no longer produced or read.
+  const dataFile = (market /* , mode */) => `data/${market}_vivek.json`;
+
+  // Schema the frontend expects. When committed data stamps an older version (a
+  // scan ran on an older build), we tell the user to rescan rather than silently
+  // dropping features that depend on newer fields.
+  const EXPECTED_SCHEMA = 2;
+
+  // "2h ago" / "just now" / "3d ago" from an ISO timestamp, for the freshness badge.
+  function timeAgo(iso) {
+    const t = Date.parse(iso);
+    if (!isFinite(t)) return "";
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 90) return "just now";
+    if (s < 3600) return `${Math.round(s / 60)}m ago`;
+    if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+    return `${Math.round(s / 86400)}d ago`;
+  }
 
   async function loadCaps() {
     try {

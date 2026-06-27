@@ -113,23 +113,17 @@ jobs:
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
 
-      - name: Update paper-trade journal
-        run: python -m scanner.journal
-
-      - name: Swing trade alerts (Telegram)
-        continue-on-error: true
-        env:
-          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python -m scanner.notify
-
-      # Posts only setups that are NEW since the last run (state-deduped), so the
-      # hourly cadence stays clean. No-ops gracefully if DISCORD_WEBHOOK_URL is unset.
-      - name: Discord digest (new A+/A setups)
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python -m scanner.discord
+      # NOTE: the paper-trade journal, Telegram alerts and Discord digest read the
+      # retired pullback/reversal/short scans, which the VIVEK-only pipeline no
+      # longer produces. They are disabled until VIVEK-native versions are wired
+      # (see ROADMAP). Re-enabling them as-is would act on stale legacy JSON.
+      #
+      #   - name: Update paper-trade journal
+      #     run: python -m scanner.journal
+      #   - name: Swing trade alerts (Telegram)
+      #     run: python -m scanner.notify
+      #   - name: Discord digest (new A+/A setups)
+      #     run: python -m scanner.discord
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |

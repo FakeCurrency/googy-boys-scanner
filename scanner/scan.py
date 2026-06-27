@@ -3,8 +3,10 @@
 import datetime as dt
 import json
 import logging
+import os
 import pathlib
 import shutil
+import subprocess
 import time as _time
 import uuid as _uuid
 from collections import Counter
@@ -16,6 +18,23 @@ from .data import download, validate_bars, DataQualityError
 from .universe import load_universe
 
 log = logging.getLogger(__name__)
+
+
+def _code_sha() -> str:
+    """Short commit SHA the scan ran at, stamped into output so the frontend can
+    tell whether the data was produced by the current build. GITHUB_SHA is set in
+    Actions; fall back to a local `git rev-parse` for manual runs."""
+    sha = os.environ.get("GITHUB_SHA")
+    if sha:
+        return sha[:7]
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                             capture_output=True, text=True, timeout=3,
+                             cwd=pathlib.Path(__file__).resolve().parents[1])
+        return out.stdout.strip() if out.returncode == 0 else ""
+    except Exception:
+        return ""
+
 
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
 
@@ -446,7 +465,8 @@ _VIVEK_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}
 def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = True,
                       out_root: str | None = None, progress: bool = True,
                       universe: list | None = None,
-                      frames: dict | None = None) -> dict:
+                      frames: dict | None = None,
+                      pulse_data: list | None = None) -> dict:
     """VIVEK (5.0-style) scan: 200 SMA reactions on the higher timeframes.
 
     Uses a long (VIVEK_DATA_PERIOD) daily history so a real Weekly 200 SMA can be
@@ -534,20 +554,31 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
     now = dt.datetime.now(ZoneInfo(market.timezone))
+    if pulse_data is None:
+        pulse_data = pulse.fetch()
+    downloaded = len(frames)
     return {
         "market": market.key,
         "label": market.label,
         "setup_type": "vivek",
+        # Freshness + version stamp so the UI can show data age / coverage and
+        # detect when committed data is a build behind the running code, instead
+        # of silently hiding features that depend on newer fields.
+        "schema_version": config.VIVEK_SCHEMA_VERSION,
+        "code_sha": _code_sha(),
         "currency": market.currency,
         "currency_symbol": market.currency_symbol,
         "timezone": market.timezone,
         "tz_label": market.tz_label,
         "generated_at": now.isoformat(timespec="seconds"),
         "scanned": scanned,
+        "downloaded": downloaded,
         "universe_size": len(universe),
+        "coverage_pct": round(100 * downloaded / max(len(universe), 1)),
         "score_max": config.VIVEK_SCORE_MAX,
         "sma": config.VIVEK_SMA,
         "sector_counts": dict(counts.most_common()),
+        "pulse": pulse_data,
         "results": results,
     }
 

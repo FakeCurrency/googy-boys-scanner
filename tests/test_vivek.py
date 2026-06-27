@@ -67,9 +67,26 @@ def test_vivek_reuses_caller_frames_no_second_download(monkeypatch):
                         lambda *a, **k: pytest.fail("VIVEK downloaded despite being given frames"))
     uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP Group", "sector": "Materials"}]
     frames = {"BHP.AX": _frame("long_bounce")}
-    out = scan.scan_vivek_market("asx", universe=uni, frames=frames, progress=False)
+    out = scan.scan_vivek_market("asx", universe=uni, frames=frames,
+                                 pulse_data=[], progress=False)
     assert out["scanned"] == 1                      # used the provided frame
     assert out["setup_type"] == "vivek"
+
+
+def test_vivek_payload_carries_freshness_and_schema_stamp():
+    """Output must stamp schema_version, code_sha, coverage and pulse so the UI
+    can show data age / coverage and detect an old-build dataset."""
+    from scanner import scan
+    uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP Group", "sector": "Materials"},
+           {"yf": "CBA.AX", "symbol": "CBA", "name": "Commonwealth Bank", "sector": "Financials"}]
+    frames = {"BHP.AX": _frame("long_bounce")}        # only 1 of 2 names "downloaded"
+    out = scan.scan_vivek_market("asx", universe=uni, frames=frames,
+                                 pulse_data=[], progress=False)
+    assert out["schema_version"] == config.VIVEK_SCHEMA_VERSION
+    assert "code_sha" in out                          # may be "" off a git checkout
+    assert out["downloaded"] == 1 and out["universe_size"] == 2
+    assert out["coverage_pct"] == 50
+    assert "pulse" in out
 
 
 def test_grade_ladder_reaches_each_tier():

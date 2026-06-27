@@ -41,24 +41,9 @@ def main() -> None:
         help="after scanning, email new A+/A setups (needs GBS_SMTP_* env vars)",
     )
     parser.add_argument(
-        "--no-reversal", action="store_true",
-        help="skip the Reversals scan (only run the Fib pullback scan)",
-    )
-    parser.add_argument(
-        "--no-spec", action="store_true",
-        help="skip the Specs (volume-spike breakout) scan",
-    )
-    parser.add_argument(
-        "--no-short", action="store_true",
-        help="skip the Shorts (bearish pullback) scan",
-    )
-    parser.add_argument(
-        "--no-googy", action="store_true",
-        help="skip the Googy consolidation breakout scan",
-    )
-    parser.add_argument(
-        "--no-vivek", action="store_true",
-        help="skip the VIVEK (5.0-style 200 SMA) scan",
+        "--legacy-scans", action="store_true",
+        help="also run the retired pullback/reversal/spec/short/googy scans "
+             "(the app is VIVEK-only now; these are off by default)",
     )
     parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
@@ -83,78 +68,59 @@ def main() -> None:
             universe = load_universe(market_key, full=not args.curated)
             if args.limit:
                 universe = universe[:args.limit]
-            # Single download per market. VIVEK needs deep (5y) history for a
-            # Weekly 200 SMA; the daily scanners only need ~1y. So download ONCE
-            # at the deep period and tail-slice it for the daily scanners —
-            # eliminating the second Yahoo pass entirely (was 2 downloads/market).
-            # When VIVEK is skipped, just pull the cheaper 1y history.
-            want_vivek = not args.no_vivek
-            dl_period = config.VIVEK_DATA_PERIOD if want_vivek else config.DATA_PERIOD
+            # The app is VIVEK-only: download the deep (5y) history VIVEK needs for
+            # a Weekly 200 SMA, ONCE. The retired daily scanners are opt-in
+            # (--legacy-scans) and reuse a ~1y tail-slice of the same frames — no
+            # second Yahoo pass either way.
+            dl_period = config.VIVEK_DATA_PERIOD
             print(f"  downloading {len(universe)} tickers ({dl_period}) ...", flush=True)
             deep_frames = download([u["yf"] for u in universe], period=dl_period)
-            # Daily scanners see the same ~1y window as before (tail of the deep
-            # frame == a fresh 1y download), so their setups/grading are unchanged.
-            frames = ({t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
-                      if want_vivek else deep_frames)
-            cov = 100 * len(frames) // max(len(universe), 1)
-            print(f"  coverage: {len(frames)}/{len(universe)} downloaded ({cov}%)"
+            cov = 100 * len(deep_frames) // max(len(universe), 1)
+            print(f"  coverage: {len(deep_frames)}/{len(universe)} downloaded ({cov}%)"
                   f"{'  ⚠️ LOW — likely Yahoo throttling' if cov < 80 and len(universe) > 50 else ''}",
                   flush=True)
             # Guard: a fully-empty download means the data source was blocked
             # (e.g. Yahoo 403/429), not a genuine "no setups" day. Writing now
             # would clobber yesterday's good JSON, so skip this market instead.
-            if not frames:
+            if not deep_frames:
                 print(f"  no data for {market_key} (download blocked/empty) — "
                       f"keeping existing JSON", flush=True)
                 continue
             pulse_data = pulse.fetch()
+            # Sector movers read recent bars; the deep tail is fine for them.
+            frames = {t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
             if market_key in ("asx", "nasdaq"):
                 mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
 
-            # 1) Fibonacci pullback scan -> <market>.json
-            pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
-                                  pulse_data=pulse_data, universe=universe, progress=False)
-            output.write(pb, args.out)
-            print(f"  pullbacks: {len(pb['results'])} setups ({tradeable(pb)} A+/A)")
+            # VIVEK (5.0-style 200 SMA reactions) -> <market>_vivek.json — the
+            # only scan the app consumes.
+            vk = scan.scan_vivek_market(market_key, out_root=args.out,
+                                        universe=universe, frames=deep_frames,
+                                        pulse_data=pulse_data, progress=False)
+            output.write(vk, args.out, name=f"{market_key}_vivek")
+            print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
+                  f"{vk['scanned']}/{vk['universe_size']} scanned")
 
-            # 2) Reversal / base-breakout scan -> <market>_reversal.json
-            if not args.no_reversal:
+            # Retired scanners (pullback/reversal/spec/short/googy) — kept behind
+            # an opt-in flag for ad-hoc research; not part of the live app.
+            if args.legacy_scans:
+                pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
+                                      pulse_data=pulse_data, universe=universe, progress=False)
+                output.write(pb, args.out)
                 rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
                                                pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(rv, args.out, name=f"{market_key}_reversal")
-                print(f"  reversals: {len(rv['results'])} setups ({tradeable(rv)} A+/A)")
-
-            # 3) Specs / volume-spike breakout scan -> <market>_spec.json
-            if not args.no_spec:
                 sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
                                            pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(sp, args.out, name=f"{market_key}_spec")
-                print(f"  specs: {len(sp['results'])} setups ({tradeable(sp)} A+/A)")
-
-            # 4) Shorts / bearish pullback scan -> <market>_short.json
-            if not args.no_short:
                 sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
                                             pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(sh, args.out, name=f"{market_key}_short")
-                print(f"  shorts: {len(sh['results'])} setups ({tradeable(sh)} A+/A)")
-
-            # 5) Googy consolidation breakout scan -> <market>_googy.json
-            if not args.no_googy:
                 gg = scan.scan_googy_market(market_key, out_root=args.out, frames=frames,
                                             pulse_data=pulse_data, universe=universe, progress=False)
                 output.write(gg, args.out, name=f"{market_key}_googy")
-                print(f"  googy: {len(gg['results'])} setups ({tradeable(gg)} A+/A)")
-
-            # 6) VIVEK (5.0-style 200 SMA reactions) -> <market>_vivek.json
-            #    Runs its own longer download (Weekly 200 SMA needs deep history),
-            #    so it does NOT reuse the 1y `frames` above.
-            if not args.no_vivek:
-                vk = scan.scan_vivek_market(market_key, out_root=args.out,
-                                            universe=universe, frames=deep_frames,
-                                            progress=False)
-                output.write(vk, args.out, name=f"{market_key}_vivek")
-                print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
-                      f"{vk['scanned']}/{vk['universe_size']} scanned")
+                print(f"  legacy: pullback {len(pb['results'])} · reversal {len(rv['results'])} · "
+                      f"spec {len(sp['results'])} · short {len(sh['results'])} · googy {len(gg['results'])}")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 
