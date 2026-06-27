@@ -1103,9 +1103,14 @@
       // Everything else → static multi-timeframe data from the scan JSON.
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
+      // VIVEK only: a read-only 2D⇄3D toggle for the Time × Price × Timeframe
+      // stack. It reuses THIS chart's per-TF data; selecting a TF below keeps the
+      // highlighted 3D plane in sync. Absent (null) for non-VIVEK or no-WebGL.
+      const view3d = (d._vivek && window.VivekChart3D) ? setup3D(d, tfs, available, () => curTF) : null;
       toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
         toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
         applyTF(b.dataset.tf);
+        if (view3d) view3d.onTF(b.dataset.tf);    // keep the 3D plane highlight in sync
       }));
       applyTF(curTF);
       // Poll a live (~15-min delayed) quote so the header price isn't frozen at
@@ -1313,6 +1318,78 @@
       // keep the backing store in sync with chart resizes
       const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
       cro.observe(el);
+    }
+
+    // ── 2D ⇄ 3D toggle (VIVEK only, read-only stack view) ─────────────────────
+    // Lazily mounts the three.js stack over the 2D canvas; the 2D view stays the
+    // source of truth (drawing tools, ruler, sim all live there). Disposing on
+    // toggle-off frees the GPU context. `getCurTF` lets the 3D plane highlight
+    // follow whichever timeframe is selected on the 2D toggle.
+    function setup3D(d, tfs, available, getCurTF) {
+      const main = el.parentNode;                  // .chart-main (position: relative)
+      let host = $("#chart3d");
+      if (!host) {
+        host = document.createElement("div");
+        host.id = "chart3d";
+        host.className = "chart3d";
+        host.hidden = true;
+        main.appendChild(host);
+      }
+      const btn = document.createElement("button");
+      btn.className = "tf-btn view3d-btn";
+      btn.type = "button";
+      btn.title = "Toggle 3D timeframe-stack view (read-only)";
+      btn.textContent = "🧊 3D";
+      toggle.appendChild(btn);
+
+      let on = false, ctrl = null, busy = false;
+      const legendEl = $("#chart-legend");
+      const drawToolsEl = $("#draw-tools");
+      const model = () => ({
+        timeframes: tfs, order: available, activeTF: getCurTF(),
+        currency: d.currency_symbol || "", symbol: d.symbol, dir: d.dir,
+      });
+      function show2D() {
+        on = false;
+        btn.classList.remove("is-active", "is-loading");
+        btn.textContent = "🧊 3D";
+        host.hidden = true;
+        el.style.visibility = "";
+        if (legendEl) legendEl.style.visibility = "";
+        if (drawToolsEl) drawToolsEl.style.visibility = "";
+        if (ctrl) { try { ctrl.dispose(); } catch (_) {} ctrl = null; }
+      }
+      btn.addEventListener("click", async () => {
+        if (busy) return;
+        if (!window.VivekChart3D || !window.VivekChart3D.isSupported()) {
+          btn.disabled = true;
+          btn.title = "3D view unavailable — WebGL isn’t supported in this browser.";
+          return;
+        }
+        if (on) { show2D(); return; }
+        // turn ON: hide the 2D canvas (keep its layout) and mount the stack.
+        on = true; busy = true;
+        btn.classList.add("is-active", "is-loading");
+        btn.textContent = "🪟 2D";
+        host.hidden = false;
+        el.style.visibility = "hidden";
+        if (legendEl) legendEl.style.visibility = "hidden";
+        if (drawToolsEl) drawToolsEl.style.visibility = "hidden";
+        try {
+          ctrl = await window.VivekChart3D.mount(host, model());
+          if (ctrl) ctrl.setActiveTF(getCurTF());
+        } catch (e) {
+          console.warn("[chart3d] mount failed:", e);
+          show2D();
+          btn.disabled = true;
+          btn.title = "3D view couldn’t load (offline or blocked).";
+        } finally {
+          busy = false;
+          btn.classList.remove("is-loading");
+        }
+      });
+      window.addEventListener("beforeunload", () => { if (ctrl) { try { ctrl.dispose(); } catch (_) {} } }, { once: true });
+      return { onTF: (k) => { if (on && ctrl) ctrl.setActiveTF(k); } };
     }
   }
 
