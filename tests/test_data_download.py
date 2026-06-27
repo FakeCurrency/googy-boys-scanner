@@ -33,6 +33,27 @@ def test_download_recovers_throttled_batches(monkeypatch):
     assert len(frames) == len(tickers)     # every batch recovered on retry — full coverage
 
 
+def test_recovery_sweep_reclaims_transiently_throttled(monkeypatch):
+    """A batch that fails the whole main pass is re-tried on the recovery sweep —
+    so transient throttling doesn't permanently cost coverage."""
+    from scanner import config
+    monkeypatch.setattr(data.time, "sleep", lambda *a: None)
+    tickers = [f"T{i}.AX" for i in range(240)]                 # 2 chunks at 120
+    calls = {"b1": 0}
+
+    def fake_dl(batch, **kw):
+        if "T0.AX" in batch:                                   # the first chunk
+            calls["b1"] += 1
+            if calls["b1"] <= config.DATA_RETRIES + 1:         # throttled for the entire main pass
+                return pd.DataFrame()
+        return _multi_frame(list(batch))
+
+    monkeypatch.setattr(data.yf, "download", fake_dl)
+    frames = data.download(tickers)
+    assert len(frames) == len(tickers)                         # recovery sweep reclaimed the first chunk
+    assert "T0.AX" in frames
+
+
 def test_download_stays_fast_until_heavy_throttling(monkeypatch):
     """Healthy batches incur no long waits; a long cooldown only kicks in after a
     run of consecutive failures (clear heavy throttling)."""

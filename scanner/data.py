@@ -95,76 +95,88 @@ def _fetch_batch(batch: list[str], period: str, interval: str,
     return None
 
 
+def _download_pass(tickers: list[str], period: str, interval: str, chunk: int,
+                   retries: int, backoff: list[float], pause: float,
+                   label: str) -> tuple[dict[str, pd.DataFrame], list[str]]:
+    """One pass over `tickers` in batches. Returns (frames, failed_tickers).
+
+    Fast by default — healthy batches incur only a tiny jittered pause. A longer
+    cooldown is used ONLY after several consecutive batches fail (clear heavy
+    throttling), so normal runs never pay for it.
+    """
+    frames: dict[str, pd.DataFrame] = {}
+    failed: list[str] = []
+    consecutive_fail = 0
+    n_batches = (len(tickers) + chunk - 1) // chunk
+
+    for bi, start in enumerate(range(0, len(tickers), chunk)):
+        if start:
+            time.sleep(pause * (0.6 + 0.8 * random.random()))
+        batch = tickers[start:start + chunk]
+        data = _fetch_batch(batch, period, interval, retries, backoff)
+
+        if data is None or len(data) == 0:          # whole batch unavailable this pass
+            failed.extend(batch)
+            consecutive_fail += 1
+            log.warning("[%s] batch %d/%d (%d tickers) no data after %d attempts",
+                        label, bi + 1, n_batches, len(batch), retries + 1)
+            if consecutive_fail >= config.DATA_HEAVY_AFTER and bi + 1 < n_batches:
+                cooldown = config.DATA_HEAVY_COOLDOWN * (0.8 + 0.4 * random.random())
+                log.warning("[%s] heavy throttling (%d batches failed in a row) — cooling %.0fs",
+                            label, consecutive_fail, cooldown)
+                time.sleep(cooldown)
+            continue
+        consecutive_fail = 0
+
+        for ticker in batch:
+            try:
+                df = data[ticker].copy() if isinstance(data.columns, pd.MultiIndex) else data.copy()
+                df = df.dropna()
+                if len(df):
+                    frames[ticker] = df
+                else:
+                    failed.append(ticker)          # empty → retry it on the recovery sweep
+            except Exception as e:
+                failed.append(ticker)
+                log.warning("[%s] %s: %s: %s", label, ticker, type(e).__name__, e)
+    return frames, failed
+
+
 def download(tickers: list[str], period: str | None = None,
              interval: str = "1d", chunk: int | None = None,
              retries: int | None = None) -> dict[str, pd.DataFrame]:
     """Download OHLCV for many tickers, returned as {ticker: DataFrame}.
 
-    Pass interval="1h" (with period="60d") for intraday scalp data. Tickers are
-    fetched in small chunks, with a brief pause between them and a long
-    escalating back-off when a batch is throttled, so a full ASX-sized universe
-    keeps high coverage even when Yahoo rate-limits.
+    Strategy: a FAST main pass (short retry waits) gets the bulk quickly; then a
+    single RECOVERY SWEEP re-tries only the tickers that failed — after a brief
+    cooldown — to reclaim coverage lost to transient throttling. Healthy runs
+    (no failures) skip the sweep entirely and stay fast; throttled runs recover
+    most of what a slow-but-patient single pass would have, in less time.
     """
     period = period or config.DATA_PERIOD
     chunk = chunk or config.DATA_CHUNK
     retries = config.DATA_RETRIES if retries is None else retries
     backoff = config.DATA_BACKOFF
     pause = config.DATA_BATCH_PAUSE
+    total = len(tickers)
 
-    frames: dict[str, pd.DataFrame] = {}
-    failed_batches = 0        # whole batches that yielded nothing after retries
-    skipped_tickers = 0       # individual tickers with no usable rows
-    consecutive_fail = 0      # run of failed batches => Yahoo is throttling hard
-    n_batches = (len(tickers) + chunk - 1) // chunk
+    frames, failed = _download_pass(tickers, period, interval, chunk, retries, backoff, pause, "pass 1")
 
-    for bi, start in enumerate(range(0, len(tickers), chunk)):
-        if start:
-            time.sleep(pause * (0.6 + 0.8 * random.random()))   # gentle, jittered spacing
-        batch = tickers[start:start + chunk]
-        data = _fetch_batch(batch, period, interval, retries, backoff)
+    # Recovery sweep: re-try the failed tickers once. Only worth it when this was
+    # partial throttling (we got *some* data) rather than a total outage.
+    if failed and frames and len(failed) < total:
+        cooldown = config.DATA_RECOVERY_COOLDOWN * (0.8 + 0.4 * random.random())
+        log.info("recovery sweep: %d/%d failed pass 1 — cooling %.0fs then retrying",
+                 len(failed), total, cooldown)
+        time.sleep(cooldown)
+        more, still_failed = _download_pass(failed, period, interval, chunk, retries, backoff, pause, "recovery")
+        frames.update(more)
+        log.info("recovery sweep: reclaimed %d/%d tickers", len(more), len(failed))
 
-        # Whole-batch failure: every ticker in this slice is unavailable this run.
-        if data is None or len(data) == 0:
-            failed_batches += 1
-            skipped_tickers += len(batch)
-            consecutive_fail += 1
-            log.warning("batch %d/%d (%d tickers) returned no data after %d attempts — skipping",
-                        bi + 1, n_batches, len(batch), retries + 1)
-            # Only now — when several batches in a row have failed — do we assume
-            # heavy rate-limiting and pause longer to let Yahoo recover. Normal
-            # operation never hits this, so healthy runs stay fast.
-            if consecutive_fail >= config.DATA_HEAVY_AFTER and bi + 1 < n_batches:
-                cooldown = config.DATA_HEAVY_COOLDOWN * (0.8 + 0.4 * random.random())
-                log.warning("heavy throttling (%d batches failed in a row) — cooling down %.0fs",
-                            consecutive_fail, cooldown)
-                time.sleep(cooldown)
-            continue
-        consecutive_fail = 0   # recovered — back to fast cadence
-
-        for ticker in batch:
-            try:
-                if isinstance(data.columns, pd.MultiIndex):
-                    df = data[ticker].copy()
-                else:
-                    df = data.copy()
-                df = df.dropna()
-                if len(df):
-                    frames[ticker] = df
-                else:
-                    skipped_tickers += 1
-            except Exception as e:
-                skipped_tickers += 1
-                log.warning("%s: %s: %s", ticker, type(e).__name__, e)
-                continue
-
-    # One-line health summary — makes "the data source is failing" obvious at a
-    # glance instead of having to infer it from a thin result set downstream.
     got = len(frames)
-    cov = 100.0 * got / len(tickers) if tickers else 0.0
-    log.info("download: %d/%d tickers (%.0f%% coverage, %d skipped, %d batches failed)",
-             got, len(tickers), cov, skipped_tickers, failed_batches)
-    if tickers and got == 0:
-        log.error("download: ZERO tickers returned for %d requested — upstream data source likely down",
-                  len(tickers))
+    cov = 100.0 * got / total if total else 0.0
+    log.info("download: %d/%d tickers (%.0f%% coverage)", got, total, cov)
+    if total and got == 0:
+        log.error("download: ZERO tickers returned for %d requested — upstream data source likely down", total)
 
     return frames

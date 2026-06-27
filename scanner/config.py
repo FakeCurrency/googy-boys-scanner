@@ -540,6 +540,7 @@ DATA_RETRIES       = 3        # attempts per batch before giving up on it
 DATA_BACKOFF       = [2, 5, 12]        # short, escalating waits within a single batch's retries
 DATA_HEAVY_AFTER   = 3        # consecutive failed batches => treat as heavy throttling
 DATA_HEAVY_COOLDOWN = 25      # seconds to let Yahoo recover once heavy throttling is detected
+DATA_RECOVERY_COOLDOWN = 20   # cooldown before the single recovery sweep re-tries failed tickers
 
 # ---------------------------------------------------------------------------
 # Market regime classification
