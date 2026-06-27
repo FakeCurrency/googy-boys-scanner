@@ -415,3 +415,44 @@ def test_decide_dedups_symbol():
 def test_decide_passes_market_leverage_through():
     out = vivek_bot.decide([_short("BTC")], equity=10_000, market="crypto")
     assert out["plans"][0]["plan"]["leverage_target"] == 3 and out["plans"][0]["plan"]["market"] == "crypto"
+
+
+# ── bot: book awareness (caps/short-bias hold ACROSS runs via open_book) ────────
+
+def test_decide_seeds_counts_from_the_existing_book():
+    """An existing book pre-loads the counters so a new run only fills the gap."""
+    book = [{"symbol": f"S{i}", "direction": "short"} for i in range(4)]
+    out = vivek_bot.decide([_long(f"L{i}") for i in range(8)],
+                           equity=10_000, market="asx", open_book=book)
+    # 4 shorts already held → 6 long slots remain; the run adds 6 new longs only.
+    assert out["summary"]["existing"] == 4
+    assert out["summary"]["taken"] == 6
+    assert out["summary"]["total_open"] == 10
+    assert out["summary"]["shorts"] == 4 and out["summary"]["short_bias_met"] is True
+
+
+def test_decide_respects_ten_cap_already_full_book():
+    """A full book means no new entries regardless of incoming setups."""
+    book = ([{"symbol": f"S{i}", "direction": "short"} for i in range(4)] +
+            [{"symbol": f"L{i}", "direction": "long"} for i in range(6)])
+    out = vivek_bot.decide([_long("NEW")], equity=10_000, market="asx", open_book=book)
+    assert out["summary"]["taken"] == 0
+    assert out["summary"]["skip_reasons"].get("book_full") == 1
+
+
+def test_decide_does_not_re_add_a_held_symbol():
+    """One position per symbol holds across runs — a held name is skipped."""
+    book = [{"symbol": "BHP", "direction": "long"}]
+    out = vivek_bot.decide([_long("BHP")], equity=10_000, market="asx", open_book=book)
+    assert out["summary"]["taken"] == 0
+    assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
+
+
+def test_decide_long_cap_counts_existing_longs():
+    """Five longs already open → only one more long allowed before the 6 cap."""
+    book = [{"symbol": f"L{i}", "direction": "long"} for i in range(5)]
+    out = vivek_bot.decide([_long("L5"), _long("L6")],
+                           equity=10_000, market="asx", open_book=book)
+    assert out["summary"]["longs"] == 6
+    assert out["summary"]["taken"] == 1
+    assert out["summary"]["skip_reasons"].get("long_cap") == 1
