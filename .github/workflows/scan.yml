@@ -100,12 +100,20 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python -m scanner.notify
 
+      # Posts only setups that are NEW since the last run (state-deduped), so the
+      # hourly cadence stays clean. No-ops gracefully if DISCORD_WEBHOOK_URL is unset.
+      - name: Discord digest (new A+/A setups)
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m scanner.discord
+
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data journal/journal.json journal/scalp_journal.json data/notified_signals.json data/market_caps.json"
+          PATHS="public/data journal/journal.json journal/scalp_journal.json journal/discord_state.json data/notified_signals.json data/market_caps.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

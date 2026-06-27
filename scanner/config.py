@@ -428,6 +428,26 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 }
 
 # ---------------------------------------------------------------------------
+# Discord digest — posts new tradeable setups to a Discord channel webhook
+# ---------------------------------------------------------------------------
+# Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
+# the module writes a preview and no-ops (never fails the workflow).
+DISCORD_USERNAME       = "Vivek's Beta Scanner"
+DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
+DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
+DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
+DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
+DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
+    "A+": 0x30D158, "A": 0x0A84FF, "B": 0xFF9500, "C": 0x8E8E93,
+}
+DISCORD_GRADE_EMOJI    = {           # per-setup marker
+    "A+": "🟢", "A": "🔵", "B": "🟠", "C": "⚪",
+}
+DISCORD_POST_RETRIES   = 4           # network/5xx retry attempts (with back-off)
+# Grade precedence for the min-grade filter (lower index = stronger).
+GRADE_PRECEDENCE       = ["A+", "A", "B", "C"]
+
+# ---------------------------------------------------------------------------
 # Phase 9: Capital Scaling Framework
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,76 @@
+name: Discord digest
+
+# Posts the scanner's tradeable setups to Discord. Two ways to use it:
+#   • Manually (Actions → "Discord digest" → Run workflow) for an on-demand
+#     snapshot — pick markets, minimum grade, and whether to repost everything.
+#   • On a schedule for a calm once-daily wrap-up digest.
+#
+# Reads the already-committed public/data/*.json (the latest scan output), so it
+# never re-runs the scanner. Requires the DISCORD_WEBHOOK_URL secret; without it
+# the run writes a preview and exits cleanly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      markets:
+        description: "Markets (space-separated, e.g. 'asx nasdaq'); blank = all"
+        default: ""
+        required: false
+      min_grade:
+        description: "Minimum grade to post"
+        default: "A"
+        required: false
+        type: choice
+        options: ["A+", "A", "B"]
+      send_all:
+        description: "Post ALL current setups (not just new since last run)"
+        default: true
+        required: false
+        type: boolean
+  schedule:
+    # Once-daily wrap-up digest of the day's current A+/A setups.
+    # 06:30 UTC ≈ ASX close (4:30pm AEST). Adjust or remove to taste.
+    - cron: "30 6 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-digest
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build digest args
+        id: args
+        run: |
+          ARGS=""
+          # On the scheduled wrap-up, always post the full current digest.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            ARGS="--all"
+          else
+            [ "${{ github.event.inputs.send_all }}" = "true" ] && ARGS="--all"
+            if [ -n "${{ github.event.inputs.min_grade }}" ]; then
+              ARGS="$ARGS --min-grade ${{ github.event.inputs.min_grade }}"
+            fi
+            for m in ${{ github.event.inputs.markets }}; do
+              ARGS="$ARGS --market $m"
+            done
+          fi
+          echo "value=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m scanner.discord ${{ steps.args.outputs.value }}
