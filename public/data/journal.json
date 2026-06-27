@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-06-27T07:17:43+00:00",
+  "updated_at": "2026-06-27T07:33:11+00:00",
   "stats": {
     "position_size": 1000,
     "brokerage": 5,
     "max_positions_long": 10,
     "max_positions_short": 10,
     "longs": {
-      "open": 6,
+      "open": 7,
       "closed": 0,
       "win_rate": 0.0,
       "total_r": 0.0,
       "total_pnl": 0.0,
-      "open_unrealised_r": 3.72,
-      "open_unrealised_pnl": 76.06,
+      "open_unrealised_r": 4.07,
+      "open_unrealised_pnl": 95.16,
       "kelly_pct": null
     },
     "shorts": {
@@ -149,9 +149,30 @@
       "shares": 1000,
       "brokerage": 5,
       "size_usd": 1000,
-      "current": 0.9998,
-      "unreal_r": -0.01,
-      "unreal_pnl": -0.15
+      "current": 0.9999,
+      "unreal_r": -0.0,
+      "unreal_pnl": -0.02
+    },
+    {
+      "market": "asx",
+      "symbol": "SGM",
+      "name": "Sims Limited",
+      "yf_ticker": "SGM.AX",
+      "grade": "A+",
+      "score": 12,
+      "entry": 27.68296873,
+      "stop": 26.14589985,
+      "target": 30.36000061,
+      "rr": 1.74,
+      "opened": "2026-06-27",
+      "status": "open",
+      "direction": "long",
+      "shares": 36,
+      "brokerage": 5,
+      "size_usd": 1000,
+      "current": 28.21,
+      "unreal_r": 0.34,
+      "unreal_pnl": 18.97
     }
   ],
   "open_shorts": [
