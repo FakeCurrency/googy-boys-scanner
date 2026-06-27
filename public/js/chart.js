@@ -17,7 +17,11 @@
   const marketRaw = (params.get("m") || "asx").toLowerCase();
   const market = VALID_MARKETS.has(marketRaw) ? marketRaw : "asx";
   const symbol = params.get("s") || "";
-  const mode = (params.get("mode") || "pullback").toLowerCase();
+  // The app is VIVEK-only, so a mode-less link (old bookmark / shared URL / bare
+  // nav) must default to VIVEK — NOT the retired "pullback", which would render
+  // the generic EMA fallback chart instead of the 5.0 view. Scalp is identified
+  // by its market, not a mode, so it keeps a non-VIVEK default.
+  const mode = (params.get("mode") || (market === "scalp" ? "scalp" : "vivek")).toLowerCase();
   const isVivek = mode === "vivek";
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
