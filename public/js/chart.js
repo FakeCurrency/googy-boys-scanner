@@ -302,7 +302,11 @@
       cryptoBars(SYM, "1d", 400).then(draw)
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
-      yahooBars(yfTickerFor(SYM, assetType), "3y", "1d").then(draw)
+      // 2y of daily bars (~500) — enough for a 200 SMA. NOTE: the /api/price
+      // range whitelist only allows 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max, so this
+      // MUST stay on a whitelisted value or the proxy silently drops it and
+      // returns no candles (which read as "chart unavailable").
+      yahooBars(yfTickerFor(SYM, assetType), "2y", "1d").then(draw)
         .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
     }
   }
