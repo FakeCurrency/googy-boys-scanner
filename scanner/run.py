@@ -107,6 +107,18 @@ def main() -> None:
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
 
+            # VIVEK-native paper-trade journal: snapshot newly-ARMED A/A+ setups
+            # at their trigger price and resolve open trades against the same deep
+            # frames (no extra download). Best-effort — never break the scan.
+            try:
+                from . import vivek_journal
+                vj = vivek_journal.update(market_key, vk["results"], deep_frames, universe)
+                ov = vj.get("expectancy", {}).get("overall", {})
+                print(f"  journal: {len(vj['open'])} open · {len(vj['closed'])} closed"
+                      f" · expectancy {ov.get('expectancy_r', 0):+.2f}R (n={ov.get('n', 0)})")
+            except Exception as e:
+                print(f"  journal: skipped ({e})", flush=True)
+
             # Retired scanners (pullback/reversal/spec/short/googy) — kept behind
             # an opt-in flag for ad-hoc research; not part of the live app.
             if args.legacy_scans:

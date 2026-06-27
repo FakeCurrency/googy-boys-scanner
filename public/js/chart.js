@@ -8,6 +8,8 @@
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
+  // Per-timeframe tooltips — used to flag the 4H view's honest limitations.
+  const TF_TITLE = { "4H": "≈2y max history (yfinance hourly) · trade levels are the Daily plan" };
   const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
@@ -195,6 +197,28 @@
       ? [mkLine(34, "EMA 34", "#2fd07f"), mkLine(55, "EMA 55", "#4d9fff"), mkLine(89, "EMA 89", "#a78bfa")]
       : [];
     return { candles, volume, lines };
+  }
+
+  // Aggregate bars into fixed-width buckets (e.g. 4h from 1h) for DISPLAY only —
+  // candles + volume, not trade-plan logic. OHLC = first open / max high / min
+  // low / last close; volume summed.
+  function bucketBars(bars, widthSec) {
+    const out = []; let cur = null, curKey = null;
+    for (const b of bars) {
+      const key = Math.floor(b.time / widthSec);
+      if (key !== curKey) {
+        if (cur) out.push(cur);
+        cur = { time: key * widthSec, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = key;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
   }
 
   // Daily → weekly OHLCV, bucketed by the Monday of each bar's week (UTC).
@@ -386,18 +410,17 @@
     if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
     if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
 
-    // Build the Daily + Weekly views, then render once. The DEEP daily pull drives
-    // both the Daily candles and a resampled Weekly view; each TF draws its own
-    // 10/20/43/200 SMA for display, but the trade PLAN (Entry/SL/TP1-3, the level,
-    // the trigger) and the markers come straight from the scan row (Python) — the
-    // chart no longer computes them. VIVEK has no 4H view (no server-side intraday).
+    // Build the Daily + Weekly + best-effort 4H views, then render once. The DEEP
+    // daily pull drives the Daily candles and a resampled Weekly view; a ~2y
+    // hourly pull (yfinance's 1h limit) bucketed to 4H drives an honest-but-
+    // limited 4H view. Each TF draws its own 10/20/43/200 SMA for DISPLAY, but the
+    // trade PLAN (Entry/SL/TP1-3, the level, the trigger) and the markers come
+    // straight from the scan row (Python) — the chart never recomputes them. The
+    // Daily and Weekly TFs have their own Python plan; 4H has no server-side plan,
+    // so it reuses the Daily plan as a clearly-labelled reference.
     // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
     // and intervals incl. 1h/1d — keep fetches on whitelisted values.
     const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
-    // The Daily/Weekly plans + markers come straight from the scan row (Python).
-    // The chart only draws the candles/SMAs for each TF; it does NOT recompute a
-    // plan. We show only the timeframes Python has a plan for (D and W) — there's
-    // no server-side intraday yet, so VIVEK deliberately has no 4H view.
     const plans = m.plans || {};
     const pyMarkers = m.markers || {};
     // Back-compat: data from before per-TF plans (schema < 3) still has a flat
@@ -409,28 +432,43 @@
       structural_tps: (m.detail || {}).structural_tps || 0,
       armed: m.armed, entry_trigger: m.entry_trigger,
     };
-    const makeTF = (bars, tfKey, planRaw) => {
+    const dailyPlan = plans["1D"] || headlinePlan;
+    // approx=true → this TF has no Python plan of its own; it borrows the Daily
+    // plan as reference and shows no (mismatched) markers.
+    const makeTF = (bars, tfKey, planRaw, approx) => {
       const tf = barsToVivekTF(bars);                 // candles + volume + SMAs (display)
       tf.levels = normalizePlan(planRaw);             // the plan (from Python)
-      tf.markers = adaptMarkers(pyMarkers[tfKey], bars, direction);
+      tf.markers = approx ? [] : adaptMarkers(pyMarkers[tfKey], bars, direction);
+      tf.approx = !!approx;
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
     const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
                              : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
+    // Crypto: native 4h klines (1000 ≈ 166d). Stocks: ~2y of hourly bucketed to 4h.
+    const intradayP = (isCrypto ? cryptoBars(SYM, "4h", 1000)
+                                : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
-      d.timeframes["1D"] = makeTF(daily, "1D", plans["1D"] || headlinePlan);
+      d.timeframes["1D"] = makeTF(daily, "1D", dailyPlan);
       if (plans["1W"]) {
         const wk = resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = makeTF(wk, "1W", plans["1W"]);
       }
       if (d.price == null) d.price = daily[daily.length - 1].close;
       d.default_tf = "1D";
-      console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
-                   `(daily=${daily.length}); plans=[${Object.keys(plans).join(", ")}]`);
-      render(d);
+      return intradayP.then((intraday) => {
+        if (intraday && intraday.length >= 24) {
+          const h4 = isCrypto ? intraday : bucketBars(intraday, 4 * 3600);   // crypto already 4h
+          // 4H is structure + the Daily plan as reference (no server-side 4H plan).
+          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", dailyPlan, true);
+        }
+        console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
+                     `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
+                     `plans=[${Object.keys(plans).join(", ")}]`);
+        render(d);
+      });
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
@@ -490,8 +528,9 @@
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
     const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-    const tfName = tfKey === "1W" ? "Weekly" : "Daily";
-    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : "D"})`;
+    const is4H = tfKey === "4H";
+    const tfName = tfKey === "1W" ? "Weekly" : is4H ? "4H" : "Daily";
+    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : is4H ? "D·ref" : "D"})`;
     const rr = lv.rr || 0;
     // Trigger state — ARMED (a trigger fired) vs WATCHING (near the level only).
     const trig = lv.entry_trigger ? lv.entry_trigger.toUpperCase() : null;
@@ -508,10 +547,13 @@
       metric("Grade", `${d.grade} · ${d.score}/${d.score_max}`),
     ].join("");
     const trigTxt = lv.armed
-      ? `Entry is the ${trig} trigger price on the ${tfName} timeframe — a fired setup. `
+      ? `Entry is the ${trig} trigger price on the ${tfName === "4H" ? "Daily" : tfName} timeframe — a fired setup. `
       : `WATCHING: price is near the 200 SMA but no trigger has fired yet; entry shown is indicative. `;
+    const fourHTxt = is4H
+      ? "4H view is best-effort (≈2y of hourly data); its candles/SMAs are 4H but the trade levels shown are the Daily plan, not a separate 4H plan. "
+      : "";
     $("#cf-analysis").textContent =
-      (d.analysis ? d.analysis + "  " : "") + trigTxt +
+      (d.analysis ? d.analysis + "  " : "") + fourHTxt + trigTxt +
       "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
@@ -933,7 +975,8 @@
       // Visual hierarchy: the trade ladder (SL/Entry/TP1) is loudest; the 200 SMA
       // and the further targets are secondary. Swing lines were dropped — the
       // structure markers already show them, so the chart stays clean.
-      line(lv.level, "#ffb020", key === "1W" ? "200 SMA·W" : "200 SMA·D", 1, true);
+      const lvlLabel = key === "1W" ? "200 SMA·W" : key === "4H" ? "200 SMA·D (ref)" : "200 SMA·D";
+      line(lv.level, "#ffb020", lvlLabel, 1, true);
       line(lv.stop,  "#ff5b5b", "SL",    2);
       line(lv.entry, "#e5e9f0", "ENTRY", 2);
       line(lv.tp1,   "#2fd07f", "TP1",   2);
@@ -1035,7 +1078,7 @@
     } else {
       // Everything else → static multi-timeframe data from the scan JSON.
       toggle.innerHTML = available.map((k) =>
-        `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}">${TF_LABEL[k]}</button>`).join("");
+        `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
       toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
         toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
         applyTF(b.dataset.tf);

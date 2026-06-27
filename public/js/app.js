@@ -955,6 +955,49 @@
     return `${Math.round(s / 86400)}d ago`;
   }
 
+  // VIVEK paper-trade track record (expectancy). Read-only summary written by the
+  // server-side journal; shows whether the trigger system actually has an edge,
+  // broken down by entry type / grade / timeframe. Hidden until trades close.
+  async function loadTrackRecord() {
+    const box = $("#track");
+    if (!box) return;
+    try {
+      const res = await fetch("data/vivek_journal.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const j = await res.json();
+      const e = j.expectancy || {};
+      const ov = e.overall || { n: 0 };
+      const nOpen = (j.open || []).length;
+      if (!ov.n && !nOpen) { box.hidden = true; return; }   // nothing to show yet
+      const rTone = (r) => (r > 0.05 ? "pos" : r < -0.05 ? "neg" : "");
+      const pillRow = (label, s) => {
+        if (!s || !s.n) return "";
+        return `<div class="trk-pill"><span class="trk-k">${esc(label)}</span>` +
+          `<span class="trk-r ${rTone(s.expectancy_r)}">${s.expectancy_r >= 0 ? "+" : ""}${s.expectancy_r}R</span>` +
+          `<span class="trk-sub">${s.win_rate}% · n=${s.n}</span></div>`;
+      };
+      const group = (title, obj, keys) => {
+        const inner = keys.map((k) => pillRow(k, obj[k])).join("");
+        return inner ? `<div class="trk-group"><div class="trk-title">${esc(title)}</div>${inner}</div>` : "";
+      };
+      box.hidden = false;
+      box.innerHTML =
+        `<div class="trk-head">` +
+          `<span class="trk-label">Track record · paper</span>` +
+          `<span class="trk-headline ${rTone(ov.expectancy_r || 0)}">` +
+            `${ov.n ? `${(ov.expectancy_r >= 0 ? "+" : "")}${ov.expectancy_r}R expectancy · ${ov.win_rate}% win · ${ov.n} closed` : "no closed trades yet"}` +
+          `</span>` +
+          `<span class="trk-open">${nOpen} open</span>` +
+        `</div>` +
+        `<div class="trk-groups">` +
+          group("Entry type", e.by_entry_type || {}, ["reclaim", "retest", "break"]) +
+          group("Grade", e.by_grade || {}, ["A+", "A"]) +
+          group("Timeframe", e.by_timeframe || {}, ["1D", "1W", "4H"]) +
+        `</div>` +
+        `<div class="trk-note">Paper trades from ARMED A+/A setups, entered at the trigger price and resolved by the 5.0 scale-out/SL rules. Early data — read directionally.</div>`;
+    } catch (_) { /* track record is optional */ }
+  }
+
   async function loadCaps() {
     try {
       const res = await fetch("data/market_caps.json", { cache: "no-cache" });
@@ -1342,5 +1385,6 @@
   initKeyboard();
   bind();
   loadCaps();
+  loadTrackRecord();
   load().then(() => startAutoRefresh());
 })();

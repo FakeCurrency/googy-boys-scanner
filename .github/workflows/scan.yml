@@ -163,7 +163,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data journal/journal.json journal/scalp_journal.json journal/discord_state.json data/notified_signals.json data/market_caps.json"
+          PATHS="public/data journal/vivek_journal.json journal/journal.json journal/scalp_journal.json journal/discord_state.json data/notified_signals.json data/market_caps.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
