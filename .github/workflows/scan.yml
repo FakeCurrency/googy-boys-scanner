@@ -71,7 +71,7 @@ jobs:
         continue-on-error: true
         run: python -m scanner.marketcaps
 
-      - name: Run market scans (ASX + NASDAQ in parallel)
+      - name: Run market scans (ASX + NASDAQ + crypto in parallel)
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
           GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
@@ -79,16 +79,20 @@ jobs:
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: |
-          python -m scanner.run --market asx --no-scalp ${{ github.event.inputs.args }} &
+          # NOTE: scalp was removed — run.py no longer accepts --no-scalp/--scalp-only.
+          # Each market runs all daily scanners incl. VIVEK (skip with --no-vivek).
+          python -m scanner.run --market asx ${{ github.event.inputs.args }} &
           PID_ASX=$!
-          python -m scanner.run --market nasdaq --no-scalp ${{ github.event.inputs.args }} &
+          python -m scanner.run --market nasdaq ${{ github.event.inputs.args }} &
           PID_NAS=$!
+          python -m scanner.run --market crypto ${{ github.event.inputs.args }} &
+          PID_CRY=$!
           wait $PID_ASX; RC_ASX=$?
           wait $PID_NAS; RC_NAS=$?
+          wait $PID_CRY; RC_CRY=$?
+          echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
+          # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
-
-      - name: Scalp scan
-        run: python -m scanner.run --scalp-only
 
       - name: Update paper-trade journal
         run: python -m scanner.journal
