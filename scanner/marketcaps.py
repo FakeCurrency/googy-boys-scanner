@@ -34,9 +34,11 @@ _SCAN_FILES = [
     ("asx",    "public/data/asx.json"),
     ("asx",    "public/data/asx_reversal.json"),
     ("asx",    "public/data/asx_spec.json"),
+    ("asx",    "public/data/asx_vivek.json"),
     ("nasdaq", "public/data/nasdaq.json"),
     ("nasdaq", "public/data/nasdaq_reversal.json"),
     ("nasdaq", "public/data/nasdaq_spec.json"),
+    ("nasdaq", "public/data/nasdaq_vivek.json"),
 ]
 
 # Only cache caps for tradeable grades — that's all the alerts ever show.

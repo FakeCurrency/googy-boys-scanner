@@ -292,10 +292,19 @@
 
   // ------------------------------------------------------- EMA / SMA legend
   function renderLegend(d) {
-    const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec" || d.setup_type === "googy";
-    const periods = smaSetup ? (d.sma_periods || []) : (d.ema_periods || []);
-    const colors = smaSetup ? SMA_COLOR : EMA_COLOR;
-    const label = smaSetup ? "SMA" : "EMA";
+    let periods, colors, label;
+    if (d.setup_type === "vivek") {
+      // VIVEK keys off the 200 SMA (the level) with the 50 SMA for trend
+      // structure — the same two lines the chart draws (amber 200, blue 50).
+      periods = [50, 200];
+      colors = { 50: "#4d9fff", 200: "#ffb020" };
+      label = "SMA";
+    } else {
+      const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec" || d.setup_type === "googy";
+      periods = smaSetup ? (d.sma_periods || []) : (d.ema_periods || []);
+      colors = smaSetup ? SMA_COLOR : EMA_COLOR;
+      label = smaSetup ? "SMA" : "EMA";
+    }
     $("#ema-legend").innerHTML = `<span class="legend-tag">${label}</span>` +
       periods.map((p) => `<span class="ema-dot"><i style="background:${colors[p] || "#888"}"></i>${p}</span>`).join("");
   }
@@ -339,8 +348,10 @@
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
       : rawMcap < SMALLCAP ? "mcap-small" : "mcap";
-    const mcapBadge = (mcapTxt && mcapCls !== "mcap")
-      ? `<span class="badge ${mcapCls}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
+    // Show the market-cap pill for EVERY ticker that has cap data (not just the
+    // hot/small-cap buckets) — it rides on the same line as the ticker + name.
+    const mcapBadge = mcapTxt
+      ? `<span class="badge ${mcapCls || "mcap"}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
       : "";
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "low" : "";
@@ -354,6 +365,7 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="badge dir">${esc(r.dir)}</span>
+          ${mcapBadge}
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
