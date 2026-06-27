@@ -528,6 +528,16 @@ MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
 SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
 
+# Yahoo download throttling control. Yahoo rate-limits bursty/concurrent
+# requests (HTTP 429); when a whole batch is throttled the old code dropped all
+# its tickers after a 2–4s wait. These make the downloader patient instead:
+# smaller batches, a pause between them, and a long escalating back-off on a
+# throttled batch so coverage stays high even under rate limiting.
+DATA_CHUNK         = 120      # tickers per yfinance request (smaller = lighter, less likely to be throttled)
+DATA_BATCH_PAUSE   = 0.6      # base seconds to pause between successive batches (+ jitter)
+DATA_RETRIES       = 4        # attempts per batch before giving up on it
+DATA_BACKOFF       = [5, 15, 40, 75]   # seconds to wait after each failed attempt (throttle recovery)
+
 # ---------------------------------------------------------------------------
 # Market regime classification
 # ---------------------------------------------------------------------------

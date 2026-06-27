@@ -2,6 +2,7 @@
 
 import datetime as dt
 import logging
+import random
 import time
 
 import numpy as np
@@ -65,45 +66,68 @@ def validate_bars(df: pd.DataFrame, symbol: str = "", interval: str = "1h",
             )
 
 
+def _fetch_batch(batch: list[str], period: str, interval: str,
+                 retries: int, backoff: list[float]) -> pd.DataFrame | None:
+    """Download one batch, retrying with an escalating back-off on failure.
+
+    Yahoo throttles bursty requests (429). A short 2–4s wait isn't enough to
+    recover, so each retry waits progressively longer (config.DATA_BACKOFF, with
+    jitter) before re-requesting the SAME batch — patience keeps coverage high
+    rather than discarding 100+ tickers at the first sign of throttling.
+    """
+    for attempt in range(retries + 1):
+        try:
+            data = yf.download(
+                batch, period=period, interval=interval,
+                group_by="ticker", auto_adjust=True,
+                threads=True, progress=False,
+            )
+            if data is not None and len(data):
+                return data
+            reason = "empty result (likely throttled)"
+        except Exception as e:
+            reason = f"{type(e).__name__}: {e}"
+        if attempt < retries:
+            wait = backoff[min(attempt, len(backoff) - 1)] * (0.8 + 0.4 * random.random())
+            log.warning("batch attempt %d/%d failed (%s) — backing off %.1fs",
+                        attempt + 1, retries + 1, reason, wait)
+            time.sleep(wait)
+    return None
+
+
 def download(tickers: list[str], period: str | None = None,
-             interval: str = "1d", chunk: int = 150, retries: int = 2) -> dict[str, pd.DataFrame]:
+             interval: str = "1d", chunk: int | None = None,
+             retries: int | None = None) -> dict[str, pd.DataFrame]:
     """Download OHLCV for many tickers, returned as {ticker: DataFrame}.
 
-    Pass interval="1h" (with period="60d") for intraday scalp data.
-    Tickers are fetched in chunks with simple retry/back-off.
+    Pass interval="1h" (with period="60d") for intraday scalp data. Tickers are
+    fetched in small chunks, with a brief pause between them and a long
+    escalating back-off when a batch is throttled, so a full ASX-sized universe
+    keeps high coverage even when Yahoo rate-limits.
     """
     period = period or config.DATA_PERIOD
+    chunk = chunk or config.DATA_CHUNK
+    retries = config.DATA_RETRIES if retries is None else retries
+    backoff = config.DATA_BACKOFF
+    pause = config.DATA_BATCH_PAUSE
+
     frames: dict[str, pd.DataFrame] = {}
     failed_batches = 0        # whole batches that yielded nothing after retries
     skipped_tickers = 0       # individual tickers with no usable rows
+    n_batches = (len(tickers) + chunk - 1) // chunk
 
-    for start in range(0, len(tickers), chunk):
+    for bi, start in enumerate(range(0, len(tickers), chunk)):
         if start:
-            time.sleep(0.1)
+            time.sleep(pause * (0.6 + 0.8 * random.random()))   # gentle, jittered spacing
         batch = tickers[start:start + chunk]
-        data = None
-        for attempt in range(retries + 1):
-            try:
-                data = yf.download(
-                    batch, period=period, interval=interval,
-                    group_by="ticker", auto_adjust=True,
-                    threads=True, progress=False,
-                )
-                break
-            except Exception as e:
-                log.warning("batch download attempt %d/%d failed: %s: %s",
-                            attempt + 1, retries + 1, type(e).__name__, e)
-                if attempt < retries:
-                    time.sleep(2 * (attempt + 1))
+        data = _fetch_batch(batch, period, interval, retries, backoff)
 
         # Whole-batch failure: every ticker in this slice is unavailable this run.
-        # Record it so the caller's logs show source degradation instead of a
-        # silently short result set.
         if data is None or len(data) == 0:
             failed_batches += 1
             skipped_tickers += len(batch)
-            log.warning("batch %d-%d (%d tickers) returned no data — skipping",
-                        start, start + len(batch), len(batch))
+            log.warning("batch %d/%d (%d tickers) returned no data after %d attempts — skipping",
+                        bi + 1, n_batches, len(batch), retries + 1)
             continue
 
         for ticker in batch:
@@ -125,9 +149,9 @@ def download(tickers: list[str], period: str | None = None,
     # One-line health summary — makes "the data source is failing" obvious at a
     # glance instead of having to infer it from a thin result set downstream.
     got = len(frames)
-    if got < len(tickers):
-        log.info("download: %d/%d tickers returned (%d skipped, %d batches failed)",
-                 got, len(tickers), skipped_tickers, failed_batches)
+    cov = 100.0 * got / len(tickers) if tickers else 0.0
+    log.info("download: %d/%d tickers (%.0f%% coverage, %d skipped, %d batches failed)",
+             got, len(tickers), cov, skipped_tickers, failed_batches)
     if tickers and got == 0:
         log.error("download: ZERO tickers returned for %d requested — upstream data source likely down",
                   len(tickers))

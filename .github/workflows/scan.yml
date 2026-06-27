@@ -71,7 +71,7 @@ jobs:
         continue-on-error: true
         run: python -m scanner.marketcaps
 
-      - name: Run market scans (ASX + NASDAQ + crypto in parallel)
+      - name: Run market scans (small markets first, then ASX uncontended)
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
           GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
@@ -79,17 +79,23 @@ jobs:
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: |
-          # NOTE: scalp was removed — run.py no longer accepts --no-scalp/--scalp-only.
-          # Each market runs all daily scanners incl. VIVEK (skip with --no-vivek).
-          python -m scanner.run --market asx ${{ github.event.inputs.args }} &
-          PID_ASX=$!
+          # Yahoo throttles concurrent requests, and EACH market downloads twice
+          # (daily scanners + VIVEK's deep-history pass). Running all three at once
+          # starved the huge ASX universe (only ~316/1985 got through). So scan the
+          # two SMALL markets (≈100 names each) together first — they finish in a
+          # couple of minutes — THEN run ASX alone with Yahoo to itself, restoring
+          # near-full ASX coverage. set +e so one market's failure doesn't abort
+          # the others; the final test gates the job.
+          set +e
           python -m scanner.run --market nasdaq ${{ github.event.inputs.args }} &
           PID_NAS=$!
           python -m scanner.run --market crypto ${{ github.event.inputs.args }} &
           PID_CRY=$!
-          wait $PID_ASX; RC_ASX=$?
           wait $PID_NAS; RC_NAS=$?
           wait $PID_CRY; RC_CRY=$?
+          echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX alone"
+          python -m scanner.run --market asx ${{ github.event.inputs.args }}
+          RC_ASX=$?
           echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]

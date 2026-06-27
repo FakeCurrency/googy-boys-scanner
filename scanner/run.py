@@ -85,6 +85,10 @@ def main() -> None:
                 universe = universe[:args.limit]
             print(f"  downloading {len(universe)} tickers ...", flush=True)
             frames = download([u["yf"] for u in universe])
+            cov = 100 * len(frames) // max(len(universe), 1)
+            print(f"  coverage: {len(frames)}/{len(universe)} downloaded ({cov}%)"
+                  f"{'  ⚠️ LOW — likely Yahoo throttling' if cov < 80 and len(universe) > 50 else ''}",
+                  flush=True)
             # Guard: a fully-empty download means the data source was blocked
             # (e.g. Yahoo 403/429), not a genuine "no setups" day. Writing now
             # would clobber yesterday's good JSON, so skip this market instead.
@@ -137,7 +141,8 @@ def main() -> None:
                 vk = scan.scan_vivek_market(market_key, out_root=args.out,
                                             universe=universe, progress=False)
                 output.write(vk, args.out, name=f"{market_key}_vivek")
-                print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A)")
+                print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
+                      f"{vk['scanned']}/{vk['universe_size']} scanned")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 
