@@ -440,8 +440,12 @@
     const isCrypto = isCryptoMarket(assetType);
     const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
                              : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
-    const hourlyP = (isCrypto ? cryptoBars(SYM, "1h", 1000)
-                              : yahooBars(yfTickerFor(SYM, assetType), "6mo", "1h")).catch(() => []);
+    // Intraday for the 4H view. Crypto: Binance native 4h klines (1000 ≈ 166d).
+    // Stocks: 2y of hourly (yfinance's 1h limit ≈ 730d) bucketed to 4h — so the
+    // 4H view spans ~2 years (≈800 bars), not the 6 months it did before, which
+    // is what made it feel sparse.
+    const intradayP = (isCrypto ? cryptoBars(SYM, "4h", 1000)
+                                : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
@@ -449,14 +453,14 @@
       const wk = resampleWeekly(daily);
       if (wk.length >= 6) d.timeframes["1W"] = makeTF(wk);
       if (d.price == null) d.price = daily[daily.length - 1].close;
-      return hourlyP.then((hourly) => {
-        if (hourly && hourly.length >= 24) {
-          const h4 = bucketBars(hourly, 4 * 3600);
+      return intradayP.then((intraday) => {
+        if (intraday && intraday.length >= 24) {
+          const h4 = isCrypto ? intraday : bucketBars(intraday, 4 * 3600);  // crypto already 4h
           if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4);
         }
         d.default_tf = "1D";   // reliable basis; user can toggle to 4H / Weekly
         console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
-                     `(daily=${daily.length}, hourly=${(hourly || []).length}); ` +
+                     `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
                      `level(${d.level_tf})=${d.level}`);
         render(d);
       });
@@ -720,6 +724,15 @@
       const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
       const exposure = margin * leverage;
       const data  = mjLoad();
+      // VIVEK: book the SL/TP of the timeframe the user is viewing (the per-TF
+      // plan), not the scan's canonical daily plan. Falls back to the scan plan.
+      const av     = d._vivek ? (d._activeLevels || null) : null;
+      const stopV  = av ? (av.stop ?? null) : (d.stop ?? null);
+      const tp1V   = av ? (av.tp1 ?? null) : (d.tp1 ?? null);
+      const tp2V   = av ? (av.tp2 ?? null) : (d.tp2 ?? null);
+      const tp3V   = av ? (av.tp3 ?? null) : (d.tp3 ?? null);
+      const tgtV   = av ? (av.tp2 ?? null) : (d.target ?? null);
+      const tfTag  = d._vivek && d._activeTf ? `${d._activeTf} · ` : "";
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
         // Preserve the instrument's true type so it buckets correctly in the
@@ -729,8 +742,9 @@
           : (d.asset_type || (market === "asx" ? "asx" : "nasdaq")),
         entry: px, entry_date: nowDate(), entry_time: nowTime(),
         size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
-        stop: d.stop ?? null, target: d.target ?? null,
-        notes: `Simulated from chart · ${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
+        stop: stopV, target: tgtV, tp1: tp1V, tp2: tp2V, tp3: tp3V,
+        timeframe: d._vivek ? (d._activeTf || "1D") : null,
+        notes: `Simulated from chart · ${tfTag}${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
         status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
       });
       mjSave(data);
@@ -950,6 +964,9 @@
       line(lv.tp1,   "#2fd07f", "TP1");
       line(lv.tp2,   "#2fd07f", "TP2");
       line(lv.tp3,   "#2fd07f", "TP3");
+      // Expose the active timeframe's plan so Simulate-Buy logs THIS TF's levels.
+      d._activeLevels = lv;
+      d._activeTf = key;
       renderVivekFooter(d, lv, key);
     }
 
