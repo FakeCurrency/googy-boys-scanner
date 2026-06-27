@@ -347,9 +347,20 @@
   // level) — deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
   function barsToVivekTF(bars) {
     const candles = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
-    const volume  = bars.map((b) => ({ time: b.time, value: Math.round(b.volume || 0),
-      color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" }));
     const cl = bars.map((b) => b.close);
+    const vols = bars.map((b) => b.volume || 0);
+    const volSma = smaArr(vols, 20);                          // recent average volume
+    // Volume colouring carries two reads at a glance: a 1.5× spike is a bright
+    // cyan bar; otherwise a green tint when volume is rising vs the prior bar,
+    // red tint when it's falling. Clean, no extra markers/lines.
+    const volume = bars.map((b, i) => {
+      const v = vols[i];
+      const avg = isFinite(volSma[i]) ? volSma[i] : v;
+      const rising = i > 0 ? v >= vols[i - 1] : true;
+      const color = (avg > 0 && v >= 1.5 * avg) ? "rgba(0,210,255,0.9)"
+                  : rising ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.42)";
+      return { time: b.time, value: Math.round(v), color };
+    });
     const mkSma = (span, name, color) => {
       const s = smaArr(cl, span);
       const data = [];
@@ -357,10 +368,10 @@
       return { name, color, data };
     };
     const lines = [];
-    if (bars.length >= 10) lines.push(mkSma(10, "SMA 10", "#e5e9f0"));     // fast (white)
-    if (bars.length >= 20) lines.push(mkSma(20, "SMA 20", "#ffd23f"));     // fast (yellow)
-    if (bars.length >= 50) lines.push(mkSma(50, "SMA 50", "#4d9fff"));     // trend structure
-    if (bars.length >= 200) lines.push(mkSma(200, "SMA 200", "#ffb020"));  // the 200 SMA — the level
+    if (bars.length >= 10)  lines.push(mkSma(10,  "SMA 10",  "#e5e9f0"));  // white
+    if (bars.length >= 20)  lines.push(mkSma(20,  "SMA 20",  "#ffd23f"));  // yellow
+    if (bars.length >= 43)  lines.push(mkSma(43,  "SMA 43",  "#a78bfa"));  // purple (trend structure)
+    if (bars.length >= 200) lines.push(mkSma(200, "SMA 200", "#ffb020"));  // amber — the level
     return { candles, volume, lines };
   }
 
@@ -1025,10 +1036,20 @@
     const entryEpoch = entryEpochOf(findOpen());
 
     function legend(tf) {
-      $("#chart-legend").innerHTML = tf.lines.map((l) => {
+      const smas = tf.lines.map((l) => {
         const last = l.data.length ? l.data[l.data.length - 1].value : null;
         return `<span><span class="cl-name" style="color:${l.color}">${l.name}</span> ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
       }).join("");
+      // VIVEK: a small key so the grey swing arrows, the reaction dot and the
+      // volume colours are self-explanatory.
+      const key = d._vivek
+        ? `<span class="cl-key"><span style="color:#8a93a6">▲ swing low</span>` +
+          `<span style="color:#8a93a6">▼ swing high</span>` +
+          `<span style="color:#ffb020">● 200 SMA reaction</span>` +
+          `<span style="color:#00d2ff">▮ vol ≥1.5×</span>` +
+          `<span style="color:#2fd07f">▮ rising</span><span style="color:#ff5b5b">▮ falling</span></span>`
+        : "";
+      $("#chart-legend").innerHTML = smas + key;
     }
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;

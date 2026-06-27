@@ -56,6 +56,9 @@
 }
 .chart-legend span { display: flex; gap: 7px; }
 .cl-name { color: var(--muted); }
+/* small key explaining the VIVEK swing arrows, reaction dot and volume colours */
+.cl-key { flex-wrap: wrap; gap: 4px 10px !important; max-width: 380px; margin-top: 6px; padding-top: 6px; border-top: 0.5px solid var(--separator); font-size: 10px; }
+.cl-key span { display: inline-flex; }
 
 .chart-foot { padding: 16px 22px 30px; border-top: 1px solid var(--border); background: var(--panel); }
 .cf-metrics { display: flex; flex-wrap: wrap; gap: 26px; margin-bottom: 14px; }
