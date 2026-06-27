@@ -41,11 +41,6 @@ def main() -> None:
         help="after scanning, email new A+/A setups (needs GBS_SMTP_* env vars)",
     )
     parser.add_argument(
-        "--legacy-scans", action="store_true",
-        help="also run the retired pullback/reversal/spec/short/googy scans "
-             "(the app is VIVEK-only now; these are off by default)",
-    )
-    parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
@@ -118,27 +113,6 @@ def main() -> None:
                       f" · expectancy {ov.get('expectancy_r', 0):+.2f}R (n={ov.get('n', 0)})")
             except Exception as e:
                 print(f"  journal: skipped ({e})", flush=True)
-
-            # Retired scanners (pullback/reversal/spec/short/googy) — kept behind
-            # an opt-in flag for ad-hoc research; not part of the live app.
-            if args.legacy_scans:
-                pb = scan.scan_market(market_key, out_root=args.out, frames=frames,
-                                      pulse_data=pulse_data, universe=universe, progress=False)
-                output.write(pb, args.out)
-                rv = scan.scan_reversal_market(market_key, out_root=args.out, frames=frames,
-                                               pulse_data=pulse_data, universe=universe, progress=False)
-                output.write(rv, args.out, name=f"{market_key}_reversal")
-                sp = scan.scan_spec_market(market_key, out_root=args.out, frames=frames,
-                                           pulse_data=pulse_data, universe=universe, progress=False)
-                output.write(sp, args.out, name=f"{market_key}_spec")
-                sh = scan.scan_short_market(market_key, out_root=args.out, frames=frames,
-                                            pulse_data=pulse_data, universe=universe, progress=False)
-                output.write(sh, args.out, name=f"{market_key}_short")
-                gg = scan.scan_googy_market(market_key, out_root=args.out, frames=frames,
-                                            pulse_data=pulse_data, universe=universe, progress=False)
-                output.write(gg, args.out, name=f"{market_key}_googy")
-                print(f"  legacy: pullback {len(pb['results'])} · reversal {len(rv['results'])} · "
-                      f"spec {len(sp['results'])} · short {len(sh['results'])} · googy {len(gg['results'])}")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 
