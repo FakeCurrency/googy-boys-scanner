@@ -576,7 +576,7 @@
     const note = $("#cf-tvnote");
     if (note) {
       note.hidden = false;
-      note.textContent = "Levels use dividend-adjusted prices. On TradingView, enable “Adjust data for dividends” and set the SMA to 43 for best alignment.";
+      note.textContent = "Levels use dividend-adjusted prices. On TradingView, enable “Adjust data for dividends” + set SMA to 43 for best alignment.";
     }
   }
 
