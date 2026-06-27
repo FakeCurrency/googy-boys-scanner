@@ -474,8 +474,10 @@ body {
 .tkr:hover { color: var(--blue); }
 
 .badge { font: 600 10px/1 var(--sans); letter-spacing: 0.02em; padding: 4px 8px; border-radius: 100px; white-space: nowrap; }
-.badge.dir { color: var(--green); background: var(--green-soft); }
-.badge.dir.short { color: var(--red); background: var(--red-soft); }
+/* Direction pill — prominent and explicitly colour-coded: LONG green, SHORT red */
+.badge.dir { font: 800 11px/1 var(--sans); letter-spacing: 0.06em; padding: 5px 10px; }
+.badge.dir.long  { color: var(--green); background: var(--green-soft); }
+.badge.dir.short { color: var(--red);   background: var(--red-soft); }
 .badge.sector { color: var(--text-2); background: var(--fill); }
 .badge.liq-liquid { color: var(--green); background: var(--green-soft); }
 .badge.liq-ok { color: var(--muted); background: var(--fill); }

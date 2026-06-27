@@ -98,7 +98,7 @@
 
   const state = {
     market: "asx",
-    mode: "pullback",   // pullback | reversal | spec | short | googy
+    mode: "vivek",      // VIVEK (5.0) is the only scanner now
     view: "results",    // results | watch
     tab: "aplus",       // aplus | a | watch
     sort: "score",      // score | price | rr | az
@@ -322,7 +322,7 @@
 
     $("#count-aplus").textContent = res.filter((r) => r.grade === "A+").length;
     $("#count-a").textContent = res.filter((r) => r.grade === "A").length;
-    $("#count-watch").textContent = res.filter((r) => r.grade === "B" || r.grade === "C").length;
+    $("#count-watch").textContent = res.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade)).length;
     $("#watch-count").textContent = res.filter((r) => isStarred(r.symbol)).length;
   }
 
@@ -364,7 +364,7 @@
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
-          <span class="badge dir">${esc(r.dir)}</span>
+          <span class="badge dir ${r.dir === "SHORT" ? "short" : "long"}">${esc(r.dir)}</span>
           ${mcapBadge}
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
