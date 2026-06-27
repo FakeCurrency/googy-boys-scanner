@@ -1,26 +1,31 @@
-"""VIVEK-native paper-trade journal — measures the trigger-based system.
+"""VIVEK-native paper-trade journal — realistic intraday forward test.
 
-Every scan, this snapshots ARMED A/A+ setups at their TRIGGER price (per
-timeframe) and then resolves the open paper trades bar-by-bar using the SAME
-rules the autonomous bot uses (`vivek_bot.manage_position`): scale out at
-TP1/TP2/TP3, move the SL to break-even at TP1 and to locked structure at TP2,
-never against the trade. On top of that it adds the things a journal needs that
-the bot's live manager doesn't: stop-out detection, MAE/MFE, realized R and
-hold time — recorded per closed trade with its grade, entry_type and timeframe.
+This measures the trigger-based system the way it would actually be traded:
 
-The point is expectancy: once enough trades close we can compare reclaim vs
-retest vs break, A+ vs A, and 1D vs 1W with real numbers instead of intuition.
+  * Trades are only OPENED during the live (delayed) market session — ASX
+    10:00–16:00 AEST shifted +15 min for the ~15-min feed delay, etc.
+  * Entry is the DELAYED INTRADAY PRICE at the moment the setup is taken during
+    the session — not the historical trigger-bar close. The structural stop and
+    TP1/TP2/TP3 come from the same per-timeframe plan the row/chart/bot use.
+  * Every market-hours scan then marks each open trade to the observed intraday
+    price: it books a scale-out when price reaches a TP, moves the SL by the 5.0
+    rules (BE at TP1, locked structure at TP2, never adverse), and closes at the
+    observed price when the stop is hit. MAE/MFE and realized R are recorded.
 
-Single source of truth: this consumes the SAME per-timeframe plans the row, the
-chart and the bot use (row["plans"][tf]) — it never recomputes a level.
+So entries and exits both use the delayed intraday prices a manual trader would
+actually see and act on — there is no look-ahead into a daily bar's full range.
+
+Single source of truth: it consumes the SAME per-timeframe plans the row, chart
+and bot use (row["plans"][tf]) — it never recomputes a level.
 """
 
 import datetime as dt
 import json
 import logging
 import pathlib
+from zoneinfo import ZoneInfo
 
-from . import vivek
+from . import config
 from .broker.vivek_bot import manage_position
 from .journal_common import atomic_write
 
@@ -30,9 +35,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 JOURNAL_FILE = ROOT / "journal" / "vivek_journal.json"
 PUBLIC_FILE = ROOT / "public" / "data" / "vivek_journal.json"
 
-JOURNAL_VERSION = 1
+JOURNAL_VERSION = 2                 # v2 = intraday entry/exit pricing + market-hours gate
 TIMEFRAMES = ("1D", "1W")          # 4H is browser-only (no server-side intraday)
-MAX_CLOSED = 4000                  # keep the file bounded; oldest trades roll off
+MAX_CLOSED = 4000
 
 
 def _load() -> dict:
@@ -58,131 +63,129 @@ def _save(j: dict) -> None:
     atomic_write(PUBLIC_FILE, payload)
 
 
-def _trade_id(symbol: str, direction: str, tf: str, entry_bar: str) -> str:
-    return f"{symbol}:{direction}:{tf}:{entry_bar}"
+def _trade_id(symbol: str, direction: str, tf: str, entry_day: str) -> str:
+    return f"{symbol}:{direction}:{tf}:{entry_day}"
 
 
-def _frame_to_bars(df, tf: str) -> list[dict]:
-    """OHLC frame -> ascending [{date, high, low, close}] for resolution.
-    For 1W the daily frame is resampled to the same W-FRI bars the plan used."""
-    if tf == "1W":
-        df = vivek._resample_weekly_ohlc(df)
-        if df is None:
-            return []
-    out = []
-    for ts, row in df.iterrows():
-        try:
-            out.append({"date": ts.strftime("%Y-%m-%d"),
-                        "high": float(row["High"]), "low": float(row["Low"]),
-                        "close": float(row["Close"])})
-        except Exception:
-            continue
-    return out
+def market_open(market_key: str, now: dt.datetime) -> bool:
+    """Is `market_key` inside its delay-adjusted trading session at `now`?
+
+    `now` must be timezone-aware in the market's own timezone. Crypto (session
+    None) is always open; stock markets are closed on weekends.
+    """
+    if not config.VIVEK_JOURNAL_MARKET_HOURS:
+        return True
+    sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
+    if sess is None:
+        return True                                  # 24/7 (crypto)
+    if now.weekday() >= 5:
+        return False                                 # weekend
+    oh, om, ch, cm = sess
+    delay = config.VIVEK_JOURNAL_FEED_DELAY_MIN
+    open_min = oh * 60 + om + delay
+    close_min = ch * 60 + cm + delay
+    cur = now.hour * 60 + now.minute
+    return open_min <= cur <= close_min
 
 
-def _snapshot(row: dict, tf: str, plan: dict, market: str) -> dict:
+def _r_of(price, entry, risk, is_long):
+    return (price - entry) / risk if is_long else (entry - price) / risk
+
+
+def _snapshot(row: dict, tf: str, plan: dict, market: str,
+              entry_price: float, day: str) -> dict | None:
+    """Open a paper trade at the current delayed intraday price.
+
+    Returns None to "not chase" — when the move has already played out (price at
+    or beyond TP1) or the entry would be on the wrong side of the stop.
+    """
     direction = "short" if str(row.get("dir", "LONG")).upper() == "SHORT" else "long"
+    is_long = direction == "long"
+    stop = plan["stop"]
+    tp1, tp2, tp3 = plan["tp1"], plan["tp2"], plan["tp3"]
+    if is_long:
+        if entry_price <= stop or entry_price >= tp1:
+            return None
+    else:
+        if entry_price >= stop or entry_price <= tp1:
+            return None
+    risk = abs(entry_price - stop)
+    if risk <= 0:
+        return None
     entry_type = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
-    entry = plan["entry"]
     return {
-        "id": _trade_id(row["symbol"], direction, tf, plan["trigger_bar"]),
+        "id": _trade_id(row["symbol"], direction, tf, day),
         "symbol": row["symbol"], "name": row.get("name", row["symbol"]),
         "sector": row.get("sector", ""), "market": market,
         "direction": direction, "grade": row["grade"], "entry_type": entry_type,
         "timeframe": tf,
-        "entry": entry, "stop": plan["stop"],
-        "tp1": plan["tp1"], "tp2": plan["tp2"], "tp3": plan["tp3"],
-        "scale": plan["scale"], "risk": plan["risk"], "rr": plan.get("rr"),
-        "entry_date": plan["trigger_bar"],
-        "opened_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "entry": round(entry_price, 8), "stop": stop,
+        "tp1": tp1, "tp2": tp2, "tp3": tp3,
+        "scale": plan["scale"], "risk": round(risk, 8),
+        "rr": round(abs(tp2 - entry_price) / risk, 2),
+        "trigger_bar": plan.get("trigger_bar"),       # the bar the trigger fired on (reference)
+        "entry_date": day, "opened_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "status": "open",
         "tp1_hit": False, "tp2_hit": False, "tp3_hit": False,
         "booked_pct": 0.0, "realized_r": 0.0, "exits": [],
-        "mae": entry, "mfe": entry, "_last_bar": None,
+        "mae": round(entry_price, 8), "mfe": round(entry_price, 8),
+        "mae_r": 0.0, "mfe_r": 0.0,
     }
 
 
-def _resolve(trade: dict, bars: list[dict]) -> dict:
-    """Advance an open paper trade through any bars after its last-processed bar.
+def _mark(trade: dict, price: float, day: str) -> None:
+    """Mark an open trade to the observed intraday `price` for this scan.
 
-    Pessimistic intrabar ordering: the stop is checked against the bar's adverse
-    extreme BEFORE booking any target on the favourable extreme, so a bar that
-    spans both resolves as a stop. Scale-outs + SL moves come from the bot's
-    manage_position (the same 5.0 rules); we add the stop-out + R accounting.
+    Single-price observation (no intrabar range), so there's no ambiguity: at
+    most one of {stop, TP scale-outs} resolves per scan. Books TPs at the TP
+    level (a resting limit), closes the stop at the observed price (so an
+    overnight gap fills at the gapped price), and moves the SL by the 5.0 rules.
     """
-    direction = trade["direction"]
-    is_long = direction == "long"
+    is_long = trade["direction"] == "long"
     entry, risk = trade["entry"], trade["risk"]
     if risk <= 0:
-        return trade
+        return
+    # running MAE/MFE from the prices we actually observe
+    trade["mfe"] = max(trade["mfe"], price) if is_long else min(trade["mfe"], price)
+    trade["mae"] = min(trade["mae"], price) if is_long else max(trade["mae"], price)
 
-    pos = {"symbol": trade["symbol"], "direction": direction, "entry": entry,
+    pos = {"symbol": trade["symbol"], "direction": trade["direction"], "entry": entry,
            "stop": trade["stop"], "tp1": trade["tp1"], "tp2": trade["tp2"],
            "tp3": trade["tp3"], "scale": trade["scale"],
-           "tp1_hit": trade["tp1_hit"], "tp2_hit": trade["tp2_hit"],
-           "tp3_hit": trade["tp3_hit"]}
-    booked = trade["booked_pct"]
-    realized = trade["realized_r"]
-    exits = list(trade["exits"])
-    mae, mfe = trade["mae"], trade["mfe"]
-    last = trade["_last_bar"]
-    start = trade["entry_date"]
+           "tp1_hit": trade["tp1_hit"], "tp2_hit": trade["tp2_hit"], "tp3_hit": trade["tp3_hit"]}
 
-    def r_of(price):
-        return (price - entry) / risk if is_long else (entry - price) / risk
-
-    closed = False
-    for b in bars:
-        if b["date"] <= start:              # entry bar and earlier — skip
-            continue
-        if last is not None and b["date"] <= last:
-            continue
-        adverse = b["low"] if is_long else b["high"]
-        favorable = b["high"] if is_long else b["low"]
-        mae = min(mae, adverse) if is_long else max(mae, adverse)
-        mfe = max(mfe, favorable) if is_long else min(mfe, favorable)
-        last = b["date"]
-
-        stop_hit = (adverse <= pos["stop"]) if is_long else (adverse >= pos["stop"])
-        if stop_hit:
-            remaining = round(1.0 - booked, 6)
-            if remaining > 1e-9:
-                px = pos["stop"]
-                exits.append({"reason": "stop", "price": px, "pct": remaining, "date": b["date"]})
-                realized += remaining * r_of(px)
-                booked += remaining
-            closed = True
-            trade["exit_price"] = pos["stop"]
-            trade["exit_date"] = b["date"]
-            break
-
-        for a in manage_position(pos, favorable):     # books TPs reached + moves SL
-            if a["action"] == "scale":
-                name = a["tp"].lower()                # "TP1" -> "tp1"
-                pct, px = a["book_pct"], pos[name]
-                exits.append({"reason": name, "price": px, "pct": pct, "date": b["date"]})
-                realized += pct * r_of(px)
-                booked += pct
-
-    trade["_last_bar"] = last
-    trade["exits"] = exits
-    trade["booked_pct"] = round(booked, 6)
-    trade["realized_r"] = round(realized, 4)
-    trade["mae"], trade["mfe"] = round(mae, 8), round(mfe, 8)
-    trade["mae_r"], trade["mfe_r"] = round(r_of(mae), 3), round(r_of(mfe), 3)
-    trade["tp1_hit"], trade["tp2_hit"], trade["tp3_hit"] = pos["tp1_hit"], pos["tp2_hit"], pos["tp3_hit"]
-    trade["stop"] = pos["stop"]
-    if closed:
+    stop_hit = price <= pos["stop"] if is_long else price >= pos["stop"]
+    if stop_hit:
+        remaining = round(1.0 - trade["booked_pct"], 6)
+        if remaining > 1e-9:
+            trade["exits"].append({"reason": "stop", "price": round(price, 8), "pct": remaining, "date": day})
+            trade["realized_r"] = round(trade["realized_r"] + remaining * _r_of(price, entry, risk, is_long), 4)
+            trade["booked_pct"] = 1.0
         trade["status"] = "closed"
+        trade["exit_price"] = round(price, 8)
+        trade["exit_date"] = day
         trade["exit_reason"] = ("target" if pos["tp3_hit"]
                                 else "trail" if pos["tp1_hit"] else "stop")
+    else:
+        for a in manage_position(pos, price):          # books TPs reached + moves SL
+            if a["action"] == "scale":
+                name = a["tp"].lower()
+                pct, px = a["book_pct"], pos[name]
+                trade["exits"].append({"reason": name, "price": px, "pct": pct, "date": day})
+                trade["realized_r"] = round(trade["realized_r"] + pct * _r_of(px, entry, risk, is_long), 4)
+                trade["booked_pct"] = round(trade["booked_pct"] + pct, 6)
+        trade["tp1_hit"], trade["tp2_hit"], trade["tp3_hit"] = pos["tp1_hit"], pos["tp2_hit"], pos["tp3_hit"]
+        trade["stop"] = pos["stop"]
+
+    trade["mae_r"] = round(_r_of(trade["mae"], entry, risk, is_long), 3)
+    trade["mfe_r"] = round(_r_of(trade["mfe"], entry, risk, is_long), 3)
+    if trade["status"] == "closed":
         try:
             d0 = dt.date.fromisoformat(trade["entry_date"])
             d1 = dt.date.fromisoformat(trade["exit_date"])
             trade["hold_days"] = (d1 - d0).days
         except Exception:
             trade["hold_days"] = None
-    return trade
 
 
 def _stats(trades: list[dict]) -> dict:
@@ -200,7 +203,7 @@ def _stats(trades: list[dict]) -> dict:
     return {
         "n": n,
         "win_rate": round(100 * len(wins) / n, 1),
-        "expectancy_r": round(sum(rs) / n, 3),       # the headline number
+        "expectancy_r": round(sum(rs) / n, 3),
         "total_r": round(sum(rs), 2),
         "avg_win_r": round(sum(wins) / len(wins), 3) if wins else 0.0,
         "avg_loss_r": round(sum(losses) / len(losses), 3) if losses else 0.0,
@@ -217,55 +220,77 @@ def expectancy(closed: list[dict]) -> dict:
     return {
         "overall": _stats(closed),
         "by_grade": split("grade", ["A+", "A"]),
-        "by_entry_type": split("entry_type", vivek.ENTRY_TYPES),
+        "by_entry_type": split("entry_type", config.VIVEK_TRIGGER_PRIORITY),
         "by_timeframe": split("timeframe", ["1D", "1W", "4H"]),
     }
 
 
-def update(market: str, results: list[dict], frames: dict, universe: list[dict]) -> dict:
-    """Snapshot newly-armed A/A+ setups, resolve this market's open trades, save.
+def _current_price(frames: dict, yf_ticker: str | None):
+    df = frames.get(yf_ticker) if yf_ticker else None
+    if df is None or len(df) == 0:
+        return None
+    try:
+        return float(df["Close"].iloc[-1])
+    except Exception:
+        return None
 
-    `frames` is the deep daily history keyed by yfinance ticker (reused from the
-    scan — no extra download); `universe` maps display symbol -> yf ticker.
+
+def update(market: str, results: list[dict], frames: dict, universe: list[dict],
+           now: dt.datetime | None = None) -> dict:
+    """Open newly-armed A/A+ setups at the current intraday price (market hours
+    only), mark this market's open trades to the observed price, and save.
+
+    `frames` is the deep daily history keyed by yfinance ticker — its last bar's
+    close is the latest (delayed) price during the session. `now` is injectable
+    for testing; it defaults to the market's local wall clock.
     """
+    mkt = config.MARKETS[market]
+    if now is None:
+        now = dt.datetime.now(ZoneInfo(mkt.timezone))
+    day = now.strftime("%Y-%m-%d")
+    is_open = market_open(market, now)
+
     j = _load()
     known = {t["id"] for t in j["open"]} | {t["id"] for t in j["closed"]}
     open_keys = {(t["symbol"], t["direction"], t["timeframe"])
                  for t in j["open"] if t.get("market") == market}
     yf_map = {u["symbol"]: u["yf"] for u in universe}
 
-    # 1) snapshot new ARMED A/A+ setups at their trigger price (per timeframe).
+    # 1) open new ARMED A/A+ setups at the current intraday price (session only).
     added = 0
-    for row in results:
-        if row.get("grade") not in ("A+", "A"):
-            continue
-        direction = "short" if str(row.get("dir", "LONG")).upper() == "SHORT" else "long"
-        plans = row.get("plans") or {}
-        for tf in TIMEFRAMES:
-            plan = plans.get(tf)
-            if not plan or not plan.get("armed") or not plan.get("trigger_bar"):
+    if is_open:
+        for row in results:
+            if row.get("grade") not in ("A+", "A"):
                 continue
-            tid = _trade_id(row["symbol"], direction, tf, plan["trigger_bar"])
-            if tid in known:
+            price = _current_price(frames, yf_map.get(row["symbol"]))
+            if price is None:
                 continue
-            if (row["symbol"], direction, tf) in open_keys:   # no pyramiding
-                continue
-            j["open"].append(_snapshot(row, tf, plan, market))
-            known.add(tid)
-            open_keys.add((row["symbol"], direction, tf))
-            added += 1
+            direction = "short" if str(row.get("dir", "LONG")).upper() == "SHORT" else "long"
+            plans = row.get("plans") or {}
+            for tf in TIMEFRAMES:
+                plan = plans.get(tf)
+                if not plan or not plan.get("armed"):
+                    continue
+                tid = _trade_id(row["symbol"], direction, tf, day)
+                if tid in known or (row["symbol"], direction, tf) in open_keys:
+                    continue
+                snap = _snapshot(row, tf, plan, market, price, day)
+                if snap is None:                       # don't chase / bad risk
+                    continue
+                j["open"].append(snap)
+                known.add(tid)
+                open_keys.add((row["symbol"], direction, tf))
+                added += 1
 
-    # 2) resolve this market's open trades against the freshly-downloaded bars.
+    # 2) mark this market's open trades to the observed price (session only).
     still_open, closed_now = [], 0
     for t in j["open"]:
         if t.get("market") != market:
             still_open.append(t)
             continue
-        df = frames.get(yf_map.get(t["symbol"]))
-        if df is None:
-            still_open.append(t)
-            continue
-        _resolve(t, _frame_to_bars(df, t["timeframe"]))
+        price = _current_price(frames, yf_map.get(t["symbol"]))
+        if is_open and price is not None:
+            _mark(t, price, day)
         if t["status"] == "closed":
             j["closed"].append(t)
             closed_now += 1
@@ -274,6 +299,7 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict])
     j["open"] = still_open
 
     _save(j)
-    log.info("vivek journal [%s]: +%d new, %d closed this run (%d open, %d closed total)",
-             market, added, closed_now, len(j["open"]), len(j["closed"]))
+    log.info("vivek journal [%s]: %s · +%d new, %d closed this run (%d open, %d closed total)",
+             market, "OPEN" if is_open else "closed-session",
+             added, closed_now, len(j["open"]), len(j["closed"]))
     return j

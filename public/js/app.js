@@ -1039,7 +1039,7 @@
           group("Grade", e.by_grade || {}, ["A+", "A"]) +
           group("Timeframe", e.by_timeframe || {}, ["1D", "1W", "4H"]) +
         `</div>` +
-        `<div class="trk-note">Paper trades from ARMED A+/A setups, entered at the trigger price and resolved by the 5.0 scale-out/SL rules. Early data — read directionally.</div>`;
+        `<div class="trk-note">Paper trades from ARMED A+/A setups — opened during market hours at the delayed intraday price and marked-to-market by the 5.0 scale-out/SL rules. Early data — read directionally.</div>`;
     } catch (_) { /* track record is optional */ }
   }
 

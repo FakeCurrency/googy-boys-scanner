@@ -284,6 +284,20 @@ VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
 VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)
 VIVEK_TP_SCALE_SHORT   = [0.50, 0.25, 0.15]   # shorts bank more, sooner
 
+# VIVEK paper journal — realistic intraday execution. Trades are only OPENED
+# during the (delayed) market session and entered at the delayed intraday price
+# at that moment; they then mark-to-market against the observed intraday price on
+# every market-hours scan — mirroring manual trading off a ~15-min-delayed feed.
+VIVEK_JOURNAL_MARKET_HOURS   = True    # gate new entries to the live session
+VIVEK_JOURNAL_FEED_DELAY_MIN = 15      # ~15-min delayed feed → action window shifts +15m
+# Base local session per market (pre-delay), as (open_h, open_m, close_h, close_m).
+# None = 24/7 (crypto). The feed delay is added to both ends at runtime.
+VIVEK_JOURNAL_SESSION = {
+    "asx":    (10, 0, 16, 0),
+    "nasdaq": (9, 30, 16, 0),
+    "crypto": None,
+}
+
 # Autonomous bot (Bybit testnet) — only take strong 5.0 matches.
 VIVEK_BOT_MIN_GRADE    = "A"       # bot trades A or better (A+/A); not B+/WATCH
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
