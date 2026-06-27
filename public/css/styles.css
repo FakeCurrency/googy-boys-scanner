@@ -528,47 +528,60 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .row-wrap.open .detail-inner > .row-detail,
 .row-wrap.open .detail-inner > .debug-panel { opacity: 1; transform: none; }
 
-/* ========================================================== detail panel */
-.row-detail { padding: 6px 24px 36px; }
+/* ====================================================== detail panel
+   Calmer, more premium layout: a dominant hero (Grade · Score · Entry · Stop ·
+   Target · R:R), then quiet, well-spaced secondary sections. Colour lives on the
+   numbers — surfaces stay neutral — so the key metrics read instantly without
+   visual noise. All class names are unchanged so the markup is untouched. */
+.row-detail { padding: 4px 26px 40px; }
+.row-detail > * + * { margin-top: 24px; }   /* one consistent vertical rhythm */
 
-/* ── hero trade card — full-color Grade badge + Entry · Stop · Target · R:R ── */
+/* ── hero trade card — the focal point ── */
 .detail-hero {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  border-radius: var(--radius-md);
+  grid-template-columns: 116px 1fr;
+  border-radius: var(--radius);
   overflow: hidden;
-  margin: 18px 0 20px;
+  margin: 22px 0 0;
+  background: var(--panel);
   box-shadow: var(--shadow);
-  border: 0.5px solid var(--separator);
+  border: 0.5px solid var(--border-soft);
 }
-/* Left: full-color grade badge — immediately signals A+/A/B/C */
+/* Left: Grade + Score — a calm colour panel (soft gradient, not a flat slab) */
 .dh-grade-block {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 22px 12px;
-  gap: 7px;
-  background: var(--gc, var(--grade-c));
+  padding: 26px 14px;
+  gap: 10px;
+  background:
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--gc, var(--grade-c)) 90%, #fff 10%),
+      color-mix(in srgb, var(--gc, var(--grade-c)) 84%, #000 8%));
 }
 .dh-grade-lbl {
   font: 700 9px/1 var(--sans);
-  letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.62);
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
 }
 .dh-grade-val {
-  font: 900 62px/0.88 var(--sans);
+  font: 800 54px/0.9 var(--sans);
   letter-spacing: -0.04em;
   color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.16);
 }
 .dh-score-val {
-  font: 700 13px/1 var(--sans);
-  letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.76);
+  font: 700 12px/1 var(--sans);
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.18);
+  padding: 4px 9px;
+  border-radius: 100px;
+  font-variant-numeric: tabular-nums;
 }
-/* Right: 4-cell metrics grid — Entry, Stop, Target, R:R */
+/* Right: Entry · Stop · Target · R:R — neutral cells, colour on the value only */
 .dh-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -577,47 +590,71 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 }
 .dh-metric {
   background: var(--panel);
-  padding: 24px 22px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
   min-width: 0;
 }
 .dh-lbl {
   font: 700 10px/1 var(--sans);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.11em;
   color: var(--muted);
   text-transform: uppercase;
 }
 .dh-val {
-  font: 800 26px/1 var(--sans);
+  font: 800 27px/1 var(--sans);
   letter-spacing: -0.03em;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .dh-val.low { color: var(--red); }
-.dh-unit { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 2px; }
-.dh-sub { font: 600 12px/1 var(--sans); }
+.dh-unit { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 1px; }
+.dh-sub { font: 600 12px/1 var(--sans); font-variant-numeric: tabular-nums; }
 .dh-sub.pos { color: var(--green); }
 .dh-sub.neg { color: var(--red); }
-.dh-stop   { background: color-mix(in srgb, var(--red)   7%, var(--panel)); }
+/* Meaning is carried by the coloured value + sub-%, not a tinted background. */
 .dh-stop   .dh-val { color: var(--red); }
-.dh-target { background: color-mix(in srgb, var(--green) 7%, var(--panel)); }
 .dh-target .dh-val { color: var(--green); }
-.dh-rr     { background: color-mix(in srgb, var(--blue)  7%, var(--panel)); }
 .dh-rr     .dh-val { color: var(--blue); }
 
-/* Signal chips inside the detail panel — calmer, quieter than in row view */
+/* Signal chips — quiet, roomy */
 .detail-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 22px;
+  gap: 7px;
 }
 
-/* price strip — quiet contextual market data */
+/* metadata bar — sector · mcap · count, very quiet just under the hero */
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.meta-item {
+  font: 500 12px/1 var(--sans);
+  color: var(--muted);
+  padding: 5px 11px;
+  background: var(--fill-2);
+  border-radius: 100px;
+}
+.meta-item.accent-orange { color: var(--orange); background: var(--orange-soft); }
+
+/* analysis — clean, readable callout with a grade-coloured edge */
+.rd-analysis {
+  padding: 18px 22px;
+  background: var(--fill-2);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--grade-color, var(--blue));
+}
+.rd-tag { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+.rd-analysis p { margin: 0; font: 400 15px/1.7 var(--sans); color: var(--text-2); }
+.rd-k { font: 700 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }
+
+/* price strip — secondary market context, deliberately understated */
 .detail-prices {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -625,11 +662,10 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   background: var(--separator);
   border-radius: var(--radius-md);
   overflow: hidden;
-  margin: 0 0 22px;
 }
 .dp-cell {
-  background: var(--fill-2);
-  padding: 13px 16px;
+  background: var(--panel);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -641,50 +677,21 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   text-transform: uppercase;
 }
 .dp-val {
-  font: 700 14px/1.1 var(--sans);
+  font: 600 14px/1.1 var(--sans);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 .dp-val .pcell-pct { font-size: 11px; font-weight: 600; margin-left: 3px; }
 .dp-val.pct-up { color: var(--green); }
 .dp-val.pct-down { color: var(--red); }
 
-/* detail metadata bar — sector · mcap · count, quietly below the hero */
-.detail-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -4px 0 20px;
-}
-.meta-item {
-  font: 500 12px/1 var(--sans);
-  color: var(--muted);
-  padding: 4px 10px;
-  background: var(--fill-2);
-  border-radius: 100px;
-}
-.meta-item.accent-orange { color: var(--orange); background: var(--orange-soft); }
-
-/* analysis section — callout card with grade-colored accent bar */
-.rd-analysis {
-  margin: 0 0 22px;
-  padding: 16px 20px;
-  background: var(--fill-2);
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--grade-color, var(--blue));
-}
-.rd-tag { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
-.rd-analysis p { margin: 0; font: 400 15px/1.75 var(--sans); color: var(--text-2); }
-.rd-k { font: 700 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }
-
-/* ── logical grouping: each related cluster sits in its own calm card ── */
+/* ── secondary clusters: each a calm, generously-padded card ── */
 .rd-group {
   background: var(--fill-2);
-  border: 0.5px solid var(--separator);
+  border: 0.5px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: 0 20px 20px;
-  margin-bottom: 14px;
+  padding: 4px 22px 22px;
 }
-.rd-group:last-child { margin-bottom: 0; }
 .rd-group > .rd-volume-bare:last-child,
 .rd-group > .rd-fast:last-child,
 .rd-group > .rd-structure:last-child { border-bottom: 0; }
@@ -692,11 +699,11 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   display: flex;
   align-items: center;
   gap: 10px;
-  font: 700 11.5px/1 var(--sans);
-  letter-spacing: 0.08em;
+  font: 700 11px/1 var(--sans);
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 20px 0 14px;
+  padding: 22px 0 15px;
   border-bottom: 0.5px solid var(--separator);
   margin-bottom: 4px;
 }
@@ -712,24 +719,24 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .rd-section-note.pct-down { color: var(--red); }
 .rd-section-note:first-of-type { margin-left: auto; }
 
-/* key level rows */
+/* key-level rows */
 .rd-levels { padding: 0; }
 .dl-row {
   display: grid;
   grid-template-columns: 140px 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 17px 0;
-  border-bottom: 0.5px solid var(--separator);
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--border-soft);
 }
 .rd-levels .dl-row:last-child { border-bottom: 0; }
-.dl-label { font: 500 13px/1 var(--sans); letter-spacing: 0; color: var(--text-2); }
+.dl-label { font: 500 13px/1 var(--sans); color: var(--text-2); }
 .dl-label.red { color: var(--red); }
 .dl-label.green { color: var(--green); }
-.dl-val { font: 700 19px/1 var(--sans); color: var(--text); }
-.dl-pct { font: 600 13px/1 var(--sans); text-align: right; }
+.dl-val { font: 700 18px/1 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
+.dl-pct { font: 600 13px/1 var(--sans); text-align: right; font-variant-numeric: tabular-nums; }
 
-/* trailing stop — inline accent row inside its group */
+/* trailing stop — quiet accent row */
 .rd-trail {
   display: flex;
   align-items: center;
@@ -740,7 +747,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   border-top: 0.5px solid var(--separator);
 }
 .rd-trail-label { font: 600 13px/1 var(--sans); color: var(--orange); flex-shrink: 0; }
-.rd-trail-val { font: 700 17px/1 var(--sans); color: var(--orange); }
+.rd-trail-val { font: 700 17px/1 var(--sans); color: var(--orange); font-variant-numeric: tabular-nums; }
 .rd-trail-note { font: 500 12px/1 var(--sans); color: var(--muted); margin-left: auto; }
 
 /* volume / rsi info rows */
@@ -754,11 +761,11 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   border-radius: var(--radius-md);
 }
 .rd-volume-bare {
-  padding: 15px 0;
+  padding: 16px 0;
   margin-bottom: 0;
   background: transparent;
   border-radius: 0;
-  border-bottom: 0.5px solid var(--separator);
+  border-bottom: 0.5px solid var(--border-soft);
 }
 .rd-vol { font: 700 15px/1.2 var(--sans); color: var(--text); }
 .rd-vol.green { color: var(--green); }
@@ -768,18 +775,18 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .rd-ema { padding: 14px 16px; margin-bottom: 10px; background: var(--fill-2); border-radius: var(--radius-md); }
 .rd-ema-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .rd-ema-head .rd-spread { margin-left: auto; font: 500 12px/1 var(--sans); color: var(--muted); }
-.rd-ladder { display: flex; align-items: center; gap: 8px; padding: 14px 0 12px; }
+.rd-ladder { display: flex; align-items: center; gap: 8px; padding: 16px 0 12px; }
 .el-ema { font: 700 15px/1 var(--sans); }
 .el-gt { color: var(--muted-2); }
-.rd-fast { display: grid; gap: 12px; padding: 6px 0 14px; border-bottom: 0.5px solid var(--separator); }
+.rd-fast { display: grid; gap: 14px; padding: 6px 0 16px; border-bottom: 0.5px solid var(--border-soft); }
 .fl-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px; }
 .fl-label { font: 500 13px/1 var(--sans); color: var(--text-2); }
 .fl-ema { font: 700 11px/1 var(--sans); }
-.fl-val { font: 600 15px/1 var(--sans); color: var(--text); }
-.fl-pct { font: 600 13px/1 var(--sans); }
+.fl-val { font: 600 15px/1 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
+.fl-pct { font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; }
 
 /* structure */
-.rd-structure { padding: 15px 0 4px; }
+.rd-structure { padding: 16px 0 4px; }
 .rd-swings { margin-top: 10px; font: 400 13px/1.75 var(--sans); color: var(--text-2); }
 
 /* utility colours */
