@@ -109,6 +109,16 @@ def test_targets_fall_back_to_r_multiples_without_structure():
     assert lv["stop"] < lv["entry"] < lv["tp1"] < lv["tp2"] < lv["tp3"]
 
 
+def test_short_targets_never_go_negative():
+    # A penny-stock short with a wide stop would push an R-multiple TP below zero.
+    df = _spiked_frame([])                              # no structure → R-multiple fallback
+    sig = {"direction": "short", "close": 0.12, "atr": 0.04,
+           "swing_low": 0.10, "swing_high": 0.121, "level": 0.121}
+    lv = vivek.compute_levels(df, sig)
+    assert lv["tp1"] > 0 and lv["tp2"] > 0 and lv["tp3"] > 0          # no negative prices
+    assert lv["stop"] > lv["entry"] > lv["tp1"] > lv["tp2"] > lv["tp3"]   # still ordered
+
+
 # ── #2 selectivity gate ─────────────────────────────────────────────────────────
 
 def test_gate_keeps_clean_high_rr_setup():

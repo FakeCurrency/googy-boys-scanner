@@ -266,6 +266,14 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
         tps.append(cand)
         basis.append("measured")
 
+    # A short's price can't go below zero, so a far R-multiple fallback must not
+    # imply a negative target. Floor short TPs at a small fraction of entry while
+    # keeping them strictly descending.
+    if direction == "short":
+        floor = entry * config.VIVEK_SHORT_TP_FLOOR
+        eps = entry * 0.001
+        tps = [max(tps[i], floor + (2 - i) * eps) for i in range(3)]
+
     rr = round(abs(tps[1] - entry) / risk, 2)   # headline R:R to the ACTUAL TP2
 
     def rnd(v):

@@ -261,6 +261,7 @@ VIVEK_TP_MAX_R         = 10.0      # ignore structure further than this (unreali
 VIVEK_TP_CLUSTER_R     = 0.6       # merge structural levels within this many R of each other
 VIVEK_TP_R             = [1.5, 3.0, 5.0]   # fallback TP1/TP2/TP3 when structure is thin
 VIVEK_MIN_TRADEABLE_RR = 1.5       # A/A+ need at least this R:R to TP2, else demote to B+
+VIVEK_SHORT_TP_FLOOR   = 0.05      # a short's targets can't fall below 5% of entry (price→0 floor)
 
 # 5.0 execution rules (used by the autonomous bot + dashboard)
 VIVEK_RISK_PCT_DEFAULT = 0.25      # % of equity risked per trade (0.25–0.5 range)
