@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=31" />
-  <link rel="stylesheet" href="css/journal.css?v=9" />
+  <link rel="stylesheet" href="css/styles.css?v=32" />
+  <link rel="stylesheet" href="css/journal.css?v=10" />
 </head>
 <body>
   <header class="topbar">
@@ -30,7 +30,7 @@
       <p class="jr-config">Max 10 positions per journal &nbsp;·&nbsp; $1,000 AUD per trade &nbsp;·&nbsp; $5 brokerage each way</p>
     </div>
 
-    <!-- OVERALL / LONGS / SHORTS / SCALP tab selector -->
+    <!-- OVERALL / LONGS / SHORTS / MY STOCKS / MY CRYPTO tab selector -->
     <div class="jr-tabs" role="tablist">
       <button class="jr-tab jr-tab-all is-active" data-journal="all" role="tab" aria-selected="true">
         <span class="jr-tab-arrow">Σ</span> Overall &nbsp;<span class="jr-tab-label">ALL</span>
@@ -40,9 +40,6 @@
       </button>
       <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">↓</span> Journal 2 &nbsp;<span class="jr-tab-label">SHORTS</span>
-      </button>
-      <button class="jr-tab jr-tab-scalp" data-journal="scalp" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">🎯</span> Scalp &nbsp;<span class="jr-tab-label">INTRADAY</span>
       </button>
       <button class="jr-tab jr-tab-stocks" data-journal="stocks" role="tab" aria-selected="false">
         <span class="jr-tab-arrow">📈</span> My Stocks &nbsp;<span class="jr-tab-label">ASX/NAS</span>
@@ -65,7 +62,7 @@
         <div id="jr-all-equity" class="jr-equity-chart"></div>
       </section>
 
-      <p class="jr-sub" style="margin-top:14px">The scoreboard pits the scanner's auto-picked paper trades (Longs, Shorts, Scalp) against the trades you log by hand (My Stocks, My Crypto) — head to head, by dollar P&amp;L. Use the tabs above to drill into each journal.</p>
+      <p class="jr-sub" style="margin-top:14px">The scoreboard pits the scanner's auto-picked paper trades (Longs, Shorts) against the trades you log by hand (My Stocks, My Crypto) — head to head, by dollar P&amp;L. Use the tabs above to drill into each journal.</p>
     </div>
 
     <!-- ── LONGS ── -->
@@ -107,26 +104,6 @@
         <div class="jr-table-wrap" id="jr-short-closed"></div>
       </section>
     </div>
-    <!-- ── SCALP ── -->
-    <div id="jr-scalp-section" class="jr-hidden">
-      <section class="stats" id="jr-scalp-stats"></section>
-
-      <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, all scalp trades)</span></div>
-        <div id="jr-scalp-equity" class="jr-equity-chart"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Open scalp positions <span id="jr-scalp-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-scalp-open"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Closed scalp trades <span id="jr-scalp-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-scalp-closed"></div>
-      </section>
-    </div>
-
     <!-- shared sync bar for all manual journals -->
     <div id="jr-shared-sync" class="jr-hidden">
       <div class="mj-sync">
@@ -334,6 +311,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/journal.js?v=22"></script>
+  <script src="js/journal.js?v=23"></script>
 </body>
 </html>

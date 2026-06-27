@@ -32,14 +32,13 @@
       if (p.mode)   state.mode   = p.mode;
       if (p.tab)    state.tab    = p.tab;
       if (p.sort)   state.sort   = p.sort;
-      if (p.scalp_type) state.scalp_type = p.scalp_type;
     } catch (_) {}
   }
   function savePrefs() {
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         market: state.market, mode: state.mode,
-        tab: state.tab, sort: state.sort, scalp_type: state.scalp_type,
+        tab: state.tab, sort: state.sort,
       }));
     } catch (_) {}
   }
@@ -89,8 +88,7 @@
       _updateRefreshBadge();
       if (_refreshRemaining <= 0) {
         _refreshRemaining = AUTO_REFRESH_S;
-        const key = state.mode === "scalp" && state.scalp_type === "crypto"
-          ? "scalp:crypto" : `${state.market}:${state.mode}`;
+        const key = `${state.market}:${state.mode}`;
         delete state.cache[key];
         localStorage.removeItem(CACHE_PREFIX + key);
         load(true);
@@ -100,11 +98,10 @@
 
   const state = {
     market: "asx",
-    mode: "pullback",   // pullback | reversal | spec | short | scalp
+    mode: "pullback",   // pullback | reversal | spec | short | googy
     view: "results",    // results | watch
     tab: "aplus",       // aplus | a | watch
     sort: "score",      // score | price | rr | az
-    scalp_type: "all",  // all | index | commodity | asx | nasdaq
     data: null,
     cache: {},
     cur: "$",
@@ -124,11 +121,6 @@
     });
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
     document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.sort === state.sort));
-    const isScalp = state.mode === "scalp";
-    const scalp_banner = document.getElementById("scalp-banner");
-    if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
-    const riskDash = document.getElementById("risk-dashboard");
-    if (riskDash) riskDash.style.display = isScalp ? "" : "none";
   })();
 
   const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
@@ -342,10 +334,7 @@
     const sector = (r.sector && !hasSectorCount) ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
     const seccount = hasSectorCount
       ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
-    // Asset badge is meaningful for scalp (crypto vs index vs commodity); suppress
-    // for daily scanners where the market tab already conveys this.
-    const assetBadge = (r.asset_type && state.mode === "scalp")
-      ? `<span class="badge asset-${esc(r.asset_type)}">${up(r.asset_type)}</span>` : "";
+    const assetBadge = "";
     const rawMcap = mcapOf(r.symbol);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
@@ -357,9 +346,7 @@
     const rrCls = r.low_rr ? "low" : "";
     const starred = isStarred(r.symbol);
 
-    const chartHref = (state.mode === "scalp")
-      ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
-      : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
@@ -474,79 +461,6 @@
     ).join("")}</div>`;
   }
 
-  function detailHtmlScalp(r) {
-    const d       = r.detail || {};
-    const cur     = r.asset_type === "asx" ? "A$" : "$";
-    const isShort = r.dir === "SHORT";
-    const lvl = (label, val, pct, cls) => val == null ? "" :
-      `<div class="dl-row"><span class="dl-label ${cls||""}">${label}</span>
-        <span class="dl-val">${cur}${num(val)}</span>
-        <span class="dl-pct ${pct>=0?"pct-up":"pct-down"}">${fmtPct(pct)}</span></div>`;
-    const band = (label, val) => val == null ? "" :
-      `<div class="fl-row"><span class="fl-label">${label}</span><span class="fl-val">${cur}${num(val)}</span></div>`;
-    const sqCls  = d.sq_state === "FIRED" ? "green" : d.sq_state === "BUILDING" ? "accent-orange" : "muted";
-    const momAbs = Math.abs(d.mom_val || 0);
-    const momDir = (d.mom_val || 0) >= 0 ? "▲" : "▼";
-    const momCls = (d.mom_val || 0) >= 0 ? "green" : "pct-down";
-    const stopPct   = isShort ? +(d.stop_pct   || 0) : -(d.stop_pct   || 0);
-    const targetPct = isShort ? -(d.target_pct || 0) : +(d.target_pct || 0);
-    const effRR  = d.eff_rr || 0;
-    const effCls = effRR >= 1 ? "green" : "pct-down";
-    const npCls  = (d.net_profit || 0) >= 0 ? "green" : "pct-down";
-    return `<div class="row-detail">
-      ${heroStrip(r, cur, d.entry, d.stop, d.target, stopPct, targetPct)}
-      ${chipsBar(r)}
-      ${metaBar(r)}
-      <div class="rd-analysis"><p>${esc(r.analysis || "")}</p></div>
-      ${priceStrip(r)}
-
-      <div class="rd-group">
-        <div class="rd-section">Key levels</div>
-        <div class="rd-levels">
-          ${lvl("Swing low",   d.swing_low,          d.swing_low_pct,  "red")}
-          ${lvl("Support",     d.nearest_support,    d.support_pct,    "red")}
-          ${lvl("Resistance",  d.nearest_resistance, d.resistance_pct, "green")}
-          ${lvl("Swing high",  d.swing_high,         d.swing_high_pct, "green")}
-          ${band("ATR (14)", d.atr)}
-        </div>
-      </div>
-
-      <div class="rd-group">
-        <div class="rd-section">Position <span class="rd-section-note">${cur}${(d.notional||0).toLocaleString()} notional · ${d.units||0} units</span></div>
-        <div class="rd-levels">
-          <div class="dl-row"><span class="dl-label red">Risk at stop</span>
-            <span class="dl-val red">−${cur}${num(d.risk_dollars)}</span>
-            <span class="dl-pct muted">+${cur}${d.brokerage_rt||0} brok</span></div>
-          <div class="dl-row"><span class="dl-label green">Reward at target</span>
-            <span class="dl-val green">+${cur}${num(d.reward_dollars)}</span>
-            <span class="dl-pct muted">−${cur}${d.brokerage_rt||0} brok</span></div>
-          <div class="dl-row"><span class="dl-label">Net loss (incl. brok)</span>
-            <span class="dl-val red">−${cur}${num(d.net_loss)}</span><span class="dl-pct"></span></div>
-          <div class="dl-row"><span class="dl-label">Net profit (incl. brok)</span>
-            <span class="dl-val ${npCls}">+${cur}${num(d.net_profit)}</span><span class="dl-pct"></span></div>
-          <div class="dl-row"><span class="dl-label">Effective R:R</span>
-            <span class="dl-val ${effCls}">${effRR.toFixed(2)}:1</span>
-            <span class="dl-pct muted">after brokerage</span></div>
-        </div>
-      </div>
-
-      <div class="rd-group">
-        <div class="rd-section">TTM squeeze
-          <span class="rd-section-note ${sqCls}">${d.sq_state||"—"}</span>
-          <span class="rd-section-note ${momCls}">MOM ${momDir} ${momAbs.toFixed(4)}</span></div>
-        <div class="rd-fast">
-          ${band("BB upper", d.bb_upper)}${band("BB mid", d.bb_mid)}${band("BB lower", d.bb_lower)}
-          ${band("KC upper", d.kc_upper)}${band("KC lower", d.kc_lower)}
-        </div>
-        <div class="rd-volume rd-volume-bare">
-          <span class="rd-k">Volume (1h)</span>
-          <span class="rd-vol ${d.volume_expanding?"green":""}">${d.volume_ratio}× ${d.volume_expanding?"Expanding":"Normal"}</span>
-          <span class="rd-vol-note">${fmtK(d.volume_today)} vs ${fmtK(d.volume_avg)} avg</span>
-        </div>
-      </div>
-    </div>`;
-  }
-
   function debugDetailHtml(r) {
     const d = r.detail || {};
     const fields = [
@@ -574,7 +488,6 @@
   function detailHtml(r) {
     const stype = (r.detail || {}).setup_type;
     if (stype === "reversal" || stype === "spec") return detailHtmlReversal(r);
-    if (stype === "scalp") return detailHtmlScalp(r);
     if (stype === "googy") return detailHtmlGoogy(r);
     const d = r.detail || {};
     const cur = state.cur;
@@ -791,10 +704,6 @@
     } else {
       list = all.filter((r) => r.grade === "B" || r.grade === "C");
     }
-    // Scalp: filter by asset type
-    if (state.mode === "scalp" && state.scalp_type && state.scalp_type !== "all") {
-      list = list.filter((r) => r.asset_type === state.scalp_type);
-    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -826,7 +735,6 @@
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
-    if (state.mode === "scalp") loadHealthStatus();
     renderPulse(d.pulse);
     refreshPulseLive(d.pulse);
     renderLegend(d);
@@ -839,9 +747,7 @@
   }
 
   const dataFile = (market, mode) =>
-    mode === "scalp" && state.scalp_type === "crypto" ? `data/scalp_crypto.json`
-      : mode === "scalp"    ? `data/scalp.json`
-      : mode === "reversal" ? `data/${market}_reversal.json`
+    mode === "reversal" ? `data/${market}_reversal.json`
       : mode === "spec"     ? `data/${market}_spec.json`
       : mode === "short"    ? `data/${market}_short.json`
       : mode === "googy"    ? `data/${market}_googy.json`
@@ -864,90 +770,9 @@
     } catch (_) { /* caps are optional */ }
   }
 
-  async function loadHealthStatus() {
-    try {
-      const r = await fetch("data/health.json", { cache: "no-cache" });
-      if (!r.ok) return;
-      const h = await r.json();
-      const el = $("#scan-sub");
-      if (!el) return;
-      const entries = Object.entries(h).filter(([k]) => k !== "updated_at");
-      if (!entries.length) return;
-      const parts = entries.map(([key, info]) => {
-        const label = key === "scalp_crypto" ? "Crypto" : key === "scalp" ? "Scalp" : key.toUpperCase();
-        const ts = info.generated_at || "";
-        let age = "";
-        if (ts) {
-          const mins = Math.round((Date.now() - new Date(ts + "Z").getTime()) / 60000);
-          age = mins < 60 ? ` ${mins}m ago` : ` ${Math.round(mins/60)}h ago`;
-        }
-        const dq = info.quality_skipped ? ` · ${info.quality_skipped} dq` : "";
-        return `${label}: ${info.tradeable ?? "?"} A+/A${dq}${age}`;
-      });
-      el.textContent = parts.join("  ·  ");
-    } catch (_) {}
-  }
-
-  async function loadRiskDashboard() {
-    try {
-      const r = await fetch("data/scalp_journal.json", { cache: "no-cache" });
-      if (!r.ok) return;
-      const j = await r.json();
-      const s = j.stats || {};
-      const longs  = s.longs  || {};
-      const shorts = s.shorts || {};
-
-      // Trades today
-      const tradesEl  = $("#rd-trades"), tradesSub = $("#rd-trades-sub");
-      const tradesToday = s.today_trades || 0, maxTrades = s.max_daily_trades || 5;
-      if (tradesEl) { tradesEl.textContent = `${tradesToday} / ${maxTrades}`; tradesEl.className = "rd-tile-val" + (tradesToday >= maxTrades ? " red" : tradesToday >= 3 ? " accent-orange" : " green"); }
-      if (tradesSub) tradesSub.textContent = `${s.trades_left_today ?? (maxTrades - tradesToday)} remaining`;
-
-      // Today P&L
-      const pnlEl = $("#rd-pnl"), pnlSub = $("#rd-pnl-sub");
-      const todayPnl = s.today_pnl || 0, maxLoss = s.max_daily_loss || 500;
-      if (pnlEl) { pnlEl.textContent = `${todayPnl >= 0 ? "+" : ""}$${todayPnl.toFixed(2)}`; pnlEl.className = "rd-tile-val" + (todayPnl <= -maxLoss ? " red" : todayPnl < 0 ? " accent-orange" : " green"); }
-      if (pnlSub) { const pct = Math.min(100, Math.abs(todayPnl) / maxLoss * 100); pnlSub.textContent = `${pct.toFixed(0)}% of $${maxLoss} limit`; }
-
-      // Open longs
-      const longsEl = $("#rd-longs"), longsSub = $("#rd-longs-sub");
-      if (longsEl) longsEl.textContent = longs.open ?? "0";
-      if (longsSub) { const unreal = longs.open_unrealised_pnl || 0; longsSub.textContent = `Unreal: ${unreal >= 0 ? "+" : ""}$${unreal.toFixed(2)}`; longsSub.className = "rd-tile-sub" + (unreal >= 0 ? " green" : " red"); }
-
-      // Open shorts
-      const shortsEl = $("#rd-shorts"), shortsSub = $("#rd-shorts-sub");
-      if (shortsEl) shortsEl.textContent = shorts.open ?? "0";
-      if (shortsSub) { const unreal = shorts.open_unrealised_pnl || 0; shortsSub.textContent = `Unreal: ${unreal >= 0 ? "+" : ""}$${unreal.toFixed(2)}`; shortsSub.className = "rd-tile-sub" + (unreal >= 0 ? " green" : " red"); }
-
-      // Correlation group exposure
-      const groups = s.group_exposure || {};
-      const groupsEl = $("#rd-groups");
-      if (groupsEl) {
-        const maxPerGroup = s.max_per_group || 2;
-        const html = Object.entries(groups).map(([g, n]) => {
-          const cls = n >= maxPerGroup ? "rg-cap" : "";
-          return `<span class="rg-chip ${cls}">${g.toUpperCase()} <strong>${n}/${maxPerGroup}</strong></span>`;
-        }).join("") || `<span class="rg-chip muted">No open positions</span>`;
-        groupsEl.innerHTML = `<span class="rd-groups-label">GROUP EXPOSURE</span>${html}`;
-      }
-
-      // Mode badge (#7)
-      const modeEl = $("#rd-mode");
-      if (modeEl) {
-        const mode = j.broker_mode || "";
-        if (mode) {
-          modeEl.textContent = mode;
-          const cls = mode === "LIVE ⚠️" ? " live-mode" : mode === "SIMULATED" ? " sim-mode" : " testnet-mode";
-          modeEl.className = "rd-mode" + cls;
-        }
-      }
-    } catch (_) {}
-  }
-
   async function load(silent = false) {
     const { market, mode } = state;
-    const key = mode === "scalp" && state.scalp_type === "crypto"
-      ? "scalp:crypto" : `${market}:${mode}`;
+    const key = `${market}:${mode}`;
     if (!silent) {
       $("#scan-title").textContent = "Loading latest scan…";
       skeleton();
@@ -1035,18 +860,6 @@
 
   // ----------------------------------------------------------- events
   function bind() {
-    // In scalp mode the top switch reflects the scalp asset filter (asx/nasdaq/
-    // crypto); outside scalp it reflects the chosen market.
-    function syncScalpUI() {
-      document.querySelectorAll(".market-btn").forEach((x) => {
-        const on = x.dataset.market === state.scalp_type;
-        x.classList.toggle("is-active", on);
-        x.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      document.querySelectorAll("[data-scalp-type]").forEach((x) => {
-        x.classList.toggle("is-active", (x.getAttribute("data-scalp-type") || "all") === state.scalp_type);
-      });
-    }
     function syncMarketUI() {
       document.querySelectorAll(".market-btn").forEach((x) => {
         const on = x.dataset.market === state.market;
@@ -1054,21 +867,8 @@
         x.setAttribute("aria-selected", on ? "true" : "false");
       });
     }
-    // Apply a scalp asset filter, reloading only when the data file changes
-    // (crypto scalps live in a separate file from the rest).
-    function setScalpType(type) {
-      if (state.scalp_type === type) return;
-      const prevType = state.scalp_type;
-      state.scalp_type = type;
-      savePrefs();
-      syncScalpUI();
-      const needsReload = (prevType === "crypto") !== (state.scalp_type === "crypto");
-      if (needsReload) load(); else renderRows();
-    }
 
     document.querySelectorAll(".market-btn").forEach((b) => b.addEventListener("click", () => {
-      // In scalp mode the market switch doubles as the scalp asset-type filter.
-      if (state.mode === "scalp") { setScalpType(b.dataset.market); return; }
       if (b.classList.contains("is-active")) return;
       document.querySelectorAll(".market-btn").forEach((x) => {
         x.classList.toggle("is-active", x === b);
@@ -1159,21 +959,8 @@
       });
       state.mode = b.dataset.mode;
       savePrefs();
-      const isScalp = state.mode === "scalp";
-      const scalp_banner = $("#scalp-banner");
-      if (scalp_banner) scalp_banner.style.display = isScalp ? "" : "none";
-      const riskDash = $("#risk-dashboard");
-      if (riskDash) { riskDash.style.display = isScalp ? "" : "none"; if (isScalp) loadRiskDashboard(); }
-      // Top switch stays fully active in scalp mode, where it acts as the scalp
-      // asset filter; otherwise it reflects the chosen market.
-      if (isScalp) syncScalpUI(); else syncMarketUI();
+      syncMarketUI();
       load();
-    }));
-
-    // Scalp asset-type filter (banner row) — shares logic + UI sync with the
-    // top market switch so the two never disagree.
-    document.querySelectorAll("[data-scalp-type]").forEach((b) => b.addEventListener("click", () => {
-      setScalpType(b.getAttribute("data-scalp-type") || "all");
     }));
 
     document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
@@ -1224,9 +1011,7 @@
         return;
       }
       searchResults.innerHTML = hits.map((r) => {
-        const href = state.mode === "scalp"
-          ? `chart.html?m=scalp&s=${encodeURIComponent(r.symbol + "_" + String(r.dir || "").toLowerCase())}`
-          : `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
+        const href = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
         return `<a class="sr-row" href="${href}">
           <span class="sr-grade" style="color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">${esc(r.grade)}</span>
           <span class="sr-sym">${esc(r.symbol)}</span>

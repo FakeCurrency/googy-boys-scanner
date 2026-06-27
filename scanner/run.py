@@ -53,40 +53,14 @@ def main() -> None:
         help="skip the Shorts (bearish pullback) scan",
     )
     parser.add_argument(
-        "--no-scalp", action="store_true",
-        help="skip the intraday scalp scan",
-    )
-    parser.add_argument(
         "--no-googy", action="store_true",
         help="skip the Googy consolidation breakout scan",
-    )
-    parser.add_argument(
-        "--scalp-only", action="store_true", dest="scalp_only",
-        help="skip daily market scans; run only the intraday scalp scan (and sectors ETF fetch)",
-    )
-    parser.add_argument(
-        "--crypto-scalp-only", action="store_true", dest="crypto_scalp_only",
-        help="run only the 24/7 crypto scalp scan; write scalp_crypto.json and exit",
     )
     parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
     )
     args = parser.parse_args()
-
-    # Fast-path: crypto-only mode — download crypto 1h data, run scalp engine, write file, exit.
-    if args.crypto_scalp_only:
-        print("Scanning CRYPTO SCALP (1h, 24/7) ...", flush=True)
-        sc = scan.scan_scalp(type_filter="crypto")
-        if not sc.get("scanned"):
-            print("  no data (download blocked/empty) — keeping existing scalp_crypto.json", flush=True)
-            return
-        out_path = pathlib.Path(args.out) / "scalp_crypto.json"
-        out_path.write_text(json.dumps(sc, indent=2), encoding="utf-8")
-        cnt = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
-        print(f"  crypto scalp: {len(sc['results'])} setups ({cnt} A+/A) "
-              f"across {sc['scanned']} instruments → {out_path}")
-        return
 
     def tradeable(payload):
         return sum(1 for r in payload["results"] if r["grade"] in config.TRADEABLE_GRADES)
@@ -97,7 +71,7 @@ def main() -> None:
     mover_inputs: dict[str, tuple] = {}
     MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
 
-    markets = [] if args.scalp_only else (args.market or list(config.MARKETS))
+    markets = args.market or list(config.MARKETS)
     for market_key in markets:
         market = config.MARKETS[market_key]
         print(f"Scanning {market.label} ...", flush=True)
@@ -153,29 +127,6 @@ def main() -> None:
                 print(f"  googy: {len(gg['results'])} setups ({tradeable(gg)} A+/A)")
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
-
-    # 5) Cross-asset scalp scan (1h, all markets combined) -> scalp.json
-    if not args.no_scalp:
-        print("Scanning SCALP (1h intraday) ...", flush=True)
-        sc = scan.scan_scalp(out_root=args.out)
-        if not sc.get("scanned"):
-            print("  no scalp data (download blocked/empty) — keeping existing scalp.json", flush=True)
-        else:
-            (pathlib.Path(args.out) / "scalp.json").write_text(
-                json.dumps(sc, indent=2), encoding="utf-8")
-            tradeable_scalp = sum(1 for r in sc["results"] if r["grade"] in config.TRADEABLE_GRADES)
-            print(f"  scalp: {len(sc['results'])} setups ({tradeable_scalp} A+/A) "
-                  f"across {sc['scanned']} instruments")
-
-            from . import scalp_journal as _sj
-            print("Updating scalp journal ...", flush=True)
-            sj = _sj._load()
-            sj = _sj.update_scalp(sj)
-            _sj._save(sj)
-            sj_s = _sj.summarize(sj)
-            print(f"  scalp journal: {sj_s['longs']['open'] + sj_s['shorts']['open']} open | "
-                  f"{sj_s['longs']['closed'] + sj_s['shorts']['closed']} closed | "
-                  f"today: {sj_s['today_trades']} trades · ${sj_s['today_pnl']:+.0f} P&L")
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     from . import sectors as _sectors

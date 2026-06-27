@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=31" />
+  <link rel="stylesheet" href="css/styles.css?v=32" />
 </head>
 <body>
   <header class="topbar">
@@ -59,12 +59,12 @@
 
     <!-- ROW 2 — scan type · search · run scan · timer -->
     <div class="topbar-row2">
+      <span class="setups-title" aria-hidden="true">SET&nbsp;UPS</span>
       <div class="scan-switch" role="tablist" aria-label="Scan type">
         <button class="scan-btn is-active" data-mode="pullback" role="tab" aria-selected="true">Pullback</button>
         <button class="scan-btn" data-mode="reversal" role="tab" aria-selected="false">Reversal</button>
         <button class="scan-btn" data-mode="spec" role="tab" aria-selected="false">Spec</button>
         <button class="scan-btn scan-btn-short" data-mode="short" role="tab" aria-selected="false">Short</button>
-        <button class="scan-btn scan-btn-scalp" data-mode="scalp" role="tab" aria-selected="false">Scalp</button>
         <button class="scan-btn scan-btn-googy" data-mode="googy" role="tab" aria-selected="false">Googy</button>
       </div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
@@ -121,55 +121,6 @@
       </button>
     </nav>
 
-    <!-- RISK DASHBOARD (shown only in scalp mode) -->
-    <section class="risk-dashboard" id="risk-dashboard" style="display:none">
-      <div class="rd-header">
-        <span class="rd-title">PORTFOLIO RISK</span>
-        <span class="rd-mode" id="rd-mode"></span>
-      </div>
-      <div class="rd-grid">
-        <div class="rd-tile">
-          <div class="rd-tile-label">Trades Today</div>
-          <div class="rd-tile-val" id="rd-trades">—</div>
-          <div class="rd-tile-sub" id="rd-trades-sub"></div>
-        </div>
-        <div class="rd-tile">
-          <div class="rd-tile-label">Today P&amp;L</div>
-          <div class="rd-tile-val" id="rd-pnl">—</div>
-          <div class="rd-tile-sub" id="rd-pnl-sub"></div>
-        </div>
-        <div class="rd-tile">
-          <div class="rd-tile-label">Open Long</div>
-          <div class="rd-tile-val green" id="rd-longs">—</div>
-          <div class="rd-tile-sub" id="rd-longs-sub"></div>
-        </div>
-        <div class="rd-tile">
-          <div class="rd-tile-label">Open Short</div>
-          <div class="rd-tile-val red" id="rd-shorts">—</div>
-          <div class="rd-tile-sub" id="rd-shorts-sub"></div>
-        </div>
-      </div>
-      <div class="rd-groups" id="rd-groups"></div>
-    </section>
-
-    <!-- scalp info banner (shown only in scalp mode) -->
-    <section class="scalp-banner" id="scalp-banner" style="display:none">
-      <div class="scalp-banner-inner">
-        <span class="scalp-banner-item"><strong>1h intraday</strong> · 4h confirmed</span>
-        <span class="scalp-banner-item"><strong>$1,000 margin</strong> · 5× = $5,000</span>
-        <span class="scalp-banner-item"><strong>$20 brokerage</strong> each way</span>
-        <span class="scalp-banner-item">Max <strong>5 trades/day</strong> · $500 daily stop</span>
-      </div>
-      <!-- scalp asset-type filter -->
-      <div class="scalp-type-filter" id="scalp-type-filter">
-        <button class="seg-btn is-active" data-scalp-type="all">All</button>
-        <button class="seg-btn" data-scalp-type="index">Indices</button>
-        <button class="seg-btn" data-scalp-type="commodity">Commodities</button>
-        <button class="seg-btn" data-scalp-type="asx">ASX</button>
-        <button class="seg-btn" data-scalp-type="nasdaq">NASDAQ</button>
-        <button class="seg-btn" data-scalp-type="crypto">₿ Crypto</button>
-      </div>
-    </section>
 
     <!-- filters -->
     <section class="controls">
