@@ -15,7 +15,7 @@ import json
 import logging
 import pathlib
 
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 
 log = logging.getLogger(__name__)
 

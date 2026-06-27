@@ -22,7 +22,7 @@ import logging
 import pathlib
 
 from scanner import config as _cfg
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ def _save_state(state: dict) -> None:
 
 def get_severity(event_type: str) -> str:
     """Return severity level string for an event_type."""
-    sev_map = getattr(_cfg, "ALERT_SEVERITY", _SEV_MAP)
+    sev_map = _cfg.ALERT_SEVERITY
     return sev_map.get(event_type, "WARNING")
 
 
@@ -96,7 +96,7 @@ def get_channels(event_type: str, severity: str = "") -> list[str]:
     """Return which channels should receive an alert for event_type."""
     if not severity:
         severity = get_severity(event_type)
-    chan_map = getattr(_cfg, "ALERT_CHANNELS", _CHAN_MAP)
+    chan_map = _cfg.ALERT_CHANNELS
     return list(chan_map.get(severity, _CHAN_MAP.get("WARNING", [])))
 
 
@@ -106,7 +106,7 @@ def should_send(event_type: str) -> bool:
     Side effect: updates journal/alert_state.json with the current timestamp
     so the next call can measure elapsed time correctly.
     """
-    rate_limits = getattr(_cfg, "ALERT_RATE_LIMITS", _RATE_MAP)
+    rate_limits = _cfg.ALERT_RATE_LIMITS
     limit_s     = rate_limits.get(event_type, rate_limits.get("DEFAULT", 300))
 
     state = _load_state()

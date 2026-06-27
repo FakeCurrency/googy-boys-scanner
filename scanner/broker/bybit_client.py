@@ -72,8 +72,8 @@ def _retry(fn, *args, **kwargs):
     (default 2) from config.  Sleep schedule: 2s, 4s, 8s for base=2.
     Re-raises the final exception if all attempts are exhausted.
     """
-    attempts = int(getattr(_cfg, "ORDER_RETRY_ATTEMPTS", 3))
-    base     = float(getattr(_cfg, "ORDER_RETRY_BACKOFF_BASE", 2.0))
+    attempts = int(_cfg.ORDER_RETRY_ATTEMPTS)
+    base     = float(_cfg.ORDER_RETRY_BACKOFF_BASE)
 
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):

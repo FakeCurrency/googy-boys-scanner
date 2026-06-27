@@ -18,6 +18,25 @@ def sma(series: pd.Series, window: int) -> pd.Series:
     return series.rolling(window).mean()
 
 
+def weekly_ema_state(df: pd.DataFrame) -> tuple[float, float, float] | None:
+    """Weekly (W-FRI) higher-timeframe EMA stack: (last_close, fast_ema, slow_ema).
+
+    Returns None when the frame can't be resampled or has too little weekly
+    history for a stable stack. Shared by the bullish (signals.py) and bearish
+    (short.py) HTF-confirmation chips so the resample + EMA lives in one place;
+    each caller just compares the three values in its own direction.
+    """
+    try:
+        wk = df["Close"].resample("W-FRI").last().dropna()
+    except Exception:
+        return None
+    if len(wk) < config.WEEKLY_SLOW + 2:
+        return None
+    fast = float(ema(wk, config.WEEKLY_FAST).iloc[-1])
+    slow = float(ema(wk, config.WEEKLY_SLOW).iloc[-1])
+    return float(wk.iloc[-1]), fast, slow
+
+
 def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     """Wilder's RSI."""
     delta = series.diff()

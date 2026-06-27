@@ -23,7 +23,7 @@ import logging
 import pathlib
 import statistics
 
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 from scanner import config as _cfg
 from scanner.broker.journal_utils import _iso_week
 
@@ -70,7 +70,7 @@ def weekly_fill_report(closed: list[dict]) -> list[dict]:
     Returns a list of week dicts sorted most-recent first, e.g.:
       [{"week": "2026-W25", "trades": 8, "avg_slip_pct": 0.042, "avg_slip_r": 0.11}, ...]
     """
-    min_trades = int(getattr(_cfg, "FILL_ANALYSIS_MIN_TRADES", 5))
+    min_trades = int(_cfg.FILL_ANALYSIS_MIN_TRADES)
     weeks: dict[str, list[float]] = {}
     weeks_r:  dict[str, list[float]] = {}
 
@@ -151,7 +151,7 @@ def write_fill_analysis(journal: dict) -> dict:
         )
 
         # Warn if average slippage is materially worse than expected
-        warn_pct = float(getattr(_cfg, "SLIPPAGE_WARN_PCT", 0.003)) * 100
+        warn_pct = float(_cfg.SLIPPAGE_WARN_PCT) * 100
         avg      = summary.get("avg_slip_pct") or 0
         if avg > warn_pct:
             log.warning(

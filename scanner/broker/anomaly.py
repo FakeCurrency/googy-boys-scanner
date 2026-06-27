@@ -109,10 +109,10 @@ def check_strategy_degradation(journal: dict) -> list[str]:
     """
     from scanner.broker.expectancy import calc_expectancy
 
-    min_t   = int(getattr(_cfg, "EXPECTANCY_MIN_TRADES", 20))
-    window  = int(getattr(_cfg, "ANOMALY_WIN_RATE_WINDOW", 20))
-    wr_drop = float(getattr(_cfg, "ANOMALY_WIN_RATE_DROP", 15.0))   # percentage points
-    e_drop  = float(getattr(_cfg, "ANOMALY_EXPECTANCY_DROP", 0.3))  # R units
+    min_t   = int(_cfg.EXPECTANCY_MIN_TRADES)
+    window  = int(_cfg.ANOMALY_WIN_RATE_WINDOW)
+    wr_drop = float(_cfg.ANOMALY_WIN_RATE_DROP)   # percentage points
+    e_drop  = float(_cfg.ANOMALY_EXPECTANCY_DROP)  # R units
 
     closed = [t for t in journal.get("closed", []) if not t.get("skip_daily_count")]
     # Need more than `window` trades, otherwise closed[-window:] == closed and the

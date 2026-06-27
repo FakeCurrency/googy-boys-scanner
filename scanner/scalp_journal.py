@@ -10,14 +10,18 @@ Different from the swing journal:
 
 import datetime as dt
 import json
-import os
 import pathlib
-import tempfile
 from zoneinfo import ZoneInfo
 
-import numpy as np
-
 from . import config
+from .broker.bybit_bracket import calc_qty_risk
+from .journal_common import (
+    atomic_write,
+    dir_stats_core,
+    load_journal,
+    mark_to_market,
+    utc_now_iso,
+)
 
 ROOT                 = pathlib.Path(__file__).resolve().parents[1]
 SCALP_JOURNAL_FILE   = ROOT / "journal" / "scalp_journal.json"
@@ -67,24 +71,12 @@ def _corr_group(symbol: str, asset_type: str = "", sector: str = "") -> str:
 
 
 def _load() -> dict:
-    if SCALP_JOURNAL_FILE.exists():
-        try:
-            return json.loads(SCALP_JOURNAL_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {"open": [], "closed": []}
+    return load_journal(SCALP_JOURNAL_FILE)
 
 
 def _dir_stats(closed: list, open_: list) -> dict:
-    rs   = np.array([c["r"]   for c in closed], dtype=float) if closed else np.array([])
-    pnls = np.array([c["pnl"] for c in closed], dtype=float) if closed else np.array([])
-    wins = rs[rs > 0]
     return {
-        "open":                len(open_),
-        "closed":              len(closed),
-        "win_rate":            round(len(wins) / len(rs) * 100, 1) if len(rs) else 0.0,
-        "total_r":             round(float(rs.sum()),   2) if len(rs)   else 0.0,
-        "total_pnl":           round(float(pnls.sum()), 2) if len(pnls) else 0.0,
+        **dir_stats_core(closed, open_),
         "open_unrealised_pnl": round(sum(p.get("unreal_pnl", 0) or 0 for p in open_), 2),
     }
 
@@ -141,20 +133,9 @@ def summarize(j: dict) -> dict:
     }
 
 
-def _atomic_write(path: pathlib.Path, payload: str) -> None:
-    """Write payload to path atomically via a temp file + rename (POSIX-safe)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
-    ) as f:
-        f.write(payload)
-        tmp = f.name
-    os.replace(tmp, path)
-
-
 def _save(j: dict) -> None:
-    j["updated_at"] = dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
-    _atomic_write(SCALP_JOURNAL_FILE, json.dumps(j, indent=2))
+    j["updated_at"] = utc_now_iso()
+    atomic_write(SCALP_JOURNAL_FILE, json.dumps(j, indent=2))
 
     long_open    = [p for p in j["open"]   if p["direction"] == "long"]
     short_open   = [p for p in j["open"]   if p["direction"] == "short"]
@@ -163,7 +144,7 @@ def _save(j: dict) -> None:
 
     all_closed = sorted(j["closed"], key=lambda c: c.get("opened_ts", ""))
 
-    _atomic_write(PUBLIC_SCALP_JOURNAL, json.dumps({
+    atomic_write(PUBLIC_SCALP_JOURNAL, json.dumps({
         "updated_at":    j["updated_at"],
         "broker_mode":   j.get("broker_mode", ""),
         "stats":         summarize(j),
@@ -265,8 +246,7 @@ def _walk_1h(df, pos: dict) -> dict:
         # Already filled in a prior run — update unrealised from latest close
         c = float(closes[-1])
         pos["current"]    = round(c, 8)
-        pos["unreal_r"]   = round(((c - entry) if direction == "long" else (entry - c)) / risk, 2)
-        pos["unreal_pnl"] = round(units * ((c - entry) if direction == "long" else (entry - c)) - BROK_RT, 2)
+        pos["unreal_r"], pos["unreal_pnl"] = mark_to_market(entry, c, stop, direction, units, BROK_RT)
         return pos
 
     # ── Walk bars: check gap-through first, then intrabar high/low ───────────
@@ -293,15 +273,13 @@ def _walk_1h(df, pos: dict) -> dict:
 
     c = float(closes[-1])
     pos["current"]    = round(c, 8)
-    pos["unreal_r"]   = round(((c - entry) if direction == "long" else (entry - c)) / risk, 2)
-    pos["unreal_pnl"] = round(units * ((c - entry) if direction == "long" else (entry - c)) - BROK_RT, 2)
+    pos["unreal_r"], pos["unreal_pnl"] = mark_to_market(entry, c, stop, direction, units, BROK_RT)
     return pos
 
 
 def close_manual(j: dict, symbol: str, direction: str, price: float, exit_date: str) -> bool:
     """Manually close a scalp position by symbol+direction. Returns True if found."""
-    import datetime as _dt
-    ts = (exit_date + "T00:00:00Z") if exit_date else (_dt.datetime.utcnow().isoformat(timespec="seconds") + "Z")
+    ts = (exit_date + "T00:00:00Z") if exit_date else utc_now_iso()
     for i, p in enumerate(j["open"]):
         if (p["symbol"].upper() == symbol.upper()
                 and p.get("direction", "long") == direction):
@@ -370,7 +348,6 @@ def update_scalp(j: dict, progress: bool = True) -> dict:
         entry = float(r["entry"])
         stop  = float(r["stop"])
         # ATR/stop-based sizing: risk a fixed dollar amount per trade
-        from .broker.bybit_bracket import calc_qty_risk
         units = calc_qty_risk(entry, stop, config.SCALP_RISK_PER_TRADE)
         if units <= 0:
             continue

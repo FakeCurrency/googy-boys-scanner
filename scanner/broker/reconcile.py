@@ -12,9 +12,8 @@ State transitions handled:
   canceled / rejected / expired → close with 0 P&L and reason = broker status
 """
 
-import datetime as dt
-
 from . import alpaca_client as ac
+from scanner.journal_common import utc_now_iso
 
 _TERMINAL = {"filled", "canceled", "expired", "rejected", "done_for_day", "replaced"}
 
@@ -67,7 +66,7 @@ def _close_from_broker(pos: dict, exit_price: float, reason: str, now_ts: str) -
 def reconcile_journal(j: dict) -> dict:
     """Mutates the journal in-place: sync every broker-tracked position."""
     orders_by_id = _fetch_all_orders()
-    now_ts = dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    now_ts = utc_now_iso()
 
     survivors = []
     for pos in j.get("open", []):

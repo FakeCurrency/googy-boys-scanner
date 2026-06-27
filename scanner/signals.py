@@ -9,7 +9,7 @@ import pandas as pd
 
 from . import config
 from .grading import grade_from_points, score_chips
-from .indicators import adx as calc_adx, ema, ema_ladder, rsi as calc_rsi
+from .indicators import adx as calc_adx, ema_ladder, rsi as calc_rsi, weekly_ema_state
 
 # Signal key -> base display label (some get dynamic suffixes in scan.py).
 CHIP_ORDER = ["alignment", "compression", "pullback", "confluence", "weekly", "volume", "adx", "rsi_pullback"]
@@ -27,15 +27,11 @@ CHIP_BASE = {
 
 def _weekly_bullish(df: pd.DataFrame) -> bool:
     """Higher-timeframe confirmation: weekly close above a rising weekly EMA stack."""
-    try:
-        wk = df["Close"].resample("W-FRI").last().dropna()
-    except Exception:
+    st = weekly_ema_state(df)
+    if st is None:
         return False
-    if len(wk) < config.WEEKLY_SLOW + 2:
-        return False
-    fast = ema(wk, config.WEEKLY_FAST).iloc[-1]
-    slow = ema(wk, config.WEEKLY_SLOW).iloc[-1]
-    return bool(wk.iloc[-1] > slow and fast > slow)
+    last, fast, slow = st
+    return bool(last > slow and fast > slow)
 
 
 def evaluate(df: pd.DataFrame) -> dict | None:

@@ -15,15 +15,14 @@ public/data/journal.json so a UI can show the track record.
 import argparse
 import datetime as dt
 import json
-import os
 import pathlib
-import tempfile
 
 import numpy as np
 
 from . import config
 from .data import download
 from .indicators import supertrend
+from .journal_common import atomic_write, dir_stats_core, load_journal, mark_to_market
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 JOURNAL_FILE = ROOT / "journal" / "journal.json"
@@ -31,12 +30,7 @@ PUBLIC_JOURNAL = ROOT / "public" / "data" / "journal.json"
 
 
 def _load() -> dict:
-    if JOURNAL_FILE.exists():
-        try:
-            return json.loads(JOURNAL_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {"open": [], "closed": []}
+    return load_journal(JOURNAL_FILE)
 
 
 def _kelly(rs: np.ndarray) -> float | None:
@@ -57,13 +51,8 @@ def _kelly(rs: np.ndarray) -> float | None:
 
 def _dir_stats(closed_list: list, open_list: list) -> dict:
     rs = np.array([c["r"] for c in closed_list], dtype=float) if closed_list else np.array([])
-    wins = rs[rs > 0]
     return {
-        "open": len(open_list),
-        "closed": len(closed_list),
-        "win_rate": round(len(wins) / len(rs) * 100, 1) if len(rs) else 0.0,
-        "total_r": round(float(rs.sum()), 2) if len(rs) else 0.0,
-        "total_pnl": round(sum(c.get("pnl", 0) or 0 for c in closed_list), 2),
+        **dir_stats_core(closed_list, open_list),
         "open_unrealised_r": round(sum(p.get("unreal_r", 0) or 0 for p in open_list), 2),
         "open_unrealised_pnl": round(sum(p.get("unreal_pnl", 0) or 0 for p in open_list), 2),
         "kelly_pct": _kelly(rs),
@@ -85,29 +74,18 @@ def summarize(j: dict) -> dict:
     }
 
 
-def _atomic_write(path: pathlib.Path, payload: str) -> None:
-    """Write payload to path atomically via a temp file + rename (POSIX-safe)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
-    ) as f:
-        f.write(payload)
-        tmp = f.name
-    os.replace(tmp, path)
-
-
 def _save(j: dict) -> None:
     # UTC to stay consistent with scalp_journal — a naive local timestamp here
     # would be silently offset by ~10h vs the scalp journal's UTC stamps.
     j["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-    _atomic_write(JOURNAL_FILE, json.dumps(j, indent=2))
+    atomic_write(JOURNAL_FILE, json.dumps(j, indent=2))
 
     open_longs  = [p for p in j["open"]   if p.get("direction", "long") == "long"]
     open_shorts = [p for p in j["open"]   if p.get("direction", "long") == "short"]
     cl_longs    = [c for c in j["closed"] if c.get("direction", "long") == "long"]
     cl_shorts   = [c for c in j["closed"] if c.get("direction", "long") == "short"]
 
-    _atomic_write(PUBLIC_JOURNAL, json.dumps({
+    atomic_write(PUBLIC_JOURNAL, json.dumps({
         "updated_at": j["updated_at"],
         "stats": summarize(j),
         "open_longs":    open_longs,
@@ -158,12 +136,7 @@ def _walk(df, pos: dict) -> dict:
     start = next((k for k, ds in enumerate(dates) if ds > pos["opened"]), None)
     if start is None:  # opened on the latest bar; nothing to evaluate yet
         pos["current"] = round(float(closes[-1]), 4)
-        if direction == "short":
-            pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
-            pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
-        else:
-            pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
-            pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
+        pos["unreal_r"], pos["unreal_pnl"] = mark_to_market(entry, closes[-1], stop, direction, shares)
         return pos
 
     if direction == "short":
@@ -177,10 +150,6 @@ def _walk(df, pos: dict) -> dict:
                               "trail" if current_stop < stop else "stop", j - start + 1)
             if lows[j] <= target:
                 return _close(pos, target, dates[j], "target", j - start + 1)
-        pos["current"] = round(float(closes[-1]), 4)
-        pos["trail_stop"] = round(current_stop, 4)
-        pos["unreal_r"] = round((entry - closes[-1]) / risk, 2)
-        pos["unreal_pnl"] = round(shares * (entry - closes[-1]), 2)
     else:
         current_stop = stop
         for j in range(start, len(df)):
@@ -192,10 +161,10 @@ def _walk(df, pos: dict) -> dict:
                               "trail" if current_stop > stop else "stop", j - start + 1)
             if highs[j] >= target:
                 return _close(pos, target, dates[j], "target", j - start + 1)
-        pos["current"] = round(float(closes[-1]), 4)
-        pos["trail_stop"] = round(current_stop, 4)
-        pos["unreal_r"] = round((closes[-1] - entry) / risk, 2)
-        pos["unreal_pnl"] = round(shares * (closes[-1] - entry), 2)
+
+    pos["current"] = round(float(closes[-1]), 4)
+    pos["trail_stop"] = round(current_stop, 4)
+    pos["unreal_r"], pos["unreal_pnl"] = mark_to_market(entry, closes[-1], stop, direction, shares)
     return pos
 
 
@@ -220,36 +189,27 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
 
     # 1) open a paper position for each new A+/A setup
     open_keys = {(p["market"], p["symbol"], p.get("direction", "long")) for p in j["open"]}
-    open_long_count  = sum(1 for p in j["open"] if p.get("direction", "long")  == "long")
-    open_short_count = sum(1 for p in j["open"] if p.get("direction", "long") == "short")
+    open_counts = {
+        "long":  sum(1 for p in j["open"] if p.get("direction", "long") == "long"),
+        "short": sum(1 for p in j["open"] if p.get("direction", "long") == "short"),
+    }
+    caps = {"long": config.MAX_POSITIONS_LONG, "short": config.MAX_POSITIONS_SHORT}
     opened_now = 0
 
-    for r in scan["results"]:
-        if open_long_count >= config.MAX_POSITIONS_LONG:
-            break
-        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "long") not in open_keys:
-            entry_price = r["entry"]
-            shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
-            j["open"].append({
-                "market": market_key, "symbol": r["symbol"], "name": r["name"],
-                "yf_ticker": r["symbol"] + market.suffix,
-                "grade": r["grade"], "score": r["score"],
-                "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
-                "opened": scan_date, "status": "open",
-                "direction": "long",
-                "shares": shares,
-                "brokerage": config.BROKERAGE_EACH_WAY,
-                "size_usd": config.POSITION_SIZE_USD,
-            })
-            open_keys.add((market_key, r["symbol"], "long"))
-            open_long_count += 1
-            opened_now += 1
+    def _open_new(results: list, direction: str) -> int:
+        """Open paper positions for new tradeable setups in one direction.
 
-    # open short positions from the short scan file
-    for r in short_results:
-        if open_short_count >= config.MAX_POSITIONS_SHORT:
-            break
-        if r["grade"] in config.TRADEABLE_GRADES and (market_key, r["symbol"], "short") not in open_keys:
+        Long and short differ only by the direction tag, the source results, and
+        the per-direction cap — so the position dict is built in exactly one place.
+        """
+        nonlocal opened_now
+        n = 0
+        for r in results:
+            if open_counts[direction] >= caps[direction]:
+                break
+            key = (market_key, r["symbol"], direction)
+            if r["grade"] not in config.TRADEABLE_GRADES or key in open_keys:
+                continue
             entry_price = r["entry"]
             shares = int(config.POSITION_SIZE_USD / entry_price) if entry_price > 0 else 0
             j["open"].append({
@@ -258,14 +218,19 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
                 "grade": r["grade"], "score": r["score"],
                 "entry": entry_price, "stop": r["stop"], "target": r["target"], "rr": r["rr"],
                 "opened": scan_date, "status": "open",
-                "direction": "short",
+                "direction": direction,
                 "shares": shares,
                 "brokerage": config.BROKERAGE_EACH_WAY,
                 "size_usd": config.POSITION_SIZE_USD,
             })
-            open_keys.add((market_key, r["symbol"], "short"))
-            open_short_count += 1
+            open_keys.add(key)
+            open_counts[direction] += 1
             opened_now += 1
+            n += 1
+        return n
+
+    _open_new(scan["results"], "long")
+    _open_new(short_results, "short")
 
     # 2) walk this market's open positions against fresh prices
     pos_this = [p for p in j["open"] if p["market"] == market_key]

@@ -23,7 +23,7 @@ import pathlib
 import statistics
 
 from scanner import config as _cfg
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 
 log      = logging.getLogger(__name__)
 ROOT     = pathlib.Path(__file__).resolve().parents[2]
@@ -61,8 +61,8 @@ def calc_expectancy(trades: list[dict]) -> dict:
     exp_r      = round(
         (win_rate * avg_win_r) - ((1.0 - win_rate) * avg_loss_r), 4,
     )
-    risk_usd   = float(getattr(_cfg, "SCALP_RISK_PER_TRADE", 100))
-    min_t      = int(getattr(_cfg, "EXPECTANCY_MIN_TRADES", 20))
+    risk_usd   = float(_cfg.SCALP_RISK_PER_TRADE)
+    min_t      = int(_cfg.EXPECTANCY_MIN_TRADES)
 
     note = (
         f"low_sample ({len(rs)}<{min_t}) — estimate unreliable"
@@ -132,7 +132,7 @@ def write_expectancy(journal: dict) -> dict:
         )
 
         # Alert if strategy edge has degraded to negative expectancy
-        min_t = int(getattr(_cfg, "EXPECTANCY_MIN_TRADES", 20))
+        min_t = int(_cfg.EXPECTANCY_MIN_TRADES)
         if exp["expectancy_r"] < 0 and exp["trades"] >= min_t:
             try:
                 from .alert_router import smart_send

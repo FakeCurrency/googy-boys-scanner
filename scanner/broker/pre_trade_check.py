@@ -22,7 +22,7 @@ are signal-selection concerns, not portfolio risk.
 
 import logging
 from scanner import config as _cfg
-from scanner.scalp_journal import _session_day, _corr_group, MAX_DAILY, MAX_LOSS, MAX_GROUP
+from scanner.scalp_journal import _session_day, _corr_group, MAX_GROUP
 from scanner.broker.risk_manager import (
     check_portfolio_heat,
     check_drawdown,
@@ -90,7 +90,7 @@ def pre_trade_check(
     checks["consec_losses"] = check_consecutive_losses(journal)
 
     # 5. Daily session loss
-    max_loss = float(getattr(_cfg, "SCALP_MAX_DAILY_LOSS", MAX_LOSS))
+    max_loss = float(_cfg.SCALP_MAX_DAILY_LOSS)
     if today_pnl < -max_loss:
         checks["daily_loss"] = {
             "ok": False,
@@ -100,7 +100,7 @@ def pre_trade_check(
         checks["daily_loss"] = {"ok": True}
 
     # 6. Daily trade cap
-    max_daily = int(getattr(_cfg, "SCALP_MAX_TRADES_PER_DAY", MAX_DAILY))
+    max_daily = int(_cfg.SCALP_MAX_TRADES_PER_DAY)
     if trades_used >= max_daily:
         checks["daily_cap"] = {
             "ok": False,
@@ -136,8 +136,8 @@ def pre_trade_check(
 
     # 11. Slippage tolerance
     slippage_pct  = float(pos.get("slippage_pct", 0))
-    reject_slip   = float(getattr(_cfg, "SLIPPAGE_REJECT_PCT", 0.01))
-    warn_slip     = float(getattr(_cfg, "SLIPPAGE_WARN_PCT", 0.003))
+    reject_slip   = float(_cfg.SLIPPAGE_REJECT_PCT)
+    warn_slip     = float(_cfg.SLIPPAGE_WARN_PCT)
     if slippage_pct > reject_slip:
         checks["slippage"] = {
             "ok": False,

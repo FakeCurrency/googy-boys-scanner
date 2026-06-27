@@ -18,7 +18,7 @@ import logging
 import pathlib
 import statistics
 
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 
 log      = logging.getLogger(__name__)
 ROOT     = pathlib.Path(__file__).resolve().parents[2]

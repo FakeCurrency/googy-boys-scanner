@@ -14,7 +14,7 @@ import pandas as pd
 
 from . import config
 from .grading import grade_from_points, score_chips
-from .indicators import adx as calc_adx, ema, ema_ladder, pivot_lows, rsi as calc_rsi, supertrend
+from .indicators import adx as calc_adx, ema_ladder, pivot_lows, rsi as calc_rsi, supertrend, weekly_ema_state
 
 SHORT_CHIP_ORDER = [
     "bearish_alignment", "compression", "resistance_touch",
@@ -41,15 +41,11 @@ SHORT_GRADE_CUTOFFS = [("A+", 10), ("A", 8), ("B", 5), ("C", 3)]
 
 
 def _weekly_bearish(df: pd.DataFrame) -> bool:
-    try:
-        wk = df["Close"].resample("W-FRI").last().dropna()
-    except Exception:
+    st = weekly_ema_state(df)
+    if st is None:
         return False
-    if len(wk) < config.WEEKLY_SLOW + 2:
-        return False
-    fast = ema(wk, config.WEEKLY_FAST).iloc[-1]
-    slow = ema(wk, config.WEEKLY_SLOW).iloc[-1]
-    return bool(wk.iloc[-1] < slow and fast < slow)
+    last, fast, slow = st
+    return bool(last < slow and fast < slow)
 
 
 def evaluate(df: pd.DataFrame) -> dict | None:

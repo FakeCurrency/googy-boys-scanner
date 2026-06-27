@@ -28,10 +28,10 @@ def account_size() -> float:
     Uses ACCOUNT_OVERRIDE_USD if set (> 0), otherwise SCALP_STARTING_CAPITAL.
     In production, callers can pass the live wallet_balance() result instead.
     """
-    override = float(getattr(_cfg, "ACCOUNT_OVERRIDE_USD", 0))
+    override = float(_cfg.ACCOUNT_OVERRIDE_USD)
     if override > 0:
         return override
-    return float(getattr(_cfg, "SCALP_STARTING_CAPITAL", 20_000))
+    return float(_cfg.SCALP_STARTING_CAPITAL)
 
 
 # ── equity curve ─────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ def portfolio_heat(open_positions: list[dict]) -> float:
 
 def check_portfolio_heat(open_positions: list[dict]) -> dict:
     heat  = portfolio_heat(open_positions)
-    limit = float(getattr(_cfg, "PORTFOLIO_HEAT_LIMIT", 0.07))
+    limit = float(_cfg.PORTFOLIO_HEAT_LIMIT)
     ok    = heat < limit
     if not ok:
         log.warning("portfolio heat %.1f%% >= limit %.1f%%", heat * 100, limit * 100)
@@ -107,8 +107,8 @@ def check_drawdown(journal: dict) -> dict:
     action: "none" | "pause" | "close_all"
     """
     dd       = current_drawdown(journal)
-    pause_at = float(getattr(_cfg, "MAX_DRAWDOWN_PAUSE", 0.12))
-    close_at = float(getattr(_cfg, "MAX_DRAWDOWN_CLOSE", 0.15))
+    pause_at = float(_cfg.MAX_DRAWDOWN_PAUSE)
+    close_at = float(_cfg.MAX_DRAWDOWN_CLOSE)
 
     action = "none"
     ok     = True
@@ -139,7 +139,7 @@ def dynamic_size_multiplier(journal: dict, regime: str = "trending") -> float:
     The multiplier is floored at 0.25 to avoid near-zero order sizes.
     """
     dd       = current_drawdown(journal)
-    halve_at = float(getattr(_cfg, "DRAWDOWN_HALVE_SIZE_AT", 0.08))
+    halve_at = float(_cfg.DRAWDOWN_HALVE_SIZE_AT)
     mult     = 1.0
 
     if dd >= halve_at:
@@ -148,7 +148,7 @@ def dynamic_size_multiplier(journal: dict, regime: str = "trending") -> float:
                  dd * 100, halve_at * 100)
 
     if regime == "ranging":
-        ranging_mult = float(getattr(_cfg, "REGIME_RANGING_RISK_MULT", 0.5))
+        ranging_mult = float(_cfg.REGIME_RANGING_RISK_MULT)
         mult *= ranging_mult
 
     return max(mult, 0.25)
@@ -167,7 +167,7 @@ def sector_exposure_usd(open_positions: list[dict]) -> dict[str, float]:
 
 def check_sector_cap(open_positions: list[dict], new_pos: dict) -> dict:
     """Check whether adding new_pos would breach the per-sector exposure limit."""
-    cap_pct   = float(getattr(_cfg, "SECTOR_EXPOSURE_CAP", 0.40))
+    cap_pct   = float(_cfg.SECTOR_EXPOSURE_CAP)
     cap_usd   = account_size() * cap_pct
     sector    = new_pos.get("sector") or new_pos.get("corr_group") or "unknown"
     current   = sector_exposure_usd(open_positions).get(sector, 0)
@@ -189,7 +189,7 @@ def check_sector_cap(open_positions: list[dict], new_pos: dict) -> dict:
 
 def check_max_positions(journal: dict) -> dict:
     n   = len(journal.get("open", []))
-    cap = int(getattr(_cfg, "MAX_OPEN_POSITIONS", 10))
+    cap = int(_cfg.MAX_OPEN_POSITIONS)
     ok  = n < cap
     if not ok:
         log.warning("max open positions (%d) reached (currently %d)", cap, n)
@@ -212,7 +212,7 @@ def check_max_capital(journal: dict) -> dict:
 
     Returns {"ok": True} when the cap is disabled (MAX_MANAGED_CAPITAL_USD = 0).
     """
-    cap = float(getattr(_cfg, "MAX_MANAGED_CAPITAL_USD", 50_000))
+    cap = float(_cfg.MAX_MANAGED_CAPITAL_USD)
     if cap <= 0:
         return {"ok": True, "deployed": 0.0, "cap": 0.0, "reason": ""}
 
@@ -246,7 +246,7 @@ def check_htf_bias(symbol: str, direction: str, bias_map: dict) -> dict:
 
     Controlled by config.HTF_BIAS_REQUIRED.
     """
-    if not getattr(_cfg, "HTF_BIAS_REQUIRED", True):
+    if not _cfg.HTF_BIAS_REQUIRED:
         return {"ok": True, "aligned": True, "strength": "disabled", "reason": ""}
 
     bias = bias_map.get(symbol)
@@ -288,8 +288,8 @@ def check_order_size(units: float, entry: float) -> dict:
     Catches fat-finger errors and data anomalies before they reach the broker.
     """
     notional = units * entry
-    min_usd  = float(getattr(_cfg, "ORDER_SIZE_MIN_USD", 10))
-    max_usd  = float(getattr(_cfg, "ORDER_SIZE_MAX_USD", 5_000))
+    min_usd  = float(_cfg.ORDER_SIZE_MIN_USD)
+    max_usd  = float(_cfg.ORDER_SIZE_MAX_USD)
     if notional < min_usd:
         return {
             "ok": False, "notional": round(notional, 4),

@@ -8,6 +8,7 @@ import shutil
 import time as _time
 import uuid as _uuid
 from collections import Counter
+from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
 from . import analysis, charts, config, googy, levels, pulse, reversal, scalp, short, signals, spec
@@ -110,10 +111,146 @@ def _write_extended_charts(
             pass
 
 
-def scan_market(market_key: str, limit: int | None = None, full: bool = True,
-                write_charts: bool = True, out_root: str | None = None,
-                progress: bool = True, frames: dict | None = None,
-                pulse_data: list | None = None, universe: list | None = None) -> dict:
+@dataclass(frozen=True)
+class EngineSpec:
+    """Per-engine differences for the shared scan driver (_scan_engine).
+
+    Everything that varies between the pullback / reversal / spec / short / googy
+    scanners is captured here as data + small callables, so the download → score
+    → row-build → envelope skeleton lives in exactly one place. Adding a result
+    field or changing the schema is now a single edit instead of five.
+    """
+    setup_type: str
+    direction: str                 # "long" | "short"
+    score_max: int
+    trend_key: str                 # key into config.TREND_THRESHOLDS
+    periods_field: str             # "ema_periods" | "sma_periods"
+    periods_value: list
+    chart_suffix: str              # "" | "_rev" | "_spec" | "_short" | "_googy"
+    chart_builder: "object"        # charts.build_chart* callable
+    evaluate: "object"             # (df, market) -> sig | None
+    is_valid: "object"             # (sig) -> bool
+    score_and_grade: "object"      # (sig) -> (points, grade, fired)
+    compute_levels: "object"       # (df, sig) -> lv
+    make_chips: "object"           # (fired, sig, turnover, market_key) -> list[str]
+    weekly_of: "object"            # (sig) -> bool
+    build_detail: "object"         # (df, sig, lv) -> dict
+    make_narrative: "object"       # (symbol, sig, lv, detail, currency_symbol) -> str
+    liquidity_min: "object"        # (market, market_key) -> float
+    extra_row: "object"            # (turnover, market_key) -> dict (extra row fields)
+    demote_low_rr: bool = False
+    row_setup_type: bool = True
+    include_universe_tickers: bool = False
+    verbose_progress: bool = False
+    catch_errors: bool = False
+
+
+def _googy_chips(fired: list[str], sig: dict, turnover: float, market_key: str) -> list[str]:
+    chips = googy.build_chips(fired, sig)
+    if turnover < config.GOOGY_LOW_LIQ_TURNOVER.get(market_key, 200_000):
+        chips.insert(0, "LOW LIQUIDITY")
+    return chips
+
+
+# ── One spec per scanner tab. The driver below is engine-agnostic. ────────────
+_PULLBACK = EngineSpec(
+    setup_type="pullback", direction="long",
+    score_max=config.SCORE_MAX, trend_key="pullback",
+    periods_field="ema_periods", periods_value=config.EMA_PERIODS,
+    chart_suffix="", chart_builder=charts.build_chart,
+    evaluate=lambda df, market: signals.evaluate(df),
+    is_valid=lambda sig: sig is not None and sig["uptrend"],
+    score_and_grade=signals.score_and_grade,
+    compute_levels=levels.compute_levels,
+    make_chips=lambda fired, sig, turnover, mk: _build_chips(fired, sig),
+    weekly_of=lambda sig: sig["weekly"],
+    build_detail=analysis.build_detail,
+    make_narrative=lambda s, sig, lv, detail, cur: analysis.narrative(s, sig, lv, detail, cur),
+    liquidity_min=lambda market, mk: market.liquidity_min,
+    extra_row=lambda turnover, mk: {},
+    demote_low_rr=True, row_setup_type=False,
+    include_universe_tickers=True, verbose_progress=True, catch_errors=True,
+)
+
+_REVERSAL = EngineSpec(
+    setup_type="reversal", direction="long",
+    score_max=config.REV_SCORE_MAX, trend_key="reversal",
+    periods_field="sma_periods", periods_value=config.REV_SMAS,
+    chart_suffix="_rev", chart_builder=charts.build_chart_reversal,
+    evaluate=lambda df, market: reversal.evaluate(df),
+    is_valid=lambda sig: sig is not None and sig.get("ok"),
+    score_and_grade=reversal.score_and_grade,
+    compute_levels=reversal.compute_levels,
+    make_chips=lambda fired, sig, turnover, mk: reversal.build_chips(fired, sig),
+    weekly_of=lambda sig: False,
+    build_detail=reversal.build_detail,
+    make_narrative=lambda s, sig, lv, detail, cur: reversal.narrative(s, sig, lv, detail, cur),
+    liquidity_min=lambda market, mk: market.liquidity_min,
+    extra_row=lambda turnover, mk: {},
+)
+
+_SPEC = EngineSpec(
+    setup_type="spec", direction="long",
+    score_max=config.SPEC_SCORE_MAX, trend_key="spec",
+    periods_field="sma_periods", periods_value=config.SPEC_SMAS,
+    chart_suffix="_spec", chart_builder=charts.build_chart_reversal,
+    evaluate=lambda df, market: spec.evaluate(
+        df, max_price=None if getattr(market, "volume_is_usd", False) else config.SPEC_MAX_PRICE),
+    is_valid=lambda sig: sig is not None and sig.get("ok"),
+    score_and_grade=spec.score_and_grade,
+    compute_levels=spec.compute_levels,
+    make_chips=lambda fired, sig, turnover, mk: spec.build_chips(fired, sig),
+    weekly_of=lambda sig: False,
+    build_detail=spec.build_detail,
+    make_narrative=lambda s, sig, lv, detail, cur: spec.spec_narrative(s, sig, lv, detail, cur),
+    liquidity_min=lambda market, mk: market.liquidity_min,
+    extra_row=lambda turnover, mk: {},
+)
+
+_SHORT = EngineSpec(
+    setup_type="short", direction="short",
+    score_max=short.SHORT_SCORE_MAX, trend_key="short",
+    periods_field="ema_periods", periods_value=config.EMA_PERIODS,
+    chart_suffix="_short", chart_builder=charts.build_chart_short,
+    evaluate=lambda df, market: short.evaluate(df),
+    is_valid=lambda sig: sig is not None,
+    score_and_grade=short.score_and_grade,
+    compute_levels=short.compute_levels,
+    make_chips=lambda fired, sig, turnover, mk: short.build_chips(fired, sig),
+    weekly_of=lambda sig: sig["weekly_bearish"],
+    build_detail=lambda df, sig, lv: {},
+    make_narrative=lambda s, sig, lv, detail, cur: short.narrative(s, sig, lv, cur),
+    liquidity_min=lambda market, mk: market.liquidity_min,
+    extra_row=lambda turnover, mk: {},
+    demote_low_rr=True,
+)
+
+_GOOGY = EngineSpec(
+    setup_type="googy", direction="long",
+    score_max=config.GOOGY_SCORE_MAX, trend_key="googy",
+    periods_field="sma_periods", periods_value=[config.GOOGY_SMA_FAST, config.GOOGY_SMA_SLOW],
+    chart_suffix="_googy", chart_builder=charts.build_chart_reversal,
+    evaluate=lambda df, market: googy.evaluate(df),
+    is_valid=lambda sig: sig is not None and sig.get("ok"),
+    score_and_grade=googy.score_and_grade,
+    compute_levels=googy.compute_levels,
+    make_chips=_googy_chips,
+    weekly_of=lambda sig: False,
+    build_detail=googy.build_detail,
+    make_narrative=lambda s, sig, lv, detail, cur: googy.narrative(s, sig, lv, detail, cur),
+    liquidity_min=lambda market, mk: config.GOOGY_MIN_TURNOVER.get(mk, 5_000),
+    extra_row=lambda turnover, mk: {"low_liquidity": turnover < config.GOOGY_LOW_LIQ_TURNOVER.get(mk, 200_000)},
+    demote_low_rr=True,
+)
+
+
+def _scan_engine(eng: EngineSpec, market_key: str, limit: int | None = None, full: bool = True,
+                 write_charts: bool = True, out_root: str | None = None,
+                 progress: bool = True, frames: dict | None = None,
+                 pulse_data: list | None = None, universe: list | None = None) -> dict:
+    """Engine-agnostic scan driver. The per-engine `eng` spec supplies the only
+    parts that differ; everything else (download, liquidity, scoring, row schema,
+    charts, ranking, envelope) is shared."""
     market = config.MARKETS[market_key]
     liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
     if universe is None:
@@ -121,42 +258,42 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         if limit:
             universe = universe[:limit]
 
-    tickers = [u["yf"] for u in universe]
     meta = {u["yf"]: u for u in universe}
-
     if frames is None:
-        if progress:
-            print(f"  downloading {len(tickers)} {market.label} tickers ...", flush=True)
-        frames = download(tickers)
+        if eng.verbose_progress and progress:
+            print(f"  downloading {len(universe)} {market.label} tickers ...", flush=True)
+        frames = download([u["yf"] for u in universe])
 
+    chart_key = market_key + eng.chart_suffix
     if write_charts and out_root:
-        charts.reset_dir(out_root, market_key)
+        charts.reset_dir(out_root, chart_key)
 
+    liq_min = eng.liquidity_min(market, market_key)
     results: list[dict] = []
     pending_charts: list[tuple] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
         try:
-            sig = signals.evaluate(df)
-            if sig is None or not sig["uptrend"]:
+            sig = eng.evaluate(df, market)
+            if not eng.is_valid(sig):
                 continue
 
             turnover = _liquidity(df, market)
-            if turnover < market.liquidity_min:
+            if turnover < liq_min:
                 continue
 
-            points, grade, fired = signals.score_and_grade(sig)
+            points, grade, fired = eng.score_and_grade(sig)
             if grade is None:
                 continue
 
-            lv = levels.compute_levels(df, sig)
+            lv = eng.compute_levels(df, sig)
             if lv["rr"] <= 0:
                 continue
 
             # Tuning toward R:R — a tradeable grade must clear the minimum reward-to-risk,
             # otherwise it's a strong pattern but a poor trade, so demote it to the watch list.
-            if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
+            if eng.demote_low_rr and grade in config.TRADEABLE_GRADES \
                     and lv["rr"] < config.MIN_TRADEABLE_RR:
                 grade = "B"
 
@@ -165,68 +302,76 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
             open_ = float(df["Open"].iloc[-1])
             y_close = float(df["Close"].iloc[-2])
             entry = lv["entry"]
-            stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
+            stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], eng.direction)
+            chips = eng.make_chips(fired, sig, turnover, market_key)
+            detail = eng.build_detail(df, sig, lv)
 
-            detail = analysis.build_detail(df, sig, lv)
+            # Built in the exact field order the live JSON already uses. setup_type
+            # is omitted for pullback; googy inserts low_liquidity after low_rr.
             row = {
                 "symbol": info.get("symbol", yf_ticker),
                 "name": info.get("name", yf_ticker),
                 "sector": info.get("sector", ""),
-                "dir": "LONG",
-                "grade": grade,
-                "score": points,
-                "score_max": config.SCORE_MAX,
-                "chips": _build_chips(fired, sig),
-                "weekly": sig["weekly"],
-                "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-                "rr_text": f"{lv['rr']:.1f}:1",
-                "target_2r": lv["target_basis"] == "measured",
-                "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-                "price": round(close, 8),
-                "y_close": round(y_close, 8),
-                "open": round(open_, 8),
-                "open_pct": _pct(open_, y_close),
-                "current_pct": _pct(close, open_),
-                "day_pct": _pct(close, y_close),
-                "entry": entry,
-                "stop": lv["stop"],
-                "target": lv["target"],
-                "rr": lv["rr"],
-                "trail": lv["trail"],
-                # Stop% = risk to stop, P2% = reward to target — both from entry (R:R = P2/Stop).
-                "stop_pct": stop_pct,
-                "p2_pct": p2_pct,
-                "target_basis": lv["target_basis"],
-                "spark": _spark(df),
-                "trend": "green" if points >= config.TREND_THRESHOLDS["pullback"] else "blue",
-                "turnover": round(turnover),
-                "detail": detail,
-                "analysis": analysis.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
-                                               market.currency_symbol),
+                "dir": "SHORT" if eng.direction == "short" else "LONG",
             }
+            if eng.row_setup_type:
+                row["setup_type"] = eng.setup_type
+            row["grade"] = grade
+            row["score"] = points
+            row["score_max"] = eng.score_max
+            row["chips"] = chips
+            row["weekly"] = eng.weekly_of(sig)
+            row["low_rr"] = lv["rr"] < config.LOW_RR_THRESHOLD
+            row.update(eng.extra_row(turnover, market_key))
+            row["rr_text"] = f"{lv['rr']:.1f}:1"
+            row["target_2r"] = lv["target_basis"] == "measured"
+            row["liquidity"] = "LIQUID" if turnover >= liquid_tier else "OK"
+            row["price"] = round(close, 8)
+            row["y_close"] = round(y_close, 8)
+            row["open"] = round(open_, 8)
+            row["open_pct"] = _pct(open_, y_close)
+            row["current_pct"] = _pct(close, open_)
+            row["day_pct"] = _pct(close, y_close)
+            row["entry"] = entry
+            row["stop"] = lv["stop"]
+            row["target"] = lv["target"]
+            row["rr"] = lv["rr"]
+            row["trail"] = lv["trail"]
+            row["stop_pct"] = stop_pct
+            row["p2_pct"] = p2_pct
+            row["target_basis"] = lv["target_basis"]
+            row["spark"] = _spark(df)
+            row["trend"] = "green" if points >= config.TREND_THRESHOLDS[eng.trend_key] else "blue"
+            row["turnover"] = round(turnover)
+            row["detail"] = detail
+            row["analysis"] = eng.make_narrative(
+                info.get("symbol", yf_ticker), sig, lv, detail, market.currency_symbol)
+
             results.append(row)
             if write_charts and out_root:
                 pending_charts.append((yf_ticker, sig, lv, row))
         except Exception as e:
+            if not eng.catch_errors:
+                raise
             print(f"  warning: {yf_ticker} → {e}", flush=True)
 
     if write_charts and out_root:
-        _write_extended_charts(pending_charts, frames, market_key, out_root,
-                               charts.build_chart, market)
+        _write_extended_charts(pending_charts, frames, chart_key, out_root,
+                               eng.chart_builder, market)
 
     # Sector counts across all results, attached to each row (e.g. "MATERIALS x16").
     sector_counts = _finalize(results)
 
     if pulse_data is None:
-        if progress:
+        if eng.verbose_progress and progress:
             print("  fetching market pulse ...", flush=True)
         pulse_data = pulse.fetch()
 
     now = dt.datetime.now(ZoneInfo(market.timezone))
-    return {
+    payload = {
         "market": market.key,
         "label": market.label,
-        "setup_type": "pullback",
+        "setup_type": eng.setup_type,
         "currency": market.currency,
         "currency_symbol": market.currency_symbol,
         "timezone": market.timezone,
@@ -234,13 +379,24 @@ def scan_market(market_key: str, limit: int | None = None, full: bool = True,
         "generated_at": now.isoformat(timespec="seconds"),
         "scanned": scanned,
         "universe_size": len(universe),
-        "universe_tickers": [u.get("symbol", u.get("yf", "")) for u in universe],
-        "score_max": config.SCORE_MAX,
-        "ema_periods": config.EMA_PERIODS,
-        "pulse": pulse_data,
-        "sector_counts": dict(sector_counts.most_common()),
-        "results": results,
     }
+    if eng.include_universe_tickers:
+        payload["universe_tickers"] = [u.get("symbol", u.get("yf", "")) for u in universe]
+    payload["score_max"] = eng.score_max
+    payload[eng.periods_field] = eng.periods_value
+    payload["pulse"] = pulse_data
+    payload["sector_counts"] = dict(sector_counts.most_common())
+    payload["results"] = results
+    return payload
+
+
+def scan_market(market_key: str, limit: int | None = None, full: bool = True,
+                write_charts: bool = True, out_root: str | None = None,
+                progress: bool = True, frames: dict | None = None,
+                pulse_data: list | None = None, universe: list | None = None) -> dict:
+    """Daily Fib-EMA pullback scanner (the main 'Pullbacks' tab)."""
+    return _scan_engine(_PULLBACK, market_key, limit, full, write_charts,
+                        out_root, progress, frames, pulse_data, universe)
 
 
 def scan_reversal_market(market_key: str, limit: int | None = None, full: bool = True,
@@ -248,117 +404,8 @@ def scan_reversal_market(market_key: str, limit: int | None = None, full: bool =
                          progress: bool = True, frames: dict | None = None,
                          pulse_data: list | None = None, universe: list | None = None) -> dict:
     """Scan a market for early reversal / base-breakout setups (the 'Reversals' tab)."""
-    market = config.MARKETS[market_key]
-    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
-    if universe is None:
-        universe = load_universe(market_key, full=full)
-        if limit:
-            universe = universe[:limit]
-
-    meta = {u["yf"]: u for u in universe}
-    if frames is None:
-        frames = download([u["yf"] for u in universe])
-
-    chart_key = f"{market_key}_rev"
-    if write_charts and out_root:
-        charts.reset_dir(out_root, chart_key)
-
-    results: list[dict] = []
-    pending_charts: list[tuple] = []
-    scanned = 0
-    for yf_ticker, df in frames.items():
-        scanned += 1
-        sig = reversal.evaluate(df)
-        if sig is None or not sig.get("ok"):
-            continue
-
-        turnover = _liquidity(df, market)
-        if turnover < market.liquidity_min:
-            continue
-
-        points, grade, fired = reversal.score_and_grade(sig)
-        if grade is None:
-            continue
-
-        lv = reversal.compute_levels(df, sig)
-        if lv["rr"] <= 0:
-            continue
-
-        info = meta.get(yf_ticker, {})
-        close = sig["close"]
-        open_ = float(df["Open"].iloc[-1])
-        y_close = float(df["Close"].iloc[-2])
-        entry = lv["entry"]
-        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
-
-        detail = reversal.build_detail(df, sig, lv)
-        row = {
-            "symbol": info.get("symbol", yf_ticker),
-            "name": info.get("name", yf_ticker),
-            "sector": info.get("sector", ""),
-            "dir": "LONG",
-            "setup_type": "reversal",
-            "grade": grade,
-            "score": points,
-            "score_max": config.REV_SCORE_MAX,
-            "chips": reversal.build_chips(fired, sig),
-            "weekly": False,
-            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-            "rr_text": f"{lv['rr']:.1f}:1",
-            "target_2r": lv["target_basis"] == "measured",
-            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 8),
-            "y_close": round(y_close, 8),
-            "open": round(open_, 8),
-            "open_pct": _pct(open_, y_close),
-            "current_pct": _pct(close, open_),
-            "day_pct": _pct(close, y_close),
-            "entry": entry,
-            "stop": lv["stop"],
-            "target": lv["target"],
-            "rr": lv["rr"],
-            "trail": lv["trail"],
-            "stop_pct": stop_pct,
-            "p2_pct": p2_pct,
-            "target_basis": lv["target_basis"],
-            "spark": _spark(df),
-            "trend": "green" if points >= config.TREND_THRESHOLDS["reversal"] else "blue",
-            "turnover": round(turnover),
-            "detail": detail,
-            "analysis": reversal.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
-                                           market.currency_symbol),
-        }
-        results.append(row)
-        if write_charts and out_root:
-            pending_charts.append((yf_ticker, sig, lv, row))
-
-    if write_charts and out_root:
-        _write_extended_charts(pending_charts, frames, chart_key, out_root,
-                               charts.build_chart_reversal, market)
-
-    sector_counts = _finalize(results)
-
-    if pulse_data is None:
-        pulse_data = pulse.fetch()
-
-    now = dt.datetime.now(ZoneInfo(market.timezone))
-    return {
-        "market": market.key,
-        "label": market.label,
-        "setup_type": "reversal",
-        "currency": market.currency,
-        "currency_symbol": market.currency_symbol,
-        "timezone": market.timezone,
-        "tz_label": market.tz_label,
-        "generated_at": now.isoformat(timespec="seconds"),
-        "scanned": scanned,
-        "universe_size": len(universe),
-        "score_max": config.REV_SCORE_MAX,
-        "sma_periods": config.REV_SMAS,
-        "pulse": pulse_data,
-        "sector_counts": dict(sector_counts.most_common()),
-        "results": results,
-    }
+    return _scan_engine(_REVERSAL, market_key, limit, full, write_charts,
+                        out_root, progress, frames, pulse_data, universe)
 
 
 def scan_spec_market(market_key: str, limit: int | None = None, full: bool = True,
@@ -366,120 +413,8 @@ def scan_spec_market(market_key: str, limit: int | None = None, full: bool = Tru
                      progress: bool = True, frames: dict | None = None,
                      pulse_data: list | None = None, universe: list | None = None) -> dict:
     """Scan a market for speculative volume-spike breakouts (the 'Specs' tab)."""
-    market = config.MARKETS[market_key]
-    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
-    if universe is None:
-        universe = load_universe(market_key, full=full)
-        if limit:
-            universe = universe[:limit]
-
-    meta = {u["yf"]: u for u in universe}
-    if frames is None:
-        frames = download([u["yf"] for u in universe])
-
-    chart_key = f"{market_key}_spec"
-    if write_charts and out_root:
-        charts.reset_dir(out_root, chart_key)
-
-    # price cap applies to real stocks; disabled for crypto (per-coin price is meaningless)
-    max_price = None if getattr(market, "volume_is_usd", False) else config.SPEC_MAX_PRICE
-
-    results: list[dict] = []
-    pending_charts: list[tuple] = []
-    scanned = 0
-    for yf_ticker, df in frames.items():
-        scanned += 1
-        sig = spec.evaluate(df, max_price=max_price)
-        if sig is None or not sig.get("ok"):
-            continue
-
-        turnover = _liquidity(df, market)
-        if turnover < market.liquidity_min:
-            continue
-
-        points, grade, fired = spec.score_and_grade(sig)
-        if grade is None:
-            continue
-
-        lv = spec.compute_levels(df, sig)
-        if lv["rr"] <= 0:
-            continue
-
-        info = meta.get(yf_ticker, {})
-        close = sig["close"]
-        open_ = float(df["Open"].iloc[-1])
-        y_close = float(df["Close"].iloc[-2])
-        entry = lv["entry"]
-        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
-
-        detail = spec.build_detail(df, sig, lv)
-        row = {
-            "symbol": info.get("symbol", yf_ticker),
-            "name": info.get("name", yf_ticker),
-            "sector": info.get("sector", ""),
-            "dir": "LONG",
-            "setup_type": "spec",
-            "grade": grade,
-            "score": points,
-            "score_max": config.SPEC_SCORE_MAX,
-            "chips": spec.build_chips(fired, sig),
-            "weekly": False,
-            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-            "rr_text": f"{lv['rr']:.1f}:1",
-            "target_2r": lv["target_basis"] == "measured",
-            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 8),
-            "y_close": round(y_close, 8),
-            "open": round(open_, 8),
-            "open_pct": _pct(open_, y_close),
-            "current_pct": _pct(close, open_),
-            "day_pct": _pct(close, y_close),
-            "entry": entry,
-            "stop": lv["stop"],
-            "target": lv["target"],
-            "rr": lv["rr"],
-            "trail": lv["trail"],
-            "stop_pct": stop_pct,
-            "p2_pct": p2_pct,
-            "target_basis": lv["target_basis"],
-            "spark": _spark(df),
-            "trend": "green" if points >= config.TREND_THRESHOLDS["spec"] else "blue",
-            "turnover": round(turnover),
-            "detail": detail,
-            "analysis": spec.spec_narrative(info.get("symbol", yf_ticker), sig, lv, detail,
-                                            market.currency_symbol),
-        }
-        results.append(row)
-        if write_charts and out_root:
-            pending_charts.append((yf_ticker, sig, lv, row))
-
-    if write_charts and out_root:
-        _write_extended_charts(pending_charts, frames, chart_key, out_root,
-                               charts.build_chart_reversal, market)
-
-    sector_counts = _finalize(results)
-
-    if pulse_data is None:
-        pulse_data = pulse.fetch()
-
-    now = dt.datetime.now(ZoneInfo(market.timezone))
-    return {
-        "market": market.key,
-        "label": market.label,
-        "setup_type": "spec",
-        "currency": market.currency,
-        "currency_symbol": market.currency_symbol,
-        "timezone": market.timezone,
-        "tz_label": market.tz_label,
-        "generated_at": now.isoformat(timespec="seconds"),
-        "scanned": scanned,
-        "universe_size": len(universe),
-        "score_max": config.SPEC_SCORE_MAX,
-        "sma_periods": config.SPEC_SMAS,
-        "pulse": pulse_data,
-        "sector_counts": dict(sector_counts.most_common()),
-        "results": results,
-    }
+    return _scan_engine(_SPEC, market_key, limit, full, write_charts,
+                        out_root, progress, frames, pulse_data, universe)
 
 
 def scan_short_market(market_key: str, limit: int | None = None, full: bool = True,
@@ -487,121 +422,8 @@ def scan_short_market(market_key: str, limit: int | None = None, full: bool = Tr
                       progress: bool = True, frames: dict | None = None,
                       pulse_data: list | None = None, universe: list | None = None) -> dict:
     """Scan a market for bearish pullback (short) setups — the Shorts tab."""
-    market = config.MARKETS[market_key]
-    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
-    if universe is None:
-        universe = load_universe(market_key, full=full)
-        if limit:
-            universe = universe[:limit]
-
-    meta = {u["yf"]: u for u in universe}
-    if frames is None:
-        frames = download([u["yf"] for u in universe])
-
-    chart_key = market_key + "_short"
-    if write_charts and out_root:
-        charts.reset_dir(out_root, chart_key)
-
-    results: list[dict] = []
-    pending_charts: list[tuple] = []
-    scanned = 0
-    for yf_ticker, df in frames.items():
-        scanned += 1
-        sig = short.evaluate(df)
-        if sig is None:
-            continue
-
-        turnover = _liquidity(df, market)
-        if turnover < market.liquidity_min:
-            continue
-
-        points, grade, fired = short.score_and_grade(sig)
-        if grade is None:
-            continue
-
-        lv = short.compute_levels(df, sig)
-        if lv["rr"] <= 0:
-            continue
-
-        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
-                and lv["rr"] < config.MIN_TRADEABLE_RR:
-            grade = "B"
-
-        info = meta.get(yf_ticker, {})
-        close = sig["close"]
-        open_ = float(df["Open"].iloc[-1])
-        y_close = float(df["Close"].iloc[-2])
-        entry = lv["entry"]
-        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "short")
-
-        row = {
-            "symbol": info.get("symbol", yf_ticker),
-            "name": info.get("name", yf_ticker),
-            "sector": info.get("sector", ""),
-            "dir": "SHORT",
-            "setup_type": "short",
-            "grade": grade,
-            "score": points,
-            "score_max": short.SHORT_SCORE_MAX,
-            "chips": short.build_chips(fired, sig),
-            "weekly": sig["weekly_bearish"],
-            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-            "rr_text": f"{lv['rr']:.1f}:1",
-            "target_2r": lv["target_basis"] == "measured",
-            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 8),
-            "y_close": round(y_close, 8),
-            "open": round(open_, 8),
-            "open_pct": _pct(open_, y_close),
-            "current_pct": _pct(close, open_),
-            "day_pct": _pct(close, y_close),
-            "entry": entry,
-            "stop": lv["stop"],
-            "target": lv["target"],
-            "rr": lv["rr"],
-            "trail": lv["trail"],
-            "stop_pct": stop_pct,
-            "p2_pct": p2_pct,
-            "target_basis": lv["target_basis"],
-            "spark": _spark(df),
-            "trend": "green" if points >= config.TREND_THRESHOLDS["short"] else "blue",
-            "turnover": round(turnover),
-            "detail": {},
-            "analysis": short.narrative(info.get("symbol", yf_ticker), sig, lv,
-                                        market.currency_symbol),
-        }
-        results.append(row)
-        if write_charts and out_root:
-            pending_charts.append((yf_ticker, sig, lv, row))
-
-    if write_charts and out_root:
-        _write_extended_charts(pending_charts, frames, chart_key, out_root,
-                               charts.build_chart_short, market)
-
-    sector_counts = _finalize(results)
-
-    if pulse_data is None:
-        pulse_data = pulse.fetch()
-
-    now = dt.datetime.now(ZoneInfo(market.timezone))
-    return {
-        "market": market.key,
-        "label": market.label,
-        "setup_type": "short",
-
-        "currency": market.currency,
-        "currency_symbol": market.currency_symbol,
-        "timezone": market.timezone,
-        "tz_label": market.tz_label,
-        "generated_at": now.isoformat(timespec="seconds"),
-        "scanned": scanned,
-        "universe_size": len(universe),
-        "score_max": short.SHORT_SCORE_MAX,
-        "ema_periods": config.EMA_PERIODS,
-        "pulse": pulse_data,
-        "sector_counts": dict(sector_counts.most_common()),
-        "results": results,
-    }
+    return _scan_engine(_SHORT, market_key, limit, full, write_charts,
+                        out_root, progress, frames, pulse_data, universe)
 
 
 def scan_googy_market(market_key: str, limit: int | None = None, full: bool = True,
@@ -610,131 +432,11 @@ def scan_googy_market(market_key: str, limit: int | None = None, full: bool = Tr
                       pulse_data: list | None = None, universe: list | None = None) -> dict:
     """Scan a market for consolidation breakout setups (the 'Googy Scan' tab).
 
-    More tolerant of low-liquidity names than other daily scanners.  Low-turnover
+    More tolerant of low-liquidity names than other daily scanners. Low-turnover
     results appear with a LOW LIQUIDITY chip rather than being filtered out.
     """
-    market = config.MARKETS[market_key]
-    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
-    low_liq_threshold = config.GOOGY_LOW_LIQ_TURNOVER.get(market_key, 200_000)
-    hard_min = config.GOOGY_MIN_TURNOVER.get(market_key, 5_000)
-    if universe is None:
-        universe = load_universe(market_key, full=full)
-        if limit:
-            universe = universe[:limit]
-
-    meta = {u["yf"]: u for u in universe}
-    if frames is None:
-        frames = download([u["yf"] for u in universe])
-
-    chart_key = f"{market_key}_googy"
-    if write_charts and out_root:
-        charts.reset_dir(out_root, chart_key)
-
-    results: list[dict] = []
-    pending_charts: list[tuple] = []
-    scanned = 0
-    for yf_ticker, df in frames.items():
-        scanned += 1
-        sig = googy.evaluate(df)
-        if sig is None or not sig.get("ok"):
-            continue
-
-        turnover = _liquidity(df, market)
-        if turnover < hard_min:
-            continue
-
-        points, grade, fired = googy.score_and_grade(sig)
-        if grade is None:
-            continue
-
-        lv = googy.compute_levels(df, sig)
-        if lv["rr"] <= 0:
-            continue
-
-        if config.DEMOTE_LOW_RR and grade in config.TRADEABLE_GRADES \
-                and lv["rr"] < config.MIN_TRADEABLE_RR:
-            grade = "B"
-
-        info = meta.get(yf_ticker, {})
-        close = sig["close"]
-        open_ = float(df["Open"].iloc[-1])
-        y_close = float(df["Close"].iloc[-2])
-        entry = lv["entry"]
-        stop_pct, p2_pct = _dir_pcts(entry, lv["stop"], lv["target"], "long")
-
-        chips = googy.build_chips(fired, sig)
-        if turnover < low_liq_threshold:
-            chips.insert(0, "LOW LIQUIDITY")
-
-        detail = googy.build_detail(df, sig, lv)
-        row = {
-            "symbol": info.get("symbol", yf_ticker),
-            "name": info.get("name", yf_ticker),
-            "sector": info.get("sector", ""),
-            "dir": "LONG",
-            "setup_type": "googy",
-            "grade": grade,
-            "score": points,
-            "score_max": config.GOOGY_SCORE_MAX,
-            "chips": chips,
-            "weekly": False,
-            "low_rr": lv["rr"] < config.LOW_RR_THRESHOLD,
-            "low_liquidity": turnover < low_liq_threshold,
-            "rr_text": f"{lv['rr']:.1f}:1",
-            "target_2r": lv["target_basis"] == "measured",
-            "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
-            "price": round(close, 8),
-            "y_close": round(y_close, 8),
-            "open": round(open_, 8),
-            "open_pct": _pct(open_, y_close),
-            "current_pct": _pct(close, open_),
-            "day_pct": _pct(close, y_close),
-            "entry": entry,
-            "stop": lv["stop"],
-            "target": lv["target"],
-            "rr": lv["rr"],
-            "trail": lv["trail"],
-            "stop_pct": stop_pct,
-            "p2_pct": p2_pct,
-            "target_basis": lv["target_basis"],
-            "spark": _spark(df),
-            "trend": "green" if points >= config.TREND_THRESHOLDS["googy"] else "blue",
-            "turnover": round(turnover),
-            "detail": detail,
-            "analysis": googy.narrative(info.get("symbol", yf_ticker), sig, lv, detail,
-                                        market.currency_symbol),
-        }
-        results.append(row)
-        if write_charts and out_root:
-            pending_charts.append((yf_ticker, sig, lv, row))
-
-    if write_charts and out_root:
-        _write_extended_charts(pending_charts, frames, chart_key, out_root,
-                               charts.build_chart_reversal, market)
-
-    sector_counts = _finalize(results)
-
-    if pulse_data is None:
-        pulse_data = pulse.fetch()
-
-    now = dt.datetime.now(ZoneInfo(market.timezone))
-    return {
-        "market": market.key,
-        "label": market.label,
-        "setup_type": "googy",
-        "currency": market.currency,
-        "currency_symbol": market.currency_symbol,
-        "timezone": market.timezone,
-        "tz_label": market.tz_label,
-        "generated_at": now.isoformat(timespec="seconds"),
-        "scanned": scanned,
-        "universe_size": len(universe),
-        "score_max": config.GOOGY_SCORE_MAX,
-        "sma_periods": [config.GOOGY_SMA_FAST, config.GOOGY_SMA_SLOW],
-        "pulse": pulse_data,
-        "sector_counts": dict(sector_counts.most_common()),
-        "results": results,
-    }
+    return _scan_engine(_GOOGY, market_key, limit, full, write_charts,
+                        out_root, progress, frames, pulse_data, universe)
 
 
 def scan_scalp(progress: bool = True, out_root: str | None = None,

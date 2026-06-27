@@ -96,12 +96,12 @@ def check_stage4_milestones(journal: dict) -> dict:
     streak = profitable_weeks_streak(journal)
     total  = total_completed_weeks(journal)
 
-    l1_weeks = int(getattr(_cfg, "LIVE_STAGE4_L1_MIN_WEEKS", 4))
-    l1_dd    = float(getattr(_cfg, "LIVE_STAGE4_L1_MAX_DD",   0.05))
-    l1_bump  = float(getattr(_cfg, "LIVE_STAGE4_L1_BUMP",     0.375))
-    l2_weeks = int(getattr(_cfg, "LIVE_STAGE4_L2_MIN_WEEKS", 4))
-    l2_dd    = float(getattr(_cfg, "LIVE_STAGE4_L2_MAX_DD",   0.06))
-    l2_bump  = float(getattr(_cfg, "LIVE_STAGE4_L2_BUMP",     0.375))
+    l1_weeks = int(_cfg.LIVE_STAGE4_L1_MIN_WEEKS)
+    l1_dd    = float(_cfg.LIVE_STAGE4_L1_MAX_DD)
+    l1_bump  = float(_cfg.LIVE_STAGE4_L1_BUMP)
+    l2_weeks = int(_cfg.LIVE_STAGE4_L2_MIN_WEEKS)
+    l2_dd    = float(_cfg.LIVE_STAGE4_L2_MAX_DD)
+    l2_bump  = float(_cfg.LIVE_STAGE4_L2_BUMP)
 
     l1_met = streak >= l1_weeks and dd < l1_dd
     l2_met = l1_met and streak >= l1_weeks + l2_weeks and dd < l2_dd
@@ -150,7 +150,7 @@ def check_stage4_milestones(journal: dict) -> dict:
             "You may scale more aggressively with discipline."
         )
 
-    warn_level = int(getattr(_cfg, "SCALING_ADVISORY_WARN_LEVEL", 1))
+    warn_level = int(_cfg.SCALING_ADVISORY_WARN_LEVEL)
 
     if current_level >= 1:
         log.info(

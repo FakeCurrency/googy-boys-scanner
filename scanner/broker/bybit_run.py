@@ -48,9 +48,10 @@ logging.basicConfig(
 log = logging.getLogger("bybit_run")
 
 from scanner.scalp_journal import (
-    SCALP_JOURNAL_FILE, _atomic_write, _session_day, _corr_group,
-    MAX_DAILY, MAX_LOSS, MAX_GROUP,
+    SCALP_JOURNAL_FILE, _session_day, _corr_group,
+    MAX_DAILY, MAX_LOSS,
 )
+from scanner.journal_common import atomic_write as _atomic_write
 from scanner import config as _cfg
 from scanner.broker import bybit_client as bc
 from scanner.broker.bybit_reconcile import reconcile_journal
@@ -116,9 +117,9 @@ def _save(j: dict, broker_mode: str = "") -> None:
 def _regime_adjusted_units(units: float, regime: str) -> float:
     """Apply regime-aware risk scaling: reduce size in ranging markets."""
     if regime == "ranging":
-        if getattr(_cfg, "REGIME_RANGING_SKIP", False):
+        if _cfg.REGIME_RANGING_SKIP:
             return 0.0
-        mult = getattr(_cfg, "REGIME_RANGING_RISK_MULT", 0.5)
+        mult = _cfg.REGIME_RANGING_RISK_MULT
         return units * mult
     return units
 
@@ -153,7 +154,7 @@ def run(dry_run: bool = False) -> None:
         # ── Live-mode safety guard ─────────────────────────────────────────
         # BYBIT_TESTNET=false alone is NOT sufficient to enable real-capital
         # execution. BYBIT_LIVE_CONFIRMED=true must also be set as a secret.
-        if not bc._testnet() and getattr(_cfg, "REQUIRE_LIVE_CONFIRMED", True):
+        if not bc._testnet() and _cfg.REQUIRE_LIVE_CONFIRMED:
             confirmed = os.environ.get("BYBIT_LIVE_CONFIRMED", "").lower() == "true"
             if not confirmed:
                 log.error(
@@ -229,15 +230,9 @@ def run(dry_run: bool = False) -> None:
     log.info("pre-trade gate  trades_used=%d/%d  today_pnl=%.2f  loss_limit=%.2f",
              trades_used, MAX_DAILY, today_pnl, -MAX_LOSS)
 
-    open_keys   = {(p["symbol"], p["direction"]) for p in j["open"]}
-    group_count: dict[str, int] = {}
-    for p in j["open"]:
-        g = p.get("corr_group") or _corr_group(
-            p["symbol"], p.get("asset_type", ""), p.get("sector", ""))
-        group_count[g] = group_count.get(g, 0) + 1
-
+    open_keys  = {(p["symbol"], p["direction"]) for p in j["open"]}
     submitted  = skipped_cap = skipped_asset = skipped_regime = 0
-    live_stage = int(getattr(_cfg, "LIVE_DEPLOYMENT_STAGE", 1))
+    live_stage = int(_cfg.LIVE_DEPLOYMENT_STAGE)
     log.info("live_deployment_stage=%d", live_stage)
 
     # ── 7. Evaluate each A+/A crypto signal ──────────────────────────────────
@@ -256,19 +251,11 @@ def run(dry_run: bool = False) -> None:
             _log_skip(symbol, direction, "already_open")
             continue
 
-        if trades_used + submitted >= MAX_DAILY:
-            log.warning("daily cap (%d) reached — no more orders this session", MAX_DAILY)
-            break
-        if today_pnl < -MAX_LOSS:
-            log.warning("daily loss cap (-$%.2f) reached — no more orders this session", MAX_LOSS)
-            break
-
-        group = _corr_group(symbol, r.get("asset_type", ""), r.get("sector", ""))
-        if group_count.get(group, 0) >= MAX_GROUP:
-            _log_skip(symbol, direction, "corr_cap",
-                      group=group, group_count=group_count.get(group, 0), max=MAX_GROUP)
-            skipped_cap += 1
-            continue
+        # Correlation group is still needed to tag the position; the cap on it —
+        # along with the daily-trade cap, daily-loss cap, portfolio heat, sector
+        # exposure and HTF bias — is enforced by pre_trade_check below, the single
+        # authority for all portfolio limits (no duplicated thresholds here).
+        group  = _corr_group(symbol, r.get("asset_type", ""), r.get("sector", ""))
 
         entry  = float(r["entry"])
         stop   = float(r["stop"])
@@ -279,7 +266,7 @@ def run(dry_run: bool = False) -> None:
         size_mult  = dynamic_size_multiplier(j, regime)  # already floors at 0.25
 
         if live_stage == 3:
-            s3_mult   = float(getattr(_cfg, "LIVE_STAGE3_POSITION_MULT", 0.35))
+            s3_mult   = float(_cfg.LIVE_STAGE3_POSITION_MULT)
             # Re-apply the 0.25 floor after the Stage 3 reduction so the minimum
             # size guarantee from dynamic_size_multiplier is still respected.
             size_mult = max(size_mult * s3_mult, 0.25)
@@ -289,7 +276,7 @@ def run(dry_run: bool = False) -> None:
         units = base_units * size_mult
 
         if units <= 0:
-            if regime == "ranging" and getattr(_cfg, "REGIME_RANGING_SKIP", False):
+            if regime == "ranging" and _cfg.REGIME_RANGING_SKIP:
                 _log_skip(symbol, direction, "regime_ranging_skip", regime=regime)
                 skipped_regime += 1
             else:
@@ -306,13 +293,13 @@ def run(dry_run: bool = False) -> None:
         # base risk or account size makes effective_risk exceed the cap, clamp it.
         if live_stage == 3:
             from scanner.broker.risk_manager import account_size as _account_size
-            max_risk_s3 = _account_size() * float(getattr(_cfg, "LIVE_STAGE3_RISK_PCT_MAX", 0.005))
+            max_risk_s3 = _account_size() * float(_cfg.LIVE_STAGE3_RISK_PCT_MAX)
             if effective_risk > max_risk_s3:
                 log.info(
                     "Stage 3 risk cap: clamping effective_risk $%.2f → $%.2f "
                     "(%.1f%% of account)",
                     effective_risk, max_risk_s3,
-                    float(getattr(_cfg, "LIVE_STAGE3_RISK_PCT_MAX", 0.005)) * 100,
+                    float(_cfg.LIVE_STAGE3_RISK_PCT_MAX) * 100,
                 )
                 effective_risk = max_risk_s3
                 stop_dist = abs(entry - stop)
@@ -354,6 +341,13 @@ def run(dry_run: bool = False) -> None:
         ptc = pre_trade_check(pos, j, sess_day=sess_day,
                               submitted_this_run=submitted, bias_map=htf_bias)
         if not ptc["ok"]:
+            # daily_loss / daily_cap are session-terminal — once hit, no later
+            # candidate can pass either, so stop the whole loop. Every other
+            # failure (corr cap, heat, sector, bias, …) is per-candidate → skip.
+            if "daily_loss" in ptc["failed"] or "daily_cap" in ptc["failed"]:
+                log.warning("session limit reached — %s — no more orders this session",
+                            ptc["reason"])
+                break
             _log_skip(symbol, direction, "pre_trade_check",
                       failed=",".join(ptc["failed"]), detail=ptc["reason"][:120])
             skipped_cap += 1
@@ -372,7 +366,6 @@ def run(dry_run: bool = False) -> None:
             pos["broker_status"]   = "SIMULATED"
             j["open"].append(pos)
             open_keys.add((symbol, direction))
-            group_count[group] = group_count.get(group, 0) + 1
             submitted += 1
             log.info("[SIM] %s %s  entry=%.4f  stop=%.4f  target=%.4f  qty=%.4f  regime=%s",
                      symbol, direction, entry, stop, float(r["target"]), units, regime)
@@ -401,7 +394,6 @@ def run(dry_run: bool = False) -> None:
 
         j["open"].append(pos)
         open_keys.add((symbol, direction))
-        group_count[group] = group_count.get(group, 0) + 1
         submitted += 1
         log.info("ORDER PLACED  %s %s → order_id=%s  link_id=%s",
                  symbol, direction, result["order_id"], result.get("order_link_id", ""))

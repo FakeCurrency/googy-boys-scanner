@@ -12,7 +12,8 @@ import logging
 import pathlib
 import statistics
 
-from scanner.scalp_journal import _session_day, _atomic_write
+from scanner.scalp_journal import _session_day
+from scanner.journal_common import atomic_write as _atomic_write
 
 log = logging.getLogger(__name__)
 

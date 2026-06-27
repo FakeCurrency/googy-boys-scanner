@@ -15,7 +15,7 @@ import logging
 import pathlib
 
 from scanner import config as _cfg
-from scanner.scalp_journal import _atomic_write
+from scanner.journal_common import atomic_write as _atomic_write
 
 log  = logging.getLogger(__name__)
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -54,7 +54,7 @@ def check_consecutive_losses(journal: dict) -> dict:
     N is controlled by config.CONSEC_LOSS_PAUSE (default 4).
     Trades flagged skip_daily_count (stop-gaps) are excluded.
     """
-    n_required = int(getattr(_cfg, "CONSEC_LOSS_PAUSE", 4))
+    n_required = int(_cfg.CONSEC_LOSS_PAUSE)
     closed = [t for t in journal.get("closed", []) if not t.get("skip_daily_count")]
 
     if len(closed) < n_required:
@@ -112,7 +112,7 @@ def check_anomaly_breaker(last_anomaly_fired: bool = False) -> dict:
     Pass last_anomaly_fired=True when the anomaly module returned alerts on
     the current run.
     """
-    if not getattr(_cfg, "ANOMALY_PAUSE_ON_TRIGGER", True):
+    if not _cfg.ANOMALY_PAUSE_ON_TRIGGER:
         return {"ok": True, "paused": False, "reason": ""}
     if last_anomaly_fired:
         log.warning("ANOMALY CIRCUIT BREAKER — anomaly detected, pausing new trades")

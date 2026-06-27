@@ -43,7 +43,7 @@ def is_blackout_day(date: str | None = None) -> bool:
     date: ISO date string "YYYY-MM-DD", or None for today (UTC).
     """
     from scanner import config as cfg
-    if not getattr(cfg, "EVENT_BLACKOUT_ENABLED", True):
+    if not cfg.EVENT_BLACKOUT_ENABLED:
         return False
 
     if date is None:
