@@ -298,12 +298,17 @@ VIVEK_JOURNAL_SESSION = {
     "crypto": None,
 }
 
-# Autonomous bot (Bybit testnet) — only take strong 5.0 matches.
-VIVEK_BOT_MIN_GRADE    = "A"       # bot trades A or better (A+/A); not B+/WATCH
+# Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
+VIVEK_BOT_MIN_GRADE    = "A+"      # A+ ONLY — never A / B+ / WATCH
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
-VIVEK_BOT_MAX_POSITIONS = 5        # concurrent open positions cap
-VIVEK_BOT_MAX_PER_SECTOR = 2       # at most N concurrent positions in one sector
-VIVEK_BOT_TARGET_LEVERAGE = 3      # bot operates at ≤3× (5.0's 2.5–3× preference); hard cap stays 5×
+VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
+# Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
+VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
+# Per-market book: at most 10 open, of which at least 4 must be SHORT (so at most
+# 6 long) — the bot reserves short slots to keep a deliberate short bias.
+VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
+VIVEK_BOT_MIN_SHORTS     = 4       # at least this many of the 10 must be short
+VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
 
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so

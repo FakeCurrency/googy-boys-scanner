@@ -243,63 +243,80 @@ def test_entry_types_always_returns_at_least_one():
     assert set(vivek.ENTRY_TYPES) <= set(vivek.ENTRY_TYPE_LABELS)
 
 
-# ── bot: take / skip ──────────────────────────────────────────────────────────
+# ── bot: take / skip (A+ only, plan-based, entry-type labelled) ─────────────────
+
+def _bplan(**kw):
+    p = {"armed": True, "entry_trigger": "reclaim", "entry": 100.0, "stop": 96.0,
+         "tp1": 106.0, "tp2": 112.0, "tp3": 120.0, "rr": 3.0, "scale": config.VIVEK_TP_SCALE_LONG}
+    p.update(kw)
+    return p
+
 
 def _row(**kw):
-    r = {"symbol": "BHP", "dir": "LONG", "grade": "A", "rr": 3.0,
-         "entry": 100.0, "stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
-         "at_level": True, "reaction": "bounce", "armed": True, "entry_trigger": "reclaim",
-         "scale": config.VIVEK_TP_SCALE_LONG}
+    plans = kw.pop("plans", None) or {"1D": _bplan()}
+    r = {"symbol": "BHP", "dir": "LONG", "grade": "A+", "entry_types": ["reclaim"], "plans": plans}
     r.update(kw)
     return r
 
 
-def test_bot_takes_clean_A_setup():
+def test_bot_takes_a_plus_and_labels_entry_type():
     d = vivek_bot.evaluate_setup(_row())
-    assert d["take"] is True and d["direction"] == "long"
+    assert d["take"] is True and d["direction"] == "long" and d["timeframe"] == "1D"
+    assert d["entry_type"] == "reclaim"
+    assert d["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["reclaim"]
 
 
-def test_bot_skips_below_min_grade(monkeypatch):
-    monkeypatch.setattr(config, "VIVEK_BOT_MIN_GRADE", "A")
-    d = vivek_bot.evaluate_setup(_row(grade="B+"))
-    assert d["take"] is False and d["code"] == "grade_below_min"
+def test_bot_takes_only_a_plus():
+    for g in ("A", "B+", "WATCH"):
+        d = vivek_bot.evaluate_setup(_row(grade=g))
+        assert d["take"] is False and d["code"] == "not_a_plus"
 
 
-def test_bot_skips_low_rr():
-    d = vivek_bot.evaluate_setup(_row(rr=1.0))
-    assert d["take"] is False and d["code"] == "low_rr"
+def test_bot_prefers_weekly_then_falls_back_to_daily():
+    # Weekly armed → trade the Weekly plan.
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(), "1W": _bplan(entry_trigger="break")}))
+    assert d["timeframe"] == "1W" and d["entry_type"] == "break"
+    # Weekly NOT armed → fall back to the Daily plan.
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(), "1W": _bplan(armed=False)}))
+    assert d["timeframe"] == "1D"
 
 
-def test_bot_skips_bad_level_order():
-    d = vivek_bot.evaluate_setup(_row(tp1=95.0))   # tp1 below entry on a long
-    assert d["take"] is False and d["code"] == "bad_level_order"
+def test_bot_skips_when_no_armed_plan():
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(armed=False)}))
+    assert d["take"] is False and d["code"] == "no_armed_plan"
 
 
-def test_bot_skips_when_not_armed():
-    d = vivek_bot.evaluate_setup(_row(armed=False))
-    assert d["take"] is False and d["code"] == "not_armed"
+def test_bot_skips_low_rr_and_bad_order():
+    assert vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(rr=1.0)}))["code"] == "low_rr"
+    assert vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(tp1=95.0)}))["code"] == "bad_level_order"
 
 
-# ── bot: sizing ───────────────────────────────────────────────────────────────
+def test_entry_type_label_flows_into_the_ticket():
+    out = vivek_bot.plan_trade(_row(), equity=10_000, market="asx")
+    assert out["plan"]["entry_type"] == "reclaim"
+    assert out["plan"]["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["reclaim"]
+    assert out["plan"]["timeframe"] == "1D" and out["plan"]["grade"] == "A+"
+
+
+# ── bot: sizing + per-market leverage ─────────────────────────────────────────
 
 def test_sizing_risks_configured_pct():
     s = vivek_bot.size_position(10_000, entry=100, stop=96, risk_pct=0.25)
-    # 0.25% of 10k = $25 risk over a $4 stop → 6.25 units
-    assert s["risk_usd"] == pytest.approx(25.0)
-    assert s["units"] == pytest.approx(6.25)
+    assert s["risk_usd"] == pytest.approx(25.0) and s["units"] == pytest.approx(6.25)
 
 
-def test_sizing_caps_leverage():
-    # tiny stop would imply huge notional; leverage must cap at the max.
-    s = vivek_bot.size_position(10_000, entry=100, stop=99.99,
-                                risk_pct=0.5, max_leverage=5)
-    assert s["leverage"] <= 5.0 + 1e-9
-    assert s["leverage_capped"] is True
+def test_sizing_risk_clamped_to_quarter_to_half_band():
+    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=2.0)["risk_pct"] == 0.5    # clamp high
+    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=0.1)["risk_pct"] == 0.25   # clamp low
 
 
-def test_sizing_respects_max_risk_pct(monkeypatch):
-    s = vivek_bot.size_position(10_000, entry=100, stop=90, risk_pct=2.0)  # asks 2%
-    assert s["risk_pct"] <= config.VIVEK_RISK_PCT_MAX                       # clamped to 0.5
+def test_leverage_is_5x_stocks_and_3x_crypto():
+    # A tiny stop implies huge notional → leverage caps at the per-market max.
+    tight = {"1D": _bplan(stop=99.99, tp1=101, tp2=102, tp3=103)}
+    asx = vivek_bot.plan_trade(_row(plans=tight), 10_000, market="asx")["plan"]
+    cry = vivek_bot.plan_trade(_row(plans=tight), 10_000, market="crypto")["plan"]
+    assert asx["leverage_target"] == 5 and asx["leverage"] <= 5 + 1e-9 and asx["leverage_capped"]
+    assert cry["leverage_target"] == 3 and cry["leverage"] <= 3 + 1e-9 and cry["leverage_capped"]
 
 
 # ── bot: live management (scale-outs + SL movement) ──────────────────────────
@@ -342,39 +359,59 @@ def test_short_management_mirrors():
     assert pos["tp1_hit"] is True and pos["stop"] == 100.0     # SL → break-even (down)
 
 
-def test_decide_splits_takeable_and_skipped():
-    rows = [_row(symbol="A1"), _row(symbol="A2", rr=1.0), _row(symbol="A3", grade="WATCH")]
-    out = vivek_bot.decide(rows, equity=10_000)
-    assert len(out["plans"]) == 1 and out["plans"][0]["plan"]["symbol"] == "A1"
-    assert len(out["skipped"]) == 2
+def _short_plan(**kw):
+    p = {"armed": True, "entry_trigger": "reclaim", "entry": 100.0, "stop": 104.0,
+         "tp1": 94.0, "tp2": 88.0, "tp3": 80.0, "rr": 3.0, "scale": config.VIVEK_TP_SCALE_SHORT}
+    p.update(kw)
+    return p
 
 
-# ── bot: portfolio discipline (few, uncorrelated positions) ─────────────────────
-
-def test_decide_caps_total_positions():
-    rows = [_row(symbol=f"S{i}", sector=f"sec{i}") for i in range(8)]   # all takeable
-    out = vivek_bot.decide(rows, equity=10_000, max_positions=3)
-    assert len(out["plans"]) == 3
-    assert out["summary"]["skip_reasons"].get("book_full") == 5
+def _long(sym):
+    return _row(symbol=sym)
 
 
-def test_decide_caps_per_sector():
-    rows = [_row(symbol=f"M{i}", sector="Materials") for i in range(4)]
-    out = vivek_bot.decide(rows, equity=10_000)                         # default 2 per sector
-    assert len(out["plans"]) == 2
-    assert out["summary"]["skip_reasons"].get("sector_full") == 2
+def _short(sym):
+    return _row(symbol=sym, dir="SHORT", plans={"1D": _short_plan()})
+
+
+# ── bot: book rules (A+ only, 10/market, ≥4 short) ──────────────────────────────
+
+def test_decide_takes_only_a_plus():
+    rows = [_long("A1"), _row(symbol="A2", grade="A"), _row(symbol="A3", grade="WATCH")]
+    out = vivek_bot.decide(rows, equity=10_000, market="asx")
+    assert out["summary"]["taken"] == 1 and out["plans"][0]["plan"]["symbol"] == "A1"
+    assert out["summary"]["skip_reasons"].get("not_a_plus") == 2
+
+
+def test_decide_caps_at_ten_per_market():
+    rows = [_short(f"S{i}") for i in range(14)]            # 14 shorts (no long cap in play)
+    out = vivek_bot.decide(rows, equity=10_000, market="asx")
+    assert out["summary"]["taken"] == 10
+    assert out["summary"]["skip_reasons"].get("book_full") == 4
+
+
+def test_decide_reserves_short_slots_caps_longs_at_six():
+    rows = [_long(f"L{i}") for i in range(10)]             # all longs available
+    out = vivek_bot.decide(rows, equity=10_000, market="asx")
+    assert out["summary"]["longs"] == 6 and out["summary"]["shorts"] == 0
+    assert out["summary"]["short_bias_met"] is False
+    assert out["summary"]["skip_reasons"].get("long_cap") == 4
+
+
+def test_decide_fills_ten_with_at_least_four_short():
+    rows = [_long(f"L{i}") for i in range(8)] + [_short(f"S{i}") for i in range(8)]
+    out = vivek_bot.decide(rows, equity=10_000, market="asx")
+    assert out["summary"]["taken"] == 10
+    assert out["summary"]["longs"] == 6 and out["summary"]["shorts"] == 4
+    assert out["summary"]["short_bias_met"] is True
 
 
 def test_decide_dedups_symbol():
-    rows = [_row(symbol="BHP", sector="A"), _row(symbol="BHP", sector="A")]
-    out = vivek_bot.decide(rows, equity=10_000)
-    assert len(out["plans"]) == 1
+    out = vivek_bot.decide([_long("BHP"), _long("BHP")], equity=10_000, market="asx")
+    assert out["summary"]["taken"] == 1
     assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
 
 
-def test_bot_leverage_defaults_to_conservative_target():
-    # A tight stop would imply huge leverage; the bot caps at the 3× target, not 5×.
-    out = vivek_bot.plan_trade(_row(entry=100, stop=99.99, tp1=101, tp2=102, tp3=103),
-                               equity=10_000)
-    assert out["plan"]["leverage"] <= config.VIVEK_BOT_TARGET_LEVERAGE + 1e-9
-    assert out["plan"]["leverage_capped"] is True
+def test_decide_passes_market_leverage_through():
+    out = vivek_bot.decide([_short("BTC")], equity=10_000, market="crypto")
+    assert out["plans"][0]["plan"]["leverage_target"] == 3 and out["plans"][0]["plan"]["market"] == "crypto"

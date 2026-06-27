@@ -855,6 +855,7 @@
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
     if (s === "price") list.sort((a, b) => n(b.price) - n(a.price));
     else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
+    else if (s === "mcap") list.sort((a, b) => mcapOf(b.symbol) - mcapOf(a.symbol));   // largest cap first
     else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
     else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
     return list;

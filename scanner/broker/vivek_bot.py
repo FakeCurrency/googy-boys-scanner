@@ -1,19 +1,27 @@
-"""VIVEK autonomous-bot decision engine — trades 5.0Trading.Bull-style setups.
+"""VIVEK autonomous-bot decision engine — strict VIVEK 5.0 rules.
 
-Pure decision logic (no broker calls) so it is fully testable and portable. A
-runner feeds it VIVEK scan rows + live prices; this module decides:
+Pure decision logic (no broker calls) so it is fully testable and auditable. A
+runner feeds it VIVEK scan rows + the account equity, PER MARKET; this module
+decides what to trade and how big. Wiring it to Bybit/IBKR bracket orders is a
+thin layer on top — this module never places an order itself.
 
-  1. evaluate_setup() — should the bot take this setup at all? (grade, levels,
-     R:R, real 200-SMA reaction). Returns a clear take/skip reason for the log.
-  2. size_position()  — how big? 0.25–0.5% risk, leverage capped at 5×.
-  3. plan_trade()     — the full ticket: direction, entry, SL, TP1/TP2/TP3 with
-     the 5.0 scale-outs and the SL-movement plan.
-  4. manage_position()— as price hits TP1/TP2/TP3: book the scale-outs and move
-     the SL (BE at TP1, below new support at TP2) — NEVER against the position.
+The rules it enforces (locked-in, audited on every decision):
 
-Everything logs why it acted so the testnet run is auditable. This is the
-foundation for autonomous demo trading; wiring it to Bybit bracket orders is a
-thin layer on top (see scanner/broker/bybit_bracket.py).
+  1. A+ ONLY. It will not take A, B+ or WATCH under any circumstances.
+  2. ENTRY TYPE is labelled on every trade — reclaim / retest / break — in both
+     the logs and the returned ticket, with the full human description.
+  3. TIMEFRAME: Weekly plans are primary (less noise); it falls back to the
+     Daily plan only if the Weekly one has no armed trigger. The timeframe it
+     traded is recorded on the ticket. A runner can override the preference
+     (e.g. to mirror the timeframe the user has selected on the chart).
+  4. SIZING: risk 0.25–0.5% of equity per trade; leverage is 5× for stocks
+     (ASX/NASDAQ) and 3× for crypto. Effective size + leverage are logged.
+  5. BOOK (per market): at most 10 open, of which AT LEAST 4 must be short — so
+     at most 6 longs. The bot reserves the short slots to hold a deliberate
+     short bias and never lets the book run long-heavy. One position per symbol.
+
+Single source of truth: it reads the SAME per-timeframe plans the row, chart and
+journal use (row["plans"][tf]) — it never recomputes a level.
 """
 
 import logging
@@ -22,77 +30,111 @@ from scanner import config as _cfg
 
 log = logging.getLogger("vivek_bot")
 
-_GRADE_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}
 _LEVEL_KEYS = ("entry", "stop", "tp1", "tp2", "tp3")
 
+# Rule 2 — the three (and only three) allowed entry types, with auditable labels.
+ENTRY_TYPE_LABEL = {
+    "reclaim": "Close back above the 200 SMA after rejection",
+    "retest":  "Retest of the level with confirmation",
+    "break":   "Break of small structure near the 200 SMA",
+}
 
-# ── 1. should we take it? ─────────────────────────────────────────────────────
 
-def evaluate_setup(row: dict, min_grade: str | None = None, min_rr: float | None = None) -> dict:
-    """Decide whether a VIVEK scan row is takeable by the bot.
+def _direction(row: dict) -> str:
+    return "short" if str(row.get("dir", "LONG")).upper() == "SHORT" else "long"
 
-    Returns {take: bool, grade, reason, code}. The bot only takes strong 5.0
-    matches with a complete, sane set of levels and a real 200-SMA reaction.
+
+def _pick_plan(row: dict, prefer_tf: str) -> tuple[str | None, dict | None]:
+    """Rule 3 — choose the timeframe plan to trade.
+
+    Weekly (or the runner-supplied `prefer_tf`) is primary; fall back to the
+    other timeframe. Only an ARMED plan with a complete level set qualifies.
+    Returns (timeframe, plan) or (None, None).
     """
-    min_grade = min_grade or _cfg.VIVEK_BOT_MIN_GRADE
+    plans = row.get("plans") or {}
+    order = [prefer_tf] + [tf for tf in ("1W", "1D") if tf != prefer_tf]
+    for tf in order:
+        p = plans.get(tf)
+        if p and p.get("armed") and all(p.get(k) is not None for k in _LEVEL_KEYS):
+            return tf, p
+    return None, None
+
+
+# ── 1. should we take it? (A+ only, armed, ordered, R:R, labelled) ────────────
+
+def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None = None) -> dict:
+    """Decide whether a VIVEK row is takeable, on the preferred timeframe's plan.
+
+    Returns a decision dict; on a take it carries the timeframe, the entry-type
+    label, and the plan it will trade. Every skip carries an auditable code.
+    """
+    prefer_tf = prefer_tf or _cfg.VIVEK_BOT_PREFER_TF
     min_rr = _cfg.VIVEK_BOT_MIN_RR if min_rr is None else min_rr
     sym = row.get("symbol", "?")
     grade = row.get("grade")
 
     def skip(code, reason):
-        log.info("SKIP  %s  [%s] %s", sym, code, reason)
+        log.info("SKIP  %-8s [%s] %s", sym, code, reason)
         return {"take": False, "grade": grade, "reason": reason, "code": code}
 
-    if grade not in _GRADE_RANK:
-        return skip("unknown_grade", f"unknown grade {grade!r}")
-    if _GRADE_RANK[grade] > _GRADE_RANK.get(min_grade, 1):
-        return skip("grade_below_min", f"grade {grade} below bot minimum {min_grade}")
+    # Rule 1 — A+ ONLY.
+    if grade != _cfg.VIVEK_BOT_MIN_GRADE:
+        return skip("not_a_plus", f"grade {grade} — bot trades {_cfg.VIVEK_BOT_MIN_GRADE} only")
 
-    # Every level must be present and ordered correctly for the direction.
-    if not all(row.get(k) not in (None, "") for k in _LEVEL_KEYS):
-        return skip("incomplete_levels", "missing entry/stop/tp1/tp2/tp3")
-    direction = "long" if str(row.get("dir", "LONG")).upper() != "SHORT" else "short"
-    e, s = float(row["entry"]), float(row["stop"])
-    t1, t2, t3 = float(row["tp1"]), float(row["tp2"]), float(row["tp3"])
+    # Rule 3 — pick the timeframe plan (Weekly primary).
+    tf, plan = _pick_plan(row, prefer_tf)
+    if plan is None:
+        return skip("no_armed_plan", f"no armed {prefer_tf}/1D plan to trade")
+
+    direction = _direction(row)
+    e, s = float(plan["entry"]), float(plan["stop"])
+    t1, t2, t3 = float(plan["tp1"]), float(plan["tp2"]), float(plan["tp3"])
     ordered = (s < e < t1 < t2 < t3) if direction == "long" else (s > e > t1 > t2 > t3)
     if not ordered:
-        return skip("bad_level_order", "levels not ordered for the trade direction")
+        return skip("bad_level_order", f"{tf} levels not ordered for {direction}")
 
-    rr = float(row.get("rr", 0) or 0)
+    rr = float(plan.get("rr", 0) or 0)
     if rr < min_rr:
-        return skip("low_rr", f"R:R {rr:.1f} < min {min_rr:.1f}")
+        return skip("low_rr", f"{tf} R:R {rr:.1f} < min {min_rr:.1f}")
 
-    # Must be ARMED — a mechanical trigger fired, not just "near the level". The
-    # scan only grades a setup A/A+ when armed, but the bot enforces it directly
-    # too so it never trades a WATCHING setup.
-    if not row.get("armed"):
-        return skip("not_armed", "WATCHING — no trigger fired")
+    # Rule 2 — entry-type label (must be one of the three known triggers).
+    et = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
+    et_label = ENTRY_TYPE_LABEL.get(et)
+    if et_label is None:
+        return skip("unknown_entry_type", f"entry type {et!r} not one of reclaim/retest/break")
 
-    why = (f"{grade} {direction} · {row.get('level_tf', '?')} 200 SMA "
-           f"{row.get('entry_trigger', '?')} · R:R {rr:.1f}")
-    log.info("TAKE  %s  %s", sym, why)
-    return {"take": True, "grade": grade, "reason": why, "code": "OK", "direction": direction}
+    why = f"A+ {direction} · {tf} · {et}: {et_label} · entry {e:g} SL {s:g} · R:R {rr:.1f}"
+    log.info("TAKE  %-8s %s", sym, why)
+    return {"take": True, "grade": grade, "direction": direction, "timeframe": tf,
+            "entry_type": et, "entry_type_label": et_label, "rr": rr,
+            "reason": why, "code": "OK", "_plan": plan}
 
 
-# ── 2. position sizing (0.25–0.5% risk, ≤5× leverage) ────────────────────────
+# ── 2. position sizing (0.25–0.5% risk; 5× stocks / 3× crypto) ────────────────
+
+def _leverage_for(market: str | None) -> float:
+    return float(_cfg.VIVEK_BOT_LEVERAGE.get(market, _cfg.VIVEK_BOT_LEVERAGE["asx"]))
+
 
 def size_position(equity: float, entry: float, stop: float,
                   risk_pct: float | None = None, max_leverage: float | None = None) -> dict:
-    """Risk-based size. Risk a small % of equity per trade, cap implied leverage."""
-    risk_pct = _cfg.VIVEK_RISK_PCT_DEFAULT if risk_pct is None else risk_pct
-    risk_pct = min(max(risk_pct, 0.0), _cfg.VIVEK_RISK_PCT_MAX)
+    """Risk-based size: risk a small % of equity, cap implied leverage at the
+    per-market leverage. Risk % is clamped to the 0.25–0.5 band."""
+    risk_pct = _cfg.VIVEK_BOT_RISK_PCT if risk_pct is None else risk_pct
+    risk_pct = min(max(risk_pct, 0.25), _cfg.VIVEK_RISK_PCT_MAX)      # 0.25–0.5 band
     max_lev = _cfg.VIVEK_MAX_LEVERAGE if max_leverage is None else max_leverage
 
     stop_dist = abs(entry - stop)
     if stop_dist <= 0 or entry <= 0 or equity <= 0:
         return {"units": 0.0, "notional": 0.0, "risk_usd": 0.0,
-                "risk_pct": risk_pct, "leverage": 0.0, "stop_dist": stop_dist}
+                "risk_pct": risk_pct, "leverage": 0.0, "stop_dist": stop_dist,
+                "leverage_capped": False}
 
     risk_usd = equity * (risk_pct / 100.0)
     units = risk_usd / stop_dist
     notional = units * entry
 
-    # Cap notional so implied leverage never exceeds the max (risk shrinks if so).
+    # Cap notional so implied leverage never exceeds the per-market max.
     max_notional = equity * max_lev
     capped = False
     if notional > max_notional:
@@ -101,37 +143,42 @@ def size_position(equity: float, entry: float, stop: float,
         notional = units * entry
         risk_usd = units * stop_dist
 
-    leverage = notional / equity if equity else 0.0
     return {
         "units": round(units, 8), "notional": round(notional, 2),
         "risk_usd": round(risk_usd, 2), "risk_pct": risk_pct,
-        "leverage": round(leverage, 2), "stop_dist": round(stop_dist, 8),
-        "leverage_capped": capped,
+        "leverage": round(notional / equity if equity else 0.0, 2),
+        "stop_dist": round(stop_dist, 8), "leverage_capped": capped,
     }
 
 
 # ── 3. full trade plan ────────────────────────────────────────────────────────
 
-def plan_trade(row: dict, equity: float, **kw) -> dict:
+def plan_trade(row: dict, equity: float, market: str | None = None,
+               prefer_tf: str | None = None, risk_pct: float | None = None,
+               min_rr: float | None = None) -> dict:
     """Combine evaluate + size into a ready-to-place ticket (or a skip)."""
-    decision = evaluate_setup(row, kw.get("min_grade"), kw.get("min_rr"))
+    decision = evaluate_setup(row, prefer_tf, min_rr)
     if not decision["take"]:
         return {**decision, "plan": None}
 
+    plan = decision["_plan"]
+    tf = decision["timeframe"]
     direction = decision["direction"]
-    entry, stop = float(row["entry"]), float(row["stop"])
-    # Conservative by default: the bot operates at ≤ target leverage (3×), not the
-    # 5× hard cap — closer to 5.0's 2.5–3× preference.
-    max_lev = kw.get("max_leverage")
-    if max_lev is None:
-        max_lev = _cfg.VIVEK_BOT_TARGET_LEVERAGE
-    sizing = size_position(equity, entry, stop, kw.get("risk_pct"), max_lev)
-    scale = row.get("scale") or (
+    entry, stop = float(plan["entry"]), float(plan["stop"])
+    tps = [float(plan["tp1"]), float(plan["tp2"]), float(plan["tp3"])]
+    max_lev = _leverage_for(market)
+    sizing = size_position(equity, entry, stop, risk_pct, max_lev)
+    scale = plan.get("scale") or (
         _cfg.VIVEK_TP_SCALE_LONG if direction == "long" else _cfg.VIVEK_TP_SCALE_SHORT)
-    tps = [float(row["tp1"]), float(row["tp2"]), float(row["tp3"])]
-    plan = {
+
+    ticket = {
         "symbol": row.get("symbol"),
+        "market": market,
         "direction": direction,
+        "timeframe": tf,                              # Rule 3 — recorded per trade
+        "entry_type": decision["entry_type"],         # Rule 2 — labelled per trade
+        "entry_type_label": decision["entry_type_label"],
+        "grade": "A+",
         "entry": entry, "stop": stop,
         "tp1": tps[0], "tp2": tps[1], "tp3": tps[2],
         "tp_plan": [
@@ -139,13 +186,15 @@ def plan_trade(row: dict, equity: float, **kw) -> dict:
             {"level": tps[1], "book_pct": scale[1], "sl_move": "below_support"},
             {"level": tps[2], "book_pct": scale[2], "sl_move": "hold"},
         ],
-        "scale": scale,
+        "scale": scale, "rr": decision["rr"], "leverage_target": max_lev,
         **sizing,
     }
-    log.info("PLAN  %s  %s  units=%.6f  notional=$%.2f  risk=$%.2f (%.2f%%)  lev=%.1fx",
-             plan["symbol"], direction, plan["units"], plan["notional"],
-             plan["risk_usd"], plan["risk_pct"], plan["leverage"])
-    return {**decision, "plan": plan}
+    log.info("PLAN  %-8s A+ %-5s %s · %s · entry %g SL %g · %g units  $%.0f notional  "
+             "risk $%.2f (%.2f%%)  lev %.1fx%s",
+             ticket["symbol"], direction, tf, ticket["entry_type"], entry, stop,
+             ticket["units"], ticket["notional"], ticket["risk_usd"], ticket["risk_pct"],
+             ticket["leverage"], "  [lev-capped]" if ticket["leverage_capped"] else "")
+    return {**decision, "plan": ticket}
 
 
 # ── 4. live management: scale-outs + SL movement (never adverse) ──────────────
@@ -158,9 +207,9 @@ def _favourable(new_sl: float, cur_sl: float, is_long: bool) -> bool:
 def manage_position(pos: dict, price: float, support: float | None = None) -> list[dict]:
     """Apply the 5.0 management rules to an open position at `price`.
 
-    Mutates `pos` (sets tp*_hit flags, advances `stop`) and returns the list of
-    actions taken this tick: {action: "scale"|"sl", ...}. SL is only ever moved
-    in the trade's favour.
+    Mutates `pos` (sets tp*_hit flags, advances `stop`) and returns the actions
+    taken: book at TP1/TP2/TP3, SL → break-even at TP1, SL → new support at TP2.
+    SL is only ever moved in the trade's favour.
     """
     is_long = pos.get("direction", "long") == "long"
     scale = pos.get("scale") or (
@@ -169,7 +218,6 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
     sym = pos.get("symbol", "?")
     actions: list[dict] = []
 
-    # TP1 → book first tranche + SL to break-even.
     if not pos.get("tp1_hit") and pos.get("tp1") is not None and reached(pos["tp1"]):
         pos["tp1_hit"] = True
         actions.append({"action": "scale", "tp": "TP1", "book_pct": scale[0], "price": price})
@@ -177,10 +225,9 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
         if _favourable(be, pos["stop"], is_long):
             pos["stop"] = be
             actions.append({"action": "sl", "to": "breakeven", "price": be})
-        log.info("MANAGE %s  TP1 hit @ %.6f → book %d%%, SL → break-even (%.6f)",
+        log.info("MANAGE %-8s TP1 @ %g → book %d%%, SL → break-even (%g)",
                  sym, price, round(scale[0] * 100), be)
 
-    # TP2 → book second tranche + SL below new support (fallback: lock TP1).
     if not pos.get("tp2_hit") and pos.get("tp2") is not None and reached(pos["tp2"]):
         pos["tp2_hit"] = True
         actions.append({"action": "scale", "tp": "TP2", "book_pct": scale[1], "price": price})
@@ -188,66 +235,76 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
         if new_sl is not None and _favourable(new_sl, pos["stop"], is_long):
             pos["stop"] = new_sl
             actions.append({"action": "sl", "to": "support", "price": new_sl})
-        log.info("MANAGE %s  TP2 hit @ %.6f → book %d%%, SL → %.6f (below new support)",
+        log.info("MANAGE %-8s TP2 @ %g → book %d%%, SL → %g (locked structure)",
                  sym, price, round(scale[1] * 100), pos["stop"])
 
-    # TP3 → book third tranche; runner left to trail.
     if not pos.get("tp3_hit") and pos.get("tp3") is not None and reached(pos["tp3"]):
         pos["tp3_hit"] = True
         actions.append({"action": "scale", "tp": "TP3", "book_pct": scale[2], "price": price})
-        log.info("MANAGE %s  TP3 hit @ %.6f → book %d%% (runner trails)",
+        log.info("MANAGE %-8s TP3 @ %g → book %d%% (runner trails)",
                  sym, price, round(scale[2] * 100))
 
     return actions
 
 
-# ── 5. process a whole VIVEK scan into plans + skip reasons ───────────────────
+# ── 5. process one market's scan into plans, with the book rules ──────────────
 
-def decide(rows: list[dict], equity: float, **kw) -> dict:
-    """Run the decision engine over a VIVEK scan, applying 5.0-style portfolio
-    discipline: a few uncorrelated positions, best setups first.
+def decide(rows: list[dict], equity: float, market: str | None = None,
+           prefer_tf: str | None = None, **kw) -> dict:
+    """Run the engine over ONE market's VIVEK scan and apply the book rules.
 
-    Rows are expected best-first (the scan sorts by grade → score → R:R). On top
-    of the per-setup take/skip rules, the book caps: at most VIVEK_BOT_MAX_POSITIONS
-    open, VIVEK_BOT_MAX_PER_SECTOR per sector, and one position per symbol.
-    Returns {plans, skipped, summary} — every skip carries an auditable code.
+    Rows are expected best-first (the scan sorts by grade → score → R:R). The
+    book caps (Rule 5): at most VIVEK_BOT_MAX_POSITIONS (10) open, at most
+    (10 − VIVEK_BOT_MIN_SHORTS) = 6 long so ≥4 short slots stay reserved, and one
+    position per symbol. Returns {plans, skipped, summary} — every skip has a code.
     """
     from collections import Counter
 
     max_pos = kw.get("max_positions", _cfg.VIVEK_BOT_MAX_POSITIONS)
-    max_sector = kw.get("max_per_sector", _cfg.VIVEK_BOT_MAX_PER_SECTOR)
+    min_shorts = kw.get("min_shorts", _cfg.VIVEK_BOT_MIN_SHORTS)
+    max_long = max(0, max_pos - min_shorts)          # reserve the short slots
     plans, skipped = [], []
     reasons: Counter = Counter()
     open_syms: set[str] = set()
-    sector_n: Counter = Counter()
+    longs = shorts = 0
 
     def drop(out, code, reason):
-        log.info("SKIP  %s  [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
+        log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
         reasons[code] += 1
         skipped.append({**out, "take": False, "code": code, "reason": reason, "plan": None})
 
     for row in rows:
-        out = plan_trade(row, equity, **kw)
+        out = plan_trade(row, equity, market=market, prefer_tf=prefer_tf, **{
+            k: kw[k] for k in ("risk_pct", "min_rr") if k in kw})
         if not out.get("plan"):
             reasons[out.get("code", "skip")] += 1
             skipped.append(out)
             continue
         sym = str(row.get("symbol") or "").upper()
-        sector = row.get("sector") or ""
-        if len(plans) >= max_pos:
-            drop(out, "book_full", f"already at the {max_pos}-position cap")
-        elif sym in open_syms:
+        direction = out["direction"]
+        if sym in open_syms:
             drop(out, "dup_symbol", f"already holding {sym}")
-        elif sector and sector_n[sector] >= max_sector:
-            drop(out, "sector_full", f"already {max_sector} positions in {sector}")
+        elif len(plans) >= max_pos:
+            drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
+        elif direction == "long" and longs >= max_long:
+            drop(out, "long_cap", f"long cap {max_long} reached — reserving the ≥{min_shorts}-short slots")
         else:
             plans.append(out)
             open_syms.add(sym)
-            if sector:
-                sector_n[sector] += 1
+            if direction == "long":
+                longs += 1
+            else:
+                shorts += 1
 
-    summary = {"setups": len(rows), "taken": len(plans),
-               "skipped": len(skipped), "skip_reasons": dict(reasons)}
-    log.info("VIVEK bot: took %d / %d setups (skips: %s)",
-             summary["taken"], summary["setups"], summary["skip_reasons"] or "none")
+    short_bias_met = shorts >= min_shorts
+    summary = {
+        "market": market, "setups": len(rows), "taken": len(plans),
+        "longs": longs, "shorts": shorts, "min_shorts": min_shorts,
+        "short_bias_met": short_bias_met,
+        "skipped": len(skipped), "skip_reasons": dict(reasons),
+    }
+    log.info("VIVEK bot [%s]: took %d/%d (A+ only) — %d long / %d short%s · skips: %s",
+             market, summary["taken"], summary["setups"], longs, shorts,
+             "" if short_bias_met else f"  ⚠ short bias unmet (<{min_shorts}, not enough shorts available)",
+             summary["skip_reasons"] or "none")
     return {"plans": plans, "skipped": skipped, "summary": summary}
