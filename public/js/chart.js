@@ -7,8 +7,8 @@
   "use strict";
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
-  const TF_LABEL = { "1H": "1H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
-  const TF_ORDER = ["1H", "1D", "3D", "1W", "1M", "3M"];
+  const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
+  const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
   const VALID_MARKETS = new Set(["asx", "nasdaq", "crypto", "scalp"]);
@@ -197,6 +197,49 @@
     return { candles, volume, lines };
   }
 
+  // Aggregate bars into fixed-width buckets (e.g. 4h from 1h). Bars carry epoch
+  // seconds; bucket = floor(time / width). OHLC = first open, max high, min low,
+  // last close; volume summed.
+  function bucketBars(bars, widthSec) {
+    const out = []; let cur = null, curKey = null;
+    for (const b of bars) {
+      const key = Math.floor(b.time / widthSec);
+      if (key !== curKey) {
+        if (cur) out.push(cur);
+        cur = { time: key * widthSec, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = key;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
+  // Daily → weekly OHLCV, bucketed by the Monday of each bar's week (UTC).
+  function resampleWeekly(bars) {
+    const out = []; let cur = null, curKey = null;
+    for (const b of bars) {
+      const dow = new Date(b.time * 1000).getUTCDay() || 7;   // 1=Mon … 7=Sun
+      const monday = b.time - (dow - 1) * 86400;
+      if (monday !== curKey) {
+        if (cur) out.push(cur);
+        cur = { time: monday, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = monday;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
   // Build a VIVEK (5.0-style) timeframe block: candles + volume + the moving
   // averages VIVEK reads — fast SMA 10/20 plus the 50 (structure) and 200 (the
   // level) — deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
@@ -304,27 +347,37 @@
     if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
     if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
 
-    const draw = (source) => (bars) => {
-      if (!bars || bars.length < 6) throw new Error("thin");
-      const lastBar = bars[bars.length - 1].close;
-      if (d.price == null) d.price = lastBar;
-      console.info(`[vivek] ${SYM} chart: ${bars.length} daily bars via ${source}; ` +
-                   `scan price=${m.price}, last bar=${lastBar}, level(${d.level_tf})=${d.level}`);
-      d.timeframes["1D"] = barsToVivekTF(bars);
-      render(d);
-    };
-    if (isCryptoMarket(assetType)) {
-      // Binance daily (real-time, keyless) → /api/price proxy fallback.
-      cryptoBars(SYM, "1d", 400).then(draw("binance/crypto-proxy"))
-        .catch(() => fail(`Couldn't load live crypto data for ${SYM} right now.`));
-    } else {
-      // 2y of daily bars (~500) — enough for a 200 SMA. NOTE: the /api/price
-      // range whitelist only allows 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max, so this
-      // MUST stay on a whitelisted value or the proxy silently drops it and
-      // returns no candles (which read as "chart unavailable").
-      yahooBars(yfTickerFor(SYM, assetType), "2y", "1d").then(draw("yahoo/api-price"))
-        .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
-    }
+    // Build the 4H / Daily / Weekly views, then render once. The DEEP daily pull
+    // drives both the Daily view and a resampled Weekly view (so the Weekly 200
+    // SMA is real, not a proxy); a best-effort hourly pull drives a resampled 4H
+    // view. Each timeframe computes its OWN 200/50/20/10 SMA. The trade levels
+    // (entry/SL/TP1-3) are the plan and stay constant across timeframes.
+    // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
+    // and intervals incl. 1h/1d — keep fetches on whitelisted values.
+    const isCrypto = isCryptoMarket(assetType);
+    const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
+                             : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
+    const hourlyP = (isCrypto ? cryptoBars(SYM, "1h", 1000)
+                              : yahooBars(yfTickerFor(SYM, assetType), "6mo", "1h")).catch(() => []);
+
+    dailyP.then((daily) => {
+      if (!daily || daily.length < 6) throw new Error("thin");
+      d.timeframes["1D"] = barsToVivekTF(daily);
+      const wk = resampleWeekly(daily);
+      if (wk.length >= 6) d.timeframes["1W"] = barsToVivekTF(wk);
+      if (d.price == null) d.price = daily[daily.length - 1].close;
+      return hourlyP.then((hourly) => {
+        if (hourly && hourly.length >= 24) {
+          const h4 = bucketBars(hourly, 4 * 3600);
+          if (h4.length >= 6) d.timeframes["4H"] = barsToVivekTF(h4);
+        }
+        d.default_tf = "1D";   // reliable basis; user can toggle to 4H / Weekly
+        console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
+                     `(daily=${daily.length}, hourly=${(hourly || []).length}); ` +
+                     `level(${d.level_tf})=${d.level}`);
+        render(d);
+      });
+    }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -365,7 +418,12 @@
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";
     const dirEl = $("#ct-dir");
-    if (d.dir) { dirEl.textContent = d.dir; dirEl.classList.toggle("short", d.dir.toUpperCase() === "SHORT"); }
+    if (d.dir) {
+      const isShort = d.dir.toUpperCase() === "SHORT";
+      dirEl.textContent = d.dir;
+      dirEl.classList.toggle("short", isShort);
+      dirEl.classList.toggle("long", !isShort);   // explicit colour both ways (LONG green / SHORT red)
+    }
     dirEl.hidden = false;
     $("#ct-chips").innerHTML = (d.chips || [])
       .map((c) => `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
