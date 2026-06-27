@@ -311,6 +311,37 @@
              swingHigh, swingLow, structural_tps: basis.filter((b) => b === "structural").length };
   }
 
+  // Structure markers for a timeframe: arrows at the recent swing pivots (the
+  // higher-highs / lower-lows that define structure) plus a marker on the most
+  // recent bar that reacted at the 200 SMA — the visual "why" of the setup.
+  function vivekMarkers(bars, direction, level) {
+    const pw = VK_PW, n = bars.length, out = [];
+    for (let i = pw; i < n - pw; i++) {
+      let isH = true, isL = true;
+      for (let k = 1; k <= pw; k++) {
+        if (!(bars[i].high >= bars[i - k].high && bars[i].high >= bars[i + k].high)) isH = false;
+        if (!(bars[i].low  <= bars[i - k].low  && bars[i].low  <= bars[i + k].low))  isL = false;
+      }
+      if (isH) out.push({ time: bars[i].time, position: "aboveBar", color: "#8a93a6", shape: "arrowDown" });
+      if (isL) out.push({ time: bars[i].time, position: "belowBar", color: "#8a93a6", shape: "arrowUp" });
+    }
+    const marks = out.slice(-10);                           // recent structure only — avoid clutter
+    if (level) {                                            // most recent 200 SMA reaction
+      for (let i = n - 1; i >= Math.max(0, n - 60); i--) {
+        const near = direction === "long"
+          ? Math.abs(bars[i].low - level) / level <= 0.02
+          : Math.abs(bars[i].high - level) / level <= 0.02;
+        if (near) {
+          marks.push({ time: bars[i].time, position: direction === "long" ? "belowBar" : "aboveBar",
+                       color: "#ffb020", shape: "circle", text: "200 SMA" });
+          break;
+        }
+      }
+    }
+    marks.sort((a, b) => a.time - b.time);
+    return marks;
+  }
+
   // Build a VIVEK (5.0-style) timeframe block: candles + volume + the moving
   // averages VIVEK reads — fast SMA 10/20 plus the 50 (structure) and 200 (the
   // level) — deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
@@ -435,6 +466,7 @@
     const makeTF = (bars) => {
       const tf = barsToVivekTF(bars);
       tf.levels = vivekLevels(bars, direction) || scanLv;
+      tf.markers = vivekMarkers(bars, direction, tf.levels ? tf.levels.level : null);
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
@@ -964,6 +996,15 @@
       line(lv.tp1,   "#2fd07f", "TP1");
       line(lv.tp2,   "#2fd07f", "TP2");
       line(lv.tp3,   "#2fd07f", "TP3");
+      // Structure markers (swing pivots + the 200 SMA reaction) for this TF,
+      // plus the open-position entry marker if there is one.
+      if (typeof candle.setMarkers === "function") {
+        const ivSec = key === "4H" ? 14400 : key === "1W" ? 604800 : 86400;
+        const ms = ((tfs[key] || {}).markers || []).slice();
+        const em = buildEntryMarker(entryEpoch, ivSec, posDir);
+        if (em) { ms.push(em); ms.sort((a, b) => a.time - b.time); }
+        candle.setMarkers(ms);
+      }
       // Expose the active timeframe's plan so Simulate-Buy logs THIS TF's levels.
       d._activeLevels = lv;
       d._activeTf = key;
