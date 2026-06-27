@@ -437,6 +437,9 @@ body {
 .vkf-chip b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .vkf-chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
 .vkf-chip.is-active b { color: rgba(255,255,255,0.85); }
+/* thin divider between the entry-type chips and the "triggered recently" toggle */
+.vkf-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 4px; }
+.vkf-recent.is-active { background: var(--green); border-color: var(--green); }
 @media (max-width: 560px) {
   .vk-filters { gap: 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .vk-filters::-webkit-scrollbar { display: none; }
@@ -543,6 +546,14 @@ body {
 
 .row-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .row-chips:empty { display: none; }
+/* VIVEK screening badges on the row */
+.rbadge { font: 700 10px/1 var(--sans); letter-spacing: 0.02em; padding: 4px 7px; border-radius: 5px;
+  white-space: nowrap; border: 1px solid transparent; }
+.rbadge.fresh  { color: var(--green);  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 32%, transparent); }
+.rbadge.trig   { color: var(--blue);   background: var(--blue-soft); }
+.rbadge.wk     { color: var(--orange); background: var(--orange-soft); }
+.rbadge.struct { color: var(--text-2); background: var(--fill); }
 .chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }

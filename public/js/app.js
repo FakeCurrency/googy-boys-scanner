@@ -107,6 +107,7 @@
     cur: "$",
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
+    vkRecent: false,    // VIVEK "triggered recently" filter toggle
   };
 
   loadPrefs();
@@ -328,6 +329,37 @@
   }
 
   // ----------------------------------------------------------- a row
+  // ── VIVEK screening helpers ────────────────────────────────────────────────
+  const RECENT_DAYS = 3;                       // trigger within this many days = "recent"
+  const TRIG_LABEL = { reclaim: "Reclaim", retest: "Retest", break: "Break" };
+
+  function scanDateMs() {
+    const t = state.data && state.data.generated_at ? Date.parse(state.data.generated_at) : NaN;
+    return isFinite(t) ? t : Date.now();
+  }
+  // A setup's trigger fired on (or within a few days of) the latest scanned bar —
+  // i.e. it has just moved, vs an older trigger still sitting in play.
+  function triggeredRecently(r) {
+    if (!r || !r.trigger_bar) return false;
+    const tb = Date.parse(`${r.trigger_bar}T00:00:00`);
+    if (!isFinite(tb)) return false;
+    return (scanDateMs() - tb) / 86400000 <= RECENT_DAYS + 0.5;
+  }
+  // Compact, scannable badges for the VIVEK list (max 3) — what moved + why it matters.
+  function vkBadges(r) {
+    if (state.mode !== "vivek") return "";
+    const out = [];
+    if (triggeredRecently(r))
+      out.push(`<span class="rbadge fresh" title="Trigger fired on/near the latest bar">⚡ Triggered recently</span>`);
+    const trig = r.entry_trigger || (r.armed && (r.entry_types || [])[0]) || null;
+    if (trig) out.push(`<span class="rbadge trig" title="Entry trigger">${esc(TRIG_LABEL[trig] || trig)}</span>`);
+    if (r.level_tf === "weekly")
+      out.push(`<span class="rbadge wk" title="Reaction at the Weekly 200 SMA (higher timeframe)">Weekly 200</span>`);
+    else if ((r.chips || []).includes("STRONG STRUCTURE"))
+      out.push(`<span class="rbadge struct" title="Recent swings stacking in the trade's favour">Strong structure</span>`);
+    return out.join("");
+  }
+
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
@@ -370,7 +402,7 @@
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
-        <div class="row-chips">${assetBadge}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${vkBadges(r)}${assetBadge}${lowrr}${widestop}${t2r}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -814,6 +846,10 @@
     if (state.mode === "vivek" && state.vkEntry.size) {
       list = list.filter((r) => (r.entry_types || []).some((t) => state.vkEntry.has(t)));
     }
+    // VIVEK "triggered recently" filter — only setups that just moved.
+    if (state.mode === "vivek" && state.vkRecent) {
+      list = list.filter(triggeredRecently);
+    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -887,15 +923,23 @@
       const active = code === "all" ? sel.size === 0 : sel.has(code);
       return `<button class="vkf-chip${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(full)}">${esc(label)} <b>${n}</b></button>`;
     };
+    const nRecent = all.filter(triggeredRecently).length;
     box.innerHTML =
       `<span class="vkf-label">200 SMA interaction</span>` +
       chip("all", "All", "Every VIVEK setup", all.length) +
-      VK_ENTRY.map(([c, l, f]) => chip(c, l, f, count(c))).join("");
+      VK_ENTRY.map(([c, l, f]) => chip(c, l, f, count(c))).join("") +
+      `<span class="vkf-sep"></span>` +
+      `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
+        `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>`;
     box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
-      const t = b.dataset.type;
-      if (t === "all") sel.clear();
-      else if (sel.has(t)) sel.delete(t);
-      else sel.add(t);
+      if (b.dataset.recent) {
+        state.vkRecent = !state.vkRecent;
+      } else {
+        const t = b.dataset.type;
+        if (t === "all") sel.clear();
+        else if (sel.has(t)) sel.delete(t);
+        else sel.add(t);
+      }
       renderEntryFilters(d);   // refresh active states + counts
       renderRows();            // re-filter the list
     }));
