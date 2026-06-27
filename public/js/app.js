@@ -106,6 +106,7 @@
     cache: {},
     cur: "$",
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
+    vkEntry: new Set(), // VIVEK entry-type filter; empty = All
   };
 
   loadPrefs();
@@ -809,6 +810,10 @@
       // Watch tab: B/C for the daily scanners; B+/WATCH for VIVEK.
       list = all.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade));
     }
+    // VIVEK entry-type filter (200 SMA interaction) — union of selected types.
+    if (state.mode === "vivek" && state.vkEntry.size) {
+      list = list.filter((r) => (r.entry_types || []).some((t) => state.vkEntry.has(t)));
+    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -817,6 +822,44 @@
     else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
     else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
     return list;
+  }
+
+  // VIVEK entry-type filter chips (200 SMA interaction). Shows live counts so
+  // the user can read market behaviour: how many setups are reclaiming /
+  // retesting / breaking structure at the level. Multi-select; "All" clears.
+  const VK_ENTRY = [
+    ["reclaim", "Reclaim after rejection", "Close back above 200 SMA after rejection"],
+    ["retest",  "Retest + confirmation",   "Retest with confirmation"],
+    ["break",   "Break of structure",      "Break of small structure near 200 SMA"],
+  ];
+  function renderEntryFilters(d) {
+    const box = $("#vk-filters");
+    if (!box) return;
+    if (!d || d.setup_type !== "vivek") { box.hidden = true; box.innerHTML = ""; return; }
+    const all = d.results || [];
+    // Only show once the scan has categorised setups (older data lacks the field).
+    if (!all.some((r) => Array.isArray(r.entry_types) && r.entry_types.length)) {
+      box.hidden = true; box.innerHTML = ""; return;
+    }
+    box.hidden = false;
+    const count = (code) => all.filter((r) => (r.entry_types || []).includes(code)).length;
+    const sel = state.vkEntry;
+    const chip = (code, label, full, n) => {
+      const active = code === "all" ? sel.size === 0 : sel.has(code);
+      return `<button class="vkf-chip${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(full)}">${esc(label)} <b>${n}</b></button>`;
+    };
+    box.innerHTML =
+      `<span class="vkf-label">200 SMA interaction</span>` +
+      chip("all", "All", "Every VIVEK setup", all.length) +
+      VK_ENTRY.map(([c, l, f]) => chip(c, l, f, count(c))).join("");
+    box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
+      const t = b.dataset.type;
+      if (t === "all") sel.clear();
+      else if (sel.has(t)) sel.delete(t);
+      else sel.add(t);
+      renderEntryFilters(d);   // refresh active states + counts
+      renderRows();            // re-filter the list
+    }));
   }
 
   function renderRows() {
@@ -842,6 +885,7 @@
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     renderPulse(d.pulse);
     refreshPulseLive(d.pulse);
+    renderEntryFilters(d);
     renderLegend(d);
     renderStats(d);
     renderRows();

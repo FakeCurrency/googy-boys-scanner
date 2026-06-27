@@ -153,6 +153,21 @@ def test_gate_leaves_lower_grades_untouched():
     assert vivek.gate_grade("WATCH", {"reaction": "fade"}, rr=0.5) == ("WATCH", [])
 
 
+# ── entry-type categories (filter chips) ────────────────────────────────────────
+
+def test_entry_types_classify_each_interaction():
+    assert "reclaim" in vivek.entry_types({"reaction": "bounce", "at_level": True, "structure": 0.4})
+    assert "reclaim" in vivek.entry_types({"reaction": "reject", "at_level": False, "structure": 0.2})
+    assert "retest" in vivek.entry_types({"reaction": "hold", "at_level": True, "structure": 0.6})
+    assert "break" in vivek.entry_types({"reaction": "hold", "at_level": False, "structure": 0.9})
+
+
+def test_entry_types_always_returns_at_least_one():
+    assert vivek.entry_types({"reaction": "fade", "at_level": False, "structure": 0.1}) == ["retest"]
+    # every code maps to a human label
+    assert set(vivek.ENTRY_TYPES) <= set(vivek.ENTRY_TYPE_LABELS)
+
+
 # ── bot: take / skip ──────────────────────────────────────────────────────────
 
 def _row(**kw):

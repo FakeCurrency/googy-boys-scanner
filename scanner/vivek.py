@@ -315,6 +315,42 @@ def gate_grade(grade: str | None, sig: dict, rr: float) -> tuple[str | None, lis
     return grade, notes
 
 
+# Entry-type categories — how price is interacting with the 200 SMA. Used by the
+# dashboard's filter chips so the user can sort setups by the trade trigger and
+# read overall market behaviour around the level. A setup can match more than one.
+ENTRY_TYPES = ["reclaim", "retest", "break"]
+ENTRY_TYPE_LABELS = {
+    "reclaim": "Close back above 200 SMA after rejection",
+    "retest":  "Retest with confirmation",
+    "break":   "Break of small structure near 200 SMA",
+}
+
+
+def entry_types(sig: dict) -> list[str]:
+    """Classify a 200-SMA interaction into one or more entry types (heuristic).
+
+    * reclaim — a clean reaction at the level: price was pushed to the 200 SMA and
+      closed back through it (bounce off support / rejection at resistance).
+    * retest  — price is sitting right AT the level and holding, with confirming
+      structure (a retest that held).
+    * break   — recent swings are stacking strongly in the trade's direction near
+      the level (a break of small structure / momentum entry).
+    """
+    react = sig.get("reaction")
+    at = bool(sig.get("at_level"))
+    struct = sig.get("structure", 0) or 0
+    types: list[str] = []
+    if react in ("bounce", "reject"):
+        types.append("reclaim")
+    if at and struct >= 0.5:
+        types.append("retest")
+    if struct >= 0.8:
+        types.append("break")
+    if not types:                      # every setup is near the level — default to retest
+        types.append("retest")
+    return types
+
+
 def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
     """Detail payload for the VIVEK ticker view."""
     return {

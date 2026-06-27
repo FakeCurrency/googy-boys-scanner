@@ -512,6 +512,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "level": sig["level"],
                 "at_level": sig["at_level"],
                 "reaction": sig["reaction"],
+                "entry_types": vivek.entry_types(sig),
                 "confluence": sig["confluence"],
                 "price": round(close, 8),
                 "entry": lv["entry"], "stop": lv["stop"],

@@ -390,6 +390,24 @@ body {
 .ema-dot { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--sans); color: var(--text-2); }
 .ema-dot i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 0.5px var(--separator); }
 
+/* VIVEK entry-type filter chips — "200 SMA interaction" */
+.vk-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.vkf-label { font: 700 10.5px/1 var(--sans); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.vkf-chip {
+  appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--panel);
+  color: var(--text-2); font: 600 12.5px/1 var(--sans); padding: 7px 12px; border-radius: 100px;
+  display: inline-flex; align-items: center; gap: 7px; transition: all .15s;
+}
+.vkf-chip:hover { border-color: var(--blue); color: var(--text); }
+.vkf-chip b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+.vkf-chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
+.vkf-chip.is-active b { color: rgba(255,255,255,0.85); }
+@media (max-width: 560px) {
+  .vk-filters { gap: 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .vk-filters::-webkit-scrollbar { display: none; }
+  .vkf-label { display: none; }
+}
+
 /* ======================================================================= rows */
 .rows { display: flex; flex-direction: column; gap: 14px; }
 
