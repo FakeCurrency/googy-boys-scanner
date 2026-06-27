@@ -483,6 +483,10 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             lv = vivek.compute_levels(df, sig)
             if lv.get("rr", 0) <= 0:
                 continue
+            # Selectivity gate: demote A/A+ that lack a clean reaction or enough
+            # room to TP2 (keeps the tradeable list short and trustworthy).
+            grade, gate_notes = vivek.gate_grade(grade, sig, lv["rr"])
+            fired = fired + gate_notes
 
             info = meta.get(yf_ticker, {})
             close = sig["close"]

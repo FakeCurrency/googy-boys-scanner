@@ -192,29 +192,81 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     return pts, grade, fired
 
 
+def _structural_targets(df: pd.DataFrame, direction: str, entry: float, risk: float) -> list[float]:
+    """Up to three REAL targets from prior structure, ordered away from entry.
+
+    Longs aim at prior resistance (pivot highs above entry); shorts at prior
+    support (pivot lows below entry). Targets must sit between MIN_R and MAX_R
+    of risk away, and clustered pivots are merged so the three TPs are distinct.
+    Returns [] when there's no usable structure (caller falls back to R-multiples).
+    """
+    if risk <= 0:
+        return []
+    pw = config.VIVEK_PIVOT_WINDOW
+    look = df.tail(config.VIVEK_TARGET_LOOKBACK)
+    lo = entry + config.VIVEK_TP_MIN_R * risk
+    hi = entry + config.VIVEK_TP_MAX_R * risk
+    if direction == "long":
+        piv = pivot_highs(look, pw).dropna().tolist()
+        cands = sorted(p for p in piv if lo <= p <= hi)
+    else:
+        lo = entry - config.VIVEK_TP_MAX_R * risk
+        hi = entry - config.VIVEK_TP_MIN_R * risk
+        piv = pivot_lows(look, pw).dropna().tolist()
+        cands = sorted((p for p in piv if lo <= p <= hi), reverse=True)
+
+    picked: list[float] = []
+    for p in cands:
+        if all(abs(p - q) >= config.VIVEK_TP_CLUSTER_R * risk for q in picked):
+            picked.append(float(p))
+        if len(picked) == 3:
+            break
+    return picked
+
+
 def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
-    """Entry, SL, TP1/TP2/TP3 (5.0 style) + R:R and per-TP scale-outs."""
+    """Entry, SL, TP1/TP2/TP3 (5.0 style) + R:R and per-TP scale-outs.
+
+    TPs land on real prior structure where it exists; any remaining slots fall
+    back to R-multiples placed strictly beyond the last target so ordering holds.
+    R:R is measured to the ACTUAL TP2, so it genuinely varies between setups.
+    """
     direction = sig["direction"]
     entry = sig["close"]
     atr = max(sig["atr"], entry * 0.001)
     buf = atr * config.VIVEK_ATR_STOP_MULT
 
     if direction == "long":
-        # Stop below the reaction low / the level, with an ATR buffer.
         stop = min(sig["swing_low"], sig["level"]) - buf
         risk = entry - stop
-        tps = [entry + risk * r for r in config.VIVEK_TP_R]
         scale = config.VIVEK_TP_SCALE_LONG
+        sign = 1
     else:
         stop = max(sig["swing_high"], sig["level"]) + buf
         risk = stop - entry
-        tps = [entry - risk * r for r in config.VIVEK_TP_R]
         scale = config.VIVEK_TP_SCALE_SHORT
+        sign = -1
 
     if risk <= 0:
         return {"rr": 0}
 
-    rr = round(abs(tps[1] - entry) / risk, 2)   # headline R:R measured to TP2
+    struct = _structural_targets(df, direction, entry, risk)
+    tps: list[float] = []
+    basis: list[str] = []
+    for i in range(3):
+        if i < len(struct):
+            tps.append(struct[i])
+            basis.append("structural")
+            continue
+        # Fallback R-multiple, forced strictly beyond the previous TP.
+        cand = entry + sign * risk * config.VIVEK_TP_R[i]
+        if tps:
+            min_next = tps[-1] + sign * risk * 0.5
+            cand = max(cand, min_next) if direction == "long" else min(cand, min_next)
+        tps.append(cand)
+        basis.append("measured")
+
+    rr = round(abs(tps[1] - entry) / risk, 2)   # headline R:R to the ACTUAL TP2
 
     def rnd(v):
         return round(float(v), 8)
@@ -229,8 +281,30 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
         "scale": scale,                      # fraction booked at TP1/TP2/TP3
         "target": rnd(tps[1]),               # generic field for shared row code
         "trail": rnd(entry),                 # SL→BE after TP1 (5.0 rule)
-        "target_basis": "measured",
+        "tp_basis": basis,                   # per-TP: "structural" vs "measured"
+        "target_basis": basis[1],            # how the headline target was set
+        "structural_tps": sum(1 for b in basis if b == "structural"),
     }
+
+
+def gate_grade(grade: str | None, sig: dict, rr: float) -> tuple[str | None, list[str]]:
+    """Apply 5.0's hard requirements that the raw structural score can't see.
+
+    A tradeable grade (A+/A) needs BOTH a real reaction (a clean bounce/reject,
+    not price merely sitting near the SMA) AND enough room to TP2. Otherwise the
+    setup is demoted to B+ (watch-list) with a chip explaining why. This is what
+    keeps the A+/A list short and trustworthy.
+    """
+    if grade not in ("A+", "A"):
+        return grade, []
+    notes: list[str] = []
+    if sig.get("reaction") not in ("bounce", "reject"):
+        grade = "B+"
+        notes.append("NO CLEAN REACTION")
+    if rr < config.VIVEK_MIN_TRADEABLE_RR:
+        grade = "B+"
+        notes.append(f"LOW R:R ({rr:.1f})")
+    return grade, notes
 
 
 def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
@@ -252,6 +326,9 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
         "tp1": lv.get("tp1"), "tp2": lv.get("tp2"), "tp3": lv.get("tp3"),
         "scale": lv.get("scale"),
         "risk": lv.get("risk"),
+        "tp_basis": lv.get("tp_basis"),
+        "structural_tps": lv.get("structural_tps"),
+        "rr": lv.get("rr"),
     }
 
 
@@ -270,11 +347,15 @@ def narrative(symbol: str, sig: dict, lv: dict, detail: dict, currency_symbol: s
               else "thin structure")
     sc = lv.get("scale") or []
     sc_txt = " / ".join(f"{int(round(x*100))}%" for x in sc) if sc else "—"
+    n_struct = lv.get("structural_tps") or 0
+    where = "prior resistance" if side == "long" else "prior support"
+    tgt_txt = (f"targets set at {where} ({n_struct}/3 from real structure)"
+               if n_struct else "targets set by R-multiples (no clear structure nearby)")
     return (
         f"{symbol} is {react} the {tf} 200 SMA ({cur}{sig['level']:.4f}), "
         f"{abs(sig['dist_pct']):.1f}% away{conf}, with {struct}. "
         f"A {side} reaction setup: enter {cur}{lv['entry']:.4f}, stop {cur}{lv['stop']:.4f} "
-        f"(beyond the reaction). Scale {sc_txt} into TP1 {cur}{lv['tp1']:.4f} / "
+        f"(beyond the reaction); {tgt_txt}. Scale {sc_txt} into TP1 {cur}{lv['tp1']:.4f} / "
         f"TP2 {cur}{lv['tp2']:.4f} / TP3 {cur}{lv['tp3']:.4f}; move SL to break-even at TP1, "
         f"then below new support at TP2. {lv['rr']:.1f}R to TP2."
     )

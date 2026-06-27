@@ -69,6 +69,68 @@ def test_grade_ladder_reaches_each_tier():
     assert grade_from_points(1, config.VIVEK_GRADE_CUTOFFS) is None
 
 
+# ── #1 structural take-profits (real R:R, not a constant) ───────────────────────
+
+def _spiked_frame(highs):
+    """60 daily bars flat at 100, with isolated High spikes at given (idx, value)."""
+    n = 60
+    o = np.full(n, 100.0); hi = np.full(n, 100.0); lo = np.full(n, 99.9); cl = np.full(n, 100.0)
+    for idx, val in highs:
+        hi[idx] = val
+    return pd.DataFrame({"Open": o, "High": hi, "Low": lo, "Close": cl, "Volume": 1e6},
+                        index=pd.date_range("2021-01-01", periods=n, freq="D"))
+
+
+def test_structural_targets_land_on_prior_resistance():
+    df = _spiked_frame([(20, 103.0), (40, 107.0)])     # two clean resistances above entry
+    tgts = vivek._structural_targets(df, "long", entry=100.0, risk=1.0)
+    assert tgts == [103.0, 107.0]                      # ordered away from entry, real pivots
+
+
+def test_compute_levels_uses_structure_and_rr_varies():
+    df = _spiked_frame([(20, 103.0), (40, 107.0)])
+    sig = {"direction": "long", "close": 100.0, "atr": 0.1,
+           "swing_low": 99.1, "swing_high": 100.0, "level": 99.2}
+    lv = vivek.compute_levels(df, sig)
+    assert lv["stop"] == pytest.approx(99.0)           # min(swing_low, level) − ATR buffer
+    assert lv["tp1"] == pytest.approx(103.0)           # TP1/TP2 sit on the real pivots
+    assert lv["tp2"] == pytest.approx(107.0)
+    assert lv["tp3"] > lv["tp2"]                       # fallback placed beyond the last
+    assert lv["rr"] == pytest.approx(7.0)              # (107−100)/1 — NOT the old constant 3.0
+    assert lv["structural_tps"] == 2
+
+
+def test_targets_fall_back_to_r_multiples_without_structure():
+    df = _spiked_frame([])                              # nothing above entry
+    sig = {"direction": "long", "close": 100.0, "atr": 0.1,
+           "swing_low": 99.1, "swing_high": 100.0, "level": 99.2}
+    lv = vivek.compute_levels(df, sig)
+    assert lv["structural_tps"] == 0
+    assert lv["stop"] < lv["entry"] < lv["tp1"] < lv["tp2"] < lv["tp3"]
+
+
+# ── #2 selectivity gate ─────────────────────────────────────────────────────────
+
+def test_gate_keeps_clean_high_rr_setup():
+    grade, notes = vivek.gate_grade("A+", {"reaction": "bounce"}, rr=3.0)
+    assert grade == "A+" and notes == []
+
+
+def test_gate_demotes_when_no_clean_reaction():
+    grade, notes = vivek.gate_grade("A", {"reaction": "hold"}, rr=3.0)
+    assert grade == "B+" and any("REACTION" in n for n in notes)
+
+
+def test_gate_demotes_low_rr():
+    grade, notes = vivek.gate_grade("A+", {"reaction": "reject"}, rr=1.0)
+    assert grade == "B+" and any("R:R" in n for n in notes)
+
+
+def test_gate_leaves_lower_grades_untouched():
+    assert vivek.gate_grade("B+", {"reaction": "hold"}, rr=1.0) == ("B+", [])
+    assert vivek.gate_grade("WATCH", {"reaction": "fade"}, rr=0.5) == ("WATCH", [])
+
+
 # ── bot: take / skip ──────────────────────────────────────────────────────────
 
 def _row(**kw):
