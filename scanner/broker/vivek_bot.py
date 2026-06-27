@@ -118,8 +118,12 @@ def plan_trade(row: dict, equity: float, **kw) -> dict:
 
     direction = decision["direction"]
     entry, stop = float(row["entry"]), float(row["stop"])
-    sizing = size_position(equity, entry, stop,
-                           kw.get("risk_pct"), kw.get("max_leverage"))
+    # Conservative by default: the bot operates at ≤ target leverage (3×), not the
+    # 5× hard cap — closer to 5.0's 2.5–3× preference.
+    max_lev = kw.get("max_leverage")
+    if max_lev is None:
+        max_lev = _cfg.VIVEK_BOT_TARGET_LEVERAGE
+    sizing = size_position(equity, entry, stop, kw.get("risk_pct"), max_lev)
     scale = row.get("scale") or (
         _cfg.VIVEK_TP_SCALE_LONG if direction == "long" else _cfg.VIVEK_TP_SCALE_SHORT)
     tps = [float(row["tp1"]), float(row["tp2"]), float(row["tp3"])]
@@ -198,11 +202,50 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
 # ── 5. process a whole VIVEK scan into plans + skip reasons ───────────────────
 
 def decide(rows: list[dict], equity: float, **kw) -> dict:
-    """Run the decision engine over a VIVEK scan. Returns {plans, skipped}."""
+    """Run the decision engine over a VIVEK scan, applying 5.0-style portfolio
+    discipline: a few uncorrelated positions, best setups first.
+
+    Rows are expected best-first (the scan sorts by grade → score → R:R). On top
+    of the per-setup take/skip rules, the book caps: at most VIVEK_BOT_MAX_POSITIONS
+    open, VIVEK_BOT_MAX_PER_SECTOR per sector, and one position per symbol.
+    Returns {plans, skipped, summary} — every skip carries an auditable code.
+    """
+    from collections import Counter
+
+    max_pos = kw.get("max_positions", _cfg.VIVEK_BOT_MAX_POSITIONS)
+    max_sector = kw.get("max_per_sector", _cfg.VIVEK_BOT_MAX_PER_SECTOR)
     plans, skipped = [], []
+    reasons: Counter = Counter()
+    open_syms: set[str] = set()
+    sector_n: Counter = Counter()
+
+    def drop(out, code, reason):
+        log.info("SKIP  %s  [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
+        reasons[code] += 1
+        skipped.append({**out, "take": False, "code": code, "reason": reason, "plan": None})
+
     for row in rows:
         out = plan_trade(row, equity, **kw)
-        (plans if out.get("plan") else skipped).append(out)
-    log.info("VIVEK bot: %d takeable, %d skipped of %d setups",
-             len(plans), len(skipped), len(rows))
-    return {"plans": plans, "skipped": skipped}
+        if not out.get("plan"):
+            reasons[out.get("code", "skip")] += 1
+            skipped.append(out)
+            continue
+        sym = str(row.get("symbol") or "").upper()
+        sector = row.get("sector") or ""
+        if len(plans) >= max_pos:
+            drop(out, "book_full", f"already at the {max_pos}-position cap")
+        elif sym in open_syms:
+            drop(out, "dup_symbol", f"already holding {sym}")
+        elif sector and sector_n[sector] >= max_sector:
+            drop(out, "sector_full", f"already {max_sector} positions in {sector}")
+        else:
+            plans.append(out)
+            open_syms.add(sym)
+            if sector:
+                sector_n[sector] += 1
+
+    summary = {"setups": len(rows), "taken": len(plans),
+               "skipped": len(skipped), "skip_reasons": dict(reasons)}
+    log.info("VIVEK bot: took %d / %d setups (skips: %s)",
+             summary["taken"], summary["setups"], summary["skip_reasons"] or "none")
+    return {"plans": plans, "skipped": skipped, "summary": summary}

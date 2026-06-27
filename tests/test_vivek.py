@@ -235,3 +235,34 @@ def test_decide_splits_takeable_and_skipped():
     out = vivek_bot.decide(rows, equity=10_000)
     assert len(out["plans"]) == 1 and out["plans"][0]["plan"]["symbol"] == "A1"
     assert len(out["skipped"]) == 2
+
+
+# ── bot: portfolio discipline (few, uncorrelated positions) ─────────────────────
+
+def test_decide_caps_total_positions():
+    rows = [_row(symbol=f"S{i}", sector=f"sec{i}") for i in range(8)]   # all takeable
+    out = vivek_bot.decide(rows, equity=10_000, max_positions=3)
+    assert len(out["plans"]) == 3
+    assert out["summary"]["skip_reasons"].get("book_full") == 5
+
+
+def test_decide_caps_per_sector():
+    rows = [_row(symbol=f"M{i}", sector="Materials") for i in range(4)]
+    out = vivek_bot.decide(rows, equity=10_000)                         # default 2 per sector
+    assert len(out["plans"]) == 2
+    assert out["summary"]["skip_reasons"].get("sector_full") == 2
+
+
+def test_decide_dedups_symbol():
+    rows = [_row(symbol="BHP", sector="A"), _row(symbol="BHP", sector="A")]
+    out = vivek_bot.decide(rows, equity=10_000)
+    assert len(out["plans"]) == 1
+    assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
+
+
+def test_bot_leverage_defaults_to_conservative_target():
+    # A tight stop would imply huge leverage; the bot caps at the 3× target, not 5×.
+    out = vivek_bot.plan_trade(_row(entry=100, stop=99.99, tp1=101, tp2=102, tp3=103),
+                               equity=10_000)
+    assert out["plan"]["leverage"] <= config.VIVEK_BOT_TARGET_LEVERAGE + 1e-9
+    assert out["plan"]["leverage_capped"] is True

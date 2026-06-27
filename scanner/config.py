@@ -273,6 +273,8 @@ VIVEK_TP_SCALE_SHORT   = [0.50, 0.25, 0.15]   # shorts bank more, sooner
 VIVEK_BOT_MIN_GRADE    = "A"       # bot trades A or better (A+/A); not B+/WATCH
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
 VIVEK_BOT_MAX_POSITIONS = 5        # concurrent open positions cap
+VIVEK_BOT_MAX_PER_SECTOR = 2       # at most N concurrent positions in one sector
+VIVEK_BOT_TARGET_LEVERAGE = 3      # bot operates at ≤3× (5.0's 2.5–3× preference); hard cap stays 5×
 
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so

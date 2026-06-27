@@ -229,10 +229,28 @@ body {
 .vk-lvl.vk-tp    .vk-lvl-key { background: var(--green-soft); color: var(--green); }
 .vk-lvl.vk-tp    .vk-lvl-price { color: var(--green); }
 .vk-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+/* freshness chip in the hero */
+.vk-fresh { font: 600 10.5px/1 var(--sans); color: var(--muted); background: var(--fill-2); padding: 5px 9px; border-radius: 100px; }
+.vk-fresh.stale { color: var(--red); background: var(--red-soft); }
+
+/* 5.0 trade checklist — mechanical criteria, pass/fail at a glance */
+.vk-checklist-wrap { margin-bottom: 18px; }
+.vk-section-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.vk-checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--separator); border-radius: var(--radius-md); overflow: hidden; }
+.vk-check { display: flex; align-items: center; gap: 9px; padding: 12px 14px; background: var(--panel); }
+.vk-check-ic { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 800 11px/1 var(--sans); }
+.vk-check.ok .vk-check-ic { background: var(--green-soft); color: var(--green); }
+.vk-check.no .vk-check-ic { background: var(--red-soft); color: var(--red); }
+.vk-check-lbl { font: 700 13px/1.2 var(--sans); color: var(--text); }
+.vk-check-note { margin-left: auto; font: 500 11.5px/1.2 var(--sans); color: var(--muted); text-align: right; }
+.vk-plan-note { margin-top: 10px; font: 500 12px/1.5 var(--sans); color: var(--text-2); padding: 11px 13px; background: var(--fill); border-radius: var(--radius-sm); }
+
 @media (max-width: 560px) {
   .vk-detail { padding: 4px 14px 32px; }
   .vk-hero { grid-template-columns: 88px 1fr; }
   .vk-lvl { grid-template-columns: 44px 1fr auto; }
+  .vk-checklist { grid-template-columns: 1fr; }
   .vk-lvl-sub { grid-column: 2 / -1; text-align: left; }
 }
 

@@ -497,6 +497,36 @@
     const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=vivek`;
 
+    // How long ago was this scan? (helps judge whether the price is actionable)
+    const scanAge = () => {
+      const g = state.data && state.data.generated_at;
+      if (!g) return "";
+      const mins = Math.max(0, Math.round((Date.now() - new Date(g).getTime()) / 60000));
+      const txt = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
+      const stale = mins > 1440;
+      return `<span class="vk-fresh${stale ? " stale" : ""}" title="When this setup was last scanned">⟳ scanned ${txt}</span>`;
+    };
+
+    // 5.0 trade checklist — the mechanical criteria, pass/fail at a glance.
+    const reactClean = r.reaction === "bounce" || r.reaction === "reject";
+    const struct = d.structure != null ? d.structure : 0;
+    const nStruct = d.structural_tps != null ? d.structural_tps : 0;
+    const rrOk = (r.rr || 0) >= 1.5;
+    const chk = (ok, label, note) => `
+      <div class="vk-check ${ok ? "ok" : "no"}">
+        <span class="vk-check-ic">${ok ? "✓" : "✕"}</span>
+        <span class="vk-check-lbl">${label}</span>
+        <span class="vk-check-note">${note}</span>
+      </div>`;
+    const checklist = [
+      chk(true, "200 SMA level", r.level_tf === "weekly" ? "Weekly (strongest)" : "H4 / daily proxy"),
+      chk(!!r.at_level, "At the level", r.at_level ? "price on the SMA" : "still approaching"),
+      chk(reactClean, "Clean reaction", r.reaction === "bounce" ? "bounced" : r.reaction === "reject" ? "rejected" : "no clear turn yet"),
+      chk(struct >= 0.5, "Structure", struct >= 0.8 ? "clean" : struct >= 0.5 ? "workable" : "thin"),
+      chk(rrOk, "R:R ≥ 1.5", `${(r.rr || 0).toFixed(1)} to TP2`),
+      chk(nStruct > 0, "Real targets", nStruct > 0 ? `${nStruct}/3 at structure` : "R-multiples only"),
+    ].join("");
+
     // A vertical price ladder: SL → Entry → TP1 → TP2 → TP3 (ordered by price).
     const lvl = (key, label, val, cls, sub) => `
       <div class="vk-lvl vk-${cls}">
@@ -527,6 +557,7 @@
             <span class="vk-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
             <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
             <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
+            ${scanAge()}
             <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
           </div>
           <p class="vk-why">${esc(r.analysis || "")}</p>
@@ -534,6 +565,12 @@
       </div>
 
       <div class="vk-ladder">${ladder.join("")}</div>
+
+      <div class="vk-checklist-wrap">
+        <div class="vk-section-lbl">5.0 checklist</div>
+        <div class="vk-checklist">${checklist}</div>
+        <div class="vk-plan-note">Risk 0.25–0.5% of equity · ≤3× leverage · SL → break-even at TP1, → below new support at TP2 · never moved against the trade.</div>
+      </div>
 
       <div class="vk-chips">${(r.chips || []).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
     </div>`;
