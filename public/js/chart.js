@@ -67,6 +67,15 @@
   }
   const isCryptoMarket = (assetType) => assetType === "crypto" || market === "crypto";
 
+  // Exchange-prefixed symbol so "Open in TradingView" lands on the RIGHT
+  // instrument (a bare "BHP" is ambiguous — TradingView would not pick ASX).
+  function tvSymbolFor(sym, assetType) {
+    const up = String(sym || "").toUpperCase();
+    if (isCryptoMarket(assetType)) return `CRYPTO:${up}USD`;
+    if (assetType === "asx" || market === "asx") return `ASX:${up}`;
+    return up;   // US — TradingView resolves the bare symbol fine
+  }
+
   // Indicator math mirroring scanner/scalp.py exactly (BB20/2, KC20/1.5×ATR,
   // EMA9/21, TTM momentum = linreg(12) of close−midline, Wilder ATR).
   const SQ_P = 20, SQ_MOM = 12, BB_MULT = 2.0, KC_MULT = 1.5;
@@ -556,7 +565,14 @@
       (d.analysis ? d.analysis + "  " : "") + fourHTxt + trigTxt +
       "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
-    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
+    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(d.symbol, d.asset_type))}`;
+    // Cross-check note: our prices/SMAs are dividend-adjusted; tell the user how
+    // to make TradingView match (else dividend-payers read a few % off).
+    const note = $("#cf-tvnote");
+    if (note) {
+      note.hidden = false;
+      note.textContent = "Levels use dividend-adjusted prices. On TradingView, enable “Adjust data for dividends” and set the SMA to 43 for best alignment.";
+    }
   }
 
   function footer(d) {
@@ -887,6 +903,8 @@
       if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
     }
     let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
+    let drawClear = () => {};         // set by initDrawing; clears temp drawings on TF switch
+    let drawRedraw = () => {};        // set by initDrawing; re-anchors drawings on pan/zoom/resize
 
     const el = $("#chart");
     const LC = window.LightweightCharts;
@@ -1028,6 +1046,7 @@
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;
       curTF = key;
+      drawClear();                    // temp drawings are TF-specific — reset on switch
       candle.setData(tf.candles);
       vol.setData(tf.volume);
       tf.lines.forEach((l, i) => lineSeries[i] && lineSeries[i].setData(l.data));
@@ -1166,8 +1185,130 @@
       showLabel(param.point, anchor, price);
     });
 
-    const ro = new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
+    // ── Temporary drawing tools (trendline + horizontal line) ─────────────────
+    // Not persisted — purely for eyeballing structure while viewing. Points are
+    // anchored to chart coordinates (logical index + price) so they track pan/
+    // zoom; switching timeframe clears them (the data underneath changed).
+    initDrawing();
+
+    const ro = new ResizeObserver(() => {
+      chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+      drawRedraw();
+    });
     ro.observe(el);
+
+    function initDrawing() {
+      const tools = $("#draw-tools");
+      const canvas = document.createElement("canvas");
+      canvas.className = "draw-layer";
+      el.appendChild(canvas);
+      if (tools) tools.hidden = false;
+
+      const ts = chart.timeScale();
+      let tool = "cursor";            // 'cursor' | 'trend' | 'hline'
+      let drawings = [];              // {type, a:{logical,price}, b:{logical,price}} | {type:'hline', price}
+      let pending = null;             // first point of a trendline in progress
+      let hover = null;               // live cursor point for the preview segment
+
+      const setPE = () => { canvas.style.pointerEvents = tool === "cursor" ? "none" : "auto"; };
+
+      function sizeCanvas() {
+        const r = el.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.round(r.width * dpr));
+        canvas.height = Math.max(1, Math.round(r.height * dpr));
+        canvas.style.width = r.width + "px";
+        canvas.style.height = r.height + "px";
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      const xOf = (logical) => { const x = ts.logicalToCoordinate(logical); return x == null ? null : x; };
+      const yOf = (price) => { const y = candle.priceToCoordinate(price); return y == null ? null : y; };
+
+      function redraw() {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
+        ctx.clearRect(0, 0, w, h);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#4d9fff";
+        const seg = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+        for (const d2 of drawings) {
+          if (d2.type === "hline") {
+            const y = yOf(d2.price); if (y == null) continue;
+            ctx.setLineDash([5, 4]); seg(0, y, w, y); ctx.setLineDash([]);
+          } else {
+            const x1 = xOf(d2.a.logical), y1 = yOf(d2.a.price);
+            const x2 = xOf(d2.b.logical), y2 = yOf(d2.b.price);
+            if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+            seg(x1, y1, x2, y2);
+          }
+        }
+        // live preview of the trendline being drawn
+        if (pending && hover) {
+          const x1 = xOf(pending.logical), y1 = yOf(pending.price);
+          if (x1 != null && y1 != null) {
+            ctx.setLineDash([3, 3]); ctx.strokeStyle = "#9aa4b2";
+            seg(x1, y1, hover.x, hover.y); ctx.setLineDash([]); ctx.strokeStyle = "#4d9fff";
+          }
+        }
+      }
+      drawRedraw = redraw;
+      drawClear = () => { drawings = []; pending = null; hover = null; redraw(); };
+
+      function ptFromEvent(ev) {
+        const r = canvas.getBoundingClientRect();
+        const x = ev.clientX - r.left, y = ev.clientY - r.top;
+        return { x, y, logical: ts.coordinateToLogical(x), price: candle.coordinateToPrice(y) };
+      }
+
+      canvas.addEventListener("pointerdown", (ev) => {
+        if (tool === "cursor") return;
+        const p = ptFromEvent(ev);
+        if (p.logical == null || p.price == null) return;
+        if (tool === "hline") {
+          drawings.push({ type: "hline", price: p.price });
+        } else if (tool === "trend") {
+          if (!pending) { pending = { logical: p.logical, price: p.price }; }
+          else { drawings.push({ type: "trend", a: pending, b: { logical: p.logical, price: p.price } }); pending = null; }
+        }
+        redraw();
+      });
+      canvas.addEventListener("pointermove", (ev) => {
+        if (tool !== "trend" || !pending) return;
+        const r = canvas.getBoundingClientRect();
+        hover = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+        redraw();
+      });
+
+      ts.subscribeVisibleLogicalRangeChange(redraw);
+
+      if (tools) {
+        tools.querySelectorAll(".draw-btn[data-tool]").forEach((b) => b.addEventListener("click", () => {
+          tool = b.dataset.tool;
+          pending = null; hover = null;
+          tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x === b));
+          setPE();
+          el.style.cursor = tool === "cursor" ? "" : "crosshair";
+          redraw();
+        }));
+        const clearBtn = $("#draw-clear");
+        if (clearBtn) clearBtn.addEventListener("click", () => drawClear());
+      }
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape" && tool !== "cursor") {
+          tool = "cursor"; pending = null; hover = null; setPE(); el.style.cursor = "";
+          if (tools) tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x.dataset.tool === "cursor"));
+          redraw();
+        }
+      });
+
+      sizeCanvas(); setPE(); redraw();
+      // keep the backing store in sync with chart resizes
+      const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
+      cro.observe(el);
+    }
   }
 
   // Live Binance feed controller. The forming candle ticks in real time, the
