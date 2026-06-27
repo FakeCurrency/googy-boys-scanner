@@ -266,6 +266,16 @@
   // Entry / SL / TP1 / TP2 / TP3 ladder as price lines.
   function vivekFallback(SYM, meta) {
     const m = meta || {};
+    // The VIVEK levels (grade/200-SMA/entry/SL/TP1-3) MUST come from the saved
+    // scan row. If the _vivek.json row is missing or has no levels, say so
+    // plainly rather than drawing a level-less "live fallback" that looks broken.
+    if (!meta || m.entry == null || m.stop == null || m.tp1 == null) {
+      console.warn(`[vivek] no scan row for ${SYM} — not rendering a generic fallback`);
+      fail(`No VIVEK setup saved for ${String(SYM).toUpperCase()}. ` +
+           `The VIVEK scan may not have run yet, or this ticker isn't a current 200-SMA setup. ` +
+           `Open the VIVEK tab and run a scan, then try again.`);
+      return;
+    }
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
     const dir = m.dir || "LONG";
     const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
@@ -292,21 +302,25 @@
     if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
     if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
 
-    const draw = (bars) => {
-      if (bars.length < 6) throw new Error("thin");
+    const draw = (source) => (bars) => {
+      if (!bars || bars.length < 6) throw new Error("thin");
+      const lastBar = bars[bars.length - 1].close;
+      if (d.price == null) d.price = lastBar;
+      console.info(`[vivek] ${SYM} chart: ${bars.length} daily bars via ${source}; ` +
+                   `scan price=${m.price}, last bar=${lastBar}, level(${d.level_tf})=${d.level}`);
       d.timeframes["1D"] = barsToVivekTF(bars);
-      if (d.price == null) d.price = bars[bars.length - 1].close;
       render(d);
     };
     if (isCryptoMarket(assetType)) {
-      cryptoBars(SYM, "1d", 400).then(draw)
-        .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
+      // Binance daily (real-time, keyless) → /api/price proxy fallback.
+      cryptoBars(SYM, "1d", 400).then(draw("binance/crypto-proxy"))
+        .catch(() => fail(`Couldn't load live crypto data for ${SYM} right now.`));
     } else {
       // 2y of daily bars (~500) — enough for a 200 SMA. NOTE: the /api/price
       // range whitelist only allows 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max, so this
       // MUST stay on a whitelisted value or the proxy silently drops it and
       // returns no candles (which read as "chart unavailable").
-      yahooBars(yfTickerFor(SYM, assetType), "2y", "1d").then(draw)
+      yahooBars(yfTickerFor(SYM, assetType), "2y", "1d").then(draw("yahoo/api-price"))
         .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
     }
   }
