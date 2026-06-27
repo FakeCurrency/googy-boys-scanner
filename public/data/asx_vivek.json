@@ -6,17 +6,17 @@
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-06-27T18:41:13+10:00",
-  "scanned": 1758,
+  "generated_at": "2026-06-27T19:06:29+10:00",
+  "scanned": 1799,
   "universe_size": 1985,
   "score_max": 10,
   "sma": 200,
   "sector_counts": {
-    "Materials": 42,
-    "Not Applic": 24,
-    "Equity Real Estate Investment Trusts (REITs)": 18,
-    "Financial Services": 12,
-    "Energy": 10,
+    "Materials": 41,
+    "Not Applic": 27,
+    "Equity Real Estate Investment Trusts (REITs)": 19,
+    "Financial Services": 13,
+    "Energy": 11,
     "Health Care Equipment & Services": 7,
     "Capital Goods": 5,
     "Software & Services": 5,
@@ -26,10 +26,10 @@
     "Utilities": 3,
     "Insurance": 3,
     "Food, Beverage & Tobacco": 3,
-    "Consumer Services": 3,
     "Real Estate Management & Development": 3,
     "Banks": 2,
     "Telecommunication Services": 2,
+    "Consumer Services": 2,
     "Media & Entertainment": 1,
     "Consumer Durables & Apparel": 1,
     "Pharmaceuticals, Biotechnology & Life Sciences": 1
@@ -54,6 +54,11 @@
       "level": 0.12150479,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.12,
       "entry": 0.12,
@@ -136,7 +141,7 @@
         "rr": 3.0
       },
       "analysis": "AAR is being rejected at the Weekly 200 SMA (A$0.1215), 1.2% away, with a clean structure. A short reaction setup: enter A$0.1200, stop A$0.1520 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$0.0719 / TP2 A$0.0239 / TP3 A$0.0060; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "DEV",
@@ -157,6 +162,11 @@
       "level": 0.2216075,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.22499999,
       "entry": 0.22499999,
@@ -239,7 +249,7 @@
         "rr": 3.0
       },
       "analysis": "DEV is bouncing off the Weekly 200 SMA (A$0.2216), 1.5% away, with a clean structure. A long reaction setup: enter A$0.2250, stop A$0.1579 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.3250 / TP2 A$0.4263 / TP3 A$0.5605; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "KGN",
@@ -260,6 +270,11 @@
       "level": 4.2265337,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 4.25,
       "entry": 4.25,
@@ -361,22 +376,27 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "h4",
-      "level": 1.933205,
+      "level": 1.93320502,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": true,
       "price": 1.97000003,
       "entry": 1.97000003,
-      "stop": 1.91284224,
-      "tp1": 2.05573671,
-      "tp2": 2.14147339,
-      "tp3": 2.25578897,
+      "stop": 1.91284226,
+      "tp1": 2.05573668,
+      "tp2": 2.14147333,
+      "tp3": 2.25578887,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.05715779,
+      "risk": 0.05715777,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -416,9 +436,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 1.933205,
-        "weekly_sma200": 1.90807245,
-        "daily_sma200": 1.933205,
+        "level": 1.93320502,
+        "weekly_sma200": 1.90807243,
+        "daily_sma200": 1.93320502,
         "dist_pct": 1.87,
         "at_level": true,
         "reaction": "bounce",
@@ -427,16 +447,16 @@
         "weekly_bars": 68,
         "atr": 0.02036276,
         "entry": 1.97000003,
-        "stop": 1.91284224,
-        "tp1": 2.05573671,
-        "tp2": 2.14147339,
-        "tp3": 2.25578897,
+        "stop": 1.91284226,
+        "tp1": 2.05573668,
+        "tp2": 2.14147333,
+        "tp3": 2.25578887,
         "scale": [
           0.25,
           0.5,
           0.15
         ],
-        "risk": 0.05715779,
+        "risk": 0.05715777,
         "tp_basis": [
           "measured",
           "measured",
@@ -446,7 +466,7 @@
         "rr": 3.0
       },
       "analysis": "MA1 is bouncing off the H4 (daily proxy) 200 SMA (A$1.9332), 1.9% away with Weekly+H4 200 SMA confluence, with a clean structure. A long reaction setup: enter A$1.9700, stop A$1.9128 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$2.0557 / TP2 A$2.1415 / TP3 A$2.2558; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "DXI",
@@ -465,9 +485,14 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 2.46687494,
+      "level": 2.46687495,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": true,
       "price": 2.5,
       "entry": 2.5,
@@ -520,9 +545,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 2.46687494,
-        "weekly_sma200": 2.46687494,
-        "daily_sma200": 2.55379602,
+        "level": 2.46687495,
+        "weekly_sma200": 2.46687495,
+        "daily_sma200": 2.55379601,
         "dist_pct": 1.33,
         "at_level": true,
         "reaction": "bounce",
@@ -550,7 +575,7 @@
         "rr": 1.53
       },
       "analysis": "DXI is bouncing off the Weekly 200 SMA (A$2.4669), 1.3% away with Weekly+H4 200 SMA confluence, with a clean structure. A long reaction setup: enter A$2.5000, stop A$2.3384 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.6325 / TP2 A$2.7472 / TP3 A$3.3082; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "ANN",
@@ -571,6 +596,11 @@
       "level": 31.55518902,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 31.46999931,
       "entry": 31.46999931,
@@ -624,7 +654,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 31.55518902,
-        "weekly_sma200": 27.61660069,
+        "weekly_sma200": 27.6166006,
         "daily_sma200": 31.55518902,
         "dist_pct": -0.27,
         "at_level": true,
@@ -671,9 +701,13 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 1.61222404,
+      "level": 1.61222403,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 1.63999999,
       "entry": 1.63999999,
@@ -726,8 +760,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 1.61222404,
-        "weekly_sma200": 1.61222404,
+        "level": 1.61222403,
+        "weekly_sma200": 1.61222403,
         "daily_sma200": 2.06096999,
         "dist_pct": 1.69,
         "at_level": true,
@@ -756,7 +790,7 @@
         "rr": 3.46
       },
       "analysis": "AFG is bouncing off the Weekly 200 SMA (A$1.6122), 1.7% away, with a workable structure. A long reaction setup: enter A$1.6400, stop A$1.5158 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.8900 / TP2 A$2.0700 / TP3 A$2.2237; move SL to break-even at TP1, then below new support at TP2. 3.5R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "AGL",
@@ -774,22 +808,26 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 8.74974464,
+      "level": 8.74974461,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": true,
       "price": 8.42000008,
       "entry": 8.42000008,
-      "stop": 8.8819604,
-      "tp1": 7.72705959,
-      "tp2": 7.03411911,
-      "tp3": 6.11019846,
+      "stop": 8.88196037,
+      "tp1": 7.72705964,
+      "tp2": 7.0341192,
+      "tp3": 6.11019861,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.46196032,
+      "risk": 0.46196029,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -829,8 +867,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 8.74974464,
-        "weekly_sma200": 8.74974464,
+        "level": 8.74974461,
+        "weekly_sma200": 8.74974461,
         "daily_sma200": 9.06078128,
         "dist_pct": -3.92,
         "at_level": false,
@@ -840,16 +878,16 @@
         "weekly_bars": 261,
         "atr": 0.13221576,
         "entry": 8.42000008,
-        "stop": 8.8819604,
-        "tp1": 7.72705959,
-        "tp2": 7.03411911,
-        "tp3": 6.11019846,
+        "stop": 8.88196037,
+        "tp1": 7.72705964,
+        "tp2": 7.0341192,
+        "tp3": 6.11019861,
         "scale": [
           0.5,
           0.25,
           0.15
         ],
-        "risk": 0.46196032,
+        "risk": 0.46196029,
         "tp_basis": [
           "measured",
           "measured",
@@ -877,9 +915,14 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 35.33800647,
+      "level": 35.33800631,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 35.04000092,
       "entry": 35.04000092,
@@ -932,9 +975,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 35.33800647,
-        "weekly_sma200": 26.44950322,
-        "daily_sma200": 35.33800647,
+        "level": 35.33800631,
+        "weekly_sma200": 26.44950315,
+        "daily_sma200": 35.33800631,
         "dist_pct": -0.85,
         "at_level": true,
         "reaction": "reject",
@@ -980,9 +1023,14 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 3.8110414,
+      "level": 3.81104141,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 3.82999992,
       "entry": 3.82999992,
@@ -1035,9 +1083,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 3.8110414,
-        "weekly_sma200": 3.48851344,
-        "daily_sma200": 3.8110414,
+        "level": 3.81104141,
+        "weekly_sma200": 3.48851343,
+        "daily_sma200": 3.81104141,
         "dist_pct": 0.5,
         "at_level": true,
         "reaction": "bounce",
@@ -1065,7 +1113,7 @@
         "rr": 3.0
       },
       "analysis": "CLW is bouncing off the H4 (daily proxy) 200 SMA (A$3.8110), 0.5% away, with a clean structure. A long reaction setup: enter A$3.8300, stop A$3.4776 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$4.1938 / TP2 A$4.8873 / TP3 A$5.5921; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "CAM",
@@ -1083,9 +1131,12 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 0.6826387,
+      "level": 0.68263869,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 0.68000001,
       "entry": 0.68000001,
@@ -1138,8 +1189,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 0.6826387,
-        "weekly_sma200": 0.6826387,
+        "level": 0.68263869,
+        "weekly_sma200": 0.68263869,
         "daily_sma200": 0.68099374,
         "dist_pct": -0.39,
         "at_level": true,
@@ -1168,7 +1219,7 @@
         "rr": 3.0
       },
       "analysis": "CAM is being rejected at the Weekly 200 SMA (A$0.6826), 0.4% away with Weekly+H4 200 SMA confluence, with thin structure. A short reaction setup: enter A$0.6800, stop A$0.7037 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.6496 / TP2 A$0.6089 / TP3 A$0.5615; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "CCP",
@@ -1186,9 +1237,14 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 12.62950693,
+      "level": 12.62950694,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 12.84000015,
       "entry": 12.84000015,
@@ -1241,9 +1297,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 12.62950693,
-        "weekly_sma200": 14.7200373,
-        "daily_sma200": 12.62950693,
+        "level": 12.62950694,
+        "weekly_sma200": 14.72003726,
+        "daily_sma200": 12.62950694,
         "dist_pct": 1.64,
         "at_level": true,
         "reaction": "bounce",
@@ -1271,7 +1327,7 @@
         "rr": 3.0
       },
       "analysis": "CCP is bouncing off the H4 (daily proxy) 200 SMA (A$12.6295), 1.6% away, with a clean structure. A long reaction setup: enter A$12.8400, stop A$11.3209 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$14.1391 / TP2 A$17.3972 / TP3 A$20.4353; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "DN1",
@@ -1289,22 +1345,26 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 96.42510189,
+      "level": 96.42510064,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": true,
       "price": 99.75,
       "entry": 99.75,
-      "stop": 95.05354037,
-      "tp1": 106.79468945,
-      "tp2": 113.83937889,
-      "tp3": 123.23229815,
+      "stop": 95.05353912,
+      "tp1": 106.79469132,
+      "tp2": 113.83938264,
+      "tp3": 123.2323044,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 4.69645963,
+      "risk": 4.69646088,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -1344,9 +1404,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 96.42510189,
-        "weekly_sma200": 96.42510189,
-        "daily_sma200": 97.05493679,
+        "level": 96.42510064,
+        "weekly_sma200": 96.42510064,
+        "daily_sma200": 97.05493641,
         "dist_pct": 3.33,
         "at_level": false,
         "reaction": "bounce",
@@ -1355,16 +1415,16 @@
         "weekly_bars": 67,
         "atr": 1.37156152,
         "entry": 99.75,
-        "stop": 95.05354037,
-        "tp1": 106.79468945,
-        "tp2": 113.83937889,
-        "tp3": 123.23229815,
+        "stop": 95.05353912,
+        "tp1": 106.79469132,
+        "tp2": 113.83938264,
+        "tp3": 123.2323044,
         "scale": [
           0.25,
           0.5,
           0.15
         ],
-        "risk": 4.69645963,
+        "risk": 4.69646088,
         "tp_basis": [
           "measured",
           "measured",
@@ -1374,7 +1434,7 @@
         "rr": 3.0
       },
       "analysis": "DN1 is bouncing off the Weekly 200 SMA (A$96.4251), 3.3% away with Weekly+H4 200 SMA confluence, with a clean structure. A long reaction setup: enter A$99.7500, stop A$95.0535 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$106.7947 / TP2 A$113.8394 / TP3 A$123.2323; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "GDI",
@@ -1395,6 +1455,11 @@
       "level": 0.61782347,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.63,
       "entry": 0.63,
@@ -1448,7 +1513,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 0.61782347,
-        "weekly_sma200": 0.57323525,
+        "weekly_sma200": 0.57323526,
         "daily_sma200": 0.61782347,
         "dist_pct": 1.93,
         "at_level": true,
@@ -1477,7 +1542,7 @@
         "rr": 3.0
       },
       "analysis": "GDI is bouncing off the H4 (daily proxy) 200 SMA (A$0.6178), 1.9% away, with a clean structure. A long reaction setup: enter A$0.6300, stop A$0.5995 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$0.6757 / TP2 A$0.7215 / TP3 A$0.7825; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "GPT",
@@ -1498,6 +1563,11 @@
       "level": 5.08531408,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 5.1500001,
       "entry": 5.1500001,
@@ -1551,7 +1621,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 5.08531408,
-        "weekly_sma200": 4.24751535,
+        "weekly_sma200": 4.24751534,
         "daily_sma200": 5.08531408,
         "dist_pct": 1.26,
         "at_level": true,
@@ -1580,7 +1650,7 @@
         "rr": 3.0
       },
       "analysis": "GPT is bouncing off the H4 (daily proxy) 200 SMA (A$5.0853), 1.3% away, with a clean structure. A long reaction setup: enter A$5.1500, stop A$4.8226 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$5.5183 / TP2 A$6.1322 / TP3 A$6.7870; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "GOZ",
@@ -1598,9 +1668,13 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 2.2387479,
+      "level": 2.23874791,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": true,
       "price": 2.30999994,
       "entry": 2.30999994,
@@ -1653,8 +1727,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 2.2387479,
-        "weekly_sma200": 2.2387479,
+        "level": 2.23874791,
+        "weekly_sma200": 2.23874791,
         "daily_sma200": 2.3206119,
         "dist_pct": 3.08,
         "at_level": false,
@@ -1683,7 +1757,7 @@
         "rr": 3.0
       },
       "analysis": "GOZ is bouncing off the Weekly 200 SMA (A$2.2387), 3.1% away with Weekly+H4 200 SMA confluence, with a clean structure. A long reaction setup: enter A$2.3100, stop A$2.1222 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.4700 / TP2 A$2.8734 / TP3 A$3.2490; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "LRV",
@@ -1704,6 +1778,11 @@
       "level": 1.2017,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.20000005,
       "entry": 1.20000005,
@@ -1786,7 +1865,7 @@
         "rr": 3.0
       },
       "analysis": "LRV is being rejected at the H4 (daily proxy) 200 SMA (A$1.2017), 0.1% away, with a clean structure. A short reaction setup: enter A$1.2000, stop A$1.5354 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.9250 / TP2 A$0.1938 / TP3 A$0.0600; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MEZ",
@@ -1804,9 +1883,13 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 4.79371767,
+      "level": 4.79371766,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": true,
       "price": 4.63999987,
       "entry": 4.63999987,
@@ -1859,8 +1942,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 4.79371767,
-        "weekly_sma200": 4.79371767,
+        "level": 4.79371766,
+        "weekly_sma200": 4.79371766,
         "daily_sma200": 4.81994474,
         "dist_pct": -3.31,
         "at_level": false,
@@ -1910,6 +1993,10 @@
       "level": 1.85172861,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": true,
       "price": 1.79499996,
       "entry": 1.79499996,
@@ -1992,7 +2079,7 @@
         "rr": 3.0
       },
       "analysis": "MRE is being rejected at the Weekly 200 SMA (A$1.8517), 3.2% away with Weekly+H4 200 SMA confluence, with a clean structure. A short reaction setup: enter A$1.7950, stop A$1.9762 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$1.5231 / TP2 A$1.2513 / TP3 A$0.8888; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "PIC",
@@ -2013,6 +2100,11 @@
       "level": 1.19233558,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.16999996,
       "entry": 1.16999996,
@@ -2066,7 +2158,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.19233558,
-        "weekly_sma200": 1.06602268,
+        "weekly_sma200": 1.06602267,
         "daily_sma200": 1.19233558,
         "dist_pct": -1.91,
         "at_level": true,
@@ -2095,7 +2187,7 @@
         "rr": 3.0
       },
       "analysis": "PIC is being rejected at the H4 (daily proxy) 200 SMA (A$1.1923), 1.9% away, with a clean structure. A short reaction setup: enter A$1.1700, stop A$1.2118 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.1300 / TP2 A$1.0445 / TP3 A$0.9608; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "PMV",
@@ -2116,6 +2208,11 @@
       "level": 14.63919451,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 14.64999962,
       "entry": 14.64999962,
@@ -2169,7 +2266,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 14.63919451,
-        "weekly_sma200": 22.05924181,
+        "weekly_sma200": 22.05924176,
         "daily_sma200": 14.63919451,
         "dist_pct": 0.07,
         "at_level": true,
@@ -2219,6 +2316,11 @@
       "level": 0.2844,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.28,
       "entry": 0.28,
@@ -2301,7 +2403,7 @@
         "rr": 3.0
       },
       "analysis": "PSC is being rejected at the H4 (daily proxy) 200 SMA (A$0.2844), 1.6% away, with a clean structure. A short reaction setup: enter A$0.2800, stop A$0.3294 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.1850 / TP2 A$0.1318 / TP3 A$0.0331; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "QRI",
@@ -2319,14 +2421,19 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 1.53240827,
+      "level": 1.53240828,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.52499998,
       "entry": 1.52499998,
       "stop": 1.57217099,
-      "tp1": 1.48091433,
+      "tp1": 1.4809143,
       "tp2": 1.38348693,
       "tp3": 1.28914491,
       "scale": [
@@ -2374,9 +2481,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 1.53240827,
+        "level": 1.53240828,
         "weekly_sma200": 1.36339387,
-        "daily_sma200": 1.53240827,
+        "daily_sma200": 1.53240828,
         "dist_pct": -0.49,
         "at_level": true,
         "reaction": "reject",
@@ -2386,7 +2493,7 @@
         "atr": 0.01717104,
         "entry": 1.52499998,
         "stop": 1.57217099,
-        "tp1": 1.48091433,
+        "tp1": 1.4809143,
         "tp2": 1.38348693,
         "tp3": 1.28914491,
         "scale": [
@@ -2404,7 +2511,7 @@
         "rr": 3.0
       },
       "analysis": "QRI is being rejected at the H4 (daily proxy) 200 SMA (A$1.5324), 0.5% away, with a clean structure. A short reaction setup: enter A$1.5250, stop A$1.5722 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.4809 / TP2 A$1.3835 / TP3 A$1.2891; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "SCG",
@@ -2425,6 +2532,11 @@
       "level": 3.85211285,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 3.92000008,
       "entry": 3.92000008,
@@ -2507,7 +2619,7 @@
         "rr": 3.0
       },
       "analysis": "SCG is bouncing off the H4 (daily proxy) 200 SMA (A$3.8521), 1.7% away, with a clean structure. A long reaction setup: enter A$3.9200, stop A$3.6403 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$4.1442 / TP2 A$4.7592 / TP3 A$5.3186; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "STW",
@@ -2525,9 +2637,14 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 78.27793278,
+      "level": 78.27793274,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 79.05000305,
       "entry": 79.05000305,
@@ -2580,9 +2697,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 78.27793278,
-        "weekly_sma200": 66.8351005,
-        "daily_sma200": 78.27793278,
+        "level": 78.27793274,
+        "weekly_sma200": 66.8351009,
+        "daily_sma200": 78.27793274,
         "dist_pct": 0.98,
         "at_level": true,
         "reaction": "bounce",
@@ -2610,7 +2727,7 @@
         "rr": 3.0
       },
       "analysis": "STW is bouncing off the H4 (daily proxy) 200 SMA (A$78.2779), 1.0% away, with a clean structure. A long reaction setup: enter A$79.0500, stop A$76.3777 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$82.0877 / TP2 A$87.0670 / TP3 A$92.4117; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "SLF",
@@ -2631,6 +2748,11 @@
       "level": 13.13417618,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 13.34000015,
       "entry": 13.34000015,
@@ -2684,7 +2806,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 13.13417618,
-        "weekly_sma200": 11.52175275,
+        "weekly_sma200": 11.5217527,
         "daily_sma200": 13.13417618,
         "dist_pct": 1.54,
         "at_level": true,
@@ -2713,7 +2835,223 @@
         "rr": 3.0
       },
       "analysis": "SLF is bouncing off the H4 (daily proxy) 200 SMA (A$13.1342), 1.5% away, with a clean structure. A long reaction setup: enter A$13.3400, stop A$12.5624 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$14.6610 / TP2 A$15.6729 / TP3 A$17.2281; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
+    },
+    {
+      "symbol": "VEA",
+      "name": "Viva Energy Group Limited",
+      "sector": "Energy",
+      "dir": "SHORT",
+      "setup_type": "vivek",
+      "grade": "A+",
+      "score": 9,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION",
+        "STRONG STRUCTURE"
+      ],
+      "level_tf": "h4",
+      "level": 2.04452793,
+      "at_level": true,
+      "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
+      "confluence": false,
+      "price": 2.01999998,
+      "entry": 2.01999998,
+      "stop": 2.45687946,
+      "tp1": 1.66193911,
+      "tp2": 0.70936154,
+      "tp3": 0.101,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 0.43687948,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "LIQUID",
+      "turnover": 14470684,
+      "spark": [
+        2.27999997,
+        2.30999994,
+        2.30999994,
+        2.33999991,
+        2.29999995,
+        2.30999994,
+        2.18000007,
+        2.16000009,
+        2.1500001,
+        2.16000009,
+        2.11999989,
+        2.13000011,
+        2.1400001,
+        2.24000001,
+        2.28999996,
+        2.24000001,
+        2.27999997,
+        2.30999994,
+        2.32999992,
+        2.25,
+        2.11999989,
+        2.1500001,
+        2.16000009,
+        2.1500001,
+        2.18000007,
+        2.13000011,
+        2.07999992,
+        2.02999997,
+        2.04999995,
+        2.01999998
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 2.04452793,
+        "weekly_sma200": 2.45665446,
+        "daily_sma200": 2.04452793,
+        "dist_pct": -1.21,
+        "at_level": true,
+        "reaction": "reject",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 261,
+        "atr": 0.08687957,
+        "entry": 2.01999998,
+        "stop": 2.45687946,
+        "tp1": 1.66193911,
+        "tp2": 0.70936154,
+        "tp3": 0.101,
+        "scale": [
+          0.5,
+          0.25,
+          0.15
+        ],
+        "risk": 0.43687948,
+        "tp_basis": [
+          "structural",
+          "measured",
+          "measured"
+        ],
+        "structural_tps": 1,
+        "rr": 3.0
+      },
+      "analysis": "VEA is being rejected at the H4 (daily proxy) 200 SMA (A$2.0445), 1.2% away, with a clean structure. A short reaction setup: enter A$2.0200, stop A$2.4569 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.6619 / TP2 A$0.7094 / TP3 A$0.1010; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
+      "sector_count": 11
+    },
+    {
+      "symbol": "WPR",
+      "name": "Waypoint Reit",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A+",
+      "score": 9,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION",
+        "STRONG STRUCTURE"
+      ],
+      "level_tf": "h4",
+      "level": 2.48955603,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
+      "confluence": false,
+      "price": 2.5,
+      "entry": 2.5,
+      "stop": 2.33949667,
+      "tp1": 2.62847463,
+      "tp2": 2.98150999,
+      "tp3": 3.30251665,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.16050333,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "LIQUID",
+      "turnover": 4142407,
+      "spark": [
+        2.43000007,
+        2.41000009,
+        2.45000005,
+        2.4000001,
+        2.42000008,
+        2.41000009,
+        2.4000001,
+        2.3900001,
+        2.4000001,
+        2.38000011,
+        2.38000011,
+        2.3599999,
+        2.32999992,
+        2.32999992,
+        2.36999989,
+        2.3900001,
+        2.41000009,
+        2.45000005,
+        2.48000002,
+        2.47000003,
+        2.48000002,
+        2.48000002,
+        2.51999998,
+        2.43000007,
+        2.47000003,
+        2.49000001,
+        2.46000004,
+        2.48000002,
+        2.48000002,
+        2.5
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 2.48955603,
+        "weekly_sma200": 2.24302219,
+        "daily_sma200": 2.48955603,
+        "dist_pct": 0.42,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 261,
+        "atr": 0.05050343,
+        "entry": 2.5,
+        "stop": 2.33949667,
+        "tp1": 2.62847463,
+        "tp2": 2.98150999,
+        "tp3": 3.30251665,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 0.16050333,
+        "tp_basis": [
+          "structural",
+          "measured",
+          "measured"
+        ],
+        "structural_tps": 1,
+        "rr": 3.0
+      },
+      "analysis": "WPR is bouncing off the H4 (daily proxy) 200 SMA (A$2.4896), 0.4% away, with a clean structure. A long reaction setup: enter A$2.5000, stop A$2.3395 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.6285 / TP2 A$2.9815 / TP3 A$3.3025; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
+      "sector_count": 19
     },
     {
       "symbol": "NGI",
@@ -2734,6 +3072,11 @@
       "level": 2.56503994,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 2.52999997,
       "entry": 2.52999997,
@@ -2816,7 +3159,7 @@
         "rr": 2.63
       },
       "analysis": "NGI is being rejected at the H4 (daily proxy) 200 SMA (A$2.5650), 1.4% away, with a clean structure. A short reaction setup: enter A$2.5300, stop A$2.7203 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.3700 / TP2 A$2.0300 / TP3 A$1.5783; move SL to break-even at TP1, then below new support at TP2. 2.6R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "PPS",
@@ -2837,6 +3180,10 @@
       "level": 0.62682057,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 0.63499999,
       "entry": 0.63499999,
@@ -2940,6 +3287,11 @@
       "level": 1.175875,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.17499995,
       "entry": 1.17499995,
@@ -3022,7 +3374,7 @@
         "rr": 2.16
       },
       "analysis": "ASM is being rejected at the H4 (daily proxy) 200 SMA (A$1.1759), 0.1% away, with a clean structure. A short reaction setup: enter A$1.1750, stop A$1.4417 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.7950 / TP2 A$0.6000 / TP3 A$0.0587; move SL to break-even at TP1, then below new support at TP2. 2.2R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "TVN",
@@ -3043,6 +3395,11 @@
       "level": 0.2757375,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.27500001,
       "entry": 0.27500001,
@@ -3125,7 +3482,7 @@
         "rr": 2.07
       },
       "analysis": "TVN is being rejected at the H4 (daily proxy) 200 SMA (A$0.2757), 0.3% away, with a clean structure. A short reaction setup: enter A$0.2750, stop A$0.3257 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.2300 / TP2 A$0.1700 / TP3 A$0.0217; move SL to break-even at TP1, then below new support at TP2. 2.1R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CBA",
@@ -3146,6 +3503,11 @@
       "level": 164.54604233,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 162.02000427,
       "entry": 162.02000427,
@@ -3199,7 +3561,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 164.54604233,
-        "weekly_sma200": 127.610047,
+        "weekly_sma200": 127.61004723,
         "daily_sma200": 164.54604233,
         "dist_pct": -1.56,
         "at_level": true,
@@ -3249,6 +3611,11 @@
       "level": 1.687125,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.65999997,
       "entry": 1.65999997,
@@ -3331,7 +3698,7 @@
         "rr": 1.99
       },
       "analysis": "LTR is being rejected at the H4 (daily proxy) 200 SMA (A$1.6871), 1.6% away, with a clean structure. A short reaction setup: enter A$1.6600, stop A$2.4509 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.0250 / TP2 A$0.0847 / TP3 A$0.0830; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "WHC",
@@ -3352,6 +3719,11 @@
       "level": 7.93072959,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 8.06999969,
       "entry": 8.06999969,
@@ -3434,7 +3806,7 @@
         "rr": 1.83
       },
       "analysis": "WHC is bouncing off the H4 (daily proxy) 200 SMA (A$7.9307), 1.7% away, with a clean structure. A long reaction setup: enter A$8.0700, stop A$7.5238 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$8.6900 / TP2 A$9.0700 / TP3 A$9.5000; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "KLS",
@@ -3455,6 +3827,11 @@
       "level": 4.27720947,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 4.28999996,
       "entry": 4.28999996,
@@ -3508,7 +3885,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 4.27720947,
-        "weekly_sma200": 4.57097351,
+        "weekly_sma200": 4.57097352,
         "daily_sma200": 4.27720947,
         "dist_pct": 0.3,
         "at_level": true,
@@ -3558,6 +3935,11 @@
       "level": 0.26711199,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.27000001,
       "entry": 0.27000001,
@@ -3640,7 +4022,113 @@
         "rr": 1.68
       },
       "analysis": "JMS is bouncing off the H4 (daily proxy) 200 SMA (A$0.2671), 1.1% away, with a clean structure. A long reaction setup: enter A$0.2700, stop A$0.2500 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.2900 / TP2 A$0.3036 / TP3 A$0.3702; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
+    },
+    {
+      "symbol": "WHI",
+      "name": "Whitefield Income Limited",
+      "sector": "Not Applic",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A+",
+      "score": 9,
+      "score_max": 10,
+      "chips": [
+        "WEEKLY 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION",
+        "W+H4 CONFLUENCE"
+      ],
+      "level_tf": "weekly",
+      "level": 1.30678254,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
+      "confluence": true,
+      "price": 1.31500006,
+      "entry": 1.31500006,
+      "stop": 1.22228795,
+      "tp1": 1.39362345,
+      "tp2": 1.4660966,
+      "tp3": 1.77856059,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.09271211,
+      "rr": 1.63,
+      "rr_text": "1.6:1",
+      "liquidity": "OK",
+      "turnover": 651655,
+      "spark": [
+        1.35878289,
+        1.35380566,
+        1.27416992,
+        1.27416992,
+        1.27914715,
+        1.25923836,
+        1.25923836,
+        1.23435223,
+        1.24928391,
+        1.23932946,
+        1.24928391,
+        1.25426114,
+        1.29407883,
+        1.28412437,
+        1.29407883,
+        1.27416992,
+        1.29999995,
+        1.26999998,
+        1.28499997,
+        1.27499998,
+        1.255,
+        1.26999998,
+        1.28999996,
+        1.29999995,
+        1.30499995,
+        1.29499996,
+        1.28999996,
+        1.30499995,
+        1.30499995,
+        1.31500006
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "weekly",
+        "level": 1.30678254,
+        "weekly_sma200": 1.30678254,
+        "daily_sma200": 1.34769368,
+        "dist_pct": 0.62,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 0.4,
+        "confluence": true,
+        "weekly_bars": 75,
+        "atr": 0.02521199,
+        "entry": 1.31500006,
+        "stop": 1.22228795,
+        "tp1": 1.39362345,
+        "tp2": 1.4660966,
+        "tp3": 1.77856059,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 0.09271211,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "measured"
+        ],
+        "structural_tps": 2,
+        "rr": 1.63
+      },
+      "analysis": "WHI is bouncing off the Weekly 200 SMA (A$1.3068), 0.6% away with Weekly+H4 200 SMA confluence, with thin structure. A long reaction setup: enter A$1.3150, stop A$1.2223 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.3936 / TP2 A$1.4661 / TP3 A$1.7786; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
+      "sector_count": 27
     },
     {
       "symbol": "TOK",
@@ -3661,6 +4149,11 @@
       "level": 1.3593,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 1.35500002,
       "entry": 1.35500002,
@@ -3743,109 +4236,7 @@
         "rr": 1.62
       },
       "analysis": "TOK is being rejected at the H4 (daily proxy) 200 SMA (A$1.3593), 0.3% away, with a clean structure. A short reaction setup: enter A$1.3550, stop A$1.5741 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.1750 / TP2 A$1.0000 / TP3 A$0.2594; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 42
-    },
-    {
-      "symbol": "WA1",
-      "name": "Wa1 Resources Ltd",
-      "sector": "Materials",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A+",
-      "score": 8,
-      "score_max": 10,
-      "chips": [
-        "WEEKLY 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "weekly",
-      "level": 11.20962499,
-      "at_level": true,
-      "reaction": "bounce",
-      "confluence": false,
-      "price": 11.31999969,
-      "entry": 11.31999969,
-      "stop": 10.35356245,
-      "tp1": 14.01000023,
-      "tp2": 15.80000019,
-      "tp3": 16.37999916,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.96643724,
-      "rr": 4.64,
-      "rr_text": "4.6:1",
-      "liquidity": "LIQUID",
-      "turnover": 2180269,
-      "spark": [
-        15.14999962,
-        14.64999962,
-        14.03999996,
-        13.55000019,
-        13.97999954,
-        14.23999977,
-        14.07999992,
-        14.18999958,
-        13.93999958,
-        13.10999966,
-        13.35000038,
-        13.59000015,
-        13.47000027,
-        14.18000031,
-        13.5,
-        13.18999958,
-        12.30000019,
-        12.14999962,
-        11.96000004,
-        12.68000031,
-        13.81000042,
-        13.35999966,
-        13.56000042,
-        13.01000023,
-        12.56999969,
-        12.5,
-        12.35999966,
-        12.39000034,
-        11.68999958,
-        11.31999969
-      ],
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "weekly",
-        "level": 11.20962499,
-        "weekly_sma200": 11.20962499,
-        "daily_sma200": 16.31515001,
-        "dist_pct": 0.98,
-        "at_level": true,
-        "reaction": "bounce",
-        "structure": 0.0,
-        "confluence": false,
-        "weekly_bars": 229,
-        "atr": 0.76643744,
-        "entry": 11.31999969,
-        "stop": 10.35356245,
-        "tp1": 14.01000023,
-        "tp2": 15.80000019,
-        "tp3": 16.37999916,
-        "scale": [
-          0.25,
-          0.5,
-          0.15
-        ],
-        "risk": 0.96643724,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 4.64
-      },
-      "analysis": "WA1 is bouncing off the Weekly 200 SMA (A$11.2096), 1.0% away, with thin structure. A long reaction setup: enter A$11.3200, stop A$10.3536 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$14.0100 / TP2 A$15.8000 / TP3 A$16.3800; move SL to break-even at TP1, then below new support at TP2. 4.6R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MTH",
@@ -3865,6 +4256,9 @@
       "level": 0.220965,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.22499999,
       "entry": 0.22499999,
@@ -3947,7 +4341,7 @@
         "rr": 4.44
       },
       "analysis": "MTH is bouncing off the Weekly 200 SMA (A$0.2210), 1.8% away, with thin structure. A long reaction setup: enter A$0.2250, stop A$0.1946 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.3100 / TP2 A$0.3600 / TP3 A$0.3800; move SL to break-even at TP1, then below new support at TP2. 4.4R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "C79",
@@ -3967,6 +4361,9 @@
       "level": 5.65005,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.69999981,
       "entry": 5.69999981,
@@ -4070,6 +4467,10 @@
       "level": 3.83698548,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 3.91000009,
       "entry": 3.91000009,
@@ -4123,7 +4524,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 3.83698548,
-        "weekly_sma200": 3.4363131,
+        "weekly_sma200": 3.43631309,
         "daily_sma200": 3.83698548,
         "dist_pct": 1.87,
         "at_level": true,
@@ -4152,7 +4553,7 @@
         "rr": 3.19
       },
       "analysis": "S32 is bouncing off the H4 (daily proxy) 200 SMA (A$3.8370), 1.9% away, with a workable structure. A long reaction setup: enter A$3.9100, stop A$3.6844 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$4.4400 / TP2 A$4.6300 / TP3 A$4.8504; move SL to break-even at TP1, then below new support at TP2. 3.2R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "AL3",
@@ -4172,6 +4573,9 @@
       "level": 0.1309875,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.13,
       "entry": 0.13,
@@ -4275,6 +4679,9 @@
       "level": 6.95281229,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 6.86000013,
       "entry": 6.86000013,
@@ -4328,7 +4735,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.95281229,
-        "weekly_sma200": 7.0720594,
+        "weekly_sma200": 7.07205939,
         "daily_sma200": 6.95281229,
         "dist_pct": -1.35,
         "at_level": true,
@@ -4377,6 +4784,10 @@
       "level": 0.23814062,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.23,
       "entry": 0.23,
@@ -4480,6 +4891,9 @@
       "level": 6.86111153,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 6.88999987,
       "entry": 6.88999987,
@@ -4533,7 +4947,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.86111153,
-        "weekly_sma200": 6.73124066,
+        "weekly_sma200": 6.73124068,
         "daily_sma200": 6.86111153,
         "dist_pct": 0.42,
         "at_level": true,
@@ -4562,7 +4976,7 @@
         "rr": 3.0
       },
       "analysis": "AFI is bouncing off the H4 (daily proxy) 200 SMA (A$6.8611), 0.4% away with Weekly+H4 200 SMA confluence, with thin structure. A long reaction setup: enter A$6.8900, stop A$6.2261 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$7.8858 / TP2 A$8.8816 / TP3 A$10.2093; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "DAI",
@@ -4582,6 +4996,10 @@
       "level": 0.46298,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.44999999,
       "entry": 0.44999999,
@@ -4681,9 +5099,13 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 7.10055215,
+      "level": 7.10055212,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 6.9000001,
       "entry": 6.9000001,
@@ -4736,8 +5158,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 7.10055215,
-        "weekly_sma200": 7.10055215,
+        "level": 7.10055212,
+        "weekly_sma200": 7.10055212,
         "daily_sma200": 6.77395226,
         "dist_pct": -2.91,
         "at_level": false,
@@ -4766,7 +5188,7 @@
         "rr": 3.0
       },
       "analysis": "ILU is being rejected at the Weekly 200 SMA (A$7.1006), 2.9% away, with a clean structure. A short reaction setup: enter A$6.9000, stop A$9.0358 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$5.1658 / TP2 A$0.4925 / TP3 A$0.3450; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "LGI",
@@ -4783,9 +5205,13 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 2.79685242,
+      "level": 2.79685239,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 2.71000004,
       "entry": 2.71000004,
@@ -4838,8 +5264,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 2.79685242,
-        "weekly_sma200": 2.79685242,
+        "level": 2.79685239,
+        "weekly_sma200": 2.79685239,
         "daily_sma200": 3.76564666,
         "dist_pct": -3.2,
         "at_level": false,
@@ -4888,6 +5314,9 @@
       "level": 0.0957075,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.097,
       "entry": 0.097,
@@ -4970,7 +5399,7 @@
         "rr": 2.99
       },
       "analysis": "MEK is bouncing off the Weekly 200 SMA (A$0.0957), 1.3% away, with thin structure. A long reaction setup: enter A$0.0970, stop A$0.0826 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.1250 / TP2 A$0.1400 / TP3 A$0.1850; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "BRE",
@@ -4991,6 +5420,10 @@
       "level": 4.63655001,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 4.55999994,
       "entry": 4.55999994,
@@ -5073,7 +5506,7 @@
         "rr": 2.92
       },
       "analysis": "BRE is being rejected at the H4 (daily proxy) 200 SMA (A$4.6366), 1.7% away, with a workable structure. A short reaction setup: enter A$4.5600, stop A$6.0438 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$2.3343 / TP2 A$0.2326 / TP3 A$0.2280; move SL to break-even at TP1, then below new support at TP2. 2.9R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "BGL",
@@ -5093,6 +5526,10 @@
       "level": 1.3399,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 1.28999996,
       "entry": 1.28999996,
@@ -5175,7 +5612,7 @@
         "rr": 2.83
       },
       "analysis": "BGL is being rejected at the Weekly 200 SMA (A$1.3399), 3.9% away, with a clean structure. A short reaction setup: enter A$1.2900, stop A$1.7223 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$0.6416 / TP2 A$0.0658 / TP3 A$0.0645; move SL to break-even at TP1, then below new support at TP2. 2.8R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MAQ",
@@ -5196,6 +5633,9 @@
       "level": 67.42309998,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 67.69000244,
       "entry": 67.69000244,
@@ -5298,6 +5738,10 @@
       "level": 13.69117417,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 14.06000042,
       "entry": 14.06000042,
@@ -5400,6 +5844,9 @@
       "level": 5.86015606,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.94999981,
       "entry": 5.94999981,
@@ -5482,7 +5929,7 @@
         "rr": 2.66
       },
       "analysis": "MAF is bouncing off the Weekly 200 SMA (A$5.8602), 1.5% away, with thin structure. A long reaction setup: enter A$5.9500, stop A$5.4809 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$6.4900 / TP2 A$7.2000 / TP3 A$7.6100; move SL to break-even at TP1, then below new support at TP2. 2.7R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "AUB",
@@ -5499,13 +5946,17 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 27.63866124,
+      "level": 27.63866131,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 28.23999977,
       "entry": 28.23999977,
-      "stop": 26.87492177,
+      "stop": 26.87492184,
       "tp1": 30.04999924,
       "tp2": 31.79638294,
       "tp3": 39.49830517,
@@ -5514,7 +5965,7 @@
         0.5,
         0.15
       ],
-      "risk": 1.365078,
+      "risk": 1.36507793,
       "rr": 2.61,
       "rr_text": "2.6:1",
       "liquidity": "LIQUID",
@@ -5554,8 +6005,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 27.63866124,
-        "weekly_sma200": 27.63866124,
+        "level": 27.63866131,
+        "weekly_sma200": 27.63866131,
         "daily_sma200": 29.00229257,
         "dist_pct": 2.13,
         "at_level": false,
@@ -5565,7 +6016,7 @@
         "weekly_bars": 261,
         "atr": 0.76373947,
         "entry": 28.23999977,
-        "stop": 26.87492177,
+        "stop": 26.87492184,
         "tp1": 30.04999924,
         "tp2": 31.79638294,
         "tp3": 39.49830517,
@@ -5574,7 +6025,7 @@
           0.5,
           0.15
         ],
-        "risk": 1.365078,
+        "risk": 1.36507793,
         "tp_basis": [
           "structural",
           "structural",
@@ -5604,6 +6055,9 @@
       "level": 1.02706063,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.03499997,
       "entry": 1.03499997,
@@ -5686,7 +6140,7 @@
         "rr": 2.58
       },
       "analysis": "ABG is bouncing off the Weekly 200 SMA (A$1.0271), 0.8% away, with thin structure. A long reaction setup: enter A$1.0350, stop A$0.9627 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.1750 / TP2 A$1.2213 / TP3 A$1.3965; move SL to break-even at TP1, then below new support at TP2. 2.6R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "SMI",
@@ -5706,6 +6160,9 @@
       "level": 0.47000814,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.465,
       "entry": 0.465,
@@ -5788,7 +6245,7 @@
         "rr": 2.58
       },
       "analysis": "SMI is being rejected at the Weekly 200 SMA (A$0.4700), 1.1% away, with thin structure. A short reaction setup: enter A$0.4650, stop A$0.6359 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$0.2086 / TP2 A$0.0237 / TP3 A$0.0232; move SL to break-even at TP1, then below new support at TP2. 2.6R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "PNR",
@@ -5808,6 +6265,9 @@
       "level": 2.35832001,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.4000001,
       "entry": 2.4000001,
@@ -5890,7 +6350,7 @@
         "rr": 2.47
       },
       "analysis": "PNR is bouncing off the Weekly 200 SMA (A$2.3583), 1.7% away, with thin structure. A long reaction setup: enter A$2.4000, stop A$2.0423 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$3.0600 / TP2 A$3.2850 / TP3 A$3.5300; move SL to break-even at TP1, then below new support at TP2. 2.5R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "FWD",
@@ -5907,9 +6367,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 1.73798232,
+      "level": 1.73798234,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.74000001,
       "entry": 1.74000001,
@@ -5962,8 +6425,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 1.73798232,
-        "weekly_sma200": 1.73798232,
+        "level": 1.73798234,
+        "weekly_sma200": 1.73798234,
         "daily_sma200": 2.25527581,
         "dist_pct": 0.12,
         "at_level": true,
@@ -6012,6 +6475,10 @@
       "level": 0.05311,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.052,
       "entry": 0.052,
@@ -6094,7 +6561,7 @@
         "rr": 2.28
       },
       "analysis": "ETM is being rejected at the Weekly 200 SMA (A$0.0531), 2.1% away, with a clean structure. A short reaction setup: enter A$0.0520, stop A$0.0737 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$0.0195 / TP2 A$0.0027 / TP3 A$0.0026; move SL to break-even at TP1, then below new support at TP2. 2.3R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "IVR",
@@ -6114,6 +6581,9 @@
       "level": 0.0458525,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.046,
       "entry": 0.046,
@@ -6196,7 +6666,7 @@
         "rr": 2.27
       },
       "analysis": "IVR is bouncing off the Weekly 200 SMA (A$0.0459), 0.3% away, with thin structure. A long reaction setup: enter A$0.0460, stop A$0.0398 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.0560 / TP2 A$0.0600 / TP3 A$0.0640; move SL to break-even at TP1, then below new support at TP2. 2.3R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MEI",
@@ -6216,6 +6686,9 @@
       "level": 0.148,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.15000001,
       "entry": 0.15000001,
@@ -6298,7 +6771,7 @@
         "rr": 2.12
       },
       "analysis": "MEI is bouncing off the Weekly 200 SMA (A$0.1480), 1.3% away, with thin structure. A long reaction setup: enter A$0.1500, stop A$0.1216 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.1800 / TP2 A$0.2100 / TP3 A$0.2600; move SL to break-even at TP1, then below new support at TP2. 2.1R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "BGA",
@@ -6319,6 +6792,10 @@
       "level": 5.69161825,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 5.78999996,
       "entry": 5.78999996,
@@ -6372,7 +6849,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 5.69161825,
-        "weekly_sma200": 4.406763,
+        "weekly_sma200": 4.40676301,
         "daily_sma200": 5.69161825,
         "dist_pct": 1.7,
         "at_level": true,
@@ -6421,6 +6898,9 @@
       "level": 9.33810001,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 9.35000038,
       "entry": 9.35000038,
@@ -6503,7 +6983,7 @@
         "rr": 1.92
       },
       "analysis": "PDN is bouncing off the Weekly 200 SMA (A$9.3381), 0.1% away, with thin structure. A long reaction setup: enter A$9.3500, stop A$8.2430 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$10.8100 / TP2 A$11.4800 / TP3 A$12.1900; move SL to break-even at TP1, then below new support at TP2. 1.9R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "SGP",
@@ -6523,6 +7003,9 @@
       "level": 4.33930252,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 4.32000017,
       "entry": 4.32000017,
@@ -6605,7 +7088,7 @@
         "rr": 1.89
       },
       "analysis": "SGP is being rejected at the Weekly 200 SMA (A$4.3393), 0.5% away, with thin structure. A short reaction setup: enter A$4.3200, stop A$4.4945 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$4.1800 / TP2 A$3.9900 / TP3 A$3.8000; move SL to break-even at TP1, then below new support at TP2. 1.9R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "ACF",
@@ -6625,6 +7108,10 @@
       "level": 0.8610339,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.88,
       "entry": 0.88,
@@ -6727,6 +7214,9 @@
       "level": 2.016575,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.02999997,
       "entry": 2.02999997,
@@ -6830,6 +7320,10 @@
       "level": 12.91255208,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 12.93000031,
       "entry": 12.93000031,
@@ -6883,7 +7377,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 12.91255208,
-        "weekly_sma200": 12.00770974,
+        "weekly_sma200": 12.00770983,
         "daily_sma200": 12.91255208,
         "dist_pct": 0.13,
         "at_level": true,
@@ -6932,6 +7426,9 @@
       "level": 2.30484874,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.26999998,
       "entry": 2.26999998,
@@ -7034,6 +7531,9 @@
       "level": 8.90273522,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 9.07999992,
       "entry": 9.07999992,
@@ -7116,7 +7616,7 @@
         "rr": 3.0
       },
       "analysis": "ARG is bouncing off the H4 (daily proxy) 200 SMA (A$8.9027), 1.9% away, with thin structure. A long reaction setup: enter A$9.0800, stop A$8.4719 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$9.9922 / TP2 A$10.9044 / TP3 A$12.1207; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "APZ",
@@ -7136,6 +7636,10 @@
       "level": 5.0940505,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 5.28000021,
       "entry": 5.28000021,
@@ -7218,7 +7722,7 @@
         "rr": 3.0
       },
       "analysis": "APZ is bouncing off the H4 (daily proxy) 200 SMA (A$5.0941), 3.5% away, with a clean structure. A long reaction setup: enter A$5.2800, stop A$4.4446 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$6.4300 / TP2 A$7.7863 / TP3 A$9.4572; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "CUP",
@@ -7238,6 +7742,10 @@
       "level": 1.07133663,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 1.04499996,
       "entry": 1.04499996,
@@ -7340,6 +7848,10 @@
       "level": 0.43242878,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.44999999,
       "entry": 0.44999999,
@@ -7422,7 +7934,7 @@
         "rr": 3.0
       },
       "analysis": "CMW is bouncing off the H4 (daily proxy) 200 SMA (A$0.4324), 3.9% away, with a clean structure. A long reaction setup: enter A$0.4500, stop A$0.4098 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$0.5103 / TP2 A$0.5706 / TP3 A$0.6510; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "FHE",
@@ -7442,6 +7954,9 @@
       "level": 0.254875,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.25999999,
       "entry": 0.25999999,
@@ -7524,7 +8039,7 @@
         "rr": 3.0
       },
       "analysis": "FHE is bouncing off the H4 (daily proxy) 200 SMA (A$0.2549), 2.0% away, with thin structure. A long reaction setup: enter A$0.2600, stop A$0.1864 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.3200 / TP2 A$0.4809 / TP3 A$0.6282; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "HZN",
@@ -7544,6 +8059,10 @@
       "level": 0.21118831,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.205,
       "entry": 0.205,
@@ -7626,7 +8145,7 @@
         "rr": 3.0
       },
       "analysis": "HZN is being rejected at the H4 (daily proxy) 200 SMA (A$0.2112), 3.0% away, with a clean structure. A short reaction setup: enter A$0.2050, stop A$0.2338 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.1792 / TP2 A$0.1186 / TP3 A$0.0610; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "PRU",
@@ -7646,6 +8165,10 @@
       "level": 5.30789983,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 5.1500001,
       "entry": 5.1500001,
@@ -7728,7 +8251,7 @@
         "rr": 3.0
       },
       "analysis": "PRU is being rejected at the H4 (daily proxy) 200 SMA (A$5.3079), 3.1% away, with a clean structure. A short reaction setup: enter A$5.1500, stop A$5.8420 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$4.5000 / TP2 A$3.0740 / TP3 A$1.6901; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "SMR",
@@ -7748,6 +8271,9 @@
       "level": 2.41316271,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.3900001,
       "entry": 2.3900001,
@@ -7830,7 +8356,7 @@
         "rr": 3.0
       },
       "analysis": "SMR is being rejected at the H4 (daily proxy) 200 SMA (A$2.4132), 1.0% away, with thin structure. A short reaction setup: enter A$2.3900, stop A$2.8773 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.9859 / TP2 A$0.9280 / TP3 A$0.1195; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "SFY",
@@ -7847,9 +8373,13 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 75.55930923,
+      "level": 75.5593092,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 77.16999817,
       "entry": 77.16999817,
@@ -7902,9 +8432,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 75.55930923,
-        "weekly_sma200": 65.15263769,
-        "daily_sma200": 75.55930923,
+        "level": 75.5593092,
+        "weekly_sma200": 65.15263805,
+        "daily_sma200": 75.5593092,
         "dist_pct": 2.09,
         "at_level": false,
         "reaction": "bounce",
@@ -7932,7 +8462,7 @@
         "rr": 3.0
       },
       "analysis": "SFY is bouncing off the H4 (daily proxy) 200 SMA (A$75.5593), 2.1% away, with a clean structure. A long reaction setup: enter A$77.1700, stop A$74.6112 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$79.2300 / TP2 A$84.8464 / TP3 A$89.9639; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "GVF",
@@ -7952,6 +8482,9 @@
       "level": 1.3453123,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.34000003,
       "entry": 1.34000003,
@@ -8005,7 +8538,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.3453123,
-        "weekly_sma200": 1.13718932,
+        "weekly_sma200": 1.1371893,
         "daily_sma200": 1.3453123,
         "dist_pct": -0.4,
         "at_level": true,
@@ -8034,7 +8567,7 @@
         "rr": 3.0
       },
       "analysis": "GVF is being rejected at the H4 (daily proxy) 200 SMA (A$1.3453), 0.4% away, with thin structure. A short reaction setup: enter A$1.3400, stop A$1.4414 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$1.1878 / TP2 A$1.0357 / TP3 A$0.8328; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "VGN",
@@ -8054,6 +8587,10 @@
       "level": 2.99935,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 3.08999991,
       "entry": 3.08999991,
@@ -8156,6 +8693,9 @@
       "level": 0.97687636,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.97000003,
       "entry": 0.97000003,
@@ -8238,7 +8778,7 @@
         "rr": 3.0
       },
       "analysis": "WMA is being rejected at the H4 (daily proxy) 200 SMA (A$0.9769), 0.7% away, with thin structure. A short reaction setup: enter A$0.9700, stop A$1.0177 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.9309 / TP2 A$0.8270 / TP3 A$0.7316; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "WAR",
@@ -8258,6 +8798,10 @@
       "level": 1.09971743,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 1.07000005,
       "entry": 1.07000005,
@@ -8311,7 +8855,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.09971743,
-        "weekly_sma200": 0.97453762,
+        "weekly_sma200": 0.97453763,
         "daily_sma200": 1.09971743,
         "dist_pct": -2.78,
         "at_level": false,
@@ -8340,7 +8884,7 @@
         "rr": 3.0
       },
       "analysis": "WAR is being rejected at the H4 (daily proxy) 200 SMA (A$1.0997), 2.8% away, with a clean structure. A short reaction setup: enter A$1.0700, stop A$1.1135 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.0309 / TP2 A$0.9396 / TP3 A$0.8527; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "WQG",
@@ -8360,11 +8904,15 @@
       "level": 1.8555439,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 1.90999997,
       "entry": 1.90999997,
       "stop": 1.7362437,
-      "tp1": 2.09654352,
+      "tp1": 2.09654377,
       "tp2": 2.43126877,
       "tp3": 2.7787813,
       "scale": [
@@ -8424,7 +8972,7 @@
         "atr": 0.04375627,
         "entry": 1.90999997,
         "stop": 1.7362437,
-        "tp1": 2.09654352,
+        "tp1": 2.09654377,
         "tp2": 2.43126877,
         "tp3": 2.7787813,
         "scale": [
@@ -8442,7 +8990,7 @@
         "rr": 3.0
       },
       "analysis": "WQG is bouncing off the H4 (daily proxy) 200 SMA (A$1.8555), 2.9% away, with a clean structure. A long reaction setup: enter A$1.9100, stop A$1.7362 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.0965 / TP2 A$2.4313 / TP3 A$2.7788; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "UNI",
@@ -8462,6 +9010,10 @@
       "level": 7.9153833,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 7.69999981,
       "entry": 7.69999981,
@@ -8515,7 +9067,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 7.9153833,
-        "weekly_sma200": 5.73117684,
+        "weekly_sma200": 5.73117683,
         "daily_sma200": 7.9153833,
         "dist_pct": -2.8,
         "at_level": false,
@@ -8564,6 +9116,9 @@
       "level": 7.44159999,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 7.30999994,
       "entry": 7.30999994,
@@ -8617,7 +9172,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 7.44159999,
-        "weekly_sma200": 8.11129406,
+        "weekly_sma200": 8.11129408,
         "daily_sma200": 7.44159999,
         "dist_pct": -1.8,
         "at_level": true,
@@ -8646,7 +9201,7 @@
         "rr": 2.91
       },
       "analysis": "IGO is being rejected at the H4 (daily proxy) 200 SMA (A$7.4416), 1.8% away, with thin structure. A short reaction setup: enter A$7.3100, stop A$9.6965 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$5.1200 / TP2 A$0.3728 / TP3 A$0.3655; move SL to break-even at TP1, then below new support at TP2. 2.9R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CIP",
@@ -8666,6 +9221,9 @@
       "level": 3.17190145,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 3.13000011,
       "entry": 3.13000011,
@@ -8719,7 +9277,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 3.17190145,
-        "weekly_sma200": 2.86101044,
+        "weekly_sma200": 2.86101046,
         "daily_sma200": 3.17190145,
         "dist_pct": -1.34,
         "at_level": true,
@@ -8748,7 +9306,7 @@
         "rr": 2.45
       },
       "analysis": "CIP is being rejected at the H4 (daily proxy) 200 SMA (A$3.1719), 1.3% away, with thin structure. A short reaction setup: enter A$3.1300, stop A$3.2240 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.9900 / TP2 A$2.9000 / TP3 A$2.8300; move SL to break-even at TP1, then below new support at TP2. 2.5R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "AMP",
@@ -8768,6 +9326,9 @@
       "level": 1.57364963,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.54999995,
       "entry": 1.54999995,
@@ -8850,7 +9411,112 @@
         "rr": 2.38
       },
       "analysis": "AMP is being rejected at the H4 (daily proxy) 200 SMA (A$1.5736), 1.5% away, with thin structure. A short reaction setup: enter A$1.5500, stop A$1.6741 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.4100 / TP2 A$1.2550 / TP3 A$1.1400; move SL to break-even at TP1, then below new support at TP2. 2.4R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
+    },
+    {
+      "symbol": "ZIP",
+      "name": "Zip Co Limited..",
+      "sector": "Financial Services",
+      "dir": "SHORT",
+      "setup_type": "vivek",
+      "grade": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "h4",
+      "level": 2.91300001,
+      "at_level": true,
+      "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
+      "confluence": false,
+      "price": 2.88000011,
+      "entry": 2.88000011,
+      "stop": 3.2093335,
+      "tp1": 2.36999989,
+      "tp2": 2.1500001,
+      "tp3": 1.60249996,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 0.32933339,
+      "rr": 2.22,
+      "rr_text": "2.2:1",
+      "liquidity": "LIQUID",
+      "turnover": 43812820,
+      "spark": [
+        2.3599999,
+        2.23000002,
+        2.25,
+        2.20000005,
+        2.25999999,
+        2.20000005,
+        2.25,
+        2.23000002,
+        2.25,
+        2.20000005,
+        2.29999995,
+        2.42000008,
+        2.42000008,
+        2.43000007,
+        2.33999991,
+        2.38000011,
+        2.51999998,
+        2.4000001,
+        2.43000007,
+        2.66000009,
+        2.82999992,
+        2.88000011,
+        2.9000001,
+        2.83999991,
+        2.92000008,
+        2.9000001,
+        2.80999994,
+        2.8599999,
+        2.93000007,
+        2.88000011
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 2.91300001,
+        "weekly_sma200": 1.731825,
+        "daily_sma200": 2.91300001,
+        "dist_pct": -1.15,
+        "at_level": true,
+        "reaction": "reject",
+        "structure": 0.4,
+        "confluence": false,
+        "weekly_bars": 261,
+        "atr": 0.14433344,
+        "entry": 2.88000011,
+        "stop": 3.2093335,
+        "tp1": 2.36999989,
+        "tp2": 2.1500001,
+        "tp3": 1.60249996,
+        "scale": [
+          0.5,
+          0.25,
+          0.15
+        ],
+        "risk": 0.32933339,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 2.22
+      },
+      "analysis": "ZIP is being rejected at the H4 (daily proxy) 200 SMA (A$2.9130), 1.1% away, with thin structure. A short reaction setup: enter A$2.8800, stop A$3.2093 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.3700 / TP2 A$2.1500 / TP3 A$1.6025; move SL to break-even at TP1, then below new support at TP2. 2.2R to TP2.",
+      "sector_count": 13
     },
     {
       "symbol": "ERM",
@@ -8870,6 +9536,10 @@
       "level": 0.3163625,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.30500001,
       "entry": 0.30500001,
@@ -8952,7 +9622,7 @@
         "rr": 2.21
       },
       "analysis": "ERM is being rejected at the H4 (daily proxy) 200 SMA (A$0.3164), 3.7% away, with a clean structure. A short reaction setup: enter A$0.3050, stop A$0.3389 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.2700 / TP2 A$0.2300 / TP3 A$0.1354; move SL to break-even at TP1, then below new support at TP2. 2.2R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "GWA",
@@ -8972,6 +9642,9 @@
       "level": 2.31821693,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.29999995,
       "entry": 2.29999995,
@@ -9074,6 +9747,9 @@
       "level": 0.701125,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.69999999,
       "entry": 0.69999999,
@@ -9156,7 +9832,7 @@
         "rr": 2.04
       },
       "analysis": "HCW is being rejected at the H4 (daily proxy) 200 SMA (A$0.7011), 0.2% away, with thin structure. A short reaction setup: enter A$0.7000, stop A$0.7442 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.6550 / TP2 A$0.6100 / TP3 A$0.4790; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "OBL",
@@ -9176,6 +9852,9 @@
       "level": 1.597925,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.61500001,
       "entry": 1.61500001,
@@ -9258,7 +9937,7 @@
         "rr": 2.03
       },
       "analysis": "OBL is bouncing off the H4 (daily proxy) 200 SMA (A$1.5979), 1.1% away, with thin structure. A long reaction setup: enter A$1.6150, stop A$1.5043 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.7100 / TP2 A$1.8400 / TP3 A$2.1684; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "ALQ",
@@ -9275,9 +9954,13 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 22.02087626,
+      "level": 22.02087631,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 22.67000008,
       "entry": 22.67000008,
@@ -9330,9 +10013,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 22.02087626,
+        "level": 22.02087631,
         "weekly_sma200": 14.87135154,
-        "daily_sma200": 22.02087626,
+        "daily_sma200": 22.02087631,
         "dist_pct": 2.86,
         "at_level": false,
         "reaction": "bounce",
@@ -9377,9 +10060,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 1.38747536,
+      "level": 1.38747534,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.375,
       "entry": 1.375,
@@ -9432,9 +10118,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 1.38747536,
-        "weekly_sma200": 1.16564099,
-        "daily_sma200": 1.38747536,
+        "level": 1.38747534,
+        "weekly_sma200": 1.16564097,
+        "daily_sma200": 1.38747534,
         "dist_pct": -0.91,
         "at_level": true,
         "reaction": "reject",
@@ -9462,7 +10148,7 @@
         "rr": 1.99
       },
       "analysis": "PL8 is being rejected at the H4 (daily proxy) 200 SMA (A$1.3875), 0.9% away, with thin structure. A short reaction setup: enter A$1.3750, stop A$1.4380 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.3140 / TP2 A$1.2498 / TP3 A$1.0600; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "CNI",
@@ -9482,6 +10168,10 @@
       "level": 1.92247483,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 1.98000002,
       "entry": 1.98000002,
@@ -9564,7 +10254,7 @@
         "rr": 1.96
       },
       "analysis": "CNI is bouncing off the H4 (daily proxy) 200 SMA (A$1.9225), 2.9% away, with a clean structure. A long reaction setup: enter A$1.9800, stop A$1.8080 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.2017 / TP2 A$2.3175 / TP3 A$2.8398; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "FPH",
@@ -9581,14 +10271,17 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 31.57069913,
+      "level": 31.57069923,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 31.56999969,
       "entry": 31.56999969,
       "stop": 33.00911645,
-      "tp1": 30.16693347,
+      "tp1": 30.16693536,
       "tp2": 28.78095542,
       "tp3": 26.2825736,
       "scale": [
@@ -9636,9 +10329,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 31.57069913,
-        "weekly_sma200": 26.77297851,
-        "daily_sma200": 31.57069913,
+        "level": 31.57069923,
+        "weekly_sma200": 26.77297855,
+        "daily_sma200": 31.57069923,
         "dist_pct": -0.0,
         "at_level": true,
         "reaction": "reject",
@@ -9648,7 +10341,7 @@
         "atr": 0.71853046,
         "entry": 31.56999969,
         "stop": 33.00911645,
-        "tp1": 30.16693347,
+        "tp1": 30.16693536,
         "tp2": 28.78095542,
         "tp3": 26.2825736,
         "scale": [
@@ -9686,6 +10379,10 @@
       "level": 0.098325,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.095,
       "entry": 0.095,
@@ -9768,7 +10465,7 @@
         "rr": 1.93
       },
       "analysis": "EMP is being rejected at the H4 (daily proxy) 200 SMA (A$0.0983), 3.5% away, with a clean structure. A short reaction setup: enter A$0.0950, stop A$0.1069 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.0840 / TP2 A$0.0720 / TP3 A$0.0354; move SL to break-even at TP1, then below new support at TP2. 1.9R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "PE1",
@@ -9788,6 +10485,9 @@
       "level": 1.4874298,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.50999999,
       "entry": 1.50999999,
@@ -9870,7 +10570,7 @@
         "rr": 1.9
       },
       "analysis": "PE1 is bouncing off the H4 (daily proxy) 200 SMA (A$1.4874), 1.5% away, with thin structure. A long reaction setup: enter A$1.5100, stop A$1.3891 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.6350 / TP2 A$1.7400 / TP3 A$1.9000; move SL to break-even at TP1, then below new support at TP2. 1.9R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "PNI",
@@ -9890,6 +10590,9 @@
       "level": 16.5435194,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 16.70000076,
       "entry": 16.70000076,
@@ -9943,7 +10646,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 16.5435194,
-        "weekly_sma200": 13.74814962,
+        "weekly_sma200": 13.7481497,
         "daily_sma200": 16.5435194,
         "dist_pct": 0.94,
         "at_level": true,
@@ -9972,7 +10675,7 @@
         "rr": 1.83
       },
       "analysis": "PNI is bouncing off the H4 (daily proxy) 200 SMA (A$16.5435), 0.9% away, with thin structure. A long reaction setup: enter A$16.7000, stop A$14.4870 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$18.4826 / TP2 A$20.7402 / TP3 A$27.7652; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "RPL",
@@ -9992,6 +10695,9 @@
       "level": 2.80167616,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.78999996,
       "entry": 2.78999996,
@@ -10045,7 +10751,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 2.80167616,
-        "weekly_sma200": 2.63754005,
+        "weekly_sma200": 2.63754004,
         "daily_sma200": 2.80167616,
         "dist_pct": -0.42,
         "at_level": true,
@@ -10074,7 +10780,7 @@
         "rr": 1.75
       },
       "analysis": "RPL is being rejected at the H4 (daily proxy) 200 SMA (A$2.8017), 0.4% away, with thin structure. A short reaction setup: enter A$2.7900, stop A$3.0752 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.5000 / TP2 A$2.2900 / TP3 A$1.3638; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "AGR",
@@ -10094,6 +10800,9 @@
       "level": 0.021005,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.021,
       "entry": 0.021,
@@ -10176,7 +10885,7 @@
         "rr": 1.7
       },
       "analysis": "AGR is being rejected at the H4 (daily proxy) 200 SMA (A$0.0210), 0.0% away, with thin structure. A short reaction setup: enter A$0.0210, stop A$0.0239 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.0185 / TP2 A$0.0160 / TP3 A$0.0140; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MVF",
@@ -10196,6 +10905,9 @@
       "level": 0.70673588,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.70999998,
       "entry": 0.70999998,
@@ -10249,7 +10961,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 0.70673588,
-        "weekly_sma200": 0.98832879,
+        "weekly_sma200": 0.98832878,
         "daily_sma200": 0.70673588,
         "dist_pct": 0.46,
         "at_level": true,
@@ -10299,6 +11011,9 @@
       "level": 2.47406444,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 2.38000011,
       "entry": 2.38000011,
@@ -10352,7 +11067,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 2.47406444,
-        "weekly_sma200": 2.53271109,
+        "weekly_sma200": 2.53271106,
         "daily_sma200": 2.47406444,
         "dist_pct": -3.95,
         "at_level": false,
@@ -10401,6 +11116,9 @@
       "level": 0.271925,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.27500001,
       "entry": 0.27500001,
@@ -10483,7 +11201,7 @@
         "rr": 1.56
       },
       "analysis": "AMI is bouncing off the H4 (daily proxy) 200 SMA (A$0.2719), 1.1% away, with thin structure. A long reaction setup: enter A$0.2750, stop A$0.2365 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.3100 / TP2 A$0.3350 / TP3 A$0.4674; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CYM",
@@ -10503,6 +11221,9 @@
       "level": 0.41554686,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.41,
       "entry": 0.41,
@@ -10585,7 +11306,7 @@
         "rr": 1.53
       },
       "analysis": "CYM is being rejected at the H4 (daily proxy) 200 SMA (A$0.4155), 1.4% away, with thin structure. A short reaction setup: enter A$0.4100, stop A$0.4752 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.3550 / TP2 A$0.3100 / TP3 A$0.0838; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CDM",
@@ -10605,6 +11326,10 @@
       "level": 0.72476675,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
       "confluence": false,
       "price": 0.74000001,
       "entry": 0.74000001,
@@ -10687,7 +11412,7 @@
         "rr": 1.51
       },
       "analysis": "CDM is bouncing off the H4 (daily proxy) 200 SMA (A$0.7248), 2.1% away, with a clean structure. A long reaction setup: enter A$0.7400, stop A$0.7065 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.7700 / TP2 A$0.7907 / TP3 A$0.8293; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "MXT",
@@ -10704,9 +11429,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 1.88968926,
+      "level": 1.88968925,
       "at_level": true,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.90499997,
       "entry": 1.90499997,
@@ -10759,9 +11487,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 1.88968926,
-        "weekly_sma200": 1.72920412,
-        "daily_sma200": 1.88968926,
+        "level": 1.88968925,
+        "weekly_sma200": 1.72920417,
+        "daily_sma200": 1.88968925,
         "dist_pct": 0.8,
         "at_level": true,
         "reaction": "bounce",
@@ -10789,7 +11517,7 @@
         "rr": 1.51
       },
       "analysis": "MXT is bouncing off the H4 (daily proxy) 200 SMA (A$1.8897), 0.8% away, with thin structure. A long reaction setup: enter A$1.9050, stop A$1.8654 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.9376 / TP2 A$1.9648 / TP3 A$2.1029; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "AMC",
@@ -10809,6 +11537,9 @@
       "level": 59.34396404,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 61.66999817,
       "entry": 61.66999817,
@@ -10862,7 +11593,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 59.34396404,
-        "weekly_sma200": 65.91193966,
+        "weekly_sma200": 65.91193947,
         "daily_sma200": 59.34396404,
         "dist_pct": 3.77,
         "at_level": false,
@@ -10891,7 +11622,7 @@
         "rr": 3.0
       },
       "analysis": "AMC is bouncing off the H4 (daily proxy) 200 SMA (A$59.3440), 3.8% away, with a workable structure. A long reaction setup: enter A$61.6700, stop A$53.2025 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$69.8905 / TP2 A$87.0724 / TP3 A$104.0073; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CQR",
@@ -10911,6 +11642,9 @@
       "level": 3.90547091,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 4.03999996,
       "entry": 4.03999996,
@@ -10964,7 +11698,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 3.90547091,
-        "weekly_sma200": 3.26647733,
+        "weekly_sma200": 3.26647736,
         "daily_sma200": 3.90547091,
         "dist_pct": 3.33,
         "at_level": false,
@@ -10993,7 +11727,7 @@
         "rr": 3.0
       },
       "analysis": "CQR is bouncing off the H4 (daily proxy) 200 SMA (A$3.9055), 3.3% away, with a workable structure. A long reaction setup: enter A$4.0400, stop A$3.7136 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$4.5296 / TP2 A$5.0192 / TP3 A$5.6720; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "DJW",
@@ -11009,22 +11743,25 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 2.70196944,
+      "level": 2.70196939,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.79999995,
       "entry": 2.79999995,
-      "stop": 2.66033402,
+      "stop": 2.66033397,
       "tp1": 2.96080899,
-      "tp2": 3.21899775,
-      "tp3": 3.49832961,
+      "tp2": 3.2189979,
+      "tp3": 3.49832986,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.13966593,
+      "risk": 0.13966598,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -11064,8 +11801,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 2.70196944,
-        "weekly_sma200": 2.70196944,
+        "level": 2.70196939,
+        "weekly_sma200": 2.70196939,
         "daily_sma200": 2.9027231,
         "dist_pct": 3.5,
         "at_level": false,
@@ -11075,16 +11812,16 @@
         "weekly_bars": 261,
         "atr": 0.04163542,
         "entry": 2.79999995,
-        "stop": 2.66033402,
+        "stop": 2.66033397,
         "tp1": 2.96080899,
-        "tp2": 3.21899775,
-        "tp3": 3.49832961,
+        "tp2": 3.2189979,
+        "tp3": 3.49832986,
         "scale": [
           0.25,
           0.5,
           0.15
         ],
-        "risk": 0.13966593,
+        "risk": 0.13966598,
         "tp_basis": [
           "structural",
           "measured",
@@ -11094,7 +11831,7 @@
         "rr": 3.0
       },
       "analysis": "DJW is bouncing off the Weekly 200 SMA (A$2.7020), 3.5% away, with thin structure. A long reaction setup: enter A$2.8000, stop A$2.6603 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$2.9608 / TP2 A$3.2190 / TP3 A$3.4983; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "NHF",
@@ -11114,6 +11851,9 @@
       "level": 6.75546252,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": true,
       "price": 7.0,
       "entry": 7.0,
@@ -11167,7 +11907,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.75546252,
-        "weekly_sma200": 6.59099582,
+        "weekly_sma200": 6.5909958,
         "daily_sma200": 6.75546252,
         "dist_pct": 3.49,
         "at_level": false,
@@ -11216,6 +11956,9 @@
       "level": 44.9143117,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 46.49000168,
       "entry": 46.49000168,
@@ -11269,7 +12012,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 44.9143117,
-        "weekly_sma200": 36.80046775,
+        "weekly_sma200": 36.80046763,
         "daily_sma200": 44.9143117,
         "dist_pct": 3.39,
         "at_level": false,
@@ -11314,9 +12057,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 5.22837335,
+      "level": 5.22837325,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.07999992,
       "entry": 5.07999992,
@@ -11369,8 +12115,8 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "weekly",
-        "level": 5.22837335,
-        "weekly_sma200": 5.22837335,
+        "level": 5.22837325,
+        "weekly_sma200": 5.22837325,
         "daily_sma200": 4.88572712,
         "dist_pct": -2.92,
         "at_level": false,
@@ -11418,6 +12164,9 @@
       "level": 14.79759997,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 15.32999992,
       "entry": 15.32999992,
@@ -11519,6 +12268,9 @@
       "level": 0.1929375,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.2,
       "entry": 0.2,
@@ -11601,7 +12353,7 @@
         "rr": 2.12
       },
       "analysis": "KAU is bouncing off the Weekly 200 SMA (A$0.1929), 3.5% away, with thin structure. A long reaction setup: enter A$0.2000, stop A$0.1717 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.2250 / TP2 A$0.2600 / TP3 A$0.2800; move SL to break-even at TP1, then below new support at TP2. 2.1R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "PDI",
@@ -11621,6 +12373,9 @@
       "level": 0.746975,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.72000003,
       "entry": 0.72000003,
@@ -11703,7 +12458,7 @@
         "rr": 1.86
       },
       "analysis": "PDI is being rejected at the H4 (daily proxy) 200 SMA (A$0.7470), 3.8% away, with a workable structure. A short reaction setup: enter A$0.7200, stop A$1.0878 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 A$0.1683 / TP2 A$0.0367 / TP3 A$0.0360; move SL to break-even at TP1, then below new support at TP2. 1.9R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "REG",
@@ -11723,6 +12478,9 @@
       "level": 6.70577859,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 6.51000023,
       "entry": 6.51000023,
@@ -11776,7 +12534,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.70577859,
-        "weekly_sma200": 4.53832996,
+        "weekly_sma200": 4.53832995,
         "daily_sma200": 6.70577859,
         "dist_pct": -3.01,
         "at_level": false,
@@ -11824,6 +12582,9 @@
       "level": 0.79754328,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.82999998,
       "entry": 0.82999998,
@@ -11906,7 +12667,7 @@
         "rr": 1.62
       },
       "analysis": "TAH is bouncing off the Weekly 200 SMA (A$0.7975), 3.9% away, with thin structure. A long reaction setup: enter A$0.8300, stop A$0.7643 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.8874 / TP2 A$0.9367 / TP3 A$0.9850; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 3
+      "sector_count": 2
     },
     {
       "symbol": "SHN",
@@ -11928,6 +12689,10 @@
       "level": 0.028145,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim",
+        "retest"
+      ],
       "confluence": false,
       "price": 0.028,
       "entry": 0.028,
@@ -12010,7 +12775,7 @@
         "rr": 1.44
       },
       "analysis": "SHN is being rejected at the H4 (daily proxy) 200 SMA (A$0.0281), 0.5% away, with a workable structure. A short reaction setup: enter A$0.0280, stop A$0.0328 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.0240 / TP2 A$0.0210 / TP3 A$0.0170; move SL to break-even at TP1, then below new support at TP2. 1.4R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "INA",
@@ -12031,6 +12796,9 @@
       "level": 4.53268656,
       "at_level": false,
       "reaction": "fade",
+      "entry_types": [
+        "break"
+      ],
       "confluence": true,
       "price": 4.38000011,
       "entry": 4.38000011,
@@ -12113,7 +12881,7 @@
         "rr": 2.23
       },
       "analysis": "INA is fading below the Weekly 200 SMA (A$4.5327), 3.5% away with Weekly+H4 200 SMA confluence, with a clean structure. A short reaction setup: enter A$4.3800, stop A$4.6602 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$4.0000 / TP2 A$3.7550 / TP3 A$2.9791; move SL to break-even at TP1, then below new support at TP2. 2.2R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "TBN",
@@ -12134,6 +12902,10 @@
       "level": 0.21645633,
       "at_level": true,
       "reaction": "hold",
+      "entry_types": [
+        "retest",
+        "break"
+      ],
       "confluence": false,
       "price": 0.22,
       "entry": 0.22,
@@ -12216,7 +12988,7 @@
         "rr": 1.74
       },
       "analysis": "TBN is holding above the H4 (daily proxy) 200 SMA (A$0.2165), 1.6% away, with a clean structure. A long reaction setup: enter A$0.2200, stop A$0.2013 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.2350 / TP2 A$0.2525 / TP3 A$0.2675; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "PCI",
@@ -12237,6 +13009,9 @@
       "level": 1.09401592,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.09000003,
       "entry": 1.09000003,
@@ -12290,7 +13065,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.09401592,
-        "weekly_sma200": 0.95994536,
+        "weekly_sma200": 0.95994538,
         "daily_sma200": 1.09401592,
         "dist_pct": -0.37,
         "at_level": true,
@@ -12319,7 +13094,7 @@
         "rr": 1.49
       },
       "analysis": "PCI is being rejected at the H4 (daily proxy) 200 SMA (A$1.0940), 0.4% away, with thin structure. A short reaction setup: enter A$1.0900, stop A$1.1135 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.0693 / TP2 A$1.0550 / TP3 A$1.0328; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "AUI",
@@ -12340,6 +13115,9 @@
       "level": 11.00620825,
       "at_level": true,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 10.97999954,
       "entry": 10.97999954,
@@ -12393,7 +13171,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 11.00620825,
-        "weekly_sma200": 9.68892112,
+        "weekly_sma200": 9.68892123,
         "daily_sma200": 11.00620825,
         "dist_pct": -0.24,
         "at_level": true,
@@ -12422,7 +13200,112 @@
         "rr": 1.45
       },
       "analysis": "AUI is being rejected at the H4 (daily proxy) 200 SMA (A$11.0062), 0.2% away, with thin structure. A short reaction setup: enter A$10.9800, stop A$11.3797 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$10.6500 / TP2 A$10.4000 / TP3 A$8.9817; move SL to break-even at TP1, then below new support at TP2. 1.4R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
+    },
+    {
+      "symbol": "WHF",
+      "name": "Whitefield Industrials Limited",
+      "sector": "Not Applic",
+      "dir": "SHORT",
+      "setup_type": "vivek",
+      "grade": "B+",
+      "score": 6,
+      "score_max": 10,
+      "chips": [
+        "WEEKLY 200 SMA",
+        "STRONG STRUCTURE",
+        "NO CLEAN REACTION"
+      ],
+      "level_tf": "weekly",
+      "level": 4.87247198,
+      "at_level": false,
+      "reaction": "fade",
+      "entry_types": [
+        "break"
+      ],
+      "confluence": false,
+      "price": 4.69000006,
+      "entry": 4.69000006,
+      "stop": 4.9683742,
+      "tp1": 4.46000004,
+      "tp2": 3.85487763,
+      "tp3": 3.29812934,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 0.27837414,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "OK",
+      "turnover": 526805,
+      "spark": [
+        4.70434093,
+        4.694561,
+        4.72390175,
+        4.67500019,
+        4.66521978,
+        4.66521978,
+        4.7630229,
+        4.72390175,
+        4.74346209,
+        4.72390175,
+        4.7630229,
+        4.73368216,
+        4.70434093,
+        4.694561,
+        4.67500019,
+        4.55999994,
+        4.55999994,
+        4.51000023,
+        4.51000023,
+        4.51999998,
+        4.5999999,
+        4.59000015,
+        4.51999998,
+        4.57000017,
+        4.6500001,
+        4.63000011,
+        4.63999987,
+        4.67999983,
+        4.67999983,
+        4.69000006
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "weekly",
+        "level": 4.87247198,
+        "weekly_sma200": 4.87247198,
+        "daily_sma200": 5.08387916,
+        "dist_pct": -3.89,
+        "at_level": false,
+        "reaction": "fade",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 261,
+        "atr": 0.09590222,
+        "entry": 4.69000006,
+        "stop": 4.9683742,
+        "tp1": 4.46000004,
+        "tp2": 3.85487763,
+        "tp3": 3.29812934,
+        "scale": [
+          0.5,
+          0.25,
+          0.15
+        ],
+        "risk": 0.27837414,
+        "tp_basis": [
+          "structural",
+          "measured",
+          "measured"
+        ],
+        "structural_tps": 1,
+        "rr": 3.0
+      },
+      "analysis": "WHF is fading below the Weekly 200 SMA (A$4.8725), 3.9% away, with a clean structure. A short reaction setup: enter A$4.6900, stop A$4.9684 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$4.4600 / TP2 A$3.8549 / TP3 A$3.2981; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
+      "sector_count": 27
     },
     {
       "symbol": "WDS",
@@ -12441,6 +13324,9 @@
       "level": 27.04446834,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 27.64999962,
       "entry": 27.64999962,
@@ -12494,7 +13380,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 27.04446834,
-        "weekly_sma200": 25.87528428,
+        "weekly_sma200": 25.87528415,
         "daily_sma200": 27.04446834,
         "dist_pct": 2.19,
         "at_level": false,
@@ -12523,7 +13409,7 @@
         "rr": 3.69
       },
       "analysis": "WDS is bouncing off the H4 (daily proxy) 200 SMA (A$27.0445), 2.2% away, with thin structure. A long reaction setup: enter A$27.6500, stop A$26.2452 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$31.9800 / TP2 A$32.8300 / TP3 A$34.0500; move SL to break-even at TP1, then below new support at TP2. 3.7R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "FRS",
@@ -12542,6 +13428,9 @@
       "level": 0.4100375,
       "at_level": false,
       "reaction": "hold",
+      "entry_types": [
+        "break"
+      ],
       "confluence": false,
       "price": 0.42500001,
       "entry": 0.42500001,
@@ -12624,7 +13513,7 @@
         "rr": 3.47
       },
       "analysis": "FRS is holding above the H4 (daily proxy) 200 SMA (A$0.4100), 3.5% away, with a clean structure. A long reaction setup: enter A$0.4250, stop A$0.3717 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.5250 / TP2 A$0.6100 / TP3 A$0.6500; move SL to break-even at TP1, then below new support at TP2. 3.5R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "BKI",
@@ -12643,6 +13532,9 @@
       "level": 1.72495773,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.77499998,
       "entry": 1.77499998,
@@ -12696,7 +13588,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.72495773,
-        "weekly_sma200": 1.60042868,
+        "weekly_sma200": 1.60042867,
         "daily_sma200": 1.72495773,
         "dist_pct": 2.82,
         "at_level": false,
@@ -12725,7 +13617,7 @@
         "rr": 3.0
       },
       "analysis": "BKI is bouncing off the H4 (daily proxy) 200 SMA (A$1.7250), 2.8% away, with thin structure. A long reaction setup: enter A$1.7750, stop A$1.6935 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.8500 / TP2 A$2.0195 / TP3 A$2.1825; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "CSC",
@@ -12744,6 +13636,9 @@
       "level": 13.51525,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 13.10000038,
       "entry": 13.10000038,
@@ -12826,7 +13721,7 @@
         "rr": 3.0
       },
       "analysis": "CSC is being rejected at the H4 (daily proxy) 200 SMA (A$13.5152), 3.2% away, with thin structure. A short reaction setup: enter A$13.1000, stop A$16.4655 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$9.8800 / TP2 A$3.0035 / TP3 A$0.6550; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "CCV",
@@ -12845,6 +13740,9 @@
       "level": 0.30831552,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.30000001,
       "entry": 0.30000001,
@@ -12898,7 +13796,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 0.30831552,
-        "weekly_sma200": 0.22278826,
+        "weekly_sma200": 0.22278827,
         "daily_sma200": 0.30831552,
         "dist_pct": -2.77,
         "at_level": false,
@@ -12927,7 +13825,7 @@
         "rr": 3.0
       },
       "analysis": "CCV is being rejected at the H4 (daily proxy) 200 SMA (A$0.3083), 2.8% away, with thin structure. A short reaction setup: enter A$0.3000, stop A$0.3167 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.2850 / TP2 A$0.2498 / TP3 A$0.2163; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "CNU",
@@ -12943,9 +13841,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 7.96105848,
+      "level": 7.96105847,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 8.15999985,
       "entry": 8.15999985,
@@ -12998,9 +13899,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 7.96105848,
+        "level": 7.96105847,
         "weekly_sma200": 6.95020966,
-        "daily_sma200": 7.96105848,
+        "daily_sma200": 7.96105847,
         "dist_pct": 2.44,
         "at_level": false,
         "reaction": "bounce",
@@ -13044,22 +13945,25 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 2.7400663,
+      "level": 2.74006632,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.67000008,
       "entry": 2.67000008,
-      "stop": 2.79973628,
+      "stop": 2.7997363,
       "tp1": 2.48000002,
-      "tp2": 2.28079147,
-      "tp3": 2.02131906,
+      "tp2": 2.28079141,
+      "tp3": 2.02131896,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.1297362,
+      "risk": 0.12973622,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -13099,9 +14003,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 2.7400663,
-        "weekly_sma200": 2.44280287,
-        "daily_sma200": 2.7400663,
+        "level": 2.74006632,
+        "weekly_sma200": 2.44280286,
+        "daily_sma200": 2.74006632,
         "dist_pct": -2.62,
         "at_level": false,
         "reaction": "reject",
@@ -13110,16 +14014,16 @@
         "weekly_bars": 261,
         "atr": 0.05966998,
         "entry": 2.67000008,
-        "stop": 2.79973628,
+        "stop": 2.7997363,
         "tp1": 2.48000002,
-        "tp2": 2.28079147,
-        "tp3": 2.02131906,
+        "tp2": 2.28079141,
+        "tp3": 2.02131896,
         "scale": [
           0.5,
           0.25,
           0.15
         ],
-        "risk": 0.1297362,
+        "risk": 0.12973622,
         "tp_basis": [
           "structural",
           "measured",
@@ -13129,7 +14033,7 @@
         "rr": 3.0
       },
       "analysis": "DXC is being rejected at the H4 (daily proxy) 200 SMA (A$2.7401), 2.6% away, with thin structure. A short reaction setup: enter A$2.6700, stop A$2.7997 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.4800 / TP2 A$2.2808 / TP3 A$2.0213; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "EMR",
@@ -13148,6 +14052,9 @@
       "level": 5.81424999,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.63000011,
       "entry": 5.63000011,
@@ -13230,7 +14137,7 @@
         "rr": 3.0
       },
       "analysis": "EMR is being rejected at the H4 (daily proxy) 200 SMA (A$5.8142), 3.3% away, with thin structure. A short reaction setup: enter A$5.6300, stop A$6.6933 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$4.7400 / TP2 A$2.4401 / TP3 A$0.3135; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "EVN",
@@ -13249,6 +14156,9 @@
       "level": 12.49580263,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 12.22999954,
       "entry": 12.22999954,
@@ -13302,7 +14212,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 12.49580263,
-        "weekly_sma200": 5.94735342,
+        "weekly_sma200": 5.94735343,
         "daily_sma200": 12.49580263,
         "dist_pct": -2.17,
         "at_level": false,
@@ -13331,7 +14241,7 @@
         "rr": 3.0
       },
       "analysis": "EVN is being rejected at the H4 (daily proxy) 200 SMA (A$12.4958), 2.2% away, with thin structure. A short reaction setup: enter A$12.2300, stop A$14.1524 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$10.5789 / TP2 A$6.4629 / TP3 A$2.6182; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "HDN",
@@ -13350,6 +14260,9 @@
       "level": 1.28105519,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.32500005,
       "entry": 1.32500005,
@@ -13403,7 +14316,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.28105519,
-        "weekly_sma200": 1.10685232,
+        "weekly_sma200": 1.10685231,
         "daily_sma200": 1.28105519,
         "dist_pct": 3.32,
         "at_level": false,
@@ -13432,7 +14345,7 @@
         "rr": 3.0
       },
       "analysis": "HDN is bouncing off the H4 (daily proxy) 200 SMA (A$1.2811), 3.3% away, with thin structure. A long reaction setup: enter A$1.3250, stop A$1.2335 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$1.4622 / TP2 A$1.5994 / TP3 A$1.7824; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     },
     {
       "symbol": "KCN",
@@ -13451,6 +14364,9 @@
       "level": 5.1784249,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.38999987,
       "entry": 5.38999987,
@@ -13533,7 +14449,7 @@
         "rr": 3.0
       },
       "analysis": "KCN is bouncing off the H4 (daily proxy) 200 SMA (A$5.1784), 3.9% away, with thin structure. A long reaction setup: enter A$5.3900, stop A$4.1718 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$6.4900 / TP2 A$9.0447 / TP3 A$11.4812; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "LIC",
@@ -13552,6 +14468,9 @@
       "level": 5.24009998,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.07000017,
       "entry": 5.07000017,
@@ -13650,9 +14569,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 1.94305936,
+      "level": 1.94305939,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.98500001,
       "entry": 1.98500001,
@@ -13705,9 +14627,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 1.94305936,
+        "level": 1.94305939,
         "weekly_sma200": 1.82292245,
-        "daily_sma200": 1.94305936,
+        "daily_sma200": 1.94305939,
         "dist_pct": 2.11,
         "at_level": false,
         "reaction": "bounce",
@@ -13735,7 +14657,7 @@
         "rr": 3.0
       },
       "analysis": "PCX is bouncing off the H4 (daily proxy) 200 SMA (A$1.9431), 2.1% away, with thin structure. A long reaction setup: enter A$1.9850, stop A$1.8837 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 25% / 50% / 15% into TP1 A$2.1369 / TP2 A$2.2888 / TP3 A$2.4913; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "RIC",
@@ -13754,6 +14676,9 @@
       "level": 2.70008461,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.63000011,
       "entry": 2.63000011,
@@ -13807,7 +14732,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 2.70008461,
-        "weekly_sma200": 2.28252282,
+        "weekly_sma200": 2.28252281,
         "daily_sma200": 2.70008461,
         "dist_pct": -2.66,
         "at_level": false,
@@ -13855,6 +14780,9 @@
       "level": 33.07130002,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 32.29999924,
       "entry": 32.29999924,
@@ -13908,7 +14836,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 33.07130002,
-        "weekly_sma200": 23.81268294,
+        "weekly_sma200": 23.81268268,
         "daily_sma200": 33.07130002,
         "dist_pct": -2.39,
         "at_level": false,
@@ -13940,9 +14868,9 @@
       "sector_count": 5
     },
     {
-      "symbol": "TKM",
-      "name": "Trek Metals Limited",
-      "sector": "Materials",
+      "symbol": "WLE",
+      "name": "Wam Leaders Limited",
+      "sector": "Not Applic",
       "dir": "LONG",
       "setup_type": "vivek",
       "grade": "B+",
@@ -13950,95 +14878,98 @@
       "score_max": 10,
       "chips": [
         "H4 200 SMA",
-        "STRONG STRUCTURE"
+        "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 0.1220025,
+      "level": 1.30223453,
       "at_level": false,
-      "reaction": "hold",
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
-      "price": 0.125,
-      "entry": 0.125,
-      "stop": 0.10451623,
-      "tp1": 0.17,
-      "tp2": 0.185,
-      "tp3": 0.20999999,
+      "price": 1.33000004,
+      "entry": 1.33000004,
+      "stop": 1.27183336,
+      "tp1": 1.39545713,
+      "tp2": 1.50450009,
+      "tp3": 1.62083346,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.02048377,
-      "rr": 2.93,
-      "rr_text": "2.9:1",
-      "liquidity": "OK",
-      "turnover": 264449,
+      "risk": 0.05816668,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "LIQUID",
+      "turnover": 1368742,
       "spark": [
-        0.16500001,
-        0.15000001,
-        0.15000001,
-        0.145,
-        0.15000001,
-        0.16500001,
-        0.155,
-        0.17,
-        0.16500001,
-        0.17,
-        0.17,
-        0.175,
-        0.16500001,
-        0.16500001,
-        0.18000001,
-        0.18000001,
-        0.185,
-        0.19,
-        0.18000001,
-        0.19,
-        0.18000001,
-        0.20999999,
-        0.19499999,
-        0.19499999,
-        0.185,
-        0.16,
-        0.155,
-        0.155,
-        0.15000001,
-        0.125
+        1.32500005,
+        1.32500005,
+        1.32500005,
+        1.30999994,
+        1.32000005,
+        1.32000005,
+        1.30999994,
+        1.32500005,
+        1.32000005,
+        1.30499995,
+        1.30999994,
+        1.30999994,
+        1.32500005,
+        1.33500004,
+        1.33000004,
+        1.31500006,
+        1.30999994,
+        1.29999995,
+        1.29999995,
+        1.30999994,
+        1.31500006,
+        1.31500006,
+        1.33000004,
+        1.33000004,
+        1.33500004,
+        1.31500006,
+        1.32000005,
+        1.33000004,
+        1.32500005,
+        1.33000004
       ],
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 0.1220025,
-        "weekly_sma200": 0.068675,
-        "daily_sma200": 0.1220025,
-        "dist_pct": 2.4,
+        "level": 1.30223453,
+        "weekly_sma200": 1.19262635,
+        "daily_sma200": 1.30223453,
+        "dist_pct": 2.09,
         "at_level": false,
-        "reaction": "hold",
-        "structure": 1.0,
+        "reaction": "bounce",
+        "structure": 0.0,
         "confluence": false,
         "weekly_bars": 261,
-        "atr": 0.01748627,
-        "entry": 0.125,
-        "stop": 0.10451623,
-        "tp1": 0.17,
-        "tp2": 0.185,
-        "tp3": 0.20999999,
+        "atr": 0.0181666,
+        "entry": 1.33000004,
+        "stop": 1.27183336,
+        "tp1": 1.39545713,
+        "tp2": 1.50450009,
+        "tp3": 1.62083346,
         "scale": [
           0.25,
           0.5,
           0.15
         ],
-        "risk": 0.02048377,
+        "risk": 0.05816668,
         "tp_basis": [
           "structural",
-          "structural",
-          "structural"
+          "measured",
+          "measured"
         ],
-        "structural_tps": 3,
-        "rr": 2.93
+        "structural_tps": 1,
+        "rr": 3.0
       },
-      "analysis": "TKM is holding above the H4 (daily proxy) 200 SMA (A$0.1220), 2.4% away, with a clean structure. A long reaction setup: enter A$0.1250, stop A$0.1045 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.1700 / TP2 A$0.1850 / TP3 A$0.2100; move SL to break-even at TP1, then below new support at TP2. 2.9R to TP2.",
-      "sector_count": 42
+      "analysis": "WLE is bouncing off the H4 (daily proxy) 200 SMA (A$1.3022), 2.1% away, with thin structure. A long reaction setup: enter A$1.3300, stop A$1.2718 (beyond the reaction); targets set at prior resistance (1/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.3955 / TP2 A$1.5045 / TP3 A$1.6208; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
+      "sector_count": 27
     },
     {
       "symbol": "AAI",
@@ -14057,6 +14988,9 @@
       "level": 78.72506498,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 76.29000092,
       "entry": 76.29000092,
@@ -14110,7 +15044,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 78.72506498,
-        "weekly_sma200": 62.73873407,
+        "weekly_sma200": 62.7387341,
         "daily_sma200": 78.72506498,
         "dist_pct": -3.19,
         "at_level": false,
@@ -14139,7 +15073,7 @@
         "rr": 2.76
       },
       "analysis": "AAI is being rejected at the H4 (daily proxy) 200 SMA (A$78.7251), 3.2% away, with thin structure. A short reaction setup: enter A$76.2900, stop A$102.5647 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 A$54.7060 / TP2 A$3.8908 / TP3 A$3.8145; move SL to break-even at TP1, then below new support at TP2. 2.8R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "STO",
@@ -14158,6 +15092,9 @@
       "level": 6.95166765,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 7.13999987,
       "entry": 7.13999987,
@@ -14211,7 +15148,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.95166765,
-        "weekly_sma200": 6.60348505,
+        "weekly_sma200": 6.60348506,
         "daily_sma200": 6.95166765,
         "dist_pct": 2.64,
         "at_level": false,
@@ -14240,7 +15177,7 @@
         "rr": 2.75
       },
       "analysis": "STO is bouncing off the H4 (daily proxy) 200 SMA (A$6.9517), 2.6% away, with thin structure. A long reaction setup: enter A$7.1400, stop A$6.7621 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$7.9200 / TP2 A$8.1800 / TP3 A$9.0294; move SL to break-even at TP1, then below new support at TP2. 2.8R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "FBU",
@@ -14259,6 +15196,9 @@
       "level": 2.8405,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 2.75999999,
       "entry": 2.75999999,
@@ -14312,7 +15252,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 2.8405,
-        "weekly_sma200": 3.44626718,
+        "weekly_sma200": 3.44626717,
         "daily_sma200": 2.8405,
         "dist_pct": -2.92,
         "at_level": false,
@@ -14360,6 +15300,9 @@
       "level": 0.0940775,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.096,
       "entry": 0.096,
@@ -14442,7 +15385,7 @@
         "rr": 2.15
       },
       "analysis": "OD6 is bouncing off the H4 (daily proxy) 200 SMA (A$0.0941), 2.0% away, with thin structure. A long reaction setup: enter A$0.0960, stop A$0.0825 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.1150 / TP2 A$0.1250 / TP3 A$0.1350; move SL to break-even at TP1, then below new support at TP2. 2.1R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "NIC",
@@ -14461,6 +15404,9 @@
       "level": 0.879425,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.89999998,
       "entry": 0.89999998,
@@ -14543,7 +15489,7 @@
         "rr": 2.0
       },
       "analysis": "NIC is bouncing off the H4 (daily proxy) 200 SMA (A$0.8794), 2.3% away, with thin structure. A long reaction setup: enter A$0.9000, stop A$0.8350 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.9600 / TP2 A$1.0300 / TP3 A$1.1000; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "MFG",
@@ -14562,6 +15508,9 @@
       "level": 9.26913571,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 9.63000011,
       "entry": 9.63000011,
@@ -14615,7 +15564,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 9.26913571,
-        "weekly_sma200": 8.06218185,
+        "weekly_sma200": 8.06218189,
         "daily_sma200": 9.26913571,
         "dist_pct": 3.75,
         "at_level": false,
@@ -14644,7 +15593,7 @@
         "rr": 1.99
       },
       "analysis": "MFG is bouncing off the H4 (daily proxy) 200 SMA (A$9.2691), 3.8% away, with thin structure. A long reaction setup: enter A$9.6300, stop A$8.6641 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$10.5000 / TP2 A$11.5500 / TP3 A$14.4595; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "sector_count": 12
+      "sector_count": 13
     },
     {
       "symbol": "SSG",
@@ -14663,6 +15612,9 @@
       "level": 1.39027137,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 1.35000002,
       "entry": 1.35000002,
@@ -14764,6 +15716,9 @@
       "level": 4.99010005,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 5.1500001,
       "entry": 5.1500001,
@@ -14817,7 +15772,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 4.99010005,
-        "weekly_sma200": 3.98629059,
+        "weekly_sma200": 3.98629058,
         "daily_sma200": 4.99010005,
         "dist_pct": 3.1,
         "at_level": false,
@@ -14865,6 +15820,9 @@
       "level": 6.89424604,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 6.75,
       "entry": 6.75,
@@ -14918,7 +15876,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 6.89424604,
-        "weekly_sma200": 4.36673645,
+        "weekly_sma200": 4.36673643,
         "daily_sma200": 6.89424604,
         "dist_pct": -2.14,
         "at_level": false,
@@ -14966,6 +15924,9 @@
       "level": 21.08599542,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 20.42000008,
       "entry": 20.42000008,
@@ -15019,7 +15980,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 21.08599542,
-        "weekly_sma200": 25.74464774,
+        "weekly_sma200": 25.7446477,
         "daily_sma200": 21.08599542,
         "dist_pct": -3.26,
         "at_level": false,
@@ -15067,6 +16028,9 @@
       "level": 0.547125,
       "at_level": false,
       "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.565,
       "entry": 0.565,
@@ -15149,7 +16113,7 @@
         "rr": 1.7
       },
       "analysis": "PMT is bouncing off the H4 (daily proxy) 200 SMA (A$0.5471), 3.2% away, with thin structure. A long reaction setup: enter A$0.5650, stop A$0.4827 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.6450 / TP2 A$0.7050 / TP3 A$0.7800; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
-      "sector_count": 42
+      "sector_count": 41
     },
     {
       "symbol": "TNE",
@@ -15165,9 +16129,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 29.99682178,
+      "level": 29.99682182,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 28.87000084,
       "entry": 28.87000084,
@@ -15220,9 +16187,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 29.99682178,
-        "weekly_sma200": 22.49795722,
-        "daily_sma200": 29.99682178,
+        "level": 29.99682182,
+        "weekly_sma200": 22.49795727,
+        "daily_sma200": 29.99682182,
         "dist_pct": -3.9,
         "at_level": false,
         "reaction": "reject",
@@ -15269,6 +16236,9 @@
       "level": 31.31266129,
       "at_level": false,
       "reaction": "hold",
+      "entry_types": [
+        "break"
+      ],
       "confluence": false,
       "price": 32.56000137,
       "entry": 32.56000137,
@@ -15322,7 +16292,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 31.31266129,
-        "weekly_sma200": 28.89297395,
+        "weekly_sma200": 28.89297397,
         "daily_sma200": 31.31266129,
         "dist_pct": 3.83,
         "at_level": false,
@@ -15351,7 +16321,7 @@
         "rr": 1.61
       },
       "analysis": "ALD is holding above the H4 (daily proxy) 200 SMA (A$31.3127), 3.8% away, with a clean structure. A long reaction setup: enter A$32.5600, stop A$30.4024 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 A$34.2900 / TP2 A$36.0400 / TP3 A$43.3481; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "OFX",
@@ -15370,6 +16340,9 @@
       "level": 0.6034,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 0.58999997,
       "entry": 0.58999997,
@@ -15452,108 +16425,7 @@
         "rr": 1.61
       },
       "analysis": "OFX is being rejected at the H4 (daily proxy) 200 SMA (A$0.6034), 2.3% away, with thin structure. A short reaction setup: enter A$0.5900, stop A$0.6582 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$0.5300 / TP2 A$0.4800 / TP3 A$0.2491; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 12
-    },
-    {
-      "symbol": "VVA",
-      "name": "Viva Leisure Limited",
-      "sector": "Consumer Services",
-      "dir": "SHORT",
-      "setup_type": "vivek",
-      "grade": "B+",
-      "score": 5,
-      "score_max": 10,
-      "chips": [
-        "H4 200 SMA",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "h4",
-      "level": 1.6234125,
-      "at_level": false,
-      "reaction": "reject",
-      "confluence": false,
-      "price": 1.57000005,
-      "entry": 1.57000005,
-      "stop": 1.69186475,
-      "tp1": 1.47000003,
-      "tp2": 1.38,
-      "tp3": 1.30499995,
-      "scale": [
-        0.5,
-        0.25,
-        0.15
-      ],
-      "risk": 0.1218647,
-      "rr": 1.56,
-      "rr_text": "1.6:1",
-      "liquidity": "OK",
-      "turnover": 290689,
-      "spark": [
-        1.48500001,
-        1.48000002,
-        1.47000003,
-        1.42999995,
-        1.42999995,
-        1.44000006,
-        1.41999996,
-        1.53999996,
-        1.57000005,
-        1.57500005,
-        1.58000004,
-        1.58500004,
-        1.57000005,
-        1.59500003,
-        1.70000005,
-        1.69500005,
-        1.59000003,
-        1.55499995,
-        1.5,
-        1.57500005,
-        1.59000003,
-        1.54999995,
-        1.59000003,
-        1.57000005,
-        1.59000003,
-        1.58000004,
-        1.58500004,
-        1.55499995,
-        1.53999996,
-        1.57000005
-      ],
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 1.6234125,
-        "weekly_sma200": 1.4001625,
-        "daily_sma200": 1.6234125,
-        "dist_pct": -3.4,
-        "at_level": false,
-        "reaction": "reject",
-        "structure": 0.0,
-        "confluence": false,
-        "weekly_bars": 261,
-        "atr": 0.05686476,
-        "entry": 1.57000005,
-        "stop": 1.69186475,
-        "tp1": 1.47000003,
-        "tp2": 1.38,
-        "tp3": 1.30499995,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 0.1218647,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 1.56
-      },
-      "analysis": "VVA is being rejected at the H4 (daily proxy) 200 SMA (A$1.6234), 3.4% away, with thin structure. A short reaction setup: enter A$1.5700, stop A$1.6919 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$1.4700 / TP2 A$1.3800 / TP3 A$1.3050; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 3
+      "sector_count": 13
     },
     {
       "symbol": "FLT",
@@ -15569,9 +16441,12 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 12.40572498,
+      "level": 12.40572497,
       "at_level": false,
       "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
       "confluence": false,
       "price": 11.98999977,
       "entry": 11.98999977,
@@ -15624,9 +16499,9 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 12.40572498,
-        "weekly_sma200": 16.02055426,
-        "daily_sma200": 12.40572498,
+        "level": 12.40572497,
+        "weekly_sma200": 16.02055435,
+        "daily_sma200": 12.40572497,
         "dist_pct": -3.47,
         "at_level": false,
         "reaction": "reject",
@@ -15654,7 +16529,111 @@
         "rr": 1.52
       },
       "analysis": "FLT is being rejected at the H4 (daily proxy) 200 SMA (A$12.4057), 3.5% away, with thin structure. A short reaction setup: enter A$11.9900, stop A$13.0175 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 A$11.0989 / TP2 A$10.4300 / TP3 A$9.6750; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
-      "sector_count": 3
+      "sector_count": 2
+    },
+    {
+      "symbol": "WIA",
+      "name": "Wia Gold Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "B+",
+      "score": 5,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "h4",
+      "level": 0.4373,
+      "at_level": false,
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
+      "confluence": false,
+      "price": 0.44999999,
+      "entry": 0.44999999,
+      "stop": 0.38968117,
+      "tp1": 0.5,
+      "tp2": 0.54000002,
+      "tp3": 0.59500003,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.06031882,
+      "rr": 1.49,
+      "rr_text": "1.5:1",
+      "liquidity": "LIQUID",
+      "turnover": 1232875,
+      "spark": [
+        0.5,
+        0.5,
+        0.5,
+        0.43000001,
+        0.47,
+        0.48500001,
+        0.5,
+        0.47499999,
+        0.48500001,
+        0.45500001,
+        0.47,
+        0.47,
+        0.49000001,
+        0.47,
+        0.47,
+        0.465,
+        0.44499999,
+        0.435,
+        0.43000001,
+        0.44,
+        0.49000001,
+        0.505,
+        0.50999999,
+        0.47999999,
+        0.47,
+        0.47,
+        0.45500001,
+        0.44999999,
+        0.44,
+        0.44999999
+      ],
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 0.4373,
+        "weekly_sma200": 0.17095571,
+        "daily_sma200": 0.4373,
+        "dist_pct": 2.82,
+        "at_level": false,
+        "reaction": "bounce",
+        "structure": 0.4,
+        "confluence": false,
+        "weekly_bars": 261,
+        "atr": 0.02531882,
+        "entry": 0.44999999,
+        "stop": 0.38968117,
+        "tp1": 0.5,
+        "tp2": 0.54000002,
+        "tp3": 0.59500003,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 0.06031882,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 1.49
+      },
+      "analysis": "WIA is bouncing off the H4 (daily proxy) 200 SMA (A$0.4373), 2.8% away, with thin structure. A long reaction setup: enter A$0.4500, stop A$0.3897 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.5000 / TP2 A$0.5400 / TP3 A$0.5950; move SL to break-even at TP1, then below new support at TP2. 1.5R to TP2.",
+      "sector_count": 41
     },
     {
       "symbol": "PPC",
@@ -15673,6 +16652,9 @@
       "level": 1.84685507,
       "at_level": false,
       "reaction": "fade",
+      "entry_types": [
+        "retest"
+      ],
       "confluence": false,
       "price": 1.78999996,
       "entry": 1.78999996,
@@ -15726,7 +16708,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 1.84685507,
-        "weekly_sma200": 1.29570856,
+        "weekly_sma200": 1.29570857,
         "daily_sma200": 1.84685507,
         "dist_pct": -3.18,
         "at_level": false,
@@ -15773,6 +16755,9 @@
       "level": 0.99506556,
       "at_level": false,
       "reaction": "hold",
+      "entry_types": [
+        "retest"
+      ],
       "confluence": false,
       "price": 1.02499998,
       "entry": 1.02499998,
@@ -15855,7 +16840,7 @@
         "rr": 1.84
       },
       "analysis": "WAX is holding above the Weekly 200 SMA (A$0.9951), 2.9% away, with thin structure. A long reaction setup: enter A$1.0250, stop A$0.9735 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$1.0850 / TP2 A$1.1200 / TP3 A$1.1679; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
-      "sector_count": 24
+      "sector_count": 27
     },
     {
       "symbol": "PME",
@@ -15873,6 +16858,9 @@
       "level": 195.34628731,
       "at_level": false,
       "reaction": "fade",
+      "entry_types": [
+        "retest"
+      ],
       "confluence": false,
       "price": 188.88000488,
       "entry": 188.88000488,
@@ -15926,7 +16914,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 195.34628731,
-        "weekly_sma200": 150.1806893,
+        "weekly_sma200": 150.18068926,
         "daily_sma200": 195.34628731,
         "dist_pct": -3.42,
         "at_level": false,
@@ -15973,6 +16961,9 @@
       "level": 0.23937,
       "at_level": false,
       "reaction": "hold",
+      "entry_types": [
+        "retest"
+      ],
       "confluence": false,
       "price": 0.245,
       "entry": 0.245,
@@ -16055,7 +17046,7 @@
         "rr": 3.5
       },
       "analysis": "TM1 is holding above the H4 (daily proxy) 200 SMA (A$0.2394), 2.3% away, with thin structure. A long reaction setup: enter A$0.2450, stop A$0.2164 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 A$0.3150 / TP2 A$0.3450 / TP3 A$0.3800; move SL to break-even at TP1, then below new support at TP2. 3.5R to TP2.",
-      "sector_count": 10
+      "sector_count": 11
     },
     {
       "symbol": "CQE",
@@ -16073,6 +17064,9 @@
       "level": 2.86807848,
       "at_level": false,
       "reaction": "fade",
+      "entry_types": [
+        "retest"
+      ],
       "confluence": false,
       "price": 2.75999999,
       "entry": 2.75999999,
@@ -16126,7 +17120,7 @@
         "setup_type": "vivek",
         "level_tf": "h4",
         "level": 2.86807848,
-        "weekly_sma200": 2.60781518,
+        "weekly_sma200": 2.60781521,
         "daily_sma200": 2.86807848,
         "dist_pct": -3.92,
         "at_level": false,
@@ -16155,7 +17149,7 @@
         "rr": 1.63
       },
       "analysis": "CQE is fading below the H4 (daily proxy) 200 SMA (A$2.8681), 3.9% away, with thin structure. A short reaction setup: enter A$2.7600, stop A$2.9320 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 A$2.6000 / TP2 A$2.4800 / TP3 A$1.9001; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
-      "sector_count": 18
+      "sector_count": 19
     }
   ]
 }
