@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B": "var(--grade-b)", "C": "var(--grade-c)" };
+  const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
   const TF_ORDER = ["1H", "1D", "3D", "1W", "1M", "3M"];
 
@@ -16,6 +16,7 @@
   const market = VALID_MARKETS.has(marketRaw) ? marketRaw : "asx";
   const symbol = params.get("s") || "";
   const mode = (params.get("mode") || "pullback").toLowerCase();
+  const isVivek = mode === "vivek";
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
@@ -196,6 +197,26 @@
     return { candles, volume, lines };
   }
 
+  // Build a VIVEK (5.0-style) timeframe block: candles + volume + the 200 SMA
+  // (the level the whole setup pivots on) and a 50 SMA for trend structure —
+  // deliberately NOT the BB/KC/EMA9/21 scalp overlay set.
+  function barsToVivekTF(bars) {
+    const candles = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
+    const volume  = bars.map((b) => ({ time: b.time, value: Math.round(b.volume || 0),
+      color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" }));
+    const cl = bars.map((b) => b.close);
+    const mkSma = (span, name, color) => {
+      const s = smaArr(cl, span);
+      const data = [];
+      for (let i = span - 1; i < bars.length; i++) if (isFinite(s[i])) data.push({ time: bars[i].time, value: s[i] });
+      return { name, color, data };
+    };
+    const lines = [];
+    if (bars.length >= 50) lines.push(mkSma(50, "SMA 50", "#4d9fff"));     // trend structure
+    if (bars.length >= 200) lines.push(mkSma(200, "SMA 200", "#ffb020"));  // the 200 SMA — the level
+    return { candles, volume, lines };
+  }
+
   // Render a chart purely from live history when no static JSON exists. `meta`
   // (optional) is the scan-results row, which still carries grade / entry / stop
   // / target even when the per-ticker chart file is missing.
@@ -235,6 +256,53 @@
           if (d.price == null) d.price = bars[bars.length - 1].close;
           render(d);
         })
+        .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+    }
+  }
+
+  // ── VIVEK (5.0-style) chart — the 200 SMA reaction, not the scalp overlays ──
+  // VIVEK has no per-ticker static chart files; it always renders live from daily
+  // history, drawing the 200 SMA (the level) + 50 SMA structure and the full
+  // Entry / SL / TP1 / TP2 / TP3 ladder as price lines.
+  function vivekFallback(SYM, meta) {
+    const m = meta || {};
+    const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
+    const dir = m.dir || "LONG";
+    const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
+    const tfLabel = m.level_tf === "weekly" ? "200 SMA · Weekly" : "200 SMA · H4";
+    const d = {
+      symbol: SYM, name: m.name || SYM, asset_type: assetType,
+      price: m.price ?? null,
+      grade: m.grade || "", score: m.score || 0, score_max: m.score_max || 0,
+      chips: m.chips || [], sector: m.sector || "", currency_symbol: cur,
+      tv_symbol: m.tv_symbol || SYM, dir,
+      rr: m.rr || 0, low_rr: m.low_rr || false, rr_text: m.rr_text || "",
+      entry: m.entry, stop: m.stop, target: m.tp2,            // headline target = TP2
+      tp1: m.tp1, tp2: m.tp2, tp3: m.tp3, scale: m.scale, risk: m.risk,
+      level: m.level, level_tf: m.level_tf, confluence: m.confluence,
+      analysis: m.analysis || "200 SMA reaction setup (5.0 style).",
+      default_tf: "1D", level_lines: [], timeframes: {}, _fallback: true, _vivek: true,
+    };
+    // Level lines, drawn from the 200 SMA outward: the level itself (amber), the
+    // stop (red), entry (white), then the three take-profits (green).
+    if (d.level != null) d.level_lines.push({ price: d.level, color: "#ffb020", title: tfLabel });
+    if (d.stop  != null) d.level_lines.push({ price: d.stop,  color: "#ff5b5b", title: "SL" });
+    if (d.entry != null) d.level_lines.push({ price: d.entry, color: "#e5e9f0", title: "ENTRY" });
+    if (d.tp1   != null) d.level_lines.push({ price: d.tp1,   color: "#2fd07f", title: "TP1" });
+    if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
+    if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
+
+    const draw = (bars) => {
+      if (bars.length < 6) throw new Error("thin");
+      d.timeframes["1D"] = barsToVivekTF(bars);
+      if (d.price == null) d.price = bars[bars.length - 1].close;
+      render(d);
+    };
+    if (isCryptoMarket(assetType)) {
+      cryptoBars(SYM, "1d", 400).then(draw)
+        .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
+    } else {
+      yahooBars(yfTickerFor(SYM, assetType), "3y", "1d").then(draw)
         .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
     }
   }
@@ -287,6 +355,30 @@
     const cur = d.currency_symbol || "";
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
+
+    // VIVEK setups get the 5.0 metric set: the 200 SMA level, the full TP ladder
+    // with its scale-out %, and the SL-movement rules spelled out underneath.
+    if (d._vivek) {
+      const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
+      const tfTxt = d.level_tf === "weekly" ? "200 SMA (W)" : "200 SMA (H4)";
+      $("#cf-metrics").innerHTML = [
+        metric(tfTxt, fmt(d.level, cur), "amber"),
+        metric("Entry", fmt(d.entry, cur)),
+        metric("SL", fmt(d.stop, cur), "red"),
+        metric(`TP1 · ${sc[0]}%`, fmt(d.tp1, cur), "green"),
+        metric(`TP2 · ${sc[1]}%`, fmt(d.tp2, cur), "green"),
+        metric(`TP3 · ${sc[2]}%`, fmt(d.tp3, cur), "green"),
+        metric("R:R → TP2", (d.rr || 0).toFixed(2), d.low_rr ? "red" : "green"),
+        metric("Grade", `${d.grade} · ${d.score}/${d.score_max}`),
+      ].join("");
+      $("#cf-analysis").textContent =
+        (d.analysis ? d.analysis + "  " : "") +
+        "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
+      if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
+      $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
+      return;
+    }
+
     $("#cf-metrics").innerHTML = [
       metric("Entry", fmt(d.entry, cur)),
       metric("Stop", fmt(d.stop, cur), "red"),
@@ -584,7 +676,8 @@
       return;
     }
     // Surface that this is a live-built chart rather than the saved scan view.
-    if (d._fallback) {
+    // (VIVEK is always rendered live by design, so it doesn't get the badge.)
+    if (d._fallback && !d._vivek) {
       const note = document.createElement("span");
       note.className = "ct-fallback-note";
       note.textContent = "live fallback";
@@ -704,8 +797,10 @@
 
     const toggle = $("#tf-toggle");
     // Live Binance feed only for genuine crypto (by asset_type) — commodities and
-    // stocks in the scalp universe stay on static scan data.
-    const pair = (d.asset_type === "crypto" || market === "crypto") ? cryptoPair(SYM) : null;
+    // stocks in the scalp universe stay on static scan data. VIVEK is a daily-200
+    // SMA swing view, so it never switches into the intraday scalp stream (which
+    // would recompute the BB/KC/EMA9/21 overlays we deliberately don't want here).
+    const pair = (!d._vivek && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
     const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch };
 
     if (pair) {
@@ -1187,7 +1282,7 @@
 
     const isScalp = market === "scalp";
     const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
-                  : mode === "short"    ? "_short"    : "";
+                  : mode === "short"    ? "_short"    : mode === "vivek" ? "_vivek" : "";
     const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
     const sOf     = isScalp
       ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
@@ -1232,7 +1327,7 @@
   function fetchResultMeta() {
     const isScalp = market === "scalp";
     const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
-                  : mode === "short"    ? "_short"    : "";
+                  : mode === "short"    ? "_short"    : mode === "vivek" ? "_vivek" : "";
     const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
     const sOf     = isScalp
       ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
@@ -1261,6 +1356,9 @@
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();
+    // VIVEK has no per-ticker static chart files — render the 200 SMA reaction
+    // live (with the full 5.0 level ladder) instead of the generic scalp chart.
+    if (isVivek) { fetchResultMeta().then((meta) => vivekFallback(baseSymbol, meta)); return; }
     fetch(chartFile, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(render)
