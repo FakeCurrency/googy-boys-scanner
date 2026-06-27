@@ -260,6 +260,11 @@ VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
 VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)
 VIVEK_TP_SCALE_SHORT   = [0.50, 0.25, 0.15]   # shorts bank more, sooner
 
+# Autonomous bot (Bybit testnet) — only take strong 5.0 matches.
+VIVEK_BOT_MIN_GRADE    = "A"       # bot trades A or better (A+/A); not B+/WATCH
+VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
+VIVEK_BOT_MAX_POSITIONS = 5        # concurrent open positions cap
+
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so
 # you can read big-money rotation (mega) AND discovery (small caps) separately.

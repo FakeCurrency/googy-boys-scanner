@@ -157,28 +157,35 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
 
     # 1) Which 200 SMA is in play (the heart of the setup).
     if sig["level_tf"] == "weekly":
-        pts += 4; fired.append("WEEKLY 200 SMA")
+        pts += 4
+        fired.append("WEEKLY 200 SMA")
     else:
-        pts += 3; fired.append("H4 200 SMA")
+        pts += 3
+        fired.append("H4 200 SMA")
 
     # 2) Right at the level vs merely near it (near-only adds nothing — that's
     #    what separates a WATCH from a tradeable grade).
     if sig["at_level"]:
-        pts += 2; fired.append("AT THE LEVEL")
+        pts += 2
+        fired.append("AT THE LEVEL")
 
     # 3) Reaction quality — a clean bounce/reject is what makes it actionable.
     if sig["reaction"] in ("bounce", "reject"):
-        pts += 2; fired.append("CLEAN REACTION")
+        pts += 2
+        fired.append("CLEAN REACTION")
 
     # 4) Structure stacking in the trade's favour.
     if sig["structure"] >= 0.8:
-        pts += 2; fired.append("STRONG STRUCTURE")
+        pts += 2
+        fired.append("STRONG STRUCTURE")
     elif sig["structure"] >= 0.5:
-        pts += 1; fired.append("OK STRUCTURE")
+        pts += 1
+        fired.append("OK STRUCTURE")
 
     # 5) Weekly + H4 confluence.
     if sig.get("confluence"):
-        pts += 1; fired.append("W+H4 CONFLUENCE")
+        pts += 1
+        fired.append("W+H4 CONFLUENCE")
 
     pts = min(pts, config.VIVEK_SCORE_MAX)
     grade = grade_from_points(pts, config.VIVEK_GRADE_CUTOFFS)
@@ -208,7 +215,10 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
         return {"rr": 0}
 
     rr = round(abs(tps[1] - entry) / risk, 2)   # headline R:R measured to TP2
-    rnd = lambda v: round(float(v), 8)
+
+    def rnd(v):
+        return round(float(v), 8)
+
     return {
         "entry": rnd(entry),
         "stop": rnd(stop),
