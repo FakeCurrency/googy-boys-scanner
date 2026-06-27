@@ -1,67 +1,46 @@
-// Cloudflare Pages Function — proxies Yahoo Finance v8 for ASX / NASDAQ quotes.
-// GET /api/quote?sym=BHP.AX  → { price, currency, time }
-// GET /api/quote?sym=AAPL    → { price, currency, time }
+// Cloudflare Pages Function — resilient single-quote proxy.
+// GET /api/quote?sym=BHP.AX  → { price, currency, time, source }
+// GET /api/quote?sym=BTC-USD → { price, currency, time, source }
+//
+// Crypto prefers Binance (real-time, 24/7); stocks/commodities use Yahoo across
+// both hosts. Currency is preserved from Yahoo meta (so ASX returns AUD).
+import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart } from "./_prices.js";
+
+const json = (status, body) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
 
 export async function onRequestGet(ctx) {
   const sym = new URL(ctx.request.url).searchParams.get("sym") || "";
 
-  // Validate: allow letters, digits, and common ticker punctuation (^=-._ for indices/futures).
   if (!/^[A-Za-z0-9.\^=\-_]{1,20}$/.test(sym)) {
-    return new Response(JSON.stringify({ error: "Invalid symbol" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
+    return json(400, { error: "Invalid symbol" });
   }
 
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1m&range=1d`;
+  const now = Math.floor(Date.now() / 1000);
 
-  let resp;
+  // Crypto: Binance first (keyless, real-time), Yahoo as a backstop.
+  if (isCryptoSymbol(sym)) {
+    const px = await fetchBinancePrice(sym);
+    if (px != null) return json(200, { price: px, currency: "USD", time: now, source: "binance" });
+  }
+
+  // Stocks / commodities (and crypto fallback): Yahoo across both hosts.
   try {
-    resp = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; GoogyBoysScanner/1.0)",
-        "Accept": "application/json",
-      },
-      cf: { cacheTtl: 0, cacheEverything: false },
+    const result = await fetchYahooChart(sym, { interval: "1m", range: "1d" });
+    const meta = result?.meta;
+    if (!meta) return json(502, { error: "No data returned for " + sym });
+    const price = meta.regularMarketPrice ?? meta.previousClose ?? null;
+    if (price == null) return json(502, { error: "No price for " + sym });
+    return json(200, {
+      price,
+      currency: meta.currency ?? "USD",
+      time: meta.regularMarketTime ?? now,
+      source: "yahoo",
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Upstream fetch failed: " + String(err) }), {
-      status: 503,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
+    return json(502, { error: "Upstream failed: " + String(err && err.message ? err.message : err) });
   }
-
-  if (!resp.ok) {
-    return new Response(JSON.stringify({ error: `Yahoo returned ${resp.status}` }), {
-      status: 502,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
-  }
-
-  let body;
-  try {
-    body = await resp.json();
-  } catch (_) {
-    return new Response(JSON.stringify({ error: "Could not parse Yahoo response" }), {
-      status: 502,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
-  }
-
-  const meta = body?.chart?.result?.[0]?.meta;
-  if (!meta) {
-    return new Response(JSON.stringify({ error: "No data returned for " + sym }), {
-      status: 502,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
-  }
-
-  const price    = meta.regularMarketPrice ?? null;
-  const currency = meta.currency ?? "USD";
-  const time     = meta.regularMarketTime ?? Math.floor(Date.now() / 1000);
-
-  return new Response(JSON.stringify({ price, currency, time }), {
-    status: 200,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
 }

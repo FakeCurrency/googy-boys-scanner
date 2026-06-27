@@ -15,15 +15,13 @@
  * TICK_SECRET env var (and the matching GitHub secret) to require a bearer token.
  */
 
+import { fetchBinancePrice, fetchYahooChart } from "./_prices.js";
+
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
-
-const BINANCE = "https://api.binance.com/api/v3/ticker/price?symbol=";
-const yahooURL = (sym) =>
-  `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1m&range=1d`;
 
 function nowParts() {
   const d = new Date();
@@ -35,16 +33,19 @@ function nowParts() {
 }
 
 // Memoised live-price lookups (one cache per invocation dedups shared symbols).
+// Both paths fall back gracefully: crypto tries Binance then Yahoo; stocks try
+// both Yahoo hosts. A null result simply means "no fill this pass" — the trade
+// stays open and is re-checked next tick (never closed on a missing price).
 async function cryptoPrice(sym, cache) {
   const k = "C:" + sym;
   if (k in cache) return cache[k];
-  let px = null;
-  try {
-    const r = await fetch(BINANCE + encodeURIComponent(String(sym).toUpperCase() + "USDT"), {
-      cf: { cacheTtl: 0 },
-    });
-    if (r.ok) { const j = await r.json(); px = j && j.price != null ? +j.price : null; }
-  } catch (_) {}
+  let px = await fetchBinancePrice(sym);
+  if (px == null) {
+    try {
+      const result = await fetchYahooChart(sym, { interval: "1m", range: "1d" });
+      px = result?.meta?.regularMarketPrice ?? null;
+    } catch (_) { px = null; }
+  }
   return (cache[k] = px);
 }
 async function stockPrice(sym, aType, cache) {
@@ -53,12 +54,9 @@ async function stockPrice(sym, aType, cache) {
   if (k in cache) return cache[k];
   let px = null;
   try {
-    const r = await fetch(yahooURL(ticket), {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GoogyBoysScanner/1.0)", "Accept": "application/json" },
-      cf: { cacheTtl: 0 },
-    });
-    if (r.ok) { const j = await r.json(); px = j?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null; }
-  } catch (_) {}
+    const result = await fetchYahooChart(ticket, { interval: "1m", range: "1d" });
+    px = result?.meta?.regularMarketPrice ?? result?.meta?.previousClose ?? null;
+  } catch (_) { px = null; }
   return (cache[k] = px);
 }
 

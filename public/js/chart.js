@@ -136,6 +136,20 @@
         high: +k[2], low: +k[3], close: +k[4], volume: +k[5] })));
   }
 
+  // Crypto history WITH a fallback: try Binance directly (fast, real-time), and
+  // if that's blocked (region/CORS/outage) drop through to the resilient
+  // /api/price proxy — which itself tries Binance server-side, then Yahoo. Keeps
+  // a crypto chart working even when the browser can't reach Binance.
+  function cryptoBars(sym, interval, limit) {
+    return binanceKlines(cryptoPair(sym), interval, limit)
+      .then((bars) => { if (!bars.length) throw new Error("empty"); return bars; })
+      .catch(() =>
+        fetch(`/api/price?symbol=${encodeURIComponent(sym)}&type=crypto&range=6mo&interval=${interval}`,
+          { cache: "no-store" })
+          .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []));
+  }
+
   // Build a chart-page "timeframe" object (candles + volume + 7 overlays + mom)
   // straight from live bars — lets a position chart render with no static JSON.
   function barsToTF(bars) {
@@ -209,7 +223,7 @@
     if (d.target != null) d.level_lines.push({ price: d.target, color: "#2fd07f", title: "TARGET" });
 
     if (isCryptoMarket(assetType)) {
-      binanceKlines(cryptoPair(SYM), "1h", 1000)
+      cryptoBars(SYM, "1h", 1000)
         .then((bars) => { if (!bars.length) throw new Error("no bars"); d.timeframes["1H"] = barsToTF(bars); d.default_tf = "1H"; render(d); })
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {

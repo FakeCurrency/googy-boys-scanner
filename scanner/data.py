@@ -74,6 +74,8 @@ def download(tickers: list[str], period: str | None = None,
     """
     period = period or config.DATA_PERIOD
     frames: dict[str, pd.DataFrame] = {}
+    failed_batches = 0        # whole batches that yielded nothing after retries
+    skipped_tickers = 0       # individual tickers with no usable rows
 
     for start in range(0, len(tickers), chunk):
         if start:
@@ -89,12 +91,19 @@ def download(tickers: list[str], period: str | None = None,
                 )
                 break
             except Exception as e:
-                log.warning("batch download attempt %d failed: %s: %s",
-                            attempt + 1, type(e).__name__, e)
+                log.warning("batch download attempt %d/%d failed: %s: %s",
+                            attempt + 1, retries + 1, type(e).__name__, e)
                 if attempt < retries:
                     time.sleep(2 * (attempt + 1))
 
+        # Whole-batch failure: every ticker in this slice is unavailable this run.
+        # Record it so the caller's logs show source degradation instead of a
+        # silently short result set.
         if data is None or len(data) == 0:
+            failed_batches += 1
+            skipped_tickers += len(batch)
+            log.warning("batch %d-%d (%d tickers) returned no data — skipping",
+                        start, start + len(batch), len(batch))
             continue
 
         for ticker in batch:
@@ -106,8 +115,21 @@ def download(tickers: list[str], period: str | None = None,
                 df = df.dropna()
                 if len(df):
                     frames[ticker] = df
+                else:
+                    skipped_tickers += 1
             except Exception as e:
+                skipped_tickers += 1
                 log.warning("%s: %s: %s", ticker, type(e).__name__, e)
                 continue
+
+    # One-line health summary — makes "the data source is failing" obvious at a
+    # glance instead of having to infer it from a thin result set downstream.
+    got = len(frames)
+    if got < len(tickers):
+        log.info("download: %d/%d tickers returned (%d skipped, %d batches failed)",
+                 got, len(tickers), skipped_tickers, failed_batches)
+    if tickers and got == 0:
+        log.error("download: ZERO tickers returned for %d requested — upstream data source likely down",
+                  len(tickers))
 
     return frames
