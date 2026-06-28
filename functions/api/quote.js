@@ -4,7 +4,7 @@
 //
 // Crypto prefers Binance (real-time, 24/7); stocks/commodities use Yahoo across
 // both hosts. Currency is preserved from Yahoo meta (so ASX returns AUD).
-import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart } from "./_prices.js";
+import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol } from "./_prices.js";
 
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
@@ -22,14 +22,16 @@ export async function onRequestGet(ctx) {
   const now = Math.floor(Date.now() / 1000);
 
   // Crypto: Binance first (keyless, real-time), Yahoo as a backstop.
-  if (isCryptoSymbol(sym)) {
+  const crypto = isCryptoSymbol(sym);
+  if (crypto) {
     const px = await fetchBinancePrice(sym);
     if (px != null) return json(200, { price: px, currency: "USD", time: now, source: "binance" });
   }
 
-  // Stocks / commodities (and crypto fallback): Yahoo across both hosts.
+  // Stocks / commodities (and crypto fallback): Yahoo across both hosts. Crypto
+  // must use "<base>-USD" so a bare base can't resolve to a same-named equity.
   try {
-    const result = await fetchYahooChart(sym, { interval: "1m", range: "1d" });
+    const result = await fetchYahooChart(crypto ? yahooCryptoSymbol(sym) : sym, { interval: "1m", range: "1d" });
     const meta = result?.meta;
     if (!meta) return json(502, { error: "No data returned for " + sym });
     const price = meta.regularMarketPrice ?? meta.previousClose ?? null;

@@ -67,6 +67,9 @@
   function yfTickerFor(sym, assetType) {
     const up = String(sym || "").toUpperCase();
     if (YF_TICKER[up]) return YF_TICKER[up];
+    // Crypto MUST be "<base>-USD" — a bare base (e.g. BDX) is a same-named stock
+    // on Yahoo (Becton Dickinson), giving a wildly wrong price + off-scale levels.
+    if (assetType === "crypto" || market === "crypto") return up.replace(/-USD$/, "") + "-USD";
     if (assetType === "asx" || market === "asx") return up.includes(".") ? up : up + ".AX";
     return up;   // nasdaq / index symbols Yahoo already knows
   }
@@ -424,14 +427,16 @@
     if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
     if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
 
-    // Build the Daily + Weekly + best-effort 4H views, then render once. The DEEP
-    // daily pull drives the Daily candles and a resampled Weekly view; a ~2y
-    // hourly pull (yfinance's 1h limit) bucketed to 4H drives an honest-but-
-    // limited 4H view. Each TF draws its own 10/20/43/200 SMA for DISPLAY, but the
-    // trade PLAN (Entry/SL/TP1-3, the level, the trigger) and the markers come
-    // straight from the scan row (Python) — the chart never recomputes them. The
-    // Daily and Weekly TFs have their own Python plan; 4H has no server-side plan,
-    // so it reuses the Daily plan as a clearly-labelled reference.
+    // Build the Daily + Weekly views, then render once. The DEEP daily pull drives
+    // the Daily candles and a resampled Weekly view. Each TF draws its own
+    // 10/20/43/200 SMA for DISPLAY, but the trade PLAN (Entry/SL/TP1-3, the level,
+    // the trigger) and the markers come straight from the scan row (Python) — the
+    // chart never recomputes them. Daily and Weekly EACH carry their OWN Python
+    // plan, so the levels genuinely change when you switch timeframe.
+    //
+    // 4H is intentionally NOT offered: it has no server-side plan, so it could
+    // only mirror the Daily levels — which read as "the timeframe toggle does
+    // nothing". Only timeframes with a real, distinct plan are shown.
     // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
     // and intervals incl. 1h/1d — keep fetches on whitelisted values.
     const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
@@ -447,21 +452,19 @@
       armed: m.armed, entry_trigger: m.entry_trigger,
     };
     const dailyPlan = plans["1D"] || headlinePlan;
-    // approx=true → this TF has no Python plan of its own; it borrows the Daily
-    // plan as reference and shows no (mismatched) markers.
-    const makeTF = (bars, tfKey, planRaw, approx) => {
+    const makeTF = (bars, tfKey, planRaw) => {
       const tf = barsToVivekTF(bars);                 // candles + volume + SMAs (display)
       tf.levels = normalizePlan(planRaw);             // the plan (from Python)
-      tf.markers = approx ? [] : adaptMarkers(pyMarkers[tfKey], bars, direction);
-      tf.approx = !!approx;
+      tf.markers = adaptMarkers(pyMarkers[tfKey], bars, direction);
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
-    const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
-                             : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
-    // Crypto: native 4h klines (1000 ≈ 166d). Stocks: ~2y of hourly bucketed to 4h.
-    const intradayP = (isCrypto ? cryptoBars(SYM, "4h", 1000)
-                                : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
+    // Crypto daily: force the proxy's Yahoo "<base>-USD" series (src=yahoo) so the
+    // chart matches the SCAN's instrument/price exactly. A guessed Binance pair
+    // can be the wrong token (or missing → a same-named stock), which throws the
+    // price scale off and pushes the real levels off-screen.
+    const dailyP = isCrypto ? vivekCryptoDaily(SYM)
+                            : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
 
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
@@ -472,18 +475,20 @@
       }
       if (d.price == null) d.price = daily[daily.length - 1].close;
       d.default_tf = "1D";
-      return intradayP.then((intraday) => {
-        if (intraday && intraday.length >= 24) {
-          const h4 = isCrypto ? intraday : bucketBars(intraday, 4 * 3600);   // crypto already 4h
-          // 4H is structure + the Daily plan as reference (no server-side 4H plan).
-          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", dailyPlan, true);
-        }
-        console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
-                     `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
-                     `plans=[${Object.keys(plans).join(", ")}]`);
-        render(d);
-      });
+      console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
+                   `(daily=${daily.length}); plans=[${Object.keys(plans).join(", ")}]`);
+      render(d);
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+  }
+
+  // VIVEK crypto daily history, forced to the scan-consistent Yahoo <base>-USD
+  // series via the proxy (src=yahoo) — never a guessed Binance pair.
+  function vivekCryptoDaily(sym) {
+    const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
+    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=5y&interval=1d&src=yahoo`,
+      { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -1212,7 +1217,13 @@
       const canvas = document.createElement("canvas");
       canvas.className = "draw-layer";
       el.appendChild(canvas);
-      if (tools) tools.hidden = false;
+      // Relocate the drawing tools into the timeframe pill row (next to D / W /
+      // 3D / Ruler) for one clean control strip, instead of a floating overlay.
+      if (tools) {
+        tools.hidden = false;
+        const tgl = $("#tf-toggle");
+        if (tgl && tools.parentNode !== tgl) { tools.classList.add("in-toggle"); tgl.appendChild(tools); }
+      }
 
       const ts = chart.timeScale();
       let tool = "cursor";            // 'cursor' | 'trend' | 'hline'

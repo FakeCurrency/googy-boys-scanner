@@ -38,7 +38,7 @@
 .ct-chips .chip { background: var(--blue-soft); color: var(--blue); }
 .ct-chips .chip.weekly { background: var(--green-soft); color: var(--green); }
 
-.tf-toggle { display: inline-flex; gap: 2px; padding: 2px; margin: 10px 16px 0; background: var(--fill); border-radius: 10px; }
+.tf-toggle { display: inline-flex; flex-wrap: wrap; gap: 2px; row-gap: 2px; padding: 2px; margin: 10px 16px 0; background: var(--fill); border-radius: 10px; align-items: center; }
 .tf-btn {
   appearance: none; border: 0; cursor: pointer; background: transparent;
   color: var(--text-2); font: 600 13px/1 var(--sans); min-width: 44px; padding: 9px 13px;
@@ -66,6 +66,12 @@
 .draw-btn.is-active { background: var(--blue); color: #fff; }
 .draw-btn.draw-clear { color: var(--muted); }
 .draw-btn.draw-clear:hover { color: var(--red); }
+/* when relocated into the timeframe pill row: inline, no floating panel chrome */
+.draw-tools.in-toggle {
+  position: static; z-index: auto; padding: 0 0 0 6px; margin-left: 4px;
+  background: transparent; border: 0; border-left: 1px solid var(--border);
+  backdrop-filter: none; border-radius: 0;
+}
 /* the canvas overlay sits on top of the chart; pointer-events toggled in JS */
 .draw-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 
