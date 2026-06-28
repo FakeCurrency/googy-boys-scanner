@@ -35,7 +35,7 @@
 /* ── equity curve ── */
 .jr-equity { margin-top: 8px; }
 .jr-equity-chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-.jr-equity-chart svg { width: 100%; height: 180px; display: block; }
+.jr-equity-chart svg { width: 100%; height: 110px; display: block; }
 
 /* ── tables ── */
 .jr-table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
@@ -346,13 +346,24 @@
 .jr-reason-trail  { background: rgba(91,156,255,.15); color: var(--bot); }
 .jr-reason-stop   { background: rgba(255,91,91,.15);  color: #ff5b5b; }
 
-/* dual-line equity tags under each curve */
-.jr-eqsvg { width: 100%; height: 190px; display: block; }
+/* dual-line equity tags under each curve — smaller + gentler */
+.jr-eqsvg { width: 100%; height: 110px; display: block; }
+.jr-equity-chart { padding: 12px 14px 10px; }
+.jr-eqaxis {
+  display: flex; justify-content: space-between; margin-top: 5px;
+  font: 600 10.5px/1 var(--mono); color: var(--muted-2);
+}
 .jr-eqtags {
-  display: flex; gap: 16px; justify-content: flex-end; margin-top: 8px;
-  font: 700 12.5px/1 var(--mono);
+  display: flex; gap: 16px; justify-content: flex-end; margin-top: 4px;
+  font: 700 12px/1 var(--mono);
 }
 .jr-eqtags .lg-r { color: var(--bot); }
+
+/* Compact stat cards inside the journal sections (the top block was too tall). */
+.side .stat-card, .cmp .stat-card { padding: 12px 14px; }
+.side .stat-label, .cmp .stat-label { font-size: 10px; }
+.side .stat-value, .cmp .stat-value { font-size: 21px; margin-top: 5px; }
+.side .stats, .cmp .stats { margin-bottom: 10px; }
 
 /* ── 1 · comparison overview ── */
 .cmp {

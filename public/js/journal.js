@@ -227,8 +227,8 @@
     const sorted = closed.slice().filter((t) => t.realized_r != null)
       .sort((a, b) => (exitMs(a) || 0) - (exitMs(b) || 0));
     let r = 0, d = 0;
-    const pts = [{ r: 0, d: 0 }];
-    for (const t of sorted) { r += t.realized_r; d += (dollarsOf(t) || 0); pts.push({ r: round(r, 3), d: round(d, 2) }); }
+    const pts = [{ r: 0, d: 0, date: sorted.length ? sorted[0].entry_date || null : null }];
+    for (const t of sorted) { r += t.realized_r; d += (dollarsOf(t) || 0); pts.push({ r: round(r, 3), d: round(d, 2), date: t.exit_date || null }); }
     return pts;
   }
 
@@ -254,7 +254,7 @@
       el.innerHTML = `<div class="jr-empty">No closed trades yet${label ? ` for ${label}` : ""} — the curve appears here.</div>`;
       return;
     }
-    const w = 1000, h = 190, pad = 10;
+    const w = 1000, h = 120, pad = 8;
     const norm = (vals) => {
       const mn = Math.min(0, ...vals), mx = Math.max(0, ...vals), rng = (mx - mn) || 1;
       return (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
@@ -266,14 +266,24 @@
     const lineR = pts.map((p, i) => `${xs(i).toFixed(1)},${yR(p.r).toFixed(1)}`).join(" ");
     const area = `${pad},${yD(0).toFixed(1)} ${lineD} ${xs(pts.length - 1).toFixed(1)},${yD(0).toFixed(1)}`;
     const endD = ds[ds.length - 1], endR = rs[rs.length - 1];
-    const col = endD >= 0 ? "#2fd07f" : "#ff5b5b";
+    // Softer, muted up/down colours + a fade-to-transparent gradient fill.
+    const col = endD >= 0 ? "#3fb784" : "#d07070";
+    const gid = elId + "-g";
+    const dated = pts.filter((p) => p.date);
+    const dlabel = (s) => s ? new Date(s + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
+    const first = dated.length ? dlabel(dated[0].date) : "";
+    const last = dated.length ? dlabel(dated[dated.length - 1].date) : "";
     el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="jr-eqsvg">
-      <line x1="0" y1="${yD(0).toFixed(1)}" x2="${w}" y2="${yD(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
-      <polygon points="${area}" fill="${col}" fill-opacity="0.10"/>
-      <polyline points="${lineD}" fill="none" stroke="${col}" stroke-width="2.5"/>
-      <polyline points="${lineR}" fill="none" stroke="#5b9cff" stroke-width="1.6" stroke-dasharray="5 4" opacity="0.95"/>
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${col}" stop-opacity="0.16"/><stop offset="1" stop-color="${col}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <line x1="0" y1="${yD(0).toFixed(1)}" x2="${w}" y2="${yD(0).toFixed(1)}" stroke="#222a38" stroke-width="1" stroke-dasharray="2 4"/>
+      <polygon points="${area}" fill="url(#${gid})"/>
+      <polyline points="${lineD}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>
+      <polyline points="${lineR}" fill="none" stroke="#7aa7e6" stroke-width="1.1" stroke-dasharray="4 5" opacity="0.5"/>
     </svg>
-    <div class="jr-eqtags"><span class="r-pos ${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
+    <div class="jr-eqaxis"><span>${first}</span><span>${last}</span></div>
+    <div class="jr-eqtags"><span class="${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
   }
 
   // ── tables ────────────────────────────────────────────────────────────────
