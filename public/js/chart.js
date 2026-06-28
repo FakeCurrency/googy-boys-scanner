@@ -883,6 +883,11 @@
         size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
         stop: stopV, target: tgtV, tp1: tp1V, tp2: tp2V, tp3: tp3V,
         timeframe: d._vivek ? (d._activeTf || "1D") : null,
+        // Log the grade + setup type so the journal matches Claude's rows: the
+        // canonical scan grade, and the entry trigger on the timeframe you took
+        // (reclaim / retest / break → "Weekly reclaim" etc. in the journal).
+        grade: d.grade || null,
+        entry_type: (av && av.entry_trigger) || d.entry_trigger || null,
         notes: `Simulated from chart · ${tfTag}${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
         status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
       });

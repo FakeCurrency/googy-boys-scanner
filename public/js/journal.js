@@ -30,6 +30,10 @@
   const px   = (v) => (v == null || isNaN(v) ? "—" : (+v).toLocaleString(undefined, { maximumFractionDigits: 6 }));
   const round = (v, n) => +(+v).toFixed(n);
 
+  // SYMBOL → { grade, entry_type } from the live scans, used only as a fallback
+  // for older manual trades that were logged before grade/setup were captured.
+  const scanMeta = new Map();
+
   // ── VIVEK sizing + cost model (mirrors scanner/broker/vivek_bot.py + config) ──
   // Each market is sized off its own $10k book; the account spans all three, so
   // the starting capital shown to the user is 3 × $10k = $30k.
@@ -294,10 +298,29 @@
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
   const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "S" : "L"}</span>`;
-  // Symbol cell links to the chart for that ticker.
+  // Grade + setup type: the bot logs these; manual trades now do too. For trades
+  // taken before that, fall back to the live scan's grade/trigger for the symbol
+  // so older rows aren't blank (scanMeta is filled from *_vivek.json at load).
+  const symKey = (t) => String((t && t.symbol) || "").toUpperCase();
+  const gradeOf = (t) => t.grade || (scanMeta.get(symKey(t)) || {}).grade || null;
+  const entryTypeOf = (t) => t.entry_type || (scanMeta.get(symKey(t)) || {}).entry_type || null;
+
+  // Setup chip: the timeframe + entry trigger of the trade — e.g. "Weekly
+  // reclaim" — coloured by trigger (reclaim green / retest red / break amber).
+  const SETUP_CLS = { reclaim: "su-reclaim", retest: "su-retest", break: "su-break" };
+  const TF_NAME = { "1W": "Weekly", "1D": "Daily", "3D": "3-Day", "4H": "4-Hour" };
+  function setupChip(t) {
+    const et = String(entryTypeOf(t) || "").toLowerCase();
+    const tf = t.timeframe || "";
+    if (!et && !tf) return "";
+    const tfn = TF_NAME[tf] || tf;
+    const label = et ? `${tfn} ${et}` : tfn;
+    return `<span class="jr-setup ${SETUP_CLS[et] || ""}" title="Setup">${esc(label)}</span>`;
+  }
+  // Symbol cell links to the chart for that ticker, with the setup chip after it.
   const symCell = (t) =>
     `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}" title="Open ${up(t.symbol)} chart">` +
-    `${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></a></td>`;
+    `${dirChip(t.direction)} ${up(t.symbol)}</a>${setupChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
     if (ms == null) return "—";
@@ -318,7 +341,7 @@
         ? `<td class="num"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
-        <td>${gradeChip(t.grade)}</td>
+        <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
         <td class="num jr-ur">—</td>
@@ -335,7 +358,7 @@
       const d = dollarsOf(t);
       return `<tr>
         ${symCell(t)}
-        <td>${gradeChip(t.grade)}</td>
+        <td>${gradeChip(gradeOf(t))}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp">${stamp(exitMs(t))}</td>
@@ -362,7 +385,7 @@
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         <td>${ownerChip(side)}</td>
         ${symCell(t)}
-        <td>${gradeChip(t.grade)}</td>
+        <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.stop)}</td>
         <td class="num"><span class="num-sub">${tps}</span></td>
@@ -387,7 +410,7 @@
       return `<tr>
         <td>${ownerChip(side)}</td>
         ${symCell(t)}
-        <td>${gradeChip(t.grade)}</td>
+        <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.exit)}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
@@ -551,6 +574,21 @@
       if (r.ok) state.bot = splitBot(await r.json());
     } catch (_) { /* keep empty */ }
   }
+  // Pull grade + entry trigger per symbol from the live scans (fallback only).
+  async function loadScanMeta() {
+    const files = ["asx_vivek.json", "nasdaq_vivek.json", "crypto_vivek.json"];
+    await Promise.all(files.map(async (f) => {
+      try {
+        const r = await fetch("data/" + f, { cache: "no-cache" });
+        if (!r.ok) return;
+        const j = await r.json();
+        for (const row of (j.results || [])) {
+          const sym = String(row.symbol || "").toUpperCase();
+          if (sym && !scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null });
+        }
+      } catch (_) { /* skip a missing/blocked file */ }
+    }));
+  }
 
   // ── close modal (Me) ──────────────────────────────────────────────────────
   let closeId = null;
@@ -666,8 +704,8 @@
   async function init() {
     loadMe();
     renderAll();                 // paint Me immediately
-    await loadBot();
-    renderAll();                 // repaint with Claude
+    await Promise.all([loadBot(), loadScanMeta()]);
+    renderAll();                 // repaint with Claude + grade/setup fallback
     wire();
     wireSync();
     refreshLive();
