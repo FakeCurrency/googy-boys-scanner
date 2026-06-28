@@ -339,8 +339,10 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # VIVEK_BOT_ENABLED + per-market MODE "live" + VIVEK_LIVE_CONFIRMED + a real
 # broker (only crypto/Bybit exists) + BYBIT_TESTNET=false. Until then the runner
 # only ever builds a paper book.
-VIVEK_BOT_ENABLED        = False   # master switch — when False the runner is a no-op
-VIVEK_BOT_DRY_RUN        = True    # True = decide + log only, never mutate the book (final safety gate)
+VIVEK_BOT_ENABLED        = True    # master switch — runner maintains the PAPER book each scan
+VIVEK_BOT_DRY_RUN        = False   # False = write the paper book so trades persist + show in the journal
+                                   #   (paper only — places NO real order; live needs MODE=live +
+                                   #    VIVEK_LIVE_CONFIRMED + a wired broker, none of which exist yet)
 VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"}  # "live" not wired yet
 VIVEK_BOT_ACCOUNT_EQUITY = 10_000  # paper account equity used for sizing (USD)
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order

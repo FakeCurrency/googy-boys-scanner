@@ -1,0 +1,96 @@
+name: Crypto bot (24/7 paper)
+
+# Crypto trades round the clock, so the VIVEK paper bot scans + manages the
+# crypto book every hour, EVERY day — independent of the weekday/stock-hours
+# schedule in scan.yml. Stock markets (ASX/NASDAQ) are handled by scan.yml and
+# only open positions during their sessions.
+#
+# Shares the "scan" concurrency group with scan.yml so the two never write the
+# shared paper book (journal/vivek_bot_book.json) at the same time.
+#
+# Paper only: scanner.run maintains the JSON paper book — it places NO real
+# orders (no broker is wired). Pushing to main triggers a Cloudflare redeploy.
+on:
+  schedule:
+    - cron: "0 * * * *"        # hourly, all days
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "Extra args for scanner.run (e.g. --limit 8 for a quick test)"
+        default: ""
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  crypto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore frame cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames
+          key: vivek-frames-${{ github.run_id }}
+          restore-keys: |
+            vivek-frames-
+
+      - name: Run crypto scan + paper bot
+        run: python -m scanner.run --market crypto ${{ github.event.inputs.args }}
+
+      - name: Verify VIVEK data schema (crypto)
+        run: |
+          python - <<'PY'
+          import json, sys
+          from scanner import config
+          want = config.VIVEK_SCHEMA_VERSION
+          f = "public/data/crypto_vivek.json"
+          v = json.load(open(f)).get("schema_version")
+          if v != want:
+              print(f"SCHEMA GATE FAILED: {f}: schema_version {v} != expected {want}"); sys.exit(1)
+          print(f"schema gate OK — {f} at v{want}")
+          PY
+
+      - name: Commit & push fresh data (triggers Cloudflare deploy)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Crypto scan output + the persistent paper book + the auto journal.
+          PATHS="public/data journal/vivek_journal.json journal/vivek_bot_book.json"
+          git add $PATHS 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: crypto bot $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+          # Generated data is recomputed each run; the latest scan simply wins —
+          # rebase onto the freshest main and re-apply our outputs on top.
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+              git checkout "$SHA" -- "$p" 2>/dev/null || true
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: crypto bot $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

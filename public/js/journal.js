@@ -47,9 +47,12 @@
   };
 
   function isCryptoTrade(t) {
-    const a = t && t.asset_type;
-    if (STOCK_TYPES.has(a)) return false;
+    // Bot trades carry `market` ("asx"/"nasdaq"/"crypto"); manual trades from the
+    // chart carry `asset_type`. Prefer whichever is set so a bot ASX position is
+    // never mistaken for crypto (which would misprice + misclassify it).
+    const a = (t && (t.market || t.asset_type)) || null;
     if (a === "crypto") return true;
+    if (STOCK_TYPES.has(a)) return false;
     if (a == null || a === "") return !NONCRYPTO.has(String((t && t.symbol) || "").toUpperCase());
     return false;
   }
