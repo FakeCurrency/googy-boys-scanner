@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=27" />
-  <link rel="stylesheet" href="css/about.css" />
+  <link rel="stylesheet" href="css/styles.css?v=42" />
+  <link rel="stylesheet" href="css/about.css?v=2" />
 </head>
 <body>
   <header class="topbar">
@@ -27,62 +27,103 @@
   <main class="doc">
     <h2 class="doc-title">How the scanner works</h2>
     <p class="lead">
-      Every trading day the scanner reviews the ASX and NASDAQ and surfaces stocks showing a healthy
-      uptrend that has paused and pulled back to a key moving average. It is a shortlist for
-      <em>manual review</em> — it does not place trades or predict prices.
+      <strong>VIVEK 5.0</strong> hunts for one specific, repeatable event: a stock or coin
+      <em>reacting</em> at its <strong>200-period SMA</strong> — the line big-picture traders watch as
+      the dividing line between trend and no-trend. The scanner reviews the ASX, NASDAQ and Crypto,
+      finds names interacting with that level, and surfaces a shortlist with a ready-made trade plan
+      for <em>manual review</em>. It does not predict prices, and (today) it does not place trades.
     </p>
 
     <section class="doc-section">
-      <h3>The Fibonacci-EMA framework</h3>
-      <p>The engine tracks seven exponential moving averages spaced along the Fibonacci sequence:</p>
-      <div class="ema-ladder">
-        <span>8</span><span>›</span><span>13</span><span>›</span><span>21</span><span>›</span>
-        <span>34</span><span>›</span><span>55</span><span>›</span><span>89</span><span>›</span><span>144</span>
-      </div>
+      <h3>The 200&nbsp;SMA reaction</h3>
       <p>
-        The ideal condition is when they line up in order — the fast 8 above the 13, above the 21,
-        and so on. That is <strong>full bullish alignment</strong>: a clean uptrend across every
-        timescale at once.
+        The 200 SMA is the only level that matters here. When price has trended away from it and then
+        comes back to <em>test</em> it, one of two things happens: the level <strong>holds</strong>
+        (a long opportunity as the trend resumes) or it <strong>fails</strong> (a short as the trend
+        flips). The scanner measures that reaction on two timeframes:
       </p>
+      <ul class="def-list">
+        <li><strong>Weekly</strong> — the primary read. Slower and less noisy; a weekly 200-SMA
+          reaction is the highest-conviction version of the setup.</li>
+        <li><strong>Daily / H4</strong> — the faster read for timing the same level, so an entry can
+          be taken without waiting a full week.</li>
+      </ul>
+      <p>A setup only becomes <strong>ARMED</strong> (actionable) once a mechanical trigger actually
+        fires at the level — until then it sits as <span class="chip">WATCHING</span>: near the 200
+        SMA, but nothing has happened yet.</p>
     </section>
 
     <section class="doc-section">
-      <h3>Signal chips</h3>
-      <p>Each pattern element a stock shows contributes points toward a score out of 13:</p>
+      <h3>The three entry types</h3>
+      <p>Every armed setup is one of exactly three reactions, labelled on the card and on every paper
+        trade so you always know <em>why</em> it triggered:</p>
       <ul class="chip-list">
-        <li><span class="chip">FULL BULLISH ALIGNMENT</span> all seven EMAs stacked in order. <em>+3</em></li>
-        <li><span class="chip">CORE FIB PULLBACK EMA_34</span> price has retraced to a core EMA (21 / 34 / 55). <em>+3</em></li>
-        <li><span class="chip">STRONG FIB CONFLUENCE @ …</span> several EMA levels cluster at one price zone. <em>+3</em></li>
-        <li><span class="chip">EMA COMPRESSION</span> the moving averages are bunched tightly. <em>+2</em></li>
-        <li><span class="chip weekly">WEEKLY BULLISH</span> the weekly timeframe is also trending up. <em>+1</em></li>
-        <li><span class="chip">VOLUME EXPANSION</span> volume is elevated versus its recent average. <em>+1</em></li>
+        <li><span class="chip">RECLAIM</span> <strong>Reclaim after rejection</strong> — price pierced
+          the 200 SMA, was rejected, then closed back on the trend side. The level held.</li>
+        <li><span class="chip">RETEST</span> <strong>Retest + confirmation</strong> — price returns to
+          the level and confirms it (a hold with momentum) rather than slicing through.</li>
+        <li><span class="chip">BREAK</span> <strong>Break of small structure</strong> — a clean break
+          of a minor swing high/low sitting right at the 200 SMA, confirming the move.</li>
+      </ul>
+      <p>You can filter the dashboard by these under <strong>200&nbsp;SMA interaction</strong>, and the
+        <a href="track.html">Track</a> page breaks expectancy down by entry type so you can see which
+        reaction is paying.</p>
+    </section>
+
+    <section class="doc-section">
+      <h3>Timeframe-aware levels</h3>
+      <p>
+        The trade plan is computed independently on each timeframe, so the <strong>Entry, SL and
+        TP1–TP3 change when you switch timeframe</strong> on the chart:
+      </p>
+      <ul class="def-list">
+        <li><strong>Daily</strong> and <strong>Weekly</strong> each carry their own separate plan —
+          their own 200-SMA level, entry trigger, stop and targets.</li>
+        <li><strong>4H</strong> and <strong>3D</strong> are reference views: real 4H / 3-day candles,
+          but they borrow the Daily plan's levels (there's no separate plan at those timeframes yet).
+          The chart shows a clear notice when you're on one of them.</li>
       </ul>
     </section>
 
     <section class="doc-section">
       <h3>Grades</h3>
-      <p>The grade is simply the sum of the points above (out of 13).</p>
+      <p>Each setup is scored on the quality of the reaction (alignment, structure, volume, weekly
+        confluence, momentum) and graded:</p>
       <div class="grade-grid">
-        <div class="grade-row"><span class="g g-aplus">A+</span> The most signals stacked together — the strongest aligned setup. <em>Tradeable</em></div>
-        <div class="grade-row"><span class="g g-a">A</span> A strong setup with most quality signals present. <em>Tradeable</em></div>
-        <div class="grade-row"><span class="g g-b">B</span> A partial setup — fewer signals lined up. <em>Watching</em></div>
-        <div class="grade-row"><span class="g g-c">C</span> Only one or two signals present. <em>Watching</em></div>
+        <div class="grade-row"><span class="g g-aplus">A+</span> Top-tier reaction — the cleanest, highest-conviction setup. <em>Immediately tradeable</em></div>
+        <div class="grade-row"><span class="g g-a">A</span> A strong reaction with most quality signals present. <em>Tradeable</em></div>
+        <div class="grade-row"><span class="g g-b">B+</span> A partial setup — fewer signals lined up. <em>Watch list</em></div>
+        <div class="grade-row"><span class="g g-c">WATCH</span> Near the level / informational only. <em>Watching</em></div>
       </div>
+      <p>An A+ or A is <strong>demoted to B+</strong> if it isn't armed, or if its reward-to-risk to
+        TP2 is below <strong>1.5 : 1</strong> — flagged <span class="chip warn">LOW R:R</span>.</p>
     </section>
 
     <section class="doc-section">
-      <h3>Entry, stop &amp; target</h3>
+      <h3>Entry, stop &amp; targets</h3>
       <ul class="def-list">
-        <li><strong>Entry</strong> — the pullback level, where price has retraced to a key EMA.</li>
-        <li><strong>Stop</strong> — below the recent swing low / structure (shown as Stop&nbsp;%).</li>
-        <li><strong>Target</strong> — the nearest real resistance above; if price is at new highs the
-          target falls back to a 2R measured move, tagged <span class="chip info">TARGET = 2R FALLBACK</span>.</li>
-        <li><strong>P2</strong> — the Phase-2 SuperTrend (ATR) trailing stop, as a % below price.</li>
+        <li><strong>Entry</strong> — the trigger price of the reaction (reclaim / retest / break) on
+          the selected timeframe.</li>
+        <li><strong>SL</strong> — just beyond the reaction / structure, so the setup is invalidated if
+          the level truly fails.</li>
+        <li><strong>TP1 / TP2 / TP3</strong> — placed at prior structure (real support/resistance),
+          falling back to measured R-multiples when there's clean air. The headline R:R is measured to
+          TP2.</li>
+        <li><strong>Scale &amp; trail</strong> — partial profits are booked at each TP (e.g. 25% / 50%
+          / 15%); the stop moves to <strong>break-even at TP1</strong>, then below <strong>new support
+          at TP2</strong>, and never moves against the trade.</li>
       </ul>
-      <p>The <strong>R : R</strong> is reward-to-risk. A tradeable <strong>A+ / A</strong> grade must
-        also clear <strong>1.5 : 1</strong> — strong patterns with a weaker reward-to-risk are
-        demoted to the <em>Watch</em> list and flagged <span class="chip warn">LOW R:R</span>, because
-        backtesting showed a minimum R:R materially improves the strategy.</p>
+    </section>
+
+    <section class="doc-section">
+      <h3>Paper-trade journal &amp; track record</h3>
+      <p>
+        Armed A+/A setups are logged to a forward-test <a href="journal.html">journal</a> at the live
+        (delayed) intraday price during market hours, then marked to market each scan — booking
+        scale-outs and stops exactly as the rules dictate. Every trade carries its
+        <strong>entry-type label</strong>, timeframe and grade, so the <a href="track.html">Track</a>
+        page can show real expectancy split by entry type, grade and timeframe.
+      </p>
     </section>
 
     <section class="doc-section">
@@ -90,37 +131,17 @@
       <p>
         The <strong>PULSE</strong> bar across the top tracks macro context — gold, silver, oil, gas,
         the tech and biotech indices, bond yields and the Aussie dollar — each with its 1-day and
-        5-day move. A liquidity filter keeps only names trading meaningful volume each day; the most
-        liquid are tagged <span class="badge liq-liquid">LIQUID</span>.
+        5-day move. A liquidity filter keeps only names trading meaningful volume each day.
       </p>
-    </section>
-
-    <section class="doc-section">
-      <h3>The Reversals scanner</h3>
-      <p>
-        The <strong>Reversals</strong> tab is a second, separate scanner for the *opposite* setup —
-        catching the <em>birth</em> of a new uptrend rather than a pullback within an existing one.
-        It looks for a beaten-down or basing stock turning up, using SMA 9/26/43/200, RSI 14 and
-        Volume. Each setup scores out of 14:
-      </p>
-      <ul class="chip-list">
-        <li><span class="chip">9 › 26 RECLAIM</span> price crossing up through the short SMAs (the trigger). <em>+4</em></li>
-        <li><span class="chip">BASE / DOWNTREND</span> well off its one-year high — room to run. <em>+3</em></li>
-        <li><span class="chip">VOLUME SURGE</span> volume expanding vs the 20-day average. <em>+3</em></li>
-        <li><span class="chip">BASE BREAKOUT</span> closing above the base high / descending resistance. <em>+2</em></li>
-        <li><span class="chip">RSI TURNING UP</span> RSI rising through its signal line. <em>+2</em></li>
-      </ul>
-      <p>Same grades (A+ ≥ 11, A ≥ 9, B ≥ 6, C ≥ 4), levels, dropdown and chart — switch with the
-        <strong>Pullbacks / Reversals</strong> toggle in the header.</p>
     </section>
 
     <section class="doc-section">
       <h3>Timing &amp; data</h3>
       <p>
-        Scans run automatically after each market's close — ASX around 6:00&nbsp;am AEST, NASDAQ
-        after the US session. Three markets are covered: <strong>ASX</strong>, <strong>NASDAQ</strong>
-        and <strong>Crypto</strong> (the top 100 coins by market cap, which trade 24/7). Price and
-        volume data comes from Yahoo Finance; the crypto list comes from CoinGecko.
+        Scans refresh automatically through the session. Three markets are covered:
+        <strong>ASX</strong>, <strong>NASDAQ</strong> and <strong>Crypto</strong> (which trades 24/7).
+        Price and volume come from Yahoo Finance (dividend-adjusted, ~15&nbsp;min delayed) — adequate
+        for the daily and weekly bars this system trades on.
       </p>
     </section>
 

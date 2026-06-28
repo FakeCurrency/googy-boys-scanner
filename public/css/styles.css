@@ -164,7 +164,7 @@ body {
   color: var(--text); font: 600 13px/1 var(--sans); letter-spacing: -0.01em;
   padding: 6px 15px; border-radius: 7px; transition: all .18s;
 }
-.market-btn.is-active { background: var(--panel); color: var(--text); box-shadow: var(--shadow-pill); }
+.market-btn.is-active { background: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
 .market-btn:not(.is-active):hover { color: var(--text-2); }
 
 .scan-switch { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill); border-radius: 9px; }

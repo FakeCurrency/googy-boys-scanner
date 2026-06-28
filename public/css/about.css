@@ -36,7 +36,7 @@
   border-radius: var(--radius-sm); padding: 12px 14px;
 }
 .grade-row em { color: var(--text); font-style: normal; font-weight: 600; margin-left: auto; font-size: 12px; }
-.g { font: 800 14px/1 var(--sans); width: 30px; }
+.g { font: 800 14px/1 var(--sans); min-width: 30px; flex: 0 0 auto; white-space: nowrap; padding-right: 6px; }
 .g-aplus { color: var(--grade-aplus); }
 .g-a { color: var(--grade-a); }
 .g-b { color: var(--grade-b); }
