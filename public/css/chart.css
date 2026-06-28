@@ -93,8 +93,10 @@
   font: 600 12.5px/1.2 var(--sans);
 }
 .tfs-strip.s-strong { border-color: var(--green); background: rgba(47,208,127,.08); }
+.tfs-strip.s-near   { border-color: var(--blue); background: rgba(10,132,255,.07); }
 .tfs-read { color: var(--text); }
 .tfs-strip.s-strong .tfs-read { color: var(--green); }
+.tfs-strip.s-near .tfs-read { color: var(--blue); }
 .tfs-strip.s-watch .tfs-read { color: var(--muted); }
 .tfs-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .tfs-chip {
@@ -109,6 +111,8 @@
 .tfs-chip.s-armed b { color: var(--green); }
 .tfs-chip.s-weak { border-color: #ffb020; color: #ffb020; }
 .tfs-chip.s-weak b { color: #ffb020; }
+.tfs-chip.s-near { border-color: var(--blue); color: var(--blue); }
+.tfs-chip.s-near b { color: var(--blue); }
 .tfs-chip.s-watch { color: var(--muted); }
 .tfs-chip.ref { opacity: .68; }
 .tfs-chip:hover { border-color: var(--blue); }

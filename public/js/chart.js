@@ -932,16 +932,32 @@
   // so the chart actively suggests where the edge is, not just draws it. Reads the
   // same per-TF plans the chart already holds; clicking a chip jumps to that TF.
   const TFS_MIN_RR = 1.5;
+  const TFS_NEAR_PCT = 1.5;   // price within 1.5% of the 200-SMA line = "approaching"
   function renderTFSetups(d, tfs, pickTF, getCurTF) {
     const order = ["4H", "1D", "3D", "1W"];
     const items = order.filter((k) => tfs[k] && tfs[k].levels).map((k) => {
       const lv = tfs[k].levels;
-      return { k, approx: !!tfs[k].approx, armed: !!lv.armed, rr: +lv.rr || 0, trig: lv.entry_trigger };
+      // How far this timeframe's latest close sits from its own 200-SMA reaction
+      // line (the core event). Lets the strip ANTICIPATE setups, not just report
+      // ones that have already armed.
+      const candles = tfs[k].candles || [];
+      const px = candles.length ? +candles[candles.length - 1].close : null;
+      const lvl = +lv.level || null;
+      const nearPct = (px && lvl) ? Math.abs(px - lvl) / lvl * 100 : null;
+      return { k, approx: !!tfs[k].approx, armed: !!lv.armed, rr: +lv.rr || 0,
+               trig: lv.entry_trigger, nearPct };
     });
     if (!items.length) return null;
+    const fmtPct = (p) => (p < 0.1 ? "<0.1%" : p.toFixed(1) + "%");
     // Real-plan timeframes only (a 4H / old-3D reference borrows the Daily plan —
     // don't let it double-count toward confluence).
     const realArmed = items.filter((i) => i.armed && !i.approx);
+    // "Approaching": a real-plan TF that hasn't triggered but whose price is
+    // hugging the 200-SMA line — a setup that may be about to fire.
+    const realNear = items
+      .filter((i) => !i.armed && !i.approx && i.nearPct != null && i.nearPct <= TFS_NEAR_PCT)
+      .sort((a, b) => a.nearPct - b.nearPct);
+    const isNear = (i) => realNear.includes(i);
     let cls, read;
     if (realArmed.length >= 2) {
       cls = "strong";
@@ -950,15 +966,35 @@
       const a = realArmed[0];
       cls = a.rr >= TFS_MIN_RR ? "armed" : "weak";
       read = `Armed on ${TF_LABEL[a.k]} · ${a.trig || "trigger"} · R:R ${a.rr.toFixed(1)}`;
+      // An armed TF with another TF also hugging the line = stacking confluence.
+      if (realNear.length) read += ` · ${TF_LABEL[realNear[0].k]} approaching (${fmtPct(realNear[0].nearPct)})`;
+    } else if (realNear.length >= 2) {
+      cls = "near";
+      read = `⚡ 200-SMA cluster forming — ${realNear.map((i) => TF_LABEL[i.k]).join(" + ")} ` +
+             `within ${fmtPct(realNear[realNear.length - 1].nearPct)} of the line`;
+    } else if (realNear.length === 1) {
+      const a = realNear[0];
+      cls = "near";
+      read = `⏳ Approaching a ${TF_LABEL[a.k]} setup — ${fmtPct(a.nearPct)} from the 200-SMA`;
     } else {
       cls = "watch";
-      read = "Watching — no timeframe has triggered yet";
+      // Name the nearest real-plan TF so the strip still points somewhere useful.
+      const nearest = items
+        .filter((i) => !i.approx && i.nearPct != null)
+        .sort((x, y) => x.nearPct - y.nearPct)[0];
+      read = nearest
+        ? `Watching — nearest is ${TF_LABEL[nearest.k]}, ${fmtPct(nearest.nearPct)} from the line`
+        : "Watching — no timeframe has triggered yet";
     }
     const chip = (i) => {
-      const state = i.armed ? (i.rr >= TFS_MIN_RR ? "armed" : "weak") : "watch";
-      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} · ${i.rr.toFixed(1)}R` : "watch";
-      const title = i.approx ? `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`
-                             : `${TF_LABEL[i.k]} 200-SMA plan${i.armed ? " · ARMED" : " · watching"}`;
+      const near = isNear(i);
+      const state = i.armed ? (i.rr >= TFS_MIN_RR ? "armed" : "weak") : (near ? "near" : "watch");
+      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} · ${i.rr.toFixed(1)}R`
+                : (i.nearPct != null && !i.approx ? fmtPct(i.nearPct) : "watch");
+      const title = i.approx
+        ? `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`
+        : `${TF_LABEL[i.k]} 200-SMA plan${i.armed ? " · ARMED" : (near ? " · approaching" : " · watching")}` +
+          (i.nearPct != null ? ` · ${fmtPct(i.nearPct)} from the line` : "");
       return `<button class="tfs-chip s-${state}${i.approx ? " ref" : ""}" data-tf="${esc(i.k)}" title="${esc(title)}">` +
              `<b>${TF_LABEL[i.k]}</b><span>${esc(sub)}</span></button>`;
     };
