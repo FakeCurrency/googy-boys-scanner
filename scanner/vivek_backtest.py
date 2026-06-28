@@ -208,42 +208,50 @@ def aggregate(trades: list[dict]) -> dict:
 
 # ── driver ────────────────────────────────────────────────────────────────────
 
-def run_backtest(markets: list[str], limit: int | None, period: str,
-                 exclude_funds: bool = True) -> dict:
+# Slim trade record stored in the report — enough to recompute every metric and
+# to MERGE markets together across separate (streamed) runs.
+_SLIM_KEYS = ("symbol", "market", "timeframe", "entry_type", "grade", "direction",
+              "entry", "stop", "exit", "exit_date", "exit_reason",
+              "realized_r", "gross_r", "cost_r")
+
+
+def _slim(tr: dict) -> dict:
+    return {k: tr.get(k) for k in _SLIM_KEYS}
+
+
+def run_market_trades(mk: str, limit: int | None, period: str,
+                      exclude_funds: bool = True) -> tuple[list[dict], dict]:
+    """Backtest ONE market; return (slim trades, coverage entry)."""
     from .universe import load_universe
     from .data import download
 
-    all_trades: list[dict] = []
-    per_market_counts = {}
-    for mk in markets:
-        uni = load_universe(mk, full=False)
-        if exclude_funds:
-            uni = [u for u in uni if not _is_fund_or_reit({"name": u.get("name"), "sector": u.get("sector")})]
-        if limit:
-            uni = uni[:limit]
-        log.info("[%s] downloading %d tickers (%s) ...", mk, len(uni), period)
-        frames = download([u["yf"] for u in uni], period=period)
-        meta = {u["yf"]: u for u in uni}
-        mt = 0
-        for yf, df in frames.items():
-            u = meta.get(yf, {})
-            try:
-                trades = replay_symbol(df, mk, u.get("symbol", yf), u.get("name", yf), u.get("sector", ""))
-            except Exception as e:
-                log.warning("[%s] %s replay error: %s", mk, yf, e)
-                trades = []
-            all_trades.extend(trades)
-            mt += len(trades)
-        per_market_counts[mk] = {"symbols": len(uni), "trades": mt}
-        log.info("[%s] %d trades from %d symbols", mk, mt, len(uni))
+    uni = load_universe(mk, full=False)
+    if exclude_funds:
+        uni = [u for u in uni if not _is_fund_or_reit({"name": u.get("name"), "sector": u.get("sector")})]
+    if limit:
+        uni = uni[:limit]
+    log.info("[%s] downloading %d tickers (%s) ...", mk, len(uni), period)
+    frames = download([u["yf"] for u in uni], period=period)
+    meta = {u["yf"]: u for u in uni}
+    trades: list[dict] = []
+    for yf, df in frames.items():
+        u = meta.get(yf, {})
+        try:
+            trades.extend(replay_symbol(df, mk, u.get("symbol", yf), u.get("name", yf), u.get("sector", "")))
+        except Exception as e:
+            log.warning("[%s] %s replay error: %s", mk, yf, e)
+    log.info("[%s] %d trades from %d symbols", mk, len(trades), len(uni))
+    return [_slim(t) for t in trades], {"symbols": len(uni), "trades": len(trades)}
 
-    report = {
+
+def build_report(trades: list[dict], coverage: dict, params: dict, status: str) -> dict:
+    return {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "params": {"markets": markets, "limit": limit, "period": period,
-                   "exclude_funds": exclude_funds, "equity": EQUITY,
-                   "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)},
-        "coverage": per_market_counts,
-        "results": aggregate(all_trades),
+        "status": status,                                  # "partial" while streaming, "complete" when done
+        "params": params,
+        "coverage": coverage,
+        "results": aggregate(trades),
+        "trades": trades,
         "caveats": [
             "Survivorship bias — today's universe excludes delisted names.",
             "yfinance daily data (dividend-adjusted); occasional gaps.",
@@ -252,7 +260,20 @@ def run_backtest(markets: list[str], limit: int | None, period: str,
             "4H is not backtested (no deep intraday history).",
         ],
     }
-    return report
+
+
+def run_backtest(markets: list[str], limit: int | None, period: str,
+                 exclude_funds: bool = True) -> dict:
+    """Backtest several markets in one process (no streaming)."""
+    trades, coverage = [], {}
+    for mk in markets:
+        tr, cov = run_market_trades(mk, limit, period, exclude_funds)
+        trades += tr
+        coverage[mk] = cov
+    params = {"markets": markets, "limit": limit, "period": period,
+              "exclude_funds": exclude_funds, "equity": EQUITY,
+              "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
+    return build_report(trades, coverage, params, "complete")
 
 
 def _print(report: dict) -> None:
@@ -279,16 +300,43 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=60, help="max symbols per market (0 = all)")
     ap.add_argument("--period", default="10y", help="yfinance history period (e.g. 10y, max)")
     ap.add_argument("--include-funds", action="store_true", help="don't exclude REITs/ETFs/funds")
+    ap.add_argument("--merge", action="store_true",
+                    help="merge this run's market(s) into the existing results file (streaming)")
+    ap.add_argument("--status", choices=["partial", "complete"],
+                    help="override the report status (default: auto)")
     ap.add_argument("--out", default=str(OUT_FILE))
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
-    report = run_backtest(markets, args.limit or None, args.period, not args.include_funds)
-    _print(report)
     out = pathlib.Path(args.out)
+
+    # Carry over trades/coverage for OTHER markets from a previous (streamed) run.
+    prior_trades, coverage = [], {}
+    if args.merge and out.exists():
+        try:
+            prev = json.loads(out.read_text())
+            prior_trades = [t for t in prev.get("trades", []) if t.get("market") not in markets]
+            coverage = {k: v for k, v in prev.get("coverage", {}).items() if k not in markets}
+        except Exception as e:
+            log.warning("could not read prior results (%s) — starting fresh", e)
+
+    new_trades = []
+    for mk in markets:
+        tr, cov = run_market_trades(mk, args.limit or None, args.period, not args.include_funds)
+        new_trades += tr
+        coverage[mk] = cov
+
+    trades = prior_trades + new_trades
+    done = set(coverage)
+    status = args.status or ("complete" if done >= set(config.MARKETS) else "partial")
+    params = {"markets": sorted(done), "limit": args.limit or None, "period": args.period,
+              "exclude_funds": not args.include_funds, "equity": EQUITY,
+              "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
+    report = build_report(trades, coverage, params, status)
+    _print(report)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
-    print(f"\nwrote {out}")
+    print(f"\nwrote {out}  (status={status}, markets done: {sorted(done)})")
 
 
 if __name__ == "__main__":

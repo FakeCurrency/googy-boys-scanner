@@ -1,16 +1,14 @@
 name: VIVEK backtest
 
 # Walk-forward backtest of the VIVEK 5.0 strategy (replays the real engine over
-# history). Heavy + data-hungry, so it runs in CI where Yahoo is reachable, and
-# commits the result to public/data/vivek_backtest.json. Manual by default.
+# history). Heavy + data-hungry, so it runs in CI where Yahoo is reachable.
+#
+# STREAMING: each market is backtested and committed separately (merging into
+# public/data/vivek_backtest.json), so results land one market at a time —
+# status="partial" until the last market flips it to "complete".
 on:
   workflow_dispatch:
     inputs:
-      market:
-        description: "Market(s) to backtest"
-        default: "all"
-        type: choice
-        options: ["all", "asx", "nasdaq", "crypto"]
       limit:
         description: "Max symbols per market (0 = all; bigger = slower)"
         default: "60"
@@ -28,7 +26,7 @@ concurrency:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,31 +36,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run walk-forward backtest
+      - name: Stream backtest per market (commit after each)
         run: |
-          MK="${{ github.event.inputs.market }}"; MK="${MK:-all}"
+          set -e
           LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
           PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
-          ARGS="--limit $LIM --period $PER"
-          [ "$MK" != "all" ] && ARGS="--market $MK $ARGS"
-          python -m scanner.vivek_backtest $ARGS
-
-      - name: Commit results
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/vivek_backtest.json 2>/dev/null || true
-          if git diff --cached --quiet; then echo "No backtest changes."; exit 0; fi
-          git commit -m "data: VIVEK backtest $(date -u +'%Y-%m-%d %H:%M UTC')"
-          SHA=$(git rev-parse HEAD)
-          for i in 1 2 3 4 5; do
-            git fetch origin main
-            git reset --hard origin/main
-            git checkout "$SHA" -- public/data/vivek_backtest.json 2>/dev/null || true
-            git add -A
-            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
-            git commit -m "data: VIVEK backtest $(date -u +'%Y-%m-%d %H:%M UTC')"
-            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
-            echo "Push race — retry $i"; sleep $((i * 3))
-          done
-          echo "Could not push after retries"; exit 1
+
+          commit_push() {
+            git add public/data/vivek_backtest.json 2>/dev/null || true
+            if git diff --cached --quiet; then echo "no change"; return; fi
+            git commit -m "data: VIVEK backtest [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
+            SHA=$(git rev-parse HEAD)
+            for i in 1 2 3 4 5; do
+              git fetch origin main
+              git reset --hard origin/main
+              git checkout "$SHA" -- public/data/vivek_backtest.json 2>/dev/null || true
+              git add -A
+              if git diff --cached --quiet; then echo "nothing vs main"; return; fi
+              git commit -m "data: VIVEK backtest [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
+              if git push origin HEAD:main; then echo "pushed $1"; return; fi
+              echo "push race — retry $i"; sleep $((i * 3))
+            done
+          }
+
+          # NASDAQ first (mature 10y history → a meaningful first read fastest),
+          # then ASX (the bulk), then Crypto (flips status to complete).
+          python -m scanner.vivek_backtest --market nasdaq --limit "$LIM" --period "$PER" --merge --status partial
+          commit_push nasdaq
+          python -m scanner.vivek_backtest --market asx --limit "$LIM" --period "$PER" --merge --status partial
+          commit_push asx
+          python -m scanner.vivek_backtest --market crypto --limit "$LIM" --period "$PER" --merge --status complete
+          commit_push crypto
