@@ -316,3 +316,97 @@
 }
 .jr-modal-save:hover   { opacity: .88; }
 .jr-modal-save:disabled { opacity: .5; cursor: default; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Claude vs Me — three-section layout (v11 redesign)
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bot: #5b9cff;            /* Claude accent (blue) */
+  --me:  #b98bff;            /* Me accent (violet)   */
+}
+
+/* grade + direction + misc inline chips */
+.g { font-weight: 800; }
+.dir {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 4px; margin-right: 6px;
+  font: 800 10px/1 var(--sans); vertical-align: middle;
+}
+.dir-l { background: rgba(45,208,127,.16); color: #2dd07f; }
+.dir-s { background: rgba(255,91,91,.16);  color: #ff5b5b; }
+.jr-tf { font: 600 10px/1 var(--mono); color: var(--muted); margin-left: 7px; }
+.jr-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.num-sub { font-size: 11px; color: var(--muted); }
+.stat-sub { font: 500 11px/1 var(--sans); color: var(--muted); }
+.jr-reason {
+  font: 700 10px/1 var(--sans); letter-spacing: .4px; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 5px; background: var(--fill); color: var(--muted);
+}
+.jr-reason-target { background: rgba(45,208,127,.15); color: #2dd07f; }
+.jr-reason-trail  { background: rgba(91,156,255,.15); color: var(--bot); }
+.jr-reason-stop   { background: rgba(255,91,91,.15);  color: #ff5b5b; }
+
+/* dual-line equity tags under each curve */
+.jr-eqsvg { width: 100%; height: 190px; display: block; }
+.jr-eqtags {
+  display: flex; gap: 16px; justify-content: flex-end; margin-top: 8px;
+  font: 700 12.5px/1 var(--mono);
+}
+.jr-eqtags .lg-r { color: var(--bot); }
+
+/* ── 1 · comparison overview ── */
+.cmp {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 18px 14px; margin-bottom: 28px;
+}
+.cmp-stats { display: grid; gap: 2px; margin: 6px 0 18px; }
+.cmp-head, .cmp-row {
+  display: grid; grid-template-columns: 1.1fr 1fr 34px 1fr; align-items: center; gap: 8px;
+}
+.cmp-head { padding: 0 10px 8px; font: 700 11px/1 var(--sans); letter-spacing: .4px; color: var(--muted); text-transform: uppercase; }
+.cmp-row {
+  padding: 9px 10px; border-radius: 8px; font: 700 14px/1 var(--mono);
+}
+.cmp-row:nth-child(even) { background: var(--fill); }
+.cmp-k { font: 600 12px/1 var(--sans); color: var(--text-2); letter-spacing: .2px; }
+.cmp-v { text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+.cmp-vs { text-align: center; font: 600 10px/1 var(--sans); color: var(--muted-2); }
+.cmp-bot { color: var(--bot); }
+.cmp-me  { color: var(--me); }
+.cmp-row.lead-bot .cmp-bot, .cmp-row.lead-me .cmp-me { font-weight: 800; }
+.cmp-row.lead-bot .cmp-bot::after { content: " ◂ ahead"; font: 700 9px/1 var(--sans); color: var(--muted); letter-spacing: .3px; }
+.cmp-row.lead-me  .cmp-me::after  { content: " ahead ▸"; font: 700 9px/1 var(--sans); color: var(--muted); letter-spacing: .3px; }
+
+.cmp-curves { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cmp-curve { margin: 0; }
+.cmp-curve-hd { margin-bottom: 8px; }
+.cmp-legend { margin: 12px 0 0; font: 600 11px/1 var(--mono); color: var(--muted); display: flex; gap: 18px; }
+.cmp-legend .lg-d { color: var(--green); }
+.cmp-legend .lg-r { color: var(--bot); }
+
+/* ── 2 + 3 · per-side sections ── */
+.side {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px 18px 22px; margin-bottom: 26px; border-left-width: 3px;
+}
+.side-bot { border-left-color: var(--bot); }
+.side-me  { border-left-color: var(--me); }
+.side-hd {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 16px 0 4px; border-bottom: 1px solid var(--border-soft); margin-bottom: 4px;
+}
+.side-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 800 14px/1 var(--sans); letter-spacing: .2px;
+  padding: 7px 12px; border-radius: 8px;
+}
+.side-badge.bot { background: rgba(91,156,255,.12); color: var(--bot); }
+.side-badge.me  { background: rgba(185,139,255,.12); color: var(--me); }
+.side-note { font: 500 12px/1.4 var(--sans); color: var(--muted); }
+.side-cta { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--me); text-decoration: none; }
+.side-cta:hover { filter: brightness(1.15); }
+
+@media (max-width: 720px) {
+  .cmp-curves { grid-template-columns: 1fr; }
+  .cmp-head, .cmp-row { grid-template-columns: 1fr 1fr 26px 1fr; }
+}

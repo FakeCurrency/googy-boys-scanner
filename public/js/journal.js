@@ -1,417 +1,322 @@
-/* Journal — Journal 1 (LONGS) + Journal 2 (SHORTS) */
+/* Paper-trade journal — Claude (bot) vs Me (manual), head to head.
+ *
+ *  • Claude  = the autonomous bot's paper book  (data/vivek_bot_book.json),
+ *              written server-side every scan. Read-only here.
+ *  • Me      = the trades you take from the charts (the shared manual store,
+ *              localStorage + optional cross-device sync). Sized + managed by
+ *              the SAME VIVEK rules as the bot: risk 0.35% of a $10k book,
+ *              5× stocks / 3× crypto leverage cap, scale at TP1/2/3, SL → BE at
+ *              TP1 → locked structure at TP2, close on the stop. You pick the
+ *              setup; the rules run the trade. $ P&L uses 1R = the $ risked.
+ *
+ *  All R/$ and equity curves are computed at render time and refreshed against
+ *  live prices, so both sides update as trades open and close.
+ */
 (() => {
   "use strict";
-  const $ = (s) => document.querySelector(s);
-  const GRADE_CLS = { "A+": "g-aplus", "A": "g-a", "B": "g-b", "C": "g-c" };
+  const $  = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-  // Escape data-derived strings before injecting into innerHTML (incl. quotes
-  // so values are safe inside quoted attributes too).
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
+  const up  = (s) => esc(String(s == null ? "" : s).toUpperCase());
 
-  const rcls  = (r) => (r >= 0 ? "r-pos" : "r-neg");
-  const rfmt  = (r) => (r == null ? "—" : (r >= 0 ? "+" : "") + r.toFixed(2) + "R");
-  const pfmt  = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2));
-  const pcls  = (v) => (v >= 0 ? "r-pos" : "r-neg");
-  const num   = (v) => (v == null || isNaN(v) ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 4 }));
+  const GRADE_CLS = { "A+": "g-aplus", "A": "g-a", "B+": "g-b", "B": "g-b", "WATCH": "g-c", "C": "g-c" };
+  const rcls = (r) => (r >= 0 ? "r-pos" : "r-neg");
+  const rfmt = (r) => (r == null || isNaN(r) ? "—" : (r >= 0 ? "+" : "") + (+r).toFixed(2) + "R");
+  const pcls = (v) => (v >= 0 ? "r-pos" : "r-neg");
+  const dfmt = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 }));
+  const d2   = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2));
+  const px   = (v) => (v == null || isNaN(v) ? "—" : (+v).toLocaleString(undefined, { maximumFractionDigits: 6 }));
+  const round = (v, n) => +(+v).toFixed(n);
 
-  function statCard(label, value, cls) {
-    return `<div class="stat-card"><div class="stat-label">${label}</div>
-      <div class="stat-value ${cls || ""}">${value}</div></div>`;
-  }
+  // ── VIVEK sizing + cost model (mirrors scanner/broker/vivek_bot.py + config) ──
+  const EQUITY = 10000, RISK_PCT = 0.35, RISK_MIN = 0.25, RISK_MAX = 0.5;
+  const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };
+  const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
+  const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };
+  const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };
 
-  function renderStats(s, prefix) {
-    const kelly = s.kelly_pct != null
-      ? statCard("½-Kelly size", `${s.kelly_pct}% of acct`, s.kelly_pct > 0 ? "accent-green" : "")
-      : statCard("½-Kelly size", "Need 20+ trades", "");
-    $(`#jr-${prefix}-stats`).innerHTML = [
-      statCard("Open",         s.open),
-      statCard("Closed",       s.closed),
-      statCard("Win rate",     `${s.win_rate}%`),
-      statCard("Realised R",   `${s.total_r >= 0 ? "+" : ""}${s.total_r}R`,
-               s.total_r >= 0 ? "accent-green" : ""),
-      s.total_pnl != null
-        ? statCard("Realised $", pfmt(s.total_pnl), pcls(s.total_pnl)) : "",
-      s.open_unrealised_pnl != null
-        ? statCard("Unrealised $", pfmt(s.open_unrealised_pnl), pcls(s.open_unrealised_pnl)) : "",
-      kelly,
-    ].join("");
-  }
-
-  function equity(closed, elId) {
-    const el = $(`#${elId}`);
-    if (!closed.length) {
-      el.innerHTML = `<div class="jr-empty">No closed trades yet — the curve appears as positions resolve.</div>`;
-      return;
-    }
-    let cum = 0;
-    const pts = closed.map((c) => (cum += c.r));
-    pts.unshift(0);
-    const w = 1000, h = 180, pad = 8;
-    const min = Math.min(0, ...pts), max = Math.max(0, ...pts), rng = (max - min) || 1;
-    const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
-    const y = (v) => h - pad - ((v - min) / rng) * (h - 2 * pad);
-    const path = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const zero  = y(0).toFixed(1);
-    const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
-    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <line x1="0" y1="${zero}" x2="${w}" y2="${zero}" stroke="#1b2333" stroke-width="1"/>
-      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/>
-    </svg>`;
-  }
-
-  function closeBtn(p, journalType) {
-    const d = JSON.stringify({
-      symbol:       p.symbol,
-      direction:    p.direction || "long",
-      market:       p.market || "",
-      yf_ticker:    p.yf_ticker || p.symbol,
-      current:      p.current   || p.entry || 0,
-      journal_type: journalType,
-    }).replace(/'/g, "&#39;");
-    return `<button class="jr-close-btn" onclick='openCloseModal(${d})'>Close</button>`;
-  }
-
-  function openTable(open, journalType) {
-    if (!open.length) return `<div class="jr-empty">No open positions.</div>`;
-    const rows = open.map((p) => `<tr>
-      <td class="jr-sym">${esc(p.symbol)}</td>
-      <td><span class="jr-grade ${GRADE_CLS[p.grade] || ""}">${esc(p.grade)}</span></td>
-      <td>${num(p.entry)}</td>
-      <td>${num(p.stop)}</td>
-      <td>${num(p.target)}</td>
-      <td>${num(p.current)}</td>
-      <td>${p.shares != null ? p.shares + " sh" : "—"}</td>
-      <td class="${rcls(p.unreal_r || 0)}">${rfmt(p.unreal_r)}</td>
-      <td class="${pcls(p.unreal_pnl || 0)}">${pfmt(p.unreal_pnl)}</td>
-      <td>${esc(p.opened)}</td>
-      <td>${closeBtn(p, journalType || "swing")}</td>
-    </tr>`).join("");
-    return `<table class="jr-table"><thead><tr>
-      <th>Symbol</th><th>Grade</th><th>Entry</th><th>Stop</th><th>Target</th>
-      <th>Current</th><th>Size</th><th>Unreal. R</th><th>Unreal. $</th><th>Opened</th><th></th>
-    </tr></thead><tbody>${rows}</tbody></table>`;
-  }
-
-  function closedTable(closed) {
-    if (!closed.length) return `<div class="jr-empty">No closed trades yet.</div>`;
-    const rows = closed.slice().reverse().map((c) => `<tr>
-      <td class="jr-sym">${esc(c.symbol)}</td>
-      <td><span class="jr-grade ${GRADE_CLS[c.grade] || ""}">${esc(c.grade)}</span></td>
-      <td>${num(c.entry)}</td>
-      <td>${num(c.exit)}</td>
-      <td>${c.shares != null ? c.shares + " sh" : "—"}</td>
-      <td><span class="reason">${esc(c.reason)}</span></td>
-      <td class="${rcls(c.r)}">${rfmt(c.r)}</td>
-      <td class="${pcls(c.pnl || 0)}">${pfmt(c.pnl)}</td>
-      <td>${esc(c.opened)} → ${esc(c.exit_date)}</td>
-    </tr>`).join("");
-    return `<table class="jr-table"><thead><tr>
-      <th>Symbol</th><th>Grade</th><th>Entry</th><th>Exit</th>
-      <th>Size</th><th>Exit on</th><th>Result R</th><th>P&amp;L $</th><th>Held</th>
-    </tr></thead><tbody>${rows}</tbody></table>`;
-  }
-
-  // ── Shared helpers ─────────────────────────────────────────────────────────
-  function fmtTs(ts) {
-    if (!ts) return "—";
-    const d = new Date(ts.endsWith("Z") ? ts : ts + "Z");
-    return d.toLocaleString(undefined, { month: "short", day: "numeric",
-      hour: "numeric", minute: "2-digit", timeZone: "UTC" }) + " UTC";
-  }
-
-  // Tab switching — remembers the active tab so a reload stays put.
-  const TAB_KEY = "gbs:journal_tab";
-  function activateTab(jrnl) {
-    let matched = false;
-    document.querySelectorAll(".jr-tab").forEach((b) => {
-      const on = b.dataset.journal === jrnl;
-      b.classList.toggle("is-active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-      if (on) matched = true;
-    });
-    if (!matched) jrnl = "all";   // unknown saved value → fall back to Overall
-
-    const allSec = $("#jr-all-section");
-    if (allSec) allSec.classList.toggle("jr-hidden", jrnl !== "all");
-    if (jrnl === "all") renderScoreboard();   // refresh "You" side with latest manual trades
-    $("#jr-long-section").classList.toggle("jr-hidden",  jrnl !== "long");
-    $("#jr-short-section").classList.toggle("jr-hidden", jrnl !== "short");
-
-    const syncBar = $("#jr-shared-sync");
-    if (syncBar) syncBar.classList.toggle("jr-hidden", jrnl !== "stocks" && jrnl !== "crypto");
-    const stocksSec = $("#jr-stocks-section");
-    if (stocksSec) {
-      stocksSec.classList.toggle("jr-hidden", jrnl !== "stocks");
-      if (jrnl === "stocks") mjRenderStocks();
-    }
-    const cryptoSec = $("#jr-crypto-section");
-    if (cryptoSec) {
-      cryptoSec.classList.toggle("jr-hidden", jrnl !== "crypto");
-      if (jrnl === "crypto") mjRenderCrypto();
-    }
-    try { localStorage.setItem(TAB_KEY, jrnl); } catch (_) {}
-  }
-
-  document.querySelectorAll(".jr-tab").forEach((btn) => {
-    btn.addEventListener("click", () => activateTab(btn.dataset.journal));
-  });
-
-  // Restore the last-used tab on load (default to Overall on first visit).
-  try {
-    const saved = localStorage.getItem(TAB_KEY);
-    if (saved && saved !== "all") activateTab(saved);
-  } catch (_) {}
-
-  // Holds each journal's closed-trade $ P&L for the combined Overall view.
-  const overall = { swing: [] };
-
-  fetch("data/journal.json", { cache: "no-cache" })
-    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then((d) => {
-      const stats = d.stats || {};
-      const ol = d.open_longs    || [];
-      const os = d.open_shorts   || [];
-      const cl = d.closed_longs  || [];
-      const cs = d.closed_shorts || [];
-
-      // LONGS
-      renderStats(stats.longs || {}, "long");
-      equity(cl, "jr-long-equity");
-      $("#jr-long-open-n").textContent   = `(${ol.length})`;
-      $("#jr-long-closed-n").textContent = `(${cl.length})`;
-      $("#jr-long-open").innerHTML   = openTable(ol, "swing");
-      $("#jr-long-closed").innerHTML = closedTable(cl);
-
-      // SHORTS
-      renderStats(stats.shorts || {}, "short");
-      equity(cs, "jr-short-equity");
-      $("#jr-short-open-n").textContent   = `(${os.length})`;
-      $("#jr-short-closed-n").textContent = `(${cs.length})`;
-      $("#jr-short-open").innerHTML   = openTable(os, "swing");
-      $("#jr-short-closed").innerHTML = closedTable(cs);
-
-      // Feed the Overall view (timestamped $ P&L from closed swing trades)
-      overall.swing = [...cl, ...cs]
-        .filter((c) => c.pnl != null)
-        .map((c) => ({ ts: c.exit_date || c.opened || "", pnl: c.pnl, src: "swing" }));
-      renderOverall();
-    })
-    .catch(() => {
-      $("#jr-long-stats").innerHTML = `<div class="jr-empty" style="grid-column:1/-1">
-        No journal yet — a clean forward test starts as new A+/A setups appear.</div>`;
-    });
-
-  // Closed manual trades (the "You" side of the scoreboard), with $ P&L.
-  function mjClosedPnls() {
-    const data = mjLoad();
-    const brk  = (assetCrypto) => assetCrypto
-      ? (data.crypto_brokerage ?? 5) : (data.stock_brokerage ?? 10);
-    return (data.trades || [])
-      .filter((t) => t.status === "closed" && t.exit != null)
-      .map((t) => {
-        return mjCalc(t, brk(mjIsCrypto(t))).pnl;
-      })
-      .filter((p) => p != null);
-  }
-
-  // Side-by-side scoreboard summarising a list of $ P&L numbers.
-  function sbSide(name, pnls) {
-    const n   = pnls.length;
-    const tot = pnls.reduce((a, b) => a + b, 0);
-    const wins = pnls.filter((p) => p > 0).length;
-    const wr  = n ? (wins / n * 100).toFixed(0) : 0;
-    return { name, n, tot, wr, totStr: pfmt(tot), cls: tot >= 0 ? "pos" : "neg" };
-  }
-
-  function renderScoreboard() {
-    const el = $("#jr-scoreboard");
-    if (!el) return;
-    const machinePnls = overall.swing
-      .map((t) => t.pnl).filter((p) => p != null);
-    const machine = sbSide("🤖 Machine", machinePnls);
-    const you     = sbSide("✏️ You", mjClosedPnls());
-
-    let badge = `<span class="sb-vs-badge tie">Dead heat</span>`;
-    let mLead = false, yLead = false;
-    const diff = Math.abs(machine.tot - you.tot);
-    if (you.n === 0 && machine.n === 0) {
-      badge = `<span class="sb-vs-badge tie">No trades yet</span>`;
-    } else if (you.tot > machine.tot) {
-      yLead = true; badge = `<span class="sb-vs-badge pos">You lead by ${pfmt(diff).replace("+", "")}</span>`;
-    } else if (machine.tot > you.tot) {
-      mLead = true; badge = `<span class="sb-vs-badge pos">Machine leads by ${pfmt(diff).replace("+", "")}</span>`;
-    }
-
-    const sideHtml = (s, lead) => `
-      <div class="sb-side${lead ? " sb-lead" : ""}">
-        <span class="sb-name">${s.name}</span>
-        <span class="sb-pnl ${s.cls}">${s.totStr}</span>
-        <span class="sb-meta">${s.n} trade${s.n === 1 ? "" : "s"} · ${s.wr}% win</span>
-      </div>`;
-
-    el.innerHTML =
-      sideHtml(machine, mLead) +
-      `<div class="sb-vs"><span>VS</span>${badge}</div>` +
-      sideHtml(you, yLead);
-  }
-
-  // ── Combined Overall dashboard (all journals, by $ P&L) ──────────────────
-  function renderOverall() {
-    renderScoreboard();
-    const trades = overall.swing
-      .filter((t) => t.pnl != null)
-      .sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-    if (!$("#jr-all-stats")) return;
-    if (!trades.length) {
-      $("#jr-all-stats").innerHTML = `<div class="jr-empty" style="grid-column:1/-1">
-        No closed trades yet — a clean forward test starts as new A+/A setups appear.</div>`;
-      return;
-    }
-    const pnls = trades.map((t) => t.pnl);
-    const wins = pnls.filter((p) => p > 0);
-    const loss = pnls.filter((p) => p < 0);
-    const grossWin  = wins.reduce((a, b) => a + b, 0);
-    const grossLoss = Math.abs(loss.reduce((a, b) => a + b, 0));
-    const pf  = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : "∞";
-    const tot = pnls.reduce((a, b) => a + b, 0);
-    const avgWin  = wins.length ? grossWin / wins.length : 0;
-    const avgLoss = loss.length ? grossLoss / loss.length : 0;
-    const best  = Math.max(...pnls);
-    const worst = Math.min(...pnls);
-    // Largest losing streak (consecutive losers) — a professional risk metric.
-    let run = 0, maxRun = 0;
-    pnls.forEach((p) => { if (p < 0) { run += 1; maxRun = Math.max(maxRun, run); } else run = 0; });
-
-    $("#jr-all-stats").innerHTML = [
-      statCard("Total trades", trades.length),
-      statCard("Win rate", `${(wins.length / trades.length * 100).toFixed(1)}%`),
-      statCard("Profit factor", pf, grossWin >= grossLoss ? "accent-green" : ""),
-      statCard("Expectancy", pfmt(tot / trades.length), pcls(tot)),
-      statCard("Realised $", pfmt(tot), pcls(tot)),
-      statCard("Avg win", pfmt(avgWin), "accent-green"),
-      statCard("Avg loss", pfmt(-avgLoss), avgLoss ? "accent-red" : ""),
-      statCard("Best / Worst", `${pfmt(best)} / ${pfmt(worst)}`),
-      statCard("Max losing streak", maxRun),
-    ].join("");
-
-    // Combined cumulative $ equity curve
-    let cum = 0;
-    const pts = trades.map((t) => (cum += t.pnl)); pts.unshift(0);
-    const el = $("#jr-all-equity");
-    const w = 1000, h = 180, pad = 8;
-    const min = Math.min(0, ...pts), max = Math.max(0, ...pts), rng = (max - min) || 1;
-    const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
-    const y = (v) => h - pad - ((v - min) / rng) * (h - 2 * pad);
-    const path = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
-    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
-      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
-  }
-
-  // ═══════════════════════════════════ MY STOCKS + MY CRYPTO ═══════════════════════════════
-  // Stored in localStorage via the shared GBSSync store; optionally mirrored to
-  // Cloudflare KV when a sync code is set (see gbs-sync.js).
-  // All P&L / R calculated on render.
-  // asset_type: "asx" | "nasdaq" | "crypto" (undefined/missing = "crypto" for backward compat)
-
-  const MJ_KEY = "gbs:manual_journal";
-
-  // Recognised stock-style asset types. Anything NOT in this set (null,
-  // undefined, "", "crypto", or any unknown value) is treated as crypto so a
-  // trade can never fall through both render filters and vanish.
-  const MJ_STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
-  const mjIsStockType = (a) => MJ_STOCK_TYPES.includes(a);
-
-  // Index/commodity symbols that must NEVER be bucketed as crypto, even on
-  // legacy trades saved before asset_type was tracked reliably. Without this a
-  // null-typed GOLD or NAS100 trade falls into the crypto catch-all below.
-  const MJ_NONCRYPTO_SYMBOLS = new Set([
-    "NAS100", "US30", "SPX500", "GER40", "UK100", "JP225",
-    "GOLD", "SILVER", "OIL", "WTI", "BRENT", "NATGAS",
-    "COPPER", "PLATINUM", "PALLADIUM", "WHEAT", "COFFEE",
-  ]);
-
-  // Single source of truth for "is this a crypto position?". A trade is crypto
-  // only when explicitly tagged "crypto", or it's a legacy trade (null/"" type)
-  // whose symbol isn't a known index/commodity. Any other explicit type
-  // (asx/nasdaq/commodity/index or anything unknown) is treated as non-crypto,
-  // so non-crypto positions can no longer leak into the Crypto journal.
-  function mjIsCrypto(t) {
-    const a = t && t.asset_type;
-    if (mjIsStockType(a)) return false;
-    if (a === "crypto") return true;
-    if (a == null || a === "") {
-      return !MJ_NONCRYPTO_SYMBOLS.has(String((t && t.symbol) || "").toUpperCase());
-    }
-    return false;
-  }
-
-  // Yahoo Finance tickers for index/commodity instruments — the scanner's
-  // internal symbol (NAS100, GOLD…) isn't what Yahoo uses, so a live quote needs
-  // the real ticker. Quotes are ~15-min delayed but beat showing a dash.
-  const MJ_YF_TICKER = {
-    NAS100: "^NDX", US30: "^DJI", SPX500: "^GSPC", GER40: "^GDAXI", UK100: "^FTSE", JP225: "^N225",
-    GOLD: "GC=F", SILVER: "SI=F", COPPER: "HG=F", PLATINUM: "PL=F", PALLADIUM: "PA=F",
-    OIL: "CL=F", WTI: "CL=F", BRENT: "BZ=F", NATGAS: "NG=F", WHEAT: "ZW=F", COFFEE: "KC=F",
+  const STOCK_TYPES = new Set(["asx", "nasdaq", "commodity", "index"]);
+  const NONCRYPTO = new Set(["NAS100","US30","SPX500","GER40","UK100","JP225",
+    "GOLD","SILVER","OIL","WTI","BRENT","NATGAS","COPPER","PLATINUM","PALLADIUM","WHEAT","COFFEE"]);
+  const YF_TICKER = {
+    NAS100:"^NDX",US30:"^DJI",SPX500:"^GSPC",GER40:"^GDAXI",UK100:"^FTSE",JP225:"^N225",
+    GOLD:"GC=F",SILVER:"SI=F",COPPER:"HG=F",PLATINUM:"PL=F",PALLADIUM:"PA=F",
+    OIL:"CL=F",WTI:"CL=F",BRENT:"BZ=F",NATGAS:"NG=F",WHEAT:"ZW=F",COFFEE:"KC=F",
   };
 
-  function mjLoad() {
-    if (window.GBSSync) return window.GBSSync.load();
-    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { stock_capital: 10000, stock_brokerage: 10, crypto_capital: 10000, crypto_brokerage: 5, trades: [], deleted: [] };
+  function isCryptoTrade(t) {
+    const a = t && t.asset_type;
+    if (STOCK_TYPES.has(a)) return false;
+    if (a === "crypto") return true;
+    if (a == null || a === "") return !NONCRYPTO.has(String((t && t.symbol) || "").toUpperCase());
+    return false;
   }
-  function mjSave(d) {
-    if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
-    localStorage.setItem(MJ_KEY, JSON.stringify(d));
-  }
-  function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
-  // Tombstone an id so the deletion propagates across devices on the next sync.
-  function mjTombstone(d, id) {
-    if (!Array.isArray(d.deleted)) d.deleted = [];
-    if (!d.deleted.includes(id)) d.deleted.push(id);
+  // Market key for sizing/costs: crypto / asx / nasdaq (stocks default to nasdaq fees).
+  function marketOf(t) {
+    if (isCryptoTrade(t)) return "crypto";
+    if (t.market === "asx" || t.asset_type === "asx") return "asx";
+    return "nasdaq";
   }
 
-  // Compute realised P&L and R for one closed trade.
-  function mjCalc(t, brokerage) {
-    if (t.status !== "closed" || t.exit == null) return { pnl: null, r: null };
-    const m   = t.direction === "long" ? 1 : -1;
-    const pnl = parseFloat((t.shares * m * (t.exit - t.entry) - 2 * brokerage).toFixed(2));
-    let r = null;
-    if (t.stop != null) {
-      const risk = t.direction === "long" ? t.entry - t.stop : t.stop - t.entry;
-      if (risk > 0) r = parseFloat(((m * (t.exit - t.entry)) / risk).toFixed(2));
+  // Risk-based size: risk a slice of equity, cap notional at the market leverage.
+  // 1R in dollars === risk_usd, so $ P&L for any VIVEK trade = R × risk_usd.
+  function sizeOf(market, entry, stop) {
+    const riskPct = Math.min(Math.max(RISK_PCT, RISK_MIN), RISK_MAX) / 100;
+    const dist = Math.abs(entry - stop);
+    if (!(dist > 0) || !(entry > 0)) return { units: 0, risk_usd: 0, notional: 0, leverage: 0 };
+    let risk_usd = EQUITY * riskPct, units = risk_usd / dist, notional = units * entry;
+    const maxN = EQUITY * (LEVERAGE[market] || LEVERAGE.asx);
+    if (notional > maxN) { units = maxN / entry; notional = units * entry; risk_usd = units * dist; }
+    return { units, risk_usd, notional, leverage: notional / EQUITY };
+  }
+
+  const costsFor = (market) => [
+    (SLIPPAGE_BPS[market]   ?? SLIPPAGE_BPS.default)   / 1e4,
+    (COMMISSION_BPS[market] ?? COMMISSION_BPS.default) / 1e4,
+  ];
+  // Round-trip cost in R: entry is a market fill; a stop/manual close pays
+  // slippage, a resting TP limit does not. Mirrors vivek_journal._cost_r.
+  function costR(t, slip, comm) {
+    const entry = t.entry, risk = t.risk;
+    if (!(risk > 0) || !entry) return 0;
+    let cp = entry * (slip + comm);
+    for (const ex of t.exits || []) {
+      const market = /^(stop|manual)/.test(ex.reason || "");
+      cp += (ex.pct || 0) * (ex.price || entry) * (comm + (market ? slip : 0));
     }
-    return { pnl, r };
+    return cp / risk;
   }
 
-  // ── shared equity-curve renderer ──────────────────────────────────────────
-  function mjDrawEquity(closed, elId) {
-    const el = $(`#${elId}`);
+  const rOf = (price, entry, risk, isLong) => (isLong ? (price - entry) : (entry - price)) / risk;
+  const fav = (nsl, csl, isLong) => (isLong ? nsl > csl : nsl < csl);
+  const isVivek = (t) => t && t.stop != null && t.tp1 != null;
+
+  // ── auto-management of a manual position (mirror of vivek_journal._mark) ──────
+  function ensureInit(t) {
+    if (t._init) return;
+    t.market = marketOf(t);
+    const isLong = t.direction !== "short";
+    if (isVivek(t)) {
+      t.risk = Math.abs(t.entry - t.stop);
+      t.risk_usd = sizeOf(t.market, t.entry, t.stop).risk_usd;
+      if (!Array.isArray(t.scale)) t.scale = SCALE[isLong ? "long" : "short"];
+    }
+    if (t.gross_r == null) t.gross_r = 0;
+    if (t.booked_pct == null) t.booked_pct = 0;
+    if (!Array.isArray(t.exits)) t.exits = [];
+    if (t.tp1_hit == null) { t.tp1_hit = false; t.tp2_hit = false; t.tp3_hit = false; }
+    if (t.mae == null) t.mae = t.entry;
+    if (t.mfe == null) t.mfe = t.entry;
+    t._init = true;
+  }
+  function finalizeR(t) {
+    const [slip, comm] = costsFor(t.market);
+    t.cost_r = round(costR(t, slip, comm), 4);
+    t.realized_r = round((t.gross_r || 0) - t.cost_r, 4);
+  }
+  function book(t, name, price, pct, isLong) {
+    t.exits.push({ reason: name, price: round(price, 8), pct, date: today() });
+    t.gross_r = round((t.gross_r || 0) + pct * rOf(price, t.entry, t.risk, isLong), 4);
+    t.booked_pct = round((t.booked_pct || 0) + pct, 6);
+  }
+  // Returns true if the trade changed state (so the store should be persisted).
+  function manage(t, price) {
+    if (t.status !== "open" || !isVivek(t) || price == null) return false;
+    ensureInit(t);
+    const isLong = t.direction !== "short", risk = t.risk;
+    if (!(risk > 0)) return false;
+    let changed = false;
+    const nmfe = isLong ? Math.max(t.mfe, price) : Math.min(t.mfe, price);
+    const nmae = isLong ? Math.min(t.mae, price) : Math.max(t.mae, price);
+    if (nmfe !== t.mfe) { t.mfe = nmfe; changed = true; }
+    if (nmae !== t.mae) { t.mae = nmae; changed = true; }
+
+    const stopHit = isLong ? price <= t.stop : price >= t.stop;
+    if (stopHit) {
+      const remaining = round(1 - (t.booked_pct || 0), 6);
+      if (remaining > 1e-9) {
+        t.exits.push({ reason: "stop", price: round(price, 8), pct: remaining, date: today() });
+        t.gross_r = round((t.gross_r || 0) + remaining * rOf(price, t.entry, risk, isLong), 4);
+        t.booked_pct = 1;
+      }
+      t.status = "closed"; t.exit = round(price, 8);
+      t.exit_date = today(); t.exit_reason = t.tp3_hit ? "target" : (t.tp1_hit ? "trail" : "stop");
+      changed = true;
+    } else {
+      const scale = t.scale, reached = (lvl) => (isLong ? price >= lvl : price <= lvl);
+      if (!t.tp1_hit && t.tp1 != null && reached(t.tp1)) {
+        t.tp1_hit = true; book(t, "tp1", t.tp1, scale[0], isLong);
+        if (fav(t.entry, t.stop, isLong)) t.stop = t.entry;        // SL → break-even
+        changed = true;
+      }
+      if (!t.tp2_hit && t.tp2 != null && reached(t.tp2)) {
+        t.tp2_hit = true; book(t, "tp2", t.tp2, scale[1], isLong);
+        if (fav(t.tp1, t.stop, isLong)) t.stop = t.tp1;            // SL → locked structure
+        changed = true;
+      }
+      if (!t.tp3_hit && t.tp3 != null && reached(t.tp3)) {
+        t.tp3_hit = true; book(t, "tp3", t.tp3, scale[2], isLong); changed = true;
+      }
+    }
+    if (changed) finalizeR(t);
+    return changed;
+  }
+  // Make sure a CLOSED manual trade has its realized R/$ resolved once.
+  function ensureClosedR(t) {
+    if (t.status !== "closed") return;
+    ensureInit(t);
+    if (!isVivek(t)) { t.realized_r = null; return; }
+    if (!t.exits.length && t.exit != null) {       // a manual full close from the chart
+      const isLong = t.direction !== "short";
+      t.gross_r = round(rOf(t.exit, t.entry, t.risk, isLong), 4);
+      t.exits = [{ reason: "manual", price: t.exit, pct: 1, date: t.exit_date || today() }];
+      t.booked_pct = 1;
+    }
+    finalizeR(t);
+  }
+
+  const dollarsOf = (t) => (t.realized_r != null && t.risk_usd != null ? t.realized_r * t.risk_usd : null);
+
+  // ── time helpers ──────────────────────────────────────────────────────────
+  const pad = (n) => String(n).padStart(2, "0");
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  function openedMs(t) {
+    const ms = Date.parse(t.opened_at || `${t.entry_date || ""}T${t.entry_time || "10:00"}`);
+    return isNaN(ms) ? null : ms;
+  }
+  function exitMs(t) {
+    const ms = Date.parse(t.closed_at || `${t.exit_date || ""}T${t.exit_time || "16:00"}`);
+    return isNaN(ms) ? null : ms;
+  }
+  function durText(fromMs, toMs) {
+    if (fromMs == null || toMs == null || toMs < fromMs) return "—";
+    const h = (toMs - fromMs) / 3.6e6;
+    if (h < 24) return `${Math.max(0, Math.round(h))}h`;
+    const d = h / 24;
+    return d < 10 ? `${d.toFixed(1)}d` : `${Math.round(d)}d`;
+  }
+
+  // ── stats + equity ────────────────────────────────────────────────────────
+  function stats(closed, openN) {
+    const rs = closed.map((t) => t.realized_r).filter((r) => r != null);
+    const ds = closed.map((t) => dollarsOf(t)).filter((v) => v != null);
+    const wins = rs.filter((r) => r > 0).length;
+    // max drawdown on the cumulative $ curve
+    let cum = 0, peak = 0, dd = 0;
+    for (const v of ds) { cum += v; peak = Math.max(peak, cum); dd = Math.min(dd, cum - peak); }
+    return {
+      n: closed.length, open: openN,
+      totalR: rs.reduce((a, b) => a + b, 0),
+      totalD: ds.reduce((a, b) => a + b, 0),
+      win: rs.length ? (100 * wins / rs.length) : null,
+      maxDD: dd,
+    };
+  }
+  // Equity series ordered by exit time: cumulative R and cumulative $.
+  function series(closed) {
+    const sorted = closed.slice().filter((t) => t.realized_r != null)
+      .sort((a, b) => (exitMs(a) || 0) - (exitMs(b) || 0));
+    let r = 0, d = 0;
+    const pts = [{ r: 0, d: 0 }];
+    for (const t of sorted) { r += t.realized_r; d += (dollarsOf(t) || 0); pts.push({ r: round(r, 3), d: round(d, 2) }); }
+    return pts;
+  }
+
+  function statCards(host, s, accent) {
+    const cell = (label, val, cls) =>
+      `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls || ""}">${val}</div></div>`;
+    host.innerHTML =
+      cell("Total R", rfmt(s.totalR), rcls(s.totalR)) +
+      cell("Total $", dfmt(s.totalD), pcls(s.totalD)) +
+      cell("Win rate", s.win == null ? "—" : s.win.toFixed(0) + "%", "") +
+      cell("Trades", `${s.n}<span class="stat-sub"> closed · ${s.open} open</span>`, "") +
+      cell("Max drawdown", dfmt(s.maxDD), s.maxDD < 0 ? "r-neg" : "");
+  }
+
+  // Dual-line equity chart: cumulative $ (filled) + cumulative R (line), each
+  // normalised to its own range inside the same box, with end-value labels.
+  function drawEquity(elId, pts, label) {
+    const el = $("#" + elId);
     if (!el) return;
-    if (!closed.length) {
-      el.innerHTML = `<div class="jr-empty">Log your first closed trade — the curve appears here.</div>`;
+    if (!pts || pts.length < 2) {
+      el.innerHTML = `<div class="jr-empty">No closed trades yet${label ? ` for ${label}` : ""} — the curve appears here.</div>`;
       return;
     }
-    let cum = 0;
-    const pts = closed.map((t) => (cum += (t.pnl || 0)));
-    pts.unshift(0);
-    const w = 1000, h = 180, pad = 8;
-    const mn = Math.min(0, ...pts), mx = Math.max(0, ...pts), rng = (mx - mn) || 1;
-    const x  = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
-    const y  = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
-    const path  = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const color = pts[pts.length - 1] >= 0 ? "#2fd07f" : "#ff5b5b";
-    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
-      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+    const w = 1000, h = 190, pad = 10;
+    const norm = (vals) => {
+      const mn = Math.min(0, ...vals), mx = Math.max(0, ...vals), rng = (mx - mn) || 1;
+      return (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
+    };
+    const xs = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
+    const ds = pts.map((p) => p.d), rs = pts.map((p) => p.r);
+    const yD = norm(ds), yR = norm(rs);
+    const lineD = pts.map((p, i) => `${xs(i).toFixed(1)},${yD(p.d).toFixed(1)}`).join(" ");
+    const lineR = pts.map((p, i) => `${xs(i).toFixed(1)},${yR(p.r).toFixed(1)}`).join(" ");
+    const area = `${pad},${yD(0).toFixed(1)} ${lineD} ${xs(pts.length - 1).toFixed(1)},${yD(0).toFixed(1)}`;
+    const endD = ds[ds.length - 1], endR = rs[rs.length - 1];
+    const col = endD >= 0 ? "#2fd07f" : "#ff5b5b";
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="jr-eqsvg">
+      <line x1="0" y1="${yD(0).toFixed(1)}" x2="${w}" y2="${yD(0).toFixed(1)}" stroke="#1b2333" stroke-width="1"/>
+      <polygon points="${area}" fill="${col}" fill-opacity="0.10"/>
+      <polyline points="${lineD}" fill="none" stroke="${col}" stroke-width="2.5"/>
+      <polyline points="${lineR}" fill="none" stroke="#5b9cff" stroke-width="1.6" stroke-dasharray="5 4" opacity="0.95"/>
+    </svg>
+    <div class="jr-eqtags"><span class="r-pos ${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
   }
 
-  // ── live prices for open positions ────────────────────────────────────────
-  // Crypto: Binance public ticker (keyless, CORS-ok — same host the chart uses).
-  // Most coins trade as <SYM>USDT; if a pair doesn't exist we just show "—".
+  // ── tables ────────────────────────────────────────────────────────────────
+  const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
+  const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "S" : "L"}</span>`;
+
+  function openRows(list, side, nowMs) {
+    if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
+    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
+      <th class="num">Targets</th><th class="num">Now</th><th class="num">In&nbsp;trade</th>
+      <th class="num">Unreal R</th><th class="num">Unreal $</th>${side === "me" ? "<th></th>" : ""}</tr>`;
+    const rows = list.map((t) => {
+      const isLong = t.direction !== "short";
+      const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
+      const tgt = `<span class="num-sub">${tps}</span>`;
+      const dur = durText(openedMs(t), nowMs);
+      const closeBtn = side === "me"
+        ? `<td class="num"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button></td>` : "";
+      return `<tr data-tid="${esc(t.id)}" data-side="${side}">
+        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        <td>${gradeChip(t.grade)}</td>
+        <td class="num">${px(t.entry)}</td>
+        <td class="num">${px(t.stop)}</td>
+        <td class="num">${tgt}</td>
+        <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
+        <td class="num jr-dur">${dur}</td>
+        <td class="num jr-ur">—</td>
+        <td class="num jr-ud">—</td>${closeBtn}</tr>`;
+    }).join("");
+    return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function closedRows(list) {
+    if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
+    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
+      <th class="num">R</th><th class="num">$</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
+    const rows = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0)).map((t) => {
+      const d = dollarsOf(t);
+      return `<tr>
+        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        <td>${gradeChip(t.grade)}</td>
+        <td class="num">${px(t.entry)}</td>
+        <td class="num">${px(t.exit)}</td>
+        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
+        <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
+        <td class="num">${durText(openedMs(t), exitMs(t))}</td>
+        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
+    }).join("");
+    return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // ── live prices (reused from the manual-journal helpers) ──────────────────
   async function cryptoPrice(sym) {
     try {
       const pair = encodeURIComponent(String(sym || "").toUpperCase() + "USDT");
@@ -421,550 +326,181 @@
       return j && j.price != null ? +j.price : null;
     } catch (_) { return null; }
   }
-  async function stockPrice(sym, aType) {
+  async function stockPrice(sym, market) {
     try {
-      const up = String(sym || "").toUpperCase();
-      const ticket = MJ_YF_TICKER[up]
-        || (aType === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
+      const up_ = String(sym || "").toUpperCase();
+      const ticket = YF_TICKER[up_] || (market === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
       const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`, { cache: "no-store" });
       if (!r.ok) return null;
       const j = await r.json();
       return j && j.price != null ? +j.price : null;
     } catch (_) { return null; }
   }
+  const priceFor = (t) => (marketOf(t) === "crypto" ? cryptoPrice(t.symbol) : stockPrice(t.symbol, marketOf(t)));
 
-  // Fill the "Now" + "Unreal $" cells for every open-position row on the page.
-  // Self-contained: reads each trade by id from the store and uses the matching
-  // per-asset brokerage, so it works for whichever manual section is visible.
-  async function mjUpdateLiveRow(tr, data) {
-    const id = tr.getAttribute("data-tid");
-    const t  = (data.trades || []).find((x) => x.id === id);
-    const nowCell  = tr.querySelector(".jr-now");
-    const upnlCell = tr.querySelector(".jr-upnl");
-    if (!t || !nowCell || !upnlCell || t.status !== "open") return;
-    const isStock = !mjIsCrypto(t);
-    const aType   = t.asset_type || (isStock ? "nasdaq" : "crypto");
-    const brokerage = isStock ? (data.stock_brokerage ?? 10) : (data.crypto_brokerage ?? 5);
-    const px = await (isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol));
-    if (!document.body.contains(nowCell)) return;   // table re-rendered meanwhile
-    if (px == null) {
-      nowCell.textContent = "—"; nowCell.className = "jr-now muted";
-      upnlCell.textContent = "—"; upnlCell.className = "jr-upnl muted";
-      return;
+  // ── store (manual side) ───────────────────────────────────────────────────
+  const MJ_KEY = "gbs:manual_journal";
+  function mjLoad() {
+    if (window.GBSSync) return window.GBSSync.load();
+    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
+    return { trades: [], deleted: [] };
+  }
+  function mjSave(d) {
+    if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
+    localStorage.setItem(MJ_KEY, JSON.stringify(d));
+  }
+
+  // ── state + render ────────────────────────────────────────────────────────
+  const state = { bot: { open: [], closed: [] }, me: { open: [], closed: [] } };
+
+  function splitBot(book) {
+    const open = (book.open || []).slice();
+    const closed = (book.closed || []).slice();
+    // Bot trades already carry net realized_r + risk_usd from the server.
+    return { open, closed };
+  }
+  function splitMe(data) {
+    const trades = (data.trades || []).filter((t) => t && t.status);
+    const open = [], closed = [];
+    for (const t of trades) {
+      if (t.status === "open") { ensureInit(t); open.push(t); }
+      else if (t.status === "closed") { ensureClosedR(t); closed.push(t); }
     }
-    const m    = t.direction === "long" ? 1 : -1;
-    const sh   = t.shares != null ? t.shares : 0;
-    const upnl = sh * m * (px - t.entry) - 2 * brokerage;   // net of round-trip brokerage
-    nowCell.textContent  = "$" + num(px);
-    nowCell.className     = "jr-now";
-    upnlCell.textContent  = pfmt(upnl);
-    upnlCell.className     = "jr-upnl " + pcls(upnl);
-  }
-  function mjUpdateLivePrices() {
-    const rows = document.querySelectorAll("table.jr-table tbody tr[data-tid]");
-    if (!rows.length) return;
-    const data = mjLoad();
-    rows.forEach((tr) => { if (tr.querySelector(".jr-now")) mjUpdateLiveRow(tr, data); });
-  }
-  // Keep prices fresh while the tab is in view.
-  setInterval(() => { if (!document.hidden) mjUpdateLivePrices(); }, 20000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) mjUpdateLivePrices(); });
-
-  // ── shared manual journal renderer ────────────────────────────────────────
-  function mjRenderFor(assetFilter, capKey, brkKey, ids) {
-    const data      = mjLoad();
-    const capital   = data[capKey]   ?? 10000;
-    const brokerage = data[brkKey]   ?? 10;
-
-    const capEl = $(ids.capInput), brkEl = $(ids.brkInput);
-    if (capEl) capEl.value = capital;
-    if (brkEl) brkEl.value = brokerage;
-
-    const myTrades = (data.trades || []).filter(assetFilter);
-    const open     = myTrades.filter((t) => t.status === "open");
-    const closed   = myTrades.filter((t) => t.status === "closed")
-                              .map((t) => ({ ...t, ...mjCalc(t, brokerage) }));
-
-    const pnls     = closed.map((t) => t.pnl).filter((p) => p != null);
-    const realised = pnls.reduce((a, b) => a + b, 0);
-    const balance  = capital + realised;
-    const wins     = closed.filter((t) => (t.pnl || 0) > 0);
-    const winRate  = closed.length ? (wins.length / closed.length * 100).toFixed(0) : 0;
-    const rs       = closed.map((t) => t.r).filter((r) => r != null);
-    const totalR   = rs.reduce((a, b) => a + b, 0);
-    const balCls   = balance >= capital ? "accent-green" : "";
-
-    const statsEl = $(ids.stats);
-    if (statsEl) statsEl.innerHTML = [
-      statCard("Balance", "$" + balance.toLocaleString(undefined, { maximumFractionDigits: 0 }), balCls),
-      statCard("Open positions", open.length),
-      statCard("Closed trades", closed.length),
-      statCard("Win rate", `${winRate}%`),
-      statCard("Realised R", (totalR >= 0 ? "+" : "") + totalR.toFixed(2) + "R", totalR >= 0 ? "accent-green" : ""),
-      statCard("Realised $", pfmt(realised), pcls(realised)),
-    ].join("");
-
-    mjDrawEquity(closed, ids.equity);
-
-    // open table
-    const openEl  = $(ids.open);
-    const openNEl = $(ids.openN);
-    if (openEl) {
-      if (openNEl) openNEl.textContent = `(${open.length})`;
-      if (!open.length) {
-        openEl.innerHTML = `<div class="jr-empty">No open positions — tap the button above to log one.</div>`;
-      } else {
-        const rows = open.map((t) => {
-          const dc  = t.direction === "long" ? "dir-long" : "dir-short";
-          const dir = t.direction === "long" ? "↑ LONG" : "↓ SHORT";
-          let rr = "—";
-          if (t.stop != null && t.target != null && t.entry > 0) {
-            const risk = t.direction === "long" ? t.entry - t.stop : t.stop - t.entry;
-            const rew  = t.direction === "long" ? t.target - t.entry : t.entry - t.target;
-            if (risk > 0) rr = (rew / risk).toFixed(1) + "R";
-          }
-          const aType = t.asset_type || "crypto";
-          const sParam = (aType !== "crypto") ? t.symbol : t.symbol + "_" + t.direction;
-          // Chart context by asset type; commodity/index fall back to a live chart.
-          const m      = aType === "asx" ? "asx" : aType === "nasdaq" ? "nasdaq"
-            : aType === "crypto" ? "crypto" : aType;
-          const chartHref = `chart.html?m=${m}&s=${encodeURIComponent(sParam)}&pos=${encodeURIComponent(t.id)}`;
-          const assetBadge = aType !== "crypto" ? `<span class="reason">${up(aType)}</span>` : "";
-          const sizeStr = t.shares != null
-            ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u \xd7${t.leverage}` : `${t.shares} sh`)
-            : "—";
-          return `<tr data-tid="${esc(t.id)}">
-            <td class="jr-sym"><a class="jr-chart-link" href="${chartHref}" title="Open live chart">${esc(t.symbol)} <span class="jr-chart-ico">📈</span></a> ${assetBadge}</td>
-            <td><span class="dir-chip ${dc}">${dir}</span></td>
-            <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
-            <td class="r-neg">${t.stop   != null ? "$" + num(t.stop)   : "—"}</td>
-            <td class="r-pos">${t.target != null ? "$" + num(t.target) : "—"}</td>
-            <td>${rr}</td>
-            <td>${sizeStr}</td>
-            <td class="jr-now muted">…</td>
-            <td class="jr-upnl muted">…</td>
-            <td class="muted">${esc(t.entry_date)}${t.entry_time ? " " + t.entry_time : ""}</td>
-            <td>${t.notes ? `<span class="reason">${esc(t.notes)}</span>` : "—"}</td>
-            <td style="white-space:nowrap">
-              <button class="mj-close-btn" data-id="${esc(t.id)}">Close</button>
-              <button class="mj-del-btn"   data-id="${esc(t.id)}" title="Delete">✕</button>
-            </td>
-          </tr>`;
-        }).join("");
-        openEl.innerHTML = `<table class="jr-table"><thead><tr>
-          <th>Symbol</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th>
-          <th>R:R</th><th>Size</th><th>Now</th><th>Unreal $</th><th>Opened</th><th>Notes</th><th></th>
-        </tr></thead><tbody>${rows}</tbody></table>`;
-        mjUpdateLivePrices();   // kick off live price + unrealised P&L fill
-      }
-    }
-
-    // closed table
-    const closedEl  = $(ids.closed);
-    const closedNEl = $(ids.closedN);
-    if (closedEl) {
-      if (closedNEl) closedNEl.textContent = `(${closed.length})`;
-      if (!closed.length) {
-        closedEl.innerHTML = `<div class="jr-empty">No closed trades yet.</div>`;
-      } else {
-        const rows = closed.slice().reverse().map((t) => {
-          const dc   = t.direction === "long" ? "dir-long" : "dir-short";
-          const dir  = t.direction === "long" ? "↑ L" : "↓ S";
-          const rStr = t.r   != null ? (t.r   >= 0 ? "+" : "") + t.r.toFixed(2)   + "R" : "—";
-          const pStr = t.pnl != null ? (t.pnl >= 0 ? "+" : "−") + "$" + Math.abs(t.pnl).toFixed(2) : "—";
-          const rCls = (t.r   || 0) >= 0 ? "r-pos" : "r-neg";
-          const pCls = (t.pnl || 0) >= 0 ? "r-pos" : "r-neg";
-          const aType = t.asset_type || "crypto";
-          const assetBadge = aType !== "crypto" ? `<span class="reason">${up(aType)}</span>` : "";
-          const sizeStr = t.shares != null
-            ? (t.leverage > 1 ? `${parseFloat(t.shares.toFixed(4))} u \xd7${t.leverage}` : `${t.shares} sh`)
-            : "—";
-          return `<tr>
-            <td class="jr-sym">${esc(t.symbol)} ${assetBadge}</td>
-            <td><span class="dir-chip ${dc}">${dir}</span></td>
-            <td>${t.entry != null ? "$" + num(t.entry) : "—"}</td>
-            <td>${t.exit  != null ? "$" + num(t.exit)  : "—"}</td>
-            <td>${sizeStr}</td>
-            <td class="${rCls}">${rStr}</td>
-            <td class="${pCls}">${pStr}</td>
-            <td class="muted">${esc(t.entry_date)} → ${esc(t.exit_date || "")}</td>
-            <td>${t.notes ? `<span class="reason">${esc(t.notes)}</span>` : "—"}</td>
-            <td><button class="mj-del-btn" data-id="${esc(t.id)}" title="Delete">✕</button></td>
-          </tr>`;
-        }).join("");
-        closedEl.innerHTML = `<table class="jr-table"><thead><tr>
-          <th>Symbol</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Size</th>
-          <th>Result R</th><th>P&amp;L $</th><th>Dates</th><th>Notes</th><th></th>
-        </tr></thead><tbody>${rows}</tbody></table>`;
-      }
-    }
+    return { open, closed };
   }
 
-  function mjRenderStocks() {
-    mjRenderFor(
-      (t) => !mjIsCrypto(t),
-      "stock_capital", "stock_brokerage",
-      {
-        capInput: "#mj-stock-capital", brkInput: "#mj-stock-brokerage",
-        stats: "#jr-stocks-stats",   equity: "jr-stocks-equity",
-        open:  "#jr-stocks-open",    openN:  "#jr-stocks-open-n",
-        closed:"#jr-stocks-closed",  closedN:"#jr-stocks-closed-n",
-      }
-    );
+  function renderSide(side) {
+    const d = state[side], pre = side;
+    const s = stats(d.closed, d.open.length);
+    statCards($("#" + pre + "-stats"), s);
+    drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
+    $("#" + pre + "-open").innerHTML = openRows(d.open, side, Date.now());
+    $("#" + pre + "-closed").innerHTML = closedRows(d.closed);
+    $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
+    $("#" + pre + "-closed-n").textContent = d.closed.length ? `(${d.closed.length})` : "";
+    return s;
   }
 
-  function mjRenderCrypto() {
-    mjRenderFor(
-      (t) => mjIsCrypto(t),
-      "crypto_capital", "crypto_brokerage",
-      {
-        capInput: "#mj-crypto-capital", brkInput: "#mj-crypto-brokerage",
-        stats: "#jr-crypto-stats",   equity: "jr-crypto-equity",
-        open:  "#jr-crypto-open",    openN:  "#jr-crypto-open-n",
-        closed:"#jr-crypto-closed",  closedN:"#jr-crypto-closed-n",
-      }
-    );
-  }
-
-  // ── Asset type toggle helpers ──────────────────────────────────────────────
-  function mjSetAsset(type) {
-    document.querySelectorAll(".mj-asset-btn").forEach((b) => {
-      b.classList.toggle("mj-asset-active", b.dataset.asset === type);
-    });
-    const isCrypto  = type === "crypto";
-    const levRow    = $("#mj-leverage-row");
-    if (levRow) levRow.classList.toggle("mj-hidden", !isCrypto);
-    const sizeEl    = $("#mj-size");
-    const levEl     = $("#mj-leverage");
-    if (sizeEl && !sizeEl._manualEdit) sizeEl.value = isCrypto ? 500 : 1000;
-    if (levEl) levEl.value = isCrypto ? 10 : 1;
-    const symEl = $("#mj-symbol");
-    if (symEl) {
-      symEl.placeholder = isCrypto ? "ETH, BTC, DOGE…"
-        : type === "asx" ? "BHP, CBA, WES…" : "AAPL, TSLA, NVDA…";
-    }
-  }
-  function mjGetAsset() {
-    const a = document.querySelector(".mj-asset-btn.mj-asset-active");
-    return a ? a.dataset.asset : "crypto";
-  }
-
-  // ── Modal helpers ──────────────────────────────────────────────────────────
-  function mjNow() {
-    const d = new Date();
-    return {
-      date: d.toISOString().slice(0, 10),
-      time: d.toTimeString().slice(0, 5),
+  function renderComparison(sb, sm) {
+    drawEquity("cmp-eq-bot", series(state.bot.closed), "Claude");
+    drawEquity("cmp-eq-me", series(state.me.closed), "you");
+    const row = (label, b, m, fmt, better) => {
+      const bv = fmt(b), mv = fmt(m);
+      const lead = better == null ? "" : (b > m ? "lead-bot" : m > b ? "lead-me" : "");
+      return `<div class="cmp-row ${lead}">
+        <span class="cmp-k">${label}</span>
+        <span class="cmp-v cmp-bot">${bv}</span>
+        <span class="cmp-vs">vs</span>
+        <span class="cmp-v cmp-me">${mv}</span></div>`;
     };
+    $("#cmp-stats").innerHTML =
+      `<div class="cmp-head"><span></span><span class="cmp-bot">🤖 Claude</span><span></span><span class="cmp-me">✏️ Me</span></div>` +
+      row("Total R", sb.totalR, sm.totalR, rfmt, true) +
+      row("Total $", sb.totalD, sm.totalD, dfmt, true) +
+      row("Win rate", sb.win || 0, sm.win || 0, (v) => v ? v.toFixed(0) + "%" : "—", true) +
+      row("Trades", sb.n, sm.n, (v) => String(v), null) +
+      row("Open now", sb.open, sm.open, (v) => String(v), null) +
+      row("Max DD", sb.maxDD, sm.maxDD, dfmt, null);
   }
 
-  function mjSetDir(dir) {
-    document.querySelectorAll(".mj-dir-btn").forEach((b) => {
-      b.classList.toggle("mj-dir-active", b.dataset.dir === dir);
-    });
-  }
-  function mjGetDir() {
-    const a = document.querySelector(".mj-dir-btn.mj-dir-active");
-    return a ? a.dataset.dir : "long";
+  function renderAll() {
+    const sb = renderSide("bot"), sm = renderSide("me");
+    renderComparison(sb, sm);
+    const note = $("#bot-note");
+    if (note) note.textContent = (state.bot.open.length || state.bot.closed.length)
+      ? "" : "Autonomous bot is in dry-run — its trades appear here once enabled.";
   }
 
-  function mjOpenModal() {
-    const { date, time } = mjNow();
+  // ── live refresh: mark opens to live price, auto-manage Me, update cells ────
+  async function refreshLive() {
+    let meChanged = false;
+    const data = mjLoad();
+    const byId = new Map((data.trades || []).map((t) => [t.id, t]));
 
-    $("#mj-modal-title").textContent = "Log New Trade";
-    $("#mj-trade-id").value   = "";
-    $("#mj-symbol").value     = "";
-    $("#mj-entry").value      = "";
-    $("#mj-entry-date").value = date;
-    $("#mj-entry-time").value = time;
-    $("#mj-stop").value       = "";
-    $("#mj-target").value     = "";
-    $("#mj-notes").value      = "";
-    $("#mj-shares-preview").textContent = "";
-    mjSetDir("long");
+    // gather open rows currently on the page
+    const trs = $$("tbody tr[data-tid]");
+    await Promise.all(trs.map(async (tr) => {
+      const side = tr.getAttribute("data-side");
+      const id = tr.getAttribute("data-tid");
+      const src = side === "bot"
+        ? state.bot.open.find((t) => t.id === id)
+        : byId.get(id);
+      if (!src) return;
+      const price = await priceFor(src);
+      const nowCell = tr.querySelector(".jr-now");
+      const urCell = tr.querySelector(".jr-ur");
+      const udCell = tr.querySelector(".jr-ud");
+      if (!nowCell || !document.body.contains(nowCell)) return;
+      if (price == null) { nowCell.textContent = "—"; return; }
 
-    // Determine default asset type from whichever manual tab is visible
-    const activeTab  = document.querySelector(".jr-tab.is-active");
-    const activeJrnl = activeTab ? activeTab.dataset.journal : "crypto";
-    const defaultAsset = activeJrnl === "stocks" ? "asx" : "crypto";
-    const sizeEl = $("#mj-size");
-    if (sizeEl) sizeEl._manualEdit = false;
-    mjSetAsset(defaultAsset);
+      if (side === "me" && manage(src, price)) meChanged = true;       // rules may close it
 
-    $("#mj-open-fields").classList.remove("mj-hidden");
-    $("#mj-close-fields").classList.add("mj-hidden");
-    $("#mj-modal").classList.remove("mj-hidden");
-    setTimeout(() => $("#mj-symbol") && $("#mj-symbol").focus(), 60);
+      const isLong = src.direction !== "short";
+      const risk = src.risk != null ? src.risk : Math.abs(src.entry - (src.stop ?? src.entry));
+      const ru = src.risk_usd;
+      nowCell.textContent = px(price);
+      if (src.status === "closed") { nowCell.textContent = "closed"; return; }
+      if (risk > 0) {
+        const ur = rOf(price, src.entry, risk, isLong);
+        urCell.textContent = rfmt(ur); urCell.className = "num jr-ur " + rcls(ur);
+        if (ru != null) { const ud = ur * ru; udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
+      }
+    }));
+
+    if (meChanged) { mjSave(data); loadMe(data); renderAll(); }
   }
 
-  function mjOpenCloseModal(tradeId) {
-    const { trades } = mjLoad();
-    const t = trades.find((x) => x.id === tradeId);
+  // ── loaders ───────────────────────────────────────────────────────────────
+  function loadMe(data) { state.me = splitMe(data || mjLoad()); }
+  async function loadBot() {
+    try {
+      const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
+      if (r.ok) state.bot = splitBot(await r.json());
+    } catch (_) { /* keep empty */ }
+  }
+
+  // ── close modal (Me) ──────────────────────────────────────────────────────
+  let closeId = null;
+  function openCloseModal(id) {
+    const t = mjLoad().trades.find((x) => x.id === id);
     if (!t) return;
-    const { date, time } = mjNow();
-    const aType = t.asset_type || (mjIsCrypto(t) ? "crypto" : "nasdaq");
-
-    $("#mj-modal-title").textContent = `Close ${t.symbol} ${t.direction === "long" ? "LONG" : "SHORT"}`;
-    $("#mj-trade-id").value   = tradeId;
-    $("#mj-exit").value       = "";
-    delete $("#mj-exit").dataset.userEdited;   // clear so live price can populate freely
-    $("#mj-exit-date").value  = date;
-    $("#mj-exit-time").value  = time;
-    $("#mj-close-preview").textContent = "";
-    $("#mj-open-fields").classList.add("mj-hidden");
-    $("#mj-close-fields").classList.remove("mj-hidden");
-    $("#mj-modal").classList.remove("mj-hidden");
-    // stash trade data on the preview element so the input handler can use it
-    $("#mj-close-preview").dataset.entry     = t.entry;
-    $("#mj-close-preview").dataset.stop      = t.stop  || "";
-    $("#mj-close-preview").dataset.shares    = t.shares || 0;
-    $("#mj-close-preview").dataset.dir       = t.direction;
-    $("#mj-close-preview").dataset.asset     = aType;
-    setTimeout(() => $("#mj-exit") && $("#mj-exit").focus(), 60);
-
-    // Default the exit price to the LIVE price (user can still override).
-    const isStock = !mjIsCrypto(t);
-    const exitEl  = $("#mj-exit");
-    exitEl.placeholder = "fetching live…";
-    Promise.resolve(isStock ? stockPrice(t.symbol, aType) : cryptoPrice(t.symbol))
-      .then((px) => {
-        if ($("#mj-trade-id").value !== tradeId) return;   // modal switched
-        if (px == null) { exitEl.placeholder = "live price unavailable"; return; }
-        if (!exitEl.dataset.userEdited) {
-          exitEl.value = px;
-          exitEl.select();
-          mjUpdateClosePreview();
-        }
-        exitEl.placeholder = "0.00";
-      })
-      .catch(() => { exitEl.placeholder = "live price unavailable"; });
+    closeId = id;
+    $("#jr-modal-title").textContent = "Close " + String(t.symbol || "").toUpperCase();
+    $("#jr-exit-price").value = "";
+    $("#jr-price-tag").textContent = "loading live…";
+    $("#jr-close-overlay").hidden = false;
+    priceFor(t).then((p) => { if (p != null) { $("#jr-exit-price").value = +(+p).toFixed(6); $("#jr-price-tag").textContent = "live"; } else $("#jr-price-tag").textContent = ""; });
+  }
+  function closeModal() { $("#jr-close-overlay").hidden = true; closeId = null; }
+  function saveClose() {
+    if (!closeId) return;
+    const data = mjLoad();
+    const t = data.trades.find((x) => x.id === closeId);
+    const exit = parseFloat($("#jr-exit-price").value);
+    if (!t || !(exit > 0)) return;
+    t.status = "closed"; t.exit = exit; t.exit_date = today(); t.exit_time = nowTime();
+    t.exit_reason = "manual"; t.mtime = Date.now();
+    delete t._init;                              // force a clean re-resolve
+    mjSave(data); closeModal(); loadMe(data); renderAll(); refreshLive();
   }
 
-
-  function mjCloseModal() {
-    $("#mj-modal").classList.add("mj-hidden");
+  // ── cross-device sync + backup/restore (Cloudflare KV via gbs-sync) ────────
+  function syncStatus(msg, cls) {
+    const el = $("#mj-sync-status");
+    if (el) { el.textContent = msg || ""; el.className = "mj-sync-status" + (cls ? " " + cls : ""); }
   }
-
-  // Live preview: shares + P&L estimate while typing in the form
-  function mjUpdateOpenPreview() {
-    const entry    = parseFloat($("#mj-entry").value);
-    const size     = parseFloat($("#mj-size").value);
-    const levEl    = $("#mj-leverage");
-    const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
-    const prev     = $("#mj-shares-preview");
-    if (!prev) return;
-    if (!entry || !size) { prev.textContent = ""; return; }
-    const exposure = size * leverage;
-    const units    = exposure / entry;
-    const stopEl   = parseFloat($("#mj-stop").value);
-    const tgtVal   = parseFloat($("#mj-target").value);
-    let rr = "";
-    if (stopEl && tgtVal) {
-      const dir  = mjGetDir();
-      const risk = dir === "long" ? entry - stopEl : stopEl - entry;
-      const rew  = dir === "long" ? tgtVal - entry : entry - tgtVal;
-      if (risk > 0) rr = ` \xb7 R:R ${(rew / risk).toFixed(1)}`;
-    }
-    const levStr = leverage > 1 ? ` \xb7 ${leverage}\xd7 leverage` : "";
-    prev.textContent = `${units.toFixed(4)} units \xb7 $${exposure.toFixed(0)} exposure${levStr}${rr}`;
-  }
-
-  function mjUpdateClosePreview() {
-    const prev  = $("#mj-close-preview");
-    const exit  = parseFloat($("#mj-exit").value);
-    if (!prev || !exit) { if (prev) prev.textContent = ""; return; }
-    const entry    = parseFloat(prev.dataset.entry  || 0);
-    const stop     = parseFloat(prev.dataset.stop   || 0);
-    const shares   = parseFloat(prev.dataset.shares  || 0);
-    const dir      = prev.dataset.dir || "long";
-    const aType    = prev.dataset.asset || "crypto";
-    const data     = mjLoad();
-    const brokerage = aType === "crypto"
-      ? (data.crypto_brokerage ?? 5)
-      : (data.stock_brokerage  ?? 10);
-    const m   = dir === "long" ? 1 : -1;
-    const pnl = shares * m * (exit - entry) - 2 * brokerage;
-    let r = "";
-    if (stop) {
-      const risk = dir === "long" ? entry - stop : stop - entry;
-      if (risk > 0) r = ` \xb7 ${((m * (exit - entry)) / risk).toFixed(2)}R`;
-    }
-    const pCls = pnl >= 0 ? "pos" : "neg";
-    prev.innerHTML = `P&amp;L: <span class="${pCls}">${pnl >= 0 ? "+" : "−"}$${Math.abs(pnl).toFixed(2)}</span>${r ? ` <span class="${pnl >= 0 ? "pos" : "neg"}">${r.trim()}</span>` : ""}`;
-  }
-
-  // ── Form submit ────────────────────────────────────────────────────────────
-  function mjHandleSubmit(e) {
-    e.preventDefault();
-    const data     = mjLoad();
-    const tradeId  = $("#mj-trade-id").value;
-
-    if (tradeId) {
-      // Close an existing position
-      const t = data.trades.find((x) => x.id === tradeId);
-      if (!t) return;
-      t.exit       = parseFloat($("#mj-exit").value);
-      t.exit_date  = $("#mj-exit-date").value;
-      t.exit_time  = $("#mj-exit-time").value;
-      t.status     = "closed";
-      t.mtime      = Date.now();
-    } else {
-      // Open a new position
-      const entry    = parseFloat($("#mj-entry").value);
-      const size     = parseFloat($("#mj-size").value);
-      const levEl    = $("#mj-leverage");
-      const leverage = parseFloat(levEl ? levEl.value : "1") || 1;
-      const stop     = parseFloat($("#mj-stop").value)   || null;
-      const target   = parseFloat($("#mj-target").value) || null;
-      data.trades.push({
-        id:          mjUid(),
-        symbol:      $("#mj-symbol").value.trim().toUpperCase(),
-        direction:   mjGetDir(),
-        asset_type:  mjGetAsset(),
-        entry,
-        entry_date:  $("#mj-entry-date").value,
-        entry_time:  $("#mj-entry-time").value,
-        size_usd:    size,
-        leverage,
-        shares:      entry > 0 ? parseFloat((size * leverage / entry).toFixed(8)) : 0,
-        stop,
-        target,
-        notes:       $("#mj-notes").value.trim(),
-        status:      "open",
-        exit:        null,
-        exit_date:   null,
-        exit_time:   null,
-        mtime:       Date.now(),
-      });
-    }
-
-    mjSave(data);
-    mjCloseModal();
-    mjRenderStocks();
-    mjRenderCrypto();
-  }
-
-  // ── Init ───────────────────────────────────────────────────────────────────
-  (function mjInit() {
-    const newStockBtn = $("#mj-new-stock-btn");
-    if (newStockBtn) newStockBtn.addEventListener("click", () => { mjSetAsset("asx"); mjOpenModal(); });
-    const newCryptoBtn = $("#mj-new-crypto-btn");
-    if (newCryptoBtn) newCryptoBtn.addEventListener("click", () => { mjSetAsset("crypto"); mjOpenModal(); });
-
-    const clearStockBtn = $("#mj-clear-stock-btn");
-    if (clearStockBtn) clearStockBtn.addEventListener("click", () => {
-      if (confirm("Clear ALL your stock trades? This cannot be undone.")) {
-        const data = mjLoad();
-        data.trades.filter((t) => t.asset_type === "asx" || t.asset_type === "nasdaq")
-                   .forEach((t) => mjTombstone(data, t.id));
-        data.trades = data.trades.filter((t) => t.asset_type !== "asx" && t.asset_type !== "nasdaq");
-        mjSave(data); mjRenderStocks();
-      }
-    });
-    const clearCryptoBtn = $("#mj-clear-crypto-btn");
-    if (clearCryptoBtn) clearCryptoBtn.addEventListener("click", () => {
-      if (confirm("Clear ALL your crypto trades? This cannot be undone.")) {
-        const data = mjLoad();
-        data.trades.filter((t) => t.asset_type == null || t.asset_type === "crypto")
-                   .forEach((t) => mjTombstone(data, t.id));
-        data.trades = data.trades.filter((t) => t.asset_type != null && t.asset_type !== "crypto");
-        mjSave(data); mjRenderCrypto();
-      }
-    });
-
-    const modalX  = $("#mj-modal-x");
-    const cancelBtn = $("#mj-cancel");
-    if (modalX)    modalX.addEventListener("click",    mjCloseModal);
-    if (cancelBtn) cancelBtn.addEventListener("click", mjCloseModal);
-
-    const overlay = $("#mj-modal");
-    if (overlay) overlay.addEventListener("click", (e) => { if (e.target === overlay) mjCloseModal(); });
-
-    const form = $("#mj-form");
-    if (form) form.addEventListener("submit", mjHandleSubmit);
-
-    // Direction toggle
-    document.querySelectorAll(".mj-dir-btn").forEach((b) => {
-      b.addEventListener("click", () => { mjSetDir(b.dataset.dir); mjUpdateOpenPreview(); });
-    });
-
-    // Asset type toggle
-    document.querySelectorAll(".mj-asset-btn").forEach((b) => {
-      b.addEventListener("click", () => mjSetAsset(b.dataset.asset));
-    });
-
-    // Track manual edits to the size field
-    const sizeEl2 = $("#mj-size");
-    if (sizeEl2) sizeEl2.addEventListener("input", () => { sizeEl2._manualEdit = true; });
-
-    // Live preview on entry/size/leverage/stop/target change
-    ["#mj-entry", "#mj-size", "#mj-leverage", "#mj-stop", "#mj-target"].forEach((sel) => {
-      const el = $(sel);
-      if (el) el.addEventListener("input", mjUpdateOpenPreview);
-    });
-    const exitEl = $("#mj-exit");
-    if (exitEl) exitEl.addEventListener("input", () => {
-      exitEl.dataset.userEdited = "1";   // stop live fetch from overwriting manual input
-      mjUpdateClosePreview();
-    });
-
-    // Settings persistence for stocks + crypto capital/brokerage
-    ["#mj-stock-capital", "#mj-stock-brokerage", "#mj-crypto-capital", "#mj-crypto-brokerage"].forEach((sel) => {
-      const el = $(sel);
-      if (!el) return;
-      el.addEventListener("change", () => {
-        const data = mjLoad();
-        const scEl = $("#mj-stock-capital"),  sbEl = $("#mj-stock-brokerage");
-        const ccEl = $("#mj-crypto-capital"), cbEl = $("#mj-crypto-brokerage");
-        const sc = parseFloat(scEl ? scEl.value : "10000") || 10000;
-        const sb = parseFloat(sbEl ? sbEl.value : "10")    || 10;
-        const cc = parseFloat(ccEl ? ccEl.value : "10000") || 10000;
-        const cb = parseFloat(cbEl ? cbEl.value : "5")     || 5;
-        data.stock_capital   = sc; data.stock_brokerage   = sb;
-        data.crypto_capital  = cc; data.crypto_brokerage  = cb;
-        mjSave(data);
-        mjRenderStocks(); mjRenderCrypto();
-      });
-    });
-
-    // Delegated: close / delete buttons in the open/closed tables
-    document.addEventListener("click", (e) => {
-      const closeBtn = e.target.closest(".mj-close-btn");
-      const delBtn   = e.target.closest(".mj-del-btn");
-      if (closeBtn) { mjOpenCloseModal(closeBtn.dataset.id); return; }
-      if (delBtn) {
-        if (confirm("Delete this trade?")) {
-          const data  = mjLoad();
-          const t     = data.trades.find((x) => x.id === delBtn.dataset.id);
-          const aType = t ? (t.asset_type || "crypto") : "crypto";
-          mjTombstone(data, delBtn.dataset.id);
-          data.trades = data.trades.filter((x) => x.id !== delBtn.dataset.id);
-          mjSave(data);
-          if (aType === "asx" || aType === "nasdaq" || aType === "commodity" || aType === "index") mjRenderStocks();
-          else mjRenderCrypto();
-        }
-      }
-    });
-
-    mjInitSync();
-    mjInitBackup();
-  })();
-
-  // ── Backup / Restore (export & import JSON) ─────────────────────────────────
-  function mjInitBackup() {
+  function afterStoreChange() { loadMe(); renderAll(); refreshLive(); }
+  function wireSync() {
+    // Backup / Restore
     const exportBtn = $("#mj-export-btn");
     if (exportBtn) exportBtn.addEventListener("click", () => {
       const blob = new Blob([JSON.stringify(mjLoad(), null, 2)], { type: "application/json" });
-      const url  = URL.createObjectURL(blob);
-      const a    = Object.assign(document.createElement("a"), {
-        href: url, download: `my-trades-${new Date().toISOString().slice(0, 10)}.json`,
-      });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href: url, download: `my-trades-${today()}.json` });
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
-
-    const importBtn = $("#mj-import-btn");
-    const importInput = $("#mj-import-input");
+    const importBtn = $("#mj-import-btn"), importInput = $("#mj-import-input");
     if (importBtn && importInput) {
       importBtn.addEventListener("click", () => importInput.click());
       importInput.addEventListener("change", () => {
@@ -975,219 +511,75 @@
           let incoming;
           try { incoming = JSON.parse(reader.result); } catch (_) { alert("That file isn't valid trade backup JSON."); return; }
           if (!incoming || !Array.isArray(incoming.trades)) { alert("That file doesn't look like a trades backup."); return; }
-          // Merge rather than overwrite, so importing never wipes existing trades.
           const merged = window.GBSSync ? window.GBSSync.merge(mjLoad(), incoming) : incoming;
-          mjSave(merged);
-          mjRenderStocks(); mjRenderCrypto();
+          mjSave(merged); afterStoreChange();
           alert(`Imported — ${merged.trades.length} trade(s) now in your journal.`);
         };
-        reader.readAsText(file);
-        importInput.value = "";
+        reader.readAsText(file); importInput.value = "";
       });
     }
-  }
-
-  // ── Cross-device cloud sync (private code → Cloudflare KV) ───────────────────
-  function mjSyncStatus(msg, cls) {
-    const el = $("#mj-sync-status");
-    if (el) { el.textContent = msg || ""; el.className = "mj-sync-status" + (cls ? " " + cls : ""); }
-  }
-
-  function mjInitSync() {
-    const codeEl   = $("#mj-sync-code");
-    const onBtn    = $("#mj-sync-on");
-    const offBtn   = $("#mj-sync-off");
-    const nowBtn   = $("#mj-sync-now");
+    // Cloud sync (private code)
+    const codeEl = $("#mj-sync-code"), onBtn = $("#mj-sync-on"), offBtn = $("#mj-sync-off"), nowBtn = $("#mj-sync-now");
     if (!codeEl || !window.GBSSync) return;
-
-    function reflect() {
+    const reflect = () => {
       const on = window.GBSSync.enabled();
       codeEl.value = on ? window.GBSSync.getCode() : "";
-      if (onBtn)  onBtn.classList.toggle("mj-hidden", on);
+      if (onBtn) onBtn.classList.toggle("mj-hidden", on);
       if (offBtn) offBtn.classList.toggle("mj-hidden", !on);
       if (nowBtn) nowBtn.classList.toggle("mj-hidden", !on);
-      mjSyncStatus(on ? "Sync ON — same trades on every device with this code." : "", on ? "live" : "");
-    }
-
-    async function enable() {
+      syncStatus(on ? "Sync ON — same trades on every device with this code." : "", on ? "live" : "");
+    };
+    const enable = async () => {
       const code = (codeEl.value || "").trim();
-      if (code.length < 4) { mjSyncStatus("Pick a code with at least 4 characters.", "neg"); return; }
-      window.GBSSync.setCode(code);
-      mjSyncStatus("Connecting…");
-      // Pull anything already stored under this code, merge, then push the union.
+      if (code.length < 4) { syncStatus("Pick a code with at least 4 characters.", "neg"); return; }
+      window.GBSSync.setCode(code); syncStatus("Connecting…");
       try {
         const probe = await window.GBSSync.pull();
         if (probe.configured === false) {
-          window.GBSSync.setCode("");
-          mjSyncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg");
-          reflect();
-          return;
+          window.GBSSync.setCode(""); reflect();
+          syncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg"); return;
         }
-        await window.GBSSync.syncOut();
-        mjRenderStocks(); mjRenderCrypto();
-        reflect();
-      } catch (_) {
-        mjSyncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg");
-      }
-    }
-
-    function disable() {
-      window.GBSSync.setCode("");
-      reflect();
-      mjSyncStatus("Sync off — this device keeps its own copy.");
-    }
-
-    function syncedAt() {
-      const t = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      mjSyncStatus(`Synced at ${t}`, "live");
-    }
-
-    async function syncNow() {
-      mjSyncStatus("Syncing…");
-      try {
-        await window.GBSSync.syncOut();
-        mjRenderStocks(); mjRenderCrypto(); renderScoreboard();
-        syncedAt();
-      } catch (_) { mjSyncStatus("Sync failed — will retry on the next change.", "neg"); }
-    }
-
-    async function silentPull() {
-      if (!window.GBSSync.enabled()) return;
-      try {
-        await window.GBSSync.syncIn();
-        mjRenderStocks(); mjRenderCrypto(); renderScoreboard();
-        syncedAt();
-      } catch (_) {}
-    }
-
-    if (onBtn)  onBtn.addEventListener("click", enable);
-    if (offBtn) offBtn.addEventListener("click", disable);
-    if (nowBtn) nowBtn.addEventListener("click", syncNow);
+        await window.GBSSync.syncOut(); afterStoreChange(); reflect();
+      } catch (_) { syncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg"); }
+    };
+    const syncedAt = () => syncStatus("Synced at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), "live");
+    if (onBtn) onBtn.addEventListener("click", enable);
+    if (offBtn) offBtn.addEventListener("click", () => { window.GBSSync.setCode(""); reflect(); syncStatus("Sync off — this device keeps its own copy."); });
+    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { await window.GBSSync.syncOut(); afterStoreChange(); syncedAt(); } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); } });
     codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
-
-    // Pull when the user switches back to this tab (phone/PC waking from background).
+    const silentPull = async () => { if (!window.GBSSync.enabled()) return; try { await window.GBSSync.syncIn(); afterStoreChange(); syncedAt(); } catch (_) {} };
     document.addEventListener("visibilitychange", () => { if (!document.hidden) silentPull(); });
-
-    // Background poll every 60 s so both devices stay in sync while the page is open.
-    setInterval(() => { if (!document.hidden) silentPull(); }, 60_000);
-
+    setInterval(() => { if (!document.hidden) silentPull(); }, 60000);
     reflect();
-    // On load, if sync is already on, pull the latest before first render.
-    if (window.GBSSync.enabled()) {
-      window.GBSSync.syncIn().then(() => { mjRenderStocks(); mjRenderCrypto(); renderScoreboard(); syncedAt(); }).catch(() => {});
-    }
+    if (window.GBSSync.enabled()) silentPull();
   }
 
-  // ── Close-position modal ─────────────────────────────────────────────────
-  const overlay   = $("#jr-close-overlay");
-  const titleEl   = $("#jr-modal-title");
-  const priceIn   = $("#jr-exit-price");
-  const priceTag  = $("#jr-price-tag");
-  const dateIn    = $("#jr-exit-date");
-  const timeIn    = $("#jr-exit-time");
-  const saveBtn   = $("#jr-modal-save");
-
-  let _modalPos = null;   // current position being closed
-
-  function closeModal() {
-    overlay.hidden = true;
-    _modalPos = null;
+  // ── wire-up ───────────────────────────────────────────────────────────────
+  function wire() {
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-close]");
+      if (btn) openCloseModal(btn.getAttribute("data-close"));
+    });
+    $("#jr-modal-x").addEventListener("click", closeModal);
+    $("#jr-modal-cancel").addEventListener("click", closeModal);
+    $("#jr-modal-save").addEventListener("click", saveClose);
+    $("#jr-close-overlay").addEventListener("click", (e) => { if (e.target.id === "jr-close-overlay") closeModal(); });
+    // react to manual trades opened on another tab/device
+    window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) { loadMe(); renderAll(); refreshLive(); } });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
+    setInterval(() => { if (!document.hidden) refreshLive(); }, 20000);
   }
 
-  $("#jr-modal-x").addEventListener("click", closeModal);
-  $("#jr-modal-cancel").addEventListener("click", closeModal);
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  async function init() {
+    loadMe();
+    renderAll();                 // paint Me immediately
+    await loadBot();
+    renderAll();                 // repaint with Claude
+    wire();
+    wireSync();
+    refreshLive();
+  }
 
-  // Exposed globally so inline onclick handlers (generated in innerHTML) can reach it.
-  window.openCloseModal = function(pos) {
-    _modalPos = pos;
-    delete priceIn.dataset.userEdited;   // clear so live price can populate freely
-
-    const dirLabel = (pos.direction || "long").toUpperCase();
-    titleEl.textContent = `Close ${pos.symbol} ${dirLabel}`;
-
-    // Pre-fill with last-known price immediately while live fetch is in-flight
-    if (pos.current && pos.current > 0) {
-      priceIn.value = pos.current;
-      priceTag.textContent = "last known";
-      priceTag.className   = "jr-price-tag stale";
-    } else {
-      priceIn.value = "";
-      priceTag.textContent = "";
-    }
-
-    // Pre-fill date/time with now (local)
-    const now = new Date();
-    dateIn.value = now.toLocaleDateString("en-CA");   // YYYY-MM-DD
-    timeIn.value = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
-    overlay.hidden = false;
-    priceIn.focus();
-    priceIn.select();
-
-    // Fetch live price — overwrite field unless user edits first
-    if (pos.yf_ticker) {
-      priceTag.textContent = "fetching…";
-      priceTag.className   = "jr-price-tag stale";
-      fetch(`/api/price?symbol=${encodeURIComponent(pos.yf_ticker)}`)
-        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-        .then((d) => {
-          if (!d.ok || !d.price) throw new Error("no price");
-          if (!priceIn.dataset.userEdited) {
-            priceIn.value = d.price;
-            priceIn.select();
-          }
-          priceTag.textContent = "live ✓";
-          priceTag.className   = "jr-price-tag";
-        })
-        .catch(() => {
-          priceTag.textContent = pos.current > 0 ? "last known" : "unavailable";
-          priceTag.className   = "jr-price-tag stale";
-        });
-    }
-  };
-
-  // Track if the user manually edited the price so we don't overwrite it
-  priceIn.addEventListener("input", () => { priceIn.dataset.userEdited = "1"; });
-
-  saveBtn.addEventListener("click", async () => {
-    const price = parseFloat(priceIn.value);
-    if (!_modalPos || !isFinite(price) || price <= 0) {
-      priceIn.focus();
-      return;
-    }
-
-    saveBtn.disabled    = true;
-    saveBtn.textContent = "Saving…";
-
-    try {
-      const res = await fetch("/api/close", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbol:       _modalPos.symbol,
-          direction:    _modalPos.direction || "long",
-          market:       _modalPos.market    || "",
-          price,
-          exit_date:    dateIn.value,
-          journal_type: _modalPos.journal_type || "swing",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (data.ok) {
-        saveBtn.textContent = "Saved ✓";
-        setTimeout(closeModal, 900);
-      } else {
-        saveBtn.disabled    = false;
-        saveBtn.textContent = "Save";
-        alert(data.message || "Something went wrong — try again.");
-      }
-    } catch (err) {
-      saveBtn.disabled    = false;
-      saveBtn.textContent = "Save";
-      alert(`Network error: ${err}`);
-    }
-  });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=45" />
-  <link rel="stylesheet" href="css/journal.css?v=10" />
+  <link rel="stylesheet" href="css/journal.css?v=11" />
 </head>
 <body>
   <header class="topbar">
@@ -26,86 +26,60 @@
   <main class="wrap">
     <div class="jr-head">
       <h2 class="jr-title">Paper-trade journal</h2>
-      <p class="jr-sub">A forward test — every A+/A setup is paper-traded from the day it appears. Bias-free, unlike a backtest. No real orders are placed.</p>
-      <p class="jr-config">Max 10 positions per journal &nbsp;·&nbsp; $1,000 AUD per trade &nbsp;·&nbsp; $5 brokerage each way</p>
+      <p class="jr-sub">
+        <strong>Claude</strong> (the autonomous bot) vs <strong>you</strong>, head to head — same VIVEK rules,
+        same sizing ($10k book · 5× stocks · 3× crypto). Entries/stops/targets and scale-outs are managed
+        automatically by the rules; you choose which setups to take from the charts. No real orders are placed.
+      </p>
     </div>
 
-    <!-- OVERALL / LONGS / SHORTS / MY STOCKS / MY CRYPTO tab selector -->
-    <div class="jr-tabs" role="tablist">
-      <button class="jr-tab jr-tab-all is-active" data-journal="all" role="tab" aria-selected="true">
-        <span class="jr-tab-arrow">Σ</span> Overall &nbsp;<span class="jr-tab-label">ALL</span>
-      </button>
-      <button class="jr-tab" data-journal="long" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">↑</span> Journal 1 &nbsp;<span class="jr-tab-label">LONGS</span>
-      </button>
-      <button class="jr-tab jr-tab-short" data-journal="short" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">↓</span> Journal 2 &nbsp;<span class="jr-tab-label">SHORTS</span>
-      </button>
-      <button class="jr-tab jr-tab-stocks" data-journal="stocks" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">📈</span> My Stocks &nbsp;<span class="jr-tab-label">ASX/NAS</span>
-      </button>
-      <button class="jr-tab jr-tab-crypto" data-journal="crypto" role="tab" aria-selected="false">
-        <span class="jr-tab-arrow">₿</span> My Crypto &nbsp;<span class="jr-tab-label">MANUAL</span>
-      </button>
-    </div>
+    <!-- ═══ 1 · COMPARISON OVERVIEW ═══ -->
+    <section class="cmp">
+      <div class="jr-section-title">Comparison overview <span class="muted">— who's ahead</span></div>
+      <div id="cmp-stats" class="cmp-stats"></div>
+      <div class="cmp-curves">
+        <figure class="cmp-curve">
+          <figcaption class="cmp-curve-hd"><span class="side-badge bot">🤖 Claude</span></figcaption>
+          <div id="cmp-eq-bot" class="jr-equity-chart"></div>
+        </figure>
+        <figure class="cmp-curve">
+          <figcaption class="cmp-curve-hd"><span class="side-badge me">✏️ Me</span></figcaption>
+          <div id="cmp-eq-me" class="jr-equity-chart"></div>
+        </figure>
+      </div>
+      <p class="cmp-legend"><span class="lg lg-d">— cumulative&nbsp;$</span> <span class="lg lg-r">— cumulative&nbsp;R</span></p>
+    </section>
 
-    <!-- ── OVERALL ── -->
-    <div id="jr-all-section">
-      <!-- Machine vs You scoreboard -->
-      <div class="jr-section-title">🤖 Machine vs ✏️ You <span class="muted">(realised $, closed trades)</span></div>
-      <div id="jr-scoreboard" class="jr-scoreboard"></div>
+    <!-- ═══ 2 · CLAUDE (BOT) ═══ -->
+    <section class="side side-bot" id="sec-bot">
+      <div class="side-hd">
+        <span class="side-badge bot">🤖 Claude (Bot)</span>
+        <span id="bot-note" class="side-note"></span>
+      </div>
+      <section class="stats" id="bot-stats"></section>
+      <div class="jr-section-title">Equity curve <span class="muted">(cumulative R · $)</span></div>
+      <div id="bot-equity" class="jr-equity-chart"></div>
+      <div class="jr-section-title">Open positions <span id="bot-open-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="bot-open"></div>
+      <div class="jr-section-title">Closed trades <span id="bot-closed-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="bot-closed"></div>
+    </section>
 
-      <section class="stats" id="jr-all-stats"></section>
+    <!-- ═══ 3 · ME (MANUAL) ═══ -->
+    <section class="side side-me" id="sec-me">
+      <div class="side-hd">
+        <span class="side-badge me">✏️ Me (Manual)</span>
+        <a class="side-cta" href="index.html">＋ Take a trade from a chart →</a>
+      </div>
+      <section class="stats" id="me-stats"></section>
+      <div class="jr-section-title">Equity curve <span class="muted">(cumulative R · $)</span></div>
+      <div id="me-equity" class="jr-equity-chart"></div>
+      <div class="jr-section-title">Open positions <span id="me-open-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="me-open"></div>
+      <div class="jr-section-title">Closed trades <span id="me-closed-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="me-closed"></div>
 
-      <section class="jr-equity">
-        <div class="jr-section-title">Combined equity curve <span class="muted">(cumulative $, all journals)</span></div>
-        <div id="jr-all-equity" class="jr-equity-chart"></div>
-      </section>
-
-      <p class="jr-sub" style="margin-top:14px">The scoreboard pits the scanner's auto-picked paper trades (Longs, Shorts) against the trades you log by hand (My Stocks, My Crypto) — head to head, by dollar P&amp;L. Use the tabs above to drill into each journal.</p>
-    </div>
-
-    <!-- ── LONGS ── -->
-    <div id="jr-long-section" class="jr-hidden">
-      <section class="stats" id="jr-long-stats"></section>
-
-      <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative R, closed longs)</span></div>
-        <div id="jr-long-equity" class="jr-equity-chart"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Open long positions <span id="jr-long-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-long-open"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Closed long trades <span id="jr-long-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-long-closed"></div>
-      </section>
-    </div>
-
-    <!-- ── SHORTS ── -->
-    <div id="jr-short-section" class="jr-hidden">
-      <section class="stats" id="jr-short-stats"></section>
-
-      <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative R, closed shorts)</span></div>
-        <div id="jr-short-equity" class="jr-equity-chart"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Open short positions <span id="jr-short-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-short-open"></div>
-      </section>
-
-      <section>
-        <div class="jr-section-title">Closed short trades <span id="jr-short-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-short-closed"></div>
-      </section>
-    </div>
-    <!-- shared sync bar for all manual journals -->
-    <div id="jr-shared-sync" class="jr-hidden">
+      <!-- cross-device sync for your manual trades -->
       <div class="mj-sync">
         <div class="mj-sync-row">
           <span class="mj-sync-label">📱 Sync across devices</span>
@@ -121,165 +95,14 @@
         <div id="mj-sync-status" class="mj-sync-status"></div>
         <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. Backup saves a file; Restore merges one back in.</p>
       </div>
-    </div>
-
-    <!-- ── MY STOCKS ── -->
-    <div id="jr-stocks-section" class="jr-hidden">
-      <div class="mj-settings">
-        <label class="mj-setting">Starting capital
-          <span class="mj-currency-wrap">$<input id="mj-stock-capital" class="mj-input" type="number" min="0" step="100" value="10000" /></span>
-        </label>
-        <label class="mj-setting">Brokerage / leg
-          <span class="mj-currency-wrap">$<input id="mj-stock-brokerage" class="mj-input" type="number" min="0" step="1" value="10" /></span>
-        </label>
-        <button id="mj-new-stock-btn" class="mj-btn-primary">+ Log Stock Trade</button>
-        <button id="mj-clear-stock-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
-      </div>
-      <section class="stats" id="jr-stocks-stats"></section>
-      <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed stock trades)</span></div>
-        <div id="jr-stocks-equity" class="jr-equity-chart"></div>
-      </section>
-      <section>
-        <div class="jr-section-title">Open positions <span id="jr-stocks-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-stocks-open"></div>
-      </section>
-      <section>
-        <div class="jr-section-title">Closed trades <span id="jr-stocks-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-stocks-closed"></div>
-      </section>
-    </div>
-
-    <!-- ── MY CRYPTO ── -->
-    <div id="jr-crypto-section" class="jr-hidden">
-      <div class="mj-settings">
-        <label class="mj-setting">Starting capital
-          <span class="mj-currency-wrap">$<input id="mj-crypto-capital" class="mj-input" type="number" min="0" step="100" value="10000" /></span>
-        </label>
-        <label class="mj-setting">Brokerage / leg
-          <span class="mj-currency-wrap">$<input id="mj-crypto-brokerage" class="mj-input" type="number" min="0" step="1" value="5" /></span>
-        </label>
-        <button id="mj-new-crypto-btn" class="mj-btn-primary">+ Log Crypto Trade</button>
-        <button id="mj-clear-crypto-btn" class="mj-btn-ghost mj-btn-danger">Clear all</button>
-      </div>
-      <section class="stats" id="jr-crypto-stats"></section>
-      <section class="jr-equity">
-        <div class="jr-section-title">Equity curve <span class="muted">(cumulative $, closed crypto trades)</span></div>
-        <div id="jr-crypto-equity" class="jr-equity-chart"></div>
-      </section>
-      <section>
-        <div class="jr-section-title">Open positions <span id="jr-crypto-open-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-crypto-open"></div>
-      </section>
-      <section>
-        <div class="jr-section-title">Closed trades <span id="jr-crypto-closed-n" class="muted"></span></div>
-        <div class="jr-table-wrap" id="jr-crypto-closed"></div>
-      </section>
-    </div>
-
-    <!-- ── MODAL (shared for open + close forms) ── -->
-    <div id="mj-modal" class="mj-overlay mj-hidden" role="dialog" aria-modal="true">
-      <div class="mj-modal">
-        <div class="mj-modal-head">
-          <span id="mj-modal-title" class="mj-modal-title">Log New Trade</span>
-          <button id="mj-modal-x" class="mj-modal-x" aria-label="Close">✕</button>
-        </div>
-        <form id="mj-form" class="mj-form" autocomplete="off" novalidate>
-          <input type="hidden" id="mj-trade-id" value="" />
-
-          <!-- ── OPEN TRADE FIELDS ── -->
-          <div id="mj-open-fields">
-            <div class="mj-row">
-              <label class="mj-label mj-full">Asset type
-                <div class="mj-asset-switch" id="mj-asset-switch">
-                  <button type="button" class="mj-asset-btn mj-asset-asx" data-asset="asx">📈 ASX</button>
-                  <button type="button" class="mj-asset-btn mj-asset-nasdaq" data-asset="nasdaq">📊 NASDAQ</button>
-                  <button type="button" class="mj-asset-btn mj-asset-crypto mj-asset-active" data-asset="crypto">₿ Crypto</button>
-                </div>
-              </label>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label">Symbol
-                <input id="mj-symbol" class="mj-field" type="text" placeholder="e.g. BHP" required />
-              </label>
-              <label class="mj-label">Direction
-                <div class="mj-dir-switch" id="mj-dir-switch">
-                  <button type="button" class="mj-dir-btn mj-dir-long mj-dir-active" data-dir="long">↑ LONG</button>
-                  <button type="button" class="mj-dir-btn mj-dir-short" data-dir="short">↓ SHORT</button>
-                </div>
-              </label>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label">Entry Price $
-                <input id="mj-entry" class="mj-field" type="number" step="any" min="0" placeholder="1.00" required />
-              </label>
-              <div class="mj-leverage-row" id="mj-leverage-row">
-                <label class="mj-label">$ Margin × Leverage
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <input id="mj-size" class="mj-field" type="number" step="any" min="0" value="500" style="flex:1;min-width:0" required />
-                    <span style="font:700 14px/1 var(--sans);color:var(--muted);flex-shrink:0">×</span>
-                    <input id="mj-leverage" class="mj-field" type="number" step="1" min="1" max="500" value="10" style="width:60px;flex-shrink:0" title="Leverage multiplier" />
-                  </div>
-                </label>
-              </div>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label">Entry Date
-                <input id="mj-entry-date" class="mj-field" type="date" required />
-              </label>
-              <label class="mj-label">Entry Time
-                <input id="mj-entry-time" class="mj-field" type="time" value="10:00" />
-              </label>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label">Stop Loss $
-                <input id="mj-stop" class="mj-field" type="number" step="any" min="0" placeholder="optional" />
-              </label>
-              <label class="mj-label">Target $
-                <input id="mj-target" class="mj-field" type="number" step="any" min="0" placeholder="optional" />
-              </label>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label mj-full">Notes
-                <input id="mj-notes" class="mj-field" type="text" placeholder="e.g. A+ reversal from scanner" />
-              </label>
-            </div>
-            <div id="mj-shares-preview" class="mj-preview"></div>
-          </div>
-
-          <!-- ── CLOSE TRADE FIELDS ── -->
-          <div id="mj-close-fields" class="mj-hidden">
-            <div class="mj-row">
-              <label class="mj-label mj-full">Exit Price $
-                <input id="mj-exit" class="mj-field" type="number" step="any" min="0" placeholder="0.89" required />
-              </label>
-            </div>
-            <div class="mj-row">
-              <label class="mj-label">Exit Date
-                <input id="mj-exit-date" class="mj-field" type="date" required />
-              </label>
-              <label class="mj-label">Exit Time
-                <input id="mj-exit-time" class="mj-field" type="time" value="14:00" />
-              </label>
-            </div>
-            <div id="mj-close-preview" class="mj-preview"></div>
-          </div>
-
-          <div class="mj-actions">
-            <button type="button" id="mj-cancel" class="mj-btn-ghost">Cancel</button>
-            <button type="submit" id="mj-submit" class="mj-btn-primary">Save</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
+    </section>
   </main>
 
   <footer class="site-footer">
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
   </footer>
 
-  <!-- ── Close-position modal ── -->
+  <!-- ── Close-position modal (Me only) ── -->
   <div id="jr-close-overlay" class="jr-overlay" hidden aria-modal="true" role="dialog">
     <div class="jr-modal">
       <div class="jr-modal-hd">
@@ -292,25 +115,15 @@
           <input id="jr-exit-price" class="jr-modal-input" type="number" step="any" min="0" placeholder="0.00" />
           <span id="jr-price-tag" class="jr-price-tag"></span>
         </div>
-        <div class="jr-modal-row">
-          <div>
-            <label class="jr-modal-label" for="jr-exit-date">EXIT DATE</label>
-            <input id="jr-exit-date" class="jr-modal-input" type="date" />
-          </div>
-          <div>
-            <label class="jr-modal-label" for="jr-exit-time">EXIT TIME</label>
-            <input id="jr-exit-time" class="jr-modal-input" type="time" />
-          </div>
-        </div>
       </div>
       <div class="jr-modal-ft">
         <button class="jr-modal-cancel" id="jr-modal-cancel">Cancel</button>
-        <button class="jr-modal-save"   id="jr-modal-save">Save</button>
+        <button class="jr-modal-save"   id="jr-modal-save">Close trade</button>
       </div>
     </div>
   </div>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/journal.js?v=23"></script>
+  <script src="js/journal.js?v=24"></script>
 </body>
 </html>
