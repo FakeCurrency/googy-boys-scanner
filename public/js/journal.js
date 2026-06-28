@@ -31,7 +31,11 @@
   const round = (v, n) => +(+v).toFixed(n);
 
   // ── VIVEK sizing + cost model (mirrors scanner/broker/vivek_bot.py + config) ──
+  // Each market is sized off its own $10k book; the account spans all three, so
+  // the starting capital shown to the user is 3 × $10k = $30k.
   const EQUITY = 10000, RISK_PCT = 0.35, RISK_MIN = 0.25, RISK_MAX = 0.5;
+  const START_CAPITAL = EQUITY * 3;        // $30k — ASX + NASDAQ + Crypto books
+  const money0 = (v) => "$" + Math.round(v).toLocaleString();
   const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };
   const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
   const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };
@@ -231,9 +235,11 @@
   function statCards(host, s, accent) {
     const cell = (label, val, cls) =>
       `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls || ""}">${val}</div></div>`;
+    const equity = START_CAPITAL + s.totalD;          // realised account value
     host.innerHTML =
-      cell("Total R", rfmt(s.totalR), rcls(s.totalR)) +
+      cell("Account value", `${money0(equity)}<span class="stat-sub"> from ${money0(START_CAPITAL)}</span>`, pcls(s.totalD)) +
       cell("Total $", dfmt(s.totalD), pcls(s.totalD)) +
+      cell("Total R", rfmt(s.totalR), rcls(s.totalR)) +
       cell("Win rate", s.win == null ? "—" : s.win.toFixed(0) + "%", "") +
       cell("Trades", `${s.n}<span class="stat-sub"> closed · ${s.open} open</span>`, "") +
       cell("Max drawdown", dfmt(s.maxDD), s.maxDD < 0 ? "r-neg" : "");
@@ -398,6 +404,7 @@
     };
     $("#cmp-stats").innerHTML =
       `<div class="cmp-head"><span></span><span class="cmp-bot">🤖 Claude</span><span></span><span class="cmp-me">✏️ Me</span></div>` +
+      row("Account value", START_CAPITAL + sb.totalD, START_CAPITAL + sm.totalD, money0, true) +
       row("Total R", sb.totalR, sm.totalR, rfmt, true) +
       row("Total $", sb.totalD, sm.totalD, dfmt, true) +
       row("Win rate", sb.win || 0, sm.win || 0, (v) => v ? v.toFixed(0) + "%" : "—", true) +
