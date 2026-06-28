@@ -363,12 +363,13 @@
 .cmp-head, .cmp-row {
   display: grid; grid-template-columns: 1.1fr 1fr 34px 1fr; align-items: center; gap: 8px;
 }
-.cmp-head { padding: 0 10px 8px; font: 700 11px/1 var(--sans); letter-spacing: .4px; color: var(--muted); text-transform: uppercase; }
+/* Centre the CLAUDE / ME headers over their value columns. */
+.cmp-head { padding: 0 10px 8px; font: 700 11px/1 var(--sans); letter-spacing: .4px; color: var(--muted); text-transform: uppercase; text-align: center; }
 .cmp-row {
   padding: 9px 10px; border-radius: 8px; font: 700 14px/1 var(--mono);
 }
 .cmp-row:nth-child(even) { background: var(--fill); }
-.cmp-k { font: 600 12px/1 var(--sans); color: var(--text-2); letter-spacing: .2px; }
+.cmp-k { font: 700 11px/1 var(--sans); color: var(--text-2); letter-spacing: .5px; text-transform: uppercase; }
 .cmp-v { text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
 .cmp-vs { text-align: center; font: 600 10px/1 var(--sans); color: var(--muted-2); }
 .cmp-bot { color: var(--bot); }
@@ -384,7 +385,12 @@
 .cmp-legend .lg-d { color: var(--green); }
 .cmp-legend .lg-r { color: var(--bot); }
 
-/* ── 2 + 3 · per-side sections ── */
+/* owner marker in the combined tables */
+.own { font-size: 14px; }
+
+/* ── 2 + 3 · Claude vs Me, side by side ── */
+.sides { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; margin-bottom: 26px; }
+.sides .side { margin-bottom: 0; }
 .side {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 4px 18px 22px; margin-bottom: 26px; border-left-width: 3px;
@@ -406,6 +412,8 @@
 .side-cta { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--me); text-decoration: none; }
 .side-cta:hover { filter: brightness(1.15); }
 
+/* Stack the two sides on narrower screens (the tables are wide). */
+@media (max-width: 1100px) { .sides { grid-template-columns: 1fr; } }
 @media (max-width: 720px) {
   .cmp-curves { grid-template-columns: 1fr; }
   .cmp-head, .cmp-row { grid-template-columns: 1fr 1fr 26px 1fr; }

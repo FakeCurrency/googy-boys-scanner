@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=45" />
-  <link rel="stylesheet" href="css/journal.css?v=11" />
+  <link rel="stylesheet" href="css/journal.css?v=12" />
 </head>
 <body>
   <header class="topbar">
@@ -49,9 +49,14 @@
         </figure>
       </div>
       <p class="cmp-legend"><span class="lg lg-d">— cumulative&nbsp;$</span> <span class="lg lg-r">— cumulative&nbsp;R</span></p>
+      <div class="jr-section-title">Open trades <span class="muted">— both</span> <span id="cmp-open-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="cmp-open"></div>
+      <div class="jr-section-title">Closed trades <span class="muted">— both</span> <span id="cmp-closed-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="cmp-closed"></div>
     </section>
 
-    <!-- ═══ 2 · CLAUDE (BOT) ═══ -->
+    <!-- ═══ 2 + 3 · CLAUDE vs ME (side by side) ═══ -->
+    <div class="sides">
     <section class="side side-bot" id="sec-bot">
       <div class="side-hd">
         <span class="side-badge bot">🤖 Claude (Bot)</span>
@@ -79,9 +84,11 @@
       <div class="jr-table-wrap" id="me-open"></div>
       <div class="jr-section-title">Closed trades <span id="me-closed-n" class="muted"></span></div>
       <div class="jr-table-wrap" id="me-closed"></div>
+    </section>
+    </div><!-- /.sides -->
 
-      <!-- cross-device sync for your manual trades -->
-      <div class="mj-sync">
+    <!-- cross-device sync for your manual trades -->
+    <div class="mj-sync">
         <div class="mj-sync-row">
           <span class="mj-sync-label">📱 Sync across devices</span>
           <input id="mj-sync-code" class="mj-input mj-sync-input" type="text" placeholder="your private code" autocomplete="off" spellcheck="false" />
@@ -96,7 +103,6 @@
         <div id="mj-sync-status" class="mj-sync-status"></div>
         <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. Backup saves a file; Restore merges one back in.</p>
       </div>
-    </section>
   </main>
 
   <footer class="site-footer">
@@ -125,6 +131,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=4"></script>
-  <script src="js/journal.js?v=26"></script>
+  <script src="js/journal.js?v=27"></script>
 </body>
 </html>

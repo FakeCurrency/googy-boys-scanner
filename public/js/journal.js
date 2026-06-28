@@ -325,6 +325,59 @@
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
+  // Combined tables (Claude + Me together) for the comparison overview.
+  const ownerChip = (side) => side === "bot"
+    ? `<span class="own own-bot" title="Claude (bot)">🤖</span>`
+    : `<span class="own own-me" title="Me (manual)">✏️</span>`;
+
+  function combinedOpen(nowMs) {
+    const rows = [...state.bot.open.map((t) => ["bot", t]), ...state.me.open.map((t) => ["me", t])];
+    if (!rows.length) return `<div class="jr-empty">No open positions on either side.</div>`;
+    const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
+      <th class="num">Targets</th><th class="num">Now</th><th class="num">In&nbsp;trade</th>
+      <th class="num">Unreal R</th><th class="num">Unreal $</th><th></th></tr>`;
+    const body = rows.map(([side, t]) => {
+      const isLong = t.direction !== "short";
+      const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
+      const closeBtn = side === "me" ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` : "";
+      return `<tr data-tid="${esc(t.id)}" data-side="${side}">
+        <td>${ownerChip(side)}</td>
+        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        <td>${gradeChip(t.grade)}</td>
+        <td class="num">${px(t.entry)}</td>
+        <td class="num">${px(t.stop)}</td>
+        <td class="num"><span class="num-sub">${tps}</span></td>
+        <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
+        <td class="num jr-dur">${durText(openedMs(t), nowMs)}</td>
+        <td class="num jr-ur">—</td>
+        <td class="num jr-ud">—</td>
+        <td class="num">${closeBtn}</td></tr>`;
+    }).join("");
+    return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  }
+
+  function combinedClosed() {
+    const rows = [...state.bot.closed.map((t) => ["bot", t]), ...state.me.closed.map((t) => ["me", t])]
+      .sort((a, b) => (exitMs(b[1]) || 0) - (exitMs(a[1]) || 0));
+    if (!rows.length) return `<div class="jr-empty">No closed trades yet on either side.</div>`;
+    const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
+      <th class="num">R</th><th class="num">$</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
+    const body = rows.map(([side, t]) => {
+      const dd = dollarsOf(t);
+      return `<tr>
+        <td>${ownerChip(side)}</td>
+        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        <td>${gradeChip(t.grade)}</td>
+        <td class="num">${px(t.entry)}</td>
+        <td class="num">${px(t.exit)}</td>
+        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
+        <td class="num ${dd == null ? "" : pcls(dd)}">${dd == null ? "—" : d2(dd)}</td>
+        <td class="num">${durText(openedMs(t), exitMs(t))}</td>
+        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
+    }).join("");
+    return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  }
+
   // ── live prices (reused from the manual-journal helpers) ──────────────────
   async function cryptoPrice(sym) {
     try {
@@ -411,6 +464,14 @@
       row("Trades", sb.n, sm.n, (v) => String(v), null) +
       row("Open now", sb.open, sm.open, (v) => String(v), null) +
       row("Max DD", sb.maxDD, sm.maxDD, dfmt, null);
+
+    // Combined open + closed trades (both sides together) under the overview.
+    $("#cmp-open").innerHTML = combinedOpen(Date.now());
+    $("#cmp-closed").innerHTML = combinedClosed();
+    const on = state.bot.open.length + state.me.open.length;
+    const cn = state.bot.closed.length + state.me.closed.length;
+    $("#cmp-open-n").textContent = on ? `(${on})` : "";
+    $("#cmp-closed-n").textContent = cn ? `(${cn})` : "";
   }
 
   function renderAll() {
