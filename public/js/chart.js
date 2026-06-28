@@ -9,7 +9,10 @@
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
   // Per-timeframe tooltips — used to flag the 4H view's honest limitations.
-  const TF_TITLE = { "4H": "≈2y max history (yfinance hourly) · trade levels are the Daily plan" };
+  const TF_TITLE = {
+    "4H": "≈2y max history (yfinance hourly) · trade levels are the Daily plan",
+    "3D": "3-day candles (3 sessions per bar) · trade levels are the Daily plan",
+  };
   const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
   const params = new URLSearchParams(location.search);
@@ -259,6 +262,22 @@
     return out;
   }
 
+  // Daily → N-session OHLCV (every N daily bars = one bar). Used for the 3-Day
+  // (3D) timeframe: groups 3 trading sessions into one candle. OHLC = first open
+  // / max high / min low / last close; volume summed.
+  function resampleNSessions(bars, n) {
+    const out = [];
+    for (let i = 0; i < bars.length; i += n) {
+      const grp = bars.slice(i, i + n);
+      if (!grp.length) continue;
+      let hi = grp[0].high, lo = grp[0].low, vol = 0;
+      for (const b of grp) { hi = Math.max(hi, b.high); lo = Math.min(lo, b.low); vol += b.volume || 0; }
+      out.push({ time: grp[0].time, open: grp[0].open, high: hi, low: lo,
+                 close: grp[grp.length - 1].close, volume: vol });
+    }
+    return out;
+  }
+
   // ── VIVEK plans come from Python (the single source of truth) ───────────────
   // The scanner emits a per-timeframe plan (entry/SL/TP1-3 + the 200 SMA level +
   // trigger state) and a small marker set in each row. The chart no longer
@@ -475,6 +494,11 @@
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
       d.timeframes["1D"] = makeTF(daily, "1D", dailyPlan);
+      // 3-Day (3D) view: daily candles grouped 3-sessions-per-bar. No separate
+      // 3-day Python plan exists, so it shows the Daily plan as a labelled
+      // reference (approx=true), the same way the 4H view does.
+      const d3 = resampleNSessions(daily, 3);
+      if (d3.length >= 6) d.timeframes["3D"] = makeTF(d3, "3D", dailyPlan, true);
       if (plans["1W"]) {
         const wk = resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = makeTF(wk, "1W", plans["1W"]);
@@ -562,9 +586,10 @@
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
     const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-    const is4H = tfKey === "4H";
-    const tfName = tfKey === "1W" ? "Weekly" : is4H ? "4H" : "Daily";
-    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : is4H ? "D·ref" : "D"})`;
+    // Reference timeframes (4H, 3D) borrow the Daily plan — flag that in the labels.
+    const isRef = tfKey === "4H" || tfKey === "3D";
+    const tfName = tfKey === "1W" ? "Weekly" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3-Day" : "Daily";
+    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : isRef ? "D·ref" : "D"})`;
     const rr = lv.rr || 0;
     // Trigger state — ARMED (a trigger fired) vs WATCHING (near the level only).
     const trig = lv.entry_trigger ? lv.entry_trigger.toUpperCase() : null;
@@ -581,13 +606,13 @@
       metric("Grade", `${d.grade} · ${d.score}/${d.score_max}`),
     ].join("");
     const trigTxt = lv.armed
-      ? `Entry is the ${trig} trigger price on the ${tfName === "4H" ? "Daily" : tfName} timeframe — a fired setup. `
+      ? `Entry is the ${trig} trigger price on the ${isRef ? "Daily" : tfName} timeframe — a fired setup. `
       : `WATCHING: price is near the 200 SMA but no trigger has fired yet; entry shown is indicative. `;
-    const fourHTxt = is4H
-      ? "4H view is best-effort (≈2y of hourly data); its candles/SMAs are 4H but the trade levels shown are the Daily plan, not a separate 4H plan. "
+    const refTxt = isRef
+      ? `${tfName} view: its candles/SMAs are real ${tfName}, but the trade levels shown are the Daily plan (no separate ${tfKey} plan). `
       : "";
     $("#cf-analysis").textContent =
-      (d.analysis ? d.analysis + "  " : "") + fourHTxt + trigTxt +
+      (d.analysis ? d.analysis + "  " : "") + refTxt + trigTxt +
       "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(d.symbol, d.asset_type))}`;
@@ -1098,17 +1123,25 @@
       legend(tf);
       if (d._vivek) {
         applyVivekLevels(key);               // re-read trade levels for this timeframe
-        // Prominent notice when 4H is selected: its levels are the Daily plan
-        // (there is no separate 4H plan yet), so users aren't misled.
-        if (tfNotice) tfNotice.hidden = !(key === "4H");
+        // Prominent notice on the reference timeframes (4H, 3D): their candles
+        // are real, but the trade levels are the Daily plan (no separate plan at
+        // those timeframes yet), so users aren't misled.
+        if (tfNotice) {
+          const isRef = (tfs[key] || {}).approx;
+          if (isRef) {
+            const nm = key === "3D" ? "3-Day (3D)" : key;
+            tfNotice.textContent =
+              `${nm} view — trade levels shown are from the Daily plan (no separate ${key} plan yet). ` +
+              `${nm} candles & SMAs are real.`;
+          }
+          tfNotice.hidden = !isRef;
+        }
       }
     }
 
-    // On-chart 4H notice (shown only on the 4H tab) — pinned over the candles.
+    // On-chart notice for reference timeframes (4H / 3D) — pinned over the candles.
     const tfNotice = d._vivek ? Object.assign(document.createElement("div"), {
-      className: "tf-notice",
-      textContent: "4H view — trade levels shown are from the Daily plan (no separate 4H plan available yet). 4H candles & SMAs are real 4H.",
-      hidden: true,
+      className: "tf-notice", hidden: true,
     }) : null;
     if (tfNotice) { el.style.position = "relative"; el.appendChild(tfNotice); }
 
@@ -1136,14 +1169,9 @@
       // Everything else → static multi-timeframe data from the scan JSON.
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
-      // VIVEK only: a read-only 2D⇄3D toggle for the Time × Price × Timeframe
-      // stack. It reuses THIS chart's per-TF data; selecting a TF below keeps the
-      // highlighted 3D plane in sync. Absent (null) for non-VIVEK or no-WebGL.
-      const view3d = (d._vivek && window.VivekChart3D) ? setup3D(d, tfs, available, () => curTF) : null;
       toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
         toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
         applyTF(b.dataset.tf);
-        if (view3d) view3d.onTF(b.dataset.tf);    // keep the 3D plane highlight in sync
       }));
       applyTF(curTF);
       // Poll a live (~15-min delayed) quote so the header price isn't frozen at
@@ -1357,78 +1385,6 @@
       // keep the backing store in sync with chart resizes
       const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
       cro.observe(el);
-    }
-
-    // ── 2D ⇄ 3D toggle (VIVEK only, read-only stack view) ─────────────────────
-    // Lazily mounts the three.js stack over the 2D canvas; the 2D view stays the
-    // source of truth (drawing tools, ruler, sim all live there). Disposing on
-    // toggle-off frees the GPU context. `getCurTF` lets the 3D plane highlight
-    // follow whichever timeframe is selected on the 2D toggle.
-    function setup3D(d, tfs, available, getCurTF) {
-      const main = el.parentNode;                  // .chart-main (position: relative)
-      let host = $("#chart3d");
-      if (!host) {
-        host = document.createElement("div");
-        host.id = "chart3d";
-        host.className = "chart3d";
-        host.hidden = true;
-        main.appendChild(host);
-      }
-      const btn = document.createElement("button");
-      btn.className = "tf-btn view3d-btn";
-      btn.type = "button";
-      btn.title = "Toggle 3D timeframe-stack view (read-only)";
-      btn.textContent = "🧊 3D";
-      toggle.appendChild(btn);
-
-      let on = false, ctrl = null, busy = false;
-      const legendEl = $("#chart-legend");
-      const drawToolsEl = $("#draw-tools");
-      const model = () => ({
-        timeframes: tfs, order: available, activeTF: getCurTF(),
-        currency: d.currency_symbol || "", symbol: d.symbol, dir: d.dir,
-      });
-      function show2D() {
-        on = false;
-        btn.classList.remove("is-active", "is-loading");
-        btn.textContent = "🧊 3D";
-        host.hidden = true;
-        el.style.visibility = "";
-        if (legendEl) legendEl.style.visibility = "";
-        if (drawToolsEl) drawToolsEl.style.visibility = "";
-        if (ctrl) { try { ctrl.dispose(); } catch (_) {} ctrl = null; }
-      }
-      btn.addEventListener("click", async () => {
-        if (busy) return;
-        if (!window.VivekChart3D || !window.VivekChart3D.isSupported()) {
-          btn.disabled = true;
-          btn.title = "3D view unavailable — WebGL isn’t supported in this browser.";
-          return;
-        }
-        if (on) { show2D(); return; }
-        // turn ON: hide the 2D canvas (keep its layout) and mount the stack.
-        on = true; busy = true;
-        btn.classList.add("is-active", "is-loading");
-        btn.textContent = "🪟 2D";
-        host.hidden = false;
-        el.style.visibility = "hidden";
-        if (legendEl) legendEl.style.visibility = "hidden";
-        if (drawToolsEl) drawToolsEl.style.visibility = "hidden";
-        try {
-          ctrl = await window.VivekChart3D.mount(host, model());
-          if (ctrl) ctrl.setActiveTF(getCurTF());
-        } catch (e) {
-          console.warn("[chart3d] mount failed:", e);
-          show2D();
-          btn.disabled = true;
-          btn.title = "3D view couldn’t load (offline or blocked).";
-        } finally {
-          busy = false;
-          btn.classList.remove("is-loading");
-        }
-      });
-      window.addEventListener("beforeunload", () => { if (ctrl) { try { ctrl.dispose(); } catch (_) {} } }, { once: true });
-      return { onTF: (k) => { if (on && ctrl) ctrl.setActiveTF(k); } };
     }
   }
 
