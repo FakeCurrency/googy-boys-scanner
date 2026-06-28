@@ -1,4 +1,4 @@
-# Vivek's Beta Scanner — CLAUDE.md
+# Vivek 5.0 — CLAUDE.md
 
 This file is read automatically at the start of every Claude Code session.
 Read it fully before touching any code.
@@ -8,7 +8,7 @@ Read it fully before touching any code.
 ## What this project is
 
 A multi-market trading signal scanner + paper-trade journal + (in-progress) live execution bot.
-Owner: Vivek (Australia). Brand name everywhere: **Vivek's Beta Scanner** — never "Googy Boys Scanner".
+Owner: Vivek (Australia). Brand name everywhere: **Vivek 5.0** (renamed from "Vivek's Beta Scanner") — never "Googy Boys Scanner".
 
 **The goal:** autonomous scalp trading bot that detects setups, places bracket orders at a broker,
 manages exits, and journals everything — starting with crypto (Bybit), later expanding to ASX and
@@ -224,7 +224,7 @@ Functions live in `functions/api/` and run in the **CF Workers runtime** (not No
 
 ## Development rules
 
-1. **Brand name:** Always "Vivek's Beta Scanner" — never "Googy Boys Scanner"
+1. **Brand name:** Always "Vivek 5.0" — never "Vivek's Beta Scanner" or "Googy Boys Scanner"
 2. **Config first:** Any new threshold/constant goes in `config.py` before being used in logic
 3. **Version bump:** Every edit to `public/js/journal.js` → bump `?v=` in `journal.html` (currently v=17)
 4. **Atomic writes:** Journal saves must use `_atomic_write()` (temp + os.replace) — never write directly

@@ -894,12 +894,15 @@
   function startStockLive(d, SYM) {
     const cur      = d.currency_symbol || "";
     const yf       = yfTickerFor(SYM, d.asset_type);
+    // VIVEK crypto: force Yahoo <base>-USD so the header price matches the chart
+    // (a guessed Binance pair could be a different/colliding token).
+    const srcParam = (d.asset_type === "crypto" || market === "crypto") ? "&src=yahoo" : "";
     const priceEl  = $("#ct-price");
     const delayEl  = $("#ct-delayed");
     let lastPx = null;
     const tick = async () => {
       try {
-        const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}`, { cache: "no-store" });
+        const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}${srcParam}`, { cache: "no-store" });
         if (!r.ok) return;
         const j = await r.json();
         if (j == null || j.price == null) return;
@@ -1336,7 +1339,11 @@
         }
       }
       drawRedraw = redraw;
-      drawClear = () => { drawings = []; pending = null; hover = null; measure = null; measureDrag = null; eraseIdx = -1; redraw(); };
+      drawClear = () => {
+        drawings = []; pending = null; hover = null; measure = null; measureDrag = null; eraseIdx = -1;
+        if (delBtn) { delBtn.style.display = "none"; delTarget = -1; }   // also clear the hover trash
+        redraw();
+      };
 
       function ptFromEvent(ev) {
         const r = canvas.getBoundingClientRect();

@@ -13,7 +13,11 @@ const json = (status, body) =>
   });
 
 export async function onRequestGet(ctx) {
-  const sym = new URL(ctx.request.url).searchParams.get("sym") || "";
+  const url = new URL(ctx.request.url);
+  const sym = url.searchParams.get("sym") || "";
+  // src=yahoo forces the Yahoo path (skips the Binance pair guess) so a VIVEK
+  // crypto header price matches its chart's scan-consistent <base>-USD series.
+  const prefer = url.searchParams.get("src") === "yahoo" ? "yahoo" : null;
 
   if (!/^[A-Za-z0-9.\^=\-_]{1,20}$/.test(sym)) {
     return json(400, { error: "Invalid symbol" });
@@ -23,7 +27,7 @@ export async function onRequestGet(ctx) {
 
   // Crypto: Binance first (keyless, real-time), Yahoo as a backstop.
   const crypto = isCryptoSymbol(sym);
-  if (crypto) {
+  if (crypto && prefer !== "yahoo") {
     const px = await fetchBinancePrice(sym);
     if (px != null) return json(200, { price: px, currency: "USD", time: now, source: "binance" });
   }
