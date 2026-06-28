@@ -22,12 +22,25 @@ ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
 COINGECKO_URL = ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
                  "&order=market_cap_desc&per_page=130&page=1&sparkline=false")
 
-# Stablecoins / wrapped-pegged tokens to skip (they don't trend).
+# Stablecoins / wrapped-pegged tokens to skip (they don't trend, so the 200-SMA
+# reaction system is meaningless on them — e.g. a "long" on a $1 peg is noise).
 CRYPTO_SKIP = {
     "USDT", "USDC", "DAI", "BUSD", "TUSD", "USDD", "FDUSD", "PYUSD", "USDE", "USDS",
     "FRAX", "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
+    "RLUSD", "GHO", "USDG", "USD1", "SUSDE", "SUSDS", "BUIDL", "USDY", "EURS",
     "WBTC", "WETH", "WEETH", "WSTETH", "STETH", "RETH", "CBETH", "WBETH", "BSC-USD",
 }
+
+
+def _is_stable(sym: str) -> bool:
+    """True for pegged stablecoins (and the explicit wrapped-token list).
+
+    Beyond the explicit set, any ``<X>USD`` ticker is treated as a USD peg
+    (RLUSD, FDUSD, crvUSD, …) so a newly-listed dollar stablecoin is skipped
+    automatically rather than waiting to be hand-added after it's traded once.
+    """
+    s = (sym or "").upper()
+    return s in CRYPTO_SKIP or s.endswith("USD")
 
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
@@ -38,6 +51,8 @@ def _from_csv(path: pathlib.Path, suffix: str) -> list[dict]:
         for row in csv.DictReader(fh):
             symbol = (row.get("symbol") or "").strip().upper()
             if not symbol:
+                continue
+            if suffix == "-USD" and _is_stable(symbol):    # crypto fallback list: drop pegs too
                 continue
             name = (row.get("name") or symbol).strip()
             sector = (row.get("sector") or "").strip()
@@ -125,7 +140,7 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
     for coin in data:
         sym = (coin.get("symbol") or "").strip().upper()
         name = (coin.get("name") or sym).strip()
-        if not sym or sym in CRYPTO_SKIP or not sym.isalnum() or sym in seen:
+        if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
             continue
         seen.add(sym)
         items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
