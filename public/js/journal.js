@@ -305,27 +305,22 @@
     return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
   }
 
+  // Per-section (Claude / Me) tables sit in half-width side-by-side columns, so
+  // they carry only the per-side essentials — the full-width combined tables in
+  // the comparison overview above show entry/stop/targets/timestamps in full.
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
-    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
-      <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
-      <th class="num">Unreal R</th><th class="num">Unreal $</th>${side === "me" ? "<th></th>" : ""}</tr>`;
+    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Now</th>
+      <th class="num">R</th><th class="num">$</th>${side === "me" ? "<th></th>" : ""}</tr>`;
     const rows = list.map((t) => {
       const isLong = t.direction !== "short";
-      const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
-      const tgt = `<span class="num-sub">${tps}</span>`;
-      const dur = durText(openedMs(t), nowMs);
       const closeBtn = side === "me"
         ? `<td class="num"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
         <td class="num">${px(t.entry)}</td>
-        <td class="num">${px(t.stop)}</td>
-        <td class="num">${tgt}</td>
         <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
-        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
-        <td class="num jr-dur">${dur}</td>
         <td class="num jr-ur">—</td>
         <td class="num jr-ud">—</td>${closeBtn}</tr>`;
     }).join("");
@@ -334,20 +329,16 @@
 
   function closedRows(list) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
-    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
-      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th><th class="num">Closed</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
+    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">R</th><th class="num">$</th>
+      <th class="num">Closed</th><th>Reason</th></tr>`;
     const rows = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0)).map((t) => {
       const d = dollarsOf(t);
       return `<tr>
         ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
-        <td class="num">${px(t.entry)}</td>
-        <td class="num">${px(t.exit)}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
-        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp">${stamp(exitMs(t))}</td>
-        <td class="num">${durText(openedMs(t), exitMs(t))}</td>
         <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;

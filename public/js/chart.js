@@ -684,6 +684,32 @@
   };
   const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
 
+  // Recompute TP1/2/3 as fresh R-multiples from the ACTUAL entry, so a late or
+  // chased fill still gets three real targets sized to its own risk (|entry −
+  // stop|). We preserve the plan's R-multiples when they're sane and strictly
+  // increasing; otherwise fall back to 1R / 2R / 3R. Returns the plan targets
+  // unchanged if there's no usable stop to measure risk against.
+  function entryRelTargets(isLong, entry, stop, planEntry, planTps) {
+    const plan = (planTps || []).slice(0, 3);
+    const risk = stop != null ? Math.abs(entry - stop) : 0;
+    if (!(risk > 0)) return plan;
+    const planRisk = planEntry != null && stop != null ? Math.abs(planEntry - stop) : 0;
+    const fallback = [1, 2, 3];
+    const out = [];
+    let prev = 0;
+    for (let i = 0; i < 3; i++) {
+      let mult = fallback[i];
+      const tp = plan[i];
+      if (planRisk > 0 && tp != null) {
+        const m = (isLong ? tp - planEntry : planEntry - tp) / planRisk;
+        if (m > prev + 0.05) mult = m;          // use the plan's ratio when it's valid + rising
+      }
+      prev = mult;
+      out.push(+(isLong ? entry + mult * risk : entry - mult * risk).toFixed(8));
+    }
+    return out;
+  }
+
   // ── Yahoo Finance proxy for ASX / NASDAQ live prices ──────────────────────
   async function fetchStockQuote(sym, assetType) {
     const ticket = assetType === "asx" ? sym + ".AX" : sym;
@@ -811,14 +837,40 @@
       const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
       const exposure = margin * leverage;
       const data  = mjLoad();
+      const isLong = dir === "long";
       // VIVEK: book the SL/TP of the timeframe the user is viewing (the per-TF
       // plan), not the scan's canonical daily plan. Falls back to the scan plan.
       const av     = d._vivek ? (d._activeLevels || null) : null;
       const stopV  = av ? (av.stop ?? null) : (d.stop ?? null);
-      const tp1V   = av ? (av.tp1 ?? null) : (d.tp1 ?? null);
-      const tp2V   = av ? (av.tp2 ?? null) : (d.tp2 ?? null);
-      const tp3V   = av ? (av.tp3 ?? null) : (d.tp3 ?? null);
-      const tgtV   = av ? (av.tp2 ?? null) : (d.target ?? null);
+      const planEntry = av ? (av.entry ?? null) : (d.entry ?? null);
+      const planTp1 = av ? (av.tp1 ?? null) : (d.tp1 ?? null);
+      const planTp2 = av ? (av.tp2 ?? null) : (d.tp2 ?? null);
+      const planTp3 = av ? (av.tp3 ?? null) : (d.tp3 ?? null);
+
+      // (a) Chasing guard — if the live price is already at/through the plan's
+      // first target, the setup has run and the reward left is degraded. Warn
+      // before booking a chased entry (targets get recut from the real entry).
+      if (planTp1 != null && (isLong ? px >= planTp1 : px <= planTp1)) {
+        const side = isLong ? "above" : "below";
+        const ok = confirm(
+          `⚠️ Chasing ${SYM}\n\n` +
+          `${fmt(px, cur)} is already ${side} the plan's first target (${fmt(planTp1, cur)}). ` +
+          `The move looks extended and your risk:reward is reduced.\n\n` +
+          `Targets will be recalculated as fresh 1R/2R/3R from this entry. Take the trade anyway?`);
+        if (!ok) {
+          buyBtn.disabled = false;
+          statusEl.className = "sim-status"; statusEl.textContent = "";
+          return;
+        }
+      }
+
+      // (b) Entry-relative targets — recompute TP1/2/3 from the ACTUAL entry so a
+      // late/chased fill still gets three real targets. Risk = |entry − stop|;
+      // we mirror the plan's R-multiples when they're sane + increasing, else
+      // fall back to 1R / 2R / 3R. The structural stop is kept as-is.
+      const tps = entryRelTargets(isLong, px, stopV, planEntry, [planTp1, planTp2, planTp3]);
+      const tp1V = tps[0], tp2V = tps[1], tp3V = tps[2];
+      const tgtV = tp2V != null ? tp2V : (av ? (av.tp2 ?? null) : (d.target ?? null));
       const tfTag  = d._vivek && d._activeTf ? `${d._activeTf} · ` : "";
       data.trades.push({
         id: mjUid(), symbol: SYM, direction: dir,
