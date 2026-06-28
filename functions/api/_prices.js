@@ -40,6 +40,15 @@ export function binanceSymbol(sym) {
   return base + "USDT";
 }
 
+/** Normalise any crypto symbol to its Yahoo pair (BDX → BDX-USD, BDXUSDT → BDX-USD).
+ * Crypto MUST be queried on Yahoo as "<base>-USD"; a bare base like "BDX" resolves
+ * to a same-named EQUITY (BDX = Becton Dickinson), which is the wrong instrument. */
+export function yahooCryptoSymbol(sym) {
+  const base = String(sym || "").toUpperCase()
+    .replace(/-USD$/, "").replace(/-USDT$/, "").replace(/USDT$/, "");
+  return base + "-USD";
+}
+
 /** Map our chart intervals to Binance kline intervals. */
 function binanceInterval(interval) {
   return ({
@@ -129,26 +138,21 @@ export function trimCandles(candles, n) {
  * Resilient live price with a source-aware fallback chain.
  * @returns {{price:number|null, source:string|null, delayed:boolean}}
  */
-export async function livePrice(sym, assetType) {
+export async function livePrice(sym, assetType, prefer = null) {
   const crypto = assetType ? assetType === "crypto" : isCryptoSymbol(sym);
-  if (crypto) {
+  if (crypto && prefer !== "yahoo") {
     const b = await fetchBinancePrice(sym);
     if (b != null) return { price: +b, source: "binance", delayed: false };
   }
+  // Crypto must be queried on Yahoo as "<base>-USD" (a bare base resolves to a
+  // same-named equity); stocks/commodities use the symbol as-is.
+  const ySym = crypto ? yahooCryptoSymbol(sym) : sym;
   try {
-    const result = await fetchYahooChart(sym, { interval: "1d", range: "1d" });
+    const result = await fetchYahooChart(ySym, { interval: "1d", range: "1d" });
     const m = result?.meta;
     const px = m?.regularMarketPrice ?? m?.previousClose ?? null;
     if (px != null) return { price: +px, source: "yahoo", delayed: !crypto };
-  } catch (_) { /* fall through */ }
-  // Last resort: a crypto whose Binance pair failed but has a Yahoo listing
-  if (crypto) {
-    try {
-      const result = await fetchYahooChart(sym, { interval: "1d", range: "1d" });
-      const px = result?.meta?.regularMarketPrice ?? null;
-      if (px != null) return { price: +px, source: "yahoo", delayed: false };
-    } catch (_) { /* give up */ }
-  }
+  } catch (_) { /* give up */ }
   return { price: null, source: null, delayed: false };
 }
 
@@ -157,16 +161,21 @@ export async function livePrice(sym, assetType) {
  * Crypto → Binance klines (fallback Yahoo); others → Yahoo (dual host).
  * @returns {{candles:Array, source:string|null, delayed:boolean}}
  */
-export async function history(sym, assetType, { range = "1y", interval = "1d" } = {}) {
+export async function history(sym, assetType, { range = "1y", interval = "1d", prefer = null } = {}) {
   const crypto = assetType ? assetType === "crypto" : isCryptoSymbol(sym);
   const want = targetBars(range, interval);
 
-  if (crypto) {
+  // `prefer:"yahoo"` skips the Binance pair guess — used by the VIVEK daily chart
+  // so a thin coin (no/!=Binance pair) matches the scan's Yahoo <base>-USD series
+  // exactly, instead of a wrong pair that throws the price scale off.
+  if (crypto && prefer !== "yahoo") {
     const c = await fetchBinanceCandles(sym, { interval, limit: want });
     if (c.length) return { candles: trimCandles(c, want), source: "binance", delayed: false };
   }
+  // Crypto on Yahoo MUST be "<base>-USD" (a bare base = a same-named equity).
+  const ySym = crypto ? yahooCryptoSymbol(sym) : sym;
   try {
-    const result = await fetchYahooChart(sym, { interval, range });
+    const result = await fetchYahooChart(ySym, { interval, range });
     const c = yahooCandles(result);
     if (c.length) return { candles: trimCandles(c, want), source: "yahoo", delayed: !crypto };
   } catch (_) { /* fall through */ }

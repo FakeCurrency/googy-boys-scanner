@@ -310,6 +310,18 @@ VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
 VIVEK_BOT_MIN_SHORTS     = 4       # at least this many of the 10 must be short
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
 
+# ── Autonomous runner (scanner/broker/vivek_run.py) — Phase 1-2: dry-run + paper
+# book. NO live execution is wired yet. Live trading requires, all together:
+# VIVEK_BOT_ENABLED + per-market MODE "live" + VIVEK_LIVE_CONFIRMED + a real
+# broker (only crypto/Bybit exists) + BYBIT_TESTNET=false. Until then the runner
+# only ever builds a paper book.
+VIVEK_BOT_ENABLED        = False   # master switch — when False the runner is a no-op
+VIVEK_BOT_DRY_RUN        = True    # True = decide + log only, never mutate the book (final safety gate)
+VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"}  # "live" not wired yet
+VIVEK_BOT_ACCOUNT_EQUITY = 10_000  # paper account equity used for sizing (USD)
+VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
+VIVEK_BOT_RECONCILE      = True    # reconcile broker fills (Phase 3; no-op while paper)
+
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so
 # you can read big-money rotation (mega) AND discovery (small caps) separately.

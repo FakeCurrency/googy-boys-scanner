@@ -113,6 +113,21 @@ def main() -> None:
                       f" · expectancy {ov.get('expectancy_r', 0):+.2f}R (n={ov.get('n', 0)})")
             except Exception as e:
                 print(f"  journal: skipped ({e})", flush=True)
+
+            # VIVEK execution/runner layer (Phase 1–2: dry-run + paper book).
+            # Gated by VIVEK_BOT_ENABLED — a no-op (and silent) until switched on.
+            # It NEVER places a live order in this phase. Best-effort.
+            if config.VIVEK_BOT_ENABLED:
+                try:
+                    from .broker import vivek_run
+                    bk = vivek_run.run_market(market_key, vk["results"], deep_frames, universe)
+                    bo = sum(1 for p in bk["open"] if p.get("market") == market_key)
+                    bs = sum(1 for p in bk["open"]
+                             if p.get("market") == market_key and p.get("direction") == "short")
+                    print(f"  bot book: {bo} open · {bs} short"
+                          f"{' · DRY-RUN' if config.VIVEK_BOT_DRY_RUN else ''}")
+                except Exception as e:
+                    print(f"  bot book: skipped ({e})", flush=True)
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
 

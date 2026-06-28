@@ -250,13 +250,17 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
 # ── 5. process one market's scan into plans, with the book rules ──────────────
 
 def decide(rows: list[dict], equity: float, market: str | None = None,
-           prefer_tf: str | None = None, **kw) -> dict:
+           prefer_tf: str | None = None, open_book: list[dict] | None = None, **kw) -> dict:
     """Run the engine over ONE market's VIVEK scan and apply the book rules.
 
     Rows are expected best-first (the scan sorts by grade → score → R:R). The
-    book caps (Rule 5): at most VIVEK_BOT_MAX_POSITIONS (10) open, at most
-    (10 − VIVEK_BOT_MIN_SHORTS) = 6 long so ≥4 short slots stay reserved, and one
-    position per symbol. Returns {plans, skipped, summary} — every skip has a code.
+    book caps (Rule 5) are evaluated against the CURRENT open book passed in via
+    `open_book` (a list of {symbol, direction} already held in this market), so
+    the limits hold ACROSS RUNS, not just within one scan: at most
+    VIVEK_BOT_MAX_POSITIONS (10) open, at most (10 − VIVEK_BOT_MIN_SHORTS) = 6
+    long so ≥4 short slots stay reserved, and one position per symbol.
+
+    Returns {plans, skipped, summary}; `plans` are the NEW entries this run.
     """
     from collections import Counter
 
@@ -265,8 +269,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     max_long = max(0, max_pos - min_shorts)          # reserve the short slots
     plans, skipped = [], []
     reasons: Counter = Counter()
-    open_syms: set[str] = set()
-    longs = shorts = 0
+
+    # Seed the counters from the positions ALREADY open in this market, so new
+    # entries can only fill the remaining capacity.
+    book = open_book or []
+    open_syms: set[str] = {str(p.get("symbol") or "").upper() for p in book}
+    existing = len(book)
+    longs = sum(1 for p in book if str(p.get("direction")) == "long")
+    shorts = sum(1 for p in book if str(p.get("direction")) == "short")
 
     def drop(out, code, reason):
         log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
@@ -284,7 +294,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         direction = out["direction"]
         if sym in open_syms:
             drop(out, "dup_symbol", f"already holding {sym}")
-        elif len(plans) >= max_pos:
+        elif longs + shorts >= max_pos:                 # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
         elif direction == "long" and longs >= max_long:
             drop(out, "long_cap", f"long cap {max_long} reached — reserving the ≥{min_shorts}-short slots")
@@ -298,13 +308,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
 
     short_bias_met = shorts >= min_shorts
     summary = {
-        "market": market, "setups": len(rows), "taken": len(plans),
+        "market": market, "setups": len(rows), "existing": existing,
+        "taken": len(plans), "total_open": longs + shorts,
         "longs": longs, "shorts": shorts, "min_shorts": min_shorts,
         "short_bias_met": short_bias_met,
         "skipped": len(skipped), "skip_reasons": dict(reasons),
     }
-    log.info("VIVEK bot [%s]: took %d/%d (A+ only) — %d long / %d short%s · skips: %s",
-             market, summary["taken"], summary["setups"], longs, shorts,
-             "" if short_bias_met else f"  ⚠ short bias unmet (<{min_shorts}, not enough shorts available)",
+    log.info("VIVEK bot [%s]: +%d new (book %d→%d) — %d long / %d short%s · skips: %s",
+             market, summary["taken"], existing, summary["total_open"], longs, shorts,
+             "" if short_bias_met else f"  ⚠ short bias unmet (<{min_shorts})",
              summary["skip_reasons"] or "none")
     return {"plans": plans, "skipped": skipped, "summary": summary}

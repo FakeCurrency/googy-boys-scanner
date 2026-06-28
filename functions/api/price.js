@@ -29,6 +29,10 @@ export const onRequestGet = async ({ request }) => {
   const range = RANGES.has(url.searchParams.get("range")) ? url.searchParams.get("range") : null;
   const interval = INTERVALS.has(url.searchParams.get("interval")) ? url.searchParams.get("interval") : null;
   const assetType = (url.searchParams.get("type") || "").toLowerCase() || null;  // optional hint
+  // Optional source override: "yahoo" forces the Yahoo path (skips the Binance
+  // pair guess) so VIVEK crypto charts match the scan's <base>-USD series.
+  const prefer = ["yahoo", "binance"].includes((url.searchParams.get("src") || "").toLowerCase())
+    ? url.searchParams.get("src").toLowerCase() : null;
   const wantCandles = Boolean(range && interval);
 
   if (!symbol || symbol.length > 30 || !/^[\w.\-^=]+$/i.test(symbol)) {
@@ -36,14 +40,14 @@ export const onRequestGet = async ({ request }) => {
   }
 
   try {
-    const live = await livePrice(symbol, assetType);
+    const live = await livePrice(symbol, assetType, prefer);
 
     if (!wantCandles) {
       if (live.price == null) return json(502, { ok: false, error: "no price from any source", symbol });
       return json(200, { ok: true, price: +live.price.toFixed(8), symbol, source: live.source });
     }
 
-    const hist = await history(symbol, assetType, { range, interval });
+    const hist = await history(symbol, assetType, { range, interval, prefer });
     // Prefer the live tick for `price`; fall back to the last candle close.
     const lastClose = hist.candles.length ? hist.candles[hist.candles.length - 1].close : null;
     const price = live.price != null ? +live.price : lastClose;

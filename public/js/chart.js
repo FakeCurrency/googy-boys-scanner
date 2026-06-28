@@ -67,6 +67,9 @@
   function yfTickerFor(sym, assetType) {
     const up = String(sym || "").toUpperCase();
     if (YF_TICKER[up]) return YF_TICKER[up];
+    // Crypto MUST be "<base>-USD" — a bare base (e.g. BDX) is a same-named stock
+    // on Yahoo (Becton Dickinson), giving a wildly wrong price + off-scale levels.
+    if (assetType === "crypto" || market === "crypto") return up.replace(/-USD$/, "") + "-USD";
     if (assetType === "asx" || market === "asx") return up.includes(".") ? up : up + ".AX";
     return up;   // nasdaq / index symbols Yahoo already knows
   }
@@ -426,12 +429,15 @@
 
     // Build the Daily + Weekly + best-effort 4H views, then render once. The DEEP
     // daily pull drives the Daily candles and a resampled Weekly view; a ~2y
-    // hourly pull (yfinance's 1h limit) bucketed to 4H drives an honest-but-
-    // limited 4H view. Each TF draws its own 10/20/43/200 SMA for DISPLAY, but the
-    // trade PLAN (Entry/SL/TP1-3, the level, the trigger) and the markers come
-    // straight from the scan row (Python) — the chart never recomputes them. The
-    // Daily and Weekly TFs have their own Python plan; 4H has no server-side plan,
-    // so it reuses the Daily plan as a clearly-labelled reference.
+    // hourly pull bucketed to 4H drives the 4H view. Each TF draws its own
+    // 10/20/43/200 SMA for DISPLAY, but the trade PLAN (Entry/SL/TP1-3, the level,
+    // the trigger) and the markers come straight from the scan row (Python) — the
+    // chart never recomputes them. Daily and Weekly EACH carry their OWN Python
+    // plan, so the levels genuinely change when you switch between them.
+    //
+    // 4H has NO server-side plan, so it shows the Daily plan's levels as a clearly
+    // labelled reference (approx=true → no mismatched markers; the chart shows a
+    // prominent "4H uses Daily levels" notice in both the 2D and 3D views).
     // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
     // and intervals incl. 1h/1d — keep fetches on whitelisted values.
     const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
@@ -448,19 +454,22 @@
     };
     const dailyPlan = plans["1D"] || headlinePlan;
     // approx=true → this TF has no Python plan of its own; it borrows the Daily
-    // plan as reference and shows no (mismatched) markers.
+    // plan as reference (flagged on the TF block) and shows no mismatched markers.
     const makeTF = (bars, tfKey, planRaw, approx) => {
       const tf = barsToVivekTF(bars);                 // candles + volume + SMAs (display)
       tf.levels = normalizePlan(planRaw);             // the plan (from Python)
       tf.markers = approx ? [] : adaptMarkers(pyMarkers[tfKey], bars, direction);
-      tf.approx = !!approx;
+      tf.approx = !!approx;                           // 4H reuses the Daily plan
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
-    const dailyP  = isCrypto ? cryptoBars(SYM, "1d", 1500)
-                             : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
-    // Crypto: native 4h klines (1000 ≈ 166d). Stocks: ~2y of hourly bucketed to 4h.
-    const intradayP = (isCrypto ? cryptoBars(SYM, "4h", 1000)
+    // Crypto: force the proxy's Yahoo "<base>-USD" series (src=yahoo) so the chart
+    // matches the SCAN's instrument/price exactly. A guessed Binance pair can be
+    // the wrong token (or missing → a same-named stock), which throws the price
+    // scale off and pushes the real levels off-screen.
+    const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d")
+                            : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
+    const intradayP = (isCrypto ? vivekCryptoBars(SYM, "2y", "1h")
                                 : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
     dailyP.then((daily) => {
@@ -474,8 +483,9 @@
       d.default_tf = "1D";
       return intradayP.then((intraday) => {
         if (intraday && intraday.length >= 24) {
-          const h4 = isCrypto ? intraday : bucketBars(intraday, 4 * 3600);   // crypto already 4h
-          // 4H is structure + the Daily plan as reference (no server-side 4H plan).
+          const h4 = bucketBars(intraday, 4 * 3600);
+          // 4H candles/SMAs are real 4H; the trade levels are the Daily plan
+          // (reference), labelled on the chart so there's no confusion.
           if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", dailyPlan, true);
         }
         console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
@@ -484,6 +494,16 @@
         render(d);
       });
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+  }
+
+  // VIVEK crypto history, forced to the scan-consistent Yahoo <base>-USD series
+  // via the proxy (src=yahoo) — never a guessed Binance pair.
+  function vivekCryptoBars(sym, range, interval) {
+    const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
+    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=yahoo`,
+      { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -576,7 +596,7 @@
     const note = $("#cf-tvnote");
     if (note) {
       note.hidden = false;
-      note.textContent = "Levels use dividend-adjusted prices. On TradingView, enable “Adjust data for dividends” and set the SMA to 43 for best alignment.";
+      note.textContent = "Levels use dividend-adjusted prices. On TradingView, enable “Adjust data for dividends” + set SMA to 43 for best alignment.";
     }
   }
 
@@ -1076,8 +1096,21 @@
       }
       chart.timeScale().fitContent();
       legend(tf);
-      if (d._vivek) applyVivekLevels(key);   // re-read trade levels for this timeframe
+      if (d._vivek) {
+        applyVivekLevels(key);               // re-read trade levels for this timeframe
+        // Prominent notice when 4H is selected: its levels are the Daily plan
+        // (there is no separate 4H plan yet), so users aren't misled.
+        if (tfNotice) tfNotice.hidden = !(key === "4H");
+      }
     }
+
+    // On-chart 4H notice (shown only on the 4H tab) — pinned over the candles.
+    const tfNotice = d._vivek ? Object.assign(document.createElement("div"), {
+      className: "tf-notice",
+      textContent: "4H view — trade levels shown are from the Daily plan (no separate 4H plan available yet). 4H candles & SMAs are real 4H.",
+      hidden: true,
+    }) : null;
+    if (tfNotice) { el.style.position = "relative"; el.appendChild(tfNotice); }
 
     const toggle = $("#tf-toggle");
     // Live Binance feed only for genuine crypto (by asset_type) — commodities and
@@ -1103,9 +1136,14 @@
       // Everything else → static multi-timeframe data from the scan JSON.
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
+      // VIVEK only: a read-only 2D⇄3D toggle for the Time × Price × Timeframe
+      // stack. It reuses THIS chart's per-TF data; selecting a TF below keeps the
+      // highlighted 3D plane in sync. Absent (null) for non-VIVEK or no-WebGL.
+      const view3d = (d._vivek && window.VivekChart3D) ? setup3D(d, tfs, available, () => curTF) : null;
       toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
         toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
         applyTF(b.dataset.tf);
+        if (view3d) view3d.onTF(b.dataset.tf);    // keep the 3D plane highlight in sync
       }));
       applyTF(curTF);
       // Poll a live (~15-min delayed) quote so the header price isn't frozen at
@@ -1207,7 +1245,13 @@
       const canvas = document.createElement("canvas");
       canvas.className = "draw-layer";
       el.appendChild(canvas);
-      if (tools) tools.hidden = false;
+      // Relocate the drawing tools into the timeframe pill row (next to D / W /
+      // 3D / Ruler) for one clean control strip, instead of a floating overlay.
+      if (tools) {
+        tools.hidden = false;
+        const tgl = $("#tf-toggle");
+        if (tgl && tools.parentNode !== tgl) { tools.classList.add("in-toggle"); tgl.appendChild(tools); }
+      }
 
       const ts = chart.timeScale();
       let tool = "cursor";            // 'cursor' | 'trend' | 'hline'
@@ -1313,6 +1357,78 @@
       // keep the backing store in sync with chart resizes
       const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
       cro.observe(el);
+    }
+
+    // ── 2D ⇄ 3D toggle (VIVEK only, read-only stack view) ─────────────────────
+    // Lazily mounts the three.js stack over the 2D canvas; the 2D view stays the
+    // source of truth (drawing tools, ruler, sim all live there). Disposing on
+    // toggle-off frees the GPU context. `getCurTF` lets the 3D plane highlight
+    // follow whichever timeframe is selected on the 2D toggle.
+    function setup3D(d, tfs, available, getCurTF) {
+      const main = el.parentNode;                  // .chart-main (position: relative)
+      let host = $("#chart3d");
+      if (!host) {
+        host = document.createElement("div");
+        host.id = "chart3d";
+        host.className = "chart3d";
+        host.hidden = true;
+        main.appendChild(host);
+      }
+      const btn = document.createElement("button");
+      btn.className = "tf-btn view3d-btn";
+      btn.type = "button";
+      btn.title = "Toggle 3D timeframe-stack view (read-only)";
+      btn.textContent = "🧊 3D";
+      toggle.appendChild(btn);
+
+      let on = false, ctrl = null, busy = false;
+      const legendEl = $("#chart-legend");
+      const drawToolsEl = $("#draw-tools");
+      const model = () => ({
+        timeframes: tfs, order: available, activeTF: getCurTF(),
+        currency: d.currency_symbol || "", symbol: d.symbol, dir: d.dir,
+      });
+      function show2D() {
+        on = false;
+        btn.classList.remove("is-active", "is-loading");
+        btn.textContent = "🧊 3D";
+        host.hidden = true;
+        el.style.visibility = "";
+        if (legendEl) legendEl.style.visibility = "";
+        if (drawToolsEl) drawToolsEl.style.visibility = "";
+        if (ctrl) { try { ctrl.dispose(); } catch (_) {} ctrl = null; }
+      }
+      btn.addEventListener("click", async () => {
+        if (busy) return;
+        if (!window.VivekChart3D || !window.VivekChart3D.isSupported()) {
+          btn.disabled = true;
+          btn.title = "3D view unavailable — WebGL isn’t supported in this browser.";
+          return;
+        }
+        if (on) { show2D(); return; }
+        // turn ON: hide the 2D canvas (keep its layout) and mount the stack.
+        on = true; busy = true;
+        btn.classList.add("is-active", "is-loading");
+        btn.textContent = "🪟 2D";
+        host.hidden = false;
+        el.style.visibility = "hidden";
+        if (legendEl) legendEl.style.visibility = "hidden";
+        if (drawToolsEl) drawToolsEl.style.visibility = "hidden";
+        try {
+          ctrl = await window.VivekChart3D.mount(host, model());
+          if (ctrl) ctrl.setActiveTF(getCurTF());
+        } catch (e) {
+          console.warn("[chart3d] mount failed:", e);
+          show2D();
+          btn.disabled = true;
+          btn.title = "3D view couldn’t load (offline or blocked).";
+        } finally {
+          busy = false;
+          btn.classList.remove("is-loading");
+        }
+      });
+      window.addEventListener("beforeunload", () => { if (ctrl) { try { ctrl.dispose(); } catch (_) {} } }, { once: true });
+      return { onTF: (k) => { if (on && ctrl) ctrl.setActiveTF(k); } };
     }
   }
 
