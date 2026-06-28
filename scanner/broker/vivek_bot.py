@@ -129,6 +129,10 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
 
     # Rule 2 — entry-type label (must be one of the three known triggers).
     et = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
+    # Favour the strongest trigger — skip the entry types the backtest flagged
+    # weak (default: retest). Reclaim carries the edge.
+    if et in set(getattr(_cfg, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ()):
+        return skip("weak_entry_type", f"{et} entry — backtest weak; bot favours reclaim")
     et_label = ENTRY_TYPE_LABEL.get(et)
     if et_label is None:
         return skip("unknown_entry_type", f"entry type {et!r} not one of reclaim/retest/break")

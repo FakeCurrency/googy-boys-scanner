@@ -442,9 +442,26 @@ body {
 .vkf-chip b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .vkf-chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
 .vkf-chip.is-active b { color: rgba(255,255,255,0.85); }
-/* thin divider between the entry-type chips and the "triggered recently" toggle */
+/* Backtest quality tint on the entry-type chips: a left dot + tinted border.
+   Active (blue) state still overrides these. */
+.vkf-chip.q-green::before, .vkf-chip.q-amber::before, .vkf-chip.q-red::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.vkf-chip.q-green { border-color: rgba(45,208,127,.55); }
+.vkf-chip.q-green::before { background: var(--green); }
+.vkf-chip.q-amber { border-color: rgba(255,176,32,.55); }
+.vkf-chip.q-amber::before { background: #ffb020; }
+.vkf-chip.q-red { border-color: rgba(255,91,91,.5); }
+.vkf-chip.q-red::before { background: var(--red); }
+.vkf-chip.is-active::before { background: #fff; }
+.vkf-legend { font: 600 11px/1 var(--sans); color: var(--muted); margin: 0 2px; white-space: nowrap; }
+/* thin divider between the entry-type chips and the toggles */
 .vkf-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 4px; }
 .vkf-recent.is-active { background: var(--green); border-color: var(--green); }
+.vkf-highconv { border-color: rgba(255,196,77,.6); color: #ffc44d; }
+.vkf-highconv.is-active { background: #ffb020; border-color: #ffb020; color: #1a1205; }
+.vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }
+@media (max-width: 560px) { .vkf-legend { display: none; } }
 @media (max-width: 560px) {
   .vk-filters { gap: 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .vk-filters::-webkit-scrollbar { display: none; }
@@ -559,6 +576,8 @@ body {
 .rbadge.trig   { color: var(--blue);   background: var(--blue-soft); }
 .rbadge.wk     { color: var(--orange); background: var(--orange-soft); }
 .rbadge.struct { color: var(--text-2); background: var(--fill); }
+.rbadge.hiconv { color: #1a1205; background: #ffb020; font-weight: 800;
+  border-color: color-mix(in srgb, #ffb020 60%, transparent); }
 .chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }

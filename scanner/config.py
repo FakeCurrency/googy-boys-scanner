@@ -324,6 +324,10 @@ VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below thi
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
 # trading. Affects the bot's selection only; the scanner still displays them.
 VIVEK_BOT_EXCLUDE_FUNDS = True
+# Favour the strongest trigger: the walk-forward backtest showed "retest" is
+# flat-to-negative while "reclaim" carries the edge, so the bot skips these
+# entry types. Selection-only; the scanner still shows them. Empty list = take all.
+VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
 VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}

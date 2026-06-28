@@ -110,6 +110,7 @@
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
+    vkHighConv: false,  // VIVEK "high conviction" filter (weekly reclaim + A/strong structure)
   };
 
   // Sort direction. Each sort has a natural default (numeric → descending,
@@ -362,10 +363,22 @@
     if (!isFinite(tb)) return false;
     return (scanDateMs() - tb) / 86400000 <= RECENT_DAYS + 0.5;
   }
+
+  // High conviction (from the walk-forward backtest): a WEEKLY reclaim that's
+  // also A/A+ or has strong structure — the cleanest, lowest-drawdown cell.
+  function isHighConviction(r) {
+    const p = r && r.plans && r.plans["1W"];
+    if (!p || !p.armed || p.entry_trigger !== "reclaim") return false;
+    const goodGrade = r.grade === "A+" || r.grade === "A";
+    const strongStructure = (p.structural_tps || 0) >= 2;
+    return goodGrade || strongStructure;
+  }
   // Compact, scannable badges for the VIVEK list (max 3) — what moved + why it matters.
   function vkBadges(r) {
     if (state.mode !== "vivek") return "";
     const out = [];
+    if (isHighConviction(r))
+      out.push(`<span class="rbadge hiconv" title="Weekly reclaim, A/strong structure — the best-performing setup in the backtest">🎯 High conviction</span>`);
     if (triggeredRecently(r))
       out.push(`<span class="rbadge fresh" title="Trigger fired on/near the latest bar">⚡ Triggered recently</span>`);
     const trig = r.entry_trigger || (r.armed && (r.entry_types || [])[0]) || null;
@@ -867,6 +880,10 @@
     if (state.mode === "vivek" && state.vkRecent) {
       list = list.filter(triggeredRecently);
     }
+    // VIVEK "high conviction" filter — weekly reclaims (A / strong structure).
+    if (state.mode === "vivek" && state.vkHighConv) {
+      list = list.filter(isHighConviction);
+    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -889,6 +906,14 @@
     ["retest",  "Retest + confirmation",   "Retest with confirmation"],
     ["break",   "Break of structure",      "Break of small structure near 200 SMA"],
   ];
+  // Backtest quality tier per trigger (long-only walk-forward): reclaim is the
+  // edge, break is middling, retest is flat-to-negative. Colour = overall edge
+  // (avg R), with the win-rate shown in the tooltip.
+  const VK_ENTRY_Q = {
+    reclaim: { tier: "green", note: "Best trigger — backtest ≈+1.6R avg, ~56% win (long-only)" },
+    break:   { tier: "amber", note: "Middling — positive but rare (small sample)" },
+    retest:  { tier: "red",   note: "Weakest — flat-to-negative; the bot skips these" },
+  };
   // Data freshness + version badge. Surfaces scan age, coverage and schema so a
   // stale/old-build dataset is visible at a glance instead of silently dropping
   // features. Turns amber when coverage is low, the scan is old, or the committed
@@ -942,19 +967,28 @@
     const sel = state.vkEntry;
     const chip = (code, label, full, n) => {
       const active = code === "all" ? sel.size === 0 : sel.has(code);
-      return `<button class="vkf-chip${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(full)}">${esc(label)} <b>${n}</b></button>`;
+      const q = VK_ENTRY_Q[code];
+      const cls = q ? ` q-${q.tier}` : "";
+      const title = q ? `${full} — ${q.note}` : full;
+      return `<button class="vkf-chip${cls}${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(title)}">${esc(label)} <b>${n}</b></button>`;
     };
     const nRecent = all.filter(triggeredRecently).length;
+    const nHigh = all.filter(isHighConviction).length;
     box.innerHTML =
       `<span class="vkf-label">200 SMA interaction</span>` +
       chip("all", "All", "Every VIVEK setup", all.length) +
       VK_ENTRY.map(([c, l, f]) => chip(c, l, f, count(c))).join("") +
+      `<span class="vkf-legend" title="Chip colour = backtest edge (avg R)">🟢 best · 🟠 ok · 🔴 weak</span>` +
       `<span class="vkf-sep"></span>` +
+      `<button class="vkf-chip vkf-highconv${state.vkHighConv ? " is-active" : ""}" data-high="1" ` +
+        `title="The best cell in the backtest: weekly reclaims that are A/A+ or have strong structure">🎯 High conviction <b>${nHigh}</b></button>` +
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
         `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>`;
     box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.recent) {
         state.vkRecent = !state.vkRecent;
+      } else if (b.dataset.high) {
+        state.vkHighConv = !state.vkHighConv;
       } else {
         const t = b.dataset.type;
         if (t === "all") sel.clear();

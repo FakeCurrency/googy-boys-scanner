@@ -51,6 +51,20 @@ def test_bot_still_takes_a_normal_operating_company():
     assert d["take"] is True and d["code"] == "OK"
 
 
+def test_bot_skips_weak_entry_types():
+    row = _row("Ansell Limited", "Health Care Equipment & Services",
+               plans={"1W": _plan(entry_trigger="retest")})
+    d = vb.evaluate_setup(row)
+    assert d["take"] is False and d["code"] == "weak_entry_type"
+
+
+def test_skip_entry_types_is_configurable(monkeypatch):
+    monkeypatch.setattr(vb._cfg, "VIVEK_BOT_SKIP_ENTRY_TYPES", [])
+    row = _row("Ansell Limited", "Health Care Equipment & Services",
+               plans={"1W": _plan(entry_trigger="retest")})
+    assert vb.evaluate_setup(row)["take"] is True
+
+
 def test_exclusion_can_be_disabled(monkeypatch):
     monkeypatch.setattr(vb._cfg, "VIVEK_BOT_EXCLUDE_FUNDS", False)
     d = vb.evaluate_setup(_row("Scentre Group", "Equity Real Estate Investment Trusts (REITs)"))
