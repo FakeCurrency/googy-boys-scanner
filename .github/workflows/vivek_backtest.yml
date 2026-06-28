@@ -1,0 +1,68 @@
+name: VIVEK backtest
+
+# Walk-forward backtest of the VIVEK 5.0 strategy (replays the real engine over
+# history). Heavy + data-hungry, so it runs in CI where Yahoo is reachable, and
+# commits the result to public/data/vivek_backtest.json. Manual by default.
+on:
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market(s) to backtest"
+        default: "all"
+        type: choice
+        options: ["all", "asx", "nasdaq", "crypto"]
+      limit:
+        description: "Max symbols per market (0 = all; bigger = slower)"
+        default: "60"
+      period:
+        description: "History depth (e.g. 10y, max)"
+        default: "10y"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vivek-backtest
+  cancel-in-progress: true
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run walk-forward backtest
+        run: |
+          MK="${{ github.event.inputs.market }}"; MK="${MK:-all}"
+          LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
+          PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
+          ARGS="--limit $LIM --period $PER"
+          [ "$MK" != "all" ] && ARGS="--market $MK $ARGS"
+          python -m scanner.vivek_backtest $ARGS
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/vivek_backtest.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "No backtest changes."; exit 0; fi
+          git commit -m "data: VIVEK backtest $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git checkout "$SHA" -- public/data/vivek_backtest.json 2>/dev/null || true
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: VIVEK backtest $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
