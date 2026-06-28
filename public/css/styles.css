@@ -1085,7 +1085,10 @@ body.debug-mode .debug-panel {
 }
 @media (max-width: 880px) {
   .topbar { flex-wrap: wrap; gap: 10px; padding: 11px 16px; }
-  .market-switch { order: 3; }
+  /* Market switch is the primary control — keep it FIRST in the nav so ASX /
+     NASDAQ / CRYPTO stay visible (order:3 buried it off-screen right once the
+     nav became a horizontal scroll strip on phones). */
+  .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
 }
 @media (max-width: 900px) {

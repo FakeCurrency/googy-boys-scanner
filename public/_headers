@@ -1,0 +1,23 @@
+# Cloudflare Pages response headers.
+#
+# The problem this fixes: without explicit caching rules, an HTML page (e.g.
+# chart.html) could be served stale from the browser/edge cache — so a freshly
+# deployed page that references a new ?v= asset is never fetched, and chart
+# updates appear "not to ship". HTML + scan data are therefore always
+# revalidated, while the versioned JS/CSS (busted by the ?v= query on every
+# change) may be cached hard. More-specific paths below win on Cloudflare Pages.
+
+# Everything: revalidate by default so the latest deploy is always served.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# Versioned static assets — safe to cache (the ?v= query changes on every edit).
+/js/*
+  Cache-Control: public, max-age=86400
+/css/*
+  Cache-Control: public, max-age=86400
+
+# Scan output JSON is rewritten every scan — must always be fresh.
+/data/*
+  Cache-Control: public, max-age=0, must-revalidate
