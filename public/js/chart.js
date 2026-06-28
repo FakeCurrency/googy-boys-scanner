@@ -926,6 +926,54 @@
     window.addEventListener("beforeunload", () => clearInterval(iv), { once: true });
   }
 
+  // ── VIVEK "setups across timeframes" strip ──────────────────────────────────
+  // A read-only decision aid: for THIS ticker it surfaces which timeframes have a
+  // live setup (armed / entry type / R:R) and flags multi-timeframe confluence —
+  // so the chart actively suggests where the edge is, not just draws it. Reads the
+  // same per-TF plans the chart already holds; clicking a chip jumps to that TF.
+  const TFS_MIN_RR = 1.5;
+  function renderTFSetups(d, tfs, pickTF, getCurTF) {
+    const order = ["4H", "1D", "3D", "1W"];
+    const items = order.filter((k) => tfs[k] && tfs[k].levels).map((k) => {
+      const lv = tfs[k].levels;
+      return { k, approx: !!tfs[k].approx, armed: !!lv.armed, rr: +lv.rr || 0, trig: lv.entry_trigger };
+    });
+    if (!items.length) return null;
+    // Real-plan timeframes only (a 4H / old-3D reference borrows the Daily plan —
+    // don't let it double-count toward confluence).
+    const realArmed = items.filter((i) => i.armed && !i.approx);
+    let cls, read;
+    if (realArmed.length >= 2) {
+      cls = "strong";
+      read = `⚡ Multi-timeframe setup — armed on ${realArmed.map((i) => TF_LABEL[i.k]).join(" + ")}`;
+    } else if (realArmed.length === 1) {
+      const a = realArmed[0];
+      cls = a.rr >= TFS_MIN_RR ? "armed" : "weak";
+      read = `Armed on ${TF_LABEL[a.k]} · ${a.trig || "trigger"} · R:R ${a.rr.toFixed(1)}`;
+    } else {
+      cls = "watch";
+      read = "Watching — no timeframe has triggered yet";
+    }
+    const chip = (i) => {
+      const state = i.armed ? (i.rr >= TFS_MIN_RR ? "armed" : "weak") : "watch";
+      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} · ${i.rr.toFixed(1)}R` : "watch";
+      const title = i.approx ? `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`
+                             : `${TF_LABEL[i.k]} 200-SMA plan${i.armed ? " · ARMED" : " · watching"}`;
+      return `<button class="tfs-chip s-${state}${i.approx ? " ref" : ""}" data-tf="${esc(i.k)}" title="${esc(title)}">` +
+             `<b>${TF_LABEL[i.k]}</b><span>${esc(sub)}</span></button>`;
+    };
+    const host = document.createElement("div");
+    host.className = "tfs-strip s-" + cls;
+    host.innerHTML = `<span class="tfs-read">${esc(read)}</span><div class="tfs-chips">${items.map(chip).join("")}</div>`;
+    const toggle = $("#tf-toggle");
+    if (toggle && toggle.parentNode) toggle.parentNode.insertBefore(host, toggle.nextSibling);
+    host.querySelectorAll(".tfs-chip").forEach((b) => b.addEventListener("click", () => pickTF(b.dataset.tf)));
+    const markActive = (key) =>
+      host.querySelectorAll(".tfs-chip").forEach((b) => b.classList.toggle("is-active", b.dataset.tf === key));
+    markActive(getCurTF());
+    return { markActive };
+  }
+
   function render(d) {
     header(d); footer(d); wireSim(d);
     const tfs = d.timeframes || {};
@@ -950,6 +998,7 @@
     let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
     let drawClear = () => {};         // set by initDrawing; clears temp drawings on TF switch
     let drawRedraw = () => {};        // set by initDrawing; re-anchors drawings on pan/zoom/resize
+    let tfSetups = null;              // VIVEK multi-timeframe setup strip (set below)
 
     const el = $("#chart");
     const LC = window.LightweightCharts;
@@ -1131,6 +1180,7 @@
           }
           tfNotice.hidden = !isRef;
         }
+        if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
     }
 
@@ -1164,10 +1214,18 @@
       // Everything else → static multi-timeframe data from the scan JSON.
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
-      toggle.querySelectorAll(".tf-btn").forEach((b) => b.addEventListener("click", () => {
-        toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x === b));
-        applyTF(b.dataset.tf);
-      }));
+      // Switch timeframe from a button OR a setup-strip chip, keeping both in sync.
+      const selectTF = (key) => {
+        if (!tfs[key]) return;
+        toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x.dataset.tf === key));
+        applyTF(key);
+      };
+      // VIVEK: a read-only "setups across timeframes" decision strip that surfaces
+      // which TF(s) have a live setup for this ticker (armed / entry / R:R / MTF
+      // confluence) and lets you jump straight to one.
+      if (d._vivek) tfSetups = renderTFSetups(d, tfs, selectTF, () => curTF);
+      toggle.querySelectorAll(".tf-btn").forEach((b) =>
+        b.addEventListener("click", () => selectTF(b.dataset.tf)));
       applyTF(curTF);
       // Poll a live (~15-min delayed) quote so the header price isn't frozen at
       // the last scan close. Covers ASX / NASDAQ stocks and scalp index /

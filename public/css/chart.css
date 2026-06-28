@@ -85,6 +85,39 @@
 }
 @media (max-width: 560px) { .tf-notice { font-size: 11.5px; padding: 7px 11px; } }
 
+/* ── "setups across timeframes" decision strip (read-only) ── */
+.tfs-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  margin: 8px 16px 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--fill); border: 1px solid var(--border);
+  font: 600 12.5px/1.2 var(--sans);
+}
+.tfs-strip.s-strong { border-color: var(--green); background: rgba(47,208,127,.08); }
+.tfs-read { color: var(--text); }
+.tfs-strip.s-strong .tfs-read { color: var(--green); }
+.tfs-strip.s-watch .tfs-read { color: var(--muted); }
+.tfs-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.tfs-chip {
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text-2);
+  padding: 5px 9px; border-radius: 999px; font: 600 11.5px/1 var(--sans);
+  transition: border-color .15s, box-shadow .15s;
+}
+.tfs-chip b { color: var(--text); font-weight: 800; }
+.tfs-chip span { font: 600 10.5px/1 var(--mono); opacity: .82; }
+.tfs-chip.s-armed { border-color: var(--green); color: var(--green); }
+.tfs-chip.s-armed b { color: var(--green); }
+.tfs-chip.s-weak { border-color: #ffb020; color: #ffb020; }
+.tfs-chip.s-weak b { color: #ffb020; }
+.tfs-chip.s-watch { color: var(--muted); }
+.tfs-chip.ref { opacity: .68; }
+.tfs-chip:hover { border-color: var(--blue); }
+.tfs-chip.is-active { box-shadow: 0 0 0 2px var(--blue) inset; }
+@media (max-width: 560px) {
+  .tfs-read { width: 100%; }
+  .tfs-chips { margin-left: 0; }
+}
+
 .cf-tvnote { color: var(--muted); font-size: 11.5px; margin: 10px 0 0; max-width: 760px; }
 .chart-legend {
   position: absolute; top: 20px; left: 28px; z-index: 5;
