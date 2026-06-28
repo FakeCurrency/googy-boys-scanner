@@ -184,6 +184,16 @@ def test_update_opens_at_intraday_price_in_session_and_is_idempotent(tmp_path, m
     assert len(j["open"]) == 1                        # no duplicate
 
 
+def test_update_skips_fund_and_reit_rows(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    rows = [_row(name="Charter Hall Long Wale Reit",
+                 sector="Equity Real Estate Investment Trusts (REITs)",
+                 plans={"1D": _plan()})]
+    uni = [{"symbol": "X", "yf": "X.AX"}]
+    j = vj.update("asx", rows, {"X.AX": _frame(101.0)}, uni, now=_aest(2024, 1, 2, 11, 0))
+    assert len(j["open"]) == 0                        # REIT kept out of the signal test
+
+
 def test_update_marks_open_trade_to_observed_price(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     rows = [_row(plans={"1D": _plan()})]

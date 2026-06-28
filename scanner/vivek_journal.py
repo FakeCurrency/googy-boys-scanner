@@ -26,7 +26,7 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from . import config
-from .broker.vivek_bot import manage_position
+from .broker.vivek_bot import manage_position, _is_fund_or_reit
 from .journal_common import atomic_write
 
 log = logging.getLogger(__name__)
@@ -323,6 +323,10 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict],
     if is_open:
         for row in results:
             if row.get("grade") not in ("A+", "A"):
+                continue
+            # Keep the forward-test to the same tradeable universe as the bot —
+            # don't let REIT/ETF/fund reactions pad the signal's expectancy.
+            if getattr(config, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
                 continue
             price = _current_price(frames, yf_map.get(row["symbol"]))
             if price is None:
