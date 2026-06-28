@@ -149,21 +149,26 @@
         t.booked_pct = 1;
       }
       t.status = "closed"; t.exit = round(price, 8);
-      t.exit_date = today(); t.exit_reason = t.tp3_hit ? "target" : (t.tp1_hit ? "trail" : "stop");
+      t.exit_date = today(); t.exit_time = nowTime();
+      t.exit_reason = t.tp3_hit ? "target" : (t.tp1_hit ? "trail" : "stop");
       changed = true;
     } else {
       const scale = t.scale, reached = (lvl) => (isLong ? price >= lvl : price <= lvl);
-      if (!t.tp1_hit && t.tp1 != null && reached(t.tp1)) {
+      // A TP only counts if it's a genuine profit target BEYOND the entry. This
+      // stops a chased entry (taken above the plan's TP1) from instantly booking
+      // "TP1" and trailing the stop to break-even on the entry bar.
+      const valid = (lvl) => (isLong ? lvl > t.entry : lvl < t.entry);
+      if (!t.tp1_hit && t.tp1 != null && valid(t.tp1) && reached(t.tp1)) {
         t.tp1_hit = true; book(t, "tp1", t.tp1, scale[0], isLong);
         if (fav(t.entry, t.stop, isLong)) t.stop = t.entry;        // SL → break-even
         changed = true;
       }
-      if (!t.tp2_hit && t.tp2 != null && reached(t.tp2)) {
+      if (!t.tp2_hit && t.tp2 != null && valid(t.tp2) && reached(t.tp2)) {
         t.tp2_hit = true; book(t, "tp2", t.tp2, scale[1], isLong);
         if (fav(t.tp1, t.stop, isLong)) t.stop = t.tp1;            // SL → locked structure
         changed = true;
       }
-      if (!t.tp3_hit && t.tp3 != null && reached(t.tp3)) {
+      if (!t.tp3_hit && t.tp3 != null && valid(t.tp3) && reached(t.tp3)) {
         t.tp3_hit = true; book(t, "tp3", t.tp3, scale[2], isLong); changed = true;
       }
     }
@@ -289,11 +294,21 @@
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
   const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "S" : "L"}</span>`;
+  // Symbol cell links to the chart for that ticker.
+  const symCell = (t) =>
+    `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}" title="Open ${up(t.symbol)} chart">` +
+    `${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></a></td>`;
+  // Date + time stamp from a parsed epoch (opened / closed).
+  function stamp(ms) {
+    if (ms == null) return "—";
+    const d = new Date(ms); if (isNaN(d)) return "—";
+    return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+  }
 
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
-      <th class="num">Targets</th><th class="num">Now</th><th class="num">In&nbsp;trade</th>
+      <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
       <th class="num">Unreal R</th><th class="num">Unreal $</th>${side === "me" ? "<th></th>" : ""}</tr>`;
     const rows = list.map((t) => {
       const isLong = t.direction !== "short";
@@ -303,12 +318,13 @@
       const closeBtn = side === "me"
         ? `<td class="num"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
-        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.stop)}</td>
         <td class="num">${tgt}</td>
         <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
+        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
         <td class="num jr-dur">${dur}</td>
         <td class="num jr-ur">—</td>
         <td class="num jr-ud">—</td>${closeBtn}</tr>`;
@@ -319,16 +335,18 @@
   function closedRows(list) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
-      <th class="num">R</th><th class="num">$</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
+      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th><th class="num">Closed</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
     const rows = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0)).map((t) => {
       const d = dollarsOf(t);
       return `<tr>
-        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.exit)}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
+        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
+        <td class="num jr-stamp">${stamp(exitMs(t))}</td>
         <td class="num">${durText(openedMs(t), exitMs(t))}</td>
         <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
     }).join("");
@@ -344,7 +362,7 @@
     const rows = [...state.bot.open.map((t) => ["bot", t]), ...state.me.open.map((t) => ["me", t])];
     if (!rows.length) return `<div class="jr-empty">No open positions on either side.</div>`;
     const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
-      <th class="num">Targets</th><th class="num">Now</th><th class="num">In&nbsp;trade</th>
+      <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
       <th class="num">Unreal R</th><th class="num">Unreal $</th><th></th></tr>`;
     const body = rows.map(([side, t]) => {
       const isLong = t.direction !== "short";
@@ -352,12 +370,13 @@
       const closeBtn = side === "me" ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         <td>${ownerChip(side)}</td>
-        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.stop)}</td>
         <td class="num"><span class="num-sub">${tps}</span></td>
         <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
+        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
         <td class="num jr-dur">${durText(openedMs(t), nowMs)}</td>
         <td class="num jr-ur">—</td>
         <td class="num jr-ud">—</td>
@@ -371,17 +390,19 @@
       .sort((a, b) => (exitMs(b[1]) || 0) - (exitMs(a[1]) || 0));
     if (!rows.length) return `<div class="jr-empty">No closed trades yet on either side.</div>`;
     const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
-      <th class="num">R</th><th class="num">$</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
+      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th><th class="num">Closed</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
     const body = rows.map(([side, t]) => {
       const dd = dollarsOf(t);
       return `<tr>
         <td>${ownerChip(side)}</td>
-        <td class="jr-sym">${dirChip(t.direction)} ${up(t.symbol)}<span class="jr-tf">${esc(t.timeframe || "")}</span></td>
+        ${symCell(t)}
         <td>${gradeChip(t.grade)}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.exit)}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
         <td class="num ${dd == null ? "" : pcls(dd)}">${dd == null ? "—" : d2(dd)}</td>
+        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
+        <td class="num jr-stamp">${stamp(exitMs(t))}</td>
         <td class="num">${durText(openedMs(t), exitMs(t))}</td>
         <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
     }).join("");
