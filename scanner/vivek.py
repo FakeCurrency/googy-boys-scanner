@@ -519,6 +519,31 @@ def gate_grade(grade: str | None, sig: dict, rr: float, armed: bool = True) -> t
     return grade, notes
 
 
+def apply_grade_hysteresis(score: int, raw_grade: str | None, prev_grade: str | None,
+                           cutoffs: list | None = None, margin: int | None = None) -> str | None:
+    """Hold a setup's PREVIOUS (higher) grade across scans unless its score has
+    clearly dropped — i.e. more than `margin` points below that grade's cutoff.
+
+    This only smooths SCORE-boundary wobble (the A+↔A flip-flop from tiny
+    scan-to-scan data differences); it is applied BEFORE gate_grade, so a genuine
+    state change (un-armed, or R:R falling below the minimum) still demotes the
+    setup. Promotions are never held back. A no-op when there's no prior grade.
+    """
+    cutoffs = config.VIVEK_GRADE_CUTOFFS if cutoffs is None else cutoffs
+    margin = config.VIVEK_GRADE_HYSTERESIS if margin is None else margin
+    if not prev_grade or prev_grade == raw_grade or margin <= 0:
+        return raw_grade
+    rank = {g: i for i, (g, _) in enumerate(cutoffs)}   # A+ = 0 (best)
+    cut = dict(cutoffs)
+    if prev_grade not in rank or raw_grade not in rank:
+        return raw_grade
+    # Only a demotion (raw is a worse tier than prev) is eligible to be held, and
+    # only while the score is still within `margin` of the previous grade's cutoff.
+    if rank[raw_grade] > rank[prev_grade] and score >= cut[prev_grade] - margin:
+        return prev_grade
+    return raw_grade
+
+
 # Entry-type categories — how price is interacting with the 200 SMA. Used by the
 # dashboard's filter chips so the user can sort setups by the trade trigger and
 # read overall market behaviour around the level. A setup can match more than one.

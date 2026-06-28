@@ -2,6 +2,7 @@
 per-timeframe plan -> grade -> rank, per market."""
 
 import datetime as dt
+import json
 import logging
 import os
 import pathlib
@@ -45,6 +46,33 @@ def _spark(df) -> list[float]:
     return [round(float(c), 8) for c in closes]
 
 
+def _load_prev_grades(out_root: str | None, market_key: str) -> dict:
+    """{symbol: grade} from the PREVIOUS scan's JSON (read before it's overwritten)
+    so grade hysteresis can hold a borderline name's prior grade across scans."""
+    if not out_root:
+        return {}
+    p = pathlib.Path(out_root) / f"{market_key}_vivek.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        return {r["symbol"]: r["grade"] for r in data.get("results", [])
+                if r.get("symbol") and r.get("grade")}
+    except Exception:
+        return {}
+
+
+def _bar_is_forming(market_key: str, last_date, now: dt.datetime) -> bool:
+    """Is the trailing daily bar still forming (the current session's incomplete
+    bar)? True only when the last bar is TODAY in the market tz and today's session
+    has not yet closed; crypto (no session) forms until UTC midnight (all day)."""
+    if last_date != now.date():
+        return False                       # a prior, completed day's bar
+    sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
+    if not sess:
+        return True                        # crypto: today's bar forms until UTC midnight
+    ch, cm = sess[2], sess[3]
+    return (now.hour * 60 + now.minute) < (ch * 60 + cm)
+
+
 # VIVEK grade ordering (A+/A/B+/WATCH).
 _VIVEK_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}
 
@@ -80,11 +108,21 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                   f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
         frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
 
+    now = dt.datetime.now(ZoneInfo(market.timezone))
+    prev_grades = _load_prev_grades(out_root, market_key)   # for grade hysteresis
+
     results: list[dict] = []
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
         try:
+            symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
+            age = _frame_age_days(df)                        # measure freshness on the raw frame
+            # Pin to COMPLETED bars: drop a still-forming trailing bar so a name's
+            # grade/plan doesn't wobble as the current session's bar fills in.
+            if (config.VIVEK_DROP_FORMING_BAR and len(df)
+                    and _bar_is_forming(market_key, df.index[-1].date(), now)):
+                df = df.iloc[:-1]
             sig = vivek.evaluate(df)
             if sig is None:
                 continue
@@ -94,6 +132,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             points, grade, fired = vivek.score_and_grade(sig)
             if grade is None:
                 continue
+            # Hysteresis: hold the prior (higher) grade through small score wobble.
+            # Applied BEFORE the gate so a genuine un-arm / low-R:R still demotes.
+            grade = vivek.apply_grade_hysteresis(points, grade, prev_grades.get(symbol))
             # Per-timeframe plans (Daily + Weekly) from the ONE engine — the Daily
             # plan is the row/bot headline; both feed the chart so the row, chart
             # and bot read identical numbers. The Daily plan also carries the
@@ -147,7 +188,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "rr_text": f"{lv['rr']:.1f}:1",
                 "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
                 "turnover": round(turnover),
-                "data_age_days": _frame_age_days(df),   # 0 = fresh; >0 = reused cache
+                "data_age_days": age,   # 0 = fresh; >0 = reused cache (raw-frame age)
                 "spark": _spark(df),
                 "detail": detail,
                 "analysis": vivek.narrative(info.get("symbol", yf_ticker), sig, lv,
@@ -159,7 +200,6 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
 
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
-    now = dt.datetime.now(ZoneInfo(market.timezone))
     if pulse_data is None:
         pulse_data = pulse.fetch()
     downloaded = len(frames)

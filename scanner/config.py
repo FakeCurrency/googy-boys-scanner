@@ -256,6 +256,13 @@ VIVEK_PIVOT_WINDOW     = 4         # swing pivot lookback for structure + stops
 VIVEK_SCORE_MAX        = 10
 # Grade ladder (note: B+ and WATCH, not B/C, per 5.0 grading)
 VIVEK_GRADE_CUTOFFS    = [("A+", 8), ("A", 6), ("B+", 4), ("WATCH", 2)]
+# Grade hysteresis: a setup holds its PREVIOUS (higher) grade unless its score
+# falls more than this many points below that grade's cutoff. Stops borderline
+# names flip-flopping (e.g. A+↔A) on tiny scan-to-scan data differences. 0 = off.
+VIVEK_GRADE_HYSTERESIS = 1
+# Drop a still-forming trailing daily bar (the current session's incomplete bar)
+# so grades/plans key off COMPLETED bars only — removes partial-bar variance.
+VIVEK_DROP_FORMING_BAR = True
 
 # Structural take-profits — TP1/TP2/TP3 land on REAL prior structure (resistance
 # above for longs, support below for shorts), so R:R varies and means something.

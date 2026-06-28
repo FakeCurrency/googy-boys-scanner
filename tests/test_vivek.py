@@ -170,6 +170,54 @@ def test_gate_leaves_lower_grades_untouched():
     assert vivek.gate_grade("WATCH", {}, rr=0.5, armed=False) == ("WATCH", [])
 
 
+# ── grade hysteresis (reduce A+↔A churn from tiny scan-to-scan data wobble) ──────
+
+def test_hysteresis_holds_prior_grade_within_margin():
+    # was A+ (cutoff 8); score wobbled to 7 (one below) → held at A+
+    assert vivek.apply_grade_hysteresis(7, "A", "A+") == "A+"
+
+
+def test_hysteresis_demotes_once_clearly_below():
+    # score 6 is more than the 1-point margin below the A+ cutoff → demote
+    assert vivek.apply_grade_hysteresis(6, "A", "A+") == "A"
+    # and a two-tier drop is never held by a one-point margin
+    assert vivek.apply_grade_hysteresis(5, "B+", "A+") == "B+"
+
+
+def test_hysteresis_never_holds_back_a_promotion():
+    assert vivek.apply_grade_hysteresis(9, "A+", "A") == "A+"
+
+
+def test_hysteresis_noop_without_prior_or_when_unchanged():
+    assert vivek.apply_grade_hysteresis(7, "A", None) == "A"
+    assert vivek.apply_grade_hysteresis(8, "A+", "A+") == "A+"
+    assert vivek.apply_grade_hysteresis(7, "A", "A+", margin=0) == "A"   # disabled
+
+
+# ── forming-bar gate (pin scans to COMPLETED daily bars) ────────────────────────
+
+def test_bar_is_forming_intraday_vs_after_close_and_prior_day():
+    from scanner import scan
+    from zoneinfo import ZoneInfo
+    import datetime as _dt
+    tz = ZoneInfo("Australia/Sydney")
+    today = _dt.date(2026, 6, 26)
+    # today's bar is forming intraday (before the 16:00 close), complete after it
+    assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 11, 0, tzinfo=tz)) is True
+    assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 16, 30, tzinfo=tz)) is False
+    # a prior day's bar is always complete
+    assert scan._bar_is_forming("asx", _dt.date(2026, 6, 25), _dt.datetime(2026, 6, 26, 11, 0, tzinfo=tz)) is False
+
+
+def test_bar_is_forming_crypto_until_utc_midnight():
+    from scanner import scan
+    from zoneinfo import ZoneInfo
+    import datetime as _dt
+    tz = ZoneInfo("UTC")
+    assert scan._bar_is_forming("crypto", _dt.date(2026, 6, 26), _dt.datetime(2026, 6, 26, 23, 0, tzinfo=tz)) is True
+    assert scan._bar_is_forming("crypto", _dt.date(2026, 6, 25), _dt.datetime(2026, 6, 26, 1, 0, tzinfo=tz)) is False
+
+
 # ── trigger model + per-timeframe plans ─────────────────────────────────────────
 
 def test_long_reclaim_trigger_fires_and_arms():
