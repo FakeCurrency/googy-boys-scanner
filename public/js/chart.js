@@ -413,6 +413,7 @@
       price: m.price ?? null,
       grade: m.grade || "", score: m.score || 0, score_max: m.score_max || 0,
       chips: m.chips || [], sector: m.sector || "", currency_symbol: cur,
+      plans: m.plans || null,                                // raw per-TF plans (for high-conviction)
       tv_symbol: m.tv_symbol || SYM, dir,
       rr: m.rr || 0, low_rr: m.low_rr || false, rr_text: m.rr_text || "",
       entry: m.entry, stop: m.stop, target: m.tp2,            // headline target = TP2
@@ -549,6 +550,17 @@
     document.body.replaceChildren(h, d);
   }
 
+  // High conviction (matches the dashboard): a WEEKLY reclaim that's A/A+ or has
+  // strong structure — the cleanest, lowest-drawdown cell in the backtest.
+  function isHighConviction(d) {
+    // Prefer the raw scan plan (always present in the JSON); fall back to the
+    // built Weekly timeframe. A genuine weekly reclaim that's A/A+ or structured.
+    const tf = d && d.timeframes && d.timeframes["1W"];
+    const p = (d && d.plans && d.plans["1W"]) || (tf && !tf.approx && tf.levels) || null;
+    if (!p || !p.armed || p.entry_trigger !== "reclaim") return false;
+    return d.grade === "A+" || d.grade === "A" || (p.structural_tps || 0) >= 2;
+  }
+
   function header(d) {
     const cur = d.currency_symbol || "";
     $("#ct-sym").textContent = d.symbol;
@@ -564,6 +576,8 @@
       dirEl.classList.toggle("long", !isShort);   // explicit colour both ways (LONG green / SHORT red)
     }
     dirEl.hidden = false;
+    const hc = $("#ct-hiconv");
+    if (hc) hc.hidden = !isHighConviction(d);
     $("#ct-chips").innerHTML = (d.chips || [])
       .map((c) => `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
   }
