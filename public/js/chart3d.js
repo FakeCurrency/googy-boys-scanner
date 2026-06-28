@@ -284,6 +284,7 @@
     const lvLegend = LEVELS.map((L) =>
       `<span class="c3d-chip"><i style="background:${hex(L.color)}"></i>${L.label}</span>`).join("");
     overlay.innerHTML =
+      `<div class="c3d-row c3d-note" hidden></div>` +
       `<div class="c3d-row c3d-tfs">${tfLegend}</div>` +
       `<div class="c3d-row c3d-lvls">${lvLegend}</div>` +
       `<div class="c3d-row c3d-foot">` +
@@ -291,6 +292,7 @@
         `<span class="c3d-hint">Read-only 3D view · drag to orbit, scroll to zoom — switch to 2D to measure or simulate.</span>` +
       `</div>`;
     host.appendChild(overlay);
+    const noteEl = overlay.querySelector(".c3d-note");
     overlay.querySelector(".c3d-reset").addEventListener("click", () => {
       camera.position.copy(homePos);
       controls.target.set(0, 0, 0);
@@ -305,6 +307,15 @@
         if (pg.bodies) pg.bodies.material.opacity = active ? 1.0 : 0.4;
         pg.lineMats.forEach((m) => { m.opacity = active ? 0.9 : 0.35; });
       });
+      // 4H has no plan of its own — its level planes are the Daily reference.
+      if (noteEl) {
+        if (key === "4H") {
+          noteEl.textContent = "4H plane — trade levels are the Daily plan (no separate 4H plan yet).";
+          noteEl.hidden = false;
+        } else {
+          noteEl.hidden = true;
+        }
+      }
     }
     setActiveTF(model.activeTF || (layout.planes[0] && layout.planes[0].key));
 

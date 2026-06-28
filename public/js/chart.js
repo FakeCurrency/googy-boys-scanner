@@ -427,16 +427,17 @@
     if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
     if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
 
-    // Build the Daily + Weekly views, then render once. The DEEP daily pull drives
-    // the Daily candles and a resampled Weekly view. Each TF draws its own
+    // Build the Daily + Weekly + best-effort 4H views, then render once. The DEEP
+    // daily pull drives the Daily candles and a resampled Weekly view; a ~2y
+    // hourly pull bucketed to 4H drives the 4H view. Each TF draws its own
     // 10/20/43/200 SMA for DISPLAY, but the trade PLAN (Entry/SL/TP1-3, the level,
     // the trigger) and the markers come straight from the scan row (Python) — the
     // chart never recomputes them. Daily and Weekly EACH carry their OWN Python
-    // plan, so the levels genuinely change when you switch timeframe.
+    // plan, so the levels genuinely change when you switch between them.
     //
-    // 4H is intentionally NOT offered: it has no server-side plan, so it could
-    // only mirror the Daily levels — which read as "the timeframe toggle does
-    // nothing". Only timeframes with a real, distinct plan are shown.
+    // 4H has NO server-side plan, so it shows the Daily plan's levels as a clearly
+    // labelled reference (approx=true → no mismatched markers; the chart shows a
+    // prominent "4H uses Daily levels" notice in both the 2D and 3D views).
     // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
     // and intervals incl. 1h/1d — keep fetches on whitelisted values.
     const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
@@ -452,19 +453,24 @@
       armed: m.armed, entry_trigger: m.entry_trigger,
     };
     const dailyPlan = plans["1D"] || headlinePlan;
-    const makeTF = (bars, tfKey, planRaw) => {
+    // approx=true → this TF has no Python plan of its own; it borrows the Daily
+    // plan as reference (flagged on the TF block) and shows no mismatched markers.
+    const makeTF = (bars, tfKey, planRaw, approx) => {
       const tf = barsToVivekTF(bars);                 // candles + volume + SMAs (display)
       tf.levels = normalizePlan(planRaw);             // the plan (from Python)
-      tf.markers = adaptMarkers(pyMarkers[tfKey], bars, direction);
+      tf.markers = approx ? [] : adaptMarkers(pyMarkers[tfKey], bars, direction);
+      tf.approx = !!approx;                           // 4H reuses the Daily plan
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
-    // Crypto daily: force the proxy's Yahoo "<base>-USD" series (src=yahoo) so the
-    // chart matches the SCAN's instrument/price exactly. A guessed Binance pair
-    // can be the wrong token (or missing → a same-named stock), which throws the
-    // price scale off and pushes the real levels off-screen.
-    const dailyP = isCrypto ? vivekCryptoDaily(SYM)
+    // Crypto: force the proxy's Yahoo "<base>-USD" series (src=yahoo) so the chart
+    // matches the SCAN's instrument/price exactly. A guessed Binance pair can be
+    // the wrong token (or missing → a same-named stock), which throws the price
+    // scale off and pushes the real levels off-screen.
+    const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d")
                             : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
+    const intradayP = (isCrypto ? vivekCryptoBars(SYM, "2y", "1h")
+                                : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
@@ -475,17 +481,26 @@
       }
       if (d.price == null) d.price = daily[daily.length - 1].close;
       d.default_tf = "1D";
-      console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
-                   `(daily=${daily.length}); plans=[${Object.keys(plans).join(", ")}]`);
-      render(d);
+      return intradayP.then((intraday) => {
+        if (intraday && intraday.length >= 24) {
+          const h4 = bucketBars(intraday, 4 * 3600);
+          // 4H candles/SMAs are real 4H; the trade levels are the Daily plan
+          // (reference), labelled on the chart so there's no confusion.
+          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", dailyPlan, true);
+        }
+        console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
+                     `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
+                     `plans=[${Object.keys(plans).join(", ")}]`);
+        render(d);
+      });
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
-  // VIVEK crypto daily history, forced to the scan-consistent Yahoo <base>-USD
-  // series via the proxy (src=yahoo) — never a guessed Binance pair.
-  function vivekCryptoDaily(sym) {
+  // VIVEK crypto history, forced to the scan-consistent Yahoo <base>-USD series
+  // via the proxy (src=yahoo) — never a guessed Binance pair.
+  function vivekCryptoBars(sym, range, interval) {
     const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
-    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=5y&interval=1d&src=yahoo`,
+    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=yahoo`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
@@ -1081,8 +1096,21 @@
       }
       chart.timeScale().fitContent();
       legend(tf);
-      if (d._vivek) applyVivekLevels(key);   // re-read trade levels for this timeframe
+      if (d._vivek) {
+        applyVivekLevels(key);               // re-read trade levels for this timeframe
+        // Prominent notice when 4H is selected: its levels are the Daily plan
+        // (there is no separate 4H plan yet), so users aren't misled.
+        if (tfNotice) tfNotice.hidden = !(key === "4H");
+      }
     }
+
+    // On-chart 4H notice (shown only on the 4H tab) — pinned over the candles.
+    const tfNotice = d._vivek ? Object.assign(document.createElement("div"), {
+      className: "tf-notice",
+      textContent: "4H view — trade levels shown are from the Daily plan (no separate 4H plan available yet). 4H candles & SMAs are real 4H.",
+      hidden: true,
+    }) : null;
+    if (tfNotice) { el.style.position = "relative"; el.appendChild(tfNotice); }
 
     const toggle = $("#tf-toggle");
     // Live Binance feed only for genuine crypto (by asset_type) — commodities and
