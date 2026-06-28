@@ -419,6 +419,11 @@ body {
 .seg-count { font: 600 10.5px/1 var(--sans); background: var(--fill); color: var(--muted); padding: 2px 6px; border-radius: 100px; }
 .seg-btn.is-active .seg-count { background: var(--blue-soft); color: var(--blue); }
 
+/* Sort segment: active button is blue (matching the active filters), with a
+   ↑ / ↓ arrow showing the current sort direction. */
+#sorts .seg-btn.is-active { background: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
+.sort-arrow { font-size: 0.92em; font-weight: 700; opacity: 0.95; }
+
 /* ================================================================ EMA legend */
 .ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 0.5px solid var(--separator); }
 .legend-tag { font: 700 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }

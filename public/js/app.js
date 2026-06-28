@@ -32,13 +32,14 @@
       if (p.mode)   state.mode   = p.mode;
       if (p.tab)    state.tab    = p.tab;
       if (p.sort)   state.sort   = p.sort;
+      if (p.sortDir) state.sortDir = p.sortDir;
     } catch (_) {}
   }
   function savePrefs() {
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         market: state.market, mode: state.mode,
-        tab: state.tab, sort: state.sort,
+        tab: state.tab, sort: state.sort, sortDir: state.sortDir,
       }));
     } catch (_) {}
   }
@@ -101,7 +102,8 @@
     mode: "vivek",      // VIVEK (5.0) is the only scanner now
     view: "results",    // results | watch
     tab: "aplus",       // aplus | a | watch
-    sort: "score",      // score | price | rr | az
+    sort: "score",      // score | price | rr | mcap | az
+    sortDir: null,      // "asc" | "desc"; null = the sort's natural default
     data: null,
     cache: {},
     cur: "$",
@@ -109,6 +111,21 @@
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
   };
+
+  // Sort direction. Each sort has a natural default (numeric → descending,
+  // alphabetical → ascending); clicking the already-active sort flips it. The
+  // active button shows a ↑ / ↓ arrow for the current direction.
+  const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc" };
+  const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
+  const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
+  function updateSortButtons() {
+    document.querySelectorAll("#sorts .seg-btn").forEach((b) => {
+      const active = b.dataset.sort === state.sort;
+      b.classList.toggle("is-active", active);
+      const arrow = b.querySelector(".sort-arrow");
+      if (arrow) arrow.textContent = active ? (sortDirOf() === "asc" ? " ↑" : " ↓") : "";
+    });
+  }
 
   loadPrefs();
   // Sync UI controls to restored preferences
@@ -122,7 +139,7 @@
       b.setAttribute("aria-selected", b.dataset.mode === state.mode ? "true" : "false");
     });
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
-    document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.sort === state.sort));
+    updateSortButtons();
   })();
 
   const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
@@ -853,11 +870,14 @@
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
+    // Each branch sorts in its NATURAL default direction; flipping the direction
+    // (clicking the active sort again) just reverses the result.
     if (s === "price") list.sort((a, b) => n(b.price) - n(a.price));
     else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
     else if (s === "mcap") list.sort((a, b) => mcapOf(b.symbol) - mcapOf(a.symbol));   // largest cap first
     else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
     else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
+    if (sortDirOf() !== defaultDir(s)) list.reverse();
     return list;
   }
 
@@ -1281,9 +1301,11 @@
     }));
 
     document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.addEventListener("click", () => {
-      state.sort = b.dataset.sort;
+      const s = b.dataset.sort;
+      if (state.sort === s) state.sortDir = (sortDirOf() === "asc" ? "desc" : "asc");  // toggle direction
+      else { state.sort = s; state.sortDir = defaultDir(s); }                          // new sort → its default
       savePrefs();
-      document.querySelectorAll("#sorts .seg-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+      updateSortButtons();
       renderRows();
     }));
 
