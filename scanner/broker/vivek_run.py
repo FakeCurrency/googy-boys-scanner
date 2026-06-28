@@ -40,8 +40,8 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from .. import config
-from . import vivek_bot
-from ..vivek_journal import _current_price, _mark, _snapshot, market_open
+from . import vivek_bot, vivek_guard
+from ..vivek_journal import _current_price, _mark, _snapshot, costs_for, market_open
 from ..journal_common import atomic_write
 
 log = logging.getLogger("vivek_run")
@@ -65,7 +65,14 @@ def _load_book() -> dict:
             b.setdefault("closed", [])
             return b
         except Exception:
-            pass
+            # Never let a corrupt/half-written book crash the run or get silently
+            # clobbered — park it for inspection and continue from a clean book.
+            try:
+                bad = BOOK_FILE.with_suffix(".corrupt.json")
+                BOOK_FILE.replace(bad)
+                log.warning("vivek book corrupt — parked at %s, starting fresh", bad.name)
+            except Exception:
+                pass
     return {"version": BOOK_VERSION, "mode": "paper", "open": [], "closed": []}
 
 
@@ -148,6 +155,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
     yf_map = {u["symbol"]: u["yf"] for u in universe}
+    costs = costs_for(market)                         # fees + slippage R-drag (None = off)
+
+    def price_of(sym):
+        return _current_price(frames, yf_map.get(sym))
 
     book = _load_book()
     book["mode"] = mode
@@ -159,24 +170,47 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         if pos.get("market") != market:
             still_open.append(pos)
             continue
-        price = _current_price(frames, yf_map.get(pos["symbol"]))
+        price = price_of(pos["symbol"])
         if is_open and price is not None:
-            _mark(pos, price, day)
+            _mark(pos, price, day, costs)
         if pos.get("status") == "closed":
             book["closed"].append(pos)
             closed_now += 1
         else:
+            # stamp live unrealised P&L so the book/UI/guard can read it
+            if price is not None:
+                ur = vivek_guard._unreal_r(pos, price)
+                pos["unreal_r"] = round(ur, 3)
+                pos["unreal_usd"] = round(ur * (pos.get("risk_usd", 0.0) or 0.0), 2)
             still_open.append(pos)
     book["open"] = still_open
 
-    # 2) decide NEW entries against the CURRENT book (caps/short-bias across runs).
+    # 2) daily-loss guardrail — once the session is down ≥ the limit, stop adding
+    #    risk for the rest of the day (open positions are still managed above).
+    guard = vivek_guard.check(book, market, day, equity, price_of)
+    book.setdefault("guard", {})[market] = guard
+    if guard["breached"]:
+        log.warning("vivek_run [%s]: DAILY-LOSS GUARD — session P&L $%.2f ≤ -$%.2f "
+                    "(%.1f%% of $%.0f) — halting new entries for %s",
+                    market, guard["session_usd"], guard["limit_usd"],
+                    guard["limit_pct"], equity, day)
+        try:
+            from .alert_dispatch import send as _alert
+            _alert("vivek_guard",
+                   f"VIVEK daily-loss guard [{market}] — session P&L ${guard['session_usd']:.2f}",
+                   f"Limit -${guard['limit_usd']:.2f}. New entries halted for {day}. "
+                   f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
+        except Exception as e:
+            log.warning("could not send guard alert: %s", e)
+
+    # 3) decide NEW entries against the CURRENT book (caps/short-bias across runs).
     open_book = [{"symbol": p["symbol"], "direction": p["direction"]}
                  for p in book["open"] if p.get("market") == market]
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book)
 
-    # 3) fill new entries at the current intraday price (session only).
+    # 4) fill new entries at the current intraday price (session only, guard clear).
     added, chased = 0, 0
-    if is_open:
+    if is_open and not guard["breached"]:
         for out in decision["plans"]:
             sym = out["plan"]["symbol"]
             price = _current_price(frames, yf_map.get(sym))
@@ -195,6 +229,13 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     book_open = sum(1 for p in book["open"] if p.get("market") == market)
     book_short = sum(1 for p in book["open"]
                      if p.get("market") == market and p.get("direction") == "short")
+
+    # Book-level snapshot for the UI/header: total open + live unrealised P&L.
+    book["summary"] = {
+        "open": len(book["open"]),
+        "unreal_usd": round(sum(p.get("unreal_usd", 0.0) or 0.0 for p in book["open"]), 2),
+        "updated_day": day,
+    }
 
     if dry_run:
         log.info("vivek_run [%s]: DRY-RUN · %s · would add %d, close %d "

@@ -151,3 +151,31 @@ def test_open_position_marks_to_market_and_closes_on_stop(tmp_path, monkeypatch)
                        now=_aest(2024, 1, 3, 11, 0))
     assert len(bk["open"]) == 0 and len(bk["closed"]) == 1
     assert bk["closed"][0]["status"] == "closed" and bk["closed"][0]["realized_r"] < 0
+
+
+# ── daily-loss guardrail + book hardening (Phase 3) ─────────────────────────────
+
+def test_daily_loss_guard_halts_new_entries(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.1)   # tiny limit, easy to breach
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}, {"symbol": "CBA", "yf": "CBA.AX"}]
+    frames_ok = {"BHP.AX": _frame(101.0), "CBA.AX": _frame(101.0)}
+    # open BHP, then stop it out the SAME day → a realised loss on the books
+    vr.run_market("asx", [_row("BHP")], frames_ok, uni, now=_aest(2024, 1, 2, 11, 0))
+    vr.run_market("asx", [], {"BHP.AX": _frame(95.0), "CBA.AX": _frame(101.0)}, uni,
+                  now=_aest(2024, 1, 2, 14, 0))
+    # later the same day a fresh A+ (CBA) is offered — the guard must refuse it
+    bk = vr.run_market("asx", [_row("CBA")], {"BHP.AX": _frame(95.0), "CBA.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 15, 0))
+    assert bk["guard"]["asx"]["breached"] is True
+    assert all(p["symbol"] != "CBA" for p in bk["open"])   # no new risk added
+
+
+def test_corrupt_book_is_parked_and_run_continues(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    (tmp_path / "vivek_bot_book.json").write_text("{ this is not valid json")
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert (tmp_path / "vivek_bot_book.corrupt.json").exists()   # bad file parked
+    assert len(bk["open"]) == 1                                  # ran fine from a clean book

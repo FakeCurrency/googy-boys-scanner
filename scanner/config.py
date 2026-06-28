@@ -297,6 +297,18 @@ VIVEK_TP_SCALE_SHORT   = [0.50, 0.25, 0.15]   # shorts bank more, sooner
 # every market-hours scan — mirroring manual trading off a ~15-min-delayed feed.
 VIVEK_JOURNAL_MARKET_HOURS   = True    # gate new entries to the live session
 VIVEK_JOURNAL_FEED_DELAY_MIN = 15      # ~15-min delayed feed → action window shifts +15m
+
+# Execution-cost realism (fees + slippage). Modelled as an R-drag computed from
+# each trade's own fills so the forward-test expectancy is NET, not gross:
+#   • commission is paid on the entry and on every exit (a fraction of notional);
+#   • slippage is paid only on MARKET-style fills — the entry and a stop/trail
+#     close — never on a resting TP limit, which fills at its level.
+# Values are in basis points (1 bp = 0.01%). Stocks are cheap/liquid; crypto
+# perps carry a wider spread + taker fee, so they cost more. "default" backstops
+# any market key not listed.
+VIVEK_COSTS_ENABLED   = True
+VIVEK_COMMISSION_BPS  = {"asx": 2.0, "nasdaq": 1.0, "crypto": 6.0, "default": 2.0}
+VIVEK_SLIPPAGE_BPS    = {"asx": 5.0, "nasdaq": 4.0, "crypto": 8.0, "default": 5.0}
 # Base local session per market (pre-delay), as (open_h, open_m, close_h, close_m).
 # None = 24/7 (crypto). The feed delay is added to both ends at runtime.
 VIVEK_JOURNAL_SESSION = {
@@ -316,6 +328,11 @@ VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
 VIVEK_BOT_MIN_SHORTS     = 4       # at least this many of the 10 must be short
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
+# Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
+# falls to -this% of equity, the runner HALTS new entries for the rest of the
+# session (it still manages/closes open positions). In a future live phase this
+# is also where a flatten would fire; in paper it just stops adding risk.
+VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 
 # ── Autonomous runner (scanner/broker/vivek_run.py) — Phase 1-2: dry-run + paper
 # book. NO live execution is wired yet. Live trading requires, all together:

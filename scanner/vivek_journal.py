@@ -40,6 +40,47 @@ TIMEFRAMES = ("1D", "1W")          # 4H is browser-only (no server-side intraday
 MAX_CLOSED = 4000
 
 
+# ── execution-cost model (fees + slippage) ───────────────────────────────────
+# Costs are modelled as an R-drag derived from a trade's own fills, so prices
+# (and therefore the gross R mechanics + their tests) are untouched and only the
+# NET realized_r reflects the drag. Pass costs=None to run cost-free.
+
+def costs_for(market: str | None) -> tuple[float, float] | None:
+    """(slippage_frac, commission_frac) for a market, or None when costs are off."""
+    if not getattr(config, "VIVEK_COSTS_ENABLED", False):
+        return None
+    slip = config.VIVEK_SLIPPAGE_BPS.get(market, config.VIVEK_SLIPPAGE_BPS["default"])
+    comm = config.VIVEK_COMMISSION_BPS.get(market, config.VIVEK_COMMISSION_BPS["default"])
+    return (slip / 10_000.0, comm / 10_000.0)
+
+
+def _cost_r(trade: dict, slip_frac: float, comm_frac: float) -> float:
+    """Round-trip cost of a trade expressed in R (risk multiples).
+
+    Entry is a market fill → pays slippage + commission on the full position.
+    Each exit pays commission on its booked fraction; only a market exit (a stop
+    or trailed close) also pays slippage — a resting TP limit fills at its level.
+    """
+    entry, risk = trade.get("entry"), trade.get("risk")
+    if not risk or risk <= 0 or not entry:
+        return 0.0
+    cost_price = entry * (slip_frac + comm_frac)                  # entry: full size, market
+    for ex in trade.get("exits", []):
+        frac = ex.get("pct", 0.0)
+        px = ex.get("price", entry)
+        is_market = str(ex.get("reason", "")).startswith("stop")  # TP limits pay no slippage
+        cost_price += frac * px * (comm_frac + (slip_frac if is_market else 0.0))
+    return cost_price / risk
+
+
+def _apply_costs(trade: dict, costs: tuple[float, float] | None) -> None:
+    """Set gross_r / cost_r / net realized_r on the trade from its accumulated R."""
+    gross = trade.get("gross_r", trade.get("realized_r", 0.0))
+    trade["gross_r"] = round(gross, 4)
+    trade["cost_r"] = round(_cost_r(trade, *costs), 4) if costs else 0.0
+    trade["realized_r"] = round(trade["gross_r"] - trade["cost_r"], 4)
+
+
 def _load() -> dict:
     if JOURNAL_FILE.exists():
         try:
@@ -48,7 +89,14 @@ def _load() -> dict:
             j.setdefault("closed", [])
             return j
         except Exception:
-            pass
+            # A corrupt/half-written file must never crash the run or be silently
+            # overwritten — park it for inspection and start from a clean book.
+            try:
+                bad = JOURNAL_FILE.with_suffix(".corrupt.json")
+                JOURNAL_FILE.replace(bad)
+                log.warning("vivek journal corrupt — parked at %s, starting fresh", bad.name)
+            except Exception:
+                pass
     return {"version": JOURNAL_VERSION, "open": [], "closed": []}
 
 
@@ -127,24 +175,29 @@ def _snapshot(row: dict, tf: str, plan: dict, market: str,
         "entry_date": day, "opened_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "status": "open",
         "tp1_hit": False, "tp2_hit": False, "tp3_hit": False,
-        "booked_pct": 0.0, "realized_r": 0.0, "exits": [],
+        "booked_pct": 0.0, "realized_r": 0.0, "gross_r": 0.0, "cost_r": 0.0, "exits": [],
         "mae": round(entry_price, 8), "mfe": round(entry_price, 8),
         "mae_r": 0.0, "mfe_r": 0.0,
     }
 
 
-def _mark(trade: dict, price: float, day: str) -> None:
+def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None = None) -> None:
     """Mark an open trade to the observed intraday `price` for this scan.
 
     Single-price observation (no intrabar range), so there's no ambiguity: at
     most one of {stop, TP scale-outs} resolves per scan. Books TPs at the TP
     level (a resting limit), closes the stop at the observed price (so an
     overnight gap fills at the gapped price), and moves the SL by the 5.0 rules.
+
+    `costs` = (slippage_frac, commission_frac) applies the execution-cost R-drag
+    so realized_r is reported NET (gross_r/cost_r are kept alongside). None = off.
     """
     is_long = trade["direction"] == "long"
     entry, risk = trade["entry"], trade["risk"]
     if risk <= 0:
         return
+    # Accumulate gross R here; costs are applied to derive the net realized_r.
+    trade.setdefault("gross_r", trade.get("realized_r", 0.0))
     # running MAE/MFE from the prices we actually observe
     trade["mfe"] = max(trade["mfe"], price) if is_long else min(trade["mfe"], price)
     trade["mae"] = min(trade["mae"], price) if is_long else max(trade["mae"], price)
@@ -159,7 +212,7 @@ def _mark(trade: dict, price: float, day: str) -> None:
         remaining = round(1.0 - trade["booked_pct"], 6)
         if remaining > 1e-9:
             trade["exits"].append({"reason": "stop", "price": round(price, 8), "pct": remaining, "date": day})
-            trade["realized_r"] = round(trade["realized_r"] + remaining * _r_of(price, entry, risk, is_long), 4)
+            trade["gross_r"] = round(trade["gross_r"] + remaining * _r_of(price, entry, risk, is_long), 4)
             trade["booked_pct"] = 1.0
         trade["status"] = "closed"
         trade["exit_price"] = round(price, 8)
@@ -172,11 +225,13 @@ def _mark(trade: dict, price: float, day: str) -> None:
                 name = a["tp"].lower()
                 pct, px = a["book_pct"], pos[name]
                 trade["exits"].append({"reason": name, "price": px, "pct": pct, "date": day})
-                trade["realized_r"] = round(trade["realized_r"] + pct * _r_of(px, entry, risk, is_long), 4)
+                trade["gross_r"] = round(trade["gross_r"] + pct * _r_of(px, entry, risk, is_long), 4)
                 trade["booked_pct"] = round(trade["booked_pct"] + pct, 6)
         trade["tp1_hit"], trade["tp2_hit"], trade["tp3_hit"] = pos["tp1_hit"], pos["tp2_hit"], pos["tp3_hit"]
         trade["stop"] = pos["stop"]
 
+    # Derive the NET realized_r from accumulated gross R minus execution costs.
+    _apply_costs(trade, costs)
     trade["mae_r"] = round(_r_of(trade["mae"], entry, risk, is_long), 3)
     trade["mfe_r"] = round(_r_of(trade["mfe"], entry, risk, is_long), 3)
     if trade["status"] == "closed":
@@ -193,13 +248,17 @@ def _stats(trades: list[dict]) -> dict:
     if not n:
         return {"n": 0, "win_rate": 0.0, "expectancy_r": 0.0, "total_r": 0.0,
                 "avg_win_r": 0.0, "avg_loss_r": 0.0, "avg_hold_days": 0.0,
-                "avg_mae_r": 0.0, "avg_mfe_r": 0.0}
+                "avg_mae_r": 0.0, "avg_mfe_r": 0.0,
+                "gross_expectancy_r": 0.0, "avg_cost_r": 0.0}
     rs = [t.get("realized_r", 0.0) for t in trades]
     wins = [r for r in rs if r > 0]
     losses = [r for r in rs if r <= 0]
     holds = [t["hold_days"] for t in trades if t.get("hold_days") is not None]
     maes = [t["mae_r"] for t in trades if t.get("mae_r") is not None]
     mfes = [t["mfe_r"] for t in trades if t.get("mfe_r") is not None]
+    # Net (realized_r) is the headline; gross/cost expose the execution-cost drag.
+    gross = [t.get("gross_r", t.get("realized_r", 0.0)) for t in trades]
+    cost = [t.get("cost_r", 0.0) for t in trades]
     return {
         "n": n,
         "win_rate": round(100 * len(wins) / n, 1),
@@ -210,6 +269,8 @@ def _stats(trades: list[dict]) -> dict:
         "avg_hold_days": round(sum(holds) / len(holds), 1) if holds else 0.0,
         "avg_mae_r": round(sum(maes) / len(maes), 3) if maes else 0.0,
         "avg_mfe_r": round(sum(mfes) / len(mfes), 3) if mfes else 0.0,
+        "gross_expectancy_r": round(sum(gross) / n, 3),
+        "avg_cost_r": round(sum(cost) / n, 3),
     }
 
 
@@ -249,6 +310,7 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict],
         now = dt.datetime.now(ZoneInfo(mkt.timezone))
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
+    costs = costs_for(market)                         # fees + slippage R-drag (None = off)
 
     j = _load()
     known = {t["id"] for t in j["open"]} | {t["id"] for t in j["closed"]}
@@ -290,7 +352,7 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict],
             continue
         price = _current_price(frames, yf_map.get(t["symbol"]))
         if is_open and price is not None:
-            _mark(t, price, day)
+            _mark(t, price, day, costs)
         if t["status"] == "closed":
             j["closed"].append(t)
             closed_now += 1

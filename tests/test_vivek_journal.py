@@ -67,6 +67,45 @@ def test_short_mirror():
     assert t["status"] == "closed" and t["realized_r"] > 0 and t["tp3_hit"]
 
 
+# ── execution-cost model (fees + slippage) ──────────────────────────────────────
+
+def test_costs_for_respects_enabled_flag_and_falls_back_to_default(monkeypatch):
+    monkeypatch.setattr(config, "VIVEK_COSTS_ENABLED", False)
+    assert vj.costs_for("asx") is None
+    monkeypatch.setattr(config, "VIVEK_COSTS_ENABLED", True)
+    slip, comm = vj.costs_for("crypto")
+    assert slip == pytest.approx(config.VIVEK_SLIPPAGE_BPS["crypto"] / 10_000)
+    assert comm == pytest.approx(config.VIVEK_COMMISSION_BPS["crypto"] / 10_000)
+    s2, _ = vj.costs_for("unlisted_market")             # unknown key → default backstop
+    assert s2 == pytest.approx(config.VIVEK_SLIPPAGE_BPS["default"] / 10_000)
+
+
+def test_cost_r_charges_slippage_only_on_market_exits():
+    slip, comm = 0.001, 0.0005
+    base = _trade(entry=100.0, risk=4.0)
+    via_tp = {**base, "exits": [{"reason": "tp1", "price": 106.0, "pct": 1.0}]}
+    via_stop = {**base, "exits": [{"reason": "stop", "price": 106.0, "pct": 1.0}]}
+    c_tp = vj._cost_r(via_tp, slip, comm)
+    c_stop = vj._cost_r(via_stop, slip, comm)
+    # entry always pays slip+comm on full size; a TP limit pays commission only.
+    assert c_tp == pytest.approx((100 * (slip + comm) + 106 * comm) / 4, abs=1e-9)
+    assert c_stop > c_tp                               # the stop also pays slippage
+
+
+def test_costs_make_realized_r_net_of_gross():
+    costs = (0.001, 0.0005)
+    t = _trade()
+    vj._mark(t, 107, "2024-01-03", costs)   # TP1
+    vj._mark(t, 113, "2024-01-04", costs)   # TP2
+    vj._mark(t, 121, "2024-01-05", costs)   # TP3
+    vj._mark(t, 105, "2024-01-08", costs)   # trail out
+    assert t["status"] == "closed"
+    assert t["gross_r"] == pytest.approx(2.75, abs=1e-3)        # same gross as the cost-free case
+    assert t["cost_r"] > 0
+    assert t["realized_r"] == pytest.approx(t["gross_r"] - t["cost_r"], abs=1e-9)
+    assert t["realized_r"] < t["gross_r"]
+
+
 # ── intraday entry (don't-chase) ────────────────────────────────────────────────
 
 def _plan(**kw):
