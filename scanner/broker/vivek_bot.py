@@ -98,6 +98,11 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
         log.info("SKIP  %-8s [%s] %s", sym, code, reason)
         return {"take": False, "grade": grade, "reason": reason, "code": code}
 
+    # Long-only: shorts lost on every market in the backtest, so the bot skips
+    # them while VIVEK_BOT_ALLOW_SHORTS is False.
+    if not getattr(_cfg, "VIVEK_BOT_ALLOW_SHORTS", True) and _direction(row) == "short":
+        return skip("shorts_disabled", f"{sym} is a short — bot is long-only")
+
     # Don't trade REITs / ETFs / LICs / managed funds (they hug the 200 SMA).
     if getattr(_cfg, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
         return skip("fund_reit", f"{sym} is a REIT/ETF/fund — excluded from bot trading")

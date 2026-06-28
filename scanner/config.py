@@ -327,10 +327,13 @@ VIVEK_BOT_EXCLUDE_FUNDS = True
 VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
-# Per-market book: at most 10 open, of which at least 4 must be SHORT (so at most
-# 6 long) — the bot reserves short slots to keep a deliberate short bias.
+# LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per
+# trade on every market tested (ASX/NASDAQ/Crypto) while longs carry the edge,
+# so the bot is long-only for now — shorts disabled and no short slots reserved.
+# The short machinery is retained behind the flag in case it's reworked later.
+VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
 VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
-VIVEK_BOT_MIN_SHORTS     = 4       # at least this many of the 10 must be short
+VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the

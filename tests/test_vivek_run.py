@@ -125,6 +125,7 @@ def test_closed_session_opens_nothing(tmp_path, monkeypatch):
 
 def test_book_caps_hold_across_runs(tmp_path, monkeypatch):
     _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_MIN_SHORTS", 4)   # exercise the 6-long reservation cap
     uni = [{"symbol": f"L{i}", "yf": f"L{i}.AX"} for i in range(8)]
     frames = {f"L{i}.AX": _frame(101.0) for i in range(8)}
     rows = [_row(symbol=f"L{i}") for i in range(6)]

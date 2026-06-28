@@ -104,7 +104,8 @@ def _manage_bar(tr: dict, high: float, low: float, close: float, day: str, costs
         _force_close(tr, close, day, costs)
 
 
-def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector: str) -> list[dict]:
+def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector: str,
+                  long_only: bool = False) -> list[dict]:
     """Walk one symbol's daily history and return its closed backtest trades."""
     if df is None or len(df) < config.VIVEK_MIN_HISTORY + 5:
         return []
@@ -148,7 +149,7 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
                 sig = None
             if sig is not None:
                 row, plans, grade = _build_row(sig, df.iloc[:j + 1], symbol, name, sector)
-                if row and grade in ("A+", "A"):
+                if row and grade in ("A+", "A") and not (long_only and row["dir"] == "SHORT"):
                     for tf in TIMEFRAMES:
                         p = plans.get(tf)
                         if p and p.get("armed") and open_slots[tf] is None:
@@ -220,7 +221,7 @@ def _slim(tr: dict) -> dict:
 
 
 def run_market_trades(mk: str, limit: int | None, period: str,
-                      exclude_funds: bool = True) -> tuple[list[dict], dict]:
+                      exclude_funds: bool = True, long_only: bool = False) -> tuple[list[dict], dict]:
     """Backtest ONE market; return (slim trades, coverage entry)."""
     from .universe import load_universe
     from .data import download
@@ -237,7 +238,8 @@ def run_market_trades(mk: str, limit: int | None, period: str,
     for yf, df in frames.items():
         u = meta.get(yf, {})
         try:
-            trades.extend(replay_symbol(df, mk, u.get("symbol", yf), u.get("name", yf), u.get("sector", "")))
+            trades.extend(replay_symbol(df, mk, u.get("symbol", yf), u.get("name", yf),
+                                        u.get("sector", ""), long_only=long_only))
         except Exception as e:
             log.warning("[%s] %s replay error: %s", mk, yf, e)
     log.info("[%s] %d trades from %d symbols", mk, len(trades), len(uni))
@@ -263,15 +265,15 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
 
 
 def run_backtest(markets: list[str], limit: int | None, period: str,
-                 exclude_funds: bool = True) -> dict:
+                 exclude_funds: bool = True, long_only: bool = False) -> dict:
     """Backtest several markets in one process (no streaming)."""
     trades, coverage = [], {}
     for mk in markets:
-        tr, cov = run_market_trades(mk, limit, period, exclude_funds)
+        tr, cov = run_market_trades(mk, limit, period, exclude_funds, long_only)
         trades += tr
         coverage[mk] = cov
     params = {"markets": markets, "limit": limit, "period": period,
-              "exclude_funds": exclude_funds, "equity": EQUITY,
+              "exclude_funds": exclude_funds, "long_only": long_only, "equity": EQUITY,
               "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
     return build_report(trades, coverage, params, "complete")
 
@@ -300,6 +302,7 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=60, help="max symbols per market (0 = all)")
     ap.add_argument("--period", default="10y", help="yfinance history period (e.g. 10y, max)")
     ap.add_argument("--include-funds", action="store_true", help="don't exclude REITs/ETFs/funds")
+    ap.add_argument("--long-only", action="store_true", help="skip short setups (long-only system)")
     ap.add_argument("--merge", action="store_true",
                     help="merge this run's market(s) into the existing results file (streaming)")
     ap.add_argument("--status", choices=["partial", "complete"],
@@ -322,7 +325,8 @@ def main() -> None:
 
     new_trades = []
     for mk in markets:
-        tr, cov = run_market_trades(mk, args.limit or None, args.period, not args.include_funds)
+        tr, cov = run_market_trades(mk, args.limit or None, args.period,
+                                    not args.include_funds, args.long_only)
         new_trades += tr
         coverage[mk] = cov
 
@@ -330,7 +334,7 @@ def main() -> None:
     done = set(coverage)
     status = args.status or ("complete" if done >= set(config.MARKETS) else "partial")
     params = {"markets": sorted(done), "limit": args.limit or None, "period": args.period,
-              "exclude_funds": not args.include_funds, "equity": EQUITY,
+              "exclude_funds": not args.include_funds, "long_only": args.long_only, "equity": EQUITY,
               "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
     report = build_report(trades, coverage, params, status)
     _print(report)

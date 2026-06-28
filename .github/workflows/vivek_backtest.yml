@@ -15,6 +15,10 @@ on:
       period:
         description: "History depth (e.g. 10y, max)"
         default: "10y"
+      long_only:
+        description: "Long-only (skip shorts) → writes vivek_backtest_longonly.json"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -41,21 +45,24 @@ jobs:
           set -e
           LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
           PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
+          LONLY="${{ github.event.inputs.long_only }}"
+          OUT="public/data/vivek_backtest.json"; FLAG=""
+          if [ "$LONLY" = "true" ]; then OUT="public/data/vivek_backtest_longonly.json"; FLAG="--long-only"; fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           commit_push() {
-            git add public/data/vivek_backtest.json 2>/dev/null || true
+            git add "$OUT" 2>/dev/null || true
             if git diff --cached --quiet; then echo "no change"; return; fi
-            git commit -m "data: VIVEK backtest [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "data: VIVEK backtest${FLAG:+ (long-only)} [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
             SHA=$(git rev-parse HEAD)
             for i in 1 2 3 4 5; do
               git fetch origin main
               git reset --hard origin/main
-              git checkout "$SHA" -- public/data/vivek_backtest.json 2>/dev/null || true
+              git checkout "$SHA" -- "$OUT" 2>/dev/null || true
               git add -A
               if git diff --cached --quiet; then echo "nothing vs main"; return; fi
-              git commit -m "data: VIVEK backtest [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
+              git commit -m "data: VIVEK backtest${FLAG:+ (long-only)} [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
               if git push origin HEAD:main; then echo "pushed $1"; return; fi
               echo "push race — retry $i"; sleep $((i * 3))
             done
@@ -63,9 +70,9 @@ jobs:
 
           # NASDAQ first (mature 10y history → a meaningful first read fastest),
           # then ASX (the bulk), then Crypto (flips status to complete).
-          python -m scanner.vivek_backtest --market nasdaq --limit "$LIM" --period "$PER" --merge --status partial
+          python -m scanner.vivek_backtest --market nasdaq --limit "$LIM" --period "$PER" $FLAG --out "$OUT" --merge --status partial
           commit_push nasdaq
-          python -m scanner.vivek_backtest --market asx --limit "$LIM" --period "$PER" --merge --status partial
+          python -m scanner.vivek_backtest --market asx --limit "$LIM" --period "$PER" $FLAG --out "$OUT" --merge --status partial
           commit_push asx
-          python -m scanner.vivek_backtest --market crypto --limit "$LIM" --period "$PER" --merge --status complete
+          python -m scanner.vivek_backtest --market crypto --limit "$LIM" --period "$PER" $FLAG --out "$OUT" --merge --status complete
           commit_push crypto

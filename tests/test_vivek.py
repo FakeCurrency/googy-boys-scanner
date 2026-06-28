@@ -437,6 +437,20 @@ def _short(sym):
 
 # ── bot: book rules (A+ only, 10/market, ≥4 short) ──────────────────────────────
 
+@pytest.fixture
+def shorts_on(monkeypatch):
+    """Enable the (default-off) short machinery so the reservation tests still
+    exercise it — the bot ships long-only, but the logic is retained."""
+    monkeypatch.setattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
+    monkeypatch.setattr(config, "VIVEK_BOT_MIN_SHORTS", 4)
+
+
+def test_decide_is_long_only_by_default():
+    out = vivek_bot.decide([_short("S1"), _short("S2"), _long("L1")], equity=10_000, market="asx")
+    assert out["summary"]["taken"] == 1 and out["plans"][0]["plan"]["direction"] == "long"
+    assert out["summary"]["skip_reasons"].get("shorts_disabled") == 2
+
+
 def test_decide_takes_only_a_plus():
     rows = [_long("A1"), _row(symbol="A2", grade="A"), _row(symbol="A3", grade="WATCH")]
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
@@ -444,14 +458,14 @@ def test_decide_takes_only_a_plus():
     assert out["summary"]["skip_reasons"].get("not_a_plus") == 2
 
 
-def test_decide_caps_at_ten_per_market():
+def test_decide_caps_at_ten_per_market(shorts_on):
     rows = [_short(f"S{i}") for i in range(14)]            # 14 shorts (no long cap in play)
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
     assert out["summary"]["taken"] == 10
     assert out["summary"]["skip_reasons"].get("book_full") == 4
 
 
-def test_decide_reserves_short_slots_caps_longs_at_six():
+def test_decide_reserves_short_slots_caps_longs_at_six(shorts_on):
     rows = [_long(f"L{i}") for i in range(10)]             # all longs available
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
     assert out["summary"]["longs"] == 6 and out["summary"]["shorts"] == 0
@@ -459,7 +473,7 @@ def test_decide_reserves_short_slots_caps_longs_at_six():
     assert out["summary"]["skip_reasons"].get("long_cap") == 4
 
 
-def test_decide_fills_ten_with_at_least_four_short():
+def test_decide_fills_ten_with_at_least_four_short(shorts_on):
     rows = [_long(f"L{i}") for i in range(8)] + [_short(f"S{i}") for i in range(8)]
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
     assert out["summary"]["taken"] == 10
@@ -473,14 +487,14 @@ def test_decide_dedups_symbol():
     assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
 
 
-def test_decide_passes_market_leverage_through():
+def test_decide_passes_market_leverage_through(shorts_on):
     out = vivek_bot.decide([_short("BTC")], equity=10_000, market="crypto")
     assert out["plans"][0]["plan"]["leverage_target"] == 3 and out["plans"][0]["plan"]["market"] == "crypto"
 
 
 # ── bot: book awareness (caps/short-bias hold ACROSS runs via open_book) ────────
 
-def test_decide_seeds_counts_from_the_existing_book():
+def test_decide_seeds_counts_from_the_existing_book(shorts_on):
     """An existing book pre-loads the counters so a new run only fills the gap."""
     book = [{"symbol": f"S{i}", "direction": "short"} for i in range(4)]
     out = vivek_bot.decide([_long(f"L{i}") for i in range(8)],
@@ -509,7 +523,7 @@ def test_decide_does_not_re_add_a_held_symbol():
     assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
 
 
-def test_decide_long_cap_counts_existing_longs():
+def test_decide_long_cap_counts_existing_longs(shorts_on):
     """Five longs already open → only one more long allowed before the 6 cap."""
     book = [{"symbol": f"L{i}", "direction": "long"} for i in range(5)]
     out = vivek_bot.decide([_long("L5"), _long("L6")],
