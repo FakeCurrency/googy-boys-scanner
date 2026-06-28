@@ -552,7 +552,7 @@
   function header(d) {
     const cur = d.currency_symbol || "";
     $("#ct-sym").textContent = d.symbol;
-    document.title = `${d.symbol} — Vivek's Beta Scanner`;
+    document.title = `${d.symbol} — Vivek 5.0`;
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";

@@ -528,7 +528,7 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 # ---------------------------------------------------------------------------
 # Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
 # the module writes a preview and no-ops (never fails the workflow).
-DISCORD_USERNAME       = "Vivek's Beta Scanner"
+DISCORD_USERNAME       = "Vivek 5.0"
 DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
 DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
 DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean

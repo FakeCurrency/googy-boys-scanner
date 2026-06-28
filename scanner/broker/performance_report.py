@@ -236,7 +236,7 @@ def maybe_send_daily_report(report: dict) -> None:
         lines.append(f"\n⚠️  {report['current_loss_streak']} consecutive losses — "
                      "consider reviewing conditions.")
 
-    subject = (f"Vivek's Beta Scanner — Daily Report {report['session_day']}  "
+    subject = (f"Vivek 5.0 — Daily Report {report['session_day']}  "
                f"P&L ${today['pnl']:+.2f}")
     if _email(subject, "\n".join(lines)):
         log.info("daily report email sent")

@@ -1,5 +1,5 @@
 /* =========================================================================
-   Vivek's Beta Scanner — frontend logic
+   Vivek 5.0 — frontend logic
    Renders the PULSE bar, stat cards, and the dense results table from
    data/<market>.json. Handles market toggle, Results/Watch views, grade
    sub-tabs, sorting, and a localStorage watchlist (stars).

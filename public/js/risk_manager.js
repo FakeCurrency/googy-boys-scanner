@@ -1,5 +1,5 @@
 /* ===========================================================================
-   risk_manager.js — Vivek's Beta Scanner / AI Bot
+   risk_manager.js — Vivek 5.0 / AI Bot
    ---------------------------------------------------------------------------
    A real, enforceable risk-management engine.
 

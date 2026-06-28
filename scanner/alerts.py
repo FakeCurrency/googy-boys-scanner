@@ -111,7 +111,7 @@ def build_html(digests: list) -> str:
             <th style="padding:8px 10px">R:R</th><th style="padding:8px 10px">Levels</th>
           </tr></thead><tbody>{_rows_html(scan, items)}</tbody></table>""")
     return f"""<div style="max-width:720px;margin:0 auto;font-family:Arial,sans-serif">
-      <h1 style="font:800 20px/1 Arial;color:#111">Vivek's Beta Scanner — {total} new A+/A setup(s)</h1>
+      <h1 style="font:800 20px/1 Arial;color:#111">Vivek 5.0 — {total} new A+/A setup(s)</h1>
       <p style="color:#666;font-size:13px">{today}</p>
       {''.join(blocks)}
       <p style="color:#999;font-size:11px;margin-top:28px">General information only — not financial advice. Markets carry risk.</p>
@@ -155,7 +155,7 @@ def run(market_keys: list[str], send_all: bool = False) -> None:
     html = build_html(digests)
     PREVIEW.parent.mkdir(parents=True, exist_ok=True)
     PREVIEW.write_text(html, encoding="utf-8")
-    subject = f"Vivek's Beta Scanner — {total} new A+/A setup(s)"
+    subject = f"Vivek 5.0 — {total} new A+/A setup(s)"
 
     if _send(subject, html):
         print(f"Sent alert ({total} setups) to {os.getenv('GBS_ALERT_TO')}.")

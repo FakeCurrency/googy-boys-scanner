@@ -101,7 +101,7 @@ def send(event_type: str, title: str, details: str = "") -> None:
     details:    optional extra context (multi-line OK)
     """
     emoji   = _EMOJI.get(event_type, "ℹ️")
-    message = f"{emoji} [Vivek's Beta Scanner] {title}"
+    message = f"{emoji} [Vivek 5.0] {title}"
     if details:
         message += f"\n{details}"
 
@@ -110,7 +110,7 @@ def send(event_type: str, title: str, details: str = "") -> None:
         channels.append("telegram")
     if _discord(message):
         channels.append("discord")
-    if _email(f"Vivek's Beta Scanner — {title}", message):
+    if _email(f"Vivek 5.0 — {title}", message):
         channels.append("email")
 
     if channels:

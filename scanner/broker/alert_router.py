@@ -209,7 +209,7 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
     from .alert_dispatch import _telegram, _discord, _email, _EMOJI
 
     emoji   = _EMOJI.get(event_type, "ℹ️")
-    message = f"{emoji} [Vivek's Beta Scanner] {title}"
+    message = f"{emoji} [Vivek 5.0] {title}"
     if details:
         message += f"\n{details}"
 
@@ -218,7 +218,7 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
         fired.append("telegram")
     if "discord" in channels and _discord(message):
         fired.append("discord")
-    if "email" in channels and _email(f"Vivek's Beta Scanner — {title}", message):
+    if "email" in channels and _email(f"Vivek 5.0 — {title}", message):
         fired.append("email")
 
     severity = get_severity(event_type)
