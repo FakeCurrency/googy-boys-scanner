@@ -320,6 +320,10 @@ VIVEK_JOURNAL_SESSION = {
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
 VIVEK_BOT_MIN_GRADE    = "A+"      # A+ ONLY — never A / B+ / WATCH
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
+# Skip non-operating vehicles (REITs / ETFs / LICs / managed funds) — they hug
+# their 200 SMA so they over-produce reactions, but aren't what we want the bot
+# trading. Affects the bot's selection only; the scanner still displays them.
+VIVEK_BOT_EXCLUDE_FUNDS = True
 VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}

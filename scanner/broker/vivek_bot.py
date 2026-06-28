@@ -44,6 +44,27 @@ def _direction(row: dict) -> str:
     return "short" if str(row.get("dir", "LONG")).upper() == "SHORT" else "long"
 
 
+# Non-operating vehicles the bot should not trade (REITs / ETFs / LICs / funds).
+# A REIT or fund hugs its 200 SMA, so it over-produces "reactions" without being
+# a real momentum/trend trade. Detected by sector + name so it catches funds that
+# sit under an operating-sector label (e.g. a real-estate income fund tagged
+# "Financial Services") as well as the ETFs/LICs that have no GICS sector at all.
+_FUND_NAME_KEYWORDS = ("REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
+                       "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X")
+_FUND_SECTOR_HINTS = ("reit", "real estate investment trust")
+_NON_OPERATING_SECTORS = {"not applicable", "not applic", "n/a"}   # the ETF/LIC/fund tag
+
+
+def _is_fund_or_reit(row: dict) -> bool:
+    name = str(row.get("name") or "").upper()
+    sector = str(row.get("sector") or "").strip().lower()
+    if any(h in sector for h in _FUND_SECTOR_HINTS):
+        return True
+    if sector in _NON_OPERATING_SECTORS:              # ETFs / LICs carry no operating sector
+        return True
+    return any(kw in name for kw in _FUND_NAME_KEYWORDS)
+
+
 def _pick_plan(row: dict, prefer_tf: str) -> tuple[str | None, dict | None]:
     """Rule 3 — choose the timeframe plan to trade.
 
@@ -76,6 +97,10 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
     def skip(code, reason):
         log.info("SKIP  %-8s [%s] %s", sym, code, reason)
         return {"take": False, "grade": grade, "reason": reason, "code": code}
+
+    # Don't trade REITs / ETFs / LICs / managed funds (they hug the 200 SMA).
+    if getattr(_cfg, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
+        return skip("fund_reit", f"{sym} is a REIT/ETF/fund — excluded from bot trading")
 
     # Rule 1 — A+ ONLY.
     if grade != _cfg.VIVEK_BOT_MIN_GRADE:
