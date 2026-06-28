@@ -1183,80 +1183,7 @@
     wireChartPosition(candle, d);
     wireLiveBox(d, el, SYM, posDir, findOpen);
 
-    // ── Ruler / measurement tool ──────────────────────────────────────────────
-    // Click once to anchor, move to see the range, click again to lock it.
-    // Click a third time (or toggle off) to clear.
-    const cur = d.currency_symbol || "";
-    let rulerOn = false, anchor = null, anchorLine = null, hoverLine = null;
-
-    const rulerBtn = document.createElement("button");
-    rulerBtn.className = "tf-btn ruler-btn"; rulerBtn.title = "Measure price range";
-    rulerBtn.innerHTML = "📏 Ruler";
-    toggle.appendChild(rulerBtn);
-
-    // Floating label that sits inside the chart canvas area.
-    const measureLabel = Object.assign(document.createElement("div"), { className: "ruler-label" });
-    el.style.position = "relative";
-    el.appendChild(measureLabel);
-
-    function clearRuler() {
-      anchor = null;
-      if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
-      if (hoverLine)  { try { candle.removePriceLine(hoverLine);  } catch (_) {} hoverLine  = null; }
-      measureLabel.style.display = "none";
-    }
-
-    function showLabel(pt, p1, p2) {
-      const delta = p2 - p1;
-      const pct   = (delta / p1 * 100);
-      const sign  = delta >= 0 ? "+" : "";
-      const col   = delta >= 0 ? "#2fd07f" : "#ff5b5b";
-      const dp    = Math.abs(p1) >= 100 ? 2 : Math.abs(p1) >= 1 ? 3 : 4;
-      measureLabel.style.cssText =
-        `display:block; top:${pt.y}px; left:${pt.x}px; border-color:${col}; color:${col}`;
-      measureLabel.innerHTML =
-        `${sign}${pct.toFixed(2)}% &nbsp; ${sign}${cur}${Math.abs(delta).toFixed(dp)}`;
-    }
-
-    rulerBtn.addEventListener("click", () => {
-      rulerOn = !rulerOn;
-      rulerBtn.classList.toggle("is-active", rulerOn);
-      el.style.cursor = rulerOn ? "crosshair" : "";
-      if (!rulerOn) clearRuler();
-    });
-
-    chart.subscribeClick((param) => {
-      if (!rulerOn || !param.point) return;
-      const price = candle.coordinateToPrice(param.point.y);
-      if (price == null) return;
-      if (!anchor) {
-        anchor = price;
-        anchorLine = candle.createPriceLine({
-          price: anchor, color: "#f0a500", lineWidth: 1,
-          lineStyle: 2, axisLabelVisible: true, title: fmt(anchor, cur),
-        });
-      } else {
-        // Lock the measurement — replace hover line with a permanent one.
-        if (hoverLine) { try { candle.removePriceLine(hoverLine); } catch (_) {} hoverLine = null; }
-        candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
-        showLabel(param.point, anchor, price);
-        anchor = null;
-        if (anchorLine) { try { candle.removePriceLine(anchorLine); } catch (_) {} anchorLine = null; }
-        // Auto-hide the label after 6 s; user can click again to measure next range.
-        setTimeout(() => { measureLabel.style.display = "none"; }, 6000);
-      }
-    });
-
-    chart.subscribeCrosshairMove((param) => {
-      if (!rulerOn || !anchor || !param.point) return;
-      const price = candle.coordinateToPrice(param.point.y);
-      if (price == null) return;
-      if (hoverLine) hoverLine.applyOptions({ price, title: `${price > anchor ? "+" : ""}${((price - anchor) / anchor * 100).toFixed(2)}%` });
-      else hoverLine = candle.createPriceLine({ price, color: "#4d9fff", lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
-      showLabel(param.point, anchor, price);
-    });
-
-    // ── Temporary drawing tools (trendline + horizontal line) ─────────────────
+    // ── Temporary drawing tools + measure + eraser ───────────────────────────
     // Not persisted — purely for eyeballing structure while viewing. Points are
     // anchored to chart coordinates (logical index + price) so they track pan/
     // zoom; switching timeframe clears them (the data underneath changed).
@@ -1269,23 +1196,31 @@
     ro.observe(el);
 
     function initDrawing() {
+      const cur = d.currency_symbol || "";
       const tools = $("#draw-tools");
       const canvas = document.createElement("canvas");
       canvas.className = "draw-layer";
+      el.style.position = "relative";
       el.appendChild(canvas);
-      // Relocate the drawing tools into the timeframe pill row (next to D / W /
-      // 3D / Ruler) for one clean control strip, instead of a floating overlay.
+      // Relocate the drawing tools into the timeframe pill row for one clean
+      // control strip, instead of a floating overlay.
       if (tools) {
         tools.hidden = false;
         const tgl = $("#tf-toggle");
         if (tgl && tools.parentNode !== tgl) { tools.classList.add("in-toggle"); tgl.appendChild(tools); }
       }
+      // Floating stats label for the measure tool (price Δ, %, bars, time).
+      const measureLabel = Object.assign(document.createElement("div"), { className: "measure-label" });
+      el.appendChild(measureLabel);
 
       const ts = chart.timeScale();
-      let tool = "cursor";            // 'cursor' | 'trend' | 'hline'
-      let drawings = [];              // {type, a:{logical,price}, b:{logical,price}} | {type:'hline', price}
+      let tool = "cursor";            // cursor | trend | hline | measure | erase
+      let drawings = [];              // {type:'trend', a, b} | {type:'hline', price}
       let pending = null;             // first point of a trendline in progress
-      let hover = null;               // live cursor point for the preview segment
+      let hover = null;               // live cursor point {x,y,logical,price}
+      let measure = null;             // locked measurement {a, b}
+      let measureDrag = null;         // {a} while dragging out a measurement
+      let eraseIdx = -1;              // drawing under the cursor in erase mode
 
       const setPE = () => { canvas.style.pointerEvents = tool === "cursor" ? "none" : "auto"; };
 
@@ -1303,36 +1238,113 @@
       const xOf = (logical) => { const x = ts.logicalToCoordinate(logical); return x == null ? null : x; };
       const yOf = (price) => { const y = candle.priceToCoordinate(price); return y == null ? null : y; };
 
+      // ── time helpers (for the measure tool's bar/day span) ──────────────────
+      const PER_BAR_DAYS = { "1H": 1 / 24, "4H": 4 / 24, "1D": 1, "3D": 3, "1W": 7, "1M": 30, "3M": 91 };
+      const timeAtLogical = (logical) => {
+        const c = (tfs[curTF] && tfs[curTF].candles) || [];
+        const i = Math.round(logical);
+        return (i >= 0 && i < c.length) ? c[i].time : null;
+      };
+      function spanText(aLog, bLog) {
+        const bars = Math.abs(Math.round(bLog - aLog));
+        const t1 = timeAtLogical(aLog), t2 = timeAtLogical(bLog);
+        const days = (t1 != null && t2 != null) ? Math.abs(t2 - t1) / 86400
+                                                : bars * (PER_BAR_DAYS[curTF] || 1);
+        let span;
+        if (days < 1) span = `${Math.max(1, Math.round(days * 24))}h`;
+        else if (days < 60) span = `${Math.round(days)}d`;
+        else if (days < 365) span = `${Math.round(days / 7)}w`;
+        else span = `${(days / 365).toFixed(1)}y`;
+        return `${bars} bar${bars === 1 ? "" : "s"} · ${span}`;
+      }
+
+      // ── hit-testing (for the eraser) ────────────────────────────────────────
+      function segDist(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+        let t = L2 ? ((px - x1) * dx + (py - y1) * dy) / L2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+      }
+      function distToDrawing(d2, px, py) {
+        if (d2.type === "hline") { const y = yOf(d2.price); return y == null ? Infinity : Math.abs(py - y); }
+        const x1 = xOf(d2.a.logical), y1 = yOf(d2.a.price), x2 = xOf(d2.b.logical), y2 = yOf(d2.b.price);
+        if (x1 == null || y1 == null || x2 == null || y2 == null) return Infinity;
+        return segDist(px, py, x1, y1, x2, y2);
+      }
+      function nearestDrawing(px, py) {
+        let best = -1, bd = 9;        // 9px hit radius
+        drawings.forEach((d2, i) => { const dd = distToDrawing(d2, px, py); if (dd < bd) { bd = dd; best = i; } });
+        return best;
+      }
+
+      // ── the TradingView-style measurement box + stats label ─────────────────
+      function drawMeasure(ctx, a, b) {
+        const x1 = xOf(a.logical), y1 = yOf(a.price), x2 = xOf(b.logical), y2 = yOf(b.price);
+        if (x1 == null || y1 == null || x2 == null || y2 == null) { measureLabel.style.display = "none"; return; }
+        const up = b.price >= a.price, col = up ? "#2fd07f" : "#ff5b5b";
+        const left = Math.min(x1, x2), right = Math.max(x1, x2), top = Math.min(y1, y2), bot = Math.max(y1, y2);
+        ctx.save();
+        ctx.fillStyle = up ? "rgba(47,208,127,0.13)" : "rgba(255,91,91,0.13)";
+        ctx.fillRect(left, top, right - left, bot - top);
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+        ctx.strokeRect(left, top, Math.max(1, right - left), Math.max(1, bot - top));
+        // a vertical arrow down the middle showing the price travel direction
+        const mx = (x1 + x2) / 2;
+        ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(mx, y1); ctx.lineTo(mx, y2); ctx.stroke();
+        ctx.restore();
+        // stats label, centred on the box, on the far side of the move
+        const delta = b.price - a.price, pct = a.price ? delta / a.price * 100 : 0;
+        const sign = delta >= 0 ? "+" : "";
+        const ad = Math.abs(a.price) >= 100 ? 2 : Math.abs(a.price) >= 1 ? 3 : Math.abs(a.price) >= 0.01 ? 5 : 8;
+        measureLabel.style.display = "block";
+        measureLabel.style.borderColor = col; measureLabel.style.color = col;
+        measureLabel.style.left = ((left + right) / 2) + "px";
+        measureLabel.style.top = (up ? top - 8 : bot + 8) + "px";
+        measureLabel.style.transform = `translate(-50%, ${up ? "-100%" : "0"})`;
+        measureLabel.innerHTML =
+          `<div class="ml-price">${sign}${pct.toFixed(2)}% <span>${sign}${cur}${Math.abs(delta).toFixed(ad)}</span></div>` +
+          `<div class="ml-time">${spanText(a.logical, b.logical)}</div>`;
+      }
+
       function redraw() {
         const ctx = canvas.getContext("2d");
         const w = canvas.width / (window.devicePixelRatio || 1);
         const h = canvas.height / (window.devicePixelRatio || 1);
         ctx.clearRect(0, 0, w, h);
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "#4d9fff";
         const seg = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
-        for (const d2 of drawings) {
+        drawings.forEach((d2, i) => {
+          const hot = (tool === "erase" && i === eraseIdx);     // highlight the erase target
+          ctx.strokeStyle = hot ? "#ff5b5b" : "#4d9fff";
+          ctx.lineWidth = hot ? 2.5 : 1.5;
           if (d2.type === "hline") {
-            const y = yOf(d2.price); if (y == null) continue;
+            const y = yOf(d2.price); if (y == null) return;
             ctx.setLineDash([5, 4]); seg(0, y, w, y); ctx.setLineDash([]);
           } else {
-            const x1 = xOf(d2.a.logical), y1 = yOf(d2.a.price);
-            const x2 = xOf(d2.b.logical), y2 = yOf(d2.b.price);
-            if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+            const x1 = xOf(d2.a.logical), y1 = yOf(d2.a.price), x2 = xOf(d2.b.logical), y2 = yOf(d2.b.price);
+            if (x1 == null || y1 == null || x2 == null || y2 == null) return;
             seg(x1, y1, x2, y2);
           }
-        }
+        });
+        ctx.lineWidth = 1.5; ctx.strokeStyle = "#4d9fff";
         // live preview of the trendline being drawn
-        if (pending && hover) {
+        if (tool === "trend" && pending && hover) {
           const x1 = xOf(pending.logical), y1 = yOf(pending.price);
           if (x1 != null && y1 != null) {
             ctx.setLineDash([3, 3]); ctx.strokeStyle = "#9aa4b2";
             seg(x1, y1, hover.x, hover.y); ctx.setLineDash([]); ctx.strokeStyle = "#4d9fff";
           }
         }
+        // measurement: the dragging preview, else the locked one
+        if (measureDrag && hover && hover.logical != null && hover.price != null) {
+          drawMeasure(ctx, measureDrag.a, { logical: hover.logical, price: hover.price });
+        } else if (measure) {
+          drawMeasure(ctx, measure.a, measure.b);
+        } else {
+          measureLabel.style.display = "none";
+        }
       }
       drawRedraw = redraw;
-      drawClear = () => { drawings = []; pending = null; hover = null; redraw(); };
+      drawClear = () => { drawings = []; pending = null; hover = null; measure = null; measureDrag = null; eraseIdx = -1; redraw(); };
 
       function ptFromEvent(ev) {
         const r = canvas.getBoundingClientRect();
@@ -1343,41 +1355,73 @@
       canvas.addEventListener("pointerdown", (ev) => {
         if (tool === "cursor") return;
         const p = ptFromEvent(ev);
+        if (tool === "erase") {
+          const i = nearestDrawing(p.x, p.y);
+          if (i >= 0) { drawings.splice(i, 1); eraseIdx = -1; redraw(); }
+          return;
+        }
         if (p.logical == null || p.price == null) return;
         if (tool === "hline") {
           drawings.push({ type: "hline", price: p.price });
         } else if (tool === "trend") {
           if (!pending) { pending = { logical: p.logical, price: p.price }; }
           else { drawings.push({ type: "trend", a: pending, b: { logical: p.logical, price: p.price } }); pending = null; }
+        } else if (tool === "measure") {
+          measure = null;                          // start a fresh measurement
+          measureDrag = { a: { logical: p.logical, price: p.price } };
+          hover = p;
+          try { canvas.setPointerCapture(ev.pointerId); } catch (_) {}
         }
         redraw();
       });
+
       canvas.addEventListener("pointermove", (ev) => {
-        if (tool !== "trend" || !pending) return;
         const r = canvas.getBoundingClientRect();
-        hover = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+        const x = ev.clientX - r.left, y = ev.clientY - r.top;
+        if (tool === "trend" && pending) { hover = { x, y }; redraw(); }
+        else if (tool === "measure" && measureDrag) {
+          hover = { x, y, logical: ts.coordinateToLogical(x), price: candle.coordinateToPrice(y) };
+          redraw();
+        } else if (tool === "erase") {
+          const i = nearestDrawing(x, y);
+          if (i !== eraseIdx) { eraseIdx = i; el.style.cursor = i >= 0 ? "pointer" : "crosshair"; redraw(); }
+        }
+      });
+
+      canvas.addEventListener("pointerup", (ev) => {
+        if (tool !== "measure" || !measureDrag) return;
+        try { canvas.releasePointerCapture(ev.pointerId); } catch (_) {}
+        const r = canvas.getBoundingClientRect();
+        const x = ev.clientX - r.left, y = ev.clientY - r.top;
+        const ax = xOf(measureDrag.a.logical), ay = yOf(measureDrag.a.price);
+        const moved = ax == null || ay == null || Math.abs(x - ax) > 3 || Math.abs(y - ay) > 3;
+        const logical = ts.coordinateToLogical(x), price = candle.coordinateToPrice(y);
+        measure = (moved && logical != null && price != null) ? { a: measureDrag.a, b: { logical, price } } : null;
+        measureDrag = null; hover = null;
         redraw();
       });
 
       ts.subscribeVisibleLogicalRangeChange(redraw);
 
+      function selectTool(name, btn) {
+        tool = name; pending = null; hover = null; measureDrag = null; eraseIdx = -1;
+        if (name !== "measure") { measure = null; }     // leaving measure clears the box
+        if (tools && btn) tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x === btn));
+        setPE();
+        el.style.cursor = name === "cursor" ? "" : "crosshair";
+        redraw();
+      }
+
       if (tools) {
-        tools.querySelectorAll(".draw-btn[data-tool]").forEach((b) => b.addEventListener("click", () => {
-          tool = b.dataset.tool;
-          pending = null; hover = null;
-          tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x === b));
-          setPE();
-          el.style.cursor = tool === "cursor" ? "" : "crosshair";
-          redraw();
-        }));
+        tools.querySelectorAll(".draw-btn[data-tool]").forEach((b) =>
+          b.addEventListener("click", () => selectTool(b.dataset.tool, b)));
         const clearBtn = $("#draw-clear");
         if (clearBtn) clearBtn.addEventListener("click", () => drawClear());
       }
       document.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape" && tool !== "cursor") {
-          tool = "cursor"; pending = null; hover = null; setPE(); el.style.cursor = "";
-          if (tools) tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x.dataset.tool === "cursor"));
-          redraw();
+          const cursorBtn = tools && tools.querySelector('.draw-btn[data-tool="cursor"]');
+          selectTool("cursor", cursorBtn);
         }
       });
 
