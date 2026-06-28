@@ -1185,8 +1185,32 @@
           `<span style="color:#00d2ff">▮ vol ≥1.5×</span>` +
           `<span style="color:#2fd07f">▮ rising</span><span style="color:#ff5b5b">▮ falling</span></span>`
         : "";
-      $("#chart-legend").innerHTML = smas + key;
+      $("#chart-legend").innerHTML = `<span id="cl-ohlc" class="cl-ohlc"></span>` + smas + key;
     }
+    // Candle readout on hover: O/H/L/C + the period's % move (vs the prior
+    // close), coloured. Updates the legend slot as the crosshair moves.
+    function updateOHLC(param) {
+      const host = document.getElementById("cl-ohlc");
+      if (!host) return;
+      const bar = param && param.seriesData && param.seriesData.get(candle);
+      if (!bar || bar.close == null || !param.time) { host.innerHTML = ""; return; }
+      const cs = (tfs[curTF] && tfs[curTF].candles) || [];
+      let prevClose = null;
+      for (let i = 0; i < cs.length; i++) {
+        if (cs[i].time === param.time) { prevClose = i > 0 ? cs[i - 1].close : null; break; }
+      }
+      const base = prevClose != null && prevClose > 0 ? prevClose : bar.open;
+      const chg = base > 0 ? (bar.close - base) / base * 100 : 0;
+      const cur = d.currency_symbol || "";
+      const cls = chg >= 0 ? "up" : "down";
+      host.innerHTML =
+        `<span class="ohlc-v">O ${fmt(bar.open, cur)}</span>` +
+        `<span class="ohlc-v">H ${fmt(bar.high, cur)}</span>` +
+        `<span class="ohlc-v">L ${fmt(bar.low, cur)}</span>` +
+        `<span class="ohlc-v">C ${fmt(bar.close, cur)}</span>` +
+        `<b class="ohlc-chg ${cls}">${chg >= 0 ? "▲ +" : "▼ "}${chg.toFixed(2)}%</b>`;
+    }
+    chart.subscribeCrosshairMove(updateOHLC);
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;
       curTF = key;

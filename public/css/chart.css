@@ -132,6 +132,13 @@
 }
 .chart-legend span { display: flex; gap: 7px; }
 .cl-name { color: var(--muted); }
+/* Hovered-candle OHLC + day move readout */
+.cl-ohlc { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cl-ohlc:empty { display: none; }
+.cl-ohlc .ohlc-v { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cl-ohlc .ohlc-chg { font-weight: 800; font-variant-numeric: tabular-nums; }
+.cl-ohlc .ohlc-chg.up { color: var(--green); }
+.cl-ohlc .ohlc-chg.down { color: var(--red); }
 /* small key explaining the VIVEK swing arrows, reaction dot and volume colours */
 .cl-key { flex-wrap: wrap; gap: 4px 10px !important; max-width: 380px; margin-top: 6px; padding-top: 6px; border-top: 0.5px solid var(--separator); font-size: 10px; }
 .cl-key span { display: inline-flex; }
