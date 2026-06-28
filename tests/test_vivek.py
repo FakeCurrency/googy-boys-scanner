@@ -215,17 +215,30 @@ def test_watching_setup_not_armed():
     assert plan is not None and plan["armed"] is False and plan["entry_trigger"] is None
 
 
-def test_build_plans_emits_daily_and_weekly():
+def test_build_plans_emits_daily_3day_and_weekly():
     df = _frame("long_bounce")
     sig = vivek.evaluate(df)
     plans = vivek.build_plans(df, sig)
     assert "1D" in plans                                   # daily always present
+    assert "3D" in plans                                   # 3-Day plan (its own 200-SMA reaction)
     assert "1W" in plans                                   # 340 daily bars → enough weeks
     for p in plans.values():
         assert p["stop"] < p["entry"] < p["tp1"] < p["tp2"] < p["tp3"]
         assert "armed" in p and "level" in p
+    # the 3-Day plan is its OWN timeframe (coarser than daily, finer than weekly).
+    assert plans["1W"]["bars"] < plans["3D"]["bars"] < plans["1D"]["bars"]
     markers = vivek.build_markers(plans)
     assert set(markers) == set(plans)                      # one marker list per plan TF
+
+
+def test_3day_bins_are_epoch_anchored():
+    # Epoch anchoring keeps the Python 3-Day plan aligned with the chart's
+    # bucketBars(daily, 3·86400): every bin start is a whole multiple of 3 days.
+    df = _frame("long_bounce")
+    d3 = vivek._resample_3day_ohlc(df)
+    assert d3 is not None and len(d3)
+    days = [ts.normalize().value // 86_400_000_000_000 for ts in d3.index]
+    assert all(x % 3 == 0 for x in days)
 
 
 # ── entry-type categories (filter chips) ────────────────────────────────────────

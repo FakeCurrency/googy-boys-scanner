@@ -262,22 +262,6 @@
     return out;
   }
 
-  // Daily → N-session OHLCV (every N daily bars = one bar). Used for the 3-Day
-  // (3D) timeframe: groups 3 trading sessions into one candle. OHLC = first open
-  // / max high / min low / last close; volume summed.
-  function resampleNSessions(bars, n) {
-    const out = [];
-    for (let i = 0; i < bars.length; i += n) {
-      const grp = bars.slice(i, i + n);
-      if (!grp.length) continue;
-      let hi = grp[0].high, lo = grp[0].low, vol = 0;
-      for (const b of grp) { hi = Math.max(hi, b.high); lo = Math.min(lo, b.low); vol += b.volume || 0; }
-      out.push({ time: grp[0].time, open: grp[0].open, high: hi, low: lo,
-                 close: grp[grp.length - 1].close, volume: vol });
-    }
-    return out;
-  }
-
   // ── VIVEK plans come from Python (the single source of truth) ───────────────
   // The scanner emits a per-timeframe plan (entry/SL/TP1-3 + the 200 SMA level +
   // trigger state) and a small marker set in each row. The chart no longer
@@ -494,11 +478,16 @@
     dailyP.then((daily) => {
       if (!daily || daily.length < 6) throw new Error("thin");
       d.timeframes["1D"] = makeTF(daily, "1D", dailyPlan);
-      // 3-Day (3D) view: daily candles grouped 3-sessions-per-bar. No separate
-      // 3-day Python plan exists, so it shows the Daily plan as a labelled
-      // reference (approx=true), the same way the 4H view does.
-      const d3 = resampleNSessions(daily, 3);
-      if (d3.length >= 6) d.timeframes["3D"] = makeTF(d3, "3D", dailyPlan, true);
+      // 3-Day (3D) view: epoch-anchored 3-calendar-day candles (bucketBars), which
+      // line up with the engine's "72h" 3-Day resample. If the scan emitted a real
+      // 3-Day plan it gets its OWN levels (a first-class timeframe like Daily /
+      // Weekly); on older data with no 3-Day plan it falls back to the Daily plan
+      // as a labelled reference (approx=true), like the 4H view.
+      const d3 = bucketBars(daily, 3 * 86400);
+      if (d3.length >= 6) {
+        const p3 = plans["3D"];
+        d.timeframes["3D"] = makeTF(d3, "3D", p3 || dailyPlan, !p3);
+      }
       if (plans["1W"]) {
         const wk = resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = makeTF(wk, "1W", plans["1W"]);
@@ -586,10 +575,13 @@
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
     const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-    // Reference timeframes (4H, 3D) borrow the Daily plan — flag that in the labels.
-    const isRef = tfKey === "4H" || tfKey === "3D";
+    // A "reference" TF borrows the Daily plan (no plan of its own) — that's 4H
+    // always, and 3D only on older data without a real 3-Day plan. Flagged via
+    // the TF block's `approx`, set when the chart built it.
+    const isRef = !!((d.timeframes && d.timeframes[tfKey]) || {}).approx;
     const tfName = tfKey === "1W" ? "Weekly" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3-Day" : "Daily";
-    const tfTxt = `200 SMA (${tfKey === "1W" ? "W" : isRef ? "D·ref" : "D"})`;
+    const tfCode = tfKey === "1W" ? "W" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3D" : "D";
+    const tfTxt = `200 SMA (${isRef ? "D·ref" : tfCode})`;
     const rr = lv.rr || 0;
     // Trigger state — ARMED (a trigger fired) vs WATCHING (near the level only).
     const trig = lv.entry_trigger ? lv.entry_trigger.toUpperCase() : null;
@@ -1313,7 +1305,7 @@
         ctx.clearRect(0, 0, w, h);
         const seg = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
         drawings.forEach((d2, i) => {
-          const hot = (tool === "erase" && i === eraseIdx);     // highlight the erase target
+          const hot = (i === eraseIdx && (tool === "erase" || tool === "cursor"));   // erase target
           ctx.strokeStyle = hot ? "#ff5b5b" : "#4d9fff";
           ctx.lineWidth = hot ? 2.5 : 1.5;
           if (d2.type === "hline") {
@@ -1399,6 +1391,38 @@
         measure = (moved && logical != null && price != null) ? { a: measureDrag.a, b: { logical, price } } : null;
         measureDrag = null; hover = null;
         redraw();
+      });
+
+      // ── simplest erase: hover any drawing (in the default cursor mode) and a
+      // trash button appears right on it — one click deletes just that drawing.
+      // No mode to enter; works alongside the eraser tool and "clear all".
+      const delBtn = Object.assign(document.createElement("button"), {
+        className: "draw-del-btn", type: "button", title: "Delete this drawing",
+      });
+      delBtn.textContent = "🗑";
+      delBtn.style.display = "none";
+      el.appendChild(delBtn);
+      let delTarget = -1, overDel = false, hideTimer = 0;
+      const scheduleHide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => {
+        if (!overDel) { delBtn.style.display = "none"; if (eraseIdx !== -1) { eraseIdx = -1; redraw(); } delTarget = -1; }
+      }, 260); };
+      delBtn.addEventListener("mouseenter", () => { overDel = true; clearTimeout(hideTimer); });
+      delBtn.addEventListener("mouseleave", () => { overDel = false; scheduleHide(); });
+      delBtn.addEventListener("click", () => {
+        if (delTarget >= 0) { drawings.splice(delTarget, 1); delTarget = -1; eraseIdx = -1; delBtn.style.display = "none"; redraw(); }
+      });
+      chart.subscribeCrosshairMove((param) => {
+        if (tool !== "cursor" || !param.point || !drawings.length) { scheduleHide(); return; }
+        const i = nearestDrawing(param.point.x, param.point.y);
+        if (i >= 0) {
+          delTarget = i;
+          delBtn.style.left = (param.point.x + 6) + "px";
+          delBtn.style.top = (param.point.y - 6) + "px";
+          delBtn.style.display = "flex";
+          if (eraseIdx !== i) { eraseIdx = i; redraw(); }      // highlight the target red
+        } else {
+          scheduleHide();
+        }
       });
 
       ts.subscribeVisibleLogicalRangeChange(redraw);

@@ -171,6 +171,15 @@
 .measure-label .ml-price span { font-weight: 600; opacity: .8; }
 .measure-label .ml-time { font: 600 11px/1.3 var(--mono); color: var(--muted); margin-top: 2px; }
 
+/* hover-to-delete: a trash button that appears on the drawing under the cursor */
+.draw-del-btn {
+  position: absolute; z-index: 21; display: none; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; cursor: pointer; transform: translateY(-100%);
+  background: rgba(8,11,17,.92); border: 1px solid var(--red); border-radius: 7px;
+  font-size: 12px; line-height: 1; box-shadow: 0 4px 14px rgba(0,0,0,.45);
+}
+.draw-del-btn:hover { background: var(--red); }
+
 /* ── floating LIVE position box ── */
 .live-pos-box {
   position: absolute; top: 14px; right: 16px; z-index: 16; min-width: 208px;

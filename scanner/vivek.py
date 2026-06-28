@@ -319,6 +319,28 @@ def _resample_weekly_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
 
+def _resample_3day_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
+    """Daily OHLCV -> a 3-Day OHLCV frame for the 3-Day plan.
+
+    Bins are EPOCH-anchored 3-calendar-day buckets so they're identical to the
+    chart's bucketBars(daily, 3·86400) — the plan, the 3-Day candles and the
+    markers therefore line up exactly (same as the Weekly plan aligning with the
+    chart's W-FRI resample)."""
+    try:
+        # "72h" (a tick-like freq) so origin="epoch" actually takes effect — a
+        # plain "3D" silently ignores the origin and anchors to the data start.
+        d3 = pd.DataFrame({
+            "Open":   df["Open"].resample("72h", origin="epoch").first(),
+            "High":   df["High"].resample("72h", origin="epoch").max(),
+            "Low":    df["Low"].resample("72h", origin="epoch").min(),
+            "Close":  df["Close"].resample("72h", origin="epoch").last(),
+            "Volume": df["Volume"].resample("72h", origin="epoch").sum(),
+        }).dropna()
+        return d3 if len(d3) else None
+    except Exception:
+        return None
+
+
 def detect_trigger(frame: pd.DataFrame, direction: str, level: float) -> dict | None:
     """Has a mechanical entry trigger fired on the LAST bar of `frame`?
 
@@ -441,13 +463,19 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
 
 
 def build_plans(df: pd.DataFrame, sig: dict) -> dict:
-    """Per-timeframe plans (Daily + Weekly) for a signal's direction. The Daily
-    plan is the row/bot headline; the Weekly plan drives the chart's W toggle."""
+    """Per-timeframe plans for a signal's direction. The Daily plan is the row/bot
+    headline; the 3-Day and Weekly plans each get their OWN 200-SMA reaction so
+    the chart's 3D and W toggles surface real setups (not a Daily reference)."""
     direction = sig["direction"]
     plans: dict[str, dict] = {}
     p1d = build_tf_plan(df, direction)
     if p1d:
         plans["1D"] = p1d
+    d3 = _resample_3day_ohlc(df)
+    if d3 is not None:
+        p3d = build_tf_plan(d3, direction)
+        if p3d:
+            plans["3D"] = p3d
     wk = _resample_weekly_ohlc(df)
     if wk is not None:
         p1w = build_tf_plan(wk, direction)
