@@ -37,9 +37,9 @@
       "cost_r": 0.0015,
       "exits": [],
       "mae": 0.08421043,
-      "mfe": 0.08879189938306808,
+      "mfe": 0.08986504375934601,
       "mae_r": 0.0,
-      "mfe_r": 0.057,
+      "mfe_r": 0.07,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 437.52958794,
       "notional": 36.66,
@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.057,
-      "unreal_usd": 1.99
+      "unreal_r": 0.07,
+      "unreal_usd": 2.46
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -473,14 +473,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0045,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0045,
       "exits": [],
       "mae": 24.07500076,
-      "mfe": 24.07500076,
+      "mfe": 24.204999923706055,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.048,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 15.11211453,
       "notional": 358.16,
@@ -488,7 +488,9 @@
       "leverage_target": 5.0,
       "risk_pct": 0.35,
       "risk_usd": 35.0,
-      "source": "vivek_bot"
+      "source": "vivek_bot",
+      "unreal_r": 0.048,
+      "unreal_usd": 1.69
     }
   ],
   "closed": [],
@@ -500,8 +502,8 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 1.99,
-      "session_usd": 1.99,
+      "unrealised_usd": 2.46,
+      "session_usd": 2.46,
       "open": 1
     },
     "asx": {
@@ -522,15 +524,15 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 0.0,
-      "session_usd": 0.0,
-      "open": 0
+      "unrealised_usd": 1.69,
+      "session_usd": 1.69,
+      "open": 1
     }
   },
   "summary": {
     "open": 10,
-    "unreal_usd": 11.55,
+    "unreal_usd": 13.71,
     "updated_day": "2026-06-30"
   },
-  "updated_at": "2026-06-29T14:59:02+00:00"
+  "updated_at": "2026-06-29T17:21:25+00:00"
 }
