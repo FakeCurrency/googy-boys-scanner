@@ -317,10 +317,17 @@
     const label = et ? `${tfn} ${et}` : tfn;
     return `<span class="jr-setup ${SETUP_CLS[et] || ""}" title="Setup">${esc(label)}</span>`;
   }
-  // Symbol cell links to the chart for that ticker, with the setup chip after it.
+  // Market chip: which book the ticker belongs to — ASX / NASDAQ / Crypto —
+  // colour-coded to match the dashboard's market accents.
+  const MKT_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
+  function marketChip(t) {
+    const m = marketOf(t);
+    return `<span class="jr-mkt jr-mkt-${m}" title="Market">${MKT_LABEL[m] || up(m)}</span>`;
+  }
+  // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
     `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}" title="Open ${up(t.symbol)} chart">` +
-    `${dirChip(t.direction)} ${up(t.symbol)}</a>${setupChip(t)}</td>`;
+    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
     if (ms == null) return "—";
