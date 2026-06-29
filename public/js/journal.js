@@ -344,15 +344,16 @@
       <th class="num">R</th><th class="num">$</th>${side === "me" ? "<th></th>" : ""}</tr>`;
     const rows = list.map((t) => {
       const isLong = t.direction !== "short";
-      const closeBtn = side === "me"
-        ? `<td class="num"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button></td>` : "";
+      const actions = side === "me"
+        ? `<td class="num jr-actions"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
+          `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
         <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
         <td class="num jr-ur">—</td>
-        <td class="num jr-ud">—</td>${closeBtn}</tr>`;
+        <td class="num jr-ud">—</td>${actions}</tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
@@ -388,7 +389,9 @@
     const body = rows.map(([side, t]) => {
       const isLong = t.direction !== "short";
       const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
-      const closeBtn = side === "me" ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` : "";
+      const actions = side === "me"
+        ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
+          `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         <td>${ownerChip(side)}</td>
         ${symCell(t)}
@@ -401,7 +404,7 @@
         <td class="num jr-dur">${durText(openedMs(t), nowMs)}</td>
         <td class="num jr-ur">—</td>
         <td class="num jr-ud">—</td>
-        <td class="num">${closeBtn}</td></tr>`;
+        <td class="num jr-actions">${actions}</td></tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
@@ -610,6 +613,21 @@
     priceFor(t).then((p) => { if (p != null) { $("#jr-exit-price").value = +(+p).toFixed(6); $("#jr-price-tag").textContent = "live"; } else $("#jr-price-tag").textContent = ""; });
   }
   function closeModal() { $("#jr-close-overlay").hidden = true; closeId = null; }
+
+  // Remove a manual trade entirely (no P&L logged) — for setups you logged but
+  // didn't actually take (e.g. a fund/REIT not listed on your broker). Records a
+  // tombstone so the deletion propagates across synced devices.
+  function removeTrade(id) {
+    const data = mjLoad();
+    const t = (data.trades || []).find((x) => x.id === id);
+    if (!t) return;
+    const sym = String(t.symbol || "").toUpperCase();
+    if (!confirm(`Remove ${sym} from your journal?\n\nThis deletes the trade entirely — no profit/loss is logged. Use this for setups you didn't actually take.`)) return;
+    data.trades = (data.trades || []).filter((x) => x.id !== id);
+    if (!Array.isArray(data.deleted)) data.deleted = [];
+    if (!data.deleted.includes(id)) data.deleted.push(id);
+    mjSave(data); loadMe(data); renderAll(); refreshLive();
+  }
   function saveClose() {
     if (!closeId) return;
     const data = mjLoad();
@@ -695,6 +713,8 @@
   // ── wire-up ───────────────────────────────────────────────────────────────
   function wire() {
     document.addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del]");
+      if (del) { removeTrade(del.getAttribute("data-del")); return; }
       const btn = e.target.closest("[data-close]");
       if (btn) openCloseModal(btn.getAttribute("data-close"));
     });

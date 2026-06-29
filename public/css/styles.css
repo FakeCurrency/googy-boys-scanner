@@ -578,6 +578,8 @@ body {
 .rbadge.struct { color: var(--text-2); background: var(--fill); }
 .rbadge.hiconv { color: #1a1205; background: #ffb020; font-weight: 800;
   border-color: color-mix(in srgb, #ffb020 60%, transparent); }
+.rbadge.fundwarn { color: var(--red); background: var(--red-soft); font-weight: 800;
+  border-color: color-mix(in srgb, var(--red) 40%, transparent); }
 .chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }

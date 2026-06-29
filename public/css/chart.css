@@ -36,6 +36,9 @@
 .ct-grade { font: 800 15px/1 var(--sans); }
 .ct-hiconv { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: #1a1205;
   background: #ffb020; padding: 5px 9px; border-radius: 6px; white-space: nowrap; }
+.ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red);
+  background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
 .ct-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 4px; }
 .ct-chips .chip { background: var(--blue-soft); color: var(--blue); }
 .ct-chips .chip.weekly { background: var(--green-soft); color: var(--green); }

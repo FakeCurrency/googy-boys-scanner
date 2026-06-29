@@ -281,6 +281,14 @@
   color: var(--muted); transition: color .15s, border-color .15s;
 }
 .jr-close-btn:hover { color: var(--red); border-color: var(--red); }
+.jr-actions { white-space: nowrap; }
+.jr-del-btn {
+  font: 700 11px/1 var(--sans); margin-left: 6px;
+  padding: 4px 7px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted-2);
+  transition: color .15s, border-color .15s;
+}
+.jr-del-btn:hover { color: var(--red); border-color: var(--red); }
 
 /* ── Close-position modal ── */
 .jr-overlay {

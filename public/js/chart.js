@@ -561,11 +561,27 @@
     return d.grade === "A+" || d.grade === "A" || (p.structural_tps || 0) >= 2;
   }
 
+  // REIT / ETF / LIC / managed fund — mirrors scanner/broker/vivek_bot.py. The
+  // bot won't trade these and most CFD brokers (e.g. CMC) don't list them.
+  const FUND_NAME_KW = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
+    "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
+  const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
+  const NON_OP_SECTORS = new Set(["not applicable", "not applic", "n/a"]);
+  function isFundReit(d) {
+    const sector = String((d && d.sector) || "").trim().toLowerCase();
+    if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
+    if (NON_OP_SECTORS.has(sector)) return true;
+    const name = String((d && (d.name || d.symbol)) || "").toUpperCase();
+    return FUND_NAME_KW.some((kw) => name.includes(kw));
+  }
+
   function header(d) {
     const cur = d.currency_symbol || "";
     $("#ct-sym").textContent = d.symbol;
     document.title = `${d.symbol} — Vivek 5.0`;
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
+    const fw = $("#ct-fundwarn");
+    if (fw) fw.hidden = !isFundReit(d);
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";
     const dirEl = $("#ct-dir");

@@ -351,6 +351,22 @@
   const RECENT_DAYS = 3;                       // trigger within this many days = "recent"
   const TRIG_LABEL = { reclaim: "Reclaim", retest: "Retest", break: "Break" };
 
+  // REIT / ETF / LIC / managed fund detector — mirrors scanner/broker/vivek_bot.py
+  // (_is_fund_or_reit). These hug the 200 SMA, so they over-produce "reactions"
+  // without being real trades; the bot already skips them, and most CFD brokers
+  // (e.g. CMC) don't list them — so the dashboard flags them as a heads-up.
+  const FUND_NAME_KEYWORDS = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
+    "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
+  const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
+  const NON_OPERATING_SECTORS = new Set(["not applicable", "not applic", "n/a"]);
+  function isFundReit(r) {
+    const sector = String((r && r.sector) || "").trim().toLowerCase();
+    if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
+    if (NON_OPERATING_SECTORS.has(sector)) return true;
+    const name = String((r && r.name) || "").toUpperCase();
+    return FUND_NAME_KEYWORDS.some((kw) => name.includes(kw));
+  }
+
   function scanDateMs() {
     const t = state.data && state.data.generated_at ? Date.parse(state.data.generated_at) : NaN;
     return isFinite(t) ? t : Date.now();
@@ -377,6 +393,8 @@
   function vkBadges(r) {
     if (state.mode !== "vivek") return "";
     const out = [];
+    if (isFundReit(r))
+      out.push(`<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>`);
     if (isHighConviction(r))
       out.push(`<span class="rbadge hiconv" title="Weekly reclaim, A/strong structure — the best-performing setup in the backtest">🎯 High conviction</span>`);
     if (triggeredRecently(r))
