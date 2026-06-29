@@ -1469,10 +1469,14 @@
   function initDailyQuote() {
     const el = document.getElementById("topbar-quote");
     if (!el) return;
-    const idx = Math.floor(Date.now() / 86400000) % TRADER_QUOTES.length;
-    const [text, author] = TRADER_QUOTES[idx];
-    el.textContent = `"${text}" — ${author}`;
-    el.title = `"${text}" — ${author}`;
+    const show = () => {
+      const idx = Math.floor(Date.now() / 3600000) % TRADER_QUOTES.length;   // rotates hourly
+      const [text, author] = TRADER_QUOTES[idx];
+      el.textContent = `"${text}" — ${author}`;
+      el.title = `"${text}" — ${author}`;
+    };
+    show();
+    setInterval(show, 60000);   // roll to the new quote the moment the hour ticks over
   }
 
   const _melFmt  = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });

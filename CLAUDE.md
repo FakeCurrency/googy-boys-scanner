@@ -224,7 +224,7 @@ Functions live in `functions/api/` and run in the **CF Workers runtime** (not No
 
 ## Development rules
 
-1. **Brand name:** Always "Vivek 5.0" — never "Vivek's Beta Scanner" or "Googy Boys Scanner"
+1. **Brand name:** Primary name is always "Vivek 5.0". A "BETA SCANNER" subtitle/descriptor under the wordmark is allowed (owner's call). Never "Vivek's Beta Scanner" as the primary name, and never "Googy Boys Scanner"
 2. **Config first:** Any new threshold/constant goes in `config.py` before being used in logic
 3. **Version bump:** Every edit to `public/js/journal.js` → bump `?v=` in `journal.html` (currently v=17)
 4. **Atomic writes:** Journal saves must use `_atomic_write()` (temp + os.replace) — never write directly
