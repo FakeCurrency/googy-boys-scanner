@@ -439,6 +439,7 @@ body {
   display: inline-flex; align-items: center; gap: 7px; transition: all .15s;
 }
 .vkf-chip:hover { border-color: var(--blue); color: var(--text); }
+.vkf-chip { touch-action: manipulation; }   /* remove tap delay / scroll-eats-tap on mobile */
 .vkf-chip b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .vkf-chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
 .vkf-chip.is-active b { color: rgba(255,255,255,0.85); }
@@ -463,9 +464,13 @@ body {
 .vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }
 @media (max-width: 560px) { .vkf-legend { display: none; } }
 @media (max-width: 560px) {
-  .vk-filters { gap: 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
-  .vk-filters::-webkit-scrollbar { display: none; }
+  /* Wrap the chips onto multiple rows so every filter — including the High
+     conviction / Triggered recently toggles on the right — is fully visible and
+     tappable. (Previously this was a horizontal scroll strip, which pushed those
+     toggles off-screen and ate taps as scroll gestures on phones.) */
+  .vk-filters { gap: 6px; flex-wrap: wrap; }
   .vkf-label { display: none; }
+  .vkf-sep { display: none; }
 }
 
 /* ======================================================================= rows */
