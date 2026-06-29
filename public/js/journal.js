@@ -434,24 +434,31 @@
   }
 
   // ── live prices (reused from the manual-journal helpers) ──────────────────
-  async function cryptoPrice(sym) {
+  // Hard client-side timeout so a slow/hanging upstream can never leave the
+  // "Now" cell stuck on the "…" placeholder — it aborts and we fall back to "—".
+  async function fetchJSON(url, ms = 6000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
     try {
-      const pair = encodeURIComponent(String(sym || "").toUpperCase() + "USDT");
-      const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`, { cache: "no-store" });
-      if (!r.ok) return null;
-      const j = await r.json();
-      return j && j.price != null ? +j.price : null;
+      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+      return r.ok ? await r.json() : null;
     } catch (_) { return null; }
+    finally { clearTimeout(t); }
+  }
+  async function cryptoPrice(sym) {
+    const pair = encodeURIComponent(String(sym || "").toUpperCase() + "USDT");
+    let j = await fetchJSON(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
+    if (j && j.price != null) return +j.price;
+    // Binance doesn't list every coin (e.g. BDX/Beldex) — fall back to Yahoo's
+    // <base>-USD via our quote proxy so those still get a live price.
+    j = await fetchJSON(`/api/quote?sym=${encodeURIComponent(String(sym || "").toUpperCase() + "-USD")}`);
+    return j && j.price != null ? +j.price : null;
   }
   async function stockPrice(sym, market) {
-    try {
-      const up_ = String(sym || "").toUpperCase();
-      const ticket = YF_TICKER[up_] || (market === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
-      const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`, { cache: "no-store" });
-      if (!r.ok) return null;
-      const j = await r.json();
-      return j && j.price != null ? +j.price : null;
-    } catch (_) { return null; }
+    const up_ = String(sym || "").toUpperCase();
+    const ticket = YF_TICKER[up_] || (market === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
+    const j = await fetchJSON(`/api/quote?sym=${encodeURIComponent(ticket)}`);
+    return j && j.price != null ? +j.price : null;
   }
   const priceFor = (t) => (marketOf(t) === "crypto" ? cryptoPrice(t.symbol) : stockPrice(t.symbol, marketOf(t)));
 
@@ -552,56 +559,47 @@
     const byId = new Map((data.trades || []).map((t) => [t.id, t]));
 
     // Every open position is rendered in TWO tables (combined overview + its
-    // per-section table), so resolve each row to its trade and GROUP by symbol —
-    // we fetch each symbol's price only once and apply it to all its rows.
+    // per-section table), so GROUP rows by symbol — fetch each symbol's price
+    // once and paint all its rows as soon as it returns (so one slow symbol
+    // can't freeze the whole column).
     const trs = $$("tbody tr[data-tid]");
-    const rowInfos = [];                 // { tr, src, side, key }
-    const keySrc = new Map();            // priceKey -> representative src
     const keyOf = (t) => marketOf(t) + ":" + String(t.symbol || "").toUpperCase();
+    const groups = new Map();            // key -> { src, rows:[{tr,src}], manual }
     for (const tr of trs) {
       const side = tr.getAttribute("data-side");
       const id = tr.getAttribute("data-tid");
       const src = side === "bot" ? state.bot.open.find((t) => t.id === id) : byId.get(id);
       if (!src) continue;
       const key = keyOf(src);
-      if (!keySrc.has(key)) keySrc.set(key, src);
-      rowInfos.push({ tr, src, side, key });
+      let g = groups.get(key);
+      if (!g) { g = { src, rows: [], manual: null }; groups.set(key, g); }
+      g.rows.push({ tr, src });
+      if (side === "me" && !g.manual) g.manual = src;
     }
 
-    // One fetch per unique symbol, capped at 6 in flight.
-    const priceByKey = new Map();
-    await inBatches([...keySrc.entries()], 6, async ([key, src]) => {
-      priceByKey.set(key, await priceFor(src));
-    });
-
-    // Auto-manage each unique MANUAL trade once against its live price.
-    const managed = new Set();
-    for (const { src, side, key } of rowInfos) {
-      if (side !== "me" || managed.has(src.id)) continue;
-      managed.add(src.id);
-      const price = priceByKey.get(key);
-      if (price != null && manage(src, price)) meChanged = true;
-    }
-
-    // Paint every row from the cached price.
-    for (const { tr, src, key } of rowInfos) {
-      const nowCell = tr.querySelector(".jr-now");
-      if (!nowCell || !document.body.contains(nowCell)) continue;
-      const urCell = tr.querySelector(".jr-ur");
-      const udCell = tr.querySelector(".jr-ud");
-      const price = priceByKey.get(key);
-      if (price == null) { nowCell.textContent = "—"; continue; }
-      const isLong = src.direction !== "short";
-      const risk = src.risk != null ? src.risk : Math.abs(src.entry - (src.stop ?? src.entry));
-      const ru = src.risk_usd;
-      nowCell.textContent = px(price);
-      if (src.status === "closed") { nowCell.textContent = "closed"; continue; }
-      if (risk > 0) {
-        const ur = rOf(price, src.entry, risk, isLong);
-        if (urCell) { urCell.textContent = rfmt(ur); urCell.className = "num jr-ur " + rcls(ur); }
-        if (ru != null && udCell) { const ud = ur * ru; udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
+    const paint = (g, price) => {
+      if (g.manual && price != null && manage(g.manual, price)) meChanged = true;
+      for (const { tr, src } of g.rows) {
+        const nowCell = tr.querySelector(".jr-now");
+        if (!nowCell || !document.body.contains(nowCell)) continue;
+        const urCell = tr.querySelector(".jr-ur");
+        const udCell = tr.querySelector(".jr-ud");
+        if (price == null) { nowCell.textContent = "—"; continue; }
+        const isLong = src.direction !== "short";
+        const risk = src.risk != null ? src.risk : Math.abs(src.entry - (src.stop ?? src.entry));
+        const ru = src.risk_usd;
+        nowCell.textContent = px(price);
+        if (src.status === "closed") { nowCell.textContent = "closed"; continue; }
+        if (risk > 0) {
+          const ur = rOf(price, src.entry, risk, isLong);
+          if (urCell) { urCell.textContent = rfmt(ur); urCell.className = "num jr-ur " + rcls(ur); }
+          if (ru != null && udCell) { const ud = ur * ru; udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
+        }
       }
-    }
+    };
+
+    // Fetch each unique symbol once (≤6 in flight), painting as each resolves.
+    await inBatches([...groups.values()], 6, async (g) => { paint(g, await priceFor(g.src)); });
 
     if (meChanged) { mjSave(data); loadMe(data); renderAll(); }
   }
