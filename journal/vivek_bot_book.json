@@ -37,9 +37,9 @@
       "cost_r": 0.0015,
       "exits": [],
       "mae": 0.08421043,
-      "mfe": 0.0871725082397461,
+      "mfe": 0.08879189938306808,
       "mae_r": 0.0,
-      "mfe_r": 0.037,
+      "mfe_r": 0.057,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 437.52958794,
       "notional": 36.66,
@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.037,
-      "unreal_usd": 1.29
+      "unreal_r": 0.057,
+      "unreal_usd": 1.99
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -442,6 +442,53 @@
       "source": "vivek_bot",
       "unreal_r": -0.026,
       "unreal_usd": -0.92
+    },
+    {
+      "id": "KHC:long:1D:2026-06-29",
+      "symbol": "KHC",
+      "name": "KHC",
+      "sector": "",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1D",
+      "entry": 24.07500076,
+      "stop": 21.38397808,
+      "tp1": 27.17403479,
+      "tp2": 30.64806882,
+      "tp3": 35.28011419,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 2.69102268,
+      "rr": 2.44,
+      "trigger_bar": null,
+      "entry_date": "2026-06-29",
+      "opened_at": "2026-06-29T14:52:48+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 24.07500076,
+      "mfe": 24.07500076,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 15.11211453,
+      "notional": 358.16,
+      "leverage": 0.04,
+      "leverage_target": 5.0,
+      "risk_pct": 0.35,
+      "risk_usd": 35.0,
+      "source": "vivek_bot"
     }
   ],
   "closed": [],
@@ -453,13 +500,13 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 1.29,
-      "session_usd": 1.29,
+      "unrealised_usd": 1.99,
+      "session_usd": 1.99,
       "open": 1
     },
     "asx": {
       "market": "asx",
-      "day": "2026-06-29",
+      "day": "2026-06-30",
       "breached": false,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
@@ -481,9 +528,9 @@
     }
   },
   "summary": {
-    "open": 9,
-    "unreal_usd": 10.85,
-    "updated_day": "2026-06-29"
+    "open": 10,
+    "unreal_usd": 11.55,
+    "updated_day": "2026-06-30"
   },
-  "updated_at": "2026-06-29T12:51:02+00:00"
+  "updated_at": "2026-06-29T14:59:02+00:00"
 }
