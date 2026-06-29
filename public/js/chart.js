@@ -752,9 +752,16 @@
     const isCrypto = d.asset_type === "crypto" || market === "crypto";
     const simBrok  = (data) => isCrypto ? data.crypto_brokerage : data.stock_brokerage;
 
-    // Re-label the entry button to match the setup direction.
-    buyBtn.textContent  = dir === "short" ? "▲ Simulate Short" : "▲ Simulate Buy";
-    sellBtn.textContent = dir === "short" ? "▼ Cover / Close"  : "▼ Simulate Sell";
+    // Re-label AND re-colour the buttons to match the setup direction: the entry
+    // action is coloured by its side (long entry = green ▲, short entry = red ▼),
+    // and the close is the opposite (cover a short = green ▲, sell a long = red ▼).
+    const isShort = dir === "short";
+    buyBtn.textContent  = isShort ? "▼ Simulate Short" : "▲ Simulate Buy";
+    sellBtn.textContent = isShort ? "▲ Cover / Close"  : "▼ Simulate Sell";
+    buyBtn.classList.toggle("sim-sell", isShort);   // short entry → red
+    buyBtn.classList.toggle("sim-buy", !isShort);
+    sellBtn.classList.toggle("sim-buy", isShort);   // cover → green
+    sellBtn.classList.toggle("sim-sell", !isShort);
 
     const openSimTrade = () =>
       mjLoad().trades.find((t) => t.sim && t.status === "open" &&
