@@ -1479,10 +1479,15 @@
     setInterval(show, 60000);   // roll to the new quote the moment the hour ticks over
   }
 
-  const _melFmt  = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const _melDate = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", day: "2-digit", month: "short", year: "numeric" });
-  const _nyFmt   = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const _nyDate  = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",    day: "2-digit",   month: "short", year: "numeric" });
+  // City clocks: Melbourne · New York (left) and China · London (right).
+  const _clockFmt = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const _dateFmt  = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, day: "2-digit", month: "short", year: "numeric" });
+  const CLOCKS = [
+    { id: "mel",    fmt: _clockFmt("Australia/Melbourne"), date: _dateFmt("Australia/Melbourne") },
+    { id: "ny",     fmt: _clockFmt("America/New_York"),    date: _dateFmt("America/New_York") },
+    { id: "china",  fmt: _clockFmt("Asia/Shanghai"),       date: _dateFmt("Asia/Shanghai") },
+    { id: "london", fmt: _clockFmt("Europe/London"),       date: _dateFmt("Europe/London") },
+  ];
 
   function _fmtClock(fmt, dateFmt, now) {
     const parts = fmt.formatToParts(now);
@@ -1494,12 +1499,11 @@
 
   function updateClocks() {
     const now = new Date();
-    const [melTime, melDate] = _fmtClock(_melFmt, _melDate, now);
-    const [nyTime,  nyDate]  = _fmtClock(_nyFmt,  _nyDate,  now);
-    const mt = document.getElementById("clk-mel-time"); if (mt) mt.textContent = melTime;
-    const md = document.getElementById("clk-mel-date"); if (md) md.textContent = melDate;
-    const nt = document.getElementById("clk-ny-time");  if (nt) nt.textContent = nyTime;
-    const nd = document.getElementById("clk-ny-date");  if (nd) nd.textContent = nyDate;
+    for (const c of CLOCKS) {
+      const [time, date] = _fmtClock(c.fmt, c.date, now);
+      const t = document.getElementById(`clk-${c.id}-time`); if (t) t.textContent = time;
+      const d = document.getElementById(`clk-${c.id}-date`); if (d) d.textContent = date;
+    }
   }
 
   initDailyQuote();

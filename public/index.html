@@ -12,19 +12,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=49" />
+  <link rel="stylesheet" href="css/styles.css?v=50" />
 </head>
 <body>
   <header class="topbar">
     <!-- ROW 1 — clocks · brand (centred) · market switch + nav links -->
     <div class="topbar-row1">
-      <div class="topbar-clocks">
-        <div class="clock-city">
+      <div class="topbar-clocks topbar-clocks-left">
+        <div class="clock-city clk-mel">
           <span class="clock-city-name">MELBOURNE</span>
           <span class="clock-time" id="clk-mel-time">—</span>
           <span class="clock-date" id="clk-mel-date">—</span>
         </div>
-        <div class="clock-city">
+        <div class="clock-city clk-ny">
           <span class="clock-city-name">NEW YORK</span>
           <span class="clock-time" id="clk-ny-time">—</span>
           <span class="clock-date" id="clk-ny-date">—</span>
@@ -40,8 +40,9 @@
           </span>
           <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
         </div>
-        <div class="topbar-quote" id="topbar-quote"></div>
       </div>
+
+      <div class="topbar-quote" id="topbar-quote"></div>
 
       <div class="topbar-nav">
         <div class="market-switch" role="tablist" aria-label="Market">
@@ -49,12 +50,27 @@
           <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
           <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
         </div>
-        <a class="howto-link" href="sectors.html">NEWS</a>
-        <a class="howto-link" href="track.html">TRACK</a>
-        <a class="howto-link" href="journal.html">JOURNAL</a>
-        <a class="howto-link" href="debug.html">DEBUG</a>
-        <a class="howto-link" href="about.html">HOW IT WORKS</a>
-        <a class="howto-link bot-nav-link" href="bot.html"><span class="bot-nav-dot"></span>AI BOT</a>
+        <div class="nav-pills">
+          <a class="howto-link" href="sectors.html">NEWS</a>
+          <a class="howto-link" href="track.html">TRACK</a>
+          <a class="howto-link" href="journal.html">JOURNAL</a>
+          <a class="howto-link" href="debug.html">DEBUG</a>
+          <a class="howto-link" href="about.html">HOW IT WORKS</a>
+          <a class="howto-link bot-nav-link" href="bot.html"><span class="bot-nav-dot"></span>AI BOT</a>
+        </div>
+      </div>
+
+      <div class="topbar-clocks topbar-clocks-right">
+        <div class="clock-city clk-china">
+          <span class="clock-city-name">CHINA</span>
+          <span class="clock-time" id="clk-china-time">—</span>
+          <span class="clock-date" id="clk-china-date">—</span>
+        </div>
+        <div class="clock-city clk-london">
+          <span class="clock-city-name">LONDON</span>
+          <span class="clock-time" id="clk-london-time">—</span>
+          <span class="clock-date" id="clk-london-date">—</span>
+        </div>
       </div>
     </div>
 
@@ -154,6 +170,6 @@
     <p class="credit">Vivek 5.0 · data via Yahoo Finance · refreshed daily after each market close</p>
   </footer>
 
-  <script src="js/app.js?v=50"></script>
+  <script src="js/app.js?v=51"></script>
 </body>
 </html>
