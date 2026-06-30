@@ -49,7 +49,7 @@
       "risk_usd": 35.0,
       "source": "vivek_bot",
       "unreal_r": 0.033,
-      "unreal_usd": 1.14
+      "unreal_usd": 1.16
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -477,9 +477,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0045,
       "exits": [],
-      "mae": 24.07500076,
+      "mae": 23.834999084472656,
       "mfe": 24.30459976196289,
-      "mae_r": 0.0,
+      "mae_r": -0.089,
       "mfe_r": 0.085,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 15.11211453,
@@ -489,8 +489,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.043,
-      "unreal_usd": 1.5
+      "unreal_r": -0.089,
+      "unreal_usd": -3.12
     },
     {
       "id": "NXT:long:1D:2026-06-30",
@@ -589,6 +589,53 @@
       "source": "vivek_bot",
       "unreal_r": -0.069,
       "unreal_usd": -2.42
+    },
+    {
+      "id": "MDB:long:1W:2026-06-30",
+      "symbol": "MDB",
+      "name": "MDB",
+      "sector": "",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 335.92999268,
+      "stop": 183.11776153,
+      "tp1": 509.61999512,
+      "tp2": 803.36668612,
+      "tp3": 1113.49114841,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 152.81223115,
+      "rr": 3.06,
+      "trigger_bar": null,
+      "entry_date": "2026-06-30",
+      "opened_at": "2026-06-30T19:26:56+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 335.92999268,
+      "mfe": 335.92999268,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 0.22571583,
+      "notional": 76.33,
+      "leverage": 0.01,
+      "leverage_target": 5.0,
+      "risk_pct": 0.35,
+      "risk_usd": 35.0,
+      "source": "vivek_bot"
     }
   ],
   "closed": [],
@@ -600,13 +647,13 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 1.14,
-      "session_usd": 1.14,
+      "unrealised_usd": 1.16,
+      "session_usd": 1.16,
       "open": 1
     },
     "asx": {
       "market": "asx",
-      "day": "2026-06-30",
+      "day": "2026-07-01",
       "breached": false,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
@@ -622,15 +669,15 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 1.5,
-      "session_usd": 1.5,
+      "unrealised_usd": -3.12,
+      "session_usd": -3.12,
       "open": 1
     }
   },
   "summary": {
-    "open": 12,
-    "unreal_usd": -0.09,
-    "updated_day": "2026-06-30"
+    "open": 13,
+    "unreal_usd": -4.69,
+    "updated_day": "2026-07-01"
   },
-  "updated_at": "2026-06-30T18:24:39+00:00"
+  "updated_at": "2026-06-30T19:32:35+00:00"
 }
