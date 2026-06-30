@@ -135,18 +135,22 @@
     t.gross_r = round((t.gross_r || 0) + pct * rOf(price, t.entry, t.risk, isLong), 4);
     t.booked_pct = round((t.booked_pct || 0) + pct, 6);
   }
-  // Returns true if the trade changed state (so the store should be persisted).
+  // Returns the kind of change so the caller can decide whether to PERSIST:
+  //   false   — nothing material (or only MAE/MFE drift)
+  //   "book"  — a TP scaled out / stop trailed (still open)
+  //   "close" — the position closed
+  // MAE/MFE high-water marks are tracked in memory only — they moved on almost
+  // every tick and were burning the KV write quota; they ride along on the next
+  // material save.
   function manage(t, price) {
     if (t.status !== "open" || !isVivek(t) || price == null) return false;
     ensureInit(t);
     const isLong = t.direction !== "short", risk = t.risk;
     if (!(risk > 0)) return false;
-    let changed = false;
-    const nmfe = isLong ? Math.max(t.mfe, price) : Math.min(t.mfe, price);
-    const nmae = isLong ? Math.min(t.mae, price) : Math.max(t.mae, price);
-    if (nmfe !== t.mfe) { t.mfe = nmfe; changed = true; }
-    if (nmae !== t.mae) { t.mae = nmae; changed = true; }
+    t.mfe = isLong ? Math.max(t.mfe, price) : Math.min(t.mfe, price);
+    t.mae = isLong ? Math.min(t.mae, price) : Math.max(t.mae, price);
 
+    let material = false;
     const stopHit = isLong ? price <= t.stop : price >= t.stop;
     if (stopHit) {
       const remaining = round(1 - (t.booked_pct || 0), 6);
@@ -158,7 +162,7 @@
       t.status = "closed"; t.exit = round(price, 8);
       t.exit_date = today(); t.exit_time = nowTime();
       t.exit_reason = t.tp3_hit ? "target" : (t.tp1_hit ? "trail" : "stop");
-      changed = true;
+      material = true;
     } else {
       const scale = t.scale, reached = (lvl) => (isLong ? price >= lvl : price <= lvl);
       // A TP only counts if it's a genuine profit target BEYOND the entry. This
@@ -168,19 +172,19 @@
       if (!t.tp1_hit && t.tp1 != null && valid(t.tp1) && reached(t.tp1)) {
         t.tp1_hit = true; book(t, "tp1", t.tp1, scale[0], isLong);
         if (fav(t.entry, t.stop, isLong)) t.stop = t.entry;        // SL → break-even
-        changed = true;
+        material = true;
       }
       if (!t.tp2_hit && t.tp2 != null && valid(t.tp2) && reached(t.tp2)) {
         t.tp2_hit = true; book(t, "tp2", t.tp2, scale[1], isLong);
         if (fav(t.tp1, t.stop, isLong)) t.stop = t.tp1;            // SL → locked structure
-        changed = true;
+        material = true;
       }
       if (!t.tp3_hit && t.tp3 != null && valid(t.tp3) && reached(t.tp3)) {
-        t.tp3_hit = true; book(t, "tp3", t.tp3, scale[2], isLong); changed = true;
+        t.tp3_hit = true; book(t, "tp3", t.tp3, scale[2], isLong); material = true;
       }
     }
-    if (changed) finalizeR(t);
-    return changed;
+    if (material) finalizeR(t);
+    return material ? (t.status === "closed" ? "close" : "book") : false;
   }
   // Make sure a CLOSED manual trade has its realized R/$ resolved once.
   function ensureClosedR(t) {
@@ -613,11 +617,8 @@
 
     const paint = (g, price) => {
       if (g.manual && price != null) {
-        const wasOpen = g.manual.status === "open";
-        if (manage(g.manual, price)) {
-          meChanged = true;
-          if (wasOpen && g.manual.status === "closed") meClosed = true;
-        }
+        const r = manage(g.manual, price);   // false | "book" | "close"
+        if (r) { meChanged = true; if (r === "close") meClosed = true; }
       }
       const src = g.src;
       for (const tr of g.rows) {
