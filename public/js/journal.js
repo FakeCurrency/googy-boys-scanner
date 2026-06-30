@@ -664,6 +664,12 @@
           if (!scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null });
           if (row.price != null) scanPrice.set(mkt + ":" + sym, +row.price);
         }
+        // Universe-wide last-close snapshot — covers held names that are no longer
+        // a current setup (so any open position can be priced from the scan).
+        const pm = j.prices || {};
+        for (const sym in pm) {
+          if (pm[sym] != null) scanPrice.set(mkt + ":" + String(sym).toUpperCase(), +pm[sym]);
+        }
       } catch (_) { /* skip a missing/blocked file */ }
     }));
   }

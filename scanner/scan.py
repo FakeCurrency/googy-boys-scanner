@@ -112,11 +112,20 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     prev_grades = _load_prev_grades(out_root, market_key)   # for grade hysteresis
 
     results: list[dict] = []
+    prices: dict[str, float] = {}        # last close for EVERY scanned symbol
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
+        symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
+        # Snapshot the latest close for the whole universe (not just setups), so
+        # the journal can price any open position — including held names that are
+        # no longer a current setup — straight from the scan, every run.
         try:
-            symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
+            if len(df):
+                prices[symbol] = round(float(df["Close"].iloc[-1]), 8)
+        except Exception:
+            pass
+        try:
             age = _frame_age_days(df)                        # measure freshness on the raw frame
             # Pin to COMPLETED bars: drop a still-forming trailing bar so a name's
             # grade/plan doesn't wobble as the current session's bar fills in.
@@ -228,6 +237,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "sector_counts": dict(counts.most_common()),
         "pulse": pulse_data,
         "results": results,
+        "prices": prices,                 # universe-wide last-close snapshot
     }
 
 
