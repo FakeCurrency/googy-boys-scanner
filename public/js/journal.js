@@ -33,6 +33,9 @@
   // SYMBOL → { grade, entry_type } from the live scans, used only as a fallback
   // for older manual trades that were logged before grade/setup were captured.
   const scanMeta = new Map();
+  // "market:SYMBOL" → last scan price. The scan refreshes this every run, so it's
+  // the reliable "Now" source for manual trades (no flaky live-quote fetch).
+  const scanPrice = new Map();
 
   // ── VIVEK sizing + cost model (mirrors scanner/broker/vivek_bot.py + config) ──
   // Each market is sized off its own $10k book; the account spans all three, so
@@ -335,6 +338,38 @@
     return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
   }
 
+  // Now / Unreal-R / Unreal-$ cells (returned separately — some tables put other
+  // columns between Now and the R/$ pair).
+  //  • Bot positions are marked to market by the scan SERVER-SIDE every run
+  //    (unreal_r / unreal_usd live in the book JSON), so render those straight
+  //    away — reliable, refreshed each scan, no client fetch.
+  //  • Manual positions are filled by refreshLive (scan-price snapshot first,
+  //    then a live quote) — these carry the data-* hooks it reads.
+  function liveCellParts(t, side) {
+    const isLong = t.direction !== "short";
+    if (side === "bot") {
+      const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
+      const now = (t.unreal_r != null && risk > 0)
+        ? (isLong ? t.entry + t.unreal_r * risk : t.entry - t.unreal_r * risk) : null;
+      const ur = t.unreal_r, ud = t.unreal_usd;
+      return {
+        now: `<td class="num jr-now">${now != null ? px(now) : "—"}</td>`,
+        ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>`,
+        ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}">${ud != null ? d2(ud) : "—"}</td>`,
+      };
+    }
+    return {
+      now: `<td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>`,
+      ur: `<td class="num jr-ur">—</td>`,
+      ud: `<td class="num jr-ud">—</td>`,
+    };
+  }
+  // Now+R+$ as three adjacent cells (for the per-section tables).
+  function liveCells(t, side) {
+    const p = liveCellParts(t, side);
+    return p.now + p.ur + p.ud;
+  }
+
   // Per-section (Claude / Me) tables sit in half-width side-by-side columns, so
   // they carry only the per-side essentials — the full-width combined tables in
   // the comparison overview above show entry/stop/targets/timestamps in full.
@@ -351,9 +386,7 @@
         ${symCell(t)}
         <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
-        <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
-        <td class="num jr-ur">—</td>
-        <td class="num jr-ud">—</td>${actions}</tr>`;
+        ${liveCells(t, side)}${actions}</tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
@@ -387,8 +420,8 @@
       <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
       <th class="num">Unreal R</th><th class="num">Unreal $</th><th></th></tr>`;
     const body = rows.map(([side, t]) => {
-      const isLong = t.direction !== "short";
       const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
+      const parts = liveCellParts(t, side);
       const actions = side === "me"
         ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
           `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button>` : "";
@@ -399,11 +432,11 @@
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.stop)}</td>
         <td class="num"><span class="num-sub">${tps}</span></td>
-        <td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>
+        ${parts.now}
         <td class="num jr-stamp">${stamp(openedMs(t))}</td>
         <td class="num jr-dur">${durText(openedMs(t), nowMs)}</td>
-        <td class="num jr-ur">—</td>
-        <td class="num jr-ud">—</td>
+        ${parts.ur}
+        ${parts.ud}
         <td class="num jr-actions">${actions}</td></tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
@@ -552,34 +585,35 @@
     }
   }
 
-  // ── live refresh: mark opens to live price, auto-manage Me, update cells ────
+  // ── live refresh: price the MANUAL opens, auto-manage them, update cells ────
+  // Bot rows are already marked to market by the scan (rendered from the book
+  // JSON), so this only touches Me rows. Each Me symbol's price comes from the
+  // latest scan snapshot first (reliable, refreshes every scan); a live quote is
+  // only fetched as a fallback when the symbol isn't in the current scan.
   async function refreshLive() {
     let meChanged = false;
     const data = mjLoad();
     const byId = new Map((data.trades || []).map((t) => [t.id, t]));
 
-    // Every open position is rendered in TWO tables (combined overview + its
-    // per-section table), so GROUP rows by symbol — fetch each symbol's price
-    // once and paint all its rows as soon as it returns (so one slow symbol
-    // can't freeze the whole column).
-    const trs = $$("tbody tr[data-tid]");
+    // Each Me position is rendered in TWO tables (combined + per-section), so
+    // GROUP rows by symbol and resolve each symbol's price once.
+    const trs = $$("tbody tr[data-tid][data-side='me']");
     const keyOf = (t) => marketOf(t) + ":" + String(t.symbol || "").toUpperCase();
-    const groups = new Map();            // key -> { src, rows:[{tr,src}], manual }
+    const groups = new Map();            // key -> { src, rows:[tr], manual }
     for (const tr of trs) {
-      const side = tr.getAttribute("data-side");
       const id = tr.getAttribute("data-tid");
-      const src = side === "bot" ? state.bot.open.find((t) => t.id === id) : byId.get(id);
+      const src = byId.get(id);
       if (!src) continue;
       const key = keyOf(src);
       let g = groups.get(key);
-      if (!g) { g = { src, rows: [], manual: null }; groups.set(key, g); }
-      g.rows.push({ tr, src });
-      if (side === "me" && !g.manual) g.manual = src;
+      if (!g) { g = { src, key, rows: [], manual: src }; groups.set(key, g); }
+      g.rows.push(tr);
     }
 
     const paint = (g, price) => {
       if (g.manual && price != null && manage(g.manual, price)) meChanged = true;
-      for (const { tr, src } of g.rows) {
+      const src = g.src;
+      for (const tr of g.rows) {
         const nowCell = tr.querySelector(".jr-now");
         if (!nowCell || !document.body.contains(nowCell)) continue;
         const urCell = tr.querySelector(".jr-ur");
@@ -598,8 +632,11 @@
       }
     };
 
-    // Fetch each unique symbol once (≤6 in flight), painting as each resolves.
-    await inBatches([...groups.values()], 6, async (g) => { paint(g, await priceFor(g.src)); });
+    // Scan price first (reliable, every scan); live quote only if absent.
+    await inBatches([...groups.values()], 6, async (g) => {
+      const price = scanPrice.has(g.key) ? scanPrice.get(g.key) : await priceFor(g.src);
+      paint(g, price);
+    });
 
     if (meChanged) { mjSave(data); loadMe(data); renderAll(); }
   }
@@ -612,17 +649,20 @@
       if (r.ok) state.bot = splitBot(await r.json());
     } catch (_) { /* keep empty */ }
   }
-  // Pull grade + entry trigger per symbol from the live scans (fallback only).
+  // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
+  // source for manual trades) from the live scans. Re-runnable: prices overwrite.
   async function loadScanMeta() {
-    const files = ["asx_vivek.json", "nasdaq_vivek.json", "crypto_vivek.json"];
-    await Promise.all(files.map(async (f) => {
+    const files = [["asx_vivek.json", "asx"], ["nasdaq_vivek.json", "nasdaq"], ["crypto_vivek.json", "crypto"]];
+    await Promise.all(files.map(async ([f, mkt]) => {
       try {
         const r = await fetch("data/" + f, { cache: "no-cache" });
         if (!r.ok) return;
         const j = await r.json();
         for (const row of (j.results || [])) {
           const sym = String(row.symbol || "").toUpperCase();
-          if (sym && !scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null });
+          if (!sym) continue;
+          if (!scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null });
+          if (row.price != null) scanPrice.set(mkt + ":" + sym, +row.price);
         }
       } catch (_) { /* skip a missing/blocked file */ }
     }));
@@ -754,6 +794,14 @@
     window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) { loadMe(); renderAll(); refreshLive(); } });
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
     setInterval(() => { if (!document.hidden) refreshLive(); }, 20000);
+    // Pick up a fresh scan while the page is open: re-pull the bot book + scan
+    // prices every few minutes and re-render (the bot side + manual Now update).
+    setInterval(async () => {
+      if (document.hidden) return;
+      await Promise.all([loadBot(), loadScanMeta()]);
+      renderAll();
+      refreshLive();
+    }, 180000);
   }
 
   async function init() {
