@@ -591,7 +591,8 @@
   // latest scan snapshot first (reliable, refreshes every scan); a live quote is
   // only fetched as a fallback when the symbol isn't in the current scan.
   async function refreshLive() {
-    let meChanged = false;
+    let meChanged = false;   // any persisted change (MAE/MFE, scale-out, close)
+    let meClosed = false;    // a position actually CLOSED → rows move tables
     const data = mjLoad();
     const byId = new Map((data.trades || []).map((t) => [t.id, t]));
 
@@ -611,7 +612,13 @@
     }
 
     const paint = (g, price) => {
-      if (g.manual && price != null && manage(g.manual, price)) meChanged = true;
+      if (g.manual && price != null) {
+        const wasOpen = g.manual.status === "open";
+        if (manage(g.manual, price)) {
+          meChanged = true;
+          if (wasOpen && g.manual.status === "closed") meClosed = true;
+        }
+      }
       const src = g.src;
       for (const tr of g.rows) {
         const nowCell = tr.querySelector(".jr-now");
@@ -638,7 +645,12 @@
       paint(g, price);
     });
 
-    if (meChanged) { mjSave(data); loadMe(data); renderAll(); }
+    // Persist MAE/MFE/scale-outs quietly, but only RE-RENDER when a position
+    // actually closed (rows move between the open/closed tables). Re-rendering on
+    // every MAE/MFE tick was rebuilding the table and wiping the Now/R/$ cells
+    // this just painted — the "flash then disappear" on the manual rows.
+    if (meChanged) mjSave(data);
+    if (meClosed) { loadMe(data); renderAll(); }
   }
 
   // ── loaders ───────────────────────────────────────────────────────────────
