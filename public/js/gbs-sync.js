@@ -105,9 +105,26 @@
     }
   }
 
+  // Hard daily budget for cloud writes so the free Workers KV tier (1000 puts/
+  // day) can NEVER be exceeded — even if something tries to write in a loop.
+  // Local storage always saves; only the cloud push is skipped once the budget
+  // is spent. Counter is per-device and resets at UTC midnight.
+  const PUT_BUDGET = 400;
+  function _putBudgetOk() {
+    try {
+      const day = new Date().toISOString().slice(0, 10);   // UTC date
+      const raw = JSON.parse(localStorage.getItem("gbs:put_budget") || "{}");
+      const used = raw.day === day ? (raw.n || 0) : 0;
+      if (used >= PUT_BUDGET) return false;
+      localStorage.setItem("gbs:put_budget", JSON.stringify({ day, n: used + 1 }));
+      return true;
+    } catch (_) { return true; }
+  }
+
   async function put(d) {
     const code = getCode();
     if (!code) return { ok: false };
+    if (!_putBudgetOk()) return { ok: false, skipped: "budget" };   // stay inside the free tier
     try {
       const res = await fetch(`${API}?code=${encodeURIComponent(code)}`, {
         method: "PUT",
