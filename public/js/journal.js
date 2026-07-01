@@ -381,7 +381,8 @@
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Now</th>
       <th class="num">R</th><th class="num">$</th>${side === "me" ? "<th></th>" : ""}</tr>`;
-    const rows = list.map((t) => {
+    // Newest position at the top.
+    const rows = list.slice().sort((a, b) => (openedMs(b) || 0) - (openedMs(a) || 0)).map((t) => {
       const isLong = t.direction !== "short";
       const actions = side === "me"
         ? `<td class="num jr-actions"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
@@ -418,7 +419,8 @@
     : `<span class="own own-me" title="Me (manual)">✏️</span>`;
 
   function combinedOpen(nowMs) {
-    const rows = [...state.bot.open.map((t) => ["bot", t]), ...state.me.open.map((t) => ["me", t])];
+    const rows = [...state.bot.open.map((t) => ["bot", t]), ...state.me.open.map((t) => ["me", t])]
+      .sort((a, b) => (openedMs(b[1]) || 0) - (openedMs(a[1]) || 0));   // newest first
     if (!rows.length) return `<div class="jr-empty">No open positions on either side.</div>`;
     const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
       <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
