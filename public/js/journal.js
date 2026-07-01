@@ -506,6 +506,15 @@
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
     return { trades: [], deleted: [] };
   }
+  // Local-only save: for changes the rules COMPUTE (TP scale-outs, stop trails,
+  // auto-closes). Every device re-derives these from the same entry/targets +
+  // price, so they must NEVER be pushed to the shared cloud store — doing so on
+  // every price move is what burned the KV write quota.
+  function mjSaveLocal(d) {
+    if (window.GBSSync) { window.GBSSync.saveLocal(d); return; }
+    localStorage.setItem(MJ_KEY, JSON.stringify(d));
+  }
+  // Cloud save: ONLY for genuine user actions (take / close / delete / import).
   function mjSave(d) {
     if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
     localStorage.setItem(MJ_KEY, JSON.stringify(d));
@@ -646,11 +655,11 @@
       paint(g, price);
     });
 
-    // Persist MAE/MFE/scale-outs quietly, but only RE-RENDER when a position
-    // actually closed (rows move between the open/closed tables). Re-rendering on
-    // every MAE/MFE tick was rebuilding the table and wiping the Now/R/$ cells
-    // this just painted — the "flash then disappear" on the manual rows.
-    if (meChanged) mjSave(data);
+    // Persist rule-computed changes (scale-outs, auto-close) LOCALLY only — never
+    // to the cloud (each device re-derives them, so cloud pushes here just burned
+    // the KV quota). Only RE-RENDER when a position actually closed (rows move
+    // between the open/closed tables).
+    if (meChanged) mjSaveLocal(data);
     if (meClosed) { loadMe(data); renderAll(); }
   }
 

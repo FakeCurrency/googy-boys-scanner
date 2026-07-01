@@ -683,8 +683,14 @@
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
     return { capital: 10000, brokerage: 10, stock_capital: 10000, stock_brokerage: 10, crypto_capital: 10000, crypto_brokerage: 5, trades: [] };
   }
-  function mjSave(x) {
+  function mjSave(x) {   // local + cloud — user actions only (Simulate Buy/Sell)
     if (window.GBSSync) { window.GBSSync.saveLocal(x); window.GBSSync.syncOutDebounced(); return; }
+    localStorage.setItem(MJ_KEY, JSON.stringify(x));
+  }
+  // Local-only — for rule-computed auto-closes (stop/target hit while the chart
+  // is open). Each device re-derives these, so they must not spam the cloud.
+  function mjSaveLocal(x) {
+    if (window.GBSSync) { window.GBSSync.saveLocal(x); return; }
     localStorage.setItem(MJ_KEY, JSON.stringify(x));
   }
   function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
@@ -812,7 +818,7 @@
         : t.target;
       rec.status = "closed"; rec.exit = fillPx; rec.exit_date = nowDate(); rec.exit_time = nowTime();
       rec.mtime = Date.now();
-      mjSave(data);
+      mjSaveLocal(data);   // rule-computed auto-close → local only
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
       const pnl = t.shares * m * (fillPx - t.entry) - 2 * simBrok(data);
       statusEl.className = `sim-status${pnl >= 0 ? " live" : " neg"}`;
@@ -1895,7 +1901,7 @@
       rec.exit_date = nowDate(); rec.exit_time = nowTime();
       rec.auto_closed = stopped ? "stop" : "target";
       rec.mtime = Date.now();
-      mjSave(data);
+      mjSaveLocal(data);   // rule-computed auto-close → local only
       const m   = posDir === "long" ? 1 : -1;
       const pnl = t.shares * m * (fillPx - t.entry) - 2 * posBrok(data);
       banner.className = "lpb-banner " + (stopped ? "neg" : "pos");
