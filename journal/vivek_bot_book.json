@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.028,
-      "unreal_usd": 0.99
+      "unreal_r": 0.03,
+      "unreal_usd": 1.05
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -97,8 +97,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.068,
-      "unreal_usd": 2.37
+      "unreal_r": -0.088,
+      "unreal_usd": -3.08
     },
     {
       "id": "PMV:long:1W:2026-06-29",
@@ -195,8 +195,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.725,
-      "unreal_usd": -25.38
+      "unreal_r": -1.113,
+      "unreal_usd": -38.97
     },
     {
       "id": "KLS:long:1D:2026-06-29",
@@ -244,8 +244,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.278,
-      "unreal_usd": 9.72
+      "unreal_r": 0.194,
+      "unreal_usd": 6.8
     },
     {
       "id": "MAQ:long:1D:2026-06-29",
@@ -293,8 +293,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.323,
-      "unreal_usd": 11.29
+      "unreal_r": 0.129,
+      "unreal_usd": 4.5
     },
     {
       "id": "FWD:long:1W:2026-06-29",
@@ -342,8 +342,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.118,
-      "unreal_usd": 4.13
+      "unreal_r": 0.126,
+      "unreal_usd": 4.43
     },
     {
       "id": "BGA:long:1D:2026-06-29",
@@ -391,8 +391,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.096,
-      "unreal_usd": -3.37
+      "unreal_r": -0.061,
+      "unreal_usd": -2.14
     },
     {
       "id": "EVT:long:1W:2026-06-29",
@@ -440,8 +440,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.06,
-      "unreal_usd": -2.1
+      "unreal_r": -0.09,
+      "unreal_usd": -3.15
     },
     {
       "id": "KHC:long:1D:2026-06-29",
@@ -538,8 +538,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.072,
-      "unreal_usd": 2.53
+      "unreal_r": 0.12,
+      "unreal_usd": 4.21
     },
     {
       "id": "FPH:long:1D:2026-06-30",
@@ -587,8 +587,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.069,
-      "unreal_usd": -2.42
+      "unreal_r": -0.167,
+      "unreal_usd": -5.85
     },
     {
       "id": "MDB:long:1W:2026-06-30",
@@ -638,19 +638,66 @@
       "source": "vivek_bot",
       "unreal_r": -0.0,
       "unreal_usd": -0.01
+    },
+    {
+      "id": "XLM:long:1W:2026-07-01",
+      "symbol": "XLM",
+      "name": "XLM",
+      "sector": "",
+      "market": "crypto",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 0.198505,
+      "stop": 0.09967621,
+      "tp1": 0.29659301,
+      "tp2": 0.51374102,
+      "tp3": 0.63424802,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.09882879,
+      "rr": 3.19,
+      "trigger_bar": null,
+      "entry_date": "2026-07-01",
+      "opened_at": "2026-07-01T10:50:44+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 0.198505,
+      "mfe": 0.198505,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 393.28591279,
+      "notional": 74.2,
+      "leverage": 0.01,
+      "leverage_target": 3.0,
+      "risk_pct": 0.35,
+      "risk_usd": 35.0,
+      "source": "vivek_bot"
     }
   ],
   "closed": [],
   "guard": {
     "crypto": {
       "market": "crypto",
-      "day": "2026-06-30",
+      "day": "2026-07-01",
       "breached": false,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 0.99,
-      "session_usd": 0.99,
+      "unrealised_usd": 1.05,
+      "session_usd": 1.05,
       "open": 1
     },
     "asx": {
@@ -660,13 +707,13 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": -2.73,
-      "session_usd": -2.73,
+      "unrealised_usd": -32.74,
+      "session_usd": -32.74,
       "open": 10
     },
     "nasdaq": {
       "market": "nasdaq",
-      "day": "2026-06-30",
+      "day": "2026-07-01",
       "breached": false,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
@@ -677,9 +724,9 @@
     }
   },
   "summary": {
-    "open": 13,
-    "unreal_usd": -7.67,
-    "updated_day": "2026-06-30"
+    "open": 14,
+    "unreal_usd": -37.63,
+    "updated_day": "2026-07-01"
   },
-  "updated_at": "2026-06-30T23:43:58+00:00"
+  "updated_at": "2026-07-01T10:54:18+00:00"
 }
