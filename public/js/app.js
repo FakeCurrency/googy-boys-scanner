@@ -898,20 +898,22 @@
       // Watch tab: B/C for the daily scanners; B+/WATCH for VIVEK.
       list = all.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade));
     }
-    // VIVEK entry-type filter (200 SMA interaction) — union of selected types.
-    if (state.mode === "vivek" && state.vkEntry.size) {
+    // The scan is always VIVEK now, so these apply purely on their toggle state
+    // (no `mode` gate — a stale persisted mode must never disable them).
+    // Entry-type filter (200 SMA interaction) — union of selected types.
+    if (state.vkEntry && state.vkEntry.size) {
       list = list.filter((r) => (r.entry_types || []).some((t) => state.vkEntry.has(t)));
     }
-    // VIVEK "triggered recently" filter — only setups that just moved.
-    if (state.mode === "vivek" && state.vkRecent) {
+    // "Triggered recently" — only setups that just moved.
+    if (state.vkRecent) {
       list = list.filter(triggeredRecently);
     }
-    // VIVEK "high conviction" filter — weekly reclaims (A / strong structure).
-    if (state.mode === "vivek" && state.vkHighConv) {
+    // "High conviction" — weekly reclaims (A / strong structure).
+    if (state.vkHighConv) {
       list = list.filter(isHighConviction);
     }
-    // Direction filter — Longs / Shorts. Combines (AND) with every filter above.
-    if (state.mode === "vivek" && state.vkDir) {
+    // Direction — Longs / Shorts. Combines (AND) with every filter above.
+    if (state.vkDir) {
       list = list.filter((r) => r.dir === state.vkDir);
     }
     const s = state.sort;
@@ -1061,8 +1063,7 @@
     if (!list.length) {
       // Are active toggle-filters the reason it's empty? Point that out so an
       // empty list reads as "these filters have no match" rather than "broken".
-      const filtersOn = state.mode === "vivek" &&
-        (state.vkDir || state.vkHighConv || state.vkRecent || state.vkEntry.size);
+      const filtersOn = state.vkDir || state.vkHighConv || state.vkRecent || (state.vkEntry && state.vkEntry.size);
       const msg = state.view === "watch"
         ? { h: "Your watchlist is empty", p: "Tap the ☆ on any setup to add it here." }
         : filtersOn
