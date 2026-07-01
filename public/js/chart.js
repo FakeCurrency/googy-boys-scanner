@@ -1510,6 +1510,31 @@
         else span = `${(days / 365).toFixed(1)}y`;
         return `${bars} bar${bars === 1 ? "" : "s"} · ${span}`;
       }
+      // Time at a logical index, EXTRAPOLATED past the last bar (avg bar spacing)
+      // so a measurement dragged into the future still gets a projected date.
+      function timeAtLogicalExt(logical) {
+        const c = (tfs[curTF] && tfs[curTF].candles) || [];
+        if (!c.length) return null;
+        const i = Math.round(logical), lastI = c.length - 1;
+        if (i >= 0 && i <= lastI) return c[i].time;
+        const n = Math.min(30, lastI);
+        const avg = n > 0 ? (c[lastI].time - c[lastI - n].time) / n : 86400;
+        return (i > lastI ? c[lastI].time + (logical - lastI) * avg
+                          : c[0].time + logical * avg);
+      }
+      const fmtDT = (sec) => {
+        if (sec == null) return "—";
+        const dt = new Date(sec * 1000);
+        const d = dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+        return (curTF === "4H" || curTF === "1H")
+          ? d + " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+          : d;
+      };
+      // "Jun 12 '26 → 15 Aug '26" for the two endpoints, earliest first.
+      function datesText(aLog, bLog) {
+        const [lo, hi] = aLog <= bLog ? [aLog, bLog] : [bLog, aLog];
+        return `${fmtDT(timeAtLogicalExt(lo))} → ${fmtDT(timeAtLogicalExt(hi))}`;
+      }
 
       // ── hit-testing (for the eraser) ────────────────────────────────────────
       function segDist(px, py, x1, y1, x2, y2) {
@@ -1556,7 +1581,8 @@
         measureLabel.style.transform = `translate(-50%, ${up ? "-100%" : "0"})`;
         measureLabel.innerHTML =
           `<div class="ml-price">${sign}${pct.toFixed(2)}% <span>${sign}${cur}${Math.abs(delta).toFixed(ad)}</span></div>` +
-          `<div class="ml-time">${spanText(a.logical, b.logical)}</div>`;
+          `<div class="ml-time">${spanText(a.logical, b.logical)}</div>` +
+          `<div class="ml-dates">${datesText(a.logical, b.logical)}</div>`;
       }
 
       function redraw() {
