@@ -1146,7 +1146,7 @@
       grid: { vertLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" },
               horzLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" } },
       rightPriceScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)" },
-      timeScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)" },
+      timeScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)", rightOffset: 6 },
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
 
@@ -1297,6 +1297,46 @@
         `<b class="ohlc-chg ${cls}">${chg >= 0 ? "▲ +" : "▼ "}${chg.toFixed(2)}%</b>`;
     }
     chart.subscribeCrosshairMove(updateOHLC);
+
+    // ── forward date projection ────────────────────────────────────────────
+    // Hover to the RIGHT of the last candle to see the rough calendar date that
+    // spot maps to — extrapolated from the average bar spacing (so weekends /
+    // holidays are baked in). Point at where you think price is headed and this
+    // tells you roughly WHEN.
+    const fc = document.createElement("div");
+    fc.className = "ct-forecast"; fc.hidden = true;
+    el.appendChild(fc);
+    const projFmt = (sec) => {
+      const dt = new Date(sec * 1000);
+      const dstr = dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      return curTF === "4H"
+        ? dstr + " · " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+        : dstr;
+    };
+    function updateForecast(param) {
+      const cs = (tfs[curTF] && tfs[curTF].candles) || [];
+      if (!param || !param.point || param.time || cs.length < 3) { fc.hidden = true; return; }
+      const ts = chart.timeScale();
+      const lastI = cs.length - 1;
+      const lastX = ts.logicalToCoordinate(lastI);
+      if (lastX == null) { fc.hidden = true; return; }
+      const bs = (ts.options && ts.options().barSpacing) || 6;
+      const ahead = (param.point.x - lastX) / bs;          // bars past the last candle
+      if (ahead < 0.5) { fc.hidden = true; return; }        // only in the future zone
+      const n = Math.min(30, lastI);
+      const avgSec = n > 0 ? (cs[lastI].time - cs[lastI - n].time) / n : 86400;
+      const projSec = cs[lastI].time + ahead * (avgSec > 0 ? avgSec : 86400);
+      const days = Math.max(1, Math.round((projSec - cs[lastI].time) / 86400));
+      fc.innerHTML =
+        `<span class="fc-date">🔮 ${projFmt(projSec)}</span>` +
+        `<span class="fc-in">≈ ${days} day${days === 1 ? "" : "s"} out · +${Math.round(ahead)} bars</span>`;
+      fc.hidden = false;
+      const w = el.clientWidth;
+      fc.style.left = Math.min(Math.max(param.point.x, 78), w - 78) + "px";
+      fc.style.top  = Math.max(6, (param.point.y || 44) - 48) + "px";
+    }
+    chart.subscribeCrosshairMove(updateForecast);
+
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;
       curTF = key;

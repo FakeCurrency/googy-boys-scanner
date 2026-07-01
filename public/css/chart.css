@@ -39,6 +39,19 @@
 .ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red);
   background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+
+/* forward date-projection readout (hover right of the last candle) */
+.chart-canvas { position: relative; }
+.ct-forecast {
+  position: absolute; z-index: 6; pointer-events: none; transform: translateX(-50%);
+  background: rgba(16,20,28,0.92); border: 1px solid rgba(120,140,170,0.35);
+  border-radius: 9px; padding: 5px 10px; text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.ct-forecast[hidden] { display: none; }
+.ct-forecast .fc-date { display: block; font: 700 12.5px/1.2 var(--mono, ui-monospace, monospace); color: #eef2f7; white-space: nowrap; }
+.ct-forecast .fc-in   { display: block; font: 600 10px/1.3 var(--sans); color: #8fa6c4; margin-top: 2px; white-space: nowrap; }
 .ct-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 4px; }
 .ct-chips .chip { background: var(--blue-soft); color: var(--blue); }
 .ct-chips .chip.weekly { background: var(--green-soft); color: var(--green); }
