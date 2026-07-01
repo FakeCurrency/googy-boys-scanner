@@ -111,6 +111,7 @@
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
     vkHighConv: false,  // VIVEK "high conviction" filter (weekly reclaim + A/strong structure)
+    vkDir: null,        // direction filter: null = both · "LONG" · "SHORT"
   };
 
   // Sort direction. Each sort has a natural default (numeric → descending,
@@ -335,7 +336,10 @@
     const tradeable = res.filter((r) => r.grade === "A+" || r.grade === "A");
     $("#stat-scanned").textContent = d.scanned ?? "—";
     $("#stat-setups").textContent = tradeable.length;
-    const top = res.slice().sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
+    // Top pick skips REITs / ETFs / LICs / managed funds — the bot won't trade
+    // them and most CFD brokers don't list them, so they shouldn't headline.
+    const top = res.filter((r) => !isFundReit(r))
+      .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
     $("#stat-toppick").textContent = top ? `${top.symbol} ${fmtPrice(top.price)}` : "—";
     const bestRR = (tradeable.length ? tradeable : res).reduce((m, r) => Math.max(m, r.rr || 0), 0);
     $("#stat-rr").textContent = bestRR > 0 ? `${bestRR.toFixed(1)}:1` : "—";
@@ -902,6 +906,10 @@
     if (state.mode === "vivek" && state.vkHighConv) {
       list = list.filter(isHighConviction);
     }
+    // Direction filter — Longs / Shorts. Combines (AND) with every filter above.
+    if (state.mode === "vivek" && state.vkDir) {
+      list = list.filter((r) => r.dir === state.vkDir);
+    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -992,6 +1000,14 @@
     };
     const nRecent = all.filter(triggeredRecently).length;
     const nHigh = all.filter(isHighConviction).length;
+    // Longs/Shorts counts stay in sync with the OTHER active filters, so the
+    // numbers reflect what you'll actually see as you stack them.
+    let dirBase = all;
+    if (state.vkEntry.size) dirBase = dirBase.filter((r) => (r.entry_types || []).some((t) => state.vkEntry.has(t)));
+    if (state.vkRecent) dirBase = dirBase.filter(triggeredRecently);
+    if (state.vkHighConv) dirBase = dirBase.filter(isHighConviction);
+    const nLong = dirBase.filter((r) => r.dir === "LONG").length;
+    const nShort = dirBase.filter((r) => r.dir === "SHORT").length;
     box.innerHTML =
       `<span class="vkf-label">200 SMA interaction</span>` +
       chip("all", "All", "Every VIVEK setup", all.length) +
@@ -1001,9 +1017,14 @@
       `<button class="vkf-chip vkf-highconv${state.vkHighConv ? " is-active" : ""}" data-high="1" ` +
         `title="The best cell in the backtest: weekly reclaims that are A/A+ or have strong structure">🎯 High conviction <b>${nHigh}</b></button>` +
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
-        `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>`;
+        `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>` +
+      `<span class="vkf-sep"></span>` +
+      `<button class="vkf-chip vkf-long${state.vkDir === "LONG" ? " is-active" : ""}" data-dir="LONG" title="Show only long setups">▲ Longs <b>${nLong}</b></button>` +
+      `<button class="vkf-chip vkf-short${state.vkDir === "SHORT" ? " is-active" : ""}" data-dir="SHORT" title="Show only short setups">▼ Shorts <b>${nShort}</b></button>`;
     box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
-      if (b.dataset.recent) {
+      if (b.dataset.dir) {
+        state.vkDir = state.vkDir === b.dataset.dir ? null : b.dataset.dir;   // toggle; click again = both
+      } else if (b.dataset.recent) {
         state.vkRecent = !state.vkRecent;
       } else if (b.dataset.high) {
         state.vkHighConv = !state.vkHighConv;
