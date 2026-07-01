@@ -29,7 +29,11 @@
     try {
       const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
       if (p.market) state.market = p.market;
-      if (p.mode)   state.mode   = p.mode;
+      // Deliberately DO NOT restore p.mode: VIVEK 5.0 is the only scanner now,
+      // and a stale mode persisted from an older build (e.g. "pullback") would
+      // silently disable every VIVEK filter (all gated on mode === "vivek") —
+      // the bug where Longs/Shorts + High conviction toggled but didn't filter.
+      state.mode = "vivek";
       if (p.tab)    state.tab    = p.tab;
       if (p.sort)   state.sort   = p.sort;
       if (p.sortDir) state.sortDir = p.sortDir;
