@@ -628,6 +628,9 @@ body {
 .vkf-long.is-active  { background: var(--green); border-color: var(--green); color: #fff; }
 .vkf-short.is-active { background: var(--red);   border-color: var(--red);   color: #fff; }
 .vkf-long.is-active b, .vkf-short.is-active b { color: rgba(255,255,255,0.85); }
+/* a direction with nothing to show in the current view — dimmed + not clickable */
+.vkf-chip.vkf-off, .vkf-chip:disabled { opacity: 0.38; cursor: default; }
+.vkf-chip.vkf-off:hover { border-color: currentColor; }
 .chip { font: 600 11px/1 var(--sans); letter-spacing: 0; color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 100px; white-space: nowrap; }
 .chip.weekly { color: var(--green); background: var(--green-soft); }
 .chip.warn { color: var(--red); background: var(--red-soft); }

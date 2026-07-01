@@ -998,6 +998,18 @@
       const title = q ? `${full} — ${q.note}` : full;
       return `<button class="vkf-chip${cls}${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(title)}">${esc(label)} <b>${n}</b></button>`;
     };
+    // Direction chip. If a direction has 0 matches in the CURRENT view (common
+    // once High conviction narrows things), render it disabled + dimmed so it
+    // reads as "nothing here" instead of a button that empties the list. The
+    // active direction is never disabled, so you can always toggle it back off.
+    const dirChipHTML = (dir, label, n) => {
+      const active = state.vkDir === dir;
+      const off = n === 0 && !active;
+      const cls = dir === "LONG" ? "vkf-long" : "vkf-short";
+      const title = off ? `No ${dir.toLowerCase()} setups in this view` : `Show only ${dir.toLowerCase()} setups`;
+      return `<button class="vkf-chip ${cls}${active ? " is-active" : ""}${off ? " vkf-off" : ""}" ` +
+        `data-dir="${dir}"${off ? " disabled" : ""} title="${title}">${label} <b>${n}</b></button>`;
+    };
     const nRecent = all.filter(triggeredRecently).length;
     const nHigh = all.filter(isHighConviction).length;
     // Longs/Shorts counts stay in sync with the OTHER active filters, so the
@@ -1019,8 +1031,8 @@
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
         `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>` +
       `<span class="vkf-sep"></span>` +
-      `<button class="vkf-chip vkf-long${state.vkDir === "LONG" ? " is-active" : ""}" data-dir="LONG" title="Show only long setups">▲ Longs <b>${nLong}</b></button>` +
-      `<button class="vkf-chip vkf-short${state.vkDir === "SHORT" ? " is-active" : ""}" data-dir="SHORT" title="Show only short setups">▼ Shorts <b>${nShort}</b></button>`;
+      dirChipHTML("LONG", "▲ Longs", nLong) +
+      dirChipHTML("SHORT", "▼ Shorts", nShort);
     box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.dir) {
         state.vkDir = state.vkDir === b.dataset.dir ? null : b.dataset.dir;   // toggle; click again = both
@@ -1043,9 +1055,15 @@
     const wrap = $("#results");
     const list = buildList();
     if (!list.length) {
+      // Are active toggle-filters the reason it's empty? Point that out so an
+      // empty list reads as "these filters have no match" rather than "broken".
+      const filtersOn = state.mode === "vivek" &&
+        (state.vkDir || state.vkHighConv || state.vkRecent || state.vkEntry.size);
       const msg = state.view === "watch"
         ? { h: "Your watchlist is empty", p: "Tap the ☆ on any setup to add it here." }
-        : { h: "No setups in this tab", p: "Try another grade tab or market, or check back after the next scan." };
+        : filtersOn
+          ? { h: "No setups match these filters", p: `Nothing here in ${state.market ? state.market.toUpperCase() : "this market"} on this tab. Turn off ${state.vkDir ? state.vkDir.toLowerCase() + " only" : "a filter"} (High conviction / Longs / Shorts) or switch market/tab.` }
+          : { h: "No setups in this tab", p: "Try another grade tab or market, or check back after the next scan." };
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
       return;
     }
