@@ -145,12 +145,18 @@ def main(argv=None) -> int:
         except Exception:
             state = {}
     fresh, new_state = diff_new(alignments, state)
-    print(f"confluence: {len(alignments)} active alignments, {len(fresh)} new/upgraded")
-    if not fresh:
+    # Discord only carries alignments at/above the lens threshold (default:
+    # triples only). The site still shows every 2-lens alignment visually —
+    # state tracks them all, so a 2->3 upgrade always pings.
+    min_lenses = getattr(config, "DISCORD_CONF_MIN_LENSES", 2)
+    to_post = [a for a in fresh if a["count"] >= min_lenses]
+    print(f"confluence: {len(alignments)} active, {len(fresh)} new/upgraded, "
+          f"{len(to_post)} at >= {min_lenses} lenses")
+    if not to_post:
         _save_state_if_changed(state, new_state)
         return 0
 
-    payloads = build_payloads(fresh)
+    payloads = build_payloads(to_post)
     url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
     if args.dry_run:
         print(json.dumps(payloads, indent=2)[:2500])

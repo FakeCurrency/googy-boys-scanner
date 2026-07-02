@@ -592,6 +592,9 @@ DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
 DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
 DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
 DISCORD_CONF_MENTION   = "@here"     # mention on TRIPLE-lens confluence alerts ("" = silent)
+DISCORD_CONF_MIN_LENSES = 3          # only post alignments with at least this many lenses
+                                     # (3 = triples only — owner's call 2026-07-02; the site
+                                     # still shows every 2-lens alignment visually)
 SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
 DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
 DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
