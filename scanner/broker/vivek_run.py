@@ -255,17 +255,18 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
              market, mode.upper(), "OPEN" if is_open else "closed-session",
              added, closed_now, book_open, book_short)
 
-    # Trade-event digest through the shared alert dispatcher. "order_placed" is
-    # INFO-severity → log-only by default; flip ALERT_CHANNELS["INFO"] in config
-    # to push these to Discord/Telegram the day you want phone notifications.
-    if opened_events or closed_events:
+    # Trade-event digest through the shared alert dispatcher. OFF by default:
+    # the scan workflow exports SMTP creds and alert_dispatch fires every
+    # configured channel, so this would EMAIL each bot trade event. Flip
+    # VIVEK_BOT_NOTIFY_TRADES in config when pushes are wanted.
+    if getattr(config, "VIVEK_BOT_NOTIFY_TRADES", False) and (opened_events or closed_events):
         try:
             from .alert_dispatch import send as _alert
             lines = [f"OPEN  {p['symbol']} {p.get('direction','?')} @ {p.get('entry')} "
                      f"({p.get('timeframe','?')} {p.get('entry_type','?')})"
                      for p in opened_events]
             lines += [f"CLOSE {p['symbol']} {p.get('exit_reason','?')} @ {p.get('exit')} "
-                      f"→ {p.get('realized_r', 0):+.2f}R"
+                      f"→ {(p.get('realized_r') or 0):+.2f}R"     # .get default won't catch a stored None
                       for p in closed_events]
             _alert("order_placed",
                    f"VIVEK bot [{market}]: {len(opened_events)} opened, {len(closed_events)} closed",

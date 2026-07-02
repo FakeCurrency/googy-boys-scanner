@@ -352,6 +352,12 @@ VIVEK_BOT_MAX_STOP_PCT   = 50.0    # skip if |entry−stop| > this % of entry (0
 # can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
 # trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 3
+# Push a digest of the bot's opens/closes through alert_dispatch each run.
+# OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
+# EVERY configured channel — enabling this without wanting it means an email per
+# bot trade event (hourly-ish in session). Flip to True when you want pushes
+# (and add DISCORD_WEBHOOK_URL to the scan workflow env for Discord instead).
+VIVEK_BOT_NOTIFY_TRADES = False
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the
 # session (it still manages/closes open positions). In a future live phase this
