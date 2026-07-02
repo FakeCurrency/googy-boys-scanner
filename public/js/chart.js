@@ -31,15 +31,15 @@
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
-  // ── PhaseMap overlay (?pm=1&dir=bullish|bearish) — draws the scanned zone
-  // bands + sweep/displacement markers ON TOP of the normal chart. When the
-  // ticker has no live VIVEK plan, the chart still renders (pmOnlyFallback)
-  // with the same candles/SMAs/timeframes, using the zones as its ladder.
-  const pmWanted = params.get("pm") === "1";
+  // ── PhaseMap overlay — draws the scanned zone bands + sweep/displacement
+  // markers ON TOP of the normal chart. The record is ALWAYS fetched
+  // (2026-07-02; ?pm=1 kept in old links but no longer required) so zones
+  // ride along wherever a setup exists and the chart never dead-ends on a
+  // ticker with no live VIVEK plan (e.g. journal names whose setup ended).
   const pmDirWanted = (params.get("dir") || "").toLowerCase();
   let pmRec = null;
   function fetchPhaseMapRec() {
-    if (!pmWanted || market === "scalp") return Promise.resolve(null);
+    if (market === "scalp") return Promise.resolve(null);
     const want = decodeURIComponent(symbol || "").toUpperCase();
     return fetch(`data/phasemap/${market}/latest.json`, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
@@ -572,21 +572,25 @@
   }
 
   function pmOnlyFallback(SYM, meta, rec) {
+    // rec may be NULL — tier-3 fallback: no VIVEK plan, no PhaseMap setup.
+    // The chart still renders (candles + SMAs, D/3D/W) so a ticker link
+    // never dead-ends — journal names whose setup ended stay clickable.
     const m = meta || {};
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
-    const bull = rec.direction === "bullish";
+    const bull = rec ? rec.direction === "bullish" : true;
     const d = {
-      symbol: String(SYM).toUpperCase(), name: m.name || rec.name || SYM,
+      symbol: String(SYM).toUpperCase(), name: m.name || (rec && rec.name) || SYM,
       asset_type: assetType,
-      price: (rec.metrics && rec.metrics.close) != null ? rec.metrics.close
+      price: (rec && rec.metrics && rec.metrics.close) != null ? rec.metrics.close
            : (m.price != null ? m.price : null),
-      grade: String(rec.tier || "").toUpperCase() === "WATCH" ? "WATCH" : (rec.tier || ""),
+      grade: rec ? (String(rec.tier || "").toUpperCase() === "WATCH" ? "WATCH" : (rec.tier || "")) : "",
       score: 0, score_max: 0,
-      chips: [rec.state.replace("_", " "), rec.regime].concat(rec.tags || []),
-      sector: m.sector || rec.sector || "",
+      chips: rec ? [rec.state.replace("_", " "), rec.regime].concat(rec.tags || []) : [],
+      sector: m.sector || (rec && rec.sector) || "",
       currency_symbol: m.currency_symbol || (market === "asx" ? "A$" : "$"),
-      tv_symbol: m.tv_symbol || SYM, dir: bull ? "LONG" : "SHORT",
-      analysis: rec.narration || "",
+      tv_symbol: m.tv_symbol || SYM, dir: rec ? (bull ? "LONG" : "SHORT") : "",
+      analysis: (rec && rec.narration) ||
+        "No live VIVEK or PhaseMap setup on this name right now — showing the raw chart (candles + SMAs) so every ticker always opens.",
       default_tf: "1D", level_lines: [], timeframes: {},
       _fallback: true, _vivek: false, _pm: true,
     };
@@ -679,7 +683,8 @@
       dirEl.classList.toggle("short", isShort);
       dirEl.classList.toggle("long", !isShort);   // explicit colour both ways (LONG green / SHORT red)
     }
-    dirEl.hidden = false;
+    // plain-fallback charts (no setup anywhere) have no direction — hide the chip
+    dirEl.hidden = !d.dir;
     const hc = $("#ct-hiconv");
     if (hc) hc.hidden = !isHighConviction(d);
     $("#ct-chips").innerHTML = (d.chips || [])
@@ -2406,15 +2411,18 @@
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();
     // VIVEK has no per-ticker static chart files — render the 200 SMA reaction
-    // live (with the full 5.0 level ladder) instead of the generic scalp chart.
-    // With ?pm=1 the PhaseMap record rides along; if the ticker has no VIVEK
-    // plan at all, the PhaseMap-only path renders instead of failing.
+    // live (with the full 5.0 level ladder). Three-tier fallback so a ticker
+    // link NEVER dead-ends (owner rule 2026-07-02 after a journal name whose
+    // setup had ended showed "Chart unavailable"):
+    //   1. live VIVEK plan  -> full ladder chart (+ zones overlay if any)
+    //   2. PhaseMap setup   -> zones-as-ladder chart
+    //   3. neither          -> plain candles + SMAs, always renders
     if (isVivek) {
       Promise.all([fetchResultMeta(), fetchPhaseMapRec()]).then(([meta, rec]) => {
         pmRec = rec;
         const hasPlan = meta && meta.entry != null && meta.stop != null && meta.tp1 != null;
-        if (!hasPlan && rec) { pmOnlyFallback(baseSymbol, meta, rec); return; }
-        vivekFallback(baseSymbol, meta);
+        if (hasPlan) { vivekFallback(baseSymbol, meta); return; }
+        pmOnlyFallback(baseSymbol, meta, rec);   // rec may be null -> plain chart
       });
       return;
     }
