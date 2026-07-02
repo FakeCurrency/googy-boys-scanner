@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.042,
-      "unreal_usd": 1.47
+      "unreal_r": 0.044,
+      "unreal_usd": 1.54
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -685,8 +685,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.018,
-      "unreal_usd": -0.63
+      "unreal_r": 0.009,
+      "unreal_usd": 0.3
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -767,14 +767,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0071,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0071,
       "exits": [],
       "mae": 54.92261887,
-      "mfe": 54.92261887,
+      "mfe": 55.649078369140625,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.068,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 3.32413331,
       "notional": 181.8,
@@ -782,7 +782,9 @@
       "leverage_target": 3.0,
       "risk_pct": 0.35,
       "risk_usd": 35.0,
-      "source": "vivek_bot"
+      "source": "vivek_bot",
+      "unreal_r": 0.068,
+      "unreal_usd": 2.36
     }
   ],
   "closed": [],
@@ -794,9 +796,9 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 0.84,
-      "session_usd": 0.84,
-      "open": 2
+      "unrealised_usd": 4.21,
+      "session_usd": 4.21,
+      "open": 3
     },
     "asx": {
       "market": "asx",
@@ -823,8 +825,8 @@
   },
   "summary": {
     "open": 16,
-    "unreal_usd": -35.22,
+    "unreal_usd": -31.86,
     "updated_day": "2026-07-02"
   },
-  "updated_at": "2026-07-02T08:32:26+00:00"
+  "updated_at": "2026-07-02T10:17:17+00:00"
 }
