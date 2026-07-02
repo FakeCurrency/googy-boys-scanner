@@ -107,7 +107,9 @@ def scan_ticker(ticker: str, df: pd.DataFrame, market: str = "asx",
     """Run both directions over one ticker's daily bars. Returns 0-2 records."""
     if df is None or len(df) < CONFIG.min_history_bars:
         return []
-    df = df.dropna(subset=["Open", "High", "Low", "Close"]).reset_index(drop=True)
+    df = df.dropna(subset=["Open", "High", "Low", "Close"])
+    # zero-priced rows are feed glitches — they poison ATR, buffers and depth
+    df = df[(df[["Open", "High", "Low", "Close"]] > 0).all(axis=1)].reset_index(drop=True)
     if len(df) < CONFIG.min_history_bars:
         return []
     ind = compute_indicators(df, volume_is_usd=volume_is_usd)

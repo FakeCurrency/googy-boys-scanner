@@ -29,6 +29,9 @@ class SetupEngine:
     ind: IndicatorSet
     bull: bool
     market: str = "asx"
+    recorder: object = None      # optional callback(i, engine) after every bar
+    #                              (used by the M4 backtest harness — the engine
+    #                              itself never reads it, so zero lookahead holds)
 
     state: str = "NEUTRAL"
     state_log: list = field(default_factory=list)   # (bar_index, state)
@@ -115,6 +118,8 @@ class SetupEngine:
     def process(self) -> None:
         for i in range(len(self.ind.close)):
             self.on_bar(i)
+            if self.recorder is not None:
+                self.recorder(i, self)
 
     def on_bar(self, i: int) -> None:
         ind = self.ind
@@ -186,7 +191,7 @@ class SetupEngine:
     def _module2_sweep(self, i: int, o, h, l, c) -> None:
         ind = self.ind
         key = float(ind.key_low[i]) if self.bull else float(ind.key_high[i])
-        if math.isnan(key):
+        if math.isnan(key) or key <= 0:   # zero/negative level = corrupt data row
             return
         buf = self._buffer(i)
 
@@ -223,6 +228,8 @@ class SetupEngine:
             if not deeper:
                 return
 
+        if key_level <= 0:
+            return   # degenerate cluster level (bad data) — never a sweep
         depth = (abs(key_level - extreme)) / key_level
         if depth > self._max_depth(c):
             return   # breakdown/blow-off, not a sweep — reject

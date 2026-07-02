@@ -1292,8 +1292,10 @@
         `<span style="color:#37d0c4;font-weight:700">PHASEMAP</span>` +
         `<span style="font-weight:700">${esc(pmRec.state.replace("_", " "))}</span>` +
         (pmRec.tier ? `<span style="color:#2fd07f;font-weight:700">${esc(pmRec.tier)}</span>` : "") +
-        `<span style="color:#6d7889">${esc(pmRec.regime)}</span>` +
-        `<span style="flex:1 1 100%;color:#8a93a5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
+        `<span style="color:#8b96a9">${esc(pmRec.regime)}</span>` +
+        (pmRec.next ? `<span style="flex:1 1 100%;color:#37d0c4;line-height:1.5">` +
+          `<b>WANTED NEXT</b> · ${esc(pmRec.next)}</span>` : "") +
+        `<span style="flex:1 1 100%;color:#98a2b5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
         `<a href="phasemap.html" style="color:#37d0c4">PhaseMap tab →</a>`;
       el.insertAdjacentElement("afterend", strip);
     }

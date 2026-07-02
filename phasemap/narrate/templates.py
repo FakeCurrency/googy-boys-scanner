@@ -112,6 +112,53 @@ TEMPLATES = {
     ),
 }
 
+# "What completes the picture" — the evidence the state machine is waiting
+# for next, per state. Same guardrails as narrations: observational voice,
+# computed slots only, no advice verbs, no predictions of WHERE — only WHAT
+# evidence would advance the state.
+NEXT_EVIDENCE = {
+    ("TRAP_SET", "bullish"): (
+        "a run of the {cluster_low}–{cluster_high} lows that closes back above "
+        "them, then a displacement candle within {window} sessions"),
+    ("TRAP_SET", "bearish"): (
+        "a run of the {cluster_low}–{cluster_high} highs that closes back below "
+        "them, then a displacement candle within {window} sessions"),
+    ("SWEPT", "bullish"): (
+        "a displacement candle — range at least {tr_mult}× normal, small lower "
+        "wick, close near its high — within {bars_remaining} sessions, or the "
+        "setup expires"),
+    ("SWEPT", "bearish"): (
+        "a displacement candle — range at least {tr_mult}× normal, small upper "
+        "wick, close near its low — within {bars_remaining} sessions, or the "
+        "setup expires"),
+    ("DISPLACED", "bullish"): (
+        "shallow pullbacks holding above the {inv_soft_low}–{inv_soft_high} "
+        "area, drawing toward {next_target}"),
+    ("DISPLACED", "bearish"): (
+        "shallow bounces holding below the {inv_soft_low}–{inv_soft_high} "
+        "area, drawing toward {next_target}"),
+    ("RUNNING", "bullish"): (
+        "pullbacks staying above {inv_soft_low}–{inv_soft_high}; next "
+        "objective {next_target}"),
+    ("RUNNING", "bearish"): (
+        "bounces staying below {inv_soft_low}–{inv_soft_high}; next "
+        "objective {next_target}"),
+    ("STALLED", "bullish"): (
+        "nothing here — the expansion thesis is done; deep-retracement "
+        "(rotation) logic owns it now"),
+    ("STALLED", "bearish"): (
+        "nothing here — the expansion thesis is done; deep-retracement "
+        "(rotation) logic owns it now"),
+    ("COMPLETE", "bullish"): (
+        "a new range to form — every mapped objective was consumed"),
+    ("COMPLETE", "bearish"): (
+        "a new range to form — every mapped objective was consumed"),
+    ("DEAD", "bullish"): (
+        "a new trap to build — the swept low failed on a closing basis"),
+    ("DEAD", "bearish"): (
+        "a new trap to build — the swept high failed on a closing basis"),
+}
+
 # Plain-English names for zone sources (used in "{t1_sources}")
 SOURCE_NAMES = {
     "box_high": "the top of the range",

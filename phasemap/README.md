@@ -16,7 +16,7 @@ with the disclaimer line.
 | M1 detection engine (modules 0–5, zones, state machine, JSON writer) | ✅ built, all 8 spec fixtures pass |
 | M2 narration engine (full state × direction template set) | ✅ built, coverage-tested |
 | M3 frontend (tab, cards, zone ladder, legend + SVG diagrams) | ✅ built as vanilla-JS pages (`public/phasemap.html`, `phasemap-legend.html`, `js/phasemap.js`, `css/phasemap.css`) — owner chose a separate tab in the existing app over the spec's React scaffold |
-| M4 backtest & proof harness (fills the `{stats}` slot) | 🔜 not started |
+| M4 backtest & proof harness (fills the `{stats}` slot) | ✅ built — `python -m phasemap.backtest --market asx --period 5y --write-stats`; reports in `backtest/reports/`, stats artefacts in `backtest/stats/` (run.py refuses them unless sample ≥ 30 AND ruleset matches). **All numbers are survivor-biased until the data moves off yfinance** — the report banner says so |
 | M5 SMT divergence module | 🔜 deferred (Phase 2) |
 | M6 chop/liquidity heatmap | 🔜 deferred (Phase 3) |
 

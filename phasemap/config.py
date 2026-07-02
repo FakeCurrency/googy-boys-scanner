@@ -14,7 +14,8 @@ from dataclasses import dataclass, field
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant
-RULESET_VERSION = "1.1.0"          # 1.1.0: multi-market (asx/nasdaq/crypto) tick + turnover rules
+RULESET_VERSION = "1.2.0"          # 1.2.0: M4 backtest harness + {stats} slot wired
+#                                    1.1.0: multi-market (asx/nasdaq/crypto) tick + turnover rules
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,14 @@ class PhaseMapConfig:
     # ---- Output ---------------------------------------------------------------
     output_dir: str = "public/data/phasemap"   # frontend reads latest.json here
     timezone: str = "Australia/Melbourne"
+
+    # ---- M4 backtest & proof harness -----------------------------------------
+    fwd_return_bars: tuple = (5, 10, 20)   # forward-return horizons per signal
+    stats_window_bars: int = 20            # "reached T1 within N sessions" window
+    backtest_horizon_bars: int = 40        # how long a signal is tracked forward
+    stats_min_signals: int = 30            # {stats} slot stays empty below this
+    oos_split_date: str = "2025-07-01"     # in-sample before, out-of-sample after
+    backtest_seed: int = 7                 # random-entry baseline (deterministic)
 
     # ---- Feature flags ---------------------------------------------------------
     enable_smt: bool = False           # Module 6 — Phase 2, do not build in v1

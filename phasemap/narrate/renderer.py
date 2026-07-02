@@ -6,7 +6,8 @@ empty (guardrail: no performance claims before M4).
 """
 
 from phasemap.config import CONFIG
-from phasemap.narrate.templates import DISCLAIMER, SOURCE_NAMES, TEMPLATES
+from phasemap.narrate.templates import (DISCLAIMER, NEXT_EVIDENCE,
+                                        SOURCE_NAMES, TEMPLATES)
 
 
 def fmt_price(x: float) -> str:
@@ -102,3 +103,30 @@ def render(record: dict, stats: dict = None) -> str:
 
     text = template.format(**slots)
     return f"{text} {DISCLAIMER}"
+
+
+def render_next(record: dict) -> str:
+    """The 'what completes the picture' line — the evidence the state machine
+    is waiting for. Computed slots only, like everything else."""
+    template = NEXT_EVIDENCE[(record["state"], record["direction"])]
+    m = record.get("metrics", {})
+    slots = {
+        "window": CONFIG.displacement_window_bars,
+        "tr_mult": f"{CONFIG.displacement_tr_mult:g}",
+        "bars_remaining": m.get("bars_remaining", "?"),
+    }
+    if "cluster_low" in m:
+        slots["cluster_low"] = fmt_price(m["cluster_low"])
+        slots["cluster_high"] = fmt_price(m["cluster_high"])
+    inv_soft = _zone_by_id(record, "inv_soft")
+    if inv_soft:
+        slots["inv_soft_low"] = fmt_price(inv_soft["low"])
+        slots["inv_soft_high"] = fmt_price(inv_soft["high"])
+    targets = [z for z in record.get("zones", []) if z["type"] == "TARGET"]
+    live = next((z for z in targets if z["status"] != "CONSUMED"),
+                targets[-1] if targets else None)
+    if live:
+        slots["next_target"] = (f"the {fmt_price(live['low'])}–"
+                                f"{fmt_price(live['high'])} zone "
+                                f"({live['id'].upper()})")
+    return template.format(**slots)

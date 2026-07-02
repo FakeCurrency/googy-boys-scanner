@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=53" />
-  <link rel="stylesheet" href="css/phasemap.css?v=3" />
+  <link rel="stylesheet" href="css/styles.css?v=54" />
+  <link rel="stylesheet" href="css/phasemap.css?v=5" />
 </head>
 <body>
   <header class="topbar">
@@ -58,6 +58,9 @@
         <button class="pm-chip" data-dir="bullish">LONG</button>
         <button class="pm-chip" data-dir="bearish">SHORT</button>
       </div>
+      <div class="pm-filter-group" id="pm-liq-filter" role="group" aria-label="Liquidity">
+        <button class="pm-chip" data-liq="hide" title="Hide results below the $200k/day turnover floor. The ILLIQUID tag itself is never disabled — this only filters your view.">HIDE ILLIQUID</button>
+      </div>
       <input class="pm-search" id="pm-search" type="search" placeholder="Ticker…" autocomplete="off" spellcheck="false" />
     </div>
 
@@ -68,6 +71,6 @@
   </main>
 
   <script src="js/phasemap-shared.js?v=2"></script>
-  <script src="js/phasemap.js?v=3"></script>
+  <script src="js/phasemap.js?v=5"></script>
 </body>
 </html>

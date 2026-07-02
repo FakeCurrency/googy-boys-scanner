@@ -22,6 +22,12 @@
         return MARKETS.includes(m) ? m : "asx";
       } catch (_) { return "asx"; }
     })(),
+    // User-controlled view filter only — the ILLIQUID tag itself can never be
+    // disabled (spec guardrail 7). Defaults to showing everything.
+    hideIlliquid: (() => {
+      try { return localStorage.getItem("pm-hide-illiquid") === "1"; }
+      catch (_) { return false; }
+    })(),
   };
 
   const $ = (sel, el = document) => el.querySelector(sel);
@@ -46,6 +52,7 @@
       </div>
       ${PM.identityHTML(rec)}
       <div class="pm-ladder">${PM.ladderHTML(rec)}</div>
+      ${rec.next ? `<div class="pm-next"><span class="pm-next-label">WANTED NEXT</span> ${PM.esc(rec.next)}</div>` : ""}
       <p class="pm-narration">${PM.esc(rec.narration)}</p>
       <div class="pm-metrics">${PM.metricsHTML(rec)}</div>
     </article>`;
@@ -58,6 +65,7 @@
       states.includes(r.state) &&
       (state.tier === "all" || r.tier === state.tier) &&
       (state.dir === "all" || r.direction === state.dir) &&
+      (!state.hideIlliquid || !r.tags.includes("ILLIQUID")) &&
       (!q || r.ticker.toUpperCase().includes(q)));
   }
 
@@ -123,6 +131,17 @@
       }));
     chipGroup("#pm-tier-filter", "tier", "tier");
     chipGroup("#pm-dir-filter", "dir", "dir");
+    const liqBtn = $("#pm-liq-filter .pm-chip");
+    if (liqBtn) {
+      liqBtn.classList.toggle("is-active", state.hideIlliquid);
+      liqBtn.addEventListener("click", () => {
+        state.hideIlliquid = !state.hideIlliquid;
+        liqBtn.classList.toggle("is-active", state.hideIlliquid);
+        try { localStorage.setItem("pm-hide-illiquid", state.hideIlliquid ? "1" : "0"); } catch (_) {}
+        state.shown = PAGE;
+        render();
+      });
+    }
     $("#pm-search").addEventListener("input", (e) => {
       state.q = e.target.value;
       state.shown = PAGE;

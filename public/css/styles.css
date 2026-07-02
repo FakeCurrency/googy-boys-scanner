@@ -13,10 +13,13 @@
   --panel-3: #1b2130;
   --elevated: #151a23;
 
-  --text: #e6ebf4;
-  --text-2: #aab4c5;
-  --muted: #6d7889;
-  --muted-2: #49525f;
+  /* Legibility pass (owner request 2026-07-02): secondary/muted text lifted a
+     few steps brighter than the original terminal restyle — same dark theme,
+     easier to read. Previous values: #aab4c5 / #6d7889 / #49525f. */
+  --text: #eef2f9;
+  --text-2: #c3cddd;
+  --muted: #8b96a9;
+  --muted-2: #626d80;
 
   --separator: #1c2230;
   --border: #1c2230;

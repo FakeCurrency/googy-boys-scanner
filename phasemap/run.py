@@ -22,14 +22,31 @@ import zoneinfo
 from phasemap.config import CONFIG, PRODUCT_NAME, RULESET_VERSION
 from phasemap.data.provider import YFinanceProvider
 from phasemap.engine.scanner import scan_ticker, sort_records
-from phasemap.narrate.renderer import render
+from phasemap.narrate.renderer import render, render_next
 from phasemap.output.writer import build_snapshot, write_snapshot
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASX_UNIVERSE_CSV = os.path.join(REPO_ROOT, "data_universe", "asx_tickers.csv")
+STATS_DIR = os.path.join(REPO_ROOT, "phasemap", "backtest", "stats")
 
 MARKETS = ("asx", "nasdaq", "crypto")
 CHART_BARS = 220          # daily candles shipped to the chart page
+
+
+def load_stats(market: str):
+    """The M4 backtest's {stats} artefact — refused unless the sample is big
+    enough AND it was produced by the current ruleset (guardrail 5: no
+    performance claims that the harness didn't actually measure)."""
+    try:
+        with open(os.path.join(STATS_DIR, f"{market}.json"), encoding="utf-8") as f:
+            s = json.load(f)
+        if (s.get("sample", 0) >= CONFIG.stats_min_signals
+                and s.get("ruleset_version") == RULESET_VERSION
+                and s.get("hit_rate_pct") is not None):
+            return s
+    except Exception:
+        pass
+    return None
 
 
 def load_symbols(market: str) -> dict:
@@ -87,6 +104,7 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
     provider = YFinanceProvider({t: info["yf"] for t, info in symbols.items()},
                                 period=args.period)
     provider.fetch_all()
+    stats = load_stats(market)
 
     chart_dir = os.path.join(data_root, "charts", market)
     os.makedirs(chart_dir, exist_ok=True)
@@ -103,7 +121,12 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
         for rec, _eng in recs:
             rec["name"] = info.get("name") or t
             rec["sector"] = info.get("sector") or ("Crypto" if market == "crypto" else "")
-            rec["narration"] = render(rec)
+            # {stats} only speaks on graded continuation setups — the claim it
+            # makes ("reached its first target zone…") is about this pattern.
+            use_stats = stats if (rec["state"] in ("DISPLACED", "RUNNING")
+                                  and rec["tier"] in ("A+", "A")) else None
+            rec["narration"] = render(rec, use_stats)
+            rec["next"] = render_next(rec)
             results.append(rec)
         if recs and t not in charted:
             write_chart_json(chart_dir, t, df)
