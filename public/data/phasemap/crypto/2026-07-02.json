@@ -71,14 +71,16 @@
       "metrics": {
         "retrace_pct": 0.0563,
         "dist_to_yearly_open_pct": -0.3627,
-        "avg_turnover_20d": 1115696695,
-        "close": 550.12,
+        "avg_turnover_20d": 1115399204,
+        "close": 550.13,
         "sweep_date": "2026-05-31",
         "sweep_depth_pct": 0.0237,
         "displacement_date": "2026-06-02"
       },
       "smt": null,
       "route_to": null,
+      "name": "BNB",
+      "sector": "Crypto",
       "narration": "Displacement confirmed on 2026-06-02. First draw is the 541.96–651.52 zone (the 1.618–2.0 extension of the leg + a shelf of equal lows + the quarterly open + the bottom of the range + the 1.0–1.272 extension of the leg). The continuation thesis stays valid while bounces hold below the 640.98–645.12 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 753.72. Analysis only — not financial advice."
     },
     {
@@ -157,8 +159,8 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0715,
-        "dist_to_yearly_open_pct": -0.445,
+        "retrace_pct": 0.0662,
+        "dist_to_yearly_open_pct": -0.4456,
         "avg_turnover_20d": 3,
         "close": 0.0002,
         "sweep_date": "2026-06-30",
@@ -167,7 +169,100 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "MemeCore",
+      "sector": "Crypto",
       "narration": "Displacement confirmed on 2026-06-30. First draw is the 0.0002–0.0002 zone (the 1.0–1.272 extension of the leg); beyond that, 0.0002–0.0002 (the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 0.0003–0.0003 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.0003. Analysis only — not financial advice."
+    },
+    {
+      "ticker": "APT",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0002,
+          "high": 0.0002,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2025-05-15"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0002,
+          "high": 0.0002,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2025-05-15"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0002,
+          "high": 0.0002,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2025-05-15"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0001,
+          "high": 0.0002,
+          "status": "UNTESTED",
+          "created_date": "2025-05-15"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0001,
+          "high": 0.0002,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2025-05-15"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0001,
+          "high": 0.0001,
+          "status": "TESTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "box_low",
+            "quarterly_open"
+          ],
+          "created_date": "2025-05-15"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.385,
+        "avg_turnover_20d": 0,
+        "close": 0.0001,
+        "sweep_date": "2025-05-15",
+        "sweep_depth_pct": 0.0052,
+        "displacement_date": "2025-05-15"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Aptos",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2025-05-15. First draw is the 0.0001–0.0002 zone (the 1.0–1.272 extension of the leg); beyond that, 0.0001–0.0001 (the 1.618–2.0 extension of the leg + the bottom of the range + the quarterly open). The continuation thesis stays valid while bounces hold below the 0.0002–0.0002 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.0002. Analysis only — not financial advice."
     },
     {
       "ticker": "TRX",
@@ -268,16 +363,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0936,
-        "dist_to_yearly_open_pct": 0.1152,
-        "avg_turnover_20d": 546197619,
-        "close": 0.317,
+        "retrace_pct": 0.0945,
+        "dist_to_yearly_open_pct": 0.1154,
+        "avg_turnover_20d": 546025872,
+        "close": 0.3171,
         "sweep_date": "2026-05-28",
         "sweep_depth_pct": 0.0417,
         "displacement_date": "2026-05-28"
       },
       "smt": null,
       "route_to": null,
+      "name": "TRON",
+      "sector": "Crypto",
       "narration": "Displacement confirmed on 2026-05-28. First draw is the 0.341–0.349 zone (the 1.0–1.272 extension of the leg + a prior swing low); beyond that, 0.326–0.337 (the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 0.340–0.342 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.371. Analysis only — not financial advice."
     },
     {
@@ -311,16 +408,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3548,
-        "dist_to_yearly_open_pct": -0.522,
-        "avg_turnover_20d": 11839104,
-        "close": 1.664,
+        "retrace_pct": 0.3126,
+        "dist_to_yearly_open_pct": -0.5201,
+        "avg_turnover_20d": 11843080,
+        "close": 1.6705,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0136,
         "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
+      "name": "Bitget Token",
+      "sector": "Crypto",
       "narration": "BGB ran the 1.565–1.586 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -354,16 +453,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3848,
+        "retrace_pct": 0.3843,
         "dist_to_yearly_open_pct": -0.3627,
-        "avg_turnover_20d": 1115696695,
-        "close": 550.12,
+        "avg_turnover_20d": 1115399204,
+        "close": 550.13,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0084,
         "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
+      "name": "BNB",
+      "sector": "Crypto",
       "narration": "BNB ran the 538.60–543.18 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -397,16 +498,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2271,
-        "dist_to_yearly_open_pct": -0.3094,
-        "avg_turnover_20d": 28447568211,
-        "close": 60434.3281,
+        "retrace_pct": 0.2171,
+        "dist_to_yearly_open_pct": -0.309,
+        "avg_turnover_20d": 28412830240,
+        "close": 60469.1797,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0057,
         "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
+      "name": "Bitcoin",
+      "sector": "Crypto",
       "narration": "BTC ran the 57747.77–58075.92 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -444,7 +547,7 @@
       "metrics": {
         "retrace_pct": 0.2326,
         "dist_to_yearly_open_pct": -0.286,
-        "avg_turnover_20d": 27106370,
+        "avg_turnover_20d": 27100729,
         "close": 1.345,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0143,
@@ -452,6 +555,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "PancakeSwap",
+      "sector": "Crypto",
       "narration": "CAKE ran the 1.299–1.318 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -485,16 +590,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2284,
-        "dist_to_yearly_open_pct": -0.3871,
-        "avg_turnover_20d": 7296547,
-        "close": 0.0555,
+        "retrace_pct": 0.2812,
+        "dist_to_yearly_open_pct": -0.389,
+        "avg_turnover_20d": 7299981,
+        "close": 0.0554,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0078,
         "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
+      "name": "Cronos",
+      "sector": "Crypto",
       "narration": "CRO ran the 0.0531–0.0535 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -528,16 +635,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1627,
-        "dist_to_yearly_open_pct": -0.6128,
-        "avg_turnover_20d": 162741806,
-        "close": 0.0773,
+        "retrace_pct": 0.1982,
+        "dist_to_yearly_open_pct": -0.6143,
+        "avg_turnover_20d": 162806904,
+        "close": 0.077,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0021,
         "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
+      "name": "Ethena",
+      "sector": "Crypto",
       "narration": "ENA ran the 0.0702–0.0704 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -571,9 +680,9 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3473,
-        "dist_to_yearly_open_pct": -0.3674,
-        "avg_turnover_20d": 3198592,
+        "retrace_pct": 0.4072,
+        "dist_to_yearly_open_pct": -0.3684,
+        "avg_turnover_20d": 3198563,
         "close": 0.0064,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.002,
@@ -581,6 +690,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Flare",
+      "sector": "Crypto",
       "narration": "FLR ran the 0.0063–0.0063 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -614,16 +725,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1437,
-        "dist_to_yearly_open_pct": -0.3113,
-        "avg_turnover_20d": 57964497,
-        "close": 0.0732,
+        "retrace_pct": 0.2393,
+        "dist_to_yearly_open_pct": -0.3144,
+        "avg_turnover_20d": 57954391,
+        "close": 0.0728,
         "sweep_date": "2026-06-28",
         "sweep_depth_pct": 0.0072,
         "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
+      "name": "Hedera",
+      "sector": "Crypto",
       "narration": "HBAR ran the 0.0702–0.0707 lows on 2026-06-28 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -657,16 +770,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0365,
-        "dist_to_yearly_open_pct": 0.2751,
-        "avg_turnover_20d": 315581292,
-        "close": 1.928,
+        "retrace_pct": 0.1151,
+        "dist_to_yearly_open_pct": 0.2651,
+        "avg_turnover_20d": 315474540,
+        "close": 1.913,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0085,
         "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
+      "name": "NEAR Protocol",
+      "sector": "Crypto",
       "narration": "NEAR ran the 1.744–1.759 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -700,16 +815,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2092,
-        "dist_to_yearly_open_pct": -0.0601,
-        "avg_turnover_20d": 131566438,
-        "close": 4070.02,
+        "retrace_pct": 0.2603,
+        "dist_to_yearly_open_pct": -0.0619,
+        "avg_turnover_20d": 131591646,
+        "close": 4062.3201,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0032,
         "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
+      "name": "PAX Gold",
+      "sector": "Crypto",
       "narration": "PAXG ran the 3950.90–3963.45 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -743,16 +860,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1879,
-        "dist_to_yearly_open_pct": -0.059,
-        "avg_turnover_20d": 220833515,
-        "close": 4068.7251,
+        "retrace_pct": 0.2242,
+        "dist_to_yearly_open_pct": -0.0602,
+        "avg_turnover_20d": 220859441,
+        "close": 4063.4031,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0029,
         "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
+      "name": "Tether Gold",
+      "sector": "Crypto",
       "narration": "XAUT ran the 3949.75–3961.12 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -786,9 +905,9 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.4465,
-        "avg_turnover_20d": 9166218,
+        "retrace_pct": 0.0722,
+        "dist_to_yearly_open_pct": -0.4472,
+        "avg_turnover_20d": 9165869,
         "close": 0.0282,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0002,
@@ -796,6 +915,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "XDC Network",
+      "sector": "Crypto",
       "narration": "XDC ran the 0.0277–0.0277 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -829,16 +950,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2648,
-        "dist_to_yearly_open_pct": -0.0133,
-        "avg_turnover_20d": 320051775,
-        "close": 0.198,
+        "retrace_pct": 0.2938,
+        "dist_to_yearly_open_pct": -0.0181,
+        "avg_turnover_20d": 319825650,
+        "close": 0.197,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0618,
         "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
+      "name": "Stellar",
+      "sector": "Crypto",
       "narration": "XLM ran the 0.174–0.185 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -872,16 +995,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0556,
-        "dist_to_yearly_open_pct": -0.175,
-        "avg_turnover_20d": 513683769,
-        "close": 422.88,
+        "retrace_pct": 0.093,
+        "dist_to_yearly_open_pct": -0.1789,
+        "avg_turnover_20d": 513990362,
+        "close": 420.84,
         "sweep_date": "2026-06-29",
         "sweep_depth_pct": 0.0779,
         "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
+      "name": "Zcash",
+      "sector": "Crypto",
       "narration": "ZEC ran the 371.37–402.73 lows on 2026-06-29 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice."
     },
     {
@@ -908,6 +1033,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Jupiter",
+      "sector": "Crypto",
       "narration": "JUP has spent 7 sessions inside a 2263.6% range. Equal highs are resting at 0.0002–0.0003 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice."
     },
     {
@@ -935,6 +1062,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Jupiter",
+      "sector": "Crypto",
       "narration": "JUP has spent 7 sessions inside a 2263.6% range. Equal lows are resting at 0.0000–0.0000 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice."
     },
     {
@@ -947,9 +1076,9 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0434,
-        "avg_turnover_20d": 626447,
-        "close": 9.1909,
+        "dist_to_yearly_open_pct": -0.0482,
+        "avg_turnover_20d": 628683,
+        "close": 9.1446,
         "bars_in_box": 42,
         "box_low": 9.0721,
         "box_high": 10.1266,
@@ -959,6 +1088,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "LEO Token",
+      "sector": "Crypto",
       "narration": "LEO has spent 42 sessions inside a 11.6% range. Equal highs are resting at 10.09–10.13 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice."
     },
     {
@@ -971,9 +1102,9 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3851,
-        "avg_turnover_20d": 240543390,
-        "close": 7.495,
+        "dist_to_yearly_open_pct": -0.3861,
+        "avg_turnover_20d": 240372481,
+        "close": 7.482,
         "bars_in_box": 1,
         "box_low": 7.0224,
         "box_high": 9.7476,
@@ -983,6 +1114,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Chainlink",
+      "sector": "Crypto",
       "narration": "LINK has spent 1 sessions inside a 38.8% range. Equal lows are resting at 7.02–7.12 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice."
     },
     {
@@ -1009,7 +1142,35 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Lighter",
+      "sector": "Crypto",
       "narration": "LIT has spent 9 sessions inside a 430.0% range. Equal lows are resting at 0.0001–0.0001 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice."
+    },
+    {
+      "ticker": "QNT",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0313,
+        "avg_turnover_20d": 7726977,
+        "close": 67.21,
+        "bars_in_box": 7,
+        "box_low": 62.8799,
+        "box_high": 83.6076,
+        "box_height_pct": 0.3296,
+        "cluster_low": 62.8799,
+        "cluster_high": 63.7342
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Quant",
+      "sector": "Crypto",
+      "narration": "QNT has spent 7 sessions inside a 33.0% range. Equal lows are resting at 62.88–63.73 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice."
     },
     {
       "ticker": "SKY",
@@ -1036,6 +1197,8 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Sky",
+      "sector": "Crypto",
       "narration": "SKY has spent 4 sessions inside a 1.8% range. Equal highs are resting at 0.0150–0.0150 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice."
     },
     {
@@ -1062,7 +1225,89 @@
       },
       "smt": null,
       "route_to": null,
+      "name": "Uniswap",
+      "sector": "Crypto",
       "narration": "UNI has spent 1 sessions inside a 18.7% range. Equal highs are resting at 0.0002–0.0002 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice."
+    },
+    {
+      "ticker": "ATOM",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 1.5668,
+          "high": 1.604,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.5093,
+          "high": 1.5668,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-06"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 1.7796,
+          "high": 1.7983,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 1.8529,
+          "high": 1.9205,
+          "status": "UNTESTED",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 1.9973,
+          "high": 2.532,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "box_high",
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-06-11"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0557,
+        "dist_to_yearly_open_pct": -0.2003,
+        "avg_turnover_20d": 33136081,
+        "close": 1.541,
+        "sweep_date": "2026-06-06",
+        "sweep_depth_pct": 0.0232,
+        "displacement_date": "2026-06-11"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Cosmos Hub",
+      "sector": "Crypto",
+      "narration": "ATOM touched the 50% area at 1.780–1.798. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 1.509, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
       "ticker": "INJ",
@@ -1131,16 +1376,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1636,
-        "dist_to_yearly_open_pct": 0.0882,
-        "avg_turnover_20d": 102917732,
-        "close": 4.556,
+        "retrace_pct": 0.1558,
+        "dist_to_yearly_open_pct": 0.0827,
+        "avg_turnover_20d": 102912662,
+        "close": 4.533,
         "sweep_date": "2026-05-30",
         "sweep_depth_pct": 0.0538,
         "displacement_date": "2026-06-04"
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "Injective",
+      "sector": "Crypto",
       "narration": "INJ touched the 50% area at 5.55–5.64. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 7.32, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1243,16 +1490,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1728,
-        "dist_to_yearly_open_pct": -0.2775,
-        "avg_turnover_20d": 12936520,
-        "close": 0.031,
+        "retrace_pct": 0.1831,
+        "dist_to_yearly_open_pct": -0.2788,
+        "avg_turnover_20d": 12929350,
+        "close": 0.0309,
         "sweep_date": "2026-06-25",
         "sweep_depth_pct": 0.0127,
         "displacement_date": "2026-06-29"
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "Kaspa",
+      "sector": "Crypto",
       "narration": "KAS touched the 50% area at 0.0289–0.0293. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0260, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1332,16 +1581,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1386,
-        "dist_to_yearly_open_pct": 0.2751,
-        "avg_turnover_20d": 315581292,
-        "close": 1.928,
+        "retrace_pct": 0.1273,
+        "dist_to_yearly_open_pct": 0.2651,
+        "avg_turnover_20d": 315474540,
+        "close": 1.913,
         "sweep_date": "2026-06-03",
         "sweep_depth_pct": 0.0347,
         "displacement_date": "2026-06-04"
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "NEAR Protocol",
+      "sector": "Crypto",
       "narration": "NEAR touched the 50% area at 2.41–2.45. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 3.20, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1418,9 +1669,9 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1715,
+        "retrace_pct": 0.1717,
         "dist_to_yearly_open_pct": -0.6529,
-        "avg_turnover_20d": 7608108,
+        "avg_turnover_20d": 7608184,
         "close": 0.0309,
         "sweep_date": "2026-05-31",
         "sweep_depth_pct": 0.0257,
@@ -1428,6 +1679,8 @@
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "Midnight",
+      "sector": "Crypto",
       "narration": "NIGHT touched the 50% area at 0.0351–0.0356. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0427, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1522,16 +1775,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.464,
-        "dist_to_yearly_open_pct": -0.2801,
-        "avg_turnover_20d": 26669489,
-        "close": 78.8571,
+        "retrace_pct": 0.4625,
+        "dist_to_yearly_open_pct": -0.2805,
+        "avg_turnover_20d": 26629483,
+        "close": 78.8172,
         "sweep_date": "2026-06-01",
         "sweep_depth_pct": 0.0457,
         "displacement_date": "2026-06-02"
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "OKB",
+      "sector": "Crypto",
       "narration": "OKB touched the 50% area at 79.83–80.73. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 95.14, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1616,16 +1871,18 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1236,
-        "dist_to_yearly_open_pct": 0.2054,
-        "avg_turnover_20d": 36134998,
-        "close": 1.548,
+        "retrace_pct": 0.1129,
+        "dist_to_yearly_open_pct": 0.1992,
+        "avg_turnover_20d": 36127701,
+        "close": 1.54,
         "sweep_date": "2026-06-04",
         "sweep_depth_pct": 0.0586,
         "displacement_date": "2026-06-04"
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "Render",
+      "sector": "Crypto",
       "narration": "RENDER touched the 50% area at 1.830–1.853. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 2.30, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     },
     {
@@ -1731,6 +1988,8 @@
       },
       "smt": null,
       "route_to": "fib_reversal",
+      "name": "Uniswap",
+      "sector": "Crypto",
       "narration": "UNI touched the 50% area at 0.0002–0.0002. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0001, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice."
     }
   ]

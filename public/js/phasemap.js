@@ -28,7 +28,9 @@
   const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
   function chartURL(rec) {
-    return `phasemap-chart.html?m=${state.market}&t=${encodeURIComponent(rec.ticker)}&d=${rec.direction}`;
+    // The ORIGINAL chart page — full VIVEK-grade charting (multi-timeframe,
+    // SMAs, drawing tools, live price, TradingView link) + the zones overlaid.
+    return `chart.html?m=${state.market}&s=${encodeURIComponent(rec.ticker)}&pm=1&dir=${rec.direction}`;
   }
 
   function cardHTML(rec, idx) {
@@ -42,6 +44,7 @@
         ${speak}
         <span class="pm-chart-cue" aria-hidden="true">CHART →</span>
       </div>
+      ${PM.identityHTML(rec)}
       <div class="pm-ladder">${PM.ladderHTML(rec)}</div>
       <p class="pm-narration">${PM.esc(rec.narration)}</p>
       <div class="pm-metrics">${PM.metricsHTML(rec)}</div>

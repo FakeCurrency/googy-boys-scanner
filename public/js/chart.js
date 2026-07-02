@@ -30,6 +30,25 @@
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
+  // ── PhaseMap overlay (?pm=1&dir=bullish|bearish) — draws the scanned zone
+  // bands + sweep/displacement markers ON TOP of the normal chart. When the
+  // ticker has no live VIVEK plan, the chart still renders (pmOnlyFallback)
+  // with the same candles/SMAs/timeframes, using the zones as its ladder.
+  const pmWanted = params.get("pm") === "1";
+  const pmDirWanted = (params.get("dir") || "").toLowerCase();
+  let pmRec = null;
+  function fetchPhaseMapRec() {
+    if (!pmWanted || market === "scalp") return Promise.resolve(null);
+    const want = decodeURIComponent(symbol || "").toUpperCase();
+    return fetch(`data/phasemap/${market}/latest.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const rows = ((j && j.results) || []).filter((r) => String(r.ticker).toUpperCase() === want);
+        return rows.find((r) => r.direction === pmDirWanted) || rows[0] || null;
+      })
+      .catch(() => null);
+  }
+
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -518,6 +537,59 @@
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
+  }
+
+  // ── PhaseMap-only chart: the ticker has no live VIVEK plan but IS in the
+  // PhaseMap scan. Same candle/SMA display + D/3D/W timeframes as a VIVEK
+  // chart; the level ladder comes from the PhaseMap zones (drawn in render).
+  // Candles prefer the scan's saved daily file (deterministic, works offline),
+  // falling back to live history.
+  function pmChartBars(SYM) {
+    return fetch(`data/phasemap/charts/${market}/${encodeURIComponent(SYM)}.json`,
+      { cache: "no-cache" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => ((j && j.candles) || []).map((c) => ({
+        time: Math.floor(Date.parse(c.t + "T00:00:00Z") / 1000),
+        open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v || 0,
+      })))
+      .catch(() => []);
+  }
+
+  function pmOnlyFallback(SYM, meta, rec) {
+    const m = meta || {};
+    const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
+    const bull = rec.direction === "bullish";
+    const d = {
+      symbol: String(SYM).toUpperCase(), name: m.name || rec.name || SYM,
+      asset_type: assetType,
+      price: (rec.metrics && rec.metrics.close) != null ? rec.metrics.close
+           : (m.price != null ? m.price : null),
+      grade: String(rec.tier || "").toUpperCase() === "WATCH" ? "WATCH" : (rec.tier || ""),
+      score: 0, score_max: 0,
+      chips: [rec.state.replace("_", " "), rec.regime].concat(rec.tags || []),
+      sector: m.sector || rec.sector || "",
+      currency_symbol: m.currency_symbol || (market === "asx" ? "A$" : "$"),
+      tv_symbol: m.tv_symbol || SYM, dir: bull ? "LONG" : "SHORT",
+      analysis: rec.narration || "",
+      default_tf: "1D", level_lines: [], timeframes: {},
+      _fallback: true, _vivek: false, _pm: true,
+    };
+    const liveDaily = () => (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "5y", "1d")
+      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d"));
+    pmChartBars(d.symbol)
+      .then((bars) => (bars.length >= 6 ? bars : liveDaily()))
+      .then((daily) => {
+        if (!daily || daily.length < 6) throw new Error("thin");
+        d.timeframes["1D"] = barsToVivekTF(daily);
+        const d3 = bucketBars(daily, 3 * 86400);
+        if (d3.length >= 6) d.timeframes["3D"] = barsToVivekTF(d3);
+        const wk = resampleWeekly(daily);
+        if (wk.length >= 6) d.timeframes["1W"] = barsToVivekTF(wk);
+        if (d.price == null) d.price = daily[daily.length - 1].close;
+        render(d);
+      })
+      .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
   // A purple "ENTRY" marker, snapped to the bar the fill falls inside so it lines
@@ -1123,7 +1195,7 @@
     }
     // Surface that this is a live-built chart rather than the saved scan view.
     // (VIVEK is always rendered live by design, so it doesn't get the badge.)
-    if (d._fallback && !d._vivek) {
+    if (d._fallback && !d._vivek && !d._pm) {
       const note = document.createElement("span");
       note.className = "ct-fallback-note";
       note.textContent = "live fallback";
@@ -1178,6 +1250,86 @@
       color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
       priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
     }));
+
+    // ── PhaseMap zone bands (?pm=1) — every scanned zone as a shaded band with
+    // a labelled dotted midline. Bands are price-static, so only their time
+    // span is refreshed per timeframe (applyPmZones, called from applyTF).
+    const pmBands = [];
+    if (pmRec) {
+      const PM_COLS = {
+        TARGET: ["rgba(47,208,127,0.14)", "#2fd07f"],
+        ENTRY_CONTINUATION: ["rgba(55,208,196,0.12)", "#37d0c4"],
+        INVALIDATION_HARD: ["rgba(255,91,91,0.14)", "#ff5b5b"],
+        INVALIDATION_MOMENTUM: ["rgba(255,91,91,0.14)", "#ff5b5b"],
+        DEMAND: ["rgba(255,178,36,0.16)", "#ffb224"],
+        SUPPLY: ["rgba(255,178,36,0.16)", "#ffb224"],
+      };
+      const PM_LABEL = { ENTRY_CONTINUATION: "ENTRY", INVALIDATION_HARD: "HARD INV",
+        INVALIDATION_MOMENTUM: "50% INV", DEMAND: "DEMAND", SUPPLY: "SUPPLY" };
+      (pmRec.zones || []).forEach((z) => {
+        const cols = PM_COLS[z.type] || ["rgba(109,120,137,0.10)", "#6d7889"];
+        const dead = z.status === "CONSUMED" || z.status === "VIOLATED";
+        const fill = dead ? cols[0].replace(/[\d.]+\)$/, "0.05)") : cols[0];
+        const s = chart.addBaselineSeries({
+          baseValue: { type: "price", price: z.low },
+          topFillColor1: fill, topFillColor2: fill,
+          topLineColor: "transparent", bottomLineColor: "transparent",
+          bottomFillColor1: "transparent", bottomFillColor2: "transparent",
+          lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+        });
+        pmBands.push({ series: s, z });
+        const label = z.type === "TARGET" ? z.id.toUpperCase() : (PM_LABEL[z.type] || z.type);
+        candle.createPriceLine({ price: (z.low + z.high) / 2, color: cols[1], lineWidth: 1,
+          lineStyle: LC.LineStyle.Dotted, axisLabelVisible: true,
+          title: `PM ${label}${z.confluence > 1 ? ` ×${z.confluence}` : ""}${dead ? ` · ${z.status.toLowerCase()}` : ""}` });
+      });
+      const strip = document.createElement("div");
+      strip.className = "pm-chart-strip";
+      strip.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;" +
+        "font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#aab4c5;" +
+        "padding:8px 10px;margin:8px 0;border:1px solid #1c2230;border-radius:8px;background:#10131a;";
+      strip.innerHTML =
+        `<span style="color:#37d0c4;font-weight:700">PHASEMAP</span>` +
+        `<span style="font-weight:700">${esc(pmRec.state.replace("_", " "))}</span>` +
+        (pmRec.tier ? `<span style="color:#2fd07f;font-weight:700">${esc(pmRec.tier)}</span>` : "") +
+        `<span style="color:#6d7889">${esc(pmRec.regime)}</span>` +
+        `<span style="flex:1 1 100%;color:#8a93a5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
+        `<a href="phasemap.html" style="color:#37d0c4">PhaseMap tab →</a>`;
+      el.insertAdjacentElement("afterend", strip);
+    }
+    function applyPmZones(key) {
+      if (!pmBands.length) return;
+      const cs = (tfs[key] || {}).candles || [];
+      if (!cs.length) return;
+      const t0 = cs[0].time, tN = cs[cs.length - 1].time;
+      pmBands.forEach((b) => b.series.setData([
+        { time: t0, value: b.z.high }, { time: tN, value: b.z.high }]));
+      // Sweep / displacement arrows — only where nothing else sets markers.
+      if (!(tfs[key] || {}).levels && !(tfs[key] || {}).squeeze_dots &&
+          typeof candle.setMarkers === "function") {
+        const bull = pmRec.direction === "bullish";
+        const snap = (iso) => {
+          const t = Math.floor(Date.parse(iso + "T00:00:00Z") / 1000);
+          let best = null;
+          for (let i = 0; i < cs.length; i++) { if (cs[i].time <= t + 86399) best = cs[i].time; else break; }
+          return best;
+        };
+        const mm = pmRec.metrics || {};
+        const mk = [];
+        if (mm.sweep_date) {
+          const t = snap(mm.sweep_date);
+          if (t) mk.push({ time: t, position: bull ? "belowBar" : "aboveBar",
+            color: "#ffb224", shape: bull ? "arrowUp" : "arrowDown", text: "SWEEP" });
+        }
+        if (mm.displacement_date) {
+          const t = snap(mm.displacement_date);
+          if (t) mk.push({ time: t, position: bull ? "belowBar" : "aboveBar",
+            color: "#2fd07f", shape: bull ? "arrowUp" : "arrowDown", text: "DISPLACE" });
+        }
+        mk.sort((a, b) => a.time - b.time);
+        candle.setMarkers(mk);
+      }
+    }
 
     // Non-VIVEK: static level lines drawn once. VIVEK draws its levels PER
     // timeframe (applyVivekLevels) so they update when you switch 4H / D / W.
@@ -1382,6 +1534,7 @@
         }
         if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
+      applyPmZones(key);                     // PhaseMap bands ride every timeframe
     }
 
     // On-chart notice for reference timeframes (4H / 3D) — pinned over the candles.
@@ -2195,7 +2348,17 @@
     wireScanNav();
     // VIVEK has no per-ticker static chart files — render the 200 SMA reaction
     // live (with the full 5.0 level ladder) instead of the generic scalp chart.
-    if (isVivek) { fetchResultMeta().then((meta) => vivekFallback(baseSymbol, meta)); return; }
+    // With ?pm=1 the PhaseMap record rides along; if the ticker has no VIVEK
+    // plan at all, the PhaseMap-only path renders instead of failing.
+    if (isVivek) {
+      Promise.all([fetchResultMeta(), fetchPhaseMapRec()]).then(([meta, rec]) => {
+        pmRec = rec;
+        const hasPlan = meta && meta.entry != null && meta.stop != null && meta.tp1 != null;
+        if (!hasPlan && rec) { pmOnlyFallback(baseSymbol, meta, rec); return; }
+        vivekFallback(baseSymbol, meta);
+      });
+      return;
+    }
     fetch(chartFile, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(render)

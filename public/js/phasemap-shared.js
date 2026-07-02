@@ -95,6 +95,30 @@ window.PM = (() => {
 
   const TIER_CLASS = { "A+": "pm-tier-aplus", A: "pm-tier-a", Watch: "pm-tier-watch" };
 
+  /* REIT / ETF / LIC / managed fund — mirrors chart.js isFundReit so the same
+     names get flagged on cards and charts alike. */
+  const FUND_NAME_KW = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
+    "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
+  const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
+  const NON_OP_SECTORS = ["not applicable", "not applic", "n/a"];
+  function isFundReit(rec) {
+    const sector = String(rec.sector || "").trim().toLowerCase();
+    if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
+    if (NON_OP_SECTORS.includes(sector)) return true;
+    const name = String(rec.name || rec.ticker || "").toUpperCase();
+    return FUND_NAME_KW.some((kw) => name.includes(kw));
+  }
+
+  function identityHTML(rec) {
+    const bits = [];
+    if (rec.name && rec.name !== rec.ticker) bits.push(esc(rec.name));
+    if (rec.sector) bits.push(`<span class="pm-sector">${esc(rec.sector)}</span>`);
+    const fund = isFundReit(rec)
+      ? `<span class="pm-tag pm-tag-fund">FUND / REIT</span>` : "";
+    if (!bits.length && !fund) return "";
+    return `<div class="pm-identity">${bits.join(" · ")} ${fund}</div>`;
+  }
+
   function headBadgesHTML(rec) {
     const long = rec.direction === "bullish";
     const tier = rec.tier
@@ -133,5 +157,6 @@ window.PM = (() => {
   }
 
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
-           ladderHTML, metricsHTML, headBadgesHTML, toggleSpeak };
+           ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
+           isFundReit, toggleSpeak };
 })();

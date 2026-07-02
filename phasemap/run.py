@@ -33,19 +33,23 @@ CHART_BARS = 220          # daily candles shipped to the chart page
 
 
 def load_symbols(market: str) -> dict:
-    """{display ticker -> yahoo symbol} for a market. Uses the repo's live
-    universe loaders (full ASX directory, curated NASDAQ, CoinGecko top-100);
-    falls back to the bundled ASX CSV."""
+    """{display ticker -> {yf, name, sector}} for a market. Uses the repo's
+    live universe loaders (full ASX directory, curated NASDAQ, CoinGecko
+    top-100); falls back to the bundled ASX CSV."""
     try:
         from scanner.universe import load_universe as repo_universe
         items = repo_universe(market, full=True)
         if items:
-            return {it["symbol"]: it["yf"] for it in items}
+            return {it["symbol"]: {"yf": it["yf"], "name": it.get("name") or it["symbol"],
+                                   "sector": it.get("sector") or ""}
+                    for it in items}
     except Exception:
         pass
     if market == "asx":
         with open(ASX_UNIVERSE_CSV, newline="", encoding="utf-8-sig") as f:
-            return {row["symbol"].strip(): row["symbol"].strip() + ".AX"
+            return {row["symbol"].strip(): {"yf": row["symbol"].strip() + ".AX",
+                                            "name": (row.get("name") or row["symbol"]).strip(),
+                                            "sector": (row.get("sector") or "").strip()}
                     for row in csv.DictReader(f) if row.get("symbol", "").strip()}
     return {}
 
@@ -80,7 +84,8 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
         print(f"[{market}] no universe — skipped")
         return {}
 
-    provider = YFinanceProvider(symbols, period=args.period)
+    provider = YFinanceProvider({t: info["yf"] for t, info in symbols.items()},
+                                period=args.period)
     provider.fetch_all()
 
     chart_dir = os.path.join(data_root, "charts", market)
@@ -94,7 +99,10 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
             continue
         recs = scan_ticker(t, df, market=market,
                            volume_is_usd=(market == "crypto"))
+        info = symbols.get(t, {})
         for rec, _eng in recs:
+            rec["name"] = info.get("name") or t
+            rec["sector"] = info.get("sector") or ("Crypto" if market == "crypto" else "")
             rec["narration"] = render(rec)
             results.append(rec)
         if recs and t not in charted:
