@@ -236,7 +236,7 @@
   }
 
   function mountWidgets(key) {
-    const theme = dark() ? "dark" : "light";
+    const theme = "dark"; // site is dark-only (terminal theme)
     const country = key === "asx" ? "au" : "us";
     mountWidget(`tv-calendar-${key}`, "https://s3.tradingview.com/external-embedding/embed-widget-events.js", {
       colorTheme: theme, isTransparent: true, locale: "en",

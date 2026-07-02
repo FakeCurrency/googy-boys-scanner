@@ -1556,9 +1556,24 @@
   updateClocks();
   setInterval(updateClocks, 1000);
 
+  // Warm the other markets in the background after first paint so the
+  // ASX / NASDAQ / CRYPTO toggle renders instantly from cache.
+  function prefetchMarkets() {
+    for (const m of ["asx", "nasdaq", "crypto"]) {
+      const key = `${m}:${state.mode}`;
+      if (m === state.market || state.cache[key]) continue;
+      fetch(dataFile(m, state.mode), { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && !state.cache[key]) { state.cache[key] = d; cacheSet(key, d); }
+        })
+        .catch(() => {});
+    }
+  }
+
   initKeyboard();
   bind();
   loadCaps();
   loadTrackRecord();
-  load().then(() => startAutoRefresh());
+  load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
 })();

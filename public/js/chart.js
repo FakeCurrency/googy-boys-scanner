@@ -1138,15 +1138,15 @@
 
     const el = $("#chart");
     const LC = window.LightweightCharts;
-    const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    // site is dark-only (terminal theme)
     const chart = LC.createChart(el, {
       width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { color: "transparent" }, textColor: dark ? "#aeb9c9" : "#4b4b52",
-        fontFamily: '-apple-system, "SF Pro Text", Inter, system-ui, sans-serif' },
-      grid: { vertLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" },
-              horzLines: { color: dark ? "rgba(84,84,88,0.28)" : "rgba(60,60,67,0.08)" } },
-      rightPriceScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)" },
-      timeScale: { borderColor: dark ? "rgba(84,84,88,0.4)" : "rgba(60,60,67,0.14)", rightOffset: 6 },
+      layout: { background: { color: "transparent" }, textColor: "#aab4c5",
+        fontFamily: '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace' },
+      grid: { vertLines: { color: "rgba(110,125,150,0.10)" },
+              horzLines: { color: "rgba(110,125,150,0.10)" } },
+      rightPriceScale: { borderColor: "rgba(110,125,150,0.22)" },
+      timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6 },
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
 

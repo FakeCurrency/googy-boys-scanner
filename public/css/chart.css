@@ -8,32 +8,33 @@
 }
 .back-link {
   display: inline-flex; align-items: center;
-  height: 30px; padding: 0 12px; border-radius: 18px;
-  border: 1.5px solid rgba(60,60,67,.25); background: var(--fill);
-  color: var(--text-2); text-decoration: none; font-size: 13px; font-weight: 600;
-  transition: background .15s;
+  height: 30px; padding: 0 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2); background: var(--fill-2);
+  color: var(--muted); text-decoration: none;
+  font: 600 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  transition: color .15s, border-color .15s;
 }
-.back-link:hover { background: rgba(120,120,128,.2); color: var(--text); }
+.back-link:hover { color: var(--green); border-color: rgba(47,208,127,0.4); }
 
 /* Prev / next navigation through the scanner result list */
 .ct-nav { display: inline-flex; align-items: center; gap: 6px; }
 .ct-nav-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: 15px;
-  border: 1.5px solid rgba(60,60,67,.25); background: var(--fill);
-  color: var(--text); font: 700 18px/1 var(--sans); cursor: pointer;
-  transition: background .15s, opacity .15s;
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2); background: var(--fill-2);
+  color: var(--text); font: 700 16px/1 var(--mono); cursor: pointer;
+  transition: border-color .15s, opacity .15s;
 }
-.ct-nav-btn:hover:not(:disabled) { background: rgba(120,120,128,.2); }
+.ct-nav-btn:hover:not(:disabled) { border-color: rgba(47,208,127,0.4); color: var(--green); }
 .ct-nav-btn:disabled { opacity: .35; cursor: default; }
 .ct-nav-pos {
   min-width: 46px; text-align: center;
   font: 600 12px/1 var(--mono); color: var(--text-2); white-space: nowrap;
 }
 
-.ct-sym { font: 800 20px/1 var(--sans); letter-spacing: 0.4px; color: var(--text); }
-.ct-price { font: 700 18px/1 var(--mono); color: var(--text); }
-.ct-grade { font: 800 15px/1 var(--sans); }
+.ct-sym { font: 700 18px/1 var(--mono); letter-spacing: 0.02em; color: var(--text); }
+.ct-price { font: 600 16px/1 var(--mono); color: var(--text); }
+.ct-grade { font: 700 14px/1 var(--mono); }
 .ct-hiconv { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: #1a1205;
   background: #ffb020; padding: 5px 9px; border-radius: 6px; white-space: nowrap; }
 .ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red);
