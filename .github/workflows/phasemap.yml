@@ -72,6 +72,12 @@ jobs:
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
 
+      # Specs — the third lens (volume-spike base breakouts, sub-$0.50).
+      # Nightly cadence like PhaseMap; ASX + NASDAQ only (no crypto).
+      - name: Run Specs scan
+        continue-on-error: true
+        run: python -m scanner.spec_run --market all
+
       # Schema gate: every freshly written snapshot must pass the writer's own
       # validator (zones are bands, states/tiers legal, disclaimer present,
       # current ruleset version) before it ships.
@@ -103,7 +109,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data/phasemap"
+          PATHS="public/data/phasemap public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

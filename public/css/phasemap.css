@@ -148,6 +148,12 @@
 }
 .pm-price-line span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; }
 
+/* SPECS page accents */
+.sp-spike { color: var(--orange); border-color: rgba(255,178,36,0.45); font-weight: 700; }
+.sp-levels b { color: var(--text); }
+.sp-levels .sp-stop { color: var(--red); }
+.sp-levels .sp-target { color: var(--green); }
+
 .pm-next {
   font-family: var(--mono); font-size: 12px; color: var(--pm-entry);
   border-left: 3px solid var(--pm-entry); background: var(--pm-entry-soft);

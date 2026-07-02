@@ -20,12 +20,13 @@
   const marketRaw = (params.get("m") || "asx").toLowerCase();
   const market = VALID_MARKETS.has(marketRaw) ? marketRaw : "asx";
   const symbol = params.get("s") || "";
-  // The app is VIVEK-only. Every non-scalp chart is a VIVEK chart, FULL STOP —
-  // we ignore any stale/explicit mode in the URL (old bookmarks, shared links,
-  // or a retired "pullback"/"reversal"/… value) that would otherwise drop us
-  // into the generic EMA "live fallback" chart. This also makes fetchResultMeta
-  // read the *_vivek.json file (it keys off `mode`). Scalp keeps its own mode.
-  const mode = market === "scalp" ? (params.get("mode") || "scalp").toLowerCase() : "vivek";
+  // Non-scalp charts are VIVEK charts by default — stale modes in old URLs are
+  // ignored. Exception (2026-07-02, Specs re-enabled): an explicit mode=spec is
+  // honoured so SPECS cards get the generic EMA chart with the spec row's
+  // entry/stop/target lines (fetchResultMeta reads <market>_spec.json off it).
+  const urlMode = (params.get("mode") || "").toLowerCase();
+  const mode = market === "scalp" ? (urlMode || "scalp")
+    : urlMode === "spec" ? "spec" : "vivek";
   const isVivek = mode === "vivek";
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
@@ -395,15 +396,30 @@
         .then((bars) => { if (!bars.length) throw new Error("no bars"); d.timeframes["1H"] = barsToTF(bars); d.default_tf = "1H"; render(d); })
         .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
     } else {
-      const yf = yfTickerFor(SYM, assetType);
-      yahooBars(yf, "2y", "1d")
-        .then((bars) => {
-          if (bars.length < 6) throw new Error("thin");
-          d.timeframes["1D"] = barsToStockTF(bars);
-          if (d.price == null) d.price = bars[bars.length - 1].close;
-          render(d);
-        })
-        .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+      // Specs ship their own saved daily candles (deterministic, works even
+      // when the live proxy is unavailable) — live history is the fallback.
+      const specStatic = mode === "spec"
+        ? fetch(`data/spec_charts/${market}/${encodeURIComponent(SYM)}.json`,
+                { cache: "no-cache" })
+            .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+        : Promise.resolve(null);
+      specStatic.then((js) => {
+        const staticBars = ((js && js.candles) || []).map((c) => ({
+          time: Math.floor(Date.parse(c.t + "T00:00:00Z") / 1000),
+          open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v || 0,
+        }));
+        const barsP = staticBars.length >= 6
+          ? Promise.resolve(staticBars)
+          : yahooBars(yfTickerFor(SYM, assetType), "2y", "1d");
+        barsP
+          .then((bars) => {
+            if (bars.length < 6) throw new Error("thin");
+            d.timeframes["1D"] = barsToStockTF(bars);
+            if (d.price == null) d.price = bars[bars.length - 1].close;
+            render(d);
+          })
+          .catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+      });
     }
   }
 
@@ -426,7 +442,7 @@
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
     const dir = m.dir || "LONG";
     const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
-    const tfLabel = m.level_tf === "weekly" ? "200 SMA · Weekly" : "200 SMA · H4";
+    const tfLabel = m.level_tf === "weekly" ? "200 SMA · Weekly" : m.level_tf === "3d" ? "200 SMA · 3D" : "200 SMA · H4";
     const d = {
       symbol: SYM, name: m.name || SYM, asset_type: assetType,
       price: m.price ?? null,

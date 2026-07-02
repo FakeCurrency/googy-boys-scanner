@@ -248,6 +248,16 @@ VIVEK_SCHEMA_VERSION   = 3
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
+# Coins pinned into the crypto universe regardless of market-cap rank
+# (2026-07-02, the FLASH gap: not in CoinGecko's top-100 -> invisible to
+# every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
+# drop out at scan time harmlessly.
+CRYPTO_EXTRA_SYMBOLS   = ["XMR", "FLASH"]
+
+VIVEK_INCLUDE_3D_LEVEL = True      # 2026-07-02: also treat the 3-Day 200 SMA as an in-play
+                                   # level (W > 3D > D). Found via XMR: price sat AT the 3D-200
+                                   # (the level the community was watching) but was -23% from
+                                   # the Daily and +10% from the Weekly -> invisible to the scan
 VIVEK_DATA_PERIOD      = "5y"      # long history so a Weekly SMA200 is meaningful
 VIVEK_MIN_WEEKLY_BARS  = 60        # need at least this many weekly bars to use Weekly SMA
 VIVEK_MIN_HISTORY      = 220       # min daily bars to compute a Daily SMA200 (~H4 proxy)

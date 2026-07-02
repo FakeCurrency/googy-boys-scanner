@@ -84,10 +84,23 @@ def evaluate(df: pd.DataFrame) -> dict | None:
     swing_low = float(recent["Low"].min())
     swing_high = float(recent["High"].max())
 
+    # 3-Day 200 SMA (2026-07-02, the XMR gap): a name can sit exactly AT the
+    # 3D-200 while being far from both the Weekly and Daily 200s — previously
+    # invisible. Same epoch-anchored resample the 3-Day plan/chart uses.
+    sma_3d = None
+    if getattr(config, "VIVEK_INCLUDE_3D_LEVEL", False):
+        d3 = _resample_3day_ohlc(df)
+        if d3 is not None and len(d3) >= config.VIVEK_SMA:
+            v = float(sma(d3["Close"], config.VIVEK_SMA).iloc[-1])
+            if np.isfinite(v) and v > 0:
+                sma_3d = v
+
     # Evaluate each higher-timeframe 200 SMA level; keep the strongest "in play".
     levels = []
     if weekly_sma:
         levels.append(("weekly", weekly_sma))
+    if sma_3d:
+        levels.append(("3d", sma_3d))
     levels.append(("h4", daily_sma))   # Daily-200 proxy for the H4 200 SMA
 
     best = None
@@ -114,9 +127,10 @@ def evaluate(df: pd.DataFrame) -> dict | None:
             "at_level": at_level, "direction": direction, "reaction": reaction,
             "structure": struct,
         }
-        # Rank: weekly beats h4; then "at level"; then reaction quality; then structure.
+        # Rank: weekly beats 3d beats h4; then "at level"; then reaction
+        # quality; then structure.
         cand["_rank"] = (
-            (2 if tf == "weekly" else 1)
+            {"weekly": 2, "3d": 1.5}.get(tf, 1)
             + (2 if at_level else 0)
             + (2 if reaction in ("bounce", "reject") else 0)
             + struct
@@ -159,6 +173,9 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     if sig["level_tf"] == "weekly":
         pts += 4
         fired.append("WEEKLY 200 SMA")
+    elif sig["level_tf"] == "3d":
+        pts += 3
+        fired.append("3D 200 SMA")
     else:
         pts += 3
         fired.append("H4 200 SMA")

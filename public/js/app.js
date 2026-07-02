@@ -595,7 +595,7 @@
     const isLong = r.dir !== "SHORT";
     const scale = (r.scale || d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
     const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
-    const tfTxt = r.level_tf === "weekly" ? "Weekly 200 SMA" : "H4 200 SMA";
+    const tfTxt = r.level_tf === "weekly" ? "Weekly 200 SMA" : r.level_tf === "3d" ? "3-Day 200 SMA" : "H4 200 SMA";
     const pctFrom = (v) => (r.entry ? ((v - r.entry) / r.entry) * 100 : 0);
     const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=vivek`;
@@ -622,7 +622,7 @@
         <span class="vk-check-note">${note}</span>
       </div>`;
     const checklist = [
-      chk(true, "200 SMA level", r.level_tf === "weekly" ? "Weekly (strongest)" : "H4 / daily proxy"),
+      chk(true, "200 SMA level", r.level_tf === "weekly" ? "Weekly (strongest)" : r.level_tf === "3d" ? "3-Day" : "H4 / daily proxy"),
       chk(!!r.at_level, "At the level", r.at_level ? "price on the SMA" : "still approaching"),
       chk(reactClean, "Clean reaction", r.reaction === "bounce" ? "bounced" : r.reaction === "reject" ? "rejected" : "no clear turn yet"),
       chk(struct >= 0.5, "Structure", struct >= 0.8 ? "clean" : struct >= 0.5 ? "workable" : "thin"),

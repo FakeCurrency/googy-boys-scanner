@@ -146,6 +146,14 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
         items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
         if len(items) >= limit:
             break
+    # Pinned extras (2026-07-02): coins the owner tracks that must never fall
+    # out of the universe because their market-cap rank slips below the top-100
+    # cut. Coins Yahoo doesn't carry are dropped at scan time as usual.
+    for sym in getattr(config, "CRYPTO_EXTRA_SYMBOLS", []):
+        sym = str(sym).strip().upper()
+        if sym and sym.isalnum() and sym not in seen:
+            seen.add(sym)
+            items.append({"symbol": sym, "name": sym, "sector": "", "yf": sym + suffix})
     return items
 
 
