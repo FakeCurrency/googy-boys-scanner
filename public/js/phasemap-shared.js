@@ -156,7 +156,46 @@ window.PM = (() => {
     synth.speak(u);
   }
 
+  /* ── Watchlist (PhaseMap + Specs) ───────────────────────────────────────
+     Starring stores a SNAPSHOT of the record, so a name stays monitorable
+     even after it drops out of the scan (the owner's requirement: losing
+     the setup must not lose the watch). Keyed by lens + market. */
+  const WATCH_KEY = "gbs-lens-watchlist";
+  function watchStore() {
+    try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || {}; }
+    catch (_) { return {}; }
+  }
+  function watchSave(s) {
+    try { localStorage.setItem(WATCH_KEY, JSON.stringify(s)); } catch (_) {}
+  }
+  const watch = {
+    map(ns, market) { return (watchStore()[ns] || {})[market] || {}; },
+    has(ns, market, ticker) { return !!this.map(ns, market)[ticker]; },
+    count(ns, market) { return Object.keys(this.map(ns, market)).length; },
+    toggle(ns, market, ticker, snap) {
+      const s = watchStore();
+      s[ns] = s[ns] || {}; s[ns][market] = s[ns][market] || {};
+      if (s[ns][market][ticker]) delete s[ns][market][ticker];
+      else s[ns][market][ticker] = { snap: snap || null,
+                                     date: new Date().toISOString().slice(0, 10) };
+      watchSave(s);
+      return !!s[ns][market][ticker];
+    },
+    refresh(ns, market, ticker, snap) {   // keep the stored snapshot current
+      const s = watchStore();
+      const e = s[ns] && s[ns][market] && s[ns][market][ticker];
+      if (e) { e.snap = snap; watchSave(s); }
+    },
+  };
+
+  function starHTML(on, ticker) {
+    return `<button class="pm-star${on ? " is-on" : ""}" data-star="${esc(ticker)}" ` +
+      `title="${on ? "Remove from" : "Add to"} watchlist — starred names stay ` +
+      `monitored even after the setup ends" aria-label="Toggle watchlist">` +
+      `${on ? "★" : "☆"}</button>`;
+  }
+
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
-           isFundReit, toggleSpeak };
+           isFundReit, toggleSpeak, watch, starHTML };
 })();

@@ -154,6 +154,49 @@
 .sp-levels .sp-stop { color: var(--red); }
 .sp-levels .sp-target { color: var(--green); }
 
+/* watchlist star (PhaseMap + Specs) */
+.pm-star {
+  cursor: pointer; border: none; background: transparent;
+  color: var(--muted-2); font-size: 17px; line-height: 1; padding: 2px 6px;
+}
+.pm-star:hover { color: var(--orange); }
+.pm-star.is-on { color: var(--orange); }
+.pm-tab-watchlist.is-active .pm-count, .pm-tab-watchlist .pm-count { color: var(--orange); }
+.pm-tag-stale { color: var(--muted); border-style: dashed; }
+
+/* SPECS dense rows (dashboard-style) */
+.sp-list { display: flex; flex-direction: column; gap: 6px; }
+.sp-row {
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+}
+.sp-row.is-open { box-shadow: var(--shadow-open); }
+.sp-row-main {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px 9px 0;
+  cursor: pointer; min-height: 44px;
+}
+.sp-row-main:hover { background: var(--fill-2); border-radius: var(--radius-md); }
+.sp-grade {
+  font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+  align-self: stretch; display: flex; align-items: center;
+  padding: 0 12px; border-left: 3px solid transparent;
+  border-radius: var(--radius-md) 0 0 var(--radius-md); min-width: 46px; justify-content: center;
+}
+.sp-name { font-size: 13px; color: var(--text-2); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-row-price { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--text); }
+.sp-row-score { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.sp-row-score b { color: var(--text-2); }
+.sp-chev { color: var(--muted-2); font-size: 12px; margin-right: 2px; transition: transform 0.12s; }
+.sp-row.is-open .sp-chev { transform: rotate(180deg); }
+.sp-row-detail { padding: 4px 14px 12px 60px; border-top: 1px solid var(--border-soft); }
+.sp-detail-chips { display: flex; gap: 5px; flex-wrap: wrap; margin: 8px 0; }
+.sp-row-detail .pm-narration { margin: 8px 0; }
+.sp-chart-link { font-size: 11px; color: var(--teal); text-decoration: none; letter-spacing: 0.06em; }
+@media (max-width: 640px) {
+  .sp-name { display: none; }
+  .sp-row-detail { padding-left: 14px; }
+}
+
 .pm-next {
   font-family: var(--mono); font-size: 12px; color: var(--pm-entry);
   border-left: 3px solid var(--pm-entry); background: var(--pm-entry-soft);

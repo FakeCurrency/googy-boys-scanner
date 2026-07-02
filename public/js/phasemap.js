@@ -47,11 +47,14 @@
     const m = rec.metrics || {};
     const rd = state.data && state.data.run_date;
     const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
+    const starred = PM.watch.has("phasemap", state.market, rec.ticker);
     return `<article class="pm-card pm-card-link" data-idx="${idx}" title="Open chart">
       <div class="pm-card-head">
         <span class="pm-ticker">${PM.esc(rec.ticker)}</span>
         ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
+        ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
         ${PM.headBadgesHTML(rec)}
+        ${PM.starHTML(starred, rec.ticker)}
         ${speak}
         <span class="pm-chart-cue" aria-hidden="true">CHART →</span>
       </div>
@@ -64,8 +67,28 @@
   }
 
   function filtered() {
-    const states = VIEWS[state.view];
     const q = state.q.trim().toUpperCase();
+    if (state.view === "watchlist") {
+      // Starred names: live records where a setup still exists, snapshot
+      // placeholders where it doesn't — the watch NEVER silently drops one.
+      const wl = PM.watch.map("phasemap", state.market);
+      const out = [];
+      for (const [ticker, entry] of Object.entries(wl).sort()) {
+        if (q && !ticker.toUpperCase().includes(q)) continue;
+        const live = state.data.results.filter((r) => r.ticker === ticker);
+        if (live.length) {
+          out.push(...live);
+        } else if (entry.snap) {
+          out.push({ ...entry.snap, _stale: true, _staleDate: entry.date });
+        } else {
+          out.push({ ticker, direction: "bullish", state: "TRAP_SET", tier: null,
+                     tags: [], regime: "ROTATION", zones: [], metrics: {},
+                     narration: "", next: "", _stale: true, _staleDate: entry.date });
+        }
+      }
+      return out;
+    }
+    const states = VIEWS[state.view];
     return state.data.results.filter((r) =>
       states.includes(r.state) &&
       (state.tier === "all" || r.tier === state.tier) &&
@@ -86,7 +109,7 @@
 
     $$(".pm-card-link", list).forEach((card) => {
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".pm-speak")) return;    // READ button, not a nav
+        if (e.target.closest(".pm-speak") || e.target.closest(".pm-star")) return;
         const rec = shown[+card.dataset.idx];
         if (rec) window.location.href = chartURL(rec);
       });
@@ -98,10 +121,20 @@
         if (rec) PM.toggleSpeak(btn, rec.narration);
       });
     });
+    $$(".pm-star", list).forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const ticker = btn.dataset.star;
+        const rec = state.data.results.find((r) => r.ticker === ticker) || null;
+        PM.watch.toggle("phasemap", state.market, ticker, rec);
+        renderCounts();
+        render();
+      });
+    });
   }
 
   function renderCounts() {
-    const counts = {};
+    const counts = { watchlist: PM.watch.count("phasemap", state.market) };
     for (const [view, states] of Object.entries(VIEWS)) {
       counts[view] = state.data
         ? state.data.results.filter((r) => states.includes(r.state)).length : 0;
@@ -172,6 +205,12 @@
       $("#pm-sub").textContent =
         `${state.market.toUpperCase()} · scan ${state.data.run_date} · ruleset v${state.data.ruleset_version} · ` +
         `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`;
+      // keep starred snapshots fresh while their setups are still live
+      const wl = PM.watch.map("phasemap", state.market);
+      for (const ticker of Object.keys(wl)) {
+        const live = state.data.results.find((r) => r.ticker === ticker);
+        if (live) PM.watch.refresh("phasemap", state.market, ticker, live);
+      }
     } catch (err) {
       state.data = null;
       $("#pm-sub").textContent =
