@@ -1539,7 +1539,22 @@
       drawClear();                    // temp drawings are TF-specific — reset on switch
       candle.setData(tf.candles);
       vol.setData(tf.volume);
-      tf.lines.forEach((l, i) => lineSeries[i] && lineSeries[i].setData(l.data));
+      // Timeframes can carry DIFFERENT line counts (a thin 4H/3D/W history has
+      // no SMA-200). Grow the series pool on demand and CLEAR every series the
+      // new TF doesn't use — a stale line from the previous TF would otherwise
+      // ghost across the chart and stretch the time axis (the "fucked 4H" bug).
+      while (lineSeries.length < tf.lines.length) {
+        const l = tf.lines[lineSeries.length];
+        lineSeries.push(chart.addLineSeries({
+          color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        }));
+      }
+      lineSeries.forEach((s, i) => {
+        const l = tf.lines[i];
+        if (l) { s.applyOptions({ color: l.color }); s.setData(l.data); }
+        else { s.setData([]); }
+      });
 
       // Momentum histogram + squeeze on/off markers under the price bars
       if (momSeries) momSeries.setData(tf.histogram || []);
