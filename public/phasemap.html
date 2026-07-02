@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PHASEMAP — Vivek 5.0</title>
+  <meta name="theme-color" content="#0a0c10" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=53" />
+  <link rel="stylesheet" href="css/phasemap.css?v=1" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">PHASEMAP</span></div>
+    </div>
+    <nav class="pm-topnav">
+      <a class="howto-link" href="index.html">← Scanner</a>
+      <a class="howto-link pm-legend-link" href="phasemap-legend.html">KEY &amp; LEGEND</a>
+    </nav>
+  </header>
+
+  <main class="wrap pm-wrap">
+    <div class="pm-head">
+      <h2 class="pm-title">PHASEMAP <span class="pm-title-sub">zones · sweeps · displacement</span></h2>
+      <p class="pm-sub" id="pm-sub">Loading latest scan…</p>
+    </div>
+
+    <!-- view tabs -->
+    <nav class="pm-tabs" id="pm-tabs" role="tablist" aria-label="View">
+      <button class="pm-tab is-active" data-view="setups" role="tab" aria-selected="true">SETUPS <span class="pm-count" data-count="setups">0</span></button>
+      <button class="pm-tab" data-view="watch" role="tab" aria-selected="false">WATCH <span class="pm-count" data-count="watch">0</span></button>
+      <button class="pm-tab" data-view="rotation" role="tab" aria-selected="false">ROTATION <span class="pm-count" data-count="rotation">0</span></button>
+      <button class="pm-tab" data-view="ended" role="tab" aria-selected="false">ENDED <span class="pm-count" data-count="ended">0</span></button>
+      <button class="pm-tab" data-view="all" role="tab" aria-selected="false">ALL <span class="pm-count" data-count="all">0</span></button>
+    </nav>
+
+    <!-- filters -->
+    <div class="pm-filters">
+      <div class="pm-filter-group" id="pm-tier-filter" role="group" aria-label="Tier">
+        <button class="pm-chip is-active" data-tier="all">ALL TIERS</button>
+        <button class="pm-chip" data-tier="A+">A+</button>
+        <button class="pm-chip" data-tier="A">A</button>
+        <button class="pm-chip" data-tier="Watch">WATCH</button>
+      </div>
+      <div class="pm-filter-group" id="pm-dir-filter" role="group" aria-label="Direction">
+        <button class="pm-chip is-active" data-dir="all">BOTH</button>
+        <button class="pm-chip" data-dir="bullish">LONG</button>
+        <button class="pm-chip" data-dir="bearish">SHORT</button>
+      </div>
+      <input class="pm-search" id="pm-search" type="search" placeholder="Ticker…" autocomplete="off" spellcheck="false" />
+    </div>
+
+    <section class="pm-list" id="pm-list" aria-live="polite"></section>
+    <div class="pm-more-row"><button class="pm-more" id="pm-more" hidden>Show more</button></div>
+
+    <p class="pm-disclaimer">Every level shown is a zone (a price band), never a single price. States are reported only after the evidence prints — nothing here predicts where a low will form. Analysis only — not financial advice.</p>
+  </main>
+
+  <script src="js/phasemap.js?v=1"></script>
+</body>
+</html>

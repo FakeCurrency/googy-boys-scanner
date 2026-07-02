@@ -1,0 +1,166 @@
+/* ============================================================ PHASEMAP page
+   Zone colour system (spec Section 8 — keep ALL PhaseMap colours here):
+   amber = accumulation / trap · red = manipulation & invalidation ·
+   green = targets / expansion · grey = neutral · blue = current price marker */
+:root {
+  --pm-trap: var(--orange);      --pm-trap-soft: var(--orange-soft);
+  --pm-kill: var(--red);         --pm-kill-soft: var(--red-soft);
+  --pm-target: var(--green);     --pm-target-soft: var(--green-soft);
+  --pm-neutral: var(--muted);    --pm-neutral-soft: rgba(109,120,137,0.12);
+  --pm-entry: var(--teal);       --pm-entry-soft: rgba(55,208,196,0.12);
+  --pm-price: var(--blue);
+}
+
+.pm-topnav { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.pm-legend-link { color: var(--teal); }
+
+.pm-wrap { max-width: 980px; margin: 0 auto; padding: 18px 16px 60px; }
+
+.pm-head { margin: 6px 0 14px; }
+.pm-title { font-family: var(--mono); font-size: 20px; letter-spacing: 0.04em; margin: 0; }
+.pm-title-sub { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+.pm-sub { font-family: var(--mono); font-size: 12px; color: var(--text-2); margin: 6px 0 0; }
+
+/* ------------------------------------------------------------- tabs/filters */
+.pm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pm-tab {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em;
+  padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+  background: var(--panel); color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.pm-tab.is-active { background: var(--panel-3); color: var(--text); border-color: var(--border-2); }
+.pm-count { color: var(--muted); margin-left: 4px; }
+.pm-tab.is-active .pm-count { color: var(--accent); }
+
+.pm-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.pm-filter-group { display: flex; gap: 4px; }
+.pm-chip {
+  font-family: var(--mono); font-size: 11px; padding: 5px 10px;
+  border-radius: 999px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer;
+}
+.pm-chip.is-active { color: var(--text); border-color: var(--border-2); background: var(--fill); }
+.pm-search {
+  font-family: var(--mono); font-size: 12px; padding: 6px 10px; width: 110px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--fill-2); color: var(--text); margin-left: auto;
+}
+
+/* ------------------------------------------------------------------- cards */
+.pm-list { display: flex; flex-direction: column; gap: 14px; }
+.pm-card {
+  background: var(--panel); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px;
+}
+.pm-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pm-ticker { font-family: var(--mono); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; }
+.pm-dir { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.pm-dir-long  { color: var(--green); background: var(--green-soft); }
+.pm-dir-short { color: var(--red);   background: var(--red-soft); }
+.pm-state { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.06em; }
+.pm-state-TRAP_SET  { color: var(--pm-trap); background: var(--pm-trap-soft); }
+.pm-state-SWEPT     { color: var(--pm-trap); background: var(--pm-trap-soft); }
+.pm-state-DISPLACED { color: var(--pm-target); background: var(--pm-target-soft); }
+.pm-state-RUNNING   { color: var(--pm-target); background: var(--pm-target-soft); }
+.pm-state-STALLED   { color: var(--pm-neutral); background: var(--pm-neutral-soft); }
+.pm-state-COMPLETE  { color: var(--pm-entry); background: var(--pm-entry-soft); }
+.pm-state-DEAD      { color: var(--pm-kill); background: var(--pm-kill-soft); }
+.pm-tier { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.pm-tier-aplus { color: #04110a; background: var(--grade-aplus); }
+.pm-tier-a     { color: #041020; background: var(--grade-a); }
+.pm-tier-watch { color: #140e02; background: var(--grade-b); }
+.pm-regime { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+.pm-tag {
+  font-family: var(--mono); font-size: 9.5px; color: var(--text-2);
+  border: 1px solid var(--border-2); padding: 1px 6px; border-radius: 3px; letter-spacing: 0.05em;
+}
+.pm-tag-illiquid { color: var(--orange); border-color: rgba(255,178,36,0.45); }
+.pm-tag-halt     { color: var(--red); border-color: rgba(255,91,91,0.45); }
+.pm-speak {
+  margin-left: auto; cursor: pointer; border: 1px solid var(--border);
+  background: var(--fill); color: var(--text-2); border-radius: var(--radius-sm);
+  font-size: 12px; padding: 4px 9px; font-family: var(--mono);
+}
+.pm-speak.is-speaking { color: var(--green); border-color: var(--green); }
+
+/* ------------------------------------------------------------- zone ladder */
+.pm-ladder { margin: 12px 0 10px; display: flex; flex-direction: column; gap: 3px; }
+.pm-rung { display: grid; grid-template-columns: 132px 1fr; gap: 8px; align-items: stretch; }
+.pm-rung-prices {
+  font-family: var(--mono); font-size: 11px; color: var(--text-2);
+  display: flex; align-items: center; justify-content: flex-end; white-space: nowrap;
+}
+.pm-band {
+  border-radius: 4px; padding: 4px 9px; display: flex; gap: 8px; align-items: center;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em;
+  border-left: 3px solid transparent;
+}
+.pm-band-label { font-weight: 700; }
+.pm-band-status { color: var(--muted); font-size: 9.5px; }
+.pm-band-sources { color: var(--muted); font-size: 9.5px; margin-left: auto; text-align: right; }
+.pm-band-target   { background: var(--pm-target-soft);  border-left-color: var(--pm-target);  color: var(--pm-target); }
+.pm-band-entry    { background: var(--pm-entry-soft);   border-left-color: var(--pm-entry);   color: var(--pm-entry); }
+.pm-band-kill     { background: var(--pm-kill-soft);    border-left-color: var(--pm-kill);    color: var(--pm-kill); }
+.pm-band-trap     { background: var(--pm-trap-soft);    border-left-color: var(--pm-trap);    color: var(--pm-trap); }
+.pm-band-consumed, .pm-band-violated { opacity: 0.45; }
+.pm-band-consumed .pm-band-status, .pm-band-violated .pm-band-status { color: var(--text-2); }
+.pm-price-row { display: grid; grid-template-columns: 132px 1fr; gap: 8px; align-items: center; }
+.pm-price-label {
+  font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--pm-price);
+  display: flex; justify-content: flex-end;
+}
+.pm-price-line { display: flex; align-items: center; gap: 8px; color: var(--pm-price); }
+.pm-price-line::before, .pm-price-line::after {
+  content: ""; height: 1px; flex: 1; background: var(--pm-price); opacity: 0.6;
+}
+.pm-price-line span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; }
+
+/* --------------------------------------------------------------- narration */
+.pm-narration {
+  font-size: 13px; line-height: 1.55; color: var(--text-2);
+  background: var(--fill-2); border-radius: var(--radius-md);
+  padding: 10px 12px; border: 1px solid var(--border-soft);
+}
+.pm-metrics {
+  display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+}
+.pm-metrics b { color: var(--text-2); font-weight: 600; }
+.pm-metric-warn b { color: var(--orange); }
+
+.pm-more-row { text-align: center; margin: 18px 0; }
+.pm-more {
+  font-family: var(--mono); font-size: 12px; padding: 8px 22px; cursor: pointer;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-2);
+  background: var(--panel); color: var(--text-2);
+}
+.pm-empty { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 30px 0; text-align: center; }
+.pm-disclaimer { color: var(--muted-2); font-size: 11px; margin-top: 26px; line-height: 1.5; }
+
+/* ------------------------------------------------------------ legend page */
+.pm-lg-section { margin: 26px 0; }
+.pm-lg-section h3 {
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; color: var(--text);
+  border-bottom: 1px solid var(--border); padding-bottom: 8px;
+}
+.pm-lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.pm-lg-item {
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+  padding: 10px 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+}
+.pm-lg-item .pm-state, .pm-lg-item .pm-band { margin-bottom: 6px; display: inline-flex; }
+.pm-lg-term { font-family: var(--mono); font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
+.pm-lg-figure {
+  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px; margin: 12px 0;
+}
+.pm-lg-figure svg { width: 100%; height: auto; display: block; }
+.pm-lg-figure figcaption { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+@media (max-width: 560px) {
+  .pm-rung { grid-template-columns: 96px 1fr; }
+  .pm-rung-prices { font-size: 9.5px; }
+  .pm-band-sources { display: none; }
+  .pm-search { width: 100%; margin-left: 0; }
+}
