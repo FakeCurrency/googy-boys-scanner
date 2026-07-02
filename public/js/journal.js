@@ -380,7 +380,7 @@
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
-      <th class="num">R</th><th class="num">$</th>${side === "me" ? "<th></th>" : ""}</tr>`;
+      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th>${side === "me" ? "<th></th>" : ""}</tr>`;
     // Newest position at the top.
     const rows = list.slice().sort((a, b) => (openedMs(b) || 0) - (openedMs(a) || 0)).map((t) => {
       const isLong = t.direction !== "short";
@@ -392,7 +392,8 @@
         <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
         <td class="num">${px(t.stop)}</td>
-        ${liveCells(t, side)}${actions}</tr>`;
+        ${liveCells(t, side)}
+        <td class="num jr-stamp">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td>${actions}</tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
@@ -400,7 +401,7 @@
   function closedRows(list) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">R</th><th class="num">$</th>
-      <th class="num">Closed</th><th>Reason</th></tr>`;
+      <th class="num">Opened</th><th class="num">Closed</th><th>Reason</th></tr>`;
     const rows = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0)).map((t) => {
       const d = dollarsOf(t);
       return `<tr>
@@ -408,7 +409,8 @@
         <td>${gradeChip(gradeOf(t))}</td>
         <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
-        <td class="num jr-stamp">${stamp(exitMs(t))}</td>
+        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
+        <td class="num jr-stamp">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
         <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
@@ -444,8 +446,8 @@
         same position, it lines up here head to head.</div>`;
     } else {
       const head = `<tr><th>Symbol</th><th class="num">Now</th>
-        <th class="num h-bot bsep">🤖 Entry</th><th class="num h-bot">🤖 R</th><th class="num h-bot">🤖 $</th>
-        <th class="num h-me bsep">✏️ Entry</th><th class="num h-me">✏️ R</th><th class="num h-me">✏️ $</th></tr>`;
+        <th class="num h-bot bsep">🤖 Entry</th><th class="num h-bot">🤖 Opened</th><th class="num h-bot">🤖 R</th><th class="num h-bot">🤖 $</th>
+        <th class="num h-me bsep">✏️ Entry</th><th class="num h-me">✏️ Opened</th><th class="num h-me">✏️ R</th><th class="num h-me">✏️ $</th></tr>`;
       const body = pairs.map(([b, m]) => {
         // Claude's cells are static (marked by the scan) — plain classes so
         // refreshLive only drives the Me cells (.jr-ur/.jr-ud) + shared Now.
@@ -455,9 +457,11 @@
           ${symCell(b)}
           ${me.now}
           <td class="num bsep">${px(b.entry)}</td>
+          <td class="num jr-stamp">${stamp(openedMs(b))}</td>
           <td class="num ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>
           <td class="num ${ud != null ? pcls(ud) : ""}">${ud != null ? d2(ud) : "—"}</td>
           <td class="num bsep">${px(m.entry)}</td>
+          <td class="num jr-stamp">${stamp(openedMs(m))}</td>
           ${me.ur}${me.ud}</tr>`;
       }).join("");
       openHost.innerHTML = `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
