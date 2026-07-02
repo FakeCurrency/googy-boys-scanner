@@ -337,15 +337,17 @@
   // ----------------------------------------------------------- stats
   function renderStats(d) {
     const res = d.results || [];
-    const tradeable = res.filter((r) => r.grade === "A+" || r.grade === "A");
+    // The headline stats describe what's actually TRADEABLE, so REITs / ETFs /
+    // LICs / managed funds are excluded across the board (the bot skips them
+    // and most CFD brokers don't list them) — not just from Top Pick.
+    const real = res.filter((r) => !isFundReit(r));
+    const tradeable = real.filter((r) => r.grade === "A+" || r.grade === "A");
     $("#stat-scanned").textContent = d.scanned ?? "—";
     $("#stat-setups").textContent = tradeable.length;
-    // Top pick skips REITs / ETFs / LICs / managed funds — the bot won't trade
-    // them and most CFD brokers don't list them, so they shouldn't headline.
-    const top = res.filter((r) => !isFundReit(r))
+    const top = real.slice()
       .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
     $("#stat-toppick").textContent = top ? `${top.symbol} ${fmtPrice(top.price)}` : "—";
-    const bestRR = (tradeable.length ? tradeable : res).reduce((m, r) => Math.max(m, r.rr || 0), 0);
+    const bestRR = (tradeable.length ? tradeable : real).reduce((m, r) => Math.max(m, r.rr || 0), 0);
     $("#stat-rr").textContent = bestRR > 0 ? `${bestRR.toFixed(1)}:1` : "—";
 
     $("#count-aplus").textContent = res.filter((r) => r.grade === "A+").length;

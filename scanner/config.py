@@ -339,6 +339,19 @@ VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
 VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
 VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
+# Tradeability gates — quality-of-fill filters, NOT strategy changes. They only
+# block pathological entries the paper model can't price honestly:
+#  • MIN_PRICE: sub-5c ASX names (e.g. a $0.021 micro-cap) trade with spreads
+#    worth multiple R — a paper fill at "the price" is fiction. Per-market floor.
+#  • MAX_STOP_PCT: a structural stop >50% from entry (seen: −95% on a weekly
+#    crypto plan) makes R sizing meaningless — risk-based units go microscopic
+#    and the position is a lottery ticket, not a managed trade.
+VIVEK_BOT_MIN_PRICE      = {"asx": 0.05, "nasdaq": 1.0, "crypto": 0.0, "default": 0.0}
+VIVEK_BOT_MAX_STOP_PCT   = 50.0    # skip if |entry−stop| > this % of entry (0 = off)
+# Correlation control: cap open positions per GICS sector per market so the book
+# can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
+# trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
+VIVEK_BOT_MAX_PER_SECTOR = 3
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the
 # session (it still manages/closes open positions). In a future live phase this

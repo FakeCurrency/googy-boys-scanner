@@ -165,6 +165,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
 
     # 1) manage open positions for THIS market — mark to the observed price.
     closed_now = 0
+    closed_events: list[dict] = []          # for the end-of-run alert digest
     still_open = []
     for pos in book["open"]:
         if pos.get("market") != market:
@@ -175,6 +176,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             _mark(pos, price, day, costs)
         if pos.get("status") == "closed":
             book["closed"].append(pos)
+            closed_events.append(pos)
             closed_now += 1
         else:
             # stamp live unrealised P&L so the book/UI/guard can read it
@@ -204,12 +206,15 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             log.warning("could not send guard alert: %s", e)
 
     # 3) decide NEW entries against the CURRENT book (caps/short-bias across runs).
-    open_book = [{"symbol": p["symbol"], "direction": p["direction"]}
+    # Sector rides along so decide() can enforce the per-sector correlation cap.
+    open_book = [{"symbol": p["symbol"], "direction": p["direction"],
+                  "sector": p.get("sector", "")}
                  for p in book["open"] if p.get("market") == market]
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book)
 
     # 4) fill new entries at the current intraday price (session only, guard clear).
     added, chased = 0, 0
+    opened_events: list[dict] = []          # for the end-of-run alert digest
     if is_open and not guard["breached"]:
         for out in decision["plans"]:
             sym = out["plan"]["symbol"]
@@ -224,6 +229,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
                 continue
             book["open"].append(pos)
+            opened_events.append(pos)
             added += 1
 
     book_open = sum(1 for p in book["open"] if p.get("market") == market)
@@ -248,6 +254,24 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     log.info("vivek_run [%s]: %s · %s · +%d new, %d closed (%d open, %d short)",
              market, mode.upper(), "OPEN" if is_open else "closed-session",
              added, closed_now, book_open, book_short)
+
+    # Trade-event digest through the shared alert dispatcher. "order_placed" is
+    # INFO-severity → log-only by default; flip ALERT_CHANNELS["INFO"] in config
+    # to push these to Discord/Telegram the day you want phone notifications.
+    if opened_events or closed_events:
+        try:
+            from .alert_dispatch import send as _alert
+            lines = [f"OPEN  {p['symbol']} {p.get('direction','?')} @ {p.get('entry')} "
+                     f"({p.get('timeframe','?')} {p.get('entry_type','?')})"
+                     for p in opened_events]
+            lines += [f"CLOSE {p['symbol']} {p.get('exit_reason','?')} @ {p.get('exit')} "
+                      f"→ {p.get('realized_r', 0):+.2f}R"
+                      for p in closed_events]
+            _alert("order_placed",
+                   f"VIVEK bot [{market}]: {len(opened_events)} opened, {len(closed_events)} closed",
+                   "\n".join(lines))
+        except Exception as e:                            # alerts must never break a run
+            log.warning("could not send trade-event alert: %s", e)
     return book
 
 

@@ -584,9 +584,51 @@
     $("#cmp-closed-n").textContent = cn ? `(${cn})` : "";
   }
 
+  // ── Edge tracker: forward expectancy per setup cell (timeframe × trigger) ──
+  // This is the table that eventually says which setups ACTUALLY make money
+  // forward — the backtest's answer (weekly reclaim best) checked against real
+  // closed trades. Cells need ~20 trades before the numbers mean anything.
+  function renderEdgeTracker() {
+    const host = $("#edge-tracker");
+    if (!host) return;
+    const closed = [...state.bot.closed, ...state.me.closed]
+      .filter((t) => t.realized_r != null);
+    if (!closed.length) {
+      host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this breaks down
+        win rate and average R by setup (e.g. Weekly reclaim vs Daily reclaim), so you can see which
+        cells carry the edge forward, not just in the backtest.</div>`;
+      return;
+    }
+    const cells = new Map();
+    for (const t of closed) {
+      const tf = TF_NAME[t.timeframe] || t.timeframe || "?";
+      const et = String(entryTypeOf(t) || "—").toLowerCase();
+      const key = `${tf} ${et}`;
+      let c = cells.get(key);
+      if (!c) { c = { key, et, n: 0, wins: 0, sumR: 0 }; cells.set(key, c); }
+      c.n += 1; c.sumR += t.realized_r;
+      if (t.realized_r > 0) c.wins += 1;
+    }
+    const rows = [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
+      const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
+      const thin = c.n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
+      return `<tr>
+        <td><span class="jr-setup ${SETUP_CLS[c.et] || ""}">${esc(c.key)}</span></td>
+        <td class="num">${c.n}${thin}</td>
+        <td class="num">${win.toFixed(0)}%</td>
+        <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
+        <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td></tr>`;
+    }).join("");
+    host.innerHTML = `<table class="jr-table"><thead><tr>
+      <th>Setup</th><th class="num">Trades</th><th class="num">Win %</th>
+      <th class="num">Avg R</th><th class="num">Total R</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }
+
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
     renderComparison(sb, sm);
+    renderEdgeTracker();
     const note = $("#bot-note");
     if (note) note.textContent = (state.bot.open.length || state.bot.closed.length)
       ? "" : "Autonomous bot is in dry-run — its trades appear here once enabled.";

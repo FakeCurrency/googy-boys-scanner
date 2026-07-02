@@ -127,6 +127,16 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
     if rr < min_rr:
         return skip("low_rr", f"{tf} R:R {rr:.1f} < min {min_rr:.1f}")
 
+    # Tradeability: a structural stop miles from entry (e.g. −95% on a weekly
+    # crypto plan) makes risk-based sizing meaningless — units go microscopic and
+    # the "trade" is a lottery ticket. Cap the stop distance as a % of entry.
+    max_stop_pct = float(getattr(_cfg, "VIVEK_BOT_MAX_STOP_PCT", 0) or 0)
+    if max_stop_pct > 0 and e > 0:
+        stop_pct = abs(e - s) / e * 100.0
+        if stop_pct > max_stop_pct:
+            return skip("wide_stop",
+                        f"{tf} stop {stop_pct:.0f}% from entry > max {max_stop_pct:.0f}%")
+
     # Rule 2 — entry-type label (must be one of the three known triggers).
     et = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
     # Favour the strongest trigger — skip the entry types the backtest flagged
@@ -194,6 +204,18 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
     decision = evaluate_setup(row, prefer_tf, min_rr)
     if not decision["take"]:
         return {**decision, "plan": None}
+
+    # Tradeability: sub-floor prices (e.g. a $0.021 ASX micro-cap) carry spreads
+    # worth multiple R — a paper fill at "the price" is fiction. Per-market floor.
+    floors = getattr(_cfg, "VIVEK_BOT_MIN_PRICE", None) or {}
+    floor = float(floors.get(market, floors.get("default", 0)) or 0)
+    px = float(row.get("price") or 0)
+    if floor > 0 and 0 < px < floor:
+        sym = row.get("symbol", "?")
+        reason = f"price {px:g} below the {market} tradeability floor {floor:g}"
+        log.info("SKIP  %-8s [min_price] %s", sym, reason)
+        return {"take": False, "grade": decision.get("grade"), "reason": reason,
+                "code": "min_price", "plan": None}
 
     plan = decision["_plan"]
     tf = decision["timeframe"]
@@ -312,6 +334,12 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     longs = sum(1 for p in book if str(p.get("direction")) == "long")
     shorts = sum(1 for p in book if str(p.get("direction")) == "short")
 
+    # Correlation control: positions per sector (existing + taken this run), so
+    # the book can't quietly become one macro bet. Unknown sectors are exempt.
+    max_sector = int(kw.get("max_per_sector", getattr(_cfg, "VIVEK_BOT_MAX_PER_SECTOR", 0)) or 0)
+    sector_counts: Counter = Counter(
+        str(p.get("sector") or "").strip().lower() for p in book if p.get("sector"))
+
     def drop(out, code, reason):
         log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
         reasons[code] += 1
@@ -326,15 +354,21 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             continue
         sym = str(row.get("symbol") or "").upper()
         direction = out["direction"]
+        sector = str(row.get("sector") or "").strip().lower()
         if sym in open_syms:
             drop(out, "dup_symbol", f"already holding {sym}")
         elif longs + shorts >= max_pos:                 # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
         elif direction == "long" and longs >= max_long:
             drop(out, "long_cap", f"long cap {max_long} reached — reserving the ≥{min_shorts}-short slots")
+        elif max_sector and sector and sector_counts[sector] >= max_sector:
+            drop(out, "sector_cap",
+                 f"already {sector_counts[sector]} open in '{sector}' — cap {max_sector}/sector")
         else:
             plans.append(out)
             open_syms.add(sym)
+            if sector:
+                sector_counts[sector] += 1
             if direction == "long":
                 longs += 1
             else:

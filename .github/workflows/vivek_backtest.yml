@@ -7,6 +7,11 @@ name: VIVEK backtest
 # public/data/vivek_backtest.json), so results land one market at a time —
 # status="partial" until the last market flips it to "complete".
 on:
+  # Monthly evidence refresh (1st of the month, 08:00 UTC): re-runs the
+  # LONG-ONLY walk-forward so the edge estimate stays current instead of
+  # ossifying at a single snapshot. Manual runs still available any time.
+  schedule:
+    - cron: "0 8 1 * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -46,6 +51,9 @@ jobs:
           LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
           PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
           LONLY="${{ github.event.inputs.long_only }}"
+          # Scheduled runs have no inputs → refresh the long-only evidence file
+          # (the bot is long-only; that's the number that matters).
+          if [ "${{ github.event_name }}" = "schedule" ]; then LONLY="true"; fi
           OUT="public/data/vivek_backtest.json"; FLAG=""
           if [ "$LONLY" = "true" ]; then OUT="public/data/vivek_backtest_longonly.json"; FLAG="--long-only"; fi
           git config user.name "github-actions[bot]"
