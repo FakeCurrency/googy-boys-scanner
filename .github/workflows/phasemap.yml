@@ -78,6 +78,14 @@ jobs:
         continue-on-error: true
         run: python -m scanner.spec_run --market all
 
+      # Multi-lens confluence -> Discord ping (state-deduped; triple-lens
+      # alignments mention @here). Never blocks the scan.
+      - name: Confluence Discord alert
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m scanner.confluence_alert
+
       # Schema gate: every freshly written snapshot must pass the writer's own
       # validator (zones are bands, states/tiers legal, disclaimer present,
       # current ruleset version) before it ships.
@@ -109,7 +117,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data/phasemap public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
+          PATHS="public/data/phasemap public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts journal/confluence_state.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

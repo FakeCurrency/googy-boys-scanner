@@ -146,6 +146,15 @@ jobs:
           print(f"schema gate OK — all *_vivek.json at v{want}")
           PY
 
+      # Multi-lens confluence -> Discord ping. VIVEK results just refreshed;
+      # PhaseMap/Specs files are the nightly ones from the checkout. State-
+      # deduped, so the intraday cadence doesn't spam. Never blocks the scan.
+      - name: Confluence Discord alert
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m scanner.confluence_alert
+
       # NOTE: the paper-trade journal, Telegram alerts and Discord digest read the
       # retired pullback/reversal/short scans, which the VIVEK-only pipeline no
       # longer produces. They are disabled until VIVEK-native versions are wired
@@ -163,7 +172,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data journal/vivek_journal.json journal/vivek_bot_book.json journal/journal.json journal/scalp_journal.json journal/discord_state.json data/notified_signals.json data/market_caps.json"
+          PATHS="public/data journal/vivek_journal.json journal/vivek_bot_book.json journal/journal.json journal/scalp_journal.json journal/discord_state.json journal/confluence_state.json data/notified_signals.json data/market_caps.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

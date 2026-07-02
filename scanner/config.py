@@ -591,6 +591,8 @@ DISCORD_USERNAME       = "Vivek 5.0"
 DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
 DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
 DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
+DISCORD_CONF_MENTION   = "@here"     # mention on TRIPLE-lens confluence alerts ("" = silent)
+SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
 DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
 DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
     "A+": 0x30D158, "A": 0x0A84FF, "B": 0xFF9500, "C": 0x8E8E93,
