@@ -43,9 +43,14 @@
     const speak = window.speechSynthesis
       ? `<button class="pm-speak" data-speak="${idx}" title="Read aloud" aria-label="Read analysis aloud">▶ READ</button>`
       : "";
+    // FLASH cue: the event printed on THIS scan's date — review the chart now
+    const m = rec.metrics || {};
+    const rd = state.data && state.data.run_date;
+    const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
     return `<article class="pm-card pm-card-link" data-idx="${idx}" title="Open chart">
       <div class="pm-card-head">
         <span class="pm-ticker">${PM.esc(rec.ticker)}</span>
+        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
         ${PM.headBadgesHTML(rec)}
         ${speak}
         <span class="pm-chart-cue" aria-hidden="true">CHART →</span>

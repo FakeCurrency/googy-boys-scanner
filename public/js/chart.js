@@ -1261,6 +1261,28 @@
       chart.priceScale("mom").applyOptions({ scaleMargins: { top: 0.72, bottom: 0.06 } });
     }
 
+    // ── FLASH bands (2026-07-02, owner request) — a translucent full-height
+    // column on every bar where a system spoke (VIVEK reaction/trigger,
+    // PhaseMap sweep/displacement). The TradingView-style "review this bar"
+    // visual cue: impossible to scroll past. Hidden price scale, value-1
+    // columns stretched to the full pane.
+    const flashSeries = chart.addHistogramSeries({
+      priceScaleId: "flash", lastValueVisible: false, priceLineVisible: false,
+    });
+    chart.priceScale("flash").applyOptions({
+      scaleMargins: { top: 0, bottom: 0 }, visible: false,
+    });
+    function setFlashes(items) {
+      // items: [{time, color}] — dedupe on time (lightweight-charts requires
+      // ascending unique times)
+      const seen = new Map();
+      (items || []).forEach((f) => { if (f && f.time != null) seen.set(f.time, f.color); });
+      flashSeries.setData([...seen.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, color]) => ({ time, value: 1, color })));
+    }
+    let vkFlashes = [], pmFlashes = [];
+
     // One line series per indicator (the set is the same across timeframes).
     const lineSeries = tfs[curTF].lines.map((l) => chart.addLineSeries({
       color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
@@ -1322,28 +1344,29 @@
       const t0 = cs[0].time, tN = cs[cs.length - 1].time;
       pmBands.forEach((b) => b.series.setData([
         { time: t0, value: b.z.high }, { time: tN, value: b.z.high }]));
+      const bull = pmRec.direction === "bullish";
+      const snap = (iso) => {
+        const t = Math.floor(Date.parse(iso + "T00:00:00Z") / 1000);
+        let best = null;
+        for (let i = 0; i < cs.length; i++) { if (cs[i].time <= t + 86399) best = cs[i].time; else break; }
+        return best;
+      };
+      const mm = pmRec.metrics || {};
+      const sweepT = mm.sweep_date ? snap(mm.sweep_date) : null;
+      const dispT = mm.displacement_date ? snap(mm.displacement_date) : null;
+      // FLASH the event bars on every timeframe (amber = sweep, green = displacement)
+      pmFlashes = [];
+      if (sweepT) pmFlashes.push({ time: sweepT, color: "rgba(255,178,36,0.12)" });
+      if (dispT) pmFlashes.push({ time: dispT, color: "rgba(47,208,127,0.12)" });
+      setFlashes([...vkFlashes, ...pmFlashes]);
       // Sweep / displacement arrows — only where nothing else sets markers.
       if (!(tfs[key] || {}).levels && !(tfs[key] || {}).squeeze_dots &&
           typeof candle.setMarkers === "function") {
-        const bull = pmRec.direction === "bullish";
-        const snap = (iso) => {
-          const t = Math.floor(Date.parse(iso + "T00:00:00Z") / 1000);
-          let best = null;
-          for (let i = 0; i < cs.length; i++) { if (cs[i].time <= t + 86399) best = cs[i].time; else break; }
-          return best;
-        };
-        const mm = pmRec.metrics || {};
         const mk = [];
-        if (mm.sweep_date) {
-          const t = snap(mm.sweep_date);
-          if (t) mk.push({ time: t, position: bull ? "belowBar" : "aboveBar",
-            color: "#ffb224", shape: bull ? "arrowUp" : "arrowDown", text: "SWEEP" });
-        }
-        if (mm.displacement_date) {
-          const t = snap(mm.displacement_date);
-          if (t) mk.push({ time: t, position: bull ? "belowBar" : "aboveBar",
-            color: "#2fd07f", shape: bull ? "arrowUp" : "arrowDown", text: "DISPLACE" });
-        }
+        if (sweepT) mk.push({ time: sweepT, position: bull ? "belowBar" : "aboveBar",
+          color: "#ffb224", shape: bull ? "arrowUp" : "arrowDown", text: "SWEEP" });
+        if (dispT) mk.push({ time: dispT, position: bull ? "belowBar" : "aboveBar",
+          color: "#2fd07f", shape: bull ? "arrowUp" : "arrowDown", text: "DISPLACE" });
         mk.sort((a, b) => a.time - b.time);
         candle.setMarkers(mk);
       }
@@ -1408,6 +1431,9 @@
         const em = buildEntryMarker(entryEpoch, ivSec, posDir);
         if (em) { ms.push(em); ms.sort((a, b) => a.time - b.time); }
         candle.setMarkers(ms);
+        // FLASH the bars where the system spoke (blue tint = VIVEK events)
+        vkFlashes = ms.map((m) => ({ time: m.time, color: "rgba(77,163,255,0.10)" }));
+        setFlashes([...vkFlashes, ...pmFlashes]);
       }
       // Expose the active timeframe's plan so Simulate-Buy logs THIS TF's levels.
       d._activeLevels = lv;
