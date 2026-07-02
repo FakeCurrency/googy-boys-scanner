@@ -427,8 +427,18 @@
 .cmp-legend .lg-d { color: var(--green); }
 .cmp-legend .lg-r { color: var(--bot); }
 
-/* owner marker in the combined tables */
-.own { font-size: 14px; }
+/* ── same positions — you and Claude in the same trade, head to head ── */
+.both > .jr-section-title:first-child { margin-top: 6px; }
+.jr-table th.h-bot { color: var(--bot); }
+.jr-table th.h-me  { color: var(--me); }
+.jr-table .bsep { border-left: 1px solid var(--border); }
+.both-note { font: 500 11px/1.5 var(--sans); color: var(--muted-2); margin: 8px 2px 0; }
+.both-win {
+  display: inline-block; font: 700 10px/1 var(--sans); letter-spacing: .4px; text-transform: uppercase;
+  padding: 4px 8px; border-radius: 4px; background: var(--fill-2); color: var(--muted);
+}
+.both-win.w-bot { background: rgba(91,156,255,.14); color: var(--bot); }
+.both-win.w-me  { background: rgba(185,139,255,.14); color: var(--me); }
 
 /* ── 2 + 3 · Claude vs Me, side by side ── */
 .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; margin-bottom: 26px; }

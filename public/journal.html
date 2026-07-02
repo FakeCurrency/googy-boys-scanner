@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=53" />
-  <link rel="stylesheet" href="css/journal.css?v=18" />
+  <link rel="stylesheet" href="css/journal.css?v=19" />
 </head>
 <body>
   <header class="topbar">
@@ -49,15 +49,23 @@
         </figure>
       </div>
       <p class="cmp-legend"><span class="lg lg-d">— cumulative&nbsp;$</span> <span class="lg lg-r">— cumulative&nbsp;R</span></p>
-      <div class="jr-section-title">Open trades <span class="muted">— both</span> <span id="cmp-open-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="cmp-open"></div>
-      <div class="jr-section-title">Closed trades <span class="muted">— both</span> <span id="cmp-closed-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="cmp-closed"></div>
       <div class="jr-section-title">Edge tracker <span class="muted">— forward expectancy by setup (fills in as trades close)</span></div>
       <div class="jr-table-wrap" id="edge-tracker"></div>
     </section>
 
-    <!-- ═══ 2 + 3 · CLAUDE vs ME (side by side) ═══ -->
+    <!-- ═══ 2 · SAME POSITIONS — you and Claude in the same trade ═══ -->
+    <section class="cmp both">
+      <div class="jr-section-title">⚔ Same positions <span class="muted">— you and Claude in the same trade, head to head</span> <span id="both-open-n" class="muted"></span></div>
+      <div class="jr-table-wrap" id="both-open"></div>
+      <p class="both-note">Same live price for both sides — the R/$ gap comes from who got the better entry.
+        Claude marks at the latest scan; your side updates live.</p>
+      <div id="both-closed-wrap" hidden>
+        <div class="jr-section-title">Settled head-to-heads <span class="muted">— same symbol, both sides closed</span></div>
+        <div class="jr-table-wrap" id="both-closed"></div>
+      </div>
+    </section>
+
+    <!-- ═══ 3 + 4 · CLAUDE (left) vs ME (right) ═══ -->
     <div class="sides">
     <section class="side side-bot" id="sec-bot">
       <div class="side-hd">
@@ -133,6 +141,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=5"></script>
-  <script src="js/journal.js?v=42"></script>
+  <script src="js/journal.js?v=43"></script>
 </body>
 </html>

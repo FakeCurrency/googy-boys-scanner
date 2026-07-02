@@ -379,7 +379,7 @@
   // the comparison overview above show entry/stop/targets/timestamps in full.
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
-    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Now</th>
+    const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
       <th class="num">R</th><th class="num">$</th>${side === "me" ? "<th></th>" : ""}</tr>`;
     // Newest position at the top.
     const rows = list.slice().sort((a, b) => (openedMs(b) || 0) - (openedMs(a) || 0)).map((t) => {
@@ -391,6 +391,7 @@
         ${symCell(t)}
         <td>${gradeChip(gradeOf(t))}</td>
         <td class="num">${px(t.entry)}</td>
+        <td class="num">${px(t.stop)}</td>
         ${liveCells(t, side)}${actions}</tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
@@ -413,63 +414,94 @@
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
-  // Combined tables (Claude + Me together) for the comparison overview.
-  const ownerChip = (side) => side === "bot"
-    ? `<span class="own own-bot" title="Claude (bot)">🤖</span>`
-    : `<span class="own own-me" title="Me (manual)">✏️</span>`;
+  // ── Same positions: you and Claude in the same trade, head to head ─────────
+  // A trade "matches" when both sides hold the same symbol, in the same market,
+  // the same way (long/short). One shared Now column (same live price for both);
+  // Claude's R/$ are marked server-side each scan, yours update live.
+  const tradeKey = (t) => `${marketOf(t)}:${symKey(t)}:${t.direction === "short" ? "S" : "L"}`;
 
-  function combinedOpen(nowMs) {
-    const rows = [...state.bot.open.map((t) => ["bot", t]), ...state.me.open.map((t) => ["me", t])]
-      .sort((a, b) => (openedMs(b[1]) || 0) - (openedMs(a[1]) || 0));   // newest first
-    if (!rows.length) return `<div class="jr-empty">No open positions on either side.</div>`;
-    const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th>
-      <th class="num">Targets</th><th class="num">Now</th><th class="num">Opened</th><th class="num">In&nbsp;trade</th>
-      <th class="num">Unreal R</th><th class="num">Unreal $</th><th></th></tr>`;
-    const body = rows.map(([side, t]) => {
-      const tps = [t.tp1, t.tp2, t.tp3].filter((v) => v != null).map((v) => px(v)).join(" / ") || "—";
-      const parts = liveCellParts(t, side);
-      const actions = side === "me"
-        ? `<button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
-          `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button>` : "";
-      return `<tr data-tid="${esc(t.id)}" data-side="${side}">
-        <td>${ownerChip(side)}</td>
-        ${symCell(t)}
-        <td>${gradeChip(gradeOf(t))}</td>
-        <td class="num">${px(t.entry)}</td>
-        <td class="num">${px(t.stop)}</td>
-        <td class="num"><span class="num-sub">${tps}</span></td>
-        ${parts.now}
-        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
-        <td class="num jr-dur">${durText(openedMs(t), nowMs)}</td>
-        ${parts.ur}
-        ${parts.ud}
-        <td class="num jr-actions">${actions}</td></tr>`;
-    }).join("");
-    return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
-  }
+  function renderBoth() {
+    const openHost = $("#both-open");
+    if (!openHost) return;
 
-  function combinedClosed() {
-    const rows = [...state.bot.closed.map((t) => ["bot", t]), ...state.me.closed.map((t) => ["me", t])]
-      .sort((a, b) => (exitMs(b[1]) || 0) - (exitMs(a[1]) || 0));
-    if (!rows.length) return `<div class="jr-empty">No closed trades yet on either side.</div>`;
-    const head = `<tr><th>Who</th><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Exit</th>
-      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th><th class="num">Closed</th><th class="num">In&nbsp;trade</th><th>Reason</th></tr>`;
-    const body = rows.map(([side, t]) => {
-      const dd = dollarsOf(t);
-      return `<tr>
-        <td>${ownerChip(side)}</td>
-        ${symCell(t)}
-        <td>${gradeChip(gradeOf(t))}</td>
-        <td class="num">${px(t.entry)}</td>
-        <td class="num">${px(t.exit)}</td>
-        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
-        <td class="num ${dd == null ? "" : pcls(dd)}">${dd == null ? "—" : d2(dd)}</td>
-        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
-        <td class="num jr-stamp">${stamp(exitMs(t))}</td>
-        <td class="num">${durText(openedMs(t), exitMs(t))}</td>
-        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
-    }).join("");
-    return `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    // open overlaps — every (Claude, me) pair currently open on the same key
+    const meByKey = new Map();
+    for (const t of state.me.open) {
+      const k = tradeKey(t);
+      if (!meByKey.has(k)) meByKey.set(k, []);
+      meByKey.get(k).push(t);
+    }
+    const pairs = [];
+    for (const b of state.bot.open) {
+      for (const m of meByKey.get(tradeKey(b)) || []) pairs.push([b, m]);
+    }
+    pairs.sort((a, b) => (openedMs(b[1]) || 0) - (openedMs(a[1]) || 0));
+    const nEl = $("#both-open-n");
+    if (nEl) nEl.textContent = pairs.length ? `(${pairs.length})` : "";
+
+    if (!pairs.length) {
+      openHost.innerHTML = `<div class="jr-empty">No overlap right now — when you and Claude hold the
+        same position, it lines up here head to head.</div>`;
+    } else {
+      const head = `<tr><th>Symbol</th><th class="num">Now</th>
+        <th class="num h-bot bsep">🤖 Entry</th><th class="num h-bot">🤖 R</th><th class="num h-bot">🤖 $</th>
+        <th class="num h-me bsep">✏️ Entry</th><th class="num h-me">✏️ R</th><th class="num h-me">✏️ $</th></tr>`;
+      const body = pairs.map(([b, m]) => {
+        // Claude's cells are static (marked by the scan) — plain classes so
+        // refreshLive only drives the Me cells (.jr-ur/.jr-ud) + shared Now.
+        const ur = b.unreal_r, ud = b.unreal_usd;
+        const me = liveCellParts(m, "me");
+        return `<tr data-tid="${esc(m.id)}" data-side="me">
+          ${symCell(b)}
+          ${me.now}
+          <td class="num bsep">${px(b.entry)}</td>
+          <td class="num ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>
+          <td class="num ${ud != null ? pcls(ud) : ""}">${ud != null ? d2(ud) : "—"}</td>
+          <td class="num bsep">${px(m.entry)}</td>
+          ${me.ur}${me.ud}</tr>`;
+      }).join("");
+      openHost.innerHTML = `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    }
+
+    // settled head-to-heads — same symbol+direction, both sides fully closed.
+    // Totals per symbol (either side may have traded it more than once).
+    const agg = (list) => {
+      const out = new Map();
+      for (const t of list) {
+        if (t.realized_r == null) continue;
+        const k = tradeKey(t);
+        const a = out.get(k) || { n: 0, r: 0, d: 0, t };
+        a.n += 1; a.r += t.realized_r; a.d += (dollarsOf(t) || 0);
+        out.set(k, a);
+      }
+      return out;
+    };
+    const bAgg = agg(state.bot.closed), mAgg = agg(state.me.closed);
+    const settled = [];
+    for (const [k, b] of bAgg) { const m = mAgg.get(k); if (m) settled.push([b, m]); }
+    settled.sort((x, y) => Math.abs(y[0].r + y[1].r) - Math.abs(x[0].r + x[1].r));
+
+    const wrap = $("#both-closed-wrap");
+    if (wrap) wrap.hidden = !settled.length;
+    if (settled.length) {
+      const win = (b, m) => b.r > m.r + 1e-9
+        ? `<span class="both-win w-bot">🤖 Claude</span>`
+        : m.r > b.r + 1e-9 ? `<span class="both-win w-me">✏️ Me</span>`
+        : `<span class="both-win">Tie</span>`;
+      const head = `<tr><th>Symbol</th>
+        <th class="num h-bot bsep">🤖 R</th><th class="num h-bot">🤖 $</th>
+        <th class="num h-me bsep">✏️ R</th><th class="num h-me">✏️ $</th>
+        <th class="num">Trades</th><th class="num">Winner</th></tr>`;
+      const body = settled.map(([b, m]) => `<tr>
+        ${symCell(b.t)}
+        <td class="num bsep ${rcls(b.r)}">${rfmt(b.r)}</td>
+        <td class="num ${pcls(b.d)}">${d2(b.d)}</td>
+        <td class="num bsep ${rcls(m.r)}">${rfmt(m.r)}</td>
+        <td class="num ${pcls(m.d)}">${d2(m.d)}</td>
+        <td class="num"><span class="num-sub">${b.n} vs ${m.n}</span></td>
+        <td class="num">${win(b, m)}</td></tr>`).join("");
+      $("#both-closed").innerHTML = `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    }
   }
 
   // ── live prices (reused from the manual-journal helpers) ──────────────────
@@ -574,14 +606,6 @@
       row("Trades", sb.n, sm.n, (v) => String(v), null) +
       row("Open now", sb.open, sm.open, (v) => String(v), null) +
       row("Max DD", sb.maxDD, sm.maxDD, dfmt, null);
-
-    // Combined open + closed trades (both sides together) under the overview.
-    $("#cmp-open").innerHTML = combinedOpen(Date.now());
-    $("#cmp-closed").innerHTML = combinedClosed();
-    const on = state.bot.open.length + state.me.open.length;
-    const cn = state.bot.closed.length + state.me.closed.length;
-    $("#cmp-open-n").textContent = on ? `(${on})` : "";
-    $("#cmp-closed-n").textContent = cn ? `(${cn})` : "";
   }
 
   // ── Edge tracker: forward expectancy per setup cell (timeframe × trigger) ──
@@ -628,6 +652,7 @@
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
     renderComparison(sb, sm);
+    renderBoth();
     renderEdgeTracker();
     const note = $("#bot-note");
     if (note) note.textContent = (state.bot.open.length || state.bot.closed.length)
