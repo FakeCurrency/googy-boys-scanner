@@ -1,0 +1,130 @@
+name: PhaseMap nightly scan
+
+# Zone-based AMD scanner (phasemap/). EOD daily bars, one snapshot per market:
+#   public/data/phasemap/<market>/latest.json  (+ dated copy)
+#   public/data/phasemap/charts/<market>/<TICKER>.json  (chart-page candles)
+# Runs nightly after the ASX close (~18:30 Melbourne = 08:30 UTC in AEST;
+# fires an hour later in Melbourne during AEDT Oct-Apr, which is fine — all
+# three markets' sessions are complete either way). Crypto trades 24/7, so
+# the job runs every day, not just weekdays.
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market to scan"
+        default: "all"
+        required: false
+        type: choice
+        options: ["all", "asx", "nasdaq", "crypto"]
+      args:
+        description: "Extra args for phasemap.run (e.g. --limit 25 for a quick test)"
+        default: ""
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phasemap
+  cancel-in-progress: false
+
+jobs:
+  phasemap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Same Yahoo etiquette as the main scan: the two small markets (~100
+      # names each) run together and finish in minutes, then the full ASX
+      # directory (~2,000 names) gets Yahoo to itself for best coverage.
+      - name: Run PhaseMap scans
+        run: |
+          set +e
+          MARKET="${{ github.event.inputs.market }}"
+          MARKET="${MARKET:-all}"
+
+          if [ "$MARKET" != "all" ]; then
+            echo "Single-market PhaseMap scan: $MARKET"
+            python -m phasemap.run --market "$MARKET" ${{ github.event.inputs.args }}
+            exit $?
+          fi
+
+          python -m phasemap.run --market nasdaq ${{ github.event.inputs.args }} &
+          PID_NAS=$!
+          python -m phasemap.run --market crypto ${{ github.event.inputs.args }} &
+          PID_CRY=$!
+          wait $PID_NAS; RC_NAS=$?
+          wait $PID_CRY; RC_CRY=$?
+          echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX alone"
+          python -m phasemap.run --market asx ${{ github.event.inputs.args }}
+          RC_ASX=$?
+          echo "phasemap rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
+          # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
+          [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+
+      # Schema gate: every freshly written snapshot must pass the writer's own
+      # validator (zones are bands, states/tiers legal, disclaimer present,
+      # current ruleset version) before it ships.
+      - name: Verify PhaseMap snapshots
+        run: |
+          python - <<'PY'
+          import json, glob, sys
+          from phasemap.config import RULESET_VERSION
+          from phasemap.output.writer import validate_snapshot
+          files = glob.glob("public/data/phasemap/*/latest.json")
+          if not files:
+              print("SCHEMA GATE FAILED: no snapshots written"); sys.exit(1)
+          bad = []
+          for f in files:
+              try:
+                  snap = json.load(open(f, encoding="utf-8"))
+                  validate_snapshot(snap)
+                  if snap["ruleset_version"] != RULESET_VERSION:
+                      bad.append(f"{f}: ruleset {snap['ruleset_version']} != {RULESET_VERSION}")
+              except Exception as e:
+                  bad.append(f"{f}: {e}")
+          if bad:
+              print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
+          print(f"schema gate OK — {len(files)} snapshots at ruleset v{RULESET_VERSION}")
+          PY
+
+      - name: Commit & push fresh data (triggers Cloudflare deploy)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Only this scan's generated outputs — never code or other files.
+          PATHS="public/data/phasemap"
+          git add $PATHS 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: phasemap $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+          # Generated data is fully recomputed each run — the latest scan wins.
+          # Rebase onto the freshest main and re-apply our outputs on top, with
+          # push retries in case a market scan lands at the same moment.
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+              git checkout "$SHA" -- "$p" 2>/dev/null || true
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: phasemap $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

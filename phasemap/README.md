@@ -22,6 +22,12 @@ with the disclaimer line.
 
 ## Running
 
+Nightly refresh is automated: `.github/workflows/phasemap.yml` runs all three
+markets daily at 08:30 UTC (≈18:30 Melbourne, post-ASX close), validates every
+snapshot against the writer's schema gate, and commits the data (Cloudflare
+redeploys). Manual trigger: Actions → "PhaseMap nightly scan" → Run workflow,
+or `gh workflow run phasemap.yml`.
+
 ```bash
 python -m phasemap.run                    # all markets: asx + nasdaq + crypto
 python -m phasemap.run --market asx       # one market (full ASX directory ~2,000 names)
