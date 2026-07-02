@@ -252,3 +252,13 @@
   .pm-band-sources { display: none; }
   .pm-search { width: 100%; margin-left: 0; }
 }
+
+/* Legibility pass 2 — bolder, bigger controls to match the dashboard */
+.pm-tab { font-size: 13.5px; font-weight: 700; padding: 8px 14px; }
+.pm-chip { font-size: 13px; font-weight: 700; padding: 6px 12px; }
+.pm-search { font-size: 13px; font-weight: 600; padding: 7px 11px; width: 130px; }
+.pm-sub { font-weight: 600; }
+.pm-ticker { font-size: 17px; }
+.pm-narration { color: var(--text); }
+.sp-name { font-weight: 600; }
+.sp-row-price { font-size: 14.5px; }

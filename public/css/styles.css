@@ -1159,9 +1159,11 @@ body.debug-mode .debug-panel {
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
 }
-@media (max-width: 1150px) {
+@media (max-width: 1560px) {
   /* the full row (flanking clocks + centred quote) only fits on wide screens;
-     below this, drop the clocks + quote and keep brand · market · nav compact */
+     below this, drop the clocks + quote and keep brand · market · nav compact.
+     (raised from 1150px on 2026-07-02 — the bolder, larger nav pills need the
+     clocks gone earlier or the row clips at laptop widths) */
   .topbar-clocks { display: none; }
   .topbar-quote { display: none; }
 }
@@ -1334,3 +1336,28 @@ body.debug-mode .debug-panel {
 .conf-banner-label { color: var(--orange); font-weight: 700; letter-spacing: 0.08em; }
 .conf-banner a { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--muted); }
 .conf-banner a:hover { color: var(--orange); }
+
+/* ═══ Legibility pass 2 (owner 2026-07-02): bigger + BOLDER interface text,
+   especially the top pills (market switch + page nav). Appended overrides —
+   the originals above stay documented; delete this block to revert. ═══ */
+.market-btn { font: 700 14px/1 var(--mono); padding: 8px 17px; }
+.howto-link { font: 700 13px/1 var(--mono); color: var(--text-2); }
+.howto-link:hover { color: var(--green); }
+.brand-text h1 { font-size: 19px; }
+.brand-sub { font-size: 11px; font-weight: 700; }
+.view-tab { font: 700 13.5px/1 var(--mono); }
+.seg-btn { font-weight: 700; font-size: 13px; }
+.stat-label { font: 700 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.chip { font: 600 11px/1 var(--mono); letter-spacing: 0.05em; padding: 4px 8px; }
+.clock-time { font-weight: 700; }
+.scan-banner-title { font-weight: 700; }
+/* the nav pills have their own more-specific rule — override at same depth */
+.nav-pills .howto-link { font-size: 12.5px; font-weight: 700; color: var(--text-2); }
+.nav-pills .howto-link:hover { color: var(--green); }
+.pm-topnav .howto-link { font-size: 12.5px; font-weight: 700; }
+/* mid-width safety: keep the bold pills but compact them where the row gets
+   tight (clocks are already hidden below 1560px) */
+@media (max-width: 1440px) {
+  .nav-pills .howto-link { font-size: 11px; padding: 5px 8px; }
+  .market-btn { font-size: 12.5px; padding: 7px 12px; }
+}
