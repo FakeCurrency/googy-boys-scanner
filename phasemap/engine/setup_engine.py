@@ -28,6 +28,7 @@ ACTIVE_STATES = ("TRAP_SET", "SWEPT", "DISPLACED", "RUNNING", "STALLED")
 class SetupEngine:
     ind: IndicatorSet
     bull: bool
+    market: str = "asx"
 
     state: str = "NEUTRAL"
     state_log: list = field(default_factory=list)   # (bar_index, state)
@@ -82,7 +83,8 @@ class SetupEngine:
 
     def _buffer(self, i: int) -> float:
         a = self.ind.atr20[i]
-        return buffer(float(self.ind.close[i]), 0.0 if math.isnan(a) else float(a))
+        return buffer(float(self.ind.close[i]), 0.0 if math.isnan(a) else float(a),
+                      self.market)
 
     def _leg(self) -> float:
         return abs(self.leg_extreme - self.sweep_extreme)

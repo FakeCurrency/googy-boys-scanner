@@ -102,20 +102,21 @@ def _metrics(eng: SetupEngine, ind, i: int) -> dict:
     return m
 
 
-def scan_ticker(ticker: str, df: pd.DataFrame) -> list:
+def scan_ticker(ticker: str, df: pd.DataFrame, market: str = "asx",
+                volume_is_usd: bool = False) -> list:
     """Run both directions over one ticker's daily bars. Returns 0-2 records."""
     if df is None or len(df) < CONFIG.min_history_bars:
         return []
     df = df.dropna(subset=["Open", "High", "Low", "Close"]).reset_index(drop=True)
     if len(df) < CONFIG.min_history_bars:
         return []
-    ind = compute_indicators(df)
+    ind = compute_indicators(df, volume_is_usd=volume_is_usd)
     base_tags = module0_tags(ind)
     last = len(df) - 1
 
     records = []
     for bull in (True, False):
-        eng = SetupEngine(ind=ind, bull=bull)
+        eng = SetupEngine(ind=ind, bull=bull, market=market)
         eng.process()
         state = eng.state
         if state not in ("TRAP_SET", "SWEPT", "DISPLACED", "RUNNING",

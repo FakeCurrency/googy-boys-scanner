@@ -144,8 +144,10 @@ def _anchor_arrays(dates, opens, closes):
     return y_open, q_open, m_open, py_close
 
 
-def compute_indicators(df: pd.DataFrame) -> IndicatorSet:
-    """df columns: Date (datetime-like), Open, High, Low, Close, Volume — ascending."""
+def compute_indicators(df: pd.DataFrame, volume_is_usd: bool = False) -> IndicatorSet:
+    """df columns: Date (datetime-like), Open, High, Low, Close, Volume — ascending.
+    volume_is_usd: crypto feeds already quote Volume in dollars — don't
+    multiply by Close again."""
     o = df["Open"].to_numpy(dtype=float)
     h = df["High"].to_numpy(dtype=float)
     l = df["Low"].to_numpy(dtype=float)
@@ -155,7 +157,7 @@ def compute_indicators(df: pd.DataFrame) -> IndicatorSet:
 
     tr = true_range(h, l, c)
     atr20 = _trailing_mean(tr, CONFIG.atr_period)
-    turnover20 = _trailing_mean(c * v, CONFIG.turnover_window)
+    turnover20 = _trailing_mean(v if volume_is_usd else c * v, CONFIG.turnover_window)
 
     yo, qo, mo, pyc = _anchor_arrays(dates, o, c)
 

@@ -23,15 +23,19 @@ with the disclaimer line.
 ## Running
 
 ```bash
-python -m phasemap.run                    # full ASX directory (~2,000 names)
-python -m phasemap.run --limit 50
+python -m phasemap.run                    # all markets: asx + nasdaq + crypto
+python -m phasemap.run --market asx       # one market (full ASX directory ~2,000 names)
+python -m phasemap.run --market nasdaq --limit 50
 python -m phasemap.run --tickers BHP,CBA
 python -m pytest phasemap/tests -q       # acceptance + unit suite
 ```
 
-Output: `public/data/phasemap/YYYY-MM-DD.json` + `latest.json` (the frontend
-reads `latest.json` only). Deterministic: same bars + same
-`config.RULESET_VERSION` → byte-identical JSON.
+Output per market: `public/data/phasemap/<market>/YYYY-MM-DD.json` +
+`latest.json` (the frontend reads `latest.json` only), plus
+`public/data/phasemap/charts/<market>/<TICKER>.json` candle files for the
+chart page. Deterministic: same bars + same `config.RULESET_VERSION` →
+byte-identical JSON. Crypto turnover uses Volume directly (Yahoo quotes
+crypto volume in USD already); tick sizes are market-aware (`engine/buffers.py`).
 
 ## Layout
 

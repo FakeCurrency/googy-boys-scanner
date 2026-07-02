@@ -25,22 +25,23 @@ class FrameProvider:
 
 
 class YFinanceProvider:
-    """Prototype provider. ASX tickers get the .AX suffix."""
+    """Prototype provider. `symbols` maps display ticker -> Yahoo symbol
+    (e.g. {"BHP": "BHP.AX", "AAPL": "AAPL", "BTC": "BTC-USD"})."""
 
-    def __init__(self, tickers, suffix: str = ".AX", period: str = "2y"):
-        self._tickers = list(tickers)
-        self._suffix = suffix
+    def __init__(self, symbols: dict, period: str = "2y"):
+        self._symbols = dict(symbols)
         self._period = period
         self._cache = {}
 
     def universe(self):
-        return sorted(self._tickers)
+        return sorted(self._symbols)
 
     def fetch_all(self, chunk_size: int = 75):
         import yfinance as yf
-        symbols = [t + self._suffix for t in self._tickers]
-        for start in range(0, len(symbols), chunk_size):
-            chunk = symbols[start:start + chunk_size]
+        by_yf = {yf_sym: t for t, yf_sym in self._symbols.items()}
+        yf_syms = sorted(by_yf)
+        for start in range(0, len(yf_syms), chunk_size):
+            chunk = yf_syms[start:start + chunk_size]
             data = yf.download(chunk, period=self._period, interval="1d",
                                auto_adjust=True, group_by="ticker",
                                progress=False, threads=True)
@@ -54,7 +55,7 @@ class YFinanceProvider:
                     continue
                 out = df.reset_index()[["Date", "Open", "High", "Low",
                                         "Close", "Volume"]]
-                self._cache[sym[:-len(self._suffix)] if self._suffix else sym] = out
+                self._cache[by_yf[sym]] = out
 
     def get_daily_bars(self, ticker: str):
         if not self._cache:

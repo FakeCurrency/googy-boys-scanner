@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant
-RULESET_VERSION = "1.0.0"
+RULESET_VERSION = "1.1.0"          # 1.1.0: multi-market (asx/nasdaq/crypto) tick + turnover rules
 
 
 @dataclass(frozen=True)
