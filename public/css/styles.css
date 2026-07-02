@@ -1306,3 +1306,31 @@ body.debug-mode .debug-panel {
 .trkp-eqfoot .pos { color: var(--green); } .trkp-eqfoot .neg { color: var(--red); }
 .trkp-emptybox { background: var(--panel); border: 1px dashed var(--border); border-radius: 12px;
   padding: 22px; text-align: center; color: var(--muted-2); font: 500 13px/1.6 var(--sans); }
+
+/* ═══ Multi-lens confluence — when VIVEK + PhaseMap + Specs line up, it must
+   stick out. 2-lens = loud chip; 3-lens = pulsing beacon. (2026-07-02) ═══ */
+.pm-conf {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--orange); background: var(--orange-soft);
+  border: 1px solid rgba(255,178,36,0.5); padding: 2px 8px; border-radius: 4px;
+  white-space: nowrap;
+}
+.pm-conf-3 {
+  color: #140c00; background: var(--orange); border-color: var(--orange);
+  animation: pm-conf-pulse 1.6s ease-in-out infinite;
+}
+@keyframes pm-conf-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,178,36,0.65); }
+  50%      { box-shadow: 0 0 0 7px rgba(255,178,36,0); }
+}
+.pm-card-triple { box-shadow: 0 0 0 1px var(--orange), 0 0 18px rgba(255,178,36,0.18) !important; }
+
+.conf-banner {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  margin: 12px 0; padding: 11px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,178,36,0.55); background: var(--orange-soft);
+  font-family: var(--mono); font-size: 12px; color: var(--text);
+}
+.conf-banner-label { color: var(--orange); font-weight: 700; letter-spacing: 0.08em; }
+.conf-banner a { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.conf-banner a:hover { color: var(--orange); }

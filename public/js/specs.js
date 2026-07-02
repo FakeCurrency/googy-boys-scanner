@@ -28,6 +28,8 @@
   function rowHTML(r, idx) {
     const cur = (state.data && state.data.currency_symbol) || "A$";
     const starred = PM.watch.has("specs", state.market, r.symbol);
+    const ci = state.confl ? state.confl.of(r.symbol) : null;
+    const aligned = ci && ci.side === "long";   // specs are long-only
     const gc = GRADE_COLOR[r.grade] || "var(--grade-c)";
     const chips = (r.chips || []).map((c) => `<span class="pm-tag">${PM.esc(c)}</span>`).join("");
     const fund = PM.isFundReit({ name: r.name, sector: r.sector, ticker: r.symbol })
@@ -38,6 +40,7 @@
         <span class="pm-ticker">${PM.esc(r.symbol)}</span>
         <span class="pm-dir pm-dir-long">LONG</span>
         <span class="sp-name">${PM.esc(r.name)}${r.sector ? ` <span class="pm-sector">${PM.esc(r.sector)}</span>` : ""} ${fund}</span>
+        ${aligned ? PM.confluenceChipHTML(ci, "SPECS") : ""}
         ${r._stale ? `<span class="pm-tag pm-tag-stale">NO ACTIVE SETUP · last seen ${PM.esc(r._staleDate || "")}</span>` : `<span class="pm-tag sp-spike">⚡ ${r.spike_ratio}×</span>`}
         <span class="sp-row-price">${cur}${fp(r.price)}</span>
         <span class="sp-row-score">${r.score}/${r.score_max}<b>${r.rr != null ? " · " + r.rr.toFixed(1) + "R" : ""}</b></span>
@@ -143,6 +146,8 @@
         const live = state.data.results.find((r) => r.symbol === sym);
         if (live) PM.watch.refresh("specs", state.market, sym, live);
       }
+      state.confl = null;
+      PM.loadConfluence(state.market).then((c) => { state.confl = c; render(); });
     } catch (err) {
       state.data = null;
       $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;

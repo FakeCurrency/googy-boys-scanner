@@ -403,6 +403,11 @@
   function vkBadges(r) {
     if (state.mode !== "vivek") return "";
     const out = [];
+    // Multi-lens confluence (dog-balls mode): another lens has an ACTIVE
+    // aligned setup on this exact name right now
+    const ci = window.PM && state.confl ? state.confl.of(r.symbol) : null;
+    if (ci && ci.side === (String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long"))
+      out.push(PM.confluenceChipHTML(ci, "VIVEK"));
     if (isFundReit(r))
       out.push(`<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>`);
     if (isHighConviction(r))
@@ -1092,6 +1097,45 @@
     renderLegend(d);
     renderStats(d);
     renderRows();
+    // Multi-lens confluence: fetch the other lenses' latest files, then
+    // re-render rows with chips + surface the alignment banner.
+    if (window.PM && PM.loadConfluence) {
+      state.confl = null;
+      renderConfluenceBanner(null);
+      PM.loadConfluence(state.market).then((c) => {
+        state.confl = c;
+        renderRows();
+        renderConfluenceBanner(c);
+      });
+    }
+  }
+
+  // A loud strip above the results whenever ANY name has 2+ lenses aligned.
+  // Links open the chart with the PhaseMap zones overlaid on the VIVEK plan.
+  function renderConfluenceBanner(confl) {
+    let el = document.getElementById("conf-banner");
+    const rows = confl ? confl.all() : [];
+    if (!rows.length) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("section");
+      el.id = "conf-banner";
+      el.className = "conf-banner";
+      const anchor = document.querySelector(".view-tabs");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
+      else return;
+    }
+    const CAP = 10;
+    el.innerHTML = `<span class="conf-banner-label">⨂ MULTI-LENS ALIGNMENT</span>` +
+      rows.slice(0, CAP).map((x) => {
+        const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
+        const arrow = x.side === "short" ? "▼" : "▲";
+        const cls = x.count >= 3 ? "pm-conf pm-conf-3" : "";
+        const tag = x.count >= 3 ? "🎯 " : "";
+        return `<a class="${cls}" title="${x.lenses.join(" + ")} — open the combined chart" ` +
+          `href="chart.html?m=${state.market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
+          `${tag}${esc(x.ticker)} ${arrow}${x.count >= 3 ? " ×3" : ""}</a>`;
+      }).join("") +
+      (rows.length > CAP ? `<span style="color:var(--muted)">+${rows.length - CAP} more</span>` : "");
   }
 
   function skeleton() {

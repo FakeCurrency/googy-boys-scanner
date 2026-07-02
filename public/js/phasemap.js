@@ -48,9 +48,12 @@
     const rd = state.data && state.data.run_date;
     const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
     const starred = PM.watch.has("phasemap", state.market, rec.ticker);
-    return `<article class="pm-card pm-card-link" data-idx="${idx}" title="Open chart">
+    const ci = state.confl ? state.confl.of(rec.ticker) : null;
+    const aligned = ci && ci.side === (rec.direction === "bearish" ? "short" : "long");
+    return `<article class="pm-card pm-card-link${aligned && ci.count >= 3 ? " pm-card-triple" : ""}" data-idx="${idx}" title="Open chart">
       <div class="pm-card-head">
         <span class="pm-ticker">${PM.esc(rec.ticker)}</span>
+        ${aligned ? PM.confluenceChipHTML(ci, "PHASEMAP") : ""}
         ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
         ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
         ${PM.headBadgesHTML(rec)}
@@ -211,6 +214,9 @@
         const live = state.data.results.find((r) => r.ticker === ticker);
         if (live) PM.watch.refresh("phasemap", state.market, ticker, live);
       }
+      // multi-lens confluence badges (async — re-render when known)
+      state.confl = null;
+      PM.loadConfluence(state.market).then((c) => { state.confl = c; render(); });
     } catch (err) {
       state.data = null;
       $("#pm-sub").textContent =

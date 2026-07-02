@@ -188,6 +188,69 @@ window.PM = (() => {
     },
   };
 
+  /* ── Multi-lens confluence ──────────────────────────────────────────────
+     The rare event: the SAME name with an ACTIVE setup on more than one
+     lens, direction-aligned (VIVEK LONG + PhaseMap bullish + Specs = the
+     full house). Computed client-side from the three latest scan files so
+     it's always as fresh as whatever each lens last published. */
+  const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
+  async function loadConfluence(market) {
+    const grab = (url) => fetch(url, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const [vivek, pm, spec] = await Promise.all([
+      grab(`data/${market}_vivek.json`),
+      grab(`data/phasemap/${market}/latest.json`),
+      grab(`data/${market}_spec.json`),
+    ]);
+    const map = {};
+    const ent = (t) => (map[t] = map[t] || { long: [], short: [], detail: {} });
+    ((vivek && vivek.results) || []).forEach((r) => {
+      const e = ent(r.symbol);
+      const side = String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long";
+      if (!e[side].includes("VIVEK")) e[side].push("VIVEK");
+      e.detail.vivek = { grade: r.grade, side };
+    });
+    ((pm && pm.results) || []).forEach((r) => {
+      if (!PM_ACTIVE_STATES.includes(r.state)) return;
+      const e = ent(r.ticker);
+      const side = r.direction === "bearish" ? "short" : "long";
+      if (!e[side].includes("PHASEMAP")) e[side].push("PHASEMAP");
+      e.detail.phasemap = { state: r.state, tier: r.tier, side };
+    });
+    ((spec && spec.results) || []).forEach((r) => {
+      const e = ent(r.symbol);
+      if (!e.long.includes("SPECS")) e.long.push("SPECS");
+      e.detail.specs = { grade: r.grade };
+    });
+    return {
+      of(ticker) {
+        const e = map[ticker];
+        if (!e) return null;
+        const side = e.long.length >= e.short.length ? "long" : "short";
+        const lenses = e[side];
+        if (lenses.length < 2) return null;
+        return { ticker, lenses, side, count: lenses.length, detail: e.detail };
+      },
+      all() {
+        return Object.keys(map)
+          .map((t) => this.of(t))
+          .filter(Boolean)
+          .sort((a, b) => b.count - a.count || a.ticker.localeCompare(b.ticker));
+      },
+    };
+  }
+
+  function confluenceChipHTML(info, currentLens) {
+    if (!info) return "";
+    const others = info.lenses.filter((l) => l !== currentLens);
+    if (!others.length) return "";
+    const triple = info.count >= 3;
+    return `<span class="pm-conf${triple ? " pm-conf-3" : ""}" ` +
+      `title="Multiple independent lenses have an ACTIVE ${info.side} setup on this ` +
+      `name right now — rare alignment, review every view">` +
+      `${triple ? "🎯 " : "⨂ "}${info.count}-LENS · +${others.join(" +")}</span>`;
+  }
+
   function starHTML(on, ticker) {
     return `<button class="pm-star${on ? " is-on" : ""}" data-star="${esc(ticker)}" ` +
       `title="${on ? "Remove from" : "Add to"} watchlist — starred names stay ` +
@@ -197,5 +260,6 @@ window.PM = (() => {
 
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
-           isFundReit, toggleSpeak, watch, starHTML };
+           isFundReit, toggleSpeak, watch, starHTML,
+           loadConfluence, confluenceChipHTML };
 })();
