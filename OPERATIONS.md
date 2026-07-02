@@ -114,7 +114,7 @@ FORCE_KILL=1 python -m scanner.broker.kill_switch
 ### Required for GitHub dispatch (Cloudflare Functions)
 | Variable | Where | Purpose |
 |----------|-------|---------|
-| `GH_DISPATCH_TOKEN` | Cloudflare Pages env | PAT with `repo` + `workflow` scopes |
+| `GH_DISPATCH_TOKEN` | Cloudflare Pages env | Fine-grained PAT scoped to **this repo only** with "Actions: Read and write" (see functions/api/scan.js). Avoid classic account-wide `repo`+`workflow` tokens — they can touch every repo on the account. |
 
 ---
 

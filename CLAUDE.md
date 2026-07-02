@@ -180,7 +180,7 @@ There is no build step — it's static HTML/CSS/JS.
 
 **GitHub Actions** runs the scanner on schedule and commits output JSON back to `main`.
 Secrets needed in GitHub repo settings:
-- `GH_DISPATCH_TOKEN` — PAT with `repo` + `workflow` scopes (used by CF Functions to trigger scans)
+- `GH_DISPATCH_TOKEN` — fine-grained PAT scoped to this repo only, "Actions: Read and write" (used by CF Functions to trigger scans; avoid classic account-wide tokens)
 - `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` — Alpaca paper broker (currently wired but REPLACING with Bybit)
 - `BYBIT_API_KEY` / `BYBIT_API_SECRET` — **next to add** (Bybit futures execution)
 - `IBKR_*` — future (ASX + commodity futures via IB Gateway)
