@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.047,
-      "unreal_usd": 1.63
+      "unreal_r": 0.05,
+      "unreal_usd": 1.74
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -685,8 +685,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.015,
-      "unreal_usd": 0.54
+      "unreal_r": 0.023,
+      "unreal_usd": 0.82
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -783,8 +783,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.084,
-      "unreal_usd": 2.93
+      "unreal_r": 0.074,
+      "unreal_usd": 2.61
     },
     {
       "id": "WLD:long:1D:2026-07-03",
@@ -816,14 +816,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0051,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0051,
       "exits": [],
       "mae": 0.4163,
-      "mfe": 0.4163,
+      "mfe": 0.41920000314712524,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.025,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 346.39372952,
       "notional": 139.47,
@@ -831,7 +831,9 @@
       "leverage_target": 3.0,
       "risk_pct": 0.35,
       "risk_usd": 35.0,
-      "source": "vivek_bot"
+      "source": "vivek_bot",
+      "unreal_r": 0.025,
+      "unreal_usd": 0.88
     }
   ],
   "closed": [],
@@ -843,9 +845,9 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 5.1,
-      "session_usd": 5.1,
-      "open": 3
+      "unrealised_usd": 6.05,
+      "session_usd": 6.05,
+      "open": 4
     },
     "asx": {
       "market": "asx",
@@ -872,8 +874,8 @@
   },
   "summary": {
     "open": 17,
-    "unreal_usd": -76.0,
+    "unreal_usd": -75.05,
     "updated_day": "2026-07-03"
   },
-  "updated_at": "2026-07-03T08:45:38+00:00"
+  "updated_at": "2026-07-03T09:46:19+00:00"
 }
