@@ -144,6 +144,35 @@ def write_report(market: str, signals: list, rnd: dict, bh: dict,
     return path
 
 
+def write_public_stats(market: str, signals: list, rnd: dict, bh: dict,
+                       universe_size: int, period: str) -> str:
+    """Machine-readable cohorts for the Insights page (public/data/...), so
+    the site's findings track the LATEST replay instead of rotting. Written
+    on every backtest run; the weekly CI keeps it fresh."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    out_dir = os.path.join(root, "public", "data", "phasemap", "stats")
+    os.makedirs(out_dir, exist_ok=True)
+    payload = {
+        "market": market.upper(),
+        "generated": datetime.date.today().isoformat(),
+        "ruleset_version": RULESET_VERSION,
+        "universe": universe_size,
+        "period": period,
+        "survivorship_bias": True,
+        "all": summarise(signals),
+        "cohorts": cohorts(signals),
+        "stall": stall_summary(signals),
+        "baselines": {"random": rnd, "buy_hold": bh},
+    }
+    path = os.path.join(out_dir, f"{market}.json")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(payload, fh, indent=1)
+        fh.write("\n")
+    os.replace(tmp, path)
+    return path
+
+
 def write_stats(market: str, signals: list, out_dir: str = None) -> str:
     """The {stats} artefact. Only A+/A signals feed the narration claim, and
     run.py refuses the file when the sample is too small or the ruleset moved."""

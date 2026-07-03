@@ -15,7 +15,8 @@ import sys
 
 from phasemap.backtest.harness import (buy_hold_baseline, random_baseline,
                                        run_ticker)
-from phasemap.backtest.report import write_report, write_stats
+from phasemap.backtest.report import (write_public_stats, write_report,
+                                      write_stats)
 from phasemap.config import PRODUCT_NAME, RULESET_VERSION
 from phasemap.data.provider import YFinanceProvider
 from phasemap.run import load_symbols
@@ -54,7 +55,9 @@ def main(argv=None) -> int:
     bh = buy_hold_baseline(frames)
     report = write_report(args.market, signals, rnd, bh,
                           universe_size=len(symbols), period=args.period)
-    print(f"signals: {len(signals)}  report: {report}")
+    public = write_public_stats(args.market, signals, rnd, bh,
+                                universe_size=len(symbols), period=args.period)
+    print(f"signals: {len(signals)}  report: {report}  public: {public}")
     if args.write_stats:
         print("stats:", write_stats(args.market, signals))
 

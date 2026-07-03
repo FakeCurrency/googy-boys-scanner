@@ -143,7 +143,19 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
         json.dump(payload, fh, ensure_ascii=False, indent=1)
         fh.write("\n")
     os.replace(tmp, path)
-    print(f"[{market_key}] specs: {len(results)} setups from {len(items)} names -> {path}")
+    # repo hygiene: drop chart candles for names no longer in the results
+    chart_dir = os.path.join(OUT_DIR, "spec_charts", market_key)
+    keep = {r["symbol"] for r in results}
+    removed = 0
+    try:
+        for name in os.listdir(chart_dir):
+            if name.endswith(".json") and name[:-5] not in keep:
+                os.remove(os.path.join(chart_dir, name))
+                removed += 1
+    except FileNotFoundError:
+        pass
+    print(f"[{market_key}] specs: {len(results)} setups from {len(items)} names -> {path}"
+          + (f" (pruned {removed})" if removed else ""))
     return payload
 
 

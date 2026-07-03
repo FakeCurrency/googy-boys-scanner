@@ -1,0 +1,78 @@
+name: Weekly lens backtests
+
+# Re-runs the PhaseMap (all 3 markets) and Specs proof-of-edge replays every
+# week and commits the refreshed artefacts:
+#   phasemap/backtest/reports/*.md        — the human proof records
+#   phasemap/backtest/stats/*.json        — the narration {stats} gate inputs
+#   public/data/phasemap/stats/*.json     — the Insights page's live numbers
+# This keeps every published hit-rate honest as markets move, instead of the
+# site quoting a backtest from months ago.
+on:
+  schedule:
+    - cron: "0 8 * * 0"        # Sunday 08:00 UTC ≈ 18:00 Melbourne — markets shut
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lens-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: PhaseMap backtests (5y, all markets)
+        run: |
+          set +e
+          python -m phasemap.backtest --market nasdaq --period 5y --write-stats
+          RC_NAS=$?
+          python -m phasemap.backtest --market crypto --period 5y --write-stats
+          RC_CRY=$?
+          python -m phasemap.backtest --market asx --period 5y --write-stats
+          RC_ASX=$?
+          echo "backtest rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
+          [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+
+      - name: Specs backtest (5y, ASX)
+        continue-on-error: true
+        run: python -m scanner.spec_backtest --market asx --period 5y
+
+      - name: Commit & push refreshed proof records
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          PATHS="phasemap/backtest/reports phasemap/backtest/stats public/data/phasemap/stats"
+          git add $PATHS 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "data: weekly lens backtests $(date -u +'%Y-%m-%d')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+              git checkout "$SHA" -- "$p" 2>/dev/null || true
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: weekly lens backtests $(date -u +'%Y-%m-%d')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

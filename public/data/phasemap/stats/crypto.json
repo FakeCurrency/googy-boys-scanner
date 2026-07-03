@@ -1,0 +1,149 @@
+{
+ "market": "CRYPTO",
+ "generated": "2026-07-03",
+ "ruleset_version": "1.2.0",
+ "universe": 101,
+ "period": "5y",
+ "survivorship_bias": true,
+ "all": {
+  "n": 1033,
+  "fwd_5": 0.028,
+  "fwd_10": 0.0282,
+  "fwd_20": -1.3612,
+  "mae": -8.7041,
+  "t1_hit_pct": 39.5,
+  "avg_bars_to_t1": 11.0,
+  "stalled_pct": 91.6,
+  "dead_pct": 35.7
+ },
+ "cohorts": {
+  "tier A+": {
+   "n": 132,
+   "fwd_5": 0.0142,
+   "fwd_10": 0.0225,
+   "fwd_20": 1.1707,
+   "mae": -0.2017,
+   "t1_hit_pct": 42.4,
+   "avg_bars_to_t1": 11.9,
+   "stalled_pct": 90.2,
+   "dead_pct": 36.4
+  },
+  "tier A": {
+   "n": 637,
+   "fwd_5": 0.0332,
+   "fwd_10": 0.0305,
+   "fwd_20": -2.4525,
+   "mae": -8.1402,
+   "t1_hit_pct": 40.2,
+   "avg_bars_to_t1": 11.3,
+   "stalled_pct": 91.5,
+   "dead_pct": 35.5
+  },
+  "long": {
+   "n": 543,
+   "fwd_5": 0.0211,
+   "fwd_10": 0.0261,
+   "fwd_20": 0.4257,
+   "mae": -0.1517,
+   "t1_hit_pct": 40.5,
+   "avg_bars_to_t1": 8.7,
+   "stalled_pct": 92.1,
+   "dead_pct": 35.9
+  },
+  "short": {
+   "n": 490,
+   "fwd_5": 0.0356,
+   "fwd_10": 0.0304,
+   "fwd_20": -3.3385,
+   "mae": -18.1816,
+   "t1_hit_pct": 38.4,
+   "avg_bars_to_t1": 13.4,
+   "stalled_pct": 91.0,
+   "dead_pct": 35.5
+  },
+  "liquid": {
+   "n": 819,
+   "fwd_5": 0.0288,
+   "fwd_10": 0.0228,
+   "fwd_20": 0.0213,
+   "mae": -0.1468,
+   "t1_hit_pct": 41.8,
+   "avg_bars_to_t1": 9.4,
+   "stalled_pct": 92.7,
+   "dead_pct": 36.3
+  },
+  "illiquid": {
+   "n": 214,
+   "fwd_5": 0.0246,
+   "fwd_10": 0.0488,
+   "fwd_20": -6.7143,
+   "mae": -41.454,
+   "t1_hit_pct": 30.8,
+   "avg_bars_to_t1": 18.3,
+   "stalled_pct": 87.4,
+   "dead_pct": 33.6
+  },
+  "price >= $1": {
+   "n": 509,
+   "fwd_5": 0.0304,
+   "fwd_10": 0.0216,
+   "fwd_20": 0.0284,
+   "mae": -0.1195,
+   "t1_hit_pct": 41.8,
+   "avg_bars_to_t1": 8.8,
+   "stalled_pct": 91.9,
+   "dead_pct": 36.5
+  },
+  "cents (<$1)": {
+   "n": 524,
+   "fwd_5": 0.0256,
+   "fwd_10": 0.0346,
+   "fwd_20": -2.7187,
+   "mae": -17.043,
+   "t1_hit_pct": 37.2,
+   "avg_bars_to_t1": 13.3,
+   "stalled_pct": 91.2,
+   "dead_pct": 34.9
+  },
+  "in-sample": {
+   "n": 822,
+   "fwd_5": 0.0272,
+   "fwd_10": 0.0297,
+   "fwd_20": -1.711,
+   "mae": -10.7361,
+   "t1_hit_pct": 38.9,
+   "avg_bars_to_t1": 11.4,
+   "stalled_pct": 91.2,
+   "dead_pct": 36.3
+  },
+  "out-of-sample": {
+   "n": 211,
+   "fwd_5": 0.0309,
+   "fwd_10": 0.0222,
+   "fwd_20": 0.0178,
+   "mae": -0.7883,
+   "t1_hit_pct": 41.7,
+   "avg_bars_to_t1": 9.2,
+   "stalled_pct": 92.9,
+   "dead_pct": 33.6
+  }
+ },
+ "stall": {
+  "stalled": 946,
+  "saved_capital": 293,
+  "cut_winner": 390,
+  "neither": 263
+ },
+ "baselines": {
+  "random": {
+   "n": 897,
+   "fwd_5": 0.0784,
+   "fwd_10": 0.1621,
+   "fwd_20": 32.2125
+  },
+  "buy_hold": {
+   "n": 81,
+   "total_return": 31.7996
+  }
+ }
+}

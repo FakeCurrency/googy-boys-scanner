@@ -594,9 +594,39 @@
       default_tf: "1D", level_lines: [], timeframes: {},
       _fallback: true, _vivek: false, _pm: true,
     };
+    // Zone-native sim plan (2026-07-03): a PhaseMap setup is paper-tradeable —
+    // entry at the current price, stop at the hard invalidation's outer edge,
+    // target at the first live target zone's mid. The Simulate buttons and
+    // their auto-close-at-stop/target machinery work exactly like VIVEK's.
+    if (rec && rec.zones && rec.zones.length && d.price != null) {
+      const c = d.price;
+      const hard = rec.zones.find((z) => z.id === "inv_hard");
+      // first live target whose MID is beyond price in the trade direction —
+      // a wide merged band can straddle price (AGR), which would hand a short
+      // a target above its entry and auto-close it instantly
+      const tgt = rec.zones.find((z) => z.type === "TARGET" && z.status !== "CONSUMED" &&
+        (bull ? (z.low + z.high) / 2 > c : (z.low + z.high) / 2 < c));
+      if (hard && tgt) {
+        const stop = bull ? hard.low : hard.high;
+        const target = (tgt.low + tgt.high) / 2;
+        const risk = bull ? c - stop : stop - c;
+        const rew = bull ? target - c : c - target;
+        if (risk > 0 && rew > 0) {   // only publish a plan that makes sense
+          d.entry = c;
+          d.stop = stop;
+          d.target = target;
+          d.tp1 = target;
+          d.rr = Math.round((rew / risk) * 100) / 100;
+          d._zonePlan = true;
+        }
+      }
+    }
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d")
       : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d"));
+    const intradayP = (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "2y", "1h")
+      : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
     pmChartBars(d.symbol)
       .then((bars) => (bars.length >= 6 ? bars : liveDaily()))
       .then((daily) => {
@@ -607,7 +637,16 @@
         const wk = resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = barsToVivekTF(wk);
         if (d.price == null) d.price = daily[daily.length - 1].close;
-        render(d);
+        // 4H parity with VIVEK charts (2026-07-03) — real 4H candles/SMAs
+        // bucketed from live hourly history; silently absent when the live
+        // feed can't serve hourly data.
+        return intradayP.then((intraday) => {
+          if (intraday && intraday.length >= 24) {
+            const h4 = bucketBars(intraday, 4 * 3600);
+            if (h4.length >= 6) d.timeframes["4H"] = barsToVivekTF(h4);
+          }
+          render(d);
+        });
       })
       .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
   }
@@ -841,6 +880,15 @@
     const sellBtn = $("#cf-sim-sell");
     const statusEl = $("#cf-sim-status");
     if (!buyBtn || !sellBtn) return;
+    // No plan anywhere (tier-3 plain chart) → simulating would journal a trade
+    // with no stop/target. Hide the buttons instead of logging nonsense.
+    if (d.entry == null || d.stop == null) {
+      buyBtn.hidden = true;
+      sellBtn.hidden = true;
+      return;
+    }
+    buyBtn.hidden = false;
+    sellBtn.hidden = false;
 
     const cur     = d.currency_symbol || "";
     const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";

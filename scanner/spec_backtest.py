@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import os
 import random
 import sys
@@ -210,7 +211,24 @@ def main(argv=None) -> int:
 
     rnd = random_baseline(frames, max(len(signals), 200))
     path = write_report(args.market, signals, rnd, len(items), args.period)
+    # machine-readable copy for the Insights page (kept fresh by weekly CI)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    pub_dir = os.path.join(root, "public", "data", "phasemap", "stats")
+    os.makedirs(pub_dir, exist_ok=True)
     top = summarise(signals)
+    pub = {
+        "market": args.market.upper(),
+        "generated": datetime.date.today().isoformat(),
+        "period": args.period,
+        "survivorship_bias": True,
+        "all": top,
+        "grades": {g: summarise([s for s in signals if s["grade"] == g])
+                   for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},
+        "baseline_random": rnd,
+    }
+    with open(os.path.join(pub_dir, f"specs_{args.market}.json"), "w",
+              encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(pub, indent=1) + "\n")
     print(f"signals: {len(signals)}  target-first: {top.get('target')}%  "
           f"stopped: {top.get('stop')}%  report: {path}")
     return 0

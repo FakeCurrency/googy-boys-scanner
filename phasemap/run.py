@@ -71,6 +71,35 @@ def load_symbols(market: str) -> dict:
     return {}
 
 
+def prune_stale_files(dir_path: str, keep: set, suffix: str = ".json") -> int:
+    """Repo hygiene: chart candles for tickers no longer in the results would
+    otherwise accumulate forever (bloat). The chart page falls back to live
+    history for anything pruned, so nothing user-facing breaks."""
+    removed = 0
+    try:
+        for name in os.listdir(dir_path):
+            if name.endswith(suffix) and name[:-len(suffix)] not in keep:
+                os.remove(os.path.join(dir_path, name))
+                removed += 1
+    except FileNotFoundError:
+        pass
+    return removed
+
+
+def prune_dated_snapshots(out_dir: str, keep_last: int = 7) -> int:
+    """Keep the trailing week of dated snapshots (latest.json untouched)."""
+    removed = 0
+    try:
+        dated = sorted(n for n in os.listdir(out_dir)
+                       if n.endswith(".json") and n != "latest.json")
+        for name in dated[:-keep_last]:
+            os.remove(os.path.join(out_dir, name))
+            removed += 1
+    except FileNotFoundError:
+        pass
+    return removed
+
+
 def write_chart_json(out_dir: str, ticker: str, df) -> None:
     """Last CHART_BARS daily candles, 8 dp (sub-cent crypto needs it)."""
     tail = df.tail(CHART_BARS)
@@ -136,6 +165,9 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
                           results=sort_records(results))
     out_dir = os.path.join(data_root, market)
     write_snapshot(snap, out_dir)
+    pruned = prune_stale_files(chart_dir, charted) + prune_dated_snapshots(out_dir)
+    if pruned:
+        print(f"[{market}] pruned {pruned} stale data file(s)")
 
     by_state = {}
     for r in results:

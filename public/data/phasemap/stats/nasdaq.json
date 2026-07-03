@@ -1,0 +1,127 @@
+{
+ "market": "NASDAQ",
+ "generated": "2026-07-03",
+ "ruleset_version": "1.2.0",
+ "universe": 98,
+ "period": "5y",
+ "survivorship_bias": true,
+ "all": {
+  "n": 1124,
+  "fwd_5": 0.0112,
+  "fwd_10": 0.0169,
+  "fwd_20": 0.0258,
+  "mae": -0.0658,
+  "t1_hit_pct": 44.6,
+  "avg_bars_to_t1": 8.9,
+  "stalled_pct": 89.1,
+  "dead_pct": 36.4
+ },
+ "cohorts": {
+  "tier A+": {
+   "n": 120,
+   "fwd_5": 0.0157,
+   "fwd_10": 0.018,
+   "fwd_20": 0.0294,
+   "mae": -0.0537,
+   "t1_hit_pct": 51.7,
+   "avg_bars_to_t1": 8.8,
+   "stalled_pct": 86.7,
+   "dead_pct": 35.0
+  },
+  "tier A": {
+   "n": 640,
+   "fwd_5": 0.0096,
+   "fwd_10": 0.0187,
+   "fwd_20": 0.026,
+   "mae": -0.068,
+   "t1_hit_pct": 41.7,
+   "avg_bars_to_t1": 8.6,
+   "stalled_pct": 87.5,
+   "dead_pct": 36.7
+  },
+  "long": {
+   "n": 500,
+   "fwd_5": 0.0128,
+   "fwd_10": 0.0281,
+   "fwd_20": 0.051,
+   "mae": -0.0585,
+   "t1_hit_pct": 50.0,
+   "avg_bars_to_t1": 8.9,
+   "stalled_pct": 87.6,
+   "dead_pct": 28.6
+  },
+  "short": {
+   "n": 624,
+   "fwd_5": 0.01,
+   "fwd_10": 0.008,
+   "fwd_20": 0.0056,
+   "mae": -0.0716,
+   "t1_hit_pct": 40.2,
+   "avg_bars_to_t1": 8.8,
+   "stalled_pct": 90.2,
+   "dead_pct": 42.6
+  },
+  "liquid": {
+   "n": 1124,
+   "fwd_5": 0.0112,
+   "fwd_10": 0.0169,
+   "fwd_20": 0.0258,
+   "mae": -0.0658,
+   "t1_hit_pct": 44.6,
+   "avg_bars_to_t1": 8.9,
+   "stalled_pct": 89.1,
+   "dead_pct": 36.4
+  },
+  "price >= $1": {
+   "n": 1124,
+   "fwd_5": 0.0112,
+   "fwd_10": 0.0169,
+   "fwd_20": 0.0258,
+   "mae": -0.0658,
+   "t1_hit_pct": 44.6,
+   "avg_bars_to_t1": 8.9,
+   "stalled_pct": 89.1,
+   "dead_pct": 36.4
+  },
+  "in-sample": {
+   "n": 868,
+   "fwd_5": 0.0124,
+   "fwd_10": 0.0219,
+   "fwd_20": 0.0332,
+   "mae": -0.0602,
+   "t1_hit_pct": 46.0,
+   "avg_bars_to_t1": 9.1,
+   "stalled_pct": 89.6,
+   "dead_pct": 34.0
+  },
+  "out-of-sample": {
+   "n": 256,
+   "fwd_5": 0.0071,
+   "fwd_10": -0.0009,
+   "fwd_20": -0.0014,
+   "mae": -0.085,
+   "t1_hit_pct": 39.8,
+   "avg_bars_to_t1": 8.0,
+   "stalled_pct": 87.1,
+   "dead_pct": 44.5
+  }
+ },
+ "stall": {
+  "stalled": 1001,
+  "saved_capital": 327,
+  "cut_winner": 446,
+  "neither": 228
+ },
+ "baselines": {
+  "random": {
+   "n": 1124,
+   "fwd_5": 0.0013,
+   "fwd_10": 0.0043,
+   "fwd_20": 0.0136
+  },
+  "buy_hold": {
+   "n": 98,
+   "total_return": 1.6973
+  }
+ }
+}
