@@ -36,7 +36,8 @@
   function chartURL(rec) {
     // The ORIGINAL chart page — full VIVEK-grade charting (multi-timeframe,
     // SMAs, drawing tools, live price, TradingView link) + the zones overlaid.
-    return `chart.html?m=${state.market}&s=${encodeURIComponent(rec.ticker)}&pm=1&dir=${rec.direction}`;
+    // src=phasemap lets the chart's prev/next arrows step through THIS list.
+    return `chart.html?m=${state.market}&s=${encodeURIComponent(rec.ticker)}&dir=${rec.direction}&src=phasemap`;
   }
 
   function cardHTML(rec, idx) {
@@ -233,4 +234,8 @@
   syncMarketButtons();
   wire();
   load();
+  // pull remote stars (unified watchlist) so phone/desktop agree
+  if (window.GBSSync && GBSSync.enabled()) {
+    GBSSync.syncIn().then(() => { renderCounts(); render(); }).catch(() => {});
+  }
 })();

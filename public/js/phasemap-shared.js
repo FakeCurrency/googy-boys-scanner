@@ -156,35 +156,93 @@ window.PM = (() => {
     synth.speak(u);
   }
 
-  /* ── Watchlist (PhaseMap + Specs) ───────────────────────────────────────
+  /* ── Watchlist (VIVEK + PhaseMap + Specs, ONE synced store) ─────────────
      Starring stores a SNAPSHOT of the record, so a name stays monitorable
-     even after it drops out of the scan (the owner's requirement: losing
-     the setup must not lose the watch). Keyed by lens + market. */
-  const WATCH_KEY = "gbs-lens-watchlist";
-  function watchStore() {
-    try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || {}; }
-    catch (_) { return {}; }
+     even after it drops out of the scan. Since 2026-07-03 the store lives
+     INSIDE the GBSSync journal object (localStorage `gbs:manual_journal`,
+     mirrored to Cloudflare KV when a sync code is set) — stars follow you
+     from desktop to phone exactly like paper trades do. Keys:
+     "<lens>:<market>:<TICKER>"; un-stars are tombstones so they propagate. */
+  const LEGACY_LENS_KEY = "gbs-lens-watchlist";
+  const LEGACY_VIVEK_KEY = "gbs:watch";
+  const MIGRATED_KEY = "gbs:watch_migrated_v1";
+
+  function _sync() { return window.GBSSync || null; }
+
+  function _migrateOnce(d) {
+    try {
+      if (localStorage.getItem(MIGRATED_KEY)) return d;
+      const now = Date.now();
+      // old lens store: { ns: { market: { TICKER: {snap, date} } } }
+      try {
+        const old = JSON.parse(localStorage.getItem(LEGACY_LENS_KEY) || "{}");
+        for (const [ns, mkts] of Object.entries(old || {})) {
+          for (const [mkt, ticks] of Object.entries(mkts || {})) {
+            for (const [t, e] of Object.entries(ticks || {})) {
+              const k = `${ns}:${mkt}:${t}`;
+              if (!d.watchlists[k]) d.watchlists[k] =
+                { snap: (e && e.snap) || null, date: (e && e.date) || "", mtime: now };
+            }
+          }
+        }
+      } catch (_) {}
+      // old VIVEK star set: [ "market:SYM", ... ]
+      try {
+        const old = JSON.parse(localStorage.getItem(LEGACY_VIVEK_KEY) || "[]");
+        for (const mk of old || []) {
+          const i = String(mk).indexOf(":");
+          if (i > 0) {
+            const k = `vivek:${mk.slice(0, i)}:${mk.slice(i + 1)}`;
+            if (!d.watchlists[k]) d.watchlists[k] =
+              { snap: null, date: "", mtime: now };
+          }
+        }
+      } catch (_) {}
+      localStorage.setItem(MIGRATED_KEY, "1");
+      const s = _sync();
+      if (s) { s.saveLocal(d); s.syncOutDebounced(); }
+    } catch (_) {}
+    return d;
   }
-  function watchSave(s) {
-    try { localStorage.setItem(WATCH_KEY, JSON.stringify(s)); } catch (_) {}
+
+  function _store() {
+    const s = _sync();
+    if (!s) return { watchlists: {} };            // no sync layer on this page
+    return _migrateOnce(s.load());
   }
+
   const watch = {
-    map(ns, market) { return (watchStore()[ns] || {})[market] || {}; },
+    map(ns, market) {
+      const pre = `${ns}:${market}:`;
+      const out = {};
+      for (const [k, v] of Object.entries(_store().watchlists)) {
+        if (k.startsWith(pre) && v && !v.del) out[k.slice(pre.length)] = v;
+      }
+      return out;
+    },
     has(ns, market, ticker) { return !!this.map(ns, market)[ticker]; },
     count(ns, market) { return Object.keys(this.map(ns, market)).length; },
     toggle(ns, market, ticker, snap) {
-      const s = watchStore();
-      s[ns] = s[ns] || {}; s[ns][market] = s[ns][market] || {};
-      if (s[ns][market][ticker]) delete s[ns][market][ticker];
-      else s[ns][market][ticker] = { snap: snap || null,
-                                     date: new Date().toISOString().slice(0, 10) };
-      watchSave(s);
-      return !!s[ns][market][ticker];
+      const s = _sync();
+      if (!s) return false;
+      const d = _store();
+      const k = `${ns}:${market}:${ticker}`;
+      const live = d.watchlists[k] && !d.watchlists[k].del;
+      d.watchlists[k] = live
+        ? { del: Date.now() }
+        : { snap: snap || null, date: new Date().toISOString().slice(0, 10),
+            mtime: Date.now() };
+      s.saveLocal(d);
+      s.syncOutDebounced();
+      return !live;
     },
     refresh(ns, market, ticker, snap) {   // keep the stored snapshot current
-      const s = watchStore();
-      const e = s[ns] && s[ns][market] && s[ns][market][ticker];
-      if (e) { e.snap = snap; watchSave(s); }
+      const s = _sync();
+      if (!s) return;
+      const d = _store();
+      const k = `${ns}:${market}:${ticker}`;
+      const e = d.watchlists[k];
+      if (e && !e.del) { e.snap = snap; s.saveLocal(d); }
     },
   };
 

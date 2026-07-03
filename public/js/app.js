@@ -160,14 +160,30 @@
   const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
 
   // ----------------------------------------------------------- watchlist
-  function loadWatch() { try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")); } catch (_) { return new Set(); } }
-  let watch = loadWatch();
-  const wkey = (sym) => `${state.market}:${sym}`;
-  const isStarred = (sym) => watch.has(wkey(sym));
+  // Since 2026-07-03 stars live in the UNIFIED synced store (PM.watch inside
+  // the GBSSync journal — mirrors to Cloudflare KV with a sync code, so stars
+  // follow phone <-> desktop). The legacy localStorage set migrates itself.
+  const _pmWatch = () => (window.PM && PM.watch) || null;
+  const isStarred = (sym) => {
+    const w = _pmWatch();
+    if (w) return w.has("vivek", state.market, sym);
+    try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")).has(`${state.market}:${sym}`); }
+    catch (_) { return false; }
+  };
   function toggleStar(sym) {
-    const k = wkey(sym);
-    if (watch.has(k)) watch.delete(k); else watch.add(k);
-    localStorage.setItem(WATCH_KEY, JSON.stringify([...watch]));
+    const w = _pmWatch();
+    if (w) {
+      const r = (state.data && state.data.results || []).find((x) => x.symbol === sym) || null;
+      w.toggle("vivek", state.market, sym,
+        r ? { symbol: sym, name: r.name, grade: r.grade, dir: r.dir, price: r.price } : null);
+      return;
+    }
+    try {
+      const s = new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]"));
+      const k = `${state.market}:${sym}`;
+      s.has(k) ? s.delete(k) : s.add(k);
+      localStorage.setItem(WATCH_KEY, JSON.stringify([...s]));
+    } catch (_) {}
   }
 
   // ----------------------------------------------------------- formatting
@@ -1460,26 +1476,70 @@
     if (searchOverlay) searchOverlay.addEventListener("click", (e) => {
       if (e.target === searchOverlay) closeSearch();
     });
-    if (searchInput) searchInput.addEventListener("input", () => {
+    // ── cross-lens search (2026-07-03): "/" searches VIVEK + PhaseMap +
+    // Specs for the current market, each hit badged by lens and linking to
+    // the right chart view. Lens files are fetched lazily on first search
+    // and re-fetched when the market changes.
+    let lensIdx = { market: null, phasemap: [], specs: [] };
+    async function loadLensIndex() {
+      if (lensIdx.market === state.market) return lensIdx;
+      const grab = (url) => fetch(url, { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const [pm, sp] = await Promise.all([
+        grab(`data/phasemap/${state.market}/latest.json`),
+        grab(`data/${state.market}_spec.json`),
+      ]);
+      lensIdx = { market: state.market,
+                  phasemap: (pm && pm.results) || [],
+                  specs: (sp && sp.results) || [] };
+      return lensIdx;
+    }
+    if (searchInput) searchInput.addEventListener("input", async () => {
       const q = searchInput.value.trim().toLowerCase();
       if (!q) { searchResults.innerHTML = ""; return; }
-      const all = (state.data && state.data.results) || [];
-      const hits = all.filter((r) =>
-        r.symbol.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q)
-      ).slice(0, 12);
-      if (!hits.length) {
-        searchResults.innerHTML = `<div class="sr-empty">No results for "${esc(searchInput.value)}"</div>`;
+      const idx = await loadLensIndex();
+      if (searchInput.value.trim().toLowerCase() !== q) return;   // stale keystroke
+      const match = (sym, name) =>
+        String(sym).toLowerCase().includes(q) || String(name || "").toLowerCase().includes(q);
+
+      const vHits = ((state.data && state.data.results) || [])
+        .filter((r) => match(r.symbol, r.name)).slice(0, 8);
+      const pHits = idx.phasemap.filter((r) => match(r.ticker, r.name)).slice(0, 6);
+      const sHits = idx.specs.filter((r) => match(r.symbol, r.name)).slice(0, 6);
+      if (!vHits.length && !pHits.length && !sHits.length) {
+        searchResults.innerHTML = `<div class="sr-empty">No results for "${esc(searchInput.value)}" in any lens</div>`;
         return;
       }
-      searchResults.innerHTML = hits.map((r) => {
+      const rows = [];
+      vHits.forEach((r) => {
         const href = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
-        return `<a class="sr-row" href="${href}">
+        rows.push(`<a class="sr-row" href="${href}">
           <span class="sr-grade" style="color:${GRADE_VAR[r.grade] || "var(--grade-c)"}">${esc(r.grade)}</span>
           <span class="sr-sym">${esc(r.symbol)}</span>
           <span class="sr-name">${esc(r.name || "")}</span>
           <span class="sr-price">${fmtPrice(r.price)}</span>
-        </a>`;
-      }).join("");
+        </a>`);
+      });
+      pHits.forEach((r) => {
+        const dir = r.direction === "bearish" ? "bearish" : "bullish";
+        const href = `chart.html?m=${state.market}&s=${encodeURIComponent(r.ticker)}&dir=${dir}&src=phasemap`;
+        rows.push(`<a class="sr-row" href="${href}">
+          <span class="sr-grade" style="color:var(--teal)">PM</span>
+          <span class="sr-sym">${esc(r.ticker)}</span>
+          <span class="sr-name">${esc(r.name || "")} · ${esc(r.state)} ${esc(r.tier || "")} ${dir === "bearish" ? "▼" : "▲"}</span>
+          <span class="sr-price">${r.metrics && r.metrics.close != null ? fmtPrice(r.metrics.close) : ""}</span>
+        </a>`);
+      });
+      sHits.forEach((r) => {
+        const href = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs`;
+        rows.push(`<a class="sr-row" href="${href}">
+          <span class="sr-grade" style="color:var(--orange)">⚡</span>
+          <span class="sr-sym">${esc(r.symbol)}</span>
+          <span class="sr-name">${esc(r.name || "")} · SPEC ${esc(r.grade)} · ${r.spike_ratio}× vol</span>
+          <span class="sr-price">${fmtPrice(r.price)}</span>
+        </a>`);
+      });
+      searchResults.innerHTML = rows.join("");
       // Close overlay when user clicks a result link
       searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", closeSearch));
     });
@@ -1620,4 +1680,15 @@
   loadCaps();
   loadTrackRecord();
   load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
+  // pull remote stars (unified watchlist) so phone/desktop agree, then refresh
+  if (window.GBSSync && GBSSync.enabled()) {
+    GBSSync.syncIn().then(() => {
+      if (state.data) {
+        renderRows();
+        const el = document.getElementById("watch-count");
+        if (el) el.textContent =
+          (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
+      }
+    }).catch(() => {});
+  }
 })();

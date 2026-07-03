@@ -33,6 +33,10 @@
     if (typeof d.stock_brokerage !== "number") d.stock_brokerage = 10;
     if (typeof d.crypto_capital !== "number") d.crypto_capital = 10000;
     if (typeof d.crypto_brokerage !== "number") d.crypto_brokerage = 5;
+    // Unified watchlists (2026-07-03): flat map "<lens>:<market>:<TICKER>" ->
+    // { snap, date, mtime } for live stars, { del: mtime } for un-stars
+    // (tombstones so removals propagate across devices, same as trades).
+    if (!d.watchlists || typeof d.watchlists !== "object" || Array.isArray(d.watchlists)) d.watchlists = {};
     if (typeof d.updated_at !== "number") d.updated_at = 0;
     return d;
   }
@@ -78,6 +82,18 @@
     const pick = (f) => typeof rNewer[f] === "number" ? rNewer[f]
                       : typeof rOlder[f] === "number" ? rOlder[f]
                       : newer[f];
+    // Watchlists: per-key newest mtime wins; a newer tombstone ({del}) removes,
+    // a newer live star resurrects. No star set on either device is dropped.
+    const wl = {};
+    for (const src of [a.watchlists || {}, b.watchlists || {}]) {
+      for (const [k, v] of Object.entries(src)) {
+        if (!v) continue;
+        const ex = wl[k];
+        const vm = v.del || v.mtime || 0;
+        const em = ex ? (ex.del || ex.mtime || 0) : -1;
+        if (vm >= em) wl[k] = v;
+      }
+    }
     return normalize({
       capital:          pick("capital"),
       brokerage:        pick("brokerage"),
@@ -87,6 +103,7 @@
       crypto_brokerage: pick("crypto_brokerage"),
       trades: [...byId.values()],
       deleted: [...deleted],
+      watchlists: wl,
       updated_at: Math.max(a.updated_at || 0, b.updated_at || 0),
     });
   }

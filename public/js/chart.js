@@ -2334,23 +2334,43 @@
     const nav = $("#ct-nav"), prevB = $("#ct-prev"), nextB = $("#ct-next"), posEl = $("#ct-nav-pos");
     if (!nav || !symbol) return;
 
+    // src=phasemap|specs (2026-07-03): step through the lens the user came
+    // from — previously the arrows only knew the VIVEK list, so browsing
+    // PhaseMap/Specs results meant a round-trip to the tab per ticker.
+    const navSrc = (params.get("src") || "").toLowerCase();
     const isScalp = market === "scalp";
     const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
                   : mode === "short"    ? "_short"    : mode === "vivek" ? "_vivek" : "";
-    const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
-    const sOf     = isScalp
+    let file = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
+    let sOf = isScalp
       ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
       : (r) => r.symbol;
-    const hrefFor = (s) => isScalp
+    let hrefFor = (s) => isScalp
       ? `chart.html?m=scalp&s=${encodeURIComponent(s)}`
       : `chart.html?m=${market}&s=${encodeURIComponent(s)}${mode !== "pullback" ? `&mode=${mode}` : ""}`;
+
+    if (navSrc === "phasemap") {
+      file = `data/phasemap/${market}/latest.json`;
+      // one entry per (ticker, direction) so both sides of a name are stepped
+      sOf = (r) => `${r.ticker}|${r.direction}`;
+      hrefFor = (key) => {
+        const [t, dir] = String(key).split("|");
+        return `chart.html?m=${market}&s=${encodeURIComponent(t)}&dir=${dir}&src=phasemap`;
+      };
+    } else if (navSrc === "specs") {
+      file = `data/${market}_spec.json`;
+      sOf = (r) => r.symbol;
+      hrefFor = (s) => `chart.html?m=${market}&s=${encodeURIComponent(s)}&mode=spec&src=specs`;
+    }
 
     fetch(file, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         const list = ((j && j.results) || []).map(sOf);
-        const cur  = decodeURIComponent(symbol).toUpperCase();
-        const idx  = list.findIndex((s) => String(s).toUpperCase() === cur);
+        const cur = navSrc === "phasemap"
+          ? `${decodeURIComponent(symbol).toUpperCase()}|${pmDirWanted || "bullish"}`
+          : decodeURIComponent(symbol).toUpperCase();
+        const idx  = list.findIndex((s) => String(s).toUpperCase() === cur.toUpperCase());
         if (idx < 0 || list.length < 2) return;   // not in this list → leave nav hidden
 
         nav.hidden = false;
