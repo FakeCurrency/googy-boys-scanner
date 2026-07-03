@@ -298,6 +298,39 @@ window.PM = (() => {
     };
   }
 
+  /* Banner body shared by the dashboard and the lens pages: capped list of
+     aligned names, triples as pulsing beacons, links to the combined chart. */
+  function confluenceBannerHTML(rows, market, cap = 10) {
+    if (!rows || !rows.length) return "";
+    return `<span class="conf-banner-label">⨂ MULTI-LENS ALIGNMENT</span>` +
+      rows.slice(0, cap).map((x) => {
+        const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
+        const arrow = x.side === "short" ? "▼" : "▲";
+        const cls = x.count >= 3 ? "pm-conf pm-conf-3" : "";
+        const tag = x.count >= 3 ? "🎯 " : "";
+        return `<a class="${cls}" title="${x.lenses.join(" + ")} — open the combined chart" ` +
+          `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
+          `${tag}${esc(x.ticker)} ${arrow}${x.count >= 3 ? " ×3" : ""}</a>`;
+      }).join("") +
+      (rows.length > cap ? `<span style="color:var(--muted)">+${rows.length - cap} more</span>` : "");
+  }
+
+  /* Staleness: lens data refreshes nightly — shout when it's older than that.
+     Accepts 'YYYY-MM-DD' (PhaseMap run_date) or a full ISO stamp (Specs). */
+  function staleBadgeHTML(stamp) {
+    if (!stamp) return "";
+    const t = Date.parse(String(stamp).length <= 10 ? stamp + "T00:00:00" : stamp);
+    if (!isFinite(t)) return "";
+    const hours = (Date.now() - t) / 3600000;
+    const limit = String(stamp).length <= 10 ? 48 : 30;   // date-only gets a day's grace
+    if (hours < limit) return "";
+    const days = Math.floor(hours / 24);
+    const age = days >= 2 ? `${days} DAYS` : `${Math.round(hours)}H`;
+    return ` <span class="pm-stale-badge" title="This lens refreshes nightly — the last ` +
+      `successful scan is older than expected. Check the GitHub Actions runs.">` +
+      `⚠ SCAN ${age} OLD</span>`;
+  }
+
   function confluenceChipHTML(info, currentLens) {
     if (!info) return "";
     const others = info.lenses.filter((l) => l !== currentLens);
@@ -319,5 +352,6 @@ window.PM = (() => {
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            isFundReit, toggleSpeak, watch, starHTML,
-           loadConfluence, confluenceChipHTML };
+           loadConfluence, confluenceChipHTML, confluenceBannerHTML,
+           staleBadgeHTML };
 })();

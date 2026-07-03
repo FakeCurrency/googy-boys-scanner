@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=56" />
-  <link rel="stylesheet" href="css/phasemap.css?v=8" />
+  <link rel="stylesheet" href="css/phasemap.css?v=9" />
 </head>
 <body>
   <header class="topbar">
@@ -63,6 +63,12 @@
       <div class="pm-filter-group" id="pm-liq-filter" role="group" aria-label="Liquidity">
         <button class="pm-chip" data-liq="hide" title="Hide results below the $200k/day turnover floor. The ILLIQUID tag itself is never disabled — this only filters your view.">HIDE ILLIQUID</button>
       </div>
+      <div class="pm-filter-group" id="pm-sort-filter" role="group" aria-label="Sort">
+        <button class="pm-chip is-active" data-sort="default" title="Scan order: tier, then state, then ticker">SORT: TIER</button>
+        <button class="pm-chip" data-sort="fresh" title="Most recent sweep/displacement first — today's flashes on top">FRESH</button>
+        <button class="pm-chip" data-sort="turnover" title="Biggest $ turnover first — the liquid end, where the backtest edge lives">TURNOVER</button>
+        <button class="pm-chip" data-sort="zrr" title="Zone R:R — distance to the first live target vs distance to the hard invalidation edge">Z-R:R</button>
+      </div>
       <input class="pm-search" id="pm-search" type="search" placeholder="Ticker…" autocomplete="off" spellcheck="false" />
     </div>
 
@@ -73,7 +79,7 @@
   </main>
 
   <script src="js/gbs-sync.js?v=6"></script>
-  <script src="js/phasemap-shared.js?v=5"></script>
-  <script src="js/phasemap.js?v=9"></script>
+  <script src="js/phasemap-shared.js?v=6"></script>
+  <script src="js/phasemap.js?v=10"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
   const GRADE_COLOR = { "A+": "var(--grade-aplus)", A: "var(--grade-a)", B: "var(--grade-b)" };
 
   const state = {
-    data: null, grade: "all", q: "", view: "results",
+    data: null, grade: "all", q: "", view: "results", sort: "default",
     market: (() => {
       try {
         const m = localStorage.getItem("sp-market");
@@ -81,9 +81,16 @@
       return out;
     }
     if (!state.data) return [];
-    return state.data.results.filter((r) =>
+    const rows = state.data.results.filter((r) =>
       (state.grade === "all" || r.grade === state.grade) &&
       (!q || r.symbol.toUpperCase().includes(q)));
+    const bynum = (fn, asc) => (a, b) => (asc ? 1 : -1) *
+      ((fn(a) ?? (asc ? Infinity : -Infinity)) - (fn(b) ?? (asc ? Infinity : -Infinity)))
+      || a.symbol.localeCompare(b.symbol);
+    if (state.sort === "spike") return [...rows].sort(bynum((r) => r.spike_ratio));
+    if (state.sort === "rr") return [...rows].sort(bynum((r) => r.rr));
+    if (state.sort === "price") return [...rows].sort(bynum((r) => r.price, true));
+    return rows;   // default: grade / score / R:R order from the scan file
   }
 
   function render() {
@@ -119,6 +126,21 @@
     renderCounts();
   }
 
+  function renderConfBanner() {
+    let el = document.getElementById("conf-banner");
+    const rows = state.confl ? state.confl.all() : [];
+    if (!rows.length) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("section");
+      el.id = "conf-banner";
+      el.className = "conf-banner";
+      const anchor = document.querySelector("#sp-tabs");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
+      else return;
+    }
+    el.innerHTML = PM.confluenceBannerHTML(rows, state.market);
+  }
+
   function renderCounts() {
     $("#sp-count-results").textContent = state.data ? state.data.results.length : 0;
     $("#sp-count-watchlist").textContent = PM.watch.count("specs", state.market);
@@ -138,16 +160,22 @@
       const res = await fetch(`data/${state.market}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
-      $("#sp-sub").textContent =
+      $("#sp-sub").innerHTML = PM.esc(
         `${state.market.toUpperCase()} · ${state.data.generated_at.slice(0, 16).replace("T", " ")} · ` +
-        `${state.data.universe_size} names scanned · ${state.data.results.length} spec setups`;
+        `${state.data.universe_size} names scanned · ${state.data.results.length} spec setups`)
+        + PM.staleBadgeHTML(state.data.generated_at);
       const wl = PM.watch.map("specs", state.market);
       for (const sym of Object.keys(wl)) {
         const live = state.data.results.find((r) => r.symbol === sym);
         if (live) PM.watch.refresh("specs", state.market, sym, live);
       }
       state.confl = null;
-      PM.loadConfluence(state.market).then((c) => { state.confl = c; render(); });
+      renderConfBanner();
+      PM.loadConfluence(state.market).then((c) => {
+        state.confl = c;
+        render();
+        renderConfBanner();
+      });
     } catch (err) {
       state.data = null;
       $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;
@@ -173,6 +201,11 @@
   $$("#sp-grade-filter .pm-chip").forEach((chip) => chip.addEventListener("click", () => {
     $$("#sp-grade-filter .pm-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
     state.grade = chip.dataset.grade;
+    render();
+  }));
+  $$("#sp-sort-filter .pm-chip").forEach((chip) => chip.addEventListener("click", () => {
+    $$("#sp-sort-filter .pm-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+    state.sort = chip.dataset.sort;
     render();
   }));
   $("#sp-search").addEventListener("input", (e) => { state.q = e.target.value; render(); });

@@ -16,6 +16,7 @@
 
   const state = {
     data: null, view: "setups", tier: "all", dir: "all", q: "", shown: PAGE,
+    sort: "default",
     market: (() => {
       try {
         const m = localStorage.getItem("pm-market");
@@ -32,6 +33,40 @@
 
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+
+  // Zone-native R:R — distance to the first live target vs distance to the
+  // hard invalidation edge. The zone system's answer to the dashboard's R:R.
+  function zoneRR(rec) {
+    const c = rec.metrics && rec.metrics.close;
+    if (c == null) return null;
+    const hard = rec.zones.find((z) => z.id === "inv_hard");
+    const tgt = rec.zones.find((z) => z.type === "TARGET" && z.status !== "CONSUMED");
+    if (!hard || !tgt) return null;
+    const bull = rec.direction !== "bearish";
+    const reward = bull ? (tgt.low + tgt.high) / 2 - c : c - (tgt.low + tgt.high) / 2;
+    const risk = bull ? c - hard.low : hard.high - c;
+    if (risk <= 0 || reward <= 0) return null;
+    return reward / risk;
+  }
+
+  function eventDate(rec) {   // most recent evidence bar — the FLASH sort key
+    const m = rec.metrics || {};
+    return m.displacement_date > (m.sweep_date || "") ? m.displacement_date
+         : (m.sweep_date || "");
+  }
+
+  function applySort(rows) {
+    const bynum = (fn) => (a, b) => (fn(b) ?? -Infinity) - (fn(a) ?? -Infinity)
+      || a.ticker.localeCompare(b.ticker);
+    if (state.sort === "fresh")
+      return [...rows].sort((a, b) => String(eventDate(b)).localeCompare(String(eventDate(a)))
+        || a.ticker.localeCompare(b.ticker));
+    if (state.sort === "turnover")
+      return [...rows].sort(bynum((r) => r.metrics && r.metrics.avg_turnover_20d));
+    if (state.sort === "zrr")
+      return [...rows].sort(bynum(zoneRR));
+    return rows;   // default: tier/state order from the scan file
+  }
 
   function chartURL(rec) {
     // The ORIGINAL chart page — full VIVEK-grade charting (multi-timeframe,
@@ -93,12 +128,12 @@
       return out;
     }
     const states = VIEWS[state.view];
-    return state.data.results.filter((r) =>
+    return applySort(state.data.results.filter((r) =>
       states.includes(r.state) &&
       (state.tier === "all" || r.tier === state.tier) &&
       (state.dir === "all" || r.direction === state.dir) &&
       (!state.hideIlliquid || !r.tags.includes("ILLIQUID")) &&
-      (!q || r.ticker.toUpperCase().includes(q)));
+      (!q || r.ticker.toUpperCase().includes(q))));
   }
 
   function render() {
@@ -137,6 +172,21 @@
     });
   }
 
+  function renderConfBanner() {
+    let el = document.getElementById("conf-banner");
+    const rows = state.confl ? state.confl.all() : [];
+    if (!rows.length) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("section");
+      el.id = "conf-banner";
+      el.className = "conf-banner";
+      const anchor = document.querySelector("#pm-tabs");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
+      else return;
+    }
+    el.innerHTML = PM.confluenceBannerHTML(rows, state.market);
+  }
+
   function renderCounts() {
     const counts = { watchlist: PM.watch.count("phasemap", state.market) };
     for (const [view, states] of Object.entries(VIEWS)) {
@@ -173,6 +223,7 @@
       }));
     chipGroup("#pm-tier-filter", "tier", "tier");
     chipGroup("#pm-dir-filter", "dir", "dir");
+    chipGroup("#pm-sort-filter", "sort", "sort");
     const liqBtn = $("#pm-liq-filter .pm-chip");
     if (liqBtn) {
       liqBtn.classList.toggle("is-active", state.hideIlliquid);
@@ -206,18 +257,24 @@
       const res = await fetch(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
-      $("#pm-sub").textContent =
+      $("#pm-sub").innerHTML = PM.esc(
         `${state.market.toUpperCase()} · scan ${state.data.run_date} · ruleset v${state.data.ruleset_version} · ` +
-        `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`;
+        `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`)
+        + PM.staleBadgeHTML(state.data.run_date);
       // keep starred snapshots fresh while their setups are still live
       const wl = PM.watch.map("phasemap", state.market);
       for (const ticker of Object.keys(wl)) {
         const live = state.data.results.find((r) => r.ticker === ticker);
         if (live) PM.watch.refresh("phasemap", state.market, ticker, live);
       }
-      // multi-lens confluence badges (async — re-render when known)
+      // multi-lens confluence badges + banner (async — re-render when known)
       state.confl = null;
-      PM.loadConfluence(state.market).then((c) => { state.confl = c; render(); });
+      renderConfBanner();
+      PM.loadConfluence(state.market).then((c) => {
+        state.confl = c;
+        render();
+        renderConfBanner();
+      });
     } catch (err) {
       state.data = null;
       $("#pm-sub").textContent =
