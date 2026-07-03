@@ -111,9 +111,9 @@
       "booked_pct": 0.0,
       "realized_r": -0.004,
       "exits": [],
-      "mae": 0.3356199860572815,
+      "mae": 0.33803001046180725,
       "mfe": 0.3065800070762634,
-      "mae_r": -0.235,
+      "mae_r": -0.257,
       "mfe_r": 0.035,
       "gross_r": 0.0,
       "cost_r": 0.004
@@ -150,9 +150,9 @@
       "booked_pct": 0.0,
       "realized_r": -0.0026,
       "exits": [],
-      "mae": 0.203575000166893,
+      "mae": 0.20527899265289307,
       "mfe": 0.1708800047636032,
-      "mae_r": -0.316,
+      "mae_r": -0.334,
       "mfe_r": 0.037,
       "gross_r": 0.0,
       "cost_r": 0.0026
@@ -189,9 +189,9 @@
       "booked_pct": 0.0,
       "realized_r": -0.0015,
       "exits": [],
-      "mae": 0.203575000166893,
+      "mae": 0.20527899265289307,
       "mfe": 0.1708800047636032,
-      "mae_r": -0.178,
+      "mae_r": -0.189,
       "mfe_r": 0.021,
       "gross_r": 0.0,
       "cost_r": 0.0015
@@ -4255,9 +4255,9 @@
       "cost_r": 0.0063,
       "exits": [],
       "mae": 0.19614900648593903,
-      "mfe": 0.203575000166893,
+      "mfe": 0.20527899265289307,
       "mae_r": -0.053,
-      "mfe_r": 0.115
+      "mfe_r": 0.153
     },
     {
       "id": "XLM:long:1W:2026-07-01",
@@ -4294,48 +4294,9 @@
       "cost_r": 0.0028,
       "exits": [],
       "mae": 0.19614900648593903,
-      "mfe": 0.203575000166893,
+      "mfe": 0.20527899265289307,
       "mae_r": -0.024,
-      "mfe_r": 0.051
-    },
-    {
-      "id": "WBT:short:1D:2026-07-01",
-      "symbol": "WBT",
-      "name": "WhiteBIT Coin",
-      "sector": "",
-      "market": "crypto",
-      "direction": "short",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "1D",
-      "entry": 53.6317749,
-      "stop": 56.46056359,
-      "tp1": 51.80942154,
-      "tp2": 49.04405212,
-      "tp3": 47.09846497,
-      "scale": [
-        0.5,
-        0.25,
-        0.15
-      ],
-      "risk": 2.82878869,
-      "rr": 1.62,
-      "trigger_bar": "2026-06-30",
-      "entry_date": "2026-07-01",
-      "opened_at": "2026-07-01T10:50:44+00:00",
-      "status": "open",
-      "tp1_hit": false,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0265,
-      "gross_r": 0.0,
-      "cost_r": 0.0265,
-      "exits": [],
-      "mae": 56.24494552612305,
-      "mfe": 53.6081428527832,
-      "mae_r": -0.924,
-      "mfe_r": 0.008
+      "mfe_r": 0.069
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -4509,9 +4470,9 @@
       "cost_r": 0.0071,
       "exits": [],
       "mae": 54.9226188659668,
-      "mfe": 56.24494552612305,
+      "mfe": 56.80817413330078,
       "mae_r": -0.0,
-      "mfe_r": 0.123
+      "mfe_r": 0.175
     },
     {
       "id": "ONDO:long:1D:2026-07-02",
@@ -4548,9 +4509,9 @@
       "cost_r": 0.0078,
       "exits": [],
       "mae": 0.3274500072002411,
-      "mfe": 0.3356199860572815,
+      "mfe": 0.33803001046180725,
       "mae_r": -0.056,
-      "mfe_r": 0.081
+      "mfe_r": 0.121
     },
     {
       "id": "ADP:short:1D:2026-07-02",
@@ -4876,35 +4837,85 @@
       "exit_date": "2026-07-02",
       "exit_reason": "stop",
       "hold_days": 2
+    },
+    {
+      "id": "WBT:short:1D:2026-07-01",
+      "symbol": "WBT",
+      "name": "WhiteBIT Coin",
+      "sector": "",
+      "market": "crypto",
+      "direction": "short",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1D",
+      "entry": 53.6317749,
+      "stop": 56.46056359,
+      "tp1": 51.80942154,
+      "tp2": 49.04405212,
+      "tp3": 47.09846497,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 2.82878869,
+      "rr": 1.62,
+      "trigger_bar": "2026-06-30",
+      "entry_date": "2026-07-01",
+      "opened_at": "2026-07-01T10:50:44+00:00",
+      "status": "closed",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": -1.1776,
+      "gross_r": -1.1229,
+      "cost_r": 0.0547,
+      "exits": [
+        {
+          "reason": "stop",
+          "price": 56.80817413,
+          "pct": 1.0,
+          "date": "2026-07-03"
+        }
+      ],
+      "mae": 56.80817413330078,
+      "mfe": 53.6081428527832,
+      "mae_r": -1.123,
+      "mfe_r": 0.008,
+      "exit_price": 56.80817413,
+      "exit_date": "2026-07-03",
+      "exit_reason": "stop",
+      "hold_days": 2
     }
   ],
   "expectancy": {
     "overall": {
-      "n": 1,
+      "n": 2,
       "win_rate": 0.0,
-      "expectancy_r": -1.404,
-      "total_r": -1.4,
+      "expectancy_r": -1.291,
+      "total_r": -2.58,
       "avg_win_r": 0.0,
-      "avg_loss_r": -1.404,
+      "avg_loss_r": -1.291,
       "avg_hold_days": 2.0,
-      "avg_mae_r": -1.382,
-      "avg_mfe_r": 0.0,
-      "gross_expectancy_r": -1.382,
-      "avg_cost_r": 0.022
+      "avg_mae_r": -1.252,
+      "avg_mfe_r": 0.004,
+      "gross_expectancy_r": -1.253,
+      "avg_cost_r": 0.038
     },
     "by_grade": {
       "A+": {
-        "n": 1,
+        "n": 2,
         "win_rate": 0.0,
-        "expectancy_r": -1.404,
-        "total_r": -1.4,
+        "expectancy_r": -1.291,
+        "total_r": -2.58,
         "avg_win_r": 0.0,
-        "avg_loss_r": -1.404,
+        "avg_loss_r": -1.291,
         "avg_hold_days": 2.0,
-        "avg_mae_r": -1.382,
-        "avg_mfe_r": 0.0,
-        "gross_expectancy_r": -1.382,
-        "avg_cost_r": 0.022
+        "avg_mae_r": -1.252,
+        "avg_mfe_r": 0.004,
+        "gross_expectancy_r": -1.253,
+        "avg_cost_r": 0.038
       },
       "A": {
         "n": 0,
@@ -4922,17 +4933,17 @@
     },
     "by_entry_type": {
       "reclaim": {
-        "n": 0,
+        "n": 1,
         "win_rate": 0.0,
-        "expectancy_r": 0.0,
-        "total_r": 0.0,
+        "expectancy_r": -1.178,
+        "total_r": -1.18,
         "avg_win_r": 0.0,
-        "avg_loss_r": 0.0,
-        "avg_hold_days": 0.0,
-        "avg_mae_r": 0.0,
-        "avg_mfe_r": 0.0,
-        "gross_expectancy_r": 0.0,
-        "avg_cost_r": 0.0
+        "avg_loss_r": -1.178,
+        "avg_hold_days": 2.0,
+        "avg_mae_r": -1.123,
+        "avg_mfe_r": 0.008,
+        "gross_expectancy_r": -1.123,
+        "avg_cost_r": 0.055
       },
       "retest": {
         "n": 1,
@@ -4963,17 +4974,17 @@
     },
     "by_timeframe": {
       "1D": {
-        "n": 1,
+        "n": 2,
         "win_rate": 0.0,
-        "expectancy_r": -1.404,
-        "total_r": -1.4,
+        "expectancy_r": -1.291,
+        "total_r": -2.58,
         "avg_win_r": 0.0,
-        "avg_loss_r": -1.404,
+        "avg_loss_r": -1.291,
         "avg_hold_days": 2.0,
-        "avg_mae_r": -1.382,
-        "avg_mfe_r": 0.0,
-        "gross_expectancy_r": -1.382,
-        "avg_cost_r": 0.022
+        "avg_mae_r": -1.252,
+        "avg_mfe_r": 0.004,
+        "gross_expectancy_r": -1.253,
+        "avg_cost_r": 0.038
       },
       "1W": {
         "n": 0,
@@ -5003,5 +5014,5 @@
       }
     }
   },
-  "updated_at": "2026-07-03T18:51:43+00:00"
+  "updated_at": "2026-07-03T20:43:28+00:00"
 }
