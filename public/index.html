@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=57" />
+  <link rel="stylesheet" href="css/styles.css?v=59" />
 </head>
 <body>
   <header class="topbar">
@@ -44,8 +44,6 @@
           <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
         </div>
       </div>
-
-      <div class="topbar-quote" id="topbar-quote"></div>
 
       <div class="topbar-nav">
         <div class="market-switch" role="tablist" aria-label="Market">
@@ -81,8 +79,9 @@
       </div>
     </div>
 
-    <!-- ROW 2 — search · run scan · timer -->
+    <!-- ROW 2 — market quote (fills the empty left span) · search · run scan · timer -->
     <div class="topbar-row2">
+      <div class="topbar-quote" id="topbar-quote"></div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>

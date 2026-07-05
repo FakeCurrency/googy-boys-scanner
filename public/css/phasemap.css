@@ -39,8 +39,8 @@
 
 .pm-head { margin: 6px 0 14px; }
 .pm-title { font-family: var(--mono); font-size: 20px; letter-spacing: 0.04em; margin: 0; }
-.pm-title-sub { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
-.pm-sub { font-family: var(--mono); font-size: 13px; color: var(--text-2); margin: 6px 0 0; }
+.pm-title-sub { font-size: 13px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+.pm-sub { font-family: var(--mono); font-size: 14px; color: var(--text-2); margin: 6px 0 0; }
 
 /* ------------------------------------------------------------- tabs/filters */
 .pm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -106,7 +106,7 @@
 .pm-speak.is-speaking { color: var(--green); border-color: var(--green); }
 
 .pm-identity {
-  font-size: 13px; color: var(--text-2); margin: 4px 0 0;
+  font-size: 14px; color: var(--text-2); margin: 4px 0 0;
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
 .pm-sector {
@@ -181,7 +181,7 @@
   padding: 0 12px; border-left: 3px solid transparent;
   border-radius: var(--radius-md) 0 0 var(--radius-md); min-width: 46px; justify-content: center;
 }
-.sp-name { font-size: 13px; color: var(--text-2); flex: 1; min-width: 0;
+.sp-name { font-size: 14px; color: var(--text-2); flex: 1; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-row-price { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--text); }
 .sp-row-score { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
@@ -206,13 +206,13 @@
 
 /* --------------------------------------------------------------- narration */
 .pm-narration {
-  font-size: 14.5px; line-height: 1.6; color: var(--text-2);
+  font-size: 15.5px; line-height: 1.65; color: var(--text-2);
   background: var(--fill-2); border-radius: var(--radius-md);
   padding: 10px 12px; border: 1px solid var(--border-soft);
 }
 .pm-metrics {
   display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px;
-  font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+  font-family: var(--mono); font-size: 12.5px; color: var(--muted);
 }
 .pm-metrics b { color: var(--text-2); font-weight: 600; }
 .pm-metric-warn b { color: var(--orange); }
@@ -224,7 +224,7 @@
   background: var(--panel); color: var(--text-2);
 }
 .pm-empty { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 30px 0; text-align: center; }
-.pm-disclaimer { color: var(--muted-2); font-size: 11px; margin-top: 26px; line-height: 1.5; }
+.pm-disclaimer { color: var(--muted-2); font-size: 12px; margin-top: 26px; line-height: 1.55; }
 
 /* ------------------------------------------------------------ legend page */
 .pm-lg-section { margin: 26px 0; }
@@ -235,7 +235,7 @@
 .pm-lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
 .pm-lg-item {
   background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
-  padding: 10px 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+  padding: 11px 13px; font-size: 13.5px; color: var(--text-2); line-height: 1.55;
 }
 .pm-lg-item .pm-state, .pm-lg-item .pm-band { margin-bottom: 6px; display: inline-flex; }
 .pm-lg-term { font-family: var(--mono); font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
