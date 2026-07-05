@@ -365,7 +365,9 @@
       .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
     $("#stat-toppick").textContent = top ? `${top.symbol} ${fmtPrice(top.price)}` : "—";
     const bestRR = (tradeable.length ? tradeable : real).reduce((m, r) => Math.max(m, r.rr || 0), 0);
-    $("#stat-rr").textContent = bestRR > 0 ? `${bestRR.toFixed(1)}:1` : "—";
+    // 4th card is MULTI-LENS TODAY (2026-07-03) — filled asynchronously when
+    // the confluence files resolve; "—" until then.
+    $("#stat-rr").textContent = "—";
 
     $("#count-aplus").textContent = res.filter((r) => r.grade === "A+").length;
     $("#count-a").textContent = res.filter((r) => r.grade === "A").length;
@@ -1099,6 +1101,31 @@
     wrap.innerHTML = list.map(rowHtml).join("");
   }
 
+  // AT-LEVEL battleground strip (2026-07-03): names sitting ON a 200-SMA
+  // right now — the moment before the reaction, across W / 3D / D levels.
+  function renderAtLevel(d) {
+    let el = document.getElementById("atlevel-strip");
+    const rows = (d.results || []).filter((r) => r.at_level);
+    if (!rows.length) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("section");
+      el.id = "atlevel-strip";
+      el.className = "conf-banner atlevel-strip";
+      const anchor = document.querySelector(".view-tabs");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
+      else return;
+    }
+    const CAP = 12;
+    const tfTag = (r) => r.level_tf === "weekly" ? "W" : r.level_tf === "3d" ? "3D" : "D";
+    el.innerHTML = `<span class="conf-banner-label" style="color:var(--teal)">◎ AT THE LEVEL NOW</span>` +
+      rows.slice(0, CAP).map((r) =>
+        `<a title="${esc(r.name || r.symbol)} — sitting on the ${tfTag(r)} 200-SMA (${r.dist_pct}% away). The reaction is the setup." ` +
+        `href="chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&pm=1">` +
+        `${esc(r.symbol)} ${String(r.dir || "LONG").toUpperCase() === "SHORT" ? "▼" : "▲"} ` +
+        `<span style="color:var(--muted)">${tfTag(r)}·200</span></a>`).join("") +
+      (rows.length > CAP ? `<span style="color:var(--muted)">+${rows.length - CAP} more</span>` : "");
+  }
+
   // ----------------------------------------------------------- apply
   function applyPayload(d) {
     state.data = d;
@@ -1113,6 +1140,7 @@
     renderEntryFilters(d);
     renderLegend(d);
     renderStats(d);
+    renderAtLevel(d);
     renderRows();
     // Multi-lens confluence: fetch the other lenses' latest files, then
     // re-render rows with chips + surface the alignment banner.
@@ -1123,6 +1151,10 @@
         state.confl = c;
         renderRows();
         renderConfluenceBanner(c);
+        const rows = c.all();
+        const lensEl = document.getElementById("stat-rr");
+        if (lensEl) lensEl.textContent = rows.length;
+        notifyTriples(rows);
       });
     }
   }
@@ -1540,6 +1572,35 @@
           <span class="sr-price">${fmtPrice(r.price)}</span>
         </a>`);
       });
+      // Starred names (any lens, this market) — the watchlist is searchable
+      if (window.PM && PM.watch) {
+        const seen = new Set(rows.map(() => 0));
+        ["vivek", "phasemap", "specs"].forEach((ns) => {
+          Object.keys(PM.watch.map(ns, state.market))
+            .filter((t) => t.toLowerCase().includes(q)).slice(0, 4)
+            .forEach((t) => rows.push(`<a class="sr-row" href="chart.html?m=${state.market}&s=${encodeURIComponent(t)}&pm=1">
+              <span class="sr-grade" style="color:var(--orange)">★</span>
+              <span class="sr-sym">${esc(t)}</span>
+              <span class="sr-name">on your ${esc(ns.toUpperCase())} watchlist</span>
+              <span class="sr-price"></span>
+            </a>`));
+        });
+      }
+      // Open journal positions — a name you're IN should always be findable
+      if (window.GBSSync) {
+        const mFor = (t) => t.asset_type === "crypto" ? "crypto"
+          : t.asset_type === "asx" ? "asx" : "nasdaq";
+        GBSSync.load().trades
+          .filter((t) => t.status === "open" &&
+            ((t.symbol || "").toLowerCase().includes(q)))
+          .slice(0, 5)
+          .forEach((t) => rows.push(`<a class="sr-row" href="chart.html?m=${mFor(t)}&s=${encodeURIComponent(t.symbol)}&pm=1">
+            <span class="sr-grade" style="color:var(--purple)">📓</span>
+            <span class="sr-sym">${esc(t.symbol)}</span>
+            <span class="sr-name">OPEN ${esc(String(t.direction || "").toUpperCase())} @ ${t.entry}${t.lens ? " · " + esc(t.lens) : ""}</span>
+            <span class="sr-price"></span>
+          </a>`));
+      }
       searchResults.innerHTML = rows.join("");
       // Close overlay when user clicks a result link
       searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", closeSearch));
@@ -1675,6 +1736,55 @@
         .catch(() => {});
     }
   }
+
+  // Browser notifications for triple-lens alignments (2026-07-03). Opt-in
+  // via the bell; dedupe in localStorage so a refresh doesn't re-ping.
+  function notifyEnabled() {
+    try { return localStorage.getItem("gbs:notify") === "1" &&
+      "Notification" in window && Notification.permission === "granted"; }
+    catch (_) { return false; }
+  }
+  function notifyTriples(rows) {
+    if (!notifyEnabled()) return;
+    let seen = {};
+    try { seen = JSON.parse(localStorage.getItem("gbs:notified") || "{}"); } catch (_) {}
+    const day = new Date().toISOString().slice(0, 10);
+    (rows || []).filter((x) => x.count >= 3).forEach((x) => {
+      const k = `${day}:${state.market}:${x.ticker}:${x.side}`;
+      if (seen[k]) return;
+      seen[k] = 1;
+      try {
+        new Notification("🎯 Triple-lens alignment", {
+          body: `${x.ticker} ${x.side.toUpperCase()} · ${state.market.toUpperCase()} — ${x.lenses.join(" + ")}`,
+          icon: "icons/icon-192.png", tag: k,
+        });
+      } catch (_) {}
+    });
+    try {
+      const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
+      localStorage.setItem("gbs:notified", JSON.stringify(pruned));
+    } catch (_) {}
+  }
+  function wireNotifyBell() {
+    const btn = document.getElementById("notify-btn");
+    if (!btn || !("Notification" in window)) { if (btn) btn.hidden = true; return; }
+    const paint = () => {
+      const on = notifyEnabled();
+      btn.style.opacity = on ? "1" : "0.45";
+      btn.title = on ? "Browser alerts ON for triple-lens alignments — click to turn off"
+                     : "Click to get a browser alert when a TRIPLE-lens alignment appears";
+    };
+    btn.addEventListener("click", async () => {
+      try {
+        if (notifyEnabled()) { localStorage.setItem("gbs:notify", "0"); paint(); return; }
+        const perm = await Notification.requestPermission();
+        if (perm === "granted") localStorage.setItem("gbs:notify", "1");
+      } catch (_) {}
+      paint();
+    });
+    paint();
+  }
+  wireNotifyBell();
 
   initKeyboard();
   bind();

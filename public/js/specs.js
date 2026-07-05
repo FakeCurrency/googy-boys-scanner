@@ -58,7 +58,7 @@
         </div>
         <div class="sp-detail-chips">${chips}</div>
         <p class="pm-narration">${PM.esc(r.analysis || "No saved analysis — this snapshot predates the current scan.")}</p>
-        <a class="pm-chart-cue sp-chart-link" href="chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs">OPEN CHART →</a>
+        <a class="pm-chart-cue sp-chart-link" href="chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs&flt=${encodeURIComponent(state.grade + '~' + state.sort)}">OPEN CHART →</a>
       </div>
     </article>`;
   }

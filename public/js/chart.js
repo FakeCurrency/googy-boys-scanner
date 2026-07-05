@@ -1062,6 +1062,10 @@
         // (reclaim / retest / break → "Weekly reclaim" etc. in the journal).
         grade: d.grade || null,
         entry_type: (av && av.entry_trigger) || d.entry_trigger || null,
+        // Which lens produced this trade — lets the journal answer
+        // "which system actually makes money" (2026-07-03)
+        lens: d._zonePlan ? "phasemap" : d._vivek ? "vivek"
+            : mode === "spec" ? "specs" : market === "scalp" ? "scalp" : "chart",
         notes: `Simulated from chart · ${tfTag}${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
         status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
       });
@@ -2447,24 +2451,76 @@
       ? `chart.html?m=scalp&s=${encodeURIComponent(s)}`
       : `chart.html?m=${market}&s=${encodeURIComponent(s)}${mode !== "pullback" ? `&mode=${mode}` : ""}`;
 
+    // flt=… carries the source page's filters + sort, so the arrows step
+    // through exactly the list the user was looking at (2026-07-03).
+    const fltRaw = (params.get("flt") || "").split("~");
+    let listFilter = (rows) => rows;
     if (navSrc === "phasemap") {
       file = `data/phasemap/${market}/latest.json`;
       // one entry per (ticker, direction) so both sides of a name are stepped
       sOf = (r) => `${r.ticker}|${r.direction}`;
       hrefFor = (key) => {
         const [t, dir] = String(key).split("|");
-        return `chart.html?m=${market}&s=${encodeURIComponent(t)}&dir=${dir}&src=phasemap`;
+        return `chart.html?m=${market}&s=${encodeURIComponent(t)}&dir=${dir}&src=phasemap` +
+          (params.get("flt") ? `&flt=${encodeURIComponent(params.get("flt"))}` : "");
+      };
+      const [view, tier, dirF, hideIll, sort] = fltRaw;
+      const PM_VIEWS = {
+        setups: ["RUNNING", "DISPLACED"], watch: ["TRAP_SET", "SWEPT"],
+        rotation: ["STALLED"], ended: ["COMPLETE", "DEAD"],
+      };
+      const states = PM_VIEWS[view] || null;   // all/watchlist -> no state filter
+      const evDate = (r) => {
+        const mm = r.metrics || {};
+        return (mm.displacement_date || "") > (mm.sweep_date || "")
+          ? mm.displacement_date : (mm.sweep_date || "");
+      };
+      const zRR = (r) => {
+        const c = r.metrics && r.metrics.close;
+        const hardZ = (r.zones || []).find((z) => z.id === "inv_hard");
+        const tgtZ = (r.zones || []).find((z) => z.type === "TARGET" && z.status !== "CONSUMED");
+        if (c == null || !hardZ || !tgtZ) return null;
+        const bull2 = r.direction !== "bearish";
+        const rew = bull2 ? (tgtZ.low + tgtZ.high) / 2 - c : c - (tgtZ.low + tgtZ.high) / 2;
+        const rsk = bull2 ? c - hardZ.low : hardZ.high - c;
+        return rsk > 0 && rew > 0 ? rew / rsk : null;
+      };
+      listFilter = (rows) => {
+        let out = rows.filter((r) =>
+          (!states || states.includes(r.state)) &&
+          (!tier || tier === "all" || r.tier === tier) &&
+          (!dirF || dirF === "all" || r.direction === dirF) &&
+          (hideIll !== "1" || !(r.tags || []).includes("ILLIQUID")));
+        const bynum = (fn) => (a, b) => (fn(b) ?? -Infinity) - (fn(a) ?? -Infinity)
+          || a.ticker.localeCompare(b.ticker);
+        if (sort === "fresh") out = [...out].sort((a, b) =>
+          String(evDate(b)).localeCompare(String(evDate(a))) || a.ticker.localeCompare(b.ticker));
+        else if (sort === "turnover") out = [...out].sort(bynum((r) => r.metrics && r.metrics.avg_turnover_20d));
+        else if (sort === "zrr") out = [...out].sort(bynum(zRR));
+        return out;
       };
     } else if (navSrc === "specs") {
       file = `data/${market}_spec.json`;
       sOf = (r) => r.symbol;
-      hrefFor = (s) => `chart.html?m=${market}&s=${encodeURIComponent(s)}&mode=spec&src=specs`;
+      hrefFor = (s2) => `chart.html?m=${market}&s=${encodeURIComponent(s2)}&mode=spec&src=specs` +
+        (params.get("flt") ? `&flt=${encodeURIComponent(params.get("flt"))}` : "");
+      const [grade, sort] = fltRaw;
+      listFilter = (rows) => {
+        let out = rows.filter((r) => !grade || grade === "all" || r.grade === grade);
+        const bynum = (fn, asc) => (a, b) => (asc ? 1 : -1) *
+          ((fn(a) ?? (asc ? Infinity : -Infinity)) - (fn(b) ?? (asc ? Infinity : -Infinity)))
+          || a.symbol.localeCompare(b.symbol);
+        if (sort === "spike") out = [...out].sort(bynum((r) => r.spike_ratio));
+        else if (sort === "rr") out = [...out].sort(bynum((r) => r.rr));
+        else if (sort === "price") out = [...out].sort(bynum((r) => r.price, true));
+        return out;
+      };
     }
 
     fetch(file, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        const list = ((j && j.results) || []).map(sOf);
+        const list = listFilter((j && j.results) || []).map(sOf);
         const cur = navSrc === "phasemap"
           ? `${decodeURIComponent(symbol).toUpperCase()}|${pmDirWanted || "bullish"}`
           : decodeURIComponent(symbol).toUpperCase();

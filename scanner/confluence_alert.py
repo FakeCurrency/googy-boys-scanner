@@ -31,6 +31,8 @@ from .discord import post_webhook
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / "public" / "data"
 STATE_FILE = ROOT / "journal" / "confluence_state.json"
+HISTORY_FILE = DATA / "phasemap" / "alert_history.json"
+HISTORY_CAP = 800
 
 MARKETS = ("asx", "nasdaq", "crypto")
 PM_ACTIVE = {"SWEPT", "DISPLACED", "RUNNING"}
@@ -96,6 +98,34 @@ def diff_new(alignments: list[dict], state: dict) -> tuple[list[dict], dict]:
     return fresh, new_state
 
 
+def append_history(fresh: list[dict]) -> None:
+    """Site-side alert log (public/data/phasemap/alert_history.json) — Discord
+    pings scroll away; the ALERTS page doesn't. Written for EVERY new
+    alignment regardless of the Discord lens threshold, deduped per day."""
+    if not fresh:
+        return
+    try:
+        hist = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        hist = {}
+    entries = hist.get("entries", [])
+    now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    day = now[:10]
+    seen = {(str(e.get("date", ""))[:10], e.get("market"), e.get("ticker"),
+             e.get("side"), e.get("count")) for e in entries}
+    for a in fresh:
+        key = (day, a["market"], a["ticker"], a["side"], a["count"])
+        if key in seen:
+            continue
+        entries.insert(0, {"date": now, "market": a["market"], "ticker": a["ticker"],
+                           "side": a["side"], "count": a["count"],
+                           "lenses": a["lenses"]})
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    HISTORY_FILE.write_text(
+        json.dumps({"entries": entries[:HISTORY_CAP]}, indent=1) + "\n",
+        encoding="utf-8")
+
+
 def build_payloads(fresh: list[dict]) -> list[dict]:
     triples = [a for a in fresh if a["count"] >= 3]
     lines = []
@@ -152,6 +182,8 @@ def main(argv=None) -> int:
     to_post = [a for a in fresh if a["count"] >= min_lenses]
     print(f"confluence: {len(alignments)} active, {len(fresh)} new/upgraded, "
           f"{len(to_post)} at >= {min_lenses} lenses")
+    if not args.dry_run:
+        append_history(fresh)   # the ALERTS page log — independent of Discord
     if not to_post:
         _save_state_if_changed(state, new_state)
         return 0

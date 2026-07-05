@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ALERTS — Vivek 5.0</title>
+  <meta name="theme-color" content="#0d1117" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+  <link rel="stylesheet" href="css/styles.css?v=57" />
+  <link rel="stylesheet" href="css/phasemap.css?v=10" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">ALERTS</span></div>
+    </div>
+    <nav class="pm-topnav">
+      <a class="howto-link" href="index.html">← Scanner</a>
+      <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
+    </nav>
+  </header>
+
+  <main class="wrap pm-wrap">
+    <div class="pm-head">
+      <h2 class="pm-title">ALERT HISTORY <span class="pm-title-sub">every multi-lens alignment the system called, newest first</span></h2>
+      <p class="pm-sub" id="al-sub">Loading…</p>
+    </div>
+    <section id="al-list"></section>
+    <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). Discord only carries the triples; this page keeps everything. Analysis only — not financial advice.</p>
+  </main>
+
+  <script src="js/alerts.js?v=1"></script>
+</body>
+</html>

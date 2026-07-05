@@ -56,6 +56,8 @@
         <div class="nav-pills">
           <a class="howto-link" href="phasemap.html">PHASEMAP</a>
           <a class="howto-link" href="specs.html">SPECS ⚡</a>
+          <a class="howto-link" href="mynames.html">★ MY NAMES</a>
+          <a class="howto-link" href="alerts.html">ALERTS</a>
           <a class="howto-link" href="sectors.html">NEWS</a>
           <a class="howto-link" href="track.html">TRACK</a>
           <a class="howto-link" href="journal.html">JOURNAL</a>
@@ -88,6 +90,7 @@
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         <span class="reload-label">SCAN</span>
       </button>
+      <button class="search-trigger" id="notify-btn" title="Browser alerts for triple-lens alignments" aria-label="Toggle alignment notifications">🔔</button>
       <span class="refresh-timer" id="refresh-timer" title="Auto-refresh countdown"></span>
     </div>
   </header>
@@ -119,7 +122,7 @@
       <div class="stat-card"><div class="stat-label">Stocks Scanned</div><div class="stat-value" id="stat-scanned">—</div></div>
       <div class="stat-card"><div class="stat-label">A+ / A Setups</div><div class="stat-value accent-green" id="stat-setups">—</div></div>
       <div class="stat-card"><div class="stat-label">Top Pick</div><div class="stat-value accent-orange" id="stat-toppick">—</div></div>
-      <div class="stat-card"><div class="stat-label">Best R:R</div><div class="stat-value" id="stat-rr">—</div></div>
+      <div class="stat-card" title="Names with 2+ lenses aligned right now — the banner below lists them"><div class="stat-label">Multi-Lens Today</div><div class="stat-value accent-orange" id="stat-rr">—</div></div>
     </section>
 
     <!-- VIVEK paper-trade track record (expectancy) — populated by app.js -->
@@ -175,6 +178,6 @@
 
   <script src="js/gbs-sync.js?v=6"></script>
   <script src="js/phasemap-shared.js?v=6"></script>
-  <script src="js/app.js?v=61"></script>
+  <script src="js/app.js?v=62"></script>
 </body>
 </html>

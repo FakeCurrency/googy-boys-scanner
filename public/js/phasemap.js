@@ -71,8 +71,11 @@
   function chartURL(rec) {
     // The ORIGINAL chart page — full VIVEK-grade charting (multi-timeframe,
     // SMAs, drawing tools, live price, TradingView link) + the zones overlaid.
-    // src=phasemap lets the chart's prev/next arrows step through THIS list.
-    return `chart.html?m=${state.market}&s=${encodeURIComponent(rec.ticker)}&dir=${rec.direction}&src=phasemap`;
+    // src=phasemap lets the chart's prev/next arrows step through THIS list —
+    // flt carries the tab's filters + sort so stepping matches what you see.
+    const flt = encodeURIComponent([state.view, state.tier, state.dir,
+      state.hideIlliquid ? 1 : 0, state.sort].join("~"));
+    return `chart.html?m=${state.market}&s=${encodeURIComponent(rec.ticker)}&dir=${rec.direction}&src=phasemap&flt=${flt}`;
   }
 
   function cardHTML(rec, idx) {
