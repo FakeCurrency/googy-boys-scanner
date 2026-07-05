@@ -87,30 +87,33 @@ jobs:
           GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
-      # Schema gate: every freshly written snapshot must pass the writer's own
-      # validator (zones are bands, states/tiers legal, disclaimer present,
-      # current ruleset version) before it ships.
+      # Schema gate: every freshly published snapshot must pass the writer's own
+      # validator (zones are bands, states/tiers legal, current ruleset version)
+      # before it ships. latest.json is the SLIM published form — narration
+      # lives in the narrations.json sidecar — so validate the pair together.
       - name: Verify PhaseMap snapshots
         run: |
           python - <<'PY'
-          import json, glob, sys
+          import json, glob, os, sys
           from phasemap.config import RULESET_VERSION
-          from phasemap.output.writer import validate_snapshot
+          from phasemap.output.writer import validate_published
           files = glob.glob("public/data/phasemap/*/latest.json")
           if not files:
               print("SCHEMA GATE FAILED: no snapshots written"); sys.exit(1)
           bad = []
           for f in files:
               try:
-                  snap = json.load(open(f, encoding="utf-8"))
-                  validate_snapshot(snap)
-                  if snap["ruleset_version"] != RULESET_VERSION:
-                      bad.append(f"{f}: ruleset {snap['ruleset_version']} != {RULESET_VERSION}")
+                  slim = json.load(open(f, encoding="utf-8"))
+                  nf = os.path.join(os.path.dirname(f), "narrations.json")
+                  narr = json.load(open(nf, encoding="utf-8")) if os.path.exists(nf) else None
+                  validate_published(slim, narr)
+                  if slim["ruleset_version"] != RULESET_VERSION:
+                      bad.append(f"{f}: ruleset {slim['ruleset_version']} != {RULESET_VERSION}")
               except Exception as e:
                   bad.append(f"{f}: {e}")
           if bad:
               print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
-          print(f"schema gate OK — {len(files)} snapshots at ruleset v{RULESET_VERSION}")
+          print(f"schema gate OK — {len(files)} published snapshots at ruleset v{RULESET_VERSION}")
           PY
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)

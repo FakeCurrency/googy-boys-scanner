@@ -5,8 +5,9 @@ import pytest
 
 from phasemap.engine.scanner import scan_ticker, sort_records
 from phasemap.narrate.renderer import render
-from phasemap.output.writer import (build_snapshot, serialise,
-                                    validate_snapshot, write_snapshot)
+from phasemap.output.writer import (build_snapshot, serialise, split_narrations,
+                                    validate_published, validate_snapshot,
+                                    write_snapshot)
 from phasemap.tests import synth
 
 
@@ -59,6 +60,29 @@ def test_write_snapshot_and_latest_copy(tmp_path):
     narr = json.loads((tmp_path / "narrations.json").read_text(encoding="utf-8"))
     for r in dated["results"]:
         assert narr["narrations"][f"{r['ticker']}|{r['direction']}"] == r["narration"]
+
+
+def test_validate_published_accepts_slim_pair():
+    """The CI schema gate validates the PUBLISHED slim latest.json against its
+    narrations.json sidecar — this is what broke the nightly on 2026-07-05."""
+    snap = snapshot_for({"AAA": synth.fixture1()})
+    slim, narr = split_narrations(snap)
+    validate_published(slim, narr)                 # must not raise
+
+
+def test_validate_published_rejects_missing_sidecar_entry():
+    snap = snapshot_for({"AAA": synth.fixture1()})
+    slim, narr = split_narrations(snap)
+    narr["narrations"] = {}                         # drop every narration
+    with pytest.raises(ValueError):
+        validate_published(slim, narr)
+
+
+def test_validate_published_rejects_full_snapshot():
+    # a full (non-slim) snapshot has no narrations_file pointer → rejected
+    snap = snapshot_for({"AAA": synth.fixture1()})
+    with pytest.raises(ValueError):
+        validate_published(snap, {"narrations": {}})
 
 
 def test_validator_rejects_bad_band():

@@ -13,6 +13,9 @@ from phasemap.config import CONFIG, RULESET_VERSION
 REQUIRED_RESULT_KEYS = ("ticker", "direction", "state", "tier", "tags",
                         "regime", "zones", "metrics", "smt", "route_to",
                         "narration")
+# Same, minus narration — for the PUBLISHED slim latest.json, where the
+# narration text lives in the narrations.json sidecar instead.
+REQUIRED_SLIM_RESULT_KEYS = tuple(k for k in REQUIRED_RESULT_KEYS if k != "narration")
 REQUIRED_ZONE_KEYS = ("id", "type", "low", "high", "status")
 VALID_STATES = ("TRAP_SET", "SWEPT", "DISPLACED", "RUNNING", "STALLED",
                 "COMPLETE", "DEAD")
@@ -20,38 +23,66 @@ VALID_ZONE_TYPES = ("DEMAND", "SUPPLY", "INVALIDATION_HARD",
                     "INVALIDATION_MOMENTUM", "ENTRY_CONTINUATION", "TARGET")
 VALID_ZONE_STATUS = ("UNTESTED", "TESTED", "RESPECTED", "CONSUMED", "VIOLATED")
 
+DISCLAIMER_TAIL = "not financial advice."
 
-def validate_snapshot(snap: dict) -> None:
-    """Hand-rolled schema check — raises ValueError with a precise message."""
+
+def _validate_header(snap: dict) -> None:
     for key in ("run_date", "ruleset_version", "universe_size", "results"):
         if key not in snap:
             raise ValueError(f"snapshot missing key: {key}")
     if not isinstance(snap["results"], list):
         raise ValueError("results must be a list")
+
+
+def _validate_result(r: dict, required_keys: tuple) -> None:
+    """Everything except the narration text (which differs full vs slim)."""
+    for key in required_keys:
+        if key not in r:
+            raise ValueError(f"result {r.get('ticker')} missing key: {key}")
+    if r["state"] not in VALID_STATES:
+        raise ValueError(f"invalid state: {r['state']}")
+    if r["direction"] not in ("bullish", "bearish"):
+        raise ValueError(f"invalid direction: {r['direction']}")
+    if r["tier"] not in ("A+", "A", "Watch", None):
+        raise ValueError(f"invalid tier: {r['tier']}")
+    for z in r["zones"]:
+        for key in REQUIRED_ZONE_KEYS:
+            if key not in z:
+                raise ValueError(f"zone missing key: {key}")
+        if z["type"] not in VALID_ZONE_TYPES:
+            raise ValueError(f"invalid zone type: {z['type']}")
+        if z["status"] not in VALID_ZONE_STATUS:
+            raise ValueError(f"invalid zone status: {z['status']}")
+        if not (isinstance(z["low"], (int, float)) and
+                isinstance(z["high"], (int, float)) and z["low"] <= z["high"]):
+            raise ValueError(
+                f"zone {z['id']} band invalid: {z['low']}..{z['high']}")
+
+
+def validate_snapshot(snap: dict) -> None:
+    """Full-schema check for the dated snapshot — narration inline. Raises
+    ValueError with a precise message."""
+    _validate_header(snap)
     for r in snap["results"]:
-        for key in REQUIRED_RESULT_KEYS:
-            if key not in r:
-                raise ValueError(f"result {r.get('ticker')} missing key: {key}")
-        if r["state"] not in VALID_STATES:
-            raise ValueError(f"invalid state: {r['state']}")
-        if r["direction"] not in ("bullish", "bearish"):
-            raise ValueError(f"invalid direction: {r['direction']}")
-        if r["tier"] not in ("A+", "A", "Watch", None):
-            raise ValueError(f"invalid tier: {r['tier']}")
-        if not r["narration"].endswith("not financial advice."):
+        _validate_result(r, REQUIRED_RESULT_KEYS)
+        if not r["narration"].endswith(DISCLAIMER_TAIL):
             raise ValueError(f"{r['ticker']}: narration missing disclaimer")
-        for z in r["zones"]:
-            for key in REQUIRED_ZONE_KEYS:
-                if key not in z:
-                    raise ValueError(f"zone missing key: {key}")
-            if z["type"] not in VALID_ZONE_TYPES:
-                raise ValueError(f"invalid zone type: {z['type']}")
-            if z["status"] not in VALID_ZONE_STATUS:
-                raise ValueError(f"invalid zone status: {z['status']}")
-            if not (isinstance(z["low"], (int, float)) and
-                    isinstance(z["high"], (int, float)) and z["low"] <= z["high"]):
-                raise ValueError(
-                    f"zone {z['id']} band invalid: {z['low']}..{z['high']}")
+
+
+def validate_published(slim: dict, narrations: dict | None) -> None:
+    """Schema check for the PUBLISHED files: the slim latest.json plus its
+    narrations.json sidecar. Results carry every key except narration, the
+    slim snapshot points at the sidecar, and every result has a narration in
+    the sidecar ending with the disclaimer."""
+    _validate_header(slim)
+    if slim.get("narrations_file") != "narrations.json":
+        raise ValueError("slim snapshot missing narrations_file pointer")
+    nmap = (narrations or {}).get("narrations", {})
+    for r in slim["results"]:
+        _validate_result(r, REQUIRED_SLIM_RESULT_KEYS)
+        text = nmap.get(f"{r['ticker']}|{r['direction']}")
+        if not text or not text.endswith(DISCLAIMER_TAIL):
+            raise ValueError(f"{r['ticker']}: narration missing/short in sidecar")
 
 
 def build_snapshot(run_date: str, universe_size: int, results: list) -> dict:
