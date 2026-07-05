@@ -677,8 +677,12 @@
       ? encodeURIComponent(market === "crypto" ? `CRYPTO:${symbol}USD` : market === "asx" ? `ASX:${symbol}` : symbol)
       : "";
     d.innerHTML = `<h2>Chart unavailable</h2><p>${esc(msg)}</p>` +
+      `<p><button class="tv-btn" id="chart-retry" type="button">↻ Retry</button></p>` +
       (symbol ? `<p><a class="tv-link" href="https://www.tradingview.com/chart/?symbol=${tvSym}" target="_blank" rel="noopener">View ${esc(symbol.toUpperCase())} on TradingView →</a></p>` : "");
     document.body.replaceChildren(h, d);
+    // A hiccuping live proxy shouldn't require a manual URL re-entry.
+    const btn = document.getElementById("chart-retry");
+    if (btn) btn.addEventListener("click", () => location.reload());
   }
 
   // High conviction (matches the dashboard): a WEEKLY reclaim that's A/A+ or has
@@ -1275,6 +1279,7 @@
     let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
     let drawClear = () => {};         // set by initDrawing; clears temp drawings on TF switch
     let drawRedraw = () => {};        // set by initDrawing; re-anchors drawings on pan/zoom/resize
+    let drawRestore = () => {};       // set by initDrawing; reloads saved drawings for the current TF
     let tfSetups = null;              // VIVEK multi-timeframe setup strip (set below)
 
     const el = $("#chart");
@@ -1589,7 +1594,8 @@
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;
       curTF = key;
-      drawClear();                    // temp drawings are TF-specific — reset on switch
+      drawClear();                    // wipe the canvas state for the old TF…
+      drawRestore();                  // …then load this TF's SAVED drawings (persistent)
       candle.setData(tf.candles);
       vol.setData(tf.volume);
       // Timeframes can carry DIFFERENT line counts (a thin 4H/3D/W history has
@@ -1894,6 +1900,49 @@
         redraw();
       };
 
+      // ── persistence (2026-07-03): drawings survive reloads and TF switches.
+      // Stored per ticker + timeframe, anchored by BAR TIME + price (logical
+      // indices shift as new bars arrive, times don't).
+      const drawKey = () => `gbs:draw:${market}:${(d.symbol || symbol).toUpperCase()}:${curTF}`;
+      const l2t = (l) => {
+        const cs = (tfs[curTF] || {}).candles || [];
+        if (!cs.length || l == null) return null;
+        const i = Math.min(cs.length - 1, Math.max(0, Math.round(l)));
+        return { t: cs[i].time, off: l - i };
+      };
+      const t2l = (a) => {
+        const cs = (tfs[curTF] || {}).candles || [];
+        if (!cs.length || !a || a.t == null) return null;
+        let i = cs.findIndex((c) => c.time >= a.t);
+        if (i < 0) i = cs.length - 1;
+        return i + (a.off || 0);
+      };
+      function saveDrawings() {
+        try {
+          const ser = drawings.map((dr) => dr.type === "hline"
+            ? { type: "hline", price: dr.price }
+            : { type: "trend", a: { ...(l2t(dr.a.logical) || {}), price: dr.a.price },
+                b: { ...(l2t(dr.b.logical) || {}), price: dr.b.price } });
+          if (ser.length) localStorage.setItem(drawKey(), JSON.stringify(ser));
+          else localStorage.removeItem(drawKey());
+        } catch (_) {}
+      }
+      function restoreDrawings() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(drawKey()) || "[]");
+          drawings = raw.map((dr) => dr.type === "hline"
+            ? { type: "hline", price: dr.price }
+            : { type: "trend",
+                a: { logical: t2l(dr.a), price: dr.a.price },
+                b: { logical: t2l(dr.b), price: dr.b.price } })
+            .filter((dr) => dr.type === "hline" ||
+                    (dr.a.logical != null && dr.b.logical != null));
+        } catch (_) { drawings = []; }
+        redraw();
+      }
+      drawRestore = restoreDrawings;
+      restoreDrawings();   // pick up saved drawings for the initial timeframe
+
       function ptFromEvent(ev) {
         const r = canvas.getBoundingClientRect();
         const x = ev.clientX - r.left, y = ev.clientY - r.top;
@@ -1905,15 +1954,16 @@
         const p = ptFromEvent(ev);
         if (tool === "erase") {
           const i = nearestDrawing(p.x, p.y);
-          if (i >= 0) { drawings.splice(i, 1); eraseIdx = -1; redraw(); }
+          if (i >= 0) { drawings.splice(i, 1); eraseIdx = -1; redraw(); saveDrawings(); }
           return;
         }
         if (p.logical == null || p.price == null) return;
         if (tool === "hline") {
           drawings.push({ type: "hline", price: p.price });
+          saveDrawings();
         } else if (tool === "trend") {
           if (!pending) { pending = { logical: p.logical, price: p.price }; }
-          else { drawings.push({ type: "trend", a: pending, b: { logical: p.logical, price: p.price } }); pending = null; }
+          else { drawings.push({ type: "trend", a: pending, b: { logical: p.logical, price: p.price } }); pending = null; saveDrawings(); }
         } else if (tool === "measure") {
           measure = null;                          // start a fresh measurement
           measureDrag = { a: { logical: p.logical, price: p.price } };
@@ -1965,7 +2015,7 @@
       delBtn.addEventListener("mouseenter", () => { overDel = true; clearTimeout(hideTimer); });
       delBtn.addEventListener("mouseleave", () => { overDel = false; scheduleHide(); });
       delBtn.addEventListener("click", () => {
-        if (delTarget >= 0) { drawings.splice(delTarget, 1); delTarget = -1; eraseIdx = -1; delBtn.style.display = "none"; redraw(); }
+        if (delTarget >= 0) { drawings.splice(delTarget, 1); delTarget = -1; eraseIdx = -1; delBtn.style.display = "none"; redraw(); saveDrawings(); }
       });
       chart.subscribeCrosshairMove((param) => {
         if (tool !== "cursor" || !param.point || !drawings.length) { scheduleHide(); return; }
@@ -1996,7 +2046,7 @@
         tools.querySelectorAll(".draw-btn[data-tool]").forEach((b) =>
           b.addEventListener("click", () => selectTool(b.dataset.tool, b)));
         const clearBtn = $("#draw-clear");
-        if (clearBtn) clearBtn.addEventListener("click", () => drawClear());
+        if (clearBtn) clearBtn.addEventListener("click", () => { drawClear(); saveDrawings(); });
       }
       document.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape" && tool !== "cursor") {
