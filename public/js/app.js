@@ -257,6 +257,7 @@
   // ----------------------------------------------------------- PULSE
   function renderPulse(pulse) {
     const sec = $("#pulse"), track = $("#pulse-track");
+    if (!sec || !track) return;   // PULSE removed from the page (owner, 2026-07-03)
     if (!pulse || !pulse.length) { sec.style.display = "none"; return; }
     sec.style.display = "";
     track.innerHTML = pulse.map((p) => {

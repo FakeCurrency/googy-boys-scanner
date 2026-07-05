@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Vivek 5.0 — ASX, NASDAQ &amp; Crypto</title>
   <meta name="description" content="Vivek 5.0 — 200-SMA reaction scanner for ASX, NASDAQ and Crypto." />
-  <meta name="theme-color" content="#080b11" />
+  <meta name="theme-color" content="#0d1117" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Vivek 5.0" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=56" />
+  <link rel="stylesheet" href="css/styles.css?v=57" />
 </head>
 <body>
   <header class="topbar">
@@ -107,11 +107,9 @@
       <div class="scan-fresh" id="scan-fresh" hidden></div>
     </section>
 
-    <!-- PULSE -->
-    <section class="pulse" id="pulse">
-      <div class="pulse-label">PULSE<span class="pulse-delayed" id="pulse-delayed" hidden>~15m delayed</span></div>
-      <div class="pulse-track" id="pulse-track"></div>
-    </section>
+    <!-- PULSE removed 2026-07-03 (owner: unused). The macro data still
+         generates server-side; restore this section + the renderPulse call
+         guards in app.js to bring it back. -->
 
     <!-- stat cards -->
     <section class="stats">
@@ -174,6 +172,6 @@
 
   <script src="js/gbs-sync.js?v=6"></script>
   <script src="js/phasemap-shared.js?v=6"></script>
-  <script src="js/app.js?v=60"></script>
+  <script src="js/app.js?v=61"></script>
 </body>
 </html>

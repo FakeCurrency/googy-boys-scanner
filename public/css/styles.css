@@ -6,27 +6,29 @@
    only the skin changed, so all pages and JS keep working untouched.
    =========================================================================== */
 :root {
-  --bg: #0a0c10;
-  --bg-grad: #0a0c10;
-  --panel: #10131a;
-  --panel-2: #151a23;
-  --panel-3: #1b2130;
-  --elevated: #151a23;
+  /* Brightness pass 3 (owner request 2026-07-03): the whole theme lifted a
+     full step — background off pitch-black, panels and borders lighter, text
+     at near-white. Still the dark terminal, just no more squinting.
+     Pass-2 values: bg #0a0c10 · panel #10131a/#151a23/#1b2130 · text #eef2f9
+     /#c3cddd/#8b96a9/#626d80 · borders #1c2230/#262e3f. */
+  --bg: #0d1117;
+  --bg-grad: #0d1117;
+  --panel: #151a23;
+  --panel-2: #1a202b;
+  --panel-3: #212a39;
+  --elevated: #1a202b;
 
-  /* Legibility pass (owner request 2026-07-02): secondary/muted text lifted a
-     few steps brighter than the original terminal restyle — same dark theme,
-     easier to read. Previous values: #aab4c5 / #6d7889 / #49525f. */
-  --text: #eef2f9;
-  --text-2: #c3cddd;
-  --muted: #8b96a9;
-  --muted-2: #626d80;
+  --text: #f5f8fd;
+  --text-2: #d5deeb;
+  --muted: #a2adc1;
+  --muted-2: #7b8699;
 
-  --separator: #1c2230;
-  --border: #1c2230;
-  --border-2: #262e3f;
-  --border-soft: #151b26;
-  --fill: #141924;
-  --fill-2: #0e1218;
+  --separator: #262e3d;
+  --border: #262e3d;
+  --border-2: #35405a;
+  --border-soft: #1c2330;
+  --fill: #1a202b;
+  --fill-2: #12161e;
 
   --blue: #4da3ff;   --blue-soft: rgba(77,163,255,0.12);
   --green: #2fd07f;  --green-soft: rgba(47,208,127,0.12);
@@ -48,7 +50,7 @@
   --shadow-hover: 0 0 0 1px var(--border-2);
   --shadow-open: 0 0 0 1px var(--border-2);
   --shadow-pill: 0 0 0 1px var(--border-2);
-  --nav: #0c0e13;
+  --nav: #11151d;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
