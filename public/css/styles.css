@@ -112,12 +112,10 @@ body {
   .setups-title { display: none; }   /* reclaim space for tabs on small screens */
 }
 /* city clocks — all four now sit on the LEFT of row 1 (owner 2026-07-05),
-   laid out as a 2×2 grid so they stay two rows tall: MELBOURNE · NEW YORK
-   on top, CHINA · LONDON below. */
+   stacked in a single column: MELBOURNE · NEW YORK · CHINA · LONDON. Narrow
+   (~280px) so the row fits clocks + quote + nav + brand down to ~1760px. */
 .topbar-clocks { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-.topbar-clocks-left {
-  display: grid; grid-template-columns: auto auto; gap: 4px 24px; align-content: center;
-}
+.topbar-clocks-left { gap: 3px; }
 .topbar-clocks-right { text-align: right; }
 .topbar-clocks-right .clock-city { justify-content: flex-end; }
 .clock-city { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -1172,10 +1170,10 @@ body.debug-mode .debug-panel {
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
 }
-@media (max-width: 2150px) {
-  /* Row 1 holds clocks + quote + nav + brand only on genuinely wide screens.
-     The 4-clock 2×2 grid is ~590px, so below this it's dropped first and the
-     quote keeps its room; brand · quote · nav stay. */
+@media (max-width: 1760px) {
+  /* Row 1 holds clocks + quote + nav + brand. The single-column clock stack
+     is ~280px, so it fits down to ~1760px; below this it's dropped first and
+     the quote keeps its room; brand · quote · nav stay. */
   .topbar-clocks { display: none; }
 }
 @media (max-width: 1600px) {
