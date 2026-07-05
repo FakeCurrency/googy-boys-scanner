@@ -111,8 +111,13 @@ body {
 @media (max-width: 560px) {
   .setups-title { display: none; }   /* reclaim space for tabs on small screens */
 }
-/* city clocks — flank row 1 (Melbourne/New York left · China/London right) */
+/* city clocks — all four now sit on the LEFT of row 1 (owner 2026-07-05),
+   laid out as a 2×2 grid so they stay two rows tall: MELBOURNE · NEW YORK
+   on top, CHINA · LONDON below. */
 .topbar-clocks { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.topbar-clocks-left {
+  display: grid; grid-template-columns: auto auto; gap: 4px 24px; align-content: center;
+}
 .topbar-clocks-right { text-align: right; }
 .topbar-clocks-right .clock-city { justify-content: flex-end; }
 .clock-city { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -133,23 +138,22 @@ body {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   flex-shrink: 0;
 }
-/* The quote lives on ROW 2 now (owner 2026-07-05): the 10-pill nav grew so
-   wide there was no legible room for it up in row 1 — it got crushed to a
-   36px sliver. Row 2 has a big empty left span, so it fills that instead,
-   left-aligned and free to wrap to two lines. */
+/* The quote sits in the MIDDLE of row 1 — between the clocks (left) and the
+   nav (owner 2026-07-05). It flex-grows to fill the gap and centres its text,
+   free to wrap to two lines. Room is made by shrinking the trailing nav pills
+   (.nav-minor) rather than dropping the quote to another row. */
 .topbar-quote {
-  flex: 1 1 auto; min-width: 0; text-align: left;
+  flex: 1 1 auto; min-width: 0; text-align: center; padding: 0 16px;
   font: 400 italic 11.5px/1.45 var(--sans); color: var(--text-2);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden;
 }
-/* market-switch + nav-link pills. With the quote gone from row 1, push the
-   nav (and the right-hand clocks after it) to the right edge so brand stays
-   left and the row stays balanced. */
+/* market-switch + nav-link pills — right of the quote, left of the brand. */
 .topbar-nav {
   display: flex; align-items: center; gap: 12px; flex-shrink: 0;
 }
-.topbar-row1 .topbar-nav { margin-left: auto; }
+/* VIVEK 5.0 wordmark now sits at the far RIGHT of row 1 (owner 2026-07-05). */
+.topbar-brand { align-items: flex-end; }
 /* push search/reload to the right in row 2 */
 .topbar-row2 .search-trigger { margin-left: auto; }
 .brand { display: flex; align-items: center; gap: 10px; }
@@ -1168,16 +1172,15 @@ body.debug-mode .debug-panel {
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
 }
-@media (max-width: 2000px) {
-  /* Row 1 fits the flanking clocks only on genuinely wide screens. The nav
-     grew to 10 pills (~1180px), so brand + nav + both clock stacks overflow
-     below ~2000px — drop the clocks and keep brand · market · nav clean.
-     (raised from 1560px on 2026-07-05; the quote moved to row 2 and no
-     longer absorbs the slack that used to hide this overflow.) */
+@media (max-width: 2150px) {
+  /* Row 1 holds clocks + quote + nav + brand only on genuinely wide screens.
+     The 4-clock 2×2 grid is ~590px, so below this it's dropped first and the
+     quote keeps its room; brand · quote · nav stay. */
   .topbar-clocks { display: none; }
 }
-@media (max-width: 720px) {
-  /* on a phone, row 2 needs its width for the search + SCAN + timer */
+@media (max-width: 1600px) {
+  /* below here the full-size nav + brand need the width — retire the quote
+     (it returns above 1600px where there's room for it to be legible) */
   .topbar-quote { display: none; }
 }
 @media (max-width: 560px) {
@@ -1368,6 +1371,12 @@ body.debug-mode .debug-panel {
 .nav-pills .howto-link { font-size: 12.5px; font-weight: 700; color: var(--text-2); }
 .nav-pills .howto-link:hover { color: var(--green); }
 .pm-topnav .howto-link { font-size: 12.5px; font-weight: 700; }
+/* secondary pills (DEBUG · HOW IT WORKS · AI BOT) shrunk to buy the header
+   quote room in row 1 (owner 2026-07-05). Higher specificity so it wins over
+   both the base rule above and the 1440px compaction below. */
+.nav-pills .howto-link.nav-minor {
+  font-size: 10px; font-weight: 600; padding: 5px 7px; letter-spacing: 0.05em;
+}
 /* mid-width safety: keep the bold pills but compact them where the row gets
    tight (clocks are already hidden below 1560px) */
 @media (max-width: 1440px) {
