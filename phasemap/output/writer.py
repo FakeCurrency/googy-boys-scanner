@@ -67,17 +67,46 @@ def serialise(snap: dict) -> str:
     return json.dumps(snap, indent=2, ensure_ascii=False) + "\n"
 
 
+def _atomic_write(path: str, payload: str) -> None:
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(payload)
+    os.replace(tmp, path)       # atomic — never corrupt on crash
+
+
+def split_narrations(snap: dict) -> tuple[dict, dict]:
+    """(slim latest, narrations sidecar) from a FULL validated snapshot.
+
+    The dated snapshot keeps the complete spec Section 7 schema (archival
+    record, backtest input, schema gate). latest.json is what every page
+    load fetches, and narration text is ~25% of it — so the published copy
+    drops narration and the frontend pulls narrations.json in parallel,
+    keyed "TICKER|direction". Deterministic: same snap => same two payloads.
+    """
+    slim = {
+        "run_date": snap["run_date"],
+        "ruleset_version": snap["ruleset_version"],
+        "universe_size": snap["universe_size"],
+        "narrations_file": "narrations.json",
+        "results": [{k: v for k, v in r.items() if k != "narration"}
+                    for r in snap["results"]],
+    }
+    narr = {
+        "run_date": snap["run_date"],
+        "narrations": {f"{r['ticker']}|{r['direction']}": r["narration"]
+                       for r in snap["results"]},
+    }
+    return slim, narr
+
+
 def write_snapshot(snap: dict, out_dir: str = None) -> str:
-    """Writes scans dir + latest.json copy. Returns the dated file path."""
+    """Writes the FULL dated snapshot + slim latest.json + narrations.json.
+    Returns the dated file path."""
     validate_snapshot(snap)
     out_dir = out_dir or CONFIG.output_dir
     os.makedirs(out_dir, exist_ok=True)
-    payload = serialise(snap)
-    dated = os.path.join(out_dir, f"{snap['run_date']}.json")
-    latest = os.path.join(out_dir, "latest.json")
-    for path in (dated, latest):
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-            f.write(payload)
-        os.replace(tmp, path)   # atomic — never corrupt on crash
-    return dated
+    slim, narr = split_narrations(snap)
+    _atomic_write(os.path.join(out_dir, f"{snap['run_date']}.json"), serialise(snap))
+    _atomic_write(os.path.join(out_dir, "latest.json"), serialise(slim))
+    _atomic_write(os.path.join(out_dir, "narrations.json"), serialise(narr))
+    return os.path.join(out_dir, f"{snap['run_date']}.json")

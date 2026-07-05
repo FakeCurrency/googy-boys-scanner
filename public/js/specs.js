@@ -161,7 +161,7 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
       $("#sp-sub").innerHTML = PM.esc(
-        `${state.market.toUpperCase()} · ${state.data.generated_at.slice(0, 16).replace("T", " ")} · ` +
+        `${state.market.toUpperCase()} · ${PM.fmtMelb(state.data.generated_at)} · ` +
         `${state.data.universe_size} names scanned · ${state.data.results.length} spec setups`)
         + PM.staleBadgeHTML(state.data.generated_at);
       const wl = PM.watch.map("specs", state.market);

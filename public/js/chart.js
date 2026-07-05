@@ -41,11 +41,19 @@
   function fetchPhaseMapRec() {
     if (market === "scalp") return Promise.resolve(null);
     const want = decodeURIComponent(symbol || "").toUpperCase();
-    return fetch(`data/phasemap/${market}/latest.json`, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
+    // narrations live in a sidecar file since 2026-07-05 (slimmer latest.json)
+    return Promise.all([
+      fetch(`data/phasemap/${market}/latest.json`, { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null)),
+      fetch(`data/phasemap/${market}/narrations.json`, { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ])
+      .then(([j, nj]) => {
         const rows = ((j && j.results) || []).filter((r) => String(r.ticker).toUpperCase() === want);
-        return rows.find((r) => r.direction === pmDirWanted) || rows[0] || null;
+        const rec = rows.find((r) => r.direction === pmDirWanted) || rows[0] || null;
+        if (rec && rec.narration == null)
+          rec.narration = (((nj && nj.narrations) || {})[`${rec.ticker}|${rec.direction}`]) || "";
+        return rec;
       })
       .catch(() => null);
   }

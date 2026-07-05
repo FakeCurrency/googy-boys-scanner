@@ -45,11 +45,20 @@ def test_results_sorted_by_tier_then_ticker():
 
 
 def test_write_snapshot_and_latest_copy(tmp_path):
+    import json
     snap = snapshot_for({"AAA": synth.fixture1()})
-    dated = write_snapshot(snap, str(tmp_path))
-    latest = tmp_path / "latest.json"
-    assert latest.exists()
-    assert (tmp_path / "2026-07-02.json").read_bytes() == latest.read_bytes()
+    write_snapshot(snap, str(tmp_path))
+    # dated snapshot keeps the FULL spec Section 7 schema (archival record)
+    dated = json.loads((tmp_path / "2026-07-02.json").read_text(encoding="utf-8"))
+    assert all("narration" in r for r in dated["results"])
+    # published latest.json is slim: narration lives in narrations.json
+    latest = json.loads((tmp_path / "latest.json").read_text(encoding="utf-8"))
+    assert latest["narrations_file"] == "narrations.json"
+    assert all("narration" not in r for r in latest["results"])
+    assert [r["ticker"] for r in latest["results"]] == [r["ticker"] for r in dated["results"]]
+    narr = json.loads((tmp_path / "narrations.json").read_text(encoding="utf-8"))
+    for r in dated["results"]:
+        assert narr["narrations"][f"{r['ticker']}|{r['direction']}"] == r["narration"]
 
 
 def test_validator_rejects_bad_band():

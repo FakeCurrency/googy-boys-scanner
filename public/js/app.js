@@ -1130,7 +1130,9 @@
   function applyPayload(d) {
     state.data = d;
     state.cur = d.currency_symbol || "$";
-    $("#scan-title").textContent = `Last scanned: ${fmtTime(d.generated_at, d.tz_label)}`;
+    // Melbourne is the ONE display convention; market-local rides the tooltip
+    $("#scan-title").textContent = `Last scanned: ${window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label)}`;
+    $("#scan-title").title = `Market-local: ${fmtTime(d.generated_at, d.tz_label)}`;
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
@@ -1396,7 +1398,7 @@
             state.cache[key] = d;
             applyPayload(d);
             startAutoRefresh();
-            flashScan(`Scan complete — updated to ${fmtTime(d.generated_at, d.tz_label)}.`, "ok");
+            flashScan(`Scan complete — updated to ${window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label)}.`, "ok");
             return;
           }
         } catch (_) {}

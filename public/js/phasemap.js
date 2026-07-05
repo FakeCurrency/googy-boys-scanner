@@ -257,9 +257,23 @@
   async function load() {
     $("#pm-sub").textContent = "Loading latest scan…";
     try {
-      const res = await fetch(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" });
+      // narrations ship in a sidecar file (latest.json is ~25% lighter);
+      // fetched in parallel and merged back. Old full payloads still work.
+      const [res, narrRes] = await Promise.all([
+        fetch(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" }),
+        fetch(`data/phasemap/${state.market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
+      ]);
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
+      try {
+        const nj = narrRes && narrRes.ok ? await narrRes.json() : null;
+        const nm = (nj && nj.narrations) || {};
+        state.data.results.forEach((r) => {
+          if (r.narration == null) r.narration = nm[`${r.ticker}|${r.direction}`] || "";
+        });
+      } catch (_) {
+        state.data.results.forEach((r) => { if (r.narration == null) r.narration = ""; });
+      }
       $("#pm-sub").innerHTML = PM.esc(
         `${state.market.toUpperCase()} · scan ${state.data.run_date} · ruleset v${state.data.ruleset_version} · ` +
         `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`)

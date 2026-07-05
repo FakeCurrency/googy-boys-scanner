@@ -315,6 +315,21 @@ window.PM = (() => {
       (rows.length > cap ? `<span style="color:var(--muted)">+${rows.length - cap} more</span>` : "");
   }
 
+  /* ONE timestamp convention (2026-07-05): every scan stamp renders in
+     Melbourne time — the owner's clock. Market-local time goes in tooltips
+     via the caller, never as the primary display. */
+  function fmtMelb(iso) {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d)) return String(iso || "");
+      return d.toLocaleString("en-AU", {
+        timeZone: "Australia/Melbourne",
+        weekday: "short", day: "numeric", month: "short",
+        hour: "numeric", minute: "2-digit",
+      }) + " Melb";
+    } catch (_) { return String(iso || ""); }
+  }
+
   /* Staleness: lens data refreshes nightly — shout when it's older than that.
      Accepts 'YYYY-MM-DD' (PhaseMap run_date) or a full ISO stamp (Specs). */
   function staleBadgeHTML(stamp) {
@@ -353,5 +368,5 @@ window.PM = (() => {
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            isFundReit, toggleSpeak, watch, starHTML,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
-           staleBadgeHTML };
+           staleBadgeHTML, fmtMelb };
 })();

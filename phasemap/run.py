@@ -91,7 +91,8 @@ def prune_dated_snapshots(out_dir: str, keep_last: int = 7) -> int:
     removed = 0
     try:
         dated = sorted(n for n in os.listdir(out_dir)
-                       if n.endswith(".json") and n != "latest.json")
+                       if n.endswith(".json")
+                       and n not in ("latest.json", "narrations.json"))
         for name in dated[:-keep_last]:
             os.remove(os.path.join(out_dir, name))
             removed += 1

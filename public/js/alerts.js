@@ -5,6 +5,14 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // One timestamp convention: Melbourne on screen, UTC in the tooltip.
+  const melbFmtD = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne",
+    year: "numeric", month: "2-digit", day: "2-digit" });
+  const melbFmtT = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne",
+    hour: "numeric", minute: "2-digit" });
+  const melbDay = (iso) => { const d = new Date(iso); return isNaN(d) ? String(iso).slice(0, 10) : melbFmtD.format(d); };
+  const melbTime = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : melbFmtT.format(d) + " Melb"; };
+
   fetch("data/phasemap/alert_history.json", { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => {
@@ -18,7 +26,7 @@
       sub.textContent = `${entries.length} alignment event(s) on record · newest first`;
       const byDay = {};
       entries.forEach((e) => {
-        const day = String(e.date || "").slice(0, 10);
+        const day = melbDay(e.date || "");
         (byDay[day] = byDay[day] || []).push(e);
       });
       list.innerHTML = Object.keys(byDay).sort().reverse().map((day) => {
@@ -33,7 +41,7 @@
             `<span class="pm-dir ${e.side === "short" ? "pm-dir-short" : "pm-dir-long"}">${arrow} ${esc(String(e.side).toUpperCase())}</span>` +
             `<span class="pm-sector">${esc(String(e.market).toUpperCase())}</span>` +
             `<span class="al-lenses">${(e.lenses || []).map(esc).join(" + ")}</span>` +
-            `<span class="al-time">${esc(String(e.date).slice(11, 16))} UTC</span>` +
+            `<span class="al-time" title="UTC ${esc(String(e.date).slice(11, 16))}">${esc(melbTime(e.date))}</span>` +
             `</a>`;
         }).join("");
         return `<section class="pm-lg-section"><h3>${esc(day)}</h3><div class="al-day">${rows}</div></section>`;

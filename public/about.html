@@ -30,11 +30,36 @@
   <main class="doc">
     <h2 class="doc-title">How the scanner works</h2>
     <p class="lead">
-      <strong>VIVEK 5.0</strong> looks for one repeatable event: price <em>reacting</em> at its
-      <strong>200-period SMA</strong> — the line that separates trend from no-trend. It scans the ASX,
-      NASDAQ and Crypto, and hands you a shortlist with a ready-made trade plan to review. It doesn't
-      predict prices or place trades.
+      <strong>VIVEK 5.0</strong> is a <strong>three-lens system</strong>: three independent ways of
+      reading the same market, each with its own scanner, its own rules and its own measured track
+      record. When more than one lens fires on the same name in the same direction, that's the signal
+      that sticks out like dog balls — and the system makes sure you see it. It doesn't predict prices
+      or place trades.
     </p>
+
+    <section class="doc-section">
+      <h3>The three lenses</h3>
+      <ul class="def-list">
+        <li><strong>VIVEK</strong> — the core lens. Price <em>reacting</em> at its
+          <strong>200-period SMA</strong> (Weekly, 3-Day or Daily/H4) — the line that separates trend
+          from no-trend. Graded A+/A/B+ with a ready-made plan. Everything below this section is the
+          VIVEK rulebook.</li>
+        <li><strong>PHASEMAP</strong> — the trap lens. Finds where a move likely <em>started</em>:
+          a liquidity sweep of obvious lows/highs followed by a displacement away. Zones, never single
+          prices; states from TRAP&nbsp;SET to RUNNING. Its own tab, charts and nightly scan.</li>
+        <li><strong>SPECS ⚡</strong> — the discovery lens. Cheap, beaten-down names waking up on a
+          3× volume spike breaking out of a base. A shortlist generator, not an entry system — the
+          backtest says demand structure before touching anything on it.</li>
+      </ul>
+      <p>
+        <strong>Multi-lens alignment</strong> — when 2+ lenses agree on one name, direction-aligned, a
+        ⨂ banner appears on every page (🎯 for the rare full 3-lens house), Discord gets pinged, and the
+        <a href="alerts.html">ALERTS</a> page keeps the permanent log. Every lens's honest, replayed
+        numbers — hit rates, expectancy, where the edge does and doesn't live — are on the
+        <a href="phasemap-insights.html">INSIGHTS</a> page, refreshed by a weekly backtest so they can't
+        silently rot. Names you star anywhere collect on <a href="mynames.html">★ MY NAMES</a>.
+      </p>
+    </section>
 
     <section class="doc-section">
       <h3>The setup</h3>
@@ -63,10 +88,11 @@
     <section class="doc-section">
       <h3>Levels change with timeframe</h3>
       <ul class="def-list">
-        <li><strong>Daily &amp; Weekly</strong> each carry their own plan — level, entry, stop and
-          targets — so Entry / SL / TP1–TP3 update when you switch timeframe on the chart.</li>
-        <li><strong>4H &amp; 3D</strong> show real candles but borrow the Daily plan's levels (no
-          separate plan yet) — flagged with a notice on the chart.</li>
+        <li><strong>Daily, 3-Day &amp; Weekly</strong> each carry their own plan — level, entry, stop
+          and targets — so Entry / SL / TP1–TP3 update when you switch timeframe on the chart. The
+          3-Day 200 SMA was added after it caught moves (XMR) the other two missed.</li>
+        <li><strong>4H</strong> shows real intraday candles but borrows the Daily plan's levels (no
+          separate plan) — flagged with a notice on the chart.</li>
       </ul>
     </section>
 
@@ -109,9 +135,10 @@
       <h3>Data</h3>
       <p>
         Covers <strong>ASX</strong>, <strong>NASDAQ</strong> and <strong>Crypto</strong> (24/7), refreshing
-        through the session. Prices are from Yahoo Finance — dividend-adjusted, ~15&nbsp;min delayed —
-        which suits the daily and weekly bars this system trades. The <strong>PULSE</strong> bar up top
-        tracks macro context (metals, energy, indices, yields, AUD) at a glance.
+        through the session — weekends run crypto-only, since that's the only market open. Prices are
+        from Yahoo Finance — dividend-adjusted, ~15&nbsp;min delayed — which suits the daily and weekly
+        bars this system trades. Every timestamp on the site is <strong>Melbourne time</strong>;
+        market-local time lives in the tooltip.
       </p>
     </section>
 
