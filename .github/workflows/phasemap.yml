@@ -84,6 +84,7 @@ jobs:
         continue-on-error: true
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
       # Schema gate: every freshly written snapshot must pass the writer's own

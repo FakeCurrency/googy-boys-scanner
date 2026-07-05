@@ -50,11 +50,15 @@ jobs:
         continue-on-error: true
         run: python -m scanner.spec_backtest --market asx --period 5y
 
+      - name: VIVEK walk-forward backtest (5y, all markets)
+        continue-on-error: true
+        run: python -m scanner.vivek_backtest --market all --limit 60 --period 5y
+
       - name: Commit & push refreshed proof records
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          PATHS="phasemap/backtest/reports phasemap/backtest/stats public/data/phasemap/stats"
+          PATHS="phasemap/backtest/reports phasemap/backtest/stats public/data/phasemap/stats public/data/vivek_backtest.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit."

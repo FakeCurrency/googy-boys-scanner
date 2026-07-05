@@ -653,11 +653,52 @@
       <tbody>${rows}</tbody></table>`;
   }
 
+  // ── Lens tracker: same idea as the edge tracker, but split by which LENS
+  // produced the trade (chart.js stamps `lens` on every sim trade since
+  // 2026-07-05; older trades group under "untagged").
+  function renderLensTracker() {
+    const host = $("#lens-tracker");
+    if (!host) return;
+    const closed = [...state.bot.closed, ...state.me.closed]
+      .filter((t) => t.realized_r != null);
+    if (!closed.length) {
+      host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this shows
+        win rate and expectancy per LENS (VIVEK vs PhaseMap vs Specs), so the three-lens system gets
+        judged by results, not vibes.</div>`;
+      return;
+    }
+    const cells = new Map();
+    for (const t of closed) {
+      const key = String(t.lens || "untagged").toLowerCase();
+      let c = cells.get(key);
+      if (!c) { c = { key, n: 0, wins: 0, sumR: 0, sumD: 0 }; cells.set(key, c); }
+      c.n += 1; c.sumR += t.realized_r;
+      c.sumD += (dollarsOf(t) || 0);
+      if (t.realized_r > 0) c.wins += 1;
+    }
+    const rows = [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
+      const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
+      const thin = c.n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
+      return `<tr>
+        <td><span class="jr-setup">${esc(c.key.toUpperCase())}</span></td>
+        <td class="num">${c.n}${thin}</td>
+        <td class="num">${win.toFixed(0)}%</td>
+        <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
+        <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td>
+        <td class="num ${pcls(c.sumD)}">${dfmt(c.sumD)}</td></tr>`;
+    }).join("");
+    host.innerHTML = `<table class="jr-table"><thead><tr>
+      <th>Lens</th><th class="num">Trades</th><th class="num">Win %</th>
+      <th class="num">Avg R</th><th class="num">Total R</th><th class="num">Total $</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }
+
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
     renderComparison(sb, sm);
     renderBoth();
     renderEdgeTracker();
+    renderLensTracker();
     const note = $("#bot-note");
     if (note) note.textContent = (state.bot.open.length || state.bot.closed.length)
       ? "" : "Autonomous bot is in dry-run — its trades appear here once enabled.";

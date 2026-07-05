@@ -625,7 +625,7 @@ def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
 def narrative(symbol: str, sig: dict, lv: dict, detail: dict, currency_symbol: str = "$") -> str:
     """Plain-English explanation of the setup and why it earned its grade."""
     cur = currency_symbol
-    tf = "Weekly" if sig["level_tf"] == "weekly" else "H4 (daily proxy)"
+    tf = {"weekly": "Weekly", "3d": "3-Day"}.get(sig["level_tf"], "H4 (daily proxy)")
     side = "long" if sig["direction"] == "long" else "short"
     react = {
         "bounce": "bouncing off", "hold": "holding above",

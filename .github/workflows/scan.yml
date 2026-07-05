@@ -161,6 +161,7 @@ jobs:
         continue-on-error: true
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
       # NOTE: the paper-trade journal, Telegram alerts and Discord digest read the

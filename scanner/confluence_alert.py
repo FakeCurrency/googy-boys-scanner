@@ -14,6 +14,10 @@ Behaviour:
     or if it fully lapses and later re-forms.
   * 3-lens alignments carry a mention (config.DISCORD_CONF_MENTION, default
     @here) — the rare full-house event. 2-lens posts are silent embeds.
+  * WATCHLIST-AWARE: when GBS_SYNC_CODE is set (GitHub secret, same code the
+    owner types on the site), starred names and open journal positions bypass
+    the lens threshold — a 2-lens alignment on YOUR name pings with a ★ even
+    while the channel is triples-only. No code -> feature silently off.
   * Without DISCORD_WEBHOOK_URL it previews and exits 0 — never fails CI.
 """
 
@@ -126,16 +130,53 @@ def append_history(fresh: list[dict]) -> None:
         encoding="utf-8")
 
 
-def build_payloads(fresh: list[dict]) -> list[dict]:
+def load_watch_keys() -> set[str]:
+    """"market:TICKER" keys the owner cares about: stars from any lens plus
+    open journal positions, read from the synced journal in Cloudflare KV.
+    Requires the GBS_SYNC_CODE env (GitHub secret) — empty set without it."""
+    code = os.environ.get("GBS_SYNC_CODE", "").strip()
+    if not code:
+        return set()
+    import urllib.parse
+    import urllib.request
+    url = f"{SITE}/api/journal?code={urllib.parse.quote(code)}"
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            payload = json.loads(r.read().decode("utf-8"))
+    except Exception as e:
+        print(f"confluence: watchlist fetch failed ({e}) — continuing without")
+        return set()
+    data = (payload or {}).get("data") or {}
+    out: set[str] = set()
+    for k, v in (data.get("watchlists") or {}).items():
+        if isinstance(v, dict) and v.get("del"):
+            continue                                   # tombstoned un-star
+        parts = str(k).split(":")                      # "<lens>:<market>:<TICKER>"
+        if len(parts) == 3:
+            out.add(f"{parts[1]}:{parts[2]}".upper())
+    for t in data.get("trades") or []:
+        if t.get("status") == "open" and t.get("symbol"):
+            mkt = t.get("asset_type") if t.get("asset_type") in ("asx", "crypto") else "nasdaq"
+            out.add(f"{mkt}:{t['symbol']}".upper())
+    return out
+
+
+def _watch_key(a: dict) -> str:
+    return f"{a['market']}:{a['ticker']}".upper()
+
+
+def build_payloads(fresh: list[dict], watch: set[str] | None = None) -> list[dict]:
+    watch = watch or set()
     triples = [a for a in fresh if a["count"] >= 3]
     lines = []
     for a in fresh[:20]:
         arrow = "🔻 SHORT" if a["side"] == "short" else "🔼 LONG"
         icon = "🎯" if a["count"] >= 3 else "⨂"
+        star = "★ " if _watch_key(a) in watch else ""
         d = "&dir=bearish" if a["side"] == "short" else "&dir=bullish"
         url = f"{SITE}/chart.html?m={a['market']}&s={a['ticker']}&pm=1{d}"
         lines.append(
-            f"{icon} **[{a['ticker']}]({url})** {arrow} · {a['market'].upper()} · "
+            f"{icon} {star}**[{a['ticker']}]({url})** {arrow} · {a['market'].upper()} · "
             f"{a['count']}-LENS — {' + '.join(a['labels'])}")
     if len(fresh) > 20:
         lines.append(f"… +{len(fresh) - 20} more on the site")
@@ -179,16 +220,22 @@ def main(argv=None) -> int:
     # triples only). The site still shows every 2-lens alignment visually —
     # state tracks them all, so a 2->3 upgrade always pings.
     min_lenses = getattr(config, "DISCORD_CONF_MIN_LENSES", 2)
-    to_post = [a for a in fresh if a["count"] >= min_lenses]
+    # Starred names + open positions bypass the threshold: YOUR names ping
+    # at 2 lenses even while the channel is triples-only.
+    watch = load_watch_keys()
+    to_post = [a for a in fresh
+               if a["count"] >= min_lenses or _watch_key(a) in watch]
+    starred = sum(1 for a in to_post if _watch_key(a) in watch)
     print(f"confluence: {len(alignments)} active, {len(fresh)} new/upgraded, "
-          f"{len(to_post)} at >= {min_lenses} lenses")
+          f"{len(to_post)} to post (>= {min_lenses} lenses or watchlisted; "
+          f"{starred} watchlisted, {len(watch)} names tracked)")
     if not args.dry_run:
         append_history(fresh)   # the ALERTS page log — independent of Discord
     if not to_post:
         _save_state_if_changed(state, new_state)
         return 0
 
-    payloads = build_payloads(to_post)
+    payloads = build_payloads(to_post, watch)
     url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
     if args.dry_run:
         print(json.dumps(payloads, indent=2)[:2500])

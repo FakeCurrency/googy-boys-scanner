@@ -13,8 +13,11 @@ Fills are pessimistic intrabar: within a bar the adverse extreme (the stop
 side) is checked BEFORE the favourable extreme, so when a bar's range spans
 both a stop and a target the stop is assumed to fill first.
 
-Backtestable timeframes: Daily (1D) and Weekly (1W). 4H is not backtestable
-server-side (no deep intraday history). Honest caveats: today's universe →
+Backtestable timeframes: Daily (1D), 3-Day (3D) and Weekly (1W). 4H is not
+backtestable server-side (no deep intraday history). Trades also carry the
+LEVEL that produced the signal (level_tf: weekly / 3d / h4-proxy) so the
+report can answer "does the 3D-200 level earn its keep?" separately from
+"which plan timeframe manages best". Honest caveats: today's universe →
 survivorship bias; yfinance data quality; A+ setups are rare so N is modest.
 
 CLI:  python -m scanner.vivek_backtest --market all --limit 60 --period 10y
@@ -39,7 +42,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT_FILE = ROOT / "public" / "data" / "vivek_backtest.json"
 
 EQUITY = config.VIVEK_BOT_ACCOUNT_EQUITY
-TIMEFRAMES = ("1D", "1W")
+TIMEFRAMES = ("1D", "3D", "1W")
+LEVEL_TFS = ("weekly", "3d", "h4")     # which 200-SMA produced the signal
 
 
 # ── per-symbol replay ─────────────────────────────────────────────────────────
@@ -53,9 +57,14 @@ def _candidate_mask(df: pd.DataFrame) -> np.ndarray:
     dsma = close.rolling(config.VIVEK_SMA).mean()
     wk = close.resample("W-FRI").last()
     wsma = wk.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
+    # 3-Day 200 SMA — epoch-anchored 72h buckets, identical to the engine's
+    # _resample_3day_ohlc, so slice anchoring can't drift from this mask.
+    d3 = close.resample("72h", origin="epoch").last().dropna()
+    sma3 = d3.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
     near_d = (close - dsma).abs() / close <= tol
     near_w = (close - wsma).abs() / close <= tol
-    return (near_d.fillna(False) | near_w.fillna(False)).to_numpy()
+    near_3 = (close - sma3).abs() / close <= tol
+    return (near_d.fillna(False) | near_w.fillna(False) | near_3.fillna(False)).to_numpy()
 
 
 def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector: str):
@@ -75,7 +84,8 @@ def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector
                    else vivek.entry_types(sig))
     row = {"symbol": symbol, "name": name, "sector": sector,
            "dir": "LONG" if sig["direction"] == "long" else "SHORT",
-           "grade": grade, "entry_types": entry_types}
+           "grade": grade, "entry_types": entry_types,
+           "level_tf": sig.get("level_tf")}
     return row, plans, grade
 
 
@@ -128,6 +138,7 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
                 tr = _snapshot(row, tf, plan, market, float(o[j]), day)
                 if tr is not None:
                     tr["market"] = market
+                    tr["level_tf"] = row.get("level_tf")
                     open_slots[tf] = tr
         pending = []
 
@@ -142,7 +153,7 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
                 open_slots[tf] = None
 
         # 3) detect a new signal at this bar (uses its close), queue for next bar
-        if cand[j] and (open_slots["1D"] is None or open_slots["1W"] is None):
+        if cand[j] and any(open_slots[tf] is None for tf in TIMEFRAMES):
             try:
                 sig = vivek.evaluate(df.iloc[:j + 1])
             except Exception:
@@ -168,7 +179,7 @@ def _metrics(trades: list[dict]) -> dict:
     n = len(trades)
     if not n:
         return {"n": 0, "win_rate": 0.0, "avg_r": 0.0, "expectancy_r": 0.0,
-                "profit_factor": 0.0, "total_r": 0.0, "total_usd": 0.0, "max_dd_usd": 0.0}
+                "profit_factor": None, "total_r": 0.0, "total_usd": 0.0, "max_dd_usd": 0.0}
     rs = [t.get("realized_r") or 0.0 for t in trades]
     ds = [_dollars(t) for t in trades]
     wins = [r for r in rs if r > 0]
@@ -184,7 +195,9 @@ def _metrics(trades: list[dict]) -> dict:
         "win_rate": round(100 * len(wins) / n, 1),
         "avg_r": round(sum(rs) / n, 3),
         "expectancy_r": round(sum(rs) / n, 3),
-        "profit_factor": round(gross_win / gross_loss, 2) if gross_loss else float("inf"),
+        # None (not inf): float("inf") serialises as bare `Infinity`, which is
+        # not valid JSON and breaks the frontend's response.json()
+        "profit_factor": round(gross_win / gross_loss, 2) if gross_loss else None,
         "total_r": round(sum(rs), 2),
         "total_usd": round(sum(ds), 2),
         "max_dd_usd": round(dd, 2),
@@ -204,6 +217,7 @@ def aggregate(trades: list[dict]) -> dict:
         "by_market": _split(trades, "market"),
         "by_grade": _split(trades, "grade", ["A+", "A"]),
         "by_direction": _split(trades, "direction", ["long", "short"]),
+        "by_level_tf": _split(trades, "level_tf", list(LEVEL_TFS)),
     }
 
 
@@ -211,8 +225,8 @@ def aggregate(trades: list[dict]) -> dict:
 
 # Slim trade record stored in the report — enough to recompute every metric and
 # to MERGE markets together across separate (streamed) runs.
-_SLIM_KEYS = ("symbol", "market", "timeframe", "entry_type", "grade", "direction",
-              "entry", "stop", "exit", "exit_date", "exit_reason",
+_SLIM_KEYS = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
+              "direction", "entry", "stop", "exit", "exit_date", "exit_reason",
               "realized_r", "gross_r", "cost_r")
 
 
@@ -281,7 +295,7 @@ def run_backtest(markets: list[str], limit: int | None, period: str,
 def _print(report: dict) -> None:
     r = report["results"]
     def line(label, m):
-        pf = "∞" if m["profit_factor"] == float("inf") else f"{m['profit_factor']:.2f}"
+        pf = "inf" if m["profit_factor"] is None else f"{m['profit_factor']:.2f}"
         print(f"  {label:<14} n={m['n']:<4} win {m['win_rate']:>5}%  "
               f"avgR {m['avg_r']:+.2f}  exp {m['expectancy_r']:+.2f}R  "
               f"PF {pf:<5} totR {m['total_r']:+.1f}  ${m['total_usd']:+.0f}  maxDD ${m['max_dd_usd']:.0f}")
@@ -289,7 +303,7 @@ def _print(report: dict) -> None:
     print("params:", report["params"])
     print("coverage:", report["coverage"])
     print("\nOVERALL"); line("overall", r["overall"])
-    for grp in ("by_entry_type", "by_timeframe", "by_market", "by_grade", "by_direction"):
+    for grp in ("by_entry_type", "by_timeframe", "by_level_tf", "by_market", "by_grade", "by_direction"):
         print(f"\n{grp.upper()}")
         for k, m in r[grp].items():
             if m["n"]:
