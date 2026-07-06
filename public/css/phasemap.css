@@ -310,3 +310,32 @@
   color: #140c00; background: var(--orange); padding: 2px 8px; border-radius: 4px;
   margin-left: 8px; white-space: nowrap;
 }
+
+/* ═══ iOS REVAMP pass (owner 2026-07-05) — matches the styles.css revamp:
+   bold SF-style sans labels, rounded-full capsules, segmented tabs. The
+   palette/radii/shadows come from the :root tokens. ═══ */
+.pm-tabs { background: rgba(255,255,255,0.07); border-radius: 13px; padding: 3px; gap: 3px; display: inline-flex; }
+.pm-tab {
+  font-family: var(--sans); font-weight: 700; font-size: 13px; letter-spacing: 0.02em;
+  background: transparent; border: 0; border-radius: 10px; padding: 8px 15px;
+}
+.pm-tab.is-active {
+  background: var(--panel-3); color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
+}
+.pm-chip { font-family: var(--sans); font-weight: 600; font-size: 12.5px; padding: 6px 12px; }
+.pm-chip.is-active { background: var(--panel-3); border-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+.pm-search { font-family: var(--sans); border-radius: 999px; padding: 7px 13px; width: 130px; }
+.pm-ticker { font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: -0.015em; }
+.pm-dir, .pm-state, .pm-tier, .pm-tag, .pm-regime, .sp-grade, .sp-spike,
+.pm-conf, .pm-stale-badge, .mn-lens, .mn-star-chip {
+  border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
+}
+.pm-dir, .pm-state, .pm-tier { padding: 3px 10px; font-weight: 700; }
+.pm-tag { padding: 2px 8px; font-size: 10px; }
+.pm-speak { border-radius: 999px; font-family: var(--sans); font-weight: 600; padding: 5px 12px; }
+.pm-title { font-family: var(--sans); font-weight: 800; letter-spacing: -0.015em; font-size: 22px; }
+.pm-sub { font-family: var(--sans); font-weight: 500; }
+.pm-lg-section h3 { font-family: var(--sans); font-weight: 800; letter-spacing: 0.02em; }
+.sp-name, .al-lenses { font-family: var(--sans); }
+.pm-more-btn, .mn-chart-link { font-family: var(--sans); font-weight: 700; border-radius: 999px; }

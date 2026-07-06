@@ -6,54 +6,62 @@
    only the skin changed, so all pages and JS keep working untouched.
    =========================================================================== */
 :root {
-  /* Brightness pass 4 (owner request 2026-07-05, "make everything MORE
-     bright"): panels lifted again and, more importantly, every SECONDARY /
-     MUTED text tier pushed brighter — that grey small-print is what was still
-     hard to read. Still the dark terminal, just louder.
-     Pass-3 values: panel #151a23/#1a202b/#212a39 · text #f5f8fd/#d5deeb
-     /#a2adc1/#7b8699 · borders #262e3d/#35405a/#1c2330. */
-  --bg: #0d1117;
-  --bg-grad: #0d1117;
-  --panel: #171d27;
-  --panel-2: #1d2431;
-  --panel-3: #242e3e;
-  --elevated: #1d2431;
+  /* ═══ iOS REVAMP (owner request 2026-07-05: "complete revamp — more BOLD,
+     more brighter, more iOS/Apple-like"). The whole skin moves from the dark
+     terminal to an Apple-dark look: iOS system accent colours, big rounded
+     corners, soft layered shadows instead of hairline rings, SF-style bold
+     sans labels (Inter ≈ SF Pro on non-Apple hardware), frosted top bar,
+     segmented controls, pill buttons, tinted rounded badges.
+     Terminal-pass values (for a revert): panel #171d27/#1d2431/#242e3e ·
+     text #f8fafe/#e6edf6/#bcc6d6/#9aa4b6 · borders #2d3646/#3c4761/#222a38 ·
+     accents #4da3ff/#2fd07f/#ff5b5b/#ffb224 · radius 10/8/6 ·
+     shadow = 0 0 0 1px var(--border). ═══ */
+  --bg: #10141b;
+  --bg-grad: #10141b;
+  --panel: #1c222d;
+  --panel-2: #232a38;
+  --panel-3: #2c3546;
+  --elevated: #232a38;
 
-  --text: #f8fafe;
-  --text-2: #e6edf6;
-  --muted: #bcc6d6;
-  --muted-2: #9aa4b6;
+  --text: #ffffff;
+  --text-2: #ecf1f9;
+  --muted: #c3cddd;
+  --muted-2: #9fabbf;
 
-  --separator: #2d3646;
-  --border: #2d3646;
-  --border-2: #3c4761;
-  --border-soft: #222a38;
-  --fill: #1a202b;
-  --fill-2: #12161e;
+  --separator: #313b4c;
+  --border: #313b4c;
+  --border-2: #445373;
+  --border-soft: #273040;
+  --fill: rgba(255,255,255,0.07);
+  --fill-2: rgba(255,255,255,0.05);
 
-  --blue: #4da3ff;   --blue-soft: rgba(77,163,255,0.12);
-  --green: #2fd07f;  --green-soft: rgba(47,208,127,0.12);
-  --red: #ff5b5b;    --red-soft: rgba(255,91,91,0.12);
-  --orange: #ffb224; --orange-soft: rgba(255,178,36,0.12);
-  --teal: #37d0c4;
-  --purple: #a78bfa;
+  /* iOS system palette (dark), soft tints at iOS "tinted button" strength */
+  --blue: #0a84ff;   --blue-soft: rgba(10,132,255,0.16);
+  --green: #30d158;  --green-soft: rgba(48,209,88,0.16);
+  --red: #ff453a;    --red-soft: rgba(255,69,58,0.16);
+  --orange: #ff9f0a; --orange-soft: rgba(255,159,10,0.16);
+  --teal: #64d2ff;
+  --purple: #bf5af2;
 
-  --ema-8: #ff5c8a;  --ema-13: #ff9f43; --ema-21: #ffd23f; --ema-34: #2fd07f;
-  --ema-55: #2fd0c4; --ema-89: #4d9fff; --ema-144: #a78bfa;
+  --ema-8: #ff5c8a;  --ema-13: #ff9f43; --ema-21: #ffd23f; --ema-34: #30d158;
+  --ema-55: #64d2ff; --ema-89: #0a84ff; --ema-144: #bf5af2;
 
-  --grade-aplus: #2fd07f; --grade-a: #4da3ff; --grade-b: #ffb224; --grade-c: #6d7889;
+  --grade-aplus: #30d158; --grade-a: #0a84ff; --grade-b: #ff9f0a; --grade-c: #8e97a8;
 
   --accent: var(--green);
-  --radius: 10px; --radius-md: 8px; --radius-sm: 6px;
-  /* hairline rings instead of drop shadows — every box-shadow:var(--*) below
-     renders as a crisp 1px border, which is the terminal look */
-  --shadow: 0 0 0 1px var(--border);
-  --shadow-hover: 0 0 0 1px var(--border-2);
-  --shadow-open: 0 0 0 1px var(--border-2);
-  --shadow-pill: 0 0 0 1px var(--border-2);
-  --nav: #11151d;
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 18px; --radius-md: 14px; --radius-sm: 10px;
+  /* iOS elevation: soft layered drop shadows + a faint white key-line */
+  --shadow: 0 1px 1px rgba(0,0,0,0.20), 0 8px 22px rgba(0,0,0,0.30),
+            0 0 0 1px rgba(255,255,255,0.055);
+  --shadow-hover: 0 2px 3px rgba(0,0,0,0.22), 0 14px 34px rgba(0,0,0,0.38),
+                  0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-open: 0 2px 3px rgba(0,0,0,0.22), 0 14px 34px rgba(0,0,0,0.38),
+                 0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-pill: 0 2px 8px rgba(0,0,0,0.32);
+  --nav: #141922;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -1380,4 +1388,153 @@ body.debug-mode .debug-panel {
 @media (max-width: 1440px) {
   .nav-pills .howto-link { font-size: 11px; padding: 5px 8px; }
   .market-btn { font-size: 12.5px; padding: 7px 12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   iOS REVAMP — component pass (owner 2026-07-05: "complete revamp — more
+   BOLD, more brighter, more iOS/Apple-like"). Appended overrides, same class
+   names and layout as before; the :root tokens above carry the palette.
+   Delete this block + restore the terminal :root values to revert.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ---- frosted, floating top bar (iOS navigation-bar material) ---- */
+.topbar {
+  background: rgba(18,22,30,0.78);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.topbar-row2 { border-top: 1px solid rgba(255,255,255,0.06); }
+
+/* app-icon style brand tile: gradient superellipse, white glyph */
+.brand-mark, .topbar-brand .brand-mark {
+  background: linear-gradient(140deg, #34d15e 0%, #0aa9b8 55%, #0a84ff 120%);
+  color: #fff; border: 0; border-radius: 27%;
+  box-shadow: 0 3px 10px rgba(10,132,255,0.30), 0 1px 2px rgba(0,0,0,0.4);
+}
+.brand h1 { font-family: var(--sans); font-weight: 800; letter-spacing: -0.02em; }
+.topbar-brand .brand h1 { letter-spacing: -0.02em; }
+.brand-sub { font-family: var(--sans); }
+
+/* ---- iOS segmented controls (market switch · scan types · sorts) ---- */
+.market-switch, .scan-switch, .seg {
+  background: rgba(255,255,255,0.07); border: 0; border-radius: 12px; padding: 3px;
+}
+.market-btn, .scan-btn, .seg-btn {
+  font-family: var(--sans); font-weight: 700; letter-spacing: 0;
+  border-radius: 9px;
+}
+.market-btn { font-size: 13.5px; padding: 8px 17px; }
+.market-btn.is-active {
+  background: var(--green); color: #04140a;
+  box-shadow: 0 2px 8px rgba(48,209,88,0.35);
+}
+.scan-btn { font-size: 12.5px; }
+.scan-btn.is-active {
+  background: var(--orange); color: #191001;
+  box-shadow: 0 2px 8px rgba(255,159,10,0.30);
+}
+.seg-btn { font-size: 13px; }
+.seg-btn.is-active {
+  background: var(--panel-3); color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
+}
+.seg-count { border-radius: 999px; font-family: var(--sans); }
+.watch-count { border-radius: 999px; }
+
+/* ---- nav pills: rounded-full, bold SF-style ---- */
+.nav-pills .howto-link {
+  border-radius: 999px; padding: 8px 14px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.09);
+  font-family: var(--sans); font-weight: 700; font-size: 12.5px; letter-spacing: 0.02em;
+  color: var(--text-2);
+}
+.nav-pills .howto-link:hover {
+  color: var(--green); border-color: rgba(48,209,88,0.45); background: var(--green-soft);
+}
+.nav-pills .howto-link.nav-minor { font-size: 10.5px; font-weight: 600; padding: 6px 10px; }
+.nav-pills .howto-link.bot-nav-link {
+  background: var(--blue-soft); border-color: rgba(10,132,255,0.4); color: #6cb5ff;
+}
+.pm-topnav .howto-link { font-family: var(--sans); }
+.howto-link { font-family: var(--sans); letter-spacing: 0.02em; }
+
+/* ---- row-2 controls: filled pill buttons (iOS prominent / tinted) ---- */
+.reload-btn {
+  border: 0; border-radius: 999px; height: 36px; padding: 0 18px;
+  background: var(--green); color: #04140a;
+  box-shadow: 0 2px 10px rgba(48,209,88,0.35);
+}
+.reload-btn:hover { background: #3ddb64; }
+.reload-label { font-family: var(--sans); font-weight: 800; letter-spacing: 0.06em; }
+.search-trigger {
+  background: rgba(255,255,255,0.08); border-radius: 999px; padding: 9px;
+  color: var(--text-2);
+}
+.search-trigger:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+.refresh-timer {
+  border-radius: 999px; border: 0; background: rgba(255,255,255,0.07);
+  padding: 7px 12px; font-family: var(--sans); font-weight: 700;
+}
+
+/* ---- stat cards: separate rounded widgets (iOS home-screen grid) ---- */
+.stats { gap: 12px; background: transparent; box-shadow: none; overflow: visible; }
+.stat-card {
+  background: var(--panel); border-radius: var(--radius);
+  box-shadow: var(--shadow); border-right: 0; padding: 20px 22px;
+}
+.stat-label { font-family: var(--sans); font-weight: 700; letter-spacing: 0.07em; font-size: 11px; }
+.stat-value { font-family: var(--sans); font-weight: 800; font-size: 30px; letter-spacing: -0.03em; }
+
+/* ---- scan banner ---- */
+.scan-banner-title { font-size: 15px; }
+.scan-fresh { border-radius: 999px; font-family: var(--sans); font-weight: 700; }
+
+/* ---- view tabs -> iOS segmented control (was underline tabs) ---- */
+.view-tabs {
+  display: inline-flex; gap: 3px; border-bottom: 0; margin-bottom: 16px;
+  background: rgba(255,255,255,0.07); border-radius: 13px; padding: 3px;
+}
+.view-tab {
+  font-family: var(--sans); font-weight: 700; font-size: 13.5px; letter-spacing: 0.02em;
+  padding: 9px 18px; margin-bottom: 0; border-bottom: 0; border-radius: 10px;
+}
+.view-tab.is-active {
+  color: var(--text); border-bottom: 0; background: var(--panel-3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* ---- filter chips: rounded-full, SF-style ---- */
+.vkf-chip { border-radius: 999px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; }
+.vkf-label, .legend-tag { font-family: var(--sans); }
+
+/* ---- result rows: bolder Apple-Stocks-style type ---- */
+.tkr { font-family: var(--sans); font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+.rprice { font-family: var(--sans); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+.cname { font-family: var(--sans); font-weight: 500; }
+.row-grade { font-family: var(--sans); font-weight: 800; font-size: 15px; }
+.row-wrap:hover { transform: translateY(-2px); }
+
+/* ---- badges & chips: tinted rounded-full capsules ---- */
+.badge, .rbadge, .chip, .vk-tf-chip, .vk-fresh, .vk-lvl-key, .vk-grade-score {
+  border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
+}
+.badge { font-size: 10px; font-weight: 700; padding: 4px 9px; }
+.badge.dir { font-size: 10.5px; font-weight: 800; padding: 5px 11px; }
+.rbadge { font-size: 10px; font-weight: 700; padding: 4px 9px; }
+.chip { font-size: 10.5px; font-weight: 600; padding: 4px 9px; }
+
+/* ---- overlays / toasts ---- */
+.search-box { border-radius: 18px; background: var(--panel-2); }
+.search-input { font-weight: 600; }
+.scan-toast { border-radius: 14px; font-family: var(--sans); font-weight: 600; }
+.conf-banner { border-radius: var(--radius-md); }
+
+/* iOS type is never letter-spaced wide at body sizes */
+body { letter-spacing: -0.012em; }
+
+/* keep the compact mid-width overrides in the new voice */
+@media (max-width: 1440px) {
+  .nav-pills .howto-link { font-size: 11.5px; padding: 6px 10px; }
+  .market-btn { font-size: 12.5px; padding: 7px 13px; }
 }
