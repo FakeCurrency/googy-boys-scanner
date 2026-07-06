@@ -2812,9 +2812,9 @@
       "cost_r": 0.0023,
       "exits": [],
       "mae": 246.4149932861328,
-      "mfe": 257.1300048828125,
+      "mfe": 257.7900085449219,
       "mae_r": -0.071,
-      "mfe_r": 0.13
+      "mfe_r": 0.143
     },
     {
       "id": "AVGO:long:1D:2026-06-29",
@@ -4348,7 +4348,7 @@
       "entry_type": "retest",
       "timeframe": "1D",
       "entry": 68.46499634,
-      "stop": 68.46499634,
+      "stop": 69.76999664,
       "tp1": 69.76999664,
       "tp2": 72.08000183,
       "tp3": 74.48999786,
@@ -4364,76 +4364,30 @@
       "opened_at": "2026-07-01T16:10:39+00:00",
       "status": "open",
       "tp1_hit": true,
-      "tp2_hit": false,
+      "tp2_hit": true,
       "tp3_hit": false,
-      "booked_pct": 0.25,
-      "realized_r": 0.0744,
-      "gross_r": 0.0836,
-      "cost_r": 0.0092,
+      "booked_pct": 0.75,
+      "realized_r": 0.5368,
+      "gross_r": 0.5469,
+      "cost_r": 0.0101,
       "exits": [
         {
           "reason": "tp1",
           "price": 69.76999664,
           "pct": 0.25,
           "date": "2026-07-02"
-        }
-      ],
-      "mae": 68.46499633789062,
-      "mfe": 71.93000030517578,
-      "mae_r": -0.0,
-      "mfe_r": 0.888
-    },
-    {
-      "id": "MDLZ:long:1D:2026-07-01",
-      "symbol": "MDLZ",
-      "name": "Mondelez International",
-      "sector": "",
-      "market": "nasdaq",
-      "direction": "long",
-      "grade": "A",
-      "entry_type": "reclaim",
-      "timeframe": "1D",
-      "entry": 58.84500122,
-      "stop": 59.18714746,
-      "tp1": 59.18714746,
-      "tp2": 60.72089431,
-      "tp3": 61.6730429,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 2.52556949,
-      "rr": 0.74,
-      "trigger_bar": "2026-06-30",
-      "entry_date": "2026-07-01",
-      "opened_at": "2026-07-01T16:10:39+00:00",
-      "status": "open",
-      "tp1_hit": true,
-      "tp2_hit": true,
-      "tp3_hit": false,
-      "booked_pct": 0.75,
-      "realized_r": 0.3919,
-      "gross_r": 0.4053,
-      "cost_r": 0.0134,
-      "exits": [
-        {
-          "reason": "tp1",
-          "price": 59.18714746,
-          "pct": 0.25,
-          "date": "2026-07-02"
         },
         {
           "reason": "tp2",
-          "price": 60.72089431,
+          "price": 72.08000183,
           "pct": 0.5,
-          "date": "2026-07-02"
+          "date": "2026-07-06"
         }
       ],
-      "mae": 58.779998779296875,
-      "mfe": 60.90999984741211,
-      "mae_r": -0.026,
-      "mfe_r": 0.818
+      "mae": 68.46499633789062,
+      "mfe": 72.63999938964844,
+      "mae_r": -0.0,
+      "mfe_r": 1.07
     },
     {
       "id": "WBT:long:1D:2026-07-02",
@@ -4626,9 +4580,9 @@
       "cost_r": 0.0076,
       "exits": [],
       "mae": 184.55999755859375,
-      "mfe": 182.3800048828125,
+      "mfe": 181.77999877929688,
       "mae_r": -0.153,
-      "mfe_r": 0.029
+      "mfe_r": 0.079
     },
     {
       "id": "CDW:long:1D:2026-07-02",
@@ -4887,21 +4841,83 @@
       "exit_date": "2026-07-03",
       "exit_reason": "stop",
       "hold_days": 2
+    },
+    {
+      "id": "MDLZ:long:1D:2026-07-01",
+      "symbol": "MDLZ",
+      "name": "Mondelez International",
+      "sector": "",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A",
+      "entry_type": "reclaim",
+      "timeframe": "1D",
+      "entry": 58.84500122,
+      "stop": 59.18714746,
+      "tp1": 59.18714746,
+      "tp2": 60.72089431,
+      "tp3": 61.6730429,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 2.52556949,
+      "rr": 0.74,
+      "trigger_bar": "2026-06-30",
+      "entry_date": "2026-07-01",
+      "opened_at": "2026-07-01T16:10:39+00:00",
+      "status": "closed",
+      "tp1_hit": true,
+      "tp2_hit": true,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": 0.4127,
+      "gross_r": 0.4291,
+      "cost_r": 0.0164,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 59.18714746,
+          "pct": 0.25,
+          "date": "2026-07-02"
+        },
+        {
+          "reason": "tp2",
+          "price": 60.72089431,
+          "pct": 0.5,
+          "date": "2026-07-02"
+        },
+        {
+          "reason": "stop",
+          "price": 59.08499908,
+          "pct": 0.25,
+          "date": "2026-07-06"
+        }
+      ],
+      "mae": 58.779998779296875,
+      "mfe": 60.90999984741211,
+      "mae_r": -0.026,
+      "mfe_r": 0.818,
+      "exit_price": 59.08499908,
+      "exit_date": "2026-07-06",
+      "exit_reason": "trail",
+      "hold_days": 5
     }
   ],
   "expectancy": {
     "overall": {
-      "n": 2,
-      "win_rate": 0.0,
-      "expectancy_r": -1.291,
-      "total_r": -2.58,
-      "avg_win_r": 0.0,
+      "n": 3,
+      "win_rate": 33.3,
+      "expectancy_r": -0.723,
+      "total_r": -2.17,
+      "avg_win_r": 0.413,
       "avg_loss_r": -1.291,
-      "avg_hold_days": 2.0,
-      "avg_mae_r": -1.252,
-      "avg_mfe_r": 0.004,
-      "gross_expectancy_r": -1.253,
-      "avg_cost_r": 0.038
+      "avg_hold_days": 3.0,
+      "avg_mae_r": -0.844,
+      "avg_mfe_r": 0.275,
+      "gross_expectancy_r": -0.692,
+      "avg_cost_r": 0.031
     },
     "by_grade": {
       "A+": {
@@ -4918,32 +4934,32 @@
         "avg_cost_r": 0.038
       },
       "A": {
-        "n": 0,
-        "win_rate": 0.0,
-        "expectancy_r": 0.0,
-        "total_r": 0.0,
-        "avg_win_r": 0.0,
+        "n": 1,
+        "win_rate": 100.0,
+        "expectancy_r": 0.413,
+        "total_r": 0.41,
+        "avg_win_r": 0.413,
         "avg_loss_r": 0.0,
-        "avg_hold_days": 0.0,
-        "avg_mae_r": 0.0,
-        "avg_mfe_r": 0.0,
-        "gross_expectancy_r": 0.0,
-        "avg_cost_r": 0.0
+        "avg_hold_days": 5.0,
+        "avg_mae_r": -0.026,
+        "avg_mfe_r": 0.818,
+        "gross_expectancy_r": 0.429,
+        "avg_cost_r": 0.016
       }
     },
     "by_entry_type": {
       "reclaim": {
-        "n": 1,
-        "win_rate": 0.0,
-        "expectancy_r": -1.178,
-        "total_r": -1.18,
-        "avg_win_r": 0.0,
+        "n": 2,
+        "win_rate": 50.0,
+        "expectancy_r": -0.382,
+        "total_r": -0.76,
+        "avg_win_r": 0.413,
         "avg_loss_r": -1.178,
-        "avg_hold_days": 2.0,
-        "avg_mae_r": -1.123,
-        "avg_mfe_r": 0.008,
-        "gross_expectancy_r": -1.123,
-        "avg_cost_r": 0.055
+        "avg_hold_days": 3.5,
+        "avg_mae_r": -0.575,
+        "avg_mfe_r": 0.413,
+        "gross_expectancy_r": -0.347,
+        "avg_cost_r": 0.036
       },
       "retest": {
         "n": 1,
@@ -4974,17 +4990,17 @@
     },
     "by_timeframe": {
       "1D": {
-        "n": 2,
-        "win_rate": 0.0,
-        "expectancy_r": -1.291,
-        "total_r": -2.58,
-        "avg_win_r": 0.0,
+        "n": 3,
+        "win_rate": 33.3,
+        "expectancy_r": -0.723,
+        "total_r": -2.17,
+        "avg_win_r": 0.413,
         "avg_loss_r": -1.291,
-        "avg_hold_days": 2.0,
-        "avg_mae_r": -1.252,
-        "avg_mfe_r": 0.004,
-        "gross_expectancy_r": -1.253,
-        "avg_cost_r": 0.038
+        "avg_hold_days": 3.0,
+        "avg_mae_r": -0.844,
+        "avg_mfe_r": 0.275,
+        "gross_expectancy_r": -0.692,
+        "avg_cost_r": 0.031
       },
       "1W": {
         "n": 0,
@@ -5014,5 +5030,5 @@
       }
     }
   },
-  "updated_at": "2026-07-06T19:22:54+00:00"
+  "updated_at": "2026-07-06T19:29:25+00:00"
 }
