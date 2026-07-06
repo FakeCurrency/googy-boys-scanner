@@ -693,8 +693,46 @@
       <tbody>${rows}</tbody></table>`;
   }
 
+  // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box per
+  // side at the top of the page — every position opened in the last 7 days,
+  // newest first, so the daily check-in is a single glance.
+  const NEW_POS_WINDOW_MS = 7 * 24 * 3.6e6;
+  function renderNewPositions() {
+    const now = Date.now();
+    const ago = (ms) => {
+      const h = (now - ms) / 3.6e6;
+      if (h < 1) return "just now";
+      if (h < 24) return Math.round(h) + "h ago";
+      const d = Math.floor(h / 24);
+      return d === 1 ? "1d ago" : d + "d ago";
+    };
+    const paint = (hostId, side, label) => {
+      const host = $("#" + hostId);
+      if (!host) return;
+      const recent = [...side.open, ...side.closed]
+        .map((t) => ({ t, ms: openedMs(t) }))
+        .filter((x) => x.ms != null && now - x.ms <= NEW_POS_WINDOW_MS)
+        .sort((a, b) => b.ms - a.ms)
+        .slice(0, 6);
+      const rows = recent.map(({ t, ms }) =>
+        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&pm=1">
+          ${dirChip(t.direction)}
+          <b class="jr-new-sym">${esc(t.symbol)}</b>
+          <span class="jr-new-entry">@ ${px(t.entry)}</span>
+          ${t.lens ? `<span class="jr-new-lens">${up(t.lens)}</span>` : ""}
+          ${t.status === "closed" ? `<span class="jr-new-closed">closed</span>` : ""}
+          <span class="jr-new-ago">${ago(ms)}</span>
+        </a>`).join("");
+      host.innerHTML = `<div class="jr-new-hd">${label} <span class="jr-new-n">${recent.length}</span></div>` +
+        (rows || `<div class="jr-new-empty">No new positions in the last 7 days.</div>`);
+    };
+    paint("new-bot", state.bot, "🤖 Claude · new positions");
+    paint("new-me", state.me, "✏️ Me · new positions");
+  }
+
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
+    renderNewPositions();
     renderComparison(sb, sm);
     renderBoth();
     renderEdgeTracker();
