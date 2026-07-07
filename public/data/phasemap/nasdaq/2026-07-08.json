@@ -1,0 +1,3599 @@
+{
+  "run_date": "2026-07-08",
+  "ruleset_version": "1.2.0",
+  "universe_size": 98,
+  "results": [
+    {
+      "ticker": "KDP",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 33.66,
+          "high": 33.82,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 33.82,
+          "high": 34.2307,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 32.66,
+          "high": 32.8859,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 32.0475,
+          "high": 32.3862,
+          "status": "UNTESTED",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 30.9002,
+          "high": 31.9231,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 29.237,
+          "high": 30.613,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 26.8958,
+          "high": 28.7896,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "equal_lows"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 25.1561,
+          "high": 26.8762,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0086,
+        "dist_to_yearly_open_pct": 0.1511,
+        "avg_turnover_20d": 572386100,
+        "close": 31.52,
+        "sweep_date": "2026-06-29",
+        "sweep_depth_pct": 0.0048,
+        "displacement_date": "2026-07-06"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Keurig Dr Pepper",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-07-06. First draw is the 30.90–31.92 zone (the 1.0–1.272 extension of the leg); beyond that, 29.24–30.61 (a shelf of equal lows + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 32.66–32.89 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 34.23. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "bounces staying below 32.66–32.89; next objective the 30.90–31.92 zone (T1)"
+    },
+    {
+      "ticker": "PEP",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 136.61,
+          "high": 140.48,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "sweep_wick",
+            "yearly_open",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 134.9939,
+          "high": 136.61,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 141.9814,
+          "high": 142.8225,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 144.2887,
+          "high": 146.1027,
+          "status": "UNTESTED",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 140.532,
+          "high": 148.448,
+          "status": "TESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 148.4615,
+          "high": 151.7896,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "prior_high",
+            "box_high"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 154.9037,
+          "high": 161.9724,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 166.2069,
+          "high": 169.0,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2511,
+        "dist_to_yearly_open_pct": 0.0387,
+        "avg_turnover_20d": 1395413603,
+        "close": 145.915,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0275,
+        "displacement_date": "2026-07-01"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "PepsiCo",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-07-01. First draw is the 140.53–148.45 zone (the 1.0–1.272 extension of the leg + a shelf of equal highs + the 1.618–2.0 extension of the leg + a prior swing high); beyond that, 148.46–151.79 (a prior swing high + the top of the range). The continuation thesis stays valid while pullbacks hold above the 141.98–142.82 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 134.99. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 141.98–142.82; next objective the 140.53–148.45 zone (T1)"
+    },
+    {
+      "ticker": "CHTR",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 241.22,
+          "high": 241.5,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-04-17"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 241.5,
+          "high": 245.8778,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-04-17"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 182.775,
+          "high": 184.7388,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-04-24"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 151.7682,
+          "high": 168.9159,
+          "status": "UNTESTED",
+          "created_date": "2026-04-24"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 157.7247,
+          "high": 181.0033,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-04-24"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 111.4967,
+          "high": 141.7603,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-04-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1186,
+        "dist_to_yearly_open_pct": -0.3412,
+        "avg_turnover_20d": 538513756,
+        "close": 137.98,
+        "sweep_date": "2026-04-17",
+        "sweep_depth_pct": 0.0012,
+        "displacement_date": "2026-04-24"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Charter Communications",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-04-24. First draw is the 157.72–181.00 zone (the 1.0–1.272 extension of the leg); beyond that, 111.50–141.76 (the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 182.78–184.74 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 245.88. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "bounces staying below 182.78–184.74; next objective the 111.50–141.76 zone (T2)"
+    },
+    {
+      "ticker": "CMCSA",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 25.2066,
+          "high": 26.7357,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 26.7357,
+          "high": 27.1429,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 24.9079,
+          "high": 25.1148,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 23.9428,
+          "high": 24.4765,
+          "status": "UNTESTED",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 22.6155,
+          "high": 24.0487,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 20.7509,
+          "high": 22.2623,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-06-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1245,
+        "dist_to_yearly_open_pct": -0.1284,
+        "avg_turnover_20d": 983529660,
+        "close": 23.535,
+        "sweep_date": "2026-06-29",
+        "sweep_depth_pct": 0.0607,
+        "displacement_date": "2026-06-29"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Comcast",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-06-29. First draw is the 22.62–24.05 zone (a prior swing low + the 1.0–1.272 extension of the leg); beyond that, 20.75–22.26 (the 1.618–2.0 extension of the leg + a prior swing low). The continuation thesis stays valid while bounces hold below the 24.91–25.11 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 27.14. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "bounces staying below 24.91–25.11; next objective the 22.62–24.05 zone (T1)"
+    },
+    {
+      "ticker": "DASH",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 146.11,
+          "high": 146.81,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 142.2464,
+          "high": 146.11,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 170.4196,
+          "high": 172.58,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 178.8269,
+          "high": 186.5562,
+          "status": "UNTESTED",
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 166.9721,
+          "high": 179.1679,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs"
+          ],
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 181.1521,
+          "high": 194.1279,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "equal_highs",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 209.8621,
+          "high": 216.3079,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 222.2842,
+          "high": 241.0979,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "equal_highs"
+          ],
+          "created_date": "2026-06-15"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0451,
+        "dist_to_yearly_open_pct": -0.1439,
+        "avg_turnover_20d": 889130398,
+        "close": 196.665,
+        "sweep_date": "2026-06-11",
+        "sweep_depth_pct": 0.0048,
+        "displacement_date": "2026-06-15"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "DoorDash",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-06-15. First draw is the 166.97–179.17 zone (the 1.0–1.272 extension of the leg + a shelf of equal highs); beyond that, 181.15–194.13 (a shelf of equal highs + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while pullbacks hold above the 170.42–172.58 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 142.25. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 170.42–172.58; next objective the 209.86–216.31 zone (T3)"
+    },
+    {
+      "ticker": "GEHC",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 59.97,
+          "high": 60.73,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 59.0811,
+          "high": 59.97,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 62.7438,
+          "high": 63.21,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 63.9746,
+          "high": 64.9207,
+          "status": "UNTESTED",
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 63.5409,
+          "high": 68.4891,
+          "status": "TESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "prior_high",
+            "equal_highs",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 70.0673,
+          "high": 72.7491,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "quarterly_open",
+            "prior_high"
+          ],
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 73.0102,
+          "high": 74.5891,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 74.6309,
+          "high": 76.4091,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-06-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.223,
+        "dist_to_yearly_open_pct": -0.2121,
+        "avg_turnover_20d": 303707952,
+        "close": 65.0051,
+        "sweep_date": "2026-06-18",
+        "sweep_depth_pct": 0.0125,
+        "displacement_date": "2026-06-23"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "GE HealthCare Technologies",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-06-23. First draw is the 63.54–68.49 zone (the 1.0–1.272 extension of the leg + a prior swing high + a shelf of equal highs + the 1.618–2.0 extension of the leg); beyond that, 70.07–72.75 (the quarterly open + a prior swing high). The continuation thesis stays valid while pullbacks hold above the 62.74–63.21 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 59.08. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 62.74–63.21; next objective the 63.54–68.49 zone (T1)"
+    },
+    {
+      "ticker": "TTWO",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 206.0,
+          "high": 206.45,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 201.6103,
+          "high": 206.0,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 233.6366,
+          "high": 235.825,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-06-16"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 242.8637,
+          "high": 251.5726,
+          "status": "UNTESTED",
+          "created_date": "2026-06-16"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 228.443,
+          "high": 239.221,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_high"
+          ],
+          "created_date": "2026-06-16"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 243.584,
+          "high": 262.097,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "fib_ext_1618",
+            "equal_highs",
+            "prior_yearly_close",
+            "yearly_open",
+            "box_high"
+          ],
+          "created_date": "2026-06-16"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1108,
+        "dist_to_yearly_open_pct": 0.0052,
+        "avg_turnover_20d": 703380464,
+        "close": 259.04,
+        "sweep_date": "2026-06-11",
+        "sweep_depth_pct": 0.0022,
+        "displacement_date": "2026-06-16"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Take-Two Interactive",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-06-16. First draw is the 228.44–239.22 zone (the 1.0–1.272 extension of the leg + a prior swing high); beyond that, 243.58–262.10 (the 1.618–2.0 extension of the leg + a shelf of equal highs + the prior yearly close + the yearly open + the top of the range). The continuation thesis stays valid while pullbacks hold above the 233.64–235.82 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 201.61. Historically this pattern reached its first target zone within 20 sessions 43% of the time on the NASDAQ. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 233.64–235.82; next objective the 243.58–262.10 zone (T2)"
+    },
+    {
+      "ticker": "APP",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 418.46,
+          "high": 430.25,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-25"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 401.7936,
+          "high": 418.46,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-25"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 489.037,
+          "high": 497.46,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 516.104,
+          "high": 539.172,
+          "status": "UNTESTED",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 561.4208,
+          "high": 630.4992,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "prior_high",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 656.8216,
+          "high": 739.5392,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "prior_yearly_close",
+            "fib_ext_1618",
+            "yearly_open",
+            "prior_high"
+          ],
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2508,
+        "dist_to_yearly_open_pct": -0.2144,
+        "avg_turnover_20d": 2767505216,
+        "close": 536.84,
+        "sweep_date": "2026-06-25",
+        "sweep_depth_pct": 0.0274,
+        "displacement_date": "2026-07-01"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "AppLovin",
+      "sector": "",
+      "narration": "Displacement confirmed on 2026-07-01. First draw is the 561.42–630.50 zone (a prior swing high + the 1.0–1.272 extension of the leg); beyond that, 656.82–739.54 (the prior yearly close + the 1.618–2.0 extension of the leg + the yearly open + a prior swing high). The continuation thesis stays valid while pullbacks hold above the 489.04–497.46 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 401.79. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 489.04–497.46; next objective the 561.42–630.50 zone (T1)"
+    },
+    {
+      "ticker": "ADI",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 371.09,
+          "high": 372.64,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 361.4027,
+          "high": 371.09,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1536,
+        "dist_to_yearly_open_pct": 0.3844,
+        "avg_turnover_20d": 2271316560,
+        "close": 379.63,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0042,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Analog Devices",
+      "sector": "",
+      "narration": "ADI ran the 371.09–372.64 lows on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "AMD",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 546.44,
+          "high": 564.09,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 564.09,
+          "high": 583.2443,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3055,
+        "dist_to_yearly_open_pct": 1.3835,
+        "avg_turnover_20d": 16004706658,
+        "close": 521.74,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0323,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Advanced Micro Devices",
+      "sector": "",
+      "narration": "AMD ran the 546.44–564.09 highs on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "AMGN",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 375.15,
+          "high": 375.25,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 375.25,
+          "high": 379.8545,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0807,
+        "dist_to_yearly_open_pct": 0.1362,
+        "avg_turnover_20d": 1086644615,
+        "close": 368.19,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0003,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Amgen",
+      "sector": "",
+      "narration": "AMGN ran the 375.15–375.25 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ARM",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 297.05,
+          "high": 303.67,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 279.0069,
+          "high": 297.05,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6101,
+        "dist_to_yearly_open_pct": 1.6944,
+        "avg_turnover_20d": 3924386968,
+        "close": 304.01,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0218,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Arm Holdings",
+      "sector": "",
+      "narration": "ARM ran the 297.05–303.67 lows on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CCEP",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 108.07,
+          "high": 109.5,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 109.5,
+          "high": 110.5792,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.1914,
+        "avg_turnover_20d": 198747376,
+        "close": 106.85,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0132,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Coca-Cola Europacific Partners",
+      "sector": "",
+      "narration": "CCEP ran the 108.07–109.50 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CDW",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 141.46,
+          "high": 142.53,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 142.53,
+          "high": 145.2172,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5374,
+        "dist_to_yearly_open_pct": 0.0124,
+        "avg_turnover_20d": 250347691,
+        "close": 137.39,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0076,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "CDW Corporation",
+      "sector": "",
+      "narration": "CDW ran the 141.46–142.53 highs on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "COST",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 924.84,
+          "high": 942.53,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 914.9643,
+          "high": 924.84,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4419,
+        "dist_to_yearly_open_pct": 0.1057,
+        "avg_turnover_20d": 2400779445,
+        "close": 949.485,
+        "sweep_date": "2026-07-02",
+        "sweep_depth_pct": 0.0188,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Costco Wholesale",
+      "sector": "",
+      "narration": "COST ran the 924.84–942.53 lows on 2026-07-02 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CPRT",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 27.85,
+          "high": 28.08,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 27.351,
+          "high": 27.85,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3764,
+        "dist_to_yearly_open_pct": -0.2474,
+        "avg_turnover_20d": 405688213,
+        "close": 29.465,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0082,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Copart",
+      "sector": "",
+      "narration": "CPRT ran the 27.85–28.08 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CRWD",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 196.415,
+          "high": 196.5,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 196.5,
+          "high": 200.9177,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.2516,
+        "dist_to_yearly_open_pct": 0.6751,
+        "avg_turnover_20d": 2083262222,
+        "close": 198.5,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0004,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "CrowdStrike Holdings",
+      "sector": "",
+      "narration": "CRWD ran the 196.41–196.50 highs on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CSX",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 49.21,
+          "high": 49.29,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 49.29,
+          "high": 49.7655,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0094,
+        "dist_to_yearly_open_pct": 0.3337,
+        "avg_turnover_20d": 562667489,
+        "close": 48.24,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0016,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "CSX Corporation",
+      "sector": "",
+      "narration": "CSX ran the 49.21–49.29 highs on 2026-07-06 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CTSH",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 37.08,
+          "high": 38.68,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 35.9143,
+          "high": 37.08,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.02,
+        "dist_to_yearly_open_pct": -0.464,
+        "avg_turnover_20d": 626237266,
+        "close": 43.95,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0414,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cognizant Technology Solutions",
+      "sector": "",
+      "narration": "CTSH ran the 37.08–38.68 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "DASH",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 193.44,
+          "high": 196.79,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 196.79,
+          "high": 201.0073,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.9868,
+        "dist_to_yearly_open_pct": -0.1439,
+        "avg_turnover_20d": 889130398,
+        "close": 196.665,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0173,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "DoorDash",
+      "sector": "",
+      "narration": "DASH ran the 193.44–196.79 highs on 2026-07-06 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "EA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 205.69,
+          "high": 206.0,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 206.0,
+          "high": 207.0272,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7037,
+        "dist_to_yearly_open_pct": 0.0082,
+        "avg_turnover_20d": 420386340,
+        "close": 205.68,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0015,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Electronic Arts",
+      "sector": "",
+      "narration": "EA ran the 205.69–206.00 highs on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "EXC",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 47.95,
+          "high": 48.54,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 48.54,
+          "high": 49.0105,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3698,
+        "dist_to_yearly_open_pct": 0.1099,
+        "avg_turnover_20d": 410874971,
+        "close": 47.935,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0123,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Exelon",
+      "sector": "",
+      "narration": "EXC ran the 47.95–48.54 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FANG",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 170.1,
+          "high": 171.48,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 167.0663,
+          "high": 170.1,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1881,
+        "dist_to_yearly_open_pct": 0.1839,
+        "avg_turnover_20d": 478908574,
+        "close": 176.855,
+        "sweep_date": "2026-07-02",
+        "sweep_depth_pct": 0.008,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Diamondback Energy",
+      "sector": "",
+      "narration": "FANG ran the 170.10–171.48 lows on 2026-07-02 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FAST",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 48.76,
+          "high": 48.83,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 48.83,
+          "high": 49.3713,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0578,
+        "dist_to_yearly_open_pct": 0.1851,
+        "avg_turnover_20d": 342305223,
+        "close": 47.2,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0014,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Fastenal",
+      "sector": "",
+      "narration": "FAST ran the 48.76–48.83 highs on 2026-07-06 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FTNT",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 159.07,
+          "high": 159.8,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 159.8,
+          "high": 162.8125,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.208,
+        "dist_to_yearly_open_pct": 1.0171,
+        "avg_turnover_20d": 969282672,
+        "close": 161.31,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0046,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Fortinet",
+      "sector": "",
+      "narration": "FTNT ran the 159.07–159.80 highs on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "GEHC",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 66.44,
+          "high": 66.45,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 66.45,
+          "high": 67.3824,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.119,
+        "dist_to_yearly_open_pct": -0.2121,
+        "avg_turnover_20d": 303707952,
+        "close": 65.0051,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0002,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "GE HealthCare Technologies",
+      "sector": "",
+      "narration": "GEHC ran the 66.44–66.45 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "GFS",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 63.33,
+          "high": 65.4157,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 60.6516,
+          "high": 63.33,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1771,
+        "dist_to_yearly_open_pct": 0.8696,
+        "avg_turnover_20d": 242203167,
+        "close": 66.35,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0319,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "GlobalFoundries",
+      "sector": "",
+      "narration": "GFS ran the 63.33–65.42 lows on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "IDXX",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 518.55,
+          "high": 523.38,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 509.8747,
+          "high": 518.55,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1469,
+        "dist_to_yearly_open_pct": -0.1596,
+        "avg_turnover_20d": 366989460,
+        "close": 568.54,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0092,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "IDEXX Laboratories",
+      "sector": "",
+      "narration": "IDXX ran the 518.55–523.38 lows on 2026-06-30 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ILMN",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 195.09,
+          "high": 196.66,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 196.66,
+          "high": 200.1285,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3996,
+        "dist_to_yearly_open_pct": 0.4628,
+        "avg_turnover_20d": 340965607,
+        "close": 192.115,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.008,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Illumina",
+      "sector": "",
+      "narration": "ILMN ran the 195.09–196.66 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "KHC",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 25.515,
+          "high": 25.745,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 25.745,
+          "high": 26.0889,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2371,
+        "dist_to_yearly_open_pct": 0.0815,
+        "avg_turnover_20d": 324047971,
+        "close": 25.375,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.009,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Kraft Heinz",
+      "sector": "",
+      "narration": "KHC ran the 25.52–25.75 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "MNST",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 97.87,
+          "high": 98.31,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 98.31,
+          "high": 99.2525,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2152,
+        "dist_to_yearly_open_pct": 0.2594,
+        "avg_turnover_20d": 552132934,
+        "close": 96.56,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0045,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Monster Beverage",
+      "sector": "",
+      "narration": "MNST ran the 97.87–98.31 highs on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ODFL",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 213.22,
+          "high": 217.7,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 208.6695,
+          "high": 213.22,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6459,
+        "dist_to_yearly_open_pct": 0.3728,
+        "avg_turnover_20d": 427860127,
+        "close": 216.265,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0206,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Old Dominion Freight Line",
+      "sector": "",
+      "narration": "ODFL ran the 213.22–217.70 lows on 2026-07-01 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "PANW",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 358.1,
+          "high": 368.17,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 368.17,
+          "high": 375.0778,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3314,
+        "dist_to_yearly_open_pct": 0.8819,
+        "avg_turnover_20d": 2256328523,
+        "close": 347.79,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0281,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Palo Alto Networks",
+      "sector": "",
+      "narration": "PANW ran the 358.10–368.17 highs on 2026-07-06 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "PYPL",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 45.79,
+          "high": 46.065,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 46.065,
+          "high": 46.7451,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4295,
+        "dist_to_yearly_open_pct": -0.2197,
+        "avg_turnover_20d": 720591112,
+        "close": 45.64,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.006,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "PayPal Holdings",
+      "sector": "",
+      "narration": "PYPL ran the 45.79–46.06 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ROP",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 366.3,
+          "high": 366.66,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 366.66,
+          "high": 371.4868,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.3072,
+        "dist_to_yearly_open_pct": -0.1664,
+        "avg_turnover_20d": 442061436,
+        "close": 369.8,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.001,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Roper Technologies",
+      "sector": "",
+      "narration": "ROP ran the 366.30–366.66 highs on 2026-07-06 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SBUX",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 103.69,
+          "high": 105.75,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 105.75,
+          "high": 107.0275,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1414,
+        "dist_to_yearly_open_pct": 0.2416,
+        "avg_turnover_20d": 789603421,
+        "close": 103.29,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0199,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Starbucks",
+      "sector": "",
+      "narration": "SBUX ran the 103.69–105.75 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SNPS",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 430.38,
+          "high": 432.63,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 421.3843,
+          "high": 430.38,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7215,
+        "dist_to_yearly_open_pct": -0.0891,
+        "avg_turnover_20d": 934623139,
+        "close": 436.2725,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0052,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Synopsys",
+      "sector": "",
+      "narration": "SNPS ran the 430.38–432.63 lows on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TMUS",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 189.07,
+          "high": 189.97,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 189.97,
+          "high": 192.856,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6483,
+        "dist_to_yearly_open_pct": -0.0603,
+        "avg_turnover_20d": 1151541875,
+        "close": 188.12,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0048,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "T-Mobile US",
+      "sector": "",
+      "narration": "TMUS ran the 189.07–189.97 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VRTX",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 529.99,
+          "high": 531.86,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 531.86,
+          "high": 538.7485,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6014,
+        "dist_to_yearly_open_pct": 0.1539,
+        "avg_turnover_20d": 899954882,
+        "close": 524.25,
+        "sweep_date": "2026-07-07",
+        "sweep_depth_pct": 0.0035,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vertex Pharmaceuticals",
+      "sector": "",
+      "narration": "VRTX ran the 529.99–531.86 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FANG",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.1839,
+        "avg_turnover_20d": 478908574,
+        "close": 176.855,
+        "bars_in_box": 2,
+        "box_low": 170.1,
+        "box_high": 211.69,
+        "box_height_pct": 0.2445,
+        "cluster_low": 210.8,
+        "cluster_high": 211.69
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Diamondback Energy",
+      "sector": "",
+      "narration": "FANG has spent 2 sessions inside a 24.4% range. Equal highs are resting at 210.80–211.69 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 210.80–211.69 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "WBD",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0872,
+        "avg_turnover_20d": 585689457,
+        "close": 26.28,
+        "bars_in_box": 25,
+        "box_low": 25.91,
+        "box_high": 27.44,
+        "box_height_pct": 0.0591,
+        "cluster_low": 27.3,
+        "cluster_high": 27.44
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Warner Bros. Discovery",
+      "sector": "",
+      "narration": "WBD has spent 25 sessions inside a 5.9% range. Equal highs are resting at 27.30–27.44 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 27.30–27.44 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "AAPL",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 315.45,
+          "high": 316.94,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 316.94,
+          "high": 319.8,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 295.345,
+          "high": 297.626,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-09"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 283.9428,
+          "high": 290.2486,
+          "status": "UNTESTED",
+          "created_date": "2026-06-09"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 278.198,
+          "high": 289.4305,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-09"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 247.6398,
+          "high": 275.0561,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "equal_lows",
+            "quarterly_open",
+            "fib_ext_1618",
+            "prior_yearly_close",
+            "yearly_open"
+          ],
+          "created_date": "2026-06-09"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 241.3181,
+          "high": 247.4241,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-06-09"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.9194,
+        "dist_to_yearly_open_pct": 0.1535,
+        "avg_turnover_20d": 19694169169,
+        "close": 313.4586,
+        "sweep_date": "2026-06-03",
+        "sweep_depth_pct": 0.0047,
+        "displacement_date": "2026-06-09"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Apple",
+      "sector": "",
+      "narration": "AAPL touched the 50% area at 295.35–297.63. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 319.80, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ARM",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 421.69,
+          "high": 427.99,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 427.99,
+          "high": 440.923,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 362.52,
+          "high": 371.5416,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 327.9518,
+          "high": 347.0691,
+          "status": "UNTESTED",
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 305.5482,
+          "high": 344.9544,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 239.7086,
+          "high": 289.0631,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 186.5066,
+          "high": 210.4084,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 92.6166,
+          "high": 169.1968,
+          "status": "UNTESTED",
+          "confluence": 5,
+          "sources": [
+            "equal_lows",
+            "prior_yearly_close",
+            "box_low",
+            "yearly_open",
+            "quarterly_open"
+          ],
+          "created_date": "2026-06-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0532,
+        "dist_to_yearly_open_pct": 1.6944,
+        "avg_turnover_20d": 3924386968,
+        "close": 304.01,
+        "sweep_date": "2026-06-02",
+        "sweep_depth_pct": 0.0149,
+        "displacement_date": "2026-06-05"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Arm Holdings",
+      "sector": "",
+      "narration": "ARM touched the 50% area at 362.52–371.54. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 440.92, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "DXCM",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 59.46,
+          "high": 61.62,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-05-15"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 58.2995,
+          "high": 59.46,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-05-15"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 68.5138,
+          "high": 69.185,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-05-20"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 71.4801,
+          "high": 74.3198,
+          "status": "UNTESTED",
+          "created_date": "2026-05-20"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 70.8224,
+          "high": 76.6376,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "prior_high",
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-05-20"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 78.2507,
+          "high": 84.1576,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-05-20"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.273,
+        "dist_to_yearly_open_pct": 0.1046,
+        "avg_turnover_20d": 364983267,
+        "close": 73.6,
+        "sweep_date": "2026-05-15",
+        "sweep_depth_pct": 0.0351,
+        "displacement_date": "2026-05-20"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "DexCom",
+      "sector": "",
+      "narration": "DXCM touched the 50% area at 68.51–69.19. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 58.30, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "HON",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 246.6257,
+          "high": 249.0718,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 249.0718,
+          "high": 252.2215,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 232.3073,
+          "high": 234.6079,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 223.4556,
+          "high": 228.3509,
+          "status": "UNTESTED",
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 226.0191,
+          "high": 233.7615,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_lows"
+          ],
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 213.7267,
+          "high": 225.9547,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows"
+          ],
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 199.0998,
+          "high": 206.2529,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "prior_yearly_close",
+            "yearly_open"
+          ],
+          "created_date": "2026-06-03"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 195.4776,
+          "high": 198.6272,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-06-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.244,
+        "dist_to_yearly_open_pct": 0.1015,
+        "avg_turnover_20d": 1387561865,
+        "close": 223.725,
+        "sweep_date": "2026-06-03",
+        "sweep_depth_pct": 0.0099,
+        "displacement_date": "2026-06-03"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Honeywell International",
+      "sector": "",
+      "narration": "HON touched the 50% area at 232.31–234.61. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 252.22, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "HON",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 217.2732,
+          "high": 221.9162,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 213.684,
+          "high": 217.2732,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 232.336,
+          "high": 234.6366,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 238.7344,
+          "high": 243.8045,
+          "status": "UNTESTED",
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 228.4099,
+          "high": 249.2199,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "quarterly_open",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-11"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 249.8467,
+          "high": 260.6551,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-06-11"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.8142,
+        "dist_to_yearly_open_pct": 0.1015,
+        "avg_turnover_20d": 1387561865,
+        "close": 223.725,
+        "sweep_date": "2026-06-11",
+        "sweep_depth_pct": 0.0209,
+        "displacement_date": "2026-06-11"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Honeywell International",
+      "sector": "",
+      "narration": "HON touched the 50% area at 232.34–234.64. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 213.68, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "IDXX",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 561.28,
+          "high": 575.43,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-06-10"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 575.43,
+          "high": 583.5255,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-10"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 546.99,
+          "high": 551.3881,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-17"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 531.9737,
+          "high": 540.2781,
+          "status": "UNTESTED",
+          "created_date": "2026-06-17"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 531.355,
+          "high": 547.9661,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_low"
+          ],
+          "created_date": "2026-06-17"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 508.3939,
+          "high": 528.3544,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-06-17"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.8789,
+        "dist_to_yearly_open_pct": -0.1596,
+        "avg_turnover_20d": 366989460,
+        "close": 568.54,
+        "sweep_date": "2026-06-10",
+        "sweep_depth_pct": 0.0252,
+        "displacement_date": "2026-06-17"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "IDEXX Laboratories",
+      "sector": "",
+      "narration": "IDXX touched the 50% area at 546.99–551.39. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 583.53, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ISRG",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 406.47,
+          "high": 420.56,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 400.5233,
+          "high": 406.47,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 422.0229,
+          "high": 425.155,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 429.5647,
+          "high": 435.0207,
+          "status": "UNTESTED",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 423.0466,
+          "high": 434.311,
+          "status": "TESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_high"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 435.1285,
+          "high": 452.7434,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 459.4266,
+          "high": 477.2534,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 486.0266,
+          "high": 508.4134,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4215,
+        "dist_to_yearly_open_pct": -0.2447,
+        "avg_turnover_20d": 1030968176,
+        "close": 428.09,
+        "sweep_date": "2026-07-02",
+        "sweep_depth_pct": 0.0335,
+        "displacement_date": "2026-07-02"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Intuitive Surgical",
+      "sector": "",
+      "narration": "ISRG touched the 50% area at 422.02–425.15. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 400.52, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ON",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 129.13,
+          "high": 130.48,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 130.48,
+          "high": 134.0302,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 108.475,
+          "high": 110.843,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 96.8564,
+          "high": 103.2818,
+          "status": "UNTESTED",
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 111.0543,
+          "high": 118.643,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_low"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 101.037,
+          "high": 110.1393,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 90.517,
+          "high": 100.583,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-06-05"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 50.304,
+          "high": 68.943,
+          "status": "UNTESTED",
+          "confluence": 6,
+          "sources": [
+            "prior_yearly_close",
+            "equal_lows",
+            "yearly_open",
+            "box_low",
+            "quarterly_open",
+            "prior_low"
+          ],
+          "created_date": "2026-06-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0963,
+        "dist_to_yearly_open_pct": 0.6418,
+        "avg_turnover_20d": 1548236276,
+        "close": 90.71,
+        "sweep_date": "2026-06-02",
+        "sweep_depth_pct": 0.0105,
+        "displacement_date": "2026-06-05"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "ON Semiconductor",
+      "sector": "",
+      "narration": "ON touched the 50% area at 108.47–110.84. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 134.03, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "PDD",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 71.94,
+          "high": 73.25,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 70.6268,
+          "high": 71.94,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 77.8265,
+          "high": 78.47,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 80.0111,
+          "high": 81.9178,
+          "status": "UNTESTED",
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 76.0534,
+          "high": 78.6641,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 79.0012,
+          "high": 82.1366,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 83.7834,
+          "high": 85.0966,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 89.4334,
+          "high": 90.7466,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-06-26"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2051,
+        "dist_to_yearly_open_pct": -0.2917,
+        "avg_turnover_20d": 658299412,
+        "close": 82.322,
+        "sweep_date": "2026-06-26",
+        "sweep_depth_pct": 0.0179,
+        "displacement_date": "2026-06-26"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "PDD Holdings",
+      "sector": "",
+      "narration": "PDD touched the 50% area at 77.83–78.47. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 70.63, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TSLA",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 414.75,
+          "high": 432.35,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 432.35,
+          "high": 442.4493,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 410.825,
+          "high": 415.8688,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 399.4598,
+          "high": 405.7451,
+          "status": "UNTESTED",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 332.1904,
+          "high": 394.9996,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "prior_low",
+            "box_low",
+            "fib_ext_1618",
+            "equal_lows",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4519,
+        "dist_to_yearly_open_pct": -0.1071,
+        "avg_turnover_20d": 19356537688,
+        "close": 408.755,
+        "sweep_date": "2026-07-02",
+        "sweep_depth_pct": 0.0424,
+        "displacement_date": "2026-07-02"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Tesla",
+      "sector": "",
+      "narration": "TSLA touched the 50% area at 410.82–415.87. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 442.45, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TSLA",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 379.3,
+          "high": 384.02,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 369.8915,
+          "high": 379.3,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 401.0362,
+          "high": 406.08,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 412.4001,
+          "high": 420.2198,
+          "status": "UNTESTED",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 408.5657,
+          "high": 427.2141,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 428.8958,
+          "high": 467.2085,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "equal_highs",
+            "fib_ext_1618",
+            "prior_yearly_close",
+            "yearly_open",
+            "box_high"
+          ],
+          "created_date": "2026-06-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4501,
+        "dist_to_yearly_open_pct": -0.1071,
+        "avg_turnover_20d": 19356537688,
+        "close": 408.755,
+        "sweep_date": "2026-06-29",
+        "sweep_depth_pct": 0.0123,
+        "displacement_date": "2026-06-29"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Tesla",
+      "sector": "",
+      "narration": "TSLA touched the 50% area at 401.04–406.08. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 369.89, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ADP",
+      "direction": "bearish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 243.03,
+          "high": 243.38,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 243.38,
+          "high": 246.3039,
+          "status": "VIOLATED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.6057,
+        "dist_to_yearly_open_pct": -0.0238,
+        "avg_turnover_20d": 648851086,
+        "close": 246.99,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0014
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Automatic Data Processing",
+      "sector": "",
+      "narration": "ADP closed above 246.30, through the ceiling of the 243.38–246.30 structural invalidation zone. The swept high did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
+      "next": "a new trap to build — the swept high failed on a closing basis"
+    },
+    {
+      "ticker": "PAYX",
+      "direction": "bearish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 106.51,
+          "high": 106.84,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 106.84,
+          "high": 108.4457,
+          "status": "VIOLATED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.9589,
+        "dist_to_yearly_open_pct": -0.0056,
+        "avg_turnover_20d": 383102472,
+        "close": 108.94,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0031
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Paychex",
+      "sector": "",
+      "narration": "PAYX closed above 108.45, through the ceiling of the 106.84–108.45 structural invalidation zone. The swept high did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
+      "next": "a new trap to build — the swept high failed on a closing basis"
+    },
+    {
+      "ticker": "SIRI",
+      "direction": "bearish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 30.11,
+          "high": 30.32,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 30.32,
+          "high": 30.7802,
+          "status": "VIOLATED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.449,
+        "dist_to_yearly_open_pct": 0.5775,
+        "avg_turnover_20d": 183942435,
+        "close": 30.98,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.007
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Sirius XM Holdings",
+      "sector": "",
+      "narration": "SIRI closed above 30.78, through the ceiling of the 30.32–30.78 structural invalidation zone. The swept high did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
+      "next": "a new trap to build — the swept high failed on a closing basis"
+    }
+  ]
+}
