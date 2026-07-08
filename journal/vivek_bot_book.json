@@ -48,8 +48,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.08,
-      "unreal_usd": 2.81
+      "unreal_r": 0.089,
+      "unreal_usd": 3.1
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -391,8 +391,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.455,
-      "unreal_usd": 15.93
+      "unreal_r": 0.348,
+      "unreal_usd": 12.17
     },
     {
       "id": "NXT:long:1D:2026-06-30",
@@ -538,8 +538,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.166,
-      "unreal_usd": 5.82
+      "unreal_r": 0.131,
+      "unreal_usd": 4.57
     },
     {
       "id": "XLM:long:1W:2026-07-01",
@@ -587,8 +587,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.177,
-      "unreal_usd": -6.19
+      "unreal_r": -0.175,
+      "unreal_usd": -6.11
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -624,9 +624,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0028,
       "exits": [],
-      "mae": 391.489501953125,
+      "mae": 390.7159118652344,
       "mfe": 427.7901001,
-      "mae_r": -0.47,
+      "mae_r": -0.48,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 0.49965118,
@@ -636,8 +636,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.322,
-      "unreal_usd": -11.28
+      "unreal_r": -0.48,
+      "unreal_usd": -16.8
     },
     {
       "id": "WBT:long:1D:2026-07-02",
@@ -685,8 +685,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.017,
-      "unreal_usd": -0.58
+      "unreal_r": 0.002,
+      "unreal_usd": 0.07
     },
     {
       "id": "WLD:long:1D:2026-07-03",
@@ -734,8 +734,8 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.349,
-      "unreal_usd": -12.21
+      "unreal_r": -0.26,
+      "unreal_usd": -9.09
     },
     {
       "id": "AIA:long:1W:2026-07-08",
@@ -834,6 +834,53 @@
       "source": "vivek_bot",
       "unreal_r": -0.176,
       "unreal_usd": -6.15
+    },
+    {
+      "id": "ADP:long:1W:2026-07-08",
+      "symbol": "ADP",
+      "name": "ADP",
+      "sector": "",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 242.0,
+      "stop": 180.50774338,
+      "tp1": 307.43641914,
+      "tp2": 440.87679426,
+      "tp3": 571.0613197,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 61.49225662,
+      "rr": 3.23,
+      "trigger_bar": null,
+      "entry_date": "2026-07-08",
+      "opened_at": "2026-07-08T18:54:17+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 242.0,
+      "mfe": 242.0,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 0.53769832,
+      "notional": 132.06,
+      "leverage": 0.01,
+      "leverage_target": 5.0,
+      "risk_pct": 0.35,
+      "risk_usd": 35.0,
+      "source": "vivek_bot"
     }
   ],
   "closed": [
@@ -966,19 +1013,19 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": -16.16,
-      "session_usd": -16.16,
+      "unrealised_usd": -12.04,
+      "session_usd": -12.04,
       "open": 4
     },
     "asx": {
       "market": "asx",
-      "day": "2026-07-08",
+      "day": "2026-07-09",
       "breached": false,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
-      "realised_usd": -111.86,
+      "realised_usd": 0,
       "unrealised_usd": -16.09,
-      "session_usd": -127.95,
+      "session_usd": -16.09,
       "open": 10
     },
     "nasdaq": {
@@ -988,15 +1035,15 @@
       "limit_usd": 300.0,
       "limit_pct": 3.0,
       "realised_usd": 0,
-      "unrealised_usd": 10.47,
-      "session_usd": 10.47,
+      "unrealised_usd": -0.05,
+      "session_usd": -0.05,
       "open": 3
     }
   },
   "summary": {
-    "open": 17,
-    "unreal_usd": -21.8,
-    "updated_day": "2026-07-08"
+    "open": 18,
+    "unreal_usd": -28.19,
+    "updated_day": "2026-07-09"
   },
-  "updated_at": "2026-07-08T16:17:08+00:00"
+  "updated_at": "2026-07-08T18:59:56+00:00"
 }
