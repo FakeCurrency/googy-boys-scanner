@@ -210,7 +210,10 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
     if pulse_data is None:
-        pulse_data = pulse.fetch()
+        # PULSE retired from the UI 2026-07-03; stopped fetching 2026-07-09 —
+        # it was still hitting Yahoo for macro quotes on every scheduled scan.
+        # Restore by swapping [] back to pulse.fetch().
+        pulse_data = []
     downloaded = len(frames)
     return {
         "market": market.key,
