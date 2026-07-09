@@ -102,17 +102,12 @@ def main() -> None:
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
 
-            # VIVEK-native paper-trade journal: snapshot newly-ARMED A/A+ setups
-            # at their trigger price and resolve open trades against the same deep
-            # frames (no extra download). Best-effort — never break the scan.
-            try:
-                from . import vivek_journal
-                vj = vivek_journal.update(market_key, vk["results"], deep_frames, universe)
-                ov = vj.get("expectancy", {}).get("overall", {})
-                print(f"  journal: {len(vj['open'])} open · {len(vj['closed'])} closed"
-                      f" · expectancy {ov.get('expectancy_r', 0):+.2f}R (n={ov.get('n', 0)})")
-            except Exception as e:
-                print(f"  journal: skipped ({e})", flush=True)
+            # Track-record journal RETIRED (owner 2026-07-09): it logged EVERY
+            # armed A+/A on every timeframe with no position cap — 200+ open
+            # trades whose early expectancy read as noise. The bot book
+            # (A+ only, 10/market, short-slot reserve) is the only track
+            # record now. vivek_journal.py stays: the backtester and the bot
+            # runner import its trade-management primitives.
 
             # VIVEK execution/runner layer (Phase 1–2: dry-run + paper book).
             # Gated by VIVEK_BOT_ENABLED — a no-op (and silent) until switched on.

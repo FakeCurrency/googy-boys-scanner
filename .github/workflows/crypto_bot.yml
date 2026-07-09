@@ -70,7 +70,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Crypto scan output + the persistent paper book + the auto journal.
-          PATHS="public/data journal/vivek_journal.json journal/vivek_bot_book.json"
+          PATHS="public/data journal/vivek_bot_book.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
