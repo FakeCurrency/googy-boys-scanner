@@ -48,6 +48,34 @@ export const onRequestPost = async ({ env, request }) => {
     });
   }
 
+  // Abuse guard (2026-07-09): the site is public and every call here burns a
+  // GitHub Actions run. KV-backed cooldown — one dispatch per market per
+  // 5 minutes, and a hard daily cap across all markets. Degrades to
+  // no-limiting if the KV binding is absent, so a misconfig can't brick the
+  // button. (Reuses the JOURNAL_KV namespace — see functions/api/journal.js.)
+  if (env.JOURNAL_KV) {
+    try {
+      const cdKey = `ratelimit:scan:${market}`;
+      if (await env.JOURNAL_KV.get(cdKey)) {
+        return json(429, {
+          ok: false, configured: true,
+          message: "A scan for this market was requested in the last 5 minutes — it's still running. The data refreshes automatically when it lands.",
+        });
+      }
+      const dayKey = `ratelimit:scan:day:${new Date().toISOString().slice(0, 10)}`;
+      const used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
+      const DAILY_CAP = 40;
+      if (used >= DAILY_CAP) {
+        return json(429, {
+          ok: false, configured: true,
+          message: "Daily manual-scan limit reached — the scheduled scans keep running as normal.",
+        });
+      }
+      await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 300 });
+      await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
+    } catch (_) { /* KV hiccup → let the request through */ }
+  }
+
   const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
 
   // Abort if GitHub is slow so the browser never hangs on this request.

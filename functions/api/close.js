@@ -48,6 +48,24 @@ export const onRequestPost = async ({ request, env }) => {
     journal_type: body.journal_type === "scalp" ? "scalp" : "swing",
   };
 
+  // Abuse guard (2026-07-09): public endpoint, each call burns an Actions run.
+  // One close per symbol per minute + daily cap. No KV binding → no limiting.
+  if (env.JOURNAL_KV) {
+    try {
+      const cdKey = `ratelimit:close:${inputs.symbol}`;
+      if (await env.JOURNAL_KV.get(cdKey)) {
+        return json(429, { ok: false, message: "A close for this symbol was just requested — give it a minute to process." });
+      }
+      const dayKey = `ratelimit:close:day:${new Date().toISOString().slice(0, 10)}`;
+      const used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
+      if (used >= 60) {
+        return json(429, { ok: false, message: "Daily close-request limit reached." });
+      }
+      await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 60 });
+      await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
+    } catch (_) { /* KV hiccup → let it through */ }
+  }
+
   const url  = `https://api.github.com/repos/${repo}/actions/workflows/close_position.yml/dispatches`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10_000);
