@@ -100,8 +100,12 @@ def _fetch_asx_listed(suffix: str) -> list[dict]:
     return items
 
 
-def _fetch_nasdaq_listed(suffix: str) -> list[dict]:
-    """Fallback: pull the live NASDAQ-listed symbol directory (pipe-delimited)."""
+def _fetch_nasdaq_listed(suffix: str, tiers: str = "Q") -> list[dict]:
+    """Live NASDAQ-listed symbol directory (pipe-delimited, free, no auth).
+
+    ``tiers`` filters by Market Category: Q = Global Select (the most liquid
+    ~1,500 names — the default scanning universe), G = Global Market,
+    S = Capital Market. Pass "QGS" for everything (~3,400)."""
     try:
         with urllib.request.urlopen(NASDAQ_LISTED_URL, timeout=30) as resp:
             text = resp.read().decode("utf-8", "ignore")
@@ -115,8 +119,12 @@ def _fetch_nasdaq_listed(suffix: str) -> list[dict]:
         name = (row.get("Security Name") or symbol).strip()
         etf = (row.get("ETF") or "").strip().upper()
         test = (row.get("Test Issue") or "").strip().upper()
-        # Skip ETFs, test issues, and non-common symbols (those with $ / .)
-        if not symbol or etf == "Y" or test == "Y" or "$" in symbol or "." in symbol:
+        tier = (row.get("Market Category") or "").strip().upper()
+        fin = (row.get("Financial Status") or "N").strip().upper()
+        # Skip ETFs, test issues, deficient/delinquent/bankrupt listings,
+        # off-tier names, non-common symbols, and the file-footer row.
+        if (not symbol or not symbol.isalnum() or etf == "Y" or test == "Y"
+                or (tiers and tier not in tiers) or fin not in ("N", "")):
             continue
         items.append({"symbol": symbol, "name": name, "sector": "", "yf": symbol + suffix})
     return items
@@ -197,6 +205,15 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     # ASX: full universe straight from the official directory.
     if market_key == "asx" and full:
         items = _fetch_asx_listed(market.suffix)
+        if items:
+            return items
+
+    # NASDAQ: full Global Select directory (~1,500 liquid names), mirroring
+    # the ASX pattern. Previously the bundled 99-name curated CSV took
+    # precedence, so every lens was blind to all but mega-caps (owner
+    # deep-dive 2026-07-09). The CSV remains the offline fallback below.
+    if market_key == "nasdaq" and full:
+        items = _fetch_nasdaq_listed(market.suffix)
         if items:
             return items
 
