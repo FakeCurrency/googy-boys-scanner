@@ -9,7 +9,14 @@ name: VIVEK backtest
 on:
   # Monthly evidence refresh (1st of the month, 08:00 UTC): re-runs the
   # LONG-ONLY walk-forward so the edge estimate stays current instead of
-  # ossifying at a single snapshot. Manual runs still available any time.
+  # ossifying at a single snapshot.
+  #
+  # OWNERSHIP (consolidated 2026-07-09): this workflow writes ONLY
+  # vivek_backtest_longonly.json. The canonical both-directions file
+  # (public/data/vivek_backtest.json — what the Insights page quotes) is
+  # owned by the WEEKLY lens_backtest.yml. Previously a manual dispatch here
+  # with default inputs silently overwrote the weekly file with a different
+  # methodology (10y both-directions vs weekly 5y).
   schedule:
     - cron: "0 8 1 * *"
   workflow_dispatch:
@@ -20,10 +27,6 @@ on:
       period:
         description: "History depth (e.g. 10y, max)"
         default: "10y"
-      long_only:
-        description: "Long-only (skip shorts) → writes vivek_backtest_longonly.json"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -50,12 +53,9 @@ jobs:
           set -e
           LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
           PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
-          LONLY="${{ github.event.inputs.long_only }}"
-          # Scheduled runs have no inputs → refresh the long-only evidence file
-          # (the bot is long-only; that's the number that matters).
-          if [ "${{ github.event_name }}" = "schedule" ]; then LONLY="true"; fi
-          OUT="public/data/vivek_backtest.json"; FLAG=""
-          if [ "$LONLY" = "true" ]; then OUT="public/data/vivek_backtest_longonly.json"; FLAG="--long-only"; fi
+          # ALWAYS long-only, ALWAYS the longonly file — the canonical
+          # both-directions vivek_backtest.json belongs to lens_backtest.yml.
+          OUT="public/data/vivek_backtest_longonly.json"; FLAG="--long-only"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 

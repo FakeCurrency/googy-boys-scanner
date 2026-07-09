@@ -1,0 +1,56 @@
+name: Tests
+
+# The gate that was missing: ~155 Python tests (risk rules, circuit breakers,
+# journal P&L, pre-trade gate) + 55 PhaseMap tests + 111 JS risk-engine tests
+# existed but NOTHING ran them — regressions only surfaced when they broke a
+# scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
+# runs the lot in ~2 minutes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scanner/**"
+      - "phasemap/**"
+      - "tests/**"
+      - "test/**"
+      - "public/js/**"
+      - "requirements.txt"
+      - ".github/workflows/test.yml"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: pytest (scanner risk/breaker/journal/pretrade + phasemap)
+        run: python -m pytest -q
+
+  javascript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax-check every shipped script
+        run: |
+          set -e
+          for f in public/js/*.js; do node --check "$f"; done
+      - name: Risk-engine tests (46)
+        run: node test/risk_manager.test.js
+      - name: Unit tests (65)
+        run: node test/unit.test.js

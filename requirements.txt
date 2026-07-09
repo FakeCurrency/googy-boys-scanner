@@ -1,6 +1,12 @@
-yfinance>=0.2.40
-pandas>=2.2
-numpy>=1.26
-requests>=2.31
-pybit>=5.8
+# Pinned exactly (2026-07-09): these five decide what the scanner sees and
+# trades — a surprise upstream release must not land straight into a
+# scheduled scan. Bump deliberately: update the pin, run `pytest`, push.
+yfinance==1.4.1
+pandas==3.0.3
+numpy==2.4.6
+requests==2.34.2
+pybit==5.16.0
+# Feeds narrative only (not in the trade path) — floor-pinned is acceptable.
 anthropic>=0.30
+# CI test gate (.github/workflows/test.yml)
+pytest==9.1.1
