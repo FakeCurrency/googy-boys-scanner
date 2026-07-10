@@ -304,7 +304,19 @@
 
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
-  const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "S" : "L"}</span>`;
+  // Full-word, dog-balls direction pill (owner 2026-07-10): a trade's
+  // AT-ENTRY direction must be unmissable, because the scan's read can flip
+  // after entry and the chart may show the opposite setup today.
+  const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "▼ SHORT" : "▲ LONG"}</span>`;
+  // Warn chip when the CURRENT scan reads the opposite way to an open trade.
+  const flipChip = (t) => {
+    if (t.status === "closed") return "";
+    const now = (scanMeta.get(symKey(t)) || {}).dir;
+    if (!now) return "";
+    const trade = String(t.direction || "long").toUpperCase() === "SHORT" ? "SHORT" : "LONG";
+    if (String(now).toUpperCase() === trade) return "";
+    return `<span class="jr-flip" title="The scanner's read on this chart flipped AFTER entry — the position was taken as ${trade}">⚠ CHART NOW READS ${esc(String(now).toUpperCase())}</span>`;
+  };
   // Grade + setup type: the bot logs these; manual trades now do too. For trades
   // taken before that, fall back to the live scan's grade/trigger for the symbol
   // so older rows aren't blank (scanMeta is filled from *_vivek.json at load).
@@ -334,7 +346,7 @@
   // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
     `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}" title="Open ${up(t.symbol)} chart">` +
-    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}</td>`;
+    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
     if (ms == null) return "—";
@@ -721,6 +733,7 @@
           <span class="jr-new-entry">@ ${px(t.entry)}</span>
           ${t.lens ? `<span class="jr-new-lens">${up(t.lens)}</span>` : ""}
           ${t.status === "closed" ? `<span class="jr-new-closed">closed</span>` : ""}
+          ${flipChip(t)}
           <span class="jr-new-ago">${ago(ms)}</span>
         </a>`).join("");
       host.innerHTML = `<div class="jr-new-hd">${label} <span class="jr-new-n">${recent.length}</span></div>` +
@@ -835,7 +848,7 @@
         for (const row of (j.results || [])) {
           const sym = String(row.symbol || "").toUpperCase();
           if (!sym) continue;
-          if (!scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null });
+          if (!scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null, dir: row.dir || null });
           if (row.price != null) scanPrice.set(mkt + ":" + sym, +row.price);
         }
         // Universe-wide last-close snapshot — covers held names that are no longer

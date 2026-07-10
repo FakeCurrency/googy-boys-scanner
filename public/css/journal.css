@@ -513,3 +513,21 @@
 .jr-new-ago { margin-left: auto; font: 600 11px/1 var(--sans); color: var(--muted-2); white-space: nowrap; }
 .jr-new-empty { font: 500 12.5px/1.5 var(--sans); color: var(--muted-2); padding: 4px 0 2px; }
 @media (max-width: 760px) { .jr-new-wrap { grid-template-columns: 1fr; } }
+
+/* ═══ Direction made DOG-BALLS obvious (owner 2026-07-10): the at-entry
+   direction is the fact that matters — the scan's read can flip after entry.
+   Full-word solid pills + a pulsing warn chip when the current scan reads
+   the opposite way to an open position. ═══ */
+.dir {
+  font: 800 10.5px/1 var(--sans); letter-spacing: 0.05em;
+  padding: 5px 10px; border-radius: 999px;
+}
+.dir-l { background: var(--green); color: #04140a; }
+.dir-s { background: var(--red);   color: #1a0606; }
+.jr-flip {
+  display: inline-flex; align-items: center; margin-left: 8px;
+  font: 800 9.5px/1 var(--sans); letter-spacing: 0.06em; white-space: nowrap;
+  color: #1a1205; background: var(--orange); border-radius: 999px; padding: 4px 9px;
+  animation: jrFlipPulse 1.6s ease-in-out infinite;
+}
+@keyframes jrFlipPulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }

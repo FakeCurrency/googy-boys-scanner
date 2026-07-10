@@ -2240,6 +2240,53 @@
     window.addEventListener("resize", restore);
   }
 
+  // 🤖 Claude's open positions get a DOG-BALLS banner pinned over the chart
+  // (owner 2026-07-10): the scanner's read can flip AFTER entry — a long
+  // reclaim at the 200-SMA can grade as a short reject hours later — so the
+  // chart must state loudly what direction the position was TAKEN as, and
+  // shout when the current read disagrees.
+  // Mounted from boot() into the STATIC .chart-main container, so it shows
+  // on every render path (saved chart, VIVEK live fallback, PhaseMap-only).
+  async function wireBotPosBanner() {
+    if (market === "scalp") return;
+    const host = document.querySelector(".chart-main");
+    if (!host) return;
+    try {
+      const [bookR, scanR] = await Promise.all([
+        fetch("data/vivek_bot_book.json", { cache: "no-cache" }),
+        fetch(`data/${market}_vivek.json`, { cache: "no-cache" }),
+      ]);
+      if (!bookR.ok) return;
+      const book = await bookR.json();
+      const want = decodeURIComponent(symbol || "").toUpperCase();
+      const pos = (book.open || []).find((p) =>
+        String(p.symbol).toUpperCase() === want &&
+        (p.market || market) === market && p.status !== "closed");
+      if (!pos) return;
+      const dirUp = String(pos.direction || "long").toUpperCase();
+      let flip = "";
+      if (scanR.ok) {
+        const j = await scanR.json();
+        const row = (j.results || []).find((r) => String(r.symbol).toUpperCase() === want);
+        const nowDir = row ? String(row.dir || "").toUpperCase() : null;
+        if (nowDir && nowDir !== dirUp) {
+          flip = `<div class="bpb-flip">⚠ THE CHART NOW READS ${esc(nowDir)} — this setup flipped AFTER entry. ` +
+            `It was a ${esc(pos.grade || "")} ${esc(dirUp)} ${esc(pos.entry_type || "")} when taken.</div>`;
+        }
+      }
+      const isLong = dirUp !== "SHORT";
+      const fp = (x) => x == null || !isFinite(x) ? "—"
+        : x < 0.1 ? (+x).toFixed(4) : x < 2 ? (+x).toFixed(3) : (+x).toFixed(2);
+      const div = document.createElement("div");
+      div.className = "bot-pos-banner " + (isLong ? "long" : "short");
+      div.innerHTML =
+        `<div class="bpb-head">🤖 CLAUDE IS <b class="bpb-dir">${isLong ? "▲ LONG" : "▼ SHORT"}</b> ${esc(want)}` +
+        `<span class="bpb-sub">taken ${esc(pos.entry_date || "")} @ ${fp(pos.entry)} · SL ${fp(pos.stop)} · TP1 ${fp(pos.tp1)}</span></div>` +
+        flip;
+      host.insertBefore(div, host.firstChild);
+    } catch (_) { /* banner is best-effort */ }
+  }
+
   // Floating LIVE box — shows the full state of the open position (entry, time,
   // current, P&L, R, move %, stop/target distance, time-in-trade) and updates on
   // every tick. Visible only while a matching position is open.
@@ -2592,6 +2639,7 @@
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();
+    wireBotPosBanner();
     // VIVEK has no per-ticker static chart files — render the 200 SMA reaction
     // live (with the full 5.0 level ladder). Three-tier fallback so a ticker
     // link NEVER dead-ends (owner rule 2026-07-02 after a journal name whose
