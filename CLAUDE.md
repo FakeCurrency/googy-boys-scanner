@@ -1,18 +1,39 @@
 # Vivek 5.0 — CLAUDE.md
 
 This file is read automatically at the start of every Claude Code session.
-Read it fully before touching any code.
+Read it fully before touching any code. (Rewritten 2026-07-10 — the previous
+version predated the three-lens pivot and half its claims were stale.)
 
 ---
 
 ## What this project is
 
-A multi-market trading signal scanner + paper-trade journal + (in-progress) live execution bot.
-Owner: Vivek (Australia). Brand name everywhere: **Vivek 5.0** (renamed from "Vivek's Beta Scanner") — never "Googy Boys Scanner".
+A **three-lens trading scanner** + paper-trade journal + execution bot
+(paper today, Bybit-gated live path built). Owner: Vivek (Melbourne,
+Australia). Brand name everywhere: **Vivek 5.0** — never "Googy Boys
+Scanner", never "Vivek's Beta Scanner" as the primary name ("BETA SCANNER"
+as a subtitle under the wordmark is fine).
 
-**The goal:** autonomous scalp trading bot that detects setups, places bracket orders at a broker,
-manages exits, and journals everything — starting with crypto (Bybit), later expanding to ASX and
-commodity futures via IBKR.
+**The three lenses** (see ROADMAP.md for the honest project state):
+
+1. **VIVEK** (`scanner/vivek.py` + `scan.py`) — the core lens. Price
+   *reacting* at its 200-SMA on Weekly / 3-Day / Daily(H4-proxy) levels.
+   Grades A+/A/B+/WATCH; per-timeframe plans (entry/SL/TP1-3); three entry
+   types (reclaim / retest / break); armed vs watching.
+2. **PhaseMap** (`phasemap/` package) — the trap lens. Liquidity sweep →
+   displacement, zone-based (zones are ALWAYS bands, never single prices).
+   **The owner's master spec doc is the single source of truth — NEVER
+   change detection maths or zone definitions without asking him.** Bump
+   `RULESET_VERSION` in `phasemap/config.py` on ANY parameter change.
+   Deterministic output; no LLM anywhere in the scan path.
+3. **Specs** (`scanner/spec.py` via `spec_run.py`) — the discovery lens.
+   Sub-$0.50 names breaking out of a base on a ≥3× volume spike. Its own
+   backtest says it's a shortlist generator, NOT an entry system.
+
+**Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
+agreements get banners everywhere, Discord pings (`scanner/confluence_alert.py`,
+triples mention @here; state-deduped), a permanent ALERTS page log, and the
+★ MY NAMES page.
 
 ---
 
@@ -20,254 +41,132 @@ commodity futures via IBKR.
 
 | Layer | What |
 |-------|------|
-| Scanner engine | Python (`scanner/`) — runs in GitHub Actions |
-| Frontend | Vanilla JS + CSS — static site on **Cloudflare Pages** (`public/`) |
-| Backend API | Cloudflare Pages Functions (`functions/api/*.js`) — CF Workers runtime |
+| Scanner engines | Python (`scanner/`, `phasemap/`) — run in GitHub Actions |
+| Frontend | Vanilla JS + CSS — static site on **Cloudflare Pages** (`public/`), iOS-style dark theme, PWA with service worker |
+| Backend API | Cloudflare Pages Functions (`functions/api/*.js`) — CF **Workers runtime, NOT Node** (no `require`, no fs; env via `context.env`) |
 | Scheduler | GitHub Actions cron (`.github/workflows/`) |
-| Data source | `yfinance` — free, delayed ~15 min (adequate for 1h/1d bars) |
-| Broker (planned) | **Bybit** for crypto futures; **IBKR** for ASX + commodity futures |
-| Live crypto prices | Bybit WS / Binance WS — free, real-time (to be wired) |
+| Data source | `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history. Production-grade provider (EODHD/Norgate) is an open owner decision |
+| Broker | **Bybit** USDT perps: client/bracket/reconcile/kill-switch BUILT + tested, paper/testnet only, live double-gated. IBKR for ASX later |
 
 ---
 
-## Repository layout
+## Repository layout (current)
 
 ```
-scanner/             Python signal engines + journal managers
-  config.py          ALL tunable constants live here — never hardcode magic numbers
-  signals.py         Daily Fib-EMA pullback scanner (long)
-  reversal.py        Base-breakout / trend-reversal scanner
-  spec.py            Speculative volume-spike breakouts
-  short.py           Bearish pullback scanner (mirror of signals.py)
-  scalp.py           1h TTM-squeeze intraday scanner
-  indicators.py      EMA, SMA, RSI, ADX, SuperTrend, pivot highs/lows
-  grading.py         grade_from_points(), score_chips() — shared scoring
-  journal.py         Swing paper-trade journal (long + short)
-  scalp_journal.py   Scalp paper-trade journal (1h bars, pessimistic fill model)
-  data.py            yfinance batch downloader (chunked, with retry)
-  alerts.py          Email digest builder
-  run.py             CLI entry point: python -m scanner.run [market] [scan_type]
-  broker/            Live execution module (currently Alpaca wired; switch to Bybit)
-    alpaca_client.py  Alpaca paper/live bracket orders — REPLACE with bybit_client.py
-    bracket_order.py  OCO bracket logic — reuse for Bybit
-    reconcile.py      Syncs broker fills back into journal
-    kill_switch.py    Flattens all positions if daily loss limit breached
-
-public/              Static frontend (Cloudflare Pages serves this)
-  index.html         Main dashboard
-  journal.html       Paper-trade journal page
-  js/journal.js      Journal JS — ALWAYS bump ?v= query string on edit (currently v=17)
-  js/app.js          Dashboard JS
-  css/styles.css     Global styles
-  css/journal.css    Journal-specific styles (has both .jr-* and .mj-* classes — keep both)
-  data/              Scan output JSON files (written by GitHub Actions, read by frontend)
-
-functions/api/       Cloudflare Pages Functions (CF Workers runtime — NOT Node.js)
-  scan.js            Triggers GitHub Actions scan dispatch
-  price.js           Live price proxy → Yahoo Finance (avoids CORS)
-  close.js           Triggers close_position.yml workflow
-  quote.js           Single-ticker quote endpoint
-  tick.js            Tick/stream endpoint
-
-.github/workflows/
-  scan.yml           Main scan scheduler (every 30 min, trading hours)
-  crypto_scalp.yml   1h crypto scalp scan
-  stop_watcher.yml   Cloud-side stop/target checker (runs between scans)
-  close_position.yml Manual position close (dispatched by /api/close)
-  backtest.yml       Weekly scalp backtest
-  kill_switch.yml    Emergency flatten — dispatched by broker/kill_switch.py
-
-journal/             Source-of-truth journal JSON (committed by Actions)
-  journal.json       Swing longs + shorts
-  scalp_journal.json Scalp positions
-
-data/                Universe files, market caps cache
-data_universe/       Ticker lists per market
+scanner/               VIVEK + Specs engines, bot, alerts
+  config.py            ALL tunable constants — never hardcode magic numbers
+  vivek.py             VIVEK 5.0 engine (levels W/3D/D, plans, grading, narrative)
+  scan.py              scan_vivek_market → public/data/<m>_vivek.json
+  run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
+  spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
+  confluence_alert.py  multi-lens Discord pings + ALERTS page history log
+  vivek_backtest.py    walk-forward replay (1D/3D/1W, level_tf cohorts)
+  vivek_journal.py     RETIRED as a journal (2026-07-09) — module kept: the
+                       backtester + bot runner import its trade primitives
+  universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
+  broker/              vivek_bot.py (decision engine: A+ only, 10/market,
+                       one/symbol, short-slot reserve), vivek_run.py (paper book),
+                       bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
+                       circuit_breaker, pre_trade_check, ...
+phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
+public/                the site (see "Frontend rules")
+functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
+                       journal.js (KV sync store), price/quote/tick proxies
+tests/ + phasemap/tests/ + test/*.test.js   ~290 tests — run on EVERY push (test.yml)
+journal/               bot book + state files committed by Actions
+data_universe/         bundled ticker CSVs (fallbacks)
 ```
 
----
+## Workflows (current)
 
-## Scanner engines — how each one works
-
-### Pullback (signals.py)
-Daily bars. Finds stocks in an uptrend (above EMA 144) that have pulled back to a Fibonacci EMA
-(21/34/55). Entry at EMA, stop below swing low, target at nearest resistance.
-Score out of 15: alignment(3) + pullback(3) + confluence(3) + compression(2) + weekly(1) + volume(1) + adx(1) + rsi_pullback(1).
-
-### Reversal (reversal.py)
-Daily bars. Finds beaten-down stocks turning up: 9-SMA crossing over 26-SMA, price above both,
-volume expansion. Score out of 14: reclaim(4) + base(3) + volume(3) + breakout(2) + rsi(2).
-
-### Spec (spec.py)
-Daily bars. Volume-spike breakouts from a base — cheap/beaten-down names with a 3× volume spike.
-Mandatory gates: spike ≥ 3×, off high ≥ 40%, price > base high, 9-SMA rising. Score out of 11.
-
-### Short (short.py)
-Daily bars. Mirror of pullback but bearish. Hard gates: sustained downtrend (≥75% bars below EMA144),
-bear EMA stack, no ascending pivot lows, weak bounce volume. Score out of 13.
-
-### Scalp (scalp.py)
-**1h bars.** TTM Squeeze momentum: Bollinger Bands inside Keltner Channels = squeeze, then momentum
-histogram fires long or short. Also checks EMA trend, RSI, volume. Score out of 8.
-Runs across crypto, select NASDAQ, and select ASX instruments on 30-min cron.
+| Workflow | Schedule | Does |
+|---|---|---|
+| test.yml | every push/PR | pytest + JS tests + syntax gate |
+| scan.yml | 30-min, market hours (weekend = crypto-only) | VIVEK scans + bot stocks book + confluence alert |
+| crypto_bot.yml | hourly 24/7 | crypto scans + crypto bot book |
+| phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate (validates SLIM latest.json + narrations.json sidecar) |
+| lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
+| vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
+| stop_watcher / close_position / kill_switch / discord_digest / feeds | various | legacy-journal stops, manual close, flatten, digests |
 
 ---
 
-## Grading system
+## Journals & track record — IMPORTANT
 
-```
-A+  → top tier, immediately tradeable
-A   → tradeable
-B   → watch list
-C   → weak / informational
-```
-
-Grades A+/A can be demoted to B if R:R < 1.5 (`DEMOTE_LOW_RR = True` in config.py).
-
----
-
-## Journal model
-
-**Swing journal** (`journal.py` + `journal/journal.json`):
-- Max 10 concurrent longs, 10 shorts
-- $1,000 AUD per trade, $5 brokerage each way
-- Stop/target checked on every scan run via `stop_watcher.yml`
-- Atomic writes: temp file + `os.replace()` — never corrupt on crash
-
-**Scalp journal** (`scalp_journal.py` + `journal/scalp_journal.json`):
-- Pessimistic fill model: next-bar-open + 0.03% slippage
-- Stop-gap detection: if the stop is hit on the very first bar the position never really opened
-  → those trades are flagged `skip_daily_count: true`
-- Daily trade cap (5) and daily loss limit ($500) reset at 08:00 UTC
-- Correlation groups: max 2 open positions per group (metals, energy, us_tech, etc.)
-
-**Manual journals** (My Stocks / My Crypto):
-- Stored in browser `localStorage`, optionally synced via Cloudflare KV (`gbs-sync.js`)
-- Separate from the paper-trade journals above
-
----
-
-## Key config constants (scanner/config.py)
-
-All thresholds live here. Never hardcode numbers in scanner logic — always add to config.py first.
-
-Important ones:
-```python
-EMA_PERIODS = [8, 13, 21, 34, 55, 89, 144]
-PULLBACK_EMAS = [21, 34, 55]
-PULLBACK_TOL = 0.025        # within 2.5% of EMA counts as pullback
-COMPRESSION_TOL = 0.06
-CONFLUENCE_BAND = 0.02
-VOLUME_MULT = 1.4
-DEMOTE_LOW_RR = True
-MIN_TRADEABLE_RR = 1.5
-SPEC_VOL_SPIKE = 3.0        # mandatory 3× volume spike for specs
-SHORT_DOWNTREND_BARS = 15
-SCALP_LEVERAGE = 5
-SCALP_MAX_TRADES_PER_DAY = 5
-SCALP_MAX_DAILY_LOSS = 500
-SCALP_DAY_ANCHOR_UTC = 8    # daily reset hour
-```
-
----
-
-## Deployment
-
-**Cloudflare Pages** serves `public/` automatically on every push to `main`.
-There is no build step — it's static HTML/CSS/JS.
-
-**Always push to `main`** for changes to go live. Feature branches don't deploy.
-
-**GitHub Actions** runs the scanner on schedule and commits output JSON back to `main`.
-Secrets needed in GitHub repo settings:
-- `GH_DISPATCH_TOKEN` — fine-grained PAT scoped to this repo only, "Actions: Read and write" (used by CF Functions to trigger scans; avoid classic account-wide tokens)
-- `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` — Alpaca paper broker (currently wired but REPLACING with Bybit)
-- `BYBIT_API_KEY` / `BYBIT_API_SECRET` — **next to add** (Bybit futures execution)
-- `IBKR_*` — future (ASX + commodity futures via IB Gateway)
-
----
-
-## Broker integration — current state + next steps
-
-### What's built (scanner/broker/)
-- `bracket_order.py` — OCO bracket order model (entry + stop + target as one linked order)
-- `alpaca_client.py` — Alpaca paper API client (submits brackets, handles fills)
-- `reconcile.py` — syncs broker fill prices back into the JSON journal
-- `kill_switch.py` — emergency flatten if daily loss limit is breached between scans
-
-### What needs to happen next: **swap Alpaca → Bybit**
-1. Create `scanner/broker/bybit_client.py` using the `pybit` library (`pip install pybit`)
-2. Bybit Unified Trading Account → Futures API → USDT perpetuals
-3. Replicate the bracket order pattern: entry order + linked SL + TP
-4. Wire `BYBIT_API_KEY` + `BYBIT_API_SECRET` as GitHub Secrets
-5. Set `BYBIT_TESTNET=true` first (Bybit has a full testnet at `testnet.bybit.com`)
-6. Run parallel with paper journal for ≥2 weeks before enabling real capital
-
-### Future: IBKR for ASX + commodity futures
-- Use `ib_insync` Python library (wraps the TWS API)
-- Requires IB Gateway running on a VPS (always-on, connects to IBKR servers)
-- Gives real-time data + order execution for: ASX stocks, Gold/Oil/Gas futures (CME/CBOT), NASDAQ stocks
-- See ROADMAP.md item #4
-
----
-
-## Cloudflare Functions — important constraints
-
-Functions live in `functions/api/` and run in the **CF Workers runtime** (not Node.js):
-- No `require()` — use `import` or inline everything
-- No file system access
-- `fetch()` is available globally (no need to import)
-- Environment variables accessed via `context.env.VARIABLE_NAME`
-- `GH_DISPATCH_TOKEN` must be set in Cloudflare Pages dashboard → Settings → Environment Variables
+- **The bot book (`journal/vivek_bot_book.json` → journal page "Claude" side)
+  is the ONE AND ONLY track record.** A+ only, max 10/market, one per symbol,
+  daily loss guards.
+- The old "track-record journal" (every armed A+/A, every timeframe, no cap —
+  it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
+  dashboard strip and TRACK page. Do not resurrect it as a headline number.
+- Manual journals ("Me" side) live in browser localStorage, synced via
+  Cloudflare KV (`gbs-sync.js`, `/api/journal?code=...`). The unified
+  watchlist (stars from all lenses) lives INSIDE that store
+  (`watchlists`, keys `<lens>:<market>:<TICKER>`, tombstoned un-stars).
 
 ---
 
 ## Development rules
 
-1. **Brand name:** Primary name is always "Vivek 5.0". A "BETA SCANNER" subtitle/descriptor under the wordmark is allowed (owner's call). Never "Vivek's Beta Scanner" as the primary name, and never "Googy Boys Scanner"
-2. **Config first:** Any new threshold/constant goes in `config.py` before being used in logic
-3. **Version bump:** Every edit to `public/js/journal.js` → bump `?v=` in `journal.html` (currently v=17)
-4. **Atomic writes:** Journal saves must use `_atomic_write()` (temp + os.replace) — never write directly
-5. **Push to main:** All changes go to `main` for Cloudflare Pages to pick up
-6. **No magic numbers** in scanner logic — they belong in config.py
-7. **Feature branch:** `claude/how-you-go-m2wk8c` was the feature branch; it's now merged. New work goes on `main` or a new branch merged back to `main`
-8. **CF Functions:** Remember Workers runtime constraints (no Node.js builtins)
+1. **Git first, always:** other sessions + CI push constantly. Before ANY
+   commit: `git stash -q -u; git pull -q --rebase origin main; git stash pop -q`.
+   `journal/alert_state.json` gets polluted by local test runs —
+   `git checkout -- journal/alert_state.json`, never commit it.
+2. **Version bump:** every edit to ANY `public/js/*.js` or `public/css/*.css`
+   bumps its `?v=` in every referencing HTML page. Don't record the numbers
+   in docs — read them from the HTML.
+3. **Config first:** any new threshold/constant goes in `scanner/config.py`
+   (or `phasemap/config.py`) before use. Bot rule constants are published to
+   `public/data/bot_rules.json` each scan — the dashboard reads them; never
+   hardcode the numbers twice (bot.js warns on drift).
+4. **PhaseMap spec is law** (see above). Schema note: published
+   `latest.json` is SLIM (narrations in `narrations.json` sidecar); the
+   dated snapshot keeps the full spec schema.
+5. **Tests gate everything:** `python -m pytest -q` (+ `node test/*.test.js`)
+   must be green; CI runs them on every push.
+6. **Pinned deps:** `requirements.txt` pins the trade-path packages exactly.
+   Bump deliberately (edit pin → pytest → push), never loosen to `>=`.
+7. **Atomic writes** for any journal/state JSON (temp + `os.replace`).
+8. **Push to `main`** — Cloudflare Pages deploys it; feature branches don't.
+9. **ASCII-only prints** in scanner code — Windows consoles are cp1252 and
+   choke on arrows/em-dashes.
+10. **CF Functions** are Workers runtime: no Node builtins; KV binding
+    `JOURNAL_KV` backs sync + the scan/close rate limits.
+
+## Frontend rules
+
+- iOS-style dark theme: tokens in `styles.css :root` (system-blue/green/red,
+  radius 18/14/10, soft shadows, frosted top bar). Old terminal values are
+  documented in the :root comment for revert.
+- One timestamp convention: **Melbourne on screen**, market-local/UTC in
+  tooltips (`PM.fmtMelb`).
+- Preview: launch config "fib-scanner" (port 8765). `preview_screenshot`
+  TIMES OUT on canvas-heavy pages (chart) — verify via `preview_eval` DOM
+  checks instead.
+- PWA: `sw.js` (network-first for `data/` + HTML, cache-first for `?v=`
+  assets; never caches `/api/`). Bump its `CACHE` name on breaking changes.
 
 ---
 
-## Running the scanner locally
+## Secrets
+
+Set: `DISCORD_WEBHOOK_URL` (private #alerts, triples-only via
+`DISCORD_CONF_MIN_LENSES`), `BYBIT_*` (testnet), `ALPACA_*` (legacy),
+`TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
+**Pending owner:** `GBS_SYNC_CODE` (activates watchlist-aware pings),
+data-provider key, Cloudflare Access.
+
+---
+
+## Running locally
 
 ```bash
-# Install deps
 pip install -r requirements.txt
-
-# Run a scan
-python -m scanner.run asx pullback
-python -m scanner.run nasdaq reversal
-python -m scanner.run crypto scalp
-
-# Serve the frontend locally
-python serve.py   # or: python -m http.server 8000 --directory public
-
-# Backtest
-python -m scanner.scalp_backtest
+python -m pytest -q                      # full gate (~290 tests)
+python -m scanner.run --market asx       # VIVEK scan
+python -m phasemap.run --market asx      # PhaseMap scan
+python -m scanner.spec_run --market asx  # Specs scan
+python -m scanner.vivek_backtest --market asx --limit 10 --period 3y
+python serve.py                          # local frontend
 ```
-
----
-
-## What's working ✅ vs what's next 🔜
-
-| Feature | Status |
-|---------|--------|
-| Pullback / Reversal / Spec / Short daily scanners | ✅ live |
-| Scalp 1h TTM-squeeze scanner | ✅ live |
-| Paper-trade journal (swing + scalp) | ✅ live |
-| Cloud stop/target watcher | ✅ live |
-| Manual journal (My Stocks / My Crypto) | ✅ live |
-| Close-position modal with live price | ✅ live |
-| Scalp backtest (out-of-sample) | ✅ live |
-| Email alerts | ✅ live |
-| **Bybit live execution (crypto futures)** | 🔜 next |
-| **Real-time crypto prices via Bybit/Binance WS** | 🔜 next |
-| **IBKR integration (ASX + commodity futures)** | 🔜 future |
-| Site privacy (Cloudflare Access) | 🔜 future |
+Local venv: `.venv/Scripts/python.exe` (3.14; CI is 3.12).
