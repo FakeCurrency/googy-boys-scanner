@@ -12,7 +12,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="css/styles.css?v=62" />
-  <link rel="stylesheet" href="css/phasemap.css?v=12" />
+  <link rel="stylesheet" href="css/phasemap.css?v=13" />
   <script src="js/sw-register.js?v=1" defer></script>
 </head>
 <body>
@@ -34,10 +34,18 @@
       <h2 class="pm-title">ALERT HISTORY <span class="pm-title-sub">every multi-lens alignment the system called, newest first</span></h2>
       <p class="pm-sub" id="al-sub">Loading…</p>
     </div>
+    <div class="pm-filters">
+      <div class="pm-filter-group" id="al-market">
+        <button class="pm-chip is-active" data-market="all">ALL</button>
+        <button class="pm-chip" data-market="asx">ASX</button>
+        <button class="pm-chip" data-market="nasdaq">NASDAQ</button>
+        <button class="pm-chip" data-market="crypto">CRYPTO</button>
+      </div>
+    </div>
     <section id="al-list"></section>
     <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). Discord only carries the triples; this page keeps everything. Analysis only — not financial advice.</p>
   </main>
 
-  <script src="js/alerts.js?v=2"></script>
+  <script src="js/alerts.js?v=3"></script>
 </body>
 </html>

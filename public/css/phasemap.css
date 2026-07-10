@@ -339,3 +339,17 @@
 .pm-lg-section h3 { font-family: var(--sans); font-weight: 800; letter-spacing: 0.02em; }
 .sp-name, .al-lenses { font-family: var(--sans); }
 .pm-more-btn, .mn-chart-link { font-family: var(--sans); font-weight: 700; border-radius: 999px; }
+
+/* ALERTS: collapsible day groups (2026-07-10) */
+.al-day-group { margin: 12px 0; }
+.al-day-summary {
+  display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none;
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+  padding: 11px 14px; user-select: none;
+}
+.al-day-summary::-webkit-details-marker { display: none; }
+.al-day-date { font: 800 14px/1 var(--sans); letter-spacing: -0.01em; color: var(--text); }
+.al-day-count { font: 600 12px/1 var(--sans); color: var(--muted); }
+.al-day-chev { margin-left: auto; color: var(--muted-2); transition: transform .15s; }
+.al-day-group[open] .al-day-chev { transform: rotate(180deg); }
+.al-day-group .al-day { margin-top: 8px; }
