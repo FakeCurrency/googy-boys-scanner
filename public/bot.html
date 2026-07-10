@@ -472,7 +472,7 @@
 
   <main class="bot-wrap">
     <div class="bot-roadmap-notice">
-      ⚡ <strong>Trading system configured</strong> — <strong>Weekly+3D bias · H4 entry · 0.25% risk per trade · 2.5× leverage</strong> · scale 25% at TP1 → move SL to BE → risk-free runner to final target. The <strong>0.25% sizing rule</strong> and <strong>3-loss hard stop</strong> are enforced live by <code>risk_manager.js</code>. Use <strong>Sim Win / Sim Loss / Attempt Entry</strong> in Risk Status to test the engine.
+      ⚡ <strong>Trading system configured</strong> — <strong>Weekly+3D bias · H4 entry · sizing/caps published live from scanner/config.py</strong> · scale 25% at TP1 → move SL to BE → risk-free runner to final target. The <strong>sizing rule</strong> and <strong>3-loss hard stop</strong> are enforced live by <code>risk_manager.js</code>. Use <strong>Sim Win / Sim Loss / Attempt Entry</strong> in Risk Status to test the engine.
     </div>
 
     <div class="bot-grid">
@@ -737,7 +737,7 @@
             <div class="bot-panel-body" style="padding-top:8px">
               <div class="roadmap-item">
                 <span class="roadmap-num done">✓</span>
-                <div><div class="roadmap-text-h">Risk rules enforced in logic</div><div class="roadmap-text-s">0.25% sizing · 3-loss hard stop · TP1→breakeven · Weekly+3D bias · journal on close — all live in risk_manager.js · also enforced server-side in scanner/broker</div></div>
+                <div><div class="roadmap-text-h">Risk rules enforced in logic</div><div class="roadmap-text-s">sizing + caps from scanner/config.py · 3-loss hard stop · TP1→breakeven · Weekly+3D bias · journal on close — all live in risk_manager.js · also enforced server-side in scanner/broker</div></div>
               </div>
               <div class="roadmap-item">
                 <span class="roadmap-num todo">2</span>
@@ -834,6 +834,6 @@
   </footer>
 
   <script src="js/risk_manager.js?v=6"></script>
-  <script src="js/bot.js?v=9"></script>
+  <script src="js/bot.js?v=10"></script>
 </body>
 </html>

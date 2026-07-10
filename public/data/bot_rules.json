@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-07-10T00:20:17Z",
+  "source": "scanner/config.py \u2014 single source of truth for bot rules",
+  "min_grade": "A+",
+  "min_rr": 1.5,
+  "skip_entry_types": [
+    "retest"
+  ],
+  "prefer_tf": "1W",
+  "allow_shorts": false,
+  "max_positions": 10,
+  "risk_pct": 0.35,
+  "leverage": {
+    "asx": 5,
+    "nasdaq": 5,
+    "crypto": 3
+  },
+  "max_daily_loss_pct": 3.0,
+  "exclude_funds": true
+}

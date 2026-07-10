@@ -534,6 +534,25 @@
 
   async function init() {
     RULES = loadRules();
+    // scanner/config.py is the single source of truth for the executing bot's
+    // numbers — every scan publishes them to data/bot_rules.json. A fresh
+    // browser adopts them; if you've saved custom rules here, yours win but
+    // any drift from the real bot is called out in the console.
+    try {
+      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
+      if (r.ok) {
+        const srv = await r.json();
+        const map = { risk_pct: srv.risk_pct, max_positions: srv.max_positions, min_rr: srv.min_rr };
+        if (!localStorage.getItem(RULES_KEY)) {
+          for (const [k, v] of Object.entries(map)) if (v != null) RULES[k] = v;
+        } else {
+          const drift = Object.entries(map).filter(([k, v]) => v != null && RULES[k] !== v);
+          if (drift.length) console.warn(
+            "[bot] rules drift vs the EXECUTING bot (scanner/config.py):",
+            Object.fromEntries(drift.map(([k]) => [k, { yours: RULES[k], bot: map[k] }])));
+        }
+      }
+    } catch (_) { /* offline — JS defaults stand */ }
     populateRulesForm(RULES);
 
     // Fetch the status feed ONCE up front so the engine is constructed with the

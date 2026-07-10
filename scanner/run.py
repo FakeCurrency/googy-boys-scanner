@@ -8,6 +8,7 @@ Examples:
 """
 
 import argparse
+import datetime as dt
 import json
 import pathlib
 
@@ -138,6 +139,27 @@ def main() -> None:
     (pathlib.Path(args.out) / "sectors.json").write_text(json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")
+
+    # Publish the executing bot's ACTUAL rules (scanner/config.py) so the
+    # dashboard risk engine reads the same numbers instead of drifting on its
+    # own JS defaults (2026-07-09 — the two engines had already diverged:
+    # Python risked 0.35%/10 positions while the JS defaults said 0.25%/5).
+    rules = {
+        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": "scanner/config.py — single source of truth for bot rules",
+        "min_grade": config.VIVEK_BOT_MIN_GRADE,
+        "min_rr": config.VIVEK_BOT_MIN_RR,
+        "skip_entry_types": list(config.VIVEK_BOT_SKIP_ENTRY_TYPES),
+        "prefer_tf": config.VIVEK_BOT_PREFER_TF,
+        "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
+        "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
+        "risk_pct": config.VIVEK_BOT_RISK_PCT,
+        "leverage": dict(config.VIVEK_BOT_LEVERAGE),
+        "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,
+        "exclude_funds": config.VIVEK_BOT_EXCLUDE_FUNDS,
+    }
+    (pathlib.Path(args.out) / "bot_rules.json").write_text(
+        json.dumps(rules, indent=2) + "\n", encoding="utf-8")
 
     if args.journal:
         from . import journal
