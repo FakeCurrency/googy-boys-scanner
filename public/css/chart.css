@@ -293,3 +293,44 @@
 .chart-error .tv-link { color: var(--accent-blue); text-decoration: none; font-size: 14px; }
 .chart-error .tv-link:hover { text-decoration: underline; }
 
+
+/* ═══ iOS REVAMP pass (owner 2026-07-10) — brings the chart page in line
+   with the styles.css revamp: frosted sticky bar, pill buttons, capsule
+   badges, segmented timeframe control, SF-style bold labels. ═══ */
+.chart-top {
+  background: rgba(18,22,30,0.78);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.back-link {
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.07); height: 32px; padding: 0 14px;
+  font: 700 12px/1 var(--sans); letter-spacing: 0.02em; text-transform: none;
+  color: var(--text-2);
+}
+.ct-nav-btn {
+  border-radius: 999px; border: 0; background: rgba(255,255,255,0.08);
+  width: 32px; height: 32px; font: 700 16px/1 var(--sans);
+}
+.ct-nav-btn:hover:not(:disabled) { background: var(--green-soft); }
+.ct-nav-pos { font: 700 12px/1 var(--sans); }
+.ct-sym { font: 800 19px/1 var(--sans); letter-spacing: -0.02em; }
+.ct-price { font: 700 17px/1 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.ct-grade { font: 800 14px/1 var(--sans); }
+.ct-hiconv, .ct-fundwarn, .ct-live, .ct-delayed, .ct-fallback-note {
+  border-radius: 999px;
+}
+.tf-toggle { background: rgba(255,255,255,0.07); border-radius: 12px; padding: 3px; }
+.tf-btn { font-weight: 700; border-radius: 9px; }
+.tf-btn.is-active {
+  background: var(--panel-3); color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
+}
+.draw-tools { background: rgba(18,22,30,0.82); border-radius: 11px; border-color: rgba(255,255,255,0.09); }
+.draw-btn { border-radius: 8px; }
+.tv-btn, .sim-btn { border-radius: 999px; font-weight: 700; }
+.sim-buy  { box-shadow: 0 2px 10px rgba(48,209,88,0.30); }
+.sim-sell { box-shadow: 0 2px 10px rgba(255,69,58,0.30); }
+.tfs-strip { border-radius: var(--radius-md); }
+.cf-metric .cfm-label { font-weight: 700; }
