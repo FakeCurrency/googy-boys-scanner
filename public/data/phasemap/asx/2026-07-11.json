@@ -5178,14 +5178,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.4094,
+          "low": 0.41,
           "high": 0.445,
           "status": "TESTED",
           "confluence": 4,
           "sources": [
-            "equal_highs",
             "fib_ext_10",
             "box_high",
+            "equal_highs",
             "fib_ext_1618"
           ],
           "created_date": "2026-07-06"
@@ -5204,8 +5204,8 @@
       "route_to": null,
       "name": "360 Capital Reit",
       "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "narration": "Displacement confirmed on 2026-07-06. First draw is the 0.409–0.445 zone (a shelf of equal highs + the 1.0–1.272 extension of the leg + the top of the range + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while pullbacks hold above the 0.398–0.403 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 0.380. Historically this pattern reached its first target zone within 20 sessions 29% of the time on the ASX. Analysis only — not financial advice.",
-      "next": "pullbacks staying above 0.398–0.403; next objective the 0.409–0.445 zone (T1)"
+      "narration": "Displacement confirmed on 2026-07-06. First draw is the 0.410–0.445 zone (the 1.0–1.272 extension of the leg + the top of the range + a shelf of equal highs + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while pullbacks hold above the 0.398–0.403 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 0.380. Historically this pattern reached its first target zone within 20 sessions 29% of the time on the ASX. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 0.398–0.403; next objective the 0.410–0.445 zone (T1)"
     },
     {
       "ticker": "TRJ",
@@ -11952,6 +11952,54 @@
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
+      "ticker": "ARL",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.375,
+          "high": 0.385,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-09"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.3584,
+          "high": 0.375,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-09"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.2833,
+        "avg_turnover_20d": 75318,
+        "close": 0.43,
+        "sweep_date": "2026-07-09",
+        "sweep_depth_pct": 0.026,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ardea Resources Limited",
+      "sector": "Materials",
+      "narration": "ARL ran the 0.375–0.385 lows on 2026-07-09 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+    },
+    {
       "ticker": "ARU",
       "direction": "bullish",
       "state": "SWEPT",
@@ -11984,7 +12032,7 @@
       "metrics": {
         "retrace_pct": 0.25,
         "dist_to_yearly_open_pct": -0.1296,
-        "avg_turnover_20d": 7368893,
+        "avg_turnover_20d": 7390329,
         "close": 0.235,
         "sweep_date": "2026-07-09",
         "sweep_depth_pct": 0.0222,
@@ -12030,7 +12078,7 @@
       "metrics": {
         "retrace_pct": 0.8727,
         "dist_to_yearly_open_pct": -0.4464,
-        "avg_turnover_20d": 8513967,
+        "avg_turnover_20d": 8521408,
         "close": 3.72,
         "sweep_date": "2026-07-10",
         "sweep_depth_pct": 0.0041,
@@ -12927,7 +12975,7 @@
       "metrics": {
         "retrace_pct": 0.6148,
         "dist_to_yearly_open_pct": 0.4044,
-        "avg_turnover_20d": 42433683,
+        "avg_turnover_20d": 42435276,
         "close": 32.0,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0266,
@@ -13161,7 +13209,7 @@
       "metrics": {
         "retrace_pct": 1.1581,
         "dist_to_yearly_open_pct": 0.0655,
-        "avg_turnover_20d": 341343826,
+        "avg_turnover_20d": 341345253,
         "close": 168.86,
         "sweep_date": "2026-07-09",
         "sweep_depth_pct": 0.0013,
@@ -13257,7 +13305,7 @@
       "metrics": {
         "retrace_pct": 0.875,
         "dist_to_yearly_open_pct": 0.1546,
-        "avg_turnover_20d": 16345723,
+        "avg_turnover_20d": 16373674,
         "close": 10.58,
         "sweep_date": "2026-07-10",
         "sweep_depth_pct": 0.0009,
@@ -13631,7 +13679,7 @@
       "metrics": {
         "retrace_pct": 0.4412,
         "dist_to_yearly_open_pct": -0.1921,
-        "avg_turnover_20d": 979092,
+        "avg_turnover_20d": 981130,
         "close": 6.85,
         "sweep_date": "2026-07-06",
         "sweep_depth_pct": 0.0086,
@@ -14843,7 +14891,7 @@
       "metrics": {
         "retrace_pct": 0.2222,
         "dist_to_yearly_open_pct": -0.3062,
-        "avg_turnover_20d": 7303473,
+        "avg_turnover_20d": 7303938,
         "close": 4.86,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0044,
@@ -15497,7 +15545,7 @@
       "metrics": {
         "retrace_pct": 0.1908,
         "dist_to_yearly_open_pct": -0.1337,
-        "avg_turnover_20d": 27474142,
+        "avg_turnover_20d": 27481047,
         "close": 82.89,
         "sweep_date": "2026-07-09",
         "sweep_depth_pct": 0.0075,
@@ -15729,7 +15777,7 @@
       "metrics": {
         "retrace_pct": 0.2381,
         "dist_to_yearly_open_pct": 0.1928,
-        "avg_turnover_20d": 686363,
+        "avg_turnover_20d": 698829,
         "close": 1.825,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0242,
@@ -15775,7 +15823,7 @@
       "metrics": {
         "retrace_pct": 0.5,
         "dist_to_yearly_open_pct": -0.2162,
-        "avg_turnover_20d": 1303753,
+        "avg_turnover_20d": 1304913,
         "close": 0.145,
         "sweep_date": "2026-07-09",
         "sweep_depth_pct": 0.0,
@@ -16149,18 +16197,18 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.0528,
-        "avg_turnover_20d": 249037,
+        "avg_turnover_20d": 249874,
         "close": 1.885,
         "sweep_date": "2026-07-07",
         "sweep_depth_pct": 0.0157,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "La Trobe Private Credit Fund",
       "sector": "Not Applic",
-      "narration": "LF1 ran the 1.910–1.940 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "LF1 ran the 1.910–1.940 highs on 2026-07-07 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "LFS",
@@ -17039,7 +17087,7 @@
       "metrics": {
         "retrace_pct": 0.0227,
         "dist_to_yearly_open_pct": 0.3335,
-        "avg_turnover_20d": 14416582,
+        "avg_turnover_20d": 14433478,
         "close": 5.26,
         "sweep_date": "2026-07-07",
         "sweep_depth_pct": 0.0143,
@@ -17597,7 +17645,7 @@
       "metrics": {
         "retrace_pct": 0.1364,
         "dist_to_yearly_open_pct": -0.0342,
-        "avg_turnover_20d": 22387974,
+        "avg_turnover_20d": 22388494,
         "close": 0.705,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0687,
@@ -19231,7 +19279,7 @@
       "metrics": {
         "retrace_pct": 0.4016,
         "dist_to_yearly_open_pct": 0.1966,
-        "avg_turnover_20d": 24926414,
+        "avg_turnover_20d": 24927651,
         "close": 44.02,
         "sweep_date": "2026-07-07",
         "sweep_depth_pct": 0.0223,
@@ -19277,7 +19325,7 @@
       "metrics": {
         "retrace_pct": 0.3241,
         "dist_to_yearly_open_pct": 0.1966,
-        "avg_turnover_20d": 24926414,
+        "avg_turnover_20d": 24927651,
         "close": 44.02,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.003,
@@ -19714,7 +19762,7 @@
       "metrics": {
         "retrace_pct": 0.8571,
         "dist_to_yearly_open_pct": 0.0267,
-        "avg_turnover_20d": 119948678,
+        "avg_turnover_20d": 120039351,
         "close": 4.9,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.002,
@@ -19760,7 +19808,7 @@
       "metrics": {
         "retrace_pct": 0.3077,
         "dist_to_yearly_open_pct": -0.023,
-        "avg_turnover_20d": 16993928,
+        "avg_turnover_20d": 16993981,
         "close": 3.63,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0028,
@@ -19900,7 +19948,7 @@
       "metrics": {
         "retrace_pct": 0.2222,
         "dist_to_yearly_open_pct": -0.6723,
-        "avg_turnover_20d": 5877423,
+        "avg_turnover_20d": 5889207,
         "close": 2.31,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0251,
@@ -23457,7 +23505,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2757,
-        "avg_turnover_20d": 173859473,
+        "avg_turnover_20d": 173894923,
         "close": 254.49,
         "bars_in_box": 6,
         "box_low": 231.86,
@@ -32063,8 +32111,8 @@
           "id": "t1",
           "type": "TARGET",
           "low": 93.371,
-          "high": 96.9967,
-          "status": "UNTESTED",
+          "high": 97.1283,
+          "status": "RESPECTED",
           "confluence": 6,
           "sources": [
             "fib_ext_1618",
@@ -40949,7 +40997,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 3.5768,
+          "low": 3.5763,
           "high": 3.6,
           "status": "VIOLATED",
           "rule": "touch",
@@ -40990,10 +41038,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.7727,
-        "dist_to_yearly_open_pct": 0.0146,
-        "avg_turnover_20d": 816258,
-        "close": 3.48,
+        "retrace_pct": 0.6136,
+        "dist_to_yearly_open_pct": 0.035,
+        "avg_turnover_20d": 822795,
+        "close": 3.55,
         "sweep_date": "2026-06-01",
         "sweep_depth_pct": 0.0146,
         "displacement_date": "2026-06-02"
@@ -42602,7 +42650,7 @@
       "metrics": {
         "retrace_pct": 0.4231,
         "dist_to_yearly_open_pct": -0.2796,
-        "avg_turnover_20d": 54619678,
+        "avg_turnover_20d": 54770499,
         "close": 3.98,
         "sweep_date": "2026-06-04",
         "sweep_depth_pct": 0.0027,
@@ -46000,7 +46048,7 @@
       "metrics": {
         "retrace_pct": 1.3838,
         "dist_to_yearly_open_pct": -0.4393,
-        "avg_turnover_20d": 7952074,
+        "avg_turnover_20d": 7965260,
         "close": 17.53,
         "sweep_date": "2026-07-06",
         "sweep_depth_pct": 0.0061
@@ -46412,101 +46460,6 @@
       "name": "News Corporation..",
       "sector": "Media & Entertainment",
       "narration": "NWS closed above 44.81, through the ceiling of the 44.45–44.81 structural invalidation zone. The swept high did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
-      "next": "a new trap to build — the swept high failed on a closing basis"
-    },
-    {
-      "ticker": "PCI",
-      "direction": "bearish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [
-        "FAST_FLIP"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 1.0893,
-          "high": 1.0943,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "monthly_open"
-          ],
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.0943,
-          "high": 1.1043,
-          "status": "VIOLATED",
-          "rule": "close_above_high",
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 1.0818,
-          "high": 1.0868,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-06-23"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 1.0753,
-          "high": 1.0789,
-          "status": "UNTESTED",
-          "created_date": "2026-06-23"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 1.0224,
-          "high": 1.0744,
-          "status": "RESPECTED",
-          "confluence": 6,
-          "sources": [
-            "prior_low",
-            "quarterly_open",
-            "box_low",
-            "equal_lows",
-            "fib_ext_1618",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-06-23"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.9882,
-          "high": 0.9982,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-06-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.4313,
-        "dist_to_yearly_open_pct": 0.0285,
-        "avg_turnover_20d": 922638,
-        "close": 1.105,
-        "sweep_date": "2026-06-22",
-        "sweep_depth_pct": 0.0046,
-        "displacement_date": "2026-06-23"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Perpetual Credit Income Trust",
-      "sector": "Not Applic",
-      "narration": "PCI closed above 1.104, through the ceiling of the 1.094–1.104 structural invalidation zone. The swept high did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
       "next": "a new trap to build — the swept high failed on a closing basis"
     },
     {
