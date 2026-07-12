@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-07-11T21:44:03+10:00",
+ "generated_at": "2026-07-12T21:58:36+10:00",
  "market": "asx",
  "setup_type": "spec",
  "currency_symbol": "A$",
@@ -210,6 +210,73 @@
    "analysis": "GRV just fired a speculative volume-spike breakout — volume hit 4.2× its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 — short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0450, stop A$0.0347, target A$0.0761 (3.00:1) — then trail it."
   },
   {
+   "symbol": "SVY",
+   "name": "Stavely Minerals Limited",
+   "sector": "Materials",
+   "setup_type": "spec",
+   "grade": "A",
+   "score": 6,
+   "score_max": 11,
+   "chips": [
+    "VOLUME 3.3× SPIKE",
+    "NEW 3-MONTH HIGH",
+    "RSI TURNING UP"
+   ],
+   "price": 0.019,
+   "entry": 0.019,
+   "stop": 0.01386,
+   "target": 0.03442,
+   "rr": 3.0,
+   "low_rr": false,
+   "spike_ratio": 3.3,
+   "off_high_pct": 24.0,
+   "detail": {
+    "setup_type": "spec",
+    "sma9": 0.016,
+    "sma9_pct": -15.8,
+    "sma26": 0.01634615,
+    "sma26_pct": -14.0,
+    "sma43": 0.01497674,
+    "sma43_pct": -21.2,
+    "sma200": 0.0156425,
+    "sma200_pct": -17.7,
+    "cross_up": false,
+    "rsi": 68.0,
+    "rsi_ma": 52.8,
+    "rsi_up": true,
+    "volume_ratio": 1.9,
+    "volume_today": 2266649,
+    "volume_avg": 702381,
+    "volume_surge": true,
+    "off_high_pct": 24.0,
+    "base_high": 0.019,
+    "base_high_pct": 0.0,
+    "broken": true,
+    "swing_low": 0.014,
+    "swing_low_pct": -26.3,
+    "trailing_stop": 0.01378576,
+    "trailing_label": "SuperTrend 3× ATR",
+    "trailing_pct": -27.4,
+    "structure": {
+     "trend": "Mixed / consolidating",
+     "swing_highs": [
+      0.019,
+      0.018,
+      0.0165
+     ],
+     "swing_lows": [
+      0.014,
+      0.015,
+      0.015
+     ]
+    },
+    "risk_pct": 27.1,
+    "spike_ratio": 3.3,
+    "new_high_long": true
+   },
+   "analysis": "SVY just fired a speculative volume-spike breakout — volume hit 3.3× its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. RSI has turned up through its signal line. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0190, stop A$0.0139, target A$0.0344 (3.00:1) — then trail it."
+  },
+  {
    "symbol": "AKO",
    "name": "Akora Resources Limited",
    "sector": "Materials",
@@ -275,6 +342,75 @@
     "new_high_long": false
    },
    "analysis": "AKO just fired a speculative volume-spike breakout — volume hit 3.0× its 20-day average as price broke out of its base. The 9-SMA has reclaimed the 26 — short-term momentum is up. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0810, stop A$0.0723, target A$0.1000 (2.18:1) — then trail it."
+  },
+  {
+   "symbol": "X2M",
+   "name": "X2M Connect Limited",
+   "sector": "Technology Hardware & Equipment",
+   "setup_type": "spec",
+   "grade": "B",
+   "score": 9,
+   "score_max": 11,
+   "chips": [
+    "VOLUME 3.0× SPIKE",
+    "NEW 3-MONTH HIGH",
+    "9 › 26 RECLAIM",
+    "DEEP BASE -71% OFF HIGH",
+    "RSI TURNING UP"
+   ],
+   "price": 0.006,
+   "entry": 0.006,
+   "stop": 0.00396,
+   "target": 0.008,
+   "rr": 0.98,
+   "low_rr": true,
+   "spike_ratio": 3.0,
+   "off_high_pct": 71.4,
+   "detail": {
+    "setup_type": "spec",
+    "sma9": 0.00461111,
+    "sma9_pct": -23.1,
+    "sma26": 0.00446154,
+    "sma26_pct": -25.6,
+    "sma43": 0.00434884,
+    "sma43_pct": -27.5,
+    "sma200": 0.00769,
+    "sma200_pct": 28.2,
+    "cross_up": true,
+    "rsi": 62.8,
+    "rsi_ma": 52.3,
+    "rsi_up": true,
+    "volume_ratio": 1.5,
+    "volume_today": 30359079,
+    "volume_avg": 9984778,
+    "volume_surge": true,
+    "off_high_pct": 71.4,
+    "base_high": 0.006,
+    "base_high_pct": 0.0,
+    "broken": true,
+    "swing_low": 0.004,
+    "swing_low_pct": -33.3,
+    "trailing_stop": 0.00367919,
+    "trailing_label": "SuperTrend 3× ATR",
+    "trailing_pct": -38.7,
+    "structure": {
+     "trend": "Mixed / consolidating",
+     "swing_highs": [
+      0.005,
+      0.005,
+      0.005
+     ],
+     "swing_lows": [
+      0.004,
+      0.004,
+      0.004
+     ]
+    },
+    "risk_pct": 34.0,
+    "spike_ratio": 3.0,
+    "new_high_long": true
+   },
+   "analysis": "X2M just fired a speculative volume-spike breakout — volume hit 3.0× its 20-day average as price broke out of its base. It's coming off a base 71% below the 1-year high, so there's room to run. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 — short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0060, stop A$0.0040, target A$0.0080 (0.98:1) — then trail it."
   },
   {
    "symbol": "CYQ",

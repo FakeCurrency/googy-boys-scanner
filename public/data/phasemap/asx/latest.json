@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-07-11",
+  "run_date": "2026-07-12",
   "ruleset_version": "1.2.0",
   "universe_size": 1988,
   "narrations_file": "narrations.json",
@@ -4237,6 +4237,18 @@
         {
           "id": "t3",
           "type": "TARGET",
+          "low": 1.6378,
+          "high": 1.662,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-04-08"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
           "low": 1.5902,
           "high": 1.6287,
           "status": "UNTESTED",
@@ -4261,7 +4273,7 @@
       "route_to": null,
       "name": "Ryder Capital Limited",
       "sector": "Not Applic",
-      "next": "bounces staying below 1.822–1.830; next objective the 1.590–1.629 zone (T3)"
+      "next": "bounces staying below 1.822–1.830; next objective the 1.590–1.629 zone (T4)"
     },
     {
       "ticker": "SDR",
@@ -31567,8 +31579,8 @@
           "id": "t1",
           "type": "TARGET",
           "low": 93.371,
-          "high": 97.1283,
-          "status": "RESPECTED",
+          "high": 96.9967,
+          "status": "UNTESTED",
           "confluence": 6,
           "sources": [
             "fib_ext_1618",
