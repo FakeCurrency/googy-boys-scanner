@@ -38,7 +38,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 640.9787,
-          "high": 645.085,
+          "high": 644.8448,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-06-02"
@@ -69,10 +69,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1332,
-        "dist_to_yearly_open_pct": -0.3445,
-        "avg_turnover_20d": 1144681922,
-        "close": 565.88,
+        "retrace_pct": 0.1825,
+        "dist_to_yearly_open_pct": -0.3328,
+        "avg_turnover_20d": 1126781460,
+        "close": 575.96,
         "sweep_date": "2026-05-31",
         "sweep_depth_pct": 0.0237,
         "displacement_date": "2026-06-02"
@@ -81,8 +81,8 @@
       "route_to": null,
       "name": "BNB",
       "sector": "Crypto",
-      "narration": "Displacement confirmed on 2026-06-02. First draw is the 541.96–651.52 zone (the 1.618–2.0 extension of the leg + a shelf of equal lows + the quarterly open + the bottom of the range + the 1.0–1.272 extension of the leg). The continuation thesis stays valid while bounces hold below the 640.98–645.09 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 753.72. Historically this pattern reached its first target zone within 20 sessions 41% of the time on the CRYPTO. Analysis only — not financial advice.",
-      "next": "bounces staying below 640.98–645.09; next objective the 541.96–651.52 zone (T1)"
+      "narration": "Displacement confirmed on 2026-06-02. First draw is the 541.96–651.52 zone (the 1.618–2.0 extension of the leg + a shelf of equal lows + the quarterly open + the bottom of the range + the 1.0–1.272 extension of the leg). The continuation thesis stays valid while bounces hold below the 640.98–644.84 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 753.72. Historically this pattern reached its first target zone within 20 sessions 41% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 640.98–644.84; next objective the 541.96–651.52 zone (T1)"
     },
     {
       "ticker": "M",
@@ -160,8 +160,8 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3036,
-        "dist_to_yearly_open_pct": -0.4152,
+        "retrace_pct": 0.3306,
+        "dist_to_yearly_open_pct": -0.4118,
         "avg_turnover_20d": 4,
         "close": 0.0002,
         "sweep_date": "2026-06-30",
@@ -302,7 +302,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 1.6939,
-          "high": 1.7157,
+          "high": 1.7151,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-07-07"
@@ -347,10 +347,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1719,
-        "dist_to_yearly_open_pct": 581.0514,
-        "avg_turnover_20d": 100169423,
-        "close": 1.6001,
+        "retrace_pct": 0.1821,
+        "dist_to_yearly_open_pct": 582.1128,
+        "avg_turnover_20d": 98434270,
+        "close": 1.603,
         "sweep_date": "2026-07-04",
         "sweep_depth_pct": 0.0108,
         "displacement_date": "2026-07-07"
@@ -359,123 +359,8 @@
       "route_to": null,
       "name": "Gram (prev. Toncoin)",
       "sector": "Crypto",
-      "narration": "Displacement confirmed on 2026-07-07. First draw is the 1.372–1.642 zone (the 1.618–2.0 extension of the leg + the quarterly open + a shelf of equal lows + the 1.0–1.272 extension of the leg); beyond that, -0.0472–0.0527 (the yearly open + the prior yearly close + a shelf of equal lows + the bottom of the range). The continuation thesis stays valid while bounces hold below the 1.694–1.716 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 1.885. Historically this pattern reached its first target zone within 20 sessions 41% of the time on the CRYPTO. Analysis only — not financial advice.",
-      "next": "bounces staying below 1.694–1.716; next objective the 1.372–1.642 zone (T1)"
-    },
-    {
-      "ticker": "DEXE",
-      "direction": "bearish",
-      "state": "DISPLACED",
-      "tier": "A",
-      "tags": [
-        "FAST_FLIP"
-      ],
-      "regime": "EXPANSION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 48.2138,
-          "high": 48.8624,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 48.8624,
-          "high": 50.6142,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 44.0179,
-          "high": 44.8938,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 41.46,
-          "high": 42.8746,
-          "status": "UNTESTED",
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 35.6622,
-          "high": 40.0493,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "fib_ext_10"
-          ],
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 28.6086,
-          "high": 34.0615,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 19.4572,
-          "high": 26.302,
-          "status": "UNTESTED",
-          "confluence": 3,
-          "sources": [
-            "equal_lows",
-            "quarterly_open",
-            "prior_low"
-          ],
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 14.9807,
-          "high": 18.558,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-07-13"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0305,
-        "dist_to_yearly_open_pct": 11.1714,
-        "avg_turnover_20d": 56024063,
-        "close": 39.469,
-        "sweep_date": "2026-07-13",
-        "sweep_depth_pct": 0.0135,
-        "displacement_date": "2026-07-13"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "DeXe",
-      "sector": "Crypto",
-      "narration": "DEXE printed a displacement candle today, 2026-07-13 — oversized range with a close near its low — after sweeping the 48.21–48.86 highs. First draw is the 35.66–40.05 zone (the 1.0–1.272 extension of the leg). The continuation thesis stays valid while bounces hold below the 44.02–44.89 area; structural invalidation only on a daily close above 50.61. Historically this pattern reached its first target zone within 20 sessions 41% of the time on the CRYPTO. Analysis only — not financial advice.",
-      "next": "shallow bounces holding below the 44.02–44.89 area, drawing toward the 35.66–40.05 zone (T1)"
+      "narration": "Displacement confirmed on 2026-07-07. First draw is the 1.372–1.642 zone (the 1.618–2.0 extension of the leg + the quarterly open + a shelf of equal lows + the 1.0–1.272 extension of the leg); beyond that, -0.0472–0.0527 (the yearly open + the prior yearly close + a shelf of equal lows + the bottom of the range). The continuation thesis stays valid while bounces hold below the 1.694–1.715 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 1.885. Historically this pattern reached its first target zone within 20 sessions 41% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 1.694–1.715; next objective the 1.372–1.642 zone (T1)"
     },
     {
       "ticker": "TRX",
@@ -483,7 +368,7 @@
       "state": "RUNNING",
       "tier": "Watch",
       "tags": [],
-      "regime": "ROTATION",
+      "regime": "EXPANSION",
       "zones": [
         {
           "id": "supply",
@@ -576,10 +461,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2479,
-        "dist_to_yearly_open_pct": 0.1458,
-        "avg_turnover_20d": 542398440,
-        "close": 0.3257,
+        "retrace_pct": 0.2446,
+        "dist_to_yearly_open_pct": 0.1451,
+        "avg_turnover_20d": 527747593,
+        "close": 0.3255,
         "sweep_date": "2026-05-28",
         "sweep_depth_pct": 0.0417,
         "displacement_date": "2026-05-28"
@@ -622,20 +507,160 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0878,
-        "dist_to_yearly_open_pct": -0.3508,
-        "avg_turnover_20d": 272767903,
-        "close": 94.85,
+        "retrace_pct": 0.5343,
+        "dist_to_yearly_open_pct": -0.3291,
+        "avg_turnover_20d": 266134490,
+        "close": 98.03,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0378,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Aave",
       "sector": "Crypto",
-      "narration": "AAVE ran the 98.27–101.99 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "AAVE ran the 98.27–101.99 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "BDX",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0983,
+          "high": 0.1012,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1012,
+          "high": 0.1045,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-14"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1112,
+        "dist_to_yearly_open_pct": -0.0521,
+        "avg_turnover_20d": 15034602,
+        "close": 0.0914,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0294,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Beldex",
+      "sector": "Crypto",
+      "narration": "BDX ran the 0.0983–0.101 highs on 2026-07-14 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "DASH",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 32.455,
+          "high": 33.3611,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 31.5992,
+          "high": 32.455,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-14"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0189,
+        "dist_to_yearly_open_pct": -0.1969,
+        "avg_turnover_20d": 49465363,
+        "close": 33.41,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0272,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Dash",
+      "sector": "Crypto",
+      "narration": "DASH ran the 32.45–33.36 lows on 2026-07-14 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "DEXE",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 48.2138,
+          "high": 48.8938,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-13"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 48.8938,
+          "high": 50.6539,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-13"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2505,
+        "dist_to_yearly_open_pct": 11.6834,
+        "avg_turnover_20d": 59448626,
+        "close": 41.1291,
+        "sweep_date": "2026-07-13",
+        "sweep_depth_pct": 0.0141,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "DeXe",
+      "sector": "Crypto",
+      "narration": "DEXE ran the 48.21–48.89 highs on 2026-07-13 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "ENA",
@@ -662,26 +687,26 @@
           "type": "INVALIDATION_HARD",
           "low": 0.084,
           "high": 0.0868,
-          "status": "UNTESTED",
+          "status": "TESTED",
           "rule": "close_above_high",
           "created_date": "2026-07-11"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1495,
-        "dist_to_yearly_open_pct": -0.6048,
-        "avg_turnover_20d": 133510504,
-        "close": 0.0789,
+        "retrace_pct": 1.1219,
+        "dist_to_yearly_open_pct": -0.5752,
+        "avg_turnover_20d": 133573162,
+        "close": 0.0848,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0312,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Ethena",
       "sector": "Crypto",
-      "narration": "ENA ran the 0.0814–0.0840 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "ENA ran the 0.0814–0.0840 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "HBAR",
@@ -708,26 +733,26 @@
           "type": "INVALIDATION_HARD",
           "low": 0.0651,
           "high": 0.0667,
-          "status": "TESTED",
+          "status": "RESPECTED",
           "rule": "close_below_low",
           "created_date": "2026-07-11"
         }
       ],
       "metrics": {
-        "retrace_pct": 1.0517,
-        "dist_to_yearly_open_pct": -0.3738,
-        "avg_turnover_20d": 58438794,
-        "close": 0.0665,
+        "retrace_pct": 0.9648,
+        "dist_to_yearly_open_pct": -0.3703,
+        "avg_turnover_20d": 57329502,
+        "close": 0.0669,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0262,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Hedera",
       "sector": "Crypto",
-      "narration": "HBAR ran the 0.0667–0.0685 lows on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "narration": "HBAR ran the 0.0667–0.0685 lows on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "ICP",
@@ -760,20 +785,20 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0411,
-        "dist_to_yearly_open_pct": -0.2344,
-        "avg_turnover_20d": 43847713,
-        "close": 2.173,
+        "retrace_pct": 0.3661,
+        "dist_to_yearly_open_pct": -0.2196,
+        "avg_turnover_20d": 42311456,
+        "close": 2.215,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0186,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Internet Computer",
       "sector": "Crypto",
-      "narration": "ICP ran the 2.28–2.32 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "ICP ran the 2.28–2.32 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "INJ",
@@ -788,7 +813,7 @@
           "type": "SUPPLY",
           "low": 4.9691,
           "high": 5.1243,
-          "status": "UNTESTED",
+          "status": "TESTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -806,20 +831,20 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.059,
-        "dist_to_yearly_open_pct": 0.1283,
-        "avg_turnover_20d": 86692131,
-        "close": 4.724,
+        "retrace_pct": 0.8148,
+        "dist_to_yearly_open_pct": 0.2016,
+        "avg_turnover_20d": 86665119,
+        "close": 5.031,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0312,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Injective",
       "sector": "Crypto",
-      "narration": "INJ ran the 4.97–5.12 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "INJ ran the 4.97–5.12 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "INJ",
@@ -834,7 +859,7 @@
           "type": "DEMAND",
           "low": 4.7903,
           "high": 4.9573,
-          "status": "TESTED",
+          "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -846,26 +871,72 @@
           "type": "INVALIDATION_HARD",
           "low": 4.6423,
           "high": 4.7903,
-          "status": "TESTED",
+          "status": "RESPECTED",
           "rule": "close_below_low",
           "created_date": "2026-07-10"
         }
       ],
       "metrics": {
-        "retrace_pct": 1.1986,
-        "dist_to_yearly_open_pct": 0.1283,
-        "avg_turnover_20d": 86692131,
-        "close": 4.724,
+        "retrace_pct": 0.2793,
+        "dist_to_yearly_open_pct": 0.2016,
+        "avg_turnover_20d": 86665119,
+        "close": 5.031,
         "sweep_date": "2026-07-10",
         "sweep_depth_pct": 0.0337,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Injective",
       "sector": "Crypto",
-      "narration": "INJ ran the 4.79–4.96 lows on 2026-07-10 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+      "narration": "INJ ran the 4.79–4.96 lows on 2026-07-10 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "LTC",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 42.9359,
+          "high": 43.193,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-13"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 42.1435,
+          "high": 42.9359,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-13"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0764,
+        "dist_to_yearly_open_pct": -0.4228,
+        "avg_turnover_20d": 214623201,
+        "close": 44.32,
+        "sweep_date": "2026-07-13",
+        "sweep_depth_pct": 0.006,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Litecoin",
+      "sector": "Crypto",
+      "narration": "LTC ran the 42.94–43.19 lows on 2026-07-13 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "NIGHT",
@@ -898,20 +969,68 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 1.3647,
-        "dist_to_yearly_open_pct": -0.6659,
-        "avg_turnover_20d": 538788,
-        "close": 0.0297,
+        "retrace_pct": 1.2655,
+        "dist_to_yearly_open_pct": -0.665,
+        "avg_turnover_20d": 514961,
+        "close": 0.0298,
         "sweep_date": "2026-07-12",
         "sweep_depth_pct": 0.0158,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Midnight",
       "sector": "Crypto",
-      "narration": "NIGHT ran the 0.0300–0.0305 lows on 2026-07-12 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "narration": "NIGHT ran the 0.0300–0.0305 lows on 2026-07-12 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "PAXG",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 3982.0818,
+          "high": 4028.8818,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3948.5728,
+          "high": 3982.0818,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-14"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1616,
+        "dist_to_yearly_open_pct": -0.0604,
+        "avg_turnover_20d": 115321237,
+        "close": 4068.8701,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0116,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "PAX Gold",
+      "sector": "Crypto",
+      "narration": "PAXG ran the 3982.08–4028.88 lows on 2026-07-14 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "PYTH",
@@ -944,20 +1063,20 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.275,
-        "dist_to_yearly_open_pct": -0.1539,
-        "avg_turnover_20d": 27382710,
-        "close": 0.0472,
+        "retrace_pct": 0.409,
+        "dist_to_yearly_open_pct": -0.1521,
+        "avg_turnover_20d": 27656111,
+        "close": 0.0473,
         "sweep_date": "2026-07-11",
         "sweep_depth_pct": 0.0439,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Pyth Network",
       "sector": "Crypto",
-      "narration": "PYTH ran the 0.0475–0.0496 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "narration": "PYTH ran the 0.0475–0.0496 highs on 2026-07-11 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "VIRTUAL",
@@ -990,20 +1109,114 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.1337,
-        "avg_turnover_20d": 47288067,
-        "close": 0.5589,
+        "retrace_pct": 0.3362,
+        "dist_to_yearly_open_pct": -0.1204,
+        "avg_turnover_20d": 46916854,
+        "close": 0.5674,
         "sweep_date": "2026-07-12",
         "sweep_depth_pct": 0.0551,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Virtuals Protocol",
       "sector": "Crypto",
-      "narration": "VIRTUAL ran the 0.583–0.615 highs on 2026-07-12 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+      "narration": "VIRTUAL ran the 0.583–0.615 highs on 2026-07-12 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "XAUT",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 3982.2466,
+          "high": 4023.5601,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3949.849,
+          "high": 3982.2466,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-14"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0475,
+        "dist_to_yearly_open_pct": -0.056,
+        "avg_turnover_20d": 146526587,
+        "close": 4081.697,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0103,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Tether Gold",
+      "sector": "Crypto",
+      "narration": "XAUT ran the 3982.25–4023.56 lows on 2026-07-14 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "XDC",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0268,
+          "high": 0.0268,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0263,
+          "high": 0.0268,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-14"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.4677,
+        "avg_turnover_20d": 7692502,
+        "close": 0.0272,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0009,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "XDC Network",
+      "sector": "Crypto",
+      "narration": "XDC ran the 0.0268–0.0268 lows on 2026-07-14 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "XMR",
@@ -1036,50 +1249,20 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6464,
-        "dist_to_yearly_open_pct": -0.2611,
-        "avg_turnover_20d": 102509951,
-        "close": 320.1317,
+        "retrace_pct": 0.3612,
+        "dist_to_yearly_open_pct": -0.2484,
+        "avg_turnover_20d": 101509854,
+        "close": 325.6339,
         "sweep_date": "2026-07-10",
         "sweep_depth_pct": 0.0255,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Monero",
       "sector": "Crypto",
-      "narration": "XMR ran the 313.37–321.59 lows on 2026-07-10 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
-    },
-    {
-      "ticker": "A7A5",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ANCHOR_CAUTION",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0055,
-        "avg_turnover_20d": 410,
-        "close": 0.0124,
-        "bars_in_box": 1,
-        "box_low": 0.0118,
-        "box_high": 0.0137,
-        "box_height_pct": 0.1581,
-        "cluster_low": 0.0137,
-        "cluster_high": 0.0137
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "A7A5",
-      "sector": "Crypto",
-      "narration": "A7A5 has spent 1 sessions inside a 15.8% range. Equal highs are resting at 0.0137–0.0137 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
-      "next": "a run of the 0.0137–0.0137 highs that closes back below them, then a displacement candle within 5 sessions"
+      "narration": "XMR ran the 313.37–321.59 lows on 2026-07-10 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "ALGO",
@@ -1091,13 +1274,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2382,
-        "avg_turnover_20d": 27945229,
-        "close": 0.084,
-        "bars_in_box": 2,
+        "dist_to_yearly_open_pct": -0.231,
+        "avg_turnover_20d": 26300379,
+        "close": 0.0848,
+        "bars_in_box": 3,
         "box_low": 0.0814,
-        "box_high": 0.1142,
-        "box_height_pct": 0.4023,
+        "box_high": 0.1067,
+        "box_height_pct": 0.3108,
         "cluster_low": 0.0814,
         "cluster_high": 0.0815
       },
@@ -1105,7 +1288,7 @@
       "route_to": null,
       "name": "Algorand",
       "sector": "Crypto",
-      "narration": "ALGO has spent 2 sessions inside a 40.2% range. Equal lows are resting at 0.0814–0.0815 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "ALGO has spent 3 sessions inside a 31.1% range. Equal lows are resting at 0.0814–0.0815 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0814–0.0815 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1118,10 +1301,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1997,
-        "avg_turnover_20d": 28112273,
-        "close": 1.542,
-        "bars_in_box": 5,
+        "dist_to_yearly_open_pct": -0.1972,
+        "avg_turnover_20d": 26775161,
+        "close": 1.547,
+        "bars_in_box": 6,
         "box_low": 1.492,
         "box_high": 2.0298,
         "box_height_pct": 0.3605,
@@ -1132,7 +1315,7 @@
       "route_to": null,
       "name": "Cosmos Hub",
       "sector": "Crypto",
-      "narration": "ATOM has spent 5 sessions inside a 36.0% range. Equal highs are resting at 2.02–2.03 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "narration": "ATOM has spent 6 sessions inside a 36.0% range. Equal highs are resting at 2.02–2.03 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
       "next": "a run of the 2.02–2.03 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
@@ -1145,13 +1328,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3445,
-        "avg_turnover_20d": 1144681922,
-        "close": 565.88,
-        "bars_in_box": 1,
+        "dist_to_yearly_open_pct": -0.3328,
+        "avg_turnover_20d": 1126781460,
+        "close": 575.96,
+        "bars_in_box": 2,
         "box_low": 538.5992,
-        "box_high": 655.147,
-        "box_height_pct": 0.2164,
+        "box_high": 631.111,
+        "box_height_pct": 0.1718,
         "cluster_low": 538.5992,
         "cluster_high": 543.1838
       },
@@ -1159,7 +1342,7 @@
       "route_to": null,
       "name": "BNB",
       "sector": "Crypto",
-      "narration": "BNB has spent 1 sessions inside a 21.6% range. Equal lows are resting at 538.60–543.18 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "BNB has spent 2 sessions inside a 17.2% range. Equal lows are resting at 538.60–543.18 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 538.60–543.18 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1172,13 +1355,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2885,
-        "avg_turnover_20d": 28522477711,
-        "close": 62262.7383,
-        "bars_in_box": 1,
+        "dist_to_yearly_open_pct": -0.2714,
+        "avg_turnover_20d": 28224933139,
+        "close": 63760.0,
+        "bars_in_box": 2,
         "box_low": 57747.7656,
-        "box_high": 67402.9297,
-        "box_height_pct": 0.1672,
+        "box_high": 67248.1328,
+        "box_height_pct": 0.1645,
         "cluster_low": 57747.7656,
         "cluster_high": 58075.9219
       },
@@ -1186,8 +1369,35 @@
       "route_to": null,
       "name": "Bitcoin",
       "sector": "Crypto",
-      "narration": "BTC has spent 1 sessions inside a 16.7% range. Equal lows are resting at 57747.77–58075.92 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "BTC has spent 2 sessions inside a 16.4% range. Equal lows are resting at 57747.77–58075.92 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 57747.77–58075.92 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "CRO",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3923,
+        "avg_turnover_20d": 6820256,
+        "close": 0.0551,
+        "bars_in_box": 23,
+        "box_low": 0.0531,
+        "box_high": 0.0633,
+        "box_height_pct": 0.1925,
+        "cluster_low": 0.0624,
+        "cluster_high": 0.0633
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cronos",
+      "sector": "Crypto",
+      "narration": "CRO has spent 23 sessions inside a 19.2% range. Equal highs are resting at 0.0624–0.0633 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0624–0.0633 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "CRO",
@@ -1199,13 +1409,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3997,
-        "avg_turnover_20d": 6890260,
-        "close": 0.0544,
-        "bars_in_box": 8,
+        "dist_to_yearly_open_pct": -0.3923,
+        "avg_turnover_20d": 6820256,
+        "close": 0.0551,
+        "bars_in_box": 9,
         "box_low": 0.0531,
-        "box_high": 0.0638,
-        "box_height_pct": 0.2027,
+        "box_high": 0.0633,
+        "box_height_pct": 0.1925,
         "cluster_low": 0.0531,
         "cluster_high": 0.0535
       },
@@ -1213,8 +1423,37 @@
       "route_to": null,
       "name": "Cronos",
       "sector": "Crypto",
-      "narration": "CRO has spent 8 sessions inside a 20.3% range. Equal lows are resting at 0.0531–0.0535 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "CRO has spent 9 sessions inside a 19.2% range. Equal lows are resting at 0.0531–0.0535 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0531–0.0535 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "DOGE",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.376,
+        "avg_turnover_20d": 596186035,
+        "close": 0.0732,
+        "bars_in_box": 13,
+        "box_low": 0.0696,
+        "box_high": 0.0917,
+        "box_height_pct": 0.3172,
+        "cluster_low": 0.0907,
+        "cluster_high": 0.0917
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Dogecoin",
+      "sector": "Crypto",
+      "narration": "DOGE has spent 13 sessions inside a 31.7% range. Equal highs are resting at 0.0907–0.0917 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0907–0.0917 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "DOT",
@@ -1226,13 +1465,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5316,
-        "avg_turnover_20d": 79594235,
-        "close": 0.838,
-        "bars_in_box": 1,
+        "dist_to_yearly_open_pct": -0.5288,
+        "avg_turnover_20d": 78947189,
+        "close": 0.843,
+        "bars_in_box": 2,
         "box_low": 0.7988,
-        "box_high": 1.1288,
-        "box_height_pct": 0.413,
+        "box_high": 1.1138,
+        "box_height_pct": 0.3943,
         "cluster_low": 0.7988,
         "cluster_high": 0.8158
       },
@@ -1240,7 +1479,7 @@
       "route_to": null,
       "name": "Polkadot",
       "sector": "Crypto",
-      "narration": "DOT has spent 1 sessions inside a 41.3% range. Equal lows are resting at 0.799–0.816 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "DOT has spent 2 sessions inside a 39.4% range. Equal lows are resting at 0.799–0.816 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.799–0.816 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1253,13 +1492,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.6048,
-        "avg_turnover_20d": 133510504,
-        "close": 0.0789,
-        "bars_in_box": 8,
+        "dist_to_yearly_open_pct": -0.5752,
+        "avg_turnover_20d": 133573162,
+        "close": 0.0848,
+        "bars_in_box": 9,
         "box_low": 0.0702,
-        "box_high": 0.1169,
-        "box_height_pct": 0.664,
+        "box_high": 0.1132,
+        "box_height_pct": 0.611,
         "cluster_low": 0.0702,
         "cluster_high": 0.0724
       },
@@ -1267,8 +1506,35 @@
       "route_to": null,
       "name": "Ethena",
       "sector": "Crypto",
-      "narration": "ENA has spent 8 sessions inside a 66.4% range. Equal lows are resting at 0.0702–0.0724 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "ENA has spent 9 sessions inside a 61.1% range. Equal lows are resting at 0.0702–0.0724 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0702–0.0724 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "ETH",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3782,
+        "avg_turnover_20d": 10433441655,
+        "close": 1844.76,
+        "bars_in_box": 9,
+        "box_low": 1506.5057,
+        "box_high": 1847.7698,
+        "box_height_pct": 0.2265,
+        "cluster_low": 1829.5137,
+        "cluster_high": 1847.7698
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ethereum",
+      "sector": "Crypto",
+      "narration": "ETH has spent 9 sessions inside a 22.7% range. Equal highs are resting at 1829.51–1847.77 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 1829.51–1847.77 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "ETH",
@@ -1280,13 +1546,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4023,
-        "avg_turnover_20d": 10569920030,
-        "close": 1773.4301,
-        "bars_in_box": 8,
+        "dist_to_yearly_open_pct": -0.3782,
+        "avg_turnover_20d": 10433441655,
+        "close": 1844.76,
+        "bars_in_box": 9,
         "box_low": 1506.5057,
-        "box_high": 1889.0588,
-        "box_height_pct": 0.2539,
+        "box_high": 1847.7698,
+        "box_height_pct": 0.2265,
         "cluster_low": 1506.5057,
         "cluster_high": 1510.5059
       },
@@ -1294,7 +1560,7 @@
       "route_to": null,
       "name": "Ethereum",
       "sector": "Crypto",
-      "narration": "ETH has spent 8 sessions inside a 25.4% range. Equal lows are resting at 1506.51–1510.51 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "ETH has spent 9 sessions inside a 22.7% range. Equal lows are resting at 1506.51–1510.51 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 1506.51–1510.51 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1307,10 +1573,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3714,
-        "avg_turnover_20d": 2889415,
-        "close": 0.0064,
-        "bars_in_box": 15,
+        "dist_to_yearly_open_pct": -0.3557,
+        "avg_turnover_20d": 2864700,
+        "close": 0.0066,
+        "bars_in_box": 16,
         "box_low": 0.0063,
         "box_high": 0.0082,
         "box_height_pct": 0.2984,
@@ -1321,7 +1587,7 @@
       "route_to": null,
       "name": "Flare",
       "sector": "Crypto",
-      "narration": "FLR has spent 15 sessions inside a 29.8% range. Equal highs are resting at 0.0082–0.0082 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "narration": "FLR has spent 16 sessions inside a 29.8% range. Equal highs are resting at 0.0082–0.0082 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
       "next": "a run of the 0.0082–0.0082 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
@@ -1339,7 +1605,7 @@
         "dist_to_yearly_open_pct": -0.6271,
         "avg_turnover_20d": 2,
         "close": 0.0002,
-        "bars_in_box": 18,
+        "bars_in_box": 19,
         "box_low": 0.0,
         "box_high": 0.0003,
         "box_height_pct": 22.0909,
@@ -1350,8 +1616,35 @@
       "route_to": null,
       "name": "Jupiter",
       "sector": "Crypto",
-      "narration": "JUP has spent 18 sessions inside a 2209.1% range. Equal lows are resting at 0.0000–0.0000 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "JUP has spent 19 sessions inside a 2209.1% range. Equal lows are resting at 0.0000–0.0000 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0000–0.0000 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "KCS",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.348,
+        "avg_turnover_20d": 2550022,
+        "close": 6.9855,
+        "bars_in_box": 1,
+        "box_low": 6.0041,
+        "box_high": 7.4684,
+        "box_height_pct": 0.2439,
+        "cluster_low": 7.4622,
+        "cluster_high": 7.4684
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "KuCoin",
+      "sector": "Crypto",
+      "narration": "KCS has spent 1 sessions inside a 24.4% range. Equal highs are resting at 7.46–7.47 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 7.46–7.47 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "LINK",
@@ -1363,13 +1656,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3522,
-        "avg_turnover_20d": 233263142,
-        "close": 7.896,
-        "bars_in_box": 12,
+        "dist_to_yearly_open_pct": -0.3334,
+        "avg_turnover_20d": 226974989,
+        "close": 8.125,
+        "bars_in_box": 13,
         "box_low": 7.0224,
-        "box_high": 8.596,
-        "box_height_pct": 0.2241,
+        "box_high": 8.5709,
+        "box_height_pct": 0.2205,
         "cluster_low": 7.0224,
         "cluster_high": 7.1228
       },
@@ -1377,7 +1670,7 @@
       "route_to": null,
       "name": "Chainlink",
       "sector": "Crypto",
-      "narration": "LINK has spent 12 sessions inside a 22.4% range. Equal lows are resting at 7.02–7.12 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "LINK has spent 13 sessions inside a 22.1% range. Equal lows are resting at 7.02–7.12 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 7.02–7.12 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1410,6 +1703,60 @@
       "next": "a run of the 0.0001–0.0001 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "NEAR",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.3425,
+        "avg_turnover_20d": 232251939,
+        "close": 2.03,
+        "bars_in_box": 1,
+        "box_low": 1.7442,
+        "box_high": 2.8444,
+        "box_height_pct": 0.6307,
+        "cluster_low": 1.7442,
+        "cluster_high": 1.7591
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "NEAR Protocol",
+      "sector": "Crypto",
+      "narration": "NEAR has spent 1 sessions inside a 63.1% range. Equal lows are resting at 1.744–1.759 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 1.744–1.759 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "OKB",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2641,
+        "avg_turnover_20d": 22814060,
+        "close": 80.6078,
+        "bars_in_box": 2,
+        "box_low": 66.275,
+        "box_high": 82.0506,
+        "box_height_pct": 0.238,
+        "cluster_low": 81.2932,
+        "cluster_high": 82.0506
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "OKB",
+      "sector": "Crypto",
+      "narration": "OKB has spent 2 sessions inside a 23.8% range. Equal highs are resting at 81.29–82.05 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 81.29–82.05 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "PYTH",
       "direction": "bullish",
       "state": "TRAP_SET",
@@ -1419,13 +1766,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1539,
-        "avg_turnover_20d": 27382710,
-        "close": 0.0472,
-        "bars_in_box": 5,
+        "dist_to_yearly_open_pct": -0.1521,
+        "avg_turnover_20d": 27656111,
+        "close": 0.0473,
+        "bars_in_box": 6,
         "box_low": 0.0296,
-        "box_high": 0.0496,
-        "box_height_pct": 0.6769,
+        "box_high": 0.05,
+        "box_height_pct": 0.6898,
         "cluster_low": 0.0296,
         "cluster_high": 0.0311
       },
@@ -1433,8 +1780,35 @@
       "route_to": null,
       "name": "Pyth Network",
       "sector": "Crypto",
-      "narration": "PYTH has spent 5 sessions inside a 67.7% range. Equal lows are resting at 0.0296–0.0311 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "PYTH has spent 6 sessions inside a 69.0% range. Equal lows are resting at 0.0296–0.0311 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0296–0.0311 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "QNT",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0681,
+        "avg_turnover_20d": 6430480,
+        "close": 64.66,
+        "bars_in_box": 33,
+        "box_low": 62.8799,
+        "box_high": 73.5247,
+        "box_height_pct": 0.1693,
+        "cluster_low": 72.738,
+        "cluster_high": 73.5247
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Quant",
+      "sector": "Crypto",
+      "narration": "QNT has spent 33 sessions inside a 16.9% range. Equal highs are resting at 72.74–73.52 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 72.74–73.52 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "SKY",
@@ -1452,7 +1826,7 @@
         "dist_to_yearly_open_pct": -0.3351,
         "avg_turnover_20d": 0,
         "close": 0.015,
-        "bars_in_box": 15,
+        "bars_in_box": 16,
         "box_low": 0.0148,
         "box_high": 0.015,
         "box_height_pct": 0.0113,
@@ -1463,7 +1837,7 @@
       "route_to": null,
       "name": "Sky",
       "sector": "Crypto",
-      "narration": "SKY has spent 15 sessions inside a 1.1% range. Equal highs are resting at 0.0150–0.0150 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "narration": "SKY has spent 16 sessions inside a 1.1% range. Equal highs are resting at 0.0150–0.0150 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
       "next": "a run of the 0.0150–0.0150 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
@@ -1476,13 +1850,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.1458,
-        "avg_turnover_20d": 542398440,
-        "close": 0.3257,
-        "bars_in_box": 5,
+        "dist_to_yearly_open_pct": 0.1451,
+        "avg_turnover_20d": 527747593,
+        "close": 0.3255,
+        "bars_in_box": 6,
         "box_low": 0.3118,
-        "box_high": 0.3353,
-        "box_height_pct": 0.0755,
+        "box_high": 0.3338,
+        "box_height_pct": 0.0708,
         "cluster_low": 0.3118,
         "cluster_high": 0.314
       },
@@ -1490,7 +1864,7 @@
       "route_to": null,
       "name": "TRON",
       "sector": "Crypto",
-      "narration": "TRX has spent 5 sessions inside a 7.5% range. Equal lows are resting at 0.312–0.314 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "TRX has spent 6 sessions inside a 7.1% range. Equal lows are resting at 0.312–0.314 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.312–0.314 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1532,13 +1906,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5428,
-        "avg_turnover_20d": 13924955,
+        "dist_to_yearly_open_pct": -0.538,
+        "avg_turnover_20d": 13730555,
         "close": 0.0048,
-        "bars_in_box": 4,
+        "bars_in_box": 5,
         "box_low": 0.0043,
-        "box_high": 0.0058,
-        "box_height_pct": 0.3632,
+        "box_high": 0.0056,
+        "box_height_pct": 0.3158,
         "cluster_low": 0.0043,
         "cluster_high": 0.0043
       },
@@ -1546,7 +1920,7 @@
       "route_to": null,
       "name": "VeChain",
       "sector": "Crypto",
-      "narration": "VET has spent 4 sessions inside a 36.3% range. Equal lows are resting at 0.0043–0.0043 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "VET has spent 5 sessions inside a 31.6% range. Equal lows are resting at 0.0043–0.0043 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 0.0043–0.0043 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1559,10 +1933,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4189,
-        "avg_turnover_20d": 1514692743,
-        "close": 1.0693,
-        "bars_in_box": 12,
+        "dist_to_yearly_open_pct": -0.4092,
+        "avg_turnover_20d": 1462903251,
+        "close": 1.0871,
+        "bars_in_box": 13,
         "box_low": 1.0098,
         "box_high": 1.2893,
         "box_height_pct": 0.2768,
@@ -1573,7 +1947,7 @@
       "route_to": null,
       "name": "XRP",
       "sector": "Crypto",
-      "narration": "XRP has spent 12 sessions inside a 27.7% range. Equal lows are resting at 1.010–1.027 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "narration": "XRP has spent 13 sessions inside a 27.7% range. Equal lows are resting at 1.010–1.027 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
       "next": "a run of the 1.010–1.027 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
@@ -1610,7 +1984,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 1.651,
+          "low": 1.6514,
           "high": 1.6647,
           "status": "VIOLATED",
           "rule": "touch",
@@ -1675,10 +2049,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6506,
-        "dist_to_yearly_open_pct": -0.5304,
-        "avg_turnover_20d": 10256892,
-        "close": 1.6345,
+        "retrace_pct": 0.6652,
+        "dist_to_yearly_open_pct": -0.5312,
+        "avg_turnover_20d": 10038637,
+        "close": 1.6316,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0136,
         "displacement_date": "2026-07-02"
@@ -1726,7 +2100,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 1.3759,
+          "low": 1.3767,
           "high": 1.3895,
           "status": "VIOLATED",
           "rule": "touch",
@@ -1771,10 +2145,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5527,
-        "dist_to_yearly_open_pct": -0.2674,
-        "avg_turnover_20d": 30068544,
-        "close": 1.38,
+        "retrace_pct": 0.3814,
+        "dist_to_yearly_open_pct": -0.2509,
+        "avg_turnover_20d": 29250417,
+        "close": 1.411,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0143,
         "displacement_date": "2026-07-05"
@@ -1783,7 +2157,7 @@
       "route_to": "fib_reversal",
       "name": "PancakeSwap",
       "sector": "Crypto",
-      "narration": "CAKE touched the 50% area at 1.376–1.389. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 1.271, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "narration": "CAKE touched the 50% area at 1.377–1.389. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 1.271, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
@@ -1889,10 +2263,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.9171,
-        "dist_to_yearly_open_pct": -0.3714,
-        "avg_turnover_20d": 2889415,
-        "close": 0.0064,
+        "retrace_pct": 0.7248,
+        "dist_to_yearly_open_pct": -0.3557,
+        "avg_turnover_20d": 2864700,
+        "close": 0.0066,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.002,
         "displacement_date": "2026-07-03"
@@ -2004,10 +2378,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6318,
-        "dist_to_yearly_open_pct": -0.3319,
-        "avg_turnover_20d": 11018449,
-        "close": 0.0287,
+        "retrace_pct": 0.673,
+        "dist_to_yearly_open_pct": -0.3369,
+        "avg_turnover_20d": 10530325,
+        "close": 0.0285,
         "sweep_date": "2026-06-25",
         "sweep_depth_pct": 0.0127,
         "displacement_date": "2026-06-29"
