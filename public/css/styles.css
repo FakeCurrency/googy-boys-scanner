@@ -1538,3 +1538,87 @@ body { letter-spacing: -0.012em; }
   .nav-pills .howto-link { font-size: 11.5px; padding: 6px 10px; }
   .market-btn { font-size: 12.5px; padding: 7px 13px; }
 }
+
+/* ═══════════════════════ shared site navigation (nav.js) ══════════════════ */
+/* Active-page pill — clearly "you are here" in the pill row. */
+.nav-pills .howto-link.is-here,
+.howto-link.is-here {
+  background: var(--blue); border-color: var(--blue); color: #fff;
+}
+.nav-pills .howto-link.bot-nav-link.is-here { color: #fff; }
+.nav-pills .howto-link.bot-nav-link.is-here .bot-nav-dot { background: #fff; }
+
+/* MORE ▾ dropdown */
+.nav-more { position: relative; display: inline-flex; }
+.nav-more-btn { cursor: pointer; }
+.nav-more-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  display: flex; flex-direction: column; min-width: 160px;
+  background: var(--elevated); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow-open); padding: 6px; gap: 2px;
+}
+.nav-more-menu[hidden] { display: none; }
+.nav-more-item {
+  padding: 9px 12px; border-radius: 8px; text-decoration: none;
+  font: 600 12.5px/1 var(--sans); color: var(--text-2); white-space: nowrap;
+}
+.nav-more-item:hover { background: var(--fill); color: var(--text); }
+.nav-more-item.is-here { color: var(--blue); }
+
+/* Bottom tab bar — the one-thumb mobile nav. Hidden on desktop. */
+.site-tabs { display: none; }
+@media (max-width: 680px) {
+  .site-tabs {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+    background: var(--nav);
+    -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
+    border-top: 0.5px solid var(--separator);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .site-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 2px 7px; text-decoration: none; color: var(--muted);
+  }
+  .site-tab-ico { font-size: 18px; line-height: 1; }
+  .site-tab-lbl { font: 700 9px/1 var(--sans); letter-spacing: 0.04em; }
+  .site-tab.is-here { color: var(--blue); }
+  body.has-site-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0)); }
+  /* the top pill nav is redundant on phones once the tab bar exists */
+  .nav-pills { display: none; }
+  /* comfortable thumb targets for the filter chips */
+  .vkf-chip { min-height: 34px; padding: 8px 12px; }
+}
+
+/* ═══════════════ dashboard bot-activity strip (what happened) ═════════════ */
+.bot-activity {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md); padding: 9px 14px; margin: 0 0 14px;
+}
+.ba-label { font: 800 10px/1 var(--sans); letter-spacing: 0.1em; color: var(--muted); }
+.ba-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 600 12px/1 var(--sans); color: var(--text-2);
+  background: var(--fill-2); border-radius: 999px; padding: 5px 11px;
+  text-decoration: none;
+}
+.ba-item:hover { background: var(--fill); color: var(--text); }
+.ba-kind-open  { color: var(--blue); }
+.ba-kind-close.pos { color: var(--green); }
+.ba-kind-close.neg { color: var(--red); }
+.ba-ago { font: 500 10.5px/1 var(--sans); color: var(--muted-2); }
+.ba-more { margin-left: auto; font: 700 11px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
+
+/* Journal — compact account summary living in the (sticky) topbar. */
+.jr-topsum {
+  display: inline-flex; align-items: center; gap: 12px; margin-left: auto;
+  font: 700 12px/1 var(--mono); color: var(--text-2); white-space: nowrap;
+}
+.jr-topsum .pos { color: var(--green); } .jr-topsum .neg { color: var(--red); }
+.jr-topsum .ts-who { font: 700 10px/1 var(--sans); color: var(--muted); letter-spacing: .04em; }
+@media (max-width: 720px) { .jr-topsum { gap: 8px; font-size: 11px; } }
+
+/* Phase Map cross-badge on scanner rows — the same name is live over there. */
+.rbadge.pmx { color: var(--teal); background: rgba(48,176,199,0.13);
+  border-color: color-mix(in srgb, var(--teal) 32%, transparent); }

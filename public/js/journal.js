@@ -345,7 +345,7 @@
   }
   // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
-    `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}" title="Open ${up(t.symbol)} chart">` +
+    `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal" title="Open ${up(t.symbol)} chart">` +
     `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
@@ -577,7 +577,8 @@
     const open = (book.open || []).slice();
     const closed = (book.closed || []).slice();
     // Bot trades already carry net realized_r + risk_usd from the server.
-    return { open, closed };
+    // updated_at rides along so the UI can show how fresh the bot's marks are.
+    return { open, closed, updated_at: book.updated_at || null };
   }
   function splitMe(data) {
     const trades = (data.trades || []).filter((t) => t && t.status);
@@ -751,8 +752,26 @@
     renderEdgeTracker();
     renderLensTracker();
     const note = $("#bot-note");
-    if (note) note.textContent = (state.bot.open.length || state.bot.closed.length)
-      ? "" : "Autonomous bot is in dry-run — its trades appear here once enabled.";
+    if (note) {
+      if (state.bot.open.length || state.bot.closed.length) {
+        // Freshness instead of blank: how old are the bot's marks? Amber >2h.
+        const t = Date.parse(state.bot.updated_at || "");
+        const m = isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null;
+        note.textContent = m == null ? "" :
+          m < 60 ? `marked ${m}m ago` : m < 48 * 60 ? `marked ${Math.round(m / 60)}h ago` : `marked ${Math.round(m / 1440)}d ago`;
+        note.style.color = m != null && m > 120 ? "var(--orange)" : "";
+      } else {
+        note.textContent = "Autonomous bot is in dry-run — its trades appear here once enabled.";
+      }
+    }
+    // Always-visible account summary in the sticky topbar: who's where, at a glance.
+    const ts = $("#jr-topsum");
+    if (ts) {
+      const cell = (who, st, openN) =>
+        `<span class="ts-who">${who}</span><span class="${pcls(st.totalD)}">${money0(START_CAPITAL + st.totalD)}</span>` +
+        `<span class="ts-who">· ${openN} open</span>`;
+      ts.innerHTML = cell("🤖", sb, state.bot.open.length) + cell("✏️", sm, state.me.open.length);
+    }
   }
 
   // Run async work in small waves so we never burst dozens of quote requests at

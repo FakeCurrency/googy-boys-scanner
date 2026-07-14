@@ -11,8 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=62" />
+  <link rel="stylesheet" href="css/styles.css?v=63" />
   <link rel="stylesheet" href="css/journal.css?v=21" />
+  <script src="js/nav.js?v=1"></script>
   <script src="js/sw-register.js?v=1" defer></script>
 </head>
 <body>
@@ -23,8 +24,8 @@
       </span>
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
     </div>
-    <a class="howto-link" href="index.html">← Dashboard</a>
-    <a class="howto-link bot-nav-link" href="bot.html"><span class="bot-nav-dot"></span>AI BOT</a>
+    <nav class="nav-pills" id="site-nav"></nav>
+    <span class="jr-topsum" id="jr-topsum"></span>
   </header>
 
   <main class="wrap">
@@ -60,7 +61,7 @@
       </div>
       <p class="cmp-legend"><span class="lg lg-d">— cumulative&nbsp;$</span> <span class="lg lg-r">— cumulative&nbsp;R</span></p>
       <div class="jr-section-title">Edge tracker <span class="muted">— forward expectancy by setup (fills in as trades close)</span></div>
-      <div class="jr-table-wrap" id="edge-tracker"></div>
+      <div class="jr-table-wrap" id="edge-tracker"><div class="jr-empty">Loading…</div></div>
       <div class="jr-section-title">⨂ Lens tracker <span class="muted">— which lens is actually paying (VIVEK vs PhaseMap vs Specs)</span></div>
       <div class="jr-table-wrap" id="lens-tracker"></div>
     </section>
@@ -68,12 +69,12 @@
     <!-- ═══ 2 · SAME POSITIONS — you and Claude in the same trade ═══ -->
     <section class="cmp both">
       <div class="jr-section-title">⚔ Same positions <span class="muted">— you and Claude in the same trade, head to head</span> <span id="both-open-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="both-open"></div>
+      <div class="jr-table-wrap" id="both-open"><div class="jr-empty">Loading…</div></div>
       <p class="both-note">Same live price for both sides — the R/$ gap comes from who got the better entry.
         Claude marks at the latest scan; your side updates live.</p>
       <div id="both-closed-wrap" hidden>
         <div class="jr-section-title">Settled head-to-heads <span class="muted">— same symbol, both sides closed</span></div>
-        <div class="jr-table-wrap" id="both-closed"></div>
+        <div class="jr-table-wrap" id="both-closed"><div class="jr-empty">Loading…</div></div>
       </div>
     </section>
 
@@ -88,9 +89,9 @@
       <div class="jr-section-title">Equity curve <span class="muted">(cumulative R · $)</span></div>
       <div id="bot-equity" class="jr-equity-chart"></div>
       <div class="jr-section-title">Open positions <span id="bot-open-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="bot-open"></div>
+      <div class="jr-table-wrap" id="bot-open"><div class="jr-empty">Loading…</div></div>
       <div class="jr-section-title">Closed trades <span id="bot-closed-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="bot-closed"></div>
+      <div class="jr-table-wrap" id="bot-closed"><div class="jr-empty">Loading…</div></div>
     </section>
 
     <!-- ═══ 3 · ME (MANUAL) ═══ -->
@@ -103,9 +104,9 @@
       <div class="jr-section-title">Equity curve <span class="muted">(cumulative R · $)</span></div>
       <div id="me-equity" class="jr-equity-chart"></div>
       <div class="jr-section-title">Open positions <span id="me-open-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="me-open"></div>
+      <div class="jr-table-wrap" id="me-open"><div class="jr-empty">Loading…</div></div>
       <div class="jr-section-title">Closed trades <span id="me-closed-n" class="muted"></span></div>
-      <div class="jr-table-wrap" id="me-closed"></div>
+      <div class="jr-table-wrap" id="me-closed"><div class="jr-empty">Loading…</div></div>
     </section>
     </div><!-- /.sides -->
 
@@ -153,6 +154,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=6"></script>
-  <script src="js/journal.js?v=47"></script>
+  <script src="js/journal.js?v=48"></script>
 </body>
 </html>

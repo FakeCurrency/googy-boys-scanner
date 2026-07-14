@@ -27,6 +27,22 @@
   const urlMode = (params.get("mode") || "").toLowerCase();
   const mode = market === "scalp" ? (urlMode || "scalp")
     : urlMode === "spec" ? "spec" : "vivek";
+  // Back-link context: return to wherever the user actually came from
+  // (journal / phasemap / specs / mynames / alerts pass src=...) instead of
+  // always dumping them on the dashboard. src already drives prev/next lists.
+  {
+    const SRC_BACK = {
+      journal:  ["journal.html",  "← Journal"],
+      phasemap: ["phasemap.html", "← Phase Map"],
+      specs:    ["specs.html",    "← Specs"],
+      mynames:  ["mynames.html",  "← My Names"],
+      alerts:   ["alerts.html",   "← Alerts"],
+      sectors:  ["sectors.html",  "← News"],
+    };
+    const back = SRC_BACK[(params.get("src") || "").toLowerCase()];
+    const el = document.querySelector(".back-link");
+    if (back && el) { el.href = back[0]; el.textContent = back[1]; }
+  }
   const isVivek = mode === "vivek";
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;

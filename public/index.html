@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=62" />
+  <link rel="stylesheet" href="css/styles.css?v=63" />
   <script src="js/sw-register.js?v=1" defer></script>
 </head>
 <body>
@@ -53,17 +53,8 @@
           <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
           <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
         </div>
-        <div class="nav-pills">
-          <a class="howto-link" href="phasemap.html">PHASEMAP</a>
-          <a class="howto-link" href="specs.html">SPECS ⚡</a>
-          <a class="howto-link" href="mynames.html">★ MY NAMES</a>
-          <a class="howto-link" href="alerts.html">ALERTS</a>
-          <a class="howto-link" href="sectors.html">NEWS</a>
-          <a class="howto-link" href="journal.html">JOURNAL</a>
-          <a class="howto-link nav-minor" href="debug.html">DEBUG</a>
-          <a class="howto-link nav-minor" href="about.html">HOW IT WORKS</a>
-          <a class="howto-link bot-nav-link nav-minor" href="bot.html"><span class="bot-nav-dot"></span>AI BOT</a>
-        </div>
+        <!-- shared site nav (js/nav.js) -->
+        <div class="nav-pills" id="site-nav"></div>
       </div>
 
       <div class="topbar-brand">
@@ -104,6 +95,9 @@
 
   <main class="wrap">
     <!-- last scanned -->
+    <!-- bot activity strip — what Claude did while you weren't looking -->
+    <section class="bot-activity" id="bot-activity" hidden></section>
+
     <section class="scan-banner">
       <div class="scan-banner-title" id="scan-title">Loading latest scan…</div>
       <div class="scan-banner-sub" id="scan-sub">Updates automatically after each market close</div>
@@ -172,6 +166,6 @@
 
   <script src="js/gbs-sync.js?v=6"></script>
   <script src="js/phasemap-shared.js?v=7"></script>
-  <script src="js/app.js?v=64"></script>
+  <script src="js/app.js?v=65"></script>
 </body>
 </html>

@@ -1216,6 +1216,48 @@
   // Track record RETIRED (owner 2026-07-09): the firehose journal that fed
   // this strip logged every A+/A on every timeframe uncapped — the bot book
   // on journal.html is the only track record now.
+  // ── bot activity strip — what Claude did while you weren't looking ────────
+  function agoText(ms) {
+    if (!isFinite(ms)) return "";
+    const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+    if (m < 60) return `${m}m ago`;
+    if (m < 48 * 60) return `${Math.round(m / 60)}h ago`;
+    return `${Math.round(m / 1440)}d ago`;
+  }
+  async function loadBotActivity() {
+    const box = $("#bot-activity");
+    if (!box) return;
+    try {
+      const res = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const b = await res.json();
+      const evts = [];
+      for (const p2 of b.open || []) {
+        const t = Date.parse(p2.opened_at || "");
+        if (isFinite(t)) evts.push({ t, kind: "open", sym: p2.symbol,
+          txt: `Opened ${p2.symbol}`, sub: `${p2.timeframe || ""} ${p2.entry_type || ""}`.trim() });
+      }
+      for (const p2 of (b.closed || []).slice(-12)) {
+        const t = Date.parse(p2.closed_at || `${p2.exit_date || ""}T${p2.exit_time || "00:00"}:00Z`);
+        const r = p2.realized_r;
+        if (isFinite(t)) evts.push({ t, kind: "close", sym: p2.symbol, r,
+          txt: `Closed ${p2.symbol} ${r != null ? `${r >= 0 ? "+" : ""}${(+r).toFixed(2)}R` : ""}`.trim(),
+          sub: p2.exit_reason || "" });
+      }
+      evts.sort((a, b2) => b2.t - a.t);
+      const recent = evts.slice(0, 4);
+      if (!recent.length) { box.hidden = true; return; }
+      box.hidden = false;
+      box.innerHTML =
+        `<span class="ba-label">🤖 BOT ACTIVITY</span>` +
+        recent.map((e) =>
+          `<a class="ba-item" href="journal.html" title="${esc(e.sub)}">` +
+          `<span class="ba-kind-${e.kind}${e.kind === "close" ? (e.r >= 0 ? " pos" : " neg") : ""}">${esc(e.txt)}</span>` +
+          `<span class="ba-ago">${agoText(e.t)}</span></a>`).join("") +
+        `<a class="ba-more" href="journal.html">Journal →</a>`;
+    } catch (_) { /* the strip is optional — never block the dashboard */ }
+  }
+
   async function loadCaps() {
     try {
       const res = await fetch("data/market_caps.json", { cache: "no-cache" });
@@ -1750,6 +1792,8 @@
   initKeyboard();
   bind();
   loadCaps();
+  loadBotActivity();
+  setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
   load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
   // pull remote stars (unified watchlist) so phone/desktop agree, then refresh
   if (window.GBSSync && GBSSync.enabled()) {

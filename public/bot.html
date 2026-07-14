@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=62" />
+  <link rel="stylesheet" href="css/styles.css?v=63" />
   <style>
     /* ===================================================================
        AI BOT TERMINAL — institutional / prop-firm styling
@@ -419,6 +419,7 @@
     .bot-nav-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); vertical-align: middle; margin-right: 3px; animation: cpulse 2.4s infinite; }
     .howto-link.bot-nav-link { color: var(--blue); font-weight: 600; }
   </style>
+  <script src="js/nav.js?v=1"></script>
   <script src="js/sw-register.js?v=1" defer></script>
 </head>
 <body>
@@ -437,11 +438,7 @@
         </div>
       </div>
       <div class="topbar-nav">
-        <a class="howto-link" href="index.html">SCANNER</a>
-        <a class="howto-link" href="sectors.html">NEWS</a>
-        <a class="howto-link" href="journal.html">JOURNAL</a>
-        <a class="howto-link bot-nav-link" href="bot.html" aria-current="page"><span class="bot-nav-dot"></span>AI BOT</a>
-        <a class="howto-link" href="about.html">HOW IT WORKS</a>
+        <nav class="nav-pills" id="site-nav"></nav>
       </div>
     </div>
   </header>
