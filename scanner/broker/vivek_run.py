@@ -41,7 +41,8 @@ from zoneinfo import ZoneInfo
 
 from .. import config
 from . import vivek_bot, vivek_guard
-from ..vivek_journal import _current_price, _mark, _snapshot, costs_for, market_open
+from ..vivek_journal import (_apply_costs, _current_price, _mark, _r_of,
+                             _snapshot, costs_for, market_open)
 from ..journal_common import atomic_write
 
 log = logging.getLogger("vivek_run")
@@ -89,7 +90,7 @@ def _save_book(book: dict) -> None:
 def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
     intraday price with the journal's don't-chase guard. Carries entry_type +
-    label + timeframe + grade end-to-end. Returns None to not-chase."""
+    label + timeframe + grade + sector end-to-end. Returns None to not-chase."""
     plan = out["plan"]
     tf = plan["timeframe"]
     # Reuse the journal's snapshot so the fill model (don't-chase, risk, MAE/MFE,
@@ -97,6 +98,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     row = {
         "symbol": plan["symbol"],
         "name": plan.get("name", plan["symbol"]),
+        "sector": plan.get("sector", ""),   # persists so the sector cap holds across runs
         "dir": "SHORT" if plan["direction"] == "short" else "LONG",
         "grade": plan["grade"],
         "entry_types": [plan["entry_type"]],
@@ -119,7 +121,107 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     snap["risk_pct"] = plan["risk_pct"]
     snap["risk_usd"] = plan["risk_usd"]
     snap["source"] = "vivek_bot"
+    # Signal-vs-fill: record the plan's entry level next to the actual fill so
+    # the scan-cadence slippage is MEASURED, not assumed. Positive bps = the
+    # fill was worse than the signal (paid up on a long / sold down on a short).
+    sig = float(plan.get("entry") or 0)
+    if sig > 0:
+        slip_bps = (float(snap["entry"]) - sig) / sig * 1e4
+        if plan["direction"] == "short":
+            slip_bps = -slip_bps
+        snap["signal_entry"] = round(sig, 8)
+        snap["fill_slip_bps"] = round(slip_bps, 1)
     return snap
+
+
+def _close_time_stop(pos: dict, price: float, day: str,
+                     costs: tuple[float, float] | None) -> None:
+    """Close a stalled position at the observed price (exit_reason 'time') —
+    same accounting as the journal's stop-close path."""
+    is_long = pos.get("direction") == "long"
+    remaining = round(1.0 - (pos.get("booked_pct") or 0.0), 6)
+    pos.setdefault("gross_r", pos.get("realized_r", 0.0))
+    if remaining > 1e-9:
+        pos.setdefault("exits", []).append(
+            {"reason": "time", "price": round(price, 8), "pct": remaining, "date": day})
+        pos["gross_r"] = round(
+            pos["gross_r"] + remaining * _r_of(price, pos["entry"], pos["risk"], is_long), 4)
+        pos["booked_pct"] = 1.0
+    pos["status"] = "closed"
+    pos["exit_price"] = round(price, 8)
+    pos["exit_date"] = day
+    pos["exit_reason"] = "time"
+    _apply_costs(pos, costs)
+    try:
+        pos["hold_days"] = (dt.date.fromisoformat(day)
+                            - dt.date.fromisoformat(pos["entry_date"])).days
+    except Exception:
+        pos["hold_days"] = None
+
+
+def _held_days(pos: dict, day: str) -> int | None:
+    try:
+        return (dt.date.fromisoformat(day) - dt.date.fromisoformat(pos["entry_date"])).days
+    except Exception:
+        return None
+
+
+def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
+    """Symbols fully stopped out within VIVEK_BOT_REENTRY_COOLDOWN_DAYS of `day`."""
+    days = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
+    if days <= 0:
+        return set()
+    try:
+        cutoff = (dt.date.fromisoformat(day) - dt.timedelta(days=days)).isoformat()
+    except ValueError:
+        return set()
+    return {str(t.get("symbol") or "").upper()
+            for t in book.get("closed", [])
+            if t.get("market") == market and t.get("exit_reason") == "stop"
+            and cutoff <= str(t.get("exit_date") or "") <= day}
+
+
+def _earnings_within(yf_symbol: str | None, buffer_days: int) -> bool:
+    """Best-effort: does this name report within `buffer_days`? Fail-OPEN —
+    any lookup problem returns False so a data hiccup never blocks trading.
+    Called only for the handful of fills per run, never the universe."""
+    if not yf_symbol or buffer_days <= 0:
+        return False
+    try:
+        import yfinance as yf
+        cal = yf.Ticker(yf_symbol).calendar
+        dates = []
+        if isinstance(cal, dict):
+            raw = cal.get("Earnings Date") or []
+            dates = raw if isinstance(raw, (list, tuple)) else [raw]
+        elif cal is not None and hasattr(cal, "loc"):        # legacy DataFrame shape
+            dates = list(cal.loc["Earnings Date"]) if "Earnings Date" in getattr(cal, "index", []) else []
+        today = dt.date.today()
+        horizon = today + dt.timedelta(days=buffer_days)
+        for d in dates:
+            d = d.date() if hasattr(d, "date") and not isinstance(d, dt.date) else d
+            if isinstance(d, dt.date) and today <= d <= horizon:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _enrich_adv(results: list[dict], frames: dict, yf_map: dict) -> None:
+    """Stamp row['adv_usd'] (20-day average dollar volume, quote currency) on
+    each scan row so the decision engine's liquidity gates can read it.
+    Missing/broken data leaves the row un-stamped (exempt, fail-open)."""
+    for row in results:
+        df = frames.get(yf_map.get(row.get("symbol")))
+        if df is None or "Volume" not in getattr(df, "columns", ()):
+            continue
+        try:
+            tail = df.tail(20)
+            adv = float((tail["Close"] * tail["Volume"]).mean())
+            if adv > 0:
+                row["adv_usd"] = round(adv, 2)
+        except Exception:
+            continue
 
 
 # ── per-market run ────────────────────────────────────────────────────────────
@@ -167,6 +269,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     closed_now = 0
     closed_events: list[dict] = []          # for the end-of-run alert digest
     still_open = []
+    max_hold = int(getattr(config, "VIVEK_BOT_MAX_HOLD_DAYS", 0) or 0)
     for pos in book["open"]:
         if pos.get("market") != market:
             still_open.append(pos)
@@ -174,6 +277,16 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         price = price_of(pos["symbol"])
         if is_open and price is not None:
             _mark(pos, price, day, costs)
+            # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
+            # nowhere and squatting in a scarce slot. Runners past TP1 are
+            # exempt (already risk-free). Session-only, like every other fill.
+            if (pos.get("status") == "open" and max_hold > 0
+                    and not pos.get("tp1_hit")
+                    and (_held_days(pos, day) or 0) > max_hold):
+                _close_time_stop(pos, price, day, costs)
+                log.info("vivek_run [%s]: TIME-STOP %s — %s days without TP1, "
+                         "closed @ %g (%+.2fR)", market, pos["symbol"],
+                         _held_days(pos, day), price, pos.get("realized_r") or 0)
         if pos.get("status") == "closed":
             book["closed"].append(pos)
             closed_events.append(pos)
@@ -192,34 +305,49 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     guard = vivek_guard.check(book, market, day, equity, price_of)
     book.setdefault("guard", {})[market] = guard
     if guard["breached"]:
-        log.warning("vivek_run [%s]: DAILY-LOSS GUARD — session P&L $%.2f ≤ -$%.2f "
-                    "(%.1f%% of $%.0f) — halting new entries for %s",
-                    market, guard["session_usd"], guard["limit_usd"],
-                    guard["limit_pct"], equity, day)
+        kind = guard.get("breach_kind") or "daily"
+        hit_usd = guard["session_usd"] if kind == "daily" else guard.get("week_usd", 0.0)
+        hit_lim = guard["limit_usd"] if kind == "daily" else guard.get("week_limit_usd", 0.0)
+        log.warning("vivek_run [%s]: %s-LOSS GUARD — P&L $%.2f ≤ -$%.2f "
+                    "— halting new entries for %s",
+                    market, kind.upper(), hit_usd, hit_lim, day)
         try:
             from .alert_dispatch import send as _alert
             _alert("vivek_guard",
-                   f"VIVEK daily-loss guard [{market}] — session P&L ${guard['session_usd']:.2f}",
-                   f"Limit -${guard['limit_usd']:.2f}. New entries halted for {day}. "
+                   f"VIVEK {kind}-loss guard [{market}] — P&L ${hit_usd:.2f}",
+                   f"Limit -${hit_lim:.2f}. New entries halted for {day}. "
                    f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
         except Exception as e:
             log.warning("could not send guard alert: %s", e)
 
     # 3) decide NEW entries against the CURRENT book (caps/short-bias across runs).
-    # Sector rides along so decide() can enforce the per-sector correlation cap.
+    # Sector rides along so decide() can enforce the per-sector correlation cap;
+    # ADV is stamped on the rows for the liquidity gates; recently-stopped
+    # symbols are handed over for the re-entry cooldown.
+    _enrich_adv(results, frames, yf_map)
     open_book = [{"symbol": p["symbol"], "direction": p["direction"],
                   "sector": p.get("sector", "")}
                  for p in book["open"] if p.get("market") == market]
-    decision = vivek_bot.decide(results, equity, market=market, open_book=open_book)
+    decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
+                                cooldown_syms=_cooldown_symbols(book, market, day))
 
     # 4) fill new entries at the current intraday price (session only, guard clear).
-    added, chased = 0, 0
+    added, chased, earnings_skipped = 0, 0, 0
+    earnings_gate = (market in (getattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ()) or ()))
+    earnings_buffer = int(getattr(config, "VIVEK_BOT_EARNINGS_BUFFER_DAYS", 0) or 0)
     opened_events: list[dict] = []          # for the end-of-run alert digest
     if is_open and not guard["breached"]:
         for out in decision["plans"]:
             sym = out["plan"]["symbol"]
             price = _current_price(frames, yf_map.get(sym))
             if price is None:
+                continue
+            # Earnings gap-avoidance (best-effort, fail-open) — only for the
+            # handful of names actually being filled, never the universe.
+            if earnings_gate and _earnings_within(yf_map.get(sym), earnings_buffer):
+                earnings_skipped += 1
+                log.info("SKIP  %-8s [earnings] reports within %dd — gap risk",
+                         sym, earnings_buffer)
                 continue
             pos = _ticket_to_position(out, price, market, day)
             if pos is None:                              # don't chase

@@ -29,6 +29,9 @@ CRYPTO_SKIP = {
     "FRAX", "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
     "RLUSD", "GHO", "USDG", "USD1", "SUSDE", "SUSDS", "BUIDL", "USDY", "EURS",
     "WBTC", "WETH", "WEETH", "WSTETH", "STETH", "RETH", "CBETH", "WBETH", "BSC-USD",
+    # newer wrapped/staked BTC-ETH derivatives — duplicates of the underlying
+    "CBBTC", "TBTC", "SOLVBTC", "LBTC", "EZETH", "RSETH", "METH", "CMETH",
+    "LSETH", "SWETH", "OSETH", "JITOSOL", "MSOL", "BNSOL", "JUPSOL",
 }
 
 

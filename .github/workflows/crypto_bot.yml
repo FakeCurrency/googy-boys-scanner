@@ -94,3 +94,15 @@ jobs:
             echo "Push race — retry $i"; sleep $((i * 3))
           done
           echo "Could not push after retries"; exit 1
+
+      # If anything above failed, say so — otherwise the site quietly serves
+      # stale data and nobody notices until the freshness badge goes orange.
+      - name: Alert on failure (Discord)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\":\"WARNING: **${{ github.workflow }}** run FAILED - scan data may be going stale. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL" || true

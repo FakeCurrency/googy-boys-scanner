@@ -137,6 +137,18 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
             return skip("wide_stop",
                         f"{tf} stop {stop_pct:.0f}% from entry > max {max_stop_pct:.0f}%")
 
+    # The inverse pathology: a stop <1% from entry is a dead/pegged instrument
+    # (stablecoin-likes, defensives glued to the SMA). Risk sizing then buys a
+    # leverage-capped MAX position in something that doesn't move — a slot
+    # squatter, not a trade.
+    min_stop_pct = float(getattr(_cfg, "VIVEK_BOT_MIN_STOP_PCT", 0) or 0)
+    if min_stop_pct > 0 and e > 0:
+        stop_pct = abs(e - s) / e * 100.0
+        if stop_pct < min_stop_pct:
+            return skip("stop_too_tight",
+                        f"{tf} stop {stop_pct:.2f}% from entry < min {min_stop_pct:g}% — "
+                        f"dead/pegged instrument")
+
     # Rule 2 — entry-type label (must be one of the three known triggers).
     et = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
     # Favour the strongest trigger — skip the entry types the backtest flagged
@@ -224,12 +236,38 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
     tps = [float(plan["tp1"]), float(plan["tp2"]), float(plan["tp3"])]
     max_lev = _leverage_for(market)
     sizing = size_position(equity, entry, stop, risk_pct, max_lev)
+
+    # Liquidity honesty (row["adv_usd"] = 20-day average dollar volume in the
+    # market's quote currency, enriched by the runner; unknown = exempt):
+    # below the ADV floor a real fill eats multiple R in spread/impact, and
+    # even above it the position must stay a sliver of the daily tape.
+    adv = row.get("adv_usd")
+    if adv is not None and adv > 0:
+        sym = row.get("symbol", "?")
+        floors = getattr(_cfg, "VIVEK_BOT_MIN_ADV", None) or {}
+        min_adv = float(floors.get(market, floors.get("default", 0)) or 0)
+        if min_adv > 0 and adv < min_adv:
+            reason = (f"20d avg dollar volume {adv:,.0f} below the {market} "
+                      f"liquidity floor {min_adv:,.0f}")
+            log.info("SKIP  %-8s [illiquid] %s", sym, reason)
+            return {"take": False, "grade": decision.get("grade"), "reason": reason,
+                    "code": "illiquid", "plan": None}
+        max_adv_pct = float(getattr(_cfg, "VIVEK_BOT_MAX_NOTIONAL_PCT_ADV", 0) or 0)
+        if max_adv_pct > 0 and sizing["notional"] > adv * (max_adv_pct / 100.0):
+            reason = (f"notional {sizing['notional']:,.0f} is "
+                      f"{sizing['notional'] / adv * 100:.1f}% of ADV {adv:,.0f} "
+                      f"— max {max_adv_pct:g}%")
+            log.info("SKIP  %-8s [size_vs_adv] %s", sym, reason)
+            return {"take": False, "grade": decision.get("grade"), "reason": reason,
+                    "code": "size_vs_adv", "plan": None}
     scale = plan.get("scale") or (
         _cfg.VIVEK_TP_SCALE_LONG if direction == "long" else _cfg.VIVEK_TP_SCALE_SHORT)
 
     ticket = {
         "symbol": row.get("symbol"),
-        "market": market,
+        "name": row.get("name", row.get("symbol")),
+        "sector": row.get("sector", ""),   # persisted on the position so the
+        "market": market,                  # sector cap holds ACROSS runs
         "direction": direction,
         "timeframe": tf,                              # Rule 3 — recorded per trade
         "entry_type": decision["entry_type"],         # Rule 2 — labelled per trade
@@ -305,6 +343,19 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
 
 # ── 5. process one market's scan into plans, with the book rules ──────────────
 
+def _sector_key(symbol: str, sector: str | None, market: str | None) -> str:
+    """Sector bucket for the correlation cap. Crypto has no GICS sector, so
+    coins get synthetic buckets: the configured majors are 'crypto-major',
+    everything else is 'crypto-alt' — 4 alts are usually ONE beta-to-BTC bet."""
+    s = str(sector or "").strip().lower()
+    if s:
+        return s
+    if market == "crypto":
+        majors = {m.upper() for m in getattr(_cfg, "VIVEK_BOT_CRYPTO_MAJORS", ()) or ()}
+        return "crypto-major" if str(symbol or "").upper() in majors else "crypto-alt"
+    return ""
+
+
 def decide(rows: list[dict], equity: float, market: str | None = None,
            prefer_tf: str | None = None, open_book: list[dict] | None = None, **kw) -> dict:
     """Run the engine over ONE market's VIVEK scan and apply the book rules.
@@ -335,10 +386,18 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     shorts = sum(1 for p in book if str(p.get("direction")) == "short")
 
     # Correlation control: positions per sector (existing + taken this run), so
-    # the book can't quietly become one macro bet. Unknown sectors are exempt.
+    # the book can't quietly become one macro bet. Unknown sectors are exempt —
+    # except crypto, which gets synthetic major/alt buckets via _sector_key.
     max_sector = int(kw.get("max_per_sector", getattr(_cfg, "VIVEK_BOT_MAX_PER_SECTOR", 0)) or 0)
-    sector_counts: Counter = Counter(
-        str(p.get("sector") or "").strip().lower() for p in book if p.get("sector"))
+    sector_counts: Counter = Counter()
+    for p in book:
+        sk = _sector_key(p.get("symbol"), p.get("sector"), market)
+        if sk:
+            sector_counts[sk] += 1
+
+    # Re-entry cooldown: symbols recently stopped out (supplied by the runner
+    # from the closed book) are untouchable — no churning the same level.
+    cooldown_syms = {str(s).upper() for s in (kw.get("cooldown_syms") or ())}
 
     def drop(out, code, reason):
         log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
@@ -354,9 +413,11 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             continue
         sym = str(row.get("symbol") or "").upper()
         direction = out["direction"]
-        sector = str(row.get("sector") or "").strip().lower()
+        sector = _sector_key(sym, row.get("sector"), market)
         if sym in open_syms:
             drop(out, "dup_symbol", f"already holding {sym}")
+        elif sym in cooldown_syms:
+            drop(out, "cooldown", f"{sym} stopped out recently — re-entry cooldown active")
         elif longs + shorts >= max_pos:                 # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
         elif direction == "long" and longs >= max_long:

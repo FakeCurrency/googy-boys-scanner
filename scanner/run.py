@@ -160,7 +160,14 @@ def main() -> None:
         # Tradeability gates (2026-07: quality-of-fill filters, not strategy)
         "min_price": dict(config.VIVEK_BOT_MIN_PRICE),
         "max_stop_pct": config.VIVEK_BOT_MAX_STOP_PCT,
+        "min_stop_pct": config.VIVEK_BOT_MIN_STOP_PCT,
         "max_per_sector": config.VIVEK_BOT_MAX_PER_SECTOR,
+        "min_adv": dict(config.VIVEK_BOT_MIN_ADV),
+        "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
+        "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
+        "reentry_cooldown_days": config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS,
+        "earnings_buffer_days": config.VIVEK_BOT_EARNINGS_BUFFER_DAYS,
+        "max_weekly_loss_pct": config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT,
         # Cost model (bps) — mirrored by the journal + cloud watcher
         "commission_bps": dict(config.VIVEK_COMMISSION_BPS),
         "slippage_bps": dict(config.VIVEK_SLIPPAGE_BPS),

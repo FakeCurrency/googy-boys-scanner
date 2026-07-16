@@ -358,6 +358,40 @@ VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–
 #    and the position is a lottery ticket, not a managed trade.
 VIVEK_BOT_MIN_PRICE      = {"asx": 0.05, "nasdaq": 1.0, "crypto": 0.0, "default": 0.0}
 VIVEK_BOT_MAX_STOP_PCT   = 50.0    # skip if |entry−stop| > this % of entry (0 = off)
+#  • MIN_STOP_PCT: the inverse pathology — a stop <1% from entry usually means a
+#    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA).
+#    Risk sizing then buys a leverage-capped MAX position in something that
+#    doesn't move, squatting in a scarce slot for months. 0 = off.
+VIVEK_BOT_MIN_STOP_PCT   = 1.0
+#  • MIN_ADV / MAX_NOTIONAL_PCT_ADV: liquidity honesty. Values are 20-day average
+#    dollar volume in the market's QUOTE currency (A$ for ASX, US$ elsewhere).
+#    Below MIN_ADV a real fill would eat multiple R in spread/impact, so the
+#    paper edge is fiction exactly where it looks best. On top of the floor the
+#    position's notional may not exceed MAX_NOTIONAL_PCT_ADV % of ADV. Crypto
+#    top-100 is deep enough that the floor is off there. Unknown ADV = exempt
+#    (fail-open, same as unknown sectors). 0 = off.
+VIVEK_BOT_MIN_ADV        = {"asx": 250_000, "nasdaq": 2_000_000, "crypto": 0, "default": 0}
+VIVEK_BOT_MAX_NOTIONAL_PCT_ADV = 2.0
+# Slot hygiene — positions are capital even when flat:
+#  • MAX_HOLD_DAYS: a position that hasn't reached TP1 after this many calendar
+#    days is going nowhere — close it (exit_reason "time") and free the slot.
+#    Runners past TP1 are exempt: they're already risk-free. 0 = off.
+VIVEK_BOT_MAX_HOLD_DAYS  = 28
+#  • REENTRY_COOLDOWN_DAYS: after a full stop-out, don't re-enter the same
+#    symbol for this many days — stops the bot churning the same level and
+#    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
+VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+# Earnings gap-avoidance (best-effort, fail-open): skip NEW entries when the
+# name reports within the buffer. Gapping through a stop is the one tail the
+# stop can't manage. Lookup is one yfinance call per candidate FILL (a handful
+# per run, not the universe) and any lookup failure lets the trade through.
+VIVEK_BOT_EARNINGS_BUFFER_DAYS = 3
+VIVEK_BOT_EARNINGS_MARKETS     = ("nasdaq",)   # ASX earnings data on yfinance is too patchy to trust
+# Crypto correlation: coins have no GICS sector, so the per-sector cap never
+# bound them — 4 alts are usually ONE beta-to-BTC bet. Synthetic sectors:
+# majors below get "crypto-major", everything else "crypto-alt", then the
+# normal VIVEK_BOT_MAX_PER_SECTOR cap applies.
+VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # Correlation control: cap open positions per GICS sector per market so the book
 # can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
 # trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
@@ -373,6 +407,11 @@ VIVEK_BOT_NOTIFY_TRADES = False
 # session (it still manages/closes open positions). In a future live phase this
 # is also where a flatten would fire; in paper it just stops adding risk.
 VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
+# Weekly circuit breaker (per market): the daily guard resets at midnight, so
+# five max-loss days in a row were previously allowed. Once realised P&L over
+# the trailing 7 calendar days + open unrealised falls to -this% of equity,
+# new entries halt until the window rolls off. 0 = off.
+VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
 
 # ── Autonomous runner (scanner/broker/vivek_run.py) — Phase 1-2: dry-run + paper
 # book. NO live execution is wired yet. Live trading requires, all together:
@@ -384,7 +423,13 @@ VIVEK_BOT_DRY_RUN        = False   # False = write the paper book so trades pers
                                    #   (paper only — places NO real order; live needs MODE=live +
                                    #    VIVEK_LIVE_CONFIRMED + a wired broker, none of which exist yet)
 VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"}  # "live" not wired yet
-VIVEK_BOT_ACCOUNT_EQUITY = 10_000  # paper account equity used for sizing (USD)
+# Sizing equity is FIXED-FRACTIONAL ON STARTING CAPITAL by deliberate decision
+# (2026-07-16): realised P&L does NOT compound into position sizing. Every
+# trade risks the same $ so per-trade R stays comparable across the whole
+# forward test — the point of the paper phase is measuring edge, not growth.
+# Revisit when the book goes live (real accounts compound whether you like it
+# or not). Values are in the market's quote currency (A$ for ASX, US$ else).
+VIVEK_BOT_ACCOUNT_EQUITY = 10_000  # paper equity used for sizing — never mutated by P&L
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
 VIVEK_BOT_RECONCILE      = True    # reconcile broker fills (Phase 3; no-op while paper)
 

@@ -373,11 +373,19 @@ def test_sizing_risk_clamped_to_quarter_to_half_band():
 
 def test_leverage_is_5x_stocks_and_3x_crypto():
     # A tiny stop implies huge notional → leverage caps at the per-market max.
+    # (Tested at the sizing layer: plan_trade now rejects sub-1% stops outright
+    # via the stop_too_tight volatility floor — see test_vivek_bot_gates.py.)
+    asx = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=5)
+    cry = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=3)
+    assert asx["leverage"] <= 5 + 1e-9 and asx["leverage_capped"]
+    assert cry["leverage"] <= 3 + 1e-9 and cry["leverage_capped"]
+    # plan_trade stamps the per-market leverage target on a normal-width plan
+    plan = vivek_bot.plan_trade(_row(), 10_000, market="crypto")["plan"]
+    assert plan["leverage_target"] == 3
+    # ...and refuses the pathological stop that used to force the cap
     tight = {"1D": _bplan(stop=99.99, tp1=101, tp2=102, tp3=103)}
-    asx = vivek_bot.plan_trade(_row(plans=tight), 10_000, market="asx")["plan"]
-    cry = vivek_bot.plan_trade(_row(plans=tight), 10_000, market="crypto")["plan"]
-    assert asx["leverage_target"] == 5 and asx["leverage"] <= 5 + 1e-9 and asx["leverage_capped"]
-    assert cry["leverage_target"] == 3 and cry["leverage"] <= 3 + 1e-9 and cry["leverage_capped"]
+    out = vivek_bot.plan_trade(_row(plans=tight), 10_000, market="asx")
+    assert out["plan"] is None and out["code"] == "stop_too_tight"
 
 
 # ── bot: live management (scale-outs + SL movement) ──────────────────────────
