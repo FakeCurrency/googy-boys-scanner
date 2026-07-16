@@ -926,6 +926,42 @@
     } catch (_) { return null; }
   }
 
+  // Real-money position sizer: your account + risk% against THIS setup's
+  // entry/stop → exact share count for the broker order. Persisted locally.
+  function wireSizeCalc(d) {
+    const host = $("#cf-mysize");
+    if (!host) return;
+    if (d.entry == null || d.stop == null) { host.hidden = true; return; }
+    const cur = d.currency_symbol || "$";
+    const LS_ACCT = "gbs:mysize-acct", LS_RISK = "gbs:mysize-risk";
+    let acct = +(localStorage.getItem(LS_ACCT) || 0);
+    let risk = +(localStorage.getItem(LS_RISK) || 1);
+    host.hidden = false;
+    host.innerHTML =
+      `<span class="ms-label">💰 My size:</span>` +
+      `<label>acct $<input id="ms-acct" type="number" min="0" step="100" value="${acct || ""}" placeholder="10000"></label>` +
+      `<label>risk <input id="ms-risk" type="number" min="0.1" max="5" step="0.1" value="${risk}">%</label>` +
+      `<span class="ms-out" id="ms-out"></span>`;
+    const out = $("#ms-out");
+    const calc = () => {
+      acct = +($("#ms-acct").value || 0);
+      risk = +($("#ms-risk").value || 0);
+      try { localStorage.setItem(LS_ACCT, String(acct)); localStorage.setItem(LS_RISK, String(risk)); } catch (_) {}
+      const dist = Math.abs(d.entry - d.stop);
+      if (!(acct > 0) || !(risk > 0) || !(dist > 0)) { out.textContent = ""; return; }
+      const riskD = acct * risk / 100;
+      const shares = riskD / dist;
+      const units = shares >= 100 ? Math.floor(shares) : +shares.toFixed(4);
+      const notional = shares * d.entry;
+      out.innerHTML = `→ <strong>${units.toLocaleString()}</strong> units ` +
+        `≈ ${cur}${Math.round(notional).toLocaleString()} notional · ` +
+        `1R = ${cur}${riskD.toFixed(0)}${notional > acct ? ` · ×${(notional / acct).toFixed(1)} leverage` : ""}`;
+    };
+    $("#ms-acct").addEventListener("input", calc);
+    $("#ms-risk").addEventListener("input", calc);
+    calc();
+  }
+
   function wireSim(d) {
     const buyBtn  = $("#cf-sim-buy");
     const sellBtn = $("#cf-sim-sell");
@@ -1307,7 +1343,7 @@
   }
 
   function render(d) {
-    header(d); footer(d); wireSim(d);
+    header(d); footer(d); wireSim(d); wireSizeCalc(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
     if (!available.length) {

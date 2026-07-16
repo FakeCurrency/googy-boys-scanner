@@ -258,6 +258,14 @@
 .al-row-triple { border-left-color: var(--orange); }
 .al-lenses { font-family: var(--mono); font-size: 11px; color: var(--text-2); letter-spacing: 0.04em; }
 .al-time { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+/* new since last visit */
+.al-new-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue);
+  box-shadow: 0 0 6px var(--blue); flex: 0 0 auto; }
+/* ticker filter box on the ALERTS page */
+.al-search { font: 600 12px/1 var(--mono); color: var(--text);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+  padding: 7px 12px; width: 140px; outline: none; }
+.al-search:focus { border-color: var(--blue); }
 
 /* --------------------------------------------------------- MY NAMES page */
 .mn-row {

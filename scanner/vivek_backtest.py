@@ -226,8 +226,8 @@ def aggregate(trades: list[dict]) -> dict:
 # Slim trade record stored in the report — enough to recompute every metric and
 # to MERGE markets together across separate (streamed) runs.
 _SLIM_KEYS = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
-              "direction", "entry", "stop", "exit", "exit_date", "exit_reason",
-              "realized_r", "gross_r", "cost_r")
+              "direction", "entry", "stop", "exit", "entry_date", "exit_date",
+              "exit_reason", "realized_r", "gross_r", "cost_r", "sector")
 
 
 def _slim(tr: dict) -> dict:
@@ -260,6 +260,92 @@ def run_market_trades(mk: str, limit: int | None, period: str,
     return [_slim(t) for t in trades], {"symbols": len(uni), "trades": len(trades)}
 
 
+# ── portfolio-level simulation ───────────────────────────────────────────────
+# The per-trade replay answers "does a signal have edge?"; this answers the
+# question the bot actually lives with: does that edge SURVIVE slot contention
+# once the book rules (10 slots, one/symbol, sector cap, cooldown) compete for
+# capital? Chronological, per market, using the same rules as the live bot.
+# The time stop and daily/weekly guards need intra-trade price paths the slim
+# records don't carry, so they are NOT simulated (noted in the output).
+
+def portfolio_sim(trades: list[dict]) -> dict:
+    from collections import Counter
+    from .broker.vivek_bot import _sector_key
+
+    skip_types = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
+    long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
+    max_pos = config.VIVEK_BOT_MAX_POSITIONS
+    max_sector = int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0)
+    cooldown = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
+
+    elig = [t for t in trades
+            if t.get("grade") == "A+"
+            and t.get("entry_type") not in skip_types
+            and (not long_only or t.get("direction") == "long")
+            and t.get("entry_date") and t.get("exit_date")]
+    if not elig:
+        return {"note": "no bot-eligible trades with entry dates (re-run the "
+                        "backtest to regenerate trades with entry_date)",
+                "eligible": _metrics([]), "portfolio": _metrics([])}
+
+    def add_days(day: str, n: int) -> str:
+        return (dt.date.fromisoformat(day) + dt.timedelta(days=n)).isoformat()
+
+    taken_all: list[dict] = []
+    skips: Counter = Counter()
+    peak_open = 0
+    for mk in sorted({t["market"] for t in elig}):
+        # Weekly first on ties — mirrors the bot's prefer_tf ordering.
+        trs = sorted((t for t in elig if t["market"] == mk),
+                     key=lambda t: (t["entry_date"],
+                                    0 if t.get("timeframe") == "1W" else 1))
+        open_pos: list[dict] = []
+        open_syms: set = set()
+        sector_count: Counter = Counter()
+        cooldown_until: dict = {}
+        for t in trs:
+            day = t["entry_date"]
+            still = []
+            for p in open_pos:                       # free slots exited BEFORE today
+                if p["exit_date"] < day:
+                    open_syms.discard(p["symbol"])
+                    sk = _sector_key(p["symbol"], p.get("sector"), mk)
+                    if sk:
+                        sector_count[sk] -= 1
+                    if cooldown and p.get("exit_reason") == "stop":
+                        cooldown_until[p["symbol"]] = add_days(p["exit_date"], cooldown)
+                else:
+                    still.append(p)
+            open_pos = still
+            sym, sk = t["symbol"], _sector_key(t["symbol"], t.get("sector"), mk)
+            if sym in open_syms:
+                skips["dup_symbol"] += 1
+            elif cooldown_until.get(sym, "") >= day:
+                skips["cooldown"] += 1
+            elif len(open_pos) >= max_pos:
+                skips["book_full"] += 1
+            elif max_sector and sk and sector_count[sk] >= max_sector:
+                skips["sector_cap"] += 1
+            else:
+                open_pos.append(t)
+                open_syms.add(sym)
+                if sk:
+                    sector_count[sk] += 1
+                taken_all.append(t)
+                peak_open = max(peak_open, len(open_pos))
+
+    return {
+        "params": {"max_positions": max_pos, "max_per_sector": max_sector,
+                   "cooldown_days": cooldown, "long_only": long_only,
+                   "skip_entry_types": sorted(skip_types),
+                   "not_simulated": ["time_stop", "daily_guard", "weekly_guard",
+                                     "adv_gates (no historical ADV)"]},
+        "eligible": _metrics(elig),          # unconstrained: every bot-eligible signal
+        "portfolio": _metrics(taken_all),    # what the book rules actually let through
+        "taken": len(taken_all), "skipped": dict(skips), "peak_open": peak_open,
+    }
+
+
 def build_report(trades: list[dict], coverage: dict, params: dict, status: str) -> dict:
     return {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -267,6 +353,7 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
         "params": params,
         "coverage": coverage,
         "results": aggregate(trades),
+        "portfolio": portfolio_sim(trades),
         "trades": trades,
         "caveats": [
             "Survivorship bias — today's universe excludes delisted names.",
@@ -274,6 +361,8 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
             "Intrabar fills assume the stop fills before the target within a bar.",
             "A+ setups are rare, so trade counts (N) can be small and noisy.",
             "4H is not backtested (no deep intraday history).",
+            "Portfolio sim: time stop and loss guards are not replayed "
+            "(no intra-trade price paths in the slim records).",
         ],
     }
 
@@ -308,6 +397,15 @@ def _print(report: dict) -> None:
         for k, m in r[grp].items():
             if m["n"]:
                 line(k, m)
+    port = report.get("portfolio") or {}
+    if port.get("portfolio", {}).get("n"):
+        print("\nPORTFOLIO (bot book rules applied chronologically)")
+        line("eligible", port["eligible"])
+        line("portfolio", port["portfolio"])
+        print(f"  taken {port['taken']} · peak open {port['peak_open']} · "
+              f"skips {port['skipped'] or 'none'}")
+    elif port.get("note"):
+        print(f"\nPORTFOLIO: {port['note']}")
 
 
 def main() -> None:

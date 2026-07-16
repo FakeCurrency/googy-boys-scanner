@@ -159,9 +159,18 @@
         <tr><td>Per-sector cap</td><td class="rule amber" data-r="max_per_sector">3</td><td>The book can’t become one macro bet (unknown sectors exempt)</td></tr>
         <tr><td>Price floor</td><td class="rule amber" data-r="min_price">ASX ≥ $0.05 · NASDAQ ≥ $1</td><td>Sub-floor spreads are worth multiple R — paper fills there are fiction</td></tr>
         <tr><td>Max stop distance</td><td class="rule amber" data-r="max_stop_pct">50% of entry</td><td>A −95% structural stop makes risk-sizing meaningless</td></tr>
+        <tr><td>Min stop distance</td><td class="rule amber" data-r="min_stop_pct">1% of entry</td><td>A &lt;1% stop = a dead/pegged name — max-size position in something that never moves</td></tr>
+        <tr><td>Liquidity floor</td><td class="rule amber" data-r="min_adv">ASX ≥ A$250k · NASDAQ ≥ $2M ADV</td><td>Below this a real fill eats multiple R in spread/impact (20-day avg dollar volume; unknown = exempt)</td></tr>
+        <tr><td>Size vs the tape</td><td class="rule amber" data-r="max_notional_pct_adv">≤ 2% of ADV</td><td>The position must stay a sliver of the daily tape or the paper fill is fiction</td></tr>
+        <tr><td>Time stop</td><td class="rule" data-r="max_hold_days">28 days without TP1</td><td>Stalled positions release the slot (exit reason <code>time</code>); runners past TP1 exempt</td></tr>
+        <tr><td>Re-entry cooldown</td><td class="rule" data-r="reentry_cooldown_days">7 days after a stop-out</td><td>No churning the same level, re-donating 1R per scan</td></tr>
+        <tr><td>Earnings buffer (NASDAQ)</td><td class="rule" data-r="earnings_buffer_days">no new entry within 3 days of earnings</td><td>Gapping through a stop is the one uncontrolled tail (best-effort, fail-open)</td></tr>
+        <tr><td>Crypto correlation</td><td class="rule amber">majors vs alts buckets</td><td>Coins have no sectors — alts share one bucket so the sector cap binds (4 alts = one BTC-beta bet)</td></tr>
         <tr><td>Don’t-chase guard</td><td class="rule">on</td><td>Won’t fill if the live price has run too far past the plan entry</td></tr>
         <tr><td>Daily-loss guard</td><td class="rule red" data-r="max_daily_loss_pct">−3% / market / day</td><td>Halts NEW entries for the session; open positions still managed</td></tr>
+        <tr><td>Weekly circuit breaker</td><td class="rule red" data-r="max_weekly_loss_pct">−6% / market / trailing 7 days</td><td>Five max-loss days in a row can’t sail through the daily reset</td></tr>
         <tr><td>Entry timing</td><td class="rule">market session only</td><td>Fills at the real session price, never a stale pre-market print</td></tr>
+        <tr><td>Fill measurement</td><td class="rule">signal vs fill logged</td><td>Every fill records the plan entry vs actual fill (bps) — scan-cadence slippage is measured, not assumed</td></tr>
       </table>
       <p class="sys-note" id="sys-drift" hidden>⚠ This page couldn’t load <code>bot_rules.json</code> — the values above
         are the last-known defaults and may be stale.</p>
@@ -171,7 +180,12 @@
     <section class="sys" id="sizing">
       <h2>6 · Sizing &amp; cost model <span class="who">(identical for bot, manual journal, cloud watcher)</span></h2>
       <ul>
-        <li><strong>Books:</strong> $10,000 per market (ASX · NASDAQ · Crypto) → $30,000 shown as starting capital.</li>
+        <li><strong>Books:</strong> $10,000 per market (ASX · NASDAQ · Crypto) → $30,000 shown as starting capital.
+          The ASX book runs in <strong>A$</strong>; the journal converts its P&amp;L to US$ at the scan’s published
+          AUD/USD rate (<code>data/fx.json</code>) so combined totals never mix currencies at face value.</li>
+        <li><strong>No compounding (deliberate):</strong> sizing always uses the starting book, never the running
+          balance — every trade risks the same $ so per-trade R stays comparable for the whole forward test.
+          Revisited when anything goes live.</li>
         <li><strong>Risk per trade:</strong> <span class="rule" data-r="risk_pct">0.35%</span> of the market’s book
           (clamped 0.25–0.5%). <strong>1R = the dollars risked</strong>, so $ P&amp;L = R × risk-$.</li>
         <li><strong>Leverage cap on notional:</strong> <span class="rule" data-r="leverage">5× stocks · 3× crypto</span> —
@@ -282,6 +296,13 @@
       if (j.max_per_sector != null) set("max_per_sector", j.max_per_sector || "off");
       if (j.max_stop_pct != null) set("max_stop_pct", j.max_stop_pct ? `${j.max_stop_pct}% of entry` : "off");
       if (j.min_price) set("min_price", `ASX ≥ $${j.min_price.asx} · NASDAQ ≥ $${j.min_price.nasdaq}`);
+      if (j.min_stop_pct != null) set("min_stop_pct", j.min_stop_pct ? `${j.min_stop_pct}% of entry` : "off");
+      if (j.min_adv) set("min_adv", `ASX ≥ A$${(j.min_adv.asx / 1000).toFixed(0)}k · NASDAQ ≥ $${(j.min_adv.nasdaq / 1e6).toFixed(0)}M ADV`);
+      if (j.max_notional_pct_adv != null) set("max_notional_pct_adv", j.max_notional_pct_adv ? `≤ ${j.max_notional_pct_adv}% of ADV` : "off");
+      if (j.max_hold_days != null) set("max_hold_days", j.max_hold_days ? `${j.max_hold_days} days without TP1` : "off");
+      if (j.reentry_cooldown_days != null) set("reentry_cooldown_days", j.reentry_cooldown_days ? `${j.reentry_cooldown_days} days after a stop-out` : "off");
+      if (j.earnings_buffer_days != null) set("earnings_buffer_days", j.earnings_buffer_days ? `no new entry within ${j.earnings_buffer_days} days of earnings` : "off");
+      if (j.max_weekly_loss_pct != null) set("max_weekly_loss_pct", j.max_weekly_loss_pct ? `−${j.max_weekly_loss_pct}% / market / trailing 7 days` : "off");
       if (j.commission_bps) set("commission_bps", `ASX ${j.commission_bps.asx} · NASDAQ ${j.commission_bps.nasdaq} · crypto ${j.commission_bps.crypto} bps`);
       if (j.slippage_bps) set("slippage_bps", `ASX ${j.slippage_bps.asx} · NASDAQ ${j.slippage_bps.nasdaq} · crypto ${j.slippage_bps.crypto} bps`);
       const t = new Date(j.generated_at);

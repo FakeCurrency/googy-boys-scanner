@@ -200,7 +200,20 @@
     finalizeR(t);
   }
 
-  const dollarsOf = (t) => (t.realized_r != null && t.risk_usd != null ? t.realized_r * t.risk_usd : null);
+  // FX honesty: ASX positions are priced in A$ while NASDAQ/crypto are US$.
+  // Every $ AGGREGATE on this page converts ASX P&L to US$ at the scan's
+  // published AUD/USD rate (data/fx.json) so the head-to-head totals stop
+  // mixing currencies at face value (~50% overstatement of ASX P&L).
+  let FX_AUDUSD = 0.66;                       // fallback until fx.json loads
+  const fxOf = (t) => ((t.market || t.asset_type) === "asx" ? FX_AUDUSD : 1);
+  const dollarsOf = (t) => (t.realized_r != null && t.risk_usd != null
+    ? t.realized_r * t.risk_usd * fxOf(t) : null);
+  async function loadFx() {
+    try {
+      const r = await fetch("data/fx.json", { cache: "no-cache" });
+      if (r.ok) { const j = await r.json(); if (j && j.audusd > 0) FX_AUDUSD = +j.audusd; }
+    } catch (_) { /* keep fallback */ }
+  }
 
   // ── time helpers ──────────────────────────────────────────────────────────
   const pad = (n) => String(n).padStart(2, "0");
@@ -367,7 +380,7 @@
       const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
       const now = (t.unreal_r != null && risk > 0)
         ? (isLong ? t.entry + t.unreal_r * risk : t.entry - t.unreal_r * risk) : null;
-      const ur = t.unreal_r, ud = t.unreal_usd;
+      const ur = t.unreal_r, ud = t.unreal_usd != null ? t.unreal_usd * fxOf(t) : null;
       return {
         now: `<td class="num jr-now">${now != null ? px(now) : "—"}</td>`,
         ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>`,
@@ -398,6 +411,8 @@
       const isLong = t.direction !== "short";
       const actions = side === "me"
         ? `<td class="num jr-actions"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
+          `<button class="jr-note-btn${t.note ? " has-note" : ""}" data-note="${esc(t.id)}" ` +
+          `title="${t.note ? esc(t.note) : "Add a note — why did you take this trade?"}">📝</button>` +
           `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
@@ -423,7 +438,7 @@
         <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
-        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span></td></tr>`;
+        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}</td></tr>`;
     }).join("");
     return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
@@ -463,7 +478,7 @@
       const body = pairs.map(([b, m]) => {
         // Claude's cells are static (marked by the scan) — plain classes so
         // refreshLive only drives the Me cells (.jr-ur/.jr-ud) + shared Now.
-        const ur = b.unreal_r, ud = b.unreal_usd;
+        const ur = b.unreal_r, ud = b.unreal_usd != null ? b.unreal_usd * fxOf(b) : null;
         const me = liveCellParts(m, "me");
         return `<tr data-tid="${esc(m.id)}" data-side="me">
           ${symCell(b)}
@@ -772,6 +787,18 @@
         `<span class="ts-who">· ${openN} open</span>`;
       ts.innerHTML = cell("🤖", sb, state.bot.open.length) + cell("✏️", sm, state.me.open.length);
     }
+    const fxn = $("#fx-note");
+    if (fxn) fxn.textContent = ` · $ figures in US$ — ASX P&L converted at AUD/USD ${FX_AUDUSD.toFixed(4)}`;
+    // Strategy-review checkpoint (owner decision, locked until the evidence
+    // exists): NASDAQ slot weighting + confluence priority get reviewed at 30
+    // closed bot trades — not before, so the forward test isn't reset mid-run.
+    const chk = $("#review-checkpoint");
+    if (chk) {
+      const n = state.bot.closed.length;
+      chk.textContent = n >= 30
+        ? `✅ Review checkpoint reached — ${n}/30 closed bot trades: time to review NASDAQ allocation & confluence priority.`
+        : `Strategy review checkpoint: ${n}/30 closed bot trades. NASDAQ allocation & confluence-priority decisions stay locked until then.`;
+    }
   }
 
   // Run async work in small waves so we never burst dozens of quote requests at
@@ -828,7 +855,7 @@
         if (risk > 0) {
           const ur = rOf(price, src.entry, risk, isLong);
           if (urCell) { urCell.textContent = rfmt(ur); urCell.className = "num jr-ur " + rcls(ur); }
-          if (ru != null && udCell) { const ud = ur * ru; udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
+          if (ru != null && udCell) { const ud = ur * ru * fxOf(src); udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
         }
       }
     };
@@ -897,6 +924,23 @@
   // Remove a manual trade entirely (no P&L logged) — for setups you logged but
   // didn't actually take (e.g. a fund/REIT not listed on your broker). Records a
   // tombstone so the deletion propagates across synced devices.
+  // Post-trade review needs the WHY, not just the numbers — a free-text note
+  // per manual trade (cloud-synced: adding/editing one is a genuine user action).
+  function editNote(id) {
+    const data = mjLoad();
+    const t = data.trades.find((x) => x.id === id);
+    if (!t) return;
+    const note = prompt(`Note for ${String(t.symbol || "").toUpperCase()} — why did you take it?`,
+                        t.note || "");
+    if (note == null) return;                      // cancelled
+    t.note = note.trim();
+    if (!t.note) delete t.note;
+    t.mtime = Date.now();
+    mjSave(data);
+    renderAll();
+    refreshLive();
+  }
+
   function removeTrade(id) {
     const data = mjLoad();
     const t = (data.trades || []).find((x) => x.id === id);
@@ -933,6 +977,32 @@
       const blob = new Blob([JSON.stringify(mjLoad(), null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = Object.assign(document.createElement("a"), { href: url, download: `my-trades-${today()}.json` });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    // CSV of BOTH books (open + closed) — for tax time and Excel analysis.
+    // $ P&L column is US$-converted like the page; native risk/prices as-is.
+    const csvBtn = $("#mj-csv-btn");
+    if (csvBtn) csvBtn.addEventListener("click", () => {
+      const cols = ["side", "symbol", "market", "direction", "grade", "entry_type",
+                    "timeframe", "status", "entry", "stop", "exit", "entry_date",
+                    "exit_date", "exit_reason", "realized_r", "risk_usd",
+                    "pnl_usd", "note"];
+      const csvEsc = (v) => {
+        const s = v == null ? "" : String(v);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const rows = [];
+      const push = (t, side) => rows.push(cols.map((c) => csvEsc(
+        c === "side" ? side
+        : c === "pnl_usd" ? (dollarsOf(t) == null ? "" : dollarsOf(t).toFixed(2))
+        : c === "market" ? marketOf(t)
+        : t[c])).join(","));
+      for (const t of [...state.bot.open, ...state.bot.closed]) push(t, "claude");
+      for (const t of [...state.me.open, ...state.me.closed]) push(t, "me");
+      const blob = new Blob([cols.join(",") + "\n" + rows.join("\n") + "\n"], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href: url, download: `vivek-journal-${today()}.csv` });
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
@@ -995,6 +1065,8 @@
     document.addEventListener("click", (e) => {
       const del = e.target.closest("[data-del]");
       if (del) { removeTrade(del.getAttribute("data-del")); return; }
+      const noteBtn = e.target.closest("[data-note]");
+      if (noteBtn) { editNote(noteBtn.getAttribute("data-note")); return; }
       const btn = e.target.closest("[data-close]");
       if (btn) openCloseModal(btn.getAttribute("data-close"));
     });
@@ -1019,7 +1091,7 @@
   async function init() {
     loadMe();
     renderAll();                 // paint Me immediately
-    await Promise.all([loadBot(), loadScanMeta()]);
+    await Promise.all([loadBot(), loadScanMeta(), loadFx()]);
     renderAll();                 // repaint with Claude + grade/setup fallback
     wire();
     wireSync();

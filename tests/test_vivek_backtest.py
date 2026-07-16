@@ -69,3 +69,64 @@ def test_replay_symbol_smoke_does_not_crash():
     for t in trades:                                       # any trades must be well-formed
         assert t["status"] == "closed" and t["timeframe"] in ("1D", "1W")
         assert t.get("realized_r") is not None
+
+
+# ── portfolio-level simulation (bot book rules applied chronologically) ──────
+
+def _sim_trade(sym, entry_date, exit_date, r=1.0, sector="secA", **kw):
+    t = {"symbol": sym, "market": "asx", "grade": "A+", "entry_type": "reclaim",
+         "direction": "long", "timeframe": "1W", "sector": sector,
+         "entry": 100, "stop": 96, "entry_date": entry_date, "exit_date": exit_date,
+         "exit_reason": "target", "realized_r": r}
+    t.update(kw)
+    return t
+
+
+def test_portfolio_sim_slot_cap():
+    trades = [_sim_trade(f"S{i}", "2026-01-05", "2026-02-01", sector=f"sec{i}")
+              for i in range(12)]
+    r = bt.portfolio_sim(trades)
+    assert r["taken"] == 10 and r["skipped"]["book_full"] == 2
+    assert r["peak_open"] == 10
+    assert r["eligible"]["n"] == 12 and r["portfolio"]["n"] == 10
+
+
+def test_portfolio_sim_slots_free_after_exit():
+    trades = [_sim_trade("AAA", "2026-01-05", "2026-01-20"),
+              _sim_trade("BBB", "2026-01-25", "2026-02-10", sector="secB")]
+    r = bt.portfolio_sim(trades)
+    assert r["taken"] == 2 and not r["skipped"]
+
+
+def test_portfolio_sim_one_per_symbol_and_sector_cap():
+    trades = ([_sim_trade("AAA", "2026-01-05", "2026-03-01"),
+               _sim_trade("AAA", "2026-01-12", "2026-03-01")] +      # dup while open
+              [_sim_trade(f"M{i}", "2026-01-05", "2026-03-01", sector="materials")
+               for i in range(4)])                                    # 4th materials blocked
+    r = bt.portfolio_sim(trades)
+    assert r["skipped"]["dup_symbol"] == 1
+    assert r["skipped"]["sector_cap"] == 1
+
+
+def test_portfolio_sim_cooldown_after_stop_out():
+    trades = [_sim_trade("AAA", "2026-01-05", "2026-01-10", r=-1.0, exit_reason="stop"),
+              _sim_trade("AAA", "2026-01-13", "2026-02-01"),          # 3d later — blocked
+              _sim_trade("AAA", "2026-02-05", "2026-03-01")]          # past cooldown — ok
+    r = bt.portfolio_sim(trades)
+    assert r["skipped"]["cooldown"] == 1 and r["taken"] == 2
+
+
+def test_portfolio_sim_filters_non_bot_trades():
+    trades = [_sim_trade("AAA", "2026-01-05", "2026-02-01", grade="A"),
+              _sim_trade("BBB", "2026-01-05", "2026-02-01", entry_type="retest"),
+              _sim_trade("CCC", "2026-01-05", "2026-02-01", direction="short"),
+              _sim_trade("DDD", "2026-01-05", "2026-02-01")]
+    r = bt.portfolio_sim(trades)
+    assert r["eligible"]["n"] == 1 and r["taken"] == 1
+
+
+def test_portfolio_sim_legacy_trades_without_entry_date():
+    r = bt.portfolio_sim([{"symbol": "AAA", "grade": "A+",
+                                       "entry_type": "reclaim", "direction": "long",
+                                       "market": "asx", "exit_date": "2026-01-10"}])
+    assert "note" in r

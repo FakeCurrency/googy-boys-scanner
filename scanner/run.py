@@ -140,6 +140,22 @@ def main() -> None:
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors")
 
+    # FX honesty: the ASX book is A$ while NASDAQ/crypto are US$ — the journal
+    # converts ASX P&L at this rate so combined totals stop mixing currencies
+    # at face value (~50% overstatement). Fail-soft: keep the last-good file.
+    try:
+        fx_frames = download(["AUDUSD=X"], period="5d")
+        fx_df = fx_frames.get("AUDUSD=X")
+        rate = float(fx_df["Close"].dropna().iloc[-1]) if fx_df is not None else None
+        if rate and 0.4 < rate < 1.2:                  # sanity band for AUD/USD
+            (pathlib.Path(args.out) / "fx.json").write_text(json.dumps({
+                "audusd": round(rate, 4),
+                "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }, indent=2) + "\n", encoding="utf-8")
+            print(f"  fx: AUDUSD {rate:.4f}")
+    except Exception as e:
+        print(f"  fx: skipped ({e})", flush=True)
+
     # Publish the executing bot's ACTUAL rules (scanner/config.py) so the
     # dashboard risk engine reads the same numbers instead of drifting on its
     # own JS defaults (2026-07-09 — the two engines had already diverged:

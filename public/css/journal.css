@@ -289,6 +289,15 @@
   transition: color .15s, border-color .15s;
 }
 .jr-del-btn:hover { color: var(--red); border-color: var(--red); }
+.jr-note-btn {
+  font: 700 11px/1 var(--sans); margin-left: 6px;
+  padding: 4px 7px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted-2);
+  transition: color .15s, border-color .15s;
+}
+.jr-note-btn:hover { color: var(--blue); border-color: var(--blue); }
+.jr-note-btn.has-note { color: var(--blue); border-color: color-mix(in srgb, var(--blue) 45%, transparent); }
+.jr-note-tag { cursor: help; }
 
 /* ── Close-position modal ── */
 .jr-overlay {

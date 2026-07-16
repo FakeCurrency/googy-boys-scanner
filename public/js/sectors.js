@@ -164,7 +164,10 @@
   }
 
   function upcomingHTML(upc) {
-    if (!upc || !upc.length) return '<li class="upc-empty">No major scheduled events found.</li>';
+    if (!upc || !upc.length) {
+      return '<li class="upc-empty">No high-impact events flagged in the next few days — ' +
+             'the live economic calendar below has the full schedule.</li>';
+    }
     return upc.map((e) => {
       const fp = e.forecast ? `f/c ${esc(e.forecast)}${e.previous ? ` · prev ${esc(e.previous)}` : ""}`
         : (e.previous ? `prev ${esc(e.previous)}` : "");

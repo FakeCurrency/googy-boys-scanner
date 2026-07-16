@@ -12,9 +12,9 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="css/styles.css?v=63" />
-  <link rel="stylesheet" href="css/phasemap.css?v=13" />
+  <link rel="stylesheet" href="css/phasemap.css?v=14" />
   <script src="js/nav.js?v=2"></script>
-  <script src="js/sw-register.js?v=1" defer></script>
+  <script src="js/sw-register.js?v=2" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -42,11 +42,16 @@
         <button class="pm-chip" data-market="nasdaq">NASDAQ</button>
         <button class="pm-chip" data-market="crypto">CRYPTO</button>
       </div>
+      <div class="pm-filter-group">
+        <button class="pm-chip" id="al-triples" title="Only 3-lens alignments">🎯 TRIPLES</button>
+        <input class="al-search" id="al-search" type="search" placeholder="Filter ticker…"
+               autocomplete="off" spellcheck="false" />
+      </div>
     </div>
     <section id="al-list"></section>
     <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). Discord only carries the triples; this page keeps everything. Analysis only — not financial advice.</p>
   </main>
 
-  <script src="js/alerts.js?v=3"></script>
+  <script src="js/alerts.js?v=4"></script>
 </body>
 </html>
