@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System — Vivek 5.0</title>
+  <meta name="theme-color" content="#080b11" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=63" />
+  <style>
+    /* doc-local layout — everything else inherits the app theme */
+    .syswrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 60px; }
+    .sys-title { font: 800 26px/1.15 var(--sans); letter-spacing: -0.3px; margin: 8px 0 6px; }
+    .sys-sub { color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 760px; margin: 0 0 10px; }
+    .sys-live { display: inline-flex; gap: 6px; align-items: center; font: 600 11px/1 var(--mono);
+      color: var(--green); background: var(--green-soft); padding: 5px 10px; border-radius: 7px; }
+    .sys-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 8px; }
+    .sys-toc a { font: 600 11px/1 var(--sans); color: var(--blue); background: var(--blue-soft);
+      padding: 6px 10px; border-radius: 999px; text-decoration: none; }
+    section.sys { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px 20px; margin: 18px 0; }
+    section.sys h2 { font: 800 16px/1.2 var(--sans); margin: 0 0 4px; }
+    section.sys h3 { font: 700 13px/1.2 var(--sans); margin: 18px 0 6px; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.06em; }
+    section.sys p, section.sys li { font: 500 13px/1.6 var(--sans); color: var(--text-2); }
+    section.sys .who { font: 600 10.5px/1 var(--mono); color: var(--muted); }
+    table.sys-t { width: 100%; border-collapse: collapse; margin: 8px 0 4px; }
+    .sys-t th { font: 700 10.5px/1.3 var(--sans); text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .sys-t td { font: 500 12.5px/1.45 var(--sans); color: var(--text-2); padding: 8px 10px;
+      border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+    .sys-t tr:last-child td { border-bottom: 0; }
+    .sys-t code, section.sys code { font: 600 11.5px/1.4 var(--mono); color: var(--text);
+      background: var(--fill); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+    .rule { font: 700 12.5px/1 var(--mono); color: var(--green); }
+    .rule.red { color: var(--red); } .rule.blue { color: var(--blue); } .rule.amber { color: var(--orange); }
+    .sys-note { font: 500 11.5px/1.55 var(--sans); color: var(--muted); background: var(--fill-2);
+      border-radius: 10px; padding: 10px 13px; margin-top: 10px; }
+    .pill-g { color: var(--grade-aplus); font-weight: 800; } .pill-a { color: var(--grade-a); font-weight: 800; }
+    .pill-b { color: var(--grade-b); font-weight: 800; } .pill-w { color: var(--grade-c); font-weight: 800; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">SYSTEM</span></div>
+    </div>
+    <nav class="nav-pills" id="site-nav"></nav>
+  </header>
+
+  <main class="syswrap">
+    <h2 class="sys-title">System document</h2>
+    <p class="sys-sub">
+      The single reference for how Vivek&nbsp;5.0 works: every rule, where every number comes from,
+      what runs when, and what each part is allowed to do. Bot constants on this page are
+      <strong>hydrated live</strong> from <code>data/bot_rules.json</code> — published from
+      <code>scanner/config.py</code> on every scan, so this page can’t drift from the code.
+    </p>
+    <span class="sys-live" id="sys-live">⏳ loading live rule values…</span>
+
+    <nav class="sys-toc">
+      <a href="#data">Data sources</a><a href="#sched">Schedules</a><a href="#lenses">The 3 lenses</a>
+      <a href="#grading">Grading</a><a href="#bot">Bot rulebook</a><a href="#sizing">Sizing &amp; costs</a>
+      <a href="#mgmt">Trade management</a><a href="#storage">Storage map</a><a href="#safety">Safety gates</a>
+      <a href="#evidence">Evidence</a><a href="#limits">Known limits</a>
+    </nav>
+
+    <!-- ═══════════════ 1 · DATA SOURCES ═══════════════ -->
+    <section class="sys" id="data">
+      <h2>1 · Where the data comes from</h2>
+      <table class="sys-t">
+        <tr><th>Data</th><th>Source</th><th>Freshness</th></tr>
+        <tr><td>Historical bars (all scans, all lenses)</td><td><code>yfinance</code> (Yahoo Finance), pinned version, downloaded in GitHub Actions</td><td>~15&nbsp;min delayed; daily/weekly bars</td></tr>
+        <tr><td>Live crypto prices (chart, journal, watcher)</td><td>Binance public API (<code>&lt;SYM&gt;USDT</code>), Yahoo <code>&lt;SYM&gt;-USD</code> fallback</td><td>Real-time</td></tr>
+        <tr><td>Live stock quotes (chart, journal, watcher)</td><td>Yahoo via the <code>/api/quote</code> Cloudflare proxy (query1→query2 fallback)</td><td>~15&nbsp;min delayed</td></tr>
+        <tr><td>Journal “Now” prices (manual side)</td><td>Scan price snapshot first (<code>prices</code> map in <code>&lt;market&gt;_vivek.json</code> — the whole universe, every scan), live quote only as fallback</td><td>Refreshed each scan</td></tr>
+        <tr><td>Universes</td><td>ASX full list (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100 + extras; bundled CSVs in <code>data_universe/</code> as fallback</td><td>Rebuilt per scan</td></tr>
+        <tr><td>Market caps / sectors</td><td>Yahoo fundamentals, persistent cache (<code>market_caps.json</code>)</td><td>Best-effort, fills over runs</td></tr>
+        <tr><td>News / feeds page</td><td>YouTube RSS + AI narrative</td><td>Every 6&nbsp;h</td></tr>
+      </table>
+      <p class="sys-note">⚠ Honesty note: Yahoo throttles bursts, so scans keep a <em>last-good cache</em> per ticker —
+        a name Yahoo drops in one run reuses its previous frame. Coverage % is stamped into every scan file and shown
+        as the freshness badge on the dashboard. History is survivor-biased (today’s index members), which inflates
+        backtests — treat NASDAQ backtest numbers especially with suspicion.</p>
+    </section>
+
+    <!-- ═══════════════ 2 · SCHEDULES ═══════════════ -->
+    <section class="sys" id="sched">
+      <h2>2 · What runs when <span class="who">(GitHub Actions cron, UTC — best-effort ±few min)</span></h2>
+      <table class="sys-t">
+        <tr><th>Job</th><th>When</th><th>Does</th></tr>
+        <tr><td>Stock scans + bot</td><td>ASX hourly 00:00–05:00 + 06:30 close · NASDAQ 13:30 open, hourly 14:00–20:00, 21:00 close (weekdays)</td><td>Scan all markets, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
+        <tr><td>Crypto bot</td><td>Hourly, 24/7</td><td>Crypto scan + bot book</td></tr>
+        <tr><td>Weekend crypto sweep</td><td>6-hourly Sat/Sun</td><td>Keeps crypto data fresh when stock scans sleep</td></tr>
+        <tr><td>Stop/target watcher</td><td><strong>Every 5 min, 24/7</strong></td><td>Cloud-side: applies the full VIVEK scale-out rules to your manual positions (TP partials, SL trailing, honest stop fills) — works with no page open</td></tr>
+        <tr><td>PhaseMap nightly</td><td>08:30 UTC daily</td><td>PhaseMap states for all markets + per-symbol chart data</td></tr>
+        <tr><td>Kill-switch check</td><td>:15/:45 each session hour</td><td>Daily-loss flatten check (legacy journal)</td></tr>
+        <tr><td>Weekly lens backtests</td><td>Sun 08:00 UTC</td><td>Refreshes <code>vivek_backtest.json</code> (canonical, both directions)</td></tr>
+        <tr><td>VIVEK long-only backtest</td><td>1st of month, 08:00 UTC</td><td>Refreshes <code>vivek_backtest_longonly.json</code> — the bot-relevant evidence</td></tr>
+        <tr><td>Tests</td><td>Every push</td><td>~290 Python + JS tests gate all code</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══════════════ 3 · LENSES ═══════════════ -->
+    <section class="sys" id="lenses">
+      <h2>3 · The three lenses</h2>
+      <h3>VIVEK 5.0 — the core (SCAN tab)</h3>
+      <p>Price <em>reacting</em> at its <strong>200-SMA</strong> on Weekly / 3-Day / Daily levels.
+        Three entry triggers, colour-coded by backtest edge:
+        <span class="rule">reclaim</span> (close back above the 200-SMA after rejection — carries the edge) ·
+        <span class="rule amber">break</span> (break of small structure at the level — okay) ·
+        <span class="rule red">retest</span> (retest + confirmation — weak; the bot skips it).
+        Each setup carries per-timeframe plans (entry / SL / TP1-3), ARMED (trigger fired) vs WATCHING
+        (near the level), grade hysteresis, and the still-forming bar is dropped so grades don’t wobble intraday.</p>
+      <h3>PhaseMap — the trap lens</h3>
+      <p>Liquidity behaviour, zone-based (zones are always <em>bands</em>, never single prices).
+        States: <code>TRAP_SET → SWEPT → RUNNING / DISPLACED → STALLED → COMPLETE/DEAD</code>.
+        Deterministic — no AI in the scan path; ruleset is versioned (<code>RULESET_VERSION</code> bumps on any
+        parameter change). The owner’s master spec is law for its maths.</p>
+      <h3>Specs — the discovery lens</h3>
+      <p>Sub-$0.50 names breaking out of a base on a <strong>≥3× volume spike</strong>. Its own backtest says it’s a
+        <em>shortlist generator, not an entry system</em> — treat SPECS results as candidates to chart, not signals to buy.</p>
+      <p class="sys-note">🔗 Multi-lens confluence: when 2+ lenses agree on the same name in the same direction you get
+        banners on the dashboard/lens pages, an ALERTS page entry, and (for triples) a Discord ping.</p>
+    </section>
+
+    <!-- ═══════════════ 4 · GRADING ═══════════════ -->
+    <section class="sys" id="grading">
+      <h2>4 · Grading</h2>
+      <table class="sys-t">
+        <tr><th>Grade</th><th>Meaning</th><th>Gates</th></tr>
+        <tr><td><span class="pill-g">A+</span></td><td>Top tier — the only grade the bot trades</td><td>Must be ARMED (a trigger actually fired) + clean structure + R:R ≥ minimum</td></tr>
+        <tr><td><span class="pill-a">A</span></td><td>Tradeable manually; ~breakeven in the backtest</td><td>ARMED required</td></tr>
+        <tr><td><span class="pill-b">B+</span></td><td>Watching — near the level, no trigger yet</td><td>Un-armed setups cap here</td></tr>
+        <tr><td><span class="pill-w">WATCH</span></td><td>Informational</td><td>—</td></tr>
+      </table>
+      <p>Low R:R demotes a grade. <strong>High Conviction 🎯</strong> = a Weekly reclaim that’s A/A+ or has strong
+        structure — the best cell in the walk-forward backtest (~65% win, +0.85R avg).</p>
+    </section>
+
+    <!-- ═══════════════ 5 · BOT RULEBOOK ═══════════════ -->
+    <section class="sys" id="bot">
+      <h2>5 · Autonomous bot rulebook <span class="who">(live from bot_rules.json)</span></h2>
+      <table class="sys-t">
+        <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
+        <tr><td>Grade</td><td class="rule" data-r="min_grade">A+ only</td><td>A+ carried the whole backtest edge; A was ~breakeven</td></tr>
+        <tr><td>Direction</td><td class="rule" data-r="allow_shorts">long-only</td><td>Shorts lost ~0.5R/trade on every market tested</td></tr>
+        <tr><td>Entry types skipped</td><td class="rule red" data-r="skip_entry_types">retest</td><td>Backtest-weak trigger</td></tr>
+        <tr><td>Preferred timeframe</td><td class="rule blue" data-r="prefer_tf">1W</td><td>Weekly plans first (less noise), falls back to 1D</td></tr>
+        <tr><td>Minimum R:R (to TP2)</td><td class="rule" data-r="min_rr">1.5</td><td>Skip poor-reward setups</td></tr>
+        <tr><td>Funds / REITs / ETFs / LICs</td><td class="rule red" data-r="exclude_funds">excluded</td><td>They hug the 200-SMA (false reactions) and CFD brokers don’t list them</td></tr>
+        <tr><td>Positions per market</td><td class="rule" data-r="max_positions">10</td><td>Book cap — full book benches new setups until something closes</td></tr>
+        <tr><td>One per symbol</td><td class="rule">always</td><td>No pyramiding</td></tr>
+        <tr><td>Per-sector cap</td><td class="rule amber" data-r="max_per_sector">3</td><td>The book can’t become one macro bet (unknown sectors exempt)</td></tr>
+        <tr><td>Price floor</td><td class="rule amber" data-r="min_price">ASX ≥ $0.05 · NASDAQ ≥ $1</td><td>Sub-floor spreads are worth multiple R — paper fills there are fiction</td></tr>
+        <tr><td>Max stop distance</td><td class="rule amber" data-r="max_stop_pct">50% of entry</td><td>A −95% structural stop makes risk-sizing meaningless</td></tr>
+        <tr><td>Don’t-chase guard</td><td class="rule">on</td><td>Won’t fill if the live price has run too far past the plan entry</td></tr>
+        <tr><td>Daily-loss guard</td><td class="rule red" data-r="max_daily_loss_pct">−3% / market / day</td><td>Halts NEW entries for the session; open positions still managed</td></tr>
+        <tr><td>Entry timing</td><td class="rule">market session only</td><td>Fills at the real session price, never a stale pre-market print</td></tr>
+      </table>
+      <p class="sys-note" id="sys-drift" hidden>⚠ This page couldn’t load <code>bot_rules.json</code> — the values above
+        are the last-known defaults and may be stale.</p>
+    </section>
+
+    <!-- ═══════════════ 6 · SIZING & COSTS ═══════════════ -->
+    <section class="sys" id="sizing">
+      <h2>6 · Sizing &amp; cost model <span class="who">(identical for bot, manual journal, cloud watcher)</span></h2>
+      <ul>
+        <li><strong>Books:</strong> $10,000 per market (ASX · NASDAQ · Crypto) → $30,000 shown as starting capital.</li>
+        <li><strong>Risk per trade:</strong> <span class="rule" data-r="risk_pct">0.35%</span> of the market’s book
+          (clamped 0.25–0.5%). <strong>1R = the dollars risked</strong>, so $ P&amp;L = R × risk-$.</li>
+        <li><strong>Leverage cap on notional:</strong> <span class="rule" data-r="leverage">5× stocks · 3× crypto</span> —
+          tight stops can’t create oversized positions.</li>
+        <li><strong>Costs (baked into every realised R):</strong> commission
+          <span class="rule amber" data-r="commission_bps">ASX 2 · NASDAQ 1 · crypto 6 bps</span> +
+          slippage <span class="rule amber" data-r="slippage_bps">ASX 5 · NASDAQ 4 · crypto 8 bps</span>.
+          A stop/manual close pays slippage; a resting TP limit doesn’t.</li>
+        <li><strong>Honest fills:</strong> a stop that gaps through fills at the <em>worse</em> price (never better than
+          the stop); a target never credits overshoot.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════ 7 · TRADE MANAGEMENT ═══════════════ -->
+    <section class="sys" id="mgmt">
+      <h2>7 · Trade management ladder <span class="who">(the same rules run the bot, your manual trades, and the 24/7 watcher)</span></h2>
+      <table class="sys-t">
+        <tr><th>Event</th><th>Action (long)</th></tr>
+        <tr><td><strong>TP1</strong> hit</td><td>Book 25% at the level · stop → <strong>break-even</strong></td></tr>
+        <tr><td><strong>TP2</strong> hit</td><td>Book 50% · stop → <strong>TP1</strong> (locked structure)</td></tr>
+        <tr><td><strong>TP3</strong> hit</td><td>Book 15% · remainder runs with the trailed stop</td></tr>
+        <tr><td><strong>Stop</strong> hit</td><td>Close the remainder. Exit reason: <code>stop</code> (no TP hit) · <code>trail</code> (TP1+ hit) · <code>target</code> (TP3 hit)</td></tr>
+        <tr><td>Chased manual entry</td><td>A TP already <em>behind</em> your entry never books (valid-target guard); chart warns before a chased Buy and recuts TP1-3 as fresh R-multiples from your actual entry</td></tr>
+      </table>
+      <p>Stops only ever move <em>in the trade’s favour</em>. Shorts mirror with 50/25/15 scaling.</p>
+    </section>
+
+    <!-- ═══════════════ 8 · STORAGE MAP ═══════════════ -->
+    <section class="sys" id="storage">
+      <h2>8 · Storage map — who writes what</h2>
+      <table class="sys-t">
+        <tr><th>File</th><th>Written by</th><th>Read by</th></tr>
+        <tr><td><code>data/&lt;m&gt;_vivek.json</code></td><td>Scan (Actions)</td><td>Dashboard, chart, journal (incl. whole-universe <code>prices</code> map)</td></tr>
+        <tr><td><code>data/vivek_bot_book.json</code></td><td>Bot runner each scan (server-marked unreal R/$)</td><td>Journal “Claude” side, dashboard activity strip</td></tr>
+        <tr><td><code>data/bot_rules.json</code></td><td>Every scan, from <code>scanner/config.py</code></td><td>Bot page, this page (live values, drift-warning)</td></tr>
+        <tr><td><code>data/phasemap/&lt;m&gt;/latest.json</code> (+dated, charts/, stats/)</td><td>PhaseMap nightly</td><td>PhaseMap pages, confluence</td></tr>
+        <tr><td><code>data/&lt;m&gt;_spec.json</code> + <code>spec_charts/</code></td><td>Specs scan</td><td>SPECS page, confluence</td></tr>
+        <tr><td>Your manual trades + watchlists</td><td><strong>Your browser</strong> (localStorage) → optional Cloudflare KV sync (private code)</td><td>Journal “Me” side, chart position box, ★ MY NAMES; the 5-min cloud watcher manages open trades in KV</td></tr>
+        <tr><td><code>data/vivek_backtest*.json</code></td><td>Weekly lens backtest · monthly long-only backtest</td><td>Insights / evidence pages</td></tr>
+      </table>
+      <p class="sys-note">Cloud writes are budgeted (max 400/day/device) and only fire on real user actions —
+        rule-computed changes (scale-outs, auto-closes) save locally and re-derive on every device.</p>
+    </section>
+
+    <!-- ═══════════════ 9 · SAFETY ═══════════════ -->
+    <section class="sys" id="safety">
+      <h2>9 · Safety gates</h2>
+      <ul>
+        <li><strong>Paper only.</strong> No real orders anywhere. Live execution requires — all together — per-market
+          <code>MODE="live"</code> + <code>VIVEK_LIVE_CONFIRMED=True</code> + a wired, reviewed broker layer. None exist today.</li>
+        <li><strong>Daily-loss guard</strong> per market (above) + a separate kill-switch workflow for the legacy journal.</li>
+        <li><strong>Schema gate:</strong> every scan verifies the published JSON carries the current schema version — code/data drift fails the workflow instead of silently hiding features.</li>
+        <li><strong>Atomic writes</strong> (temp + rename) + corrupt-file quarantine on every journal/book load.</li>
+        <li><strong>Config-first:</strong> every threshold lives in <code>scanner/config.py</code> / <code>phasemap/config.py</code>; bot constants republished to <code>bot_rules.json</code> each scan and drift-checked in the UI.</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════ 10 · EVIDENCE ═══════════════ -->
+    <section class="sys" id="evidence">
+      <h2>10 · Evidence — why these rules</h2>
+      <p>A walk-forward backtest replays the <em>real engine</em> bar-by-bar (causal, pessimistic intrabar fills:
+        stop checked before target). Headline findings that set today’s rules:</p>
+      <ul>
+        <li>Long-only ex-NASDAQ ≈ <strong>+0.46R/trade</strong>, PF ≈ 2.0, ~56% win.</li>
+        <li><strong>Weekly reclaim</strong> is the cleanest cell (~65% win, +0.85R, PF ≈ 3.3) → bot prefers 1W + reclaim.</li>
+        <li>Shorts ≈ <strong>−0.5R/trade everywhere</strong> → long-only. Retests ~flat → skipped. A ≈ breakeven → A+ only.</li>
+      </ul>
+      <p>Forward evidence accrues in the journal’s <strong>Edge Tracker</strong> (expectancy per setup cell from real
+        closed trades — needs ~20 per cell to mean anything) and refreshes automatically: weekly (canonical) + monthly (long-only).</p>
+    </section>
+
+    <!-- ═══════════════ 11 · LIMITS ═══════════════ -->
+    <section class="sys" id="limits">
+      <h2>11 · Known limitations (read before trusting any number)</h2>
+      <ul>
+        <li><strong>~15-min delayed data</strong>; the bot marks positions hourly at scans (manual trades: every 5 min via the watcher). Real gaps can and do blow through stops — losses beyond −1R are recorded honestly.</li>
+        <li><strong>Survivorship bias</strong> in backtests (current index membership). Discount NASDAQ cells hardest.</li>
+        <li><strong>Paper ≠ broker:</strong> the model prices commission + slippage but not CFD spread or overnight financing (~7–8%/yr on notional at CMC) — your real P&amp;L will lag the paper book.</li>
+        <li><strong>Cron is best-effort:</strong> scans can run minutes late; weekday crons don’t know market holidays.</li>
+        <li><strong>Zero-to-few closed trades</strong> so far — the forward record, not the backtest, is the verdict. Judge on R over 40+ closed trades.</li>
+      </ul>
+    </section>
+
+    <footer class="site-footer"><p class="disclaimer">General information only — not financial advice. Markets carry risk.</p></footer>
+  </main>
+
+  <script src="js/nav.js?v=2"></script>
+  <script>
+  /* Hydrate the rulebook from bot_rules.json so this page can never drift from
+     scanner/config.py. Unknown/missing file → keep static text + show warning. */
+  (async () => {
+    const live = document.getElementById("sys-live");
+    try {
+      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
+      if (!r.ok) throw 0;
+      const j = await r.json();
+      const set = (k, v) => document.querySelectorAll(`[data-r="${k}"]`).forEach((el) => { el.textContent = v; });
+      set("min_grade", `${j.min_grade} only`);
+      set("allow_shorts", j.allow_shorts ? "longs + shorts" : "long-only");
+      set("skip_entry_types", (j.skip_entry_types || []).join(", ") || "none");
+      set("prefer_tf", j.prefer_tf);
+      set("min_rr", j.min_rr);
+      set("exclude_funds", j.exclude_funds ? "excluded" : "allowed");
+      set("max_positions", j.max_positions);
+      set("risk_pct", j.risk_pct + "%");
+      set("max_daily_loss_pct", `−${j.max_daily_loss_pct}% / market / day`);
+      if (j.leverage) set("leverage", `${j.leverage.asx}× stocks · ${j.leverage.crypto}× crypto`);
+      if (j.max_per_sector != null) set("max_per_sector", j.max_per_sector || "off");
+      if (j.max_stop_pct != null) set("max_stop_pct", j.max_stop_pct ? `${j.max_stop_pct}% of entry` : "off");
+      if (j.min_price) set("min_price", `ASX ≥ $${j.min_price.asx} · NASDAQ ≥ $${j.min_price.nasdaq}`);
+      if (j.commission_bps) set("commission_bps", `ASX ${j.commission_bps.asx} · NASDAQ ${j.commission_bps.nasdaq} · crypto ${j.commission_bps.crypto} bps`);
+      if (j.slippage_bps) set("slippage_bps", `ASX ${j.slippage_bps.asx} · NASDAQ ${j.slippage_bps.nasdaq} · crypto ${j.slippage_bps.crypto} bps`);
+      const t = new Date(j.generated_at);
+      live.textContent = "● live values — published " + (isNaN(t) ? "recently" : t.toLocaleString());
+    } catch (_) {
+      live.textContent = "⚠ live values unavailable — showing last-known defaults";
+      live.style.color = "var(--orange)"; live.style.background = "var(--orange-soft)";
+      const d = document.getElementById("sys-drift"); if (d) d.hidden = false;
+    }
+  })();
+  </script>
+</body>
+</html>

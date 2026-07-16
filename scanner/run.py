@@ -157,6 +157,13 @@ def main() -> None:
         "leverage": dict(config.VIVEK_BOT_LEVERAGE),
         "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,
         "exclude_funds": config.VIVEK_BOT_EXCLUDE_FUNDS,
+        # Tradeability gates (2026-07: quality-of-fill filters, not strategy)
+        "min_price": dict(config.VIVEK_BOT_MIN_PRICE),
+        "max_stop_pct": config.VIVEK_BOT_MAX_STOP_PCT,
+        "max_per_sector": config.VIVEK_BOT_MAX_PER_SECTOR,
+        # Cost model (bps) — mirrored by the journal + cloud watcher
+        "commission_bps": dict(config.VIVEK_COMMISSION_BPS),
+        "slippage_bps": dict(config.VIVEK_SLIPPAGE_BPS),
     }
     (pathlib.Path(args.out) / "bot_rules.json").write_text(
         json.dumps(rules, indent=2) + "\n", encoding="utf-8")

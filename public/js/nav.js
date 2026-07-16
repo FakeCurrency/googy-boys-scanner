@@ -30,6 +30,7 @@
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors" },
     { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true },
+    { href: "system.html",  label: "SYSTEM",       key: "system" },
     { href: "about.html",   label: "HOW IT WORKS", key: "about" },
   ];
 
