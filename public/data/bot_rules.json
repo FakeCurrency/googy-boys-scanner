@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-16T06:37:49Z",
+  "generated_at": "2026-07-16T07:52:30Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "min_grade": "A+",
   "min_rr": 1.5,
@@ -16,5 +16,25 @@
     "crypto": 3
   },
   "max_daily_loss_pct": 3.0,
-  "exclude_funds": true
+  "exclude_funds": true,
+  "min_price": {
+    "asx": 0.05,
+    "nasdaq": 1.0,
+    "crypto": 0.0,
+    "default": 0.0
+  },
+  "max_stop_pct": 50.0,
+  "max_per_sector": 3,
+  "commission_bps": {
+    "asx": 2.0,
+    "nasdaq": 1.0,
+    "crypto": 6.0,
+    "default": 2.0
+  },
+  "slippage_bps": {
+    "asx": 5.0,
+    "nasdaq": 4.0,
+    "crypto": 8.0,
+    "default": 5.0
+  }
 }
