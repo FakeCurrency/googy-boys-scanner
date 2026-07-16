@@ -739,8 +739,8 @@
   // shows. Best-effort, stocks only (the proxy edge-caches this request).
   function checkRecentDividend(d) {
     const el = $("#ct-divadj");
-    if (!el || d.asset_type === "crypto") return;
-    fetch(`/api/price?symbol=${encodeURIComponent(yfTickerFor(SYM, d.asset_type))}&range=1mo&interval=1d`)
+    if (!el || d.asset_type === "crypto" || !d.symbol) return;
+    fetch(`/api/price?symbol=${encodeURIComponent(yfTickerFor(String(d.symbol).toUpperCase(), d.asset_type))}&range=1mo&interval=1d`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         const div = j && j.recent_div;

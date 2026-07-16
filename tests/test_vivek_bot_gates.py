@@ -189,3 +189,42 @@ def test_config_constants_exist():
     assert config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS > 0
     assert config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT > 0
     assert config.VIVEK_BOT_EARNINGS_BUFFER_DAYS > 0
+
+
+def test_earnings_within_handles_timestamps_and_dates(monkeypatch):
+    """yfinance returns pandas Timestamps (datetime subclass) as often as plain
+    dates — comparing those against a date raises TypeError, which would make
+    the gate silently fail-open forever. Both shapes must work."""
+    import sys, types
+    import pandas as pd
+
+    inside = dt.date.today() + dt.timedelta(days=2)
+    outside = dt.date.today() + dt.timedelta(days=30)
+
+    def fake_yf(dates):
+        mod = types.ModuleType("yfinance")
+        class T:
+            def __init__(self, sym): pass
+            calendar = {"Earnings Date": dates}
+        mod.Ticker = T
+        return mod
+
+    monkeypatch.setitem(sys.modules, "yfinance", fake_yf([pd.Timestamp(inside)]))
+    assert vivek_run._earnings_within("AAPL", 3) is True      # Timestamp inside buffer
+
+    monkeypatch.setitem(sys.modules, "yfinance", fake_yf([inside]))
+    assert vivek_run._earnings_within("AAPL", 3) is True      # plain date inside buffer
+
+    monkeypatch.setitem(sys.modules, "yfinance", fake_yf([pd.Timestamp(outside)]))
+    assert vivek_run._earnings_within("AAPL", 3) is False     # outside buffer
+
+    monkeypatch.setitem(sys.modules, "yfinance", fake_yf(None))
+    assert vivek_run._earnings_within("AAPL", 3) is False     # missing data fail-open
+
+
+def test_time_stop_exit_pays_slippage_like_a_market_fill():
+    pos = _open_pos("2026-06-01")
+    vivek_run._close_time_stop(pos, 101.0, TODAY, (0.0005, 0.0002))  # 5bps slip + 2bps comm
+    # entry leg 100*(7bps) + time exit 101*(7bps) — slippage IS charged on the exit
+    expected_cost = (100 * 0.0007 + 101 * 0.0007) / 4.0
+    assert pos["cost_r"] == pytest.approx(expected_cost, abs=1e-4)

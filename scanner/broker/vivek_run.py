@@ -199,7 +199,11 @@ def _earnings_within(yf_symbol: str | None, buffer_days: int) -> bool:
         today = dt.date.today()
         horizon = today + dt.timedelta(days=buffer_days)
         for d in dates:
-            d = d.date() if hasattr(d, "date") and not isinstance(d, dt.date) else d
+            # Normalise datetime/pandas-Timestamp → plain date. A datetime IS a
+            # date subclass, so comparing it against a date raises TypeError —
+            # without this the gate would silently fail-open on Timestamps.
+            if isinstance(d, dt.datetime):
+                d = d.date()
             if isinstance(d, dt.date) and today <= d <= horizon:
                 return True
     except Exception:

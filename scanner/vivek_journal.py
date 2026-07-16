@@ -68,7 +68,8 @@ def _cost_r(trade: dict, slip_frac: float, comm_frac: float) -> float:
     for ex in trade.get("exits", []):
         frac = ex.get("pct", 0.0)
         px = ex.get("price", entry)
-        is_market = str(ex.get("reason", "")).startswith("stop")  # TP limits pay no slippage
+        # TP limits pay no slippage; stop + time-stop closes are market fills.
+        is_market = str(ex.get("reason", "")).startswith(("stop", "time"))
         cost_price += frac * px * (comm_frac + (slip_frac if is_market else 0.0))
     return cost_price / risk
 
