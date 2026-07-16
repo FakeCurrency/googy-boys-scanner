@@ -121,7 +121,9 @@ table.sec-table { width: 100%; border-collapse: collapse; }
 .mv-head.vol { color: var(--blue); }
 
 /* live widgets */
-.tv-host { height: 420px; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+/* #131722 = TradingView's own dark-theme body colour — the widgets paint it
+   (isTransparent:false), so the host matches it to avoid light seams. */
+.tv-host { height: 420px; background: #131722; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .tv-host .tradingview-widget-container { height: 100%; }
 
 .sec-disclaimer { font-size: 11.5px; color: var(--muted-2); margin: 24px 4px 0; line-height: 1.5; }

@@ -238,14 +238,18 @@
   function mountWidgets(key) {
     const theme = "dark"; // site is dark-only (terminal theme)
     const country = key === "asx" ? "au" : "us";
+    // isTransparent must stay FALSE: TradingView's iframe ignores the
+    // transparency request intermittently and falls back to a white body,
+    // which then gets dark-theme (pale) text painted over it — unreadable.
+    // Letting the widget own its background guarantees dark-on-dark.
     mountWidget(`tv-calendar-${key}`, "https://s3.tradingview.com/external-embedding/embed-widget-events.js", {
-      colorTheme: theme, isTransparent: true, locale: "en",
+      colorTheme: theme, isTransparent: false, locale: "en",
       countryFilter: country, importanceFilter: "0,1", width: "100%", height: "100%",
     });
     // US only: broad top-stories feed (Fed / macro / market-sensitive), not single-symbol.
     if (key === "us") {
       mountWidget("tv-news-us", "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js", {
-        feedMode: "all_symbols", isTransparent: true, displayMode: "regular",
+        feedMode: "all_symbols", isTransparent: false, displayMode: "regular",
         colorTheme: theme, locale: "en", width: "100%", height: "100%",
       });
     }
