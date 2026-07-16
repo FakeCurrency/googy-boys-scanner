@@ -12,10 +12,16 @@
  */
 import { livePrice, history } from "./_prices.js";
 
+// Successful responses edge-cache for ~20s — chart opens and journal refreshes
+// re-request the same symbols in bursts; a short shared cache absorbs those
+// instead of hammering Yahoo into throttling. Errors are never cached.
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": status === 200 ? "public, max-age=15, s-maxage=20" : "no-store",
+    },
   });
 
 export const onRequestGet = async ({ request }) => {
@@ -64,6 +70,9 @@ export const onRequestGet = async ({ request }) => {
       delayed: hist.delayed,
       bars: hist.candles.length,
       candles: hist.candles,
+      // dividend within ~45d → the adjusted series (and levels) differs from
+      // the raw prices a broker shows; the chart surfaces this as a chip
+      recent_div: hist.recent_div || null,
     });
   } catch (err) {
     return json(502, { ok: false, error: String(err && err.message ? err.message : err), symbol });

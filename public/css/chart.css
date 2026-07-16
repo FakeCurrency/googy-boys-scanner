@@ -40,6 +40,11 @@
 .ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red);
   background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+/* recent ex-dividend — levels are on the ADJUSTED series, broker raw prices differ */
+.ct-divadj { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent);
+  padding: 4px 9px; border-radius: 6px; white-space: nowrap; cursor: help; }
 
 /* forward date-projection readout (hover right of the last candle) */
 .chart-canvas { position: relative; }

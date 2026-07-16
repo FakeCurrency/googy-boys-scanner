@@ -31,6 +31,31 @@ async function keyFor(code) {
 
 const cleanCode = (url) => (new URL(url).searchParams.get("code") || "").trim();
 
+// Brute-force guard: someone guessing sync codes produces GET *misses* — a
+// legit user misses at most once or twice at setup. Count only misses per IP
+// per day (so the counter costs a KV write only on misses, not on normal
+// traffic — the write quota stays protected) and lock the IP out past the cap.
+// Fail-open if KV hiccups: a limiter outage must never break sync.
+const MISS_DAY_LIMIT = 30;
+
+const missKey = (request) =>
+  `ratelimit:journal-miss:${new Date().toISOString().slice(0, 10)}:` +
+  (request.headers.get("CF-Connecting-IP") || "unknown");
+
+async function tooManyMisses(env, request) {
+  try {
+    return parseInt((await env.JOURNAL_KV.get(missKey(request))) || "0", 10) >= MISS_DAY_LIMIT;
+  } catch (_) { return false; }
+}
+
+async function countMiss(env, request) {
+  try {
+    const key = missKey(request);
+    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
+    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 172800 });
+  } catch (_) { /* fail-open */ }
+}
+
 export const onRequestGet = async ({ env, request }) => {
   if (!env.JOURNAL_KV) {
     return json(503, { ok: false, configured: false,
@@ -38,10 +63,15 @@ export const onRequestGet = async ({ env, request }) => {
   }
   const code = cleanCode(request.url);
   if (code.length < 4) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (await tooManyMisses(env, request)) {
+    return json(429, { ok: false, configured: true,
+      message: "Too many unknown sync codes from this connection today — try again tomorrow." });
+  }
 
   const raw = await env.JOURNAL_KV.get(await keyFor(code));
   let data = null;
   if (raw) { try { data = JSON.parse(raw); } catch (_) { data = null; } }
+  else await countMiss(env, request);   // unknown code — brute-force signal
   return json(200, { ok: true, configured: true, data });
 };
 
@@ -52,6 +82,10 @@ export const onRequestPut = async ({ env, request }) => {
   }
   const code = cleanCode(request.url);
   if (code.length < 4) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (await tooManyMisses(env, request)) {
+    return json(429, { ok: false, configured: true,
+      message: "Too many unknown sync codes from this connection today — try again tomorrow." });
+  }
 
   let body;
   try { body = await request.json(); } catch (_) { return json(400, { ok: false, configured: true, message: "Invalid JSON body." }); }

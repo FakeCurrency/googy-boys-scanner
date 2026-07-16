@@ -734,6 +734,28 @@
     return FUND_NAME_KW.some((kw) => name.includes(kw));
   }
 
+  // Dividend honesty: scan levels come from a dividend-ADJUSTED series, so a
+  // recent ex-div means every level differs from the raw prices your broker
+  // shows. Best-effort, stocks only (the proxy edge-caches this request).
+  function checkRecentDividend(d) {
+    const el = $("#ct-divadj");
+    if (!el || d.asset_type === "crypto") return;
+    fetch(`/api/price?symbol=${encodeURIComponent(yfTickerFor(SYM, d.asset_type))}&range=1mo&interval=1d`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const div = j && j.recent_div;
+        if (!div || !div.date) return;
+        const when = new Date(div.date * 1000).toLocaleDateString("en-AU",
+          { day: "numeric", month: "short", timeZone: "Australia/Melbourne" });
+        el.textContent = `Ⓓ DIV-ADJ ${when}`;
+        el.title = `Went ex-dividend ${when} (${div.amount ? "$" + div.amount : "amount n/a"}). ` +
+          `Chart prices and levels are dividend-adjusted — your broker's raw prices ` +
+          `(e.g. CMC) will sit slightly higher than these levels.`;
+        el.hidden = false;
+      })
+      .catch(() => {});
+  }
+
   function header(d) {
     const cur = d.currency_symbol || "";
     $("#ct-sym").textContent = d.symbol;
@@ -741,6 +763,7 @@
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     const fw = $("#ct-fundwarn");
     if (fw) fw.hidden = !isFundReit(d);
+    checkRecentDividend(d);
     $("#ct-price").textContent = fmt(d.price, cur);
     const g = $("#ct-grade"); g.textContent = d.grade; g.style.color = GRADE_VAR[d.grade] || "var(--grade-c)";
     const dirEl = $("#ct-dir");

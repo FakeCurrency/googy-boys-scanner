@@ -54,3 +54,5 @@ jobs:
         run: node test/risk_manager.test.js
       - name: Unit tests (65)
         run: node test/unit.test.js
+      - name: Cloud-watcher VIVEK parity tests (21)
+        run: node test/vivek_manage.test.js

@@ -6,10 +6,17 @@
 // both hosts. Currency is preserved from Yahoo meta (so ASX returns AUD).
 import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol } from "./_prices.js";
 
+// Successful quotes are edge-cached for ~20s: the journal opens with a batch
+// of per-symbol fetches, so a short shared cache absorbs repeat opens (and
+// multiple devices) instead of hammering Yahoo into throttling us. Errors are
+// never cached.
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": status === 200 ? "public, max-age=15, s-maxage=20" : "no-store",
+    },
   });
 
 export async function onRequestGet(ctx) {

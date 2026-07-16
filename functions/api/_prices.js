@@ -76,7 +76,7 @@ export async function fetchYahooChart(sym, { interval = "1d", range = "1d", time
   for (const host of YH_HOSTS) {
     try {
       const url = `https://${host}/v8/finance/chart/${encodeURIComponent(sym)}` +
-        `?interval=${interval}&range=${range}`;
+        `?interval=${interval}&range=${range}&events=div`;
       const res = await timedFetch(url, { headers: { "User-Agent": UA, "Accept": "application/json" } }, timeout);
       if (!res.ok) { lastErr = new Error(`yahoo ${res.status}`); continue; }
       const data = await res.json();
@@ -177,7 +177,25 @@ export async function history(sym, assetType, { range = "1y", interval = "1d", p
   try {
     const result = await fetchYahooChart(ySym, { interval, range });
     const c = yahooCandles(result);
-    if (c.length) return { candles: trimCandles(c, want), source: "yahoo", delayed: !crypto };
+    if (c.length) {
+      return { candles: trimCandles(c, want), source: "yahoo", delayed: !crypto,
+               recent_div: recentDividend(result) };
+    }
   } catch (_) { /* fall through */ }
   return { candles: [], source: null, delayed: false };
+}
+
+/** Most recent dividend within ~45 days from a Yahoo chart result (events=div),
+ *  or null. Recent dividends mean the ADJUSTED series (and every level derived
+ *  from it) differs from the raw prices a broker shows. */
+export function recentDividend(result, windowDays = 45) {
+  const divs = result?.events?.dividends;
+  if (!divs) return null;
+  const cutoff = Date.now() / 1000 - windowDays * 86400;
+  let latest = null;
+  for (const k of Object.keys(divs)) {
+    const d = divs[k];
+    if (d && d.date >= cutoff && (!latest || d.date > latest.date)) latest = d;
+  }
+  return latest ? { date: latest.date, amount: +latest.amount || 0 } : null;
 }
