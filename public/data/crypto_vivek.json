@@ -3,12 +3,12 @@
   "label": "CRYPTO",
   "setup_type": "vivek",
   "schema_version": 3,
-  "code_sha": "11dedc1",
+  "code_sha": "6028f70",
   "currency": "USD",
   "currency_symbol": "$",
   "timezone": "UTC",
   "tz_label": "UTC",
-  "generated_at": "2026-07-16T23:58:46+00:00",
+  "generated_at": "2026-07-17T03:15:23+00:00",
   "scanned": 91,
   "downloaded": 91,
   "from_cache": 0,
@@ -24,13 +24,11 @@
       "label": "ASX 200",
       "ticker": "^AXJO",
       "divide": 1,
-      "value": 8841.0,
+      "value": 8783.0,
       "decimals": 0,
-      "day_pct": 0.37,
-      "d5_pct": 0.64,
+      "day_pct": -0.65,
+      "d5_pct": -0.26,
       "spark": [
-        8917.7002,
-        8966.2998,
         8911.0996,
         8828.7002,
         8816.0996,
@@ -50,19 +48,21 @@
         8806.0,
         8808.5,
         8808.5,
-        8841.0996
+        8841.0996,
+        8840.7002,
+        8783.0
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "GOLD",
       "label": "Gold",
       "ticker": "GC=F",
       "divide": 1,
-      "value": 3980.0,
+      "value": 3992.0,
       "decimals": 0,
-      "day_pct": -1.58,
-      "d5_pct": -3.64,
+      "day_pct": -1.29,
+      "d5_pct": -3.36,
       "spark": [
         4328.0,
         4330.8999,
@@ -85,7 +85,7 @@
         3997.0,
         4061.1001,
         4044.0,
-        3980.2
+        3992.0
       ],
       "dir": "down"
     },
@@ -94,10 +94,10 @@
       "label": "Silver",
       "ticker": "SI=F",
       "divide": 1,
-      "value": 55.69,
+      "value": 55.45,
       "decimals": 2,
-      "day_pct": -2.49,
-      "d5_pct": -7.76,
+      "day_pct": -2.91,
+      "d5_pct": -8.16,
       "spark": [
         70.066,
         69.899,
@@ -120,7 +120,7 @@
         57.634,
         58.772,
         57.11,
-        55.69
+        55.45
       ],
       "dir": "down"
     },
@@ -129,10 +129,10 @@
       "label": "Brent",
       "ticker": "BZ=F",
       "divide": 1,
-      "value": 84.95,
+      "value": 84.92,
       "decimals": 2,
-      "day_pct": 0.0,
-      "d5_pct": 11.34,
+      "day_pct": -0.04,
+      "d5_pct": 11.3,
       "spark": [
         83.17,
         78.96,
@@ -155,19 +155,19 @@
         83.3,
         84.73,
         84.95,
-        84.95
+        84.92
       ],
-      "dir": "up"
+      "dir": "down"
     },
     {
       "key": "WTI",
       "label": "WTI",
       "ticker": "CL=F",
       "divide": 1,
-      "value": 79.0,
+      "value": 79.08,
       "decimals": 2,
-      "day_pct": -0.75,
-      "d5_pct": 9.6,
+      "day_pct": -0.65,
+      "d5_pct": 9.71,
       "spark": [
         80.75,
         76.05,
@@ -190,7 +190,7 @@
         78.14,
         79.34,
         79.6,
-        79.0
+        79.08
       ],
       "dir": "down"
     },
@@ -199,10 +199,10 @@
       "label": "Nat Gas",
       "ticker": "NG=F",
       "divide": 1,
-      "value": 2.89,
+      "value": 2.87,
       "decimals": 2,
-      "day_pct": -0.99,
-      "d5_pct": -3.88,
+      "day_pct": -1.74,
+      "d5_pct": -4.61,
       "spark": [
         3.147,
         3.239,
@@ -225,7 +225,7 @@
         2.897,
         2.904,
         2.924,
-        2.895
+        2.873
       ],
       "dir": "down"
     },
@@ -339,10 +339,10 @@
       "label": "AUD/USD",
       "ticker": "AUDUSD=X",
       "divide": 1,
-      "value": 0.7001,
+      "value": 0.6987,
       "decimals": 4,
-      "day_pct": -0.1,
-      "d5_pct": 0.82,
+      "day_pct": -0.31,
+      "d5_pct": 0.61,
       "spark": [
         0.7018,
         0.7013,
@@ -365,7 +365,7 @@
         0.6918,
         0.6976,
         0.7008,
-        0.7001
+        0.6987
       ],
       "dir": "down"
     },
@@ -409,10 +409,10 @@
       "label": "USD Idx",
       "ticker": "DX-Y.NYB",
       "divide": 1,
-      "value": 100.71,
+      "value": 100.77,
       "decimals": 2,
-      "day_pct": 0.21,
-      "d5_pct": -0.22,
+      "day_pct": 0.27,
+      "d5_pct": -0.17,
       "spark": [
         99.63,
         99.54,
@@ -435,7 +435,7 @@
         101.28,
         100.94,
         100.5,
-        100.714
+        100.769
       ],
       "dir": "up"
     }
@@ -498,7 +498,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-15",
           "reaction_bar": "2026-07-14",
-          "bars": 1826
+          "bars": 1825
         },
         "3D": {
           "entry": 0.082524,
@@ -531,7 +531,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-06-06",
-          "bars": 610
+          "bars": 609
         },
         "1W": {
           "entry": 0.082524,
@@ -564,7 +564,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-17",
           "reaction_bar": "2025-07-11",
-          "bars": 262
+          "bars": 261
         }
       },
       "markers": {
@@ -658,7 +658,7 @@
         "reaction": "bounce",
         "structure": 1.0,
         "confluence": false,
-        "weekly_bars": 262,
+        "weekly_bars": 261,
         "atr": 0.00771013,
         "entry": 0.082524,
         "stop": 0.07230387,
@@ -738,7 +738,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-15",
           "reaction_bar": "2026-07-15",
-          "bars": 1826
+          "bars": 1825
         },
         "3D": {
           "entry": 0.18828399,
@@ -771,7 +771,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": null,
-          "bars": 610
+          "bars": 609
         },
         "1W": {
           "entry": 0.18828399,
@@ -804,7 +804,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-17",
           "reaction_bar": "2026-07-10",
-          "bars": 262
+          "bars": 261
         }
       },
       "markers": {
@@ -893,7 +893,7 @@
         "reaction": "bounce",
         "structure": 0.0,
         "confluence": true,
-        "weekly_bars": 262,
+        "weekly_bars": 261,
         "atr": 0.01123643,
         "entry": 0.18828399,
         "stop": 0.16657858,
@@ -1429,7 +1429,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-06-15",
-          "bars": 1826
+          "bars": 1825
         },
         "3D": {
           "entry": 34.49059296,
@@ -1462,15 +1462,15 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-15",
           "reaction_bar": "2026-07-15",
-          "bars": 610
+          "bars": 609
         },
         "1W": {
           "entry": 34.49059296,
-          "stop": 67.39708962,
+          "stop": 67.39708983,
           "tp1": 1.79351083,
           "tp2": 1.75902024,
           "tp3": 1.72452965,
-          "risk": 32.90649666,
+          "risk": 32.90649688,
           "rr": 0.99,
           "direction": "short",
           "scale": [
@@ -1495,7 +1495,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-17",
           "reaction_bar": "2026-07-17",
-          "bars": 262
+          "bars": 261
         }
       },
       "markers": {
@@ -1589,7 +1589,7 @@
         "reaction": "reject",
         "structure": 0.6,
         "confluence": false,
-        "weekly_bars": 262,
+        "weekly_bars": 261,
         "atr": 1.95104035,
         "entry": 34.49059296,
         "stop": 41.85985718,
@@ -1669,7 +1669,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-05-31",
-          "bars": 1826
+          "bars": 1825
         },
         "3D": {
           "entry": 64712.375,
@@ -1702,15 +1702,15 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": null,
-          "bars": 610
+          "bars": 609
         },
         "1W": {
           "entry": 64712.375,
-          "stop": 51136.82790642,
+          "stop": 51136.82789408,
           "tp1": 82792.2109375,
           "tp2": 97860.6015625,
           "tp3": 108268.4453125,
-          "risk": 13575.54709358,
+          "risk": 13575.54710592,
           "rr": 2.44,
           "direction": "long",
           "scale": [
@@ -1735,7 +1735,7 @@
           "entry_trigger": "reclaim",
           "trigger_bar": "2026-07-17",
           "reaction_bar": "2026-07-17",
-          "bars": 262
+          "bars": 261
         }
       },
       "markers": {
@@ -1819,7 +1819,7 @@
         "reaction": "bounce",
         "structure": 0.0,
         "confluence": false,
-        "weekly_bars": 262,
+        "weekly_bars": 261,
         "atr": 1951.20691197,
         "entry": 64712.375,
         "stop": 59324.62121303,
@@ -2126,7 +2126,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-07-03",
-          "bars": 1826
+          "bars": 1825
         },
         "3D": {
           "entry": 0.32433799,
@@ -2159,7 +2159,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-03-17",
-          "bars": 610
+          "bars": 609
         },
         "1W": {
           "entry": 0.32433799,
@@ -2192,7 +2192,7 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": null,
-          "bars": 262
+          "bars": 261
         }
       },
       "markers": {
@@ -2271,7 +2271,7 @@
         "reaction": "hold",
         "structure": 0.0,
         "confluence": false,
-        "weekly_bars": 262,
+        "weekly_bars": 261,
         "atr": 0.00456961,
         "entry": 0.32433799,
         "stop": 0.3094885,
@@ -2297,96 +2297,96 @@
     }
   ],
   "prices": {
-    "BTC": 63787.87890625,
-    "ETH": 1863.2199707,
-    "BNB": 572.14001465,
-    "XRP": 1.08630002,
-    "SOL": 75.26000214,
-    "TRX": 0.32297906,
+    "BTC": 63569.609375,
+    "ETH": 1852.61999512,
+    "BNB": 571.51000977,
+    "XRP": 1.09060001,
+    "SOL": 75.16999817,
+    "TRX": 0.32185858,
     "HYPE": 5e-06,
-    "DOGE": 0.07232,
+    "DOGE": 0.07231,
     "RAIN": 1.6e-05,
-    "LEO": 9.80123138,
-    "ZEC": 525.15997314,
-    "WBT": 55.78392792,
-    "XLM": 0.184971,
-    "XMR": 334.91635132,
-    "LINK": 8.33399963,
-    "ADA": 0.16069999,
+    "LEO": 9.8013773,
+    "ZEC": 533.88000488,
+    "WBT": 55.57218933,
+    "XLM": 0.184126,
+    "XMR": 331.63806152,
+    "LINK": 8.28800011,
+    "ADA": 0.1603,
     "CC": 0.17997301,
-    "BCH": 221.6000061,
-    "GRAM": 1.5180819,
-    "LTC": 44.93000031,
+    "BCH": 223.25,
+    "GRAM": 1.50256217,
+    "LTC": 45.65000153,
     "SUI": 0.0003,
-    "HBAR": 0.06659,
-    "CRO": 0.0613,
-    "AVAX": 6.51999998,
-    "NEAR": 1.96599996,
-    "XAUT": 3980.65527344,
-    "SHIB": 4.11e-06,
+    "HBAR": 0.06647,
+    "AVAX": 6.51000023,
+    "CRO": 0.0592,
+    "NEAR": 1.98599994,
+    "XAUT": 3989.94775391,
+    "SHIB": 4.14e-06,
     "UNI": 0.000163,
     "TAO": 1.3e-07,
     "WLFI": 0.0,
-    "PAXG": 3978.16992188,
-    "ONDO": 0.36306,
-    "OKB": 80.23347473,
-    "DEXE": 35.55273056,
+    "ONDO": 0.368,
+    "PAXG": 3985.69995117,
+    "OKB": 80.93062592,
     "ASTER": 0.001076,
-    "HTX": 1.81e-06,
+    "DEXE": 34.59792709,
+    "HTX": 1.8e-06,
     "M": 0.00024785,
-    "MNT": 1.16895783,
-    "DOT": 0.85699999,
+    "MNT": 1.16607332,
+    "DOT": 0.86000001,
     "SKY": 0.01496526,
     "USDF": 2.14239407,
-    "AAVE": 91.08999634,
-    "WLD": 0.38730001,
+    "AAVE": 90.73999786,
+    "WLD": 0.3822,
     "MORPHO": 0.001813,
-    "ICP": 2.12100005,
-    "BGB": 1.62853539,
+    "ICP": 2.13000011,
     "PEPE": 6e-06,
-    "ETC": 6.92999983,
+    "BGB": 1.62939298,
+    "ETC": 6.94000006,
     "U": 1e-06,
-    "USDGO": 0.99980366,
+    "USDGO": 1.00003052,
     "STABLE": 2e-06,
-    "QNT": 63.74000168,
-    "KCS": 6.714571,
+    "QNT": 63.97999954,
+    "KCS": 6.69505978,
     "ADI": 3.6e-05,
     "POL": 0.008241,
     "PI": 0.00205,
-    "JST": 0.09746514,
+    "JST": 0.09728234,
     "BEAT": 3.9e-05,
-    "ENA": 0.0822,
-    "ATOM": 1.50999999,
-    "KAS": 0.02819337,
-    "RENDER": 1.47500002,
-    "NEXO": 0.7467013,
-    "ALGO": 0.0824,
-    "GT": 6.65895224,
-    "BDX": 0.08734364,
-    "JUP": 0.00025914,
-    "FIL": 0.76899999,
-    "FLR": 0.00663,
-    "LIT": 0.000129,
+    "ATOM": 1.50899994,
+    "ENA": 0.0809,
+    "KAS": 0.02805505,
+    "RENDER": 1.48599994,
+    "NEXO": 0.74593729,
+    "ALGO": 0.0825,
+    "GT": 6.61853743,
+    "BDX": 0.08860371,
+    "JUP": 1.179e-05,
+    "FIL": 0.773,
     "ARB": 0.00075706,
-    "YLDS": 0.99988329,
-    "XDC": 0.02699701,
+    "FLR": 0.00657,
+    "LIT": 0.000129,
+    "YLDS": 0.99986523,
+    "XDC": 0.02763981,
     "USX": 1.00333905,
-    "APT": 0.000131,
     "VVV": 1e-06,
-    "NIGHT": 0.02958487,
-    "INJ": 4.85599995,
-    "A7A5": 0.0122654,
-    "AERO": 5.029e-05,
+    "APT": 0.000131,
+    "NIGHT": 0.02958325,
+    "INJ": 4.87200022,
+    "A7A5": 0.01232952,
+    "AERO": 4.915e-05,
     "HASH": 0.000336,
     "USDTB": 0.99992502,
-    "CAKE": 1.38999999,
-    "DASH": 33.31999969,
-    "VIRTUAL": 0.62711632,
-    "VET": 0.00473,
-    "OUSG": 100.23896027,
-    "PRIME": 0.017208,
-    "PYTH": 0.0503,
+    "CAKE": 1.398,
+    "DASH": 33.38000107,
     "ETHFI": 0.419,
+    "VIRTUAL": 0.61655563,
+    "OUSG": 100.23896027,
+    "VET": 0.00471,
+    "PRIME": 0.017208,
+    "PYTH": 0.0507,
     "FLASH": 0.000434
   }
 }
