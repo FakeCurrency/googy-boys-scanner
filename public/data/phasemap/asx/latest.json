@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-07-18",
+  "run_date": "2026-07-19",
   "ruleset_version": "1.2.0",
   "universe_size": 1987,
   "narrations_file": "narrations.json",
@@ -42664,14 +42664,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.4094,
+          "low": 0.41,
           "high": 0.445,
           "status": "RESPECTED",
           "confluence": 4,
           "sources": [
-            "equal_highs",
             "fib_ext_10",
             "box_high",
+            "equal_highs",
             "fib_ext_1618"
           ],
           "created_date": "2026-07-06"
@@ -43288,6 +43288,121 @@
       "smt": null,
       "route_to": "fib_reversal",
       "name": "Union Star Metals Ltd",
+      "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VAN",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.032,
+          "high": 0.033,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.03,
+          "high": 0.032,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.035,
+          "high": 0.036,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0369,
+          "high": 0.0381,
+          "status": "UNTESTED",
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.039,
+          "high": 0.0432,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0439,
+          "high": 0.05,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.062,
+          "high": 0.066,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.073,
+          "high": 0.075,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "box_high"
+          ],
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.625,
+        "dist_to_yearly_open_pct": -0.6465,
+        "avg_turnover_20d": 18224,
+        "close": 0.035,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0303,
+        "displacement_date": "2026-07-07"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Vantage Metals Limited",
       "sector": "Materials",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },

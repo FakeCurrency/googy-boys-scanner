@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-07-18",
+  "run_date": "2026-07-19",
   "ruleset_version": "1.2.0",
   "universe_size": 1428,
   "narrations_file": "narrations.json",
@@ -496,8 +496,8 @@
           "confluence": 3,
           "sources": [
             "equal_lows",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-08"
         },
@@ -943,8 +943,8 @@
           "confluence": 3,
           "sources": [
             "prior_high",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-06-26"
         },
@@ -4788,7 +4788,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 303.6288,
-          "high": 322.9569,
+          "high": 322.957,
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
@@ -7137,7 +7137,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 83.0711,
-          "high": 92.4859,
+          "high": 92.486,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -8658,7 +8658,7 @@
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
           "low": 23.15,
-          "high": 23.7953,
+          "high": 23.7486,
           "status": "UNTESTED",
           "rule": "close_above_high",
           "created_date": "2026-07-16"
@@ -8667,7 +8667,7 @@
       "metrics": {
         "retrace_pct": 0.8715,
         "dist_to_yearly_open_pct": 0.4087,
-        "avg_turnover_20d": 75497364,
+        "avg_turnover_20d": 66180291,
         "close": 22.92,
         "sweep_date": "2026-07-16",
         "sweep_depth_pct": 0.007,
@@ -24886,53 +24886,6 @@
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
-      "ticker": "SNEX",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 114.48,
-          "high": 118.5,
-          "status": "RESPECTED",
-          "confluence": 3,
-          "sources": [
-            "sweep_wick",
-            "quarterly_open",
-            "monthly_open"
-          ],
-          "created_date": "2026-07-13"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 118.5,
-          "high": 122.16,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-13"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0051,
-        "dist_to_yearly_open_pct": 0.6229,
-        "avg_turnover_20d": 130550179,
-        "close": 102.99,
-        "sweep_date": "2026-07-13",
-        "sweep_depth_pct": 0.0351,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "StoneX Group Inc. - Common Stock",
-      "sector": "",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
-    },
-    {
       "ticker": "SOFI",
       "direction": "bullish",
       "state": "SWEPT",
@@ -34776,7 +34729,7 @@
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 679.2569,
+          "low": 679.2568,
           "high": 697.492,
           "status": "UNTESTED",
           "confluence": 1,
@@ -34788,7 +34741,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 636.5982,
+          "low": 636.5981,
           "high": 659.4324,
           "status": "UNTESTED",
           "confluence": 1,
@@ -37125,7 +37078,7 @@
           "id": "t2",
           "type": "TARGET",
           "low": 208.1529,
-          "high": 214.129,
+          "high": 214.1289,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
