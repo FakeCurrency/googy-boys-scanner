@@ -1,6 +1,6 @@
 {
-  "run_date": "2026-07-19",
-  "ruleset_version": "1.2.0",
+  "run_date": "2026-07-20",
+  "ruleset_version": "1.3.1",
   "universe_size": 1428,
   "narrations_file": "narrations.json",
   "results": [
@@ -3444,7 +3444,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 46.2872,
+          "low": 46.2873,
           "high": 53.1695,
           "status": "RESPECTED",
           "confluence": 3,
@@ -12651,51 +12651,6 @@
       "name": "CoStar Group, Inc. - Common Stock",
       "sector": "",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
-    },
-    {
-      "ticker": "CSQ",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 20.723,
-          "high": 20.74,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-15"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 20.74,
-          "high": 20.9014,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-15"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1,
-        "dist_to_yearly_open_pct": 0.088,
-        "avg_turnover_20d": 3927663,
-        "close": 20.2,
-        "sweep_date": "2026-07-15",
-        "sweep_depth_pct": 0.0008,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Calamos Strategic Total Return Fund - Closed End Fund",
-      "sector": "",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "CSX",
@@ -34729,7 +34684,7 @@
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 679.2568,
+          "low": 679.2569,
           "high": 697.492,
           "status": "UNTESTED",
           "confluence": 1,
@@ -34741,7 +34696,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 636.5981,
+          "low": 636.5982,
           "high": 659.4324,
           "status": "UNTESTED",
           "confluence": 1,
@@ -37078,7 +37033,7 @@
           "id": "t2",
           "type": "TARGET",
           "low": 208.1529,
-          "high": 214.1289,
+          "high": 214.129,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -40884,8 +40839,8 @@
             "fib_ext_10",
             "equal_highs",
             "fib_ext_1618",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-06-26"
         },
