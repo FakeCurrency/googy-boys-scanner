@@ -68,12 +68,14 @@ def _is_fund_or_reit(row: dict) -> bool:
 def _pick_plan(row: dict, prefer_tf: str) -> tuple[str | None, dict | None]:
     """Rule 3 — choose the timeframe plan to trade.
 
-    Weekly (or the runner-supplied `prefer_tf`) is primary; fall back to the
-    other timeframe. Only an ARMED plan with a complete level set qualifies.
-    Returns (timeframe, plan) or (None, None).
+    Weekly (or the runner-supplied `prefer_tf`) is primary; fall back through
+    3-Day then Daily. (3D was silently invisible here even though the engine
+    builds a 3D plan and the 3D-200 level was added for exactly the moves the
+    other frames missed.) Only an ARMED plan with a complete level set
+    qualifies. Returns (timeframe, plan) or (None, None).
     """
     plans = row.get("plans") or {}
-    order = [prefer_tf] + [tf for tf in ("1W", "1D") if tf != prefer_tf]
+    order = [prefer_tf] + [tf for tf in ("1W", "3D", "1D") if tf != prefer_tf]
     for tf in order:
         p = plans.get(tf)
         if p and p.get("armed") and all(p.get(k) is not None for k in _LEVEL_KEYS):

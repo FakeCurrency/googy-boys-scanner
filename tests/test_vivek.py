@@ -174,24 +174,24 @@ def test_gate_leaves_lower_grades_untouched():
 
 def test_hysteresis_holds_prior_grade_within_margin():
     # was A+ (cutoff 8); score wobbled to 7 (one below) → held at A+
-    assert vivek.apply_grade_hysteresis(7, "A", "A+") == "A+"
+    assert vivek.apply_grade_hysteresis(7, "A", "A+") == ("A+", 1)
 
 
 def test_hysteresis_demotes_once_clearly_below():
     # score 6 is more than the 1-point margin below the A+ cutoff → demote
-    assert vivek.apply_grade_hysteresis(6, "A", "A+") == "A"
+    assert vivek.apply_grade_hysteresis(6, "A", "A+") == ("A", 0)
     # and a two-tier drop is never held by a one-point margin
-    assert vivek.apply_grade_hysteresis(5, "B+", "A+") == "B+"
+    assert vivek.apply_grade_hysteresis(5, "B+", "A+") == ("B+", 0)
 
 
 def test_hysteresis_never_holds_back_a_promotion():
-    assert vivek.apply_grade_hysteresis(9, "A+", "A") == "A+"
+    assert vivek.apply_grade_hysteresis(9, "A+", "A") == ("A+", 0)
 
 
 def test_hysteresis_noop_without_prior_or_when_unchanged():
-    assert vivek.apply_grade_hysteresis(7, "A", None) == "A"
-    assert vivek.apply_grade_hysteresis(8, "A+", "A+") == "A+"
-    assert vivek.apply_grade_hysteresis(7, "A", "A+", margin=0) == "A"   # disabled
+    assert vivek.apply_grade_hysteresis(7, "A", None) == ("A", 0)
+    assert vivek.apply_grade_hysteresis(8, "A+", "A+") == ("A+", 0)
+    assert vivek.apply_grade_hysteresis(7, "A", "A+", margin=0) == ("A", 0)   # disabled
 
 
 # ── forming-bar gate (pin scans to COMPLETED daily bars) ────────────────────────
@@ -539,3 +539,49 @@ def test_decide_long_cap_counts_existing_longs(shorts_on):
     assert out["summary"]["longs"] == 6
     assert out["summary"]["taken"] == 1
     assert out["summary"]["skip_reasons"].get("long_cap") == 1
+
+
+def test_hysteresis_hold_is_bounded_and_direction_aware():
+    """The ratchet fix: a hold can't renew itself forever off its own published
+    output, and a LONG badge never survives onto a SHORT read."""
+    # renews while under the max...
+    g, held = vivek.apply_grade_hysteresis(7, "A", "A+", held_runs=0)
+    assert (g, held) == ("A+", 1)
+    g, held = vivek.apply_grade_hysteresis(7, "A", "A+", held_runs=held)
+    assert (g, held) == ("A+", 2)
+    g, held = vivek.apply_grade_hysteresis(7, "A", "A+", held_runs=held)
+    assert (g, held) == ("A+", 3)
+    # ...then the raw grade publishes
+    g, held = vivek.apply_grade_hysteresis(7, "A", "A+", held_runs=held)
+    assert (g, held) == ("A", 0)
+    # direction flip -> fresh grade immediately, no hold
+    g, held = vivek.apply_grade_hysteresis(7, "A", "A+",
+                                           prev_dir="LONG", cur_dir="SHORT")
+    assert (g, held) == ("A", 0)
+
+
+def test_reclaim_fires_only_on_first_close_back_through():
+    """One pierce must arm ONE reclaim — not ~6 consecutive scans with the
+    entry drifting to each new close."""
+    import pandas as pd
+    level = 100.0
+    # bars: pierce (close below), first close back above, then drift higher
+    lows  = [101, 98,  99.5, 101, 102, 103]
+    highs = [103, 102, 103, 104, 105, 106]
+    closes = [102, 99,  101, 102, 103, 104]
+    vols = [1e6] * 6
+
+    def frame(upto):
+        idx = pd.date_range(end="2026-01-10", periods=upto, freq="D")
+        return pd.DataFrame({"Open": closes[:upto], "High": highs[:upto],
+                             "Low": lows[:upto], "Close": closes[:upto],
+                             "Volume": vols[:upto]}, index=idx)
+
+    # bar 2 (close 101, prev close 99 <= level): the FIRST re-close -> fires
+    t = vivek.detect_trigger(frame(3), "long", level)
+    assert t is not None and t["type"] == "reclaim" and t["entry"] == 101
+    # bars 3..5: still above the level with the pierce in lookback -> must NOT
+    # re-arm as a fresh reclaim at ever-higher entries
+    for upto in (4, 5, 6):
+        t = vivek.detect_trigger(frame(upto), "long", level)
+        assert t is None or t["type"] != "reclaim", f"re-fired at bar {upto - 1}"

@@ -47,14 +47,17 @@ def _spark(df) -> list[float]:
 
 
 def _load_prev_grades(out_root: str | None, market_key: str) -> dict:
-    """{symbol: grade} from the PREVIOUS scan's JSON (read before it's overwritten)
-    so grade hysteresis can hold a borderline name's prior grade across scans."""
+    """{symbol: {grade, dir, held}} from the PREVIOUS scan's JSON (read before
+    it's overwritten) so grade hysteresis can hold a borderline name's prior
+    grade across scans — direction-aware and with a bounded hold count."""
     if not out_root:
         return {}
     p = pathlib.Path(out_root) / f"{market_key}_vivek.json"
     try:
         data = json.loads(p.read_text(encoding="utf-8"))
-        return {r["symbol"]: r["grade"] for r in data.get("results", [])
+        return {r["symbol"]: {"grade": r["grade"], "dir": r.get("dir"),
+                              "held": int(r.get("grade_held_runs") or 0)}
+                for r in data.get("results", [])
                 if r.get("symbol") and r.get("grade")}
     except Exception:
         return {}
@@ -143,25 +146,37 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 continue
             # Hysteresis: hold the prior (higher) grade through small score wobble.
             # Applied BEFORE the gate so a genuine un-arm / low-R:R still demotes.
-            grade = vivek.apply_grade_hysteresis(points, grade, prev_grades.get(symbol))
-            # Per-timeframe plans (Daily + Weekly) from the ONE engine — the Daily
-            # plan is the row/bot headline; both feed the chart so the row, chart
-            # and bot read identical numbers. The Daily plan also carries the
-            # trigger state (armed / entry_trigger / trigger_bar).
+            # Direction-aware (a LONG badge never survives onto a SHORT read) and
+            # bounded (a hold can't renew itself forever off its own output).
+            prev = prev_grades.get(symbol) or {}
+            grade, held_runs = vivek.apply_grade_hysteresis(
+                points, grade, prev.get("grade"),
+                prev_dir=prev.get("dir"),
+                cur_dir="LONG" if sig["direction"] == "long" else "SHORT",
+                held_runs=prev.get("held", 0))
+            # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine —
+            # the Daily plan stays the row/chart headline so numbers match, but
+            # the ARMED/R:R GATE reads the best bot-relevant plan (1W > 3D > 1D):
+            # gating A+/A off the 1D trigger alone demoted weekly-armed setups to
+            # WATCHING, and the Weekly-preferring bot never traded them.
             plans = vivek.build_plans(df, sig)
             lv = plans.get("1D")
             if not lv or lv.get("rr", 0) <= 0:
                 continue
-            armed = bool(lv.get("armed"))
+            gate_tf = next((tf for tf in ("1W", "3D", "1D")
+                            if (plans.get(tf) or {}).get("armed")), None)
+            gate_plan = plans.get(gate_tf) if gate_tf else None
+            armed = gate_plan is not None
+            gate_rr = float(gate_plan.get("rr") or 0) if gate_plan else float(lv.get("rr") or 0)
             markers = vivek.build_markers(plans)
             # Selectivity gate: only ARMED setups (a trigger fired) earn A/A+;
             # otherwise the setup is WATCHING and capped at B+. Also demote on low
             # R:R. Keeps the tradeable list short and genuinely actionable.
-            grade, gate_notes = vivek.gate_grade(grade, sig, lv["rr"], armed)
+            grade, gate_notes = vivek.gate_grade(grade, sig, gate_rr, armed)
             fired = fired + gate_notes
             # Entry-type chips reflect the FIRED trigger when armed; fall back to
             # the descriptive heuristic for watching setups.
-            entry_types = ([lv["entry_trigger"]] if armed and lv.get("entry_trigger")
+            entry_types = ([gate_plan["entry_trigger"]] if armed and gate_plan.get("entry_trigger")
                            else vivek.entry_types(sig))
 
             info = meta.get(yf_ticker, {})
@@ -184,8 +199,10 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "reaction": sig["reaction"],
                 "entry_types": entry_types,
                 "armed": armed,
-                "entry_trigger": lv.get("entry_trigger"),
-                "trigger_bar": lv.get("trigger_bar"),
+                "armed_tf": gate_tf,               # which plan fired the gate (1W/3D/1D)
+                "grade_held_runs": held_runs,      # hysteresis state, read back next scan
+                "entry_trigger": (gate_plan or lv).get("entry_trigger"),
+                "trigger_bar": (gate_plan or lv).get("trigger_bar"),
                 "plans": plans,
                 "markers": markers,
                 "confluence": sig["confluence"],

@@ -68,7 +68,10 @@ def _candidate_mask(df: pd.DataFrame) -> np.ndarray:
 
 
 def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector: str):
-    """Replicate scan.py's row build (grade + gate + plans), minus hysteresis."""
+    """Replicate scan.py's row build (grade + gate + plans), minus hysteresis.
+    PARITY: the armed/R:R gate reads the best bot-relevant plan (1W > 3D > 1D),
+    exactly like scan.py — a backtest gated differently from the live scan
+    would invalidate the evidence."""
     points, grade, _ = vivek.score_and_grade(sig)
     if grade is None:
         return None, None, None
@@ -76,11 +79,15 @@ def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector
     lv = plans.get("1D")
     if not lv or lv.get("rr", 0) <= 0:
         return None, None, None
-    armed = bool(lv.get("armed"))
-    grade, _notes = vivek.gate_grade(grade, sig, lv["rr"], armed)
+    gate_tf = next((tf for tf in ("1W", "3D", "1D")
+                    if (plans.get(tf) or {}).get("armed")), None)
+    gate_plan = plans.get(gate_tf) if gate_tf else None
+    armed = gate_plan is not None
+    gate_rr = float(gate_plan.get("rr") or 0) if gate_plan else float(lv.get("rr") or 0)
+    grade, _notes = vivek.gate_grade(grade, sig, gate_rr, armed)
     if grade is None:
         return None, None, None
-    entry_types = ([lv["entry_trigger"]] if armed and lv.get("entry_trigger")
+    entry_types = ([gate_plan["entry_trigger"]] if armed and gate_plan.get("entry_trigger")
                    else vivek.entry_types(sig))
     row = {"symbol": symbol, "name": name, "sector": sector,
            "dir": "LONG" if sig["direction"] == "long" else "SHORT",

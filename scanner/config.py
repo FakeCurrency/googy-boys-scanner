@@ -270,6 +270,12 @@ VIVEK_GRADE_CUTOFFS    = [("A+", 8), ("A", 6), ("B+", 4), ("WATCH", 2)]
 # falls more than this many points below that grade's cutoff. Stops borderline
 # names flip-flopping (e.g. A+↔A) on tiny scan-to-scan data differences. 0 = off.
 VIVEK_GRADE_HYSTERESIS = 1
+# ...but a hold may not RENEW itself forever: the previous grade came from the
+# published (already-held) output, so a 7-scorer could stay A+ indefinitely and
+# quietly lower the bot's A+ bar. After this many consecutive held scans the raw
+# grade is published. A hold also never survives a LONG<->SHORT direction flip —
+# the old badge belonged to the opposite trade.
+VIVEK_GRADE_HYSTERESIS_MAX_RUNS = 3
 # Drop a still-forming trailing daily bar (the current session's incomplete bar)
 # so grades/plans key off COMPLETED bars only — removes partial-bar variance.
 VIVEK_DROP_FORMING_BAR = True
@@ -357,7 +363,10 @@ VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–
 #    crypto plan) makes R sizing meaningless — risk-based units go microscopic
 #    and the position is a lottery ticket, not a managed trade.
 VIVEK_BOT_MIN_PRICE      = {"asx": 0.05, "nasdaq": 1.0, "crypto": 0.0, "default": 0.0}
-VIVEK_BOT_MAX_STOP_PCT   = 50.0    # skip if |entry−stop| > this % of entry (0 = off)
+VIVEK_BOT_MAX_STOP_PCT   = 25.0    # skip if |entry−stop| > this % of entry (0 = off).
+                                   # Was 50 — which waved through 1D tickets whose stop
+                                   # anchored to a distant higher-frame SMA (AXON: a 37%
+                                   # stop, TP1 +62%, on a "daily" trade).
 #  • MIN_STOP_PCT: the inverse pathology — a stop <1% from entry usually means a
 #    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA).
 #    Risk sizing then buys a leverage-capped MAX position in something that

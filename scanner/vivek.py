@@ -389,14 +389,19 @@ def detect_trigger(frame: pd.DataFrame, direction: str, level: float) -> dict | 
 
     candidates: dict[str, dict] = {}
 
-    # reclaim — pierced the level recently, last bar closed back through it.
+    # reclaim — pierced the level recently and the last bar is the FIRST close
+    # back through it. Without the first-close condition a single touch kept
+    # the setup "armed reclaim" for ~6 consecutive daily scans, with the entry
+    # drifting to each new close (up to ~4% off the true trigger) — the bot
+    # then bought the most whipsaw-prone bar, not the reclaim itself. Strictly
+    # causal: uses only completed bars (last and last-1).
     if is_long:
         pierced = any(low[i] <= level for i in range(last - k, last + 1))
-        if pierced and lc > level:
+        if pierced and lc > level and close[last - 1] <= level:
             candidates["reclaim"] = {"type": "reclaim", "entry": float(lc), "bar": last}
     else:
         pierced = any(high[i] >= level for i in range(last - k, last + 1))
-        if pierced and lc < level:
+        if pierced and lc < level and close[last - 1] >= level:
             candidates["reclaim"] = {"type": "reclaim", "entry": float(lc), "bar": last}
 
     # retest — last bar tagged the level and held, on calm volume. Enter at the level.
@@ -537,7 +542,10 @@ def gate_grade(grade: str | None, sig: dict, rr: float, armed: bool = True) -> t
 
 
 def apply_grade_hysteresis(score: int, raw_grade: str | None, prev_grade: str | None,
-                           cutoffs: list | None = None, margin: int | None = None) -> str | None:
+                           cutoffs: list | None = None, margin: int | None = None,
+                           prev_dir: str | None = None, cur_dir: str | None = None,
+                           held_runs: int = 0,
+                           max_runs: int | None = None) -> tuple[str | None, int]:
     """Hold a setup's PREVIOUS (higher) grade across scans unless its score has
     clearly dropped — i.e. more than `margin` points below that grade's cutoff.
 
@@ -545,20 +553,35 @@ def apply_grade_hysteresis(score: int, raw_grade: str | None, prev_grade: str | 
     scan-to-scan data differences); it is applied BEFORE gate_grade, so a genuine
     state change (un-armed, or R:R falling below the minimum) still demotes the
     setup. Promotions are never held back. A no-op when there's no prior grade.
+
+    Two hard bounds (2026-07 — the ratchet fix):
+      * A hold never survives a LONG<->SHORT direction flip: the previous badge
+        described the OPPOSITE trade.
+      * A hold may renew at most `max_runs` consecutive scans. prev_grade comes
+        from the published (already-held) output, so an unbounded hold let a
+        7-scorer stay A+ forever — silently lowering the bot's A+ bar.
+
+    Returns (grade, held_runs) — persist held_runs on the row and feed it back.
     """
     cutoffs = config.VIVEK_GRADE_CUTOFFS if cutoffs is None else cutoffs
     margin = config.VIVEK_GRADE_HYSTERESIS if margin is None else margin
+    max_runs = (getattr(config, "VIVEK_GRADE_HYSTERESIS_MAX_RUNS", 3)
+                if max_runs is None else max_runs)
     if not prev_grade or prev_grade == raw_grade or margin <= 0:
-        return raw_grade
+        return raw_grade, 0
+    if prev_dir and cur_dir and prev_dir != cur_dir:
+        return raw_grade, 0                      # flipped sides — fresh grade
     rank = {g: i for i, (g, _) in enumerate(cutoffs)}   # A+ = 0 (best)
     cut = dict(cutoffs)
     if prev_grade not in rank or raw_grade not in rank:
-        return raw_grade
-    # Only a demotion (raw is a worse tier than prev) is eligible to be held, and
-    # only while the score is still within `margin` of the previous grade's cutoff.
-    if rank[raw_grade] > rank[prev_grade] and score >= cut[prev_grade] - margin:
-        return prev_grade
-    return raw_grade
+        return raw_grade, 0
+    # Only a demotion (raw is a worse tier than prev) is eligible to be held,
+    # only while the score is within `margin` of the previous grade's cutoff,
+    # and only for max_runs consecutive scans.
+    if (rank[raw_grade] > rank[prev_grade] and score >= cut[prev_grade] - margin
+            and held_runs < max_runs):
+        return prev_grade, held_runs + 1
+    return raw_grade, 0
 
 
 # Entry-type categories — how price is interacting with the 200 SMA. Used by the
