@@ -95,25 +95,81 @@ def check_and_kill(j: dict, dry_run: bool = False,
     return True
 
 
-def _book_market_journal(book: dict, market: str, market_day: str) -> dict:
+def _live_marks(book: dict) -> dict:
+    """(symbol, market) -> latest price for every open book position.
+
+    Best-effort, ONE batched yfinance call (2026-07-20 Phase 4): the standalone
+    check runs BETWEEN scans, and pricing open risk off the marks the runner
+    stamped last scan meant a fast adverse move could stay invisible for up to
+    an hour (crypto overnight/weekend especially). Daily bars: the last close
+    IS the running candle for crypto and the delayed session price for stocks —
+    exactly the freshness a scan run would have stamped at this moment.
+
+    Returns {} on ANY failure so every caller falls back to the last-scan
+    marks per position — the safety net can never end up WORSE than before.
+    """
+    open_pos = [p for p in book.get("open", []) if p.get("symbol")]
+    if not open_pos:
+        return {}
+    try:
+        from scanner import config
+        from scanner.data import download
+        from scanner.vivek_journal import _current_price
+        want = {}                                # yf ticker -> (symbol, market)
+        for p in open_pos:
+            m = p.get("market")
+            if m in config.MARKETS:
+                want[p["symbol"] + config.MARKETS[m].suffix] = (p["symbol"], m)
+        if not want:
+            return {}
+        frames = download(sorted(want), period="5d", retries=1)
+        quotes = {}
+        for yf_t, key in want.items():
+            px = _current_price(frames, yf_t)
+            if px is not None and px > 0:
+                quotes[key] = px
+        return quotes
+    except Exception as e:
+        log.warning("kill-switch: live quote fetch failed (%s) - falling back "
+                    "to last-scan marks", e)
+        return {}
+
+
+def _book_market_journal(book: dict, market: str, market_day: str,
+                         quotes: dict | None = None) -> dict:
     """Adapt ONE market's slice of the BOT BOOK to check_and_kill's journal shape.
 
     Selection is by the market-local day (exit_date), but rows are stamped with
     the AEST _session_day() key because that is what check_and_kill compares
-    against. Open positions carry the marks the runner stamped LAST SCAN
-    (unreal_usd on the remaining fraction + banked realized_r) — no live
-    re-pricing here, so the reading can be up to one scan interval old.
+    against. Open positions are re-priced LIVE when `quotes` has a price for
+    them (same _unreal_r maths the runner itself stamps with, so the two can
+    never disagree on semantics); any position without a live quote falls back
+    to the unreal_usd mark from the last scan. Banked partial-exit R
+    (realized_r) is added either way.
     """
     from scanner.scalp_journal import _session_day
+
+    from . import vivek_guard
     key = _session_day()
     closed = [{"session_day": key,
                "pnl": (t.get("realized_r") or 0.0) * (t.get("risk_usd") or 0.0)}
               for t in book.get("closed", [])
               if t.get("market") == market and t.get("exit_date") == market_day]
-    open_ = [{"unreal_pnl": ((p.get("unreal_usd") or 0.0)
-                             + (p.get("realized_r") or 0.0) * (p.get("risk_usd") or 0.0))}
-             for p in book.get("open", []) if p.get("market") == market]
-    return {"open": open_, "closed": closed}
+    open_, live_n = [], 0
+    for p in book.get("open", []):
+        if p.get("market") != market:
+            continue
+        unreal = p.get("unreal_usd") or 0.0          # last-scan stamp (fallback)
+        q = (quotes or {}).get((p.get("symbol"), market))
+        if q is not None:
+            try:
+                unreal = vivek_guard._unreal_r(p, q) * (p.get("risk_usd") or 0.0)
+                live_n += 1
+            except Exception:                        # malformed row: keep stamp
+                unreal = p.get("unreal_usd") or 0.0
+        open_.append({"unreal_pnl": unreal
+                      + (p.get("realized_r") or 0.0) * (p.get("risk_usd") or 0.0)})
+    return {"open": open_, "closed": closed, "live_marks": live_n}
 
 
 def run_standalone(dry_run: bool = False) -> dict:
@@ -150,13 +206,21 @@ def run_standalone(dry_run: bool = False) -> dict:
     else:
         log.warning("kill-switch: no bot book at %s yet - nothing to guard", BOOK_FILE)
 
+    # Live re-pricing (2026-07-20 Phase 4): between scans the stamped marks can
+    # be up to an hour old — exactly the window this standalone check exists to
+    # cover. One batched fetch; empty dict on failure = last-scan marks.
+    quotes = _live_marks(book)
+    if book.get("open"):
+        log.info("kill-switch: live quotes for %d/%d open position(s); "
+                 "the rest use last-scan marks", len(quotes), len(book["open"]))
+
     equity = config.VIVEK_BOT_ACCOUNT_EQUITY
     pct = getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0) or 0.0
     limit = equity * pct / 100.0
     out = {"triggered": [], "checked": []}
     for market, mkt in config.MARKETS.items():
         market_day = dt.datetime.now(ZoneInfo(mkt.timezone)).strftime("%Y-%m-%d")
-        j = _book_market_journal(book, market, market_day)
+        j = _book_market_journal(book, market, market_day, quotes=quotes)
         out["checked"].append(market)
         if check_and_kill(j, dry_run=dry_run, limit_usd=limit,
                           label=f"bot book [{market}]"):
@@ -165,8 +229,8 @@ def run_standalone(dry_run: bool = False) -> dict:
             pnl = (sum(c["pnl"] for c in j["closed"])
                    + sum(p["unreal_pnl"] for p in j["open"]))
             log.info("kill-switch OK [%s] - book P&L $%.2f / limit -$%.2f "
-                     "(%d open, marks from last scan)",
-                     market, pnl, limit, len(j["open"]))
+                     "(%d open, %d live-priced)",
+                     market, pnl, limit, len(j["open"]), j.get("live_marks", 0))
     return out
 
 

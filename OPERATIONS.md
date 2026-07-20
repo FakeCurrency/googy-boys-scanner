@@ -12,7 +12,8 @@ Last updated: 2026-06-22
 | Run Bybit executor | `python -m scanner.broker.bybit_run` |
 | Dry run (log only) | `python -m scanner.broker.bybit_run --dry-run` |
 | Check kill-switch | `python -m scanner.broker.kill_switch` |
-| Send alert digest | `python -m scanner.alerts` |
+| Audit bot-book integrity (read-only) | `python -m scanner.broker.vivek_run --verify` |
+| Rebuild derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
 | Run all tests | `pytest tests/ -v` |
 | Serve frontend locally | `python -m http.server 8000 --directory public` |
 
@@ -30,7 +31,7 @@ GitHub Actions handles everything automatically:
 | `phasemap.yml` | Nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate |
 | `lens_backtest.yml` | Weekly Sun | PhaseMap/Specs/VIVEK replays -> Insights stats |
 | `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
-| `kill_switch.yml` | Every 30 min (market hours) | Standalone loss check on the BOT BOOK (per market) |
+| `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol |
 | `stop_watcher.yml` | Every 5 min | Curls /api/tick (cloud watcher for the KV-synced manual journal) |
 | `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals |
 | `test.yml` | Every push/PR | pytest + JS tests |
@@ -58,7 +59,7 @@ Without `BYBIT_API_KEY`, the system runs in **SIMULATED mode** — full pipeline
 ## Stopping the system
 
 **Pause new orders only** (without touching existing positions):
-- Disable the `crypto_scalp.yml` workflow in GitHub → Actions → (select workflow) → … → Disable workflow
+- Disable `scan.yml` and `crypto_bot.yml` in GitHub → Actions → (select workflow) → … → Disable workflow
 
 **Emergency flatten** (kill all positions now):
 ```bash
@@ -67,28 +68,33 @@ python -m scanner.broker.kill_switch
 Or trigger the `kill_switch.yml` workflow manually in GitHub Actions.
 
 **Full stop** (no scans, no orders):
-- Disable `crypto_scalp.yml` AND `scan.yml` in GitHub Actions
+- Disable `scan.yml` AND `crypto_bot.yml` in GitHub Actions
 
 ---
 
 ## Kill switch
 
-The kill switch fires automatically when session P&L hits -$500 (SCALP_MAX_DAILY_LOSS).
+The standalone check (kill_switch.yml, every 30 min, 24/7) reads the BOT BOOK
+per market and fires when a market's session P&L (today's realised + open
+unrealised) breaches VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY.
+Open positions are re-priced with LIVE quotes at check time (2026-07-20
+Phase 4) — one batched fetch; any symbol that can't be quoted falls back to
+the mark stamped at the last scan, so the check degrades gracefully instead
+of failing.
 
 When it fires:
-1. All Bybit orders are cancelled
-2. All Bybit positions are closed at market
+1. All Bybit orders are cancelled (only if broker keys are configured)
+2. All Bybit positions are closed at market (same condition)
 3. An alert fires via Telegram/Discord/email (if configured)
-4. No new orders are placed until the next AEST session day
+4. The paper book itself is NOT modified — the runner's own guard halts new
+   entries for the session
 
 **Manual kill switch:**
 ```bash
-# Check status
-python -m scanner.broker.kill_switch
-
-# Force flatten (even if loss limit not yet reached)
-python -m scanner.broker.kill_switch          # add --dry-run to log only (note 2026-07-20: the previously documented FORCE_KILL env var never existed in code; the switch fires on the bot book's daily-loss limit)
+python -m scanner.broker.kill_switch          # add --dry-run to log only
 ```
+(Note 2026-07-20: the previously documented FORCE_KILL env var never existed
+in code; the switch fires on the bot book's daily-loss limit.)
 
 ---
 

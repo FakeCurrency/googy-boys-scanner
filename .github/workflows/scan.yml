@@ -173,6 +173,11 @@ jobs:
           print(f"schema gate OK - {len(files)} file(s) at v{want} (scope: {market})")
           PY
 
+      # Track-record integrity gate (Phase 4): a malformed / cross-contaminated
+      # / stale book fails the run HERE — failure email, nothing committed.
+      - name: Verify book integrity
+        run: python -m scanner.broker.vivek_run --verify
+
       # Multi-lens confluence -> Discord ping. VIVEK results just refreshed;
       # PhaseMap/Specs files are the nightly ones from the checkout. State-
       # deduped, so the intraday cadence doesn't spam. Never blocks the scan.
@@ -209,7 +214,13 @@ jobs:
           # (Dropped: journal/journal.json + scalp_journal.json + discord_state
           # + data/notified_signals.json — nothing in this workflow writes them.)
           PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/asx_prices.json public/data/nasdaq_prices.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
-          git add $PATHS 2>/dev/null || true
+          # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
+          # stages NOTHING when any single pathspec matches no file. The
+          # unassigned book file only exists when migration finds strays, so
+          # its absence made every add fail wholesale — green runs, zero
+          # commits, frozen site. Per-path adds cannot couple like that.
+          for p in $PATHS; do git add -- "$p" 2>/dev/null || true; done
+          git diff --cached --stat | tail -5
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0

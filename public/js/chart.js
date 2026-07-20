@@ -64,11 +64,23 @@
       fetch(`data/phasemap/${market}/narrations.json`, { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ])
-      .then(([j, nj]) => {
+      .then(async ([j, nj]) => {
         const rows = ((j && j.results) || []).filter((r) => String(r.ticker).toUpperCase() === want);
         const rec = rows.find((r) => r.direction === pmDirWanted) || rows[0] || null;
-        if (rec && rec.narration == null)
+        if (rec && rec.narration == null) {
+          // pair-mismatch guard (review H5): a deploy between the two parallel
+          // fetches can leave the sidecar on the previous scan — refetch once,
+          // cache-busted by the run_date we actually want.
+          if (nj && j && nj.run_date && j.run_date && nj.run_date !== j.run_date) {
+            try {
+              const r2 = await fetch(
+                `data/phasemap/${market}/narrations.json?rd=${encodeURIComponent(j.run_date)}`,
+                { cache: "reload" });
+              if (r2.ok) nj = await r2.json();
+            } catch (_) { /* keep what we have */ }
+          }
           rec.narration = (((nj && nj.narrations) || {})[`${rec.ticker}|${rec.direction}`]) || "";
+        }
         return rec;
       })
       .catch(() => null);

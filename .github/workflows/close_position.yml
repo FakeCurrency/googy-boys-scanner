@@ -86,6 +86,11 @@ jobs:
               --journal-type "$JOURNAL_TYPE"
           fi
 
+      # Track-record integrity gate (Phase 4): a close that somehow left the
+      # book malformed/stale must fail HERE, before anything is committed.
+      - name: Verify book integrity
+        run: python -m scanner.broker.vivek_run --verify
+
       - name: Commit updated journal
         env:
           SYMBOL: ${{ github.event.inputs.symbol }}
@@ -95,10 +100,17 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Surgical paths (review C3): only the files a close can write —
-          # never the whole public/data directory.
-          git add journal/vivek_bot_book.json journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json public/data/vivek_bot_book.json \
-                  journal/journal.json journal/scalp_journal.json \
-                  public/data/journal.json public/data/scalp_journal.json 2>/dev/null || true
+          # never the whole public/data directory. ONE path per git add
+          # (2026-07-20 hotfix): a single missing pathspec — e.g. the
+          # unassigned book file, which only exists when migration found
+          # strays — makes a combined `git add` stage NOTHING, silently.
+          for p in journal/vivek_bot_book.json journal/vivek_bot_book.asx.json \
+                   journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json \
+                   journal/vivek_bot_book.unassigned.json public/data/vivek_bot_book.json \
+                   journal/journal.json journal/scalp_journal.json \
+                   public/data/journal.json public/data/scalp_journal.json; do
+            git add -- "$p" 2>/dev/null || true
+          done
           if git diff --cached --quiet; then
             echo "Nothing to commit (position not found or already closed)."
           else

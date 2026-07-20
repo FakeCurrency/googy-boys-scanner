@@ -382,3 +382,71 @@ def test_unpriceable_position_gets_auditable_counter(tmp_path, monkeypatch):
     bk = vr.run_market("nasdaq", [], {}, [], now=_ny(2024, 1, 3, 12, 0))
     (pos,) = bk["open"]
     assert pos["unpriced_runs"] == 2
+
+
+# ── verify_books: the Phase 4 track-record integrity gate ──────────────────────
+
+def _vpos(symbol="BHP", market="asx", **kw):
+    import copy
+    p = {"symbol": symbol, "market": market, "direction": "long", "status": "open",
+         "entry": 100.0, "stop": 96.0, "risk": 4.0, "risk_usd": 100.0,
+         "unreal_usd": 0.0, "realized_r": 0.0}
+    p.update(kw)
+    return copy.deepcopy(p)
+
+
+def test_verify_books_healthy(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[_vpos()])
+    _write_market_book(tmp_path, "crypto", open_=[_vpos("BTC", "crypto")])
+    vr._write_combined()
+    assert vr.verify_books() == []
+
+
+def test_verify_books_empty_layout_is_ok(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)                 # nothing on disk at all
+    assert vr.verify_books() == []
+
+
+def test_verify_books_flags_cross_market_contamination(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    # post-migration layout: all three market files exist; a crypto entry has
+    # somehow landed inside the ASX canonical file
+    _write_market_book(tmp_path, "asx", open_=[_vpos(), _vpos("BTC", "crypto")])
+    _write_market_book(tmp_path, "nasdaq")
+    _write_market_book(tmp_path, "crypto")
+    vr._write_combined()
+    probs = vr.verify_books()
+    assert len(probs) == 1 and "DIFFERENT market" in probs[0] and "BTC" in probs[0]
+
+
+def test_verify_books_flags_duplicate_open_symbol(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[_vpos(), _vpos()])
+    vr._write_combined()
+    probs = vr.verify_books()
+    assert any("duplicate open symbols" in p and "BHP" in p for p in probs)
+
+
+def test_verify_books_flags_stale_combined_and_public(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[_vpos()])
+    vr._write_combined()
+    # a later canonical write that somehow skipped the combined refresh
+    _write_market_book(tmp_path, "asx", open_=[_vpos(), _vpos("CBA", "asx")])
+    probs = vr.verify_books()
+    assert sum("STALE" in p for p in probs) == 2   # combined + public twin
+
+
+def test_verify_books_flags_missing_combined(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[_vpos()])
+    probs = vr.verify_books()
+    assert sum("MISSING" in p for p in probs) == 2
+
+
+def test_verify_books_corrupt_market_file_reported_not_raised(monkeypatch, tmp_path):
+    _enable(monkeypatch, tmp_path)
+    _mfile(tmp_path, "asx").write_text("{not json", encoding="utf-8")
+    probs = vr.verify_books()                      # must NOT raise/abort
+    assert any("UNPARSEABLE" in p for p in probs)

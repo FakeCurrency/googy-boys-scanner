@@ -68,6 +68,11 @@ jobs:
           print(f"schema gate OK — {f} at v{want}")
           PY
 
+      # Track-record integrity gate (Phase 4): a malformed / cross-contaminated
+      # / stale book fails the run HERE — failure email, nothing committed.
+      - name: Verify book integrity
+        run: python -m scanner.broker.vivek_run --verify
+
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
           git config user.name "github-actions[bot]"
@@ -81,7 +86,13 @@ jobs:
           # stale checkout. Invariant: list only files written by scan-group
           # workflows.
           PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json"
-          git add $PATHS 2>/dev/null || true
+          # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
+          # stages NOTHING when any single pathspec matches no file. The
+          # unassigned book file only exists when migration finds strays, so
+          # its absence made every add fail wholesale — green runs, zero
+          # commits, frozen site. Per-path adds cannot couple like that.
+          for p in $PATHS; do git add -- "$p" 2>/dev/null || true; done
+          git diff --cached --stat | tail -5
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0

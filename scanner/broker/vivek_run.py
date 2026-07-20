@@ -217,6 +217,77 @@ def _write_combined() -> None:
     atomic_write(PUBLIC_FILE, payload)
 
 
+def verify_books() -> list[str]:
+    """Integrity audit of book layout v2. Returns problem strings ([] = healthy).
+
+    READ-ONLY. Run by the scan/close workflows AFTER their write steps (Phase 4
+    monitoring): a bad book state fails the run loudly — failure email + no
+    commit — instead of a broken track record quietly reaching main. Checks:
+      1. every canonical market file parses and is shaped {open:[], closed:[]}
+      2. no entry sits in the WRONG market's file (cross-contamination)
+      3. no duplicate open symbols inside a market (one-per-symbol rule)
+      4. the derived combined file + its public twin match what the canonical
+         files derive to right now (volatile timestamps ignored) — staleness
+         is recoverable with --rebuild-combined, and the next scan self-heals
+    """
+    problems: list[str] = []
+    market_files = [m for m in config.MARKETS if _market_book_file(m).exists()]
+    parse_ok = True
+    for market in market_files:
+        p = _market_book_file(market)
+        try:
+            mb = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:
+            problems.append(f"{p.name}: UNPARSEABLE ({e})")
+            parse_ok = False
+            continue
+        for section in ("open", "closed"):
+            rows = mb.get(section)
+            if not isinstance(rows, list):
+                problems.append(f"{p.name}: '{section}' is not a list")
+                parse_ok = False
+                continue
+            strays = [t.get("symbol") for t in rows if t.get("market") != market]
+            if strays:
+                problems.append(f"{p.name}: {len(strays)} {section} entr"
+                                f"{'y' if len(strays) == 1 else 'ies'} belong to a "
+                                f"DIFFERENT market: {strays[:5]}")
+        counts: dict = {}
+        for t in (mb.get("open") or []) if isinstance(mb.get("open"), list) else []:
+            counts[t.get("symbol")] = counts.get(t.get("symbol"), 0) + 1
+        dupes = sorted(s for s, n in counts.items() if n > 1)
+        if dupes:
+            problems.append(f"{p.name}: duplicate open symbols {dupes} "
+                            f"(one-per-symbol rule)")
+    if not market_files:
+        return problems          # pre-migration / fresh install: nothing to cross-check
+    if not parse_ok:
+        return problems          # combined comparison would abort on a corrupt file
+
+    def _stable(d: dict) -> dict:
+        d = json.loads(json.dumps(d))                     # deep copy
+        d.pop("updated_at", None)
+        (d.get("summary") or {}).pop("updated_day", None)
+        return d
+
+    derived = _stable(_combined_view())
+    for path, label in ((BOOK_FILE, "combined book"),
+                        (PUBLIC_FILE, "public combined book")):
+        if not path.exists():
+            problems.append(f"{label}: MISSING ({path.name}) - run "
+                            f"python -m scanner.broker.vivek_run --rebuild-combined")
+            continue
+        try:
+            disk = _stable(json.loads(path.read_text(encoding="utf-8")))
+        except Exception as e:
+            problems.append(f"{label}: unparseable ({e}) - run --rebuild-combined")
+            continue
+        if disk != derived:
+            problems.append(f"{label}: STALE - does not match the canonical "
+                            f"market files (run --rebuild-combined)")
+    return problems
+
+
 def _save_market_book(market: str, mbook: dict) -> None:
     """Persist ONE market's canonical file, then refresh the combined view."""
     mbook["version"] = BOOK_VERSION
@@ -677,7 +748,23 @@ def main() -> None:
     parser.add_argument("--rebuild-combined", action="store_true",
                         help="regenerate the derived combined book from the "
                              "canonical per-market files and exit")
+    parser.add_argument("--verify", action="store_true",
+                        help="read-only integrity audit of the book files; "
+                             "exit 1 (and list problems) if anything is wrong")
     args = parser.parse_args()
+
+    if args.verify:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        problems = verify_books()
+        if problems:
+            for pr in problems:
+                print(f"BOOK VERIFY FAIL: {pr}")
+            raise SystemExit(1)
+        v = _combined_view()
+        n_files = sum(1 for m in config.MARKETS if _market_book_file(m).exists())
+        print(f"book verify OK - {n_files} market file(s), "
+              f"{len(v['open'])} open / {len(v['closed'])} closed combined")
+        return
 
     if args.rebuild_combined:
         logging.basicConfig(level=logging.INFO, format="%(message)s")

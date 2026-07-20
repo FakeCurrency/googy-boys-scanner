@@ -72,3 +72,89 @@ def test_run_standalone_all_clear_on_quiet_book(tmp_path, monkeypatch, stub_aler
     monkeypatch.setattr(vr, "BOOK_FILE", p)
     out = ks.run_standalone(dry_run=True)
     assert out["triggered"] == []
+
+
+# ── live quotes (2026-07-20 Phase 4) ───────────────────────────────────────────
+
+def _pos(symbol="BHP", market="asx", **kw):
+    p = {"symbol": symbol, "market": market, "direction": "long", "status": "open",
+         "entry": 100.0, "risk": 5.0, "risk_usd": 100.0, "booked_pct": 0.0,
+         "unreal_usd": -50.0, "realized_r": 0.0}
+    p.update(kw)
+    return p
+
+
+def test_adapter_live_quote_repriceses_with_runner_maths():
+    """A live quote replaces the stamped mark using the SAME _unreal_r the
+    runner stamps with: long, entry 100, risk 5, quote 90 -> -2R on $100."""
+    j = ks._book_market_journal(_book(open_=[_pos()]), "asx", "2024-01-02",
+                                quotes={("BHP", "asx"): 90.0})
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(-200.0)
+    assert j["live_marks"] == 1
+
+
+def test_adapter_no_quote_falls_back_to_stamped_mark():
+    j = ks._book_market_journal(_book(open_=[_pos()]), "asx", "2024-01-02",
+                                quotes={})
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
+    assert j["live_marks"] == 0
+
+
+def test_adapter_malformed_row_keeps_stamp_not_crash():
+    bad = _pos()
+    del bad["entry"]                      # _unreal_r would KeyError
+    j = ks._book_market_journal(_book(open_=[bad]), "asx", "2024-01-02",
+                                quotes={("BHP", "asx"): 90.0})
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
+
+
+def test_run_standalone_fires_on_live_move_stale_mark_says_fine(
+        tmp_path, monkeypatch, stub_alerts):
+    """THE reason for Phase 4: mark stamped at last scan says -$50 (fine), the
+    market has since moved to -$800 — the live quote must trip the switch."""
+    import scanner.broker.vivek_run as vr
+    book = _book(open_=[_pos(risk_usd=400.0)])          # live -2R * $400 = -$800
+    p = tmp_path / "vivek_bot_book.json"
+    p.write_text(json.dumps(book), encoding="utf-8")
+    monkeypatch.setattr(vr, "BOOK_FILE", p)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)   # $300 on 10k
+    monkeypatch.setattr(ks, "_live_marks", lambda b: {("BHP", "asx"): 90.0})
+    out = ks.run_standalone(dry_run=True)
+    assert "asx" in out["triggered"]
+    # sanity: with quotes suppressed the stale -$50 mark would NOT have fired
+    monkeypatch.setattr(ks, "_live_marks", lambda b: {})
+    assert ks.run_standalone(dry_run=True)["triggered"] == []
+
+
+def test_live_marks_suffix_mapping_and_batching(monkeypatch):
+    import pandas as pd
+
+    import scanner.data as sdata
+
+    def _frame(px):
+        idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
+        return pd.DataFrame({"Close": [px] * 3}, index=idx)
+
+    asked = {}
+
+    def fake_download(tickers, period=None, retries=None, **kw):
+        asked["tickers"] = list(tickers)
+        return {"BHP.AX": _frame(42.0), "BTC-USD": _frame(50000.0)}
+
+    monkeypatch.setattr(sdata, "download", fake_download)
+    book = _book(open_=[_pos("BHP", "asx"), _pos("BTC", "crypto"),
+                        _pos("GHOST", "not_a_market")])
+    q = ks._live_marks(book)
+    assert q == {("BHP", "asx"): 42.0, ("BTC", "crypto"): 50000.0}
+    assert asked["tickers"] == ["BHP.AX", "BTC-USD"]    # one batch, suffix-mapped
+
+
+def test_live_marks_fetch_failure_returns_empty(monkeypatch):
+    import scanner.data as sdata
+
+    def boom(*a, **k):
+        raise RuntimeError("yfinance down")
+
+    monkeypatch.setattr(sdata, "download", boom)
+    q = ks._live_marks(_book(open_=[_pos()]))
+    assert q == {}                        # safety net falls back, never raises

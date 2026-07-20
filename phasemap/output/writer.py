@@ -132,12 +132,24 @@ def split_narrations(snap: dict) -> tuple[dict, dict]:
 
 def write_snapshot(snap: dict, out_dir: str = None) -> str:
     """Writes the FULL dated snapshot + slim latest.json + narrations.json.
-    Returns the dated file path."""
+    Returns the dated file path.
+
+    Publish discipline (2026-07-20 Phase 4, review H5):
+      * validate_published() runs BEFORE any file is touched — the same check
+        the nightly schema gate applies after the fact, moved in front of the
+        writes so a structurally broken pair can never replace good files,
+        even locally.
+      * narrations.json is written BEFORE latest.json: latest.json is the
+        entry point readers key off, so when a new latest appears its sidecar
+        is already in place. (The frontend additionally run_date-matches the
+        pair and refetches on mismatch — deploys can still race a page load.)
+    """
     validate_snapshot(snap)
     out_dir = out_dir or CONFIG.output_dir
     os.makedirs(out_dir, exist_ok=True)
     slim, narr = split_narrations(snap)
+    validate_published(slim, narr)      # abort BEFORE touching published files
     _atomic_write(os.path.join(out_dir, f"{snap['run_date']}.json"), serialise(snap))
-    _atomic_write(os.path.join(out_dir, "latest.json"), serialise(slim))
     _atomic_write(os.path.join(out_dir, "narrations.json"), serialise(narr))
+    _atomic_write(os.path.join(out_dir, "latest.json"), serialise(slim))
     return os.path.join(out_dir, f"{snap['run_date']}.json")

@@ -266,7 +266,19 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
       try {
-        const nj = narrRes && narrRes.ok ? await narrRes.json() : null;
+        let nj = narrRes && narrRes.ok ? await narrRes.json() : null;
+        // The pair ships together but is fetched in parallel — a deploy landing
+        // between the two requests can leave the sidecar on the PREVIOUS scan
+        // (review H5). run_date-match the pair and refetch the sidecar once,
+        // cache-busted by the wanted run_date (shared, CDN-friendly buster).
+        if (nj && nj.run_date && state.data.run_date && nj.run_date !== state.data.run_date) {
+          try {
+            const r2 = await fetch(
+              `data/phasemap/${state.market}/narrations.json?rd=${encodeURIComponent(state.data.run_date)}`,
+              { cache: "reload" });
+            if (r2.ok) nj = await r2.json();
+          } catch (_) { /* keep the mismatched sidecar — better than nothing */ }
+        }
         const nm = (nj && nj.narrations) || {};
         state.data.results.forEach((r) => {
           if (r.narration == null) r.narration = nm[`${r.ticker}|${r.direction}`] || "";

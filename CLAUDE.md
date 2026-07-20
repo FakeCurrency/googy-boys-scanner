@@ -91,7 +91,7 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + schema gate (SLIM latest.json + narrations sidecar); no confluence here |
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
-| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market (broker flatten only if keys set) |
+| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set |
 | stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals |
 
@@ -107,7 +107,8 @@ paper_run/bracket_order/reconcile modules deleted.)
   run can only write its own file — cross-market clobber impossible by
   construction); `journal/vivek_bot_book.json` + the public twin are a DERIVED
   combined view (same old schema; regenerate with
-  `python -m scanner.broker.vivek_run --rebuild-combined`). A+ only (grade_raw,
+  `python -m scanner.broker.vivek_run --rebuild-combined`; audit with
+  `--verify` — the scan/close workflows run it as a failing gate). A+ only (grade_raw,
   unsmoothed), max 10/market, one per symbol, daily+weekly loss guards, manual
   close via close_position.yml journal_type=bot.
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —

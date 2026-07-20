@@ -113,3 +113,32 @@ def test_chart_writer_skips_windows_reserved_names(tmp_path):
     assert os.listdir(tmp_path) == []          # nothing written for reserved names
     write_chart_json(str(tmp_path), "BHP", df)
     assert os.listdir(tmp_path) == ["BHP.json"]
+
+
+# ── publish-pair discipline (2026-07-20 Phase 4, review H5) ────────────────────
+
+def test_write_order_sidecar_before_latest(tmp_path, monkeypatch):
+    """narrations.json must land BEFORE latest.json: latest is the entry point
+    readers key off, so when a new latest appears its sidecar already exists."""
+    import os
+    from phasemap.output import writer as w
+    calls, real = [], w._atomic_write
+
+    def spy(path, payload):
+        calls.append(os.path.basename(path))
+        real(path, payload)
+
+    monkeypatch.setattr(w, "_atomic_write", spy)
+    w.write_snapshot(snapshot_for({"AAA": synth.fixture1()}), str(tmp_path))
+    assert calls.index("narrations.json") < calls.index("latest.json")
+
+
+def test_broken_pair_never_touches_disk(tmp_path, monkeypatch):
+    """Regression guard: if split/validation ever diverge, write_snapshot must
+    abort BEFORE any published file is replaced (validate_published up front)."""
+    from phasemap.output import writer as w
+    monkeypatch.setattr(w, "split_narrations",
+                        lambda s: ({"run_date": "x"}, {"narrations": {}}))
+    with pytest.raises(ValueError):
+        w.write_snapshot(snapshot_for({"AAA": synth.fixture1()}), str(tmp_path))
+    assert list(tmp_path.iterdir()) == []          # nothing written at all
