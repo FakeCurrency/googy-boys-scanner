@@ -964,14 +964,37 @@
     ["retest",  "Retest + confirmation",   "Retest with confirmation"],
     ["break",   "Break of structure",      "Break of small structure near 200 SMA"],
   ];
-  // Backtest quality tier per trigger (long-only walk-forward): reclaim is the
-  // edge, break is middling, retest is flat-to-negative. Colour = overall edge
-  // (avg R), with the win-rate shown in the tooltip.
+  // Backtest quality per trigger — populated at RUNTIME from the live artifact
+  // (vivek_backtest_longonly.json → results.by_entry_type). Numbers are never
+  // hardcoded here: until the fetch lands (or if it fails) chips read "no
+  // backtest data" with no tint. Tint = expectancy_r: >0.3 green, 0–0.3 amber,
+  // <0 red.
   const VK_ENTRY_Q = {
-    reclaim: { tier: "green", note: "Best trigger — backtest ≈+1.6R avg, ~56% win (long-only)" },
-    break:   { tier: "amber", note: "Middling — positive but rare (small sample)" },
-    retest:  { tier: "red",   note: "Weakest — flat-to-negative; the bot skips these" },
+    reclaim: { tier: null, note: "no backtest data" },
+    retest:  { tier: null, note: "no backtest data" },
+    break:   { tier: null, note: "no backtest data" },
   };
+  async function loadEntryQuality() {
+    try {
+      const res = await fetch("data/vivek_backtest_longonly.json", { cache: "no-cache" });
+      if (!res.ok) return;
+      const by = (((await res.json()) || {}).results || {}).by_entry_type || {};
+      let touched = false;
+      for (const code in VK_ENTRY_Q) {
+        const s = by[code];
+        if (!s || typeof s.expectancy_r !== "number") continue;
+        const e = s.expectancy_r;
+        VK_ENTRY_Q[code] = {
+          tier: e > 0.3 ? "green" : e >= 0 ? "amber" : "red",
+          note: `Backtest (long-only): ${e >= 0 ? "+" : ""}${e.toFixed(2)}R avg over ${s.n} trades` +
+                (s.win_rate != null ? ` · ${s.win_rate}% win` : "") +
+                (s.profit_factor != null ? ` · PF ${s.profit_factor}` : ""),
+        };
+        touched = true;
+      }
+      if (touched && state.data) renderEntryFilters(state.data);   // repaint chips with real numbers
+    } catch (_) { /* fetch failed — neutral wording stands, never stale claims */ }
+  }
   // Data freshness + version badge. Surfaces scan age, coverage and schema so a
   // stale/old-build dataset is visible at a glance instead of silently dropping
   // features. Turns amber when coverage is low, the scan is old, or the committed
@@ -1026,7 +1049,7 @@
     const chip = (code, label, full, n) => {
       const active = code === "all" ? sel.size === 0 : sel.has(code);
       const q = VK_ENTRY_Q[code];
-      const cls = q ? ` q-${q.tier}` : "";
+      const cls = q && q.tier ? ` q-${q.tier}` : "";
       const title = q ? `${full} — ${q.note}` : full;
       return `<button class="vkf-chip${cls}${active ? " is-active" : ""}" data-type="${esc(code)}" title="${esc(title)}">${esc(label)} <b>${n}</b></button>`;
     };
@@ -1792,6 +1815,7 @@
   initKeyboard();
   bind();
   loadCaps();
+  loadEntryQuality();
   loadBotActivity();
   setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
   load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });

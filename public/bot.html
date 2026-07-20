@@ -55,6 +55,8 @@
     .bot-status-equity { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
     .bot-status-equity-label { font: 600 9.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
     .bot-status-equity-val { font: 700 16px/1 var(--bot-mono); color: var(--text); font-variant-numeric: tabular-nums; }
+    .bot-status-equity-note { font: 500 9px/1.2 var(--sans); color: var(--muted); }
+    .bot-stale-banner { background: var(--orange-soft, rgba(255,159,10,0.12)); border: 0.5px solid var(--orange); color: var(--orange); border-radius: 11px; padding: 10px 15px; margin: 12px 24px 0; font: 500 12px/1.5 var(--sans); }
 
     .bot-status-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
     .bot-action-btn {
@@ -448,13 +450,18 @@
     <div class="bot-conn-group" id="bot-conn-group"><!-- connections injected --></div>
     <div class="bot-status-equity">
       <span class="bot-status-equity-label">Equity</span>
-      <span class="bot-status-equity-val num" id="bot-equity-val">$10,342</span>
+      <span class="bot-status-equity-val num" id="bot-equity-val">—</span>
+      <span class="bot-status-equity-note">paper book equity — configured, not broker-read</span>
     </div>
     <div class="bot-status-right">
       <button class="bot-action-btn bot-btn-pause is-running" id="bot-toggle">⏸ PAUSE BOT</button>
       <button class="kill-btn" id="kill-btn">⏻ KILL SWITCH</button>
     </div>
   </div>
+
+  <!-- Stale-feed notice: bot_status.json froze 2026-06-25 — bot.js unhides this
+       whenever the feed is stale/unavailable so June data never reads as live -->
+  <div class="bot-stale-banner" id="bot-stale-banner" hidden></div>
 
   <!-- Persistent banners -->
   <div class="bot-banner bot-banner-kill" id="kill-banner">
@@ -630,7 +637,7 @@
           <div class="bot-panel-header"><span class="bot-panel-title">Position Sizing &amp; Risk</span></div>
           <div class="bot-panel-body">
             <div class="sizing-readout">
-              <div class="sizing-line"><span class="sizing-line-k">Account equity</span><span class="sizing-line-v num" id="sz-equity">$10,342</span></div>
+              <div class="sizing-line"><span class="sizing-line-k">Account equity</span><span class="sizing-line-v num" id="sz-equity">—</span></div>
               <div class="sizing-line"><span class="sizing-line-k">Max risk / trade (<span id="sz-risk-pct">0.25%</span>)</span><span class="sizing-line-v accent num" id="sz-max-risk">$25.86</span></div>
               <div class="sizing-line"><span class="sizing-line-k">Open risk (live, all positions)</span><span class="sizing-line-v num" id="sz-open-risk">$0</span></div>
             </div>
@@ -707,7 +714,7 @@
         <div class="bot-panel">
           <div class="bot-panel-header">
             <span class="bot-panel-title">Execution Log</span>
-            <span class="bot-panel-meta">live</span>
+            <span class="bot-panel-meta" id="log-meta">live</span>
           </div>
           <div class="bot-panel-body" style="padding-top:6px;padding-bottom:6px" id="bot-log"></div>
         </div>
@@ -721,8 +728,8 @@
             <div class="bot-panel-header"><span class="bot-panel-title">Today's Performance</span></div>
             <div class="bot-panel-body">
               <div class="equity-card-head">
-                <span class="equity-now num" id="equity-now">$10,342</span>
-                <span class="equity-chg up num" id="equity-chg">+3.4%</span>
+                <span class="equity-now num" id="equity-now">—</span>
+                <span class="equity-chg num" id="equity-chg">—</span>
               </div>
               <svg class="equity-svg" id="equity-svg" preserveAspectRatio="none"></svg>
               <div id="stats-grid"></div>
@@ -832,6 +839,6 @@
   </footer>
 
   <script src="js/risk_manager.js?v=6"></script>
-  <script src="js/bot.js?v=10"></script>
+  <script src="js/bot.js?v=11"></script>
 </body>
 </html>

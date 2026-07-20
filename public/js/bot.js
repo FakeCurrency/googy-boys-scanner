@@ -13,12 +13,29 @@
   // for risk/kill state — it all goes through `risk`.
   let risk = null;
 
-  // Last-resort equity ONLY if bot_status.json can't be fetched on boot (e.g.
-  // offline first load). The real starting equity always comes from the feed
-  // (d.equity / d.capital) — see init() which fetches it BEFORE constructing
-  // the engine so we never run on a hardcoded number when data is available.
+  // Paper book equity. bot_status.json FROZE on 2026-06-25 (nothing writes it),
+  // so equity is CONFIGURED, not broker-read: bot_rules.json's `equity` wins if
+  // that file ever publishes one, else this constant. Never seeded from a stale
+  // feed — the header note on the page says exactly that.
   const FALLBACK_EQUITY = 10000;
   const STATUS_URL = "data/bot_status.json";
+  // A live feed would refresh every scan; anything older is a dead snapshot and
+  // must never render as live (equity, today's stats, HTF bias, connections).
+  const STALE_AFTER_MS = 24 * 3.6e6;
+  const feedStale = (d) => { const t = Date.parse((d && d.generated_at) || ""); return !isFinite(t) || Date.now() - t > STALE_AFTER_MS; };
+  const feedDate = (d) => { const t = Date.parse((d && d.generated_at) || ""); return isFinite(t) ? new Date(t).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) : "unknown date"; };
+  // Stale/unavailable banner + per-panel labels, so June data never reads live.
+  function markFeedState(stale, d) {
+    const el = $("#bot-stale-banner");
+    if (el) {
+      el.hidden = !stale;
+      if (stale) el.textContent = d
+        ? `⚠ Bot status feed is stale — last update ${feedDate(d)}. Connections, HTF bias, today's stats and feed positions are shown as stale/unavailable, not live. Equity is the configured paper book, not a broker read.`
+        : "⚠ Bot status feed unavailable — no live telemetry. Equity is the configured paper book, not a broker read.";
+    }
+    const logMeta = $("#log-meta");
+    if (logMeta) logMeta.textContent = stale ? (d ? `stale · as of ${feedDate(d)}` : "unavailable") : "live";
+  }
 
   // Sizing-calculator instrument list (engine resolves aliases like YM→/YM).
   const CALC_INSTRUMENTS = ["/NQ", "YM", "GC", "SI", "CL", "NG"];
@@ -89,11 +106,14 @@
   }
 
   // ── Connections ────────────────────────────────────────────────────────────
-  function renderConnections(conns) {
+  // A stale feed's "WS connected · 38ms" is a lie — render offline + a stale tag.
+  function renderConnections(conns, stale, asOf) {
     const wrap = $("#bot-conn-group"); if (!wrap || !conns) return;
     wrap.innerHTML = ["mode", "bybit", "ibkr"].filter(k => conns[k]).map(k => {
       const c = conns[k];
-      return `<div class="bot-conn conn-${c.state}"><span class="bot-conn-dot"></span><span class="bot-conn-text"><span class="bot-conn-label">${c.label}</span><span class="bot-conn-detail">${c.detail}</span></span></div>`;
+      const st = stale ? "offline" : c.state;
+      const detail = stale ? `unavailable — feed stale (${asOf})` : c.detail;
+      return `<div class="bot-conn conn-${st}"><span class="bot-conn-dot"></span><span class="bot-conn-text"><span class="bot-conn-label">${c.label}</span><span class="bot-conn-detail">${detail}</span></span></div>`;
     }).join("");
   }
 
@@ -388,13 +408,23 @@
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
-  function renderStats(d) {
-    const today = d.today; if (!today) return;
-    const eq = d.equity || d.capital, startEq = (d.equity_curve && d.equity_curve[0]) || d.capital;
-    const chgPct = ((eq - startEq) / startEq) * 100;
+  function renderStats(d, stale) {
+    // Equity readouts come from the ENGINE (configured paper equity, updated by
+    // sim closes) — never a stale feed number dressed up as a broker read.
+    const eq = risk ? risk.getCurrentRiskState().equity : (d.equity || d.capital);
     $("#bot-equity-val").textContent = moneyK(eq);
     $("#equity-now").textContent = moneyK(eq);
-    const chgEl = $("#equity-chg"); chgEl.textContent = pct(chgPct); chgEl.className = "equity-chg num " + (chgPct >= 0 ? "up" : "down");
+    const chgEl = $("#equity-chg");
+    const today = d.today;
+    if (stale || !today) {
+      chgEl.textContent = "feed stale"; chgEl.className = "equity-chg num";
+      const svg = $("#equity-svg"); if (svg) svg.innerHTML = "";
+      $("#stats-grid").innerHTML = `<div class="bot-empty" style="grid-column:1/-1">Today's stats unavailable — status feed last updated ${feedDate(d)}.</div>`;
+      return;
+    }
+    const startEq = (d.equity_curve && d.equity_curve[0]) || d.capital;
+    const chgPct = ((eq - startEq) / startEq) * 100;
+    chgEl.textContent = pct(chgPct); chgEl.className = "equity-chg num " + (chgPct >= 0 ? "up" : "down");
     renderEquityCurve(d.equity_curve);
     const total = today.realized_pnl + today.unrealized_pnl;
     const winRate = today.trades_closed ? Math.round(today.wins / today.trades_closed * 100) : 0;
@@ -538,10 +568,11 @@
     // numbers — every scan publishes them to data/bot_rules.json. A fresh
     // browser adopts them; if you've saved custom rules here, yours win but
     // any drift from the real bot is called out in the console.
+    let srvRules = null;
     try {
       const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
       if (r.ok) {
-        const srv = await r.json();
+        const srv = srvRules = await r.json();
         const map = { risk_pct: srv.risk_pct, max_positions: srv.max_positions, min_rr: srv.min_rr };
         if (!localStorage.getItem(RULES_KEY)) {
           for (const [k, v] of Object.entries(map)) if (v != null) RULES[k] = v;
@@ -555,11 +586,12 @@
     } catch (_) { /* offline — JS defaults stand */ }
     populateRulesForm(RULES);
 
-    // Fetch the status feed ONCE up front so the engine is constructed with the
-    // REAL starting equity from bot_status.json, not a hardcoded placeholder.
-    // The fallback is used only if this initial fetch fails (offline boot).
+    // The status feed still drives the log/journal panels, but equity is NEVER
+    // seeded from it — bot_status.json froze 2026-06-25 and nothing writes it.
+    // Configured source: bot_rules.json `equity` if it ever publishes one, else
+    // FALLBACK_EQUITY (the header note flags it as configured, not broker-read).
     const seed = await fetchStatus();
-    const startingEquity = seed ? Number(seed.equity ?? seed.capital) || FALLBACK_EQUITY : FALLBACK_EQUITY;
+    const startingEquity = Number(srvRules && srvRules.equity) || FALLBACK_EQUITY;
 
     // Create the risk engine with the loaded equity.
     risk = new RiskManager({
@@ -713,28 +745,37 @@
     try {
       const d = prefetched || await fetchStatus();
       if (!d) throw new Error("no data");
+      const stale = feedStale(d);
+      markFeedState(stale, d);
       window.__DATA = d; window.__JSUMMARY = d.journal_summary;
-      window.__EQUITY = d.equity || d.capital;
+      window.__EQUITY = stale ? risk.getCurrentRiskState().equity : (d.equity || d.capital);
       JOURNAL = d.journal || []; LOG = d.log || [];
 
-      // Feed live equity to the engine; seed the loss counter on first run only.
-      risk.setEquity(d.equity || d.capital);
-      risk.seedConsecutiveLosses((d.risk_status && d.risk_status.consecutive_losses) || 0);
+      // Feed live equity + loss counter to the engine — but ONLY from a live
+      // feed. A stale snapshot's June numbers must not masquerade as current.
+      if (!stale) {
+        risk.setEquity(d.equity || d.capital);
+        risk.seedConsecutiveLosses((d.risk_status && d.risk_status.consecutive_losses) || 0);
+      }
 
       // ── Seed the engine with bias + positions (only on first load) ─────────
       // Re-seeding every 30s would clobber an in-session breakeven the user
       // triggered, so we only seed positions once. Bias is cheap to refresh.
+      // Stale feed → no bias, no positions: bias chips simply don't render
+      // ("unavailable") and the book shows empty instead of June ghosts.
       POS_META = {};
       (d.positions || []).forEach(p => { POS_META[p.symbol] = p; });
-      // HTF bias: per-position `bias` block, plus an optional instrument map.
-      const biasMap = Object.assign({}, d.htf_bias || {});
-      (d.positions || []).forEach(p => { if (p.bias) biasMap[p.symbol] = p.bias; });
-      Object.keys(biasMap).forEach(sym => risk.setBias(sym, biasMap[sym]));
-      window.__BIAS_MAP = biasMap;
-      if (!window.__POS_SEEDED) { risk.loadPositions(d.positions || []); window.__POS_SEEDED = true; }
+      if (!stale) {
+        // HTF bias: per-position `bias` block, plus an optional instrument map.
+        const biasMap = Object.assign({}, d.htf_bias || {});
+        (d.positions || []).forEach(p => { if (p.bias) biasMap[p.symbol] = p.bias; });
+        Object.keys(biasMap).forEach(sym => risk.setBias(sym, biasMap[sym]));
+        window.__BIAS_MAP = biasMap;
+      }
+      if (!window.__POS_SEEDED) { risk.loadPositions(stale ? [] : (d.positions || [])); window.__POS_SEEDED = true; }
 
-      renderConnections(d.connections);
-      renderStats(d);
+      renderConnections(d.connections, stale, feedDate(d));
+      renderStats(d, stale);
       renderLog(LOG);
       renderJournalSummary(d.journal_summary);
       populateJournalFilters(JOURNAL);
@@ -745,6 +786,7 @@
       renderPositionsFromEngine();
       renderPortfolioIntel();
     } catch (e) {
+      markFeedState(true, null);
       showToast("Bot data unavailable — showing empty state.", "warn");
       renderPositionsFromEngine(); renderPortfolioIntel(); renderLog([]);
     }

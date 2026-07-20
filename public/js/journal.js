@@ -37,16 +37,48 @@
   // the reliable "Now" source for manual trades (no flaky live-quote fetch).
   const scanPrice = new Map();
 
-  // ── VIVEK sizing + cost model (mirrors scanner/broker/vivek_bot.py + config) ──
+  // ── VIVEK sizing + cost model (live source: data/bot_rules.json) ───────────
   // Each market is sized off its own $10k book; the account spans all three, so
   // the starting capital shown to the user is 3 × $10k = $30k.
-  const EQUITY = 10000, RISK_PCT = 0.35, RISK_MIN = 0.25, RISK_MAX = 0.5;
+  // RISK_PCT / LEVERAGE / *_BPS below are OFFLINE FALLBACKS only — loadBotRules()
+  // overrides them from bot_rules.json (published from scanner/config.py every
+  // scan), so this file can never drift from the executing bot silently again.
+  const EQUITY = 10000, RISK_MIN = 0.25, RISK_MAX = 0.5;
+  let RISK_PCT = 0.35;                     // fallback — bot_rules.json wins
   const START_CAPITAL = EQUITY * 3;        // $30k — ASX + NASDAQ + Crypto books
   const money0 = (v) => "$" + Math.round(v).toLocaleString();
-  const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };
+  const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };                    // fallback
   const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
-  const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };
-  const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };
+  const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
+  const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
+
+  // Adopt the EXECUTING bot's numbers; warn when the JS fallbacks have drifted.
+  async function loadBotRules() {
+    try {
+      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
+      if (!r.ok) return;
+      const j = await r.json();
+      const drift = {};
+      if (typeof j.risk_pct === "number" && j.risk_pct !== RISK_PCT) {
+        drift.risk_pct = { fallback: RISK_PCT, live: j.risk_pct };
+        RISK_PCT = j.risk_pct;
+      }
+      for (const [key, tgt] of [["leverage", LEVERAGE], ["commission_bps", COMMISSION_BPS], ["slippage_bps", SLIPPAGE_BPS]]) {
+        const src = j[key];
+        if (!src || typeof src !== "object") continue;
+        for (const k in tgt) {
+          if (typeof src[k] === "number" && src[k] !== tgt[k]) {
+            drift[key + "." + k] = { fallback: tgt[k], live: src[k] };
+            tgt[k] = src[k];
+          }
+        }
+      }
+      if (Object.keys(drift).length) {
+        console.warn("[journal] sizing fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
+        loadMe();     // re-derive manual sizing with the live constants
+      }
+    } catch (_) { /* offline — fallbacks stand */ }
+  }
 
   const STOCK_TYPES = new Set(["asx", "nasdaq", "commodity", "index"]);
   const NONCRYPTO = new Set(["NAS100","US30","SPX500","GER40","UK100","JP225",
@@ -644,81 +676,95 @@
   // This is the table that eventually says which setups ACTUALLY make money
   // forward — the backtest's answer (weekly reclaim best) checked against real
   // closed trades. Cells need ~20 trades before the numbers mean anything.
+  // Bot and manual trades are aggregated in SEPARATE sections (🤖 / ✏️) so the
+  // bot's evidence is never contaminated by manual discretion.
+  const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed], ["✏️ Me", state.me.closed]];
+  const sideRow = (label, cols) =>
+    `<tr><td colspan="${cols}" style="text-align:left;font-weight:700;padding:12px 8px 6px;color:var(--muted)">${label}</td></tr>`;
+  const sideEmptyRow = (cols) =>
+    `<tr><td colspan="${cols}" style="text-align:left;color:var(--muted)">No closed trades yet.</td></tr>`;
+  const thinMark = (n) => n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
+
   function renderEdgeTracker() {
     const host = $("#edge-tracker");
     if (!host) return;
-    const closed = [...state.bot.closed, ...state.me.closed]
-      .filter((t) => t.realized_r != null);
-    if (!closed.length) {
+    const sides = TRACKER_SIDES();
+    if (!sides.some(([, list]) => list.some((t) => t.realized_r != null))) {
       host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this breaks down
         win rate and average R by setup (e.g. Weekly reclaim vs Daily reclaim), so you can see which
         cells carry the edge forward, not just in the backtest.</div>`;
       return;
     }
-    const cells = new Map();
-    for (const t of closed) {
-      const tf = TF_NAME[t.timeframe] || t.timeframe || "?";
-      const et = String(entryTypeOf(t) || "—").toLowerCase();
-      const key = `${tf} ${et}`;
-      let c = cells.get(key);
-      if (!c) { c = { key, et, n: 0, wins: 0, sumR: 0 }; cells.set(key, c); }
-      c.n += 1; c.sumR += t.realized_r;
-      if (t.realized_r > 0) c.wins += 1;
-    }
-    const rows = [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
-      const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
-      const thin = c.n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
-      return `<tr>
-        <td><span class="jr-setup ${SETUP_CLS[c.et] || ""}">${esc(c.key)}</span></td>
-        <td class="num">${c.n}${thin}</td>
-        <td class="num">${win.toFixed(0)}%</td>
-        <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
-        <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td></tr>`;
-    }).join("");
+    const section = (label, list) => {
+      const closed = list.filter((t) => t.realized_r != null);
+      if (!closed.length) return sideRow(label, 5) + sideEmptyRow(5);
+      const cells = new Map();
+      for (const t of closed) {
+        const tf = TF_NAME[t.timeframe] || t.timeframe || "?";
+        const et = String(entryTypeOf(t) || "—").toLowerCase();
+        const key = `${tf} ${et}`;
+        let c = cells.get(key);
+        if (!c) { c = { key, et, n: 0, wins: 0, sumR: 0 }; cells.set(key, c); }
+        c.n += 1; c.sumR += t.realized_r;
+        if (t.realized_r > 0) c.wins += 1;
+      }
+      return sideRow(label, 5) + [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
+        const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
+        return `<tr>
+          <td><span class="jr-setup ${SETUP_CLS[c.et] || ""}">${esc(c.key)}</span></td>
+          <td class="num">${c.n}${thinMark(c.n)}</td>
+          <td class="num">${win.toFixed(0)}%</td>
+          <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
+          <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td></tr>`;
+      }).join("");
+    };
     host.innerHTML = `<table class="jr-table"><thead><tr>
       <th>Setup</th><th class="num">Trades</th><th class="num">Win %</th>
       <th class="num">Avg R</th><th class="num">Total R</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
+      <tbody>${sides.map(([l, list]) => section(l, list)).join("")}</tbody></table>`;
   }
 
   // ── Lens tracker: same idea as the edge tracker, but split by which LENS
   // produced the trade (chart.js stamps `lens` on every sim trade since
-  // 2026-07-05; older trades group under "untagged").
+  // 2026-07-05; vivek_run stamps bot trades since 2026-07-20; older trades
+  // group under "untagged"). Bot vs Me aggregated separately, like above.
   function renderLensTracker() {
     const host = $("#lens-tracker");
     if (!host) return;
-    const closed = [...state.bot.closed, ...state.me.closed]
-      .filter((t) => t.realized_r != null);
-    if (!closed.length) {
+    const sides = TRACKER_SIDES();
+    if (!sides.some(([, list]) => list.some((t) => t.realized_r != null))) {
       host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this shows
         win rate and expectancy per LENS (VIVEK vs PhaseMap vs Specs), so the three-lens system gets
         judged by results, not vibes.</div>`;
       return;
     }
-    const cells = new Map();
-    for (const t of closed) {
-      const key = String(t.lens || "untagged").toLowerCase();
-      let c = cells.get(key);
-      if (!c) { c = { key, n: 0, wins: 0, sumR: 0, sumD: 0 }; cells.set(key, c); }
-      c.n += 1; c.sumR += t.realized_r;
-      c.sumD += (dollarsOf(t) || 0);
-      if (t.realized_r > 0) c.wins += 1;
-    }
-    const rows = [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
-      const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
-      const thin = c.n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
-      return `<tr>
-        <td><span class="jr-setup">${esc(c.key.toUpperCase())}</span></td>
-        <td class="num">${c.n}${thin}</td>
-        <td class="num">${win.toFixed(0)}%</td>
-        <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
-        <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td>
-        <td class="num ${pcls(c.sumD)}">${dfmt(c.sumD)}</td></tr>`;
-    }).join("");
+    const section = (label, list) => {
+      const closed = list.filter((t) => t.realized_r != null);
+      if (!closed.length) return sideRow(label, 6) + sideEmptyRow(6);
+      const cells = new Map();
+      for (const t of closed) {
+        const key = String(t.lens || "untagged").toLowerCase();
+        let c = cells.get(key);
+        if (!c) { c = { key, n: 0, wins: 0, sumR: 0, sumD: 0 }; cells.set(key, c); }
+        c.n += 1; c.sumR += t.realized_r;
+        c.sumD += (dollarsOf(t) || 0);
+        if (t.realized_r > 0) c.wins += 1;
+      }
+      return sideRow(label, 6) + [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
+        const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
+        return `<tr>
+          <td><span class="jr-setup">${esc(c.key.toUpperCase())}</span></td>
+          <td class="num">${c.n}${thinMark(c.n)}</td>
+          <td class="num">${win.toFixed(0)}%</td>
+          <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
+          <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td>
+          <td class="num ${pcls(c.sumD)}">${dfmt(c.sumD)}</td></tr>`;
+      }).join("");
+    };
     host.innerHTML = `<table class="jr-table"><thead><tr>
       <th>Lens</th><th class="num">Trades</th><th class="num">Win %</th>
       <th class="num">Avg R</th><th class="num">Total R</th><th class="num">Total $</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
+      <tbody>${sides.map(([l, list]) => section(l, list)).join("")}</tbody></table>`;
   }
 
   // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box per
@@ -1091,8 +1137,8 @@
   async function init() {
     loadMe();
     renderAll();                 // paint Me immediately
-    await Promise.all([loadBot(), loadScanMeta(), loadFx()]);
-    renderAll();                 // repaint with Claude + grade/setup fallback
+    await Promise.all([loadBot(), loadScanMeta(), loadFx(), loadBotRules()]);
+    renderAll();                 // repaint with Claude + live rules + grade/setup fallback
     wire();
     wireSync();
     refreshLive();

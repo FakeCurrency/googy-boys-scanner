@@ -121,6 +121,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     snap["risk_pct"] = plan["risk_pct"]
     snap["risk_usd"] = plan["risk_usd"]
     snap["source"] = "vivek_bot"
+    snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
     # Signal-vs-fill: record the plan's entry level next to the actual fill so
     # the scan-cadence slippage is MEASURED, not assumed. Positive bps = the
     # fill was worse than the signal (paid up on a long / sold down on a short).
