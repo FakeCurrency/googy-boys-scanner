@@ -97,3 +97,17 @@ def test_validator_requires_disclaimer():
     snap["results"][0]["narration"] = "Buy now!"
     with pytest.raises(ValueError):
         validate_snapshot(snap)
+
+
+def test_chart_writer_skips_windows_reserved_names(tmp_path):
+    """PRN.json (Perenti) broke every Windows checkout — never write reserved
+    device-name files again."""
+    import pandas as pd
+    from phasemap.run import write_chart_json
+    df = pd.DataFrame({"Date": ["2026-07-01"], "Open": [1.0], "High": [1.1],
+                       "Low": [0.9], "Close": [1.05], "Volume": [1000]})
+    for bad in ("PRN", "CON", "AUX", "NUL", "COM1", "LPT9"):
+        write_chart_json(str(tmp_path), bad, df)
+        assert not (tmp_path / f"{bad}.json").exists()
+    write_chart_json(str(tmp_path), "BHP", df)
+    assert (tmp_path / "BHP.json").exists()

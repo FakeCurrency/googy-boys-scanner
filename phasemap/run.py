@@ -101,8 +101,19 @@ def prune_dated_snapshots(out_dir: str, keep_last: int = 7) -> int:
     return removed
 
 
+# Windows-reserved device names: a file called PRN.json (PRN is a real ASX
+# ticker — Perenti) breaks every git checkout/pull on Windows. Skip writing
+# chart files for these tickers; the chart page's live fallback covers them.
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL",
+                     *(f"COM{i}" for i in range(1, 10)),
+                     *(f"LPT{i}" for i in range(1, 10))}
+
+
 def write_chart_json(out_dir: str, ticker: str, df) -> None:
     """Last CHART_BARS daily candles, 8 dp (sub-cent crypto needs it)."""
+    if ticker.upper() in _WINDOWS_RESERVED:
+        print(f"  chart skip: {ticker} is a Windows-reserved filename")
+        return
     tail = df.tail(CHART_BARS)
     candles = [
         {"t": str(r.Date)[:10],
