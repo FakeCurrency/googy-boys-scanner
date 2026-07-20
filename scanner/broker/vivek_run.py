@@ -269,6 +269,29 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     book = _load_book()
     book["mode"] = mode
 
+    # Open-book symbols can fall OUT of the universe while still being live
+    # positions (delisting, index-tier change, curated-list swap — MDB froze
+    # exactly this way after the 2026-07-09 NASDAQ expansion: unpriceable, so
+    # its stop could never fire and it squatted a slot). The caller only
+    # downloads universe tickers, so fetch the stragglers directly here — a
+    # handful at most, best-effort, never breaks the run.
+    missing = sorted({p["symbol"] for p in book["open"]
+                      if p.get("market") == market and p["symbol"] not in yf_map})
+    if missing:
+        yf_missing = {s: s + mkt.suffix for s in missing}
+        try:
+            from ..data import download
+            extra = download(list(yf_missing.values()), period="6mo")
+            priced = sum(1 for v in extra.values() if v is not None and len(v))
+            frames = {**frames, **extra}
+            yf_map = {**yf_map, **yf_missing}
+            log.info("vivek_run [%s]: %d open position(s) no longer in the "
+                     "universe — fetched directly (%d priced): %s",
+                     market, len(missing), priced, ", ".join(missing))
+        except Exception as e:
+            log.warning("vivek_run [%s]: could not fetch off-universe book "
+                        "symbols %s: %s", market, ", ".join(missing), e)
+
     # 1) manage open positions for THIS market — mark to the observed price.
     closed_now = 0
     closed_events: list[dict] = []          # for the end-of-run alert digest
@@ -279,6 +302,18 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             still_open.append(pos)
             continue
         price = price_of(pos["symbol"])
+        # Auditable freeze detection: a position that can't be priced can't be
+        # stopped out. Count consecutive unpriced runs on the position itself
+        # so the book (and anyone reading it) SEES the freeze instead of a
+        # silently stale mark.
+        if price is None:
+            pos["unpriced_runs"] = int(pos.get("unpriced_runs") or 0) + 1
+            if pos["unpriced_runs"] in (3, 10, 30):
+                log.warning("vivek_run [%s]: %s has had NO price for %d "
+                            "consecutive runs — stop cannot fire",
+                            market, pos["symbol"], pos["unpriced_runs"])
+        else:
+            pos.pop("unpriced_runs", None)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going

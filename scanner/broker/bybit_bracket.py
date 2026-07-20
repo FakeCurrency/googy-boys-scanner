@@ -38,7 +38,8 @@ def to_bybit_symbol(yf_ticker: str) -> str:
 
 
 def _fmt_qty(qty: float) -> str:
-    """Format quantity to a reasonable precision for Bybit."""
+    """Fallback quantity precision — used ONLY when the instrument spec is
+    unavailable (see _quantize)."""
     if qty >= 1000:
         return f"{qty:.1f}"
     if qty >= 100:
@@ -51,7 +52,8 @@ def _fmt_qty(qty: float) -> str:
 
 
 def _fmt_price(price: float) -> str:
-    """Format price to a reasonable precision for Bybit."""
+    """Fallback price precision — used ONLY when the instrument spec is
+    unavailable (see _quantize)."""
     if price >= 10_000:
         return f"{price:.1f}"
     if price >= 100:
@@ -59,6 +61,45 @@ def _fmt_price(price: float) -> str:
     if price >= 1:
         return f"{price:.4f}"
     return f"{price:.6f}"
+
+
+def _snap(value: float, step: float, mode: str = "round") -> float:
+    """Snap value onto a step grid (floor for qty — never oversize)."""
+    if step <= 0:
+        return value
+    n = value / step
+    n = int(n) if mode == "floor" else round(n)
+    # re-quantise through the step's own decimal places to kill float dust
+    dp = max(0, -_decimal_exp(step))
+    return round(n * step, dp)
+
+
+def _decimal_exp(x: float) -> int:
+    s = f"{x:.10f}".rstrip("0")
+    return -(len(s.split(".")[1])) if "." in s and s.split(".")[1] else 0
+
+
+def _quantize(symbol: str, units: float, prices: dict[str, float]) -> tuple[str, dict[str, str], str | None]:
+    """Quantise qty/prices to the instrument's REAL qtyStep/tickSize.
+
+    Bybit rejects any qty not a multiple of qtyStep and any price off the
+    tickSize grid — the old guessed decimal ladders produced exactly such
+    orders (e.g. BTCUSDT qtyStep 0.001). Falls back to the ladder formatting
+    if the spec lookup fails (fail-open: a spec outage must not block paper).
+    Returns (qty_str, {name: price_str}, skip_reason|None)."""
+    try:
+        spec = bc.get_instrument_spec(symbol)
+    except Exception as e:
+        log.warning("no instrument spec for %s (%s) — falling back to ladder "
+                    "formatting", symbol, e)
+        return _fmt_qty(units), {k: _fmt_price(v) for k, v in prices.items()}, None
+    qty = _snap(units, spec["qty_step"], mode="floor")
+    if spec["min_qty"] and qty < spec["min_qty"]:
+        return "", {}, (f"qty {qty:g} below minOrderQty {spec['min_qty']:g} "
+                        f"(step {spec['qty_step']:g})")
+    return (f"{qty:g}",
+            {k: f"{_snap(v, spec['tick_size']):g}" for k, v in prices.items()},
+            None)
 
 
 def calc_qty(entry: float, notional: float) -> float:
@@ -121,17 +162,22 @@ def submit(pos: dict) -> dict:
 
     order_link_id = _order_link_id(symbol, direction, sess_day)
 
+    qty_str, px, skip = _quantize(symbol, units,
+                                  {"entry": entry, "stop": stop, "target": target})
+    if skip:
+        return {"skipped": True, "reason": skip}
+
     order_kwargs = dict(
         category="linear",
         symbol=symbol,
         side=side,
         orderType="Limit",
-        qty=_fmt_qty(units),
-        price=_fmt_price(entry),
+        qty=qty_str,
+        price=px["entry"],
         timeInForce="GTC",
         orderLinkId=order_link_id,
-        takeProfit=_fmt_price(target),
-        stopLoss=_fmt_price(stop),
+        takeProfit=px["target"],
+        stopLoss=px["stop"],
         tpTriggerBy="LastPrice",
         slTriggerBy="LastPrice",
         tpslMode="Full",
@@ -146,6 +192,20 @@ def submit(pos: dict) -> dict:
             break
         except Exception as e:
             last_exc = e
+            # AMBIGUOUS-TIMEOUT GUARD: a timeout/network error can land AFTER Bybit
+            # accepted the order — blind retry would double-enter. Before any
+            # retry, ask Bybit whether our deterministic client id already
+            # exists; if it does, that IS our order.
+            try:
+                existing = bc.find_order_by_link_id(symbol, order_link_id)
+            except Exception:
+                existing = {}
+            if existing.get("orderId"):
+                log.warning("order attempt %d errored (%s) but orderLinkId %s "
+                            "already exists at Bybit — adopting it, NOT retrying",
+                            attempt, e, order_link_id)
+                result = existing
+                break
             if attempt < attempts:
                 wait = config.ORDER_RETRY_BACKOFF_BASE ** attempt
                 log.warning("order attempt %d/%d failed (%s) — retrying in %ds",

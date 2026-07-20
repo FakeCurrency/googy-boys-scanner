@@ -186,6 +186,61 @@ def get_order_status(symbol: str, order_id: str) -> dict:
     return _retry(_fetch)
 
 
+def find_order_by_link_id(symbol: str, order_link_id: str) -> dict:
+    """Look an order up by CLIENT id (orderLinkId) — open orders first, then
+    history. Used to disambiguate a timeout-after-accept before re-submitting:
+    if Bybit already has the order, retrying would double-enter."""
+    sess = _session()
+
+    def _fetch():
+        resp = sess.get_open_orders(category="linear", symbol=symbol,
+                                    orderLinkId=order_link_id)
+        orders = resp["result"].get("list", [])
+        if orders:
+            return orders[0]
+        resp2 = sess.get_order_history(category="linear", symbol=symbol,
+                                       orderLinkId=order_link_id, limit=1)
+        hist = resp2["result"].get("list", [])
+        return hist[0] if hist else {}
+
+    return _retry(_fetch)
+
+
+# ── instrument specs (qty step / tick size) ──────────────────────────────────
+
+_SPEC_CACHE: dict[str, dict] = {}
+
+
+def get_instrument_spec(symbol: str) -> dict:
+    """{qty_step, min_qty, tick_size} for a linear symbol, cached per process.
+
+    Bybit rejects any order whose qty is not a multiple of qtyStep or whose
+    price is off the tickSize grid — sizes/prices MUST be quantised to these,
+    never to guessed decimal ladders. Raises on lookup failure (callers decide
+    whether to fail open)."""
+    spec = _SPEC_CACHE.get(symbol)
+    if spec:
+        return spec
+
+    def _fetch():
+        resp = _session().get_instruments_info(category="linear", symbol=symbol)
+        rows = resp["result"].get("list", [])
+        if not rows:
+            raise ValueError(f"no instrument info for {symbol}")
+        row = rows[0]
+        lot = row.get("lotSizeFilter", {})
+        px = row.get("priceFilter", {})
+        return {
+            "qty_step": float(lot.get("qtyStep") or 0),
+            "min_qty": float(lot.get("minOrderQty") or 0),
+            "tick_size": float(px.get("tickSize") or 0),
+        }
+
+    spec = _retry(_fetch)
+    _SPEC_CACHE[symbol] = spec
+    return spec
+
+
 # ── closed P&L history ────────────────────────────────────────────────────────
 
 def get_closed_pnl(symbol: str | None = None, limit: int = 50) -> list[dict]:

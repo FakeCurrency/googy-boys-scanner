@@ -180,3 +180,65 @@ def test_corrupt_book_is_parked_and_run_continues(tmp_path, monkeypatch):
                        now=_aest(2024, 1, 2, 11, 0))
     assert (tmp_path / "vivek_bot_book.corrupt.json").exists()   # bad file parked
     assert len(bk["open"]) == 1                                  # ran fine from a clean book
+
+
+# ── off-universe positions must still price (the MDB freeze, 2026-07) ──────────
+
+def _ny(y, m, d, hh, mm):
+    return dt.datetime(y, m, d, hh, mm, tzinfo=ZoneInfo("America/New_York"))
+
+
+def _open_position(symbol="MDB", market="nasdaq"):
+    from scanner.vivek_journal import _snapshot
+    row = {"symbol": symbol, "name": symbol, "sector": "", "grade": "A+",
+           "dir": "LONG", "entry_types": ["reclaim"]}
+    plan = {"stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
+            "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
+            "armed": True, "trigger_bar": None}
+    pos = _snapshot(row, "1D", plan, market, 100.0, "2024-01-01")
+    pos["market"] = market
+    pos["risk_usd"] = 35.0
+    return pos
+
+
+def test_off_universe_position_is_fetched_and_can_stop_out(tmp_path, monkeypatch):
+    """A held symbol that fell out of the universe (delist/tier change/list swap)
+    must STILL be priced — otherwise its stop can never fire and it squats a
+    slot forever (the frozen-MDB bug)."""
+    import json
+    _enable(monkeypatch, tmp_path)
+    book = {"version": 1, "mode": "paper", "open": [_open_position()], "closed": []}
+    (tmp_path / "vivek_bot_book.json").write_text(json.dumps(book), encoding="utf-8")
+
+    calls = {}
+    def fake_download(tickers, period="6mo"):
+        calls["tickers"] = list(tickers)
+        return {t: _frame(90.0) for t in tickers}      # below the 96 stop
+    import scanner.data
+    monkeypatch.setattr(scanner.data, "download", fake_download)
+
+    bk = vr.run_market("nasdaq", [], {}, [], now=_ny(2024, 1, 2, 12, 0))
+    assert calls["tickers"] == ["MDB"]                 # fetched directly
+    assert bk["open"] == []                            # no longer frozen open
+    (closed,) = [t for t in bk["closed"] if t["symbol"] == "MDB"]
+    assert closed["status"] == "closed" and closed["exit_reason"] == "stop"
+
+
+def test_unpriceable_position_gets_auditable_counter(tmp_path, monkeypatch):
+    """If a symbol truly has no data anywhere, the freeze must be VISIBLE:
+    unpriced_runs counts up on the position instead of a silent stale mark."""
+    import json
+    _enable(monkeypatch, tmp_path)
+    book = {"version": 1, "mode": "paper", "open": [_open_position()], "closed": []}
+    (tmp_path / "vivek_bot_book.json").write_text(json.dumps(book), encoding="utf-8")
+    import scanner.data
+    monkeypatch.setattr(scanner.data, "download", lambda tickers, period="6mo": {})
+
+    bk = vr.run_market("nasdaq", [], {}, [], now=_ny(2024, 1, 2, 12, 0))
+    (pos,) = bk["open"]
+    assert pos["unpriced_runs"] == 1                   # visible, not silent
+
+    # a second run keeps counting
+    bk = vr.run_market("nasdaq", [], {}, [], now=_ny(2024, 1, 3, 12, 0))
+    (pos,) = bk["open"]
+    assert pos["unpriced_runs"] == 2

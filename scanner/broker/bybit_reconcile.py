@@ -16,7 +16,6 @@ import logging
 
 from . import bybit_client as bc
 from .bybit_bracket import to_bybit_symbol
-from scanner.scalp_journal import BROK_RT
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +44,62 @@ def _find_closed_pnl(symbol: str, direction: str, closed_records: list[dict]) ->
         return None
     # Bybit returns records newest-first
     return matches[0]
+
+
+def _exit_reason(rec: dict, pos: dict) -> str:
+    """Classify why a position closed.
+
+    Bybit V5 closed-pnl records carry ``execType`` (Trade / BustTrade /
+    AdlTrade ...), NOT the ``exitType`` a previous version read — and execType
+    can't tell a take-profit from a stop anyway. So: liquidations map from
+    execType, and TP-vs-SL is classified by which of the position's own stop /
+    target levels the average exit price landed nearer to."""
+    exec_type = str(rec.get("execType") or rec.get("exitType") or "").strip()
+    if exec_type in ("BustTrade", "AdlTrade", "Liq", "SessionSettlePnl"):
+        return "liquidated"
+    try:
+        exit_px = float(rec.get("avgExitPrice") or 0)
+        stop = float(pos.get("stop") or 0)
+        target = float(pos.get("target") or 0)
+        if exit_px > 0 and stop > 0 and target > 0 and stop != target:
+            return "stop" if abs(exit_px - stop) <= abs(exit_px - target) else "target"
+    except (TypeError, ValueError):
+        pass
+    return "unknown"
+
+
+def _sweep_orphans(j: dict, live_positions: list[dict], known_symbols: set[str],
+                   now_ts: str) -> None:
+    """AUDIT: positions that exist at Bybit but NOT in the journal (a crash
+    between place_order success and save, an adopted timeout order, a manual
+    trade). The broker is ground truth — an unknown live position means real
+    exposure that no stop-watcher, guard or kill-switch is accounting for.
+    Recorded on the journal (j['orphans']) and logged loudly; NOT auto-adopted
+    (sizing/stop context is unknowable here — a human must decide)."""
+    orphans = []
+    for p in live_positions:
+        if float(p.get("size", 0)) == 0:
+            continue
+        if p["symbol"] in known_symbols:
+            continue
+        orphans.append({
+            "symbol": p["symbol"], "side": p.get("side"),
+            "size": p.get("size"), "avg_price": p.get("avgPrice"),
+            "unrealised": p.get("unrealisedPnl"), "seen_at": now_ts,
+        })
+        log.error("ORPHAN position at Bybit not in journal: %s %s size=%s "
+                  "avg=%s — unmanaged exposure, review immediately",
+                  p["symbol"], p.get("side"), p.get("size"), p.get("avgPrice"))
+    j["orphans"] = orphans
+    if orphans:
+        try:
+            from .alert_dispatch import send as _alert
+            _alert("orphan_position",
+                   f"Bybit holds {len(orphans)} position(s) the journal doesn't know",
+                   "\n".join(f"{o['symbol']} {o['side']} size={o['size']} avg={o['avg_price']}"
+                             for o in orphans))
+        except Exception as e:
+            log.warning("could not send orphan alert: %s", e)
 
 
 def reconcile_journal(j: dict) -> dict:
@@ -114,16 +169,11 @@ def reconcile_journal(j: dict) -> dict:
 
         if closed_rec:
             closed_pnl = float(closed_rec.get("closedPnl", 0))
-            exit_type  = closed_rec.get("exitType", "unknown")
-            reason_map = {
-                "takeProfit":        "target",
-                "StopLoss":          "stop",
-                "Liq":               "liquidated",
-                "BustTrade":         "liquidated",
-                "PartialTakeProfit": "target",
-            }
-            reason = reason_map.get(exit_type, exit_type.lower())
-            pnl    = round(closed_pnl - BROK_RT, 2)
+            reason = _exit_reason(closed_rec, pos)
+            # Bybit's closedPnl already NETS exchange trading fees — deducting
+            # the $40 ASX-CFD round-turn here double-charged every crypto exit
+            # (a taker round-trip on a ~$5k perp position is ~$5.50, not $40).
+            pnl    = round(closed_pnl, 2)
 
             fill_price = float(pos.get("fill_price") or pos["entry"])
             stop       = float(pos["stop"])
@@ -156,4 +206,9 @@ def reconcile_journal(j: dict) -> dict:
             survivors.append({**pos, "broker_status": "pending"})
 
     j["open"] = survivors
+
+    # Broker-side audit: anything live at Bybit that no journal entry claims.
+    known = {p.get("bybit_symbol") or to_bybit_symbol(p["symbol"])
+             for p in j.get("open", []) if p.get("broker_order_id")}
+    _sweep_orphans(j, live_positions, known, now_ts)
     return j
