@@ -5,11 +5,15 @@
 // Crypto prefers Binance (real-time, 24/7); stocks/commodities use Yahoo across
 // both hosts. Currency is preserved from Yahoo meta (so ASX returns AUD).
 import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol } from "./_prices.js";
+import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
 
-// Successful quotes are edge-cached for ~20s: the journal opens with a batch
-// of per-symbol fetches, so a short shared cache absorbs repeat opens (and
-// multiple devices) instead of hammering Yahoo into throttling us. Errors are
-// never cached.
+// Successful quotes are edge-cached for ~20s via the Cache API (cachePut below —
+// a Cache-Control header alone does NOT edge-cache a Function response): the
+// journal opens with a batch of per-symbol fetches, so a short shared cache
+// absorbs repeat opens (and multiple devices) instead of hammering Yahoo into
+// throttling us. Errors are never cached. The per-IP guard is in-memory —
+// zero KV operations on this hot path (the old KV counter burned the daily
+// write quota by itself).
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
@@ -18,25 +22,6 @@ const json = (status, body) =>
       "Cache-Control": status === 200 ? "public, max-age=15, s-maxage=20" : "no-store",
     },
   });
-
-// Free-relay guard: per-IP cap shared with /api/price (same "px" key space).
-// KV read+increment is not atomic — racing bursts can slip a few past the cap,
-// fine for an abuse guard. Degrades open (no limiting) when the KV binding is
-// absent, same as scan.js, so a misconfig can't kill quotes.
-const PX_REQS_PER_MIN = 120;
-
-async function overPxLimit(env, request) {
-  if (!env || !env.JOURNAL_KV) return false;
-  try {
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    const bucket = new Date().toISOString().slice(0, 16);   // UTC minute bucket
-    const key = `ratelimit:px:${ip}:${bucket}`;
-    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
-    if (n > PX_REQS_PER_MIN) return true;
-    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 120 });
-    return false;
-  } catch (_) { return false; }
-}
 
 export async function onRequestGet(ctx) {
   const url = new URL(ctx.request.url);
@@ -49,7 +34,10 @@ export async function onRequestGet(ctx) {
     return json(400, { error: "Invalid symbol" });
   }
 
-  if (await overPxLimit(ctx.env, ctx.request)) {
+  const hit = await cacheMatch(ctx.request);
+  if (hit) return hit;
+
+  if (overPxLimit(ctx.request)) {
     return json(429, { error: "Too many quote requests — slow down." });
   }
 
@@ -59,7 +47,9 @@ export async function onRequestGet(ctx) {
   const crypto = isCryptoSymbol(sym);
   if (crypto && prefer !== "yahoo") {
     const px = await fetchBinancePrice(sym);
-    if (px != null) return json(200, { price: px, currency: "USD", time: now, source: "binance" });
+    if (px != null) {
+      return cachePut(ctx, json(200, { price: px, currency: "USD", time: now, source: "binance" }));
+    }
   }
 
   // Stocks / commodities (and crypto fallback): Yahoo across both hosts. Crypto
@@ -70,12 +60,12 @@ export async function onRequestGet(ctx) {
     if (!meta) return json(502, { error: "No data returned for " + sym });
     const price = meta.regularMarketPrice ?? meta.previousClose ?? null;
     if (price == null) return json(502, { error: "No price for " + sym });
-    return json(200, {
+    return cachePut(ctx, json(200, {
       price,
       currency: meta.currency ?? "USD",
       time: meta.regularMarketTime ?? now,
       source: "yahoo",
-    });
+    }));
   } catch (err) {
     return json(502, { error: "Upstream failed: " + String(err && err.message ? err.message : err) });
   }
