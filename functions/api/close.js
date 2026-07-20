@@ -47,13 +47,21 @@ export const onRequestPost = async ({ request, env }) => {
     return json(400, { ok: false, message: "Invalid market." });
   }
 
+  // journal_type "bot" (2026-07-20, review C4) routes to the REAL bot-book
+  // close in the workflow; a bot close requires a concrete market.
+  const journalType = body.journal_type === "scalp" ? "scalp"
+    : body.journal_type === "bot" ? "bot" : "swing";
+  if (journalType === "bot" && !["asx", "nasdaq", "crypto"].includes(market)) {
+    return json(400, { ok: false, message: "A bot close needs market asx|nasdaq|crypto." });
+  }
+
   const inputs = {
     symbol,
     direction:    body.direction === "short" ? "short" : "long",
     market,
     price:        String(price),
     exit_date:    /^\d{4}-\d{2}-\d{2}$/.test(body.exit_date) ? body.exit_date : "",
-    journal_type: body.journal_type === "scalp" ? "scalp" : "swing",
+    journal_type: journalType,
   };
 
   // Abuse guard (2026-07-09): public endpoint, each call burns an Actions run.

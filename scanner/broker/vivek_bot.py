@@ -94,7 +94,11 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
     prefer_tf = prefer_tf or _cfg.VIVEK_BOT_PREFER_TF
     min_rr = _cfg.VIVEK_BOT_MIN_RR if min_rr is None else min_rr
     sym = row.get("symbol", "?")
-    grade = row.get("grade")
+    # H2 (2026-07-20): buy off the RAW gated grade. row["grade"] is smoothed by
+    # display hysteresis — it can hold a decayed setup at A+ for up to 3 scans,
+    # and a smoothing device must never authorise an entry. Old scan JSONs
+    # without grade_raw fall back to the displayed grade.
+    grade = row.get("grade_raw") or row.get("grade")
 
     def skip(code, reason):
         log.info("SKIP  %-8s [%s] %s", sym, code, reason)

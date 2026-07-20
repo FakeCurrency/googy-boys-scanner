@@ -486,6 +486,30 @@ test("stance soft-cap is always ≤ the hard portfolio cap", () => {
   assert.ok(s.effectiveCapUsd <= 200 + 1e-6, "soft cap never exceeds the hard cap");
 });
 
+// ── execution costs: bps model vs legacy flat fee (2026-07-20, review H8) ────
+
+test("close costs use the bot_rules bps model when configured", () => {
+  const e = mk({ commissionBps: 2, slippageBps: 5 });   // "default" market: 7bps/leg
+  // /NQ: $20/point → entry notional 20000×20×0.1 = $40,000
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+               target: 21000, units: 0.1 });
+  const r = e.closePosition("/NQ", 21000);               // exit notional $42,000
+  assert.equal(r.closed, true);
+  // (40000 + 42000) × 7bps = $57.40 — scales with notional, unlike the flat $2
+  assert.equal(r.costs, 57.4);
+  assert.equal(r.gross, 2000);
+  assert.equal(r.netPnl, 1942.6);
+});
+
+test("close costs fall back to the legacy flat fee when no bps configured", () => {
+  const e = mk();                                        // no bps → flat model
+  e.addEntry({ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+               target: 21000, units: 0.1 });
+  const r = e.closePosition("/NQ", 21000);
+  assert.equal(r.closed, true);
+  assert.equal(r.costs, 2.0, "legacy flat round-turn fee preserved");
+});
+
 // ─────────────────────────────── summary ─────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);
 if (failed) { console.error(`FAILED  ${failed} failed, ${passed} passed`); process.exit(1); }

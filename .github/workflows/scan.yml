@@ -186,8 +186,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data journal/vivek_bot_book.json journal/journal.json journal/scalp_journal.json journal/discord_state.json journal/confluence_state.json data/notified_signals.json data/market_caps.json"
+          # SURGICAL paths only (2026-07-20, review C3): list EXACTLY the files
+          # this workflow's steps write, never a whole directory. The old bare
+          # "public/data" made the retry loop below delete + re-apply the ENTIRE
+          # directory from this run's stale checkout, reverting fresh files that
+          # phasemap.yml / lens_backtest.yml / vivek_backtest.yml (different
+          # concurrency groups) had pushed meanwhile. Invariant: every path here
+          # must be written ONLY by workflows in the "scan" concurrency group.
+          # (Dropped: journal/journal.json + scalp_journal.json + discord_state
+          # + data/notified_signals.json — nothing in this workflow writes them.)
+          PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/confluence_state.json data/market_caps.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
@@ -195,10 +203,10 @@ jobs:
           fi
           git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"
           SHA=$(git rev-parse HEAD)
-          # Generated data is fully recomputed each run, so the latest scan simply
-          # wins: rebase onto the freshest main and re-apply our outputs on top.
-          # This avoids the merge/modify-delete conflicts a plain rebase hits when
-          # scans race. Retry the push in case another scan lands first.
+          # Re-apply OUR generated files onto the freshest main and push. Safe
+          # because $PATHS is surgical (see above): everything listed is written
+          # only by scan-group workflows, which serialize — so this run's copy of
+          # each listed file is always the newest. Retry in case a push races.
           for i in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main

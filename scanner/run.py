@@ -12,7 +12,7 @@ import datetime as dt
 import json
 import pathlib
 
-from . import config, output, pulse, scan
+from . import config, output, scan
 from .data import download, merge_with_cache
 from .universe import load_universe
 
@@ -33,14 +33,11 @@ def main() -> None:
         "--curated", action="store_true",
         help="use the smaller bundled ASX list instead of the full ~2,000-name directory",
     )
-    parser.add_argument(
-        "--journal", action="store_true",
-        help="after scanning, update the paper-trade journal (forward test)",
-    )
-    parser.add_argument(
-        "--alert", action="store_true",
-        help="after scanning, email new A+/A setups (needs GBS_SMTP_* env vars)",
-    )
+    # --journal and --alert flags removed 2026-07-20 (hygiene pass): both drove
+    # RETIRED systems (the old track-record journal and the legacy email
+    # alerter, which read scan files the VIVEK-only pipeline no longer writes).
+    # scanner/journal.py remains reachable via close_position.yml for the
+    # manual swing/scalp pages only.
     parser.add_argument(
         "--out", default=str(DEFAULT_OUT),
         help="directory to write <market>.json into",
@@ -87,7 +84,12 @@ def main() -> None:
                 print(f"  no data for {market_key} (download blocked/empty) — "
                       f"keeping existing JSON", flush=True)
                 continue
-            pulse_data = pulse.fetch()
+            # PULSE fully retired (UI 2026-07-03; fetch finally removed
+            # 2026-07-20, hygiene pass): this was still a Yahoo macro download
+            # on EVERY scheduled scan for a feature nobody renders. The payload
+            # keeps an empty "pulse" key one release so stale cached JS can't
+            # break. Restore by re-importing scanner.pulse and calling fetch().
+            pulse_data = []
             # Sector movers read recent bars; the deep tail is fine for them.
             frames = {t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
             if market_key in ("asx", "nasdaq"):
@@ -190,26 +192,6 @@ def main() -> None:
     }
     (pathlib.Path(args.out) / "bot_rules.json").write_text(
         json.dumps(rules, indent=2) + "\n", encoding="utf-8")
-
-    if args.journal:
-        from . import journal
-        print("Updating paper-trade journal ...", flush=True)
-        j = journal._load()
-        for market_key in markets:
-            j = journal.update_market(market_key, j)
-        journal._save(j)
-        s = journal.summarize(j)
-        sl, ss = s["longs"], s["shorts"]
-        print(f"  journal longs:  {sl['open']} open | {sl['closed']} closed | "
-              f"win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
-        print(f"  journal shorts: {ss['open']} open | {ss['closed']} closed | "
-              f"win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
-
-    if args.alert:
-        from . import alerts
-        print("Checking for new A+/A setups to alert ...", flush=True)
-        alerts.run(markets)
-
 
 if __name__ == "__main__":
     main()

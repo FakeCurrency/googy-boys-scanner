@@ -68,8 +68,10 @@ def _cost_r(trade: dict, slip_frac: float, comm_frac: float) -> float:
     for ex in trade.get("exits", []):
         frac = ex.get("pct", 0.0)
         px = ex.get("price", entry)
-        # TP limits pay no slippage; stop + time-stop closes are market fills.
-        is_market = str(ex.get("reason", "")).startswith(("stop", "time"))
+        # TP limits pay no slippage; stop / time-stop / manual closes are
+        # market fills ("manual" added 2026-07-20 with the real bot-book
+        # close, review C4 — a hand-flattened position pays slippage too).
+        is_market = str(ex.get("reason", "")).startswith(("stop", "time", "manual"))
         cost_price += frac * px * (comm_frac + (slip_frac if is_market else 0.0))
     return cost_price / risk
 

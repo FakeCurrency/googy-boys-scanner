@@ -14,7 +14,10 @@ from dataclasses import dataclass, field
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant
-RULESET_VERSION = "1.2.0"          # 1.2.0: M4 backtest harness + {stats} slot wired
+RULESET_VERSION = "1.3.0"          # 1.3.0: 24/7 markets scan CLOSED bars only — the
+#                                    still-forming UTC daily candle is dropped before
+#                                    detection (review H3; owner-approved 2026-07-20)
+#                                    1.2.0: M4 backtest harness + {stats} slot wired
 #                                    1.1.0: multi-market (asx/nasdaq/crypto) tick + turnover rules
 
 
@@ -78,6 +81,14 @@ class PhaseMapConfig:
     # ---- Output ---------------------------------------------------------------
     output_dir: str = "public/data/phasemap"   # frontend reads latest.json here
     timezone: str = "Australia/Melbourne"
+
+    # ---- Data hygiene (v1.3.0) ------------------------------------------------
+    # 24/7 markets have no session close: yfinance's newest daily row is the
+    # STILL-FORMING UTC day, so detection ran on a partial candle whose
+    # H/L/C mutate until midnight (non-reproducible tiers). These markets scan
+    # closed bars only. Equity markets are scanned post-close by the nightly
+    # schedule, so their last bar is already complete — listed markets only.
+    drop_forming_bar_markets: tuple = ("crypto",)
 
     # ---- M4 backtest & proof harness -----------------------------------------
     fwd_return_bars: tuple = (5, 10, 20)   # forward-return horizons per signal

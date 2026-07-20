@@ -69,8 +69,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Crypto scan output + the persistent paper book + the auto journal.
-          PATHS="public/data journal/vivek_bot_book.json"
+          # SURGICAL paths only (2026-07-20, review C3): exactly what
+          # `scanner.run --market crypto` writes — the crypto scan JSON, the
+          # sectors/fx/bot_rules files run.py refreshes on every invocation,
+          # and both copies of the paper book. The old bare "public/data" made
+          # the retry loop below revert OTHER workflows' fresh outputs
+          # (phasemap snapshots, spec files, backtest stats) to this run's
+          # stale checkout. Invariant: list only files written by scan-group
+          # workflows.
+          PATHS="public/data/crypto_vivek.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
@@ -78,8 +85,8 @@ jobs:
           fi
           git commit -m "data: crypto bot $(date -u +'%Y-%m-%d %H:%M UTC')"
           SHA=$(git rev-parse HEAD)
-          # Generated data is recomputed each run; the latest scan simply wins —
-          # rebase onto the freshest main and re-apply our outputs on top.
+          # Re-apply OUR files onto the freshest main. Safe because $PATHS is
+          # surgical (see above) and scan-group workflows serialize.
           for i in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main

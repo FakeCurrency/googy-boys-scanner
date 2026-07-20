@@ -244,7 +244,10 @@ GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
 # shape the frontend depends on changes (e.g. a new per-row field). The UI reads
 # this to tell "old data, missing fields" apart from "no setups", instead of
 # silently hiding features. v2 = adds entry_types + freshness/version stamping.
-VIVEK_SCHEMA_VERSION   = 3
+# v4 (2026-07-20, reviews H1+H2) = adds grade_raw (unsmoothed grade the bot
+# buys off) + headline_tf, and the row's headline entry/stop/TP/R:R now come
+# from the TRADED plan (gated TF when armed, 1D fallback) instead of always 1D.
+VIVEK_SCHEMA_VERSION   = 4
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)

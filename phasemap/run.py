@@ -21,7 +21,7 @@ import zoneinfo
 
 from phasemap.config import CONFIG, PRODUCT_NAME, RULESET_VERSION
 from phasemap.data.provider import YFinanceProvider
-from phasemap.engine.scanner import scan_ticker, sort_records
+from phasemap.engine.scanner import drop_forming_bar, scan_ticker, sort_records
 from phasemap.narrate.renderer import render, render_next
 from phasemap.output.writer import build_snapshot, write_snapshot
 
@@ -155,6 +155,10 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
     for t in provider.universe():
         df = provider.get_daily_bars(t)
         if df is None:
+            continue
+        # 24/7 markets: detection sees CLOSED bars only (v1.3.0, review H3).
+        df = drop_forming_bar(df, market)
+        if df is None or not len(df):
             continue
         recs = scan_ticker(t, df, market=market,
                            volume_is_usd=(market == "crypto"))

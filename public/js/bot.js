@@ -8,6 +8,13 @@
   const $$ = (s, c = document) => [...c.querySelectorAll(s)];
   const RULES_KEY = "gbs_bot_rules_v2";
 
+  // HTML-escape for every data-derived string that lands in innerHTML
+  // (2026-07-20, review H7 — this page had no escaping at all: feed names,
+  // journal reasons, log messages and the persisted kill-switch reason all
+  // rendered raw). Covers quotes so attribute interpolations are safe too.
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
   // ── The risk engine. Single source of truth for risk state. ────────────────
   // Created in init() once we know equity; bot.js never touches localStorage
   // for risk/kill state — it all goes through `risk`.
@@ -113,7 +120,7 @@
       const c = conns[k];
       const st = stale ? "offline" : c.state;
       const detail = stale ? `unavailable — feed stale (${asOf})` : c.detail;
-      return `<div class="bot-conn conn-${st}"><span class="bot-conn-dot"></span><span class="bot-conn-text"><span class="bot-conn-label">${c.label}</span><span class="bot-conn-detail">${detail}</span></span></div>`;
+      return `<div class="bot-conn conn-${st}"><span class="bot-conn-dot"></span><span class="bot-conn-text"><span class="bot-conn-label">${esc(c.label)}</span><span class="bot-conn-detail">${esc(detail)}</span></span></div>`;
     }).join("");
   }
 
@@ -167,7 +174,7 @@
     const killBanner = $("#kill-banner"), riskBanner = $("#risk-banner");
     if (state.isKillSwitchActive) {
       killBanner.classList.add("show");
-      $("#kill-banner-text").innerHTML = `<strong>KILL SWITCH ACTIVE</strong> — Trading disabled. Reason: ${state.lastKillSwitchReason || "manual"}${state.lastKillSwitchAction ? " · " + state.lastKillSwitchAction : ""} — click to reset`;
+      $("#kill-banner-text").innerHTML = `<strong>KILL SWITCH ACTIVE</strong> — Trading disabled. Reason: ${esc(state.lastKillSwitchReason || "manual")}${state.lastKillSwitchAction ? " · " + esc(state.lastKillSwitchAction) : ""} — click to reset`;
       riskBanner.classList.remove("show");
     } else {
       killBanner.classList.remove("show");
@@ -189,7 +196,7 @@
 
     // ── Last kill event line (roadmap) ────────────────────────────────────
     if (state.lastKillSwitchTime) {
-      $("#roadmap-kill-line").innerHTML = `Last kill switch: <strong>${fmtDateShort(state.lastKillSwitchTime)} · ${state.lastKillSwitchReason || "manual"}</strong>${state.lastKillSwitchAction ? " — " + state.lastKillSwitchAction : ""}`;
+      $("#roadmap-kill-line").innerHTML = `Last kill switch: <strong>${fmtDateShort(state.lastKillSwitchTime)} · ${esc(state.lastKillSwitchReason || "manual")}</strong>${state.lastKillSwitchAction ? " — " + esc(state.lastKillSwitchAction) : ""}`;
     }
 
     // ── Sizing readout (0.25% rule live from the engine) ──────────────────
@@ -236,10 +243,10 @@
         rwrap.innerHTML = health.positionCount ? `<div class="intel-empty">No break-even runners yet — risk-recycling kicks in once a position scales out at TP1.</div>` : "";
       } else {
         rwrap.innerHTML = runners.map(r =>
-          `<div class="intel-runner intel-${r.status}" title="${r.reason}">
-             <span class="intel-runner-sym num">${r.symbol}</span>
-             <span class="intel-runner-act">${r.action.replace("_", " ")}</span>
-             <span class="intel-runner-why">${r.reason}${r.unrealizedR != null ? ` · ${signed(r.unrealizedR, 1)}R` : ""}</span>
+          `<div class="intel-runner intel-${esc(r.status)}" title="${esc(r.reason)}">
+             <span class="intel-runner-sym num">${esc(r.symbol)}</span>
+             <span class="intel-runner-act">${esc(r.action.replace("_", " "))}</span>
+             <span class="intel-runner-why">${esc(r.reason)}${r.unrealizedR != null ? ` · ${signed(r.unrealizedR, 1)}R` : ""}</span>
            </div>`).join("");
       }
     }
@@ -276,7 +283,7 @@
     const cls = align.strength === "counter" ? "bias-counter" : align.strength === "partial" ? "bias-partial" : "bias-aligned";
     const b = align.bias || {};
     const arr = v => v === "bull" ? "▲" : v === "bear" ? "▼" : "■";
-    return `<span class="pos-bias-chip ${cls}" title="${align.reason}">HTF W${arr(b.weekly)} 3D${arr(b.threeDay)}</span>`;
+    return `<span class="pos-bias-chip ${cls}" title="${esc(align.reason)}">HTF W${arr(b.weekly)} 3D${arr(b.threeDay)}</span>`;
   }
 
   // Merge engine positions with cosmetic metadata + derived live numbers.
@@ -325,18 +332,18 @@
       const tpMetric = p.tp1
         ? `<div class="pos-metric"><span class="pos-metric-k">${p.tp1Hit ? "TP1 ✓ (booked 25%)" : "TP1 (25%→BE)"}</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
         : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`;
-      const simBtn = (!p.tp1Hit && p.tp1 != null) ? `<button class="pos-sim-btn" data-symbol="${p.symbol}" data-tp1="${p.tp1}" title="Simulate price reaching TP1">▶ Sim → TP1</button>` : "";
+      const simBtn = (!p.tp1Hit && p.tp1 != null) ? `<button class="pos-sim-btn" data-symbol="${esc(p.symbol)}" data-tp1="${esc(p.tp1)}" title="Simulate price reaching TP1">▶ Sim → TP1</button>` : "";
       return `<div class="pos-card${p.stopAtBreakeven ? " is-breakeven" : ""}">
         <div class="pos-card-top">
-          <span class="pos-ticker num">${p.symbol}</span><span class="pos-name">${p.name || ""}</span>
+          <span class="pos-ticker num">${esc(p.symbol)}</span><span class="pos-name">${esc(p.name || "")}</span>
           <span class="pos-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
           ${p.leverage ? `<span class="pos-lev num">${p.leverage}×</span>` : ""}
-          ${p.strategy ? `<span class="pos-strat-chip">${p.strategy}</span>` : ""}
-          ${p.bias_tf ? `<span class="pos-tf-chip">${p.bias_tf}→${p.entry_tf || "H4"}</span>` : ""}
+          ${p.strategy ? `<span class="pos-strat-chip">${esc(p.strategy)}</span>` : ""}
+          ${p.bias_tf ? `<span class="pos-tf-chip">${esc(p.bias_tf)}→${esc(p.entry_tf || "H4")}</span>` : ""}
           ${biasChip(p.biasAlign)}
           ${p.entry_count > 1 ? `<span class="pos-tf-chip">×${p.entry_count} entries</span>` : ""}
           ${beBadge}
-          <button class="pos-close-btn" data-symbol="${p.symbol}">Close</button>
+          <button class="pos-close-btn" data-symbol="${esc(p.symbol)}">Close</button>
         </div>
         <div class="pos-body">
           <div class="pos-metrics">
@@ -436,8 +443,8 @@
       <div class="stat-tile"><div class="stat-tile-label">Unrealized</div><div class="stat-tile-val num ${g(today.unrealized_pnl)}">${sm(today.unrealized_pnl)}</div><div class="stat-tile-sub">open trades</div></div>
       <div class="stat-tile"><div class="stat-tile-label">Total P&amp;L</div><div class="stat-tile-val num ${g(total)}">${sm(total)}</div><div class="stat-tile-sub">realized + open</div></div>
       <div class="stat-tile"><div class="stat-tile-label">Win Rate</div><div class="stat-tile-val num">${today.trades_closed ? winRate + "%" : "—"}</div><div class="stat-tile-sub">${today.wins}W · ${today.losses}L</div></div>
-      <div class="stat-tile"><div class="stat-tile-label">Best Trade</div><div class="stat-tile-val num stat-green">+${money(today.best_trade, 0)}</div><div class="stat-tile-sub">${today.best_symbol}</div></div>
-      <div class="stat-tile"><div class="stat-tile-label">Worst Trade</div><div class="stat-tile-val num stat-red">−${money(Math.abs(today.worst_trade), 0)}</div><div class="stat-tile-sub">${today.worst_symbol}</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Best Trade</div><div class="stat-tile-val num stat-green">+${money(today.best_trade, 0)}</div><div class="stat-tile-sub">${esc(today.best_symbol)}</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Worst Trade</div><div class="stat-tile-val num stat-red">−${money(Math.abs(today.worst_trade), 0)}</div><div class="stat-tile-sub">${esc(today.worst_symbol)}</div></div>
       <div class="stat-tile stat-tile-wide"><div class="stat-tile-label">Daily Stop Used</div><div class="stat-risk-bar-wrap"><div class="stat-risk-bar ${barCls}" style="width:${usedPct}%"></div></div><div class="stat-tile-sub num">${money(today.daily_loss_used, 0)} of ${money(today.daily_loss_limit, 0)} · ${Math.round(usedPct)}%</div></div>`;
   }
 
@@ -446,7 +453,7 @@
   function renderLog(log) {
     const wrap = $("#bot-log"); if (!wrap || !log) return;
     const map = { enter: "▶", signal: "◉", win: "✓", loss: "✗", kill: "⏻", system: "·", error: "⚠" };
-    wrap.innerHTML = log.map(e => `<div class="log-row log-${e.type}"><span class="log-icon">${map[e.type] || "·"}</span><span class="log-time num">${fmtTs(e.ts)}</span><span class="log-msg">${e.msg}</span></div>`).join("");
+    wrap.innerHTML = log.map(e => `<div class="log-row log-${e.type}"><span class="log-icon">${map[e.type] || "·"}</span><span class="log-time num">${fmtTs(e.ts)}</span><span class="log-msg">${esc(e.msg)}</span></div>`).join("");
   }
   function prependLog(entry) { LOG.unshift(entry); renderLog(LOG); }
 
@@ -462,7 +469,7 @@
   }
   function populateJournalFilters(journal) {
     const sel = $("#jf-instrument"), instruments = [...new Set(journal.map(t => t.symbol))];
-    sel.innerHTML = `<option value="all">All instruments</option>` + instruments.map(s => `<option value="${s}">${s}</option>`).join("");
+    sel.innerHTML = `<option value="all">All instruments</option>` + instruments.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
   }
   function filteredJournal() {
     const inst = $("#jf-instrument").value, result = $("#jf-result").value, period = $("#jf-period").value;
@@ -480,12 +487,12 @@
     $("#journal-count").textContent = `${rows.length} trade${rows.length !== 1 ? "s" : ""}`;
     if (!rows.length) { tbody.innerHTML = `<tr><td colspan="13" class="lft" style="color:var(--muted);padding:24px">No trades match these filters.</td></tr>`; return; }
     tbody.innerHTML = rows.map(t => `<tr>
-      <td class="lft jt-id">${t.id}</td><td class="lft">${fmtDateShort(t.opened)}</td><td>${t.duration}</td>
-      <td class="lft">${t.symbol}</td><td class="lft ${t.dir === "long" ? "jt-dir-long" : "jt-dir-short"}">${t.dir === "long" ? "L" : "S"}</td>
+      <td class="lft jt-id">${esc(t.id)}</td><td class="lft">${fmtDateShort(t.opened)}</td><td>${esc(t.duration)}</td>
+      <td class="lft">${esc(t.symbol)}</td><td class="lft ${t.dir === "long" ? "jt-dir-long" : "jt-dir-short"}">${t.dir === "long" ? "L" : "S"}</td>
       <td>${px(t.entry)}</td><td>${px(t.exit)}</td><td>${t.size}</td>
       <td>${signed(t.gross, 0).replace("+", "+$").replace("−", "−$")}</td><td>−${money(t.costs, 0)}</td>
       <td class="${t.net >= 0 ? "jt-net-pos" : "jt-net-neg"}">${signed(t.net, 0).replace("+", "+$").replace("−", "−$")}</td>
-      <td class="jt-reason">${t.reason}</td><td class="${t.r >= 0 ? "jt-r-pos" : "jt-r-neg"}">${signed(t.r, 1)}R</td>
+      <td class="jt-reason">${esc(t.reason)}</td><td class="${t.r >= 0 ? "jt-r-pos" : "jt-r-neg"}">${signed(t.r, 1)}R</td>
     </tr>`).join("");
   }
 
@@ -503,14 +510,14 @@
   }
   function exportExcel() {
     const head = JHEAD.map(h => `<th style="background:#1c1c1e;color:#fff;padding:6px 10px;text-align:left;border:1px solid #444">${h}</th>`).join("");
-    const body = filteredJournal().map(t => `<tr>${JCOLS.map(c => { const neg = (c === "net" || c === "r") && t[c] < 0, pos = (c === "net" || c === "r") && t[c] > 0; return `<td style="padding:5px 10px;border:1px solid #ccc;${neg ? "color:#c00" : pos ? "color:#080" : ""}">${t[c] == null ? "" : t[c]}</td>`; }).join("")}</tr>`).join("");
+    const body = filteredJournal().map(t => `<tr>${JCOLS.map(c => { const neg = (c === "net" || c === "r") && t[c] < 0, pos = (c === "net" || c === "r") && t[c] > 0; return `<td style="padding:5px 10px;border:1px solid #ccc;${neg ? "color:#c00" : pos ? "color:#080" : ""}">${t[c] == null ? "" : esc(t[c])}</td>`; }).join("")}</tr>`).join("");
     const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><h3>Vivek 5.0 — Bot Trade Journal</h3><table style="border-collapse:collapse;font-family:Calibri,sans-serif;font-size:12px"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
     download(`bot_journal_${Date.now()}.xls`, html, "application/vnd.ms-excel"); showToast("Excel exported.", "ok");
   }
   function exportHTMLReport() {
     const rows = filteredJournal(), s = window.__JSUMMARY || {}, totalNet = rows.reduce((a, t) => a + t.net, 0);
     const head = JHEAD.slice(0, 15).map(h => `<th>${h}</th>`).join("");
-    const body = rows.map(t => `<tr class="${t.net >= 0 ? "w" : "l"}"><td>${t.id}</td><td>${fmtDateShort(t.opened)}</td><td>${fmtDateShort(t.closed)}</td><td>${t.duration}</td><td>${t.symbol}</td><td>${t.name}</td><td>${t.dir}</td><td>${px(t.entry)}</td><td>${px(t.exit)}</td><td>${t.size}</td><td>${signed(t.gross, 0)}</td><td>${t.costs}</td><td class="${t.net >= 0 ? "pos" : "neg"}">${signed(t.net, 0)}</td><td>${t.reason}</td><td class="${t.r >= 0 ? "pos" : "neg"}">${signed(t.r, 1)}R</td></tr>`).join("");
+    const body = rows.map(t => `<tr class="${t.net >= 0 ? "w" : "l"}"><td>${esc(t.id)}</td><td>${fmtDateShort(t.opened)}</td><td>${fmtDateShort(t.closed)}</td><td>${esc(t.duration)}</td><td>${esc(t.symbol)}</td><td>${esc(t.name)}</td><td>${esc(t.dir)}</td><td>${px(t.entry)}</td><td>${px(t.exit)}</td><td>${t.size}</td><td>${signed(t.gross, 0)}</td><td>${t.costs}</td><td class="${t.net >= 0 ? "pos" : "neg"}">${signed(t.net, 0)}</td><td>${esc(t.reason)}</td><td class="${t.r >= 0 ? "pos" : "neg"}">${signed(t.r, 1)}R</td></tr>`).join("");
     const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bot Trade Report</title><style>body{font-family:-apple-system,Inter,sans-serif;background:#0a0a0c;color:#e8e8ea;padding:32px;max-width:1100px;margin:0 auto}h1{font-size:20px;margin:0 0 4px}.sub{color:#888;font-size:13px;margin-bottom:24px}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}.card{background:#1c1c1e;border-radius:10px;padding:14px}.card .k{font-size:10px;letter-spacing:.06em;color:#888;text-transform:uppercase}.card .v{font-size:20px;font-weight:700;margin-top:6px;font-family:monospace}table{width:100%;border-collapse:collapse;font-size:12px;font-family:monospace}th{text-align:left;padding:8px;border-bottom:1px solid #333;color:#888;font-size:10px;text-transform:uppercase}td{padding:7px 8px;border-bottom:1px solid #222}.pos{color:#30d158}.neg{color:#ff453a}tr.w td:first-child{border-left:2px solid #30d158}tr.l td:first-child{border-left:2px solid #ff453a}@media print{body{background:#fff;color:#000}.card{background:#f2f2f2}}.pbtn{margin-bottom:20px;padding:9px 16px;border:none;border-radius:8px;background:#0a84ff;color:#fff;cursor:pointer;font-weight:600}</style></head><body><button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button><h1>Vivek 5.0 — Bot Trade Report</h1><div class="sub">Generated ${new Date().toLocaleString("en-AU")} · ${rows.length} trades</div><div class="summary"><div class="card"><div class="k">Win Rate</div><div class="v">${s.win_rate || "—"}%</div></div><div class="card"><div class="k">Profit Factor</div><div class="v">${s.profit_factor ? s.profit_factor.toFixed(1) : "—"}</div></div><div class="card"><div class="k">Expectancy</div><div class="v">${money(s.expectancy || 0, 0)}</div></div><div class="card"><div class="k">Max Consec L</div><div class="v">${s.max_consec_losses || "—"}</div></div><div class="card"><div class="k">Net P/L</div><div class="v ${totalNet >= 0 ? "pos" : "neg"}">${signed(totalNet, 0)}</div></div></div><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
     const w = window.open("", "_blank");
     if (w) { w.document.write(doc); w.document.close(); showToast("HTML report opened.", "ok"); } else { download(`bot_report_${Date.now()}.html`, doc, "text/html"); showToast("Report downloaded.", "ok"); }
@@ -593,12 +600,19 @@
     const seed = await fetchStatus();
     const startingEquity = Number(srvRules && srvRules.equity) || FALLBACK_EQUITY;
 
-    // Create the risk engine with the loaded equity.
+    // Create the risk engine with the loaded equity. Execution costs come
+    // from bot_rules.json's bps model (review H8) so the on-page journal's
+    // net P/L uses the SAME fee maths as the Python book — the old flat $2
+    // round-turn stays only as an offline fallback. "default" market bps
+    // are used because the sim instruments span markets.
+    const bps = (dict) => (dict && (dict.default != null ? dict.default : null));
     risk = new RiskManager({
       equity: startingEquity,
       maxRiskPerTradePct: RULES.risk_pct,
       maxConsecutiveLosses: RULES.loss_limit,
       maxPositions: RULES.max_positions,
+      commissionBps: (srvRules && bps(srvRules.commission_bps)) || 0,
+      slippageBps: (srvRules && bps(srvRules.slippage_bps)) || 0,
     });
     // The engine drives ALL risk/kill/sizing UI via this subscription.
     risk.subscribe(renderRiskUI);

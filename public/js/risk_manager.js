@@ -117,7 +117,17 @@
         // Round-turn cost (entry + exit fees/commission) booked against a trade
         // when it closes. Used by closePosition() to compute net P/L for the
         // journal. Override per-close via opts.costs if you have exact fills.
+        // LEGACY FALLBACK ONLY (2026-07-20, review H8): when the bps model
+        // below is configured (bot.js seeds it from bot_rules.json), costs
+        // scale with notional like the Python book; this flat fee applies
+        // only when no bps values are set.
         roundTurnFeeUsd: cfg.roundTurnFeeUsd != null ? cfg.roundTurnFeeUsd : 2.0,
+        // Execution costs in BASIS POINTS of notional, mirroring the Python
+        // book's model (scanner/config.py VIVEK_COMMISSION_BPS /
+        // VIVEK_SLIPPAGE_BPS, published in bot_rules.json). Charged on the
+        // entry leg and on the market-style exit leg of a close. 0 = unset.
+        commissionBps: cfg.commissionBps != null ? cfg.commissionBps : 0,
+        slippageBps: cfg.slippageBps != null ? cfg.slippageBps : 0,
 
         // ── Portfolio Intelligence (book-context layer) ───────────────────
         // A SOFT layer over the hard rules. It tunes how aggressively freed
@@ -271,6 +281,13 @@
       if (patch.roundTurnFeeUsd != null) {
         const v = Math.max(0, this._num(patch.roundTurnFeeUsd, this.config.roundTurnFeeUsd));
         if (v !== this.config.roundTurnFeeUsd) { this.config.roundTurnFeeUsd = v; changed = true; }
+      }
+      // bps cost model (review H8) — patched from bot_rules.json by bot.js.
+      for (const k of ["commissionBps", "slippageBps"]) {
+        if (patch[k] != null) {
+          const v = Math.max(0, this._num(patch[k], this.config[k]));
+          if (v !== this.config[k]) { this.config[k] = v; changed = true; }
+        }
       }
       if (changed) { this._log("info", "Config updated.", this.config); this._emit(); }
       return this.config;
@@ -730,15 +747,32 @@
      * @param {Object} [opts]  {reason, costs}  — override exit reason / fees.
      * @returns {{closed, netPnl, gross, costs, r, state, journalEntry}}
      */
+    /** Execution costs for one closed trade (review H8). Bps-of-notional on
+     * both legs — entry fill + market-style exit (stop/manual/runner close),
+     * matching the Python book's model — or the legacy flat fee when no bps
+     * are configured. */
+    _tradeCosts(pos, exit) {
+      const c = this._num(this.config.commissionBps, 0), s = this._num(this.config.slippageBps, 0);
+      if (!(c > 0 || s > 0)) return this.config.roundTurnFeeUsd;   // legacy fallback
+      const dpp = pos.dollarsPerPoint || 1;
+      const perLegBps = c + s;
+      const entryNotional = Math.abs(pos.entry * dpp * pos.units);
+      const exitNotional = Math.abs(exit * dpp * pos.units);
+      return (entryNotional + exitNotional) * perLegBps / 10000;
+    }
+
     closePosition(symbol, exitPrice, opts = {}) {
       const pos = this._positions[symbol];
       if (!pos) return { closed: false, netPnl: 0, gross: 0, costs: 0, r: 0, state: this.getCurrentRiskState(), journalEntry: null };
 
       const exit = this._num(exitPrice, pos.current);
       const m = pos.direction === "long" ? 1 : -1;
-      // Gross = raw price move × point value × units. Costs = round-turn fees.
+      // Gross = raw price move × point value × units. Costs = bps-of-notional
+      // when the bot_rules model is configured (review H8), else the legacy
+      // flat round-turn fee. A $50k notional now pays ~$35 at 7bps/leg, not $2.
       const gross = this._round(m * (exit - pos.entry) * pos.dollarsPerPoint * pos.units, 2);
-      const costs = this._round(opts.costs != null ? this._num(opts.costs, this.config.roundTurnFeeUsd) : this.config.roundTurnFeeUsd, 2);
+      const costs = this._round(
+        opts.costs != null ? this._num(opts.costs, 0) : this._tradeCosts(pos, exit), 2);
       const netPnl = this._round(gross - costs, 2);
 
       // R-multiple measured off the INITIAL stop (pre-breakeven), so a runner

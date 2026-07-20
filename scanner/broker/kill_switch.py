@@ -21,33 +21,39 @@ sys.path.insert(0, str(ROOT))
 log = logging.getLogger(__name__)
 
 
-def check_and_kill(j: dict, dry_run: bool = False) -> bool:
+def check_and_kill(j: dict, dry_run: bool = False,
+                   limit_usd: float | None = None, label: str = "session") -> bool:
     """Return True if the kill switch fired (caller must abort new orders).
 
-    j  — the scalp journal dict (open + closed lists)
+    j          — journal-shaped dict: open[].unreal_pnl + closed[].{session_day,pnl}
+    limit_usd  — loss limit; defaults to the legacy SCALP_MAX_DAILY_LOSS so the
+                 pre-2026-07-20 call sites/tests behave identically. The bot-book
+                 path (run_standalone) passes the VIVEK guard limit instead.
+    label      — names the P&L source in logs/alerts (e.g. "bot book [asx]").
     """
     from scanner.config import SCALP_MAX_DAILY_LOSS
     from scanner.scalp_journal import _session_day
 
+    limit = SCALP_MAX_DAILY_LOSS if limit_usd is None else float(limit_usd)
     today        = _session_day()
     today_closed = [c for c in j.get("closed", []) if c.get("session_day") == today]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
     unrealised   = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
     total_session = today_pnl + unrealised
 
-    if total_session >= -SCALP_MAX_DAILY_LOSS:
+    if total_session >= -limit:
         return False
 
-    log.warning("KILL SWITCH TRIGGERED — session P&L = $%.2f (limit -$%.2f)",
-                total_session, SCALP_MAX_DAILY_LOSS)
+    log.warning("KILL SWITCH TRIGGERED — %s P&L = $%.2f (limit -$%.2f)",
+                label, total_session, limit)
 
     # Dispatch alert to all configured channels
     try:
         from .alert_dispatch import send as _alert
         _alert(
             "kill_switch",
-            f"Kill switch triggered — session P&L ${total_session:.2f}",
-            f"Daily loss limit: -${SCALP_MAX_DAILY_LOSS}. "
+            f"Kill switch triggered — {label} P&L ${total_session:.2f}",
+            f"Daily loss limit: -${limit:.2f}. "
             f"{'DRY RUN — not flattening.' if dry_run else 'Flattening all positions now.'}",
         )
     except Exception as e:
@@ -89,28 +95,79 @@ def check_and_kill(j: dict, dry_run: bool = False) -> bool:
     return True
 
 
-def run_standalone(dry_run: bool = False) -> None:
-    """Load the journal and run the kill-switch check (for the hourly workflow)."""
+def _book_market_journal(book: dict, market: str, market_day: str) -> dict:
+    """Adapt ONE market's slice of the BOT BOOK to check_and_kill's journal shape.
+
+    Selection is by the market-local day (exit_date), but rows are stamped with
+    the AEST _session_day() key because that is what check_and_kill compares
+    against. Open positions carry the marks the runner stamped LAST SCAN
+    (unreal_usd on the remaining fraction + banked realized_r) — no live
+    re-pricing here, so the reading can be up to one scan interval old.
+    """
+    from scanner.scalp_journal import _session_day
+    key = _session_day()
+    closed = [{"session_day": key,
+               "pnl": (t.get("realized_r") or 0.0) * (t.get("risk_usd") or 0.0)}
+              for t in book.get("closed", [])
+              if t.get("market") == market and t.get("exit_date") == market_day]
+    open_ = [{"unreal_pnl": ((p.get("unreal_usd") or 0.0)
+                             + (p.get("realized_r") or 0.0) * (p.get("risk_usd") or 0.0))}
+             for p in book.get("open", []) if p.get("market") == market]
+    return {"open": open_, "closed": closed}
+
+
+def run_standalone(dry_run: bool = False) -> dict:
+    """Check the BOT BOOK — the one-and-only track record — per market.
+
+    Rewritten 2026-07-20 (review C5): the old version read the retired scalp
+    journal, whose file no longer exists — session P&L was always $0.00 and
+    the switch could never fire. It now reads journal/vivek_bot_book.json and
+    applies the same per-market limit the runner's own guard uses
+    (VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY).
+    Returns {"triggered": [markets], "checked": [markets]} for tests/callers.
+    """
+    import datetime as dt
     import json
-    from scanner.scalp_journal import SCALP_JOURNAL_FILE
+    from zoneinfo import ZoneInfo
 
-    j = {"open": [], "closed": []}
-    if SCALP_JOURNAL_FILE.exists():
+    from scanner import config
+    from scanner.broker.vivek_run import BOOK_FILE
+
+    book = {"open": [], "closed": []}
+    if BOOK_FILE.exists():
         try:
-            j = json.loads(SCALP_JOURNAL_FILE.read_text())
+            book = json.loads(BOOK_FILE.read_text(encoding="utf-8"))
         except Exception as e:
-            log.error("could not read journal: %s", e)
+            # Fail LOUD (C2 spirit): an unreadable track record must alert,
+            # not silently report "all clear" on an empty dict.
+            log.error("kill-switch: could not read bot book (%s)", e)
+            try:
+                from .alert_dispatch import send as _alert
+                _alert("scan_error", "Kill-switch could not read the bot book",
+                       f"{BOOK_FILE}: {e} - loss guard is flying blind until fixed.")
+            except Exception:
+                pass
+    else:
+        log.warning("kill-switch: no bot book at %s yet - nothing to guard", BOOK_FILE)
 
-    triggered = check_and_kill(j, dry_run=dry_run)
-    if not triggered:
-        from scanner.config import SCALP_MAX_DAILY_LOSS
-        from scanner.scalp_journal import _session_day
-        today = _session_day()
-        pnl   = sum(c.get("pnl", 0) for c in j.get("closed", [])
-                    if c.get("session_day") == today)
-        unreal = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
-        log.info("kill-switch OK — session P&L $%.2f / limit -$%.2f",
-                 pnl + unreal, SCALP_MAX_DAILY_LOSS)
+    equity = config.VIVEK_BOT_ACCOUNT_EQUITY
+    pct = getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0) or 0.0
+    limit = equity * pct / 100.0
+    out = {"triggered": [], "checked": []}
+    for market, mkt in config.MARKETS.items():
+        market_day = dt.datetime.now(ZoneInfo(mkt.timezone)).strftime("%Y-%m-%d")
+        j = _book_market_journal(book, market, market_day)
+        out["checked"].append(market)
+        if check_and_kill(j, dry_run=dry_run, limit_usd=limit,
+                          label=f"bot book [{market}]"):
+            out["triggered"].append(market)
+        else:
+            pnl = (sum(c["pnl"] for c in j["closed"])
+                   + sum(p["unreal_pnl"] for p in j["open"]))
+            log.info("kill-switch OK [%s] - book P&L $%.2f / limit -$%.2f "
+                     "(%d open, marks from last scan)",
+                     market, pnl, limit, len(j["open"]))
+    return out
 
 
 if __name__ == "__main__":

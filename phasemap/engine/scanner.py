@@ -15,6 +15,25 @@ STATE_ORDER = {"RUNNING": 0, "DISPLACED": 1, "SWEPT": 2, "TRAP_SET": 3,
                "STALLED": 4, "COMPLETE": 5, "DEAD": 6}
 
 
+def drop_forming_bar(df, market: str, today=None):
+    """Drop the newest daily row when it is the STILL-FORMING session (v1.3.0).
+
+    24/7 markets (CONFIG.drop_forming_bar_markets) have no close: yfinance's
+    latest "daily" row is the in-progress UTC day, so sweeps/displacement were
+    being detected off a partial candle that mutates until midnight — the same
+    pathology VIVEK guards against with VIVEK_DROP_FORMING_BAR (review H3).
+    `today` is injectable for tests; defaults to the current UTC date.
+    Equity markets pass through untouched (scanned post-close by schedule).
+    """
+    if market not in CONFIG.drop_forming_bar_markets or df is None or not len(df):
+        return df
+    import datetime as _dt
+    today = today or _dt.datetime.now(_dt.timezone.utc).date()
+    last = df["Date"].iloc[-1]
+    last_date = last.date() if hasattr(last, "date") else last
+    return df.iloc[:-1] if last_date == today else df
+
+
 def module0_tags(ind) -> list:
     """Liquidity + halt tags. ILLIQUID is a warning, never a filter."""
     tags = []

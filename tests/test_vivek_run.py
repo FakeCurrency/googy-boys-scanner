@@ -239,6 +239,45 @@ def test_off_universe_position_is_fetched_and_can_stop_out(tmp_path, monkeypatch
     assert closed["status"] == "closed" and closed["exit_reason"] == "stop"
 
 
+## ── manual bot-book close (2026-07-20, review C4) ───────────────────────────────
+
+def test_close_bot_position_closes_and_persists(tmp_path, monkeypatch):
+    import json
+    _enable(monkeypatch, tmp_path)
+    book = {"version": 1, "mode": "paper",
+            "open": [_open_position("MDB", "nasdaq")], "closed": []}
+    (tmp_path / "vivek_bot_book.json").write_text(json.dumps(book), encoding="utf-8")
+    closed = vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    assert closed is not None and closed["status"] == "closed"
+    assert closed["exit_reason"] == "manual" and closed["exit_price"] == 98.0
+    # entry 100 / stop 96 -> risk 4; close @98 -> -0.5R gross on full size
+    assert closed["gross_r"] == pytest.approx(-0.5)
+    saved = json.loads((tmp_path / "vivek_bot_book.json").read_text(encoding="utf-8"))
+    assert saved["open"] == [] and len(saved["closed"]) == 1
+    assert (tmp_path / "public_book.json").exists()        # public twin updated too
+
+
+def test_close_bot_position_books_only_the_remaining_fraction(tmp_path, monkeypatch):
+    import json
+    _enable(monkeypatch, tmp_path)
+    pos = _open_position("MDB", "nasdaq")
+    pos["booked_pct"] = 0.25            # TP1 already banked 25% at 106 (+0.375R)
+    pos["realized_r"] = 0.375
+    pos["gross_r"] = 0.375
+    book = {"version": 1, "mode": "paper", "open": [pos], "closed": []}
+    (tmp_path / "vivek_bot_book.json").write_text(json.dumps(book), encoding="utf-8")
+    closed = vr.close_bot_position("MDB", "nasdaq", 104.0, day="2024-01-05")
+    # remaining 75% exits @104 (+1R per unit): 0.375 + 0.75 = 1.125R gross
+    assert closed["gross_r"] == pytest.approx(1.125)
+    assert closed["booked_pct"] == 1.0
+
+
+def test_close_bot_position_without_match_leaves_book_unwritten(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    assert vr.close_bot_position("XYZ", "asx", 10.0) is None
+    assert not (tmp_path / "vivek_bot_book.json").exists()  # nothing created/saved
+
+
 def test_unpriceable_position_gets_auditable_counter(tmp_path, monkeypatch):
     """If a symbol truly has no data anywhere, the freeze must be VISIBLE:
     unpriced_runs counts up on the position instead of a silent stale mark."""

@@ -24,11 +24,19 @@ GitHub Actions handles everything automatically:
 
 | Workflow | Schedule | What it does |
 |----------|----------|--------------|
-| `crypto_scalp.yml` | Every 30 min (trading hours) | Scans crypto, runs Bybit executor, commits output |
-| `scan.yml` | Every 30 min | Scans NASDAQ/ASX, updates scalp.json |
-| `stop_watcher.yml` | Every 15 min | Checks stop/target hits on open positions |
-| `kill_switch.yml` | Every hour | Standalone kill-switch check |
-| `backtest.yml` | Weekly | Re-runs scalp backtest, writes backtest_results.json |
+| `scan.yml` | Market-hours crons (weekend = crypto-only) | VIVEK scans SEQUENTIALLY (nasdaq, crypto, asx) + paper bot book + confluence alert |
+| `crypto_bot.yml` | Hourly, 24/7 | Crypto VIVEK scan + crypto slice of the bot book |
+| `backup_book.yml` | Daily 21:35 UTC | Snapshots the bot book + journal state into `backups/` |
+| `phasemap.yml` | Nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate |
+| `lens_backtest.yml` | Weekly Sun | PhaseMap/Specs/VIVEK replays -> Insights stats |
+| `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
+| `kill_switch.yml` | Every 30 min (market hours) | Standalone loss check on the BOT BOOK (per market) |
+| `stop_watcher.yml` | Every 5 min | Curls /api/tick (cloud watcher for the KV-synced manual journal) |
+| `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals |
+| `test.yml` | Every push/PR | pytest + JS tests |
+
+(Table rewritten 2026-07-20 — the previous one listed retired workflows:
+crypto_scalp.yml, backtest.yml, and a 15-min stop watcher no longer exist.)
 
 Cloudflare Pages serves `public/` automatically on every push to `main`.
 
@@ -79,7 +87,7 @@ When it fires:
 python -m scanner.broker.kill_switch
 
 # Force flatten (even if loss limit not yet reached)
-FORCE_KILL=1 python -m scanner.broker.kill_switch
+python -m scanner.broker.kill_switch          # add --dry-run to log only (note 2026-07-20: the previously documented FORCE_KILL env var never existed in code; the switch fires on the bot book's daily-loss limit)
 ```
 
 ---
@@ -306,7 +314,7 @@ Complete every item before switching from TESTNET to LIVE capital.
 
 - [ ] **Minimum testnet period**: run TESTNET mode for at least 2 weeks with real signal flow
 - [ ] **Minimum trade sample**: at least 30 testnet trades recorded in `scalp_journal.json`
-- [ ] **Kill switch test**: manually trigger `FORCE_KILL=1 python -m scanner.broker.kill_switch` and verify Bybit testnet orders are cancelled
+- [ ] **Kill switch test**: manually trigger `python -m scanner.broker.kill_switch          # add --dry-run to log only (note 2026-07-20: the previously documented FORCE_KILL env var never existed in code; the switch fires on the bot book's daily-loss limit)` and verify Bybit testnet orders are cancelled
 - [ ] **Drawdown test**: inject a fake losing streak into the journal and verify the circuit breaker fires
 - [ ] **Consecutive loss test**: add 4 consecutive negative PnL entries, verify breaker fires
 - [ ] **Pre-trade check test**: run `python -m scanner.broker.bybit_run --dry-run` with a full journal and verify all checks pass/fail as expected
@@ -359,7 +367,7 @@ Set `LIVE_DEPLOYMENT_STAGE` in `scanner/config.py` to reflect your current stage
 - [ ] Enable all alert channels (Telegram + Discord + Email) and verify they fire
 - [ ] Turn on detailed logging (`LOG_LEVEL=DEBUG` or similar)
 - [ ] Enable pre-trade risk checks (they are enabled by default in Phase 5)
-- [ ] Test Kill Switch manually: `FORCE_KILL=1 python -m scanner.broker.kill_switch`
+- [ ] Test Kill Switch manually: `python -m scanner.broker.kill_switch          # add --dry-run to log only (note 2026-07-20: the previously documented FORCE_KILL env var never existed in code; the switch fires on the bot book's daily-loss limit)`
 - [ ] Test Daily Loss Circuit Breaker: add a fake -$600 PnL entry to the journal and verify the breaker fires
 
 **During testnet:**
@@ -514,7 +522,7 @@ All alerts now go through `scanner/broker/alert_router.smart_send()` which appli
 | INFO     | Log only (no push) | order_placed, daily_report |
 
 Rate limits prevent alert storms. Limits are per event type (e.g. `anomaly` → max 1 per 30 min).
-State is persisted in `journal/alert_state.json` so limits survive between GitHub Actions runs.
+State is written to `journal/alert_state.json` on the runner, but NOTE (2026-07-20): no workflow commits that file, so rate-limit state does NOT survive between GitHub Actions runs — treat the limiter as per-run only.
 
 **Tuning:** edit `ALERT_SEVERITY`, `ALERT_CHANNELS`, and `ALERT_RATE_LIMITS` in `scanner/config.py`.
 

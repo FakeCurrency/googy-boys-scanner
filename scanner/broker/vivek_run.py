@@ -198,6 +198,70 @@ def _held_days(pos: dict, day: str) -> int | None:
         return None
 
 
+def close_bot_position(symbol: str, market: str, price: float,
+                       direction: str | None = None, day: str | None = None,
+                       reason: str = "manual") -> dict | None:
+    """Close ONE open bot-book position at `price` and persist the book.
+
+    The REAL manual close for the one-and-only track record (2026-07-20,
+    review C4 — the old "Close position" workflow edited the RETIRED journals
+    and never touched the book, so a stuck position could squat a slot
+    forever). Same accounting as every other close path: the remaining
+    un-booked fraction exits at `price` (a market fill, so slippage applies
+    via the cost model), costs are applied, exit_* fields stamped. Returns
+    the closed position, or None if no matching OPEN position exists — the
+    book is then left untouched and unsaved.
+    """
+    price = float(price)
+    if price <= 0:
+        raise ValueError(f"close price must be positive, got {price!r}")
+    book = _load_book()                  # corrupt book -> BookCorruptError (C2)
+    sym = str(symbol or "").upper()
+    if day is None:
+        tz = config.MARKETS[market].timezone if market in config.MARKETS else "UTC"
+        day = dt.datetime.now(ZoneInfo(tz)).strftime("%Y-%m-%d")
+
+    match = None
+    for p in book["open"]:
+        if (str(p.get("symbol") or "").upper() == sym
+                and p.get("market") == market
+                and (direction is None or p.get("direction") == direction)):
+            match = p
+            break
+    if match is None:
+        log.warning("close_bot_position: no open %s position for %s [%s] - book untouched",
+                    direction or "any-direction", sym, market)
+        return None
+
+    is_long = match.get("direction") == "long"
+    remaining = round(1.0 - (match.get("booked_pct") or 0.0), 6)
+    match.setdefault("gross_r", match.get("realized_r", 0.0))
+    if remaining > 1e-9:
+        match.setdefault("exits", []).append(
+            {"reason": "manual", "price": round(price, 8), "pct": remaining, "date": day})
+        match["gross_r"] = round(
+            match["gross_r"] + remaining * _r_of(price, match["entry"], match["risk"], is_long), 4)
+        match["booked_pct"] = 1.0
+    match["status"] = "closed"
+    match["exit_price"] = round(price, 8)
+    match["exit_date"] = day
+    match["exit_reason"] = reason
+    _apply_costs(match, costs_for(market))
+    try:
+        match["hold_days"] = (dt.date.fromisoformat(day)
+                              - dt.date.fromisoformat(match["entry_date"])).days
+    except Exception:
+        match["hold_days"] = None
+
+    book["open"] = [p for p in book["open"] if p is not match]
+    book["closed"].append(match)
+    _save_book(book)
+    log.info("close_bot_position: CLOSED %s %s [%s] @ %g -> %+.2fR (%s)",
+             sym, match.get("direction"), market, price,
+             match.get("realized_r") or 0.0, reason)
+    return match
+
+
 def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
     """Symbols fully stopped out within VIVEK_BOT_REENTRY_COOLDOWN_DAYS of `day`."""
     days = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
@@ -488,7 +552,30 @@ def main() -> None:
     parser.add_argument("--live", action="store_true",
                         help="force-write the paper book (overrides VIVEK_BOT_DRY_RUN); "
                              "still PAPER only — never a real order")
+    # Manual close of ONE bot-book position (review C4). Used by the
+    # close_position.yml workflow with journal_type=bot.
+    parser.add_argument("--close", metavar="SYMBOL",
+                        help="close one open bot-book position and exit")
+    parser.add_argument("--price", type=float, help="exit price for --close")
+    parser.add_argument("--direction", choices=["long", "short"],
+                        help="disambiguate --close when both sides exist")
+    parser.add_argument("--day", help="exit date YYYY-MM-DD for --close (default: today)")
     args = parser.parse_args()
+
+    if args.close:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        if not args.market or len(args.market) != 1 or args.market[0] == "all":
+            parser.error("--close needs exactly one --market")
+        if args.price is None:
+            parser.error("--close needs --price")
+        closed = close_bot_position(args.close, args.market[0], args.price,
+                                    direction=args.direction, day=args.day or None)
+        if closed is None:
+            print(f"no open position matched {args.close} [{args.market[0]}] - book untouched")
+            raise SystemExit(2)
+        print(f"closed {closed['symbol']} {closed['direction']} [{args.market[0]}] "
+              f"@ {closed['exit_price']} -> {closed.get('realized_r', 0):+.2f}R (manual)")
+        return
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     if not config.VIVEK_BOT_ENABLED:

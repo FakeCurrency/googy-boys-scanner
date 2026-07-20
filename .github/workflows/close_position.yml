@@ -22,15 +22,20 @@ on:
         required: false
         default: ""
       journal_type:
-        description: "swing or scalp"
+        description: "bot (the paper bot book — the real track record), swing or scalp"
         required: true
-        default: swing
+        default: bot
 
 permissions:
   contents: write
 
+# Joined the "scan" group (2026-07-20, review C4): journal_type=bot WRITES the
+# shared bot book, so a close must never run concurrently with a scan's
+# load->modify->write cycle (the C1 invariant: one book writer at a time).
+# Closes queue behind a running scan — expect up to ~15 min delay; correctness
+# over speed for the only track record.
 concurrency:
-  group: close-${{ github.event.inputs.symbol }}-${{ github.event.inputs.direction }}
+  group: scan
   cancel-in-progress: false
 
 jobs:
@@ -58,14 +63,28 @@ jobs:
           EXIT_DATE: ${{ github.event.inputs.exit_date }}
           JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
         run: |
-          python -m scanner.journal \
-            --close-manual \
-            --symbol "$SYMBOL" \
-            --direction "$DIRECTION" \
-            --market "$MARKET" \
-            --price "$PRICE" \
-            --date "$EXIT_DATE" \
-            --journal-type "$JOURNAL_TYPE"
+          if [ "$JOURNAL_TYPE" = "bot" ]; then
+            # The REAL close (review C4): edits journal/vivek_bot_book.json —
+            # the one-and-only track record. Exits non-zero if no open
+            # position matches, so a typo'd symbol fails loudly instead of
+            # committing a no-op "success".
+            python -m scanner.broker.vivek_run \
+              --close "$SYMBOL" \
+              --market "$MARKET" \
+              --price "$PRICE" \
+              ${DIRECTION:+--direction "$DIRECTION"} \
+              ${EXIT_DATE:+--day "$EXIT_DATE"}
+          else
+            # Legacy journals (swing/scalp) — retained for the manual pages.
+            python -m scanner.journal \
+              --close-manual \
+              --symbol "$SYMBOL" \
+              --direction "$DIRECTION" \
+              --market "$MARKET" \
+              --price "$PRICE" \
+              --date "$EXIT_DATE" \
+              --journal-type "$JOURNAL_TYPE"
+          fi
 
       - name: Commit updated journal
         env:
@@ -75,7 +94,11 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data journal/journal.json journal/scalp_journal.json 2>/dev/null || true
+          # Surgical paths (review C3): only the files a close can write —
+          # never the whole public/data directory.
+          git add journal/vivek_bot_book.json public/data/vivek_bot_book.json \
+                  journal/journal.json journal/scalp_journal.json \
+                  public/data/journal.json public/data/scalp_journal.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing to commit (position not found or already closed)."
           else

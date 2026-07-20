@@ -141,38 +141,48 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             turnover = _liquidity(df, market)
             if turnover < market.liquidity_min:
                 continue
-            points, grade, fired = vivek.score_and_grade(sig)
-            if grade is None:
+            points, raw_grade, fired = vivek.score_and_grade(sig)
+            if raw_grade is None:
                 continue
             # Hysteresis: hold the prior (higher) grade through small score wobble.
             # Applied BEFORE the gate so a genuine un-arm / low-R:R still demotes.
             # Direction-aware (a LONG badge never survives onto a SHORT read) and
             # bounded (a hold can't renew itself forever off its own output).
+            # DISPLAY-ONLY as of 2026-07-20 (review H2): the held grade is what
+            # the row shows, but the bot buys off grade_raw below — a smoothing
+            # device must never authorise an entry on a decayed setup.
             prev = prev_grades.get(symbol) or {}
             grade, held_runs = vivek.apply_grade_hysteresis(
-                points, grade, prev.get("grade"),
+                points, raw_grade, prev.get("grade"),
                 prev_dir=prev.get("dir"),
                 cur_dir="LONG" if sig["direction"] == "long" else "SHORT",
                 held_runs=prev.get("held", 0))
-            # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine —
-            # the Daily plan stays the row/chart headline so numbers match, but
-            # the ARMED/R:R GATE reads the best bot-relevant plan (1W > 3D > 1D):
-            # gating A+/A off the 1D trigger alone demoted weekly-armed setups to
-            # WATCHING, and the Weekly-preferring bot never traded them.
+            # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine.
             plans = vivek.build_plans(df, sig)
             lv = plans.get("1D")
-            if not lv or lv.get("rr", 0) <= 0:
-                continue
             gate_tf = next((tf for tf in ("1W", "3D", "1D")
                             if (plans.get(tf) or {}).get("armed")), None)
             gate_plan = plans.get(gate_tf) if gate_tf else None
             armed = gate_plan is not None
-            gate_rr = float(gate_plan.get("rr") or 0) if gate_plan else float(lv.get("rr") or 0)
+            # H1 (2026-07-20): the row HEADLINE is the plan the system actually
+            # trades — the gated timeframe when armed (1W > 3D > 1D, the same
+            # order the bot prefers), falling back to the Daily plan when merely
+            # watching. Before this the row always showed 1D numbers while the
+            # gate/bot read the armed TF: a weekly-armed A+ displayed a different
+            # entry/stop/R:R than the trade actually taken, and a weekly-armed
+            # setup whose 1D plan was missing/bad was dropped from the scan
+            # entirely.
+            hp = gate_plan or lv
+            if not hp or float(hp.get("rr") or 0) <= 0:
+                continue
+            gate_rr = float(hp.get("rr") or 0)
             markers = vivek.build_markers(plans)
             # Selectivity gate: only ARMED setups (a trigger fired) earn A/A+;
             # otherwise the setup is WATCHING and capped at B+. Also demote on low
-            # R:R. Keeps the tradeable list short and genuinely actionable.
+            # R:R. Applied to BOTH grades: `grade` (held, displayed) and
+            # `grade_raw` (unsmoothed — what the bot is allowed to buy).
             grade, gate_notes = vivek.gate_grade(grade, sig, gate_rr, armed)
+            grade_raw, _ = vivek.gate_grade(raw_grade, sig, gate_rr, armed)
             fired = fired + gate_notes
             # Entry-type chips reflect the FIRED trigger when armed; fall back to
             # the descriptive heuristic for watching setups.
@@ -181,7 +191,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
 
             info = meta.get(yf_ticker, {})
             close = sig["close"]
-            detail = vivek.build_detail(df, sig, lv)
+            detail = vivek.build_detail(df, sig, hp)
             is_long = sig["direction"] == "long"
             results.append({
                 "symbol": info.get("symbol", yf_ticker),
@@ -189,7 +199,8 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "sector": info.get("sector", ""),
                 "dir": "LONG" if is_long else "SHORT",
                 "setup_type": "vivek",
-                "grade": grade,
+                "grade": grade,                    # displayed (hysteresis-held, gated)
+                "grade_raw": grade_raw,            # unsmoothed, gated — the bot buys off THIS
                 "score": points,
                 "score_max": config.VIVEK_SCORE_MAX,
                 "chips": fired,
@@ -201,23 +212,26 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "armed": armed,
                 "armed_tf": gate_tf,               # which plan fired the gate (1W/3D/1D)
                 "grade_held_runs": held_runs,      # hysteresis state, read back next scan
-                "entry_trigger": (gate_plan or lv).get("entry_trigger"),
-                "trigger_bar": (gate_plan or lv).get("trigger_bar"),
+                "entry_trigger": hp.get("entry_trigger"),
+                "trigger_bar": hp.get("trigger_bar"),
                 "plans": plans,
                 "markers": markers,
                 "confluence": sig["confluence"],
                 "price": round(close, 8),
-                "entry": lv["entry"], "stop": lv["stop"],
-                "tp1": lv["tp1"], "tp2": lv["tp2"], "tp3": lv["tp3"],
-                "scale": lv["scale"], "risk": lv["risk"],
-                "rr": lv["rr"],
-                "rr_text": f"{lv['rr']:.1f}:1",
+                # Headline numbers = the TRADED plan (hp): gated TF when armed,
+                # 1D fallback when watching. headline_tf labels the source.
+                "headline_tf": gate_tf or "1D",
+                "entry": hp["entry"], "stop": hp["stop"],
+                "tp1": hp["tp1"], "tp2": hp["tp2"], "tp3": hp["tp3"],
+                "scale": hp["scale"], "risk": hp["risk"],
+                "rr": hp["rr"],
+                "rr_text": f"{hp['rr']:.1f}:1",
                 "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
                 "turnover": round(turnover),
                 "data_age_days": age,   # 0 = fresh; >0 = reused cache (raw-frame age)
                 "spark": _spark(df),
                 "detail": detail,
-                "analysis": vivek.narrative(info.get("symbol", yf_ticker), sig, lv,
+                "analysis": vivek.narrative(info.get("symbol", yf_ticker), sig, hp,
                                             detail, market.currency_symbol),
             })
         except Exception as e:
