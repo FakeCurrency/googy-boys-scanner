@@ -30,6 +30,11 @@ ROOT       = pathlib.Path(__file__).resolve().parents[1]
 BACKUP_DIR = ROOT / "backups"
 
 BACKUP_FILES = [
+    # THE track record (2026-07-20, review C2): the bot book is the one file
+    # whose loss is unrecoverable — it must be first in every backup. Both the
+    # canonical copy and the published twin (they can diverge; keep both).
+    "journal/vivek_bot_book.json",
+    "public/data/vivek_bot_book.json",
     "journal/journal.json",
     "journal/scalp_journal.json",
     "public/data/asx.json",

@@ -172,14 +172,29 @@ def test_daily_loss_guard_halts_new_entries(tmp_path, monkeypatch):
     assert all(p["symbol"] != "CBA" for p in bk["open"])   # no new risk added
 
 
-def test_corrupt_book_is_parked_and_run_continues(tmp_path, monkeypatch):
+def test_corrupt_book_aborts_loudly_and_leaves_the_file_untouched(tmp_path, monkeypatch):
+    """THE track record must never be silently replaced (2026-07-20, review C2):
+    an unreadable book aborts the run with a non-zero exit, the file is left
+    byte-for-byte as it was (no .corrupt.json parking — a rename made the NEXT
+    run start empty), and nothing is written."""
     _enable(monkeypatch, tmp_path)
-    (tmp_path / "vivek_bot_book.json").write_text("{ this is not valid json")
+    bad = "{ this is not valid json"
+    (tmp_path / "vivek_bot_book.json").write_text(bad)
     uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
-    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
-                       now=_aest(2024, 1, 2, 11, 0))
-    assert (tmp_path / "vivek_bot_book.corrupt.json").exists()   # bad file parked
-    assert len(bk["open"]) == 1                                  # ran fine from a clean book
+    with pytest.raises(vr.BookCorruptError):
+        vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                      now=_aest(2024, 1, 2, 11, 0))
+    assert (tmp_path / "vivek_bot_book.json").read_text() == bad   # untouched
+    assert not (tmp_path / "vivek_bot_book.corrupt.json").exists() # no parking
+    assert not (tmp_path / "public_book.json").exists()            # nothing written
+
+
+def test_book_corrupt_error_escapes_generic_exception_handlers():
+    """run.py wraps run_market in best-effort `except Exception` blocks; the
+    abort only works because BookCorruptError is a SystemExit (a BaseException),
+    which those wrappers cannot swallow. Pin that contract."""
+    assert issubclass(vr.BookCorruptError, SystemExit)
+    assert not issubclass(vr.BookCorruptError, Exception)
 
 
 # ── off-universe positions must still price (the MDB freeze, 2026-07) ──────────

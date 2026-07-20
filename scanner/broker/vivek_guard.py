@@ -19,16 +19,30 @@ from .. import config
 
 
 def _unreal_r(pos: dict, price: float) -> float:
-    """Current unrealised R of an open position at `price` (0 on bad risk)."""
+    """Current unrealised R of an open position at `price` (0 on bad risk).
+
+    Scaled by the REMAINING open fraction (2026-07-20, review C6): once a
+    position has booked partial profits (`booked_pct` > 0) only the un-booked
+    remainder is still exposed — valuing the full original size overstated
+    runners' unrealised P&L and fed the loss guard phantom numbers. The R
+    already BANKED by those partial exits lives in pos["realized_r"] and is
+    counted separately by session_pnl, so nothing is dropped or double-counted.
+    """
     risk = pos.get("risk") or 0.0
     if risk <= 0:
         return 0.0
+    remaining = min(1.0, max(0.0, 1.0 - (pos.get("booked_pct") or 0.0)))
+    if remaining <= 0.0:
+        return 0.0
     entry = pos["entry"]
-    return (price - entry) / risk if pos.get("direction") == "long" else (entry - price) / risk
+    per_unit = (price - entry) / risk if pos.get("direction") == "long" else (entry - price) / risk
+    return per_unit * remaining
 
 
 def session_pnl(book: dict, market: str, day: str, price_of) -> dict:
-    """Today's P&L for `market`: realised on positions closed today + open unrealised.
+    """Today's P&L for `market`: realised on positions closed today + each open
+    position's TOTAL current P&L (banked partial-exit R + unrealised on the
+    remaining open fraction).
 
     `price_of(symbol)` returns the current price or None. P&L is in account
     currency, derived from each position's R and its sized `risk_usd`.
@@ -38,26 +52,33 @@ def session_pnl(book: dict, market: str, day: str, price_of) -> dict:
         for t in book.get("closed", [])
         if t.get("market") == market and t.get("exit_date") == day
     )
-    unrealised, open_n = 0.0, 0
+    unrealised, open_realised, open_n = 0.0, 0.0, 0
     for p in book.get("open", []):
         if p.get("market") != market:
             continue
         open_n += 1
+        # R already BANKED by partial exits on this still-open position (net of
+        # costs — 2026-07-20, review C6). Previously invisible to the guard
+        # until the position fully closed, so a runner's locked-in TP1/TP2
+        # profit never offset its remaining-size drawdown.
+        open_realised += (p.get("realized_r", 0.0) or 0.0) * (p.get("risk_usd", 0.0) or 0.0)
         price = price_of(p.get("symbol"))
         if price is None:
             continue
         unrealised += _unreal_r(p, price) * (p.get("risk_usd", 0.0) or 0.0)
     return {
         "realised_usd": round(realised, 2),
+        "open_realised_usd": round(open_realised, 2),
         "unrealised_usd": round(unrealised, 2),
-        "session_usd": round(realised + unrealised, 2),
+        "session_usd": round(realised + open_realised + unrealised, 2),
         "open": open_n,
     }
 
 
 def week_pnl(book: dict, market: str, day: str, unrealised_usd: float) -> float:
-    """Trailing-7-day P&L: realised on trades closed in the window + open
-    unrealised (already computed by session_pnl — passed in, not re-priced)."""
+    """Trailing-7-day P&L: realised on trades closed in the window + the open
+    positions' current P&L (remaining-size unrealised PLUS banked partial-exit
+    R — already computed by session_pnl and passed in, not re-priced)."""
     try:
         cutoff = (_dt.date.fromisoformat(day) - _dt.timedelta(days=7)).isoformat()
     except ValueError:
@@ -84,7 +105,10 @@ def check(book: dict, market: str, day: str, equity: float, price_of) -> dict:
 
     wpct = getattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0) or 0.0
     wlimit = round(equity * (wpct / 100.0), 2)
-    wusd = week_pnl(book, market, day, pnl["unrealised_usd"])
+    # Open positions contribute their FULL current P&L to the weekly window:
+    # unrealised on the remaining size + banked partial-exit R (review C6).
+    wusd = week_pnl(book, market, day,
+                    pnl["unrealised_usd"] + pnl["open_realised_usd"])
     weekly_breach = wlimit > 0 and wusd <= -wlimit
 
     return {

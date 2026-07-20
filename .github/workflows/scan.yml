@@ -1,8 +1,12 @@
 name: Scheduled scan
 
-# ASX and NASDAQ are downloaded and scanned in parallel, cutting wall-clock
-# time roughly in half.  The scalp scan, journal, broker sync, and Telegram
-# notify run sequentially once both market scans finish.
+# Markets are scanned STRICTLY SEQUENTIALLY (2026-07-20, review C1): every
+# `scanner.run` invocation rewrites the whole shared bot book
+# (journal/vivek_bot_book.json) via load→modify→write, so two concurrent
+# market processes race and the last writer silently erases the other's
+# closed trades / realised P&L — corrupting the system's only track record.
+# One market at a time = one book writer at a time. Costs a few minutes of
+# wall-clock per full cycle; buys an intact track record.
 # Pushing to main triggers Cloudflare Pages to redeploy the site automatically.
 on:
   schedule:
@@ -115,17 +119,19 @@ jobs:
             exit $?
           fi
 
-          # Full cycle. Yahoo throttles concurrent requests and each market now
-          # downloads ONCE (deep history reused for VIVEK). Still, scan the two
-          # SMALL markets (≈100 names) together first — they finish in a couple of
-          # minutes — THEN run ASX alone with Yahoo to itself for best coverage.
-          python -m scanner.run --market nasdaq ${{ github.event.inputs.args }} &
-          PID_NAS=$!
-          python -m scanner.run --market crypto ${{ github.event.inputs.args }} &
-          PID_CRY=$!
-          wait $PID_NAS; RC_NAS=$?
-          wait $PID_CRY; RC_CRY=$?
-          echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX alone"
+          # Full cycle — SEQUENTIAL, never parallel (2026-07-20, review C1).
+          # Each scanner.run rewrites the ENTIRE shared bot book
+          # (journal/vivek_bot_book.json): parallel `&` processes here raced
+          # load→modify→write and the last writer erased the other market's
+          # closes and realised P&L from the only track record. Do NOT
+          # re-parallelise without first giving the book per-market files or
+          # a cross-process lock. Small markets first, ASX (the big download)
+          # last — same Yahoo-friendly order as before, one at a time.
+          python -m scanner.run --market nasdaq ${{ github.event.inputs.args }}
+          RC_NAS=$?
+          python -m scanner.run --market crypto ${{ github.event.inputs.args }}
+          RC_CRY=$?
+          echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX"
           python -m scanner.run --market asx ${{ github.event.inputs.args }}
           RC_ASX=$?
           echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"

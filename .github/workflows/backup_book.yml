@@ -1,0 +1,66 @@
+name: Backup bot book
+
+# Nightly safety net for journal/vivek_bot_book.json — the system's ONLY track
+# record (2026-07-20, review C2). Snapshots the journal/state files into
+# backups/<timestamp>/ via scripts/backup_journal.py and commits ONLY that new
+# backup directory — it never touches public/data or the live journal files,
+# so it cannot clobber a concurrent scan's outputs. Restore path:
+#   python scripts/backup_journal.py list
+#   python scripts/backup_journal.py restore <backup-dir>
+
+on:
+  schedule:
+    # Daily 21:35 UTC — right after the 21:00 NASDAQ-close scan has committed,
+    # so each night's snapshot captures that day's final book. Runs weekends
+    # too (the crypto book updates 24/7).
+    - cron: "35 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Own group (not "scan"): a queued backup must never be displaced from the
+# shared scan queue and silently skipped. Push races are handled below —
+# this workflow only ADDS files under backups/, so a rebase is always clean.
+concurrency:
+  group: backup-book
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # backup_journal.py is stdlib-only — no pip install needed.
+      - name: Create timestamped backup
+        run: python3 scripts/backup_journal.py backup
+
+      - name: Commit backup (surgical — only the new backups/ dir)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups
+          if git diff --cached --quiet; then
+            echo "Nothing to back up."
+            exit 0
+          fi
+          git commit -m "backup: journal state $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3 4 5; do
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — rebase and retry $i"
+            git pull --rebase origin main || true
+            sleep $((i * 3))
+          done
+          echo "Could not push backup after retries"; exit 1
+
+      - name: Alert on failure (Discord)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\":\"WARNING: **${{ github.workflow }}** FAILED - the bot book has no fresh backup. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL" || true

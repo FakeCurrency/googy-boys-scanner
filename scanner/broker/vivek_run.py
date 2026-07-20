@@ -58,23 +58,54 @@ MAX_CLOSED = 4000
 
 # ── persistence (separate from the signal journal — Decision §9.2) ────────────
 
+class BookCorruptError(SystemExit):
+    """The bot book EXISTS but cannot be read/parsed.
+
+    Deliberately a SystemExit subclass (2026-07-20, review C2): the paper book
+    is the system's ONLY track record, so an unreadable book must ABORT the
+    process with a non-zero exit instead of silently restarting from an empty
+    book — the old behaviour parked the file on the ephemeral CI runner and
+    then committed a blank book over the real history. SystemExit is NOT
+    caught by the best-effort `except Exception` wrappers in scanner/run.py,
+    so the workflow fails loudly and nothing overwrites the file. Recovery is
+    manual: inspect/fix the file (or restore from git / backups/) and re-run.
+    """
+
+
+def _alert_book_corrupt(err: Exception) -> None:
+    """Best-effort CRITICAL alert — must never mask the abort itself."""
+    try:
+        from .alert_dispatch import send as _alert
+        _alert("scan_error",
+               "VIVEK bot book CORRUPT — run aborted, book NOT modified",
+               f"{BOOK_FILE} failed to parse: {err}\n"
+               f"The runner exited before writing anything. Restore or fix the "
+               f"book (git history or backups/), then re-run the scan.")
+    except Exception as e:                       # alerting must not hide the abort
+        log.warning("could not send corrupt-book alert: %s", e)
+
+
 def _load_book() -> dict:
-    if BOOK_FILE.exists():
-        try:
-            b = json.loads(BOOK_FILE.read_text(encoding="utf-8"))
-            b.setdefault("open", [])
-            b.setdefault("closed", [])
-            return b
-        except Exception:
-            # Never let a corrupt/half-written book crash the run or get silently
-            # clobbered — park it for inspection and continue from a clean book.
-            try:
-                bad = BOOK_FILE.with_suffix(".corrupt.json")
-                BOOK_FILE.replace(bad)
-                log.warning("vivek book corrupt — parked at %s, starting fresh", bad.name)
-            except Exception:
-                pass
-    return {"version": BOOK_VERSION, "mode": "paper", "open": [], "closed": []}
+    if not BOOK_FILE.exists():
+        # An ABSENT book is a legitimate fresh start (first run / deliberate
+        # reset). Only an unreadable EXISTING book aborts, below.
+        return {"version": BOOK_VERSION, "mode": "paper", "open": [], "closed": []}
+    try:
+        b = json.loads(BOOK_FILE.read_text(encoding="utf-8"))
+        b.setdefault("open", [])
+        b.setdefault("closed", [])
+        return b
+    except Exception as e:
+        # THE track record is unreadable. Leave the file EXACTLY as it is (no
+        # rename — parking it made the next run silently start empty), alert,
+        # and abort the process so nothing downstream can write a blank book.
+        log.error("vivek book CORRUPT (%s) — aborting run, book left untouched at %s",
+                  e, BOOK_FILE)
+        _alert_book_corrupt(e)
+        raise BookCorruptError(
+            f"vivek_run: corrupt bot book at {BOOK_FILE} ({e}) — run aborted, "
+            f"file left untouched; restore from git/backups before re-running"
+        ) from e
 
 
 def _save_book(book: dict) -> None:
