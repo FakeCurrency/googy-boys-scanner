@@ -31,6 +31,29 @@ async function keyFor(code) {
 
 const cleanCode = (url) => (new URL(url).searchParams.get("code") || "").trim();
 
+// Legacy floor — the owner's own sync code may be this short. New codes should
+// be ≥8 chars; the enumeration guard below is what keeps short codes viable.
+const MIN_CODE_LEN = 4;
+
+// Per-IP request throttle across GET+PUT — caps code enumeration regardless of
+// hit or miss. KV read+increment is not atomic, so racing requests can slip a
+// few past the cap; acceptable for an abuse guard (not a security boundary on
+// its own — the miss counter below backs it up). Fail-open on KV errors: a
+// limiter outage must never break sync.
+const REQS_PER_HOUR = 30;
+
+async function overRateLimit(env, request) {
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const bucket = new Date().toISOString().slice(0, 13);   // UTC hour bucket
+    const key = `ratelimit:journal:${ip}:${bucket}`;
+    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
+    if (n > REQS_PER_HOUR) return true;
+    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 7200 });
+    return false;
+  } catch (_) { return false; }
+}
+
 // Brute-force guard: someone guessing sync codes produces GET *misses* — a
 // legit user misses at most once or twice at setup. Count only misses per IP
 // per day (so the counter costs a KV write only on misses, not on normal
@@ -62,7 +85,11 @@ export const onRequestGet = async ({ env, request }) => {
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare (see functions/api/journal.js)." });
   }
   const code = cleanCode(request.url);
-  if (code.length < 4) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (await overRateLimit(env, request)) {
+    return json(429, { ok: false, configured: true,
+      message: "Too many sync requests from this connection — try again in an hour." });
+  }
   if (await tooManyMisses(env, request)) {
     return json(429, { ok: false, configured: true,
       message: "Too many unknown sync codes from this connection today — try again tomorrow." });
@@ -81,7 +108,11 @@ export const onRequestPut = async ({ env, request }) => {
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare." });
   }
   const code = cleanCode(request.url);
-  if (code.length < 4) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
+  if (await overRateLimit(env, request)) {
+    return json(429, { ok: false, configured: true,
+      message: "Too many sync requests from this connection — try again in an hour." });
+  }
   if (await tooManyMisses(env, request)) {
     return json(429, { ok: false, configured: true,
       message: "Too many unknown sync codes from this connection today — try again tomorrow." });

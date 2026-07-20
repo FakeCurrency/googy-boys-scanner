@@ -22,8 +22,8 @@ jobs:
         env:
           # Optional override; defaults to the production Pages URL.
           TICK_URL: ${{ vars.TICK_URL }}
-          # Optional: set this (and a matching TICK_SECRET env var in Cloudflare)
-          # to require a bearer token. Leave unset to run open.
+          # Required in Cloudflare: /api/tick fails closed (503) until a
+          # TICK_SECRET env var is set there; mirror the value in this secret.
           TICK_SECRET: ${{ secrets.TICK_SECRET }}
         run: |
           URL="${TICK_URL:-https://googy-boys-scanner.pages.dev/api/tick}"

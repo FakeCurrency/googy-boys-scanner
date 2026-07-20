@@ -24,7 +24,26 @@ const json = (status, body) =>
     },
   });
 
-export const onRequestGet = async ({ request }) => {
+// Free-relay guard: per-IP cap shared with /api/quote (same "px" key space).
+// KV read+increment is not atomic — racing bursts can slip a few past the cap,
+// fine for an abuse guard. Degrades open (no limiting) when the KV binding is
+// absent, same as scan.js, so a misconfig can't kill charts.
+const PX_REQS_PER_MIN = 120;
+
+async function overPxLimit(env, request) {
+  if (!env || !env.JOURNAL_KV) return false;
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const bucket = new Date().toISOString().slice(0, 16);   // UTC minute bucket
+    const key = `ratelimit:px:${ip}:${bucket}`;
+    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
+    if (n > PX_REQS_PER_MIN) return true;
+    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 120 });
+    return false;
+  } catch (_) { return false; }
+}
+
+export const onRequestGet = async ({ request, env }) => {
   const url = new URL(request.url);
   const symbol = url.searchParams.get("symbol") || "";
 
@@ -43,6 +62,10 @@ export const onRequestGet = async ({ request }) => {
 
   if (!symbol || symbol.length > 30 || !/^[\w.\-^=]+$/i.test(symbol)) {
     return json(400, { ok: false, error: "Invalid symbol" });
+  }
+
+  if (await overPxLimit(env, request)) {
+    return json(429, { ok: false, error: "Too many price requests — slow down." });
   }
 
   try {

@@ -11,8 +11,9 @@
  * fills: a stop that gaps through fills at the worse live price (never better
  * than the stop); a target never credits overshoot — identical to the chart.
  *
- * Setup: needs the same JOURNAL_KV binding as /api/journal. Optionally set a
- * TICK_SECRET env var (and the matching GitHub secret) to require a bearer token.
+ * Setup: needs the same JOURNAL_KV binding as /api/journal, plus a TICK_SECRET
+ * env var (and the matching GitHub secret). No secret → the endpoint refuses to
+ * run (fail closed) — an open watcher would let anyone walk every journal.
  */
 
 import { fetchBinancePrice, fetchYahooChart } from "./_prices.js";
@@ -95,8 +96,9 @@ async function runTick(env) {
   }
   const cache = {};
   const np = nowParts();
-  let journals = 0, closed = 0;
-  const details = [];
+  // Counts only — no per-trade detail leaves this endpoint (symbols/directions/
+  // fills belong to the journal owners, not whoever holds the tick secret's URL).
+  let journals = 0, closed = 0, scaled = 0;
 
   let cursor;
   do {
@@ -123,12 +125,8 @@ async function runTick(env) {
           const r = manageVivek(t, px, np);
           if (!r) continue;
           changed = true;
-          if (r === "close") {
-            closed++;
-            details.push({ symbol: t.symbol, dir: t.direction, kind: t.exit_reason, fill: t.exit });
-          } else {
-            details.push({ symbol: t.symbol, dir: t.direction, kind: "scale-out", fill: px });
-          }
+          if (r === "close") closed++;
+          else scaled++;
           continue;
         }
 
@@ -144,7 +142,6 @@ async function runTick(env) {
         t.mtime = Date.now();
         changed = true;
         closed++;
-        details.push({ symbol: t.symbol, dir: t.direction, kind: hit.kind, fill: hit.fill });
       }
 
       if (changed) {
@@ -154,11 +151,10 @@ async function runTick(env) {
     }
   } while (cursor);
 
-  return json(200, { ok: true, journals, closed, details, at: new Date().toISOString() });
+  return json(200, { ok: true, journals, closed, scaled });
 }
 
 function authorised(request, env) {
-  if (!env.TICK_SECRET) return true;          // open unless a secret is configured
   const url = new URL(request.url);
   const fromQuery = url.searchParams.get("key");
   const header = request.headers.get("Authorization") || "";
@@ -169,6 +165,10 @@ function authorised(request, env) {
 export const onRequest = async ({ request, env }) => {
   if (request.method !== "GET" && request.method !== "POST") {
     return json(405, { ok: false, message: "Use GET or POST." });
+  }
+  // Fail closed: an unset secret disables the watcher instead of opening it.
+  if (!env.TICK_SECRET) {
+    return json(503, { ok: false, message: "TICK_SECRET not configured — watcher disabled." });
   }
   if (!authorised(request, env)) return json(401, { ok: false, message: "Unauthorized." });
   return runTick(env);

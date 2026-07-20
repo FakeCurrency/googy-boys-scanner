@@ -107,14 +107,14 @@ export const onRequestPost = async ({ env, request }) => {
     }
 
     // Map the common GitHub failure modes to a clear, actionable message.
-    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    // Never echo the upstream body — it can carry token/repo details.
     const friendly = {
       401: "Scan token is invalid or expired — regenerate GH_DISPATCH_TOKEN in Cloudflare.",
       403: "Scan token lacks permission (needs Actions: Read and write) or GitHub is rate-limiting.",
       404: `Workflow "${workflow}" or repo not found — check GH_WORKFLOW / GH_REPO.`,
       422: `GitHub couldn't dispatch on ref "${ref}" — check the branch exists and the workflow has workflow_dispatch.`,
       429: "GitHub is rate-limiting scan requests — wait a minute and try again.",
-    }[res.status] || `GitHub rejected the request (${res.status}). ${detail}`;
+    }[res.status] || `GitHub rejected the request (${res.status}).`;
 
     return json(502, { ok: false, configured: true, status: res.status, message: friendly });
   } catch (err) {
@@ -124,7 +124,7 @@ export const onRequestPost = async ({ env, request }) => {
       configured: true,
       message: aborted
         ? "GitHub took too long to respond — the scan may still start; check back shortly."
-        : `Network error reaching GitHub: ${err}`,
+        : "Network error reaching GitHub.",
     });
   } finally {
     clearTimeout(timer);

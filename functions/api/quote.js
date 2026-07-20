@@ -19,6 +19,25 @@ const json = (status, body) =>
     },
   });
 
+// Free-relay guard: per-IP cap shared with /api/price (same "px" key space).
+// KV read+increment is not atomic — racing bursts can slip a few past the cap,
+// fine for an abuse guard. Degrades open (no limiting) when the KV binding is
+// absent, same as scan.js, so a misconfig can't kill quotes.
+const PX_REQS_PER_MIN = 120;
+
+async function overPxLimit(env, request) {
+  if (!env || !env.JOURNAL_KV) return false;
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const bucket = new Date().toISOString().slice(0, 16);   // UTC minute bucket
+    const key = `ratelimit:px:${ip}:${bucket}`;
+    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
+    if (n > PX_REQS_PER_MIN) return true;
+    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 120 });
+    return false;
+  } catch (_) { return false; }
+}
+
 export async function onRequestGet(ctx) {
   const url = new URL(ctx.request.url);
   const sym = url.searchParams.get("sym") || "";
@@ -28,6 +47,10 @@ export async function onRequestGet(ctx) {
 
   if (!/^[A-Za-z0-9.\^=\-_]{1,20}$/.test(sym)) {
     return json(400, { error: "Invalid symbol" });
+  }
+
+  if (await overPxLimit(ctx.env, ctx.request)) {
+    return json(429, { error: "Too many quote requests — slow down." });
   }
 
   const now = Math.floor(Date.now() / 1000);

@@ -34,15 +34,23 @@ export const onRequestPost = async ({ request, env }) => {
     return json(400, { ok: false, message: "Invalid JSON body." });
   }
 
-  const price = parseFloat(body?.price);
-  if (!body?.symbol || !isFinite(price) || price <= 0) {
+  // Strict validation: these inputs reach a GitHub Actions workflow, so only
+  // known-shape values may pass (defence in depth with the env-var quoting in
+  // close_position.yml).
+  const symbol = String(body?.symbol || "").trim().toUpperCase();
+  const market = String(body?.market || "").trim().toLowerCase();
+  const price  = parseFloat(body?.price);
+  if (!/^[A-Z0-9.\-]{1,15}$/.test(symbol) || !isFinite(price) || price <= 0) {
     return json(400, { ok: false, message: "symbol and a positive price are required." });
+  }
+  if (!["asx", "nasdaq", "crypto", "scalp", ""].includes(market)) {
+    return json(400, { ok: false, message: "Invalid market." });
   }
 
   const inputs = {
-    symbol:       String(body.symbol).slice(0, 20),
+    symbol,
     direction:    body.direction === "short" ? "short" : "long",
-    market:       String(body.market || "").slice(0, 20),
+    market,
     price:        String(price),
     exit_date:    /^\d{4}-\d{2}-\d{2}$/.test(body.exit_date) ? body.exit_date : "",
     journal_type: body.journal_type === "scalp" ? "scalp" : "swing",
@@ -91,13 +99,13 @@ export const onRequestPost = async ({ request, env }) => {
       });
     }
 
-    const detail = (await res.text().catch(() => "")).slice(0, 200);
-    return json(502, { ok: false, message: `GitHub error ${res.status}: ${detail}` });
+    // Never echo the upstream body — it can carry token/repo details.
+    return json(502, { ok: false, message: `GitHub rejected the request (${res.status}).` });
   } catch (err) {
     const aborted = err?.name === "AbortError";
     return json(aborted ? 504 : 502, {
       ok: false,
-      message: aborted ? "GitHub took too long — try again." : `Network error: ${err}`,
+      message: aborted ? "GitHub took too long — try again." : "Network error reaching GitHub.",
     });
   } finally {
     clearTimeout(timer);

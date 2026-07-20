@@ -47,18 +47,31 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Inputs pass through env vars, never ${{ }} inside run: — the runner does
+      # not shell-interpolate env values, so a crafted input can't inject commands.
       - name: Close position in journal
+        env:
+          SYMBOL: ${{ github.event.inputs.symbol }}
+          DIRECTION: ${{ github.event.inputs.direction }}
+          MARKET: ${{ github.event.inputs.market }}
+          PRICE: ${{ github.event.inputs.price }}
+          EXIT_DATE: ${{ github.event.inputs.exit_date }}
+          JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
         run: |
           python -m scanner.journal \
             --close-manual \
-            --symbol "${{ github.event.inputs.symbol }}" \
-            --direction "${{ github.event.inputs.direction }}" \
-            --market "${{ github.event.inputs.market }}" \
-            --price "${{ github.event.inputs.price }}" \
-            --date "${{ github.event.inputs.exit_date }}" \
-            --journal-type "${{ github.event.inputs.journal_type }}"
+            --symbol "$SYMBOL" \
+            --direction "$DIRECTION" \
+            --market "$MARKET" \
+            --price "$PRICE" \
+            --date "$EXIT_DATE" \
+            --journal-type "$JOURNAL_TYPE"
 
       - name: Commit updated journal
+        env:
+          SYMBOL: ${{ github.event.inputs.symbol }}
+          DIRECTION: ${{ github.event.inputs.direction }}
+          PRICE: ${{ github.event.inputs.price }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -66,7 +79,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing to commit (position not found or already closed)."
           else
-            git commit -m "journal: manual close ${{ github.event.inputs.symbol }} ${{ github.event.inputs.direction }} @ ${{ github.event.inputs.price }}"
+            git commit -m "journal: manual close $SYMBOL $DIRECTION @ $PRICE"
             git pull --rebase origin main
             git push
           fi
