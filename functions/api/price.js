@@ -11,10 +11,14 @@
  *     → { ok, price, symbol, source, delayed, bars, candles:[{time,open,high,low,close,volume}] }
  */
 import { livePrice, history } from "./_prices.js";
+import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
 
-// Successful responses edge-cache for ~20s — chart opens and journal refreshes
-// re-request the same symbols in bursts; a short shared cache absorbs those
-// instead of hammering Yahoo into throttling. Errors are never cached.
+// Successful responses edge-cache for ~20s via the Cache API (cachePut below —
+// a Cache-Control header alone does NOT edge-cache a Function response) — chart
+// opens and journal refreshes re-request the same symbols in bursts; a short
+// shared cache absorbs those instead of hammering Yahoo into throttling.
+// Errors are never cached. The per-IP guard is in-memory — zero KV operations
+// on this hot path (the old KV counter burned the daily write quota by itself).
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
@@ -24,26 +28,8 @@ const json = (status, body) =>
     },
   });
 
-// Free-relay guard: per-IP cap shared with /api/quote (same "px" key space).
-// KV read+increment is not atomic — racing bursts can slip a few past the cap,
-// fine for an abuse guard. Degrades open (no limiting) when the KV binding is
-// absent, same as scan.js, so a misconfig can't kill charts.
-const PX_REQS_PER_MIN = 120;
-
-async function overPxLimit(env, request) {
-  if (!env || !env.JOURNAL_KV) return false;
-  try {
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    const bucket = new Date().toISOString().slice(0, 16);   // UTC minute bucket
-    const key = `ratelimit:px:${ip}:${bucket}`;
-    const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
-    if (n > PX_REQS_PER_MIN) return true;
-    await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 120 });
-    return false;
-  } catch (_) { return false; }
-}
-
-export const onRequestGet = async ({ request, env }) => {
+export const onRequestGet = async (ctx) => {
+  const { request } = ctx;
   const url = new URL(request.url);
   const symbol = url.searchParams.get("symbol") || "";
 
@@ -64,7 +50,10 @@ export const onRequestGet = async ({ request, env }) => {
     return json(400, { ok: false, error: "Invalid symbol" });
   }
 
-  if (await overPxLimit(env, request)) {
+  const hit = await cacheMatch(request);
+  if (hit) return hit;
+
+  if (overPxLimit(request)) {
     return json(429, { ok: false, error: "Too many price requests — slow down." });
   }
 
@@ -73,7 +62,7 @@ export const onRequestGet = async ({ request, env }) => {
 
     if (!wantCandles) {
       if (live.price == null) return json(502, { ok: false, error: "no price from any source", symbol });
-      return json(200, { ok: true, price: +live.price.toFixed(8), symbol, source: live.source });
+      return cachePut(ctx, json(200, { ok: true, price: +live.price.toFixed(8), symbol, source: live.source }));
     }
 
     const hist = await history(symbol, assetType, { range, interval, prefer });
@@ -85,7 +74,7 @@ export const onRequestGet = async ({ request, env }) => {
       return json(502, { ok: false, error: "no price or history from any source", symbol });
     }
 
-    return json(200, {
+    return cachePut(ctx, json(200, {
       ok: true,
       symbol,
       price: price == null ? null : +price.toFixed(8),
@@ -96,7 +85,7 @@ export const onRequestGet = async ({ request, env }) => {
       // dividend within ~45d → the adjusted series (and levels) differs from
       // the raw prices a broker shows; the chart surfaces this as a chip
       recent_div: hist.recent_div || null,
-    });
+    }));
   } catch (err) {
     return json(502, { ok: false, error: String(err && err.message ? err.message : err), symbol });
   }

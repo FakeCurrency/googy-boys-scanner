@@ -1245,6 +1245,7 @@
     const delayEl  = $("#ct-delayed");
     let lastPx = null;
     const tick = async () => {
+      if (document.hidden) return;   // backgrounded tab: don't burn the quote relay
       try {
         const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}${srcParam}`, { cache: "no-store" });
         if (!r.ok) return;
@@ -2520,6 +2521,7 @@
         let lastStockPx = null;
         const priceHd = $("#ct-price");
         stockTick = async () => {
+          if (document.hidden) return;   // backgrounded tab: don't burn the quote relay
           const price = await fetchStockQuote(SYM, trade.asset_type);
           if (price == null) return;
           liveState.price = price;
