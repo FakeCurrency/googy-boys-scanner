@@ -1,12 +1,14 @@
 name: Kill-switch check
 
-# Runs every 30 minutes during trading hours — independently of the scanner.
-# Flattens all Bybit (or Alpaca) positions if the daily loss limit is breached.
-# Safe to run with no broker credentials (logs only and exits cleanly).
+# Runs every 30 minutes, ALL hours, ALL days (2026-07-20): the check reads the
+# bot book (review C5), and the crypto slice of that book trades 24/7 — the
+# old market-hours-only crons (which were also EDT-hardcoded and drifted an
+# hour every winter) left crypto unguarded overnight and all weekend.
+# Flattens Bybit (or Alpaca) positions only if broker credentials are set;
+# with none it logs + alerts and exits cleanly.
 on:
   schedule:
-    - cron: "15,45 0-5 * * 1-5"    # ASX session  00:15–05:45 UTC
-    - cron: "15,45 13-21 * * 1-5"  # NASDAQ session  13:15–21:45 UTC
+    - cron: "15,45 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -42,9 +44,14 @@ jobs:
           BYBIT_TESTNET:     ${{ secrets.BYBIT_TESTNET }}
           ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          # Input passes through env, never ${{ }} inside run: (2026-07-20
+          # security pass) — this job holds the broker keys, and the free-text
+          # input could otherwise inject shell into it.
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
-          DRY="${{ github.event.inputs.dry_run }}"
-          if [ "$DRY" = "true" ]; then
+          # Scheduled runs have no input (DRY_RUN empty) and must stay ARMED —
+          # only an explicit dry_run=true from a manual dispatch logs-only.
+          if [ "$DRY_RUN" = "true" ]; then
             python -m scanner.broker.kill_switch --dry-run
           else
             python -m scanner.broker.kill_switch

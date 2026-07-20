@@ -931,10 +931,30 @@
   // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
   // source for manual trades) from the live scans. Re-runnable: prices overwrite.
   async function loadScanMeta() {
-    const files = [["asx_vivek.json", "asx"], ["nasdaq_vivek.json", "nasdaq"], ["crypto_vivek.json", "crypto"]];
-    await Promise.all(files.map(async ([f, mkt]) => {
+    // Prefer the SLIM per-market companion (2026-07-20, perf): ~5% the size of
+    // the full scan files this page used to download (~3MB across markets)
+    // just to build a price/grade map. Falls back to the full file per market
+    // until the first post-deploy scan publishes the slim ones.
+    const markets = ["asx", "nasdaq", "crypto"];
+    await Promise.all(markets.map(async (mkt) => {
       try {
-        const r = await fetch("data/" + f, { cache: "no-cache" });
+        const r = await fetch(`data/${mkt}_prices.json`, { cache: "no-cache" });
+        if (r.ok) {
+          const j = await r.json();
+          const rows = j.rows || {};
+          for (const sym in rows) {
+            const s = String(sym).toUpperCase(), row = rows[sym] || {};
+            if (!scanMeta.has(s)) scanMeta.set(s, { grade: row.grade || null, entry_type: null, dir: row.dir || null });
+          }
+          const pm = j.prices || {};
+          for (const sym in pm) {
+            if (pm[sym] != null) scanPrice.set(mkt + ":" + String(sym).toUpperCase(), +pm[sym]);
+          }
+          return;
+        }
+      } catch (_) { /* fall through to the full file */ }
+      try {
+        const r = await fetch(`data/${mkt}_vivek.json`, { cache: "no-cache" });
         if (!r.ok) return;
         const j = await r.json();
         for (const row of (j.results || [])) {
@@ -952,6 +972,23 @@
       } catch (_) { /* skip a missing/blocked file */ }
     }));
   }
+
+  // Surface quota-lost saves (2026-07-20): gbs-sync dispatches gbs:save-error
+  // when localStorage rejects a write — previously NOTHING listened, so a
+  // just-closed trade could vanish silently. Loud, persistent red banner.
+  window.addEventListener("gbs:save-error", () => {
+    let el = document.getElementById("gbs-save-error");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "gbs-save-error";
+      el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);"
+        + "z-index:9999;background:#ff453a;color:#fff;padding:10px 18px;border-radius:12px;"
+        + "font-weight:600;font-size:13px;max-width:520px;box-shadow:0 6px 24px rgba(0,0,0,.45)";
+      document.body.appendChild(el);
+    }
+    el.textContent = "STORAGE FULL — this device could NOT save your last change. "
+      + "Export a backup now (Backup button), then reload; if it repeats, clear old site data.";
+  });
 
   // ── close modal (Me) ──────────────────────────────────────────────────────
   let closeId = null;

@@ -740,7 +740,10 @@
 
     // Reuse the payload we already fetched for the first render (no double-fetch).
     await loadData(seed);
-    setInterval(loadData, 30000);
+    // Visibility guard (2026-07-20): don't refetch + full-rerender every 30s
+    // in a background tab, forever; catch up immediately when it's foregrounded.
+    setInterval(() => { if (!document.hidden) loadData(); }, 30000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadData(); });
     startClocks();
   }
 

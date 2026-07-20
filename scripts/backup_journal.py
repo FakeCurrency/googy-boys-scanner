@@ -58,6 +58,26 @@ LOG_FILES = [
 ]
 LOG_TAIL_LINES = 50_000
 
+# Retention (2026-07-20): nightly snapshots are ~100KB each and were unbounded.
+# Keep the newest N; backup() prunes older ones (the workflow stages deletions
+# with `git add -A backups`). 30 dailies ≈ a month of restore points.
+BACKUP_KEEP = 30
+
+
+def prune(keep: int = BACKUP_KEEP) -> int:
+    """Delete all but the newest `keep` timestamped backup dirs. Returns count
+    removed. Timestamp-format dirs only — anything else is left untouched."""
+    if not BACKUP_DIR.exists() or keep <= 0:
+        return 0
+    dated = sorted(d for d in BACKUP_DIR.iterdir()
+                   if d.is_dir() and len(d.name) == 19 and d.name[4] == "-")
+    removed = 0
+    for d in dated[:-keep] if len(dated) > keep else []:
+        shutil.rmtree(d, ignore_errors=True)
+        removed += 1
+        print(f"  prune {d.name}")
+    return removed
+
 
 def _ts() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
@@ -101,7 +121,10 @@ def backup() -> pathlib.Path:
     }
     (dest / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
-    print(f"\nBackup complete → {dest}")
+    pruned = prune()
+    if pruned:
+        print(f"  pruned {pruned} old backup(s) (keep {BACKUP_KEEP})")
+    print(f"\nBackup complete -> {dest}")
     return dest
 
 

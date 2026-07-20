@@ -41,7 +41,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backups
+          # -A so retention PRUNING deletions (backup_journal.py keeps the
+          # newest N) are staged too, not just new snapshot dirs.
+          git add -A backups
           if git diff --cached --quiet; then
             echo "Nothing to back up."
             exit 0

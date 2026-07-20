@@ -48,6 +48,11 @@ jobs:
       # names each) run together and finish in minutes, then the full ASX
       # directory (~2,000 names) gets Yahoo to itself for best coverage.
       - name: Run PhaseMap scans
+        env:
+          # Free-text input passes through env, never ${{ }} inside run:
+          # (2026-07-20 security pass) — the runner does not shell-interpolate
+          # env values, so a crafted input can't inject commands.
+          ARGS: ${{ github.event.inputs.args }}
         run: |
           set +e
           MARKET="${{ github.event.inputs.market }}"
@@ -55,18 +60,18 @@ jobs:
 
           if [ "$MARKET" != "all" ]; then
             echo "Single-market PhaseMap scan: $MARKET"
-            python -m phasemap.run --market "$MARKET" ${{ github.event.inputs.args }}
+            python -m phasemap.run --market "$MARKET" $ARGS
             exit $?
           fi
 
-          python -m phasemap.run --market nasdaq ${{ github.event.inputs.args }} &
+          python -m phasemap.run --market nasdaq $ARGS &
           PID_NAS=$!
-          python -m phasemap.run --market crypto ${{ github.event.inputs.args }} &
+          python -m phasemap.run --market crypto $ARGS &
           PID_CRY=$!
           wait $PID_NAS; RC_NAS=$?
           wait $PID_CRY; RC_CRY=$?
           echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX alone"
-          python -m phasemap.run --market asx ${{ github.event.inputs.args }}
+          python -m phasemap.run --market asx $ARGS
           RC_ASX=$?
           echo "phasemap rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
@@ -78,14 +83,13 @@ jobs:
         continue-on-error: true
         run: python -m scanner.spec_run --market all
 
-      # Multi-lens confluence -> Discord ping (state-deduped; triple-lens
-      # alignments mention @here). Never blocks the scan.
-      - name: Confluence Discord alert
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
-        run: python -m scanner.confluence_alert
+      # Confluence alert REMOVED from this workflow (2026-07-20, review H6):
+      # its dedupe state (journal/confluence_state.json + alert_history.json)
+      # was committed from TWO concurrency groups (phasemap + scan), so the
+      # groups could revert each other's state — duplicate @here pings or lost
+      # alerts. The scan-group now solely owns confluence: intraday runs in
+      # scan.yml, plus the tiny confluence.yml at 08:45 UTC (right after this
+      # nightly's data lands) to pick up fresh PhaseMap/Specs alignments.
 
       # Schema gate: every freshly published snapshot must pass the writer's own
       # validator (zones are bands, states/tiers legal, current ruleset version)
@@ -120,8 +124,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Only this scan's generated outputs — never code or other files.
-          PATHS="public/data/phasemap public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts journal/confluence_state.json"
+          # SURGICAL paths (2026-07-20, reviews C3+H6): per-market snapshot
+          # dirs + charts — NOT the whole public/data/phasemap dir, which also
+          # contains alert_history.json (owned by the scan group's confluence)
+          # and stats/ (owned by lens_backtest.yml); re-applying those from
+          # this run's stale checkout reverted the owners' fresher pushes.
+          # journal/confluence_state.json dropped: confluence no longer runs here.
+          PATHS="public/data/phasemap/asx public/data/phasemap/nasdaq public/data/phasemap/crypto public/data/phasemap/charts public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

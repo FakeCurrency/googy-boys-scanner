@@ -106,16 +106,21 @@ jobs:
           GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+          # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
+          ARGS: ${{ github.event.inputs.args }}
         run: |
           set +e
           MARKET="${{ github.event.inputs.market }}"
           MARKET="${MARKET:-${{ needs.gate.outputs.market_override }}}"
           MARKET="${MARKET:-all}"     # scheduled runs have no input -> full cycle
+          # Tell the schema gate which files THIS run rewrote (2026-07-20):
+          # a partial run must only be judged on its own output files.
+          echo "SCANNED_MARKET=$MARKET" >> "$GITHUB_ENV"
 
           if [ "$MARKET" != "all" ]; then
             # Single-market scan (fast path) — just the one the user asked for.
             echo "Single-market scan: $MARKET"
-            python -m scanner.run --market "$MARKET" ${{ github.event.inputs.args }}
+            python -m scanner.run --market "$MARKET" $ARGS
             exit $?
           fi
 
@@ -127,12 +132,12 @@ jobs:
           # re-parallelise without first giving the book per-market files or
           # a cross-process lock. Small markets first, ASX (the big download)
           # last — same Yahoo-friendly order as before, one at a time.
-          python -m scanner.run --market nasdaq ${{ github.event.inputs.args }}
+          python -m scanner.run --market nasdaq $ARGS
           RC_NAS=$?
-          python -m scanner.run --market crypto ${{ github.event.inputs.args }}
+          python -m scanner.run --market crypto $ARGS
           RC_CRY=$?
           echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX"
-          python -m scanner.run --market asx ${{ github.event.inputs.args }}
+          python -m scanner.run --market asx $ARGS
           RC_ASX=$?
           echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
           # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
@@ -144,11 +149,19 @@ jobs:
       - name: Verify VIVEK data schema
         run: |
           python - <<'PY'
-          import json, glob, sys
+          import json, glob, os, sys
           from scanner import config
           want = config.VIVEK_SCHEMA_VERSION
+          # Gate ONLY the files this run rewrote (2026-07-20 fix): a partial
+          # run (single-market dispatch / weekend crypto-only) used to be
+          # judged on sibling files still at the PREVIOUS schema version —
+          # the v3->v4 bump failed the first crypto-only run exactly this
+          # way. Full cycles still verify all three.
+          market = os.environ.get("SCANNED_MARKET", "all")
+          files = (sorted(glob.glob("public/data/*_vivek.json")) if market == "all"
+                   else [f"public/data/{market}_vivek.json"])
           bad = []
-          for f in glob.glob("public/data/*_vivek.json"):
+          for f in files:
               try:
                   v = json.load(open(f)).get("schema_version")
               except Exception as e:
@@ -157,7 +170,7 @@ jobs:
                   bad.append(f"{f}: schema_version {v} != expected {want}")
           if bad:
               print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
-          print(f"schema gate OK — all *_vivek.json at v{want}")
+          print(f"schema gate OK - {len(files)} file(s) at v{want} (scope: {market})")
           PY
 
       # Multi-lens confluence -> Discord ping. VIVEK results just refreshed;
@@ -195,7 +208,7 @@ jobs:
           # must be written ONLY by workflows in the "scan" concurrency group.
           # (Dropped: journal/journal.json + scalp_journal.json + discord_state
           # + data/notified_signals.json — nothing in this workflow writes them.)
-          PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/confluence_state.json data/market_caps.json"
+          PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/asx_prices.json public/data/nasdaq_prices.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/confluence_state.json data/market_caps.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

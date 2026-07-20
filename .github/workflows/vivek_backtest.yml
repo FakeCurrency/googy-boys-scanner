@@ -49,10 +49,14 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Stream backtest per market (commit after each)
+        env:
+          # Free-text inputs via env, never ${{ }} in run: (2026-07-20 security pass)
+          IN_LIMIT: ${{ github.event.inputs.limit }}
+          IN_PERIOD: ${{ github.event.inputs.period }}
         run: |
           set -e
-          LIM="${{ github.event.inputs.limit }}"; LIM="${LIM:-60}"
-          PER="${{ github.event.inputs.period }}"; PER="${PER:-10y}"
+          LIM="${IN_LIMIT:-60}"
+          PER="${IN_PERIOD:-10y}"
           # ALWAYS long-only, ALWAYS the longonly file — the canonical
           # both-directions vivek_backtest.json belongs to lens_backtest.yml.
           OUT="public/data/vivek_backtest_longonly.json"; FLAG="--long-only"

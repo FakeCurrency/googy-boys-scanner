@@ -29,7 +29,13 @@ async function keyFor(code) {
   return "journal:" + hex;
 }
 
-const cleanCode = (url) => (new URL(url).searchParams.get("code") || "").trim();
+// Sync code arrives via the X-Sync-Code HEADER (2026-07-20 security pass —
+// query strings leak through Referer, proxy/CDN logs and browser history;
+// the code is the journal's only credential). The ?code= query form is kept
+// as a fallback for older cached clients.
+const cleanCode = (request) =>
+  ((request.headers.get("X-Sync-Code") || "").trim()
+   || (new URL(request.url).searchParams.get("code") || "").trim());
 
 // Legacy floor — the owner's own sync code may be this short. New codes should
 // be ≥8 chars; the enumeration guard below is what keeps short codes viable.
@@ -84,7 +90,7 @@ export const onRequestGet = async ({ env, request }) => {
     return json(503, { ok: false, configured: false,
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare (see functions/api/journal.js)." });
   }
-  const code = cleanCode(request.url);
+  const code = cleanCode(request);
   if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
   if (await overRateLimit(env, request)) {
     return json(429, { ok: false, configured: true,
@@ -107,7 +113,7 @@ export const onRequestPut = async ({ env, request }) => {
     return json(503, { ok: false, configured: false,
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare." });
   }
-  const code = cleanCode(request.url);
+  const code = cleanCode(request);
   if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
   if (await overRateLimit(env, request)) {
     return json(429, { ok: false, configured: true,

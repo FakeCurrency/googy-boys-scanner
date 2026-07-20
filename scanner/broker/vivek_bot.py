@@ -113,6 +113,14 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
     if getattr(_cfg, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
         return skip("fund_reit", f"{sym} is a REIT/ETF/fund — excluded from bot trading")
 
+    # Data freshness (2026-07-20): a row computed off a cache-reused frame is
+    # days old — its "armed" trigger and prices describe a market that has
+    # since moved. Never open a position on stale data.
+    max_age = int(getattr(_cfg, "VIVEK_BOT_MAX_DATA_AGE_DAYS", 0) or 0)
+    age = int(row.get("data_age_days") or 0)
+    if max_age > 0 and age > max_age:
+        return skip("stale_data", f"{sym} data is {age}d old (cache reuse) — max {max_age}d")
+
     # Rule 1 — A+ ONLY.
     if grade != _cfg.VIVEK_BOT_MIN_GRADE:
         return skip("not_a_plus", f"grade {grade} — bot trades {_cfg.VIVEK_BOT_MIN_GRADE} only")

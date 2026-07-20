@@ -10,7 +10,7 @@ import subprocess
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import config, pulse
+from . import config   # (pulse import removed 2026-07-20 — module retired & deleted)
 from .data import download, _frame_age_days
 from .universe import load_universe
 

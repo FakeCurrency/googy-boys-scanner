@@ -105,6 +105,24 @@ def main() -> None:
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
 
+            # Slim per-market companion (2026-07-20, perf): the journal page
+            # only needs symbol -> price + grade/dir to mark positions, but was
+            # downloading the FULL scan file (ASX ~1.2MB, NASDAQ ~1.6MB) for
+            # that map. This is ~5% of the size; the full file stays canonical.
+            slim = {
+                "schema_version": vk["schema_version"],
+                "generated_at": vk["generated_at"],
+                "market": market_key,
+                "prices": vk["prices"],
+                "rows": {r["symbol"]: {"grade": r["grade"],
+                                       "grade_raw": r.get("grade_raw"),
+                                       "dir": r["dir"],
+                                       "headline_tf": r.get("headline_tf")}
+                         for r in vk["results"]},
+            }
+            (pathlib.Path(args.out) / f"{market_key}_prices.json").write_text(
+                json.dumps(slim, separators=(",", ":")) + "\n", encoding="utf-8")
+
             # Track-record journal RETIRED (owner 2026-07-09): it logged EVERY
             # armed A+/A on every timeframe with no position cap — 200+ open
             # trades whose early expectancy read as noise. The bot book
@@ -184,6 +202,7 @@ def main() -> None:
         "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
         "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
         "reentry_cooldown_days": config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS,
+        "max_data_age_days": config.VIVEK_BOT_MAX_DATA_AGE_DAYS,
         "earnings_buffer_days": config.VIVEK_BOT_EARNINGS_BUFFER_DAYS,
         "max_weekly_loss_pct": config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT,
         # Cost model (bps) — mirrored by the journal + cloud watcher

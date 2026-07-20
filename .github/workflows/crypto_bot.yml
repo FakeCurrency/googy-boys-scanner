@@ -50,7 +50,10 @@ jobs:
             vivek-frames-
 
       - name: Run crypto scan + paper bot
-        run: python -m scanner.run --market crypto ${{ github.event.inputs.args }}
+        env:
+          # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
+          ARGS: ${{ github.event.inputs.args }}
+        run: python -m scanner.run --market crypto $ARGS
 
       - name: Verify VIVEK data schema (crypto)
         run: |
@@ -77,7 +80,7 @@ jobs:
           # (phasemap snapshots, spec files, backtest stats) to this run's
           # stale checkout. Invariant: list only files written by scan-group
           # workflows.
-          PATHS="public/data/crypto_vivek.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json"
+          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json"
           git add $PATHS 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."

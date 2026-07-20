@@ -50,7 +50,15 @@
 
   // ---- localStorage scan cache with TTL -----------------------------------
   function cacheSet(key, data) {
-    try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ ts: Date.now(), data })); }
+    try {
+      const payload = JSON.stringify({ ts: Date.now(), data });
+      // Size cap (2026-07-20): full NASDAQ/ASX scans are 1-2MB each; three of
+      // them squeezed localStorage's ~5MB origin quota and could make the
+      // manual journal's save FAIL — a silently lost trade. Oversized scans
+      // skip the cache (cold loads just refetch); small markets still cache.
+      if (payload.length > 500_000) return;
+      localStorage.setItem(CACHE_PREFIX + key, payload);
+    }
     catch (_) {}
   }
   function cacheGet(key) {
@@ -254,83 +262,11 @@
       <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   }
 
-  // ----------------------------------------------------------- PULSE
-  function renderPulse(pulse) {
-    const sec = $("#pulse"), track = $("#pulse-track");
-    if (!sec || !track) return;   // PULSE removed from the page (owner, 2026-07-03)
-    if (!pulse || !pulse.length) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    track.innerHTML = pulse.map((p) => {
-      const val = p.value == null ? "—"
-        : p.value.toLocaleString(undefined, { minimumFractionDigits: p.decimals, maximumFractionDigits: p.decimals });
-      const dir = p.dir === "up" ? "up" : "down";
-      const day = p.day_pct == null ? "" : (p.day_pct >= 0 ? "+" : "") + p.day_pct.toFixed(2) + "%";
-      const d5 = p.d5_pct == null ? "" : "5D " + (p.d5_pct >= 0 ? "+" : "") + p.d5_pct.toFixed(2) + "%";
-      return `<div class="pulse-item" data-pkey="${esc(p.key)}">
-        <div class="pi-head"><span class="pi-key">${esc(p.key)}</span><span class="pi-val">${val}</span></div>
-        <div class="pi-change ${dir}">${day}<span class="pi-5d">${d5}</span></div>
-        ${spark(p.spark, 120, 22, p.dir === "up" ? COLOR.green : COLOR.red, "pi-spark")}
-      </div>`;
-    }).join("");
-  }
-
-  // Refresh PULSE values from Yahoo Finance after the static scan data renders,
-  // then keep them current on a slow interval. Staggers requests so we don't
-  // hammer the proxy, retries once on a transient failure, and reveals a visible
-  // "~15m delayed" badge once at least one live value lands (Yahoo isn't
-  // real-time for indices / futures / FX).
-  let _pulseTimer = null;
-  async function _pulseQuote(ticker) {
-    // One retry — Yahoo/proxy occasionally returns a transient non-200.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const res = await fetch(`/api/quote?sym=${encodeURIComponent(ticker)}`, { cache: "no-store" });
-        if (res.ok) {
-          const j = await res.json();
-          if (j && j.price != null) return j;
-        }
-      } catch (_) { /* fall through to retry */ }
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
-    }
-    return null;
-  }
-  async function _pulsePass(pulse) {
-    const track = $("#pulse-track");
-    if (!track) return;
-    let anyLive = false;
-    for (let i = 0; i < pulse.length; i++) {
-      const p = pulse[i];
-      if (!p.ticker) continue;
-      await new Promise((r) => setTimeout(r, i * 350));
-      const j = await _pulseQuote(p.ticker);
-      if (!j) continue;
-      const divide = p.divide || 1;
-      const price = j.price / divide;
-      const decimals = p.decimals ?? 2;
-      const valStr = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-      const item = track.querySelector(`[data-pkey="${CSS.escape(p.key)}"]`);
-      if (!item) continue;
-      const valEl = item.querySelector(".pi-val");
-      if (valEl && valEl.textContent !== valStr) {
-        valEl.textContent = valStr;
-        const refreshedAt = j.time ? new Date(j.time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-        valEl.title = refreshedAt ? `~15min delayed · as of ${refreshedAt}` : "~15min delayed";
-      }
-      anyLive = true;
-    }
-    if (anyLive) {
-      const badge = $("#pulse-delayed");
-      if (badge) badge.hidden = false;
-    }
-  }
-  function refreshPulseLive(pulse) {
-    if (!pulse || !pulse.length) return;
-    if (_pulseTimer) { clearInterval(_pulseTimer); _pulseTimer = null; }
-    _pulsePass(pulse);
-    // Keep the macro row live without reloading the page (Yahoo is ~15m delayed,
-    // so a 90s cadence is plenty fresh and gentle on the proxy).
-    _pulseTimer = setInterval(() => _pulsePass(pulse), 90000);
-  }
+  // PULSE fully removed (2026-07-20, hygiene): the UI section went 2026-07-03,
+  // the scanner stopped publishing data 2026-07-09, but ~75 lines of render +
+  // a 90-second /api/quote polling interval were still shipped and ARMED
+  // whenever old cached data carried a non-empty pulse array. Payloads keep an
+  // empty "pulse" key for one release; nothing reads it here anymore.
 
   // ------------------------------------------------------- EMA / SMA legend
   function renderLegend(d) {
@@ -683,6 +619,8 @@
           <div class="vk-hero-top">
             <span class="vk-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
             <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
+            ${r.headline_tf && r.headline_tf !== "1D"
+              ? `<span class="vk-tf-chip" title="Entry/SL/TP and R:R shown are the ${esc(r.headline_tf)} plan — the timeframe the trigger armed on (and the one the bot trades)">${esc(r.headline_tf)} PLAN</span>` : ""}
             <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
             ${scanAge()}
             <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
@@ -1160,8 +1098,6 @@
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     renderFreshness(d);
-    renderPulse(d.pulse);
-    refreshPulseLive(d.pulse);
     renderEntryFilters(d);
     renderLegend(d);
     renderStats(d);

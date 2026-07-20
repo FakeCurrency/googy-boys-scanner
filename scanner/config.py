@@ -393,6 +393,12 @@ VIVEK_BOT_MAX_HOLD_DAYS  = 28
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+#  • MAX_DATA_AGE_DAYS (2026-07-20): rows built from the last-good frame cache
+#    carry data_age_days > 0 when Yahoo dropped the ticker this run. A trigger
+#    "armed" on multi-day-old data is fiction — the real market has moved —
+#    so the bot skips rows older than this. 0 = off. The scan still DISPLAYS
+#    stale rows (age-badged); this gates the bot's entries only.
+VIVEK_BOT_MAX_DATA_AGE_DAYS = 3
 # Earnings gap-avoidance (best-effort, fail-open): skip NEW entries when the
 # name reports within the buffer. Gapping through a stop is the one tail the
 # stop can't manage. Lookup is one yfinance call per candidate FILL (a handful

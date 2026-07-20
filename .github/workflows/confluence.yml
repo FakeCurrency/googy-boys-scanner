@@ -1,0 +1,73 @@
+name: Confluence alert (post-nightly)
+
+# Multi-lens confluence -> Discord ping, 15 min after the PhaseMap/Specs
+# nightly lands (2026-07-20, review H6). This workflow exists so the
+# confluence dedupe state (journal/confluence_state.json +
+# public/data/phasemap/alert_history.json) has a SINGLE committing owner:
+# the "scan" concurrency group. Previously phasemap.yml (its own group)
+# also ran confluence and committed the state, so the two groups could
+# revert each other's dedupe keys — duplicate @here pings or silenced
+# alerts. Intraday confluence still runs inside scan.yml after every scan;
+# this run only picks up alignments created by the nightly data refresh.
+
+on:
+  schedule:
+    - cron: "45 8 * * *"     # daily, 15 min after phasemap.yml's 08:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as scan.yml / crypto_bot.yml / close_position.yml — every
+# committer of the confluence state serializes here (the C1 invariant).
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  confluence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Confluence Discord alert
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
+        run: python -m scanner.confluence_alert
+
+      - name: Commit state (surgical — the two confluence files only)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          PATHS="journal/confluence_state.json public/data/phasemap/alert_history.json"
+          git add $PATHS 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No state changes to commit."
+            exit 0
+          fi
+          git commit -m "data: confluence $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+              git checkout "$SHA" -- "$p" 2>/dev/null || true
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: confluence $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

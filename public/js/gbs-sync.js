@@ -113,7 +113,11 @@
     const code = getCode();
     if (!code) return { ok: false, configured: null, data: null };
     try {
-      const res = await fetch(`${API}?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+      // Code travels in a HEADER, not the query string (2026-07-20 security
+      // pass): URLs leak via Referer, proxy logs and browser history, and the
+      // code is this journal's only credential. Server still accepts ?code=
+      // as a fallback for older cached clients.
+      const res = await fetch(API, { cache: "no-store", headers: { "X-Sync-Code": code } });
       const j = await res.json().catch(() => null);
       if (!res.ok || !j) return { ok: false, configured: j ? j.configured : null, data: null };
       return { ok: true, configured: true, data: j.data || null };
@@ -143,9 +147,9 @@
     if (!code) return { ok: false };
     if (!_putBudgetOk()) return { ok: false, skipped: "budget" };   // stay inside the free tier
     try {
-      const res = await fetch(`${API}?code=${encodeURIComponent(code)}`, {
+      const res = await fetch(API, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Sync-Code": code },
         body: JSON.stringify(normalize(d)),
       });
       const j = await res.json().catch(() => null);

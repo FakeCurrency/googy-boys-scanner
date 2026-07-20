@@ -96,6 +96,25 @@ def test_display_hold_does_not_leak_into_grade_raw(monkeypatch):
     assert row["grade_raw"] == "A"       # what the bot is allowed to buy
 
 
+def test_bot_skips_stale_cache_reused_rows(monkeypatch):
+    """2026-07-20 (Phase 2): a row built from a cache-reused frame carries
+    data_age_days > 0 — its armed trigger describes a market that has since
+    moved. The bot must never open on it; fresh rows pass untouched."""
+    from scanner import config as _c
+    monkeypatch.setattr(_c, "VIVEK_BOT_MAX_DATA_AGE_DAYS", 3, raising=False)
+    row = {"symbol": "BHP", "name": "BHP", "sector": "Materials", "dir": "LONG",
+           "grade": "A+", "grade_raw": "A+", "entry_types": ["reclaim"],
+           "plans": {"1W": _plan(103.0, armed=True)}, "price": 103.0,
+           "data_age_days": 5}
+    out = vivek_bot.evaluate_setup(row)
+    assert out["take"] is False and out["code"] == "stale_data"
+
+    row["data_age_days"] = 0
+    assert vivek_bot.evaluate_setup(row)["take"] is True
+    del row["data_age_days"]                       # absent field == fresh
+    assert vivek_bot.evaluate_setup(row)["take"] is True
+
+
 def test_bot_buys_off_grade_raw_not_the_smoothed_grade():
     plans = {"1W": _plan(103.0, armed=True)}
     row = {"symbol": "BHP", "name": "BHP", "sector": "Materials", "dir": "LONG",
