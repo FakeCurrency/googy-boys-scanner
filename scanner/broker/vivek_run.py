@@ -48,12 +48,34 @@ from ..journal_common import atomic_write
 log = logging.getLogger("vivek_run")
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-BOOK_FILE = ROOT / "journal" / "vivek_bot_book.json"
+BOOK_DIR = ROOT / "journal"
+# BOOK LAYOUT v2 (2026-07-20, Phase 3 — structural fix for the C1 race class):
+#   CANONICAL: journal/vivek_bot_book.<market>.json — one file per market.
+#     run_market(m) can only ever touch market m's file, so one market's run
+#     clobbering another's closes is impossible BY CONSTRUCTION (not merely
+#     by workflow scheduling, which remains as belt-and-braces).
+#   DERIVED:   journal/vivek_bot_book.json (+ the public/data twin) — the
+#     combined view, regenerated from the canonical files on every save.
+#     Same name + schema as the old single book, so the frontend, backup
+#     tooling, kill switch and older tests keep working unchanged. If it is
+#     ever stale/corrupt it is REGENERABLE: python -m scanner.broker.vivek_run
+#     --rebuild-combined. The canonical files are the track record.
+#   MIGRATION: first load of a market whose canonical file doesn't exist
+#     splits that market's slice out of the legacy combined file (read-only —
+#     the legacy file itself is never mutated by migration; git history holds
+#     the pre-split state). Entries with an unrecognised market go to
+#     vivek_bot_book.unassigned.json so nothing can be silently dropped.
+BOOK_FILE = BOOK_DIR / "vivek_bot_book.json"           # combined, DERIVED
 PUBLIC_FILE = ROOT / "public" / "data" / "vivek_bot_book.json"
+UNASSIGNED_FILE = BOOK_DIR / "vivek_bot_book.unassigned.json"
 
-BOOK_VERSION = 1
+BOOK_VERSION = 2                   # v2 = per-market canonical files
 TIMEFRAMES = ("1D", "1W")          # server-side intraday timeframes (4H is browser-only)
-MAX_CLOSED = 4000
+MAX_CLOSED = 4000                  # per MARKET file now (was: whole book)
+
+
+def _market_book_file(market: str) -> pathlib.Path:
+    return BOOK_DIR / f"vivek_bot_book.{market}.json"
 
 
 # ── persistence (separate from the signal journal — Decision §9.2) ────────────
@@ -85,37 +107,125 @@ def _alert_book_corrupt(err: Exception) -> None:
         log.warning("could not send corrupt-book alert: %s", e)
 
 
-def _load_book() -> dict:
-    if not BOOK_FILE.exists():
-        # An ABSENT book is a legitimate fresh start (first run / deliberate
-        # reset). Only an unreadable EXISTING book aborts, below.
-        return {"version": BOOK_VERSION, "mode": "paper", "open": [], "closed": []}
+def _read_json_or_abort(path: pathlib.Path, what: str) -> dict:
+    """Parse a book file or ABORT the process (C2 rule: an unreadable track
+    record must never be silently replaced; the file is left untouched)."""
     try:
-        b = json.loads(BOOK_FILE.read_text(encoding="utf-8"))
+        b = json.loads(path.read_text(encoding="utf-8"))
         b.setdefault("open", [])
         b.setdefault("closed", [])
         return b
     except Exception as e:
-        # THE track record is unreadable. Leave the file EXACTLY as it is (no
-        # rename — parking it made the next run silently start empty), alert,
-        # and abort the process so nothing downstream can write a blank book.
-        log.error("vivek book CORRUPT (%s) — aborting run, book left untouched at %s",
-                  e, BOOK_FILE)
+        log.error("vivek %s CORRUPT (%s) - aborting run, file left untouched at %s",
+                  what, e, path)
         _alert_book_corrupt(e)
         raise BookCorruptError(
-            f"vivek_run: corrupt bot book at {BOOK_FILE} ({e}) — run aborted, "
+            f"vivek_run: corrupt {what} at {path} ({e}) - run aborted, "
             f"file left untouched; restore from git/backups before re-running"
         ) from e
 
 
-def _save_book(book: dict) -> None:
-    book["version"] = BOOK_VERSION
-    book["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-    if len(book["closed"]) > MAX_CLOSED:
-        book["closed"] = book["closed"][-MAX_CLOSED:]
-    payload = json.dumps(book, indent=2)
+def _split_from_legacy(market: str) -> dict | None:
+    """One-time migration: derive `market`'s slice from the legacy combined
+    file. Read-only on the legacy file. Returns None when there is nothing to
+    migrate (fresh install). On the first split, entries whose market isn't in
+    config.MARKETS are preserved to UNASSIGNED_FILE — never dropped."""
+    if not BOOK_FILE.exists():
+        return None
+    legacy = _read_json_or_abort(BOOK_FILE, "legacy combined book (migration)")
+    known = set(config.MARKETS)
+    if not UNASSIGNED_FILE.exists():
+        stray = ([p for p in legacy["open"] if p.get("market") not in known]
+                 + [p for p in legacy["closed"] if p.get("market") not in known])
+        if stray:
+            atomic_write(UNASSIGNED_FILE, json.dumps(
+                {"version": BOOK_VERSION, "note": "entries with unknown market, "
+                 "preserved by the v2 per-market split", "entries": stray}, indent=2))
+            log.warning("book migration: %d entries with unknown market preserved "
+                        "to %s", len(stray), UNASSIGNED_FILE.name)
+    mbook = {
+        "version": BOOK_VERSION, "mode": legacy.get("mode", "paper"),
+        "market": market,
+        "open": [p for p in legacy["open"] if p.get("market") == market],
+        "closed": [p for p in legacy["closed"] if p.get("market") == market],
+        "guard": {market: (legacy.get("guard") or {}).get(market)}
+                 if (legacy.get("guard") or {}).get(market) else {},
+    }
+    log.info("book migration: split %s slice from legacy combined "
+             "(%d open, %d closed)", market, len(mbook["open"]), len(mbook["closed"]))
+    return mbook
+
+
+def _load_market_book(market: str) -> dict:
+    """CANONICAL per-market book. Missing file -> migrate from legacy combined,
+    else a legitimate fresh start. Corrupt file -> abort (C2)."""
+    p = _market_book_file(market)
+    if not p.exists():
+        migrated = _split_from_legacy(market)
+        if migrated is not None:
+            return migrated
+        return {"version": BOOK_VERSION, "mode": "paper", "market": market,
+                "open": [], "closed": []}
+    return _read_json_or_abort(p, f"bot book [{market}]")
+
+
+def _combined_view(override: dict | None = None) -> dict:
+    """The combined book, merged from the canonical per-market files (plus any
+    preserved unassigned entries). `override` = {market: mbook} lets a dry-run
+    show its in-memory slice without touching disk."""
+    override = override or {}
+    out = {"version": BOOK_VERSION, "mode": "paper", "open": [], "closed": [],
+           "guard": {}}
+    for market in config.MARKETS:
+        if market in override:
+            mb = override[market]
+        else:
+            p = _market_book_file(market)
+            if p.exists():
+                mb = _read_json_or_abort(p, f"bot book [{market}]")
+            else:
+                mb = _split_from_legacy(market) or {"open": [], "closed": []}
+        out["open"].extend(mb.get("open") or [])
+        out["closed"].extend(mb.get("closed") or [])
+        out["guard"].update(mb.get("guard") or {})
+        if mb.get("mode") and mb["mode"] != "paper":
+            out["mode"] = mb["mode"]
+    if UNASSIGNED_FILE.exists():
+        try:
+            stray = json.loads(UNASSIGNED_FILE.read_text(encoding="utf-8"))
+            out["open"].extend([p for p in stray.get("entries", [])
+                                if p.get("status") == "open"])
+            out["closed"].extend([p for p in stray.get("entries", [])
+                                  if p.get("status") != "open"])
+        except Exception as e:                     # display-only; never fatal
+            log.warning("could not fold unassigned entries into combined view: %s", e)
+    out["summary"] = {
+        "open": len(out["open"]),
+        "unreal_usd": round(sum(p.get("unreal_usd", 0.0) or 0.0 for p in out["open"]), 2),
+        "updated_day": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d"),
+    }
+    out["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    return out
+
+
+def _write_combined() -> None:
+    """Regenerate the DERIVED combined view (journal + public twin) from the
+    canonical files. Written after the canonical save, so a crash in between
+    leaves combined at most one run stale - and always regenerable."""
+    payload = json.dumps(_combined_view(), indent=2)
     atomic_write(BOOK_FILE, payload)
     atomic_write(PUBLIC_FILE, payload)
+
+
+def _save_market_book(market: str, mbook: dict) -> None:
+    """Persist ONE market's canonical file, then refresh the combined view."""
+    mbook["version"] = BOOK_VERSION
+    mbook["market"] = market
+    mbook["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    if len(mbook["closed"]) > MAX_CLOSED:
+        mbook["closed"] = mbook["closed"][-MAX_CLOSED:]
+    atomic_write(_market_book_file(market), json.dumps(mbook, indent=2))
+    _write_combined()
 
 
 def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) -> dict | None:
@@ -215,7 +325,7 @@ def close_bot_position(symbol: str, market: str, price: float,
     price = float(price)
     if price <= 0:
         raise ValueError(f"close price must be positive, got {price!r}")
-    book = _load_book()                  # corrupt book -> BookCorruptError (C2)
+    book = _load_market_book(market)     # corrupt book -> BookCorruptError (C2)
     sym = str(symbol or "").upper()
     if day is None:
         tz = config.MARKETS[market].timezone if market in config.MARKETS else "UTC"
@@ -255,7 +365,7 @@ def close_bot_position(symbol: str, market: str, price: float,
 
     book["open"] = [p for p in book["open"] if p is not match]
     book["closed"].append(match)
-    _save_book(book)
+    _save_market_book(market, book)
     log.info("close_bot_position: CLOSED %s %s [%s] @ %g -> %+.2fR (%s)",
              sym, match.get("direction"), market, price,
              match.get("realized_r") or 0.0, reason)
@@ -337,7 +447,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     """
     if not config.VIVEK_BOT_ENABLED:
         log.info("vivek_run [%s]: disabled (VIVEK_BOT_ENABLED=False) — no-op", market)
-        return _load_book()
+        return _combined_view()
 
     equity = config.VIVEK_BOT_ACCOUNT_EQUITY if equity is None else equity
     dry_run = config.VIVEK_BOT_DRY_RUN if dry_run is None else dry_run
@@ -362,7 +472,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     def price_of(sym):
         return _current_price(frames, yf_map.get(sym))
 
-    book = _load_book()
+    # CANONICAL per-market slice: this run can only ever write THIS market's
+    # file (Phase 3 book layout v2) — cross-market interference is impossible.
+    book = _load_market_book(market)
     book["mode"] = mode
 
     # Open-book symbols can fall OUT of the universe while still being live
@@ -511,9 +623,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                  "(book unchanged: %d open, %d short) · decision: %s",
                  market, "OPEN" if is_open else "closed-session", added, closed_now,
                  book_open, book_short, decision["summary"]["skip_reasons"] or "none")
-        return book
+        # Combined view with THIS market's in-memory (unsaved) slice overlaid.
+        return _combined_view(override={market: book})
 
-    _save_book(book)
+    _save_market_book(market, book)
     log.info("vivek_run [%s]: %s · %s · +%d new, %d closed (%d open, %d short)",
              market, mode.upper(), "OPEN" if is_open else "closed-session",
              added, closed_now, book_open, book_short)
@@ -536,7 +649,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                    "\n".join(lines))
         except Exception as e:                            # alerts must never break a run
             log.warning("could not send trade-event alert: %s", e)
-    return book
+    # Return the cross-market combined view (same shape callers always saw).
+    return _combined_view()
 
 
 # ── CLI: dry-run smoke test from the latest scan JSON ─────────────────────────
@@ -560,7 +674,17 @@ def main() -> None:
     parser.add_argument("--direction", choices=["long", "short"],
                         help="disambiguate --close when both sides exist")
     parser.add_argument("--day", help="exit date YYYY-MM-DD for --close (default: today)")
+    parser.add_argument("--rebuild-combined", action="store_true",
+                        help="regenerate the derived combined book from the "
+                             "canonical per-market files and exit")
     args = parser.parse_args()
+
+    if args.rebuild_combined:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        _write_combined()
+        v = _combined_view()
+        print(f"combined view rebuilt: {len(v['open'])} open, {len(v['closed'])} closed")
+        return
 
     if args.close:
         logging.basicConfig(level=logging.INFO, format="%(message)s")

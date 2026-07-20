@@ -268,6 +268,26 @@
   // whenever old cached data carried a non-empty pulse array. Payloads keep an
   // empty "pulse" key for one release; nothing reads it here anymore.
 
+  // Offline visibility (2026-07-20): the service worker serves cached /data
+  // when the network is gone — fine for reading, but it must never READ as
+  // live on a trading dashboard. Persistent amber banner while offline.
+  function _netBanner(off) {
+    let el = document.getElementById("gbs-offline-banner");
+    if (!off) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "gbs-offline-banner";
+      el.style.cssText = "position:fixed;bottom:14px;left:50%;transform:translateX(-50%);"
+        + "z-index:9999;background:#ff9500;color:#000;padding:8px 16px;border-radius:10px;"
+        + "font-weight:600;font-size:12.5px;box-shadow:0 6px 24px rgba(0,0,0,.4)";
+      el.textContent = "OFFLINE — showing the last cached scan, not live data.";
+      document.body.appendChild(el);
+    }
+  }
+  window.addEventListener("offline", () => _netBanner(true));
+  window.addEventListener("online", () => _netBanner(false));
+  if (navigator.onLine === false) _netBanner(true);
+
   // ------------------------------------------------------- EMA / SMA legend
   function renderLegend(d) {
     let periods, colors, label;

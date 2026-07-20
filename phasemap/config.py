@@ -14,7 +14,12 @@ from dataclasses import dataclass, field
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant
-RULESET_VERSION = "1.3.0"          # 1.3.0: 24/7 markets scan CLOSED bars only — the
+RULESET_VERSION = "1.3.1"          # 1.3.1: backtest FILL REALISM — entry_mid is only
+#                                    credited when price actually trades through it;
+#                                    gappers fill at the signal close (review H4).
+#                                    Detection maths unchanged; stats artefacts
+#                                    regenerate at this version before {stats} speaks.
+#                                    1.3.0: 24/7 markets scan CLOSED bars only — the
 #                                    still-forming UTC daily candle is dropped before
 #                                    detection (review H3; owner-approved 2026-07-20)
 #                                    1.2.0: M4 backtest harness + {stats} slot wired

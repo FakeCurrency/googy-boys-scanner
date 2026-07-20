@@ -105,12 +105,28 @@ def _finalize(sig: dict, ind) -> None:
     n = len(ind.close)
     bull = sig["direction"] == "bullish"
     sign = 1.0 if bull else -1.0
-    em = sig["entry_mid"]
+    end = min(n, i + CONFIG.stats_window_bars + 1)
+    # FILL REALISM (2026-07-20, review H4 / ruleset 1.3.1): entry_mid is a
+    # RETRACE limit in the 0.236-0.382 band — it only fills if price actually
+    # trades back through the mid after the signal bar. The old code credited
+    # the mid fill unconditionally, so exactly the winners that gapped away
+    # (never retraced) were measured from a price nobody could have got —
+    # overstating the published edge. A signal whose mid never trades fills
+    # at the signal-bar close instead (what a taker would have paid).
+    em0 = sig["entry_mid"]
+    filled_mid = False
+    if em0 > 0 and end > i + 1:
+        if bull:
+            filled_mid = float(min(ind.low[i + 1:end])) <= em0
+        else:
+            filled_mid = float(max(ind.high[i + 1:end])) >= em0
+    em = em0 if filled_mid else float(ind.close[i])
+    sig["fill"] = "entry_mid" if filled_mid else "close"
+    sig["fill_price"] = round(em, 12)
     for h in CONFIG.fwd_return_bars:
         j = i + h
         sig[f"fwd_{h}"] = round(sign * (float(ind.close[j]) / em - 1), 4) \
             if (j < n and em > 0) else None
-    end = min(n, i + CONFIG.stats_window_bars + 1)
     if end > i + 1 and em > 0:
         if bull:
             sig["mae"] = round(float(min(ind.low[i + 1:end])) / em - 1, 4)
@@ -138,6 +154,8 @@ def _finalize(sig: dict, ind) -> None:
 
 def run_ticker(ticker: str, df, market: str, volume_is_usd: bool = False) -> list:
     """All signals for one ticker, both directions, fully measured."""
+    from phasemap.engine.scanner import drop_forming_bar
+    df = drop_forming_bar(df, market)      # 24/7: closed bars only (H3 parity)
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
     df = df[(df[["Open", "High", "Low", "Close"]] > 0).all(axis=1)].reset_index(drop=True)
     if len(df) < CONFIG.min_history_bars:

@@ -63,6 +63,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
   vivek_backtest.py    walk-forward replay (1D/3D/1W, level_tf cohorts)
   vivek_journal.py     RETIRED as a journal (2026-07-09) — module kept: the
                        backtester + bot runner import its trade primitives
+                       (notify/alerts/pulse + broker paper_run/bracket_order/
+                       reconcile DELETED 2026-07-20 — see git history)
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
   broker/              vivek_bot.py (decision engine: A+ only, 10/market,
                        one/symbol, short-slot reserve), vivek_run.py (paper book),
@@ -82,20 +84,32 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | Workflow | Schedule | Does |
 |---|---|---|
 | test.yml | every push/PR | pytest + JS tests + syntax gate |
-| scan.yml | 30-min, market hours (weekend = crypto-only) | VIVEK scans + bot stocks book + confluence alert |
-| crypto_bot.yml | hourly 24/7 | crypto scans + crypto bot book |
-| phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate (validates SLIM latest.json + narrations.json sidecar) |
+| scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only) | VIVEK scans + bot book + confluence alert |
+| crypto_bot.yml | hourly 24/7 | crypto scan + crypto slice of the bot book |
+| confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
+| backup_book.yml | daily 21:35 UTC | snapshots the bot book + journal state into `backups/` (keep 30) |
+| phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + schema gate (SLIM latest.json + narrations sidecar); no confluence here |
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
-| stop_watcher / close_position / kill_switch / discord_digest / feeds | various | legacy-journal stops, manual close, flatten, digests |
+| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market (broker flatten only if keys set) |
+| stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
+| close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals |
+
+(Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
+paper_run/bracket_order/reconcile modules deleted.)
 
 ---
 
 ## Journals & track record — IMPORTANT
 
-- **The bot book (`journal/vivek_bot_book.json` → journal page "Claude" side)
-  is the ONE AND ONLY track record.** A+ only, max 10/market, one per symbol,
-  daily loss guards.
+- **The bot book is the ONE AND ONLY track record.** Layout v2 (2026-07-20):
+  CANONICAL per-market files `journal/vivek_bot_book.<market>.json` (a market's
+  run can only write its own file — cross-market clobber impossible by
+  construction); `journal/vivek_bot_book.json` + the public twin are a DERIVED
+  combined view (same old schema; regenerate with
+  `python -m scanner.broker.vivek_run --rebuild-combined`). A+ only (grade_raw,
+  unsmoothed), max 10/market, one per symbol, daily+weekly loss guards, manual
+  close via close_position.yml journal_type=bot.
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.

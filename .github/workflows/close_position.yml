@@ -96,7 +96,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Surgical paths (review C3): only the files a close can write —
           # never the whole public/data directory.
-          git add journal/vivek_bot_book.json public/data/vivek_bot_book.json \
+          git add journal/vivek_bot_book.json journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json public/data/vivek_bot_book.json \
                   journal/journal.json journal/scalp_journal.json \
                   public/data/journal.json public/data/scalp_journal.json 2>/dev/null || true
           if git diff --cached --quiet; then

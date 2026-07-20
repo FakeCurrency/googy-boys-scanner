@@ -127,6 +127,14 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
     if df is None or len(df) < config.VIVEK_MIN_HISTORY + 5:
         return []
     df = df[~df.index.duplicated(keep="last")].sort_index()
+    # 24/7 markets: never let the still-forming UTC daily bar into the replay
+    # (2026-07-20 — parity with the scan's VIVEK_DROP_FORMING_BAR / H3): a
+    # partial final candle would seed the last detect/manage step with numbers
+    # that change until midnight.
+    if market == "crypto" and len(df) and df.index[-1].date() == dt.datetime.now(dt.timezone.utc).date():
+        df = df.iloc[:-1]
+        if len(df) < config.VIVEK_MIN_HISTORY + 5:
+            return []
     n = len(df)
     idx = df.index
     o, h, l, c = df["Open"].to_numpy(), df["High"].to_numpy(), df["Low"].to_numpy(), df["Close"].to_numpy()

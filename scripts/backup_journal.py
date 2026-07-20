@@ -30,9 +30,14 @@ ROOT       = pathlib.Path(__file__).resolve().parents[1]
 BACKUP_DIR = ROOT / "backups"
 
 BACKUP_FILES = [
-    # THE track record (2026-07-20, review C2): the bot book is the one file
-    # whose loss is unrecoverable — it must be first in every backup. Both the
-    # canonical copy and the published twin (they can diverge; keep both).
+    # THE track record (2026-07-20, review C2 + Phase 3 layout v2): the
+    # CANONICAL per-market book files come first — they are the record.
+    # The combined file + public twin are derived views (kept for
+    # convenience; regenerable via vivek_run --rebuild-combined).
+    "journal/vivek_bot_book.asx.json",
+    "journal/vivek_bot_book.nasdaq.json",
+    "journal/vivek_bot_book.crypto.json",
+    "journal/vivek_bot_book.unassigned.json",
     "journal/vivek_bot_book.json",
     "public/data/vivek_bot_book.json",
     "journal/journal.json",

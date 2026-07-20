@@ -53,7 +53,11 @@ def _aest(y, m, d, hh, mm):
 
 
 def _enable(monkeypatch, tmp_path, dry_run=False, mode=None):
+    # Book layout v2 (Phase 3): canonical per-market files under BOOK_DIR +
+    # the derived combined view at BOOK_FILE (+ public twin).
+    monkeypatch.setattr(vr, "BOOK_DIR", tmp_path)
     monkeypatch.setattr(vr, "BOOK_FILE", tmp_path / "vivek_bot_book.json")
+    monkeypatch.setattr(vr, "UNASSIGNED_FILE", tmp_path / "vivek_bot_book.unassigned.json")
     monkeypatch.setattr(vr, "PUBLIC_FILE", tmp_path / "public_book.json")
     monkeypatch.setattr(config, "VIVEK_BOT_ENABLED", True)
     monkeypatch.setattr(config, "VIVEK_BOT_DRY_RUN", dry_run)
@@ -61,17 +65,28 @@ def _enable(monkeypatch, tmp_path, dry_run=False, mode=None):
         monkeypatch.setattr(config, "VIVEK_BOT_MODE", mode)
 
 
+def _mfile(tmp_path, market):
+    return tmp_path / f"vivek_bot_book.{market}.json"
+
+
+def _write_market_book(tmp_path, market, open_=None, closed=None):
+    import json
+    (_mfile(tmp_path, market)).write_text(json.dumps(
+        {"version": 2, "mode": "paper", "market": market,
+         "open": list(open_ or []), "closed": list(closed or [])}), encoding="utf-8")
+
+
 # ── safety gates ────────────────────────────────────────────────────────────────
 
 def test_disabled_runner_is_a_noop(tmp_path, monkeypatch):
-    monkeypatch.setattr(vr, "BOOK_FILE", tmp_path / "book.json")
-    monkeypatch.setattr(vr, "PUBLIC_FILE", tmp_path / "pub.json")
+    _enable(monkeypatch, tmp_path)
     monkeypatch.setattr(config, "VIVEK_BOT_ENABLED", False)
     uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
     bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
                        now=_aest(2024, 1, 2, 11, 0))
     assert bk["open"] == [] and bk["closed"] == []
-    assert not (tmp_path / "book.json").exists()        # nothing written
+    assert not (tmp_path / "vivek_bot_book.json").exists()   # nothing written
+    assert not _mfile(tmp_path, "asx").exists()
 
 
 def test_dry_run_decides_but_never_writes_the_book(tmp_path, monkeypatch):
@@ -110,7 +125,8 @@ def test_fills_at_intraday_price_and_carries_entry_type_label(tmp_path, monkeypa
     assert pos["entry_type_label"] == ENTRY_TYPE_LABEL["reclaim"]
     assert pos["timeframe"] == "1D" and pos["grade"] == "A+"
     assert pos["units"] > 0 and pos["leverage_target"] == 5
-    assert (tmp_path / "vivek_bot_book.json").exists()    # persisted
+    assert _mfile(tmp_path, "asx").exists()               # canonical persisted
+    assert (tmp_path / "vivek_bot_book.json").exists()    # derived combined too
 
 
 def test_closed_session_opens_nothing(tmp_path, monkeypatch):
@@ -187,6 +203,76 @@ def test_corrupt_book_aborts_loudly_and_leaves_the_file_untouched(tmp_path, monk
     assert (tmp_path / "vivek_bot_book.json").read_text() == bad   # untouched
     assert not (tmp_path / "vivek_bot_book.corrupt.json").exists() # no parking
     assert not (tmp_path / "public_book.json").exists()            # nothing written
+
+
+def test_corrupt_market_file_aborts_loudly_too(tmp_path, monkeypatch):
+    """Layout v2: a corrupt CANONICAL per-market file must abort the same way."""
+    _enable(monkeypatch, tmp_path)
+    bad = "{ not json"
+    _mfile(tmp_path, "asx").write_text(bad)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    with pytest.raises(vr.BookCorruptError):
+        vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                      now=_aest(2024, 1, 2, 11, 0))
+    assert _mfile(tmp_path, "asx").read_text() == bad              # untouched
+
+
+# ── book layout v2: per-market canonical files (2026-07-20, Phase 3) ───────────
+
+def test_market_isolation_by_construction(tmp_path, monkeypatch):
+    """The structural guarantee: running ASX can not touch the other markets'
+    canonical files, byte for byte — even though it rewrites the combined view."""
+    import json
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "nasdaq",
+                       open_=[{"symbol": "MDB", "market": "nasdaq", "direction": "long",
+                               "status": "open", "entry": 1, "risk": 1}])
+    _write_market_book(tmp_path, "crypto",
+                       closed=[{"symbol": "BTC", "market": "crypto", "status": "closed",
+                                "realized_r": 2.0}])
+    before = {m: _mfile(tmp_path, m).read_bytes() for m in ("nasdaq", "crypto")}
+
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+
+    for m in ("nasdaq", "crypto"):
+        assert _mfile(tmp_path, m).read_bytes() == before[m]       # UNTOUCHED
+    # …while the combined view sees all three markets
+    assert {p["market"] for p in bk["open"]} == {"asx", "nasdaq"}
+    assert any(t["market"] == "crypto" for t in bk["closed"])
+    combined = json.loads((tmp_path / "vivek_bot_book.json").read_text())
+    assert len(combined["open"]) == 2 and len(combined["closed"]) == 1
+
+
+def test_migration_splits_legacy_and_preserves_unknown_markets(tmp_path, monkeypatch):
+    import json
+    _enable(monkeypatch, tmp_path)
+    legacy = {"version": 1, "mode": "paper",
+              "open": [{"symbol": "BHP", "market": "asx", "status": "open",
+                        "entry": 100.0, "stop": 96.0, "tp1": 106.0, "tp2": 112.0,
+                        "tp3": 120.0, "risk": 4.0, "direction": "long",
+                        "scale": [0.25, 0.5, 0.15], "booked_pct": 0.0,
+                        "entry_date": "2024-01-01",
+                        "tp1_hit": False, "tp2_hit": False, "tp3_hit": False,
+                        "realized_r": 0.0, "gross_r": 0.0, "exits": [],
+                        "mae": 100.0, "mfe": 100.0},
+                       {"symbol": "OLD", "market": "retired_mkt", "status": "open"}],
+              "closed": [{"symbol": "CBA", "market": "asx", "status": "closed",
+                          "realized_r": 1.0}],
+              "guard": {"asx": {"breached": False}}}
+    (tmp_path / "vivek_bot_book.json").write_text(json.dumps(legacy), encoding="utf-8")
+
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+
+    m = json.loads(_mfile(tmp_path, "asx").read_text())
+    assert [p["symbol"] for p in m["open"]] == ["BHP"]             # asx slice only
+    assert [t["symbol"] for t in m["closed"]] == ["CBA"]
+    stray = json.loads((tmp_path / "vivek_bot_book.unassigned.json").read_text())
+    assert [e["symbol"] for e in stray["entries"]] == ["OLD"]      # never dropped
+    assert any(p["symbol"] == "OLD" for p in bk["open"])           # still visible combined
 
 
 def test_book_corrupt_error_escapes_generic_exception_handlers():

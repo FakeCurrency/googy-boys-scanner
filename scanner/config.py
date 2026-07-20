@@ -110,24 +110,8 @@ BROKERAGE_EACH_WAY = 5       # brokerage cost per leg (buy + sell = 2x this)
 MAX_POSITIONS_LONG = 10      # maximum concurrent open long positions across all markets
 MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across all markets
 
-# ---------------------------------------------------------------------------
-# PULSE — macro market indicators shown in the top bar.
-# (key, label, yfinance ticker, divide_by, decimals)
-# ---------------------------------------------------------------------------
-PULSE = [
-    ("ASX200",  "ASX 200",  "^AXJO",     1,  0),
-    ("GOLD",    "Gold",     "GC=F",      1,  0),
-    ("SILVER",  "Silver",   "SI=F",      1,  2),
-    ("BRENT",   "Brent",    "BZ=F",      1,  2),
-    ("WTI",     "WTI",      "CL=F",      1,  2),
-    ("NATGAS",  "Nat Gas",  "NG=F",      1,  2),
-    ("TECH",    "Tech",     "^IXIC",     1,  2),
-    ("BIOTECH", "Biotech",  "XBI",       1,  2),
-    ("YIELDS",  "10Y",      "^TNX",      1,  3),
-    ("AUD",     "AUD/USD",  "AUDUSD=X",  1,  4),
-    ("VIX",     "VIX",      "^VIX",      1,  2),
-    ("USD",     "USD Idx",  "DX-Y.NYB",  1,  2),
-]
+# PULSE constant removed 2026-07-20 — the module was deleted (feature retired
+# 2026-07-03/09); payloads keep an empty "pulse" key for cached-JS back-compat.
 
 # ---------------------------------------------------------------------------
 # REVERSALS scanner — early trend-reversal / base-breakout setups.
