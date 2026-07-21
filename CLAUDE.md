@@ -197,3 +197,9 @@ python -m scanner.vivek_backtest --market asx --limit 10 --period 3y
 python serve.py                          # local frontend
 ```
 Local venv: `.venv/Scripts/python.exe` (3.14; CI is 3.12).
+
+**Repo home (2026-07-21): `C:\\dev\\googy-boys-scanner`** — moved OFF OneDrive
+after a sync rollback corrupted the working tree + git index mid-session.
+Never keep this repo inside a OneDrive/Dropbox-synced path. (The old copy at
+Documents is RETIRED; the local `.venv` must be recreated in the new home
+when needed: `pip install -r requirements.txt`.)
