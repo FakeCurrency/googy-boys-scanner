@@ -132,6 +132,21 @@ jobs:
           # journal/confluence_state.json dropped: confluence no longer runs here.
           PATHS="public/data/phasemap/asx public/data/phasemap/nasdaq public/data/phasemap/crypto public/data/phasemap/charts public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
           git add $PATHS 2>/dev/null || true
+          # Must-change gate (2026-07-20 Phase 5): a successful nightly ALWAYS
+          # advances every market's latest.json (run_date is daily) — staging
+          # none of them means output is being lost; fail loudly. Manual
+          # single-market dispatches only warn.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            bash scripts/assert_staged.sh "phasemap asx"    public/data/phasemap/asx/latest.json
+            bash scripts/assert_staged.sh "phasemap nasdaq" public/data/phasemap/nasdaq/latest.json
+            bash scripts/assert_staged.sh "phasemap crypto" public/data/phasemap/crypto/latest.json
+          else
+            bash scripts/assert_staged.sh "phasemap (manual)" \
+              public/data/phasemap/asx/latest.json \
+              public/data/phasemap/nasdaq/latest.json \
+              public/data/phasemap/crypto/latest.json \
+              || echo "::warning::no latest.json staged (manual run)"
+          fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0

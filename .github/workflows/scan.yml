@@ -221,6 +221,18 @@ jobs:
           # commits, frozen site. Per-path adds cannot couple like that.
           for p in $PATHS; do git add -- "$p" 2>/dev/null || true; done
           git diff --cached --stat | tail -5
+          # Must-change gate (2026-07-20 Phase 5): every scan rewrites the
+          # *_vivek.json files (wall-clock generated_at) and every non-dry bot
+          # run re-stamps the book's updated_at — a scheduled run staging
+          # NOTHING is always a bug (the Phase 3 staging bug ran green 5x
+          # exactly this way). Manual dispatches (--dry-run/--limit tests)
+          # only warn.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            bash scripts/assert_staged.sh "scan output" journal/vivek_bot_book.json
+          else
+            bash scripts/assert_staged.sh "scan output (manual)" journal/vivek_bot_book.json \
+              || echo "::warning::book not staged (manual run - dry-run or test args?)"
+          fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0
@@ -238,6 +250,14 @@ jobs:
               [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
               git checkout "$SHA" -- "$p" 2>/dev/null || true
             done
+            # The COMBINED book is a DERIVED file shared by every scan-group
+            # workflow (2026-07-20 evening incident): a run queued on an OLD
+            # checkout that loses the push race re-applies its STALE combined
+            # over marks a fresher run just committed (canonical per-market
+            # files stay correct; only the derived view diverges until the
+            # next run). Regenerate it from the CURRENT tree instead of
+            # trusting this run's snapshot.
+            python -m scanner.broker.vivek_run --rebuild-combined
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
             git commit -m "data: scan $(date -u +'%Y-%m-%d %H:%M UTC')"

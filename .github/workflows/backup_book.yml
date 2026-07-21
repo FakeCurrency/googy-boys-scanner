@@ -44,6 +44,10 @@ jobs:
           # -A so retention PRUNING deletions (backup_journal.py keeps the
           # newest N) are staged too, not just new snapshot dirs.
           git add -A backups
+          # Must-change gate (2026-07-20 Phase 5): every run creates a NEW
+          # timestamped dir under backups/ — empty staging here can only mean
+          # the backup was silently lost. Fail loudly (email + Discord).
+          bash scripts/assert_staged.sh "book backup" backups
           if git diff --cached --quiet; then
             echo "Nothing to back up."
             exit 0

@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  actions: read      # watchdog run-history probes (2026-07-20 Phase 5)
 
 concurrency:
   group: kill-switch
@@ -36,6 +37,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      # Watchdog alert-state (first-alert / 6h-reminder / recovery dedup)
+      # rides the cache, same prefix-restore pattern as the frame cache —
+      # zero commits, zero deploys. .cache/ is gitignored.
+      - name: Restore watchdog state
+        uses: actions/cache@v4
+        with:
+          path: .cache/watchdog_state.json
+          key: watchdog-state-${{ github.run_id }}
+          restore-keys: |
+            watchdog-state-
 
       - name: Run kill-switch check
         env:
@@ -56,3 +68,22 @@ jobs:
           else
             python -m scanner.broker.kill_switch
           fi
+
+      # Freshness watchdog (2026-07-20, Phase 5): content + run-history
+      # probes for every critical pipeline. Runs AFTER the kill-switch check
+      # so it can never block the safety net; its own crash fails this job
+      # loudly (a silent monitor is worse than none). See scanner/watchdog.py
+      # and OPERATIONS.md "Watchdog alerts".
+      - name: Freshness watchdog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCHDOG_HOST: kill_switch
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+        run: python -m scanner.watchdog

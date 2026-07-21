@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: write
+  actions: read      # watchdog run-history probes (2026-07-20 Phase 5)
 
 concurrency:
   group: scan
@@ -48,6 +49,16 @@ jobs:
           key: vivek-frames-${{ github.run_id }}
           restore-keys: |
             vivek-frames-
+
+      # Watchdog alert-state (dedup) — shared prefix with kill_switch.yml so
+      # both hosts see the same first-alert/reminder/recovery history.
+      - name: Restore watchdog state
+        uses: actions/cache@v4
+        with:
+          path: .cache/watchdog_state.json
+          key: watchdog-state-${{ github.run_id }}
+          restore-keys: |
+            watchdog-state-
 
       - name: Run crypto scan + paper bot
         env:
@@ -93,6 +104,16 @@ jobs:
           # commits, frozen site. Per-path adds cannot couple like that.
           for p in $PATHS; do git add -- "$p" 2>/dev/null || true; done
           git diff --cached --stat | tail -5
+          # Must-change gate (2026-07-20 Phase 5): every non-dry bot run
+          # re-stamps the book's updated_at, so a scheduled run staging
+          # NOTHING is always a bug (the Phase 3 staging bug ran green 5x
+          # exactly this way). Manual dispatches only warn.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            bash scripts/assert_staged.sh "crypto output" journal/vivek_bot_book.json
+          else
+            bash scripts/assert_staged.sh "crypto output (manual)" journal/vivek_bot_book.json \
+              || echo "::warning::book not staged (manual run - dry-run or test args?)"
+          fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0
@@ -108,6 +129,14 @@ jobs:
               [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
               git checkout "$SHA" -- "$p" 2>/dev/null || true
             done
+            # The COMBINED book is a DERIVED file shared by every scan-group
+            # workflow (2026-07-20 evening incident): a run queued on an OLD
+            # checkout that loses the push race re-applies its STALE combined
+            # over marks a fresher run just committed (canonical per-market
+            # files stay correct; only the derived view diverges until the
+            # next run). Regenerate it from the CURRENT tree instead of
+            # trusting this run's snapshot.
+            python -m scanner.broker.vivek_run --rebuild-combined
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
             git commit -m "data: crypto bot $(date -u +'%Y-%m-%d %H:%M UTC')"
@@ -115,6 +144,24 @@ jobs:
             echo "Push race — retry $i"; sleep $((i * 3))
           done
           echo "Could not push after retries"; exit 1
+
+      # Freshness watchdog (2026-07-20, Phase 5): cross-checks EVERY critical
+      # pipeline (incl. kill_switch.yml aliveness, which commits nothing and
+      # is otherwise invisible). Second host besides kill_switch.yml so a
+      # scheduler skip of one workflow doesn't blind the monitor.
+      - name: Freshness watchdog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCHDOG_HOST: crypto_bot
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+        run: python -m scanner.watchdog
 
       # If anything above failed, say so — otherwise the site quietly serves
       # stale data and nobody notices until the freshness badge goes orange.

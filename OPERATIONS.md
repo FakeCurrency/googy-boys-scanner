@@ -14,6 +14,7 @@ Last updated: 2026-06-22
 | Check kill-switch | `python -m scanner.broker.kill_switch` |
 | Audit bot-book integrity (read-only) | `python -m scanner.broker.vivek_run --verify` |
 | Rebuild derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
+| Freshness watchdog (read-only preview) | `python -m scanner.watchdog --dry-run` |
 | Run all tests | `pytest tests/ -v` |
 | Serve frontend locally | `python -m http.server 8000 --directory public` |
 
@@ -31,7 +32,7 @@ GitHub Actions handles everything automatically:
 | `phasemap.yml` | Nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate |
 | `lens_backtest.yml` | Weekly Sun | PhaseMap/Specs/VIVEK replays -> Insights stats |
 | `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
-| `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol |
+| `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol. Also hosts the freshness watchdog |
 | `stop_watcher.yml` | Every 5 min | Curls /api/tick (cloud watcher for the KV-synced manual journal) |
 | `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals |
 | `test.yml` | Every push/PR | pytest + JS tests |
@@ -95,6 +96,49 @@ python -m scanner.broker.kill_switch          # add --dry-run to log only
 ```
 (Note 2026-07-20: the previously documented FORCE_KILL env var never existed
 in code; the switch fires on the bot book's daily-loss limit.)
+
+---
+
+## Watchdog alerts (2026-07-20, Phase 5)
+
+`scanner/watchdog.py` runs inside kill_switch.yml (every 30 min) and
+crypto_bot.yml (hourly). It exists because of the 2026-07-20 incident: runs
+can finish GREEN while committing nothing, and GitHub's cron can silently
+skip runs for hours — neither produced any alert. The watchdog covers both:
+content probes (timestamps inside committed files) and run-history probes
+(GitHub API: each critical workflow's last successful run).
+
+**Noise contract:** one alert on first detection, one reminder every 6h
+while unresolved, one recovery notice — never a message per check. If a run
+FAILED outright, GitHub's own failure email is the alert; the watchdog stays
+quiet about that workflow. CRITICAL = Discord/Telegram + email; WARNING = no
+email. Thresholds live in scanner/config.py (WATCHDOG_*).
+
+**What each alert means / what to do:**
+
+- *"bot book updated_at is Nh old"* (CRITICAL) — no run has SAVED the track
+  record recently. Check Actions: are crypto_bot/scan runs green but
+  committing nothing (staging problem — see the assert_staged gate), or not
+  firing at all (scheduler)? Dispatch "Crypto bot" manually; if its commit
+  step stages nothing, that run's log now says exactly why.
+- *"book MISSING / unreadable"* (CRITICAL) — restore from git history or
+  `backups/` (see Runbooks), then `python -m scanner.broker.vivek_run
+  --verify`.
+- *"<workflow>: last successful run Nh ago"* — the schedule is being skipped
+  or the workflow is failing silently. Open Actions → that workflow. If
+  GitHub's scheduler is degraded (runs simply absent), dispatch manually;
+  it self-heals when the scheduler recovers.
+- *"newest backup is Nh old"* (CRITICAL) — the track record isn't being
+  snapshotted. Dispatch "Backup bot book" manually today, then investigate.
+- *"PhaseMap latest.json is N days behind"* — the nightly didn't publish;
+  dispatch "PhaseMap nightly scan" manually.
+
+**Must-change gates:** scan.yml / crypto_bot.yml / phasemap.yml /
+backup_book.yml now FAIL (red run → email + Discord) when a scheduled run
+stages none of its must-change outputs (`scripts/assert_staged.sh`). A red
+run with "ASSERT-STAGED FAILED" means output is being produced but LOST
+between the scan step and git — exactly the Phase 3 staging bug pattern.
+Manual dispatches only warn (dry-runs/tests legitimately stage nothing).
 
 ---
 

@@ -91,12 +91,23 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + schema gate (SLIM latest.json + narrations sidecar); no confluence here |
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
-| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set |
+| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) |
 | stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted.)
+
+**Silent-failure protection (2026-07-20, Phase 5):** the committing workflows
+(scan/crypto_bot/phasemap/backup_book) run `scripts/assert_staged.sh` after
+staging — a scheduled run that stages none of its must-change outputs FAILS
+loudly instead of finishing green (the Phase 3 staging bug ran green 5x while
+committing nothing). `scanner/watchdog.py` (hosted in kill_switch.yml +
+crypto_bot.yml) additionally probes content timestamps + GitHub run history
+and alerts on staleness with strict noise rules (first / 6h reminder /
+recovery; red runs are GitHub's to email about). Thresholds: config
+WATCHDOG_*. When adding a workflow that commits data, give it an
+assert_staged call and a WATCHDOG_RUNS entry.
 
 ---
 

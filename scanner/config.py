@@ -606,6 +606,29 @@ ALERT_RATE_LIMITS = {
     "DEFAULT":         300,
 }
 
+# ── Freshness watchdog (2026-07-20, Phase 5 — scanner/watchdog.py) ────────────
+# Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). Thresholds
+# are >= 2x the worst GitHub cron drift ever observed in this repo (48 min) so
+# scheduler jitter can never page anyone. CRITICAL routes per ALERT_CHANNELS
+# (incl. email); WARNING skips email. One alert on first detection, one
+# reminder every WATCHDOG_RENOTIFY_HOURS, one recovery notice — never more.
+WATCHDOG_RENOTIFY_HOURS = 6.0
+WATCHDOG_BOOK_MAX_AGE_H = 4.0          # combined book updated_at (money path)
+WATCHDOG_CRYPTO_SCAN_MAX_AGE_H = 4.0   # crypto_vivek.json generated_at
+WATCHDOG_PHASEMAP_MAX_LAG_DAYS = 2     # latest.json run_date lag
+WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
+# Run-history probes (GitHub Actions API): workflow file -> threshold on the
+# LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
+# GitHub already emails failures; the watchdog only covers SILENT problems.
+WATCHDOG_RUNS = {
+    "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
+    "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
+    "scan.yml":        {"max_age_h": 24.0, "severity": "WARNING"},
+    "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
+    "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
+    "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
+}
+
 # Phase 7: Health check thresholds
 HEALTH_SCAN_STALE_WARN_H = 2    # warn if health.json is older than this many hours
 HEALTH_SCAN_STALE_CRIT_H = 4    # critical if older than this
