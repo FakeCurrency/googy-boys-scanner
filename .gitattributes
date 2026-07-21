@@ -1,0 +1,27 @@
+# Normalize ALL text to LF in the repo, on every machine (2026-07-21).
+# Without this, a clone on a machine with core.autocrlf=true silently rewrites
+# every file to CRLF on the next commit — which broke the shell scripts CI runs
+# (assert_staged.sh shebang became "bash\r"). LF is enforced here so it can
+# never recur regardless of a contributor's local git config.
+* text=auto eol=lf
+
+# Scripts and code that MUST be LF (executed on Linux runners)
+*.sh   text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+
+# Binary assets — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
