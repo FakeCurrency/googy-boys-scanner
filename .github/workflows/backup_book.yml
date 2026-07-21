@@ -37,6 +37,21 @@ jobs:
       - name: Create timestamped backup
         run: python3 scripts/backup_journal.py backup
 
+      # Off-tree copy (2026-07-21): the snapshot committed below lives in the
+      # SAME repo as the book it protects — a bad force-push / repo corruption
+      # would take the record AND its backups together. This uploads the whole
+      # backups/ set as a run artifact (90-day retention) so a copy always
+      # exists OUTSIDE the git tree. Restore: Actions → this workflow → pick a
+      # run → download the artifact, unzip, then
+      #   python scripts/backup_journal.py restore <backup-dir>
+      - name: Upload snapshots as run artifact (off-tree copy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: book-backups-${{ github.run_id }}
+          path: backups/
+          retention-days: 90
+          if-no-files-found: error
+
       - name: Commit backup (surgical — only the new backups/ dir)
         run: |
           git config user.name "github-actions[bot]"

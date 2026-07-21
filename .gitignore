@@ -23,5 +23,9 @@ firebase-debug.log
 # Claude Code internal (agent worktrees, session state)
 .claude/worktrees/
 
+# Staging area for files awaiting manual deletion (cloud sessions can't rm on
+# the mounted device folder — they mv here; delete this folder when reviewed)
+_to_delete/
+
 # Last-good per-ticker frame cache (restored across CI runs via actions/cache)
 .cache/

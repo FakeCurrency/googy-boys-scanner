@@ -34,12 +34,8 @@
     { href: "about.html",   label: "HOW IT WORKS", key: "about" },
   ];
 
-  const isDebug = () => {
-    try {
-      return new URLSearchParams(location.search).has("debug") ||
-        localStorage.getItem("gbs:debug") === "1";
-    } catch (_) { return false; }
-  };
+  // (debug.html retired 2026-07-21 with the scalp-era data surfaces it read —
+  //  system.html + /api/health are the live diagnostics now.)
 
   // Current page key from the path ("/" and "/index.html" are both the scanner;
   // the phasemap sub-pages highlight the PHASEMAP destination).
@@ -53,7 +49,7 @@
   function render() {
     const mount = document.getElementById("site-nav");
     const here = pageKey();
-    const more = MORE.concat(isDebug() ? [{ href: "debug.html", label: "DEBUG", key: "debug" }] : []);
+    const more = MORE;
 
     if (mount) {
       const pill = (it) =>

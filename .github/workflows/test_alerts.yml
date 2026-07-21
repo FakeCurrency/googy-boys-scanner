@@ -1,0 +1,61 @@
+name: Alert-path self-test
+
+# Manual-only (2026-07-21, Phase 6 P2): proves the alert channels DELIVER by
+# forcing one test message through every configured route (Discord, Telegram,
+# email) via `scanner.watchdog --test-alert`, running where the real secrets
+# live. An unexercised email path is a CRITICAL that silently degrades to
+# Discord-only — run this once after ANY alert-secret change and read the
+# per-channel result in the job summary. It sends real (clearly-labelled)
+# test messages, so it has NO schedule and never runs automatically.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alert-self-test
+  cancel-in-progress: false
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send test alert through every configured channel
+        env:
+          WATCHDOG_HOST: self-test
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT: ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+          GBS_ALERT_FROM: ${{ secrets.GBS_ALERT_FROM }}
+        run: |
+          python -m scanner.watchdog --test-alert | tee /tmp/alert_test.txt
+          {
+            echo "## Alert-path self-test"
+            echo ""
+            echo "Green job = the test ran; **read the lines below** for what"
+            echo "actually delivered. Any route listed as NOT delivered means"
+            echo "that channel is unconfigured or failing — a CRITICAL would"
+            echo "silently skip it."
+            echo ""
+            echo '```'
+            cat /tmp/alert_test.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

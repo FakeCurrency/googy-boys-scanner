@@ -7,11 +7,12 @@ Usage:
   python scripts/backup_journal.py list             # list available backups
 
 Backup directory: backups/YYYY-MM-DDTHH-MM-SS/
-Files backed up:
-  journal/journal.json
-  journal/scalp_journal.json
+Files backed up (2026-07-21 — trimmed to the LIVE state set; the scalp-era
+public/data files were retired and deleted, see git history):
+  journal/vivek_bot_book*.json  (canonical per-market books = THE track record)
+  journal/journal.json + journal/scalp_journal.json  (frozen legacy history)
   journal/*.log  (last 50k lines each)
-  public/data/*.json
+  public/data/vivek_bot_book.json + events.json
   scanner/config.py
 
 Restore:
@@ -42,16 +43,10 @@ BACKUP_FILES = [
     "public/data/vivek_bot_book.json",
     "journal/journal.json",
     "journal/scalp_journal.json",
-    "public/data/asx.json",
-    "public/data/nasdaq.json",
-    "public/data/asx_reversal.json",
-    "public/data/asx_spec.json",
-    "public/data/asx_short.json",
-    "public/data/scalp.json",
-    "public/data/scalp_crypto.json",
-    "public/data/scalp_journal.json",
-    "public/data/health.json",
-    "public/data/performance.json",
+    # (2026-07-21: the retired scalp-era public/data files — asx/nasdaq
+    #  pullback/reversal/short scans, scalp*.json, health.json,
+    #  performance.json — were deleted from public/data; entries dropped.
+    #  _copy() skips missing files, so old backups still restore cleanly.)
     "public/data/events.json",
     "scanner/config.py",
 ]
