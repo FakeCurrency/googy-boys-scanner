@@ -299,6 +299,69 @@ def _save_market_book(market: str, mbook: dict) -> None:
     _write_combined()
 
 
+def _mark_sanity(pos: dict, price: float, market: str) -> float | None:
+    """Gate an observed price before it may manage `pos`. Returns the price to
+    use, or None to SKIP managing this run (freeze, like an unpriced run).
+
+    WHY (2026-07-21, Phase 6 P1): the data layer runs auto_adjust=True, so a
+    stock SPLIT rewrites the whole price basis overnight while the position's
+    stored entry/stop stay in the OLD basis — the next observed price reads as
+    an impossible collapse/spike against a stale stop and would book a fake
+    catastrophic exit into the ONLY track record. Same for a vendor bad print.
+
+    Discipline (all constants in config, per-market):
+      * move vs the LAST ACCEPTED mark <= VIVEK_MARK_SANITY_PCT -> accept.
+      * beyond it -> reject; count suspect_price_runs on the position (visible
+        in the book, like unpriced_runs); ALERT on the 2nd consecutive hit.
+      * on the VIVEK_MARK_SANITY_ACCEPT_RUNS-th consecutive hit -> ACCEPT the
+        price and resume managing: a REAL crash is delayed a couple of runs,
+        never ignored (and the live-quote kill switch watches it meanwhile).
+    Seeding: the first guarded observation of a position (no last_mark yet)
+    is accepted unconditionally — legacy runners far from entry must not
+    false-positive on rollout.
+    """
+    limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(market, 0.0)
+    ref = pos.get("last_mark") or 0.0
+    if limit <= 0 or ref <= 0:
+        pos["last_mark"] = round(price, 8)               # seed; guard from next run
+        return price
+    move = abs(price / ref - 1.0)
+    if move <= limit:
+        pos["last_mark"] = round(price, 8)
+        pos.pop("suspect_price_runs", None)
+        pos.pop("suspect_price", None)
+        return price
+    n = int(pos.get("suspect_price_runs") or 0) + 1
+    pos["suspect_price_runs"] = n
+    pos["suspect_price"] = round(price, 8)
+    accept_n = int(getattr(config, "VIVEK_MARK_SANITY_ACCEPT_RUNS", 3) or 3)
+    if n >= accept_n:
+        log.warning("vivek_run: %s [%s] price %.6g is %+.0f%% vs last mark %.6g "
+                    "for the %dth consecutive run - ACCEPTING as real",
+                    pos.get("symbol"), market, price, move * 100, ref, n)
+        pos["last_mark"] = round(price, 8)
+        pos.pop("suspect_price_runs", None)
+        pos.pop("suspect_price", None)
+        return price
+    log.warning("vivek_run: SUSPECT price for %s [%s]: %.6g is %+.0f%% vs last "
+                "mark %.6g (limit %.0f%%) - managing SUSPENDED (%d/%d)",
+                pos.get("symbol"), market, price, move * 100, ref,
+                limit * 100, n, accept_n)
+    if n == 2:                       # second consecutive hit -> tell the owner
+        try:
+            from .alert_dispatch import send as _alert
+            _alert("anomaly",
+                   f"SUSPECT price on {pos.get('symbol')} [{market}] - "
+                   f"managing suspended",
+                   f"Observed {price:.6g} vs last mark {ref:.6g} "
+                   f"({move * 100:+.0f}%; limit {limit * 100:.0f}%). Likely a "
+                   f"split/bad print. Auto-accepts on run {accept_n} if it "
+                   f"persists; stop/TP handling is paused until then.")
+        except Exception as e:
+            log.warning("could not send suspect-price alert: %s", e)
+    return None
+
+
 def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
     intraday price with the journal's don't-chase guard. Carries entry_type +
@@ -344,6 +407,10 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
             slip_bps = -slip_bps
         snap["signal_entry"] = round(sig, 8)
         snap["fill_slip_bps"] = round(slip_bps, 1)
+    # Mark-sanity reference (Phase 6 P1): a NEW position is guarded from its
+    # very first re-mark — the fill price is the first accepted mark. (Legacy
+    # positions without last_mark get seeded on their first guarded run.)
+    snap["last_mark"] = round(float(snap["entry"]), 8)
     return snap
 
 
@@ -593,6 +660,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                             market, pos["symbol"], pos["unpriced_runs"])
         else:
             pos.pop("unpriced_runs", None)
+        # Mark-sanity guard (2026-07-21, Phase 6 P1): an impossible one-interval
+        # move (split / bad print) must not book fake exits into the track
+        # record. None -> skip managing this run, exactly like unpriced.
+        if price is not None:
+            price = _mark_sanity(pos, price, market)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going

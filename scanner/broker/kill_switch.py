@@ -123,11 +123,30 @@ def _live_marks(book: dict) -> dict:
         if not want:
             return {}
         frames = download(sorted(want), period="5d", retries=1)
+        by_key = {}
+        for p in open_pos:
+            m = p.get("market")
+            if m in config.MARKETS:
+                by_key[(p["symbol"], m)] = p
         quotes = {}
         for yf_t, key in want.items():
             px = _current_price(frames, yf_t)
-            if px is not None and px > 0:
-                quotes[key] = px
+            if px is None or px <= 0:
+                continue
+            # Mark-sanity filter (2026-07-21, Phase 6 P1): a split/bad print
+            # must not fake-trigger the loss check either. A quote that moved
+            # beyond the per-market sanity limit vs the runner's last ACCEPTED
+            # mark is dropped -> that position falls back to its stamped mark.
+            pos = by_key.get(key)
+            ref = (pos or {}).get("last_mark") or 0.0
+            limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(
+                key[1], 0.0)
+            if ref > 0 and limit > 0 and abs(px / ref - 1.0) > limit:
+                log.warning("kill-switch: dropping SUSPECT quote for %s [%s]: "
+                            "%.6g vs last mark %.6g (limit %.0f%%)",
+                            key[0], key[1], px, ref, limit * 100)
+                continue
+            quotes[key] = px
         return quotes
     except Exception as e:
         log.warning("kill-switch: live quote fetch failed (%s) - falling back "

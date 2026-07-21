@@ -606,6 +606,17 @@ ALERT_RATE_LIMITS = {
     "DEFAULT":         300,
 }
 
+# ── Mark-sanity guard (2026-07-21, Phase 6 P1 — vivek_run + kill_switch) ─────
+# Reject a position mark whose one-interval move vs the LAST ACCEPTED mark
+# exceeds this fraction: splits (auto_adjust rewrites the price basis while
+# stored entry/stop stay in the old one) and vendor bad prints would otherwise
+# book fake catastrophic exits into the only track record. Alert fires on the
+# 2nd consecutive suspect run; the price is ACCEPTED on the Nth so a real
+# crash is delayed at most (N-1) runs, never ignored. Crypto gets more head-
+# room (real 40%+ days happen).
+VIVEK_MARK_SANITY_PCT = {"asx": 0.35, "nasdaq": 0.35, "crypto": 0.60}
+VIVEK_MARK_SANITY_ACCEPT_RUNS = 3
+
 # ── Freshness watchdog (2026-07-20, Phase 5 — scanner/watchdog.py) ────────────
 # Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). Thresholds
 # are >= 2x the worst GitHub cron drift ever observed in this repo (48 min) so

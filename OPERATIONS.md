@@ -140,6 +140,37 @@ run with "ASSERT-STAGED FAILED" means output is being produced but LOST
 between the scan step and git — exactly the Phase 3 staging bug pattern.
 Manual dispatches only warn (dry-runs/tests legitimately stage nothing).
 
+**External heartbeat (2026-07-21, Phase 6):** `GET /api/health` on the site
+returns 200 while the published bot book is under 4h old, 503 otherwise —
+served entirely by Cloudflare, zero GitHub involvement. Point a free external
+monitor at it so pipeline silence alerts you even if GitHub's scheduler (and
+therefore the in-repo watchdog) is down:
+
+1. Sign up at uptimerobot.com (free tier is fine).
+2. Add monitor → type "HTTP(s)" → URL
+   `https://googy-boys-scanner.pages.dev/api/health` → interval 5 min.
+3. Add your email as the alert contact. Done — it emails on 503/timeouts
+   and again on recovery. (`?max_h=N` overrides the threshold per-probe.)
+
+**Prove the alert channels deliver:**
+```bash
+python -m scanner.watchdog --test-alert   # with DISCORD_WEBHOOK_URL / GBS_SMTP_* / TELEGRAM_* exported
+```
+Prints, per severity route, which channels actually delivered and which are
+unconfigured/failing. Run it once after any secret change — an unexercised
+email path is a CRITICAL that silently degrades to Discord-only.
+
+**Mark-sanity guard (2026-07-21, Phase 6):** a position mark that moves more
+than VIVEK_MARK_SANITY_PCT (ASX/NASDAQ 35%, crypto 60%) against its last
+accepted mark — a split under auto_adjust, or a vendor bad print — does NOT
+manage the position: stops/TPs pause, `suspect_price_runs` counts on the
+position (visible in the book), an "anomaly" alert fires on the 2nd
+consecutive hit, and the price is ACCEPTED on the 3rd so a real crash is
+delayed at most two runs, never ignored. The kill switch drops such quotes
+the same way (falls back to the stamped mark). If you get the alert: check
+the symbol for a split/halt; nothing to do if it's real — the guard
+self-resolves either way.
+
 ---
 
 ## Environment variables

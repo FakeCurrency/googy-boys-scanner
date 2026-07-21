@@ -216,3 +216,53 @@ def test_expectancy_splits_by_grade_entry_type_timeframe():
     assert e["by_grade"]["A+"]["expectancy_r"] == pytest.approx(2.0)
     assert e["by_entry_type"]["reclaim"]["n"] == 1
     assert e["by_timeframe"]["1D"]["n"] == 1 and e["by_timeframe"]["4H"]["n"] == 0
+
+
+# ── fill-model honesty pins (2026-07-21, Phase 6 P3 — tests ONLY) ──────────────
+# The paper record's credibility rests on these three facts staying true. A
+# future edit that quietly books stops AT the stop level (ignoring gaps) or
+# TPs beyond the limit would inflate the only track record with no test
+# failing — these pin the audited-honest behaviour of 2026-07-21.
+
+def test_pin_gap_through_stop_books_gapped_price_not_stop_level():
+    """Long stop 96; the market gaps to 88 overnight. The exit must book at
+    the OBSERVED 88 (a -3R reality), never at the 96 stop level (-1R wish)."""
+    t = _trade()
+    vj._mark(t, 88.0, "2024-01-03")
+    assert t["status"] == "closed" and t["exit_reason"] == "stop"
+    assert t["exit_price"] == 88.0                       # gapped price, not 96
+    assert t["exits"][-1]["price"] == 88.0
+    assert t["realized_r"] == pytest.approx((88 - 100) / 4)   # -3R booked
+
+
+def test_pin_gap_through_stop_short_side():
+    t = _trade(direction="short", entry=100.0, stop=104.0,
+               tp1=94.0, tp2=88.0, tp3=80.0, scale=[0.25, 0.50, 0.15],
+               mae=100.0, mfe=100.0)
+    vj._mark(t, 112.0, "2024-01-03")                     # gap UP through stop
+    assert t["status"] == "closed"
+    assert t["exit_price"] == 112.0
+    assert t["realized_r"] == pytest.approx((100 - 112) / 4)  # -3R booked
+
+
+def test_pin_tp_books_at_limit_level_not_observed_price():
+    """Observed 108 crossed TP1(106): a resting limit fills AT 106 — booking
+    the observed 108 would flatter the record."""
+    t = _trade()
+    vj._mark(t, 108.0, "2024-01-03")
+    assert t["status"] == "open" and t["tp1_hit"]
+    assert t["exits"][-1] == {"reason": "tp1", "price": 106.0, "pct": 0.25,
+                              "date": "2024-01-03"}
+    assert t["realized_r"] == pytest.approx(0.25 * (106 - 100) / 4)
+
+
+def test_pin_costs_net_realized_r_down():
+    """With a cost model on, realized_r must come out BELOW gross_r by the
+    slippage+commission drag — never equal, never above."""
+    t = _trade()
+    costs = (0.001, 0.001)                               # 10 bps + 10 bps
+    vj._mark(t, 88.0, "2024-01-03", costs=costs)         # stopped out
+    assert t["status"] == "closed"
+    assert t["gross_r"] == pytest.approx(-3.0)
+    assert t["realized_r"] < t["gross_r"]                # drag applied
+    assert t["cost_r"] > 0

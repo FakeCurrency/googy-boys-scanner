@@ -450,3 +450,73 @@ def test_verify_books_corrupt_market_file_reported_not_raised(monkeypatch, tmp_p
     _mfile(tmp_path, "asx").write_text("{not json", encoding="utf-8")
     probs = vr.verify_books()                      # must NOT raise/abort
     assert any("UNPARSEABLE" in p for p in probs)
+
+
+# ── mark-sanity guard (2026-07-21, Phase 6 P1) ─────────────────────────────────
+
+def _sane_pos(**kw):
+    p = {"symbol": "BHP", "market": "asx", "direction": "long", "status": "open",
+         "entry": 100.0, "stop": 96.0, "risk": 4.0, "risk_usd": 100.0,
+         "last_mark": 100.0}
+    p.update(kw)
+    return p
+
+
+def test_sanity_normal_move_accepted_and_tracked():
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 110.0, "asx") == 110.0
+    assert pos["last_mark"] == 110.0 and "suspect_price_runs" not in pos
+
+
+def test_sanity_split_price_rejected_not_managed():
+    """A 10:1 split reads as -90% vs the last mark: must NOT manage on it."""
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx") is None
+    assert pos["suspect_price_runs"] == 1 and pos["suspect_price"] == 10.0
+    assert pos["last_mark"] == 100.0                     # reference unchanged
+
+
+def test_sanity_second_hit_alerts_third_accepts(stub_alerts):
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx") is None     # 1st: silent freeze
+    assert vr._mark_sanity(pos, 10.1, "asx") is None     # 2nd: alert
+    assert pos["suspect_price_runs"] == 2
+    assert vr._mark_sanity(pos, 10.05, "asx") == 10.05   # 3rd: accepted as real
+    assert pos["last_mark"] == 10.05
+    assert "suspect_price_runs" not in pos and "suspect_price" not in pos
+
+
+def test_sanity_recovery_clears_counter():
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx") is None
+    assert vr._mark_sanity(pos, 101.0, "asx") == 101.0   # sane price returns
+    assert "suspect_price_runs" not in pos and pos["last_mark"] == 101.0
+
+
+def test_sanity_seeds_legacy_position_without_false_positive():
+    """Rollout: an old runner +80% from entry has no last_mark — first guarded
+    observation must be accepted and become the reference."""
+    pos = _sane_pos()
+    del pos["last_mark"]
+    assert vr._mark_sanity(pos, 180.0, "asx") == 180.0
+    assert pos["last_mark"] == 180.0
+
+
+def test_sanity_crypto_headroom():
+    pos = _sane_pos(symbol="BTC", market="crypto")
+    assert vr._mark_sanity(pos, 155.0, "crypto") == 155.0    # +55% < 60% limit
+    assert vr._mark_sanity(pos, 260.0, "crypto") is None     # +68% > limit
+
+
+def test_sanity_guard_prevents_fake_stop_out_in_run_market(tmp_path, monkeypatch):
+    """End to end: a split price must NOT close the position via run_market."""
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert len(bk["open"]) == 1
+    # next run the feed serves a 10:1-split price: 10.1 (would be a "stop hit")
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))
+    assert len(bk["open"]) == 1 and len(bk["closed"]) == 0   # NOT closed
+    assert bk["open"][0]["suspect_price_runs"] == 1

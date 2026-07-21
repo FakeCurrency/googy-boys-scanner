@@ -351,12 +351,38 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
             "recovered": recovered, "sent": sent, "notes": notes}
 
 
+def test_alert() -> None:
+    """Force ONE test message through every configured channel and print the
+    per-channel delivery result (2026-07-21, Phase 6 P2). This is how the
+    owner PROVES the alert paths actually deliver — before Phase 6 the email
+    leg (GBS_SMTP_*) had never once been exercised, so a CRITICAL could have
+    silently degraded to Discord-only. Run locally with the secrets exported,
+    or via a manual workflow dispatch."""
+    host = os.environ.get("WATCHDOG_HOST", "manual")
+    text = (f"[Vivek 5.0] Watchdog TEST ALERT (host: {host}) - if you can "
+            f"read this, this channel delivers. No action needed.")
+    for severity in ("WARNING", "CRITICAL"):
+        wanted = config.ALERT_CHANNELS.get(severity, [])
+        sent = _dispatch(severity, f"{text} [severity route: {severity}]")
+        missing = [c for c in wanted if c not in sent]
+        print(f"{log_prefix} test-alert {severity}: sent via "
+              f"{','.join(sent) or 'NONE'}"
+              + (f" - NOT delivered: {','.join(missing)} "
+                 f"(channel unconfigured or failing)" if missing else ""))
+
+
 def main(argv: list[str] | None = None) -> None:
     import argparse
     p = argparse.ArgumentParser(description="Vivek 5.0 freshness watchdog")
     p.add_argument("--dry-run", action="store_true",
                    help="probe and print only - no alerts, no state update")
+    p.add_argument("--test-alert", action="store_true",
+                   help="send one TEST message through every configured "
+                        "channel and report per-channel delivery")
     args = p.parse_args(argv)
+    if args.test_alert:
+        test_alert()
+        return
     run(dry_run=args.dry_run)
 
 

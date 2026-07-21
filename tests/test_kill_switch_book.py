@@ -158,3 +158,45 @@ def test_live_marks_fetch_failure_returns_empty(monkeypatch):
     monkeypatch.setattr(sdata, "download", boom)
     q = ks._live_marks(_book(open_=[_pos()]))
     assert q == {}                        # safety net falls back, never raises
+
+
+# ── mark-sanity quote filter (2026-07-21, Phase 6 P1) ──────────────────────────
+
+def test_live_marks_drops_split_price_quote(monkeypatch):
+    """A 10:1-split quote must NOT reach the loss check — the position falls
+    back to its stamped mark instead of showing a fake -90% collapse."""
+    import pandas as pd
+
+    import scanner.data as sdata
+
+    def _frame(px):
+        idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
+        return pd.DataFrame({"Close": [px] * 3}, index=idx)
+
+    def fake_download(tickers, period=None, retries=None, **kw):
+        return {"BHP.AX": _frame(10.1), "BTC-USD": _frame(50000.0)}
+
+    monkeypatch.setattr(sdata, "download", fake_download)
+    book = _book(open_=[_pos("BHP", "asx", last_mark=101.0),
+                        _pos("BTC", "crypto", entry=48000.0, risk=2000.0,
+                             last_mark=48000.0)])
+    q = ks._live_marks(book)
+    assert ("BHP", "asx") not in q                  # split quote dropped
+    assert q[("BTC", "crypto")] == 50000.0          # +4.2% quote passes
+
+
+def test_live_marks_no_reference_passes_through(monkeypatch):
+    """Legacy position without last_mark: quotes keep flowing (no filter)."""
+    import pandas as pd
+
+    import scanner.data as sdata
+
+    def _frame(px):
+        idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
+        return pd.DataFrame({"Close": [px] * 3}, index=idx)
+
+    monkeypatch.setattr(sdata, "download",
+                        lambda t, period=None, retries=None, **kw: {"BHP.AX": _frame(10.1)})
+    book = _book(open_=[_pos("BHP", "asx")])        # _pos has no last_mark
+    q = ks._live_marks(book)
+    assert q[("BHP", "asx")] == 10.1
