@@ -12,7 +12,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="css/styles.css?v=63" />
-  <link rel="stylesheet" href="css/phasemap.css?v=14" />
+  <link rel="stylesheet" href="css/phasemap.css?v=15" />
   <script src="js/nav.js?v=2"></script>
   <script src="js/sw-register.js?v=2" defer></script>
 </head>
@@ -74,8 +74,18 @@
         <button class="pm-chip" data-sort="turnover" title="Biggest $ turnover first — the liquid end, where the backtest edge lives">TURNOVER</button>
         <button class="pm-chip" data-sort="zrr" title="Zone R:R — distance to the first live target vs distance to the hard invalidation edge">Z-R:R</button>
       </div>
-      <input class="pm-search" id="pm-search" type="search" placeholder="Ticker…" autocomplete="off" spellcheck="false" />
+      <div class="pm-filter-group" id="pm-density-filter" role="group" aria-label="Density">
+        <button class="pm-chip" data-density="compact" title="Head row + phase stepper only — maximum rows on screen">COMPACT</button>
+        <button class="pm-chip" data-density="cozy" title="Ladder shown, narration clamped">COZY</button>
+        <button class="pm-chip is-active" data-density="full" title="Everything — ladder, narration, metrics">FULL</button>
+      </div>
+      <input class="pm-search" id="pm-search" type="search" placeholder="Ticker…  ( / )" autocomplete="off" spellcheck="false" aria-label="Fuzzy ticker search" />
     </div>
+
+    <!-- one-click filter presets (built-ins + your saved combos) -->
+    <div class="pm-presets" id="pm-presets" role="group" aria-label="Filter presets"></div>
+    <!-- active non-default filters, each removable -->
+    <div class="pm-active" id="pm-active" hidden aria-label="Active filters"></div>
 
     <section class="pm-list" id="pm-list" aria-live="polite"></section>
     <div class="pm-more-row"><button class="pm-more" id="pm-more" hidden>Show more</button></div>
@@ -83,8 +93,21 @@
     <p class="pm-disclaimer">Every level shown is a zone (a price band), never a single price. States are reported only after the evidence prints — nothing here predicts where a low will form. Analysis only — not financial advice.</p>
   </main>
 
+  <!-- always-accessible glossary: floating ? button + slide-over drawer -->
+  <button class="pm-gloss-btn" id="pm-gloss-btn" title="Glossary — what every PhaseMap term means" aria-label="Open glossary">?</button>
+  <div class="pm-gloss" id="pm-gloss" hidden role="dialog" aria-label="PhaseMap glossary">
+    <aside class="pm-gloss-panel">
+      <div class="pm-gloss-head">
+        <b>GLOSSARY</b>
+        <a href="phasemap-legend.html">FULL KEY &amp; LEGEND →</a>
+        <button id="pm-gloss-x" title="Close" aria-label="Close glossary">✕</button>
+      </div>
+      <div class="pm-gloss-body" id="pm-gloss-body"></div>
+    </aside>
+  </div>
+
   <script src="js/gbs-sync.js?v=7"></script>
-  <script src="js/phasemap-shared.js?v=7"></script>
-  <script src="js/phasemap.js?v=13"></script>
+  <script src="js/phasemap-shared.js?v=8"></script>
+  <script src="js/phasemap.js?v=14"></script>
 </body>
 </html>
