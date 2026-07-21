@@ -1462,28 +1462,71 @@
       };
       const PM_LABEL = { ENTRY_CONTINUATION: "ENTRY", INVALIDATION_HARD: "HARD INV",
         INVALIDATION_MOMENTUM: "50% INV", DEMAND: "DEMAND", SUPPLY: "SUPPLY" };
+      // legend/tooltip groups — the four togglable families of zone
+      const PM_GROUP = { TARGET: "target", ENTRY_CONTINUATION: "entry",
+        INVALIDATION_HARD: "invalid", INVALIDATION_MOMENTUM: "invalid",
+        DEMAND: "trap", SUPPLY: "trap" };
+      const GROUP_LABEL = { target: "TARGETS", entry: "ENTRY", invalid: "INVALIDATION", trap: "TRAP" };
+      const GROUP_COL = { target: "#2fd07f", entry: "#37d0c4", invalid: "#ff5b5b", trap: "#ffb224" };
+      // user prefs (persisted): overall band opacity + per-group visibility
+      const OPACITY = { subtle: 0.55, normal: 1, bold: 1.7 };
+      let zOp = "normal";
+      try { zOp = localStorage.getItem("pm-zone-opacity") || "normal"; } catch (_) {}
+      if (!(zOp in OPACITY)) zOp = "normal";
+      let zHide = {};
+      try { zHide = JSON.parse(localStorage.getItem("pm-zone-hidden") || "{}") || {}; } catch (_) {}
+      const alphaScale = (rgba, mult) =>
+        rgba.replace(/([\d.]+)\)$/, (_m, a) => Math.min(0.8, +a * mult).toFixed(3) + ")");
+      const pf = (x) => x == null ? "—" : x >= 1000 ? x.toLocaleString("en-AU", { maximumFractionDigits: 0 })
+        : x < 0.001 ? x.toFixed(8).replace(/0+$/, "") : x < 0.1 ? x.toFixed(4) : x < 2 ? x.toFixed(3) : x.toFixed(2);
+      const SRC_LABEL = { box_high: "box high", box_low: "box low", equal_highs: "equal highs",
+        equal_lows: "equal lows", prior_high: "prior high", prior_low: "prior low",
+        yearly_open: "yearly open", quarterly_open: "quarterly open", monthly_open: "monthly open",
+        prior_yearly_close: "prior yearly close", fib_ext_10: "fib ext 1.0–1.272",
+        fib_ext_1618: "fib ext 1.618–2.0", sweep_wick: "sweep wick" };
+
+      function paintBand(b) {
+        // Zone strength reads visually: ×N-confluence bands sit heavier on the
+        // chart, dead (consumed/violated) bands fade right back, and the fill
+        // runs as a soft top→bottom gradient — a band, not a hard-edged box.
+        const cols = PM_COLS[b.z.type] || ["rgba(109,120,137,0.10)", "#6d7889"];
+        const dead = b.z.status === "CONSUMED" || b.z.status === "VIOLATED";
+        const strength = 1 + 0.35 * (Math.min(b.z.confluence || 1, 3) - 1);
+        const mult = OPACITY[zOp] * strength * (dead ? 0.3 : 1);
+        b.series.applyOptions({
+          visible: !zHide[b.group],
+          topFillColor1: alphaScale(cols[0], mult * 1.45),   // upper edge, denser
+          topFillColor2: alphaScale(cols[0], mult * 0.55),   // fades toward the base
+        });
+        if (b.pl) { candle.removePriceLine(b.pl); b.pl = null; }
+        if (!zHide[b.group]) b.pl = candle.createPriceLine(b.plOpts);
+      }
+
       (pmRec.zones || []).forEach((z) => {
         const cols = PM_COLS[z.type] || ["rgba(109,120,137,0.10)", "#6d7889"];
         const dead = z.status === "CONSUMED" || z.status === "VIOLATED";
-        const fill = dead ? cols[0].replace(/[\d.]+\)$/, "0.05)") : cols[0];
         const s = chart.addBaselineSeries({
           baseValue: { type: "price", price: z.low },
-          topFillColor1: fill, topFillColor2: fill,
+          topFillColor1: cols[0], topFillColor2: cols[0],
           topLineColor: "transparent", bottomLineColor: "transparent",
           bottomFillColor1: "transparent", bottomFillColor2: "transparent",
           lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
         });
-        pmBands.push({ series: s, z });
         const label = z.type === "TARGET" ? z.id.toUpperCase() : (PM_LABEL[z.type] || z.type);
-        candle.createPriceLine({ price: (z.low + z.high) / 2, color: cols[1], lineWidth: 1,
-          lineStyle: LC.LineStyle.Dotted, axisLabelVisible: true,
-          title: `PM ${label}${z.confluence > 1 ? ` ×${z.confluence}` : ""}${dead ? ` · ${z.status.toLowerCase()}` : ""}` });
+        const b = { series: s, z, group: PM_GROUP[z.type] || "trap", pl: null,
+          plOpts: { price: (z.low + z.high) / 2, color: cols[1], lineWidth: 1,
+            lineStyle: LC.LineStyle.Dotted, axisLabelVisible: true,
+            title: `PM ${label}${z.confluence > 1 ? ` ×${z.confluence}` : ""}${dead ? ` · ${z.status.toLowerCase()}` : ""}` } };
+        pmBands.push(b);
+        paintBand(b);
       });
+
       const strip = document.createElement("div");
       strip.className = "pm-chart-strip";
       strip.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;" +
         "font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#aab4c5;" +
         "padding:8px 10px;margin:8px 0;border:1px solid #1c2230;border-radius:8px;background:#10131a;";
+      const groups = [...new Set(pmBands.map((b) => b.group))];
       strip.innerHTML =
         `<span style="color:#37d0c4;font-weight:700">PHASEMAP</span>` +
         `<span style="font-weight:700">${esc(pmRec.state.replace("_", " "))}</span>` +
@@ -1492,8 +1535,64 @@
         (pmRec.next ? `<span style="flex:1 1 100%;color:#37d0c4;line-height:1.5">` +
           `<b>WANTED NEXT</b> · ${esc(pmRec.next)}</span>` : "") +
         `<span style="flex:1 1 100%;color:#98a2b5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
+        `<span style="flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center">` +
+          `<span style="color:#6d7889">ZONES</span>` +
+          groups.map((g) => `<button class="pm-zone-toggle" data-zg="${g}" style="cursor:pointer;` +
+            `font:inherit;padding:2px 9px;border-radius:999px;border:1px solid #2a3242;` +
+            `background:${zHide[g] ? "transparent" : "#1a2130"};color:${zHide[g] ? "#5b6577" : GROUP_COL[g]};` +
+            `${zHide[g] ? "text-decoration:line-through;" : ""}" ` +
+            `title="Show/hide ${GROUP_LABEL[g].toLowerCase()} zones on the chart">${GROUP_LABEL[g]}</button>`).join("") +
+          `<button class="pm-zone-op" style="cursor:pointer;font:inherit;padding:2px 9px;margin-left:6px;` +
+            `border-radius:999px;border:1px dashed #2a3242;background:transparent;color:#8b96a9" ` +
+            `title="Cycle band opacity — subtle / normal / bold (saved)">◐ ${esc(zOp.toUpperCase())}</button>` +
+        `</span>` +
         `<a href="phasemap.html" style="color:#37d0c4">PhaseMap tab →</a>`;
       el.insertAdjacentElement("afterend", strip);
+      strip.querySelectorAll(".pm-zone-toggle").forEach((btn) => btn.addEventListener("click", () => {
+        const g = btn.dataset.zg;
+        zHide[g] = !zHide[g];
+        try { localStorage.setItem("pm-zone-hidden", JSON.stringify(zHide)); } catch (_) {}
+        btn.style.background = zHide[g] ? "transparent" : "#1a2130";
+        btn.style.color = zHide[g] ? "#5b6577" : GROUP_COL[g];
+        btn.style.textDecoration = zHide[g] ? "line-through" : "none";
+        pmBands.filter((b) => b.group === g).forEach(paintBand);
+      }));
+      strip.querySelector(".pm-zone-op").addEventListener("click", (e) => {
+        const order = ["subtle", "normal", "bold"];
+        zOp = order[(order.indexOf(zOp) + 1) % order.length];
+        try { localStorage.setItem("pm-zone-opacity", zOp); } catch (_) {}
+        e.currentTarget.textContent = `◐ ${zOp.toUpperCase()}`;
+        pmBands.forEach(paintBand);
+      });
+
+      // Hover/tap tooltip: every zone the cursor price sits inside, with
+      // bounds, midpoint, status and the sources that flagged the band.
+      const zoneTip = document.createElement("div");
+      zoneTip.className = "pm-zone-tip";
+      zoneTip.style.display = "none";
+      el.style.position = "relative";
+      el.appendChild(zoneTip);
+      chart.subscribeCrosshairMove((param) => {
+        if (!param || !param.point) { zoneTip.style.display = "none"; return; }
+        const price = candle.coordinateToPrice(param.point.y);
+        if (price == null) { zoneTip.style.display = "none"; return; }
+        const hits = (pmRec.zones || []).filter((z) =>
+          price >= z.low && price <= z.high && !zHide[PM_GROUP[z.type] || "trap"]);
+        if (!hits.length) { zoneTip.style.display = "none"; return; }
+        zoneTip.innerHTML = hits.map((z) => {
+          const label = z.type === "TARGET" ? z.id.toUpperCase() : (PM_LABEL[z.type] || z.type);
+          const col = (PM_COLS[z.type] || [0, "#6d7889"])[1];
+          const src = (z.sources || []).map((s2) => SRC_LABEL[s2] || s2).join(" + ");
+          return `<div class="pm-zone-tip-row"><b style="color:${col}">${esc(label)}` +
+            `${z.confluence > 1 ? ` ×${z.confluence}` : ""}</b> ` +
+            `${pf(z.low)}–${pf(z.high)} · mid ${pf((z.low + z.high) / 2)} · ${esc(z.status)}` +
+            (src ? `<span class="pm-zone-tip-src">${esc(src)}</span>` : "") + `</div>`;
+        }).join("");
+        zoneTip.style.display = "block";
+        const w = zoneTip.offsetWidth, cw = el.clientWidth;
+        zoneTip.style.left = Math.min(param.point.x + 14, Math.max(4, cw - w - 8)) + "px";
+        zoneTip.style.top = (param.point.y + 14) + "px";
+      });
     }
     function applyPmZones(key) {
       if (!pmBands.length) return;
