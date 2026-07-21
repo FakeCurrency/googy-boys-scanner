@@ -119,6 +119,13 @@ window.PM = (() => {
     return `<div class="pm-identity">${bits.join(" · ")} ${fund}</div>`;
   }
 
+  /* Non-color glyph per state — direction/state must survive greyscale and
+     red-green colorblindness (WCAG 1.4.1: color is never the only signal). */
+  const STATE_GLYPH = {
+    TRAP_SET: "◎", SWEPT: "◉", DISPLACED: "▲", RUNNING: "▶",
+    STALLED: "⏸", COMPLETE: "✓", DEAD: "✕",
+  };
+
   function headBadgesHTML(rec) {
     const long = rec.direction === "bullish";
     const tier = rec.tier
@@ -128,11 +135,98 @@ window.PM = (() => {
       return `<span class="pm-tag${extra}">${esc(t)}</span>`;
     }).join("");
     return `
-      <span class="pm-dir ${long ? "pm-dir-long" : "pm-dir-short"}">${long ? "LONG" : "SHORT"}</span>
-      <span class="pm-state pm-state-${esc(rec.state)}">${esc(rec.state.replace("_", " "))}</span>
+      <span class="pm-dir ${long ? "pm-dir-long" : "pm-dir-short"}">${long ? "▲ LONG" : "▼ SHORT"}</span>
+      <span class="pm-state pm-state-${esc(rec.state)}">${STATE_GLYPH[rec.state] || ""} ${esc(rec.state.replace("_", " "))}</span>
       ${tier}
       <span class="pm-regime">${esc(rec.regime)}</span>
       ${tags}`;
+  }
+
+  /* ── Phase stepper ───────────────────────────────────────────────────────
+     The lens's lifecycle as a horizontal progress strip. Steps are marked
+     reached ONLY from printed evidence (state + sweep/displacement dates) —
+     the stepper never claims progress the scan hasn't reported. STALLED and
+     DEAD are off-path terminals appended after the furthest reached step. */
+  const PHASE_PATH = ["TRAP_SET", "SWEPT", "DISPLACED", "RUNNING", "COMPLETE"];
+  function stepperHTML(rec) {
+    const m = rec.metrics || {};
+    const onPath = PHASE_PATH.indexOf(rec.state);
+    // furthest step with evidence: state itself if on-path, else dates
+    let reached = onPath >= 0 ? onPath
+      : m.displacement_date ? 2
+      : m.sweep_date ? 1 : 0;
+    const terminal = onPath === -1 ? rec.state : null;   // STALLED | DEAD
+    const steps = PHASE_PATH.map((s, i) => {
+      const cls = i < reached ? "is-done" : i === reached && !terminal ? "is-now"
+        : i === reached ? "is-done" : "";
+      return `<span class="pm-step ${cls}" data-term="${esc(s.toLowerCase())}">` +
+        `<span class="pm-step-dot">${STATE_GLYPH[s]}</span>${esc(s.replace("_", " "))}</span>`;
+    });
+    if (terminal) {
+      steps.splice(reached + 1, 0,
+        `<span class="pm-step is-now is-terminal pm-step-${esc(terminal)}" data-term="${esc(terminal.toLowerCase())}">` +
+        `<span class="pm-step-dot">${STATE_GLYPH[terminal]}</span>${esc(terminal)}</span>`);
+      steps.length = reached + 2;   // the path beyond a terminal never happens
+    }
+    return `<div class="pm-stepper" title="Where this name sits in the trap lifecycle">` +
+      steps.join(`<span class="pm-step-arrow">›</span>`) + `</div>`;
+  }
+
+  /* ── "Why flagged" panel ─────────────────────────────────────────────────
+     Plain-language restatement of the fields the scan actually printed —
+     state semantics mirror the KEY & LEGEND page; every bullet is tied to a
+     datum in the record. Nothing here computes or predicts anything. */
+  const STATE_WHY = {
+    TRAP_SET: "The map is drawn: a liquidity pool and its zones are identified, but price has not swept it yet. Nothing is confirmed at this stage.",
+    SWEPT: "Price ran through the mapped liquidity pool — the sweep printed. Now waiting for displacement to confirm intent.",
+    DISPLACED: "After the sweep, price displaced away with conviction — the confirmation evidence this lens waits for has printed.",
+    RUNNING: "Displacement confirmed and price is travelling toward its target zones — the setup is live.",
+    STALLED: "The move lost momentum before completing — rotation, not trend. It can resume or die from here.",
+    COMPLETE: "The final target zone was reached — this setup has fully played out.",
+    DEAD: "Price violated the hard invalidation zone — the idea is invalidated and the setup is finished.",
+  };
+  function whyHTML(rec) {
+    const m = rec.metrics || {};
+    const rows = [];
+    const term = (label, key) => `<button class="pm-term" data-term="${esc(key)}" ` +
+      `title="What does '${esc(label)}' mean?">${esc(label)}<sup>?</sup></button>`;
+    rows.push(STATE_WHY[rec.state] || "");
+    if (m.sweep_date) rows.push(`${term("Sweep", "swept")} printed on <b>${esc(m.sweep_date)}</b>.`);
+    if (m.displacement_date) rows.push(`${term("Displacement", "displaced")} printed on <b>${esc(m.displacement_date)}</b>.`);
+    if (m.retrace_pct != null) rows.push(`Retrace so far: <b>${fmtPct(m.retrace_pct)}</b>.`);
+    if (m.bars_in_box != null) rows.push(`<b>${m.bars_in_box}</b> bars spent in the ${term("box", "box")}.`);
+    const live = rec.zones.filter((z) => z.status !== "CONSUMED" && z.status !== "VIOLATED").length;
+    if (rec.zones.length) rows.push(`<b>${rec.zones.length}</b> ${term("zones", "zone")} mapped, <b>${live}</b> still live — every one a price band, never a single price.`);
+    if (rec.tier) rows.push(`Scan ${term("tier", "tier")}: <b>${esc(rec.tier)}</b>.`);
+    if (rec.tags.includes("ILLIQUID")) rows.push(`<b>ILLIQUID</b> — average turnover is below the $200k/day floor; fills and exits will be harder than the chart implies.`);
+    if (rec.tags.includes("HALT_RISK")) rows.push(`<b>HALT RISK</b> — this name carries a trading-halt risk flag from the scan.`);
+    return `<details class="pm-why"><summary>WHY FLAGGED <span class="pm-why-chev">▾</span></summary>
+      <ul>${rows.filter(Boolean).map((r) => `<li>${r}</li>`).join("")}</ul></details>`;
+  }
+
+  /* ── Glossary (plain-language, mirrors the KEY & LEGEND page) ───────────── */
+  const GLOSSARY = [
+    ["zone", "Zone", "A price BAND with an upper and lower bound — never a single price. Every level PhaseMap draws is a zone."],
+    ["trap_set", "Trap set", "The starting state: a liquidity pool and its zones are mapped, but price hasn't swept them yet."],
+    ["swept", "Sweep", "Price runs through a mapped liquidity pool (e.g. equal lows), taking out the resting orders there. The trap springs — but a sweep alone confirms nothing."],
+    ["displaced", "Displacement", "A decisive move away after the sweep. This is the confirmation evidence the lens waits for before a setup counts."],
+    ["box", "Box", "The consolidation range price built before the event — its high and low are the liquidity zones most likely to be swept."],
+    ["tier", "Tier", "The scan's quality bucket for the setup (A+ / A / Watch), from the ruleset — not a prediction."],
+    ["regime", "Regime", "The broader behaviour the scan reads this name in (e.g. ROTATION) — context, not a signal."],
+    ["target", "Target zone", "Where the move is headed if the setup plays out. Consumed targets are greyed out."],
+    ["hard_invalidation", "Hard invalidation", "The zone that proves the idea wrong. Price closing through it kills the setup (DEAD)."],
+    ["momentum_invalidation", "50% invalidation", "The softer warning level — losing it means momentum has failed even if the hard line survives."],
+    ["confluence", "Confluence (×N)", "N independent sources land on the same band (e.g. box low + fib extension) — the band is merged and marked ×N."],
+    ["flashed", "⚡ FLASHED", "The sweep or displacement printed on the latest scan day — fresh evidence worth reviewing now."],
+    ["stalled", "Stalled", "The move lost momentum before completing — rotation, not trend."],
+    ["dead", "Dead", "The hard invalidation was violated — the setup is finished."],
+    ["complete", "Complete", "The final target zone was reached — the setup fully played out."],
+    ["running", "Running", "Displacement confirmed and price is travelling toward its targets — the setup is live."],
+    ["trap", "Trap (demand/supply)", "The amber zones where the liquidity grab happens — accumulation territory in the spec's colour system."],
+  ];
+  function glossaryHTML() {
+    return GLOSSARY.map(([key, name, body]) =>
+      `<div class="pm-gloss-item" id="gloss-${esc(key)}"><b>${esc(name)}</b><p>${esc(body)}</p></div>`).join("");
   }
 
   /* read-aloud (Web Speech API) — degrades silently where unsupported */
@@ -366,6 +460,7 @@ window.PM = (() => {
 
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
+           stepperHTML, whyHTML, glossaryHTML,
            isFundReit, toggleSpeak, watch, starHTML,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb };

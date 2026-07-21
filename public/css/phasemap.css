@@ -361,3 +361,124 @@
 .al-day-chev { margin-left: auto; color: var(--muted-2); transition: transform .15s; }
 .al-day-group[open] .al-day-chev { transform: rotate(180deg); }
 .al-day-group .al-day { margin-top: 8px; }
+
+/* ═══ List-UX tranche (2026-07-21) — stepper · why-flagged · presets ·
+   active-filter chips · density modes · skeletons · glossary drawer ·
+   since-last-visit. Colours stay inside the spec Section 8 system above. ═══ */
+
+/* phase stepper */
+.pm-stepper {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  margin: 9px 0 2px; font-family: var(--sans); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.05em; color: var(--muted-2);
+}
+.pm-step { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
+  border-radius: 999px; border: 1px solid var(--border); }
+.pm-step-dot { font-size: 10px; }
+.pm-step.is-done { color: var(--text-2); border-color: var(--border-2); }
+.pm-step.is-now { color: var(--text); background: var(--panel-3); border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
+.pm-step.is-terminal.pm-step-DEAD { color: var(--pm-kill); background: var(--pm-kill-soft); }
+.pm-step.is-terminal.pm-step-STALLED { color: var(--pm-neutral); background: var(--pm-neutral-soft); }
+.pm-step-arrow { color: var(--muted-2); }
+
+/* why-flagged panel */
+.pm-why { margin: 4px 0 8px; }
+.pm-why summary {
+  cursor: pointer; list-style: none; user-select: none; display: inline-flex;
+  align-items: center; gap: 5px; font-family: var(--sans); font-size: 11px;
+  font-weight: 700; letter-spacing: 0.06em; color: var(--teal);
+  padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px;
+}
+.pm-why summary::-webkit-details-marker { display: none; }
+.pm-why[open] .pm-why-chev { display: inline-block; transform: rotate(180deg); }
+.pm-why ul {
+  margin: 8px 0 0; padding: 10px 12px 10px 28px; background: var(--fill-2);
+  border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  font-size: 13.5px; line-height: 1.6; color: var(--text-2);
+}
+.pm-why li { margin: 3px 0; }
+.pm-why b { color: var(--text); }
+.pm-term {
+  background: none; border: 0; padding: 0; cursor: help; font: inherit;
+  color: var(--teal); text-decoration: underline dotted; text-underline-offset: 2px;
+}
+.pm-term sup { font-size: 9px; }
+
+/* presets + active-filter chips */
+.pm-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: -6px 0 10px; }
+.pm-preset-x { margin-left: 6px; color: var(--muted-2); }
+.pm-preset-x:hover { color: var(--red); }
+.pm-preset-save { color: var(--teal); border-style: dashed; }
+.pm-active { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0 0 10px; }
+.pm-active-chip, .pm-active-clear {
+  font-family: var(--sans); font-size: 11.5px; font-weight: 700; cursor: pointer;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-2);
+  background: var(--fill); color: var(--text-2);
+}
+.pm-active-clear { color: var(--red); border-color: rgba(255,69,58,0.4); background: transparent; }
+
+/* density modes — compact: head + stepper only · cozy: clamp the prose */
+.pm-density-compact .pm-ladder, .pm-density-compact .pm-narration,
+.pm-density-compact .pm-metrics, .pm-density-compact .pm-next,
+.pm-density-compact .pm-identity, .pm-density-compact .pm-why { display: none; }
+.pm-density-compact .pm-card { padding: 10px 14px; }
+.pm-density-compact.pm-list { gap: 8px; }
+.pm-density-cozy .pm-narration {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.pm-density-cozy .pm-band-sources { display: none; }
+.pm-density-cozy .pm-metrics { display: none; }
+
+/* skeleton shimmer while the scan JSON loads */
+.pm-skel-line {
+  height: 13px; border-radius: 6px; margin: 10px 0;
+  background: linear-gradient(90deg, var(--fill) 25%, var(--fill-2) 45%, var(--fill) 65%);
+  background-size: 300% 100%; animation: pm-shimmer 1.2s ease-in-out infinite;
+}
+.pm-skel-line.w40 { width: 40%; } .pm-skel-line.w55 { width: 55%; } .pm-skel-line.w70 { width: 70%; }
+@keyframes pm-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .pm-skel-line { animation: none; } }
+
+/* since-you-last-checked banner + NEW badge */
+.pm-since {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+  padding: 10px 14px; border-radius: var(--radius-md); font-family: var(--sans);
+  font-size: 12.5px; font-weight: 600; color: var(--text-2);
+  background: var(--blue-soft); border: 1px solid rgba(10,132,255,0.35);
+}
+.pm-since b { color: var(--text); }
+.pm-since-x { margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--muted); font-size: 13px; padding: 2px 6px; }
+.pm-tag-new { color: var(--blue); border-color: rgba(10,132,255,0.5); font-weight: 700; }
+
+/* keyboard focus — a visible ring the mouse never shows */
+.pm-card-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* glossary drawer */
+.pm-gloss-btn {
+  position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 40px; height: 40px;
+  border-radius: 50%; border: 1px solid var(--border-2); cursor: pointer;
+  background: var(--panel-3); color: var(--teal); font: 800 17px/1 var(--sans);
+  box-shadow: var(--shadow);
+}
+.pm-gloss { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.45); }
+.pm-gloss-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(400px, 92vw);
+  background: var(--panel); box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column;
+}
+.pm-gloss-head {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); font-family: var(--sans);
+}
+.pm-gloss-head b { font-size: 15px; letter-spacing: 0.04em; }
+.pm-gloss-head a { font-size: 11px; font-weight: 700; color: var(--teal); text-decoration: none; }
+.pm-gloss-head button { margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--muted); font-size: 15px; padding: 4px 8px; }
+.pm-gloss-body { overflow-y: auto; padding: 6px 16px 20px; }
+.pm-gloss-item { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+.pm-gloss-item b { font-family: var(--sans); font-size: 13.5px; color: var(--text); }
+.pm-gloss-item p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--text-2); }
+.pm-gloss-item.is-hit { background: var(--blue-soft); border-radius: 8px; padding: 10px; }
+body.pm-gloss-open { overflow: hidden; }

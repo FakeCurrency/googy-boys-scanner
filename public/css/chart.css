@@ -372,3 +372,14 @@
   color: #1a1205; background: var(--orange);
   animation: ctLivePulse 1.6s ease-in-out infinite;
 }
+
+/* PhaseMap zone hover tooltip (2026-07-21) — bounds · mid · status · sources */
+.pm-zone-tip {
+  position: absolute; z-index: 30; pointer-events: none; max-width: 340px;
+  background: rgba(16,19,26,0.95); border: 1px solid #2a3242; border-radius: 8px;
+  padding: 7px 10px; font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px; line-height: 1.55; color: #aab4c5;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+.pm-zone-tip-row + .pm-zone-tip-row { margin-top: 4px; border-top: 1px solid #1c2230; padding-top: 4px; }
+.pm-zone-tip-src { display: block; color: #6d7889; font-size: 9.5px; }
