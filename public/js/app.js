@@ -163,6 +163,8 @@
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
     vkHighConv: false,  // VIVEK "high conviction" filter (weekly reclaim + A/strong structure)
     vkDir: null,        // direction filter: null = both · "LONG" · "SHORT"
+    vkConfl: false,     // deck pill (Wave 3): only rows with 2+ lens alignment
+    vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
   };
 
   // Sort direction. Each sort has a natural default (numeric → descending,
@@ -346,26 +348,54 @@
       periods.map((p) => `<span class="ema-dot"><i style="background:${colors[p] || "#888"}"></i>${p}</span>`).join("");
   }
 
-  // ----------------------------------------------------------- stats
-  function renderStats(d) {
-    const res = d.results || [];
-    // The headline stats describe what's actually TRADEABLE, so REITs / ETFs /
-    // LICs / managed funds are excluded across the board (the bot skips them
-    // and most CFD brokers don't list them) — not just from Top Pick.
+  // ------------------------------------------------- deck pills (Wave 3)
+  // Replaces the 4 stat cards + at-level strip + confluence banner. A+/A are
+  // shortcuts to the grade tabs; Multi-lens and At-level are FILTER TOGGLES
+  // (the old banners' content, now one click away instead of two strips).
+  // Fund/REIT-excluded logic for the tradeable count is unchanged.
+  function renderDeckPills(d) {
+    const box = $("#deck-pills");
+    if (!box) return;
+    const res = (d && d.results) || [];
     const real = res.filter((r) => !isFundReit(r));
     const tradeable = real.filter((r) => r.grade === "A+" || r.grade === "A");
-    $("#stat-scanned").textContent = d.scanned ?? "—";
-    $("#stat-setups").textContent = tradeable.length;
     const top = real.slice()
       .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
-    $("#stat-toppick").textContent = top ? `${top.symbol} ${fmtPrice(top.price)}` : "—";
-    const bestRR = (tradeable.length ? tradeable : real).reduce((m, r) => Math.max(m, r.rr || 0), 0);
-    // 4th card is MULTI-LENS TODAY (2026-07-03) — filled asynchronously when
-    // the confluence files resolve; "—" until then.
-    $("#stat-rr").textContent = "—";
-
-    $("#count-aplus").textContent = res.filter((r) => r.grade === "A+").length;
-    $("#count-a").textContent = res.filter((r) => r.grade === "A").length;
+    const nAplus = res.filter((r) => r.grade === "A+").length;
+    const nA = res.filter((r) => r.grade === "A").length;
+    const nAt = res.filter((r) => r.at_level).length;
+    const nConf = state.confl ? state.confl.all().length : null;
+    const pill = (attrs, cls, label, n, title, active) =>
+      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} title="${esc(title)}">` +
+      `${label}${n == null ? "" : ` <b>${n}</b>`}</button>`;
+    box.innerHTML =
+      pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.view === "results" && state.tab === "aplus") +
+      pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.view === "results" && state.tab === "a") +
+      pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
+        "Names with 2+ lenses aligned right now — click to filter the list to them", state.vkConfl) +
+      pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
+        "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
+      (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
+        `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
+      `<span class="deck-npick" title="A+/A setups excluding funds/REITs — what's actually tradeable">${tradeable.length} tradeable</span>`;
+    box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
+      state.view = "results";
+      state.tab = b.dataset.goto;
+      document.querySelectorAll(".view-tab").forEach((x) => x.classList.toggle("is-active", x.dataset.view === "results"));
+      document.querySelectorAll("#tabs .seg-btn").forEach((x) => x.classList.toggle("is-active", x.dataset.tab === state.tab));
+      savePrefs();
+      renderDeckPills(state.data);
+      renderRows();
+    }));
+    box.querySelectorAll("[data-pill]").forEach((b) => b.addEventListener("click", () => {
+      if (b.dataset.pill === "confl") state.vkConfl = !state.vkConfl;
+      if (b.dataset.pill === "atlevel") state.vkAtLevel = !state.vkAtLevel;
+      renderDeckPills(state.data);
+      renderRows();
+    }));
+    // Grade-tab counts + watch count live in the toolbar as before
+    $("#count-aplus").textContent = nAplus;
+    $("#count-a").textContent = nA;
     $("#count-watch").textContent = res.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade)).length;
     $("#watch-count").textContent = res.filter((r) => isStarred(r.symbol)).length;
   }
@@ -967,6 +997,17 @@
     if (state.vkDir) {
       list = list.filter((r) => r.dir === state.vkDir);
     }
+    // Deck pills (Wave 3): multi-lens alignment / at-the-level. View filters
+    // only — no signal logic; same data the retired banner strips showed.
+    if (state.vkConfl) {
+      list = list.filter((r) => {
+        const ci = state.confl && state.confl.of(r.symbol);
+        return ci && ci.side === (String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long");
+      });
+    }
+    if (state.vkAtLevel) {
+      list = list.filter((r) => r.at_level);
+    }
     const s = state.sort;
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
@@ -1141,11 +1182,18 @@
     if (!list.length) {
       // Are active toggle-filters the reason it's empty? Point that out so an
       // empty list reads as "these filters have no match" rather than "broken".
-      const filtersOn = state.vkDir || state.vkHighConv || state.vkRecent || (state.vkEntry && state.vkEntry.size);
+      const activeFilters = [
+        state.vkConfl && "⨂ Multi-lens",
+        state.vkAtLevel && "◎ At level",
+        state.vkHighConv && "High conviction",
+        state.vkRecent && "Triggered recently",
+        state.vkDir && (state.vkDir === "LONG" ? "Longs only" : "Shorts only"),
+        state.vkEntry && state.vkEntry.size ? [...state.vkEntry].join("/") : null,
+      ].filter(Boolean);
       const msg = state.view === "watch"
         ? { h: "Your watchlist is empty", p: "Tap the ☆ on any setup to add it here." }
-        : filtersOn
-          ? { h: "No setups match these filters", p: `Nothing here in ${state.market ? state.market.toUpperCase() : "this market"} on this tab. Turn off ${state.vkDir ? state.vkDir.toLowerCase() + " only" : "a filter"} (High conviction / Longs / Shorts) or switch market/tab.` }
+        : activeFilters.length
+          ? { h: "No setups match these filters", p: `${activeFilters.join(" + ")} has no matches in ${state.market ? state.market.toUpperCase() : "this market"} on this tab — tap a pill or filter to widen, or switch market/tab.` }
           : { h: "No setups in this tab", p: "Try another grade tab or market, or check back after the next scan." };
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
       return;
@@ -1169,30 +1217,8 @@
     requestAnimationFrame(step);
   }
 
-  // AT-LEVEL battleground strip (2026-07-03): names sitting ON a 200-SMA
-  // right now — the moment before the reaction, across W / 3D / D levels.
-  function renderAtLevel(d) {
-    let el = document.getElementById("atlevel-strip");
-    const rows = (d.results || []).filter((r) => r.at_level);
-    if (!rows.length) { if (el) el.remove(); return; }
-    if (!el) {
-      el = document.createElement("section");
-      el.id = "atlevel-strip";
-      el.className = "conf-banner atlevel-strip";
-      const anchor = document.querySelector(".view-tabs");
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
-      else return;
-    }
-    const CAP = 12;
-    const tfTag = (r) => r.level_tf === "weekly" ? "W" : r.level_tf === "3d" ? "3D" : "D";
-    el.innerHTML = `<span class="conf-banner-label" style="color:var(--teal)">◎ AT THE LEVEL NOW</span>` +
-      rows.slice(0, CAP).map((r) =>
-        `<a title="${esc(r.name || r.symbol)} — sitting on the ${tfTag(r)} 200-SMA (${r.dist_pct}% away). The reaction is the setup." ` +
-        `href="chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&pm=1">` +
-        `${esc(r.symbol)} ${String(r.dir || "LONG").toUpperCase() === "SHORT" ? "▼" : "▲"} ` +
-        `<span style="color:var(--muted)">${tfTag(r)}·200</span></a>`).join("") +
-      (rows.length > CAP ? `<span style="color:var(--muted)">+${rows.length - CAP} more</span>` : "");
-  }
+  // AT-LEVEL banner strip retired (Wave 3, 2026-07-22): the deck's ◎ At-level
+  // pill filters the real rows instead — same data, one click, no extra band.
 
   // ----------------------------------------------------------- apply
   // Relative "Last scanned" (UI Wave 1): "4m ago" on screen; the exact
@@ -1209,6 +1235,11 @@
                  : state.staleView ? "  ·  updating…" : "";
     el.textContent = `Last scanned: ${rel}${suffix}`;
     el.title = `Melbourne: ${melb}  ·  Market-local: ${fmtTime(d.generated_at, d.tz_label)}`;
+    // Deck freshness dot (Wave 3): green = live · pulsing = updating a stale
+    // paint · amber = last refresh failed (matches the title suffix).
+    const dot = document.getElementById("deck-dot");
+    if (dot) dot.className = "deck-dot" +
+      (state.staleView === "failed" ? " warn" : state.staleView ? " sync" : "");
   }
 
   function applyPayload(d, stale = false) {
@@ -1224,55 +1255,27 @@
     renderFreshness(d);
     renderEntryFilters(d);
     renderLegend(d);
-    renderStats(d);
-    renderAtLevel(d);
+    renderDeckPills(d);
     renderRows();
     // Multi-lens confluence: fetch the other lenses' latest files, then
-    // re-render rows with chips + surface the alignment banner.
+    // re-render rows with chips + refresh the deck's Multi-lens pill count.
     if (window.PM && PM.loadConfluence) {
       state.confl = null;
-      renderConfluenceBanner(null);
       // Pass the payload we just rendered so the vivek file isn't fetched
       // twice (Wave 2). A head-cache paint is truncated — let it fetch full.
       PM.loadConfluence(state.market, d._head ? null : d).then((c) => {
+        if (state.data !== d) return;   // view moved on while lenses loaded
         state.confl = c;
         renderRows();
-        renderConfluenceBanner(c);
-        const rows = c.all();
-        const lensEl = document.getElementById("stat-rr");
-        if (lensEl) lensEl.textContent = rows.length;
-        notifyTriples(rows);
+        renderDeckPills(d);
+        notifyTriples(c.all());
       });
     }
   }
 
-  // A loud strip above the results whenever ANY name has 2+ lenses aligned.
-  // Links open the chart with the PhaseMap zones overlaid on the VIVEK plan.
-  function renderConfluenceBanner(confl) {
-    let el = document.getElementById("conf-banner");
-    const rows = confl ? confl.all() : [];
-    if (!rows.length) { if (el) el.remove(); return; }
-    if (!el) {
-      el = document.createElement("section");
-      el.id = "conf-banner";
-      el.className = "conf-banner";
-      const anchor = document.querySelector(".view-tabs");
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
-      else return;
-    }
-    const CAP = 10;
-    el.innerHTML = `<span class="conf-banner-label">⨂ MULTI-LENS ALIGNMENT</span>` +
-      rows.slice(0, CAP).map((x) => {
-        const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
-        const arrow = x.side === "short" ? "▼" : "▲";
-        const cls = x.count >= 3 ? "pm-conf pm-conf-3" : "";
-        const tag = x.count >= 3 ? "🎯 " : "";
-        return `<a class="${cls}" title="${x.lenses.join(" + ")} — open the combined chart" ` +
-          `href="chart.html?m=${state.market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
-          `${tag}${esc(x.ticker)} ${arrow}${x.count >= 3 ? " ×3" : ""}</a>`;
-      }).join("") +
-      (rows.length > CAP ? `<span style="color:var(--muted)">+${rows.length - CAP} more</span>` : "");
-  }
+  // Confluence banner strip retired (Wave 3, 2026-07-22): the deck's
+  // ⨂ Multi-lens pill filters the rows to aligned names instead — the rows
+  // themselves carry the confluence chip, so nothing is lost, one band is.
 
   function skeleton() {
     // 8 shimmer placeholders sized like real row cards (see .skeleton CSS)
@@ -1834,7 +1837,9 @@
   ];
 
   function initDailyQuote() {
-    const el = document.getElementById("topbar-quote");
+    // Wave 3: the quote left the topbar (single-row deck header) — it now
+    // lives quietly in the footer.
+    const el = document.getElementById("footer-quote") || document.getElementById("topbar-quote");
     if (!el) return;
     const show = () => {
       const idx = Math.floor(Date.now() / 3600000) % TRADER_QUOTES.length;   // rotates hourly
@@ -1865,11 +1870,20 @@
   }
 
   function updateClocks() {
+    // Wave 3: MEL + NY as a two-line micro block in the topbar; China +
+    // London (and full dates) ride the tooltip instead of their own columns.
     const now = new Date();
+    const parts = {};
+    for (const c of CLOCKS) parts[c.id] = _fmtClock(c.fmt, c.date, now);
+    const mel = document.getElementById("clk-mel-time");
+    const ny  = document.getElementById("clk-ny-time");
+    if (mel) mel.textContent = `MEL ${parts.mel[0]}`;
+    if (ny)  ny.textContent  = `NY ${parts.ny[0]}`;
+    const box = document.getElementById("microclock");
+    if (box) box.title = `Melbourne ${parts.mel[0]} · ${parts.mel[1]}\nNew York ${parts.ny[0]} · ${parts.ny[1]}\nChina ${parts.china[0]}\nLondon ${parts.london[0]}`;
+    // Legacy 4-clock pages (none since Wave 3) — date cells if present
     for (const c of CLOCKS) {
-      const [time, date] = _fmtClock(c.fmt, c.date, now);
-      const t = document.getElementById(`clk-${c.id}-time`); if (t) t.textContent = time;
-      const d = document.getElementById(`clk-${c.id}-date`); if (d) d.textContent = date;
+      const d = document.getElementById(`clk-${c.id}-date`); if (d) d.textContent = parts[c.id][1];
     }
   }
 

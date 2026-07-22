@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=64" />
+  <link rel="stylesheet" href="css/styles.css?v=65" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -36,66 +36,36 @@
   <script src="js/sw-register.js?v=2" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <!-- ROW 1 — clocks · brand (centred) · market switch + nav links -->
-    <div class="topbar-row1">
-      <div class="topbar-clocks topbar-clocks-left">
-        <div class="clock-city clk-mel">
-          <span class="clock-city-name">MELBOURNE</span>
-          <span class="clock-time" id="clk-mel-time">—</span>
-          <span class="clock-date" id="clk-mel-date">—</span>
-        </div>
-        <div class="clock-city clk-ny">
-          <span class="clock-city-name">NEW YORK</span>
-          <span class="clock-time" id="clk-ny-time">—</span>
-          <span class="clock-date" id="clk-ny-date">—</span>
-        </div>
-        <div class="clock-city clk-china">
-          <span class="clock-city-name">CHINA</span>
-          <span class="clock-time" id="clk-china-time">—</span>
-          <span class="clock-date" id="clk-china-date">—</span>
-        </div>
-        <div class="clock-city clk-london">
-          <span class="clock-city-name">LONDON</span>
-          <span class="clock-time" id="clk-london-time">—</span>
-          <span class="clock-date" id="clk-london-date">—</span>
-        </div>
-      </div>
-
-      <div class="topbar-quote" id="topbar-quote"></div>
-
-      <div class="topbar-nav">
-        <div class="market-switch" role="tablist" aria-label="Market">
-          <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
-          <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
-          <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
-        </div>
-        <!-- shared site nav (js/nav.js) -->
-        <div class="nav-pills" id="site-nav"></div>
-      </div>
-
-      <div class="topbar-brand">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
-            </svg>
-          </span>
-          <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
-        </div>
-      </div>
+  <!-- Command Deck topbar (Wave 3): ONE row — brand · markets · nav · clocks · actions -->
+  <header class="topbar deck-top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" />
+        </svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
     </div>
-
-    <!-- ROW 2 — search · run scan · timer -->
-    <div class="topbar-row2">
+    <div class="market-switch" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+      <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+    </div>
+    <!-- shared site nav (js/nav.js) -->
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
+      <div class="microclock" id="microclock" title="">
+        <span id="clk-mel-time">—</span>
+        <span id="clk-ny-time">—</span>
+      </div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
+      <button class="search-trigger" id="notify-btn" title="Browser alerts for triple-lens alignments" aria-label="Toggle alignment notifications">🔔</button>
       <button class="reload-btn" id="reload-btn" title="Run a fresh cloud scan" aria-label="Run a fresh scan">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         <span class="reload-label">SCAN</span>
       </button>
-      <button class="search-trigger" id="notify-btn" title="Browser alerts for triple-lens alignments" aria-label="Toggle alignment notifications">🔔</button>
       <span class="refresh-timer" id="refresh-timer" title="Auto-refresh countdown"></span>
     </div>
   </header>
@@ -111,27 +81,25 @@
   </div>
 
   <main class="wrap">
-    <!-- last scanned -->
-    <!-- bot activity strip — what Claude did while you weren't looking -->
-    <section class="bot-activity" id="bot-activity" hidden></section>
-
-    <section class="scan-banner">
-      <div class="scan-banner-title" id="scan-title">Loading latest scan…</div>
-      <div class="scan-banner-sub" id="scan-sub">Updates automatically after each market close</div>
-      <div class="scan-fresh" id="scan-fresh" hidden></div>
+    <!-- COMMAND DECK (Wave 3): one bar replaces the scan banner, freshness
+         pill placement, 4 stat cards, bot strip and the at-level/confluence
+         banner strips — those live on as click-to-filter pills. -->
+    <section class="deck" id="deck">
+      <div class="deck-status">
+        <div class="deck-title" id="scan-title">Loading latest scan…</div>
+        <div class="deck-sub">
+          <span class="deck-dot" id="deck-dot" aria-hidden="true"></span>
+          <span id="scan-sub">Updates automatically after each market close</span>
+          <span class="scan-fresh" id="scan-fresh" hidden></span>
+        </div>
+      </div>
+      <div class="deck-pills" id="deck-pills" role="group" aria-label="Scan filters"></div>
+      <div class="deck-bot" id="bot-activity" hidden></div>
     </section>
 
     <!-- PULSE removed 2026-07-03 (owner: unused). The macro data still
          generates server-side; restore this section + the renderPulse call
          guards in app.js to bring it back. -->
-
-    <!-- stat cards -->
-    <section class="stats">
-      <div class="stat-card"><div class="stat-label">Stocks Scanned</div><div class="stat-value" id="stat-scanned">—</div></div>
-      <div class="stat-card"><div class="stat-label">A+ / A Setups</div><div class="stat-value accent-green" id="stat-setups">—</div></div>
-      <div class="stat-card"><div class="stat-label">Top Pick</div><div class="stat-value accent-orange" id="stat-toppick">—</div></div>
-      <div class="stat-card" title="Names with 2+ lenses aligned right now — the banner below lists them"><div class="stat-label">Multi-Lens Today</div><div class="stat-value accent-orange" id="stat-rr">—</div></div>
-    </section>
 
     <!-- Results / Watch -->
     <nav class="view-tabs" role="tablist" aria-label="View">
@@ -177,12 +145,13 @@
   </main>
 
   <footer class="site-footer">
+    <p class="footer-quote" id="footer-quote"></p>
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
     <p class="credit">Vivek 5.0 · data via Yahoo Finance · refreshed daily after each market close</p>
   </footer>
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=70"></script>
+  <script src="js/app.js?v=71"></script>
 </body>
 </html>

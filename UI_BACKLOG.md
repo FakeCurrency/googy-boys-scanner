@@ -15,22 +15,22 @@ breaking changes.
 
 ## Wave 3 — Command Deck, desktop (built responsive from day one)
 
-- [ ] 1. Command bar component: scan status (market · setups · scanned/universe · age · coverage) with live freshness dot, replacing the scan banner + freshness pill.
-- [ ] 2. Stat pills in the command bar (A+ / A / Watch counts) replacing the four stat cards.
-- [ ] 3. ⨂ Multi-lens pill with live count — **click filters the rows to aligned names**, replacing the confluence banner strip.
-- [ ] 4. ◎ At-level pill with live count — click filters to names sitting on a 200-SMA now, replacing the at-level strip.
-- [ ] 5. Bot chip in the command bar (open count · today's R · last action) with click-to-expand event list; Journal → link kept.
+- [x] 1. Command bar component: scan status (market · setups · scanned/universe · age · coverage) with live freshness dot, replacing the scan banner + freshness pill.
+- [x] 2. Stat pills in the command bar (A+ / A / Watch counts) replacing the four stat cards.
+- [x] 3. ⨂ Multi-lens pill with live count — **click filters the rows to aligned names**, replacing the confluence banner strip.
+- [x] 4. ◎ At-level pill with live count — click filters to names sitting on a 200-SMA now, replacing the at-level strip.
+- [x] 5. Bot chip in the command bar (open count · today's R · last action) with click-to-expand event list; Journal → link kept.
 - [ ] 6. ONE sticky filter toolbar merging view tabs + grade tabs + direction + 🎯/⚡ + entry-type chips + sort into a single line.
 - [ ] 7. Sort as a compact cycling control (SCORE ↓ → PRICE → R:R → M.C → A-Z) with direction flip on repeat tap.
 - [ ] 8. Toolbar condenses to a slim variant on scroll (labels shrink, counts stay).
-- [ ] 9. Single-row topbar: brand + market segments + nav pills + search + SCAN; kill topbar row 2.
-- [ ] 10. Clocks collapse to a two-line MEL/NY micro block; China/London move to its tooltip.
-- [ ] 11. Retire the rotating trader quote from the topbar (footer keeps it).
+- [x] 9. Single-row topbar: brand + market segments + nav pills + search + SCAN; kill topbar row 2.
+- [x] 10. Clocks collapse to a two-line MEL/NY micro block; China/London move to its tooltip.
+- [x] 11. Retire the rotating trader quote from the topbar (footer keeps it).
 - [ ] 12. Row card v2: 76px, grade rail, ticker+dir arrow+mcap+name line, price with day-% beneath, spark, score + R:R stack.
 - [ ] 13. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
 - [ ] 14. Checklist as inline pass/fail chips in the expanded panel; "View chart →" as the primary CTA.
-- [ ] 15. Filter-aware empty states ("0 rows: Multi-lens + Shorts — tap a pill to widen").
-- [ ] 16. Wave-1 SWR semantics wired into the deck: "updating…" pulses the freshness dot; "update failed — showing cached" turns it amber.
+- [x] 15. Filter-aware empty states ("0 rows: Multi-lens + Shorts — tap a pill to widen").
+- [x] 16. Wave-1 SWR semantics wired into the deck: "updating…" pulses the freshness dot; "update failed — showing cached" turns it amber.
 - [ ] 17. Day-change display: use current_pct/day_pct; when null (ASX overnight), derive approx % from the last two spark points and mark it ~.
 - [ ] 18. Playwright e2e suite committed to `test/e2e/` covering deck paint, pill filtering, expand, sort — runs in CI from this wave on.
 
