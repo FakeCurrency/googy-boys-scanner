@@ -94,7 +94,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation.
 - [ ] 61. Idle-time prefetch (requestIdleCallback + timer fallback) replaces the fixed 300ms market prefetch.
 - [ ] 62. Self-host subset woff2 fonts — kill the Google Fonts round-trip and its layout shift.
 - [ ] 63. sw.js precaches the app shell on install for instant repeat loads.
-- [ ] 64. SW update flow: one-tap Update applies AND reloads.
+- [x] 64. SW update flow: one-tap Update applies AND reloads; background tabs self-heal on controllerchange; 30-min re-check for long-open tabs; apply-on-return via visibilitychange. (Shipped early — owner hit the stale-tab case.)
 - [ ] 65. Single SVG sprite for per-row icons (~15% list HTML cut at 200 rows).
 - [ ] 66. Defer GBSSync.syncIn until after first rows paint.
 - [ ] 67. sessionStorage cache for market_caps + backtest artifacts.
