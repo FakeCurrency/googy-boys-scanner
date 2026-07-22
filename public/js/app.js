@@ -1882,10 +1882,10 @@
     const hms = (id) => (parts[id][0].split(" ")[1] || parts[id][0]);   // "13:33:53"
     const hm  = (id) => hms(id).slice(0, 5);                            // "13:33"
     const put = (elId, txt) => { const el = document.getElementById(elId); if (el) el.textContent = txt; };
-    put("clk-mel-time", `MEL ${hms("mel")}`);
-    put("clk-ny-time",  `NY ${hms("ny")}`);
-    put("clk-china-time",  `CN ${hm("china")}`);
-    put("clk-london-time", `LDN ${hm("london")}`);
+    put("clk-mel-time", `MELBOURNE ${hms("mel")}`);
+    put("clk-ny-time",  `NEW YORK ${hms("ny")}`);
+    put("clk-china-time",  `CHINA ${hm("china")}`);
+    put("clk-london-time", `LONDON ${hm("london")}`);
     const box = document.getElementById("microclock");
     if (box) box.title = `Melbourne ${parts.mel[0]} · ${parts.mel[1]}\nNew York ${parts.ny[0]} · ${parts.ny[1]}\nChina ${parts.china[0]} · ${parts.china[1]}\nLondon ${parts.london[0]} · ${parts.london[1]}`;
   }
