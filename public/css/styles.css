@@ -1879,3 +1879,51 @@ body { letter-spacing: -0.012em; }
 /* v2 height trim: 76px standard card on desktop too (was ~87 from padding). */
 .row-main { padding: 10px 14px 10px 16px; gap: 6px; }
 @media (min-width: 681px) { .row-main { padding: 10px 15px 10px 16px; } }
+
+/* ── Wave 3R (#5+#6+#31): expanded panel v2 ─────────────────────────────────
+   Horizontal trade ladder (SL → IN → TP1 → TP2 → TP3 reading in trade order,
+   arrows between cells), checklist as inline pass/fail chips, and View
+   chart → promoted to the panel's primary action. On phones the ladder
+   reflows to a 2-row grid (#31) — never five squished columns. */
+.vk-ladder-h {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+  background: var(--separator); border-radius: var(--radius-md); overflow: hidden;
+}
+.vk-cell {
+  display: flex; flex-direction: column; gap: 4px; padding: 11px 12px 10px;
+  background: var(--panel); min-width: 0; position: relative;
+}
+.vk-cell-key { font: 700 10.5px/1 var(--mono); letter-spacing: 0.08em; color: var(--muted-2); }
+.vk-cell-key::after { content: " →"; opacity: 0.45; }
+.vk-cell:last-child .vk-cell-key::after { content: ""; }
+.vk-cell-price { font: 700 15px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.vk-cell-sub { font: 500 10.5px/1.35 var(--sans); color: var(--muted-2); }
+.vk-sl .vk-cell-key, .vk-sl .vk-cell-price { color: var(--red); }
+.vk-sl { box-shadow: inset 0 2px 0 var(--red); }
+.vk-entry .vk-cell-key, .vk-entry .vk-cell-price { color: var(--blue); }
+.vk-entry { box-shadow: inset 0 2px 0 var(--blue); }
+.vk-tp .vk-cell-key, .vk-tp .vk-cell-price { color: var(--green); }
+.vk-tp { box-shadow: inset 0 2px 0 var(--green); }
+@media (max-width: 680px) {
+  /* #31: 2-row reflow — SL + IN across the top, the three TPs beneath. */
+  .vk-ladder-h { grid-template-columns: repeat(6, 1fr); }
+  .vk-cell { padding: 10px 10px 9px; }
+  .vk-sl, .vk-entry { grid-column: span 3; }
+  .vk-tp { grid-column: span 2; }
+}
+/* #6: checklist chips */
+.vk-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.vk-chk {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px;
+  border-radius: 999px; font: 600 11.5px/1 var(--sans); cursor: default;
+  border: 1px solid var(--border-2); color: var(--text-2); background: var(--panel);
+}
+.vk-chk b { font-weight: 800; }
+.vk-chk.ok { color: var(--green); border-color: rgba(47, 208, 127, 0.35); background: var(--green-soft); }
+.vk-chk.no { color: var(--red); border-color: rgba(255, 92, 92, 0.3); background: rgba(255, 92, 92, 0.08); }
+/* #6: View chart → is the panel's primary CTA */
+.vk-chart-btn {
+  background: var(--blue); border-color: var(--blue); color: #fff !important;
+  font-weight: 700; padding: 8px 14px; border-radius: 10px;
+}
+.vk-chart-btn:hover { filter: brightness(1.12); }

@@ -751,12 +751,11 @@
     const struct = d.structure != null ? d.structure : 0;
     const nStruct = d.structural_tps != null ? d.structural_tps : 0;
     const rrOk = (r.rr || 0) >= 1.5;
-    const chk = (ok, label, note) => `
-      <div class="vk-check ${ok ? "ok" : "no"}">
-        <span class="vk-check-ic">${ok ? "✓" : "✕"}</span>
-        <span class="vk-check-lbl">${label}</span>
-        <span class="vk-check-note">${note}</span>
-      </div>`;
+    // Backlog #6: pass/fail as compact inline chips — the note rides in the
+    // tooltip instead of a third column, so six criteria read in one glance.
+    const chk = (ok, label, note) =>
+      `<span class="vk-chk ${ok ? "ok" : "no"}" title="${esc(note)}">` +
+      `<b>${ok ? "✓" : "✕"}</b> ${label}</span>`;
     const checklist = [
       chk(true, "200 SMA level", r.level_tf === "weekly" ? "Weekly (strongest)" : r.level_tf === "3d" ? "3-Day" : "H4 / daily proxy"),
       chk(!!r.at_level, "At the level", r.at_level ? "price on the SMA" : "still approaching"),
@@ -766,23 +765,22 @@
       chk(nStruct > 0, "Real targets", nStruct > 0 ? `${nStruct}/3 at structure` : "R-multiples only"),
     ].join("");
 
-    // A vertical price ladder: SL → Entry → TP1 → TP2 → TP3 (ordered by price).
-    const lvl = (key, label, val, cls, sub) => `
-      <div class="vk-lvl vk-${cls}">
-        <span class="vk-lvl-key">${key}</span>
-        <span class="vk-lvl-label">${label}</span>
-        <span class="vk-lvl-price num">${cur}${num(val)}</span>
-        <span class="vk-lvl-sub">${sub}</span>
+    // Backlog #5: HORIZONTAL trade ladder — Stop → Entry → TP1 → TP2 → TP3
+    // as cells reading left to right in trade order (both directions), each
+    // with its %-from-entry and the scale-out note.
+    const cell = (key, label, val, cls, sub) => `
+      <div class="vk-cell vk-${cls}" title="${esc(label)}">
+        <span class="vk-cell-key">${key}</span>
+        <span class="vk-cell-price num">${cur}${num(val)}</span>
+        <span class="vk-cell-sub">${sub}</span>
       </div>`;
-    const tps = [
-      lvl("TP3", "Take profit 3", r.tp3, "tp", `${sgn(pctFrom(r.tp3))} · book ${scale[2]}%`),
-      lvl("TP2", "Take profit 2", r.tp2, "tp", `${sgn(pctFrom(r.tp2))} · book ${scale[1]}% · SL → support`),
-      lvl("TP1", "Take profit 1", r.tp1, "tp", `${sgn(pctFrom(r.tp1))} · book ${scale[0]}% · SL → break-even`),
-      lvl("IN",  "Entry", r.entry, "entry", `${tfTxt} reaction`),
-      lvl("SL",  "Stop loss", r.stop, "sl", `${sgn(pctFrom(r.stop))} · risk ${cur}${num(r.risk)}`),
+    const ladder = [
+      cell("SL",  "Stop loss",     r.stop,  "sl",    `${sgn(pctFrom(r.stop))} · risk ${cur}${num(r.risk)}`),
+      cell("IN",  "Entry",         r.entry, "entry", `${tfTxt} reaction`),
+      cell("TP1", "Take profit 1", r.tp1,   "tp",    `${sgn(pctFrom(r.tp1))} · book ${scale[0]}% · SL → BE`),
+      cell("TP2", "Take profit 2", r.tp2,   "tp",    `${sgn(pctFrom(r.tp2))} · book ${scale[1]}% · SL → support`),
+      cell("TP3", "Take profit 3", r.tp3,   "tp",    `${sgn(pctFrom(r.tp3))} · book ${scale[2]}%`),
     ];
-    // Longs read top-down TP3→SL; shorts invert so price still descends visually.
-    const ladder = isLong ? tps : tps.slice().reverse();
 
     return `<div class="row-detail vk-detail">
       <div class="vk-hero" style="--gc:${gColor}">
@@ -805,11 +803,11 @@
         </div>
       </div>
 
-      <div class="vk-ladder">${ladder.join("")}</div>
+      <div class="vk-ladder vk-ladder-h">${ladder.join("")}</div>
 
       <div class="vk-checklist-wrap">
         <div class="vk-section-lbl">5.0 checklist</div>
-        <div class="vk-checklist">${checklist}</div>
+        <div class="vk-checks">${checklist}</div>
         <div class="vk-plan-note">Risk 0.25–0.5% of equity · ≤3× leverage · SL → break-even at TP1, → below new support at TP2 · never moved against the trade.</div>
       </div>
 

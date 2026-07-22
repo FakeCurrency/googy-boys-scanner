@@ -20,8 +20,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 2. Sort as a compact cycling control (SCORE ↓ → PRICE → R:R → M.C → A-Z) with direction flip on repeat tap.
 - [x] 3. Toolbar condenses to a slim variant on scroll (labels shrink, counts stay).
 - [x] 4. Row card v2: 76px, ticker + dir arrow + mcap + name line, price with day-% beneath, spark, score + R:R stack.
-- [ ] 5. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
-- [ ] 6. Checklist as inline pass/fail chips in the expanded panel; "View chart →" as the primary CTA.
+- [x] 5. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
+- [x] 6. Checklist as inline pass/fail chips in the expanded panel; "View chart →" as the primary CTA.
 - [x] 7. Day-change display: current_pct/day_pct with spark-derived ~fallback when null.
 - [ ] 8. Playwright e2e suite in `test/e2e/` (deck paint, pill filtering, expand, sort, recs page) wired into test.yml CI.
 
@@ -55,7 +55,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [ ] 28. Phone row grid: 44px grade rail, right-aligned price + day-%, spark hidden <480px but day-% kept.
 - [ ] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).
 - [ ] 30. MORE / overflow destinations as a touch bottom sheet with scrim (covers SPECS + ALERTS + the MORE set on phones).
-- [ ] 31. Expanded ladder reflows to a 2-row grid on phones — never five squished columns.
+- [x] 31. Expanded ladder reflows to a 2-row grid on phones — never five squished columns.
 - [ ] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
 - [ ] 33. All tap targets ≥44px (star, expand, pills, segments) per iOS HIG.
 - [ ] 34. Touch-slop guard: scrolling a row never accidentally expands it.
