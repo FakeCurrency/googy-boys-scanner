@@ -69,6 +69,43 @@
     return null;
   }
 
+  // ── Stale-while-revalidate cache additions (UI Wave 1, 2026-07-22) ────────
+  // cacheGetStale returns an EXPIRED full payload (cacheGet hides those) so a
+  // cold paint can show the last-known scan instantly while the fresh fetch
+  // runs in the background. The slim "head" cache is a second, always-written
+  // entry — stats + the first HEAD_ROWS rows with the heavy per-row fields
+  // (spark/detail/plans/analysis) stripped — so a market whose full payload
+  // exceeds the 500KB cacheSet cap (kept: it protects the manual journal's
+  // localStorage quota) still paints instantly. Head payloads are marked
+  // _head, shown only under the "updating…" flag, and NEVER enter state.cache.
+  const HEAD_PREFIX = "gbs:cache:head:";
+  const HEAD_ROWS   = 60;
+  function cacheGetStale(key) {
+    try {
+      const item = JSON.parse(localStorage.getItem(CACHE_PREFIX + key) || "null");
+      if (item && item.data) return item.data;
+    } catch (_) {}
+    return null;
+  }
+  function cacheSetHead(key, data) {
+    try {
+      const rows = ((data && data.results) || []).slice(0, HEAD_ROWS)
+        .map(({ spark, detail, plans, analysis, ...slim }) => slim);
+      const head = { ...data, results: rows, _head: true,
+                     _full_count: ((data && data.results) || []).length };
+      const payload = JSON.stringify({ ts: Date.now(), data: head });
+      if (payload.length > 500_000) return;   // same cap as cacheSet — never raised
+      localStorage.setItem(HEAD_PREFIX + key, payload);
+    } catch (_) {}
+  }
+  function cacheGetHead(key) {
+    try {
+      const item = JSON.parse(localStorage.getItem(HEAD_PREFIX + key) || "null");
+      if (item && item.data) return item.data;
+    } catch (_) {}
+    return null;
+  }
+
   // ---- debug mode ---------------------------------------------------------
   const isDebug = () =>
     new URLSearchParams(location.search).has("debug") ||
@@ -117,6 +154,8 @@
     sort: "score",      // score | price | rr | mcap | az
     sortDir: null,      // "asc" | "desc"; null = the sort's natural default
     data: null,
+    dataKey: null,      // "<market>:<mode>" the on-screen data belongs to
+    staleView: false,   // true = SWR paint awaiting fresh · "failed" = refresh failed
     cache: {},
     cur: "$",
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
@@ -374,9 +413,11 @@
     const strongStructure = (p.structural_tps || 0) >= 2;
     return goodGrade || strongStructure;
   }
-  // Compact, scannable badges for the VIVEK list (max 3) — what moved + why it matters.
+  // Compact, scannable badges for the VIVEK list — what moved + why it
+  // matters. Returns an ARRAY; rowHtml caps the row at 3 chips + a "+N"
+  // overflow chip (UI Wave 1) — the expanded panel still shows everything.
   function vkBadges(r) {
-    if (state.mode !== "vivek") return "";
+    if (state.mode !== "vivek") return [];
     const out = [];
     // Multi-lens confluence (dog-balls mode): another lens has an ACTIVE
     // aligned setup on this exact name right now
@@ -395,7 +436,22 @@
       out.push(`<span class="rbadge wk" title="Reaction at the Weekly 200 SMA (higher timeframe)">Weekly 200</span>`);
     else if ((r.chips || []).includes("STRONG STRUCTURE"))
       out.push(`<span class="rbadge struct" title="Recent swings stacking in the trade's favour">Strong structure</span>`);
-    return out.join("");
+    return out;
+  }
+
+  // Row chip strip capped at 3 + "+N" (UI Wave 1): warnings (FUND/REIT,
+  // LOW R:R, WIDE STOP) always outrank decorative badges so the cap can never
+  // hide a risk flag. The full set stays in the expanded detail panel.
+  const CHIP_CAP = 3;
+  function rowChips(r, extras) {
+    const all = [...vkBadges(r), ...extras].filter(Boolean);
+    const isWarn = (h) => /fundwarn|chip warn/.test(h);
+    const ordered = [...all.filter(isWarn), ...all.filter((h) => !isWarn(h))];
+    const shown = ordered.slice(0, CHIP_CAP);
+    const hidden = ordered.length - shown.length;
+    if (hidden > 0)
+      shown.push(`<span class="rbadge chip-more" title="${hidden} more — expand the row for every chip">+${hidden}</span>`);
+    return shown.join("");
   }
 
   function rowHtml(r, i) {
@@ -440,7 +496,7 @@
           <span class="cname">${esc(r.name || "")}</span>
           <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
-        <div class="row-chips">${vkBadges(r)}${assetBadge}${lowrr}${widestop}${t2r}</div>
+        <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">
@@ -981,7 +1037,9 @@
     box.hidden = false;
     box.className = `scan-fresh${warn ? " warn" : ""}`;
     box.textContent = bits.join("  ·  ");
-    box.title = d.code_sha ? `Built from ${d.code_sha}` : "";
+    // Relative age on screen → exact Melbourne time in the tooltip (UI Wave 1)
+    const melb = window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label);
+    box.title = `Generated ${melb}` + (d.code_sha ? ` · built from ${d.code_sha}` : "");
   }
 
   function renderEntryFilters(d) {
@@ -1064,9 +1122,11 @@
     }));
   }
 
+  let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts
   function renderRows() {
     const wrap = $("#results");
     const list = buildList();
+    _rowsToken++;
     if (!list.length) {
       // Are active toggle-filters the reason it's empty? Point that out so an
       // empty list reads as "these filters have no match" rather than "broken".
@@ -1079,7 +1139,23 @@
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
       return;
     }
-    wrap.innerHTML = list.map(rowHtml).join("");
+    // Incremental render (UI Wave 1): the first chunk paints synchronously so
+    // the list is instantly usable; the tail streams in rAF batches so a
+    // 400-row NASDAQ list can't block the first paint. Delegated row handlers
+    // keep working on appended rows; the token kills a superseded stream.
+    const FIRST = 40, BATCH = 60;
+    wrap.innerHTML = list.slice(0, FIRST).map(rowHtml).join("");
+    if (list.length <= FIRST) return;
+    const token = _rowsToken;
+    let i = FIRST;
+    const step = () => {
+      if (token !== _rowsToken || !wrap.isConnected) return;
+      wrap.insertAdjacentHTML("beforeend",
+        list.slice(i, i + BATCH).map((r, j) => rowHtml(r, i + j)).join(""));
+      i += BATCH;
+      if (i < list.length) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
 
   // AT-LEVEL battleground strip (2026-07-03): names sitting ON a 200-SMA
@@ -1108,15 +1184,32 @@
   }
 
   // ----------------------------------------------------------- apply
-  function applyPayload(d) {
+  // Relative "Last scanned" (UI Wave 1): "4m ago" on screen; the exact
+  // Melbourne time (the ONE display convention) + market-local ride the
+  // tooltip. A stale-while-revalidate paint is flagged "updating…" so a
+  // cached copy can never read as live on a trading dashboard.
+  function updateScanTitle(d) {
+    const el = $("#scan-title");
+    if (!el || !d) return;
+    const t = Date.parse(d.generated_at);
+    const melb = window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label);
+    const rel = isFinite(t) ? (Date.now() - t < 60000 ? "just now" : agoText(t)) : melb;
+    const suffix = state.staleView === "failed" ? "  ·  update failed — showing cached"
+                 : state.staleView ? "  ·  updating…" : "";
+    el.textContent = `Last scanned: ${rel}${suffix}`;
+    el.title = `Melbourne: ${melb}  ·  Market-local: ${fmtTime(d.generated_at, d.tz_label)}`;
+  }
+
+  function applyPayload(d, stale = false) {
     state.data = d;
+    state.dataKey = `${state.market}:${state.mode}`;
+    state.staleView = stale;
     state.cur = d.currency_symbol || "$";
-    // Melbourne is the ONE display convention; market-local rides the tooltip
-    $("#scan-title").textContent = `Last scanned: ${window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label)}`;
-    $("#scan-title").title = `Market-local: ${fmtTime(d.generated_at, d.tz_label)}`;
+    updateScanTitle(d);
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
     const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
-    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${d.results.length} setups${dqNote}${riskNote} · auto-refreshes hourly`;
+    const nSetups = d._head && d._full_count != null ? d._full_count : d.results.length;
+    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${nSetups} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     renderFreshness(d);
     renderEntryFilters(d);
     renderLegend(d);
@@ -1169,7 +1262,8 @@
   }
 
   function skeleton() {
-    $("#results").innerHTML = Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join("");
+    // 8 shimmer placeholders sized like real row cards (see .skeleton CSS)
+    $("#results").innerHTML = Array.from({ length: 8 }, () => `<div class="skeleton"></div>`).join("");
   }
 
   // The app is VIVEK-only; the retired pullback/reversal/spec/short/googy feeds
@@ -1226,14 +1320,39 @@
       evts.sort((a, b2) => b2.t - a.t);
       const recent = evts.slice(0, 4);
       if (!recent.length) { box.hidden = true; return; }
+      // One summary line (UI Wave 1): open count · today's realised R (Melbourne
+      // day) · last action age. Click expands the event list; the 3-min
+      // re-render keeps an expanded list expanded. Journal → link stays put.
+      const wasOpen = !!box.querySelector(".ba-events:not([hidden])");
+      const nOpen = (b.open || []).length;
+      const melbDay = (t) => new Intl.DateTimeFormat("en-CA",
+        { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).format(t);
+      const today = melbDay(Date.now());
+      const closedToday = evts.filter((e) => e.kind === "close" && isFinite(e.t) && melbDay(e.t) === today);
+      const rSum = closedToday.reduce((s, e) => s + (isFinite(+e.r) ? +e.r : 0), 0);
+      const rTxt = closedToday.length ? `${rSum >= 0 ? "+" : ""}${rSum.toFixed(1)}R today` : "no closes today";
+      const sumTxt = `Bot: ${nOpen} open · ${rTxt} · last action ${agoText(recent[0].t)}`;
       box.hidden = false;
       box.innerHTML =
-        `<span class="ba-label">🤖 BOT ACTIVITY</span>` +
+        `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" ` +
+          `title="The paper bot book — click for the recent events">🤖 ${esc(sumTxt)}` +
+          `<span class="ba-chev" aria-hidden="true">▾</span></button>` +
+        `<a class="ba-more" href="journal.html">Journal →</a>` +
+        `<div class="ba-events"${wasOpen ? "" : " hidden"}>` +
         recent.map((e) =>
           `<a class="ba-item" href="journal.html" title="${esc(e.sub)}">` +
           `<span class="ba-kind-${e.kind}${e.kind === "close" ? (e.r >= 0 ? " pos" : " neg") : ""}">${esc(e.txt)}</span>` +
           `<span class="ba-ago">${agoText(e.t)}</span></a>`).join("") +
-        `<a class="ba-more" href="journal.html">Journal →</a>`;
+        `</div>`;
+      box.classList.toggle("ba-open", wasOpen);
+      const sumBtn = box.querySelector(".ba-sum");
+      const list = box.querySelector(".ba-events");
+      if (sumBtn && list) sumBtn.addEventListener("click", () => {
+        const open = !list.hidden;
+        list.hidden = open;
+        sumBtn.setAttribute("aria-expanded", String(!open));
+        box.classList.toggle("ba-open", !open);
+      });
     } catch (_) { /* the strip is optional — never block the dashboard */ }
   }
 
@@ -1257,25 +1376,54 @@
   async function load(silent = false) {
     const { market, mode } = state;
     const key = `${market}:${mode}`;
-    if (!silent) {
-      $("#scan-title").textContent = "Loading latest scan…";
-      skeleton();
-    }
     // Check localStorage cache first (5-min TTL)
     if (!state.cache[key]) {
       const lsCached = cacheGet(key);
       if (lsCached) state.cache[key] = lsCached;
     }
     if (state.cache[key]) { applyPayload(state.cache[key]); return; }
+    // Stale-while-revalidate (UI Wave 1): if this market/mode isn't already on
+    // screen, paint the best cached copy NOW — expired full payload first,
+    // else the slim head cache — marked "updating…", then fetch fresh and swap.
+    // If it IS already on screen (auto-refresh / reload), keep the current
+    // view rather than degrading to a stale/head repaint while we fetch.
+    const alreadyShowing = state.data && state.dataKey === key;
+    let painted = alreadyShowing;
+    if (!alreadyShowing) {
+      const stale = cacheGetStale(key) || cacheGetHead(key);
+      if (stale) { applyPayload(stale, true); painted = true; }
+      else if (!silent) {
+        $("#scan-title").textContent = "Loading latest scan…";
+        skeleton();
+      }
+    }
     try {
-      const res = await fetch(dataFile(market, mode), { cache: "no-cache" });
-      if (!res.ok) throw new Error(res.status);
-      const d = await res.json();
+      // The head of index.html starts this fetch before any script loads;
+      // consume it (once) instead of fetching the same payload twice.
+      let d = null;
+      const pre = window.__scanPreload;
+      if (pre && pre.market === market && mode === "vivek") {
+        window.__scanPreload = null;
+        d = await pre.promise.catch(() => null);
+      }
+      if (!d) {
+        const res = await fetch(dataFile(market, mode), { cache: "no-cache" });
+        if (!res.ok) throw new Error(res.status);
+        d = await res.json();
+      }
       state.cache[key] = d;
       cacheSet(key, d);
-      applyPayload(d);
+      cacheSetHead(key, d);
+      // If the user switched market while this fetch was in flight, keep the
+      // result cached but don't stomp the view they're now looking at.
+      if (key === `${state.market}:${state.mode}`) applyPayload(d);
     } catch (e) {
-      if (!silent) {
+      if (key !== `${state.market}:${state.mode}`) return;   // view moved on
+      if (painted && state.data) {
+        // Keep the stale view but say the refresh failed — never fake liveness.
+        state.staleView = "failed";
+        updateScanTitle(state.data);
+      } else if (!silent) {
         $("#scan-title").textContent = "No scan data yet";
         $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
           <p>Run the scanner to generate the data, then refresh.</p></div>`;
@@ -1376,6 +1524,8 @@
           if (d.generated_at && d.generated_at !== oldGenAt) {
             const key = `${state.market}:${state.mode}`;
             state.cache[key] = d;
+            cacheSet(key, d);
+            cacheSetHead(key, d);
             applyPayload(d);
             startAutoRefresh();
             flashScan(`Scan complete — updated to ${window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label)}.`, "ok");
@@ -1509,7 +1659,7 @@
                   specs: (sp && sp.results) || [] };
       return lensIdx;
     }
-    if (searchInput) searchInput.addEventListener("input", async () => {
+    const runSearch = async () => {
       const q = searchInput.value.trim().toLowerCase();
       if (!q) { searchResults.innerHTML = ""; return; }
       const idx = await loadLensIndex();
@@ -1586,6 +1736,13 @@
       searchResults.innerHTML = rows.join("");
       // Close overlay when user clicks a result link
       searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", closeSearch));
+    };
+    // Debounced ~150ms (UI Wave 1): one search per typing pause, not one per
+    // keystroke — the stale-keystroke guard above still drops late responses.
+    let _searchT = null;
+    if (searchInput) searchInput.addEventListener("input", () => {
+      clearTimeout(_searchT);
+      _searchT = setTimeout(runSearch, 150);
     });
 
     // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
@@ -1713,7 +1870,7 @@
       fetch(dataFile(m, state.mode), { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (d && !state.cache[key]) { state.cache[key] = d; cacheSet(key, d); }
+          if (d && !state.cache[key]) { state.cache[key] = d; cacheSet(key, d); cacheSetHead(key, d); }
         })
         .catch(() => {});
     }
@@ -1774,6 +1931,13 @@
   loadEntryQuality();
   loadBotActivity();
   setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
+  // Keep the relative "Last scanned" + freshness badge honest while the tab
+  // sits open — a "4m ago" that silently ages to 40m would read as live.
+  setInterval(() => {
+    if (document.hidden || !state.data) return;
+    updateScanTitle(state.data);
+    renderFreshness(state.data);
+  }, 30000);
   load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
   // pull remote stars (unified watchlist) so phone/desktop agree, then refresh
   if (window.GBSSync && GBSSync.enabled()) {

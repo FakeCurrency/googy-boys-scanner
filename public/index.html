@@ -15,8 +15,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=63" />
-  <script src="js/nav.js?v=3"></script>
+  <link rel="stylesheet" href="css/styles.css?v=64" />
+  <script>
+  /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
+     saved market from gbs:prefs and starts the request before any script
+     parses. app.js consumes window.__scanPreload, so nothing loads twice. */
+  try {
+    var _pm = "asx";
+    try { _pm = (JSON.parse(localStorage.getItem("gbs:prefs") || "{}").market) || "asx"; } catch (_e) {}
+    if (["asx", "nasdaq", "crypto"].indexOf(_pm) < 0) _pm = "asx";
+    window.__scanPreload = {
+      market: _pm,
+      promise: fetch("data/" + _pm + "_vivek.json", { cache: "no-cache" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+    };
+  } catch (_e) {}
+  </script>
+  <script src="js/nav.js?v=3" defer></script>
   <script src="js/sw-register.js?v=2" defer></script>
 </head>
 <body>
@@ -167,6 +183,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=8"></script>
-  <script src="js/app.js?v=68"></script>
+  <script src="js/app.js?v=69"></script>
 </body>
 </html>

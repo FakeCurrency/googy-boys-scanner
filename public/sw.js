@@ -11,7 +11,7 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v3";   // v3 2026-07-21: scalp-era data surfaces + debug page retired — purge cached copies
+const CACHE = "vivek5-v4";   // v4 2026-07-22: UI Wave 1 — SWR paint, batched rows, bot-strip summary; purge stale assets
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();

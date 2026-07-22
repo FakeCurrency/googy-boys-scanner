@@ -25,8 +25,11 @@
 
   --text: #ffffff;
   --text-2: #ecf1f9;
-  --muted: #c3cddd;
-  --muted-2: #9fabbf;
+  /* UI Wave 1 (2026-07-22): lifted from #c3cddd / #9fabbf — both already met
+     WCAG AA, but muted-2 sat at 5.3:1 on --panel-3; now ≥6.2:1 everywhere
+     (muted ≥8.4:1), so secondary text reads cleanly on every surface. */
+  --muted: #cdd6e4;
+  --muted-2: #adb9cd;
 
   --separator: #313b4c;
   --border: #313b4c;
@@ -1622,3 +1625,41 @@ body { letter-spacing: -0.012em; }
 /* Phase Map cross-badge on scanner rows — the same name is live over there. */
 .rbadge.pmx { color: var(--teal); background: rgba(48,176,199,0.13);
   border-color: color-mix(in srgb, var(--teal) 32%, transparent); }
+
+/* ═══════════════════ UI WAVE 1 (2026-07-22) — speed + readability ═════════
+   Appended overrides, same pattern as the iOS pass above. */
+
+/* Skeleton placeholders sized like real row cards (min-height 90 / 80 mobile)
+   so the swap to live rows doesn't jump the layout; shimmer keyframe reused. */
+.skeleton { height: 90px; }
+@media (max-width: 600px) { .skeleton { height: 80px; } }
+
+/* Tabular figures on every numeric cell. The `font:` shorthand in the base
+   rules resets the body-level tabular-nums, so re-assert it where numbers
+   must not wiggle as they change: prices, scores, R multiples, stat values. */
+.rprice, .rk-score, .rk-rr, .dp-val, .dh-val, .stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows hold 2 visual lines max: line 1 (ticker · price) already clips; the
+   chip strip now never wraps — overflow collapses into the "+N" chip. */
+.row-chips { flex-wrap: nowrap; overflow: hidden; }
+.rbadge.chip-more {
+  color: var(--muted); background: var(--fill-2);
+  border-color: var(--border); flex-shrink: 0;
+}
+
+/* Bot strip: one summary line; the event list expands below on click. */
+.ba-sum {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 2px;
+  font: 700 12.5px/1 var(--sans); color: var(--text-2); text-align: left;
+}
+.ba-sum:hover { color: var(--text); }
+.ba-chev { font-size: 10px; color: var(--muted-2); transition: transform .15s; }
+.ba-open .ba-chev { transform: rotate(180deg); }
+.ba-events {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  width: 100%; padding-top: 4px;
+}
+.ba-events[hidden] { display: none; }

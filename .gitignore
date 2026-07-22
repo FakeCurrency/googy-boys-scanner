@@ -29,3 +29,6 @@ _to_delete/
 
 # Last-good per-ticker frame cache (restored across CI runs via actions/cache)
 .cache/
+
+# Claude cloud-session push credential (local only, never commit)
+.claude/gh_token.txt
