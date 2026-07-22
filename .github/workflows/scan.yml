@@ -13,12 +13,17 @@ on:
     # Hourly during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
     # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
     # NASDAQ 9:30 AM–4:00 PM ET   = 13:30–21:00 UTC  (EDT; add 1h in EST winter)
-    - cron: "0 0-5 * * 1-5"      # ASX  00:00–05:00 UTC (hourly)
-    - cron: "30 6 * * 1-5"        # ASX  06:30 UTC = 4:30 PM AEST (closing alert)
-    - cron: "30 13 * * 1-5"       # NASDAQ open  13:30 UTC
-    - cron: "0 14-20 * * 1-5"     # NASDAQ 14:00–20:00 UTC (hourly)
-    - cron: "0 21 * * 1-5"        # NASDAQ close 21:00 UTC
-    - cron: "0 2,8,14,20 * * 0,6" # weekends: crypto only, 6-hourly (24/7 market —
+    #
+    # OFF-:00 MINUTES (2026-07-22): GitHub's scheduler is most congested at the
+    # top of the hour — their own docs recommend a random minute — and this
+    # repo has recorded 48-min drift and silently skipped morning runs. :07
+    # keeps the same effective cadence while dodging the worst-load slot.
+    - cron: "7 0-5 * * 1-5"       # ASX  00:07–05:07 UTC (hourly)
+    - cron: "37 6 * * 1-5"        # ASX  06:37 UTC ≈ 4:37 PM AEST (closing alert)
+    - cron: "37 13 * * 1-5"       # NASDAQ open  13:37 UTC
+    - cron: "7 14-20 * * 1-5"     # NASDAQ 14:07–20:07 UTC (hourly)
+    - cron: "7 21 * * 1-5"        # NASDAQ close 21:07 UTC
+    - cron: "7 2,8,14,20 * * 0,6" # weekends: crypto only, 6-hourly (24/7 market —
                                   # dashboard data used to stale from Fri to Mon)
   workflow_dispatch:
     inputs:
