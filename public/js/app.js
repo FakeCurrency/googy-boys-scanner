@@ -1204,6 +1204,9 @@
     // keep working on appended rows; the token kills a superseded stream.
     const FIRST = 40, BATCH = 60;
     wrap.innerHTML = list.slice(0, FIRST).map(rowHtml).join("");
+    // Entrance cascade on the FIRST paint only (backlog #48) — later renders
+    // (filters, sorts, pills) swap instantly, which reads as much snappier.
+    if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
     if (list.length <= FIRST) return;
     const token = _rowsToken;
     let i = FIRST;

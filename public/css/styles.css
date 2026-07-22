@@ -1731,6 +1731,60 @@ body { letter-spacing: -0.012em; }
 }
 .deck-bot .ba-events { padding-top: 8px; }
 
+/* ---- RECOMMENDATIONS page (owner 2026-07-22) — deck-language cards ---- */
+.rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 14px; }
+.rec-card {
+  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px 18px; margin: 0 0 2px; min-width: 0;
+}
+.rec-card-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.rec-card-hd h3 { margin: 0; font: 800 15px/1 var(--sans); letter-spacing: -0.01em; }
+.rec-verdict {
+  margin-left: auto; font: 800 11.5px/1 var(--sans); letter-spacing: 0.04em;
+  padding: 7px 11px; border-radius: 999px; white-space: nowrap;
+}
+.rec-verdict.up    { color: var(--green);  background: var(--green-soft); }
+.rec-verdict.down  { color: var(--red);    background: var(--red-soft); }
+.rec-verdict.mixed { color: var(--orange); background: var(--orange-soft); }
+.rec-breadth {
+  position: relative; height: 10px; border-radius: 999px; background: var(--red-soft);
+  overflow: hidden; margin: 4px 0 18px;
+}
+.rec-breadth i { position: absolute; inset: 0 auto 0 0; background: var(--green); opacity: 0.75; border-radius: 999px 0 0 999px; }
+.rec-breadth-lbl {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 700 8.5px/1 var(--mono); letter-spacing: 0.05em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.rec-line { margin: 0 0 12px; font: 400 13.5px/1.55 var(--sans); color: var(--text-2); }
+.rec-nums { display: flex; gap: 8px; flex-wrap: wrap; }
+.rec-nums span {
+  font: 600 11.5px/1 var(--sans); color: var(--muted); background: var(--fill-2);
+  border: 1px solid var(--border-soft); border-radius: 999px; padding: 7px 11px;
+}
+.rec-nums b { font: 800 12px/1 var(--mono); color: var(--text); }
+.rec-nums b.pos { color: var(--green); } .rec-nums b.neg { color: var(--red); }
+.rec-age { margin-top: 10px; font: 500 10.5px/1.4 var(--sans); color: var(--muted-2); }
+.rec-note { border-left: 3px solid var(--blue); margin-bottom: 14px; }
+.rec-note-body { margin: 0; font: 400 14.5px/1.65 var(--sans); color: var(--text-2); }
+.rec-movers .rec-mv-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.rec-mv {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  font: 700 12.5px/1 var(--sans); color: var(--text);
+  background: var(--fill-2); border: 1px solid var(--border-soft);
+  border-radius: 999px; padding: 9px 13px;
+}
+.rec-mv:hover { background: var(--fill); }
+.rec-mv-mkt { font: 700 9px/1 var(--mono); color: var(--muted-2); letter-spacing: 0.06em; }
+.rec-mv-r { font: 800 12px/1 var(--mono); }
+.rec-mv-r.pos { color: var(--green); } .rec-mv-r.neg { color: var(--red); }
+.rec-link { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--blue); text-decoration: none; }
+.rec-disclaimer { font: 500 11.5px/1.6 var(--sans); color: var(--muted-2); max-width: 760px; margin: 18px 0 0; }
+@media (max-width: 880px) { .rec-grid { grid-template-columns: 1fr; } }
+
+/* snappy re-renders (backlog #48): the entrance cascade plays on FIRST paint
+   only — filter/sort/pill re-renders swap instantly instead of re-animating. */
+.rows[data-painted] .row-wrap { animation: none; }
+
 /* responsive: the deck is the same app at thumb scale (backlog #19 seed) */
 @media (max-width: 880px) {
   .deck-top { flex-wrap: wrap; }

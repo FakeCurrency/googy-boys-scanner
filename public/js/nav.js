@@ -18,15 +18,17 @@
   "use strict";
 
   const PRIMARY = [
-    { href: "index.html",    label: "SCAN",       tab: "📡", key: "index" },
-    { href: "phasemap.html", label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
-    { href: "specs.html",    label: "SPECS ⚡",   tab: "⚡", key: "specs" },
-    { href: "mynames.html",  label: "★ MY NAMES", tab: "★", key: "mynames" },
-    { href: "alerts.html",   label: "ALERTS",     tab: "🔔", key: "alerts" },
-    { href: "journal.html",  label: "JOURNAL",    tab: "📒", key: "journal" },
+    { href: "index.html",           label: "SCAN",       tab: "📡", key: "index" },
+    { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
+    { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
+    { href: "specs.html",           label: "SPECS ⚡",   tab: "⚡", key: "specs" },
+    { href: "mynames.html",         label: "★ MY NAMES", tab: "★", key: "mynames" },
+    { href: "alerts.html",          label: "ALERTS",     tab: "🔔", key: "alerts" },
+    { href: "journal.html",         label: "JOURNAL",    tab: "📒", key: "journal" },
   ];
-  // Bottom tab bar fits 5 — SPECS lives in the top pills / MORE on mobile.
-  const TABS = PRIMARY.filter((x) => x.key !== "specs");
+  // Bottom tab bar fits 5 — SPECS + ALERTS live in the top pills / MORE on
+  // mobile (RECS took a slot, owner 2026-07-22).
+  const TABS = PRIMARY.filter((x) => x.key !== "specs" && x.key !== "alerts");
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors" },
     { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true },
