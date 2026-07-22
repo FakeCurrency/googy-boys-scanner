@@ -24,7 +24,7 @@ breaking changes.
 - [ ] 7. Sort as a compact cycling control (SCORE ↓ → PRICE → R:R → M.C → A-Z) with direction flip on repeat tap.
 - [ ] 8. Toolbar condenses to a slim variant on scroll (labels shrink, counts stay).
 - [x] 9. Single-row topbar: brand + market segments + nav pills + search + SCAN; kill topbar row 2.
-- [x] 10. Clocks collapse to a two-line MEL/NY micro block; China/London move to its tooltip.
+- [x] 10. ~~Clocks collapse to a two-line MEL/NY micro block; China/London in tooltip~~ AMENDED by owner 2026-07-22: all FOUR cities visible in a 2×2 micro grid (MEL/NY with seconds, CN/LDN HH:MM), dates in tooltip. Shipped.
 - [x] 11. Retire the rotating trader quote from the topbar (footer keeps it).
 - [ ] 12. Row card v2: 76px, grade rail, ticker+dir arrow+mcap+name line, price with day-% beneath, spark, score + R:R stack.
 - [ ] 13. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
@@ -33,6 +33,14 @@ breaking changes.
 - [x] 16. Wave-1 SWR semantics wired into the deck: "updating…" pulses the freshness dot; "update failed — showing cached" turns it amber.
 - [ ] 17. Day-change display: use current_pct/day_pct; when null (ASX overnight), derive approx % from the last two spark points and mark it ~.
 - [ ] 18. Playwright e2e suite committed to `test/e2e/` covering deck paint, pill filtering, expand, sort — runs in CI from this wave on.
+
+### Owner adjustments (2026-07-22 PM) — shipped or promoted
+
+- [x] A1. Journal: OPEN POSITIONS unrealised P&L headline — total $ up/down (bot book marks + manual scan/live prices, US$ convention), split per side, marked-age note. (Pulled forward from the Wave-8 area.)
+- [x] A2. Journal legibility: intro, comparison/analytics, head-to-head and sync sections fold closed by default — P&L → new positions → the two books is now the reading order.
+- [x] A3. nav.js MORE menu regression fixed (dropdown was clipped by the deck topbar's scroll container — now fixed-position anchored).
+- **PROMOTED to next up:** items 84–86 expanded per owner — Specs and PhaseMap pages adopt the SAME deck layout as the SCAN page (command bar + pills + sticky toolbar language), not just token alignment.
+- Known pre-existing: journal tables overflow on phones (item 75's job) — NOT introduced by A1/A2.
 
 ## Wave 4 — Mobile parity (≤680px): same app, smaller
 

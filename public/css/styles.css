@@ -1676,10 +1676,13 @@ body { letter-spacing: -0.012em; }
 .deck-top .nav-pills::-webkit-scrollbar { display: none; }
 .deck-top-right { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .microclock {
-  font: 700 10.5px/1.5 var(--mono); color: var(--muted-2); text-align: right;
-  display: flex; flex-direction: column; white-space: nowrap; cursor: default;
-  font-variant-numeric: tabular-nums;
+  /* 2×2 grid, all four cities visible (owner 2026-07-22); bigger than v1 */
+  font: 700 12px/1.45 var(--mono); color: var(--muted-2); cursor: default;
+  display: grid; grid-template-columns: auto auto; gap: 0 14px;
+  white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left;
 }
+.microclock .mc-major { color: var(--text-2); }
+.microclock .mc-minor { color: var(--muted-2); }
 
 /* ---- command deck bar ---- */
 .deck {

@@ -805,8 +805,49 @@
     paint("new-me", state.me, "✏️ Me · new positions");
   }
 
+  // ── OPEN POSITIONS P&L headline (owner 2026-07-22): the total $ up/down on
+  // current positions, before anything else on the page. Bot side comes marked
+  // from the book JSON (last scan / kill-switch pricing); the Me side uses the
+  // same scan-price snapshot the tables use and re-renders after refreshLive
+  // upgrades marks to live quotes. All US$ per the page convention (fx-note).
+  function renderPnlHeadline() {
+    const box = $("#jr-pnl");
+    if (!box) return;
+    const botOpen = state.bot.open || [];
+    const botU = botOpen.reduce((s, t) => s + (t.unreal_usd != null ? t.unreal_usd * fxOf(t) : 0), 0);
+    let meU = 0, meN = 0, mePriced = 0;
+    for (const t of state.me.open || []) {
+      meN++;
+      const price = scanPrice.get(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
+      const isLong = t.direction !== "short";
+      const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
+      if (price != null && risk > 0 && t.risk_usd != null) {
+        meU += rOf(price, t.entry, risk, isLong) * t.risk_usd * fxOf(t);
+        mePriced++;
+      }
+    }
+    const total = botU + meU;
+    const nOpen = botOpen.length + meN;
+    if (!nOpen) { box.hidden = true; return; }
+    box.hidden = false;
+    const totEl = $("#jr-pnl-total");
+    totEl.textContent = d2(total);
+    totEl.className = "jr-pnl-total " + pcls(total);
+    const t = Date.parse(state.bot.updated_at || "");
+    const m = isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null;
+    const age = m == null ? "" : m < 60 ? ` · marked ${m}m ago` : m < 2880 ? ` · marked ${Math.round(m / 60)}h ago` : ` · marked ${Math.round(m / 1440)}d ago`;
+    const unpriced = meN - mePriced;
+    $("#jr-pnl-sub").textContent =
+      `${nOpen} open position${nOpen === 1 ? "" : "s"} · US$${age}` +
+      (unpriced > 0 ? ` · ${unpriced} of yours awaiting a price` : "");
+    $("#jr-pnl-split").innerHTML =
+      `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(botU)}">${d2(botU)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>` +
+      (meN ? `<span class="jr-pnl-chip"><span class="ts-who">✏️ Me</span> <b class="${pcls(meU)}">${d2(meU)}</b> <span class="ts-who">· ${meN} open</span></span>` : "");
+  }
+
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
+    renderPnlHeadline();
     renderNewPositions();
     renderComparison(sb, sm);
     renderBoth();
@@ -882,6 +923,8 @@
     }
 
     const paint = (g, price) => {
+      // Remember the freshest mark so the P&L headline uses live quotes too.
+      if (price != null) scanPrice.set(g.key, price);
       if (g.manual && price != null) {
         const r = manage(g.manual, price);   // false | "book" | "close"
         if (r) { meChanged = true; if (r === "close") meClosed = true; }
@@ -918,6 +961,8 @@
     // between the open/closed tables).
     if (meChanged) mjSaveLocal(data);
     if (meClosed) { loadMe(data); renderAll(); }
+    // Live quotes may have upgraded manual marks — refresh the P&L headline.
+    renderPnlHeadline();
   }
 
   // ── loaders ───────────────────────────────────────────────────────────────

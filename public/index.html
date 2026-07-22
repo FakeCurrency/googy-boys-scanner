@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=65" />
+  <link rel="stylesheet" href="css/styles.css?v=66" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -32,7 +32,7 @@
     };
   } catch (_e) {}
   </script>
-  <script src="js/nav.js?v=3" defer></script>
+  <script src="js/nav.js?v=4" defer></script>
   <script src="js/sw-register.js?v=2" defer></script>
 </head>
 <body>
@@ -55,8 +55,10 @@
     <div class="nav-pills" id="site-nav"></div>
     <div class="deck-top-right">
       <div class="microclock" id="microclock" title="">
-        <span id="clk-mel-time">—</span>
-        <span id="clk-ny-time">—</span>
+        <span class="mc-major" id="clk-mel-time">—</span>
+        <span class="mc-minor" id="clk-china-time">—</span>
+        <span class="mc-major" id="clk-ny-time">—</span>
+        <span class="mc-minor" id="clk-london-time">—</span>
       </div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -152,6 +154,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=71"></script>
+  <script src="js/app.js?v=72"></script>
 </body>
 </html>

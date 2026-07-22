@@ -68,14 +68,25 @@
       const btn = mount.querySelector(".nav-more-btn");
       const menu = mount.querySelector(".nav-more-menu");
       if (btn && menu) {
+        const close = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); };
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           const open = !menu.hidden;
-          menu.hidden = open;
-          btn.setAttribute("aria-expanded", String(!open));
+          if (open) { close(); return; }
+          // Fixed positioning (2026-07-22): the deck topbar's nav strip is a
+          // scroll container, which CLIPS absolutely-positioned children — the
+          // menu opened invisibly. Anchor it to the button in viewport space.
+          const r = btn.getBoundingClientRect();
+          menu.style.position = "fixed";
+          menu.style.top = `${Math.round(r.bottom + 6)}px`;
+          menu.style.left = "auto";
+          menu.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+          menu.hidden = false;
+          btn.setAttribute("aria-expanded", "true");
+          window.addEventListener("scroll", close, { once: true, passive: true });
         });
-        document.addEventListener("click", () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); });
-        document.addEventListener("keydown", (e) => { if (e.key === "Escape") { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); } });
+        document.addEventListener("click", close);
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
       }
     }
 

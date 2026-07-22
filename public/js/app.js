@@ -1870,21 +1870,21 @@
   }
 
   function updateClocks() {
-    // Wave 3: MEL + NY as a two-line micro block in the topbar; China +
-    // London (and full dates) ride the tooltip instead of their own columns.
+    // All FOUR cities visible (owner 2026-07-22: "I wanna be able to see
+    // london/china without hovering"). 2×2 grid: MEL/NY with seconds in the
+    // left column, China/London HH:MM in the right; dates ride the tooltip.
     const now = new Date();
     const parts = {};
     for (const c of CLOCKS) parts[c.id] = _fmtClock(c.fmt, c.date, now);
-    const mel = document.getElementById("clk-mel-time");
-    const ny  = document.getElementById("clk-ny-time");
-    if (mel) mel.textContent = `MEL ${parts.mel[0]}`;
-    if (ny)  ny.textContent  = `NY ${parts.ny[0]}`;
+    const hms = (id) => (parts[id][0].split(" ")[1] || parts[id][0]);   // "13:33:53"
+    const hm  = (id) => hms(id).slice(0, 5);                            // "13:33"
+    const put = (elId, txt) => { const el = document.getElementById(elId); if (el) el.textContent = txt; };
+    put("clk-mel-time", `MEL ${hms("mel")}`);
+    put("clk-ny-time",  `NY ${hms("ny")}`);
+    put("clk-china-time",  `CN ${hm("china")}`);
+    put("clk-london-time", `LDN ${hm("london")}`);
     const box = document.getElementById("microclock");
-    if (box) box.title = `Melbourne ${parts.mel[0]} · ${parts.mel[1]}\nNew York ${parts.ny[0]} · ${parts.ny[1]}\nChina ${parts.china[0]}\nLondon ${parts.london[0]}`;
-    // Legacy 4-clock pages (none since Wave 3) — date cells if present
-    for (const c of CLOCKS) {
-      const d = document.getElementById(`clk-${c.id}-date`); if (d) d.textContent = parts[c.id][1];
-    }
+    if (box) box.title = `Melbourne ${parts.mel[0]} · ${parts.mel[1]}\nNew York ${parts.ny[0]} · ${parts.ny[1]}\nChina ${parts.china[0]} · ${parts.china[1]}\nLondon ${parts.london[0]} · ${parts.london[1]}`;
   }
 
   initDailyQuote();

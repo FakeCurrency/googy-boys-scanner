@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=65" />
-  <link rel="stylesheet" href="css/journal.css?v=22" />
-  <script src="js/nav.js?v=3"></script>
+  <link rel="stylesheet" href="css/styles.css?v=66" />
+  <link rel="stylesheet" href="css/journal.css?v=23" />
+  <script src="js/nav.js?v=4"></script>
   <script src="js/sw-register.js?v=2" defer></script>
 </head>
 <body>
@@ -31,14 +31,27 @@
   <main class="wrap">
     <div class="jr-head">
       <h2 class="jr-title">Paper-trade journal</h2>
-      <p class="jr-sub">
-        <strong>Claude</strong> (the autonomous bot) vs <strong>you</strong>, head to head — same VIVEK rules,
-        same sizing ($10k book · 5× stocks · 3× crypto). Entries/stops/targets and scale-outs are managed
-        automatically by the rules; you choose which setups to take from the charts. No real orders are placed.
-      </p>
-      <p class="jr-config">Starting capital <strong>$30,000</strong> — $10,000 per market across ASX · NASDAQ · Crypto
-        <span id="fx-note" class="muted"></span></p>
+      <details class="jr-fold jr-fold-quiet">
+        <summary>How this works</summary>
+        <p class="jr-sub">
+          <strong>Claude</strong> (the autonomous bot) vs <strong>you</strong>, head to head — same VIVEK rules,
+          same sizing ($10k book · 5× stocks · 3× crypto). Entries/stops/targets and scale-outs are managed
+          automatically by the rules; you choose which setups to take from the charts. No real orders are placed.
+        </p>
+        <p class="jr-config">Starting capital <strong>$30,000</strong> — $10,000 per market across ASX · NASDAQ · Crypto
+          <span id="fx-note" class="muted"></span></p>
+      </details>
     </div>
+
+    <!-- ═══ OPEN POSITIONS P&L — the number that matters first (owner 2026-07-22) ═══ -->
+    <section class="jr-pnl" id="jr-pnl" hidden>
+      <div class="jr-pnl-main">
+        <span class="jr-pnl-label">Open positions · unrealised P&amp;L</span>
+        <span class="jr-pnl-total" id="jr-pnl-total">—</span>
+        <span class="jr-pnl-sub" id="jr-pnl-sub"></span>
+      </div>
+      <div class="jr-pnl-split" id="jr-pnl-split"></div>
+    </section>
 
     <!-- ═══ 0 · NEW POSITIONS RECENTLY TAKEN — the daily glance ═══ -->
     <section class="jr-new-wrap">
@@ -46,9 +59,10 @@
       <div class="jr-new-card" id="new-me"></div>
     </section>
 
-    <!-- ═══ 1 · COMPARISON OVERVIEW ═══ -->
+    <!-- ═══ 1 · COMPARISON OVERVIEW (folded by default — legibility pass) ═══ -->
+    <details class="jr-fold">
+      <summary>Comparison &amp; analytics <span class="muted">— who's ahead · edge tracker · lens tracker</span></summary>
     <section class="cmp">
-      <div class="jr-section-title">Comparison overview <span class="muted">— who's ahead</span></div>
       <div id="cmp-stats" class="cmp-stats"></div>
       <div class="cmp-curves">
         <figure class="cmp-curve">
@@ -67,10 +81,12 @@
       <div class="jr-table-wrap" id="lens-tracker"></div>
       <p class="both-note" id="review-checkpoint"></p>
     </section>
+    </details>
 
-    <!-- ═══ 2 · SAME POSITIONS — you and Claude in the same trade ═══ -->
+    <!-- ═══ 2 · SAME POSITIONS (folded by default — legibility pass) ═══ -->
+    <details class="jr-fold">
+      <summary>⚔ Same positions <span class="muted">— you and Claude in the same trade</span> <span id="both-open-n" class="muted"></span></summary>
     <section class="cmp both">
-      <div class="jr-section-title">⚔ Same positions <span class="muted">— you and Claude in the same trade, head to head</span> <span id="both-open-n" class="muted"></span></div>
       <div class="jr-table-wrap" id="both-open"><div class="jr-empty">Loading…</div></div>
       <p class="both-note">Same live price for both sides — the R/$ gap comes from who got the better entry.
         Claude marks at the latest scan; your side updates live.</p>
@@ -79,6 +95,7 @@
         <div class="jr-table-wrap" id="both-closed"><div class="jr-empty">Loading…</div></div>
       </div>
     </section>
+    </details>
 
     <!-- ═══ 3 + 4 · CLAUDE (left) vs ME (right) ═══ -->
     <div class="sides">
@@ -112,7 +129,9 @@
     </section>
     </div><!-- /.sides -->
 
-    <!-- cross-device sync for your manual trades -->
+    <!-- cross-device sync for your manual trades (folded — legibility pass) -->
+    <details class="jr-fold">
+      <summary>📱 Sync, backup &amp; export</summary>
     <div class="mj-sync">
         <div class="mj-sync-row">
           <span class="mj-sync-label">📱 Sync across devices</span>
@@ -129,6 +148,7 @@
         <div id="mj-sync-status" class="mj-sync-status"></div>
         <p class="mj-sync-hint">Type the same code on your phone and desktop to see the same trades. Backup saves a file; Restore merges one back in.</p>
       </div>
+    </details>
   </main>
 
   <footer class="site-footer">
@@ -157,6 +177,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=7"></script>
-  <script src="js/journal.js?v=51"></script>
+  <script src="js/journal.js?v=52"></script>
 </body>
 </html>
