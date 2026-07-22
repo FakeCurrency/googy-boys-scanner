@@ -173,13 +173,23 @@
   const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc" };
   const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
   const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
+  // Compact cycling sort (backlog #2): one control instead of five buttons.
+  // The label advances through the cycle; the arrow flips direction.
+  const SORT_CYCLE = ["score", "price", "rr", "mcap", "az"];
+  const SORT_LABEL = { score: "SCORE", price: "PRICE", rr: "R:R", mcap: "M.C", az: "A-Z" };
   function updateSortButtons() {
-    document.querySelectorAll("#sorts .seg-btn").forEach((b) => {
-      const active = b.dataset.sort === state.sort;
-      b.classList.toggle("is-active", active);
-      const arrow = b.querySelector(".sort-arrow");
-      if (arrow) arrow.textContent = active ? (sortDirOf() === "asc" ? " ↑" : " ↓") : "";
-    });
+    const label = document.getElementById("sort-cycle");
+    const dir = document.getElementById("sort-dir");
+    if (label) label.textContent = SORT_LABEL[state.sort] || String(state.sort).toUpperCase();
+    if (dir) dir.textContent = sortDirOf() === "asc" ? "↑" : "↓";
+  }
+  // ★ watch toggle (backlog #1): the old Results/Watch tab pair as one chip.
+  function syncWatchToggle() {
+    const b = document.getElementById("watch-toggle");
+    if (!b) return;
+    const on = state.view === "watch";
+    b.classList.toggle("is-active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
   loadPrefs();
@@ -195,6 +205,28 @@
     });
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
     updateSortButtons();
+    syncWatchToggle();
+  })();
+
+  // Sticky toolbar (backlog #1+3): pin the merged filter line right under the
+  // topbar (whose height varies by breakpoint — measure it into a CSS var)
+  // and condense to a slim variant once the deck has scrolled away.
+  (function stickyToolbar() {
+    const bar = document.getElementById("toolbar");
+    if (!bar) return;
+    const top = document.querySelector(".topbar");
+    const setH = () =>
+      document.documentElement.style.setProperty("--topbar-h", `${top ? top.offsetHeight : 0}px`);
+    setH();
+    window.addEventListener("resize", setH, { passive: true });
+    let raf = 0;
+    window.addEventListener("scroll", () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        bar.classList.toggle("is-slim", window.scrollY > 120);
+        raf = 0;
+      });
+    }, { passive: true });
   })();
 
   const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
@@ -381,7 +413,7 @@
     box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
       state.view = "results";
       state.tab = b.dataset.goto;
-      document.querySelectorAll(".view-tab").forEach((x) => x.classList.toggle("is-active", x.dataset.view === "results"));
+      syncWatchToggle();
       document.querySelectorAll("#tabs .seg-btn").forEach((x) => x.classList.toggle("is-active", x.dataset.tab === state.tab));
       savePrefs();
       renderDeckPills(state.data);
@@ -1025,10 +1057,12 @@
   // VIVEK entry-type filter chips (200 SMA interaction). Shows live counts so
   // the user can read market behaviour: how many setups are reclaiming /
   // retesting / breaking structure at the level. Multi-select; "All" clears.
+  // Labels are compact so the merged toolbar keeps its single line (backlog
+  // #1) — the full wording lives in each chip's tooltip.
   const VK_ENTRY = [
-    ["reclaim", "Reclaim after rejection", "Close back above 200 SMA after rejection"],
-    ["retest",  "Retest + confirmation",   "Retest with confirmation"],
-    ["break",   "Break of structure",      "Break of small structure near 200 SMA"],
+    ["reclaim", "Reclaim", "Reclaim after rejection — close back above 200 SMA after rejection"],
+    ["retest",  "Retest",  "Retest + confirmation"],
+    ["break",   "Break",   "Break of small structure near 200 SMA"],
   ];
   // Backtest quality per trigger — populated at RUNTIME from the live artifact
   // (vivek_backtest_longonly.json → results.by_entry_type). Numbers are never
@@ -1152,7 +1186,7 @@
       `<button class="vkf-chip vkf-highconv${state.vkHighConv ? " is-active" : ""}" data-high="1" ` +
         `title="The best cell in the backtest: weekly reclaims that are A/A+ or have strong structure">🎯 High conviction <b>${nHigh}</b></button>` +
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
-        `title="Setups whose trigger fired on or near the latest scanned bar">⚡ Triggered recently <b>${nRecent}</b></button>` +
+        `title="Triggered recently — setups whose trigger fired on or near the latest scanned bar">⚡ Triggered <b>${nRecent}</b></button>` +
       `<span class="vkf-sep"></span>` +
       dirChipHTML("LONG", "▲ Longs", nLong) +
       dirChipHTML("SHORT", "▼ Shorts", nShort);
@@ -1622,34 +1656,40 @@
       load();
     }));
 
-    document.querySelectorAll(".view-tab").forEach((b) => b.addEventListener("click", () => {
-      state.view = b.dataset.view;
-      document.querySelectorAll(".view-tab").forEach((x) => {
-        x.classList.toggle("is-active", x === b);
-        x.setAttribute("aria-selected", x === b ? "true" : "false");
-      });
+    const watchToggle = document.getElementById("watch-toggle");
+    if (watchToggle) watchToggle.addEventListener("click", () => {
+      state.view = state.view === "watch" ? "results" : "watch";
+      syncWatchToggle();
       renderRows();
-    }));
+    });
 
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.addEventListener("click", () => {
       state.tab = b.dataset.tab;
       savePrefs();
       if (state.view !== "results") {
         state.view = "results";
-        document.querySelectorAll(".view-tab").forEach((x) => x.classList.toggle("is-active", x.dataset.view === "results"));
+        syncWatchToggle();
       }
       document.querySelectorAll("#tabs .seg-btn").forEach((x) => x.classList.toggle("is-active", x === b));
       renderRows();
     }));
 
-    document.querySelectorAll("#sorts .seg-btn").forEach((b) => b.addEventListener("click", () => {
-      const s = b.dataset.sort;
-      if (state.sort === s) state.sortDir = (sortDirOf() === "asc" ? "desc" : "asc");  // toggle direction
-      else { state.sort = s; state.sortDir = defaultDir(s); }                          // new sort → its default
+    const sortCycleBtn = document.getElementById("sort-cycle");
+    if (sortCycleBtn) sortCycleBtn.addEventListener("click", () => {
+      const i = SORT_CYCLE.indexOf(state.sort);
+      state.sort = SORT_CYCLE[(i + 1) % SORT_CYCLE.length];   // unknown sort → SCORE
+      state.sortDir = defaultDir(state.sort);
       savePrefs();
       updateSortButtons();
       renderRows();
-    }));
+    });
+    const sortDirBtn = document.getElementById("sort-dir");
+    if (sortDirBtn) sortDirBtn.addEventListener("click", () => {
+      state.sortDir = (sortDirOf() === "asc" ? "desc" : "asc");
+      savePrefs();
+      updateSortButtons();
+      renderRows();
+    });
 
     // Search overlay wiring
     const searchTrigger = document.getElementById("search-trigger");

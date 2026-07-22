@@ -1808,3 +1808,48 @@ body { letter-spacing: -0.012em; }
   .fpill { flex-shrink: 0; min-height: 38px; }
   .deck-bot { margin-left: 0; width: 100%; }
 }
+
+/* ── Wave 3R (#1-3): ONE sticky filter toolbar ──────────────────────────────
+   Grades + ★ watch + VIVEK chips + cycling sort in a single line that pins
+   under the topbar (height measured into --topbar-h by app.js) and slims
+   once the deck scrolls away. Replaces .view-tabs + .controls on the
+   dashboard (both classes remain for specs.html). */
+.toolbar {
+  position: sticky; top: var(--topbar-h, 53px); z-index: 20;
+  background: var(--nav);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0 9px; margin-bottom: 14px;
+}
+.tb-line { display: flex; align-items: center; gap: 6px; overflow-x: auto;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tb-line::-webkit-scrollbar { display: none; }
+.tb-line > * { flex: 0 0 auto; }
+.tb-watch { border: 1px solid var(--border); border-radius: 999px;
+  background: var(--fill-2); padding: 7px 13px; }
+#toolbar #vk-filters { display: inline-flex; align-items: center; gap: 6px;
+  flex-wrap: nowrap; margin: 0; }
+#toolbar #vk-filters[hidden] { display: none; }
+#toolbar .vkf-label, #toolbar .vkf-legend { display: none; } /* tooltips carry these */
+#toolbar .vkf-sep { width: 1px; height: 18px; background: var(--border); flex: 0 0 auto; }
+.tb-sort { display: inline-flex; margin-left: auto; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden; background: var(--fill-2); }
+.tb-sort-label, .tb-sort-dir { appearance: none; border: 0; background: transparent;
+  color: var(--text-2); font: inherit; font-weight: 700; font-size: 13px;
+  padding: 7px 10px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.tb-sort-label { border-right: 1px solid var(--border); min-width: 60px; text-align: center; }
+.tb-sort-dir { font-size: 14px; padding: 7px 11px; color: var(--text); }
+.tb-sort-label:hover, .tb-sort-dir:hover { color: var(--text); background: var(--panel-3); }
+/* Slim variant on scroll (#3): tighter paddings + smaller type, counts stay. */
+.toolbar.is-slim { padding: 4px 0 5px; }
+.toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip { font-size: 11px; padding: 4px 8px; }
+.toolbar.is-slim .tb-watch { padding: 4px 10px; }
+.toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { font-size: 11px; padding: 4px 9px; }
+@media (max-width: 680px) {
+  .tb-line { gap: 6px; padding-bottom: 2px; }
+  .tb-sort-label { min-width: 58px; }
+}
+/* Keep the merged line dense enough that the sort control never clips on a
+   standard desktop (1366-1500px): slightly tighter chips inside the toolbar. */
+#toolbar .vkf-chip { padding: 6px 10px; }
+#toolbar .seg-btn { padding: 6px 11px; }

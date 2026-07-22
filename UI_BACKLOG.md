@@ -16,9 +16,9 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 3R — finish the Command Deck (desktop)
 
-- [ ] 1. ONE sticky filter toolbar merging view tabs + grade tabs + direction + 🎯/⚡ + entry-type chips into a single line.
-- [ ] 2. Sort as a compact cycling control (SCORE ↓ → PRICE → R:R → M.C → A-Z) with direction flip on repeat tap.
-- [ ] 3. Toolbar condenses to a slim variant on scroll (labels shrink, counts stay).
+- [x] 1. ONE sticky filter toolbar merging view tabs + grade tabs + direction + 🎯/⚡ + entry-type chips into a single line.
+- [x] 2. Sort as a compact cycling control (SCORE ↓ → PRICE → R:R → M.C → A-Z) with direction flip on repeat tap.
+- [x] 3. Toolbar condenses to a slim variant on scroll (labels shrink, counts stay).
 - [ ] 4. Row card v2: 76px, ticker + dir arrow + mcap + name line, price with day-% beneath, spark, score + R:R stack.
 - [ ] 5. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
 - [ ] 6. Checklist as inline pass/fail chips in the expanded panel; "View chart →" as the primary CTA.

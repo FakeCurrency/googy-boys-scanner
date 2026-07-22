@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=68" />
+  <link rel="stylesheet" href="css/styles.css?v=69" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -103,41 +103,26 @@
          generates server-side; restore this section + the renderPulse call
          guards in app.js to bring it back. -->
 
-    <!-- Results / Watch -->
-    <nav class="view-tabs" role="tablist" aria-label="View">
-      <button class="view-tab is-active" data-view="results" role="tab" aria-selected="true">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Results
-      </button>
-      <button class="view-tab" data-view="watch" role="tab" aria-selected="false">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Watch <span class="watch-count" id="watch-count">0</span>
-      </button>
-    </nav>
-
-
-    <!-- filters -->
-    <section class="controls">
-      <div class="control-group">
+    <!-- ONE sticky toolbar (backlog #1-3): grades + ★ watch + VIVEK filter
+         chips + a compact cycling sort — a single line that pins under the
+         topbar and slims on scroll. Replaces the old view-tabs nav + controls
+         row + separate vk-filters strip. -->
+    <section class="toolbar" id="toolbar">
+      <div class="tb-line">
         <div class="seg" id="tabs">
           <button class="seg-btn is-active" data-tab="aplus">A+ <span class="seg-count" id="count-aplus">0</span></button>
           <button class="seg-btn" data-tab="a">A <span class="seg-count" id="count-a">0</span></button>
           <button class="seg-btn" data-tab="watch">WATCH <span class="seg-count" id="count-watch">0</span></button>
         </div>
-      </div>
-      <div class="control-group">
-        <div class="seg" id="sorts">
-          <button class="seg-btn is-active" data-sort="score">SCORE<span class="sort-arrow" aria-hidden="true"></span></button>
-          <button class="seg-btn" data-sort="price">PRICE<span class="sort-arrow" aria-hidden="true"></span></button>
-          <button class="seg-btn" data-sort="rr">R:R<span class="sort-arrow" aria-hidden="true"></span></button>
-          <button class="seg-btn" data-sort="mcap">M.C<span class="sort-arrow" aria-hidden="true"></span></button>
-          <button class="seg-btn" data-sort="az">A-Z<span class="sort-arrow" aria-hidden="true"></span></button>
+        <button class="seg-btn tb-watch" id="watch-toggle" aria-pressed="false"
+          title="Your starred names, from every lens — tap to show only them">★ <span class="seg-count" id="watch-count">0</span></button>
+        <div class="tb-chips" id="vk-filters" hidden></div>
+        <div class="tb-sort" role="group" aria-label="Sort">
+          <button class="tb-sort-label" id="sort-cycle" title="Sort — tap to cycle: SCORE → PRICE → R:R → M.C → A-Z">SCORE</button>
+          <button class="tb-sort-dir" id="sort-dir" title="Flip sort direction">↓</button>
         </div>
       </div>
     </section>
-
-    <!-- VIVEK entry-type filter (200 SMA interaction) — populated by app.js -->
-    <section class="vk-filters" id="vk-filters" hidden></section>
 
     <!-- EMA legend -->
     <section class="ema-legend" id="ema-legend"></section>
@@ -154,6 +139,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=74"></script>
+  <script src="js/app.js?v=75"></script>
 </body>
 </html>
