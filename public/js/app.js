@@ -518,12 +518,23 @@
       </div>
      </div>
      <div class="detail-anim">
-       <div class="detail-inner">
-         ${detailHtml(r)}
-         ${debugDetailHtml(r)}
-       </div>
+       <div class="detail-inner"></div>
      </div>
     </div>`;
+  }
+
+  // Lazy detail (Wave 2, 2026-07-22): the expanded panel used to be rendered
+  // for EVERY row up-front — the bulk of the list's HTML for content almost
+  // never opened. Now it's built on first expand (and gets a fresher scan-age
+  // stamp as a bonus). dataset.filled makes repeat opens free.
+  function fillDetail(wrap) {
+    const inner = wrap.querySelector(".detail-inner");
+    if (!inner || inner.dataset.filled) return;
+    const r = ((state.data && state.data.results) || [])
+      .find((x) => x.symbol === wrap.dataset.sym);
+    if (!r) return;
+    inner.innerHTML = detailHtml(r) + debugDetailHtml(r);
+    inner.dataset.filled = "1";
   }
 
   function priceStrip(r) {
@@ -1221,7 +1232,9 @@
     if (window.PM && PM.loadConfluence) {
       state.confl = null;
       renderConfluenceBanner(null);
-      PM.loadConfluence(state.market).then((c) => {
+      // Pass the payload we just rendered so the vivek file isn't fetched
+      // twice (Wave 2). A head-cache paint is truncated — let it fetch full.
+      PM.loadConfluence(state.market, d._head ? null : d).then((c) => {
         state.confl = c;
         renderRows();
         renderConfluenceBanner(c);
@@ -1773,7 +1786,10 @@
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
       const wrap = e.target.closest(".row-wrap");
-      if (wrap) wrap.classList.toggle("open");
+      if (wrap) {
+        if (!wrap.classList.contains("open")) fillDetail(wrap);
+        wrap.classList.toggle("open");
+      }
     });
   }
 

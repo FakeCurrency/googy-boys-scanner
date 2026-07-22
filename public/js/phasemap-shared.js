@@ -346,11 +346,14 @@ window.PM = (() => {
      full house). Computed client-side from the three latest scan files so
      it's always as fresh as whatever each lens last published. */
   const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
-  async function loadConfluence(market) {
+  async function loadConfluence(market, vivekData = null) {
     const grab = (url) => fetch(url, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // Wave 2 (2026-07-22): the dashboard already holds the full VIVEK payload
+    // it just rendered — callers can pass it in so the same file isn't
+    // downloaded twice per load. Callers that pass nothing behave as before.
     const [vivek, pm, spec] = await Promise.all([
-      grab(`data/${market}_vivek.json`),
+      vivekData ? Promise.resolve(vivekData) : grab(`data/${market}_vivek.json`),
       grab(`data/phasemap/${market}/latest.json`),
       grab(`data/${market}_spec.json`),
     ]);
