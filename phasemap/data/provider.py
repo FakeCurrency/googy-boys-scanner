@@ -47,8 +47,22 @@ class YFinanceProvider:
                                progress=False, threads=True)
             for sym in chunk:
                 try:
-                    df = data[sym] if len(chunk) > 1 else data
-                except KeyError:
+                    # group_by="ticker" gives MultiIndex columns whenever the
+                    # response is per-ticker keyed — select our symbol; a flat
+                    # frame is only valid for a single-symbol chunk.
+                    if isinstance(data.columns, pd.MultiIndex) or len(chunk) > 1:
+                        df = data[sym]
+                    else:
+                        df = data
+                except (KeyError, IndexError):
+                    continue
+                # Yahoo outage/throttle guard (2026-07-22, PhaseMap nightly
+                # #22): a failed batch comes back as a frame with NO per-field
+                # columns at all — dropna(subset=...) then raises KeyError and
+                # kills the whole market run. No usable columns = an empty
+                # download for this symbol: skip it like the df.empty case.
+                if df is None or df.empty or \
+                        not {"Open", "High", "Low", "Close", "Volume"}.issubset(df.columns):
                     continue
                 df = df.dropna(subset=["Open", "High", "Low", "Close"])
                 if df.empty:
