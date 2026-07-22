@@ -505,6 +505,20 @@
   // LOW R:R, WIDE STOP) always outrank decorative badges so the cap can never
   // hide a risk flag. The full set stays in the expanded detail panel.
   const CHIP_CAP = 3;
+  // Day change % (backlog #7). Prefer a scan-provided field; fall back to the
+  // spark's last two closes (≈ daily cadence) flagged as an estimate.
+  function dayPct(r) {
+    const v = (typeof r.current_pct === "number") ? r.current_pct
+            : (typeof r.day_pct === "number") ? r.day_pct : null;
+    if (v != null && isFinite(v)) return { v, est: false };
+    const sp = r.spark;
+    if (Array.isArray(sp) && sp.length >= 2) {
+      const a = +sp[sp.length - 2], b = +sp[sp.length - 1];
+      if (a > 0 && isFinite(b)) return { v: ((b - a) / a) * 100, est: true };
+    }
+    return null;
+  }
+
   function rowChips(r, extras) {
     const all = [...vkBadges(r), ...extras].filter(Boolean);
     const isWarn = (h) => /fundwarn|chip warn/.test(h);
@@ -546,6 +560,16 @@
     const rrCls = r.low_rr ? "low" : "";
     const starred = isStarred(r.symbol);
 
+    // Day change (backlog #7): the price block shows today's % beneath the
+    // price. Scan-provided fields win when the publisher ships them; until
+    // then it is derived from the spark's last two closes and marked ~.
+    const dp = dayPct(r);
+    const isShort = r.dir === "SHORT";
+    const dayHTML = dp == null ? "" :
+      `<span class="rday ${dp.v >= 0 ? "up" : "down"}${dp.est ? " est" : ""}" ` +
+      `title="${dp.est ? "≈ change vs the previous spark close (day-change isn't in the scan data yet)" : "Day change"}">` +
+      `${dp.est ? "~" : ""}${dp.v >= 0 ? "+" : ""}${dp.v.toFixed(1)}%</span>`;
+
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
@@ -553,12 +577,15 @@
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
-          <span class="badge dir ${r.dir === "SHORT" ? "short" : "long"}">${esc(r.dir)}</span>
+          <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
           ${mcapBadge}
           <span class="cname">${esc(r.name || "")}</span>
-          <span class="rprice">${fmtPrice(r.price)}</span>
         </div>
         <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
+      </div>
+      <div class="row-price">
+        <span class="rprice">${fmtPrice(r.price)}</span>
+        ${dayHTML}
       </div>
       <div class="row-right">
         <a class="row-spark" href="${chartHref}" title="Open chart">

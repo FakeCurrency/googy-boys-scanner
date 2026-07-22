@@ -1853,3 +1853,29 @@ body { letter-spacing: -0.012em; }
    standard desktop (1366-1500px): slightly tighter chips inside the toolbar. */
 #toolbar .vkf-chip { padding: 6px 10px; }
 #toolbar .seg-btn { padding: 6px 11px; }
+
+/* ── Wave 3R (#4+#7): row card v2 ───────────────────────────────────────────
+   76px cards: ticker + dir arrow + mcap + name on line 1, chips beneath;
+   price with day-% stacked in its own column; spark + score/R:R + actions
+   right. Direction is an arrow (▲/▼) instead of a pill — the colour carries
+   the meaning, the title carries the word. */
+.row { grid-template-columns: 68px 1fr auto auto; min-height: 76px; }
+.rdir { font: 800 14px/1 var(--mono); flex: 0 0 auto; transform: translateY(1px); }
+.rdir.long { color: var(--green); }
+.rdir.short { color: var(--red); }
+.row-price {
+  display: flex; flex-direction: column; align-items: flex-end;
+  justify-content: center; gap: 3px; min-width: 84px; padding: 0 4px;
+}
+.rday { font: 600 11.5px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.rday.up { color: var(--green); }
+.rday.down { color: var(--red); }
+.rday.est { opacity: 0.8; }
+.skeleton { height: 76px; }
+@media (max-width: 680px) {
+  .row-price { min-width: 68px; padding: 0 2px; }
+  .rday { font-size: 10.5px; }
+}
+/* v2 height trim: 76px standard card on desktop too (was ~87 from padding). */
+.row-main { padding: 10px 14px 10px 16px; gap: 6px; }
+@media (min-width: 681px) { .row-main { padding: 10px 15px 10px 16px; } }
