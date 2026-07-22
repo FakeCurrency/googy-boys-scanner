@@ -57,3 +57,23 @@ jobs:
         run: node test/unit.test.js
       - name: Cloud-watcher VIVEK parity tests (21)
         run: node test/vivek_manage.test.js
+
+  # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
+  # the daily flows — deck paint, pill filtering, row expand + ladder, sort
+  # control, recs page, and a 390px overflow/price check — against the
+  # committed scan data, failing on any uncaught page error.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y > /dev/null 2>&1
+          npm install --no-save playwright > /dev/null 2>&1
+          npx playwright install --with-deps chromium
+      - name: E2E smoke (dashboard + recs · desktop + 390px)
+        run: node test/e2e/smoke.e2e.js

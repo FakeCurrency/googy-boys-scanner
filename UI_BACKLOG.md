@@ -23,7 +23,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 5. Expanded panel v2: horizontal Stop → Entry → TP1/TP2/TP3 ladder cells with % and scale-out notes.
 - [x] 6. Checklist as inline pass/fail chips in the expanded panel; "View chart →" as the primary CTA.
 - [x] 7. Day-change display: current_pct/day_pct with spark-derived ~fallback when null.
-- [ ] 8. Playwright e2e suite in `test/e2e/` (deck paint, pill filtering, expand, sort, recs page) wired into test.yml CI.
+- [x] 8. Playwright e2e suite in `test/e2e/` (deck paint, pill filtering, expand, sort, recs page) wired into test.yml CI.
 
 ## Wave R — Recommendations page grows up
 
