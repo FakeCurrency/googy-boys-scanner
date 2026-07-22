@@ -1676,13 +1676,21 @@ body { letter-spacing: -0.012em; }
 .deck-top .nav-pills::-webkit-scrollbar { display: none; }
 .deck-top-right { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .microclock {
-  /* 2×2 grid, all four cities visible (owner 2026-07-22); bigger than v1 */
-  font: 700 12px/1.45 var(--mono); color: var(--muted-2); cursor: default;
-  display: grid; grid-template-columns: auto auto; gap: 0 14px;
+  /* Owner 2026-07-22: bolder, larger, each city its OWN colour.
+     2×2 grid: MEL/NY (with seconds) left, CN/LDN right. Dates in tooltip. */
+  font: 800 14px/1.5 var(--mono); cursor: default;
+  display: grid; grid-template-columns: auto auto; gap: 1px 16px;
   white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left;
+  letter-spacing: 0.01em;
 }
-.microclock .mc-major { color: var(--text-2); }
-.microclock .mc-minor { color: var(--muted-2); }
+#clk-mel-time    { color: var(--blue); }     /* Melbourne — blue */
+#clk-ny-time     { color: #ff5c8a; }         /* New York — pink */
+#clk-china-time  { color: var(--orange); }   /* China — orange */
+#clk-london-time { color: var(--teal); }     /* London — teal */
+
+/* BACK pill (owner 2026-07-22) — subtle outline so it never fights SCAN */
+.nav-pills .nav-back { color: var(--muted); background: transparent; cursor: pointer; }
+.nav-pills .nav-back:hover { color: var(--text); background: var(--fill); border-color: var(--border-2); }
 
 /* ---- command deck bar ---- */
 .deck {

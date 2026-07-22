@@ -11,63 +11,76 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=67" />
-  <link rel="stylesheet" href="css/phasemap.css?v=15" />
-  <script src="js/nav.js?v=5"></script>
+  <link rel="stylesheet" href="css/styles.css?v=68" />
+  <link rel="stylesheet" href="css/phasemap.css?v=16" />
+  <script src="js/nav.js?v=6"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
 <body>
-  <header class="topbar">
+  <!-- Deck topbar (backlog #19): same single-row header as the SCAN page -->
+  <header class="topbar deck-top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
       </span>
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">SPECS ⚡</span></div>
     </div>
-    <nav class="pm-topnav">
-      <div class="market-switch" id="sp-market" role="tablist" aria-label="Market">
-        <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
-        <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
-      </div>
-      <nav class="nav-pills" id="site-nav"></nav>
+    <div class="market-switch" id="sp-market" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+    </div>
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
       <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
-    </nav>
+    </div>
   </header>
 
-  <main class="wrap pm-wrap">
-    <div class="pm-head">
-      <h2 class="pm-title">SPECS <span class="pm-title-sub">volume-spike breakouts from a base · sub-$0.50 · the discovery lens</span></h2>
-      <p class="pm-sub" id="sp-sub">Loading latest scan…</p>
-    </div>
+  <main class="wrap">
+    <!-- Command deck (backlog #19): status + freshness dot + filter pills -->
+    <section class="deck" id="deck">
+      <div class="deck-status">
+        <div class="deck-title" id="sp-title">SPECS · loading…</div>
+        <div class="deck-sub">
+          <span class="deck-dot" id="sp-dot" aria-hidden="true"></span>
+          <span id="sp-sub">volume-spike breakouts from a base · sub-$0.50 · the discovery lens</span>
+        </div>
+      </div>
+      <div class="deck-pills" id="sp-pills" role="group" aria-label="Spec filters"></div>
+    </section>
 
-    <nav class="pm-tabs" id="sp-tabs" role="tablist" aria-label="View">
-      <button class="pm-tab is-active" data-view="results" role="tab" aria-selected="true">RESULTS <span class="pm-count" id="sp-count-results">0</span></button>
-      <button class="pm-tab pm-tab-watchlist" data-view="watchlist" role="tab" aria-selected="false" title="Starred names — they stay here even after the setup ends">★ WATCHLIST <span class="pm-count" id="sp-count-watchlist">0</span></button>
+    <nav class="view-tabs" id="sp-tabs" role="tablist" aria-label="View">
+      <button class="view-tab is-active" data-view="results" role="tab" aria-selected="true">Results <span class="watch-count" id="sp-count-results">0</span></button>
+      <button class="view-tab" data-view="watchlist" role="tab" aria-selected="false" title="Starred names — they stay here even after the setup ends">★ Watchlist <span class="watch-count" id="sp-count-watchlist">0</span></button>
     </nav>
 
-    <div class="pm-filters">
-      <div class="pm-filter-group" id="sp-grade-filter" role="group" aria-label="Grade">
-        <button class="pm-chip is-active" data-grade="all">ALL GRADES</button>
-        <button class="pm-chip" data-grade="A+">A+</button>
-        <button class="pm-chip" data-grade="A">A</button>
-        <button class="pm-chip" data-grade="B">B</button>
+    <!-- Toolbar (backlog #20): same seg language as the SCAN page -->
+    <section class="controls">
+      <div class="control-group">
+        <div class="seg" id="sp-grade-filter" role="group" aria-label="Grade">
+          <button class="seg-btn is-active" data-grade="all">ALL</button>
+          <button class="seg-btn" data-grade="A+">A+</button>
+          <button class="seg-btn" data-grade="A">A</button>
+          <button class="seg-btn" data-grade="B">B</button>
+        </div>
       </div>
-      <div class="pm-filter-group" id="sp-sort-filter" role="group" aria-label="Sort">
-        <button class="pm-chip is-active" data-sort="default" title="Scan order: grade, then score, then R:R">SORT: GRADE</button>
-        <button class="pm-chip" data-sort="spike" title="Biggest volume spike first">SPIKE</button>
-        <button class="pm-chip" data-sort="rr" title="Best risk:reward first">R:R</button>
-        <button class="pm-chip" data-sort="price" title="Cheapest first">PRICE</button>
+      <div class="control-group">
+        <div class="seg" id="sp-sort-filter" role="group" aria-label="Sort">
+          <button class="seg-btn is-active" data-sort="default" title="Scan order: grade, then score, then R:R">GRADE</button>
+          <button class="seg-btn" data-sort="spike" title="Biggest volume spike first">SPIKE</button>
+          <button class="seg-btn" data-sort="rr" title="Best risk:reward first">R:R</button>
+          <button class="seg-btn" data-sort="price" title="Cheapest first">PRICE</button>
+        </div>
       </div>
       <input class="pm-search" id="sp-search" type="search" placeholder="Ticker…" autocomplete="off" spellcheck="false" />
-    </div>
+    </section>
 
-    <section class="sp-list" id="sp-list" aria-live="polite"></section>
+    <section class="rows" id="sp-list" aria-live="polite"></section>
 
     <p class="pm-disclaimer">Specs are speculative by definition: cheap, thin, volatile names breaking out of a base on a volume spike — the backtest says they're a DISCOVERY lens, not an entry system (see Insights). Every mandatory gate (3× volume, beaten-down base, breakout, rising short SMAs, not over-extended) must pass before a name appears. Highest-risk setups in the app — position accordingly. Analysis only — not financial advice.</p>
   </main>
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/specs.js?v=7"></script>
+  <script src="js/specs.js?v=8"></script>
 </body>
 </html>

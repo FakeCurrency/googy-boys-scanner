@@ -12,7 +12,7 @@ proposed to the owner, not shipped). Mobile parity is a hard requirement.
 preload, lazy details, single-fetch), Command Deck tranche A (deck bar, filter
 pills, single-row topbar), 4-city clocks, MORE-menu fix, journal P&L headline +
 fold legibility, RECOMMENDATIONS page v1 (client-side consensus + Claude's
-daily note + movers + nav/tab slot), first-paint-only row animation.
+daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-update, specs/phasemap deck parity (19-22), BACK pill in nav, 4-colour bold clock grid.
 
 ## Wave 3R — finish the Command Deck (desktop)
 
@@ -40,10 +40,10 @@ daily note + movers + nav/tab slot), first-paint-only row animation.
 
 ## Wave P — Specs + PhaseMap adopt the SCAN layout (owner-promoted)
 
-- [ ] 19. Specs page: deck command bar (status + count pills + freshness dot) replacing its current header block.
-- [ ] 20. Specs page: sticky filter/sort toolbar in the deck language; row cards aligned to dashboard classes.
-- [ ] 21. PhaseMap list page: deck command bar (status + state/tier pills as click-to-filter) — respecting its existing UX tranche's filters.
-- [ ] 22. PhaseMap list page: sticky toolbar unification (its stepper/presets restyled into the shared language, behaviour unchanged).
+- [x] 19. Specs page: deck command bar (status + count pills + freshness dot) replacing its current header block.
+- [x] 20. Specs page: sticky filter/sort toolbar in the deck language; row cards aligned to dashboard classes.
+- [x] 21. PhaseMap list page: deck command bar (status + state/tier pills as click-to-filter) — respecting its existing UX tranche's filters.
+- [x] 22. PhaseMap list page: sticky toolbar unification (its stepper/presets restyled into the shared language, behaviour unchanged).
 - [ ] 23. Extract the deck bar + pill + toolbar CSS into a shared, documented component block (one source of truth for all pages).
 - [ ] 24. e2e smoke for specs + phasemap pages (paint, filter, no console errors, 390px).
 

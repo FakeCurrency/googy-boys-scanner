@@ -1,15 +1,19 @@
 /* SPECS tab — volume-spike breakouts from a base (sub-$0.50 names).
-   Dense dashboard-style rows (grade block · ticker · identity · spike ·
-   price · score) that expand for the full plan + analysis. Stars persist
-   a snapshot, so watchlisted names survive losing the setup. */
+   Deck layout (backlog #19-20, owner 2026-07-22): the page now uses the SAME
+   command-bar + pill + row-card language as the SCAN dashboard — grade rail
+   rows that expand, filter pills with live counts (Multi-lens is a
+   click-to-filter, like SCAN), seg toolbar for grade/sort. Stars persist a
+   snapshot, so watchlisted names survive losing the setup. Logic unchanged. */
 (() => {
   "use strict";
 
   const MARKETS = ["asx", "nasdaq"];
-  const GRADE_COLOR = { "A+": "var(--grade-aplus)", A: "var(--grade-a)", B: "var(--grade-b)" };
+  const GRADE_VAR = { "A+": "var(--grade-aplus)", A: "var(--grade-a)", B: "var(--grade-b)" };
 
   const state = {
     data: null, grade: "all", q: "", view: "results", sort: "default",
+    confOnly: false,   // deck pill: only rows with 2+ lens alignment
+    confl: null,
     market: (() => {
       try {
         const m = localStorage.getItem("sp-market");
@@ -24,43 +28,67 @@
     if (x == null || !isFinite(x)) return "—";
     return x < 0.1 ? x.toFixed(4) : x < 2 ? x.toFixed(3) : x.toFixed(2);
   };
+  const alignedOf = (r) => {
+    const ci = state.confl ? state.confl.of(r.symbol) : null;
+    return ci && ci.side === "long" ? ci : null;   // specs are long-only
+  };
 
   function rowHTML(r, idx) {
     const cur = (state.data && state.data.currency_symbol) || "A$";
     const starred = PM.watch.has("specs", state.market, r.symbol);
-    const ci = state.confl ? state.confl.of(r.symbol) : null;
-    const aligned = ci && ci.side === "long";   // specs are long-only
-    const gc = GRADE_COLOR[r.grade] || "var(--grade-c)";
-    const chips = (r.chips || []).map((c) => `<span class="pm-tag">${PM.esc(c)}</span>`).join("");
-    const fund = PM.isFundReit({ name: r.name, sector: r.sector, ticker: r.symbol })
-      ? '<span class="pm-tag pm-tag-fund">FUND / REIT</span>' : "";
-    return `<article class="sp-row" data-idx="${idx}">
-      <div class="sp-row-main" role="button" tabindex="0" title="Expand">
-        <span class="sp-grade" style="background:${gc}22;border-left-color:${gc};color:${gc}">${PM.esc(r.grade)}</span>
-        <span class="pm-ticker">${PM.esc(r.symbol)}</span>
-        <span class="pm-dir pm-dir-long">LONG</span>
-        <span class="sp-name">${PM.esc(r.name)}${r.sector ? ` <span class="pm-sector">${PM.esc(r.sector)}</span>` : ""} ${fund}</span>
-        ${aligned ? PM.confluenceChipHTML(ci, "SPECS") : ""}
-        ${r._stale ? `<span class="pm-tag pm-tag-stale">NO ACTIVE SETUP · last seen ${PM.esc(r._staleDate || "")}</span>` : `<span class="pm-tag sp-spike">⚡ ${r.spike_ratio}×</span>`}
-        <span class="sp-row-price">${cur}${fp(r.price)}</span>
-        <span class="sp-row-score">${r.score}/${r.score_max}<b>${r.rr != null ? " · " + r.rr.toFixed(1) + "R" : ""}</b></span>
-        ${PM.starHTML(starred, r.symbol)}
-        <span class="sp-chev" aria-hidden="true">▾</span>
-      </div>
-      <div class="sp-row-detail" hidden>
-        <div class="pm-metrics sp-levels">
-          <span>entry <b>${cur}${fp(r.entry)}</b></span>
-          <span>stop <b class="sp-stop">${cur}${fp(r.stop)}</b></span>
-          <span>target <b class="sp-target">${cur}${fp(r.target)}</b></span>
-          <span>R:R <b>${r.rr != null ? r.rr.toFixed(1) : "—"}</b></span>
-          <span>off high <b>${r.off_high_pct != null ? r.off_high_pct + "%" : "—"}</b></span>
-          ${r.low_rr ? '<span class="pm-metric-warn"><b>LOW R:R</b></span>' : ""}
+    const ci = alignedOf(r);
+    const gc = GRADE_VAR[r.grade] || "var(--grade-c)";
+    const fund = PM.isFundReit({ name: r.name, sector: r.sector, ticker: r.symbol });
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs&flt=${encodeURIComponent(state.grade + "~" + state.sort)}`;
+    const chips = [
+      fund ? `<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund">⚠ FUND / REIT</span>` : "",
+      ci ? PM.confluenceChipHTML(ci, "SPECS") : "",
+      r._stale
+        ? `<span class="rbadge struct" title="Starred snapshot — the setup is no longer in the live scan">NO ACTIVE SETUP · ${PM.esc(r._staleDate || "")}</span>`
+        : `<span class="rbadge wk" title="Volume vs 20-day average on the breakout">⚡ ${PM.esc(String(r.spike_ratio))}× volume</span>`,
+      r.low_rr ? `<span class="chip warn">LOW R:R</span>` : "",
+    ].filter(Boolean);
+    const detailChips = (r.chips || []).map((c) => `<span class="chip">${PM.esc(c)}</span>`).join("");
+    return `<div class="row-wrap sp-row" data-idx="${idx}" style="--grade-color:${gc};--row-i:${Math.min(idx, 12)}">
+      <div class="row">
+        <div class="row-grade">${PM.esc(r.grade)}</div>
+        <div class="row-main">
+          <div class="row-line1">
+            <a class="tkr" href="${chartHref}" title="Open chart">${PM.esc(r.symbol)}</a>
+            <span class="badge dir long">LONG</span>
+            ${r.sector ? `<span class="badge sector">${PM.esc(r.sector)}</span>` : ""}
+            <span class="cname">${PM.esc(r.name)}</span>
+            <span class="rprice">${cur}${fp(r.price)}</span>
+          </div>
+          <div class="row-chips">${chips.join("")}</div>
         </div>
-        <div class="sp-detail-chips">${chips}</div>
-        <p class="pm-narration">${PM.esc(r.analysis || "No saved analysis — this snapshot predates the current scan.")}</p>
-        <a class="pm-chart-cue sp-chart-link" href="chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs&flt=${encodeURIComponent(state.grade + '~' + state.sort)}">OPEN CHART →</a>
+        <div class="row-right">
+          <div class="row-kpis">
+            <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
+            <span class="rk-rr ${r.low_rr ? "low" : ""}">${r.rr != null ? r.rr.toFixed(1) + "R" : "—"}</span>
+          </div>
+          ${PM.starHTML(starred, r.symbol)}
+          <button class="row-expand" title="Details" aria-label="Toggle details">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
       </div>
-    </article>`;
+      <div class="detail-anim">
+        <div class="detail-inner">
+          <div class="row-detail sp-detail">
+            <div class="detail-prices">
+              <div class="dp-cell"><span class="dp-lbl">Entry</span><span class="dp-val">${cur}${fp(r.entry)}</span></div>
+              <div class="dp-cell"><span class="dp-lbl">Stop</span><span class="dp-val pct-down">${cur}${fp(r.stop)}</span></div>
+              <div class="dp-cell"><span class="dp-lbl">Target</span><span class="dp-val pct-up">${cur}${fp(r.target)}</span></div>
+              <div class="dp-cell"><span class="dp-lbl">Off high</span><span class="dp-val">${r.off_high_pct != null ? r.off_high_pct + "%" : "—"}</span></div>
+            </div>
+            ${detailChips ? `<div class="detail-chips">${detailChips}</div>` : ""}
+            <div class="rd-analysis"><p>${PM.esc(r.analysis || "No saved analysis — this snapshot predates the current scan.")}</p></div>
+            <a class="vk-chart-btn sp-chart-link" href="${chartHref}">View chart →</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
   }
 
   function visibleRows() {
@@ -81,9 +109,10 @@
       return out;
     }
     if (!state.data) return [];
-    const rows = state.data.results.filter((r) =>
+    let rows = state.data.results.filter((r) =>
       (state.grade === "all" || r.grade === state.grade) &&
       (!q || r.symbol.toUpperCase().includes(q)));
+    if (state.confOnly) rows = rows.filter((r) => alignedOf(r));
     const bynum = (fn, asc) => (a, b) => (asc ? 1 : -1) *
       ((fn(a) ?? (asc ? Infinity : -Infinity)) - (fn(b) ?? (asc ? Infinity : -Infinity)))
       || a.symbol.localeCompare(b.symbol);
@@ -93,25 +122,50 @@
     return rows;   // default: grade / score / R:R order from the scan file
   }
 
+  // Deck pills (backlog #19): grade counts as tab shortcuts, Multi-lens as a
+  // click-to-filter toggle — the SCAN page pattern, replacing the old banner.
+  function renderPills() {
+    const box = $("#sp-pills");
+    if (!box) return;
+    const res = (state.data && state.data.results) || [];
+    const n = (g) => res.filter((r) => r.grade === g).length;
+    const nConf = state.confl ? res.filter((r) => alignedOf(r)).length : null;
+    const pill = (attrs, cls, label, count, title, active) =>
+      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} title="${PM.esc(title)}">` +
+      `${label}${count == null ? "" : ` <b>${count}</b>`}</button>`;
+    box.innerHTML =
+      pill(`data-g="A+"`, "g", "A+", n("A+"), "Filter to A+ specs", state.grade === "A+") +
+      pill(`data-g="A"`, "", "A", n("A"), "Filter to A specs", state.grade === "A") +
+      pill(`data-g="B"`, "", "B", n("B"), "Filter to B specs", state.grade === "B") +
+      pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
+        "Specs that another lens agrees with right now — click to filter", state.confOnly);
+    box.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => {
+      state.grade = state.grade === b.dataset.g ? "all" : b.dataset.g;
+      $$("#sp-grade-filter .seg-btn").forEach((c) => c.classList.toggle("is-active", c.dataset.grade === state.grade));
+      renderPills(); render();
+    }));
+    box.querySelectorAll("[data-pill]").forEach((b) => b.addEventListener("click", () => {
+      state.confOnly = !state.confOnly;
+      renderPills(); render();
+    }));
+  }
+
   function render() {
     const list = $("#sp-list");
     const rows = visibleRows();
     list.innerHTML = rows.length
       ? rows.map(rowHTML).join("")
-      : `<div class="pm-empty">${state.view === "watchlist"
-          ? "Nothing starred yet — hit ☆ on any row and it stays here even after the setup ends."
-          : "No spec setups in this view — the gates are strict (3× volume spike + base + breakout, all mandatory)."}</div>`;
+      : `<div class="placeholder"><h3>${state.view === "watchlist" ? "Nothing starred yet" : "No spec setups in this view"}</h3>
+         <p>${state.view === "watchlist"
+          ? "Hit ☆ on any row and it stays here even after the setup ends."
+          : state.confOnly ? "No multi-lens agreement among these specs right now — tap the pill to widen."
+          : "The gates are strict (3× volume spike + base + breakout, all mandatory)."}</p></div>`;
 
-    $$(".sp-row", list).forEach((row) => {
-      const main = $(".sp-row-main", row);
-      const detail = $(".sp-row-detail", row);
-      const openIt = (e) => {
-        if (e.target.closest(".pm-star") || e.target.closest(".sp-chart-link")) return;
-        detail.hidden = !detail.hidden;
-        row.classList.toggle("is-open", !detail.hidden);
-      };
-      main.addEventListener("click", openIt);
-      main.addEventListener("keydown", (e) => { if (e.key === "Enter") openIt(e); });
+    $$(".row-wrap", list).forEach((row) => {
+      row.querySelector(".row").addEventListener("click", (e) => {
+        if (e.target.closest(".pm-star") || e.target.closest("a.tkr")) return;
+        row.classList.toggle("open");
+      });
     });
     $$(".pm-star", list).forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -124,21 +178,6 @@
       });
     });
     renderCounts();
-  }
-
-  function renderConfBanner() {
-    let el = document.getElementById("conf-banner");
-    const rows = state.confl ? state.confl.all() : [];
-    if (!rows.length) { if (el) el.remove(); return; }
-    if (!el) {
-      el = document.createElement("section");
-      el.id = "conf-banner";
-      el.className = "conf-banner";
-      const anchor = document.querySelector("#sp-tabs");
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
-      else return;
-    }
-    el.innerHTML = PM.confluenceBannerHTML(rows, state.market);
   }
 
   function renderCounts() {
@@ -155,14 +194,16 @@
   }
 
   async function load() {
-    $("#sp-sub").textContent = "Loading latest scan…";
+    $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()} · loading…`;
     try {
       const res = await fetch(`data/${state.market}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
+      $("#sp-title").textContent =
+        `SPECS · ${state.market.toUpperCase()} · ${state.data.results.length} setups`;
       $("#sp-sub").innerHTML = PM.esc(
-        `${state.market.toUpperCase()} · ${PM.fmtMelb(state.data.generated_at)} · ` +
-        `${state.data.universe_size} names scanned · ${state.data.results.length} spec setups`)
+        `${PM.fmtMelb(state.data.generated_at)} · ${state.data.universe_size} names scanned · ` +
+        `volume-spike breakouts · sub-$0.50 · the discovery lens`)
         + PM.staleBadgeHTML(state.data.generated_at);
       const wl = PM.watch.map("specs", state.market);
       for (const sym of Object.keys(wl)) {
@@ -170,14 +211,15 @@
         if (live) PM.watch.refresh("specs", state.market, sym, live);
       }
       state.confl = null;
-      renderConfBanner();
+      renderPills();
       PM.loadConfluence(state.market).then((c) => {
         state.confl = c;
+        renderPills();
         render();
-        renderConfBanner();
       });
     } catch (err) {
       state.data = null;
+      $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()}`;
       $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;
     }
     render();
@@ -190,21 +232,22 @@
     syncMarketButtons();
     load();
   }));
-  $$("#sp-tabs .pm-tab").forEach((tab) => tab.addEventListener("click", () => {
-    $$("#sp-tabs .pm-tab").forEach((t) => {
+  $$("#sp-tabs .view-tab").forEach((tab) => tab.addEventListener("click", () => {
+    $$("#sp-tabs .view-tab").forEach((t) => {
       t.classList.toggle("is-active", t === tab);
       t.setAttribute("aria-selected", String(t === tab));
     });
     state.view = tab.dataset.view;
     render();
   }));
-  $$("#sp-grade-filter .pm-chip").forEach((chip) => chip.addEventListener("click", () => {
-    $$("#sp-grade-filter .pm-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+  $$("#sp-grade-filter .seg-btn").forEach((chip) => chip.addEventListener("click", () => {
+    $$("#sp-grade-filter .seg-btn").forEach((c) => c.classList.toggle("is-active", c === chip));
     state.grade = chip.dataset.grade;
+    renderPills();
     render();
   }));
-  $$("#sp-sort-filter .pm-chip").forEach((chip) => chip.addEventListener("click", () => {
-    $$("#sp-sort-filter .pm-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+  $$("#sp-sort-filter .seg-btn").forEach((chip) => chip.addEventListener("click", () => {
+    $$("#sp-sort-filter .seg-btn").forEach((c) => c.classList.toggle("is-active", c === chip));
     state.sort = chip.dataset.sort;
     render();
   }));

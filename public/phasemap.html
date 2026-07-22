@@ -11,36 +11,43 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=67" />
-  <link rel="stylesheet" href="css/phasemap.css?v=15" />
-  <script src="js/nav.js?v=5"></script>
+  <link rel="stylesheet" href="css/styles.css?v=68" />
+  <link rel="stylesheet" href="css/phasemap.css?v=16" />
+  <script src="js/nav.js?v=6"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
 <body>
-  <header class="topbar">
+  <!-- Deck topbar (backlog #21): same single-row header as the SCAN page -->
+  <header class="topbar deck-top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
       </span>
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">PHASEMAP</span></div>
     </div>
-    <nav class="pm-topnav">
-      <div class="market-switch" id="pm-market" role="tablist" aria-label="Market">
-        <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
-        <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
-        <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
-      </div>
-      <nav class="nav-pills" id="site-nav"></nav>
+    <div class="market-switch" id="pm-market" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+      <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+    </div>
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
       <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
       <a class="howto-link pm-legend-link" href="phasemap-legend.html">KEY &amp; LEGEND</a>
-    </nav>
+    </div>
   </header>
 
   <main class="wrap pm-wrap">
-    <div class="pm-head">
-      <h2 class="pm-title">PHASEMAP <span class="pm-title-sub">zones · sweeps · displacement</span></h2>
-      <p class="pm-sub" id="pm-sub">Loading latest scan…</p>
-    </div>
+    <!-- Command deck (backlog #21): status bar in the SCAN page language -->
+    <section class="deck">
+      <div class="deck-status">
+        <div class="deck-title">PHASEMAP <span class="pm-title-sub">zones · sweeps · displacement</span></div>
+        <div class="deck-sub">
+          <span class="deck-dot" aria-hidden="true"></span>
+          <span class="pm-sub" id="pm-sub">Loading latest scan…</span>
+        </div>
+      </div>
+    </section>
 
     <!-- view tabs -->
     <nav class="pm-tabs" id="pm-tabs" role="tablist" aria-label="View">

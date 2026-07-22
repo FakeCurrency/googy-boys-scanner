@@ -58,7 +58,12 @@
         `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
         `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${it.label}</a>`;
       const moreActive = more.some((it) => it.key === here);
+      // BACK (owner 2026-07-22): one click to the previous page from anywhere
+      // but the dashboard. Falls back to SCAN when there's no in-site history.
+      const backPill = here === "index" ? "" :
+        `<button class="howto-link nav-back" type="button" title="Back to the previous page">← BACK</button>`;
       mount.innerHTML =
+        backPill +
         PRIMARY.map(pill).join("") +
         `<span class="nav-more">` +
           `<button class="howto-link nav-more-btn${moreActive ? " is-here" : ""}" type="button" aria-haspopup="true" aria-expanded="false">MORE ▾</button>` +
@@ -66,6 +71,14 @@
             more.map((it) => `<a class="nav-more-item${it.key === here ? " is-here" : ""}" href="${it.href}">${it.bot ? '<span class="bot-nav-dot"></span> ' : ""}${it.label}</a>`).join("") +
           `</span>` +
         `</span>`;
+
+      const backBtn = mount.querySelector(".nav-back");
+      if (backBtn) backBtn.addEventListener("click", () => {
+        let sameSite = false;
+        try { sameSite = document.referrer && new URL(document.referrer).origin === location.origin; } catch (_) {}
+        if (history.length > 1 && sameSite) history.back();
+        else location.href = "index.html";
+      });
 
       const btn = mount.querySelector(".nav-more-btn");
       const menu = mount.querySelector(".nav-more-menu");
