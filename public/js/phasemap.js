@@ -354,6 +354,9 @@
         sort: state.sort, hideIlliquid: state.hideIlliquid });
       lsSet("pm-presets", JSON.stringify(cs)); renderPresets();
     });
+    // Freshly (re)built chips carry no active state — sync immediately so a
+    // matching preset is highlighted from first paint (and after deletes).
+    syncFilterButtons();
   }
 
   /* ── "since you last checked" banner ───────────────────────────────────── */
@@ -441,9 +444,12 @@
     }));
     const chipGroup = (rootSel, key, dataKey) =>
       $$(rootSel + " .pm-chip").forEach((chip) => chip.addEventListener("click", () => {
-        $$(rootSel + " .pm-chip").forEach((c) => c.classList.toggle("is-active", c === chip));
         state[key] = chip.dataset[dataKey];
         lsSet(`pm-${key}`, state[key]);
+        // One sync path for every chip class (2026-07-23): the old per-group
+        // toggle here left PRESET chips stale — drifting off "A+ LONGS" via a
+        // manual filter kept the preset lit. syncFilterButtons owns all of it.
+        syncFilterButtons();
         state.shown = PAGE;
         render();
       }));
@@ -456,8 +462,8 @@
       liqBtn.classList.toggle("is-active", state.hideIlliquid);
       liqBtn.addEventListener("click", () => {
         state.hideIlliquid = !state.hideIlliquid;
-        liqBtn.classList.toggle("is-active", state.hideIlliquid);
         try { localStorage.setItem("pm-hide-illiquid", state.hideIlliquid ? "1" : "0"); } catch (_) {}
+        syncFilterButtons();   // covers this chip + preset match state
         state.shown = PAGE;
         render();
       });
@@ -502,6 +508,16 @@
     syncGroup("#pm-density-filter", "density", state.density);
     const liq = $("#pm-liq-filter .pm-chip");
     if (liq) liq.classList.toggle("is-active", state.hideIlliquid);
+    // Preset chips light up while the CURRENT combo exactly matches what
+    // they'd apply (owner 2026-07-23: "when i click on A+ longs i want it
+    // to be highlighted so i know i'm on A+ longs") — and dim again the
+    // moment any single filter drifts off that combo.
+    const presetMatches = (p) => !!p && p.view === state.view && p.tier === state.tier &&
+      p.dir === state.dir && p.sort === state.sort && !!p.hideIlliquid === !!state.hideIlliquid;
+    $$("#pm-presets .pm-preset").forEach((b) => {
+      const p = b.dataset.b != null ? BUILTIN_PRESETS[+b.dataset.b] : customPresets()[+b.dataset.c];
+      b.classList.toggle("is-active", presetMatches(p));
+    });
   }
 
   async function load() {
