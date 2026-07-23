@@ -1573,7 +1573,7 @@ body { letter-spacing: -0.012em; }
 .site-tabs { display: none; }
 @media (max-width: 680px) {
   .site-tabs {
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-template-columns: repeat(6, 1fr);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
     background: var(--nav);
     -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
@@ -1584,6 +1584,8 @@ body { letter-spacing: -0.012em; }
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     padding: 8px 2px 7px; text-decoration: none; color: var(--muted);
   }
+  /* #30: the MORE tab is a <button> — reset its native chrome to match tabs. */
+  .site-tab-more { appearance: none; background: transparent; border: 0; cursor: pointer; font: inherit; }
   .site-tab-ico { font-size: 18px; line-height: 1; position: relative; }
   .site-tab-lbl { font: 700 9px/1 var(--sans); letter-spacing: 0.04em; }
   .site-tab.is-here { color: var(--blue); }
@@ -1608,6 +1610,45 @@ body { letter-spacing: -0.012em; }
   body.has-site-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0)); }
   /* the top pill nav is redundant on phones once the tab bar exists */
   .nav-pills { display: none; }
+
+  /* ── #30: MORE bottom sheet ──────────────────────────────────────────── */
+  .more-sheet-scrim {
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(0,0,0,0); transition: background .22s ease;
+    display: flex; align-items: flex-end;
+  }
+  /* Restore the hidden attribute (CSS display overrides it) — else the scrim
+     covers the screen and eats the MORE tap even while "closed". */
+  .more-sheet-scrim[hidden] { display: none; }
+  .more-sheet-scrim.is-open { background: rgba(0,0,0,0.55); }
+  .more-sheet {
+    width: 100%; background: var(--elevated, var(--panel));
+    border-radius: 20px 20px 0 0; border-top: 0.5px solid var(--separator);
+    padding: 8px 14px calc(16px + env(safe-area-inset-bottom, 0));
+    transform: translateY(100%); transition: transform .24s cubic-bezier(.2,.8,.2,1);
+    max-height: 82vh; max-height: 82dvh; overflow-y: auto;
+  }
+  .more-sheet-scrim.is-open .more-sheet { transform: translateY(0); }
+  .more-sheet-grip { width: 38px; height: 4px; border-radius: 999px; background: var(--border-2); margin: 6px auto 10px; }
+  .more-sheet-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    font: 800 17px/1 var(--sans); color: var(--text); padding: 2px 4px 12px;
+  }
+  .more-sheet-x {
+    appearance: none; border: 0; background: var(--fill-2); color: var(--text-2);
+    width: 34px; height: 34px; border-radius: 999px; font-size: 15px; cursor: pointer;
+  }
+  .more-sheet-row {
+    display: flex; align-items: center; gap: 14px; text-decoration: none;
+    padding: 15px 8px; border-radius: 12px; color: var(--text);
+    min-height: 44px; border-bottom: 0.5px solid var(--border-soft);
+  }
+  .more-sheet-row:last-child { border-bottom: 0; }
+  .more-sheet-row:active { background: var(--fill); }
+  .more-sheet-row.is-here { color: var(--blue); }
+  .more-sheet-ico { font-size: 20px; width: 26px; text-align: center; flex: 0 0 auto; }
+  .more-sheet-lbl { font: 700 15px/1 var(--sans); flex: 1; }
+  .more-sheet-go { color: var(--muted-2); font-size: 20px; }
   /* comfortable thumb targets for the filter chips */
   .vkf-chip { min-height: 34px; padding: 8px 12px; }
 }

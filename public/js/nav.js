@@ -30,10 +30,16 @@
   // mobile (RECS took a slot, owner 2026-07-22).
   const TABS = PRIMARY.filter((x) => x.key !== "specs" && x.key !== "alerts");
   const MORE = [
-    { href: "sectors.html", label: "NEWS",         key: "sectors" },
-    { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true },
-    { href: "system.html",  label: "SYSTEM",       key: "system" },
-    { href: "about.html",   label: "HOW IT WORKS", key: "about" },
+    { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
+    { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true, tab: "🤖" },
+    { href: "system.html",  label: "SYSTEM",       key: "system", tab: "⚙️" },
+    { href: "about.html",   label: "HOW IT WORKS", key: "about", tab: "❓" },
+  ];
+  // Everything not on the 5-slot bottom bar, for the mobile MORE sheet (#30):
+  // SPECS + ALERTS (top-pill-only on desktop) plus the MORE set.
+  const SHEET = [
+    ...PRIMARY.filter((x) => x.key === "specs" || x.key === "alerts"),
+    ...MORE,
   ];
 
   // (debug.html retired 2026-07-21 with the scalp-era data surfaces it read —
@@ -110,15 +116,66 @@
       const bar = document.createElement("nav");
       bar.className = "site-tabs";
       bar.setAttribute("aria-label", "Primary");
-      bar.innerHTML = TABS.map((it) =>
+      const sheetActive = SHEET.some((it) => it.key === here);
+      const tabHTML = TABS.map((it) =>
         `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
         `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
         `<span class="site-tab-lbl">${it.label.replace(" ⚡", "").replace("AI ", "")}</span></a>`
       ).join("");
+      // #30: a 6th MORE tab opens a bottom sheet with every overflow
+      // destination — the only way to reach SPECS/ALERTS/NEWS/AI BOT/SYSTEM/
+      // HOW IT WORKS on a phone (the desktop pill row is hidden there).
+      const moreTab =
+        `<button class="site-tab site-tab-more${sheetActive ? " is-here" : ""}" type="button" aria-haspopup="dialog" aria-expanded="false">` +
+        `<span class="site-tab-ico" aria-hidden="true">⋯</span>` +
+        `<span class="site-tab-lbl">MORE</span></button>`;
+      bar.innerHTML = tabHTML + moreTab;
       document.body.appendChild(bar);
       document.body.classList.add("has-site-tabs");
       decorateTabBadges();
+      buildMoreSheet(here);
     }
+  }
+
+  // #30: the mobile MORE bottom sheet — a scrimmed panel that slides up with
+  // the overflow destinations as big touch rows. Dismiss on scrim tap, close
+  // button, Esc, or picking a destination.
+  function buildMoreSheet(here) {
+    if (document.querySelector(".more-sheet-scrim")) return;
+    const scrim = document.createElement("div");
+    scrim.className = "more-sheet-scrim";
+    scrim.hidden = true;
+    scrim.innerHTML =
+      `<div class="more-sheet" role="dialog" aria-modal="true" aria-label="More destinations">` +
+        `<div class="more-sheet-grip" aria-hidden="true"></div>` +
+        `<div class="more-sheet-hd">More<button class="more-sheet-x" type="button" aria-label="Close">✕</button></div>` +
+        `<div class="more-sheet-list">` +
+          SHEET.map((it) =>
+            `<a class="more-sheet-row${it.key === here ? " is-here" : ""}" href="${it.href}">` +
+            `<span class="more-sheet-ico" aria-hidden="true">${it.bot ? '<span class="bot-nav-dot"></span>' : it.tab || "•"}</span>` +
+            `<span class="more-sheet-lbl">${it.label.replace(" ⚡", "")}</span>` +
+            `<span class="more-sheet-go" aria-hidden="true">›</span></a>`).join("") +
+        `</div>` +
+      `</div>`;
+    document.body.appendChild(scrim);
+
+    const btn = document.querySelector(".site-tab-more");
+    const open = () => {
+      scrim.hidden = false;
+      requestAnimationFrame(() => scrim.classList.add("is-open"));
+      if (btn) btn.setAttribute("aria-expanded", "true");
+      document.addEventListener("keydown", onEsc);
+    };
+    const close = () => {
+      scrim.classList.remove("is-open");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+      document.removeEventListener("keydown", onEsc);
+      setTimeout(() => { scrim.hidden = true; }, 220);   // after the slide-out
+    };
+    const onEsc = (e) => { if (e.key === "Escape") close(); };
+    if (btn) btn.addEventListener("click", open);
+    scrim.addEventListener("click", (e) => { if (e.target === scrim) close(); });
+    scrim.querySelector(".more-sheet-x").addEventListener("click", close);
   }
 
   // Live badge counts on the bottom tabs (backlog #29): the tradeable A+ count
