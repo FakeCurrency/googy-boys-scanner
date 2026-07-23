@@ -203,6 +203,16 @@
   }
 
   loadPrefs();
+  // Deep link (backlog #16): ?m=asx|nasdaq|crypto opens the dashboard already
+  // switched to that market (e.g. the RECS cards' "Open scan →"). Overrides
+  // the saved pref and persists, so a refresh keeps you where the link put you.
+  try {
+    const qm = new URLSearchParams(location.search).get("m");
+    if (qm && ["asx", "nasdaq", "crypto"].includes(qm.toLowerCase())) {
+      state.market = qm.toLowerCase();
+      savePrefs();
+    }
+  } catch (_) {}
   // Sync UI controls to restored preferences
   (function syncPrefsUI() {
     document.querySelectorAll(".market-btn").forEach((b) => {

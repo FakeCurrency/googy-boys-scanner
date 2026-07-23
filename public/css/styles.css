@@ -1827,6 +1827,36 @@ body { letter-spacing: -0.012em; }
 .rec-sec-lean { font: 700 11px/1 var(--mono); white-space: nowrap; flex: 0 0 auto; }
 .rec-sec-lean.up { color: var(--green); } .rec-sec-lean.down { color: var(--red); } .rec-sec-lean.flat { color: var(--muted); }
 
+/* ── Wave R #15+#16: watchlist badges + deep links ──────────────────────── */
+.rec-watch-badge {
+  font: 800 11px/1 var(--mono); color: var(--orange);
+  background: var(--orange-soft); border: 1px solid rgba(255,159,10,0.30);
+  border-radius: 999px; padding: 3px 8px;
+}
+.rec-card-hd .rec-verdict { margin-left: auto; }   /* verdict stays right when a ★ badge is present */
+.rec-card-ft { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.rec-card-ft .rec-age { margin-top: 0; }
+.rec-open { font: 700 12px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
+.rec-open:hover { text-decoration: underline; }
+.rec-mv.watched { border-color: rgba(255,159,10,0.45); background: var(--orange-soft); }
+.rec-mv-star { color: var(--orange); font-size: 11px; margin-right: 2px; }
+
+/* ── Wave R #12: note archive fold ──────────────────────────────────────── */
+.rec-archive {
+  margin: 0 0 14px; background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 4px 14px;
+}
+.rec-archive > summary {
+  cursor: pointer; list-style: none; padding: 10px 0; user-select: none;
+  font: 700 12.5px/1 var(--sans); color: var(--text-2);
+}
+.rec-archive > summary::-webkit-details-marker { display: none; }
+.rec-archive > summary::before { content: "▸ "; color: var(--muted); }
+.rec-archive[open] > summary::before { content: "▾ "; }
+.rec-arch-item { padding: 10px 0; border-top: 1px solid var(--border); }
+.rec-arch-date { font: 700 10.5px/1 var(--mono); letter-spacing: 0.03em; color: var(--muted-2); }
+.rec-arch-item p { margin: 5px 0 0; font: 400 13px/1.55 var(--sans); color: var(--text-2); }
+
 /* snappy re-renders (backlog #48): the entrance cascade plays on FIRST paint
    only — filter/sort/pill re-renders swap instantly instead of re-animating. */
 .rows[data-painted] .row-wrap { animation: none; }

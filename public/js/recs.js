@@ -106,6 +106,45 @@
     return window.PM && PM.fmtMelb ? PM.fmtMelb(iso) : String(iso || "");
   }
 
+  // Watchlist-aware (backlog #15): a name is "watched" if it's starred under
+  // ANY lens for its market (stars live in the shared sync store via PM.watch).
+  const LENSES = ["vivek", "phasemap", "specs"];
+  function isWatched(market, sym) {
+    if (!window.PM || !PM.watch) return false;
+    try { return LENSES.some((ns) => PM.watch.has(ns, market, sym)); } catch (_) { return false; }
+  }
+
+  // Note archive (backlog #12): remember each day's note client-side so prior
+  // reads survive the daily overwrite of reco_note.json; show the last 7.
+  const NOTES_KEY = "gbs:reco:notes";
+  function rememberNote(note) {
+    if (!note || !note.date || !note.note) return;
+    try {
+      const log = JSON.parse(localStorage.getItem(NOTES_KEY) || "{}");
+      log[note.date] = { date: note.date, author: note.author || "auto", note: note.note };
+      const keep = Object.keys(log).sort().slice(-14);   // cap 14 days
+      const trimmed = {};
+      keep.forEach((k) => { trimmed[k] = log[k]; });
+      localStorage.setItem(NOTES_KEY, JSON.stringify(trimmed));
+    } catch (_) {}
+  }
+  function noteArchive(currentDate) {
+    let log = {};
+    try { log = JSON.parse(localStorage.getItem(NOTES_KEY) || "{}"); } catch (_) {}
+    const prior = Object.values(log)
+      .filter((n) => n && n.date && n.date !== currentDate && n.note)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 7);
+    if (!prior.length) return "";
+    return `<details class="rec-archive">
+      <summary>Earlier notes · last ${prior.length}</summary>
+      ${prior.map((n) => `<div class="rec-arch-item">
+        <span class="rec-arch-date">${esc(n.date)}${n.author === "Claude" ? " · Claude" : ""}</span>
+        <p>${esc(n.note)}</p>
+      </div>`).join("")}
+    </details>`;
+  }
+
   // Verdict from setup breadth + bot positioning. Thresholds are DISPLAY
   // heuristics only (commentary, not signals): >=62% one-sided = bias.
   function verdict(longs, shorts, botR) {
@@ -143,9 +182,11 @@
     const pl = n ? Math.round((longs / n) * 100) : 50;
     const gen = prices && prices.generated_at;
     const delta = n ? priorDelta(histArr, pl) : null;   // #10
+    const watched = Object.keys(rows).filter((sym) => isWatched(m.key, sym)).length;   // #15
     return `<article class="rec-card" data-market="${esc(m.key)}">
       <div class="rec-card-hd">
         <h3>${m.label}</h3>
+        ${watched ? `<span class="rec-watch-badge" title="${watched} of your starred names ${watched === 1 ? "is" : "are"} in this scan">★ ${watched}</span>` : ""}
         <span class="rec-verdict ${v.cls}">${v.label}</span>
       </div>
       <div class="rec-breadth" title="Direction of qualifying setups in the latest scan">
@@ -161,7 +202,10 @@
         <span title="Sum of unrealised R on the bot's open positions here">Book <b class="${rcls(botR)}">${rfmt(botR)}</b></span>
       </div>
       <div class="rec-enrich" data-enrich="${esc(m.key)}"></div>
-      <div class="rec-age">${gen ? `scan ${agoText(gen)}` : "no scan data"}</div>
+      <div class="rec-card-ft">
+        <span class="rec-age">${gen ? `scan ${agoText(gen)}` : "no scan data"}</span>
+        <a class="rec-open" href="index.html?m=${esc(m.key)}" title="Open the ${esc(m.label)} scan on the dashboard">Open ${esc(m.label)} scan →</a>
+      </div>
     </article>`;
   }
 
@@ -254,9 +298,9 @@
         <a class="rec-link" href="journal.html">Journal →</a></div>
       <div class="rec-mv-list">
         ${movers.map((p) => `
-          <a class="rec-mv" href="chart.html?m=${esc(p.market)}&s=${encodeURIComponent(p.symbol)}&mode=vivek"
-             title="${esc(p.timeframe || "")} ${esc(p.entry_type || "")} — open the chart">
-            <b>${esc(p.symbol)}</b>
+          <a class="rec-mv${isWatched(p.market, p.symbol) ? " watched" : ""}" href="chart.html?m=${esc(p.market)}&s=${encodeURIComponent(p.symbol)}&mode=vivek"
+             title="${isWatched(p.market, p.symbol) ? "★ on your watchlist — " : ""}${esc(p.timeframe || "")} ${esc(p.entry_type || "")} — open the chart">
+            ${isWatched(p.market, p.symbol) ? `<span class="rec-mv-star" aria-label="watched">★</span>` : ""}<b>${esc(p.symbol)}</b>
             <span class="rec-mv-mkt">${esc(String(p.market || "").toUpperCase())}</span>
             <span class="rec-mv-r ${rcls(p.unreal_r)}">${rfmt(p.unreal_r)}</span>
           </a>`).join("")}
@@ -305,7 +349,8 @@
     });
     saveHist(hist);
 
-    $("#rec-note-slot").innerHTML = noteCard(note);
+    rememberNote(note);                                    // #12: log today's note
+    $("#rec-note-slot").innerHTML = noteCard(note) + noteArchive(note && note.date);
     $("#rec-markets").innerHTML = MARKETS.map((m) => marketCard(m, prices[m.key], perMkt(m.key), hist[m.key])).join("");
     $("#rec-movers-slot").innerHTML = moversCard(open);
 
