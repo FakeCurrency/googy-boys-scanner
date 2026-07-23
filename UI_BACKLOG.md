@@ -56,7 +56,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).
 - [x] 30. MORE / overflow destinations as a touch bottom sheet with scrim (covers SPECS + ALERTS + the MORE set on phones).
 - [x] 31. Expanded ladder reflows to a 2-row grid on phones — never five squished columns.
-- [ ] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
+- [x] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
 - [x] 33. All tap targets ≥44px (star, expand, pills, segments) per iOS HIG.
 - [x] 34. Touch-slop guard: scrolling a row never accidentally expands it.
 - [x] 35. Safe-area inset audit on every page (notch, home indicator).
