@@ -390,7 +390,7 @@
   }
   // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
-    `<td class="jr-sym"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal" title="Open ${up(t.symbol)} chart">` +
+    `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal" title="Open ${up(t.symbol)} chart">` +
     `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
@@ -414,15 +414,15 @@
         ? (isLong ? t.entry + t.unreal_r * risk : t.entry - t.unreal_r * risk) : null;
       const ur = t.unreal_r, ud = t.unreal_usd != null ? t.unreal_usd * fxOf(t) : null;
       return {
-        now: `<td class="num jr-now">${now != null ? px(now) : "—"}</td>`,
-        ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>`,
-        ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}">${ud != null ? d2(ud) : "—"}</td>`,
+        now: `<td class="num jr-now" data-label="Now">${now != null ? px(now) : "—"}</td>`,
+        ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R">${ur != null ? rfmt(ur) : "—"}</td>`,
+        ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}" data-label="$">${ud != null ? d2(ud) : "—"}</td>`,
       };
     }
     return {
-      now: `<td class="num jr-now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>`,
-      ur: `<td class="num jr-ur">—</td>`,
-      ud: `<td class="num jr-ud">—</td>`,
+      now: `<td class="num jr-now" data-label="Now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>`,
+      ur: `<td class="num jr-ur" data-label="R">—</td>`,
+      ud: `<td class="num jr-ud" data-label="$">—</td>`,
     };
   }
   // Now+R+$ as three adjacent cells (for the per-section tables).
@@ -448,13 +448,13 @@
           `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
-        <td>${gradeChip(gradeOf(t))}</td>
-        <td class="num">${px(t.entry)}</td>
-        <td class="num">${px(t.stop)}</td>
+        <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
+        <td class="num" data-label="Entry">${px(t.entry)}</td>
+        <td class="num" data-label="Stop">${px(t.stop)}</td>
         ${liveCells(t, side)}
-        <td class="num jr-stamp">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td>${actions}</tr>`;
+        <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td>${actions}</tr>`;
     }).join("");
-    return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
   function closedRows(list) {
@@ -465,14 +465,14 @@
       const d = dollarsOf(t);
       return `<tr>
         ${symCell(t)}
-        <td>${gradeChip(gradeOf(t))}</td>
-        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}">${rfmt(t.realized_r)}</td>
-        <td class="num ${d == null ? "" : pcls(d)}">${d == null ? "—" : d2(d)}</td>
-        <td class="num jr-stamp">${stamp(openedMs(t))}</td>
-        <td class="num jr-stamp">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
-        <td><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}</td></tr>`;
+        <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
+        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}" data-label="R">${rfmt(t.realized_r)}</td>
+        <td class="num ${d == null ? "" : pcls(d)}" data-label="$">${d == null ? "—" : d2(d)}</td>
+        <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
+        <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
+        <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}</td></tr>`;
     }).join("");
-    return `<table class="jr-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
   // ── Same positions: you and Claude in the same trade, head to head ─────────
@@ -523,7 +523,7 @@
           <td class="num jr-stamp">${stamp(openedMs(m))}</td>
           ${me.ur}${me.ud}</tr>`;
       }).join("");
-      openHost.innerHTML = `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+      openHost.innerHTML = `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${body}</tbody></table>`;
     }
 
     // settled head-to-heads — same symbol+direction, both sides fully closed.
@@ -563,7 +563,7 @@
         <td class="num ${pcls(m.d)}">${d2(m.d)}</td>
         <td class="num"><span class="num-sub">${b.n} vs ${m.n}</span></td>
         <td class="num">${win(b, m)}</td></tr>`).join("");
-      $("#both-closed").innerHTML = `<table class="jr-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+      $("#both-closed").innerHTML = `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${body}</tbody></table>`;
     }
   }
 

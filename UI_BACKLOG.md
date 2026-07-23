@@ -70,7 +70,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [ ] 43. theme-color + status-bar styling matched across pages; A2HS nudge shown once.
 - [ ] 44. Star action haptic + micro-animation.
 - [ ] 45. Long-press ticker quick-action sheet: Chart / Star / Journal.
-- [ ] 46. Journal mobile: bot book tables become cards (kills the pre-existing phone overflow).
+- [x] 46. Journal mobile: bot book tables become cards (kills the pre-existing phone overflow).
 
 ## Wave 5 — Rows, detail & interaction polish
 

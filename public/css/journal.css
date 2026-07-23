@@ -606,3 +606,42 @@ details.jr-fold.jr-fold-quiet > summary {
 @media (max-width: 680px) {
   .jr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
+
+/* ── Wave 4 #46: bot-book tables become CARDS on phones ─────────────────────
+   Each row reflows to a card (symbol header + label:value rows) instead of a
+   horizontally-scrolling table. Uses the data-label on each <td>. The earlier
+   overflow-scroll fallback is superseded here — cards never overflow. */
+@media (max-width: 680px) {
+  .jr-table-wrap { overflow: visible; border: 0; background: transparent; border-radius: 0; }
+  /* Non-cardable tables (edge/lens analytics) just scroll horizontally. */
+  .jr-table:not(.jr-cardable) { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .jr-cardable { border-collapse: separate; }
+  .jr-cardable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .jr-cardable, .jr-cardable tbody, .jr-cardable tr, .jr-cardable td { display: block; width: auto; }
+  .jr-cardable tr {
+    background: var(--panel); border: 1px solid var(--border); border-left-width: 3px;
+    border-radius: 12px; padding: 4px 14px 10px; margin-bottom: 10px;
+  }
+  .jr-cardable td {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 8px 0; text-align: right; border: 0;
+    border-bottom: 0.5px solid var(--border-soft); font-size: 13px;
+  }
+  .jr-cardable td:last-child { border-bottom: 0; }
+  .jr-cardable td::before {
+    content: attr(data-label); flex: 0 0 auto; text-align: left;
+    font: 700 10px/1.2 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted-2);
+  }
+  /* Symbol is the card header: full-width, prominent, no label prefix. */
+  .jr-cardable td.jr-sym {
+    justify-content: flex-start; flex-wrap: wrap; gap: 7px; text-align: left;
+    padding: 12px 0 10px; font-size: 15px; border-bottom: 1px solid var(--border-soft); margin-bottom: 2px;
+  }
+  .jr-cardable td.jr-sym::before { display: none; }
+  .side .jr-cardable td { font-size: 13px; padding: 8px 0; }   /* undo the tight half-width cells */
+  /* Actions (Close / note / delete) sit as a full-width button row. */
+  .jr-cardable td.jr-actions { justify-content: flex-end; gap: 8px; padding-top: 11px; }
+  .jr-cardable td.jr-actions::before { display: none; }
+  .jr-close-btn, .jr-note-btn, .jr-del-btn { min-height: 40px; min-width: 44px; }
+  .jr-stamp .num-sub { color: var(--muted-2); }
+}
