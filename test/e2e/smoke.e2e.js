@@ -106,6 +106,49 @@ const check = (ok, label) => {
     check(recCards >= 3, `recommendations market cards render (${recCards})`);
     await page.context().close();
 
+    // Wait until a list's rendered count settles (async fetch + render) so the
+    // filter assertions can't race a still-painting page — flaky e2e = red CI
+    // runs = failure emails, which we do not ship.
+    const settledCount = async (pg, sel) => {
+      let last = -1, stable = 0;
+      for (let i = 0; i < 40; i++) {           // up to ~8s
+        const n = await pg.$$eval(sel, (els) => els.length).catch(() => 0);
+        if (n === last && n > 0) { if (++stable >= 3) return n; } else { stable = 0; last = n; }
+        await pg.waitForTimeout(200);
+      }
+      return last;
+    };
+
+    // ── Specs page (#24): paints rows + grade filter narrows ─────────────
+    page = await newPage({ width: 1500, height: 950 });
+    await page.goto(`${BASE}/specs.html`, { waitUntil: "networkidle", timeout: 30000 });
+    await page.waitForSelector("#sp-list .row-wrap", { timeout: 30000 });
+    const spBefore = await settledCount(page, "#sp-list .row-wrap");
+    check(spBefore > 0, `specs page paints rows (${spBefore})`);
+    const spGrade = await page.$("#sp-grade-filter .seg-btn[data-grade='A+']");
+    if (spGrade) {
+      await spGrade.click();
+      await page.waitForTimeout(500);
+      const spAfter = await page.$$eval("#sp-list .row-wrap", (n) => n.length);
+      check(spAfter <= spBefore, `specs grade filter narrows (${spBefore} → ${spAfter})`);
+    } else { check(false, "specs A+ grade filter present"); }
+    await page.context().close();
+
+    // ── PhaseMap page (#24): paints cards + tier filter narrows ──────────
+    page = await newPage({ width: 1500, height: 950 });
+    await page.goto(`${BASE}/phasemap.html`, { waitUntil: "networkidle", timeout: 30000 });
+    await page.waitForSelector("#pm-list .pm-card", { timeout: 30000 });
+    const pmBefore = await settledCount(page, "#pm-list .pm-card");
+    check(pmBefore > 0, `phasemap page paints cards (${pmBefore})`);
+    const pmTier = await page.$("#pm-tier-filter .pm-chip[data-tier='A+']");
+    if (pmTier) {
+      await pmTier.click();
+      await page.waitForTimeout(500);
+      const pmAfter = await page.$$eval("#pm-list .pm-card", (n) => n.length);
+      check(pmAfter <= pmBefore, `phasemap tier filter narrows (${pmBefore} → ${pmAfter})`);
+    } else { check(false, "phasemap A+ tier filter present"); }
+    await page.context().close();
+
     // ── 390px mobile dashboard ───────────────────────────────────────────
     page = await newPage({ width: 390, height: 844 });
     await page.goto(`${BASE}/index.html`, { waitUntil: "domcontentloaded", timeout: 30000 });

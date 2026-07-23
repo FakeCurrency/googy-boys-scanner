@@ -44,8 +44,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 20. Specs page: sticky filter/sort toolbar in the deck language; row cards aligned to dashboard classes.
 - [x] 21. PhaseMap list page: deck command bar (status + state/tier pills as click-to-filter) — respecting its existing UX tranche's filters.
 - [x] 22. PhaseMap list page: sticky toolbar unification (its stepper/presets restyled into the shared language, behaviour unchanged).
-- [ ] 23. Extract the deck bar + pill + toolbar CSS into a shared, documented component block (one source of truth for all pages).
-- [ ] 24. e2e smoke for specs + phasemap pages (paint, filter, no console errors, 390px).
+- [x] 23. Extract the deck bar + pill + toolbar CSS into a shared, documented component block (one source of truth for all pages).
+- [x] 24. e2e smoke for specs + phasemap pages (paint, filter, no console errors, 390px).
 
 ## Wave 4 — Mobile parity (≤680px)
 

@@ -1766,7 +1766,29 @@ body { letter-spacing: -0.012em; }
 }
 .ba-events[hidden] { display: none; }
 
-/* ═══════════════ WAVE 3a (2026-07-22) — Command Deck, tranche A ═══════════
+/* ╔═══════════════════════════════════════════════════════════════════════╗
+   ║  SHARED DECK COMPONENT — ONE SOURCE OF TRUTH (backlog #23)             ║
+   ║                                                                       ║
+   ║  These classes are the shared command-deck vocabulary used by the     ║
+   ║  dashboard AND specs.html AND phasemap.html (Wave P parity). Change    ║
+   ║  a deck look HERE and it updates every page — never fork these into    ║
+   ║  a page-specific rule. The component is three layers:                 ║
+   ║                                                                       ║
+   ║    • TOPBAR   .deck-top / .deck-top-right / .microclock — the single   ║
+   ║               row: brand · market switch · #site-nav pills · actions.  ║
+   ║    • DECK     .deck / .deck-status / .deck-title / .deck-sub /         ║
+   ║               .deck-dot / .deck-pills / .fpill (+g/o/t/top/is-active)  ║
+   ║               — the status line + click-to-filter pill strip.         ║
+   ║    • TOOLBAR  .toolbar / .tb-line / .seg / .seg-btn / .vkf-chip /      ║
+   ║               .tb-sort* — the sticky merged filter/sort line (see the  ║
+   ║               "ONE sticky toolbar" block below, near the row cards).   ║
+   ║                                                                       ║
+   ║  Responsive rules for all three live in the mobile @media blocks       ║
+   ║  (h-scroll strips, 40px thumb targets, sticky offsets). Per-page       ║
+   ║  scripts (app.js / specs.js / phasemap.js) render into these IDs:      ║
+   ║  #deck-pills / #sp-pills / #pm-* — same markup, same skin.             ║
+   ╚═══════════════════════════════════════════════════════════════════════╝
+   WAVE 3a (2026-07-22) — Command Deck, tranche A:
    One command bar replaces the scan banner, 4 stat cards, bot strip and the
    at-level/confluence banner strips; the topbar collapses to a single row. */
 
