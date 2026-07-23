@@ -28,6 +28,72 @@
   const rfmt = (v) => (v == null || isNaN(v) ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`);
   const rcls = (v) => (v >= 0 ? "pos" : "neg");
 
+  // ── Consensus history (backlog #10+#11) ──────────────────────────────────
+  // Client-side ONLY (by design): each visit records today's per-market long
+  // breadth to localStorage, building a day-over-day trend the page can show
+  // as delta arrows and a mini history strip. No server round-trip, no new
+  // data file — it fills in as the owner opens the page across days. Starts
+  // sparse and honest (one bar day one), never invents prior days.
+  const HIST_KEY = "gbs:reco:hist";
+  const HIST_CAP = 30;
+  // Today's date in MELBOURNE (the site's one on-screen timezone) as YYYY-MM-DD.
+  function melbDay() {
+    try { return new Date().toLocaleDateString("en-CA", { timeZone: "Australia/Melbourne" }); }
+    catch (_) { return new Date().toISOString().slice(0, 10); }
+  }
+  function readHist() {
+    try {
+      const h = JSON.parse(localStorage.getItem(HIST_KEY) || "{}");
+      return (h && typeof h === "object" && !Array.isArray(h)) ? h : {};
+    } catch (_) { return {}; }
+  }
+  // Record today's breadth for a market. Same-day repeat visits UPDATE today's
+  // bar (breadth shifts as fresh scans land) rather than appending duplicates.
+  function recordSnapshot(hist, marketKey, pl, n) {
+    if (n <= 0) return hist;                     // don't log an empty/no-scan day
+    const day = melbDay();
+    const arr = Array.isArray(hist[marketKey]) ? hist[marketKey] : [];
+    const last = arr[arr.length - 1];
+    if (last && last.d === day) { last.pl = pl; last.n = n; }
+    else arr.push({ d: day, pl, n });
+    hist[marketKey] = arr.slice(-HIST_CAP);
+    return hist;
+  }
+  function saveHist(hist) {
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch (_) {}
+  }
+  // Delta vs the most recent PRIOR day (never today's own bar).
+  function priorDelta(arr, todayPl) {
+    if (!Array.isArray(arr)) return null;
+    const day = melbDay();
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i].d !== day) return { pp: Math.round(todayPl - arr[i].pl), from: arr[i].d };
+    }
+    return null;   // no prior day yet
+  }
+  // "Breadth shifting" chip. >3pp move = a real shift; else steady.
+  function deltaChip(delta) {
+    if (!delta) return `<span class="rec-delta flat" title="No prior day recorded yet — the trend fills in as you check back">first read</span>`;
+    const { pp } = delta;
+    if (pp >= 3) return `<span class="rec-delta up" title="Long breadth up ${pp}pp vs ${esc(delta.from)}">▲ shifting long +${pp}pp</span>`;
+    if (pp <= -3) return `<span class="rec-delta down" title="Long breadth down ${Math.abs(pp)}pp vs ${esc(delta.from)}">▼ shifting short ${pp}pp</span>`;
+    return `<span class="rec-delta flat" title="Breadth roughly steady vs ${esc(delta.from)} (${pp >= 0 ? "+" : ""}${pp}pp)">◆ steady ${pp >= 0 ? "+" : ""}${pp}pp</span>`;
+  }
+  // 14-day mini bar strip: bar height = long %, colour = lean.
+  function historyStrip(arr) {
+    const recent = (Array.isArray(arr) ? arr : []).slice(-14);
+    if (recent.length < 2) return "";   // one bar reads as noise — wait for a trend
+    const bars = recent.map((s) => {
+      const cls = s.pl >= 62 ? "up" : s.pl <= 38 ? "down" : "flat";
+      const h = Math.max(8, Math.min(100, s.pl));
+      return `<i class="rec-hbar ${cls}" style="height:${h}%" title="${esc(s.d)}: ${s.pl}% long (${s.n} setups)"></i>`;
+    }).join("");
+    return `<div class="rec-hist" title="Long-breadth over the last ${recent.length} days you've checked">
+      <div class="rec-hist-bars">${bars}</div>
+      <span class="rec-hist-lbl">${recent.length}-day breadth</span>
+    </div>`;
+  }
+
   function agoText(iso) {
     const t = Date.parse(iso);
     if (!isFinite(t)) return "";
@@ -65,7 +131,7 @@
     };
   }
 
-  function marketCard(m, prices, botPos) {
+  function marketCard(m, prices, botPos, histArr) {
     const rows = (prices && prices.rows) || {};
     const list = Object.values(rows);
     const longs = list.filter((r) => r.dir === "LONG").length;
@@ -73,9 +139,11 @@
     const aplus = list.filter((r) => r.grade === "A+").length;
     const botR = botPos.reduce((s, p) => s + (p.unreal_r || 0), 0);
     const v = verdict(longs, shorts, botR);
-    const pl = longs + shorts ? Math.round((longs / (longs + shorts)) * 100) : 50;
+    const n = longs + shorts;
+    const pl = n ? Math.round((longs / n) * 100) : 50;
     const gen = prices && prices.generated_at;
-    return `<article class="rec-card">
+    const delta = n ? priorDelta(histArr, pl) : null;   // #10
+    return `<article class="rec-card" data-market="${esc(m.key)}">
       <div class="rec-card-hd">
         <h3>${m.label}</h3>
         <span class="rec-verdict ${v.cls}">${v.label}</span>
@@ -84,8 +152,10 @@
         <i style="width:${pl}%"></i>
         <span class="rec-breadth-lbl">▲ ${longs} long · ${shorts} short ▼</span>
       </div>
+      ${n ? `<div class="rec-delta-row">${deltaChip(delta)}</div>` : ""}
       <p class="rec-line">${esc(v.line)}</p>
-      <div class="rec-nums">
+      ${historyStrip(histArr)}
+      <div class="rec-nums" data-nums="${esc(m.key)}">
         <span title="A+ setups in the latest scan">A+ <b>${aplus}</b></span>
         <span title="Bot's open positions in this market">Bot open <b>${botPos.length}</b></span>
         <span title="Sum of unrealised R on the bot's open positions here">Book <b class="${rcls(botR)}">${rfmt(botR)}</b></span>
@@ -141,8 +211,21 @@
       sub.textContent = `Consensus recomputed from the latest published scans · freshest ${agoText(stamps[0])}`;
       sub.title = `Freshest scan: ${fmtMelb(stamps[0])}`;
     }
+    // Record today's breadth per market, THEN render (so today's bar shows in
+    // the strip and the delta compares against a genuine prior day).
+    const hist = readHist();
+    MARKETS.forEach((m) => {
+      const rows = (prices[m.key] && prices[m.key].rows) || {};
+      const list = Object.values(rows);
+      const longs = list.filter((r) => r.dir === "LONG").length;
+      const shorts = list.filter((r) => r.dir === "SHORT").length;
+      const n = longs + shorts;
+      if (n) recordSnapshot(hist, m.key, Math.round((longs / n) * 100), n);
+    });
+    saveHist(hist);
+
     $("#rec-note-slot").innerHTML = noteCard(note);
-    $("#rec-markets").innerHTML = MARKETS.map((m) => marketCard(m, prices[m.key], perMkt(m.key))).join("");
+    $("#rec-markets").innerHTML = MARKETS.map((m) => marketCard(m, prices[m.key], perMkt(m.key), hist[m.key])).join("");
     $("#rec-movers-slot").innerHTML = moversCard(open);
   }
 
