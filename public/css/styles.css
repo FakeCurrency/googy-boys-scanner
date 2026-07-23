@@ -2212,3 +2212,19 @@ body { letter-spacing: -0.012em; }
 .qa-act:active { background: var(--fill); }
 .qa-ico { font-size: 19px; width: 24px; text-align: center; }
 .qa-cancel { justify-content: center; background: transparent; color: var(--muted); font-weight: 600; margin-bottom: 0; }
+
+/* ── Wave 4 #43: one-time Add-to-Home-Screen nudge (phones) ─────────────── */
+.a2hs {
+  position: fixed; left: 10px; right: 10px; z-index: 85;
+  bottom: calc(66px + env(safe-area-inset-bottom, 0));   /* just above the tab bar */
+  display: flex; align-items: center; gap: 10px;
+  background: var(--elevated, var(--panel)); border: 1px solid var(--border-2);
+  border-radius: 14px; padding: 11px 12px; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  transform: translateY(140%); opacity: 0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s;
+}
+.a2hs.in { transform: translateY(0); opacity: 1; }
+.a2hs-ico { font-size: 20px; flex: 0 0 auto; }
+.a2hs-msg { flex: 1; font: 600 12.5px/1.35 var(--sans); color: var(--text-2); }
+.a2hs-msg b { color: var(--text); }
+.a2hs-add { appearance: none; border: 0; background: var(--blue); color: #fff; font: 800 12.5px/1 var(--sans); padding: 9px 14px; border-radius: 999px; flex: 0 0 auto; cursor: pointer; }
+.a2hs-x { appearance: none; border: 0; background: var(--fill-2); color: var(--muted); width: 30px; height: 30px; border-radius: 999px; font-size: 13px; flex: 0 0 auto; cursor: pointer; }

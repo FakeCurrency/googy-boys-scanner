@@ -134,6 +134,47 @@
       document.body.classList.add("has-site-tabs");
       decorateTabBadges();
       buildMoreSheet(here);
+      a2hsNudge();
+    }
+  }
+
+  // #43: one-time "Add to Home Screen" nudge on phones. Uses the Chrome/
+  // Android beforeinstallprompt when available, and an iOS Safari hint
+  // otherwise. Shown at most once ever (localStorage flag), never when
+  // already installed (standalone) or on desktop.
+  function a2hsNudge() {
+    let dismissed = false;
+    try { dismissed = localStorage.getItem("gbs:a2hs") === "done"; } catch (_) { return; }
+    if (dismissed) return;
+    const standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    if (standalone) return;
+    if (!(window.matchMedia && window.matchMedia("(max-width: 680px)").matches)) return;   // phones only
+    const markDone = () => { try { localStorage.setItem("gbs:a2hs", "done"); } catch (_) {} };
+    const show = (html, onAdd) => {
+      if (document.querySelector(".a2hs")) return;
+      const bar = document.createElement("div");
+      bar.className = "a2hs";
+      bar.innerHTML = `<span class="a2hs-ico" aria-hidden="true">📲</span><span class="a2hs-msg">${html}</span>` +
+        (onAdd ? `<button class="a2hs-add" type="button">Add</button>` : "") +
+        `<button class="a2hs-x" type="button" aria-label="Dismiss">✕</button>`;
+      document.body.appendChild(bar);
+      requestAnimationFrame(() => bar.classList.add("in"));
+      const close = () => { markDone(); bar.classList.remove("in"); setTimeout(() => bar.remove(), 250); };
+      bar.querySelector(".a2hs-x").addEventListener("click", close);
+      const add = bar.querySelector(".a2hs-add");
+      if (add) add.addEventListener("click", async () => { const fn = onAdd; close(); try { await fn(); } catch (_) {} });
+    };
+    let deferred = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault(); deferred = e;
+      show("Add Vivek 5.0 to your home screen — full-screen, one tap away.",
+        async () => { try { deferred.prompt(); await deferred.userChoice; } catch (_) {} });
+    });
+    const ua = navigator.userAgent || "";
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isSafari = /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua);
+    if (isIOS && isSafari) {
+      setTimeout(() => show('Install Vivek 5.0: tap <b>Share</b>, then <b>Add to Home Screen</b>.', null), 2600);
     }
   }
 

@@ -67,7 +67,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [ ] 40. Mobile screenshot matrix in CI: 360/390/430px for dashboard, recs, journal, phasemap, chart.
 - [x] 41. Active filter pill auto-scrolls into view in mobile strips.
 - [x] 42. Sort control always reachable on mobile (pinned end of toolbar strip).
-- [ ] 43. theme-color + status-bar styling matched across pages; A2HS nudge shown once.
+- [x] 43. theme-color + status-bar styling matched across pages; A2HS nudge shown once.
 - [x] 44. Star action haptic + micro-animation.
 - [x] 45. Long-press ticker quick-action sheet: Chart / Star / Journal.
 - [x] 46. Journal mobile: bot book tables become cards (kills the pre-existing phone overflow).
