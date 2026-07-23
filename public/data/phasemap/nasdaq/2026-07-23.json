@@ -267,14 +267,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 15.6345,
+          "low": 15.6823,
           "high": 16.909,
           "status": "CONSUMED",
           "confluence": 5,
           "sources": [
             "equal_lows",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -308,7 +308,7 @@
       "route_to": null,
       "name": "Brighthouse Financial, Inc. - Junior Subordinated Debentures due 2058",
       "sector": "",
-      "narration": "Displacement confirmed on 2026-04-15. First draw is the 15.63–16.91 zone (a shelf of equal lows + the prior yearly close + the yearly open + the quarterly open + the 1.0–1.272 extension of the leg); beyond that, 14.61–15.58 (the 1.618–2.0 extension of the leg + the bottom of the range + a prior swing low). The continuation thesis stays valid while bounces hold below the 16.97–17.02 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 18.99. Analysis only — not financial advice.",
+      "narration": "Displacement confirmed on 2026-04-15. First draw is the 15.68–16.91 zone (a shelf of equal lows + the yearly open + the prior yearly close + the quarterly open + the 1.0–1.272 extension of the leg); beyond that, 14.61–15.58 (the 1.618–2.0 extension of the leg + the bottom of the range + a prior swing low). The continuation thesis stays valid while bounces hold below the 16.97–17.02 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 18.99. Analysis only — not financial advice.",
       "next": "bounces staying below 16.97–17.02; next objective the 14.61–15.58 zone (T2)"
     },
     {
@@ -499,8 +499,8 @@
           "confluence": 3,
           "sources": [
             "equal_lows",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-08"
         },
@@ -3573,7 +3573,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 46.2873,
+          "low": 46.2872,
           "high": 53.1695,
           "status": "RESPECTED",
           "confluence": 3,
@@ -6853,7 +6853,7 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 142.2536,
+          "low": 142.2535,
           "high": 165.6129,
           "status": "UNTESTED",
           "confluence": 3,
@@ -23495,6 +23495,52 @@
       "sector": "",
       "narration": "SMTC ran the 114.45–122.89 lows on 2026-07-17 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SNEX",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 68.0,
+          "high": 68.6067,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-20"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 65.7976,
+          "high": 68.0,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-20"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2262,
+        "dist_to_yearly_open_pct": 0.7496,
+        "avg_turnover_20d": 120473854,
+        "close": 74.02,
+        "sweep_date": "2026-07-20",
+        "sweep_depth_pct": 0.0088,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "StoneX Group Inc. - Common Stock",
+      "sector": "",
+      "narration": "SNEX ran the 68.00–68.61 lows on 2026-07-20 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "SOFI",

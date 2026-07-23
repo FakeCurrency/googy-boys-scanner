@@ -266,14 +266,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 15.6345,
+          "low": 15.6823,
           "high": 16.909,
           "status": "CONSUMED",
           "confluence": 5,
           "sources": [
             "equal_lows",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -496,8 +496,8 @@
           "confluence": 3,
           "sources": [
             "equal_lows",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-08"
         },
@@ -3541,7 +3541,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 46.2873,
+          "low": 46.2872,
           "high": 53.1695,
           "status": "RESPECTED",
           "confluence": 3,
@@ -6789,7 +6789,7 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 142.2536,
+          "low": 142.2535,
           "high": 165.6129,
           "status": "UNTESTED",
           "confluence": 3,
@@ -23076,6 +23076,51 @@
       "name": "Semtech Corporation - Common Stock",
       "sector": "",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SNEX",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 68.0,
+          "high": 68.6067,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-20"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 65.7976,
+          "high": 68.0,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-20"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2262,
+        "dist_to_yearly_open_pct": 0.7496,
+        "avg_turnover_20d": 120473854,
+        "close": 74.02,
+        "sweep_date": "2026-07-20",
+        "sweep_depth_pct": 0.0088,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "StoneX Group Inc. - Common Stock",
+      "sector": "",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "SOFI",
