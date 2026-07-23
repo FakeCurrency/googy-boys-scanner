@@ -1237,7 +1237,7 @@ body.debug-mode .debug-panel {
   .row-spark { width: 46px; height: 24px; }
   .tkr { font-size: 18px; }
   .rprice { font-size: 18px; }
-  .cname { display: none; }
+  /* .cname display:none removed (v2 #27) — names now wrap to their own line on phones; see the Wave-4 block at the end of this file. */
   /* tighter, quieter secondary badges so the ticker + price stay the focus */
   .badge { font-size: 9.5px; padding: 3px 7px; }
   .row-chips { gap: 4px; }
@@ -1927,3 +1927,43 @@ body { letter-spacing: -0.012em; }
   font-weight: 700; padding: 8px 14px; border-radius: 10px;
 }
 .vk-chart-btn:hover { filter: brightness(1.12); }
+
+/* ── Wave 5 #47: FUND/REIT dimming (default on, ⚠ FUNDS chip toggles) ───── */
+.row-wrap.row-dim { opacity: 0.45; }
+.row-wrap.row-dim:hover, .row-wrap.row-dim.open { opacity: 1; }
+.tb-dim.is-active { color: var(--orange); }
+
+/* ── Wave 4 core (#27+#28+#33): phone rows + touch targets ──────────────────
+   ≤680px: 44px grade rail; company name gets its OWN line under the ticker
+   (was display:none); price + day-%% stay right-aligned; ≤480px drops the
+   spark but keeps the day-%%. Tap targets: 44px boxes on star/expand/copy,
+   invisible ±5px hit-area extensions on chips/pills/segs (iOS HIG). */
+@media (max-width: 680px) {
+  .row { grid-template-columns: 44px 1fr auto auto; }
+  .row-grade { font-size: 12.5px; }
+  .row-main { padding: 9px 10px 9px 12px; gap: 5px; }
+  .row-line1 { flex-wrap: wrap; row-gap: 2px; }
+  .cname {
+    display: block; flex-basis: 100%; order: 5; max-width: none;
+    font-size: 12px; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Debug-copy is a desktop tool — its 44px box starved the ticker line. */
+  .row-copy-debug { display: none; }
+  .t-star, .row-expand {
+    min-width: 38px; min-height: 44px; position: relative;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .t-star::after, .row-expand::after { content: ""; position: absolute; inset: -3px; }
+  .row-right { gap: 0; }
+  .row-price { min-width: 62px; }
+  .row-kpis { min-width: 44px; }
+  .seg-btn, .vkf-chip, .fpill, .tb-sort-label, .tb-sort-dir { position: relative; }
+  .seg-btn::after, .vkf-chip::after, .fpill::after,
+  .tb-sort-label::after, .tb-sort-dir::after {
+    content: ""; position: absolute; inset: -5px;
+  }
+}
+@media (max-width: 480px) {
+  .row-spark { display: none; }   /* #28: spark goes, day-%% stays */
+}

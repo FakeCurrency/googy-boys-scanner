@@ -51,14 +51,14 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 - [ ] 25. Mobile command bar: identical content as desktop, h-scroll pill strip, no divergent UI.
 - [ ] 26. Sticky mobile toolbar: the merged filter line as a thumb-height h-scroll strip (≥40px targets).
-- [ ] 27. Company name visible on phones as a second row line (stop `display:none`).
-- [ ] 28. Phone row grid: 44px grade rail, right-aligned price + day-%, spark hidden <480px but day-% kept.
+- [x] 27. Company name visible on phones as a second row line (stop `display:none`).
+- [x] 28. Phone row grid: 44px grade rail, right-aligned price + day-%, spark hidden <480px but day-% kept.
 - [ ] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).
 - [ ] 30. MORE / overflow destinations as a touch bottom sheet with scrim (covers SPECS + ALERTS + the MORE set on phones).
 - [x] 31. Expanded ladder reflows to a 2-row grid on phones — never five squished columns.
 - [ ] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
-- [ ] 33. All tap targets ≥44px (star, expand, pills, segments) per iOS HIG.
-- [ ] 34. Touch-slop guard: scrolling a row never accidentally expands it.
+- [x] 33. All tap targets ≥44px (star, expand, pills, segments) per iOS HIG.
+- [x] 34. Touch-slop guard: scrolling a row never accidentally expands it.
 - [ ] 35. Safe-area inset audit on every page (notch, home indicator).
 - [ ] 36. dvh-based sticky positioning (iOS URL-bar collapse must not jitter the toolbar).
 - [ ] 37. 16px minimum font-size on inputs (kills iOS zoom-on-focus).
@@ -74,7 +74,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 5 — Rows, detail & interaction polish
 
-- [ ] 47. FUND/REIT dimming toggle (default on, persisted) — they crowd the A+ list.
+- [x] 47. FUND/REIT dimming toggle (default on, persisted) — they crowd the A+ list.
 - [ ] 48. Sticky A+/A/B+ group headers when sorted by score.
 - [ ] 49. "+N" overflow chip click expands the row directly.
 - [ ] 50. Keyboard: Enter expands focused row; ←/→ switch grade tabs.

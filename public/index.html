@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="css/styles.css?v=71" />
+  <link rel="stylesheet" href="css/styles.css?v=72" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -116,6 +116,8 @@
         </div>
         <button class="seg-btn tb-watch" id="watch-toggle" aria-pressed="false"
           title="Your starred names, from every lens — tap to show only them">★ <span class="seg-count" id="watch-count">0</span></button>
+        <button class="seg-btn tb-watch tb-dim is-active" id="fund-dim" aria-pressed="true"
+          title="FUND / REIT rows are dimmed — the bot never trades them and most CFD brokers don't list them. Tap to show them at full strength.">⚠ FUNDS</button>
         <div class="tb-chips" id="vk-filters" hidden></div>
         <div class="tb-sort" role="group" aria-label="Sort">
           <button class="tb-sort-label" id="sort-cycle" title="Sort — tap to cycle: SCORE → PRICE → R:R → M.C → A-Z">SCORE</button>
@@ -139,6 +141,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=77"></script>
+  <script src="js/app.js?v=78"></script>
 </body>
 </html>

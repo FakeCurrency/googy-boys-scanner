@@ -37,6 +37,7 @@
       if (p.tab)    state.tab    = p.tab;
       if (p.sort)   state.sort   = p.sort;
       if (p.sortDir) state.sortDir = p.sortDir;
+      state.dimFunds = p.dimFunds !== false;   // v2 #47: dim FUND/REIT rows, default ON
     } catch (_) {}
   }
   function savePrefs() {
@@ -44,6 +45,7 @@
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         market: state.market, mode: state.mode,
         tab: state.tab, sort: state.sort, sortDir: state.sortDir,
+        dimFunds: state.dimFunds !== false,
       }));
     } catch (_) {}
   }
@@ -191,6 +193,14 @@
     b.classList.toggle("is-active", on);
     b.setAttribute("aria-pressed", on ? "true" : "false");
   }
+  // ⚠ FUNDS chip (v2 #47): active = FUND/REIT rows dimmed.
+  function syncFundDim() {
+    const b = document.getElementById("fund-dim");
+    if (!b) return;
+    const on = state.dimFunds !== false;
+    b.classList.toggle("is-active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  }
 
   loadPrefs();
   // Sync UI controls to restored preferences
@@ -206,6 +216,7 @@
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
     updateSortButtons();
     syncWatchToggle();
+    syncFundDim();
   })();
 
   // Sticky toolbar (backlog #1+3): pin the merged filter line right under the
@@ -571,7 +582,10 @@
       `${dp.est ? "~" : ""}${dp.v >= 0 ? "+" : ""}${dp.v.toFixed(1)}%</span>`;
 
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
-    return `<div class="row-wrap" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
+    // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
+    // they crowd the A+ list. Toggled by the ⚠ FUNDS chip; hover/open restores.
+    const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
+    return `<div class="row-wrap${dimCls}" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
@@ -1688,6 +1702,15 @@
       renderRows();
     });
 
+    // ⚠ FUNDS dim toggle (v2 #47) — active chip = funds dimmed (the default).
+    const fundDim = document.getElementById("fund-dim");
+    if (fundDim) fundDim.addEventListener("click", () => {
+      state.dimFunds = state.dimFunds === false;
+      savePrefs();
+      syncFundDim();
+      renderRows();
+    });
+
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.addEventListener("click", () => {
       state.tab = b.dataset.tab;
       savePrefs();
@@ -1829,8 +1852,21 @@
       _searchT = setTimeout(runSearch, 150);
     });
 
+    // Touch-slop guard (v2 #34): a scroll that starts on a row must never
+    // expand it. Track finger travel and swallow the click that follows a drag.
+    const rowsHost = $("#results");
+    let _slop = 0, _sx = 0, _sy = 0;
+    rowsHost.addEventListener("touchstart", (e) => {
+      const t = e.touches[0]; _slop = 0; _sx = t.clientX; _sy = t.clientY;
+    }, { passive: true });
+    rowsHost.addEventListener("touchmove", (e) => {
+      const t = e.touches[0];
+      _slop = Math.max(_slop, Math.hypot(t.clientX - _sx, t.clientY - _sy));
+    }, { passive: true });
+
     // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
+      if (_slop > 12) { _slop = 0; return; }   // drag, not a tap (v2 #34)
       const copyBtn = e.target.closest(".row-copy-debug");
       if (copyBtn) {
         const sym = copyBtn.dataset.sym;
