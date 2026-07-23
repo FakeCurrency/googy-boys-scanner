@@ -399,9 +399,16 @@
     if (!vals || vals.length < 2) return "";
     const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
     const step = w / (vals.length - 1);
-    const pts = vals.map((v, i) => `${(i * step).toFixed(1)},${(h - ((v - min) / rng) * h).toFixed(1)}`).join(" ");
+    const x = (i) => (i * step);
+    const y = (v) => (h - ((v - min) / rng) * h);
+    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    // #54: min/max markers — a hollow dot at the low and high of the window,
+    // each carrying an SVG <title> so a hover/tap reveals the exact value.
+    const iMax = vals.indexOf(max), iMin = vals.indexOf(min);
+    const dot = (i, v, c) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="1.8" fill="${c}" stroke="var(--bg)" stroke-width="0.8"><title>${v}</title></circle>`;
+    const markers = `${dot(iMax, max, "var(--green)")}${dot(iMin, min, "var(--red)")}`;
     return `<svg class="${cls || ""}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>${markers}</svg>`;
   }
 
   // PULSE fully removed (2026-07-20, hygiene): the UI section went 2026-07-03,
@@ -679,6 +686,29 @@
        <div class="detail-inner"></div>
      </div>
     </div>`;
+  }
+
+  // #53: re-stamp every open panel's "scanned Xm ago" chip so a long-open row
+  // can't silently age into reading as fresh. Same maths as scanAge() above.
+  function refreshScanAgeChips() {
+    const g = state.data && state.data.generated_at;
+    if (!g) return;
+    const mins = Math.max(0, Math.round((Date.now() - new Date(g).getTime()) / 60000));
+    const txt = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
+    document.querySelectorAll(".detail-inner .vk-fresh").forEach((el) => {
+      el.textContent = `⟳ scanned ${txt}`;
+      el.classList.toggle("stale", mins > 1440);
+    });
+  }
+
+  // #52: warm the chart candle file for a symbol on hover so tapping through
+  // to the chart paints instantly. Once per symbol per session; silent.
+  const _prefetched = new Set();
+  function prefetchChart(sym) {
+    if (!sym || _prefetched.has(sym)) return;
+    _prefetched.add(sym);
+    const modeDir = state.mode === "reversal" ? "_rev" : state.mode === "spec" ? "_spec" : state.mode === "short" ? "_short" : "";
+    fetch(`data/charts/${state.market}${modeDir}/${encodeURIComponent(sym)}.json`, { cache: "force-cache" }).catch(() => {});
   }
 
   // Lazy detail (Wave 2, 2026-07-22): the expanded panel used to be rendered
@@ -2005,6 +2035,11 @@
     }, { passive: true });
     rowsHost.addEventListener("touchend", cancelLongPress, { passive: true });
     rowsHost.addEventListener("touchcancel", cancelLongPress, { passive: true });
+    // #52: prefetch chart data for the hovered row (desktop pointer only).
+    rowsHost.addEventListener("mouseover", (e) => {
+      const w = e.target.closest && e.target.closest(".row-wrap");
+      if (w && w.dataset.sym) prefetchChart(w.dataset.sym);
+    });
 
     // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
@@ -2242,6 +2277,7 @@
     if (document.hidden || !state.data) return;
     updateScanTitle(state.data);
     renderFreshness(state.data);
+    refreshScanAgeChips();   // #53: keep open panels' "scanned Xm ago" honest
   }, 30000);
   load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
   // pull remote stars (unified watchlist) so phone/desktop agree, then refresh

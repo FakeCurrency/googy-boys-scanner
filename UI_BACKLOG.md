@@ -79,9 +79,9 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 49. "+N" overflow chip click expands the row directly.
 - [x] 50. Keyboard: Enter expands focused row; ←/→ switch grade tabs.
 - [x] 51. Copy-debug button relocates into the expanded panel.
-- [ ] 52. Hover prefetch of chart data for the hovered symbol.
-- [ ] 53. Expanded panel scan-age chip ticks live with the 30s refresher.
-- [ ] 54. Spark min/max markers via SVG titles.
+- [x] 52. Hover prefetch of chart data for the hovered symbol.
+- [x] 53. Expanded panel scan-age chip ticks live with the 30s refresher.
+- [x] 54. Spark min/max markers via SVG titles.
 - [ ] 55. Watch tab shows starred names from ALL lenses, badged per lens.
 
 ## Wave 6 — Performance & PWA depth (the "smooth + snappy" program)
