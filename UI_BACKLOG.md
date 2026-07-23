@@ -27,7 +27,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave R — Recommendations page grows up
 
-- [ ] 9. Harden the daily note session: verify first scheduled firings, graceful skip when the token is unreachable, note stays dated + honest.
+- [x] 9. Harden the daily note session: verify first scheduled firings, graceful skip when the token is unreachable, note stays dated + honest.
 - [x] 10. Day-over-day consensus deltas: localStorage snapshot per day → "breadth shifting long/short" arrows on each market card.
 - [x] 11. 14-day consensus history strip per market (client-side snapshots, tiny bars).
 - [x] 12. Note archive: keep prior notes (reco_notes log) and show the last 7 behind a fold.
@@ -35,8 +35,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 14. Per-sector breadth: top 3 sectors leaning long/short per market (lazy full-scan fetch).
 - [x] 15. Watchlist-aware: badge movers/cards when a starred name is involved.
 - [x] 16. Per-card deep link: "Open ASX scan →" jumps to the dashboard pre-switched to that market.
-- [ ] 17. Recs mobile pass: card order, thumb targets, movers as h-scroll strip.
-- [ ] 18. Recs empty/degraded states: per-file fallback messaging when a data file is missing or stale >48h.
+- [x] 17. Recs mobile pass: card order, thumb targets, movers as h-scroll strip.
+- [x] 18. Recs empty/degraded states: per-file fallback messaging when a data file is missing or stale >48h.
 
 ## Wave P — Specs + PhaseMap adopt the SCAN layout (owner-promoted)
 

@@ -170,8 +170,24 @@
     };
   }
 
+  const HOUR = 36e5;
+  function hoursSince(iso) {
+    const t = Date.parse(iso);
+    return isFinite(t) ? (Date.now() - t) / HOUR : null;
+  }
+
   function marketCard(m, prices, botPos, histArr) {
-    const rows = (prices && prices.rows) || {};
+    // Degraded state (backlog #18): the scan file for this market failed to
+    // load — say so plainly instead of rendering a hollow zero-everything card.
+    if (!prices || !prices.rows) {
+      return `<article class="rec-card rec-degraded" data-market="${esc(m.key)}">
+        <div class="rec-card-hd"><h3>${m.label}</h3><span class="rec-verdict mixed">◆ No data</span></div>
+        <p class="rec-line">${m.label} scan data isn't reachable right now — it refreshes after each market close. Consensus returns on the next scan.</p>
+        <div class="rec-card-ft"><span class="rec-age">data unavailable</span>
+          <a class="rec-open" href="index.html?m=${esc(m.key)}" title="Open the ${esc(m.label)} scan on the dashboard">Open ${esc(m.label)} scan →</a></div>
+      </article>`;
+    }
+    const rows = prices.rows || {};
     const list = Object.values(rows);
     const longs = list.filter((r) => r.dir === "LONG").length;
     const shorts = list.filter((r) => r.dir === "SHORT").length;
@@ -183,9 +199,14 @@
     const gen = prices && prices.generated_at;
     const delta = n ? priorDelta(histArr, pl) : null;   // #10
     const watched = Object.keys(rows).filter((sym) => isWatched(m.key, sym)).length;   // #15
-    return `<article class="rec-card" data-market="${esc(m.key)}">
+    // Stale state (backlog #18): data present but >48h old — flag it so a
+    // frozen pipeline can't read as a live "quiet market".
+    const staleH = hoursSince(gen);
+    const stale = staleH != null && staleH > 48;
+    return `<article class="rec-card${stale ? " rec-stale-card" : ""}" data-market="${esc(m.key)}">
       <div class="rec-card-hd">
         <h3>${m.label}</h3>
+        ${stale ? `<span class="rec-stale" title="This scan is ${Math.round(staleH / 24)} days old — the pipeline may be stalled; treat the read as out of date">⚠ ${Math.round(staleH / 24)}d old</span>` : ""}
         ${watched ? `<span class="rec-watch-badge" title="${watched} of your starred names ${watched === 1 ? "is" : "are"} in this scan">★ ${watched}</span>` : ""}
         <span class="rec-verdict ${v.cls}">${v.label}</span>
       </div>
@@ -310,10 +331,21 @@
   }
 
   function noteCard(note) {
-    if (!note || !note.note) return "";
-    return `<article class="rec-card rec-note">
+    // Degraded (backlog #18): no note file — a light placeholder beats a gap.
+    if (!note || !note.note) {
+      return `<article class="rec-card rec-note rec-degraded">
+        <div class="rec-card-hd"><h3>🤖 Daily note</h3></div>
+        <p class="rec-note-body">Today's note isn't in yet — it's written after the market-close scans each day. The market cards below are live from the latest scan.</p>
+      </article>`;
+    }
+    // Stale note (#18): the auto note re-dates daily, so a date >2 days behind
+    // Melbourne today means the note pipeline stalled — flag it, don't hide it.
+    const staleH = note.updated_at ? hoursSince(note.updated_at) : null;
+    const stale = staleH != null && staleH > 48;
+    return `<article class="rec-card rec-note${stale ? " rec-stale-card" : ""}">
       <div class="rec-card-hd">
         <h3>${note.author === "Claude" ? "🤖 Claude's note" : "🤖 Daily note · auto"}</h3>
+        ${stale ? `<span class="rec-stale" title="This note is ${Math.round(staleH / 24)} days old — the daily writer may be stalled">⚠ ${Math.round(staleH / 24)}d old</span>` : ""}
         <span class="rec-age">${esc(note.date || "")}${note.updated_at ? ` · ${agoText(note.updated_at)}` : ""}</span>
       </div>
       <p class="rec-note-body">${esc(note.note)}</p>
