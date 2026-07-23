@@ -288,6 +288,54 @@
     } catch (_) {}
   }
 
+  // Long-press quick actions (#45): a scrimmed sheet with Chart / Star /
+  // Journal for one ticker. Built lazily, reused across presses.
+  function openQuickActions(sym) {
+    if (!sym) return;
+    const r = (state.data && state.data.results || []).find((x) => x.symbol === sym) || {};
+    const starred = isStarred(sym);
+    let scrim = document.getElementById("qa-scrim");
+    if (!scrim) {
+      scrim = document.createElement("div");
+      scrim.id = "qa-scrim";
+      scrim.className = "qa-scrim";
+      document.body.appendChild(scrim);
+      scrim.addEventListener("click", (e) => { if (e.target === scrim) closeQuickActions(); });
+    }
+    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(sym)}&mode=vivek`;
+    scrim.innerHTML =
+      `<div class="qa-sheet" role="dialog" aria-modal="true" aria-label="Actions for ${esc(sym)}">` +
+        `<div class="more-sheet-grip" aria-hidden="true"></div>` +
+        `<div class="qa-hd"><b>${esc(sym)}</b>${r.name ? `<span>${esc(r.name)}</span>` : ""}</div>` +
+        `<a class="qa-act" href="${chartHref}"><span class="qa-ico">📈</span> View chart</a>` +
+        `<button class="qa-act" type="button" data-act="star"><span class="qa-ico">${starred ? "★" : "☆"}</span> ${starred ? "Remove from watchlist" : "Add to watchlist"}</button>` +
+        `<a class="qa-act" href="journal.html"><span class="qa-ico">📒</span> Open journal</a>` +
+        `<button class="qa-act qa-cancel" type="button">Cancel</button>` +
+      `</div>`;
+    scrim.hidden = false;
+    requestAnimationFrame(() => scrim.classList.add("is-open"));
+    scrim.querySelector('[data-act="star"]').addEventListener("click", () => {
+      toggleStar(sym);
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+      const nowStar = isStarred(sym);
+      // reflect on the underlying row without a full re-render
+      const rowStar = document.querySelector(`.row-wrap[data-sym="${CSS.escape(sym)}"] .t-star`);
+      if (rowStar) { rowStar.classList.toggle("starred", nowStar); const svg = rowStar.querySelector("svg"); if (svg) svg.setAttribute("fill", nowStar ? "currentColor" : "none"); }
+      const wc = $("#watch-count"); if (wc && state.data) wc.textContent = (state.data.results || []).filter((x) => isStarred(x.symbol)).length;
+      closeQuickActions();
+    });
+    scrim.querySelector(".qa-cancel").addEventListener("click", closeQuickActions);
+    document.addEventListener("keydown", _qaEsc);
+  }
+  function _qaEsc(e) { if (e.key === "Escape") closeQuickActions(); }
+  function closeQuickActions() {
+    const scrim = document.getElementById("qa-scrim");
+    if (!scrim) return;
+    scrim.classList.remove("is-open");
+    document.removeEventListener("keydown", _qaEsc);
+    setTimeout(() => { scrim.hidden = true; }, 200);
+  }
+
   // ----------------------------------------------------------- formatting
   function decimals(v) {
     const a = Math.abs(v);
@@ -1916,19 +1964,35 @@
 
     // Touch-slop guard (v2 #34): a scroll that starts on a row must never
     // expand it. Track finger travel and swallow the click that follows a drag.
+    // Also hosts long-press detection (#45): hold ~480ms on a row without
+    // moving → a Chart/Star/Journal quick-action sheet, and the click that
+    // follows the release is swallowed so the row doesn't also expand.
     const rowsHost = $("#results");
-    let _slop = 0, _sx = 0, _sy = 0;
+    let _slop = 0, _sx = 0, _sy = 0, _lpT = null, _lpFired = false;
+    const cancelLongPress = () => { if (_lpT) { clearTimeout(_lpT); _lpT = null; } };
     rowsHost.addEventListener("touchstart", (e) => {
-      const t = e.touches[0]; _slop = 0; _sx = t.clientX; _sy = t.clientY;
+      const t = e.touches[0]; _slop = 0; _sx = t.clientX; _sy = t.clientY; _lpFired = false;
+      const wrap = e.target.closest(".row-wrap");
+      if (!wrap || e.target.closest(".t-star, .row-expand, .row-copy-debug, a")) return;
+      cancelLongPress();
+      _lpT = setTimeout(() => {
+        _lpFired = true;
+        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }
+        openQuickActions(wrap.dataset.sym);
+      }, 480);
     }, { passive: true });
     rowsHost.addEventListener("touchmove", (e) => {
       const t = e.touches[0];
       _slop = Math.max(_slop, Math.hypot(t.clientX - _sx, t.clientY - _sy));
+      if (_slop > 10) cancelLongPress();
     }, { passive: true });
+    rowsHost.addEventListener("touchend", cancelLongPress, { passive: true });
+    rowsHost.addEventListener("touchcancel", cancelLongPress, { passive: true });
 
     // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
       if (_slop > 12) { _slop = 0; return; }   // drag, not a tap (v2 #34)
+      if (_lpFired) { _lpFired = false; return; }   // long-press opened the sheet (#45)
       const copyBtn = e.target.closest(".row-copy-debug");
       if (copyBtn) {
         const sym = copyBtn.dataset.sym;
@@ -1951,6 +2015,9 @@
         star.classList.toggle("starred", on);
         const svg = star.querySelector("svg");
         if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
+        // #44: haptic tick + a bounce only when STARRING (not un-starring).
+        if (on && navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+        if (on) { star.classList.remove("pop"); void star.offsetWidth; star.classList.add("pop"); }
         return;
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
