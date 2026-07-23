@@ -59,10 +59,10 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [ ] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
 - [x] 33. All tap targets ≥44px (star, expand, pills, segments) per iOS HIG.
 - [x] 34. Touch-slop guard: scrolling a row never accidentally expands it.
-- [ ] 35. Safe-area inset audit on every page (notch, home indicator).
-- [ ] 36. dvh-based sticky positioning (iOS URL-bar collapse must not jitter the toolbar).
-- [ ] 37. 16px minimum font-size on inputs (kills iOS zoom-on-focus).
-- [ ] 38. Zero horizontal overflow at 320px on every page (automated check in e2e).
+- [x] 35. Safe-area inset audit on every page (notch, home indicator).
+- [x] 36. dvh-based sticky positioning (iOS URL-bar collapse must not jitter the toolbar).
+- [x] 37. 16px minimum font-size on inputs (kills iOS zoom-on-focus).
+- [x] 38. Zero horizontal overflow at 320px on every page (automated check in e2e).
 - [ ] 39. One documented breakpoint scale (320/480/680/880/1200) replacing ad-hoc media queries.
 - [ ] 40. Mobile screenshot matrix in CI: 360/390/430px for dashboard, recs, journal, phasemap, chart.
 - [ ] 41. Active filter pill auto-scrolls into view in mobile strips.
