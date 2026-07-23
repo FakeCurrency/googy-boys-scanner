@@ -1254,7 +1254,23 @@
       }
       renderEntryFilters(d);   // refresh active states + counts
       renderRows();            // re-filter the list
+      ensureActiveVisible();   // #41: keep the just-activated pill on screen
     }));
+    ensureActiveVisible();     // #41: reveal a restored/active filter on (re)render
+  }
+
+  // #41: nudge the active filter chip into view WITHIN the mobile toolbar strip
+  // (horizontal-only — never scrolls the page vertically). No-op when the strip
+  // isn't overflowing (desktop / few chips).
+  function ensureActiveVisible() {
+    const line = document.querySelector("#toolbar .tb-line");
+    if (!line || line.scrollWidth <= line.clientWidth) return;
+    const el = document.querySelector("#vk-filters .vkf-chip.is-active")
+            || document.querySelector("#tabs .seg-btn.is-active");
+    if (!el) return;
+    const lr = line.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (er.left < lr.left + 8) line.scrollBy({ left: er.left - lr.left - 8, behavior: "smooth" });
+    else if (er.right > lr.right - 8) line.scrollBy({ left: er.right - lr.right + 8, behavior: "smooth" });
   }
 
   let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts

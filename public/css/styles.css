@@ -1584,9 +1584,27 @@ body { letter-spacing: -0.012em; }
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     padding: 8px 2px 7px; text-decoration: none; color: var(--muted);
   }
-  .site-tab-ico { font-size: 18px; line-height: 1; }
+  .site-tab-ico { font-size: 18px; line-height: 1; position: relative; }
   .site-tab-lbl { font: 700 9px/1 var(--sans); letter-spacing: 0.04em; }
   .site-tab.is-here { color: var(--blue); }
+  /* #29: active tab gets a filled pill + a top accent so "where am I" reads
+     instantly; badge counts ride the icon. */
+  .site-tab.is-here .site-tab-lbl { font-weight: 800; }
+  .site-tab.is-here::before {
+    content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 3px; border-radius: 0 0 3px 3px; background: var(--blue);
+  }
+  .site-tab-badge {
+    position: absolute; top: -6px; left: 60%;
+    min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 800 9px/1 var(--mono); color: #fff; background: var(--red);
+    border-radius: 999px; border: 1.5px solid var(--nav);
+  }
+  /* A CSS `display` overrides the HTML `hidden` attribute — restore it so the
+     count-less tabs (RECS/PHASEMAP/MY NAMES) don't show an empty dot. */
+  .site-tab-badge[hidden] { display: none; }
+  .site-tab[data-tabkey="index"] .site-tab-badge { background: var(--green); }
   body.has-site-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0)); }
   /* the top pill nav is redundant on phones once the tab bar exists */
   .nav-pills { display: none; }
@@ -1941,6 +1959,12 @@ body { letter-spacing: -0.012em; }
 @media (max-width: 680px) {
   .tb-line { gap: 6px; padding-bottom: 2px; }
   .tb-sort-label { min-width: 58px; }
+  /* #42: pin the sort control to the right edge so it's always reachable even
+     as the filter chips scroll horizontally under it. */
+  .tb-sort {
+    position: sticky; right: 0; margin-left: 6px; z-index: 2;
+    background: var(--nav); box-shadow: -10px 0 10px -6px var(--nav);
+  }
 }
 /* Keep the merged line dense enough that the sort control never clips on a
    standard desktop (1366-1500px): slightly tighter chips inside the toolbar. */

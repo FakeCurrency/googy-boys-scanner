@@ -53,7 +53,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [ ] 26. Sticky mobile toolbar: the merged filter line as a thumb-height h-scroll strip (≥40px targets).
 - [x] 27. Company name visible on phones as a second row line (stop `display:none`).
 - [x] 28. Phone row grid: 44px grade rail, right-aligned price + day-%, spark hidden <480px but day-% kept.
-- [ ] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).
+- [x] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).
 - [ ] 30. MORE / overflow destinations as a touch bottom sheet with scrim (covers SPECS + ALERTS + the MORE set on phones).
 - [x] 31. Expanded ladder reflows to a 2-row grid on phones — never five squished columns.
 - [ ] 32. Full-screen mobile search overlay with recent-tickers row and big cancel target.
@@ -65,8 +65,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 38. Zero horizontal overflow at 320px on every page (automated check in e2e).
 - [ ] 39. One documented breakpoint scale (320/480/680/880/1200) replacing ad-hoc media queries.
 - [ ] 40. Mobile screenshot matrix in CI: 360/390/430px for dashboard, recs, journal, phasemap, chart.
-- [ ] 41. Active filter pill auto-scrolls into view in mobile strips.
-- [ ] 42. Sort control always reachable on mobile (pinned end of toolbar strip).
+- [x] 41. Active filter pill auto-scrolls into view in mobile strips.
+- [x] 42. Sort control always reachable on mobile (pinned end of toolbar strip).
 - [ ] 43. theme-color + status-bar styling matched across pages; A2HS nudge shown once.
 - [ ] 44. Star action haptic + micro-animation.
 - [ ] 45. Long-press ticker quick-action sheet: Chart / Star / Journal.

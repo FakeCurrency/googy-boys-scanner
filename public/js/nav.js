@@ -111,13 +111,42 @@
       bar.className = "site-tabs";
       bar.setAttribute("aria-label", "Primary");
       bar.innerHTML = TABS.map((it) =>
-        `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}">` +
-        `<span class="site-tab-ico" aria-hidden="true">${it.tab}</span>` +
+        `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
+        `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
         `<span class="site-tab-lbl">${it.label.replace(" ⚡", "").replace("AI ", "")}</span></a>`
       ).join("");
       document.body.appendChild(bar);
       document.body.classList.add("has-site-tabs");
+      decorateTabBadges();
     }
+  }
+
+  // Live badge counts on the bottom tabs (backlog #29): the tradeable A+ count
+  // on SCAN and the bot's open-position count on JOURNAL — a glance-value the
+  // owner asked for. Lightweight: reads the same slim published files the rest
+  // of the site uses, fails silent (no badge) if anything is unreachable, and
+  // never blocks nav render.
+  function setBadge(key, n) {
+    const el = document.querySelector(`.site-tab-badge[data-badge="${key}"]`);
+    if (!el) return;
+    if (n > 0) { el.textContent = n > 99 ? "99+" : String(n); el.hidden = false; }
+    else { el.hidden = true; }
+  }
+  function decorateTabBadges() {
+    const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // SCAN: A+ count for the market the dashboard will open (saved pref).
+    let market = "asx";
+    try { market = JSON.parse(localStorage.getItem("gbs:prefs") || "{}").market || "asx"; } catch (_) {}
+    if (!["asx", "nasdaq", "crypto"].includes(market)) market = "asx";
+    grab(`data/${market}_prices.json`).then((d) => {
+      const rows = (d && d.rows) || {};
+      const aplus = Object.values(rows).filter((r) => r && r.grade === "A+").length;
+      setBadge("index", aplus);
+    });
+    // JOURNAL: bot open positions (the one track record).
+    grab("data/vivek_bot_book.json").then((d) => {
+      setBadge("journal", ((d && d.open) || []).length);
+    });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", render);
