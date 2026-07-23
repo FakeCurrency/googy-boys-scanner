@@ -31,8 +31,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 10. Day-over-day consensus deltas: localStorage snapshot per day → "breadth shifting long/short" arrows on each market card.
 - [x] 11. 14-day consensus history strip per market (client-side snapshots, tiny bars).
 - [ ] 12. Note archive: keep prior notes (reco_notes log) and show the last 7 behind a fold.
-- [ ] 13. At-level + multi-lens counts on market cards (lazy fetch after first paint).
-- [ ] 14. Per-sector breadth: top 3 sectors leaning long/short per market (lazy full-scan fetch).
+- [x] 13. At-level + multi-lens counts on market cards (lazy fetch after first paint).
+- [x] 14. Per-sector breadth: top 3 sectors leaning long/short per market (lazy full-scan fetch).
 - [ ] 15. Watchlist-aware: badge movers/cards when a starred name is involved.
 - [ ] 16. Per-card deep link: "Open ASX scan →" jumps to the dashboard pre-switched to that market.
 - [ ] 17. Recs mobile pass: card order, thumb targets, movers as h-scroll strip.

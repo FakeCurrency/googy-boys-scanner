@@ -1812,6 +1812,21 @@ body { letter-spacing: -0.012em; }
 .rec-hbar.flat { background: var(--muted-2); }
 .rec-hist-lbl { display: block; margin-top: 4px; font: 600 9.5px/1 var(--sans); letter-spacing: 0.04em; color: var(--muted-2); text-transform: uppercase; }
 
+/* ── Wave R #13+#14: lazy card enrichment (at-level / multi-lens / sectors) ── */
+.rec-enrich:empty { display: none; }
+.rec-enrich-nums { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+.rec-enrich-nums span {
+  font: 600 11px/1 var(--sans); color: var(--text-2);
+  background: var(--fill-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px;
+}
+.rec-enrich-nums b { font: 800 12px/1 var(--mono); color: var(--text); }
+.rec-sec-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.rec-sec-hd { font: 700 9.5px/1 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 7px; }
+.rec-sec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.rec-sec-nm { font: 600 12px/1.2 var(--sans); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-sec-lean { font: 700 11px/1 var(--mono); white-space: nowrap; flex: 0 0 auto; }
+.rec-sec-lean.up { color: var(--green); } .rec-sec-lean.down { color: var(--red); } .rec-sec-lean.flat { color: var(--muted); }
+
 /* snappy re-renders (backlog #48): the entrance cascade plays on FIRST paint
    only — filter/sort/pill re-renders swap instantly instead of re-animating. */
 .rows[data-painted] .row-wrap { animation: none; }

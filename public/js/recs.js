@@ -160,8 +160,89 @@
         <span title="Bot's open positions in this market">Bot open <b>${botPos.length}</b></span>
         <span title="Sum of unrealised R on the bot's open positions here">Book <b class="${rcls(botR)}">${rfmt(botR)}</b></span>
       </div>
+      <div class="rec-enrich" data-enrich="${esc(m.key)}"></div>
       <div class="rec-age">${gen ? `scan ${agoText(gen)}` : "no scan data"}</div>
     </article>`;
+  }
+
+  // ── Lazy card enrichment (backlog #13+#14) ───────────────────────────────
+  // The slim price files carry only grade+dir. At-level, multi-lens and sector
+  // live in the FULL scan JSON (1-2MB each), so we fetch those AFTER the base
+  // cards paint — the page is useful instantly and deepens a beat later.
+  // Cached per market by the scan's generated_at so the 5-min re-render and
+  // repeated loads don't refetch the same megabytes.
+  const vkCache = {};   // key -> { gen, results }
+  async function fetchVivek(key, gen) {
+    if (vkCache[key] && vkCache[key].gen === gen) return vkCache[key].results;
+    const d = await grab(`data/${key}_vivek.json`);
+    const results = (d && d.results) || null;
+    if (results) vkCache[key] = { gen, results };
+    return results;
+  }
+  // Sectors worth naming: drop the non-informative buckets the scanner emits
+  // for names without a clean GICS sector.
+  const SKIP_SECTOR = /^(not applic|not applicable|n\/?a|\?|)$/i;
+  const SECTOR_SHORT = (s) => String(s || "")
+    .replace(/Equity Real Estate Investment Trusts \(REITs\)/i, "REITs")
+    .replace(/Information Technology/i, "InfoTech")
+    .replace(/Consumer Discretionary/i, "Consumer Disc.")
+    .replace(/Communication Services/i, "Comms")
+    .replace(/Financial Services/i, "Financials")
+    .slice(0, 22);
+  function sectorBreadth(results) {
+    const byS = {};
+    for (const r of results) {
+      const s = String(r.sector || "").trim();
+      if (SKIP_SECTOR.test(s)) continue;
+      const e = byS[s] || (byS[s] = { n: 0, longs: 0, shorts: 0 });
+      e.n++;
+      if (r.dir === "LONG") e.longs++; else if (r.dir === "SHORT") e.shorts++;
+    }
+    return Object.entries(byS)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 3);
+  }
+  function enrichBlock(results, multi) {
+    const atLevel = results.filter((r) => r.at_level).length;
+    const secs = sectorBreadth(results);
+    const secRows = secs.map((s) => {
+      const lean = s.longs > s.shorts ? "up" : s.shorts > s.longs ? "down" : "flat";
+      const arrow = lean === "up" ? "▲" : lean === "down" ? "▼" : "◆";
+      return `<div class="rec-sec" title="${esc(s.name)}: ${s.longs} long / ${s.shorts} short">
+        <span class="rec-sec-nm">${esc(SECTOR_SHORT(s.name))}</span>
+        <span class="rec-sec-lean ${lean}">${arrow} ${s.longs}L·${s.shorts}S</span>
+      </div>`;
+    }).join("");
+    return `<div class="rec-enrich-nums">
+        <span title="Setups sitting ON a 200-SMA right now — the moment before the reaction">◎ At level <b>${atLevel}</b></span>
+        <span title="Names with 2+ lenses aligned right now">⨂ Multi-lens <b>${multi}</b></span>
+      </div>
+      ${secs.length ? `<div class="rec-sec-list"><div class="rec-sec-hd">Sectors in play</div>${secRows}</div>` : ""}`;
+  }
+  // Same confluence engine the dashboard's ⨂ pill uses (PM.loadConfluence),
+  // so "Multi-lens" is ONE number across the site. Falls back to the vivek
+  // row's own confluence flag if the shared helper isn't present.
+  async function multiLensCount(market, results) {
+    try {
+      if (window.PM && PM.loadConfluence) {
+        const c = await PM.loadConfluence(market, { results });
+        return c.all().length;
+      }
+    } catch (_) {}
+    return results.filter((r) => r.confluence).length;
+  }
+  async function enrichCards(prices) {
+    await Promise.all(MARKETS.map(async (m) => {
+      const p = prices[m.key];
+      if (!p || !p.generated_at) return;
+      const results = await fetchVivek(m.key, p.generated_at);
+      if (!results) return;
+      const multi = await multiLensCount(m.key, results);
+      const slot = document.querySelector(`.rec-enrich[data-enrich="${m.key}"]`);
+      if (!slot) return;                       // card re-rendered underneath us
+      slot.innerHTML = enrichBlock(results, multi);
+    }));
   }
 
   function moversCard(open) {
@@ -227,6 +308,9 @@
     $("#rec-note-slot").innerHTML = noteCard(note);
     $("#rec-markets").innerHTML = MARKETS.map((m) => marketCard(m, prices[m.key], perMkt(m.key), hist[m.key])).join("");
     $("#rec-movers-slot").innerHTML = moversCard(open);
+
+    // #13+#14: deepen the cards once the base view is on screen (non-blocking).
+    enrichCards(prices).catch(() => {});
   }
 
   load();
