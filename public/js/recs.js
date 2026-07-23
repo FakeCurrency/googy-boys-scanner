@@ -118,7 +118,7 @@
     if (!note || !note.note) return "";
     return `<article class="rec-card rec-note">
       <div class="rec-card-hd">
-        <h3>🤖 Claude's note</h3>
+        <h3>${note.author === "Claude" ? "🤖 Claude's note" : "🤖 Daily note · auto"}</h3>
         <span class="rec-age">${esc(note.date || "")}${note.updated_at ? ` · ${agoText(note.updated_at)}` : ""}</span>
       </div>
       <p class="rec-note-body">${esc(note.note)}</p>

@@ -1,0 +1,62 @@
+name: Recommendations note (auto)
+
+# Daily auto-generated note for the RECOMMENDATIONS page (2026-07-23).
+# Cloud Claude scheduled sessions cannot reach the push token (fresh headless
+# containers, no device bridge), so CI owns the daily cadence instead:
+# scripts/reco_note.py rewrites public/data/reco_note.json deterministically
+# from the day's COMMITTED scan data + paper book (author "auto").
+# Hand-written notes ride interactive Claude sessions (author "Claude") and
+# are never overwritten on their own day — the script exits UNCHANGED.
+# Commentary only: nothing here is read by the bot or any signal path.
+
+on:
+  schedule:
+    - cron: "52 8 * * *"   # 08:52 UTC ≈ 6:52pm Melbourne — after the ASX close
+                           # scan window; off the congested :00 scheduler slot
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Own group: writes ONLY reco_note.json, which no other workflow touches —
+# no reason to queue behind the scan group.
+concurrency:
+  group: reco-note
+  cancel-in-progress: false
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # stdlib-only — no pip install needed.
+      - name: Generate the daily note
+        run: python3 scripts/reco_note.py | tee /tmp/reco_out.txt
+
+      - name: Commit & push (surgical — the note file only)
+        run: |
+          if grep -q RECO_NOTE_UNCHANGED /tmp/reco_out.txt; then
+            echo "Hand-written Claude note for today stands - nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- public/data/reco_note.json
+          # Must-change gate (house rule): the note re-dates every run that
+          # reaches this step, so staging nothing is always a bug.
+          bash scripts/assert_staged.sh "reco note" public/data/reco_note.json
+          git commit -m "data: recommendations note $(date -u +'%Y-%m-%d')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git checkout "$SHA" -- public/data/reco_note.json
+            git add -- public/data/reco_note.json
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: recommendations note $(date -u +'%Y-%m-%d')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race — retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
