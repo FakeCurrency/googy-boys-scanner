@@ -75,6 +75,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;   /* #36: iOS URL-bar collapse must not jitter sticky UI */
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
@@ -2058,4 +2059,35 @@ body { letter-spacing: -0.012em; }
 }
 @media (max-width: 480px) {
   .row-spark { display: none; }   /* #28: spark goes, day-%% stays */
+}
+
+/* ═══ Wave 4 mobile foundations (#35 safe-area · #37 16px inputs) ═══════════
+   Appended last so these win on order. Scoped to phones — desktop untouched. */
+@media (max-width: 680px) {
+  /* #37: a 16px floor on every keyboard-invoking input kills iOS's
+     zoom-on-focus (which then never zooms back out). Beats the per-class
+     13-15px sizes (.pm-search / .mj-input / .jr-modal-input) via !important —
+     the one place it's the accepted fix. Range/checkbox/radio excluded. */
+  input[type="text"], input[type="search"], input[type="number"],
+  input[type="email"], input[type="tel"], input[type="password"],
+  input:not([type]), textarea, select { font-size: 16px !important; }
+
+  /* #35: safe-area insets — content clears the notch (portrait status bar +
+     landscape side cutout) and the home indicator. viewport-fit=cover is
+     already set in every page's <meta viewport>. */
+  .topbar {
+    padding-top: max(11px, env(safe-area-inset-top, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+  .wrap {
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+  .site-tabs {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  /* Full-screen overlays must clear the notch too. */
+  .search-overlay { padding-top: env(safe-area-inset-top, 0px); }
 }

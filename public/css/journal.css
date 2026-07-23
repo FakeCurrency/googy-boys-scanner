@@ -590,3 +590,19 @@ details.jr-fold.jr-fold-quiet > summary {
   .jr-pnl-total { font-size: 28px; }
   .jr-pnl-split { margin-left: 0; }
 }
+
+/* ── Wave 4 #46/#38: kill the journal's phone-width overflow ─────────────────
+   The Bot/Me comparison sides sit in a grid; without min-width:0 the grid
+   items refuse to shrink below their wide tables' intrinsic width, so the
+   table's own overflow-x scroll never engages and the whole page overflows
+   at 320-390px. min-width:0 lets the columns fit the viewport and the tables
+   scroll WITHIN their card. */
+.side, .sides { min-width: 0; }
+.side .stats, .side .jr-table-wrap, .side .jr-equity-chart,
+.side .side-hd { min-width: 0; max-width: 100%; }
+.side .jr-equity-chart { overflow: hidden; }
+.side .jr-equity-chart svg { max-width: 100%; height: auto; }
+/* Belt-and-suspenders: any stray wide table on a phone scrolls in place. */
+@media (max-width: 680px) {
+  .jr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}

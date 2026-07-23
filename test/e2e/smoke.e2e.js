@@ -125,6 +125,16 @@ const check = (ok, label) => {
     check(mob.priceVisible, "mobile 390px: row price fully visible");
     await page.context().close();
 
+    // ── 320px (narrowest phone) zero-overflow guard across pages (#38) ───────
+    for (const path of ["index.html", "recommendations.html", "phasemap.html", "specs.html", "journal.html"]) {
+      const pg = await newPage({ width: 320, height: 720 });
+      await pg.goto(`${BASE}/${path}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await pg.waitForTimeout(1200);   // let the app paint
+      const over = await pg.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      check(!over, `320px: no horizontal overflow on ${path}`);
+      await pg.context().close();
+    }
+
     await browser.close();
 
     // ── Page errors gate ─────────────────────────────────────────────────
