@@ -77,3 +77,15 @@ jobs:
           npx playwright install --with-deps chromium
       - name: E2E smoke (dashboard + recs · desktop + 390px)
         run: node test/e2e/smoke.e2e.js
+      # Mobile screenshot matrix (#40): 6 pages x 360/390/430, asserts zero
+      # overflow and uploads the shots so mobile layout is reviewable per run.
+      - name: Mobile screenshot matrix (360/390/430)
+        run: node test/e2e/screenshots.e2e.js
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-screenshots
+          path: test/e2e/__shots__/
+          retention-days: 14
+          if-no-files-found: warn

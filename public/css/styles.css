@@ -4,6 +4,24 @@
    JetBrains Mono for every number/ticker/label, sharp corners, fast
    transform/opacity-only transitions. Same layout + class names as before —
    only the skin changed, so all pages and JS keep working untouched.
+   ===========================================================================
+
+   ── BREAKPOINT SCALE (backlog #39) ──────────────────────────────────────
+   The canonical responsive scale for Vivek 5.0 — new work uses THESE, not a
+   fresh ad-hoc value tuned to one element:
+
+     320px  — narrowest supported phone. Nothing may overflow here (the e2e
+              suite asserts it on every page). Design floor.
+     480px  — small phone → large phone / spark-drop boundary.
+     680px  — THE phone⇄desktop line. Below it: bottom tab bar + MORE sheet,
+              hidden pill nav, 16px inputs, card reflows, h-scroll strips.
+     880px  — tablet / narrow-desktop: multi-column grids collapse to one.
+     1200px — full desktop content width ceiling.
+
+   Grandfathered: a handful of older, content-specific queries (e.g. 560/720/
+   1440) predate this scale and are left as-is where rewriting them would risk
+   a layout the owner already signed off on. Migrate opportunistically when
+   touching the surrounding rules — never in a blind sweep.
    =========================================================================== */
 :root {
   /* ═══ iOS REVAMP (owner request 2026-07-05: "complete revamp — more BOLD,

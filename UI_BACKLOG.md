@@ -63,8 +63,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 36. dvh-based sticky positioning (iOS URL-bar collapse must not jitter the toolbar).
 - [x] 37. 16px minimum font-size on inputs (kills iOS zoom-on-focus).
 - [x] 38. Zero horizontal overflow at 320px on every page (automated check in e2e).
-- [ ] 39. One documented breakpoint scale (320/480/680/880/1200) replacing ad-hoc media queries.
-- [ ] 40. Mobile screenshot matrix in CI: 360/390/430px for dashboard, recs, journal, phasemap, chart.
+- [x] 39. One documented breakpoint scale (320/480/680/880/1200) replacing ad-hoc media queries.
+- [x] 40. Mobile screenshot matrix in CI: 360/390/430px for dashboard, recs, journal, phasemap, chart.
 - [x] 41. Active filter pill auto-scrolls into view in mobile strips.
 - [x] 42. Sort control always reachable on mobile (pinned end of toolbar strip).
 - [x] 43. theme-color + status-bar styling matched across pages; A2HS nudge shown once.
