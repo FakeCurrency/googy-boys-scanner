@@ -75,10 +75,10 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 ## Wave 5 — Rows, detail & interaction polish
 
 - [x] 47. FUND/REIT dimming toggle (default on, persisted) — they crowd the A+ list.
-- [ ] 48. Sticky A+/A/B+ group headers when sorted by score.
-- [ ] 49. "+N" overflow chip click expands the row directly.
-- [ ] 50. Keyboard: Enter expands focused row; ←/→ switch grade tabs.
-- [ ] 51. Copy-debug button relocates into the expanded panel.
+- [x] 48. Sticky A+/A/B+ group headers when sorted by score.
+- [x] 49. "+N" overflow chip click expands the row directly.
+- [x] 50. Keyboard: Enter expands focused row; ←/→ switch grade tabs.
+- [x] 51. Copy-debug button relocates into the expanded panel.
 - [ ] 52. Hover prefetch of chart data for the hovered symbol.
 - [ ] 53. Expanded panel scan-age chip ticks live with the 30s refresher.
 - [ ] 54. Spark min/max markers via SVG titles.

@@ -643,7 +643,7 @@
     // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
     // they crowd the A+ list. Toggled by the ⚠ FUNDS chip; hover/open restores.
     const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
-    return `<div class="row-wrap${dimCls}" data-sym="${esc(r.symbol)}" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
+    return `<div class="row-wrap${dimCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
@@ -670,9 +670,6 @@
         <button class="t-star ${starred ? "starred" : ""}" data-sym="${esc(r.symbol)}" title="Watchlist" aria-label="Toggle watchlist">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
-        <button class="row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy debug info" aria-label="Copy raw data">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
         <button class="row-expand" title="Details" aria-label="Toggle details">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
@@ -694,7 +691,11 @@
     const r = ((state.data && state.data.results) || [])
       .find((x) => x.symbol === wrap.dataset.sym);
     if (!r) return;
-    inner.innerHTML = detailHtml(r) + debugDetailHtml(r);
+    // #51: copy-debug lives in the expanded panel now (off the row) — one
+    // clean tap target per row, the developer tool tucked where it belongs.
+    const copyBtn = `<button class="dp-copy row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy this setup's raw data">` +
+      `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy raw data</button>`;
+    inner.innerHTML = detailHtml(r) + debugDetailHtml(r) + `<div class="dp-tools">${copyBtn}</div>`;
     inner.dataset.filled = "1";
   }
 
@@ -1345,14 +1346,30 @@
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
       return;
     }
+    // Sticky grade-group headers (#48): shown when the list is in grade order
+    // (the default SCORE sort). Most useful on the multi-grade views — the
+    // WATCH tab (B+/WATCH) and the ★ watchlist (all grades mixed) — but a
+    // single labelled section header on a single-grade tab reads fine too.
+    const showGroups = state.sort === "score";
+    const groupAt = {};
+    if (showGroups) {
+      let prev = null;
+      list.forEach((r, idx) => { if (r.grade !== prev) { groupAt[idx] = r.grade; prev = r.grade; } });
+    }
+    const GROUP_NAME = { "A+": "A+ SETUPS", "A": "A SETUPS", "B+": "B+ SETUPS", "B": "B SETUPS", "WATCH": "WATCH", "C": "C SETUPS" };
+    const gradeCount = (g) => list.reduce((n, r) => n + (r.grade === g ? 1 : 0), 0);
+    const rowOrGroup = (r, idx) =>
+      (groupAt[idx] ? `<div class="row-group" data-grade="${esc(groupAt[idx])}" style="--grade-color:${GRADE_VAR[groupAt[idx]] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[groupAt[idx]] || groupAt[idx])}</span><span class="row-group-n">${gradeCount(groupAt[idx])}</span></div>` : "")
+      + rowHtml(r, idx);
+
     // Incremental render (UI Wave 1): the first chunk paints synchronously so
     // the list is instantly usable; the tail streams in rAF batches so a
     // 400-row NASDAQ list can't block the first paint. Delegated row handlers
     // keep working on appended rows; the token kills a superseded stream.
     const FIRST = 40, BATCH = 60;
-    wrap.innerHTML = list.slice(0, FIRST).map(rowHtml).join("");
-    // Entrance cascade on the FIRST paint only (backlog #48) — later renders
-    // (filters, sorts, pills) swap instantly, which reads as much snappier.
+    wrap.innerHTML = list.slice(0, FIRST).map((r, idx) => rowOrGroup(r, idx)).join("");
+    // Entrance cascade on the FIRST paint only — later renders (filters,
+    // sorts, pills) swap instantly, which reads as much snappier.
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
     if (list.length <= FIRST) return;
     const token = _rowsToken;
@@ -1360,7 +1377,7 @@
     const step = () => {
       if (token !== _rowsToken || !wrap.isConnected) return;
       wrap.insertAdjacentHTML("beforeend",
-        list.slice(i, i + BATCH).map((r, j) => rowHtml(r, i + j)).join(""));
+        list.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join(""));
       i += BATCH;
       if (i < list.length) requestAnimationFrame(step);
     };
@@ -2021,12 +2038,37 @@
         return;
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
+      // #49: the "+N" overflow chip expands the row directly (explicit — it
+      // also fell through before, but now it's an obvious affordance).
       const wrap = e.target.closest(".row-wrap");
-      if (wrap) {
-        if (!wrap.classList.contains("open")) fillDetail(wrap);
-        wrap.classList.toggle("open");
-      }
+      if (wrap) toggleRowOpen(wrap);
     });
+
+    // #50: keyboard — Enter/Space expands the focused row; ←/→ switch grade
+    // tabs (skipped while typing in the search field).
+    $("#results").addEventListener("keydown", (e) => {
+      const wrap = e.target.closest && e.target.closest(".row-wrap");
+      if (!wrap) return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRowOpen(wrap); }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA"].includes((document.activeElement || {}).tagName)) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const order = ["aplus", "a", "watch"];
+      const i = order.indexOf(state.tab);
+      if (i < 0) return;
+      const next = order[(i + (e.key === "ArrowRight" ? 1 : order.length - 1)) % order.length];
+      const btn = document.querySelector(`#tabs .seg-btn[data-tab="${next}"]`);
+      if (btn) { e.preventDefault(); btn.click(); }
+    });
+  }
+
+  // Shared row expand/collapse (#49/#50): fills the lazy panel on first open
+  // and keeps aria-expanded honest for a11y.
+  function toggleRowOpen(wrap) {
+    if (!wrap.classList.contains("open")) fillDetail(wrap);
+    const open = wrap.classList.toggle("open");
+    wrap.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
   // ---- daily rotating quote + live clocks --------------------------------

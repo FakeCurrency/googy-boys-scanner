@@ -2283,3 +2283,28 @@ body { letter-spacing: -0.012em; }
   /* the strips already scroll; make the momentum feel native + hide the bar */
   #deck-pills { -webkit-overflow-scrolling: touch; }
 }
+
+/* ── Wave 5 #48/#49/#50/#51: group headers, +N affordance, panel tools ────── */
+/* #48: sticky grade-group headers (shown only when sorted by SCORE). */
+.row-group {
+  position: sticky; top: calc(var(--topbar-h, 53px) + 46px); z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 16px; margin: 0; background: var(--nav);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--grade-color, var(--grade-c));
+  font: 800 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--grade-color, var(--text-2));
+}
+.row-group-n { font: 800 11px/1 var(--mono); color: var(--muted-2); background: var(--fill-2); border-radius: 999px; padding: 3px 8px; }
+/* #49: the +N overflow chip is an explicit, tappable expand affordance. */
+.chip-more { cursor: pointer; }
+.chip-more:hover { border-color: var(--blue); color: var(--text); }
+/* #50: focused row gets a clear ring (also helps mouse users tab through). */
+.row-wrap:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 12px; }
+/* #51: copy-debug in the expanded panel. */
+.dp-tools { display: flex; justify-content: flex-end; padding: 10px 2px 2px; }
+.dp-copy {
+  display: inline-flex; align-items: center; gap: 7px; appearance: none; cursor: pointer;
+  border: 1px solid var(--border); background: var(--fill-2); color: var(--muted);
+  font: 600 11px/1 var(--sans); padding: 8px 12px; border-radius: 999px;
+}
+.dp-copy:hover { color: var(--text-2); border-color: var(--border-2); }
