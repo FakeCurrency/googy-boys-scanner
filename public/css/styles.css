@@ -1087,6 +1087,30 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 }
 .sr-row:last-child { border-bottom: 0; }
 .sr-row:hover { background: var(--panel-2); }
+/* #32: cancel button (desktop uses Esc; this shows on mobile), recent chips, hint */
+.search-cancel { display: none; appearance: none; border: 0; background: transparent;
+  color: var(--blue); font: 700 16px/1 var(--sans); padding: 10px 4px; cursor: pointer; }
+.sr-hint { padding: 16px; font: 500 13px/1.5 var(--sans); color: var(--muted); }
+.sr-recent { padding: 14px 16px 16px; }
+.sr-recent-hd { font: 700 10.5px/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 10px; }
+.sr-recent-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.sr-recent-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font: 800 13px/1 var(--sans); color: var(--text); background: var(--fill-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; }
+.sr-recent-chip:hover { border-color: var(--blue); }
+.sr-recent-mkt { font: 700 9px/1 var(--mono); color: var(--muted-2); letter-spacing: 0.05em; }
+@media (max-width: 680px) {
+  /* Full-screen search sheet — no dim-behind, the input + results own the
+     viewport, and a big Cancel sits beside the field. */
+  .search-overlay { padding-top: 0; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .search-box { width: 100%; border-radius: 0; border: 0; border-bottom: 1px solid var(--separator);
+    box-shadow: none; padding: 14px 14px calc(14px + env(safe-area-inset-top, 0)); padding-top: max(14px, env(safe-area-inset-top, 0px)); gap: 8px; }
+  .search-esc { display: none; }
+  .search-cancel { display: inline-block; flex: 0 0 auto; }
+  .search-results { width: 100%; border-radius: 0; border: 0; box-shadow: none; margin-top: 0;
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .sr-recent-chip { padding: 11px 15px; }   /* ≥44px-ish tap target */
+}
 .sr-grade { font: 800 11.5px/1 var(--sans); }
 .sr-sym { font: 700 14px/1 var(--sans); letter-spacing: -0.01em; }
 .sr-name { font: 500 13px/1 var(--sans); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

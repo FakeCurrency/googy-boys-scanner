@@ -1550,19 +1550,50 @@
   }
 
   // ----------------------------------------------------------- search overlay
+  // Recent tickers (#32): the last handful of names opened from search, so a
+  // phone user can re-open them in a tap instead of retyping. Client-side only.
+  const RECENT_KEY = "gbs:recent";
+  function getRecent() {
+    try { const a = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); return Array.isArray(a) ? a.slice(0, 10) : []; }
+    catch (_) { return []; }
+  }
+  function recordRecent(sym, market) {
+    if (!sym) return;
+    try {
+      const a = getRecent().filter((x) => !(x.s === sym && x.m === market));
+      a.unshift({ s: sym, m: market || state.market });
+      localStorage.setItem(RECENT_KEY, JSON.stringify(a.slice(0, 10)));
+    } catch (_) {}
+  }
+  function renderRecent() {
+    const res = document.getElementById("search-results");
+    if (!res) return;
+    const recent = getRecent();
+    if (!recent.length) { res.innerHTML = `<div class="sr-hint">Type a ticker or name — searches VIVEK, PhaseMap and Specs.</div>`; return; }
+    res.innerHTML =
+      `<div class="sr-recent"><div class="sr-recent-hd">Recent</div><div class="sr-recent-row">` +
+      recent.map((x) =>
+        `<a class="sr-recent-chip" href="chart.html?m=${esc(x.m)}&s=${encodeURIComponent(x.s)}&mode=vivek" data-sym="${esc(x.s)}" data-mkt="${esc(x.m)}">` +
+        `${esc(x.s)} <span class="sr-recent-mkt">${esc(String(x.m).toUpperCase())}</span></a>`).join("") +
+      `</div></div>`;
+    res.querySelectorAll(".sr-recent-chip").forEach((a) =>
+      a.addEventListener("click", () => { recordRecent(a.dataset.sym, a.dataset.mkt); closeSearch(); }));
+  }
+
   function openSearch() {
     const overlay = document.getElementById("search-overlay");
     const input   = document.getElementById("search-input");
     if (!overlay) return;
     overlay.removeAttribute("hidden");
+    document.body.classList.add("search-open");
     if (input) { input.value = ""; input.focus(); }
-    const res = document.getElementById("search-results");
-    if (res) res.innerHTML = "";
+    renderRecent();   // #32: surface recent tickers the moment it opens
   }
   function closeSearch() {
     const overlay = document.getElementById("search-overlay");
     if (!overlay) return;
     overlay.setAttribute("hidden", "");
+    document.body.classList.remove("search-open");
     const input = document.getElementById("search-input");
     if (input) input.value = "";
     const res = document.getElementById("search-results");
@@ -1774,6 +1805,8 @@
     if (searchOverlay) searchOverlay.addEventListener("click", (e) => {
       if (e.target === searchOverlay) closeSearch();
     });
+    const searchCancel = document.getElementById("search-cancel");   // #32
+    if (searchCancel) searchCancel.addEventListener("click", closeSearch);
     // ── cross-lens search (2026-07-03): "/" searches VIVEK + PhaseMap +
     // Specs for the current market, each hit badged by lens and linking to
     // the right chart view. Lens files are fetched lazily on first search
@@ -1794,7 +1827,7 @@
     }
     const runSearch = async () => {
       const q = searchInput.value.trim().toLowerCase();
-      if (!q) { searchResults.innerHTML = ""; return; }
+      if (!q) { renderRecent(); return; }   // #32: empty query → recent tickers
       const idx = await loadLensIndex();
       if (searchInput.value.trim().toLowerCase() !== q) return;   // stale keystroke
       const match = (sym, name) =>
@@ -1867,8 +1900,11 @@
           </a>`));
       }
       searchResults.innerHTML = rows.join("");
-      // Close overlay when user clicks a result link
-      searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", closeSearch));
+      // Record the ticker into Recent, then close, when a result is picked (#32).
+      searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", () => {
+        try { const u = new URL(a.href, location.href); recordRecent(u.searchParams.get("s"), u.searchParams.get("m")); } catch (_) {}
+        closeSearch();
+      }));
     };
     // Debounced ~150ms (UI Wave 1): one search per typing pause, not one per
     // keystroke — the stale-keystroke guard above still drops late responses.
