@@ -49,8 +49,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 4 — Mobile parity (≤680px)
 
-- [ ] 25. Mobile command bar: identical content as desktop, h-scroll pill strip, no divergent UI.
-- [ ] 26. Sticky mobile toolbar: the merged filter line as a thumb-height h-scroll strip (≥40px targets).
+- [x] 25. Mobile command bar: identical content as desktop, h-scroll pill strip, no divergent UI.
+- [x] 26. Sticky mobile toolbar: the merged filter line as a thumb-height h-scroll strip (≥40px targets).
 - [x] 27. Company name visible on phones as a second row line (stop `display:none`).
 - [x] 28. Phone row grid: 44px grade rail, right-aligned price + day-%, spark hidden <480px but day-% kept.
 - [x] 29. Bottom tab bar refinement: active states, badge counts (A+ count on SCAN, open positions on JOURNAL).

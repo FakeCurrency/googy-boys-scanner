@@ -2246,3 +2246,18 @@ body { letter-spacing: -0.012em; }
 .a2hs-msg b { color: var(--text); }
 .a2hs-add { appearance: none; border: 0; background: var(--blue); color: #fff; font: 800 12.5px/1 var(--sans); padding: 9px 14px; border-radius: 999px; flex: 0 0 auto; cursor: pointer; }
 .a2hs-x { appearance: none; border: 0; background: var(--fill-2); color: var(--muted); width: 30px; height: 30px; border-radius: 999px; font-size: 13px; flex: 0 0 auto; cursor: pointer; }
+
+/* ── Wave 4 #25+#26: thumb-height controls in the mobile strips ──────────────
+   The command-bar pills and the sticky filter toolbar carry the SAME content
+   as desktop and h-scroll (done earlier); this gives their controls proper
+   >=40px touch height on phones per the iOS HIG. */
+@media (max-width: 680px) {
+  #toolbar .seg-btn, #toolbar .vkf-chip, #toolbar .tb-watch,
+  #toolbar .tb-sort-label, #toolbar .tb-sort-dir {
+    min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  #toolbar .seg { align-items: stretch; }
+  #deck-pills .fpill { min-height: 38px; display: inline-flex; align-items: center; }
+  /* the strips already scroll; make the momentum feel native + hide the bar */
+  #deck-pills { -webkit-overflow-scrolling: touch; }
+}
