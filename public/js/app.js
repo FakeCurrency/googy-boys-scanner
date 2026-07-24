@@ -334,7 +334,7 @@
       const nowStar = isStarred(sym);
       // reflect on the underlying row without a full re-render
       const rowStar = document.querySelector(`.row-wrap[data-sym="${CSS.escape(sym)}"] .t-star`);
-      if (rowStar) { rowStar.classList.toggle("starred", nowStar); const svg = rowStar.querySelector("svg"); if (svg) svg.setAttribute("fill", nowStar ? "currentColor" : "none"); }
+      if (rowStar) rowStar.classList.toggle("starred", nowStar);   // #65: fill is CSS-driven
       const wc = $("#watch-count"); if (wc && state.data) wc.textContent = (state.data.results || []).filter((x) => isStarred(x.symbol)).length;
       closeQuickActions();
     });
@@ -690,10 +690,10 @@
           <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + rrStar}</span>
         </div>
         <button class="t-star ${starred ? "starred" : ""}" data-sym="${esc(r.symbol)}" title="Watchlist" aria-label="Toggle watchlist">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="${starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="17" height="17" aria-hidden="true"><use href="#ic-star"/></svg>
         </button>
         <button class="row-expand" title="Details" aria-label="Toggle details">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg width="18" height="18" aria-hidden="true"><use href="#ic-chevron"/></svg>
         </button>
       </div>
      </div>
@@ -2146,9 +2146,7 @@
         $("#watch-count").textContent = (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
         if (state.view === "watch") { renderRows(); return; }
         const on = isStarred(star.dataset.sym);
-        star.classList.toggle("starred", on);
-        const svg = star.querySelector("svg");
-        if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
+        star.classList.toggle("starred", on);   // #65: fill is CSS-driven
         // #44: haptic tick + a bounce only when STARRING (not un-starring).
         if (on && navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
         if (on) { star.classList.remove("pop"); void star.offsetWidth; star.classList.add("pop"); }

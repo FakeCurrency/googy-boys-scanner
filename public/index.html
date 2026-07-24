@@ -14,7 +14,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-600.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=1" />
-  <link rel="stylesheet" href="css/styles.css?v=89" />
+  <link rel="stylesheet" href="css/styles.css?v=90" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -38,6 +38,13 @@
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
 <body>
+  <!-- #65: one SVG sprite for the icons repeated on every row — the star and
+       the expand chevron are <use>d instead of re-emitting their point data
+       per row (~15% less list HTML at 200 rows). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="ic-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <symbol id="ic-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  </svg>
   <!-- Command Deck topbar (Wave 3): ONE row — brand · markets · nav · clocks · actions -->
   <header class="topbar deck-top">
     <div class="brand">
@@ -144,6 +151,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=88"></script>
+  <script src="js/app.js?v=89"></script>
 </body>
 </html>
