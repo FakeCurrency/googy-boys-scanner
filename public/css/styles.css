@@ -99,7 +99,19 @@ body {
   letter-spacing: -0.01em;
 }
 ::selection { background: rgba(47,208,127,0.25); }
-:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+/* #92: one visible keyboard-focus ring for EVERY interactive element — a green
+   outline plus a soft halo so it reads on busy/dark cards too. Applies to
+   links, buttons, inputs, custom [role]/[tabindex] widgets, summary folds and
+   the clickable result rows alike (the universal :focus-visible selector). */
+:focus-visible {
+  outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 22%, transparent);
+}
+/* Keep the ring on form controls that drop the default outline for mouse use:
+   restore it specifically for keyboard focus. */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--green); outline-offset: 1px;
+}
 
 /* ================================================================= nav bar */
 .topbar {
@@ -1201,13 +1213,24 @@ body.debug-mode .debug-panel {
 .sr-row:active { transform: scale(0.99); }
 
 /* honour reduced-motion: keep things instant for users who ask for it */
+/* #94: kill ALL motion for users who ask for it — shimmer, entrance slides,
+   chevron spins, pulses, hover lifts — across every component, not just the
+   handful listed below. The near-zero durations neutralise animations and
+   transitions everywhere; the targeted rules below additionally cancel the
+   static transforms that :active/entrance states apply. */
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .row-wrap, .placeholder, .search-overlay:not([hidden]),
   .search-overlay:not([hidden]) .search-box { animation: none; }
   .detail-anim { transition: grid-template-rows .01ms; }
   .detail-inner > .row-detail, .detail-inner > .debug-panel { transition: none; transform: none; }
   .row:active, .seg-btn:active, .scan-btn:active, .market-btn:active,
-  .view-tab:active, .reload-btn:active { transform: none; }
+  .view-tab:active, .reload-btn:active, .mn-row:hover { transform: none; }
 }
 
 /* ============================================================== responsive */

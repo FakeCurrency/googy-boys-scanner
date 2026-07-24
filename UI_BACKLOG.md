@@ -134,10 +134,10 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 10 — Accessibility & quality gates
 
-- [ ] 92. Visible focus rings on every interactive element.
-- [ ] 93. aria-pressed/aria-expanded on all toggles (pills, chips, folds, rows).
-- [ ] 94. prefers-reduced-motion kills shimmer/entrance/chevrons across ALL components.
-- [ ] 95. Grade + direction conveyed by text/shape, never colour alone.
+- [x] 92. One visible keyboard-focus ring for every interactive element — the universal :focus-visible selector gives a green outline + soft halo (reads on busy/dark cards); form controls that drop the default outline for mouse use get the ring restored for keyboard focus. Verified the first Tab lands a 2px outline + halo.
+- [x] 93. aria-pressed added to the deck filter pills (via the pill builder) and the A+/A/WATCH grade tabs (synced at every toggle point + in the static markup, with role=group). Toggles already carrying it (★ watch, ⚠ funds, market/mode tabs, rows aria-expanded, bot summary) kept. Verified aria-pressed flips A+→false / A→true on switch.
+- [x] 94. prefers-reduced-motion now kills ALL motion, not a hand-listed few: a universal rule zeroes animation + transition durations across every element (shimmer, entrance slides, chevron spins, pulses, hover lifts), with the targeted transform-cancels kept. Verified transition-duration drops to 0.01ms under reduced-motion.
+- [x] 95. Already satisfied and verified: grade is always the letter (A+/A/WATCH), direction is always an arrow SHAPE (▲/▼) plus a text label + aria-label — never colour alone. No colour-only grade/direction cue exists.
 - [ ] 96. Automated contrast check in CI for every token pair on new components (≥4.5:1).
 - [ ] 97. Node tests for the cache layer (cacheSet/head/SWR/expiry) with mocked localStorage.
 - [ ] 98. Screenshot-diff CI job, desktop + 390px, fails on >2% unexpected drift.

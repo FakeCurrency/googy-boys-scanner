@@ -239,7 +239,7 @@
       b.classList.toggle("is-active", b.dataset.mode === state.mode);
       b.setAttribute("aria-selected", b.dataset.mode === state.mode ? "true" : "false");
     });
-    document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === state.tab));
+    document.querySelectorAll("#tabs .seg-btn").forEach((b) => { const on = b.dataset.tab === state.tab; b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
     updateSortButtons();
     syncWatchToggle();
     syncFundDim();
@@ -518,8 +518,10 @@
     const nA = res.filter((r) => r.grade === "A").length;
     const nAt = res.filter((r) => r.at_level).length;
     const nConf = state.confl ? state.confl.all().length : null;
+    // #93: every filter pill carries aria-pressed so its on/off state is exposed
+    // to assistive tech, not just conveyed by the is-active colour.
     const pill = (attrs, cls, label, n, title, active) =>
-      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} title="${esc(title)}">` +
+      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} aria-pressed="${active ? "true" : "false"}" title="${esc(title)}">` +
       `${label}${n == null ? "" : ` <b>${n}</b>`}</button>`;
     box.innerHTML =
       pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.view === "results" && state.tab === "aplus") +
@@ -535,7 +537,7 @@
       state.view = "results";
       state.tab = b.dataset.goto;
       syncWatchToggle();
-      document.querySelectorAll("#tabs .seg-btn").forEach((x) => x.classList.toggle("is-active", x.dataset.tab === state.tab));
+      document.querySelectorAll("#tabs .seg-btn").forEach((x) => { const on = x.dataset.tab === state.tab; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
       savePrefs();
       renderDeckPills(state.data);
       renderRows();
@@ -1983,7 +1985,7 @@
         state.view = "results";
         syncWatchToggle();
       }
-      document.querySelectorAll("#tabs .seg-btn").forEach((x) => x.classList.toggle("is-active", x === b));
+      document.querySelectorAll("#tabs .seg-btn").forEach((x) => { const on = x === b; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
       renderRows();
     }));
 

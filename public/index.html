@@ -16,7 +16,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-600.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=1" />
-  <link rel="stylesheet" href="css/styles.css?v=90" />
+  <link rel="stylesheet" href="css/styles.css?v=91" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -121,10 +121,10 @@
          row + separate vk-filters strip. -->
     <section class="toolbar" id="toolbar">
       <div class="tb-line">
-        <div class="seg" id="tabs">
-          <button class="seg-btn is-active" data-tab="aplus">A+ <span class="seg-count" id="count-aplus">0</span></button>
-          <button class="seg-btn" data-tab="a">A <span class="seg-count" id="count-a">0</span></button>
-          <button class="seg-btn" data-tab="watch">WATCH <span class="seg-count" id="count-watch">0</span></button>
+        <div class="seg" id="tabs" role="group" aria-label="Grade filter">
+          <button class="seg-btn is-active" data-tab="aplus" aria-pressed="true">A+ <span class="seg-count" id="count-aplus">0</span></button>
+          <button class="seg-btn" data-tab="a" aria-pressed="false">A <span class="seg-count" id="count-a">0</span></button>
+          <button class="seg-btn" data-tab="watch" aria-pressed="false">WATCH <span class="seg-count" id="count-watch">0</span></button>
         </div>
         <button class="seg-btn tb-watch" id="watch-toggle" aria-pressed="false"
           title="Your starred names, from every lens — tap to show only them">★ <span class="seg-count" id="watch-count">0</span></button>
@@ -153,6 +153,6 @@
 
   <script src="js/gbs-sync.js?v=7"></script>
   <script src="js/phasemap-shared.js?v=9"></script>
-  <script src="js/app.js?v=91"></script>
+  <script src="js/app.js?v=92"></script>
 </body>
 </html>
