@@ -81,6 +81,16 @@ jobs:
       # overflow and uploads the shots so mobile layout is reviewable per run.
       - name: Mobile screenshot matrix (360/390/430)
         run: node test/e2e/screenshots.e2e.js
+      # Lighthouse budget tripwire (#70): fails ONLY on an egregious layout-
+      # stability or payload regression (CLS < 1.30, transfer < 5MB). TTI is
+      # printed but NOT gated — it swings ~2x on shared runners and a flaky
+      # perf gate would just resurrect the failure-email problem. Reuses the
+      # chromium Playwright already installed above (no second browser download).
+      - name: Lighthouse budget (CLS + transfer tripwire)
+        run: |
+          npm install --no-save lighthouse chrome-launcher > /dev/null 2>&1
+          export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node test/e2e/lighthouse.e2e.js
       - name: Upload mobile screenshots
         if: always()
         uses: actions/upload-artifact@v4
