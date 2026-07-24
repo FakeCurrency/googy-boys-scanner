@@ -116,13 +116,13 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 ## Wave 8 — Journal & AI Bot pages
 
 - [ ] 79. Journal adopts the deck header + toolbar language (P&L headline stays first).
-- [ ] 80. Equity-curve mini chart with the P&L headline (bot book only — the honest record).
+- [x] 80. The P&L headline now carries a compact cumulative-$ sparkline of the BOT book's realised curve (the honest record) + its running total-$ · total-R, alongside the open-positions unrealised number.
 - [x] 81. Closed-trade R is now a filled colour-scale chip — deeper green the bigger the win (≥2R / ≥1R / >0), red past the full stop (>-1R / ≤-1R), neutral at flat. Asymmetric buckets because wins run open-ended while losses cap near the -1R stop.
 - [x] 82. The close-position modal shows a live "Realised R + $ impact" preview that updates as you type the exit price, before you confirm. Computed by cloning the trade and running the EXACT resolver the load path uses (ensureClosedR) — verified preview === actual outcome (+2.59R preview matched the booked +2.59R).
-- [ ] 83. Journal sync status indicator: synced / local-only / error.
-- [ ] 84. Weekly digest card: closes, R total, win rate — client-side from the bot book.
+- [x] 83. Always-visible header pill shows the manual-journal sync state — ☁ Synced (green) / 📴 Local only (muted) / ⚠ Sync error (red, on a save/sync failure via the gbs:save-error event). Tapping it opens the (folded) sync settings. All three states verified.
+- [x] 84. Weekly digest card at the top: bot book closes in the last 7 days — count, total R, total $, win rate, best close — computed client-side from the book.
 - [ ] 85. bot.html visual alignment to deck tokens; inline styles move to a css file.
-- [ ] 86. Journal "new positions" cards link to charts and show entry-type chips consistently.
+- [x] 86. New-position cards now show the entry-type setup chip (Weekly reclaim / Daily retest / …) consistently with the tables, and use the canonical src=journal chart link (was the stale &pm=1).
 
 ## Wave 9 — Cross-page consistency
 

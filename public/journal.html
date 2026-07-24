@@ -14,7 +14,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=1" />
   <link rel="stylesheet" href="css/styles.css?v=90" />
-  <link rel="stylesheet" href="css/journal.css?v=26" />
+  <link rel="stylesheet" href="css/journal.css?v=27" />
   <script src="js/nav.js?v=9"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
@@ -28,6 +28,8 @@
     </div>
     <nav class="nav-pills" id="site-nav"></nav>
     <span class="jr-topsum" id="jr-topsum"></span>
+    <!-- #83: always-visible manual-journal sync status — synced / local-only / error -->
+    <button class="jr-sync-pill off" id="jr-sync-pill" type="button" title="Manual-journal sync status — tap to open sync settings">📴 Local only</button>
   </header>
 
   <main class="wrap">
@@ -53,6 +55,18 @@
         <span class="jr-pnl-sub" id="jr-pnl-sub"></span>
       </div>
       <div class="jr-pnl-split" id="jr-pnl-split"></div>
+      <!-- #80: bot book realised equity curve — the honest track record, mini -->
+      <div class="jr-pnl-track" id="jr-pnl-track" hidden>
+        <span class="jr-pnl-track-label">🤖 Bot book · realised</span>
+        <div class="jr-pnl-spark" id="jr-pnl-spark"></div>
+        <span class="jr-pnl-track-val" id="jr-pnl-track-val"></span>
+      </div>
+    </section>
+
+    <!-- ═══ WEEKLY DIGEST (#84) — bot book, last 7 days at a glance ═══ -->
+    <section class="jr-digest" id="jr-digest" hidden>
+      <div class="jr-digest-hd">📅 This week · bot book <span class="jr-digest-range" id="jr-digest-range"></span></div>
+      <div class="jr-digest-grid" id="jr-digest-grid"></div>
     </section>
 
     <!-- ═══ 0 · NEW POSITIONS RECENTLY TAKEN — the daily glance ═══ -->
@@ -185,6 +199,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=7"></script>
-  <script src="js/journal.js?v=54"></script>
+  <script src="js/journal.js?v=55"></script>
 </body>
 </html>

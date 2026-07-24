@@ -356,6 +356,30 @@
     <div class="jr-eqtags"><span class="${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
   }
 
+  // #80: a compact cumulative-$ sparkline for the P&L headline — bot book only
+  // (the honest realised record). Just the $ line + a soft fill; no axis/tags.
+  function drawMiniEquity(elId, pts) {
+    const el = $("#" + elId);
+    if (!el) return false;
+    if (!pts || pts.length < 2) { el.innerHTML = ""; return false; }
+    const w = 240, h = 44, pad = 4;
+    const ds = pts.map((p) => p.d);
+    const mn = Math.min(0, ...ds), mx = Math.max(0, ...ds), rng = (mx - mn) || 1;
+    const y = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
+    const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
+    const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.d).toFixed(1)}`).join(" ");
+    const endD = ds[ds.length - 1];
+    const col = endD >= 0 ? "#3fb784" : "#d07070";
+    const area = `${pad},${y(0).toFixed(1)} ${line} ${x(pts.length - 1).toFixed(1)},${y(0).toFixed(1)}`;
+    const gid = elId + "-g";
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="jr-mini-eqsvg" role="img" aria-label="Bot book realised equity curve">
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.20"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#222a38" stroke-width="1" stroke-dasharray="2 4"/>
+      <polygon points="${area}" fill="url(#${gid})"/>
+      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+    return true;
+  }
+
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
   // Full-word, dog-balls direction pill (owner 2026-07-10): a trade's
@@ -798,10 +822,11 @@
         .sort((a, b) => b.ms - a.ms)
         .slice(0, 6);
       const rows = recent.map(({ t, ms }) =>
-        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&pm=1">
+        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&src=journal">
           ${dirChip(t.direction)}
           <b class="jr-new-sym">${esc(t.symbol)}</b>
           <span class="jr-new-entry">@ ${px(t.entry)}</span>
+          ${setupChip(t)}
           ${t.lens ? `<span class="jr-new-lens">${up(t.lens)}</span>` : ""}
           ${t.status === "closed" ? `<span class="jr-new-closed">closed</span>` : ""}
           ${flipChip(t)}
@@ -852,11 +877,50 @@
     $("#jr-pnl-split").innerHTML =
       `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(botU)}">${d2(botU)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>` +
       (meN ? `<span class="jr-pnl-chip"><span class="ts-who">✏️ Me</span> <b class="${pcls(meU)}">${d2(meU)}</b> <span class="ts-who">· ${meN} open</span></span>` : "");
+    // #80: the bot book's realised equity curve alongside the headline.
+    const hasCurve = drawMiniEquity("jr-pnl-spark", series(state.bot.closed));
+    const track = $("#jr-pnl-track");
+    if (track) track.hidden = !hasCurve;
+    if (hasCurve) {
+      const bs = stats(state.bot.closed, botOpen.length);
+      const tv = $("#jr-pnl-track-val");
+      if (tv) { tv.textContent = `${dfmt(bs.totalD)} · ${rfmt(bs.totalR)}`; tv.className = "jr-pnl-track-val " + pcls(bs.totalD); }
+    }
+  }
+
+  // #84: weekly digest — bot book closes in the last 7 days (the honest record),
+  // summarised: count, R total, $ total, win rate, best close. Client-side.
+  function renderWeeklyDigest() {
+    const box = $("#jr-digest");
+    if (!box) return;
+    const weekAgo = Date.now() - 7 * 24 * 3.6e6;
+    const closes = (state.bot.closed || []).filter((t) => {
+      const ms = exitMs(t); return ms != null && ms >= weekAgo && t.realized_r != null;
+    });
+    if (!closes.length) { box.hidden = true; return; }
+    box.hidden = false;
+    const n = closes.length;
+    const totalR = closes.reduce((s, t) => s + t.realized_r, 0);
+    const totalD = closes.reduce((s, t) => s + (dollarsOf(t) || 0), 0);
+    const wins = closes.filter((t) => t.realized_r > 0).length;
+    const win = Math.round((wins / n) * 100);
+    const best = closes.reduce((a, b) => (a == null || b.realized_r > a.realized_r ? b : a), null);
+    const cell = (label, val, cls) =>
+      `<div class="jr-dg-cell"><span class="jr-dg-label">${label}</span><span class="jr-dg-val ${cls || ""}">${val}</span></div>`;
+    $("#jr-digest-grid").innerHTML =
+      cell("Closes", String(n), "") +
+      cell("Total R", rfmt(totalR), rcls(totalR)) +
+      cell("Total $", dfmt(totalD), pcls(totalD)) +
+      cell("Win rate", win + "%", "") +
+      (best ? cell("Best", up(best.symbol) + " " + rfmt(best.realized_r), rcls(best.realized_r)) : "");
+    const range = $("#jr-digest-range");
+    if (range) range.textContent = "last 7 days";
   }
 
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
     renderPnlHeadline();
+    renderWeeklyDigest();
     renderNewPositions();
     renderComparison(sb, sm);
     renderBoth();
@@ -1141,6 +1205,19 @@
     const el = $("#mj-sync-status");
     if (el) { el.textContent = msg || ""; el.className = "mj-sync-status" + (cls ? " " + cls : ""); }
   }
+  // #83: the always-visible header pill — synced / local-only / error. `error`
+  // sticks until the next successful reflect() clears it.
+  function reflectSyncPill(errored) {
+    const pill = $("#jr-sync-pill");
+    if (!pill) return;
+    const on = !!(window.GBSSync && window.GBSSync.enabled());
+    let cls, txt;
+    if (errored) { cls = "err"; txt = "⚠ Sync error"; }
+    else if (on) { cls = "on"; txt = "☁ Synced"; }
+    else { cls = "off"; txt = "📴 Local only"; }
+    pill.className = "jr-sync-pill " + cls;
+    pill.textContent = txt;
+  }
   function afterStoreChange() { loadMe(); renderAll(); refreshLive(); }
   function wireSync() {
     // Backup / Restore
@@ -1206,7 +1283,17 @@
       if (offBtn) offBtn.classList.toggle("mj-hidden", !on);
       if (nowBtn) nowBtn.classList.toggle("mj-hidden", !on);
       syncStatus(on ? "Sync ON — same trades on every device with this code." : "", on ? "live" : "");
+      reflectSyncPill(false);   // #83
     };
+    // #83: the header pill opens the (folded) sync settings; a save/sync error
+    // anywhere flips it to the error state until the next clean reflect().
+    const pill = $("#jr-sync-pill");
+    if (pill) pill.addEventListener("click", () => {
+      const fold = codeEl.closest("details.jr-fold");
+      if (fold) { fold.open = true; fold.scrollIntoView({ behavior: "smooth", block: "center" }); }
+      codeEl.focus();
+    });
+    window.addEventListener("gbs:save-error", () => reflectSyncPill(true));
     const enable = async () => {
       const code = (codeEl.value || "").trim();
       if (code.length < 4) { syncStatus("Pick a code with at least 4 characters.", "neg"); return; }
@@ -1218,12 +1305,12 @@
           syncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg"); return;
         }
         await window.GBSSync.syncOut(); afterStoreChange(); reflect();
-      } catch (_) { syncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg"); }
+      } catch (_) { syncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg"); reflectSyncPill(true); }
     };
     const syncedAt = () => syncStatus("Synced at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), "live");
     if (onBtn) onBtn.addEventListener("click", enable);
     if (offBtn) offBtn.addEventListener("click", () => { window.GBSSync.setCode(""); reflect(); syncStatus("Sync off — this device keeps its own copy."); });
-    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { await window.GBSSync.syncOut(); afterStoreChange(); syncedAt(); } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); } });
+    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { await window.GBSSync.syncOut(); afterStoreChange(); syncedAt(); } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); reflectSyncPill(true); } });
     codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
     const silentPull = async () => { if (!window.GBSSync.enabled()) return; try { await window.GBSSync.syncIn(); afterStoreChange(); syncedAt(); } catch (_) {} };
     document.addEventListener("visibilitychange", () => { if (!document.hidden) silentPull(); });

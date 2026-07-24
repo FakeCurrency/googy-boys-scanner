@@ -505,7 +505,7 @@
   background: rgba(255,255,255,0.09); border-radius: 999px; padding: 3px 8px;
 }
 .jr-new-row {
-  display: flex; align-items: center; gap: 8px; text-decoration: none;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; text-decoration: none;
   padding: 7px 9px; margin: 0 -9px; border-radius: 10px; color: var(--text);
 }
 .jr-new-row:hover { background: rgba(255,255,255,0.06); }
@@ -671,3 +671,37 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-cp-val.r-pos { color: var(--green); }
 .jr-cp-val.r-neg { color: var(--red); }
 .jr-cp-note { margin-top: 6px; font: 600 11.5px/1.3 var(--sans); color: var(--muted); }
+
+/* #80: bot book realised mini equity curve, with the P&L headline */
+.jr-pnl-track { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); width: 100%; }
+.jr-pnl-track[hidden] { display: none; }
+.jr-pnl-track-label { font: 600 11px/1.2 var(--sans); letter-spacing: .03em; color: var(--muted); }
+.jr-pnl-spark { flex: 1; min-width: 100px; max-width: 300px; height: 44px; }
+.jr-pnl-spark .jr-mini-eqsvg { width: 100%; height: 100%; display: block; }
+.jr-pnl-track-val { font: 800 13px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+.jr-pnl-track-val.r-pos { color: var(--green); }
+.jr-pnl-track-val.r-neg { color: var(--red); }
+
+/* #83: always-visible header sync-status pill */
+.jr-sync-pill {
+  appearance: none; cursor: pointer; border-radius: 999px; padding: 5px 11px;
+  font: 700 11px/1 var(--sans); letter-spacing: .02em; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--fill); color: var(--muted);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.jr-sync-pill.on  { color: var(--green); background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 34%, transparent); }
+.jr-sync-pill.off { color: var(--muted); }
+.jr-sync-pill.err { color: var(--red); background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+.jr-sync-pill:hover { border-color: var(--blue); }
+
+/* #84: weekly digest card — bot book, last 7 days */
+.jr-digest { margin: 14px 0; padding: 14px 16px; border-radius: 14px; background: var(--fill); border: 1px solid var(--border); }
+.jr-digest[hidden] { display: none; }
+.jr-digest-hd { font: 700 13px/1.2 var(--sans); color: var(--text); margin-bottom: 12px; }
+.jr-digest-range { font-weight: 600; color: var(--muted); margin-left: 4px; }
+.jr-digest-grid { display: flex; flex-wrap: wrap; gap: 22px; }
+.jr-dg-cell { display: flex; flex-direction: column; gap: 4px; }
+.jr-dg-label { font: 600 10px/1 var(--sans); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.jr-dg-val { font: 800 16px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.jr-dg-val.r-pos { color: var(--green); }
+.jr-dg-val.r-neg { color: var(--red); }
