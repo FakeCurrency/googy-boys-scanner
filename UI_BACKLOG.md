@@ -92,7 +92,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 59. Slim the head-cache further (drop chips/entry_types) so more of NASDAQ fits the untouched 500KB cap.
 - [x] 60. Purge legacy localStorage keys post-migration (quota headroom protects the journal).
 - [x] 61. Idle-time prefetch (requestIdleCallback + timer fallback) replaces the fixed 300ms market prefetch.
-- [ ] 62. Self-host subset woff2 fonts — kill the Google Fonts round-trip and its layout shift.
+- [x] 62. Self-host subset woff2 fonts — kill the Google Fonts round-trip and its layout shift.
 - [x] 63. sw.js precaches the app shell on install for instant repeat loads.
 - [x] 64. SW update flow: one-tap Update applies AND reloads; background tabs self-heal on controllerchange; 30-min re-check for long-open tabs; apply-on-return via visibilitychange. (Shipped early — owner hit the stale-tab case.)
 - [ ] 65. Single SVG sprite for per-row icons (~15% list HTML cut at 200 rows).
