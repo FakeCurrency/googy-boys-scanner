@@ -57,6 +57,10 @@ jobs:
         run: node test/unit.test.js
       - name: Cloud-watcher VIVEK parity tests (21)
         run: node test/vivek_manage.test.js
+      - name: SWR cache-layer tests (#97)
+        run: node test/cache.test.js
+      - name: Design-token contrast gate (#96)
+        run: node test/contrast.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
@@ -91,6 +95,28 @@ jobs:
           npm install --no-save lighthouse chrome-launcher > /dev/null 2>&1
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node test/e2e/lighthouse.e2e.js
+      # Screenshot-diff gate (#98): fails on >2% visual drift, desktop + 390px.
+      # Baselines are cached per-environment (CI-native rendering) so cross-env
+      # font differences never false-fail; first run self-baselines and passes,
+      # later runs diff. Bump the cache key to accept an intentional visual change.
+      - name: Restore screenshot baselines
+        uses: actions/cache@v4
+        with:
+          path: test/e2e/__baseline__
+          key: screenshot-baselines-v1-${{ runner.os }}
+      - name: Screenshot-diff (desktop + 390px, <2% drift)
+        run: |
+          npm install --no-save pixelmatch pngjs > /dev/null 2>&1
+          export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node test/e2e/screenshot-diff.e2e.js
+      - name: Upload screenshot diffs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: test/e2e/__diff__/
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Upload mobile screenshots
         if: always()
         uses: actions/upload-artifact@v4

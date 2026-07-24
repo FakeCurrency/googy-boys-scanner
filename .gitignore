@@ -33,3 +33,12 @@ _to_delete/
 # Claude cloud-session push credential (local only, never commit)
 .claude/gh_token.txt
 test/e2e/__shots__/
+# #98 screenshot-diff: baselines are self-captured per environment (CI cache),
+# never committed — cross-env font rendering would otherwise false-fail.
+test/e2e/__baseline__/
+test/e2e/__diff__/
+
+# local dev installs (CI installs its own)
+node_modules/
+package-lock.json
+package.json

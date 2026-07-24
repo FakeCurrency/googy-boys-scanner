@@ -1,0 +1,4 @@
+{
+  "version": "2026.07.24-1",
+  "note": "Deploy stamp for skew detection. telemetry.js reads this at page load and re-checks on focus; if the value has changed, a new deploy landed while the tab was open and it offers a refresh. Bump on a meaningful release; the service-worker controllerchange event catches every deploy regardless."
+}

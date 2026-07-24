@@ -51,66 +51,24 @@
   }
 
   // ---- localStorage scan cache with TTL -----------------------------------
-  function cacheSet(key, data) {
-    try {
-      const payload = JSON.stringify({ ts: Date.now(), data });
-      // Size cap (2026-07-20): full NASDAQ/ASX scans are 1-2MB each; three of
-      // them squeezed localStorage's ~5MB origin quota and could make the
-      // manual journal's save FAIL — a silently lost trade. Oversized scans
-      // skip the cache (cold loads just refetch); small markets still cache.
-      if (payload.length > 500_000) return;
-      localStorage.setItem(CACHE_PREFIX + key, payload);
-    }
-    catch (_) {}
-  }
-  function cacheGet(key) {
-    try {
-      const item = JSON.parse(localStorage.getItem(CACHE_PREFIX + key) || "null");
-      if (item && Date.now() - item.ts < CACHE_TTL_MS) return item.data;
-    } catch (_) {}
-    return null;
-  }
-
-  // ── Stale-while-revalidate cache additions (UI Wave 1, 2026-07-22) ────────
-  // cacheGetStale returns an EXPIRED full payload (cacheGet hides those) so a
-  // cold paint can show the last-known scan instantly while the fresh fetch
-  // runs in the background. The slim "head" cache is a second, always-written
-  // entry — stats + the first HEAD_ROWS rows with the heavy per-row fields
-  // (spark/detail/plans/analysis) stripped — so a market whose full payload
-  // exceeds the 500KB cacheSet cap (kept: it protects the manual journal's
-  // localStorage quota) still paints instantly. Head payloads are marked
-  // _head, shown only under the "updating…" flag, and NEVER enter state.cache.
-  const HEAD_PREFIX = "gbs:cache:head:";
-  const HEAD_ROWS   = 60;
-  function cacheGetStale(key) {
-    try {
-      const item = JSON.parse(localStorage.getItem(CACHE_PREFIX + key) || "null");
-      if (item && item.data) return item.data;
-    } catch (_) {}
-    return null;
-  }
-  function cacheSetHead(key, data) {
-    try {
-      // #59: strip the heaviest per-row fields from the head-cache so more of
-      // a big NASDAQ payload fits under the untouched 500KB cap. chips +
-      // entry_types + markers are irrelevant on the transient "updating…"
-      // paint (confluence is KEPT so the deck pills don't flash a wrong count).
-      const rows = ((data && data.results) || []).slice(0, HEAD_ROWS)
-        .map(({ spark, detail, plans, analysis, chips, entry_types, markers, ...slim }) => slim);
-      const head = { ...data, results: rows, _head: true,
-                     _full_count: ((data && data.results) || []).length };
-      const payload = JSON.stringify({ ts: Date.now(), data: head });
-      if (payload.length > 500_000) return;   // same cap as cacheSet — never raised
-      localStorage.setItem(HEAD_PREFIX + key, payload);
-    } catch (_) {}
-  }
-  function cacheGetHead(key) {
-    try {
-      const item = JSON.parse(localStorage.getItem(HEAD_PREFIX + key) || "null");
-      if (item && item.data) return item.data;
-    } catch (_) {}
-    return null;
-  }
+  // #97: the SWR scan cache now lives in js/cache.js (window.GBSCache) so it can
+  // be unit-tested with a mocked localStorage + clock (test/cache.test.js).
+  // Thin aliases keep every call site unchanged; the behaviour is identical
+  // (5-min TTL full cache, expired-payload stale paint, slim head cache under
+  // the 500KB journal-safety cap). The fallback keeps the dashboard working
+  // (just uncached) if cache.js somehow fails to load.
+  const _cache = (typeof window !== "undefined" && window.GBSCache) || {
+    set() {}, get() { return null; }, getStale() { return null; },
+    setHead() {}, getHead() { return null; },
+    HEAD_PREFIX: "gbs:cache:head:", HEAD_ROWS: 60,
+  };
+  const cacheSet      = (k, d) => _cache.set(k, d);
+  const cacheGet      = (k)    => _cache.get(k);
+  const cacheGetStale = (k)    => _cache.getStale(k);
+  const cacheSetHead  = (k, d) => _cache.setHead(k, d);
+  const cacheGetHead  = (k)    => _cache.getHead(k);
+  const HEAD_PREFIX   = _cache.HEAD_PREFIX;
+  const HEAD_ROWS     = _cache.HEAD_ROWS;
 
   // ---- debug mode ---------------------------------------------------------
   const isDebug = () =>
