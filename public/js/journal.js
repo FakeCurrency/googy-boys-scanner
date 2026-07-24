@@ -24,6 +24,15 @@
   const GRADE_CLS = { "A+": "g-aplus", "A": "g-a", "B+": "g-b", "B": "g-b", "WATCH": "g-c", "C": "g-c" };
   const rcls = (r) => (r >= 0 ? "r-pos" : "r-neg");
   const rfmt = (r) => (r == null || isNaN(r) ? "—" : (r >= 0 ? "+" : "") + (+r).toFixed(2) + "R");
+  // #81: bucket a realised-R into a colour-scale class. Wins run open-ended
+  // (+3R happens); losses are capped near the -1R stop, so the scale is
+  // asymmetric — deeper green the bigger the win, red past the full stop.
+  const rBucket = (r) =>
+    r == null || isNaN(r) ? "rc-na"
+    : r >= 2 ? "rc-p3" : r >= 1 ? "rc-p2" : r > 0 ? "rc-p1"
+    : r === 0 ? "rc-flat" : r > -1 ? "rc-n1" : "rc-n2";
+  // A realised-R rendered as a filled colour-scale chip (#81).
+  const rChip = (r) => `<span class="jr-rchip ${rBucket(r)}">${rfmt(r)}</span>`;
   const pcls = (v) => (v >= 0 ? "r-pos" : "r-neg");
   const dfmt = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 }));
   const d2   = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2));
@@ -466,7 +475,7 @@
       return `<tr>
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
-        <td class="num ${t.realized_r == null ? "" : rcls(t.realized_r)}" data-label="R">${rfmt(t.realized_r)}</td>
+        <td class="num" data-label="R">${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}" data-label="$">${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
@@ -1037,6 +1046,36 @@
 
   // ── close modal (Me) ──────────────────────────────────────────────────────
   let closeId = null;
+  // #82: what closing at `exit` WOULD book — realised R + $ impact. Clones the
+  // trade and runs the exact same resolver the load path uses (ensureClosedR
+  // via the same field-sets saveClose does), so the preview equals the outcome.
+  function computeCloseOutcome(t, exit) {
+    if (!(exit > 0)) return null;
+    let c;
+    try { c = JSON.parse(JSON.stringify(t)); } catch (_) { return null; }
+    c.status = "closed"; c.exit = exit; c.exit_date = today(); c.exit_time = nowTime();
+    c.exit_reason = "manual"; delete c._init;
+    ensureClosedR(c);
+    const r = c.realized_r;
+    const dollars = (r != null && c.risk_usd != null) ? r * c.risk_usd * fxOf(c) : null;
+    return { r, dollars };
+  }
+  function updateClosePreview() {
+    const box = $("#jr-close-preview");
+    if (!box) return;
+    const t = closeId && mjLoad().trades.find((x) => x.id === closeId);
+    const exit = parseFloat($("#jr-exit-price").value);
+    const out = t ? computeCloseOutcome(t, exit) : null;
+    if (!out || out.r == null) { box.hidden = true; return; }
+    box.hidden = false;
+    const rEl = $("#jr-cp-r"), dEl = $("#jr-cp-d");
+    rEl.textContent = rfmt(out.r); rEl.className = "jr-cp-val " + rcls(out.r);
+    if (out.dollars == null) { dEl.textContent = ""; }
+    else { dEl.textContent = dfmt(out.dollars); dEl.className = "jr-cp-val " + pcls(out.dollars); }
+    const note = $("#jr-cp-note");
+    if (note) note.textContent = out.r >= 0 ? "This is a winning close." : "This books a loss.";
+  }
+
   function openCloseModal(id) {
     const t = mjLoad().trades.find((x) => x.id === id);
     if (!t) return;
@@ -1044,8 +1083,13 @@
     $("#jr-modal-title").textContent = "Close " + String(t.symbol || "").toUpperCase();
     $("#jr-exit-price").value = "";
     $("#jr-price-tag").textContent = "loading live…";
+    const box = $("#jr-close-preview"); if (box) box.hidden = true;
     $("#jr-close-overlay").hidden = false;
-    priceFor(t).then((p) => { if (p != null) { $("#jr-exit-price").value = +(+p).toFixed(6); $("#jr-price-tag").textContent = "live"; } else $("#jr-price-tag").textContent = ""; });
+    priceFor(t).then((p) => {
+      if (p != null) { $("#jr-exit-price").value = +(+p).toFixed(6); $("#jr-price-tag").textContent = "live"; }
+      else $("#jr-price-tag").textContent = "";
+      updateClosePreview();
+    });
   }
   function closeModal() { $("#jr-close-overlay").hidden = true; closeId = null; }
 
@@ -1201,6 +1245,7 @@
     $("#jr-modal-x").addEventListener("click", closeModal);
     $("#jr-modal-cancel").addEventListener("click", closeModal);
     $("#jr-modal-save").addEventListener("click", saveClose);
+    $("#jr-exit-price").addEventListener("input", updateClosePreview);   // #82 live R/$ preview
     $("#jr-close-overlay").addEventListener("click", (e) => { if (e.target.id === "jr-close-overlay") closeModal(); });
     // react to manual trades opened on another tab/device
     window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) { loadMe(); renderAll(); refreshLive(); } });

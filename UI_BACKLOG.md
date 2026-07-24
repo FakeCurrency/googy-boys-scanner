@@ -117,8 +117,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 - [ ] 79. Journal adopts the deck header + toolbar language (P&L headline stays first).
 - [ ] 80. Equity-curve mini chart with the P&L headline (bot book only — the honest record).
-- [ ] 81. Per-trade realised-R chips with colour scale in closed lists.
-- [ ] 82. Close-position flow shows R + $ impact preview before confirming.
+- [x] 81. Closed-trade R is now a filled colour-scale chip — deeper green the bigger the win (≥2R / ≥1R / >0), red past the full stop (>-1R / ≤-1R), neutral at flat. Asymmetric buckets because wins run open-ended while losses cap near the -1R stop.
+- [x] 82. The close-position modal shows a live "Realised R + $ impact" preview that updates as you type the exit price, before you confirm. Computed by cloning the trade and running the EXACT resolver the load path uses (ensureClosedR) — verified preview === actual outcome (+2.59R preview matched the booked +2.59R).
 - [ ] 83. Journal sync status indicator: synced / local-only / error.
 - [ ] 84. Weekly digest card: closes, R total, win rate — client-side from the bot book.
 - [ ] 85. bot.html visual alignment to deck tokens; inline styles move to a css file.

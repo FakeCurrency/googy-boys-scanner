@@ -645,3 +645,29 @@ details.jr-fold.jr-fold-quiet > summary {
   .jr-close-btn, .jr-note-btn, .jr-del-btn { min-height: 40px; min-width: 44px; }
   .jr-stamp .num-sub { color: var(--muted-2); }
 }
+
+/* #81: realised-R colour-scale chips in the closed lists — deeper green the
+   bigger the win, red past the full stop. */
+.jr-rchip {
+  display: inline-block; padding: 2px 7px; border-radius: 6px;
+  font: 700 11.5px/1.35 var(--mono); font-variant-numeric: tabular-nums;
+}
+.jr-rchip.rc-p3   { background: color-mix(in srgb, var(--green) 34%, transparent); color: #8affc0; }
+.jr-rchip.rc-p2   { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); }
+.jr-rchip.rc-p1   { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); }
+.jr-rchip.rc-flat { background: var(--fill); color: var(--muted); }
+.jr-rchip.rc-n1   { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+.jr-rchip.rc-n2   { background: color-mix(in srgb, var(--red) 28%, transparent); color: #ff9089; }
+.jr-rchip.rc-na   { color: var(--muted); }
+
+/* #82: close-position R + $ impact preview inside the modal */
+.jr-close-preview {
+  margin-top: 12px; padding: 11px 13px; border-radius: 10px;
+  background: var(--fill); border: 1px solid var(--border);
+}
+.jr-cp-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+.jr-cp-label { font: 600 11px/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.jr-cp-val { font: 800 15px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.jr-cp-val.r-pos { color: var(--green); }
+.jr-cp-val.r-neg { color: var(--red); }
+.jr-cp-note { margin-top: 6px; font: 600 11.5px/1.3 var(--sans); color: var(--muted); }

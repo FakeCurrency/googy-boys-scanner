@@ -14,7 +14,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=1" />
   <link rel="stylesheet" href="css/styles.css?v=90" />
-  <link rel="stylesheet" href="css/journal.css?v=25" />
+  <link rel="stylesheet" href="css/journal.css?v=26" />
   <script src="js/nav.js?v=9"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
@@ -170,6 +170,12 @@
           <input id="jr-exit-price" class="jr-modal-input" type="number" step="any" min="0" placeholder="0.00" />
           <span id="jr-price-tag" class="jr-price-tag"></span>
         </div>
+        <!-- #82: live R + $ impact of closing here, before you confirm -->
+        <div class="jr-close-preview" id="jr-close-preview" hidden>
+          <div class="jr-cp-row"><span class="jr-cp-label">Realised R</span><span class="jr-cp-val" id="jr-cp-r">—</span></div>
+          <div class="jr-cp-row"><span class="jr-cp-label">$ impact</span><span class="jr-cp-val" id="jr-cp-d">—</span></div>
+          <div class="jr-cp-note" id="jr-cp-note"></div>
+        </div>
       </div>
       <div class="jr-modal-ft">
         <button class="jr-modal-cancel" id="jr-modal-cancel">Cancel</button>
@@ -179,6 +185,6 @@
   </div>
 
   <script src="js/gbs-sync.js?v=7"></script>
-  <script src="js/journal.js?v=53"></script>
+  <script src="js/journal.js?v=54"></script>
 </body>
 </html>
