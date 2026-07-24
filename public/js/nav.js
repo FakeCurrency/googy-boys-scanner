@@ -247,6 +247,22 @@
     });
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", render);
-  else render();
+  // #91: one shared footer include — a consistent credit (data source +
+  // refresh cadence) and disclaimer on every nav page. Pages that already ship
+  // their own <footer class="site-footer"> (dashboard / journal / bot) keep it;
+  // the lens & utility pages get this appended so the data source and the
+  // disclaimer read identically everywhere.
+  function renderFooter() {
+    if (document.querySelector("footer.site-footer")) return;   // page has its own
+    const f = document.createElement("footer");
+    f.className = "site-footer gbs-shared-foot";
+    f.innerHTML =
+      '<p class="credit">Vivek 5.0 · three-lens scanner · data via Yahoo Finance (~15&nbsp;min delayed) · refreshed daily after each market close</p>' +
+      '<p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>';
+    document.body.appendChild(f);
+  }
+
+  function init() { render(); renderFooter(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();

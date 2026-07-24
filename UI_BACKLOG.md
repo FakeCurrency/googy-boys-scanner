@@ -126,11 +126,11 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 9 — Cross-page consistency
 
-- [ ] 87. One shared header include on every page (phasemap pages stop hand-rolling theirs).
-- [ ] 88. Alerts page: relative times + Melbourne tooltips + deck header.
+- [x] 87. Every nav page now uses the same deck header structure (topbar deck-top: brand · nav-pills · deck-top-right). The phasemap sub-pages (insights, legend) and mynames/sectors stopped hand-rolling their own pm-topnav layouts. The nav strip itself is the shared include (nav.js injects it into #site-nav on every page); all headers now share one structure. Verified deck header + no 320px overflow on all 7 lens/utility pages.
+- [x] 88. Alerts page: on-screen times are now RELATIVE ("4h ago"), with the full Melbourne time + UTC in the tooltip; adopted the shared deck header; chart links use the canonical src=alerts.
 - [ ] 89. ★ My Names rows use the dashboard row-card language, badged per lens.
 - [ ] 90. Styled 404/error page; favicon + touch icons regenerated from the brand tile.
-- [ ] 91. Footer standardised (disclaimer, data source, quote's home) on all pages.
+- [x] 91. One shared footer include (nav.js renderFooter): a consistent credit line (data source · ~15 min delayed · refreshed daily) + the standard disclaimer, injected on every nav page that doesn't already ship its own <footer class="site-footer"> (dashboard/journal/bot keep theirs — no double footer). Verified across 10 pages.
 
 ## Wave 10 — Accessibility & quality gates
 

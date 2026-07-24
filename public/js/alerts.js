@@ -14,6 +14,16 @@
     hour: "numeric", minute: "2-digit" });
   const melbDay = (iso) => { const d = new Date(iso); return isNaN(d) ? String(iso).slice(0, 10) : melbFmtD.format(d); };
   const melbTime = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : melbFmtT.format(d) + " Melb"; };
+  // #88: relative time on screen (the daily glance), full Melbourne + UTC in
+  // the tooltip. "just now" under a minute; minutes / hours / days after.
+  const relTime = (iso) => {
+    const t = Date.parse(iso || ""); if (!isFinite(t)) return "";
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return "just now";
+    const m = s / 60; if (m < 60) return Math.round(m) + "m ago";
+    const h = m / 60; if (h < 24) return Math.round(h) + "h ago";
+    const d = Math.floor(h / 24); return d === 1 ? "1d ago" : d + "d ago";
+  };
 
   const state = { entries: [], market: "all", q: "", triplesOnly: false };
 
@@ -29,14 +39,14 @@
     const arrow = e.side === "short" ? "▼" : "▲";
     const dir = e.side === "short" ? "&dir=bearish" : "&dir=bullish";
     return `<a class="al-row${triple ? " al-row-triple" : ""}${isNew(e) ? " al-row-new" : ""}" ` +
-      `href="chart.html?m=${esc(e.market)}&s=${encodeURIComponent(e.ticker)}&pm=1${dir}">` +
+      `href="chart.html?m=${esc(e.market)}&s=${encodeURIComponent(e.ticker)}&src=alerts${dir}">` +
       `${isNew(e) ? '<span class="al-new-dot" title="New since your last visit"></span>' : ""}` +
       `<span class="pm-conf${triple ? " pm-conf-3" : ""}">${triple ? "🎯 " : "⨂ "}${e.count}-LENS</span>` +
       `<span class="pm-ticker">${esc(e.ticker)}</span>` +
       `<span class="pm-dir ${e.side === "short" ? "pm-dir-short" : "pm-dir-long"}">${arrow} ${esc(String(e.side).toUpperCase())}</span>` +
       `<span class="pm-sector">${esc(String(e.market).toUpperCase())}</span>` +
       `<span class="al-lenses">${(e.lenses || []).map(esc).join(" + ")}</span>` +
-      `<span class="al-time" title="UTC ${esc(String(e.date).slice(11, 16))}">${esc(melbTime(e.date))}</span>` +
+      `<span class="al-time" title="${esc(melbTime(e.date))} · UTC ${esc(String(e.date).slice(11, 16))}">${esc(relTime(e.date))}</span>` +
       `</a>`;
   }
 

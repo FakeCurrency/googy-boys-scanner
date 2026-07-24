@@ -15,21 +15,22 @@
   <link rel="stylesheet" href="css/fonts.css?v=1" />
   <link rel="stylesheet" href="css/styles.css?v=90" />
   <link rel="stylesheet" href="css/phasemap.css?v=16" />
-  <script src="js/nav.js?v=9"></script>
+  <script src="js/nav.js?v=10"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
 <body>
-  <header class="topbar">
+  <!-- #88: shared deck header (matches index/specs/phasemap/journal) -->
+  <header class="topbar deck-top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </span>
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">ALERTS</span></div>
     </div>
-    <nav class="pm-topnav">
-      <nav class="nav-pills" id="site-nav"></nav>
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
       <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
-    </nav>
+    </div>
   </header>
 
   <main class="wrap pm-wrap">
@@ -54,6 +55,6 @@
     <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). Discord only carries the triples; this page keeps everything. Analysis only — not financial advice.</p>
   </main>
 
-  <script src="js/alerts.js?v=4"></script>
+  <script src="js/alerts.js?v=5"></script>
 </body>
 </html>
