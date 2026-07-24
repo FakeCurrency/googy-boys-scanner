@@ -383,3 +383,68 @@
 }
 .pm-zone-tip-row + .pm-zone-tip-row { margin-top: 4px; border-top: 1px solid #1c2230; padding-top: 4px; }
 .pm-zone-tip-src { display: block; color: #6d7889; font-size: 9.5px; }
+
+/* ── Wave 7: header star + market chip (#71), loading skeleton (#77),
+   offline states (#78) ── */
+.ct-star {
+  appearance: none; border: none; background: none; cursor: pointer;
+  font-size: 20px; line-height: 1; color: var(--muted); padding: 0 2px;
+  transition: color .15s, transform .1s;
+}
+.ct-star:hover,
+.ct-star.is-on { color: #ffb020; }
+.ct-star:active { transform: scale(.86); }
+.ct-star[hidden] { display: none; }
+
+.ct-market {
+  font: 700 10px/1 var(--sans); letter-spacing: .08em;
+  color: var(--text-2); background: var(--fill);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; white-space: nowrap;
+}
+.ct-market[data-mk="asx"]    { color: var(--green); background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 34%, transparent); }
+.ct-market[data-mk="nasdaq"] { color: var(--blue);  background: var(--blue-soft);  border-color: color-mix(in srgb, var(--blue) 34%, transparent); }
+.ct-market[data-mk="crypto"] { color: #ffb020; background: color-mix(in srgb, #ffb020 12%, transparent); border-color: color-mix(in srgb, #ffb020 34%, transparent); }
+.ct-market[hidden] { display: none; }
+
+.chart-skeleton {
+  position: absolute; inset: 12px 16px 0; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; background: var(--panel);
+}
+.chart-skeleton .sk-bars {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 46%; width: min(72%, 660px);
+}
+.chart-skeleton .sk-bars span {
+  flex: 1; border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, var(--fill) 25%, var(--fill-2) 37%, var(--fill) 63%);
+  background-size: 400% 100%; animation: sk-shimmer 1.4s ease infinite;
+}
+.chart-skeleton .sk-bars span:nth-child(1){height:38%}
+.chart-skeleton .sk-bars span:nth-child(2){height:62%}
+.chart-skeleton .sk-bars span:nth-child(3){height:48%}
+.chart-skeleton .sk-bars span:nth-child(4){height:80%}
+.chart-skeleton .sk-bars span:nth-child(5){height:58%}
+.chart-skeleton .sk-bars span:nth-child(6){height:92%}
+.chart-skeleton .sk-bars span:nth-child(7){height:70%}
+.chart-skeleton .sk-bars span:nth-child(8){height:52%}
+.chart-skeleton .sk-bars span:nth-child(9){height:74%}
+.chart-skeleton .sk-bars span:nth-child(10){height:44%}
+.chart-skeleton .sk-msg { font: 600 12px/1 var(--sans); letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+@keyframes sk-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+.offline-banner {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 16px 0; padding: 8px 12px; border-radius: 10px;
+  background: color-mix(in srgb, #ffb020 12%, transparent);
+  border: 1px solid color-mix(in srgb, #ffb020 40%, transparent);
+  color: var(--text-2); font: 600 12.5px/1.35 var(--sans);
+}
+.offline-banner[hidden] { display: none; }
+.offline-banner .ob-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffb020; flex: none; }
+
+.chart-error.is-offline h2 { color: #ffb020; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-skeleton .sk-bars span { animation: none; }
+}

@@ -446,7 +446,26 @@
   // Offline visibility (2026-07-20): the service worker serves cached /data
   // when the network is gone — fine for reading, but it must never READ as
   // live on a trading dashboard. Persistent amber banner while offline.
+  let _offline = navigator.onLine === false;
+  // #78: a fresh scan needs the network — offline, the SCAN button is disabled
+  // and says why, so a tap doesn't silently no-op. Never fights the mid-scan
+  // spinner: it only re-enables when the button isn't already busy.
+  function _syncScanBtn() {
+    const b = document.getElementById("reload-btn");
+    if (!b) return;
+    if (_offline) {
+      b.disabled = true;
+      b.classList.add("is-offline");
+      b.title = "You're offline — reconnect to run a fresh scan";
+    } else if (!b.classList.contains("spinning")) {
+      b.disabled = false;
+      b.classList.remove("is-offline");
+      b.title = "Run a fresh cloud scan";
+    }
+  }
   function _netBanner(off) {
+    _offline = off;
+    _syncScanBtn();
     let el = document.getElementById("gbs-offline-banner");
     if (!off) { if (el) el.remove(); return; }
     if (!el) {
@@ -1908,7 +1927,7 @@
       await load();
       setTimeout(() => {
         btn.classList.remove("spinning");
-        btn.disabled = false;
+        btn.disabled = _offline;   // stay disabled if we went offline mid-scan (#78)
       }, 800);
       if (scanTriggered) pollForFreshScan(oldGenAt);
     });

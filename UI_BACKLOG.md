@@ -104,14 +104,14 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 7 — Chart page
 
-- [ ] 71. Chart page adopts the deck header (back + symbol + market, star synced).
+- [x] 71. Chart header now carries the watchlist ★ (same unified PM.watch store as the dashboard/lens pages — namespaced to the lens you arrived from, persists locally, mirrors to cloud with a sync code) + a coloured market chip (ASX/NASDAQ/CRYPTO). phasemap-shared.js now loads on the chart page so PM.watch is available.
 - [ ] 72. Mobile chart: full-bleed canvas, controls in a bottom sheet.
 - [ ] 73. Legend chips toggle SMA lines on tap.
-- [ ] 74. Entry/SL/TP lines labelled with % from current price.
+- [x] 74. ENTRY price line now shows its distance from the current price ("+/-X% vs live" — the trigger distance a trader watches); SL/TP lines keep their entry-relative %/R ladder (the plan's own risk framing). Applied in both the VIVEK and specs/phasemap level-drawing paths.
 - [ ] 75. Swipe/arrow to next/prev setup in the current filtered list.
 - [ ] 76. Canonical shareable chart links; PNG export button.
-- [ ] 77. Chart loading skeleton + error state in app style.
-- [ ] 78. Offline state disables SCAN button and says why (also on chart).
+- [x] 77. App-style shimmering candle skeleton fills the canvas until first paint (or the error state) replaces it — every render path funnels through header()→hideSkeleton(), fail() clears it too. Error state polished (offline-aware, see #78). Shimmer respects prefers-reduced-motion.
+- [x] 78. Dashboard SCAN button disables when offline with a "you're offline — reconnect to run a fresh scan" tooltip (never fights the mid-scan spinner; stays disabled if you drop offline mid-scan). Chart page gets a live offline banner + an offline-specific error state ("You're offline" rather than "Chart unavailable"). Both react to online/offline events live.
 
 ## Wave 8 — Journal & AI Bot pages
 

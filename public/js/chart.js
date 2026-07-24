@@ -47,6 +47,17 @@
   const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
   const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
 
+  // #71: which lens's watchlist this chart's star belongs to — matches the
+  // page the user arrived from (src=…) so a star set here shows up on that
+  // lens's list and on ★ My Names. Same unified PM.watch store the dashboard,
+  // PhaseMap and Specs pages write to (mirrors to Cloudflare KV with a sync
+  // code). scalp/crypto charts fold into the market's vivek watchlist.
+  const _src = (params.get("src") || "").toLowerCase();
+  const starLens = _src === "phasemap" ? "phasemap"
+    : (mode === "spec" || _src === "specs") ? "specs" : "vivek";
+  const starMarket = market === "scalp" ? "crypto" : market;
+  const MARKET_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO", scalp: "CRYPTO" };
+
   // ── PhaseMap overlay — draws the scanned zone bands + sweep/displacement
   // markers ON TOP of the normal chart. The record is ALWAYS fetched
   // (2026-07-02; ?pm=1 kept in old links but no longer required) so zones
@@ -703,22 +714,50 @@
     return (cur || "") + v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
   }
 
+  // #77: drop the loading skeleton once anything real (a header, a paint, or an
+  // error) is on screen. Idempotent — every render path calls header(), which
+  // calls this; fail() calls it too.
+  function hideSkeleton() {
+    const sk = document.getElementById("chart-skeleton");
+    if (sk) sk.remove();
+  }
+
   function fail(msg) {
+    hideSkeleton();
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
     const h = document.createElement("header");
     h.className = "chart-top";
     h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
     const d = document.createElement("div");
-    d.className = "chart-error";
+    d.className = "chart-error" + (offline ? " is-offline" : "");
     const tvSym = symbol
       ? encodeURIComponent(market === "crypto" ? `CRYPTO:${symbol}USD` : market === "asx" ? `ASX:${symbol}` : symbol)
       : "";
-    d.innerHTML = `<h2>Chart unavailable</h2><p>${esc(msg)}</p>` +
+    // #78: an offline failure is a distinct, non-alarming state — say so plainly
+    // rather than implying the chart is broken.
+    const head = offline ? "You're offline" : "Chart unavailable";
+    const body = offline
+      ? "This chart isn't in the offline cache yet. Reconnect and it'll load."
+      : esc(msg);
+    d.innerHTML = `<h2>${head}</h2><p>${body}</p>` +
       `<p><button class="tv-btn" id="chart-retry" type="button">↻ Retry</button></p>` +
-      (symbol ? `<p><a class="tv-link" href="https://www.tradingview.com/chart/?symbol=${tvSym}" target="_blank" rel="noopener">View ${esc(symbol.toUpperCase())} on TradingView →</a></p>` : "");
+      (symbol && !offline ? `<p><a class="tv-link" href="https://www.tradingview.com/chart/?symbol=${tvSym}" target="_blank" rel="noopener">View ${esc(symbol.toUpperCase())} on TradingView →</a></p>` : "");
     document.body.replaceChildren(h, d);
     // A hiccuping live proxy shouldn't require a manual URL re-entry.
     const btn = document.getElementById("chart-retry");
     if (btn) btn.addEventListener("click", () => location.reload());
+  }
+
+  // #78: offline banner — reflects connectivity live. The chart still shows the
+  // last loaded data (SW-cached); this just tells the user why live prices and
+  // the "next setup" arrows may be quiet.
+  function initOffline() {
+    const banner = document.getElementById("offline-banner");
+    if (!banner) return;
+    const sync = () => { banner.hidden = navigator.onLine !== false; };
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    sync();
   }
 
   // High conviction (matches the dashboard): a WEEKLY reclaim that's A/A+ or has
@@ -768,10 +807,47 @@
       .catch(() => {});
   }
 
+  // #71: the header watchlist star — same unified PM.watch store as every
+  // other page, namespaced to the lens the user came from. Persists locally
+  // even without a sync code; mirrors to the cloud when one is set.
+  function wireStar(d) {
+    const btn = $("#ct-star");
+    const w = window.PM && PM.watch;
+    if (!btn || !w) return;
+    const SYM = (d.symbol || symbol).toUpperCase();
+    const paint = () => {
+      const on = w.has(starLens, starMarket, SYM);
+      btn.textContent = on ? "★" : "☆";
+      btn.classList.toggle("is-on", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.title = (on ? "Remove from" : "Add to") +
+        " watchlist — starred names stay monitored even after the setup ends";
+    };
+    btn.hidden = false;
+    paint();
+    if (!btn._wired) {
+      btn._wired = true;
+      btn.addEventListener("click", () => {
+        w.toggle(starLens, starMarket, SYM, {
+          symbol: SYM, name: d.name || d.symbol, grade: d.grade || null,
+          dir: d.dir || null, price: d.price != null ? d.price : null,
+        });
+        paint();
+      });
+    }
+  }
+
   function header(d) {
     const cur = d.currency_symbol || "";
+    hideSkeleton();
     $("#ct-sym").textContent = d.symbol;
     document.title = `${d.symbol} — Vivek 5.0`;
+    wireStar(d);
+    const mk = $("#ct-market");
+    if (mk) {
+      const lbl = MARKET_LABEL[market] || market.toUpperCase();
+      mk.textContent = lbl; mk.dataset.mk = starMarket; mk.hidden = false;
+    }
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     const fw = $("#ct-fundwarn");
     if (fw) fw.hidden = !isFundReit(d);
@@ -1643,6 +1719,10 @@
           const rMult = Math.abs(L.price - ep) / riskDist;
           title += ` · ${rMult.toFixed(1)}R`;
         }
+      } else if (ep && L.price === ep && d.price > 0 && L.price !== d.price) {
+        // #74: ENTRY line shows its gap from the current price (trigger distance).
+        const g = (L.price - d.price) / d.price * 100;
+        title += ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs live`;
       }
       candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
@@ -1666,6 +1746,12 @@
           t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
           const rd = lv.stop ? Math.abs(ep - lv.stop) : 0;
           if (rd > 0) t += ` · ${(Math.abs(price - ep) / rd).toFixed(1)}R`;
+        } else if (price === ep && d.price > 0 && price !== d.price) {
+          // #74: the ENTRY line carries its distance from the current price —
+          // how far price must travel to arm the trade. (SL/TP above are
+          // labelled entry-relative — that's the R ladder of the plan itself.)
+          const g = (price - d.price) / d.price * 100;
+          t += ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs live`;
         }
         vkHandles.push(candle.createPriceLine({ price, color, lineWidth: weight || 1,
           lineStyle: dotted ? LC.LineStyle.Dotted : LC.LineStyle.Dashed, axisLabelVisible: true, title: t }));
@@ -2824,6 +2910,7 @@
   }
 
   function boot() {
+    initOffline();
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();
