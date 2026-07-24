@@ -2327,3 +2327,11 @@ body { letter-spacing: -0.012em; }
   padding: 7px 12px; color: var(--text); font: 800 13px/1 var(--sans);
 }
 .olw-chip:hover { border-color: var(--blue); }
+
+/* ── Wave 6 #58: skip render work for off-screen rows ───────────────────────
+   content-visibility:auto lets the browser skip layout+paint for rows outside
+   the viewport (big win on 200-400 row NASDAQ lists); the intrinsic-size
+   placeholder keeps the scrollbar honest. On-screen + expanded rows render
+   fully as normal. */
+.row-wrap { content-visibility: auto; contain-intrinsic-size: auto 76px; }
+.row-wrap.open { content-visibility: visible; }   /* never virtualize an open panel */

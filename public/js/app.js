@@ -2324,16 +2324,51 @@
     renderFreshness(state.data);
     refreshScanAgeChips();   // #53: keep open panels' "scanned Xm ago" honest
   }, 30000);
-  load().then(() => { startAutoRefresh(); setTimeout(prefetchMarkets, 300); });
-  // pull remote stars (unified watchlist) so phone/desktop agree, then refresh
-  if (window.GBSSync && GBSSync.enabled()) {
-    GBSSync.syncIn().then(() => {
-      if (state.data) {
-        renderRows();
-        const el = document.getElementById("watch-count");
-        if (el) el.textContent =
-          (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
+  // #61: idle-time prefetch of the other markets (requestIdleCallback with a
+  // timer fallback) — was a fixed 300ms that could contend with first paint.
+  const whenIdle = (fn) => (window.requestIdleCallback
+    ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 400));
+  load().then(() => {
+    startAutoRefresh();
+    whenIdle(prefetchMarkets);
+    // #66: defer the watchlist sync-in until AFTER the first rows are on
+    // screen — the star reconcile is not first-paint-critical.
+    if (window.GBSSync && GBSSync.enabled()) {
+      whenIdle(() => GBSSync.syncIn().then(() => {
+        if (state.data) {
+          renderRows();
+          const el = document.getElementById("watch-count");
+          if (el) el.textContent = (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
+        }
+      }).catch(() => {}));
+    }
+    // #69: first-paint→interactive timing beacon (console only) — before/after
+    // evidence for the perf program, zero UI cost.
+    try {
+      const nav = performance.getEntriesByType("navigation")[0];
+      const fp = (performance.getEntriesByName("first-contentful-paint")[0] || {}).startTime;
+      requestAnimationFrame(() => console.info(
+        `[perf] rows painted @ ${Math.round(performance.now())}ms` +
+        (fp ? ` · FCP ${Math.round(fp)}ms` : "") +
+        (nav ? ` · DOMContentLoaded ${Math.round(nav.domContentLoadedEventEnd)}ms` : "")));
+    } catch (_) {}
+  });
+
+  // #60: one-time purge of legacy localStorage keys left by retired features —
+  // reclaims quota so the manual journal's save can never fail silently.
+  (function purgeLegacyKeys() {
+    try {
+      if (localStorage.getItem("gbs:purged:v1")) return;
+      const DEAD = ["gbs:pulse", "gbs:cache:pullback", "gbs:cache:reversal", "gbs:cache:short",
+        "gbs:scalp", "gbs:track", "gbs:mode", "gbs:debug:pulse"];
+      DEAD.forEach((k) => localStorage.removeItem(k));
+      // Old per-mode scan caches (gbs:cache:<market>:pullback etc.) — only the
+      // vivek ones are live now.
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && /^gbs:cache:.*:(pullback|reversal|short|scalp)$/.test(k)) localStorage.removeItem(k);
       }
-    }).catch(() => {});
-  }
+      localStorage.setItem("gbs:purged:v1", "1");
+    } catch (_) {}
+  })();
 })();
