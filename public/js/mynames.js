@@ -72,12 +72,14 @@
       ? `<span class="mn-star-chip mn-trade-chip" title="Open paper position">📓 OPEN ${esc(String(x.trade.direction || "").toUpperCase())} @ ${esc(String(x.trade.entry))}${x.trade.lens ? " · " + esc(String(x.trade.lens).toUpperCase()) : ""}</span>`
       : "";
     const conf = ci ? PM.confluenceChipHTML(ci, "") : "";
+    const MKT = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
     return `<article class="mn-row">
       <div class="mn-row-top">
+        <span class="mn-mkt mn-mkt-${m}">${MKT[m] || m.toUpperCase()}</span>
         <span class="pm-ticker">${esc(t)}</span>
         ${conf}
         ${stars}${trade}
-        <a class="pm-chart-cue mn-chart-link" href="chart.html?m=${m}&s=${encodeURIComponent(t)}&pm=1">OPEN CHART →</a>
+        <a class="pm-chart-cue mn-chart-link" href="chart.html?m=${m}&s=${encodeURIComponent(t)}&src=mynames">OPEN CHART →</a>
       </div>
       <div class="mn-row-lenses">${lensChips(m, t, scans)}</div>
     </article>`;

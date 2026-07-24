@@ -128,8 +128,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 - [x] 87. Every nav page now uses the same deck header structure (topbar deck-top: brand · nav-pills · deck-top-right). The phasemap sub-pages (insights, legend) and mynames/sectors stopped hand-rolling their own pm-topnav layouts. The nav strip itself is the shared include (nav.js injects it into #site-nav on every page); all headers now share one structure. Verified deck header + no 320px overflow on all 7 lens/utility pages.
 - [x] 88. Alerts page: on-screen times are now RELATIVE ("4h ago"), with the full Melbourne time + UTC in the tooltip; adopted the shared deck header; chart links use the canonical src=alerts.
-- [ ] 89. ★ My Names rows use the dashboard row-card language, badged per lens.
-- [ ] 90. Styled 404/error page; favicon + touch icons regenerated from the brand tile.
+- [x] 89. ★ My Names rows now speak the dashboard row-card language: a bordered card with hover lift + accent, a colour-matched market chip (ASX/NASDAQ/CRYPTO) leading each row, and the per-lens status badges (VIVEK/PHASEMAP/SPECS · grade/state/quiet). Chart links use the canonical src=mynames (was the stale &pm=1).
+- [x] 90. Styled 404 page (404.html) in the app's language — deck header, brand glyph, clear "back to the scanner" + PhaseMap/Journal actions, shared footer. Regenerated the full icon set from the brand tile (dark rounded square + green chart-up arrow): apple-touch (180), icon-192, icon-512, plus the previously-missing favicon.ico (16/32/48) + favicon-32/16 PNGs, and linked them on every page.
 - [x] 91. One shared footer include (nav.js renderFooter): a consistent credit line (data source · ~15 min delayed · refreshed daily) + the standard disclaimer, injected on every nav page that doesn't already ship its own <footer class="site-footer"> (dashboard/journal/bot keep theirs — no double footer). Verified across 10 pages.
 
 ## Wave 10 — Accessibility & quality gates
