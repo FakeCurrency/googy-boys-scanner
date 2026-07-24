@@ -272,6 +272,16 @@
     try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")).has(`${state.market}:${sym}`); }
     catch (_) { return false; }
   };
+  // #55: cross-lens watch — which lenses have starred this name (current
+  // market). Powers the ★ watch view's per-lens badges + inclusion.
+  const LENS_TAG = [["vivek", "V"], ["phasemap", "P"], ["specs", "S"]];
+  const LENS_NAME = { V: "VIVEK", P: "PhaseMap", S: "Specs" };
+  function lensStars(sym) {
+    const w = _pmWatch();
+    if (!w) return isStarred(sym) ? ["V"] : [];
+    return LENS_TAG.filter(([ns]) => w.has(ns, state.market, sym)).map(([, t]) => t);
+  }
+  const isWatchedAny = (sym) => lensStars(sym).length > 0;
   function toggleStar(sym) {
     const w = _pmWatch();
     if (w) {
@@ -658,6 +668,7 @@
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
           ${mcapBadge}
+          ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
         </div>
         <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
@@ -1130,7 +1141,7 @@
     const all = (state.data && state.data.results) || [];
     let list;
     if (state.view === "watch") {
-      list = all.filter((r) => isStarred(r.symbol));
+      list = all.filter((r) => isWatchedAny(r.symbol));   // #55: any lens, not just VIVEK
     } else if (state.tab === "aplus") {
       list = all.filter((r) => r.grade === "A+");
     } else if (state.tab === "a") {
@@ -1401,17 +1412,51 @@
     // Entrance cascade on the FIRST paint only — later renders (filters,
     // sorts, pills) swap instantly, which reads as much snappier.
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
+    // #55: the other-lens strip lives at the end of the watch view — append it
+    // here (before the small-list early return, so short watchlists get it too).
+    if (state.view === "watch") appendOtherLensWatched(wrap, list);
     if (list.length <= FIRST) return;
     const token = _rowsToken;
     let i = FIRST;
     const step = () => {
       if (token !== _rowsToken || !wrap.isConnected) return;
-      wrap.insertAdjacentHTML("beforeend",
-        list.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join(""));
+      // keep the other-lens strip last as rows stream in
+      const olw = wrap.querySelector(".olw");
+      const html = list.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join("");
+      if (olw) olw.insertAdjacentHTML("beforebegin", html);
+      else wrap.insertAdjacentHTML("beforeend", html);
       i += BATCH;
       if (i < list.length) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+  }
+
+  // #55: starred names in PhaseMap/Specs for this market that AREN'T in the
+  // VIVEK scan get a compact "also watched" strip below the rows — so the ★
+  // view is the true, whole watchlist, not just its VIVEK slice.
+  function appendOtherLensWatched(wrap, shownList) {
+    const w = _pmWatch();
+    if (!w) return;
+    const shown = new Set(shownList.map((r) => r.symbol));
+    const extras = {};   // symbol -> lenses
+    [["phasemap", "P"], ["specs", "S"]].forEach(([ns, tag]) => {
+      const m = w.map(ns, state.market) || {};
+      Object.keys(m).forEach((sym) => {
+        if (shown.has(sym)) return;
+        (extras[sym] = extras[sym] || { lenses: [], snap: m[sym] && m[sym].snap }).lenses.push(tag);
+      });
+    });
+    const syms = Object.keys(extras);
+    if (!syms.length) return;
+    const chips = syms.slice(0, 40).map((sym) => {
+      const e = extras[sym];
+      const href = `chart.html?m=${state.market}&s=${encodeURIComponent(sym)}&pm=1`;
+      const badges = e.lenses.map((l) => `<span class="lens-badge lens-${l}">${l}</span>`).join("");
+      return `<a class="olw-chip" href="${href}" title="Open ${esc(sym)} — not in the current VIVEK scan">${badges}<b>${esc(sym)}</b></a>`;
+    }).join("");
+    wrap.insertAdjacentHTML("beforeend",
+      `<div class="olw"><div class="olw-hd">Also on your watchlist — other lenses, not in the current VIVEK scan</div>` +
+      `<div class="olw-row">${chips}</div></div>`);
   }
 
   // AT-LEVEL banner strip retired (Wave 3, 2026-07-22): the deck's ◎ At-level

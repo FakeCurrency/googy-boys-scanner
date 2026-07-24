@@ -82,7 +82,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 52. Hover prefetch of chart data for the hovered symbol.
 - [x] 53. Expanded panel scan-age chip ticks live with the 30s refresher.
 - [x] 54. Spark min/max markers via SVG titles.
-- [ ] 55. Watch tab shows starred names from ALL lenses, badged per lens.
+- [x] 55. Watch tab shows starred names from ALL lenses, badged per lens.
 
 ## Wave 6 — Performance & PWA depth (the "smooth + snappy" program)
 

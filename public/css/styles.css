@@ -2308,3 +2308,22 @@ body { letter-spacing: -0.012em; }
   font: 600 11px/1 var(--sans); padding: 8px 12px; border-radius: 999px;
 }
 .dp-copy:hover { color: var(--text-2); border-color: var(--border-2); }
+
+/* ── Wave 5 #55: cross-lens watch badges + other-lens strip ─────────────── */
+.lens-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 5px; flex: 0 0 auto;
+  font: 800 9px/1 var(--mono); color: #fff;
+}
+.lens-badge.lens-V { background: var(--blue); }
+.lens-badge.lens-P { background: var(--purple, #bf5af2); }
+.lens-badge.lens-S { background: var(--orange); }
+.olw { margin: 14px 2px 4px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.olw-hd { font: 700 10.5px/1.3 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 10px; }
+.olw-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.olw-chip {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  background: var(--fill-2); border: 1px solid var(--border); border-radius: 999px;
+  padding: 7px 12px; color: var(--text); font: 800 13px/1 var(--sans);
+}
+.olw-chip:hover { border-color: var(--blue); }
