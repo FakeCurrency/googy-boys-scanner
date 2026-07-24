@@ -760,6 +760,58 @@
     sync();
   }
 
+  // #76: a CANONICAL shareable link — just the identity params (market, symbol,
+  // lens context), dropping the transient filter/sort state (flt=…) that only
+  // makes sense to the tab you came from. Copies to the clipboard.
+  function canonicalURL() {
+    const q = new URLSearchParams();
+    q.set("m", market);
+    if (symbol) q.set("s", decodeURIComponent(symbol));
+    if (mode === "spec") q.set("mode", "spec");
+    const dir = params.get("dir"); if (dir) q.set("dir", dir);
+    const src = params.get("src"); if (src) q.set("src", src);
+    return `${location.origin}${location.pathname}?${q.toString()}`;
+  }
+  function wireShare() {
+    const btn = document.getElementById("cf-share");
+    if (!btn || btn._wired) return;
+    btn._wired = true;
+    btn.addEventListener("click", async () => {
+      const url = canonicalURL();
+      const done = (ok) => {
+        const old = btn.textContent;
+        btn.textContent = ok ? "✓ Link copied" : "⤴ " + url;
+        setTimeout(() => { btn.textContent = old; }, ok ? 1600 : 3500);
+      };
+      try {
+        if (navigator.share && /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
+          await navigator.share({ title: `${decodeURIComponent(symbol)} — Vivek 5.0`, url });
+          return;
+        }
+        await navigator.clipboard.writeText(url); done(true);
+      } catch (_) { done(false); }
+    });
+  }
+
+  // #76: PNG export — lightweight-charts' takeScreenshot() gives the rendered
+  // canvas; we download it as <SYM>_<tf>.png. Wired from render() so it has the
+  // live chart handle.
+  function wirePng(chart, d, getTF) {
+    const btn = document.getElementById("cf-png");
+    if (!btn || !chart || typeof chart.takeScreenshot !== "function") { if (btn) btn.hidden = true; return; }
+    if (btn._wired) return;
+    btn._wired = true;
+    btn.addEventListener("click", () => {
+      try {
+        const cnv = chart.takeScreenshot();
+        const name = `${(d.symbol || symbol).toUpperCase()}_${(getTF && getTF()) || ""}.png`.replace(/_\.png$/, ".png");
+        const dl = (href) => { const a = document.createElement("a"); a.href = href; a.download = name; a.click(); };
+        if (cnv.toBlob) cnv.toBlob((b) => { const u = URL.createObjectURL(b); dl(u); setTimeout(() => URL.revokeObjectURL(u), 4000); });
+        else dl(cnv.toDataURL("image/png"));
+      } catch (_) {}
+    });
+  }
+
   // High conviction (matches the dashboard): a WEEKLY reclaim that's A/A+ or has
   // strong structure — the cleanest, lowest-drawdown cell in the backtest.
   function isHighConviction(d) {
@@ -1522,6 +1574,19 @@
       color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
       priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
     }));
+    // #73: tap a legend name to hide/show that SMA line. Tracked by NAME (line
+    // counts differ per timeframe) so the choice survives TF switches. The
+    // per-button click is wired inside legend() (idempotent onclick) so it
+    // always references THIS render's series, never a stale earlier render.
+    const hiddenSmas = new Set();
+    function toggleSma(name) {
+      if (hiddenSmas.has(name)) hiddenSmas.delete(name); else hiddenSmas.add(name);
+      const cur = tfs[curTF];
+      (cur ? cur.lines : []).forEach((l, i) => {
+        if (l.name === name && lineSeries[i]) lineSeries[i].applyOptions({ visible: !hiddenSmas.has(name) });
+      });
+      if (cur) legend(cur);
+    }
 
     // ── PhaseMap zone bands (?pm=1) — every scanned zone as a shaded band with
     // a labelled dotted midline. Bands are price-static, so only their time
@@ -1800,7 +1865,12 @@
     function legend(tf) {
       const smas = tf.lines.map((l) => {
         const last = l.data.length ? l.data[l.data.length - 1].value : null;
-        return `<span><span class="cl-name" style="color:${l.color}">${l.name}</span> ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
+        const off = hiddenSmas.has(l.name);
+        // #73: each SMA name is a toggle button — tap to hide/show its line.
+        return `<span class="cl-item${off ? " is-off" : ""}"><button type="button" class="cl-name" ` +
+          `data-sma="${esc(l.name)}" style="color:${l.color}" aria-pressed="${off ? "false" : "true"}" ` +
+          `title="Tap to ${off ? "show" : "hide"} the ${esc(l.name)} line">${esc(l.name)}</button>` +
+          ` ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
       }).join("");
       // VIVEK: a small key so the reaction dot, the entry-trigger arrow and the
       // volume colours are self-explanatory.
@@ -1810,7 +1880,13 @@
           `<span style="color:#00d2ff">▮ vol ≥1.5×</span>` +
           `<span style="color:#2fd07f">▮ rising</span><span style="color:#ff5b5b">▮ falling</span></span>`
         : "";
-      $("#chart-legend").innerHTML = `<span id="cl-ohlc" class="cl-ohlc"></span>` + smas + key;
+      const host = $("#chart-legend");
+      host.innerHTML = `<span id="cl-ohlc" class="cl-ohlc"></span>` + smas + key;
+      // #73: (re)wire each name button to this render's toggle. onclick is
+      // idempotent, so rebuilding the legend on every TF switch never stacks.
+      host.querySelectorAll(".cl-name[data-sma]").forEach((btn) => {
+        btn.onclick = () => toggleSma(btn.dataset.sma);
+      });
     }
     // Candle readout on hover: O/H/L/C + the period's % move (vs the prior
     // close), coloured. Updates the legend slot as the crosshair moves.
@@ -1896,7 +1972,7 @@
       }
       lineSeries.forEach((s, i) => {
         const l = tf.lines[i];
-        if (l) { s.applyOptions({ color: l.color }); s.setData(l.data); }
+        if (l) { s.applyOptions({ color: l.color, visible: !hiddenSmas.has(l.name) }); s.setData(l.data); }
         else { s.setData([]); }
       });
 
@@ -1953,6 +2029,7 @@
     // would recompute the BB/KC/EMA9/21 overlays we deliberately don't want here).
     const pair = (!d._vivek && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
     const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch };
+    wirePng(chart, d, () => curTF);   // #76: PNG export needs the live chart handle
 
     if (pair) {
       // Crypto → live intraday timeframes streamed from Binance (15M / 30M / 1H).
@@ -2868,6 +2945,23 @@
           if (e.key === "ArrowLeft"  && idx > 0)               go(idx - 1);
           if (e.key === "ArrowRight" && idx < list.length - 1) go(idx + 1);
         });
+        // #75: swipe left/right to step the list — but NOT on the chart canvas
+        // (it owns horizontal drag for panning) or the drawing layer. Swiping
+        // the header / toolbar / footer frame changes setup; a clear, mostly-
+        // horizontal flick only.
+        let tsX = 0, tsY = 0, onCanvas = false;
+        document.addEventListener("touchstart", (e) => {
+          const t = e.changedTouches[0]; tsX = t.clientX; tsY = t.clientY;
+          onCanvas = !!(e.target.closest && e.target.closest("#chart, .draw-layer, .draw-tools"));
+        }, { passive: true });
+        document.addEventListener("touchend", (e) => {
+          if (onCanvas) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - tsX, dy = t.clientY - tsY;
+          if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2) return;
+          if (dx > 0 && idx > 0) go(idx - 1);              // swipe right → previous
+          else if (dx < 0 && idx < list.length - 1) go(idx + 1);  // swipe left → next
+        }, { passive: true });
       })
       .catch(() => {});
   }
@@ -2911,6 +3005,7 @@
 
   function boot() {
     initOffline();
+    wireShare();
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();

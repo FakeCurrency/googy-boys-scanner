@@ -185,7 +185,7 @@
 .cfm-val.green { color: var(--green); }
 .cfm-val.amber { color: var(--orange); }
 .cf-analysis { font-size: 13.5px; line-height: 1.65; color: var(--text-2); max-width: 900px; margin: 0 0 14px; }
-.cf-actions { display: flex; align-items: center; gap: 14px; }
+.cf-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .tv-btn {
   display: inline-block; text-decoration: none;
   background: var(--blue-soft); color: var(--blue);
@@ -447,4 +447,34 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chart-skeleton .sk-bars span { animation: none; }
+}
+
+/* #73: legend SMA names are toggle buttons — tap to hide/show a line. The
+   legend container stays pointer-events:none (so you can pan the chart through
+   it); only the buttons opt back in to receive taps. */
+.chart-legend .cl-name {
+  appearance: none; border: none; background: none; padding: 2px 3px; margin: -2px 0; border-radius: 5px;
+  font: inherit; letter-spacing: inherit; cursor: pointer; pointer-events: auto;
+}
+.chart-legend .cl-name:hover { background: rgba(120,120,128,.16); }
+.chart-legend .cl-item { align-items: center; }
+.chart-legend .cl-item.is-off { opacity: .42; }
+.chart-legend .cl-item.is-off .cl-name { text-decoration: line-through; }
+
+/* #72: mobile — full-bleed canvas, timeframe controls as a thumb-reachable
+   bar directly beneath it (source-reordered below the chart in the flex
+   column). The chart's ResizeObserver repaints to the new dimensions. */
+@media (max-width: 560px) {
+  .chart-main { padding: 0; }
+  .chart-canvas { height: 64vh; }
+  .chart-skeleton { inset: 0; }
+  .chart-legend { top: 10px; left: 12px; }
+  .tf-toggle {
+    order: 1; margin: 0; border-radius: 0; padding: 8px 10px;
+    justify-content: center; gap: 6px; row-gap: 6px;
+    background: var(--panel); border-top: 1px solid var(--border);
+  }
+  .tf-btn { padding: 8px 13px; font-size: 12.5px; }
+  .chart-foot { order: 2; }
+  .draw-tools { top: 12px; right: 12px; }
 }
