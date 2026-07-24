@@ -86,8 +86,8 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 6 — Performance & PWA depth (the "smooth + snappy" program)
 
-- [ ] 56. Transition audit: every animation ≤200ms, transform/opacity only, zero layout-shifting transitions site-wide.
-- [ ] 57. Input-latency budget: filter/sort/pill interactions paint <50ms on a 200-row list (measured in e2e).
+- [x] 56. Transition audit: every animation ≤200ms, transform/opacity only, zero layout-shifting transitions site-wide.
+- [x] 57. Input-latency budget: filter/sort/pill interactions paint <50ms on a 200-row list (measured in e2e).
 - [x] 58. Scroll performance audit: no scroll-linked jank (passive listeners, content-visibility on below-fold rows).
 - [ ] 59. Slim the head-cache further (drop chips/entry_types) so more of NASDAQ fits the untouched 500KB cap.
 - [x] 60. Purge legacy localStorage keys post-migration (quota headroom protects the journal).
@@ -97,7 +97,7 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 - [x] 64. SW update flow: one-tap Update applies AND reloads; background tabs self-heal on controllerchange; 30-min re-check for long-open tabs; apply-on-return via visibilitychange. (Shipped early — owner hit the stale-tab case.)
 - [ ] 65. Single SVG sprite for per-row icons (~15% list HTML cut at 200 rows).
 - [x] 66. Defer GBSSync.syncIn until after first rows paint.
-- [ ] 67. sessionStorage cache for market_caps + backtest artifacts.
+- [x] 67. sessionStorage cache for market_caps + backtest artifacts.
 - [ ] 68. Windowed rendering fallback if any list exceeds 300 rows.
 - [x] 69. First-paint→interactive timing beacon (console) for before/after evidence.
 - [ ] 70. Lighthouse budget in CI — fail on TTI/CLS regression past thresholds.

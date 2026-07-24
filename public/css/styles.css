@@ -565,7 +565,7 @@ body {
   will-change: transform;
   /* backwards fill holds the start frame during the stagger delay, then
      releases so :hover transforms keep working once the entrance finishes. */
-  animation: rowIn .46s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: rowIn .2s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   animation-delay: calc(var(--row-i, 0) * 26ms);
 }
 .row-wrap:hover {
@@ -750,7 +750,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .detail-anim {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: grid-template-rows 0.2s cubic-bezier(0.22, 1, 0.36, 1);   /* #56: <=200ms */
 }
 .row-wrap.open .detail-anim { grid-template-rows: 1fr; }
 .detail-inner { overflow: hidden; min-height: 0; }
@@ -761,7 +761,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .detail-inner > .debug-panel {
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.3s ease 0.1s, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+  transition: opacity 0.18s ease 0.04s, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1) 0.04s;   /* #56 */
 }
 .row-wrap.open .detail-inner > .row-detail,
 .row-wrap.open .detail-inner > .debug-panel { opacity: 1; transform: none; }
@@ -1185,7 +1185,7 @@ body.debug-mode .debug-panel {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
-.placeholder { animation: fadeUp .4s cubic-bezier(0.22,1,0.36,1) backwards; }
+.placeholder { animation: fadeUp .2s cubic-bezier(0.22,1,0.36,1) backwards; }
 
 /* search overlay: backdrop fades, panel rises into place */
 @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1195,7 +1195,7 @@ body.debug-mode .debug-panel {
 }
 .search-overlay:not([hidden]) { animation: overlayIn .2s ease; }
 .search-overlay:not([hidden]) .search-box {
-  animation: searchBoxIn .34s cubic-bezier(0.22,1,0.36,1);
+  animation: searchBoxIn .2s cubic-bezier(0.22,1,0.36,1);
 }
 .sr-row { transition: background .14s ease, transform .12s ease; }
 .sr-row:active { transform: scale(0.99); }

@@ -96,6 +96,18 @@ const check = (ok, label) => {
     check(d0 !== d1, `sort direction flips (${d0} → ${d1})`);
     const rowsAfterSort = await page.$$eval(".row-wrap", (n) => n.length);
     check(rowsAfterSort > 0, `rows still render after sorting (${rowsAfterSort})`);
+
+    // #57: input-latency budget — the synchronous cost of a sort interaction
+    // (buildList + first-chunk paint) on the largest list must stay snappy.
+    await page.evaluate(() => { const b = document.querySelector('.market-btn[data-market="nasdaq"]'); if (b) b.click(); });
+    await page.waitForTimeout(1500);
+    const nRows = await page.$$eval(".row-wrap", (n) => n.length);
+    const sortMs = await page.evaluate(() => {
+      const t0 = performance.now();
+      document.getElementById("sort-cycle").click();   // sync handler → first-chunk render
+      return performance.now() - t0;
+    });
+    check(sortMs < 80, `sort interaction paints fast on ${nRows} rows (${sortMs.toFixed(1)}ms sync, budget 80)`);
     await page.context().close();
 
     // ── Recommendations page ─────────────────────────────────────────────

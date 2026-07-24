@@ -1215,9 +1215,9 @@
   };
   async function loadEntryQuality() {
     try {
-      const res = await fetch("data/vivek_backtest_longonly.json", { cache: "no-cache" });
-      if (!res.ok) return;
-      const by = (((await res.json()) || {}).results || {}).by_entry_type || {};
+      const bt = await sessFetch("data/vivek_backtest_longonly.json");   // #67
+      if (!bt) return;
+      const by = ((bt.results) || {}).by_entry_type || {};
       let touched = false;
       for (const code in VK_ENTRY_Q) {
         const s = by[code];
@@ -1614,11 +1614,26 @@
     } catch (_) { /* the strip is optional — never block the dashboard */ }
   }
 
+  // #67: session cache for slow-changing artifacts (market caps, backtest
+  // stats). They refresh at most daily, so a soft reload within the same tab
+  // session serves them from sessionStorage instead of re-fetching. A fresh
+  // session (new tab) still pulls the latest.
+  async function sessFetch(url) {
+    const key = "gbs:sess:" + url;
+    try { const c = sessionStorage.getItem(key); if (c) return JSON.parse(c); } catch (_) {}
+    try {
+      const res = await fetch(url, { cache: "no-cache" });
+      if (!res.ok) return null;
+      const j = await res.json();
+      try { sessionStorage.setItem(key, JSON.stringify(j)); } catch (_) {}
+      return j;
+    } catch (_) { return null; }
+  }
+
   async function loadCaps() {
     try {
-      const res = await fetch("data/market_caps.json", { cache: "no-cache" });
-      if (!res.ok) return;
-      const raw = await res.json();
+      const raw = await sessFetch("data/market_caps.json");
+      if (!raw) return;
       // Cache stores {"asx:BHP": {"mcap": 1.2e9, "ts": "..."}}; flatten to floats.
       const flat = {};
       for (const k in raw) {
