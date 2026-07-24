@@ -17,16 +17,20 @@ on:
     # SCHEDULE RE-REGISTRATION (2026-07-24): GitHub's scheduler silently dropped
     # the 00:07 / 01:07 / 02:07 ASX runs (no run created at all — the same
     # "silently skipped morning runs" failure the :07 move was meant to dodge;
-    # every run that DID start stayed green). Editing this workflow file on the
-    # default branch forces GitHub to re-register its crons — that is this
-    # comment's entire job. If morning runs ghost again, touch this file again
-    # and consider a redundant offset cron (e.g. also :47) for the ASX window.
+    # every run that DID start stayed green). A file-touch re-registration at
+    # 02:19 did NOT bring the 03:07 cron back, so the :47 SELF-HEALING BACKSTOP
+    # below now covers the window: it fires 40 min after each :07 slot, asks the
+    # LIVE site's /api/health whether a scan landed within the last hour, and
+    # skips itself when one did. A healthy scheduler costs zero extra runs; a
+    # ghosted :07 is caught within the hour instead of aging into a watchdog
+    # alert. (Gate logic: see the backstop branch in the gate job below.)
     #
     # OFF-:00 MINUTES (2026-07-22): GitHub's scheduler is most congested at the
     # top of the hour — their own docs recommend a random minute — and this
     # repo has recorded 48-min drift and silently skipped morning runs. :07
     # keeps the same effective cadence while dodging the worst-load slot.
     - cron: "7 0-5 * * 1-5"       # ASX  00:07–05:07 UTC (hourly)
+    - cron: "47 0-5 * * 1-5"      # ASX BACKSTOP — no-op unless the :07 ghosted (gate job)
     - cron: "37 6 * * 1-5"        # ASX  06:37 UTC ≈ 4:37 PM AEST (closing alert)
     - cron: "37 13 * * 1-5"       # NASDAQ open  13:37 UTC
     - cron: "7 14-20 * * 1-5"     # NASDAQ 14:07–20:07 UTC (hourly)
@@ -67,6 +71,26 @@ jobs:
       - id: check
         run: |
           DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
+          # :47 ASX BACKSTOP (2026-07-24): only exists to catch a :07 run the
+          # GitHub scheduler silently never started. Ask the LIVE site whether
+          # a scan landed within the last hour (max_h=1); if yes, this run is
+          # redundant — skip. If the data is stale OR health is unreachable,
+          # run the missed scan (fail open: a broken probe must never leave
+          # the site stale).
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "47 0-5 * * 1-5" ]; then
+            HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?max_h=1" || echo "")
+            echo "backstop health probe: $HEALTH"
+            if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
+              echo "Backstop :47 — a scan already landed this hour. Skipping."
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "market_override=" >> "$GITHUB_OUTPUT"
+            else
+              echo "Backstop :47 — data stale or probe failed. Running the missed scan."
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              echo "market_override=" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
           if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -ge 6 ]; then
             # Weekend schedule: stock markets are shut, but crypto trades 24/7 —
             # run a crypto-only scan so the dashboard doesn't stale Fri->Mon.
