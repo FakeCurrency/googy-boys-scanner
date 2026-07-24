@@ -115,13 +115,13 @@ daily note + movers + nav/tab slot), first-paint-only row animation, SW auto-upd
 
 ## Wave 8 — Journal & AI Bot pages
 
-- [ ] 79. Journal adopts the deck header + toolbar language (P&L headline stays first).
+- [x] 79. Journal now uses the shared deck header (topbar deck-top — same as index/specs/phasemap): brand · nav · right-aligned status group (account summary + sync pill). The P&L headline stays the first thing in the body. Account summary drops on mobile (redundant with the P&L headline) so the header never overflows.
 - [x] 80. The P&L headline now carries a compact cumulative-$ sparkline of the BOT book's realised curve (the honest record) + its running total-$ · total-R, alongside the open-positions unrealised number.
 - [x] 81. Closed-trade R is now a filled colour-scale chip — deeper green the bigger the win (≥2R / ≥1R / >0), red past the full stop (>-1R / ≤-1R), neutral at flat. Asymmetric buckets because wins run open-ended while losses cap near the -1R stop.
 - [x] 82. The close-position modal shows a live "Realised R + $ impact" preview that updates as you type the exit price, before you confirm. Computed by cloning the trade and running the EXACT resolver the load path uses (ensureClosedR) — verified preview === actual outcome (+2.59R preview matched the booked +2.59R).
 - [x] 83. Always-visible header pill shows the manual-journal sync state — ☁ Synced (green) / 📴 Local only (muted) / ⚠ Sync error (red, on a save/sync failure via the gbs:save-error event). Tapping it opens the (folded) sync settings. All three states verified.
 - [x] 84. Weekly digest card at the top: bot book closes in the last 7 days — count, total R, total $, win rate, best close — computed client-side from the book.
-- [ ] 85. bot.html visual alignment to deck tokens; inline styles move to a css file.
+- [x] 85. bot.html's 406-line inline &lt;style&gt; block extracted to public/css/bot.css (linked, versioned) — bot.html drops from ~845 to 439 lines. The styles already referenced the shared design tokens (var(--panel/green/red/…)); verified the page renders identically with the external sheet.
 - [x] 86. New-position cards now show the entry-type setup chip (Weekly reclaim / Daily retest / …) consistently with the tables, and use the canonical src=journal chart link (was the stale &pm=1).
 
 ## Wave 9 — Cross-page consistency

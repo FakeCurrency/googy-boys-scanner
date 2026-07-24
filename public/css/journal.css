@@ -693,6 +693,11 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-sync-pill.off { color: var(--muted); }
 .jr-sync-pill.err { color: var(--red); background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
 .jr-sync-pill:hover { border-color: var(--blue); }
+/* #79: in the deck header keep the right group from overflowing narrow screens —
+   the account summary is redundant with the P&L headline below, so drop it on
+   mobile and keep the sync pill. */
+.deck-top .deck-top-right { min-width: 0; }
+@media (max-width: 620px) { .deck-top .jr-topsum { display: none; } }
 
 /* #84: weekly digest card — bot book, last 7 days */
 .jr-digest { margin: 14px 0; padding: 14px 16px; border-radius: 14px; background: var(--fill); border: 1px solid var(--border); }

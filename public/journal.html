@@ -14,12 +14,14 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=1" />
   <link rel="stylesheet" href="css/styles.css?v=90" />
-  <link rel="stylesheet" href="css/journal.css?v=27" />
+  <link rel="stylesheet" href="css/journal.css?v=28" />
   <script src="js/nav.js?v=9"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
 <body>
-  <header class="topbar">
+  <!-- #79: shared deck header (matches index/specs/phasemap) — brand · nav ·
+       right-aligned status. The P&L headline stays the first thing in <main>. -->
+  <header class="topbar deck-top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
@@ -27,9 +29,11 @@
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
     </div>
     <nav class="nav-pills" id="site-nav"></nav>
-    <span class="jr-topsum" id="jr-topsum"></span>
-    <!-- #83: always-visible manual-journal sync status — synced / local-only / error -->
-    <button class="jr-sync-pill off" id="jr-sync-pill" type="button" title="Manual-journal sync status — tap to open sync settings">📴 Local only</button>
+    <div class="deck-top-right">
+      <span class="jr-topsum" id="jr-topsum"></span>
+      <!-- #83: always-visible manual-journal sync status — synced / local-only / error -->
+      <button class="jr-sync-pill off" id="jr-sync-pill" type="button" title="Manual-journal sync status — tap to open sync settings">📴 Local only</button>
+    </div>
   </header>
 
   <main class="wrap">
