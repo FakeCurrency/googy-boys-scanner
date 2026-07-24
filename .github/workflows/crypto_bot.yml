@@ -14,6 +14,11 @@ on:
   schedule:
     # :22 (2026-07-22): off GitHub's congested :00 slot, and offset from
     # scan.yml's :07 crons so the two never co-arrive at the shared queue.
+    #
+    # SCHEDULE RE-REGISTRATION (2026-07-24): GitHub's scheduler also dropped
+    # this workflow's 23:22 UTC owned-hour run (alongside scan.yml's morning
+    # crons — no runs created, nothing failed). Editing the file re-registers
+    # the crons; that is this comment's only purpose.
     - cron: "22 * * * *"       # hourly, all days (weekday stock-session hours
                                # skipped by the gate job below — scan.yml owns
                                # crypto during those windows)
