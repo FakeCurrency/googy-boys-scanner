@@ -91,8 +91,12 @@
   }
   function cacheSetHead(key, data) {
     try {
+      // #59: strip the heaviest per-row fields from the head-cache so more of
+      // a big NASDAQ payload fits under the untouched 500KB cap. chips +
+      // entry_types + markers are irrelevant on the transient "updating…"
+      // paint (confluence is KEPT so the deck pills don't flash a wrong count).
       const rows = ((data && data.results) || []).slice(0, HEAD_ROWS)
-        .map(({ spark, detail, plans, analysis, ...slim }) => slim);
+        .map(({ spark, detail, plans, analysis, chips, entry_types, markers, ...slim }) => slim);
       const head = { ...data, results: rows, _head: true,
                      _full_count: ((data && data.results) || []).length };
       const payload = JSON.stringify({ ts: Date.now(), data: head });
@@ -1403,32 +1407,50 @@
       (groupAt[idx] ? `<div class="row-group" data-grade="${esc(groupAt[idx])}" style="--grade-color:${GRADE_VAR[groupAt[idx]] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[groupAt[idx]] || groupAt[idx])}</span><span class="row-group-n">${gradeCount(groupAt[idx])}</span></div>` : "")
       + rowHtml(r, idx);
 
+    // #68: windowing safeguard — content-visibility (#58) keeps off-screen
+    // rows cheap to lay out, but 700+ ASX WATCH-tab nodes still bloat the DOM.
+    // Cap the rendered set and tell the user exactly what was held back (never
+    // a silent truncation), with a one-tap "show all" escape hatch.
+    const WINDOW_CAP = 300;
+    const capped = list.length > WINDOW_CAP && !state._showAll;
+    const renderList = capped ? list.slice(0, WINDOW_CAP) : list;
+    const heldBack = list.length - renderList.length;
+
     // Incremental render (UI Wave 1): the first chunk paints synchronously so
     // the list is instantly usable; the tail streams in rAF batches so a
     // 400-row NASDAQ list can't block the first paint. Delegated row handlers
     // keep working on appended rows; the token kills a superseded stream.
     const FIRST = 40, BATCH = 60;
-    wrap.innerHTML = list.slice(0, FIRST).map((r, idx) => rowOrGroup(r, idx)).join("");
+    const capNotice = () => heldBack > 0
+      ? `<div class="row-cap"><span>Showing the top ${WINDOW_CAP} of ${list.length} — refine filters to narrow, or</span> <button class="row-cap-all" type="button">show all ${list.length}</button></div>`
+      : "";
+    wrap.innerHTML = renderList.slice(0, FIRST).map((r, idx) => rowOrGroup(r, idx)).join("");
     // Entrance cascade on the FIRST paint only — later renders (filters,
     // sorts, pills) swap instantly, which reads as much snappier.
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
     // #55: the other-lens strip lives at the end of the watch view — append it
     // here (before the small-list early return, so short watchlists get it too).
-    if (state.view === "watch") appendOtherLensWatched(wrap, list);
-    if (list.length <= FIRST) return;
+    if (state.view === "watch") appendOtherLensWatched(wrap, renderList);
+    if (renderList.length <= FIRST) { if (capNotice()) wrap.insertAdjacentHTML("beforeend", capNotice()); wireCapAll(wrap); return; }
     const token = _rowsToken;
     let i = FIRST;
     const step = () => {
       if (token !== _rowsToken || !wrap.isConnected) return;
       // keep the other-lens strip last as rows stream in
       const olw = wrap.querySelector(".olw");
-      const html = list.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join("");
+      const html = renderList.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join("");
       if (olw) olw.insertAdjacentHTML("beforebegin", html);
       else wrap.insertAdjacentHTML("beforeend", html);
       i += BATCH;
-      if (i < list.length) requestAnimationFrame(step);
+      if (i < renderList.length) requestAnimationFrame(step);
+      else if (capNotice()) { wrap.insertAdjacentHTML("beforeend", capNotice()); wireCapAll(wrap); }
     };
     requestAnimationFrame(step);
+  }
+  // #68: the "show all N" escape hatch below a windowed list.
+  function wireCapAll(wrap) {
+    const btn = wrap.querySelector(".row-cap-all");
+    if (btn) btn.addEventListener("click", () => { state._showAll = true; renderRows(); }, { once: true });
   }
 
   // #55: starred names in PhaseMap/Specs for this market that AREN'T in the
@@ -1810,7 +1832,7 @@
         x.classList.toggle("is-active", x === b);
         x.setAttribute("aria-selected", x === b ? "true" : "false");
       });
-      state.market = b.dataset.market;
+      state.market = b.dataset.market; state._showAll = false;
       savePrefs();
       load();
     }));
@@ -1909,7 +1931,7 @@
 
     const watchToggle = document.getElementById("watch-toggle");
     if (watchToggle) watchToggle.addEventListener("click", () => {
-      state.view = state.view === "watch" ? "results" : "watch";
+      state.view = state.view === "watch" ? "results" : "watch"; state._showAll = false;
       syncWatchToggle();
       renderRows();
     });
@@ -1924,7 +1946,7 @@
     });
 
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.addEventListener("click", () => {
-      state.tab = b.dataset.tab;
+      state.tab = b.dataset.tab; state._showAll = false;
       savePrefs();
       if (state.view !== "results") {
         state.view = "results";

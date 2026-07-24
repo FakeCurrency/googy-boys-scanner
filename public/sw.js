@@ -11,10 +11,27 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v4";   // v4 2026-07-22: UI Wave 1 — SWR paint, batched rows, bot-strip summary; purge stale assets
+const CACHE = "vivek5-v5";   // v5 2026-07-24: #63 app-shell precache on install
 
+// #63: precache the app shell on install — read index.html and pull its
+// CURRENT versioned CSS/JS (so the list is always in sync with the deploy,
+// never a hardcoded stale ?v=), plus the page itself. Repeat loads then paint
+// the shell instantly from cache; a cold offline launch has something to show.
 self.addEventListener("install", (e) => {
-  self.skipWaiting();
+  e.waitUntil((async () => {
+    try {
+      const c = await caches.open(CACHE);
+      const html = await fetch("index.html", { cache: "no-cache" });
+      if (html && html.ok) {
+        await c.put("index.html", html.clone());
+        const text = await html.text();
+        const urls = [...text.matchAll(/(?:href|src)="([^"]+\.(?:css|js)\?v=\d+)"/g)].map((m) => m[1]);
+        await Promise.all([...new Set(urls)].map((u) =>
+          fetch(u).then((r) => (r && r.ok ? c.put(u, r) : null)).catch(() => {})));
+      }
+    } catch (_) { /* offline at install / quota — fine, runtime caching still fills in */ }
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (e) => {

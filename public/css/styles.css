@@ -2335,3 +2335,10 @@ body { letter-spacing: -0.012em; }
    fully as normal. */
 .row-wrap { content-visibility: auto; contain-intrinsic-size: auto 76px; }
 .row-wrap.open { content-visibility: visible; }   /* never virtualize an open panel */
+
+/* ── Wave 6 #68: windowed-list "show all" notice ────────────────────────── */
+.row-cap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+  padding: 16px; margin-top: 8px; font: 500 12.5px/1.5 var(--sans); color: var(--muted); text-align: center; }
+.row-cap-all { appearance: none; border: 1px solid var(--blue); background: transparent; color: var(--blue);
+  font: 700 12.5px/1 var(--sans); padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+.row-cap-all:hover { background: var(--blue); color: #fff; }
