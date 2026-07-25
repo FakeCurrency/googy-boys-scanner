@@ -74,10 +74,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Playwright + Chromium
+      # ONE consolidated install (2026-07-25): npm's --no-save installs can
+      # PRUNE previously-installed packages that aren't in package.json — the
+      # old per-step installs (playwright here, lighthouse later, pixelmatch
+      # later still) had the last install evicting an earlier module, and the
+      # screenshot-diff step died on a missing require (run #77). Installing
+      # everything in one command removes the prune hazard entirely.
+      - name: Install Playwright + Chromium + tool deps
         run: |
           npm init -y > /dev/null 2>&1
-          npm install --no-save playwright > /dev/null 2>&1
+          npm install --no-save playwright lighthouse chrome-launcher pixelmatch pngjs > /dev/null 2>&1
           npx playwright install --with-deps chromium
       - name: E2E smoke (dashboard + recs · desktop + 390px)
         run: node test/e2e/smoke.e2e.js
@@ -92,7 +98,6 @@ jobs:
       # chromium Playwright already installed above (no second browser download).
       - name: Lighthouse budget (CLS + transfer tripwire)
         run: |
-          npm install --no-save lighthouse chrome-launcher > /dev/null 2>&1
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node test/e2e/lighthouse.e2e.js
       # Screenshot-diff gate (#98): fails on >2% visual drift, desktop + 390px.
@@ -106,7 +111,6 @@ jobs:
           key: screenshot-baselines-v2-${{ runner.os }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
-          npm install --no-save pixelmatch pngjs > /dev/null 2>&1
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node test/e2e/screenshot-diff.e2e.js
       - name: Upload screenshot diffs
