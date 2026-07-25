@@ -2060,14 +2060,24 @@ body { letter-spacing: -0.012em; }
   border-bottom: 1px solid var(--border);
   padding: 8px 0 9px; margin-bottom: 14px;
 }
-.tb-line { display: flex; align-items: center; gap: 6px; overflow-x: auto;
+/* Desktop: the line WRAPS — every chip and the sort control stay visible
+   (owner 2026-07-24: the grown chip set was silently clipping "Shorts" and
+   SCORE past the container edge; a hidden-scrollbar strip gives no hint that
+   anything is cut off). Mobile (≤680px) keeps the deliberate one-line
+   horizontal scroll with the sort pinned right — see the block below. */
+.tb-line { display: flex; align-items: center; gap: 6px; row-gap: 6px;
+  flex-wrap: wrap;
   scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .tb-line::-webkit-scrollbar { display: none; }
 .tb-line > * { flex: 0 0 auto; }
 .tb-watch { border: 1px solid var(--border); border-radius: 999px;
   background: var(--fill-2); padding: 7px 13px; }
 #toolbar #vk-filters { display: inline-flex; align-items: center; gap: 6px;
-  flex-wrap: nowrap; margin: 0; }
+  flex-wrap: wrap; row-gap: 6px; margin: 0;
+  /* Shrinkable (overrides the .tb-line > * flex:0 0 auto): at its natural
+     max-content width the chip strip would refuse to compress and overflow
+     mid-width screens — allowing shrink lets its internal wrap engage. */
+  flex: 1 1 auto; min-width: 0; }
 #toolbar #vk-filters[hidden] { display: none; }
 #toolbar .vkf-label, #toolbar .vkf-legend { display: none; } /* tooltips carry these */
 #toolbar .vkf-sep { width: 1px; height: 18px; background: var(--border); flex: 0 0 auto; }
@@ -2085,7 +2095,10 @@ body { letter-spacing: -0.012em; }
 .toolbar.is-slim .tb-watch { padding: 4px 10px; }
 .toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { font-size: 11px; padding: 4px 9px; }
 @media (max-width: 680px) {
-  .tb-line { gap: 6px; padding-bottom: 2px; }
+  /* Mobile keeps the ONE-LINE horizontally-scrolling strip (thumb design):
+     nowrap + natural width so the strip scrolls instead of squashing. */
+  .tb-line { gap: 6px; padding-bottom: 2px; flex-wrap: nowrap; overflow-x: auto; }
+  #toolbar #vk-filters { flex-wrap: nowrap; flex: 0 0 auto; min-width: auto; }
   .tb-sort-label { min-width: 58px; }
   /* #42: pin the sort control to the right edge so it's always reachable even
      as the filter chips scroll horizontally under it. */
