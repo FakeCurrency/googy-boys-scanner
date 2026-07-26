@@ -50,6 +50,9 @@ const check = (ok, label) => {
     const newPage = async (vp) => {
       const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
       const page = await ctx.newPage();
+      // UX #3: mark as already-onboarded so the first-visit tour scrim never
+      // intercepts the suite's clicks.
+      await page.addInitScript(() => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} });
       page.on("pageerror", (e) => pageErrors.push(`${vp.width}px ${page.url()}: ${e.message}`));
       return page;
     };

@@ -78,6 +78,22 @@ const waitPort = (port, tries = 50) => new Promise((res, rej) => {
     for (const [name, page, w, h] of VIEWS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, reducedMotion: "reduce" });
       const p = await ctx.newPage();
+      // Onboarding tour + status pill are session-dependent — keep shots deterministic.
+      await p.addInitScript(() => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} });
+      // FROZEN DATA (2026-07-26): live scan JSON changes with every scheduled
+      // commit, which slowly drifts the shots until the gate false-fails on a
+      // code push that changed nothing visual (observed: index 2.99% pure-data
+      // drift). Every /data/ request is served from the committed fixture set
+      // instead, so the diff only ever sees UI changes.
+      await ctx.route("**/data/**", (route) => {
+        const rel = new URL(route.request().url()).pathname.replace(/^\/+/, "");
+        const fix = path.join(__dirname, "fixtures", rel);
+        if (fs.existsSync(fix)) {
+          route.fulfill({ status: 200, contentType: "application/json", body: fs.readFileSync(fix) });
+        } else {
+          route.fulfill({ status: 404, contentType: "text/plain", body: "no fixture" });
+        }
+      });
       await p.goto(`http://localhost:${PORT}/${page}`, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
       await p.addStyleTag({ content: MASK }).catch(() => {});
       await p.waitForTimeout(1200);

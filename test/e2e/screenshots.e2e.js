@@ -45,6 +45,7 @@ let failures = 0;
     for (const w of WIDTHS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
       const page = await ctx.newPage();
+      await page.addInitScript(() => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} });
       for (const pg of PAGES) {
         try {
           await page.goto(`${BASE}/${pg}`, { waitUntil: "domcontentloaded", timeout: 30000 });

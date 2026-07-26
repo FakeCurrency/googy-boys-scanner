@@ -298,16 +298,79 @@
     return results.filter((r) => r.confluence).length;
   }
   async function enrichCards(prices) {
+    const collected = {};
     await Promise.all(MARKETS.map(async (m) => {
       const p = prices[m.key];
       if (!p || !p.generated_at) return;
       const results = await fetchVivek(m.key, p.generated_at);
       if (!results) return;
       const multi = await multiLensCount(m.key, results);
+      collected[m.key] = { results, multi };
       const slot = document.querySelector(`.rec-enrich[data-enrich="${m.key}"]`);
       if (!slot) return;                       // card re-rendered underneath us
       slot.innerHTML = enrichBlock(results, multi);
     }));
+    renderMorningRead(collected);              // UX top-10 #9
+  }
+
+  // ── Morning read (UX top-10 #9, 2026-07-26) ───────────────────────────────
+  // The 60-second daily ritual, at the top: what changed overnight (A+ count +
+  // multi-lens alignments vs the last day you checked, same localStorage
+  // pattern as the breadth strip) and the three strongest A+ names right now,
+  // one tap from their charts. Computed from the SAME data the cards below
+  // use — no new fetches.
+  const HIST2_KEY = "gbs:reco:hist2";
+  function overnightDelta(aplus, multi) {
+    let h = {};
+    try { h = JSON.parse(localStorage.getItem(HIST2_KEY) || "{}"); } catch (_) {}
+    const today = melbDay();
+    const prior = (h.day && h.day !== today) ? h : (h.prior || null);
+    const out = prior && prior.day !== today
+      ? { dA: aplus - (prior.aplus || 0), dM: multi - (prior.multi || 0), from: prior.day }
+      : null;
+    const next = { day: today, aplus, multi };
+    if (h.day && h.day !== today) next.prior = { day: h.day, aplus: h.aplus, multi: h.multi };
+    else if (h.prior) next.prior = h.prior;
+    try { localStorage.setItem(HIST2_KEY, JSON.stringify(next)); } catch (_) {}
+    return out;
+  }
+  function renderMorningRead(collected) {
+    const host = document.getElementById("rec-morning");
+    if (!host) return;
+    const keys = Object.keys(collected);
+    if (!keys.length) { host.hidden = true; return; }
+    const all = [];
+    let aplusTotal = 0, multiTotal = 0, atLevelTotal = 0;
+    for (const k of keys) {
+      const { results, multi } = collected[k];
+      multiTotal += multi || 0;
+      for (const r of results) {
+        if (r.grade === "A+") aplusTotal++;
+        if (r.at_level) atLevelTotal++;
+        all.push({ ...r, _mkt: k });
+      }
+    }
+    const isFund = (r) => (window.PM && PM.isFundReit) ? PM.isFundReit(r) : false;
+    const watch = all.filter((r) => r.grade === "A+" && !isFund(r))
+      .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3);
+    const d = overnightDelta(aplusTotal, multiTotal);
+    const dChip = (v, label) => v == null ? "" :
+      `<span class="mr-delta ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v > 0 ? "▲ +" : v < 0 ? "▼ " : "◆ ±"}${Math.abs(v)} ${label}</span>`;
+    const MKT = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
+    host.hidden = false;
+    host.innerHTML =
+      `<div class="mr-hd">☕ Morning read <span class="mr-sub">${d ? `vs ${esc(d.from)}` : "your overnight deltas fill in from tomorrow"}</span></div>` +
+      `<div class="mr-stats">` +
+      `<span class="mr-stat">A+ <b>${aplusTotal}</b>${d ? dChip(d.dA, "overnight") : ""}</span>` +
+      `<span class="mr-stat">⨂ Multi-lens <b>${multiTotal}</b>${d ? dChip(d.dM, "") : ""}</span>` +
+      `<span class="mr-stat">◎ At level <b>${atLevelTotal}</b></span>` +
+      `</div>` +
+      (watch.length ? `<div class="mr-watch"><span class="mr-watch-lbl">Worth a look:</span>` +
+        watch.map((r) =>
+          `<a class="mr-pick" href="chart.html?m=${r._mkt}&s=${encodeURIComponent(r.symbol)}&mode=vivek" ` +
+          `title="${esc(r.name || r.symbol)} — A+ score ${r.score ?? "?"}${r.at_level ? " · at level now" : ""}">` +
+          `${esc(r.symbol)} <span class="mr-pick-mkt">${MKT[r._mkt]}</span>${r.at_level ? " ◎" : ""}${r.confluence ? " ⨂" : ""}</a>`
+        ).join("") + `</div>` : "");
   }
 
   function moversCard(open) {

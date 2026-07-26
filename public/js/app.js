@@ -272,6 +272,45 @@
     } catch (_) {}
   }
 
+  // ── First-visit onboarding (UX top-10 #3, 2026-07-26) ─────────────────────
+  // A new visitor lands on hundreds of setups and ~20 controls with no guide.
+  // Three tiny cards, shown ONCE ever (gbs:onboarded), skippable at any step,
+  // built lazily after first paint so it never costs the load. Returning users
+  // and the CI harnesses (which pre-seed the flag) never see it.
+  function maybeOnboard() {
+    try { if (localStorage.getItem("gbs:onboarded")) return; } catch (_) { return; }
+    const done = () => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} scrim.remove(); };
+    const STEPS = [
+      ["🧭", "Three markets, one scanner", "ASX, NASDAQ and Crypto — switch up top. Every name is graded on how price is REACTING at its 200-SMA."],
+      ["🎯", "A+ is the shortlist", "The A+ / A / WATCH tabs filter by setup grade. A+ means every gate passed — that's the tab worth checking daily. Pills under the title filter further (at-level, multi-lens…)."],
+      ["📋", "Tap a row for the plan", "Every row expands into the full trade plan — entry, stop, targets with R:R — plus a chart. Star (☆) anything to track it across every lens on ★ MY NAMES."],
+    ];
+    let i = 0;
+    const scrim = document.createElement("div");
+    scrim.className = "ob-scrim";
+    scrim.setAttribute("role", "dialog");
+    scrim.setAttribute("aria-label", "Welcome tour");
+    const paint = () => {
+      const [ico, title, body] = STEPS[i];
+      scrim.innerHTML =
+        `<div class="ob-card">` +
+        `<div class="ob-ico" aria-hidden="true">${ico}</div>` +
+        `<h3 class="ob-title">${title}</h3>` +
+        `<p class="ob-body">${body}</p>` +
+        `<div class="ob-dots">${STEPS.map((_, d) => `<span class="ob-dot${d === i ? " on" : ""}"></span>`).join("")}</div>` +
+        `<div class="ob-actions">` +
+        `<button type="button" class="ob-skip">Skip</button>` +
+        `<button type="button" class="ob-next">${i < STEPS.length - 1 ? "Next" : "Let's go"}</button>` +
+        `</div></div>`;
+      scrim.querySelector(".ob-skip").addEventListener("click", done);
+      scrim.querySelector(".ob-next").addEventListener("click", () => { if (++i < STEPS.length) paint(); else done(); });
+    };
+    scrim.addEventListener("click", (e) => { if (e.target === scrim) done(); });
+    paint();
+    document.body.appendChild(scrim);
+    scrim.querySelector(".ob-next").focus();
+  }
+
   // Long-press quick actions (#45): a scrimmed sheet with Chart / Star /
   // Journal for one ticker. Built lazily, reused across presses.
   function openQuickActions(sym) {
@@ -1233,6 +1272,70 @@
   // stale/old-build dataset is visible at a glance instead of silently dropping
   // features. Turns amber when coverage is low, the scan is old, or the committed
   // data was produced by an older build than the frontend expects.
+  // ── System-status pill (UX top-10 #2, 2026-07-26) ─────────────────────────
+  // One glance instead of an email: reads the SAME /api/health heartbeat the
+  // uptime monitor and watchdog use (the published bot book's age off the live
+  // site — scanner, commit and deploy all had to work for it to be fresh) and
+  // shows ● Systems go / ● Running late in the deck. Click for the detail
+  // popover. Hides silently where the endpoint doesn't exist (local dev, CI
+  // harnesses) and never runs in ?lite measurement mode.
+  let _sysPopover = null;
+  async function renderSystemStatus() {
+    if (MEASURE) return;
+    const sub = document.querySelector(".deck-sub");
+    if (!sub) return;
+    let pill = document.getElementById("sys-pill");
+    let health = null;
+    try {
+      const r = await fetch("/api/health?max_h=4", { cache: "no-store" });
+      if (r.ok || r.status === 503) health = await r.json();
+    } catch (_) {}
+    if (!health || typeof health.ok !== "boolean") { if (pill) pill.hidden = true; return; }
+    if (!pill) {
+      pill = document.createElement("button");
+      pill.id = "sys-pill"; pill.type = "button";
+      pill.setAttribute("aria-haspopup", "true");
+      pill.setAttribute("aria-expanded", "false");
+      sub.appendChild(pill);
+      pill.addEventListener("click", (e) => { e.stopPropagation(); toggleSysPopover(pill); });
+    }
+    pill.hidden = false;
+    pill._health = health;
+    const ok = health.ok === true;
+    pill.className = "sys-pill " + (ok ? "ok" : "warn");
+    pill.textContent = ok ? "● Systems go" : "● Running late";
+    const ageTxt = health.age_h != null ? `${health.age_h}h` : "?";
+    pill.title = ok
+      ? `Pipeline healthy — data ${ageTxt} old. Tap for detail.`
+      : `Data is ${ageTxt} old (threshold 4h) — the backstop/watchdog are on it. Tap for detail.`;
+  }
+  function toggleSysPopover(pill) {
+    if (_sysPopover) { _sysPopover.remove(); _sysPopover = null; pill.setAttribute("aria-expanded", "false"); return; }
+    const h = pill._health || {};
+    const ok = h.ok === true;
+    const pop = document.createElement("div");
+    pop.className = "sys-popover";
+    pop.setAttribute("role", "dialog");
+    pop.innerHTML =
+      `<div class="sysp-row"><span class="sysp-k">Pipeline</span><b class="${ok ? "r-ok" : "r-warn"}">${ok ? "Healthy" : "Running late"}</b></div>` +
+      `<div class="sysp-row"><span class="sysp-k">Data age</span><b>${h.age_h != null ? h.age_h + "h" : "—"} <span class="sysp-sub">(alerts past ${h.max_h || 4}h)</span></b></div>` +
+      `<div class="sysp-row"><span class="sysp-k">Bot positions</span><b>${h.open != null ? h.open + " open" : "—"}</b></div>` +
+      `<div class="sysp-note">Scans run hourly in-session with a self-healing backstop; the watchdog emails if data truly stales.${ok ? "" : " If this stays late, tap SCAN to force a fresh run."}</div>` +
+      `<a class="sysp-link" href="system.html">Full system page →</a>`;
+    const r = pill.getBoundingClientRect();
+    pop.style.top = `${Math.round(r.bottom + 8 + window.scrollY)}px`;
+    pop.style.left = `${Math.round(Math.max(8, Math.min(r.left, window.innerWidth - 280)))}px`;
+    document.body.appendChild(pop);
+    _sysPopover = pop;
+    pill.setAttribute("aria-expanded", "true");
+    setTimeout(() => document.addEventListener("click", function close(e) {
+      if (pop.contains(e.target)) return;
+      pop.remove(); if (_sysPopover === pop) _sysPopover = null;
+      pill.setAttribute("aria-expanded", "false");
+      document.removeEventListener("click", close);
+    }), 0);
+  }
+
   function renderFreshness(d) {
     const box = $("#scan-fresh");
     if (!box) return;
@@ -2350,6 +2453,8 @@
     renderFreshness(state.data);
     refreshScanAgeChips();   // #53: keep open panels' "scanned Xm ago" honest
   }, 30000);
+  // UX #2: refresh the system-status pill every 5 min while the tab is open.
+  if (!MEASURE) setInterval(() => { if (!document.hidden) renderSystemStatus(); }, 300000);
   // #61: idle-time prefetch of the other markets (requestIdleCallback with a
   // timer fallback) — was a fixed 300ms that could contend with first paint.
   const whenIdle = (fn) => (window.requestIdleCallback
@@ -2359,6 +2464,8 @@
     // prefetch so the trace sees a stable payload, not a random ~1.6MB extra.
     if (!MEASURE) startAutoRefresh();
     if (!MEASURE) whenIdle(prefetchMarkets);
+    if (!MEASURE) whenIdle(renderSystemStatus);   // UX #2: status pill after first paint
+    if (!MEASURE) whenIdle(maybeOnboard);         // UX #3: first-visit intro (once, ever)
     // #66: defer the watchlist sync-in until AFTER the first rows are on
     // screen — the star reconcile is not first-paint-critical.
     if (!MEASURE && window.GBSSync && GBSSync.enabled()) {
