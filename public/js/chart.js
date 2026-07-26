@@ -2589,7 +2589,10 @@
       btn.type = "button"; btn.className = "tf-btn replay-btn";
       btn.textContent = "▶ REPLAY";
       btn.title = "Setup replay — rewind to the signal bar, then step forward bar by bar";
-      tgl.appendChild(btn);
+      // Fix-10 #9: phones keep the timeframe row clean — the button lives in
+      // the ✏ sheet's ANALYZE section there instead.
+      const sheetRow = window.__ctSheet && window.__ctSheet.analyzeRow;
+      (sheetRow || tgl).appendChild(btn);
 
       const bar = document.createElement("div");
       bar.className = "replay-bar"; bar.hidden = true;
@@ -2650,6 +2653,7 @@
       function enter() {
         const c = cs();
         if (c.length < 15) { chartToast("Not enough bars on this timeframe to replay."); return; }
+        if (window.__ctSheet) window.__ctSheet.close();   // show the chart, not the sheet
         replayCtl.active = true;
         btn.classList.add("is-active");
         bar.hidden = false;
@@ -2721,7 +2725,10 @@
       const btn = document.createElement("button");
       btn.type = "button"; btn.className = "tf-btn rs-btn"; btn.textContent = "⚖ VS";
       btn.title = "Relative strength — overlay a rebased index or ticker to see who's leading";
-      tgl.appendChild(btn);
+      // Fix-10 #9: button folds into the phone sheet; the CHIP stays on the
+      // timeframe row everywhere — it's the live overlay indicator/remover.
+      const sheetRow = window.__ctSheet && window.__ctSheet.analyzeRow;
+      (sheetRow || tgl).appendChild(btn);
       const chip = document.createElement("button");
       chip.type = "button"; chip.className = "tf-btn rs-chip"; chip.hidden = true;
       tgl.appendChild(chip);
@@ -2791,6 +2798,7 @@
               rsBars = bars; rsLabel = label;
               ensureSeries(); rsApply(curTF);
               chip.hidden = false; btn.classList.add("is-active");
+              if (persist && window.__ctSheet) window.__ctSheet.close();   // #9: reveal the overlay
               if (persist) { try { localStorage.setItem(RS_KEY, JSON.stringify({ yf: cands[i], label })); } catch (_) {} }
             })
             .catch(() => tryOne(i + 1));
@@ -3461,6 +3469,14 @@
     secTools.className = "cts-sec";
     secTools.innerHTML = `<div class="cts-hd">Draw</div>`;
     secTools.appendChild(tools);            // move — listeners ride along
+    // Fix-10 #9: an ANALYZE section — initReplay/initCompare drop their
+    // buttons here on phones (instead of crowding the timeframe row).
+    const secAn = document.createElement("div");
+    secAn.className = "cts-sec";
+    secAn.innerHTML = `<div class="cts-hd">Analyze</div>`;
+    const anRow = document.createElement("div");
+    anRow.className = "cts-actions";
+    secAn.appendChild(anRow);
     const secActs = document.createElement("div");
     secActs.className = "cts-sec";
     secActs.innerHTML = `<div class="cts-hd">Share</div>`;
@@ -3468,11 +3484,12 @@
     actRow.className = "cts-actions";
     [plan, share, png, tv].forEach((el) => { if (el) actRow.appendChild(el); });
     secActs.appendChild(actRow);
-    sheet.appendChild(secTools); sheet.appendChild(secActs);
+    sheet.appendChild(secTools); sheet.appendChild(secAn); sheet.appendChild(secActs);
     const setOpen = (open) => {
       sheet.hidden = !open; scrim.hidden = !open;
       fab.setAttribute("aria-expanded", open ? "true" : "false");
     };
+    window.__ctSheet = { close: () => setOpen(false), analyzeRow: anRow };
     fab.addEventListener("click", () => setOpen(sheet.hidden));
     scrim.addEventListener("click", () => setOpen(false));
     document.body.append(scrim, sheet, fab);

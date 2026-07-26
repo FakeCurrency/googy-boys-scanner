@@ -69,6 +69,23 @@
     </p>
     <span class="sys-live" id="sys-live">⏳ loading live rule values…</span>
 
+    <!-- Fix-10 #7: live scan coverage — the owner-visible tripwire for the
+         silent-universe-collapse class (2026-07-26: a Saturday ASX scan ran
+         on 93 of ~2,000 names without a trace). Hydrated by the inline
+         script below via 2KB Range reads of each scan file's header. -->
+    <section class="sys" id="sys-coverage">
+      <h2>Scan coverage · live</h2>
+      <p>Universe each market's LATEST scan actually covered, straight from the published scan headers.
+        Amber = partial scan (directory fetch failed and the run fell back to a cached/bundled list).</p>
+      <table class="sys-t" id="sys-cov-t">
+        <thead><tr><th>Market</th><th>Universe scanned</th><th>Typical</th><th>Last scan</th><th>Status</th></tr></thead>
+        <tbody id="sys-cov-body"><tr><td colspan="5">⏳ reading scan headers…</td></tr></tbody>
+      </table>
+      <p class="sys-note">Self-healing: every good directory fetch snapshots the full universe to a committed
+        cache, and a failed fetch falls back to that snapshot before the small bundled list — so a partial
+        scan should be rare and one-off. The dashboard shows a ⚠ partial-scan pill on affected data too.</p>
+    </section>
+
     <nav class="sys-toc">
       <a href="#data">Data sources</a><a href="#sched">Schedules</a><a href="#lenses">The 3 lenses</a>
       <a href="#grading">Grading</a><a href="#bot">Bot rulebook</a><a href="#sizing">Sizing &amp; costs</a>
@@ -280,6 +297,46 @@
 
   <script src="js/nav.js?v=13"></script>
   <script>
+  /* Fix-10 #7: scan-coverage panel — Range-read the first 2KB of each scan
+     file (the header fields precede the results array), pull universe_size +
+     generated_at, and grade them against each market's typical floor. Falls
+     back to a full fetch if the server ignores Range. */
+  (async () => {
+    const body = document.getElementById("sys-cov-body");
+    if (!body) return;
+    const FLOOR = { asx: [800, "~2,000"], nasdaq: [600, "~1,430"], crypto: [50, "~100"] };
+    const head = async (m) => {
+      const url = `data/${m}_vivek.json`;
+      let text = "";
+      try {
+        const r = await fetch(url, { headers: { Range: "bytes=0-2047" }, cache: "no-cache" });
+        text = await r.text();
+      } catch (_) { return null; }
+      if (text.length > 4096) text = text.slice(0, 4096);   // full body came back — trim
+      const uni = /"universe_size":\s*(\d+)/.exec(text);
+      const gen = /"generated_at":\s*"([^"]+)"/.exec(text);
+      return { uni: uni ? +uni[1] : null, gen: gen ? gen[1] : null };
+    };
+    const ago = (iso) => {
+      const t = Date.parse(iso || "");
+      if (!isFinite(t)) return "—";
+      const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      return m < 60 ? `${m}m ago` : m < 2880 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+    };
+    const rows = await Promise.all(["asx", "nasdaq", "crypto"].map(async (m) => {
+      const h = await head(m);
+      const [floor, typical] = FLOOR[m];
+      if (!h || h.uni == null) return `<tr><td>${m.toUpperCase()}</td><td colspan="4">scan file unreadable</td></tr>`;
+      const okay = h.uni >= floor;
+      return `<tr><td><b>${m.toUpperCase()}</b></td>` +
+        `<td><code>${h.uni.toLocaleString()}</code></td><td>${typical}</td>` +
+        `<td>${ago(h.gen)}</td>` +
+        `<td>${okay ? '<span class="rule">● FULL</span>'
+                    : `<span class="rule amber">⚠ PARTIAL — below the ${floor} floor</span>`}</td></tr>`;
+    }));
+    body.innerHTML = rows.join("");
+  })();
+
   /* Hydrate the rulebook from bot_rules.json so this page can never drift from
      scanner/config.py. Unknown/missing file → keep static text + show warning. */
   (async () => {

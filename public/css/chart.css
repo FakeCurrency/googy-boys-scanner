@@ -580,3 +580,7 @@
   flex: 0 0 auto; width: 34px; border: none; border-radius: 8px;
   background: var(--blue); color: #fff; font: 700 14px/1 var(--mono); cursor: pointer;
 }
+
+/* Fix-10 #9: REPLAY/VS live in the sheet's ANALYZE row on phones */
+#ct-sheet .cts-actions .tf-btn { padding: 11px 16px; font-size: 13px; border-radius: 10px; background: rgba(120,120,128,.14); }
+#ct-sheet .cts-actions .tf-btn.is-active { background: var(--blue); color: #fff; }
