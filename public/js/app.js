@@ -177,6 +177,7 @@
   }
 
   loadPrefs();
+  consumeViewApply();   // UX-20 #2: one-shot preset/URL view application
   // Deep link (backlog #16): ?m=asx|nasdaq|crypto opens the dashboard already
   // switched to that market (e.g. the RECS cards' "Open scan →"). Overrides
   // the saved pref and persists, so a refresh keeps you where the link put you.
@@ -650,6 +651,197 @@
     return shown.join("");
   }
 
+  // ── UX-20 #1: "what changed since I last looked" ──────────────────────────
+  // A per-market snapshot of {symbol → grade rank} is written once per VISIT
+  // (first full payload of the session); rows are then marked NEW / ↑ / ↓
+  // against the PREVIOUS visit's snapshot. Auto-refreshes keep comparing to
+  // the same baseline, so markers stay stable while the tab is open. The very
+  // first visit records silently (no marker flood).
+  const _visitBase = {};
+  function updateVisitDiff(d) {
+    if (!d || d._head || !Array.isArray(d.results)) return;
+    const m = state.market;
+    if (_visitBase[m]) return;
+    let prev = null;
+    try { prev = JSON.parse(localStorage.getItem("gbs:visit:" + m) || "null"); } catch (_) {}
+    _visitBase[m] = prev || { _empty: true };
+    const snap = {};
+    for (const r of d.results) snap[r.symbol] = GRADE_RANK[r.grade] ?? 9;
+    try { localStorage.setItem("gbs:visit:" + m, JSON.stringify(snap)); } catch (_) {}
+  }
+  function changeMark(r) {
+    const base = _visitBase[state.market];
+    if (!base || base._empty) return "";
+    const prev = base[r.symbol];
+    const cur = GRADE_RANK[r.grade] ?? 9;
+    if (prev == null) return `<span class="chg chg-new" title="New since your last visit">NEW</span>`;
+    if (cur < prev) return `<span class="chg chg-up" title="Grade upgraded since your last visit">↑</span>`;
+    if (cur > prev) return `<span class="chg chg-down" title="Grade downgraded since your last visit">↓</span>`;
+    return "";
+  }
+
+  // ── UX-20 #6: per-row W / 3D / D state dots ──────────────────────────────
+  // Three tiny dots read cross-timeframe state without expanding the row:
+  // filled green = that TF's plan is ARMED, amber ring = plan exists
+  // (watching), dim = no plan on that TF.
+  function tfDots(r) {
+    if (!r.plans) return "";
+    const TFS = [["1W", "W"], ["3D", "3D"], ["1D", "D"]];
+    const txt = TFS.map(([k, l]) => {
+      const p = r.plans[k];
+      return `${l} ${p ? (p.armed ? "armed" : "watching") : "quiet"}`;
+    }).join(" · ");
+    return `<span class="tfdots" title="${esc(txt)}">` +
+      TFS.map(([k]) => {
+        const p = r.plans[k];
+        return `<i class="tfd ${p ? (p.armed ? "on" : "near") : "off"}"></i>`;
+      }).join("") + `</span>`;
+  }
+
+  // ── UX-20 #3: ★ MY NAMES live strip on the dashboard ─────────────────────
+  // Your starred names for the current market as one compact row: names with
+  // an active setup show grade/direction/at-level and jump to their row;
+  // quiet names link to their chart. Collapsible, remembered.
+  function renderWatchStrip() {
+    const host = document.getElementById("watch-strip");
+    if (!host || !state.data) return;
+    let collapsed = false;
+    try { collapsed = localStorage.getItem("gbs:wstrip") === "0"; } catch (_) {}
+    const res = state.data.results || [];
+    const inScan = new Map(res.map((r) => [r.symbol, r]));
+    const w = _pmWatch();
+    const syms = new Set();
+    if (w) LENS_TAG.forEach(([ns]) => Object.keys(w.map(ns, state.market)).forEach((s) => syms.add(s)));
+    else res.filter((r) => isStarred(r.symbol)).forEach((r) => syms.add(r.symbol));
+    if (!syms.size) { host.hidden = true; return; }
+    host.hidden = false;
+    const chip = (s) => {
+      const r = inScan.get(s);
+      if (r) {
+        const sh = r.dir === "SHORT";
+        return `<button type="button" class="ws-chip live" data-sym="${esc(s)}" ` +
+          `title="${esc(r.grade)} ${sh ? "SHORT" : "LONG"}${r.at_level ? " · at level now" : ""} — tap to open in the list">` +
+          `${esc(s)} <span class="ws-g">${esc(r.grade)}</span><span class="ws-d ${sh ? "s" : "l"}">${sh ? "▼" : "▲"}</span>${r.at_level ? `<span class="ws-al" title="At its 200-SMA now">◎</span>` : ""}</button>`;
+      }
+      return `<a class="ws-chip quiet" href="chart.html?m=${state.market}&s=${encodeURIComponent(s)}" ` +
+        `title="No active setup this scan — open the chart">${esc(s)}</a>`;
+    };
+    host.innerHTML =
+      `<button type="button" class="ws-lbl" id="ws-toggle" aria-expanded="${collapsed ? "false" : "true"}" title="${collapsed ? "Show" : "Hide"} your starred names">★ MY NAMES ${collapsed ? "▸" : "▾"}</button>` +
+      (collapsed ? "" : [...syms].sort().map(chip).join("") + `<a class="ws-all" href="mynames.html">all lenses →</a>`);
+    if (!host._wired) {
+      host._wired = true;
+      host.addEventListener("click", (e) => {
+        const t = e.target.closest("#ws-toggle, .ws-chip.live");
+        if (!t) return;
+        if (t.id === "ws-toggle") {
+          try { localStorage.setItem("gbs:wstrip", localStorage.getItem("gbs:wstrip") === "0" ? "1" : "0"); } catch (_) {}
+          renderWatchStrip(); return;
+        }
+        const wrap = document.querySelector(`.row-wrap[data-sym="${CSS.escape(t.dataset.sym)}"]`);
+        if (wrap) { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); if (!wrap.classList.contains("open")) wrap.click(); }
+        else location.href = `chart.html?m=${state.market}&s=${encodeURIComponent(t.dataset.sym)}`;
+      });
+    }
+  }
+
+  // ── UX-20 #2: saved view presets + shareable view URLs ───────────────────
+  // Save the current filter+sort combination under a name; apply in one tap.
+  // Applying (and boot) goes through gbs:prefs + a one-shot gbs:view-apply so
+  // the EXISTING boot path rebuilds every control consistently. The URL gets
+  // the view encoded (?tab=&sort=…) so a copied link reproduces the view.
+  const VIEW_KEYS = ["tab", "sort", "sortDir", "view"];
+  function captureView() {
+    return { market: state.market, tab: state.tab, sort: state.sort, sortDir: state.sortDir,
+      view: state.view, dir: state.vkDir, entry: [...state.vkEntry], recent: state.vkRecent,
+      hc: state.vkHighConv, confl: state.vkConfl, atLevel: state.vkAtLevel,
+      funds: state.dimFunds !== false };
+  }
+  function applyViewPreset(v) {
+    try {
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+      p.market = v.market || p.market; p.tab = v.tab; p.sort = v.sort; p.sortDir = v.sortDir;
+      p.dimFunds = v.funds !== false;
+      localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+      localStorage.setItem("gbs:view-apply", JSON.stringify(v));
+    } catch (_) {}
+    const q = new URLSearchParams({ m: v.market || state.market, tab: v.tab || "aplus", sort: v.sort || "score" });
+    if (v.sortDir) q.set("sd", v.sortDir);
+    if (v.confl) q.set("cf", "1"); if (v.atLevel) q.set("al", "1");
+    if (v.hc) q.set("hc", "1"); if (v.dir) q.set("dirf", v.dir);
+    location.href = `index.html?${q.toString()}`;
+  }
+  // one-shot consumer — runs at boot, after prefs load
+  function consumeViewApply() {
+    let v = null;
+    try {
+      v = JSON.parse(localStorage.getItem("gbs:view-apply") || "null");
+      localStorage.removeItem("gbs:view-apply");
+    } catch (_) {}
+    // URL params work standalone too (shared links)
+    const q = new URLSearchParams(location.search);
+    if (!v && (q.has("tab") || q.has("cf") || q.has("al") || q.has("hc") || q.has("dirf"))) {
+      v = { tab: q.get("tab"), sort: q.get("sort"), sortDir: q.get("sd"),
+        confl: q.get("cf") === "1", atLevel: q.get("al") === "1",
+        hc: q.get("hc") === "1", dir: q.get("dirf") || null };
+    }
+    if (!v) return;
+    if (v.tab) state.tab = v.tab;
+    if (v.sort) state.sort = v.sort;
+    state.sortDir = v.sortDir || null;
+    if (v.view) state.view = v.view;
+    state.vkDir = v.dir || null;
+    state.vkEntry = new Set(v.entry || []);
+    state.vkRecent = !!v.recent; state.vkHighConv = !!v.hc;
+    state.vkConfl = !!v.confl; state.vkAtLevel = !!v.atLevel;
+  }
+  function wireViewsMenu() {
+    const btn = document.getElementById("views-btn");
+    if (!btn) return;
+    let menu = null;
+    const close = () => { if (menu) { menu.remove(); menu = null; btn.setAttribute("aria-expanded", "false"); } };
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (menu) { close(); return; }
+      let presets = [];
+      try { presets = JSON.parse(localStorage.getItem("gbs:presets") || "[]"); } catch (_) {}
+      menu = document.createElement("div");
+      menu.className = "views-menu";
+      menu.innerHTML =
+        (presets.length ? presets.map((p, i) =>
+          `<div class="vm-row"><button type="button" class="vm-apply" data-i="${i}">${esc(p.name)}</button>` +
+          `<button type="button" class="vm-del" data-i="${i}" title="Delete preset" aria-label="Delete ${esc(p.name)}">✕</button></div>`).join("")
+          : `<div class="vm-empty">No saved views yet.</div>`) +
+        `<button type="button" class="vm-save">＋ Save current view…</button>`;
+      const r = btn.getBoundingClientRect();
+      menu.style.top = `${Math.round(r.bottom + 6 + window.scrollY)}px`;
+      menu.style.left = `${Math.round(r.left)}px`;
+      document.body.appendChild(menu);
+      btn.setAttribute("aria-expanded", "true");
+      menu.addEventListener("click", (ev) => {
+        const t = ev.target;
+        if (t.classList.contains("vm-save")) {
+          const name = (prompt("Name this view (current market, tab, filters and sort):") || "").trim();
+          if (name) {
+            presets = presets.filter((p) => p.name !== name);
+            presets.push({ name, ...captureView() });
+            try { localStorage.setItem("gbs:presets", JSON.stringify(presets.slice(-12))); } catch (_) {}
+          }
+          close();
+        } else if (t.classList.contains("vm-apply")) {
+          const p = presets[+t.dataset.i]; close(); if (p) applyViewPreset(p);
+        } else if (t.classList.contains("vm-del")) {
+          presets.splice(+t.dataset.i, 1);
+          try { localStorage.setItem("gbs:presets", JSON.stringify(presets)); } catch (_) {}
+          close(); btn.click();
+        }
+      });
+      setTimeout(() => document.addEventListener("click", function c(ev) {
+        if (menu && !menu.contains(ev.target)) { close(); document.removeEventListener("click", c); }
+      }), 0);
+    });
+  }
+
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
@@ -701,6 +893,7 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
+          ${tfDots(r)}${changeMark(r)}
           ${mcapBadge}
           ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
@@ -1500,6 +1693,7 @@
 
   let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts
   function renderRows() {
+    setTimeout(renderWatchStrip, 0);   // UX-20 #3: strip reflects the fresh rows
     const wrap = $("#results");
     const list = buildList();
     _rowsToken++;
@@ -1641,6 +1835,7 @@
     state.data = d;
     state.dataKey = `${state.market}:${state.mode}`;
     state.staleView = stale;
+    updateVisitDiff(d);   // UX-20 #1: fix this visit's change-baseline
     state.cur = d.currency_symbol || "$";
     updateScanTitle(d);
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
@@ -2521,6 +2716,7 @@
     paint();
   }
   wireNotifyBell();
+  wireViewsMenu();   // UX-20 #2
 
   initKeyboard();
   bind();

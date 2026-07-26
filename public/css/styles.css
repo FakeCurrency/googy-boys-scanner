@@ -2562,3 +2562,58 @@ body { letter-spacing: -0.012em; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ── UX-20 #1: what-changed markers ──────────────────────────────────────── */
+.chg { font: 800 8.5px/1 var(--sans); letter-spacing: .05em; padding: 3px 5px; border-radius: 5px; vertical-align: 2px; }
+.chg-new  { color: var(--blue); background: var(--blue-soft); }
+.chg-up   { color: var(--green); background: var(--green-soft); font-size: 10px; }
+.chg-down { color: var(--red); background: var(--red-soft); font-size: 10px; }
+
+/* ── UX-20 #6: per-row W/3D/D dots ───────────────────────────────────────── */
+.tfdots { display: inline-flex; gap: 3px; align-items: center; margin: 0 2px; cursor: help; }
+.tfd { width: 6px; height: 6px; border-radius: 50%; background: var(--fill); border: 1px solid var(--border); }
+.tfd.on   { background: var(--green); border-color: var(--green); box-shadow: 0 0 4px var(--green); }
+.tfd.near { background: transparent; border-color: var(--orange); }
+.tfd.off  { opacity: .55; }
+
+/* ── UX-20 #3: ★ MY NAMES strip ─────────────────────────────────────────── */
+.watch-strip {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+  margin: 0 0 12px; padding: 9px 12px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.watch-strip[hidden] { display: none; }
+.ws-lbl { appearance: none; border: none; background: none; cursor: pointer;
+  font: 800 10px/1 var(--sans); letter-spacing: .08em; color: var(--muted); padding: 4px 2px; }
+.ws-lbl:hover { color: var(--text); }
+.ws-chip {
+  display: inline-flex; align-items: center; gap: 5px; text-decoration: none; cursor: pointer;
+  font: 700 11.5px/1 var(--mono); color: var(--text);
+  background: var(--fill); border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px;
+  transition: border-color .15s;
+}
+.ws-chip:hover { border-color: var(--green); }
+.ws-chip.quiet { color: var(--muted); }
+.ws-g { font: 800 9px/1 var(--sans); color: var(--grade-aplus); }
+.ws-d.l { color: var(--green); } .ws-d.s { color: var(--red); }
+.ws-al { color: var(--teal); }
+.ws-all { margin-left: auto; font: 700 10.5px/1 var(--sans); color: var(--blue); text-decoration: none; }
+.ws-all:hover { text-decoration: underline; }
+
+/* ── UX-20 #2: views menu ────────────────────────────────────────────────── */
+.tb-views { min-width: 34px; }
+.views-menu {
+  position: absolute; z-index: 999; min-width: 220px;
+  background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 12px;
+  padding: 8px; box-shadow: 0 14px 40px rgba(0,0,0,.5);
+}
+.vm-row { display: flex; align-items: center; gap: 6px; }
+.vm-apply { flex: 1; appearance: none; border: none; background: none; cursor: pointer; text-align: left;
+  color: var(--text); font: 600 12.5px/1.3 var(--sans); padding: 8px 9px; border-radius: 8px; }
+.vm-apply:hover { background: var(--fill); }
+.vm-del { appearance: none; border: none; background: none; cursor: pointer; color: var(--muted); font-size: 11px; padding: 6px; }
+.vm-del:hover { color: var(--red); }
+.vm-empty { color: var(--muted); font: 500 12px/1.4 var(--sans); padding: 8px 9px; }
+.vm-save { width: 100%; appearance: none; border: none; cursor: pointer; margin-top: 4px;
+  background: var(--fill); color: var(--blue); font: 700 12px/1 var(--sans); padding: 9px; border-radius: 8px; }
+.vm-save:hover { background: var(--blue-soft); }
