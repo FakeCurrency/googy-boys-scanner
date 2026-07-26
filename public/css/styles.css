@@ -2517,3 +2517,48 @@ body { letter-spacing: -0.012em; }
 }
 .mr-pick:hover { border-color: var(--green); color: var(--green); }
 .mr-pick-mkt { font: 700 9px/1 var(--sans); letter-spacing: .07em; color: var(--muted-2); }
+
+/* ── UX top-10 #4: proportional plan axis + R:R meter (row detail) ───────── */
+.vk-axis { margin: 2px 0 12px; }
+.vk-axis-track {
+  position: relative; height: 40px; border-radius: 8px;
+  background: var(--fill-2); border: 1px solid var(--border);
+}
+.vk-axis-seg { position: absolute; top: 6px; height: 8px; border-radius: 4px; }
+.vk-axis-seg.risk   { background: color-mix(in srgb, var(--red) 45%, transparent); }
+.vk-axis-seg.reward { background: color-mix(in srgb, var(--green) 45%, transparent); }
+.vk-axis-tick {
+  position: absolute; top: 3px; transform: translateX(-50%);
+  font: 700 8.5px/1 var(--mono); letter-spacing: .04em; color: var(--muted);
+  text-align: center; padding-top: 15px; cursor: help;
+}
+.vk-axis-tick i { position: absolute; left: 50%; top: 0; width: 2px; height: 14px; background: currentColor; border-radius: 1px; transform: translateX(-50%); }
+.vk-axis-tick.sl { color: var(--red); }
+.vk-axis-tick.in { color: var(--text); font-weight: 800; }
+.vk-axis-tick.tp { color: var(--green); }
+.vk-axis-now {
+  position: absolute; top: 1px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--blue); border: 2px solid var(--bg); transform: translateX(-50%);
+  box-shadow: 0 0 8px var(--blue); z-index: 2;
+}
+.vk-axis-meta { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
+.vk-rrmeter { display: inline-flex; width: 130px; height: 7px; border-radius: 4px; overflow: hidden; background: var(--fill); }
+.vk-rrmeter .rm-risk { background: var(--red); opacity: .75; }
+.vk-rrmeter .rm-rw { background: var(--green); opacity: .8; }
+.vk-axis-note { font: 600 11px/1.2 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ── UX top-10 #5: toolbar density on wide screens — one line at ≥1500px ── */
+@media (min-width: 1200px) {
+  #toolbar .vkf-chip { padding: 6px 8px; font-size: 12px; }
+  #toolbar .seg-btn { padding: 6px 9px; }
+  .tb-line { gap: 5px; }
+  #toolbar #vk-filters { gap: 5px; }
+  .tb-watch { padding: 7px 10px; }
+  .tb-sort-label { min-width: 54px; }
+}
+
+/* ── UX top-10 #10: cross-document view transitions (progressive) ────────── */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

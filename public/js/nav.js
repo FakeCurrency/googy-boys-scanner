@@ -262,6 +262,29 @@
     document.body.appendChild(f);
   }
 
+  // UX top-10 #10: instant-feeling navigation — prefetch a page the moment the
+  // user shows INTENT (hover / touchstart on any internal link), so the real
+  // click lands on a warm cache. One <link rel=prefetch> per URL per session;
+  // SW + HTTP caching make repeats free. Skips downloads and cross-origin.
+  const _prefetched = new Set();
+  function prefetchHref(href) {
+    try {
+      const u = new URL(href, location.href);
+      if (u.origin !== location.origin || !/\.html($|\?)/.test(u.pathname + u.search)) return;
+      const key = u.pathname + u.search;
+      if (_prefetched.has(key)) return;
+      _prefetched.add(key);
+      const l = document.createElement("link");
+      l.rel = "prefetch"; l.href = key; l.as = "document";
+      document.head.appendChild(l);
+    } catch (_) {}
+  }
+  ["mouseover", "touchstart"].forEach((ev) =>
+    document.addEventListener(ev, (e) => {
+      const a = e.target && e.target.closest && e.target.closest("a[href]");
+      if (a && !a.target) prefetchHref(a.getAttribute("href"));
+    }, { passive: true, capture: true }));
+
   function init() { render(); renderFooter(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

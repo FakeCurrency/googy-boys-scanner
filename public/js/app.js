@@ -930,6 +930,42 @@
       cell("TP3", "Take profit 3", r.tp3,   "tp",    `${sgn(pctFrom(r.tp3))} · book ${scale[2]}%`),
     ];
 
+    // UX top-10 #4: the plan at a glance — a PROPORTIONAL price axis. The cell
+    // ladder above reads in trade order but its cells are equidistant; this bar
+    // places SL / Entry / TPs at their TRUE relative prices with a live "now"
+    // marker, so one glance answers "how far is the entry, and what's the
+    // shape of the trade?" Plus an R:R meter (risk vs reward to TP2, widths
+    // proportional). Pure CSS positioning — no canvas, no lib.
+    const axisHTML = (() => {
+      const lv = [r.stop, r.entry, r.tp1, r.tp2, r.tp3].filter((x) => x != null && isFinite(x));
+      if (lv.length < 3 || r.entry == null || r.stop == null) return "";
+      const now = (r.price != null && isFinite(r.price)) ? r.price : null;
+      const lo = Math.min(...lv, now != null ? now : Infinity);
+      const hi = Math.max(...lv, now != null ? now : -Infinity);
+      const span = hi - lo || 1;
+      const X = (p) => Math.max(0, Math.min(100, ((p - lo) / span) * 100));
+      const seg = (a, b, cls) => {
+        const l = Math.min(X(a), X(b)), w = Math.abs(X(b) - X(a));
+        return `<span class="vk-axis-seg ${cls}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%"></span>`;
+      };
+      const tick = (p, lbl, cls) => p == null ? "" :
+        `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${lbl} ${cur}${num(p)}"><i></i>${lbl}</span>`;
+      const nowPct = now != null && r.entry ? ((r.entry - now) / now * 100) : null;
+      const rr = r.rr || 0;
+      const rwW = Math.max(8, Math.min(88, (rr / (1 + rr)) * 100));
+      return `<div class="vk-axis" aria-label="Plan levels relative to the current price">
+        <div class="vk-axis-track">
+          ${seg(r.stop, r.entry, "risk")}${seg(r.entry, r.tp3 != null ? r.tp3 : (r.tp2 != null ? r.tp2 : r.tp1), "reward")}
+          ${tick(r.stop, "SL", "sl")}${tick(r.entry, "IN", "in")}${tick(r.tp1, "TP1", "tp")}${tick(r.tp2, "TP2", "tp")}${tick(r.tp3, "TP3", "tp")}
+          ${now != null ? `<span class="vk-axis-now" style="left:${X(now).toFixed(1)}%" title="Now ${cur}${num(now)}"></span>` : ""}
+        </div>
+        <div class="vk-axis-meta">
+          <span class="vk-rrmeter" title="Risk vs reward to TP2"><i class="rm-risk" style="width:${(100 - rwW).toFixed(0)}%"></i><i class="rm-rw" style="width:${rwW.toFixed(0)}%"></i></span>
+          <span class="vk-axis-note">1 : ${(rr || 0).toFixed(1)}${nowPct != null ? ` · entry ${nowPct >= 0 ? "+" : ""}${nowPct.toFixed(1)}% from here` : ""}</span>
+        </div>
+      </div>`;
+    })();
+
     return `<div class="row-detail vk-detail">
       <div class="vk-hero" style="--gc:${gColor}">
         <div class="vk-grade-block">
@@ -951,6 +987,7 @@
         </div>
       </div>
 
+      ${axisHTML}
       <div class="vk-ladder vk-ladder-h">${ladder.join("")}</div>
 
       <div class="vk-checklist-wrap">
@@ -2466,6 +2503,20 @@
     if (!MEASURE) whenIdle(prefetchMarkets);
     if (!MEASURE) whenIdle(renderSystemStatus);   // UX #2: status pill after first paint
     if (!MEASURE) whenIdle(maybeOnboard);         // UX #3: first-visit intro (once, ever)
+    // UX #10: coming BACK from a chart lands you where you left the list, not
+    // at the top. Position saved per market+tab on leave; restored only when
+    // the referrer is the chart page (bfcache does it natively when it can —
+    // this covers the loads it can't).
+    try {
+      const skey = () => `gbs:scroll:${state.market}:${state.tab}`;
+      window.addEventListener("pagehide", () => {
+        try { sessionStorage.setItem(skey(), String(Math.round(window.scrollY))); } catch (_) {}
+      });
+      if (/chart\.html/.test(document.referrer || "")) {
+        const y = parseInt(sessionStorage.getItem(skey()) || "0", 10);
+        if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+      }
+    } catch (_) {}
     // #66: defer the watchlist sync-in until AFTER the first rows are on
     // screen — the star reconcile is not first-paint-critical.
     if (!MEASURE && window.GBSSync && GBSSync.enabled()) {
