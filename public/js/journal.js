@@ -712,6 +712,40 @@
   // Bot and manual trades are aggregated in SEPARATE sections (🤖 / ✏️) so the
   // bot's evidence is never contaminated by manual discretion.
   const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed], ["✏️ Me", state.me.closed]];
+
+  // ── Edge headline card (UX top-10 #8, 2026-07-26) ─────────────────────────
+  // The edge tracker's single most important row, surfaced ABOVE the fold:
+  // the best-performing setup cell across BOTH books (min 4 closed trades so
+  // one lucky fill can't crown itself), plus a caution line when a cell with
+  // 4+ trades is bleeding. Same aggregation the folded tracker uses — one
+  // number, zero new data.
+  function renderEdgeCard() {
+    const box = $("#jr-edge-card");
+    if (!box) return;
+    const closed = TRACKER_SIDES().flatMap(([, list]) => list).filter((t) => t.realized_r != null);
+    const cells = new Map();
+    for (const t of closed) {
+      const tf = TF_NAME[t.timeframe] || t.timeframe || "?";
+      const et = String(entryTypeOf(t) || "—").toLowerCase();
+      const key = `${tf} ${et}`;
+      let c = cells.get(key);
+      if (!c) { c = { key, n: 0, wins: 0, sumR: 0 }; cells.set(key, c); }
+      c.n += 1; c.sumR += t.realized_r; if (t.realized_r > 0) c.wins += 1;
+    }
+    const qual = [...cells.values()].filter((c) => c.n >= 4);
+    if (!qual.length) { box.hidden = true; return; }
+    const best = qual.reduce((a, b) => (b.sumR / b.n > a.sumR / a.n ? b : a));
+    const worst = qual.reduce((a, b) => (b.sumR / b.n < a.sumR / a.n ? b : a));
+    const avg = best.sumR / best.n, win = Math.round(100 * best.wins / best.n);
+    box.hidden = false;
+    box.innerHTML =
+      `<span class="jr-ec-lbl">📈 What's working</span>` +
+      `<span class="jr-ec-cell">${esc(best.key)}</span>` +
+      `<b class="jr-ec-r ${rcls(avg)}">${rfmt(avg)} avg</b>` +
+      `<span class="jr-ec-sub">${win}% win · ${best.n} closed</span>` +
+      (worst !== best && worst.sumR / worst.n < -0.2
+        ? `<span class="jr-ec-warn">⚠ leaking: ${esc(worst.key)} ${rfmt(worst.sumR / worst.n)} over ${worst.n}</span>` : "");
+  }
   const sideRow = (label, cols) =>
     `<tr><td colspan="${cols}" style="text-align:left;font-weight:700;padding:12px 8px 6px;color:var(--muted)">${label}</td></tr>`;
   const sideEmptyRow = (cols) =>
@@ -921,6 +955,7 @@
     const sb = renderSide("bot"), sm = renderSide("me");
     renderPnlHeadline();
     renderWeeklyDigest();
+    renderEdgeCard();
     renderNewPositions();
     renderComparison(sb, sm);
     renderBoth();

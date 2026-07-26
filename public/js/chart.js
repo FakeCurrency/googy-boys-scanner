@@ -2089,11 +2089,13 @@
       el.style.position = "relative";
       el.appendChild(canvas);
       // Relocate the drawing tools into the timeframe pill row for one clean
-      // control strip, instead of a floating overlay.
+      // control strip, instead of a floating overlay. On phones the UX #7
+      // bottom sheet owns the tools instead — don't steal them back from it.
       if (tools) {
         tools.hidden = false;
         const tgl = $("#tf-toggle");
-        if (tgl && tools.parentNode !== tgl) { tools.classList.add("in-toggle"); tgl.appendChild(tools); }
+        const inSheet = !!document.getElementById("ct-sheet");
+        if (tgl && tools.parentNode !== tgl && !inSheet) { tools.classList.add("in-toggle"); tgl.appendChild(tools); }
       }
       // Floating stats label for the measure tool (price Δ, %, bars, time).
       const measureLabel = Object.assign(document.createElement("div"), { className: "measure-label" });
@@ -3003,8 +3005,56 @@
     fetchResultMeta().then((meta) => liveFallback(baseSymbol, meta));
   }
 
+  // ── Mobile control sheet (UX top-10 #7, 2026-07-26) ───────────────────────
+  // On phones the drawing tools floated cramped over the canvas corner and the
+  // Share/PNG actions sat below the fold. A ✏ FAB now opens a bottom sheet
+  // holding those SECONDARY controls in thumb reach — the existing DOM nodes
+  // are MOVED in (listeners intact), so nothing is re-wired. The timeframe bar
+  // deliberately stays visible under the canvas: it's the most-used control
+  // and never belongs behind an extra tap. Desktop unchanged.
+  function initMobileSheet() {
+    if (!window.matchMedia || !matchMedia("(max-width: 560px)").matches) return;
+    const tools = document.getElementById("draw-tools");
+    const share = document.getElementById("cf-share");
+    const png = document.getElementById("cf-png");
+    const tv = document.getElementById("cf-tv");
+    if (!tools) return;
+    const fab = document.createElement("button");
+    fab.id = "ct-fab"; fab.type = "button";
+    fab.setAttribute("aria-haspopup", "dialog");
+    fab.setAttribute("aria-expanded", "false");
+    fab.title = "Chart tools — draw, share, export";
+    fab.textContent = "✏";
+    const scrim = document.createElement("div");
+    scrim.id = "ct-sheet-scrim"; scrim.hidden = true;
+    const sheet = document.createElement("div");
+    sheet.id = "ct-sheet"; sheet.hidden = true;
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-label", "Chart tools");
+    const secTools = document.createElement("div");
+    secTools.className = "cts-sec";
+    secTools.innerHTML = `<div class="cts-hd">Draw</div>`;
+    secTools.appendChild(tools);            // move — listeners ride along
+    const secActs = document.createElement("div");
+    secActs.className = "cts-sec";
+    secActs.innerHTML = `<div class="cts-hd">Share</div>`;
+    const actRow = document.createElement("div");
+    actRow.className = "cts-actions";
+    [share, png, tv].forEach((el) => { if (el) actRow.appendChild(el); });
+    secActs.appendChild(actRow);
+    sheet.appendChild(secTools); sheet.appendChild(secActs);
+    const setOpen = (open) => {
+      sheet.hidden = !open; scrim.hidden = !open;
+      fab.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    fab.addEventListener("click", () => setOpen(sheet.hidden));
+    scrim.addEventListener("click", () => setOpen(false));
+    document.body.append(scrim, sheet, fab);
+  }
+
   function boot() {
     initOffline();
+    initMobileSheet();
     wireShare();
     if (posId) { renderPosition(posId); return; }
     if (!symbol) { fail("No ticker specified."); return; }

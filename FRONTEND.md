@@ -141,6 +141,14 @@ is empty.
 - **Accessibility** — one universal `:focus-visible` ring (green + halo);
   toggles carry `aria-pressed`, disclosures `aria-expanded`;
   `prefers-reduced-motion` zeroes ALL animation/transition durations.
+- **UX top-10 (2026-07-26)** — CLS pass (space reserved pre-data + metric-
+  matched font fallbacks; lighthouse gate at <0.50), system-status pill
+  (`/api/health` in the deck), first-visit onboarding (`gbs:onboarded`), recs
+  morning read, proportional plan axis in row detail, intent prefetch + view
+  transitions + scroll restore (nav.js/app.js), ★ arm/trigger notifications
+  (`gbs:watch-state`), chart mobile control sheet, journal edge card.
+- **Screenshot-diff fixtures** — `test/e2e/fixtures/data/` freezes all /data/
+  requests during the diff so live scan commits can't drift the shots.
 - **Telemetry** (`js/telemetry.js`, #99) — loaded first in `<head>` on every
   page: a `window.onerror`/`unhandledrejection` beacon (ring buffer +
   `window.__gbsErrors()`), plus `version.json` skew detection (offers a refresh

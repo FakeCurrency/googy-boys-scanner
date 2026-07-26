@@ -1664,6 +1664,7 @@
         renderRows();
         renderDeckPills(d);
         notifyTriples(c.all());
+        notifyWatchArms(d.results || []);   // UX #6: ★ names newly arming/triggering
       });
     }
   }
@@ -2455,6 +2456,51 @@
       localStorage.setItem("gbs:notified", JSON.stringify(pruned));
     } catch (_) {}
   }
+  // ── Watchlist arm/trigger alerts (UX top-10 #6, 2026-07-26) ──────────────
+  // Stars stop being passive: when a ★ name's headline plan NEWLY arms (or its
+  // entry trigger fires) between scans, a browser notification says so — the
+  // same 🔔 permission and enable flag the triple-lens alerts use, the same
+  // once-per-day dedupe. State snapshot lives in gbs:watch-state; the FIRST
+  // sighting of a name just records it (no alert), so enabling the bell never
+  // floods you with already-armed names. Max 3 notifications per scan load.
+  function notifyWatchArms(results) {
+    if (!notifyEnabled() || !Array.isArray(results)) return;
+    let snap = {};
+    try { snap = JSON.parse(localStorage.getItem("gbs:watch-state") || "{}"); } catch (_) {}
+    let seen = {};
+    try { seen = JSON.parse(localStorage.getItem("gbs:notified") || "{}"); } catch (_) {}
+    const day = new Date().toISOString().slice(0, 10);
+    let fired = 0;
+    for (const r of results) {
+      if (!isWatchedAny(r.symbol)) continue;
+      const tf = r.headline_tf || "1D";
+      const p = (r.plans && (r.plans[tf] || r.plans["1D"] || r.plans["1W"])) || null;
+      const armed = !!(p && p.armed);
+      const trig = (p && p.entry_trigger) || null;
+      const key = `${state.market}:${r.symbol}`;
+      const prev = snap[key];
+      snap[key] = { armed, trig };
+      if (!prev) continue;                       // first sighting: record only
+      const newlyArmed = armed && !prev.armed;
+      const newTrigger = trig && trig !== prev.trig && armed;
+      if ((!newlyArmed && !newTrigger) || fired >= 3) continue;
+      const nk = `${day}:watch:${key}:${trig || "armed"}`;
+      if (seen[nk]) continue;
+      seen[nk] = 1; fired++;
+      try {
+        new Notification(`★ ${r.symbol} ${newlyArmed ? "armed" : "trigger"}`, {
+          body: `${r.dir || ""} ${r.grade || ""} · ${state.market.toUpperCase()} — ${trig || "setup"} on ${tf}`.trim(),
+          icon: "icons/icon-192.png", tag: nk,
+        });
+      } catch (_) {}
+    }
+    try { localStorage.setItem("gbs:watch-state", JSON.stringify(snap)); } catch (_) {}
+    try {
+      const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
+      localStorage.setItem("gbs:notified", JSON.stringify(pruned));
+    } catch (_) {}
+  }
+
   function wireNotifyBell() {
     const btn = document.getElementById("notify-btn");
     if (!btn || !("Notification" in window)) { if (btn) btn.hidden = true; return; }

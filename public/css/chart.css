@@ -478,3 +478,32 @@
   .chart-foot { order: 2; }
   .draw-tools { top: 12px; right: 12px; }
 }
+
+/* ── UX top-10 #7: mobile control sheet (draw + share in thumb reach) ────── */
+#ct-fab {
+  display: none; position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0));
+  z-index: 60; width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--border-2); background: var(--panel-2); color: var(--text);
+  font-size: 19px; cursor: pointer; box-shadow: 0 8px 26px rgba(0,0,0,.5);
+}
+#ct-sheet-scrim { position: fixed; inset: 0; z-index: 61; background: rgba(4,7,12,.55); }
+#ct-sheet-scrim[hidden] { display: none; }
+#ct-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 62;
+  background: var(--panel); border-top: 1px solid var(--border-2);
+  border-radius: 16px 16px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0));
+  box-shadow: 0 -14px 44px rgba(0,0,0,.55);
+}
+#ct-sheet[hidden] { display: none; }
+.cts-sec + .cts-sec { margin-top: 14px; }
+.cts-hd { font: 700 10.5px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+.cts-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+#ct-sheet .draw-tools { position: static; display: flex; gap: 8px; padding: 0; background: none; border: none; box-shadow: none; }
+#ct-sheet .draw-btn { width: 42px; height: 42px; font-size: 16px; }
+@media (max-width: 560px) {
+  #ct-fab { display: grid; place-items: center; }
+  /* the sheet owns these on phones — hide their old positions if JS moved them
+     is moot (they're physically in the sheet), this is belt-and-braces for the
+     pre-boot flash */
+  .chart-foot .cf-actions #cf-share, .chart-foot .cf-actions #cf-png { display: none; }
+}

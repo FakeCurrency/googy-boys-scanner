@@ -710,3 +710,18 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-dg-val { font: 800 16px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
 .jr-dg-val.r-pos { color: var(--green); }
 .jr-dg-val.r-neg { color: var(--red); }
+
+/* ── UX top-10 #8: edge headline card ────────────────────────────────────── */
+.jr-edge-card {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  margin: 0 0 14px; padding: 11px 16px; border-radius: 12px;
+  background: var(--fill); border: 1px solid var(--border);
+  font: 600 12.5px/1.4 var(--sans); color: var(--muted);
+}
+.jr-edge-card[hidden] { display: none; }
+.jr-ec-lbl { font-weight: 800; color: var(--text); }
+.jr-ec-cell { font: 700 12px/1 var(--mono); color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 999px; }
+.jr-ec-r { font: 800 14px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.jr-ec-r.r-pos { color: var(--green); } .jr-ec-r.r-neg { color: var(--red); }
+.jr-ec-sub { color: var(--muted-2); }
+.jr-ec-warn { font: 600 11.5px/1.3 var(--sans); color: var(--orange); margin-left: auto; }
