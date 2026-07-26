@@ -2712,3 +2712,60 @@ body.density-compact .badge { padding: 2.5px 5px; }
   padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(255,176,32,.4);
   background: rgba(255,176,32,.1); white-space: nowrap; cursor: help;
 }
+
+/* ── Fix-10 batch A ──────────────────────────────────────────────────────── */
+/* #5: shared bottom toast (trade-card copy etc.) */
+.gbs-toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom, 0)); z-index: 130;
+  max-width: min(92vw, 520px); padding: 11px 18px; border-radius: 12px;
+  border: 1px solid var(--border-2); background: var(--panel, #131a26);
+  color: var(--text); font: 600 12.5px/1.5 var(--sans); text-align: center;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); animation: pa-in .22s ease;
+}
+.gbs-toast.tappable { cursor: pointer; }
+.gbs-toast.tappable:hover { border-color: var(--blue); }
+.gbs-toast.out { opacity: 0; transition: opacity .4s ease; }
+body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 0)); }
+@keyframes pa-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+
+/* #2: price-alert manager card (alerts page) */
+.pa-manager {
+  margin: 0 0 16px; padding: 13px 16px; border-radius: var(--r-mid, 14px);
+  border: 1px solid var(--border); background: var(--panel);
+}
+.pa-mg-hd { font: 700 13px/1.4 var(--sans); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pa-mg-hd b { font-family: var(--mono); color: #00d2ff; }
+.pa-mg-sub { font: 500 11px/1.5 var(--sans); color: var(--muted); }
+.pa-mg-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.pa-mg-row {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px;
+  border-radius: 9px; font: 600 12.5px/1.4 var(--sans);
+}
+.pa-mg-row:hover { background: rgba(120,120,128,.1); }
+.pa-mg-sym { font: 700 13px/1 var(--mono); color: var(--text); text-decoration: none; min-width: 52px; }
+.pa-mg-sym:hover { color: var(--blue); }
+.pa-mg-mkt { font: 600 9.5px/1 var(--mono); letter-spacing: .06em; color: var(--muted);
+  border: 1px solid var(--border-2); border-radius: 4px; padding: 3px 5px; }
+.pa-mg-px { color: var(--muted); flex: 1 1 auto; }
+.pa-mg-px b { font-family: var(--mono); color: #00d2ff; }
+.pa-mg-ago { font: 500 11px/1 var(--sans); color: var(--muted); }
+.pa-mg-del {
+  border: none; background: none; color: var(--muted); cursor: pointer;
+  font: 700 13px/1 var(--mono); padding: 5px 8px; border-radius: 7px;
+}
+.pa-mg-del:hover { color: var(--red); background: rgba(255,91,91,.14); }
+
+/* #6: alert count on the ALERTS nav pill / sheet row + row ⏰ chip */
+.nav-count {
+  display: inline-block; min-width: 15px; text-align: center; margin-left: 2px;
+  padding: 2px 5px; border-radius: 999px; font: 700 9.5px/1 var(--mono);
+  background: rgba(0,210,255,.18); color: #00d2ff;
+}
+.row-alert { font-size: 11px; line-height: 1; opacity: .85; flex-shrink: 0; }
+
+/* #3: palette personal rows */
+.cp-ico.cp-mine { color: var(--amber, #ffb020); }
+
+/* #4: copy-plan button in the row detail */
+.vk-copy-btn { cursor: pointer; background: none; }

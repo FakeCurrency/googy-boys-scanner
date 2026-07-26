@@ -2110,6 +2110,21 @@
     wireChartPosition(candle, d);
     wireLiveBox(d, el, SYM, posDir, findOpen);
 
+    // Fix-10 #4: ⧉ Plan — copy the ACTIVE timeframe's plan as pasteable text.
+    const planBtn = $("#cf-plan");
+    if (planBtn) planBtn.onclick = async () => {
+      const lv = d._activeLevels || { entry: d.entry, stop: d.stop, tp1: d.tp1, tp2: d.tp2, tp3: d.tp3, rr: d.rr };
+      if (lv.entry == null) { planBtn.textContent = "— no plan"; setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1400); return; }
+      const c = d.currency_symbol || "";
+      const f = (v) => (v == null || !isFinite(v)) ? "—" : fmt(v, c);
+      const txt = `${SYM} ${(d.dir || "LONG").toUpperCase()} — entry ${f(lv.entry)} · SL ${f(lv.stop)} · ` +
+        `TP1 ${f(lv.tp1)} / TP2 ${f(lv.tp2)} / TP3 ${f(lv.tp3)} · R:R ${(+lv.rr || 0).toFixed(1)} ` +
+        `(${d._activeTf || curTF} plan · ${d.grade || ""} · Vivek 5.0 — not advice)`;
+      try { await navigator.clipboard.writeText(txt); planBtn.textContent = "✓ Copied"; }
+      catch (_) { planBtn.textContent = "✗ Blocked"; }
+      setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1600);
+    };
+
     // ── Temporary drawing tools + measure + eraser ───────────────────────────
     // Not persisted — purely for eyeballing structure while viewing. Points are
     // anchored to chart coordinates (logical index + price) so they track pan/
@@ -3428,6 +3443,7 @@
     const share = document.getElementById("cf-share");
     const png = document.getElementById("cf-png");
     const tv = document.getElementById("cf-tv");
+    const plan = document.getElementById("cf-plan");   // Fix-10 #4 rides along
     if (!tools) return;
     const fab = document.createElement("button");
     fab.id = "ct-fab"; fab.type = "button";
@@ -3450,7 +3466,7 @@
     secActs.innerHTML = `<div class="cts-hd">Share</div>`;
     const actRow = document.createElement("div");
     actRow.className = "cts-actions";
-    [share, png, tv].forEach((el) => { if (el) actRow.appendChild(el); });
+    [plan, share, png, tv].forEach((el) => { if (el) actRow.appendChild(el); });
     secActs.appendChild(actRow);
     sheet.appendChild(secTools); sheet.appendChild(secActs);
     const setOpen = (open) => {

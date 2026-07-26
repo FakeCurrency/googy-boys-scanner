@@ -54,15 +54,33 @@
     return base;
   }
 
+  // Fix-10 #6: active price-alert count (⏰ lines set on charts) — shown on
+  // the ALERTS nav pill and the mobile MORE sheet row so armed alerts are
+  // visible from anywhere, not only on the charts that own them.
+  function paCount() {
+    let n = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf("gbs:palerts:") !== 0) continue;
+        const list = JSON.parse(localStorage.getItem(k) || "[]");
+        if (Array.isArray(list)) n += list.length;
+      }
+    } catch (_) {}
+    return n;
+  }
+
   function render() {
     const mount = document.getElementById("site-nav");
     const here = pageKey();
     const more = MORE;
+    const paN = paCount();
 
     if (mount) {
       const pill = (it) =>
         `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
-        `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${it.label}</a>`;
+        `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${it.label}` +
+        `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
       const moreActive = more.some((it) => it.key === here);
       // BACK (owner 2026-07-22): one click to the previous page from anywhere
       // but the dashboard. Falls back to SCAN when there's no in-site history.
@@ -199,7 +217,8 @@
           SHEET.map((it) =>
             `<a class="more-sheet-row${it.key === here ? " is-here" : ""}" href="${it.href}">` +
             `<span class="more-sheet-ico" aria-hidden="true">${it.bot ? '<span class="bot-nav-dot"></span>' : it.tab || "•"}</span>` +
-            `<span class="more-sheet-lbl">${it.label.replace(" ⚡", "")}</span>` +
+            `<span class="more-sheet-lbl">${it.label.replace(" ⚡", "")}` +
+            `${it.key === "alerts" && paCount() ? ` <span class="nav-count">${paCount()}</span>` : ""}</span>` +
             `<span class="more-sheet-go" aria-hidden="true">›</span></a>`).join("") +
         `</div>` +
       `</div>`;
@@ -301,7 +320,7 @@
   // Enter runs, Esc closes. Pages add their own commands via
   // window.GBSPalette.register([{label, hint, run}]).
   const cpExtra = [];
-  let cpEl = null, cpInput = null, cpList = null, cpSel = 0, cpIndex = null, cpIndexP = null;
+  let cpEl = null, cpInput = null, cpList = null, cpSel = 0, cpIndex = null, cpIndexP = null, cpMine = [];
   const MKT_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
 
   function cpCommands() {
@@ -317,10 +336,12 @@
   function cpLoadIndex() {
     if (cpIndexP) return cpIndexP;
     const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    cpIndexP = Promise.all(["asx", "nasdaq", "crypto"].map((m) => grab(`data/${m}_prices.json`)))
-      .then((files) => {
+    cpIndexP = Promise.all([
+      ...["asx", "nasdaq", "crypto"].map((m) => grab(`data/${m}_prices.json`)),
+      grab("data/vivek_bot_book.json"),
+    ]).then(([pa, pn, pc, book]) => {
         const out = [];
-        files.forEach((d, i) => {
+        [pa, pn, pc].forEach((d, i) => {
           const m = ["asx", "nasdaq", "crypto"][i];
           const rows = (d && d.rows) || {};
           for (const sym in rows) {
@@ -329,6 +350,40 @@
           }
         });
         cpIndex = out;
+        // Fix-10 #3: YOUR names rank first — ★ stars (unified watchlist, on
+        // pages where gbs-sync is loaded), the bot's open book, and your own
+        // open manual positions. Deduped by symbol+market, stars win.
+        const mine = new Map();
+        const put = (s, m, kind) => {
+          const key = `${m}:${s}`;
+          if (!s || (mine.has(key) && kind !== "star")) return;
+          mine.set(key, { s, m, kind });
+        };
+        ((book && book.open) || []).forEach((p) =>
+          put(String(p.symbol || "").toUpperCase(), p.market || "asx", "bot"));
+        try {
+          const mj = JSON.parse(localStorage.getItem("gbs:manual_journal") || "{}");
+          (mj.trades || []).filter((t) => t.status === "open").forEach((t) =>
+            put(String(t.symbol || "").toUpperCase(),
+              ["asx", "nasdaq"].indexOf(t.asset_type) >= 0 ? t.asset_type : (t.market || "crypto"), "me"));
+        } catch (_) {}
+        try {
+          // Stars read straight from the unified store (works on EVERY page —
+          // no dependency on phasemap-shared being loaded): keys are
+          // "<lens>:<market>:<TICKER>", un-stars are tombstoned with .del.
+          const wl = (JSON.parse(localStorage.getItem("gbs:manual_journal") || "{}").watchlists) || {};
+          for (const k in wl) {
+            const v = wl[k];
+            if (!v || v.del) continue;
+            const parts = k.split(":");
+            if (parts.length === 3 && ["asx", "nasdaq", "crypto"].indexOf(parts[1]) >= 0)
+              put(parts[2].toUpperCase(), parts[1], "star");
+          }
+        } catch (_) {}
+        // Stars first, then your own positions, then the bot's book.
+        const rank = { star: 0, me: 1, bot: 2 };
+        cpMine = [...mine.values()].sort((a, b) =>
+          (rank[a.kind] - rank[b.kind]) || a.s.localeCompare(b.s));
         return out;
       });
     return cpIndexP;
@@ -372,11 +427,26 @@
     const sel = cpList.querySelector(".cp-item.is-sel");
     if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
   }
+  const CP_KIND = { star: ["★", "starred", "mynames"], bot: ["🤖", "bot position", "journal"], me: ["✏️", "your position", "journal"] };
+  const cpMineRow = (t) => {
+    const [ico, label, src] = CP_KIND[t.kind] || ["•", "", "index"];
+    return `<button class="cp-item" type="button" data-href="chart.html?m=${t.m}&s=${encodeURIComponent(t.s)}&mode=vivek&src=${src}" role="option">` +
+      `<span class="cp-ico cp-mine" aria-hidden="true">${ico}</span>` +
+      `<span class="cp-lbl">${t.s}</span>` +
+      `<span class="cp-meta">${label} · ${MKT_LABEL[t.m] || t.m}</span></button>`;
+  };
   function cpRender() {
     const q = (cpInput.value || "").trim().toLowerCase();
     const cmds = cpCommands().filter((c) => !q || c.label.toLowerCase().includes(q));
     cpRendered = cmds;
     let html = "";
+    // Fix-10 #3: your names first — always a peek on empty query, and matches
+    // rank above the general scan results when typing.
+    if (cpMine.length) {
+      const Q = q.toUpperCase();
+      const mine = q ? cpMine.filter((t) => t.s.includes(Q)) : cpMine.slice(0, 5);
+      if (mine.length) html += `<div class="cp-hd">Yours</div>` + mine.slice(0, 6).map(cpMineRow).join("");
+    }
     const cmdRows = cmds.slice(0, q ? 5 : 14).map((c, i) =>
       `<button class="cp-item" type="button" data-cmd="${i}" role="option">` +
       `<span class="cp-ico" aria-hidden="true">${c.hint || "→"}</span><span class="cp-lbl">${c.label}</span></button>`).join("");

@@ -505,7 +505,7 @@
   /* the sheet owns these on phones — hide their old positions if JS moved them
      is moot (they're physically in the sheet), this is belt-and-braces for the
      pre-boot flash */
-  .chart-foot .cf-actions #cf-share, .chart-foot .cf-actions #cf-png { display: none; }
+  .chart-foot .cf-actions #cf-share, .chart-foot .cf-actions #cf-png, .chart-foot .cf-actions #cf-plan { display: none; }
 }
 
 /* ── UX-20 batch 2: alerts · replay · relative strength · shading ────────── */

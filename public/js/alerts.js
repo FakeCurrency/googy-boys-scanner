@@ -115,4 +115,79 @@
     .catch(() => {
       document.getElementById("al-sub").textContent = "Alert history unavailable.";
     });
+
+  // ── Fix-10 #2: YOUR price-alert lines, managed here ───────────────────────
+  // Every ⏰ one-shot alert set with the chart's 🔔 tool (gbs:palerts:*), in
+  // one place: level, direction it's waiting on, when it was set, one-tap
+  // remove, and a link to the chart it lives on. Fires happen on the chart
+  // page (live tick) and the dashboard (every scan) — this is the ledger.
+  function paEsc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function paFmt(v) {
+    if (v == null || !isFinite(v)) return "—";
+    const a = Math.abs(v);
+    return a >= 100 ? (+v).toFixed(2) : a >= 1 ? (+v).toFixed(3) : a >= 0.01 ? (+v).toFixed(4) : (+v).toFixed(6);
+  }
+  function renderPriceAlerts() {
+    let host = document.getElementById("pa-manager");
+    if (!host) {
+      host = document.createElement("section");
+      host.id = "pa-manager";
+      host.className = "pa-manager";
+      const anchor = document.querySelector(".pm-filters");
+      if (!anchor || !anchor.parentNode) return;
+      anchor.parentNode.insertBefore(host, anchor);
+      host.addEventListener("click", (e) => {
+        const del = e.target.closest("[data-pa-del]");
+        if (!del) return;
+        const [key, idx] = del.getAttribute("data-pa-del").split("|");
+        try {
+          const list = JSON.parse(localStorage.getItem(key) || "[]") || [];
+          list.splice(+idx, 1);
+          if (list.length) localStorage.setItem(key, JSON.stringify(list));
+          else localStorage.removeItem(key);
+        } catch (_) {}
+        renderPriceAlerts();
+      });
+    }
+    const rows = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf("gbs:palerts:") !== 0) continue;
+        const parts = k.split(":");
+        const market = parts[2] || "", sym = parts[3] || "";
+        let list = [];
+        try { list = JSON.parse(localStorage.getItem(k) || "[]") || []; } catch (_) { continue; }
+        list.forEach((a, idx) => rows.push({ k, idx, market, sym, a }));
+      }
+    } catch (_) {}
+    if (!rows.length) { host.hidden = true; return; }
+    rows.sort((x, y) => x.market.localeCompare(y.market) || x.sym.localeCompare(y.sym) || x.a.p - y.a.p);
+    const MKT = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO", scalp: "SCALP" };
+    const ago = (t) => {
+      if (!t) return "";
+      const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      return m < 60 ? `${m}m ago` : m < 2880 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+    };
+    host.hidden = false;
+    host.innerHTML =
+      `<div class="pa-mg-hd">⏰ Your price-alert lines <b>${rows.length}</b>` +
+      `<span class="pa-mg-sub">set with the 🔔 tool on any chart · one-shot — they fire on the chart and on every scan, then clear</span></div>` +
+      `<div class="pa-mg-rows">` +
+      rows.map((r) => {
+        const waitUp = r.a.ref != null && r.a.ref < r.a.p;
+        return `<div class="pa-mg-row">` +
+          `<a class="pa-mg-sym" href="chart.html?m=${paEsc(r.market)}&s=${encodeURIComponent(r.sym)}&mode=vivek" title="Open the chart">${paEsc(r.sym)}</a>` +
+          `<span class="pa-mg-mkt">${MKT[r.market] || paEsc(r.market.toUpperCase())}</span>` +
+          `<span class="pa-mg-px">${waitUp ? "▲ crosses above" : "▼ crosses below"} <b>${paFmt(r.a.p)}</b></span>` +
+          `<span class="pa-mg-ago">${ago(r.a.t)}</span>` +
+          `<button class="pa-mg-del" type="button" data-pa-del="${paEsc(r.k)}|${r.idx}" title="Remove this alert" aria-label="Remove alert">✕</button>` +
+        `</div>`;
+      }).join("") + `</div>`;
+  }
+  renderPriceAlerts();
+  window.addEventListener("storage", (e) => { if (e.key && e.key.indexOf("gbs:palerts:") === 0) renderPriceAlerts(); });
 })();

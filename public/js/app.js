@@ -922,7 +922,7 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
-          ${tfDots(r)}${changeMark(r)}
+          ${tfDots(r)}${changeMark(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
           ${mcapBadge}
           ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
@@ -1224,6 +1224,8 @@
             <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
             ${scanAge()}
             <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
+            <button class="vk-chart-btn vk-copy-btn" type="button" data-copyplan="${esc(r.symbol)}"
+              title="Copy this plan as one line of text — entry, SL, TPs, R:R">⧉ Copy plan</button>
           </div>
           <p class="vk-why">${esc(r.analysis || "")}</p>
         </div>
@@ -1749,6 +1751,7 @@
   let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts
   function renderRows() {
     setTimeout(renderWatchStrip, 0);   // UX-20 #3: strip reflects the fresh rows
+    refreshAlertSyms();                // Fix-10 #6: ⏰ chips read the live store
     const wrap = $("#results");
     const list = buildList();
     _rowsToken++;
@@ -2816,6 +2819,40 @@
     if (out) out.innerHTML = (acct > 0 && riskP > 0 && dist > 0)
       ? sizeCalcText(acct, riskP, dist, entry, state.cur) : "";
   });
+
+  // ── Fix-10 #4: copy-plan — one tap turns a row's plan into pasteable text.
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest && e.target.closest("[data-copyplan]");
+    if (!b) return;
+    const sym = b.getAttribute("data-copyplan");
+    const r = ((state.data || {}).results || []).find((x) => x.symbol === sym);
+    if (!r) return;
+    const cur = state.cur || "$";
+    const p = (v) => (v == null || !isFinite(v)) ? "—" : cur + num(v);
+    const txt = `${r.symbol} ${r.dir || "LONG"} — entry ${p(r.entry)} · SL ${p(r.stop)} · ` +
+      `TP1 ${p(r.tp1)} / TP2 ${p(r.tp2)} / TP3 ${p(r.tp3)} · R:R ${(r.rr || 0).toFixed(1)} ` +
+      `(${r.headline_tf || "1D"} plan · ${r.grade || ""} · Vivek 5.0 — not advice)`;
+    const done = (ok) => {
+      b.textContent = ok ? "✓ Copied" : "✗ Copy blocked";
+      setTimeout(() => { b.textContent = "⧉ Copy plan"; }, 1600);
+    };
+    try { await navigator.clipboard.writeText(txt); done(true); } catch (_) { done(false); }
+  });
+
+  // ── Fix-10 #6: ⏰ chip on rows that have an armed price-alert line ────────
+  let alertSyms = new Set();
+  function refreshAlertSyms() {
+    alertSyms = new Set();
+    try {
+      const pre = `gbs:palerts:${state.market}:`;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf(pre) !== 0) continue;
+        const list = JSON.parse(localStorage.getItem(k) || "[]");
+        if (Array.isArray(list) && list.length) alertSyms.add(k.slice(pre.length));
+      }
+    } catch (_) {}
+  }
 
   // ── Price-alert lines set on the chart page (UX-20 #4) ───────────────────
   // The chart's 🔔 tool stores one-shot alerts in gbs:palerts:<market>:<SYM>

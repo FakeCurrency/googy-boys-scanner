@@ -578,14 +578,39 @@
     x.fillStyle = "#5b6577"; x.font = `600 14px ${sans}`;
     x.fillText("Three-lens 200-SMA scanner · paper journal — every trade logged, wins and losses alike.", 48, H - 58);
     x.fillText("General information only — not financial advice.", 48, H - 34);
-    cv.toBlob((blob) => {
+    cv.toBlob(async (blob) => {
       if (!blob) return;
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `vivek-trade-${sym}-${(t.exit_date || "").replaceAll("-", "") || "card"}.png`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      const doDownload = () => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `vivek-trade-${sym}-${(t.exit_date || "").replaceAll("-", "") || "card"}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      };
+      // Fix-10 #5: clipboard-first — paste straight into Discord/chat; the
+      // toast offers the file too. Falls back to a plain download wherever
+      // the clipboard image API isn't available.
+      let copied = false;
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          copied = true;
+        }
+      } catch (_) {}
+      if (copied) gbsToast("📋 Trade card copied — paste it anywhere · tap here to download the file too", doDownload);
+      else { doDownload(); gbsToast("⬇ Trade card downloaded"); }
     }, "image/png");
+  }
+
+  // Small bottom toast (shared by the trade-card copy + future notices).
+  function gbsToast(msg, onTap) {
+    document.querySelectorAll(".gbs-toast").forEach((x) => x.remove());
+    const el = document.createElement("div");
+    el.className = "gbs-toast" + (onTap ? " tappable" : "");
+    el.textContent = msg;
+    if (onTap) el.addEventListener("click", () => { try { onTap(); } catch (_) {} el.remove(); });
+    document.body.appendChild(el);
+    setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 400); }, 5600);
   }
 
   // ── Same positions: you and Claude in the same trade, head to head ─────────
@@ -1067,6 +1092,59 @@
     }
   }
 
+  // Fix-10 #1: EXIT QUALITY — the bot book records every trade's best (MFE)
+  // and worst (MAE) excursion in R. Comparing those to what was actually
+  // booked answers the questions a raw win rate can't: are winners being cut
+  // early, are stops honest (slippage), and how many losers were green first
+  // (a tighter break-even rule would have saved them). Bot book only — the
+  // manual side has no excursion marks.
+  function renderExitQuality() {
+    const box = $("#jr-xq");
+    if (!box) return;
+    const closed = (state.bot.closed || []).filter((t) => t.realized_r != null && t.mfe_r != null && t.mae_r != null);
+    if (closed.length < 4) { box.hidden = true; return; }
+    const winners = closed.filter((t) => t.realized_r > 0);
+    const losers = closed.filter((t) => t.realized_r < 0);
+    const avg = (arr, f) => arr.length ? arr.reduce((s, t) => s + f(t), 0) / arr.length : null;
+    const cell = (label, val, cls, title) =>
+      `<div class="jr-dg-cell" title="${esc(title || "")}"><span class="jr-dg-label">${label}</span><span class="jr-dg-val ${cls || ""}">${val}</span></div>`;
+    let cells = "", verdicts = [];
+    // winners: peak vs booked
+    if (winners.length) {
+      const wR = avg(winners, (t) => t.realized_r), wMFE = avg(winners, (t) => t.mfe_r);
+      const giveback = wMFE - wR;
+      cells += cell("Winners", `${winners.length} · avg ${rfmt(wR)}`, rcls(wR));
+      cells += cell("Peak vs booked", `${rfmt(wMFE)} → ${rfmt(wR)}`, giveback > 0.8 ? "neg" : "",
+        "Average best excursion (MFE) vs what the exits actually booked");
+      if (wMFE > 0) cells += cell("Capture", Math.round((wR / wMFE) * 100) + "%", "",
+        "Booked R as a share of the average peak — 100% would mean top-ticking every exit");
+      verdicts.push(giveback > 0.8
+        ? `Winners peak ${rfmt(wMFE)} on average but book ${rfmt(wR)} — the ladder is giving back ${giveback.toFixed(1)}R; a wider trail past TP2 may pay.`
+        : `Exits are capturing most of the winners' move (peak ${rfmt(wMFE)}, booked ${rfmt(wR)}).`);
+    } else {
+      cells += cell("Winners", "0 yet", "");
+    }
+    // losers: stop honesty + saveable
+    if (losers.length) {
+      const lR = avg(losers, (t) => t.realized_r);
+      const slip = -1 - lR;                        // how far past -1R the average loss lands
+      const saveable = losers.filter((t) => t.mfe_r >= 0.5);
+      cells += cell("Losers", `${losers.length} · avg ${rfmt(lR)}`, rcls(lR));
+      cells += cell("Stop slippage", `${slip <= 0.05 ? "≈none" : rfmt(-slip) + " past plan"}`, slip > 0.25 ? "neg" : "",
+        "Average loser vs the -1R plan — gaps/slippage make losses land beyond the stop");
+      cells += cell("Were green first", `${saveable.length}/${losers.length} ≥ +0.5R`, saveable.length ? "" : "",
+        "Losers whose best excursion reached +0.5R before stopping out");
+      if (slip > 0.25) verdicts.push(`Average loss lands ${rfmt(lR)} vs the −1R plan — ${slip.toFixed(1)}R of gap/slippage; mostly a fill-quality fact, not a rule problem.`);
+      if (saveable.length >= 2) verdicts.push(`${saveable.length} losers were up ≥ +0.5R before stopping — evidence for an earlier break-even move.`);
+      if (!verdicts.length) verdicts.push("Losses are landing where the plan says they should.");
+    }
+    const sub = $("#jr-xq-sub");
+    if (sub) sub.textContent = `${closed.length} closed with excursion marks`;
+    $("#jr-xq-grid").innerHTML = cells;
+    $("#jr-xq-verdict").textContent = verdicts.join(" ");
+    box.hidden = false;
+  }
+
   // UX-20 #10: R-distribution histogram — every closed trade from both books
   // bucketed by realised R. Pure CSS bars; hidden until 5 closes exist.
   function renderRDist() {
@@ -1100,6 +1178,7 @@
     renderPnlHeadline();
     renderWeeklyDigest();
     renderRDist();               // UX-20 #10
+    renderExitQuality();         // Fix-10 #1
     renderEdgeCard();
     renderNewPositions();
     renderComparison(sb, sm);
