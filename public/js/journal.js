@@ -490,11 +490,16 @@
     return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
-  function closedRows(list) {
+  // UX-20 #13: registry backing the per-row 📤 trade-card buttons — rebuilt on
+  // every render so data-card="side:idx" always resolves to the row it sits on.
+  const cardReg = { bot: [], me: [] };
+  function closedRows(list, side) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">R</th><th class="num">$</th>
       <th class="num">Opened</th><th class="num">Closed</th><th>Reason</th></tr>`;
-    const rows = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0)).map((t) => {
+    const sorted = list.slice().sort((a, b) => (exitMs(b) || 0) - (exitMs(a) || 0));
+    if (side) cardReg[side] = sorted;
+    const rows = sorted.map((t, i) => {
       const d = dollarsOf(t);
       return `<tr>
         ${symCell(t)}
@@ -503,9 +508,84 @@
         <td class="num ${d == null ? "" : pcls(d)}" data-label="$">${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
-        <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}</td></tr>`;
+        <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
     }).join("");
     return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // UX-20 #13: render a closed trade as a 1000×525 dark PNG card (canvas —
+  // no libs) and download it. Symbol, side, grade, entry→exit, the R multiple
+  // as the hero number, $ P&L, dates/duration/reason, brand + disclaimer.
+  function downloadTradeCard(key) {
+    const [side, idx] = String(key).split(":");
+    const t = (cardReg[side] || [])[+idx];
+    if (!t || t.realized_r == null) return;
+    const W = 1000, H = 525, dpr = 2;
+    const cv = document.createElement("canvas");
+    cv.width = W * dpr; cv.height = H * dpr;
+    const x = cv.getContext("2d");
+    x.scale(dpr, dpr);
+    const r = t.realized_r, win = r > 0;
+    const col = win ? "#2fd07f" : r < 0 ? "#ff5b5b" : "#aab4c5";
+    // backdrop: near-black with a soft tinted glow from the result side
+    x.fillStyle = "#0b0f16"; x.fillRect(0, 0, W, H);
+    const glow = x.createRadialGradient(W - 190, H / 2, 40, W - 190, H / 2, 430);
+    glow.addColorStop(0, win ? "rgba(47,208,127,0.16)" : r < 0 ? "rgba(255,91,91,0.14)" : "rgba(120,130,150,0.10)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = glow; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "rgba(110,125,150,0.28)"; x.lineWidth = 2;
+    x.strokeRect(1, 1, W - 2, H - 2);
+    const mono = "'JetBrains Mono', ui-monospace, monospace";
+    const sans = "Inter, system-ui, sans-serif";
+    // header: brand + book + paper tag
+    x.fillStyle = "#5b6577"; x.font = `800 20px ${sans}`;
+    x.fillText("VIVEK 5.0", 48, 62);
+    x.font = `600 15px ${sans}`;
+    x.fillText(`${side === "bot" ? "🤖 CLAUDE'S BOT" : "✏️ MANUAL BOOK"} · PAPER TRADE`, 158, 61);
+    // symbol + direction + grade
+    const sym = up(t.symbol);
+    x.fillStyle = "#e5e9f0"; x.font = `800 58px ${sans}`;
+    x.fillText(sym, 46, 148);
+    const symW = x.measureText(sym).width;
+    const dirShort = (t.direction || "long") === "short";
+    x.fillStyle = dirShort ? "#ff5b5b" : "#2fd07f"; x.font = `800 24px ${sans}`;
+    x.fillText(dirShort ? "▼ SHORT" : "▲ LONG", 58 + symW, 146);
+    const g = gradeOf(t);
+    if (g) { x.fillStyle = "#ffb020"; x.font = `700 22px ${mono}`; x.fillText(g, 62 + symW + (dirShort ? 118 : 108), 146); }
+    x.fillStyle = "#8b96a9"; x.font = `600 17px ${sans}`;
+    x.fillText(`${(marketOf(t) || "").toUpperCase()}${t.entry_type ? " · " + String(t.entry_type_label || t.entry_type).toLowerCase() : ""}${t.timeframe ? " · " + (TF_NAME[t.timeframe] || t.timeframe) : ""}`, 48, 182);
+    // entry → exit (magnitude-scaled precision — no float noise on the card)
+    const exit = t.exit_price ?? t.exit;
+    const fp = (v) => v == null || !isFinite(v) ? "—"
+      : Math.abs(v) >= 100 ? (+v).toFixed(2) : Math.abs(v) >= 1 ? (+v).toFixed(3)
+      : Math.abs(v) >= 0.01 ? (+v).toFixed(4) : (+v).toFixed(6);
+    x.fillStyle = "#aab4c5"; x.font = `600 21px ${mono}`;
+    x.fillText(`${fp(t.entry)}  →  ${fp(exit)}`, 48, 262);
+    x.fillStyle = "#5b6577"; x.font = `600 15px ${sans}`;
+    x.fillText("entry → exit", 48, 288);
+    // dates + duration + reason
+    x.fillStyle = "#8b96a9"; x.font = `600 16px ${mono}`;
+    x.fillText(`${stamp(openedMs(t))} → ${stamp(exitMs(t))}  ·  ${durText(openedMs(t), exitMs(t))}  ·  ${t.exit_reason || "manual"}`, 48, 344);
+    // the hero number: realised R (+ $ underneath when known)
+    x.textAlign = "right";
+    x.fillStyle = col; x.font = `800 96px ${mono}`;
+    x.fillText(`${r >= 0 ? "+" : ""}${r.toFixed(2)}R`, W - 52, 200);
+    const d = dollarsOf(t);
+    if (d != null) { x.font = `700 34px ${mono}`; x.fillText(`${d >= 0 ? "+" : "−"}US$${Math.abs(d).toFixed(2)}`, W - 54, 250); }
+    x.textAlign = "left";
+    // footer rule + disclaimers
+    x.strokeStyle = "rgba(110,125,150,0.22)"; x.beginPath(); x.moveTo(48, H - 92); x.lineTo(W - 48, H - 92); x.stroke();
+    x.fillStyle = "#5b6577"; x.font = `600 14px ${sans}`;
+    x.fillText("Three-lens 200-SMA scanner · paper journal — every trade logged, wins and losses alike.", 48, H - 58);
+    x.fillText("General information only — not financial advice.", 48, H - 34);
+    cv.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `vivek-trade-${sym}-${(t.exit_date || "").replaceAll("-", "") || "card"}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, "image/png");
   }
 
   // ── Same positions: you and Claude in the same trade, head to head ─────────
@@ -676,7 +756,7 @@
     statCards($("#" + pre + "-stats"), s);
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
     $("#" + pre + "-open").innerHTML = openRows(d.open, side, Date.now());
-    $("#" + pre + "-closed").innerHTML = closedRows(d.closed);
+    $("#" + pre + "-closed").innerHTML = closedRows(d.closed, side);
     $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
     $("#" + pre + "-closed-n").textContent = d.closed.length ? `(${d.closed.length})` : "";
     return s;
@@ -922,39 +1002,104 @@
     }
   }
 
-  // #84: weekly digest — bot book closes in the last 7 days (the honest record),
-  // summarised: count, R total, $ total, win rate, best close. Client-side.
+  // UX-20 #11 (supersedes #84's rolling bot digest): WEEK REVIEW — calendar
+  // weeks (Mon–Sun, local), BOTH books, with ‹ › paging back through history
+  // and a per-day dot strip. The ritual it enables: every Friday, page the
+  // last few weeks and watch net R by week — the only trend that matters.
+  let wkOffset = 0;   // 0 = this week, 1 = last week, …
+  function weekBounds(off) {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;              // Mon=0 … Sun=6
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow - off * 7);
+    const start = mon.getTime();
+    return { start, end: start + 7 * 86400e3, mon };
+  }
   function renderWeeklyDigest() {
     const box = $("#jr-digest");
     if (!box) return;
-    const weekAgo = Date.now() - 7 * 24 * 3.6e6;
-    const closes = (state.bot.closed || []).filter((t) => {
-      const ms = exitMs(t); return ms != null && ms >= weekAgo && t.realized_r != null;
-    });
-    if (!closes.length) { box.hidden = true; return; }
+    const anyEver = (state.bot.closed || []).some((t) => t.realized_r != null) ||
+                    (state.me.closed || []).some((t) => t.realized_r != null);
+    if (!anyEver) { box.hidden = true; return; }
     box.hidden = false;
-    const n = closes.length;
+    const { start, end, mon } = weekBounds(wkOffset);
+    const inWeek = (t) => { const ms = exitMs(t); return ms != null && ms >= start && ms < end && t.realized_r != null; };
+    const bot = (state.bot.closed || []).filter(inWeek);
+    const me  = (state.me.closed  || []).filter(inWeek);
+    const closes = [...bot, ...me];
+    const fmtD = (d) => d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const range = $("#jr-digest-range");
+    if (range) range.textContent = wkOffset === 0
+      ? `this week · from ${fmtD(mon)}`
+      : `${fmtD(mon)} – ${fmtD(new Date(start + 6 * 86400e3))}`;
+    const nextB = $("#jr-wk-next");
+    if (nextB) nextB.disabled = wkOffset === 0;
+    const grid = $("#jr-digest-grid");
+    const days = $("#jr-wk-days");
+    if (!closes.length) {
+      grid.innerHTML = `<div class="jr-empty jr-wk-empty">No closes this week${wkOffset ? "" : " yet"} — ‹ pages back through past weeks.</div>`;
+      if (days) days.innerHTML = "";
+      return;
+    }
     const totalR = closes.reduce((s, t) => s + t.realized_r, 0);
     const totalD = closes.reduce((s, t) => s + (dollarsOf(t) || 0), 0);
     const wins = closes.filter((t) => t.realized_r > 0).length;
-    const win = Math.round((wins / n) * 100);
-    const best = closes.reduce((a, b) => (a == null || b.realized_r > a.realized_r ? b : a), null);
+    const best  = closes.reduce((a, b) => (a == null || b.realized_r > a.realized_r ? b : a), null);
+    const worst = closes.reduce((a, b) => (a == null || b.realized_r < a.realized_r ? b : a), null);
     const cell = (label, val, cls) =>
       `<div class="jr-dg-cell"><span class="jr-dg-label">${label}</span><span class="jr-dg-val ${cls || ""}">${val}</span></div>`;
-    $("#jr-digest-grid").innerHTML =
-      cell("Closes", String(n), "") +
-      cell("Total R", rfmt(totalR), rcls(totalR)) +
-      cell("Total $", dfmt(totalD), pcls(totalD)) +
-      cell("Win rate", win + "%", "") +
-      (best ? cell("Best", up(best.symbol) + " " + rfmt(best.realized_r), rcls(best.realized_r)) : "");
-    const range = $("#jr-digest-range");
-    if (range) range.textContent = "last 7 days";
+    grid.innerHTML =
+      cell("Closes", `${closes.length} <span class="num-sub">🤖${bot.length} ✏️${me.length}</span>`, "") +
+      cell("Net R", rfmt(totalR), rcls(totalR)) +
+      cell("Net $", dfmt(totalD), pcls(totalD)) +
+      cell("Win rate", Math.round((wins / closes.length) * 100) + "%", "") +
+      (best ? cell("Best", up(best.symbol) + " " + rfmt(best.realized_r), rcls(best.realized_r)) : "") +
+      (worst && worst !== best ? cell("Worst", up(worst.symbol) + " " + rfmt(worst.realized_r), rcls(worst.realized_r)) : "");
+    if (days) {
+      const byDay = Array.from({ length: 7 }, () => []);
+      closes.forEach((t) => {
+        const i = Math.floor((exitMs(t) - start) / 86400e3);
+        if (i >= 0 && i < 7) byDay[i].push(t);
+      });
+      const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      days.innerHTML = byDay.map((list, i) =>
+        `<span class="jr-wk-day"><i>${names[i]}</i><span class="jr-wk-dots">${list.map((t) =>
+          `<b class="${t.realized_r > 0 ? "dot-win" : t.realized_r < 0 ? "dot-loss" : "dot-flat"}" title="${up(t.symbol)} ${rfmt(t.realized_r)}"></b>`).join("") || `<b class="dot-none"></b>`}</span></span>`).join("");
+    }
+  }
+
+  // UX-20 #10: R-distribution histogram — every closed trade from both books
+  // bucketed by realised R. Pure CSS bars; hidden until 5 closes exist.
+  function renderRDist() {
+    const box = $("#jr-rdist");
+    if (!box) return;
+    const closed = [...(state.bot.closed || []), ...(state.me.closed || [])]
+      .filter((t) => t.realized_r != null);
+    if (closed.length < 5) { box.hidden = true; return; }
+    const BUCKETS = [
+      { lbl: "≤−2R", lo: -Infinity, hi: -2 }, { lbl: "−2…−1", lo: -2, hi: -1 },
+      { lbl: "−1…0", lo: -1, hi: 0 }, { lbl: "0…1", lo: 0, hi: 1 },
+      { lbl: "1…2", lo: 1, hi: 2 }, { lbl: "2…3", lo: 2, hi: 3 }, { lbl: ">3R", lo: 3, hi: Infinity },
+    ];
+    const counts = BUCKETS.map((b) => closed.filter((t) => t.realized_r > b.lo && t.realized_r <= b.hi).length);
+    const max = Math.max(...counts, 1);
+    const avg = closed.reduce((s, t) => s + t.realized_r, 0) / closed.length;
+    const sub = $("#jr-rdist-sub");
+    if (sub) sub.textContent = `${closed.length} closed · both books · avg ${rfmt(avg)}`;
+    $("#jr-rdist-bars").innerHTML = BUCKETS.map((b, i) => {
+      const h = counts[i] ? Math.max(6, Math.round((counts[i] / max) * 64)) : 2;
+      return `<div class="jr-rd-col" title="${counts[i]} trade${counts[i] === 1 ? "" : "s"} closed ${b.lbl}">
+        <span class="jr-rd-n">${counts[i] || ""}</span>
+        <i class="jr-rd-bar ${b.hi <= 0 ? "neg" : "pos"}" style="height:${h}px"></i>
+        <span class="jr-rd-lbl">${b.lbl}</span></div>`;
+    }).join("");
+    box.hidden = false;
   }
 
   function renderAll() {
     const sb = renderSide("bot"), sm = renderSide("me");
     renderPnlHeadline();
     renderWeeklyDigest();
+    renderRDist();               // UX-20 #10
     renderEdgeCard();
     renderNewPositions();
     renderComparison(sb, sm);
@@ -1361,9 +1506,15 @@
       if (del) { removeTrade(del.getAttribute("data-del")); return; }
       const noteBtn = e.target.closest("[data-note]");
       if (noteBtn) { editNote(noteBtn.getAttribute("data-note")); return; }
+      const card = e.target.closest("[data-card]");
+      if (card) { downloadTradeCard(card.getAttribute("data-card")); return; }   // UX-20 #13
       const btn = e.target.closest("[data-close]");
       if (btn) openCloseModal(btn.getAttribute("data-close"));
     });
+    // UX-20 #11: page the week review back / forward
+    const wp = $("#jr-wk-prev"), wn = $("#jr-wk-next");
+    if (wp) wp.addEventListener("click", () => { wkOffset++; renderWeeklyDigest(); });
+    if (wn) wn.addEventListener("click", () => { if (wkOffset > 0) { wkOffset--; renderWeeklyDigest(); } });
     $("#jr-modal-x").addEventListener("click", closeModal);
     $("#jr-modal-cancel").addEventListener("click", closeModal);
     $("#jr-modal-save").addEventListener("click", saveClose);

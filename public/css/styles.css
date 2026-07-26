@@ -2617,3 +2617,37 @@ body { letter-spacing: -0.012em; }
 .vm-save { width: 100%; appearance: none; border: none; cursor: pointer; margin-top: 4px;
   background: var(--fill); color: var(--blue); font: 700 12px/1 var(--sans); padding: 9px; border-radius: 8px; }
 .vm-save:hover { background: var(--blue-soft); }
+
+/* ── UX-20 #12: per-setup sizing line in the row detail ──────────────────── */
+.vk-size {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin: 2px 0 10px; padding: 8px 12px; border-radius: 10px;
+  border: 1px dashed var(--border-2); background: rgba(120,120,128,.07);
+  font: 600 12px/1.5 var(--sans); color: var(--muted);
+}
+.vk-size-out { color: var(--text); }
+.vk-size-out b { font-family: var(--mono); font-size: 13px; }
+.vk-size-src { color: var(--muted); font-weight: 500; }
+.vk-size label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.vk-size input {
+  width: 76px; padding: 4px 7px; border-radius: 8px; border: 1px solid var(--border-2);
+  background: rgba(0,0,0,.25); color: var(--text); font: 600 12px/1 var(--mono);
+}
+.vk-size input:focus { outline: none; border-color: var(--blue); }
+.vk-size input[data-k="risk"] { width: 52px; }
+
+/* ── UX-20 #14: recs week-in-review strip ────────────────────────────────── */
+.rec-week {
+  margin: 0 0 14px; padding: 11px 16px; border-radius: var(--r-mid, 14px);
+  border: 1px solid var(--border); background: var(--panel);
+}
+.rw-hd { font: 700 12.5px/1 var(--sans); letter-spacing: .02em; margin-bottom: 8px; }
+.rw-sub { color: var(--muted); font-weight: 600; font-size: 11px; margin-left: 6px; }
+.rw-body { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; font: 600 12px/1.5 var(--sans); color: var(--muted); }
+.rw-lbl { text-transform: uppercase; font-size: 10px; letter-spacing: .07em; }
+.rw-arc b { color: var(--text); font-family: var(--mono); font-weight: 700; }
+.rw-arc i, .rw-bot b { font-style: normal; font-family: var(--mono); }
+.rw-arc .up, .rw-bot .up { color: var(--green); }
+.rw-arc .down, .rw-bot .down { color: var(--red); }
+.rw-arc .flat { color: var(--muted); }
+.rw-bot { color: var(--text); }

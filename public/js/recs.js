@@ -373,6 +373,51 @@
         ).join("") + `</div>` : "");
   }
 
+  // ── Week in review (UX-20 #14) ────────────────────────────────────────────
+  // How the week is DEVELOPING, not just today's snapshot: each market's
+  // long-breadth arc from Monday's first logged visit to now (from the same
+  // gbs:reco:hist store the strip uses — fills in as the page is opened
+  // across days), plus what the bot actually booked this week. No fetches —
+  // reuses the bot book and history already in hand.
+  function renderWeekReview(book, hist) {
+    const host = document.getElementById("rec-week");
+    if (!host) return;
+    // Monday of the current week in Melbourne days (hist keys are melbDay()).
+    const melbNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+    const dow = (melbNow.getDay() + 6) % 7;                    // Mon=0
+    const monday = new Date(melbNow.getFullYear(), melbNow.getMonth(), melbNow.getDate() - dow);
+    const monStr = monday.toLocaleDateString("en-CA");
+    const MKT = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
+    // breadth arcs: first vs latest logged day this week, per market
+    const arcs = [];
+    for (const k of Object.keys(MKT)) {
+      const arr = (hist && Array.isArray(hist[k]) ? hist[k] : []).filter((e) => e.d >= monStr);
+      if (arr.length < 2) continue;
+      const a = arr[0].pl, b = arr[arr.length - 1].pl, dd = b - a;
+      arcs.push(`<span class="rw-arc" title="${MKT[k]} long-breadth ${a}% on ${esc(arr[0].d)} → ${b}% latest (${arr.length} days logged)">` +
+        `${MKT[k]} <b>${a}→${b}%</b> <i class="${dd > 2 ? "up" : dd < -2 ? "down" : "flat"}">${dd > 2 ? "▲" : dd < -2 ? "▼" : "◆"}</i></span>`);
+    }
+    // bot closes this week
+    const closes = ((book && book.closed) || []).filter((t) =>
+      t.realized_r != null && String(t.exit_date || "") >= monStr);
+    let botLine = "";
+    if (closes.length) {
+      const netR = closes.reduce((s, t) => s + t.realized_r, 0);
+      const best = closes.reduce((a, b) => (a == null || b.realized_r > a.realized_r ? b : a), null);
+      botLine = `<span class="rw-bot" title="Bot book closes since Monday">🤖 <b>${closes.length}</b> close${closes.length === 1 ? "" : "s"} · ` +
+        `<b class="${netR >= 0 ? "up" : "down"}">${netR >= 0 ? "+" : ""}${netR.toFixed(1)}R</b>` +
+        (best ? ` · best ${esc(String(best.symbol).toUpperCase())} ${best.realized_r >= 0 ? "+" : ""}${best.realized_r.toFixed(1)}R` : "") + `</span>`;
+    }
+    if (!arcs.length && !botLine) { host.hidden = true; return; }
+    const fmtD = monday.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    host.hidden = false;
+    host.innerHTML =
+      `<div class="rw-hd">📆 The week so far <span class="rw-sub">since Mon ${esc(fmtD)}</span></div>` +
+      `<div class="rw-body">` +
+      (arcs.length ? `<span class="rw-lbl" title="Share of scanned names setting up LONG — first vs latest visit this week">breadth</span>${arcs.join("")}` : "") +
+      botLine + `</div>`;
+  }
+
   function moversCard(open) {
     const movers = open.filter((p) => p.unreal_r != null)
       .sort((a, b) => Math.abs(b.unreal_r) - Math.abs(a.unreal_r)).slice(0, 6);
@@ -448,6 +493,7 @@
     $("#rec-note-slot").innerHTML = noteCard(note) + noteArchive(note && note.date);
     $("#rec-markets").innerHTML = MARKETS.map((m) => marketCard(m, prices[m.key], perMkt(m.key), hist[m.key])).join("");
     $("#rec-movers-slot").innerHTML = moversCard(open);
+    renderWeekReview(book, hist);                          // UX-20 #14
 
     // #13+#14: deepen the cards once the base view is on screen (non-blocking).
     enrichCards(prices).catch(() => {});

@@ -725,3 +725,45 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-ec-r.r-pos { color: var(--green); } .jr-ec-r.r-neg { color: var(--red); }
 .jr-ec-sub { color: var(--muted-2); }
 .jr-ec-warn { font: 600 11.5px/1.3 var(--sans); color: var(--orange); margin-left: auto; }
+
+/* ── UX-20 #11: week review (nav + per-day dots) ─────────────────────────── */
+.jr-wk-nav { margin-left: auto; display: inline-flex; gap: 4px; }
+.jr-wk-btn {
+  width: 28px; height: 26px; border-radius: 8px; border: 1px solid var(--border-2);
+  background: var(--fill); color: var(--text); font: 700 14px/1 var(--mono); cursor: pointer;
+}
+.jr-wk-btn:hover:not(:disabled) { background: rgba(120,120,128,.22); }
+.jr-wk-btn:disabled { opacity: .35; cursor: default; }
+.jr-digest-hd { display: flex; align-items: center; gap: 8px; }
+.jr-wk-empty { grid-column: 1 / -1; }
+.jr-wk-days { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.jr-wk-day { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+.jr-wk-day > i { font: 600 9.5px/1 var(--sans); font-style: normal; color: var(--muted); letter-spacing: .04em; }
+.jr-wk-dots { display: inline-flex; gap: 3px; min-height: 8px; }
+.jr-wk-dots b { width: 8px; height: 8px; border-radius: 50%; }
+.jr-wk-dots .dot-win { background: var(--green); }
+.jr-wk-dots .dot-loss { background: var(--red); }
+.jr-wk-dots .dot-flat { background: var(--muted); }
+.jr-wk-dots .dot-none { background: rgba(120,120,128,.18); width: 6px; height: 6px; margin-top: 1px; }
+
+/* ── UX-20 #10: R-distribution histogram ─────────────────────────────────── */
+.jr-rdist {
+  border: 1px solid var(--border); border-radius: var(--r-mid, 14px);
+  background: var(--panel); padding: 14px 16px; margin: 14px 0;
+}
+.jr-rdist-bars { display: flex; align-items: flex-end; gap: 10px; padding: 10px 2px 2px; }
+.jr-rd-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.jr-rd-n { font: 700 11px/1 var(--mono); color: var(--muted); min-height: 12px; }
+.jr-rd-bar { width: 100%; max-width: 54px; border-radius: 5px 5px 2px 2px; display: block; }
+.jr-rd-bar.pos { background: linear-gradient(180deg, var(--green), rgba(47,208,127,.45)); }
+.jr-rd-bar.neg { background: linear-gradient(180deg, var(--red), rgba(255,91,91,.4)); }
+.jr-rd-lbl { font: 600 10px/1 var(--mono); color: var(--muted); white-space: nowrap; }
+.jr-rdist-note { margin: 10px 0 0; font: 500 11.5px/1.55 var(--sans); color: var(--muted); }
+@media (max-width: 560px) { .jr-rdist-bars { gap: 5px; } .jr-rd-lbl { font-size: 8.5px; } }
+
+/* ── UX-20 #13: trade-card export button ─────────────────────────────────── */
+.jr-card-btn {
+  border: none; background: none; cursor: pointer; font-size: 13px;
+  opacity: .5; padding: 2px 4px; border-radius: 6px; vertical-align: middle;
+}
+.jr-card-btn:hover { opacity: 1; background: rgba(120,120,128,.18); }

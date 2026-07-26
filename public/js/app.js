@@ -1159,6 +1159,26 @@
       </div>`;
     })();
 
+    // UX-20 #12: YOUR size for this exact setup — same gbs:mysize-* store the
+    // chart page's My-size box saves, so it's set once and appears on every
+    // expanded row. Unset → a one-time inline mini-form (saved on input, the
+    // delegated listener below computes live); set → units/notional/1R line.
+    const sizeHTML = (() => {
+      if (r.entry == null || r.stop == null || !(Math.abs(r.entry - r.stop) > 0)) return "";
+      const acct = +(localStorage.getItem("gbs:mysize-acct") || 0);
+      const riskP = +(localStorage.getItem("gbs:mysize-risk") || 1);
+      const set = acct > 0 && riskP > 0;
+      const inner = set
+        ? `<span class="vk-size-out">${sizeCalcText(acct, riskP, Math.abs(r.entry - r.stop), r.entry, cur)}</span>`
+        : `<span class="vk-size-hint">size every setup — set once:</span>` +
+          `<label>acct $<input class="vk-size-in" data-k="acct" type="number" inputmode="decimal" min="0" step="100" placeholder="10000"></label>` +
+          `<label>risk <input class="vk-size-in" data-k="risk" type="number" inputmode="decimal" min="0.1" max="5" step="0.1" value="1">%</label>` +
+          `<span class="vk-size-out"></span>`;
+      return `<div class="vk-size" data-entry="${r.entry}" data-stop="${r.stop}" title="${set
+        ? "Sized from the account + risk saved in the chart page's My-size box (gears the whole site) — edit it on any chart."
+        : "Saved on this device only; the chart page's My-size box shares the same values."}">💰 ${inner}</div>`;
+    })();
+
     return `<div class="row-detail vk-detail">
       <div class="vk-hero" style="--gc:${gColor}">
         <div class="vk-grade-block">
@@ -1181,6 +1201,7 @@
       </div>
 
       ${axisHTML}
+      ${sizeHTML}
       <div class="vk-ladder vk-ladder-h">${ladder.join("")}</div>
 
       <div class="vk-checklist-wrap">
@@ -2696,6 +2717,37 @@
       localStorage.setItem("gbs:notified", JSON.stringify(pruned));
     } catch (_) {}
   }
+
+  // ── Per-setup position sizing (UX-20 #12) ────────────────────────────────
+  // Shared with the row-detail builder AND the delegated input handler: turn
+  // (account, risk %, stop distance, entry) into a units/notional/1R line.
+  function sizeCalcText(acct, riskP, dist, entry, cur) {
+    const riskD = acct * riskP / 100;
+    const sh = riskD / dist;
+    const units = sh >= 100 ? Math.floor(sh) : +sh.toFixed(4);
+    const notional = sh * entry;
+    const lev = notional > acct ? ` · ×${(notional / acct).toFixed(1)} lev` : "";
+    return `<b>${units.toLocaleString()}</b> units ≈ ${cur}${Math.round(notional).toLocaleString()} notional · ` +
+      `1R = ${cur}${riskD.toFixed(0)} <span class="vk-size-src">(${riskP}% of ${cur}${acct.toLocaleString()})</span>${lev}`;
+  }
+  // One listener for every expanded row's mini-form (rows render lazily).
+  document.addEventListener("input", (e) => {
+    const inp = e.target && e.target.closest && e.target.closest(".vk-size-in");
+    if (!inp) return;
+    const wrap = inp.closest(".vk-size");
+    if (!wrap) return;
+    const acct = +((wrap.querySelector('[data-k="acct"]') || {}).value || 0);
+    const riskP = +((wrap.querySelector('[data-k="risk"]') || {}).value || 0);
+    try {
+      localStorage.setItem("gbs:mysize-acct", String(acct));
+      localStorage.setItem("gbs:mysize-risk", String(riskP));
+    } catch (_) {}
+    const out = wrap.querySelector(".vk-size-out");
+    const entry = +wrap.dataset.entry, stop = +wrap.dataset.stop;
+    const dist = Math.abs(entry - stop);
+    if (out) out.innerHTML = (acct > 0 && riskP > 0 && dist > 0)
+      ? sizeCalcText(acct, riskP, dist, entry, state.cur) : "";
+  });
 
   // ── Price-alert lines set on the chart page (UX-20 #4) ───────────────────
   // The chart's 🔔 tool stores one-shot alerts in gbs:palerts:<market>:<SYM>
