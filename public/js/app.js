@@ -146,13 +146,13 @@
   // Sort direction. Each sort has a natural default (numeric → descending,
   // alphabetical → ascending); clicking the already-active sort flips it. The
   // active button shows a ↑ / ↓ arrow for the current direction.
-  const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc" };
+  const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc", sector: "asc" };
   const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
   const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
   // Compact cycling sort (backlog #2): one control instead of five buttons.
   // The label advances through the cycle; the arrow flips direction.
-  const SORT_CYCLE = ["score", "price", "rr", "mcap", "az"];
-  const SORT_LABEL = { score: "SCORE", price: "PRICE", rr: "R:R", mcap: "M.C", az: "A-Z" };
+  const SORT_CYCLE = ["score", "price", "rr", "mcap", "az", "sector"];
+  const SORT_LABEL = { score: "SCORE", price: "PRICE", rr: "R:R", mcap: "M.C", az: "A-Z", sector: "SECTOR" };
   function updateSortButtons() {
     const label = document.getElementById("sort-cycle");
     const dir = document.getElementById("sort-dir");
@@ -795,6 +795,31 @@
     state.vkRecent = !!v.recent; state.vkHighConv = !!v.hc;
     state.vkConfl = !!v.confl; state.vkAtLevel = !!v.atLevel;
   }
+  // ── UX-20 #17: row density — COMFORTABLE (default) / COMPACT ─────────────
+  // One body class, persisted; compact tightens the whole list (~40% more
+  // rows per screen) for scan-the-tape sessions. Lives in the ☰ views menu
+  // and the ⌘K palette.
+  const densityCompact = () => { try { return localStorage.getItem("gbs:density") === "compact"; } catch (_) { return false; } };
+  function applyDensity() { document.body.classList.toggle("density-compact", densityCompact()); }
+  function toggleDensity() {
+    try { localStorage.setItem("gbs:density", densityCompact() ? "" : "compact"); } catch (_) {}
+    applyDensity();
+  }
+  applyDensity();
+
+  // UX-20 #16: dashboard commands for the global ⌘K palette (nav.js). nav.js
+  // loads deferred, after this script — register on DOMContentLoaded if the
+  // palette isn't up yet.
+  {
+    const reg = () => window.GBSPalette && window.GBSPalette.register([
+      { label: "Toggle · compact rows", hint: "☰", run: toggleDensity },
+      { label: "Toggle · FUND / REIT dimming", hint: "⚠", run: () => { const b = document.getElementById("fund-dim"); if (b) b.click(); } },
+      { label: "Run · fresh cloud scan", hint: "📡", run: () => { const b = document.getElementById("reload-btn"); if (b) b.click(); } },
+    ]);
+    if (window.GBSPalette) reg();
+    else document.addEventListener("DOMContentLoaded", reg, { once: true });
+  }
+
   function wireViewsMenu() {
     const btn = document.getElementById("views-btn");
     if (!btn) return;
@@ -812,7 +837,9 @@
           `<div class="vm-row"><button type="button" class="vm-apply" data-i="${i}">${esc(p.name)}</button>` +
           `<button type="button" class="vm-del" data-i="${i}" title="Delete preset" aria-label="Delete ${esc(p.name)}">✕</button></div>`).join("")
           : `<div class="vm-empty">No saved views yet.</div>`) +
-        `<button type="button" class="vm-save">＋ Save current view…</button>`;
+        `<button type="button" class="vm-save">＋ Save current view…</button>` +
+        `<button type="button" class="vm-density" title="Compact fits ~40% more rows per screen">` +
+          `☰ Rows: ${densityCompact() ? "COMPACT · tap for comfortable" : "COMFORTABLE · tap for compact"}</button>`;
       const r = btn.getBoundingClientRect();
       menu.style.top = `${Math.round(r.bottom + 6 + window.scrollY)}px`;
       menu.style.left = `${Math.round(r.left)}px`;
@@ -834,6 +861,8 @@
           presets.splice(+t.dataset.i, 1);
           try { localStorage.setItem("gbs:presets", JSON.stringify(presets)); } catch (_) {}
           close(); btn.click();
+        } else if (t.classList.contains("vm-density")) {
+          toggleDensity(); close();                       // UX-20 #17
         }
       });
       setTimeout(() => document.addEventListener("click", function c(ev) {
@@ -1473,6 +1502,11 @@
     else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
     else if (s === "mcap") list.sort((a, b) => mcapOf(b.symbol) - mcapOf(a.symbol));   // largest cap first
     else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
+    // UX-20 #18: sector view — group the tape by sector (best grade/score first
+    // inside each), so rotation reads at a glance; renderRows adds the headers.
+    else if (s === "sector") list.sort((a, b) =>
+      String(a.sector || "~").localeCompare(String(b.sector || "~")) ||
+      (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)));
     else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
     if (sortDirOf() !== defaultDir(s)) list.reverse();
     return list;
@@ -1741,17 +1775,28 @@
     // (the default SCORE sort). Most useful on the multi-grade views — the
     // WATCH tab (B+/WATCH) and the ★ watchlist (all grades mixed) — but a
     // single labelled section header on a single-grade tab reads fine too.
-    const showGroups = state.sort === "score";
+    // UX-20 #18: the same header machinery now serves TWO groupings — grade
+    // sections on the default SCORE sort, sector sections on the SECTOR sort.
+    const groupKeyOf = state.sort === "score" ? (r) => r.grade
+                     : state.sort === "sector" ? (r) => r.sector || "OTHER"
+                     : null;
+    const showGroups = !!groupKeyOf;
     const groupAt = {};
     if (showGroups) {
       let prev = null;
-      list.forEach((r, idx) => { if (r.grade !== prev) { groupAt[idx] = r.grade; prev = r.grade; } });
+      list.forEach((r, idx) => { const k = groupKeyOf(r); if (k !== prev) { groupAt[idx] = k; prev = k; } });
     }
     const GROUP_NAME = { "A+": "A+ SETUPS", "A": "A SETUPS", "B+": "B+ SETUPS", "B": "B SETUPS", "WATCH": "WATCH", "C": "C SETUPS" };
-    const gradeCount = (g) => list.reduce((n, r) => n + (r.grade === g ? 1 : 0), 0);
-    const rowOrGroup = (r, idx) =>
-      (groupAt[idx] ? `<div class="row-group" data-grade="${esc(groupAt[idx])}" style="--grade-color:${GRADE_VAR[groupAt[idx]] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[groupAt[idx]] || groupAt[idx])}</span><span class="row-group-n">${gradeCount(groupAt[idx])}</span></div>` : "")
-      + rowHtml(r, idx);
+    const groupHdr = (k) => {
+      if (state.sort === "sector") {
+        const inG = list.filter((r) => (r.sector || "OTHER") === k);
+        const ap = inG.filter((r) => r.grade === "A+").length;
+        return `<div class="row-group row-group-sector" style="--grade-color:var(--blue)"><span>${esc(String(k).toUpperCase())}</span><span class="row-group-n">${inG.length}${ap ? ` · ${ap} A+` : ""}</span></div>`;
+      }
+      const count = list.reduce((n, r) => n + (r.grade === k ? 1 : 0), 0);
+      return `<div class="row-group" data-grade="${esc(k)}" style="--grade-color:${GRADE_VAR[k] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[k] || k)}</span><span class="row-group-n">${count}</span></div>`;
+    };
+    const rowOrGroup = (r, idx) => (groupAt[idx] ? groupHdr(groupAt[idx]) : "") + rowHtml(r, idx);
 
     // #68: windowing safeguard — content-visibility (#58) keeps off-screen
     // rows cheap to lay out, but 700+ ASX WATCH-tab nodes still bloat the DOM.
@@ -1864,6 +1909,29 @@
     const nSetups = d._head && d._full_count != null ? d._full_count : d.results.length;
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${nSetups} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     renderFreshness(d);
+    // Degraded-universe tripwire (2026-07-26): a flaky ticker-directory fetch
+    // once dropped a Saturday ASX scan to the 94-name bundled CSV — results
+    // looked normal but covered ~5% of the market. If this payload's universe
+    // reads far below the market's typical size, say so right on the deck.
+    {
+      const floor = { asx: 800, nasdaq: 600, crypto: 50 }[state.market] || 0;
+      const uni = +(d.universe_size ?? d.scanned ?? 0);
+      const bad = floor && uni > 0 && uni < floor;
+      const host = document.querySelector(".deck-sub");
+      let el = document.getElementById("scan-degraded");
+      if (bad && !el && host) {
+        el = document.createElement("span");
+        el.id = "scan-degraded"; el.className = "scan-degraded";
+        host.appendChild(el);
+      }
+      if (el) {
+        el.hidden = !bad;
+        if (bad) {
+          el.textContent = `⚠ partial scan — only ${uni} names covered`;
+          el.title = "The ticker-directory fetch failed on this run, so the scanner fell back to a small bundled list. These results are real but cover a fraction of the market. The scanner now snapshots the full universe after every good run and self-heals from it, so the next scan should be full-size again.";
+        }
+      }
+    }
     renderEntryFilters(d);
     renderLegend(d);
     renderDeckPills(d);

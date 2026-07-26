@@ -133,7 +133,7 @@ jobs:
           # (phasemap snapshots, spec files, backtest stats) to this run's
           # stale checkout. Invariant: list only files written by scan-group
           # workflows.
-          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json"
+          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
           # stages NOTHING when any single pathspec matches no file. The
           # unassigned book file only exists when migration finds strays, so

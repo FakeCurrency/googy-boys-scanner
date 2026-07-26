@@ -250,7 +250,7 @@ jobs:
           # must be written ONLY by workflows in the "scan" concurrency group.
           # (Dropped: journal/journal.json + scalp_journal.json + discord_state
           # + data/notified_signals.json — nothing in this workflow writes them.)
-          PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/asx_prices.json public/data/nasdaq_prices.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
+          PATHS="public/data/asx_vivek.json public/data/nasdaq_vivek.json public/data/crypto_vivek.json public/data/asx_prices.json public/data/nasdaq_prices.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json data/universe_cache/asx.json data/universe_cache/nasdaq.json data/universe_cache/crypto.json"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
           # stages NOTHING when any single pathspec matches no file. The
           # unassigned book file only exists when migration finds strays, so

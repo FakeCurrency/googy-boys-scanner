@@ -191,6 +191,11 @@
         `<div class="more-sheet-grip" aria-hidden="true"></div>` +
         `<div class="more-sheet-hd">More<button class="more-sheet-x" type="button" aria-label="Close">✕</button></div>` +
         `<div class="more-sheet-list">` +
+          // UX-20 #15: global search reachable with a thumb — opens the palette
+          `<button class="more-sheet-row more-sheet-search" type="button">` +
+          `<span class="more-sheet-ico" aria-hidden="true">🔎</span>` +
+          `<span class="more-sheet-lbl">SEARCH EVERYTHING</span>` +
+          `<span class="more-sheet-go" aria-hidden="true">›</span></button>` +
           SHEET.map((it) =>
             `<a class="more-sheet-row${it.key === here ? " is-here" : ""}" href="${it.href}">` +
             `<span class="more-sheet-ico" aria-hidden="true">${it.bot ? '<span class="bot-nav-dot"></span>' : it.tab || "•"}</span>` +
@@ -217,6 +222,8 @@
     if (btn) btn.addEventListener("click", open);
     scrim.addEventListener("click", (e) => { if (e.target === scrim) close(); });
     scrim.querySelector(".more-sheet-x").addEventListener("click", close);
+    const searchRow = scrim.querySelector(".more-sheet-search");
+    if (searchRow) searchRow.addEventListener("click", () => { close(); setTimeout(() => window.GBSPalette && window.GBSPalette.open(), 240); });
   }
 
   // Live badge counts on the bottom tabs (backlog #29): the tradeable A+ count
@@ -284,6 +291,133 @@
       const a = e.target && e.target.closest && e.target.closest("a[href]");
       if (a && !a.target) prefetchHref(a.getAttribute("href"));
     }, { passive: true, capture: true }));
+
+  // ── ⌘K command palette + global setup search (UX-20 #15+#16) ─────────────
+  // One overlay on every nav page: type to filter COMMANDS (go-to-page, open
+  // a market, page-registered actions) and to search the CURRENT SETUPS in
+  // all three markets at once (indexed lazily from the slim *_prices.json
+  // files the tab badges already read — ~50KB total, usually cache-warm).
+  // ⌘K / Ctrl-K opens it; the mobile MORE sheet gets a SEARCH row; ↑↓ move,
+  // Enter runs, Esc closes. Pages add their own commands via
+  // window.GBSPalette.register([{label, hint, run}]).
+  const cpExtra = [];
+  let cpEl = null, cpInput = null, cpList = null, cpSel = 0, cpIndex = null, cpIndexP = null;
+  const MKT_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
+
+  function cpCommands() {
+    const go = (href) => () => { location.href = href; };
+    const base = [...PRIMARY, ...MORE].map((it) => ({
+      label: `Go · ${it.label.replace(" ⚡", "")}`, hint: it.tab || "→", run: go(it.href),
+    }));
+    const mkts = ["asx", "nasdaq", "crypto"].map((m) => ({
+      label: `Dashboard · ${MKT_LABEL[m]}`, hint: "📡", run: go(`index.html?m=${m}`),
+    }));
+    return [...mkts, ...base, ...cpExtra];
+  }
+  function cpLoadIndex() {
+    if (cpIndexP) return cpIndexP;
+    const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    cpIndexP = Promise.all(["asx", "nasdaq", "crypto"].map((m) => grab(`data/${m}_prices.json`)))
+      .then((files) => {
+        const out = [];
+        files.forEach((d, i) => {
+          const m = ["asx", "nasdaq", "crypto"][i];
+          const rows = (d && d.rows) || {};
+          for (const sym in rows) {
+            const r = rows[sym] || {};
+            out.push({ s: String(sym).toUpperCase(), m, g: r.grade || "", d: r.dir || "" });
+          }
+        });
+        cpIndex = out;
+        return out;
+      });
+    return cpIndexP;
+  }
+  function cpEnsure() {
+    if (cpEl) return;
+    cpEl = document.createElement("div");
+    cpEl.className = "cp-overlay";
+    cpEl.hidden = true;
+    cpEl.innerHTML =
+      `<div class="cp-box" role="dialog" aria-modal="true" aria-label="Command palette">` +
+        `<div class="cp-input-row"><span class="cp-glyph" aria-hidden="true">⌘</span>` +
+        `<input class="cp-input" type="text" placeholder="Search setups or type a command…" ` +
+          `autocomplete="off" autocapitalize="off" spellcheck="false" />` +
+        `<kbd class="cp-esc">Esc</kbd></div>` +
+        `<div class="cp-list" role="listbox"></div>` +
+      `</div>`;
+    document.body.appendChild(cpEl);
+    cpInput = cpEl.querySelector(".cp-input");
+    cpList = cpEl.querySelector(".cp-list");
+    cpEl.addEventListener("click", (e) => { if (e.target === cpEl) cpClose(); });
+    cpInput.addEventListener("input", () => { cpSel = 0; cpRender(); });
+    cpInput.addEventListener("keydown", (e) => {
+      const items = cpList.querySelectorAll(".cp-item");
+      if (e.key === "ArrowDown") { e.preventDefault(); cpSel = Math.min(cpSel + 1, items.length - 1); cpPaintSel(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); cpSel = Math.max(cpSel - 1, 0); cpPaintSel(); }
+      else if (e.key === "Enter") { e.preventDefault(); const it = items[cpSel]; if (it) it.click(); }
+      else if (e.key === "Escape") { e.preventDefault(); cpClose(); }
+    });
+    cpList.addEventListener("click", (e) => {
+      const it = e.target.closest(".cp-item");
+      if (!it) return;
+      cpClose();
+      if (it.dataset.href) location.href = it.dataset.href;
+      else if (it.dataset.cmd != null) { const c = cpRendered[+it.dataset.cmd]; if (c && c.run) c.run(); }
+    });
+  }
+  let cpRendered = [];
+  function cpPaintSel() {
+    cpList.querySelectorAll(".cp-item").forEach((el, i) => el.classList.toggle("is-sel", i === cpSel));
+    const sel = cpList.querySelector(".cp-item.is-sel");
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
+  }
+  function cpRender() {
+    const q = (cpInput.value || "").trim().toLowerCase();
+    const cmds = cpCommands().filter((c) => !q || c.label.toLowerCase().includes(q));
+    cpRendered = cmds;
+    let html = "";
+    const cmdRows = cmds.slice(0, q ? 5 : 14).map((c, i) =>
+      `<button class="cp-item" type="button" data-cmd="${i}" role="option">` +
+      `<span class="cp-ico" aria-hidden="true">${c.hint || "→"}</span><span class="cp-lbl">${c.label}</span></button>`).join("");
+    if (cmdRows) html += `<div class="cp-hd">Commands</div>` + cmdRows;
+    if (q) {
+      if (!cpIndex) {
+        html += `<div class="cp-hd">Setups</div><div class="cp-note">Searching the latest scans…</div>`;
+        cpLoadIndex().then(() => { if (!cpEl.hidden) cpRender(); });
+      } else {
+        const Q = q.toUpperCase();
+        const starts = cpIndex.filter((t) => t.s.startsWith(Q));
+        const incl = cpIndex.filter((t) => !t.s.startsWith(Q) && t.s.includes(Q));
+        const hits = [...starts, ...incl].slice(0, 8);
+        if (hits.length) {
+          html += `<div class="cp-hd">Setups · all markets</div>` + hits.map((t) =>
+            `<button class="cp-item" type="button" data-href="chart.html?m=${t.m}&s=${encodeURIComponent(t.s)}&mode=vivek" role="option">` +
+            `<span class="cp-ico ${t.d === "SHORT" ? "cp-short" : "cp-long"}" aria-hidden="true">${t.d === "SHORT" ? "▼" : "▲"}</span>` +
+            `<span class="cp-lbl">${t.s}</span>` +
+            `<span class="cp-meta">${t.g ? `<b class="cp-grade">${t.g}</b> · ` : ""}${MKT_LABEL[t.m]}</span></button>`).join("");
+        } else if (!cmds.length) {
+          html += `<div class="cp-note">No matching setup or command — the search covers names currently in the three scans.</div>`;
+        }
+      }
+    }
+    cpList.innerHTML = html || `<div class="cp-note">Type to search…</div>`;
+    cpPaintSel();
+  }
+  function cpOpen() {
+    cpEnsure();
+    cpSel = 0;
+    cpEl.hidden = false;
+    cpInput.value = "";
+    cpRender();
+    cpLoadIndex();
+    setTimeout(() => cpInput.focus(), 30);
+  }
+  function cpClose() { if (cpEl) cpEl.hidden = true; }
+  window.GBSPalette = { open: cpOpen, register: (cmds) => { (cmds || []).forEach((c) => c && c.label && cpExtra.push(c)); } };
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === "k") { e.preventDefault(); cpEl && !cpEl.hidden ? cpClose() : cpOpen(); }
+  });
 
   function init() { render(); renderFooter(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

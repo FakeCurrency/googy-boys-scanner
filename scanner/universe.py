@@ -7,15 +7,27 @@ fine. If a CSV is missing, NASDAQ can fall back to the official symbol file.
 """
 
 import csv
+import datetime as dt
 import io
 import json
+import os
 import pathlib
+import time
 import urllib.request
 
 from . import config
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 UNIVERSE_DIR = ROOT / "data_universe"
+# Last-good universe cache (2026-07-26): one flaky directory fetch dropped a
+# Saturday ASX scan from ~2,000 names to the 94-name bundled CSV — silently.
+# Every successful full fetch is now snapshotted here (committed by scan.yml
+# alongside market_caps.json), and a failed fetch falls back to this snapshot
+# BEFORE the tiny bundled list. Sector metadata rides along, so a degraded
+# run keeps sectors too.
+UNIVERSE_CACHE_DIR = ROOT / "data" / "universe_cache"
+# A snapshot smaller than this is itself a degraded list — never cache it.
+_CACHE_MIN = {"asx": 400, "nasdaq": 400, "crypto": 40}
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
@@ -48,6 +60,59 @@ def _is_stable(sym: str) -> bool:
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
 
+def _http_get(url: str, timeout: int, headers: dict | None = None, attempts: int = 3) -> str:
+    """GET with retries + backoff (5s, 10s). Directory endpoints flake, and a
+    single miss must not collapse the scan universe. Raises on final failure
+    so callers keep their existing except-and-fallback shape."""
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers=headers or {})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode("utf-8", "ignore")
+        except Exception as exc:  # noqa: BLE001 - any network error retries
+            last = exc
+            if i < attempts - 1:
+                time.sleep(5 * (i + 1))
+    raise last if last else RuntimeError("fetch failed")
+
+
+# ── last-good universe cache ─────────────────────────────────────────────────
+
+def _cache_path(market_key: str) -> pathlib.Path:
+    return UNIVERSE_CACHE_DIR / f"{market_key}.json"
+
+
+def _save_universe_cache(market_key: str, items: list[dict]) -> None:
+    """Snapshot a SUCCESSFUL full fetch (atomic write; degraded lists refused)."""
+    try:
+        if len(items) < _CACHE_MIN.get(market_key, 400):
+            return
+        UNIVERSE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps({
+            "saved_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+            "market": market_key,
+            "count": len(items),
+            "items": items,
+        })
+        tmp = _cache_path(market_key).with_suffix(".json.tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, _cache_path(market_key))
+    except Exception:
+        pass  # the cache is safety net, never a failure source
+
+
+def _load_universe_cache(market_key: str) -> list[dict]:
+    try:
+        data = json.loads(_cache_path(market_key).read_text(encoding="utf-8"))
+        items = data.get("items") or []
+        if isinstance(items, list) and len(items) >= _CACHE_MIN.get(market_key, 400):
+            return items
+    except Exception:
+        pass
+    return []
+
+
 def _from_csv(path: pathlib.Path, suffix: str) -> list[dict]:
     items: list[dict] = []
     with open(path, newline="", encoding="utf-8") as fh:
@@ -75,9 +140,7 @@ def _fetch_asx_listed(suffix: str) -> list[dict]:
     The file has a few preamble lines, then rows of: "Company name","Code","GICS".
     """
     try:
-        req = urllib.request.Request(ASX_LISTED_URL, headers=_BROWSER_HEADERS)
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            text = resp.read().decode("utf-8", "ignore")
+        text = _http_get(ASX_LISTED_URL, timeout=45, headers=_BROWSER_HEADERS)
     except Exception:
         return []
 
@@ -110,8 +173,7 @@ def _fetch_nasdaq_listed(suffix: str, tiers: str = "Q") -> list[dict]:
     ~1,500 names — the default scanning universe), G = Global Market,
     S = Capital Market. Pass "QGS" for everything (~3,400)."""
     try:
-        with urllib.request.urlopen(NASDAQ_LISTED_URL, timeout=30) as resp:
-            text = resp.read().decode("utf-8", "ignore")
+        text = _http_get(NASDAQ_LISTED_URL, timeout=30)
     except Exception:
         return []
 
@@ -140,9 +202,7 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
     under that exact ticker are dropped at scan time when no data comes back.
     """
     try:
-        req = urllib.request.Request(COINGECKO_URL, headers=_BROWSER_HEADERS)
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8", "ignore"))
+        data = json.loads(_http_get(COINGECKO_URL, timeout=30, headers=_BROWSER_HEADERS))
     except Exception:
         return []
 
@@ -209,6 +269,7 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     if market_key == "asx" and full:
         items = _fetch_asx_listed(market.suffix)
         if items:
+            _save_universe_cache(market_key, items)
             return items
 
     # NASDAQ: full Global Select directory (~1,500 liquid names), mirroring
@@ -218,18 +279,34 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     if market_key == "nasdaq" and full:
         items = _fetch_nasdaq_listed(market.suffix)
         if items:
+            _save_universe_cache(market_key, items)
             return items
 
     # Crypto: top 100 by market cap from CoinGecko.
     if market_key == "crypto":
         items = _fetch_crypto(market.suffix)
         if items:
+            _save_universe_cache(market_key, items)
             return items
-        # fall through to the bundled list if the fetch failed
+        # fall through to the cached/bundled list if the fetch failed
+
+    # Directory fetch failed (even with retries): prefer the LAST GOOD full
+    # snapshot over the tiny bundled CSV, so one flaky endpoint can no longer
+    # shrink a scan from ~2,000 names to ~90 without a trace.
+    if full or market_key == "crypto":
+        cached = _load_universe_cache(market_key)
+        if cached:
+            print(f"  universe: {market_key} directory fetch FAILED - "
+                  f"using last-good cache ({len(cached)} names)", flush=True)
+            return cached
 
     if csv_path.exists():
         items = _from_csv(csv_path, market.suffix)
         if items:
+            if full:
+                print(f"  universe: WARNING {market_key} running on the bundled "
+                      f"fallback CSV ({len(items)} names) - directory fetch and "
+                      f"cache both unavailable", flush=True)
             return items
 
     if market_key == "asx":
