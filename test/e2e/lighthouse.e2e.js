@@ -77,10 +77,12 @@ const CHROME = process.env.PW_CHROMIUM || process.env.CHROME_PATH || undefined;
     const tti = a["interactive"].numericValue;
     const bytes = a["total-byte-weight"].numericValue;
     const check = (ok, label) => { console.log(`${ok ? "PASS" : "FAIL"}  ${label}`); if (!ok) failures++; };
-    // GATED. Transfer is deterministic in ?lite mode (tight budget); CLS still
-    // has runner variance so its budget is a looser tripwire above the max.
+    // GATED. Transfer is deterministic in ?lite mode (tight budget). CLS was
+    // rebuilt 2026-07-26 (UX top-10 #1: reserved deck/nav/rows space, metric-
+    // matched font fallbacks) — observed 0.12-0.19 across runs, so the gate
+    // drops from the old 1.60 tripwire to 0.50 (~3-4x headroom over max).
     check(bytes < 5.0 * 1024 * 1024, `transfer ${(bytes / 1024 / 1024).toFixed(2)}MB < 5.0MB (deterministic ~3.50)`);
-    check(cls < 1.60, `CLS ${cls.toFixed(3)} < 1.60 (observed max ~1.06)`);
+    check(cls < 0.50, `CLS ${cls.toFixed(3)} < 0.50 (observed 0.12-0.19 after the #1 CLS pass)`);
     // INFORMATIONAL (TTI swings 2x on shared CI runners — reported, NOT gated,
     // so a noisy runner can't red-fail the build and re-trigger the emails).
     console.log(`INFO  TTI ${Math.round(tti)}ms · perf score ${Math.round(runner.lhr.categories.performance.score * 100)} (not gated — runner-variable)`);

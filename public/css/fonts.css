@@ -12,3 +12,20 @@
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/jbmono-500.woff2") format("woff2"); }
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/jbmono-600.woff2") format("woff2"); }
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/jbmono-700.woff2") format("woff2"); }
+
+/* CLS pass (UX top-10 #1, 2026-07-26): metric-matched FALLBACKS. On a
+   throttled first load the system font paints first and Inter swaps in a beat
+   later — Arial/Helvetica metrics differ enough that the whole page re-flows
+   (this was the dominant ~0.5 residual layout shift). These local fallbacks
+   are size-adjusted to Inter / JetBrains Mono metrics so the swap is
+   (near-)geometry-identical, and the token stacks in styles.css list them
+   right after the web font. Override values are the standard fontaine/capsize
+   numbers for Inter and JetBrains Mono. */
+@font-face {
+  font-family: "Inter-fallback"; src: local("Arial");
+  size-adjust: 107.0%; ascent-override: 90.44%; descent-override: 22.52%; line-gap-override: 0%;
+}
+@font-face {
+  font-family: "JBMono-fallback"; src: local("Courier New");
+  size-adjust: 103.0%; ascent-override: 100.44%; descent-override: 26.36%; line-gap-override: 0%;
+}

@@ -132,18 +132,33 @@ const check = (ok, label) => {
     };
 
     // ── Specs page (#24): paints rows + grade filter narrows ─────────────
+    // DATA-AWARE (2026-07-26): the Specs gates are strict — a session can
+    // legitimately pass ZERO setups (both spec files were empty after Friday's
+    // close, which timed this block out and red-failed the run). The correct
+    // behaviour with empty data is the EMPTY STATE, so that's what's asserted
+    // when the committed JSON has no results; the row assertions only run when
+    // there is data to paint. A quiet market must never fail CI.
+    const specData = (() => {
+      try { return require(path.join(ROOT, "data", "asx_spec.json")); } catch (_) { return null; }
+    })();
+    const specN = ((specData && specData.results) || []).length;
     page = await newPage({ width: 1500, height: 950 });
     await page.goto(`${BASE}/specs.html`, { waitUntil: "networkidle", timeout: 30000 });
-    await page.waitForSelector("#sp-list .row-wrap", { timeout: 30000 });
-    const spBefore = await settledCount(page, "#sp-list .row-wrap");
-    check(spBefore > 0, `specs page paints rows (${spBefore})`);
-    const spGrade = await page.$("#sp-grade-filter .seg-btn[data-grade='A+']");
-    if (spGrade) {
-      await spGrade.click();
-      await page.waitForTimeout(500);
-      const spAfter = await page.$$eval("#sp-list .row-wrap", (n) => n.length);
-      check(spAfter <= spBefore, `specs grade filter narrows (${spBefore} → ${spAfter})`);
-    } else { check(false, "specs A+ grade filter present"); }
+    if (specN === 0) {
+      await page.waitForSelector("#sp-list .placeholder", { timeout: 30000 });
+      check(true, "specs: committed data has 0 setups — empty state renders (correct)");
+    } else {
+      await page.waitForSelector("#sp-list .row-wrap", { timeout: 30000 });
+      const spBefore = await settledCount(page, "#sp-list .row-wrap");
+      check(spBefore > 0, `specs page paints rows (${spBefore})`);
+      const spGrade = await page.$("#sp-grade-filter .seg-btn[data-grade='A+']");
+      if (spGrade) {
+        await spGrade.click();
+        await page.waitForTimeout(500);
+        const spAfter = await page.$$eval("#sp-list .row-wrap", (n) => n.length);
+        check(spAfter <= spBefore, `specs grade filter narrows (${spBefore} → ${spAfter})`);
+      } else { check(false, "specs A+ grade filter present"); }
+    }
     await page.context().close();
 
     // ── PhaseMap page (#24): paints cards + tier filter narrows ──────────

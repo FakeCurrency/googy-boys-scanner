@@ -80,9 +80,12 @@
                  0 0 0 1px rgba(255,255,255,0.10);
   --shadow-pill: 0 2px 8px rgba(0,0,0,0.32);
   --nav: #141922;
+  /* CLS #1: "Inter-fallback"/"JBMono-fallback" are metric-matched local
+     fallbacks (fonts.css) — they paint with (near-)Inter geometry while the
+     real files load, so the swap doesn't re-flow the page. */
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-          "Inter", "Segoe UI", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+          "Inter", "Inter-fallback", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "JBMono-fallback", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -510,7 +513,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .sort-arrow { font-size: 0.92em; font-weight: 700; opacity: 0.95; }
 
 /* ================================================================ EMA legend */
-.ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 1px solid var(--border); }
+.ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 1px solid var(--border); min-height: 24px; /* CLS #1: reserved pre-data */ }
 .legend-tag { font: 700 10px/1 var(--mono); letter-spacing: 0.12em; color: var(--muted); }
 .ema-dot { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); color: var(--text-2); }
 .ema-dot i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
@@ -559,7 +562,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 /* ======================================================================= rows */
-.rows { display: flex; flex-direction: column; gap: 14px; }
+.rows { display: flex; flex-direction: column; gap: 14px;
+  /* CLS #1: the list holds most-of-a-viewport from the first frame, so the
+     footer paints in (roughly) its final place instead of being shoved down
+     when the rows arrive — this was ~0.38 of the measured shift. */
+  min-height: 72vh; }
 
 /* staggered entrance — replays on every list render (tab / sort / market
    switch and on fresh data load) so content settles in rather than snapping. */
@@ -1819,7 +1826,14 @@ body { letter-spacing: -0.012em; }
 .deck-top { display: flex; align-items: center; gap: 14px; padding: 9px 20px; }
 .deck-top .brand { flex-shrink: 0; }
 .deck-top .nav-pills { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
-  scrollbar-width: none; min-width: 0; }
+  scrollbar-width: none; min-width: 0;
+  /* CLS #1: nav.js injects the pills AFTER first paint. flex-basis 0 (not
+     auto!) means the strip's size comes ONLY from the free space — injected
+     content can never expand its basis and re-wrap the header (at ~800px a
+     basis of auto made the loaded pills push the strip to a second row,
+     shoving the whole page down 44px — the dominant 0.51 shift). Pills scroll
+     inside whatever space the row grants. min-height reserves the row. */
+  flex: 1 1 0; min-height: 30px; }
 .deck-top .nav-pills::-webkit-scrollbar { display: none; }
 .deck-top-right { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .microclock {
@@ -1830,6 +1844,10 @@ body { letter-spacing: -0.012em; }
   white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left;
   letter-spacing: 0.01em;
 }
+/* CLS #1: the cells boot as "—" then become "18:51:09 MEL" — reserve widths
+   so the tick-over doesn't nudge the header's right group. */
+.microclock .mc-major { display: inline-block; min-width: 118px; }
+.microclock .mc-minor { display: inline-block; min-width: 92px; }
 #clk-mel-time    { color: var(--blue); }     /* Melbourne — blue */
 #clk-ny-time     { color: #ff5c8a; }         /* New York — pink */
 #clk-china-time  { color: var(--orange); }   /* China — orange */
@@ -1840,16 +1858,26 @@ body { letter-spacing: -0.012em; }
 .nav-pills .nav-back:hover { color: var(--text); background: var(--fill); border-color: var(--border-2); }
 
 /* ---- command deck bar ---- */
+/* CLS pass (UX top-10 #1, 2026-07-26): the deck used to paint as a thin
+   "Loading…" bar, then GROW as pills + the bot strip arrived — shoving the
+   toolbar, rows and footer down (Lighthouse blamed main.wrap for ~0.50 of the
+   ~0.89 CLS). Space is now RESERVED before data arrives: the deck, its pills
+   row, the bot strip and the EMA legend all hold their loaded height from the
+   first frame (values measured slightly UNDER real loaded heights so an
+   under-shoot never leaves a permanent gap). #results holds 72vh so the
+   footer never sits high then jumps (its share was ~0.38). */
 .deck {
   background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 14px 18px; margin: 0 0 14px;
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  min-height: 118px;
 }
 .deck-status { min-width: 0; }
 .deck-title { font: 800 19px/1.25 var(--sans); letter-spacing: -0.02em; color: var(--text); }
 .deck-sub {
   display: flex; align-items: center; gap: 8px; margin-top: 3px;
   font: 500 12px/1.5 var(--sans); color: var(--muted-2); flex-wrap: wrap;
+  min-height: 23px;   /* CLS #1: the freshness pill is taller than the text line */
 }
 .deck-dot {
   width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0;
@@ -1861,7 +1889,30 @@ body { letter-spacing: -0.012em; }
 @keyframes deckpulse { 50% { opacity: 0.35; } }
 .deck-sub .scan-fresh { margin: 0; }
 
-.deck-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.deck-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 32px; }
+/* Reserve the bot strip's slot while it loads — [hidden] usually means
+   display:none, but that would collapse the deck and re-shift everything when
+   the strip arrives. visibility:hidden keeps it out of the a11y tree while
+   holding the space. */
+.deck .deck-bot[hidden] { display: flex; visibility: hidden; min-height: 32px; }
+/* Mid widths (tablet / small laptop): the deck stacks progressively — pills
+   wrap under the status column, the bot strip takes its own line, the sub-text
+   wraps to two lines — so the loaded height climbs as the viewport narrows.
+   Reservations are tiered from MEASURED loaded heights (always a few px UNDER
+   actual, so an over-reserve can never leave a permanent gap). */
+@media (max-width: 1150px) { .deck { min-height: 170px; align-items: flex-start; } }
+@media (max-width: 1024px) { .deck { min-height: 188px; } }
+@media (max-width: 860px)  { .deck { min-height: 198px; } .deck-status { min-height: 74px; } }
+/* In the reserved band the deck is top-aligned (above) so the empty state
+   paints children at their loaded positions — centering redistributed them
+   when the content arrived, which was itself a shift. */
+/* Mobile: the deck stacks fully (title / pills wrap / full-width bot strip) so
+   its loaded height is taller again — reserve the measured mobile heights. */
+@media (max-width: 600px) {
+  .deck { min-height: 230px; }
+  .deck-pills { min-height: 38px; }
+  .deck .deck-bot[hidden] { min-height: 60px; }
+}
 .fpill {
   appearance: none; cursor: pointer; text-decoration: none;
   display: inline-flex; align-items: center; gap: 7px;
