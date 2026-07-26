@@ -507,3 +507,76 @@
      pre-boot flash */
   .chart-foot .cf-actions #cf-share, .chart-foot .cf-actions #cf-png { display: none; }
 }
+
+/* ── UX-20 batch 2: alerts · replay · relative strength · shading ────────── */
+/* #4 price-alert tool button */
+.draw-btn.draw-alert.is-active { background: #00d2ff; color: #04121a; }
+
+/* in-chart toast (alert set / fired, replay + compare feedback) */
+.pa-toast {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 32; max-width: min(92%, 480px); padding: 8px 14px;
+  border: 1px solid rgba(0,210,255,.45); border-radius: 10px;
+  background: rgba(10,16,24,.94); color: var(--text);
+  font: 600 12px/1.45 var(--sans); text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  animation: pa-in .22s ease; pointer-events: none;
+}
+.pa-toast.out { opacity: 0; transition: opacity .4s ease; }
+@keyframes pa-in { from { opacity: 0; transform: translate(-50%, -6px); } }
+
+/* #7 replay scrub bar */
+.replay-btn { color: var(--muted); }
+.replay-btn.is-active { background: var(--amber, #ffb020); color: #1a1206; }
+.replay-bar {
+  position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 30;
+  display: flex; align-items: center; gap: 6px; padding: 7px 9px;
+  border: 1px solid var(--border-2); border-radius: 12px;
+  background: rgba(10,15,23,.92); backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+.replay-bar[hidden] { display: none; }
+.rp-btn {
+  width: 34px; height: 32px; flex: 0 0 auto; border-radius: 8px;
+  border: none; background: rgba(120,120,128,.14); color: var(--text);
+  font: 700 13px/1 var(--mono); cursor: pointer;
+}
+.rp-btn:hover { background: rgba(120,120,128,.26); }
+.rp-btn.rp-play { background: var(--blue); color: #fff; }
+.rp-btn.rp-exit { color: var(--muted); }
+.rp-btn.rp-exit:hover { color: var(--red); background: rgba(255,91,91,.16); }
+.rp-slider { flex: 1 1 auto; min-width: 60px; accent-color: var(--blue); height: 26px; }
+.rp-pos { flex: 0 0 auto; font: 600 10.5px/1 var(--mono); color: var(--muted); white-space: nowrap; }
+@media (max-width: 560px) { .rp-pos { display: none; } .replay-bar { gap: 4px; } }
+
+/* #8 relative-strength (VS) overlay */
+.rs-btn { color: var(--muted); }
+.rs-btn.is-active { background: rgba(255,106,213,.2); color: #ff6ad5; }
+.rs-chip { color: #ff6ad5; background: rgba(255,106,213,.12); font-weight: 700; }
+.rs-chip.lead { color: var(--green); background: rgba(47,208,127,.12); }
+.rs-chip.lag { color: var(--red); background: rgba(255,91,91,.12); }
+.rs-menu {
+  position: fixed; z-index: 70; width: 228px; padding: 6px;
+  border: 1px solid var(--border-2); border-radius: 12px;
+  background: var(--panel, #131a26); box-shadow: 0 14px 40px rgba(0,0,0,.55);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rs-menu[hidden] { display: none; }
+.rsm-opt {
+  text-align: left; padding: 8px 10px; border: none; border-radius: 8px;
+  background: none; color: var(--text); font: 600 12px/1.2 var(--sans); cursor: pointer;
+}
+.rsm-opt:hover { background: rgba(120,120,128,.16); }
+.rsm-opt.rsm-off { color: var(--muted); }
+.rsm-opt.rsm-off:hover { color: var(--red); }
+.rsm-custom { display: flex; gap: 6px; padding: 4px 6px 6px; }
+.rsm-in {
+  flex: 1 1 auto; min-width: 0; padding: 7px 9px; border-radius: 8px;
+  border: 1px solid var(--border-2); background: rgba(0,0,0,.25); color: var(--text);
+  font: 600 12px/1 var(--mono); text-transform: uppercase;
+}
+.rsm-in:focus { outline: none; border-color: var(--blue); }
+.rsm-go {
+  flex: 0 0 auto; width: 34px; border: none; border-radius: 8px;
+  background: var(--blue); color: #fff; font: 700 14px/1 var(--mono); cursor: pointer;
+}

@@ -1860,6 +1860,7 @@
         renderDeckPills(d);
         notifyTriples(c.all());
         notifyWatchArms(d.results || []);   // UX #6: ★ names newly arming/triggering
+        checkPriceAlerts(d.results || []);  // UX-20 #4: chart-set price alert lines
       });
     }
   }
@@ -2694,6 +2695,50 @@
       const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
       localStorage.setItem("gbs:notified", JSON.stringify(pruned));
     } catch (_) {}
+  }
+
+  // ── Price-alert lines set on the chart page (UX-20 #4) ───────────────────
+  // The chart's 🔔 tool stores one-shot alerts in gbs:palerts:<market>:<SYM>
+  // with the price at creation (ref). Every scan load re-checks them against
+  // the fresh prices, so an alert fires even when the chart tab is long
+  // closed. Crossed = price moved to the other side of the line since it was
+  // set. Fired alerts are deleted (one-shot). Setting the alert WAS the
+  // opt-in, so this needs only browser permission — not the 🔔 bell flag.
+  function checkPriceAlerts(results) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const pre = `gbs:palerts:${state.market}:`;
+    const keys = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(pre) === 0) keys.push(k);
+      }
+    } catch (_) { return; }
+    const pf = (x) => x >= 100 ? (+x).toFixed(2) : x >= 1 ? (+x).toFixed(3) : (+x).toFixed(4);
+    keys.forEach((k) => {
+      const sym = k.slice(pre.length);
+      const row = (results || []).find((r) => String(r.symbol).toUpperCase() === sym);
+      if (!row || row.price == null) return;
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(k) || "[]") || []; } catch (_) { return; }
+      if (!list.length) return;
+      const keep = list.filter((a) => {
+        const crossed = a && a.p != null && a.ref != null &&
+          ((a.ref < a.p && row.price >= a.p) || (a.ref > a.p && row.price <= a.p));
+        if (!crossed) return true;
+        try {
+          new Notification(`⏰ ${sym} crossed ${pf(a.p)}`, {
+            body: `Now ${pf(row.price)} · ${state.market.toUpperCase()} — the alert line you set on the chart`,
+            icon: "icons/icon-192.png", tag: `pa:${state.market}:${sym}:${a.p}`,
+          });
+        } catch (_) {}
+        return false;
+      });
+      try {
+        if (keep.length) localStorage.setItem(k, JSON.stringify(keep));
+        else localStorage.removeItem(k);
+      } catch (_) {}
+    });
   }
 
   function wireNotifyBell() {

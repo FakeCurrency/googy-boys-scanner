@@ -412,6 +412,31 @@
     return { candles, volume, lines };
   }
 
+  // ── Session / weekend shading (UX-20 #9) ───────────────────────────────────
+  // Per-bar background tints, drawn with the same full-height hidden-scale
+  // histogram trick as the FLASH bands: intraday timeframes get alternating
+  // UTC-day banding (day boundaries read at a glance) with weekend bars a
+  // shade heavier (crypto's weekend chop stands out); daily/3D charts tint
+  // weekend bars only (stocks have none — crypto does). Weekly+ stays clean.
+  const SHADE_INTRADAY = { "15M": 1, "30M": 1, "1H": 1, "4H": 1 };
+  function shadeRows(candles, key) {
+    const out = [];
+    const intraday = !!SHADE_INTRADAY[key];
+    const daily = key === "1D" || key === "3D";
+    if (!intraday && !daily) return out;
+    for (const c of candles || []) {
+      const dow = new Date(c.time * 1000).getUTCDay();
+      const wk = dow === 0 || dow === 6;
+      if (intraday) {
+        if (wk) out.push({ time: c.time, value: 1, color: "rgba(120,140,190,0.10)" });
+        else if (Math.floor(c.time / 86400) % 2) out.push({ time: c.time, value: 1, color: "rgba(110,125,150,0.05)" });
+      } else if (wk) {
+        out.push({ time: c.time, value: 1, color: "rgba(120,140,190,0.10)" });
+      }
+    }
+    return out;
+  }
+
   // Render a chart purely from live history when no static JSON exists. `meta`
   // (optional) is the scan-results row, which still carries grade / entry / stop
   // / target even when the per-ticker chart file is missing.
@@ -1509,6 +1534,9 @@
     let drawRedraw = () => {};        // set by initDrawing; re-anchors drawings on pan/zoom/resize
     let drawRestore = () => {};       // set by initDrawing; reloads saved drawings for the current TF
     let tfSetups = null;              // VIVEK multi-timeframe setup strip (set below)
+    let rsApply = () => {};           // set by initCompare; re-maps the RS overlay per TF
+    let rsTrim = () => {};            // set by initCompare; clips the overlay during replay
+    const replayCtl = { active: false, abort() {} };   // set by initReplay
 
     const el = $("#chart");
     const LC = window.LightweightCharts;
@@ -1546,6 +1574,16 @@
       });
       chart.priceScale("mom").applyOptions({ scaleMargins: { top: 0.72, bottom: 0.06 } });
     }
+
+    // ── Session / weekend shading (UX-20 #9) — created BEFORE the flash series
+    // so event flashes always paint over the calendar banding.
+    const shadeSeries = chart.addHistogramSeries({
+      priceScaleId: "shade", lastValueVisible: false, priceLineVisible: false,
+    });
+    chart.priceScale("shade").applyOptions({
+      scaleMargins: { top: 0, bottom: 0 }, visible: false,
+    });
+    const applyShade = (key) => shadeSeries.setData(shadeRows((tfs[key] || {}).candles, key));
 
     // ── FLASH bands (2026-07-02, owner request) — a translucent full-height
     // column on every bar where a system spoke (VIVEK reaction/trigger,
@@ -1954,6 +1992,7 @@
 
     function applyTF(key) {
       const tf = tfs[key]; if (!tf) return;
+      if (replayCtl.active) replayCtl.abort();   // TF switch ends a replay silently
       curTF = key;
       drawClear();                    // wipe the canvas state for the old TF…
       drawRestore();                  // …then load this TF's SAVED drawings (persistent)
@@ -2014,6 +2053,8 @@
         if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
       applyPmZones(key);                     // PhaseMap bands ride every timeframe
+      applyShade(key);                       // #9: session / weekend banding
+      rsApply(key);                          // #8: re-map the RS overlay to this TF
     }
 
     // On-chart notice for reference timeframes (4H / 3D) — pinned over the candles.
@@ -2028,7 +2069,7 @@
     // SMA swing view, so it never switches into the intraday scalp stream (which
     // would recompute the BB/KC/EMA9/21 overlays we deliberately don't want here).
     const pair = (!d._vivek && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
-    const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch };
+    const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch, shadeSeries };
     wirePng(chart, d, () => curTF);   // #76: PNG export needs the live chart handle
 
     if (pair) {
@@ -2074,6 +2115,9 @@
     // anchored to chart coordinates (logical index + price) so they track pan/
     // zoom; switching timeframe clears them (the data underneath changed).
     initDrawing();
+    const alertsApi = initAlerts();   // UX-20 #4: tap-to-set price alert lines
+    initReplay();                     // UX-20 #7: bar-by-bar setup replay
+    initCompare();                    // UX-20 #8: relative-strength overlay
 
     const ro = new ResizeObserver(() => {
       chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
@@ -2321,6 +2365,7 @@
           if (i >= 0) { drawings.splice(i, 1); eraseIdx = -1; redraw(); saveDrawings(); }
           return;
         }
+        if (tool === "alert") { alertsApi.toggleAt(p); return; }   // UX-20 #4
         if (p.logical == null || p.price == null) return;
         if (tool === "hline") {
           drawings.push({ type: "hline", price: p.price });
@@ -2424,6 +2469,368 @@
       const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
       cro.observe(el);
     }
+
+    // Small in-chart toast (alerts / replay / compare feedback).
+    function chartToast(msg) {
+      el.querySelectorAll(".pa-toast").forEach((x) => x.remove());   // never stack
+      const t = document.createElement("div");
+      t.className = "pa-toast";
+      t.textContent = msg;
+      el.appendChild(t);
+      setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, 5200);
+    }
+
+    // ── UX-20 #4: tap-to-set price alert lines ─────────────────────────────
+    // The 🔔 drawing tool: tap a price → a dotted cyan alert line + a saved
+    // one-shot alert (gbs:palerts:<market>:<SYM>). It fires as a browser
+    // notification (+ in-page toast) when the live tick crosses the level
+    // while this chart is open, AND the dashboard checks the same store
+    // against every fresh scan — so the alert still lands when this tab is
+    // long closed. Tap on/near an existing alert line removes it.
+    function initAlerts() {
+      const SYMU = (d.symbol || symbol).toUpperCase();
+      const KEY = `gbs:palerts:${market}:${SYMU}`;
+      const cur = d.currency_symbol || "";
+      let list = [];
+      try { list = JSON.parse(localStorage.getItem(KEY) || "[]") || []; } catch (_) {}
+      const handles = new Map();
+      const save = () => { try {
+        if (list.length) localStorage.setItem(KEY, JSON.stringify(list));
+        else localStorage.removeItem(KEY);
+      } catch (_) {} };
+      const draw = (a) => {
+        handles.set(a, candle.createPriceLine({
+          price: a.p, color: "#00d2ff", lineWidth: 1, lineStyle: LC.LineStyle.Dotted,
+          axisLabelVisible: true, title: "⏰ ALERT",
+        }));
+      };
+      const remove = (a) => {
+        const pl = handles.get(a);
+        if (pl) { try { candle.removePriceLine(pl); } catch (_) {} }
+        handles.delete(a);
+        list = list.filter((x) => x !== a);
+        save();
+      };
+      const fire = (a, px) => {
+        const msg = `${SYMU} crossed ${fmt(a.p, cur)} — now ${fmt(px, cur)}`;
+        try {
+          if ("Notification" in window && Notification.permission === "granted")
+            new Notification(`⏰ ${SYMU} price alert`, {
+              body: `${msg} · ${MARKET_LABEL[market] || market.toUpperCase()}`,
+              icon: "icons/icon-192.png", tag: `pa:${market}:${SYMU}:${a.p}`,
+            });
+        } catch (_) {}
+        chartToast(`⏰ ${msg}`);
+        remove(a);
+      };
+      list.forEach(draw);
+      let lastTick = null;
+      onLiveTick((px) => {
+        if (px == null) return;
+        const prev = lastTick; lastTick = px;
+        if (!list.length) return;
+        list.slice().forEach((a) => {
+          const ref = prev != null ? prev : a.ref;
+          if (ref == null || ref === px) return;
+          if ((ref < a.p && px >= a.p) || (ref > a.p && px <= a.p)) fire(a, px);
+        });
+      });
+      return {
+        toggleAt(p) {
+          if (p.price == null || !isFinite(p.price)) return;
+          for (const [a] of handles) {
+            const ay = candle.priceToCoordinate(a.p);
+            if (ay != null && p.y != null && Math.abs(ay - p.y) <= 8) {
+              remove(a);
+              chartToast(`Alert at ${fmt(a.p, cur)} removed`);
+              return;
+            }
+          }
+          const a = { p: p.price, ref: liveState.price ?? d.price ?? null, t: Date.now() };
+          list.push(a); save(); draw(a);
+          try {
+            if ("Notification" in window && Notification.permission === "default")
+              Notification.requestPermission();
+          } catch (_) {}
+          chartToast(`⏰ Alert set at ${fmt(a.p, cur)} — fires when price crosses it (here or on the dashboard)`);
+        },
+      };
+    }
+
+    // ── UX-20 #7: setup replay ─────────────────────────────────────────────
+    // ▶ REPLAY rewinds the current timeframe to the signal bar (the first
+    // Python marker — the 200-SMA reaction) and steps forward bar by bar:
+    // slider scrub, ‹ › steps, space to auto-play, arrows on the keyboard.
+    // Everything time-anchored (candles, volume, SMAs, momentum, markers,
+    // flashes, shading, RS overlay, PhaseMap band spans) is clipped to the
+    // scrub point; price-static lines (SL/Entry/TP, alerts) stay. Exiting
+    // (or switching TF) restores the full view via applyTF. Live-streamed
+    // scalp charts skip replay — the stream would fight the scrubber.
+    function initReplay() {
+      if (pair) return;
+      const tgl = $("#tf-toggle");
+      if (!tgl) return;
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "tf-btn replay-btn";
+      btn.textContent = "▶ REPLAY";
+      btn.title = "Setup replay — rewind to the signal bar, then step forward bar by bar";
+      tgl.appendChild(btn);
+
+      const bar = document.createElement("div");
+      bar.className = "replay-bar"; bar.hidden = true;
+      bar.innerHTML =
+        `<button class="rp-btn" data-rp="sig" title="Jump back to the signal bar">⚑</button>` +
+        `<button class="rp-btn" data-rp="back" title="Step back one bar (←)">‹</button>` +
+        `<button class="rp-btn rp-play" data-rp="play" title="Play / pause (space)">▶</button>` +
+        `<button class="rp-btn" data-rp="fwd" title="Step forward one bar (→)">›</button>` +
+        `<input class="rp-slider" type="range" min="12" max="100" value="100" aria-label="Replay position" />` +
+        `<span class="rp-pos"></span>` +
+        `<button class="rp-btn rp-exit" data-rp="exit" title="Exit replay (Esc)">✕</button>`;
+      el.appendChild(bar);
+      const slider = bar.querySelector(".rp-slider");
+      const posLbl = bar.querySelector(".rp-pos");
+      const playBtn = bar.querySelector(".rp-play");
+
+      let idx = 0, timer = 0;
+      const cs = () => (tfs[curTF] || {}).candles || [];
+      const stopPlay = () => { if (timer) { clearInterval(timer); timer = 0; playBtn.textContent = "▶"; } };
+
+      function rApply(i) {
+        const tf = tfs[curTF] || {}; const c = tf.candles || [];
+        if (!c.length) return;
+        idx = Math.max(Math.min(12, c.length), Math.min(i, c.length));
+        const tCut = c[idx - 1].time;
+        candle.setData(c.slice(0, idx));
+        vol.setData((tf.volume || []).filter((p) => p.time <= tCut));
+        lineSeries.forEach((s, k) => {
+          const l = tf.lines && tf.lines[k];
+          s.setData(l ? l.data.filter((pt) => pt.time <= tCut) : []);
+        });
+        if (momSeries) momSeries.setData((tf.histogram || []).filter((p) => p.time <= tCut));
+        if (typeof candle.setMarkers === "function")
+          candle.setMarkers((tf.markers || []).filter((m) => m.time <= tCut));
+        setFlashes([...vkFlashes, ...pmFlashes].filter((f) => f.time <= tCut));
+        shadeSeries.setData(shadeRows(c.slice(0, idx), curTF));
+        rsTrim(tCut);
+        pmBands.forEach((b) => b.series.setData(
+          [{ time: c[0].time, value: b.z.high }, { time: tCut, value: b.z.high }]));
+        chart.timeScale().fitContent();
+        drawRedraw();
+        slider.value = String(idx);
+        const dt = new Date(tCut * 1000);
+        posLbl.textContent = `${idx}/${c.length} · ` +
+          dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+        if (idx >= c.length) stopPlay();
+      }
+
+      // Start point: the first marker (200-SMA reaction) on this TF, else ~30
+      // bars back — "rewind to where the setup began".
+      const sigIdx = () => {
+        const c = cs();
+        const mk = ((tfs[curTF] || {}).markers || [])[0];
+        if (mk) { const i = c.findIndex((b) => b.time === mk.time); if (i >= 0) return Math.max(i + 1, 12); }
+        return Math.max(12, c.length - 30);
+      };
+
+      function enter() {
+        const c = cs();
+        if (c.length < 15) { chartToast("Not enough bars on this timeframe to replay."); return; }
+        replayCtl.active = true;
+        btn.classList.add("is-active");
+        bar.hidden = false;
+        slider.min = "12"; slider.max = String(c.length);
+        rApply(sigIdx());
+      }
+      function exit() {
+        if (!replayCtl.active) return;
+        stopPlay();
+        replayCtl.active = false;
+        btn.classList.remove("is-active");
+        bar.hidden = true;
+        applyTF(curTF);                 // full restore of the real view
+      }
+      replayCtl.abort = () => {         // applyTF repaints anyway — just reset UI state
+        stopPlay();
+        replayCtl.active = false;
+        btn.classList.remove("is-active");
+        bar.hidden = true;
+      };
+      const togglePlay = () => {
+        if (timer) { stopPlay(); return; }
+        if (idx >= cs().length) rApply(sigIdx());
+        playBtn.textContent = "❚❚";
+        timer = setInterval(() => {
+          if (idx >= cs().length) { stopPlay(); return; }
+          rApply(idx + 1);
+        }, 400);
+      };
+
+      btn.addEventListener("click", () => (replayCtl.active ? exit() : enter()));
+      bar.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-rp]"); if (!b) return;
+        const k = b.dataset.rp;
+        if (k === "exit") exit();
+        else if (k === "sig") { stopPlay(); rApply(sigIdx()); }
+        else if (k === "back") { stopPlay(); rApply(idx - 1); }
+        else if (k === "fwd") { stopPlay(); rApply(idx + 1); }
+        else if (k === "play") togglePlay();
+      });
+      slider.addEventListener("input", () => { stopPlay(); rApply(+slider.value); });
+      // Capture-phase keys so ←/→ scrub bars instead of jumping to the
+      // prev/next SETUP (wireScanNav listens on the same document).
+      document.addEventListener("keydown", (e) => {
+        if (!replayCtl.active) return;
+        if (e.key === "ArrowLeft") { e.preventDefault(); e.stopImmediatePropagation(); stopPlay(); rApply(idx - 1); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); e.stopImmediatePropagation(); stopPlay(); rApply(idx + 1); }
+        else if (e.key === "Escape") { e.stopImmediatePropagation(); exit(); }
+        else if (e.key === " ") { e.preventDefault(); e.stopImmediatePropagation(); togglePlay(); }
+      }, true);
+    }
+
+    // ── UX-20 #8: relative-strength overlay ────────────────────────────────
+    // ⚖ VS overlays a second instrument (market index / SPY / ETH / any
+    // ticker) as a dashed pink line REBASED to this chart's first visible
+    // close — divergence between the two lines IS the relative strength.
+    // The chip states who's leading over the window; choice persists per
+    // market and re-applies on every chart until removed.
+    function initCompare() {
+      if (pair) return;
+      const tgl = $("#tf-toggle");
+      if (!tgl) return;
+      const SYMU = (d.symbol || symbol).toUpperCase();
+      const RS_KEY = `gbs:rs:${market}`;
+      const IDX = market === "nasdaq" ? ["^NDX", "NDX"]
+                : market === "crypto" ? ["BTC-USD", "BTC"] : ["^AXJO", "XJO"];
+      const fmtPct = (x) => (x >= 0 ? "+" : "") + x.toFixed(1) + "%";
+
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "tf-btn rs-btn"; btn.textContent = "⚖ VS";
+      btn.title = "Relative strength — overlay a rebased index or ticker to see who's leading";
+      tgl.appendChild(btn);
+      const chip = document.createElement("button");
+      chip.type = "button"; chip.className = "tf-btn rs-chip"; chip.hidden = true;
+      tgl.appendChild(chip);
+      const menu = document.createElement("div");
+      menu.className = "rs-menu"; menu.hidden = true;
+      document.body.appendChild(menu);
+
+      let rsSeries = null, rsBars = null, rsLabel = "";
+      const ensureSeries = () => rsSeries || (rsSeries = chart.addLineSeries({
+        color: "#ff6ad5", lineWidth: 2, lineStyle: LC.LineStyle.Dashed,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+      }));
+      // Map compare bars onto this TF's candle times (last daily close at or
+      // before each bar; +86399s absorbs day-start timezone stamps).
+      const mapRs = (c) => {
+        let j = 0; const out = [];
+        for (const b of c) {
+          while (j + 1 < rsBars.length && rsBars[j + 1].time <= b.time + 86399) j++;
+          if (rsBars[j].time <= b.time + 86399) out.push({ time: b.time, value: rsBars[j].close, mc: b.close });
+        }
+        return out;
+      };
+
+      rsApply = (key) => {
+        if (!rsSeries) return;
+        const c = (tfs[key] || {}).candles || [];
+        if (!rsBars || !rsBars.length || !c.length) { rsSeries.setData([]); return; }
+        const out = mapRs(c);
+        if (out.length < 2) { rsSeries.setData([]); return; }
+        const scale = out[0].mc / out[0].value;
+        rsSeries.setData(out.map((p) => ({ time: p.time, value: p.value * scale })));
+        const mPct = (out[out.length - 1].mc / out[0].mc - 1) * 100;
+        const cPct = (out[out.length - 1].value / out[0].value - 1) * 100;
+        const lead = mPct >= cPct;
+        chip.textContent = `vs ${rsLabel} ${lead ? "▲" : "▼"} ✕`;
+        chip.classList.toggle("lead", lead);
+        chip.classList.toggle("lag", !lead);
+        chip.title = `${SYMU} ${fmtPct(mPct)} vs ${rsLabel} ${fmtPct(cPct)} over this window — ` +
+          `${SYMU} is ${lead ? "LEADING" : "LAGGING"}. The dashed pink line is ${rsLabel} ` +
+          `rebased to the first bar. Tap to remove.`;
+      };
+      rsTrim = (tCut) => {              // replay support: clip to the scrub point
+        if (!rsSeries || !rsBars || !rsBars.length) return;
+        const c = ((tfs[curTF] || {}).candles || []).filter((b) => b.time <= tCut);
+        const out = c.length >= 2 ? mapRs(c) : [];
+        if (out.length < 2) { rsSeries.setData([]); return; }
+        const scale = out[0].mc / out[0].value;
+        rsSeries.setData(out.map((p) => ({ time: p.time, value: p.value * scale })));
+      };
+
+      function clearOverlay() {
+        rsBars = null; rsLabel = "";
+        if (rsSeries) rsSeries.setData([]);
+        chip.hidden = true; btn.classList.remove("is-active");
+        try { localStorage.removeItem(RS_KEY); } catch (_) {}
+      }
+      function load(cands, label, persist) {
+        const tryOne = (i) => {
+          if (i >= cands.length) {
+            if (persist) chartToast(`Couldn't load "${label}" — try the full Yahoo form (BHP.AX, ^NDX, BTC-USD).`);
+            else { try { localStorage.removeItem(RS_KEY); } catch (_) {} }   // stale saved compare
+            return;
+          }
+          yahooBars(cands[i], "1y", "1d")
+            .then((bars) => {
+              if (!bars || bars.length < 5) throw new Error("empty");
+              rsBars = bars; rsLabel = label;
+              ensureSeries(); rsApply(curTF);
+              chip.hidden = false; btn.classList.add("is-active");
+              if (persist) { try { localStorage.setItem(RS_KEY, JSON.stringify({ yf: cands[i], label })); } catch (_) {} }
+            })
+            .catch(() => tryOne(i + 1));
+        };
+        tryOne(0);
+      }
+      const normalize = (raw) => {
+        const up = String(raw || "").trim().toUpperCase();
+        if (!up || up.length > 15 || !/^[\w.\-^=]+$/.test(up)) return null;
+        if (/[\^=.]/.test(up) || /-USD$/.test(up)) return { c: [up], label: up.replace(/\.AX$/, "") };
+        if (market === "crypto") return { c: [up + "-USD"], label: up };
+        if (market === "asx") return { c: [up + ".AX", up], label: up };   // try ASX first, then the bare US symbol
+        return { c: [up], label: up };
+      };
+
+      const onDoc = (e) => { if (!menu.contains(e.target) && e.target !== btn) close(); };
+      function close() { menu.hidden = true; document.removeEventListener("click", onDoc); }
+      function openMenu() {
+        menu.innerHTML =
+          `<button class="rsm-opt" data-rs="idx">${IDX[1]} · market index</button>` +
+          (market === "crypto"
+            ? `<button class="rsm-opt" data-rs="eth">ETH · Ethereum</button>`
+            : `<button class="rsm-opt" data-rs="spy">SPY · S&amp;P 500</button>`) +
+          `<div class="rsm-custom"><input class="rsm-in" type="text" placeholder="Ticker (BHP, NVDA, ^NDX…)" ` +
+            `spellcheck="false" autocomplete="off" /><button class="rsm-go" type="button" title="Apply">→</button></div>` +
+          (rsBars ? `<button class="rsm-opt rsm-off" data-rs="off">✕ remove overlay</button>` : "");
+        const r = btn.getBoundingClientRect();
+        menu.style.left = Math.max(8, Math.min(r.left, innerWidth - 236)) + "px";
+        menu.style.top = (r.bottom + 6) + "px";
+        menu.hidden = false;
+        const applyCustom = () => {
+          const n = normalize(menu.querySelector(".rsm-in").value);
+          if (n) { load(n.c, n.label, true); close(); }
+        };
+        menu.querySelector(".rsm-go").addEventListener("click", applyCustom);
+        menu.querySelector(".rsm-in").addEventListener("keydown", (e) => { if (e.key === "Enter") applyCustom(); });
+        menu.querySelectorAll(".rsm-opt").forEach((b) => b.addEventListener("click", () => {
+          const k = b.dataset.rs;
+          if (k === "idx") load([IDX[0]], IDX[1], true);
+          else if (k === "spy") load(["SPY"], "SPY", true);
+          else if (k === "eth") load(["ETH-USD"], "ETH", true);
+          else if (k === "off") clearOverlay();
+          close();
+        }));
+        setTimeout(() => document.addEventListener("click", onDoc), 0);
+      }
+      btn.addEventListener("click", () => (menu.hidden ? openMenu() : close()));
+      chip.addEventListener("click", clearOverlay);
+
+      // Sticky: re-apply the saved compare for this market on every chart.
+      try {
+        const saved = JSON.parse(localStorage.getItem(RS_KEY) || "null");
+        if (saved && saved.yf) load([saved.yf], saved.label || saved.yf, false);
+      } catch (_) {}
+    }
   }
 
   // Live Binance feed controller. The forming candle ticks in real time, the
@@ -2450,6 +2857,9 @@
       S.candle.setData(bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
       S.vol.setData(bars.map((b) => ({ time: b.time, value: Math.round(b.volume),
         color: b.close >= b.open ? "rgba(47,208,127,0.5)" : "rgba(255,91,91,0.5)" })));
+      // #9: alternating-day + weekend banding on the live intraday stream too
+      if (S.shadeSeries) S.shadeSeries.setData(
+        shadeRows(bars, iv === "1h" ? "1H" : iv === "30m" ? "30M" : "15M"));
       const c = computeScalp(bars, N_DISP);
       c.lineData.forEach((ld, i) => S.lineSeries[i] && S.lineSeries[i].setData(ld));
       if (S.momSeries) S.momSeries.setData(c.hist);
