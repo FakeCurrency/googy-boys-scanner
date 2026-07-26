@@ -11,7 +11,7 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v5";   // v5 2026-07-24: #63 app-shell precache on install
+const CACHE = "vivek5-v6";   // v6 2026-07-26: UX-20 #19 — offline.html fallback + maskable icons
 
 // #63: precache the app shell on install — read index.html and pull its
 // CURRENT versioned CSS/JS (so the list is always in sync with the deploy,
@@ -21,6 +21,12 @@ self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
     try {
       const c = await caches.open(CACHE);
+      // UX-20 #19: the offline fallback page rides in the shell precache —
+      // fully self-contained, so it renders even with nothing else cached.
+      try {
+        const off = await fetch("offline.html", { cache: "no-cache" });
+        if (off && off.ok) await c.put("offline.html", off);
+      } catch (_) { /* fills in on a later install */ }
       const html = await fetch("index.html", { cache: "no-cache" });
       if (html && html.ok) {
         await c.put("index.html", html.clone());
@@ -82,7 +88,14 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   if (req.mode === "navigate") {
-    e.respondWith(networkFirst(req));
+    // network → cached copy of the SAME page → offline.html (UX-20 #19), so
+    // an offline navigation to a never-visited page lands on a branded
+    // explanation instead of the browser dinosaur.
+    e.respondWith(networkFirst(req).catch(async () => {
+      const off = await caches.match("offline.html");
+      if (off) return off;
+      throw new Error("offline");
+    }));
     return;
   }
   if (url.search.includes("v=") ||

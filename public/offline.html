@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Offline — Vivek 5.0</title>
+  <meta name="theme-color" content="#10141b" />
+  <!-- Fully self-contained: this page must render with ZERO network and no
+       cached CSS — it's the service worker's last-resort navigation fallback. -->
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #10141b; color: #e5e9f0; padding: 24px;
+      font: 500 15px/1.6 Inter, system-ui, -apple-system, sans-serif;
+    }
+    .card {
+      max-width: 460px; text-align: center; padding: 38px 30px;
+      border: 1px solid rgba(110,125,150,.25); border-radius: 18px;
+      background: #131a26; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    }
+    .mark { font-size: 40px; margin-bottom: 14px; }
+    h1 { font-size: 19px; font-weight: 800; letter-spacing: .01em; margin-bottom: 10px; }
+    p { color: #8b96a9; margin-bottom: 8px; }
+    .hint { font-size: 12.5px; }
+    .retry {
+      display: inline-block; margin-top: 18px; padding: 11px 22px; border-radius: 12px;
+      border: none; background: #2f6fed; color: #fff; font: 700 14px/1 Inter, system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .retry:active { transform: scale(.97); }
+    .brand { margin-top: 22px; font: 700 10.5px/1 ui-monospace, Menlo, monospace;
+      letter-spacing: .12em; color: #5b6577; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="mark">📡</div>
+    <h1>You're offline</h1>
+    <p>This page isn't in the offline cache yet.</p>
+    <p class="hint">Pages you've opened before still work offline — try the dashboard.
+      Live prices and fresh scans resume the moment you reconnect.</p>
+    <button class="retry" onclick="location.reload()">Try again</button><br />
+    <a class="retry" style="background:rgba(120,120,128,.18);color:#e5e9f0;margin-top:10px;text-decoration:none" href="index.html">Open the dashboard</a>
+    <div class="brand">VIVEK 5.0 · BETA SCANNER</div>
+  </div>
+</body>
+</html>

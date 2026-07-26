@@ -1,94 +1,2213 @@
-symbol,name
-BHP,BHP Group
-CBA,Commonwealth Bank of Australia
-CSL,CSL Limited
-NAB,National Australia Bank
-WBC,Westpac Banking Corp
-ANZ,ANZ Group Holdings
-MQG,Macquarie Group
-WES,Wesfarmers
-WOW,Woolworths Group
-FMG,Fortescue
-RIO,Rio Tinto
-TLS,Telstra Group
-GMG,Goodman Group
-WDS,Woodside Energy Group
-TCL,Transurban Group
-ALL,Aristocrat Leisure
-COL,Coles Group
-REA,REA Group
-QBE,QBE Insurance Group
-STO,Santos
-WTC,WiseTech Global
-XRO,Xero
-FPH,Fisher & Paykel Healthcare
-RMD,ResMed
-COH,Cochlear
-JHX,James Hardie Industries
-BXB,Brambles
-MIN,Mineral Resources
-PLS,Pilbara Minerals
-AMC,Amcor
-ORG,Origin Energy
-S32,South32
-NST,Northern Star Resources
-EVN,Evolution Mining
-IAG,Insurance Australia Group
-SUN,Suncorp Group
-MPL,Medibank Private
-NHF,nib holdings
-SHL,Sonic Healthcare
-SGP,Stockland
-MGR,Mirvac Group
-DXS,Dexus
-GPT,GPT Group
-VCX,Vicinity Centres
-CAR,CAR Group
-SEK,Seek
-ALD,Ampol
-AGL,AGL Energy
-ORI,Orica
-BSL,BlueScope Steel
-SOL,Washington H Soul Pattinson
-TWE,Treasury Wine Estates
-A2M,The a2 Milk Company
-JBH,JB Hi-Fi
-HVN,Harvey Norman Holdings
-DMP,Domino's Pizza Enterprises
-FLT,Flight Centre Travel Group
-QAN,Qantas Airways
-CPU,Computershare
-REH,Reece
-BEN,Bendigo and Adelaide Bank
-BOQ,Bank of Queensland
-ARB,ARB Corporation
-PME,Pro Medicus
-NXT,NextDC
-ALX,Atlas Arteria
-AIA,Auckland International Airport
-CWY,Cleanaway Waste Management
-EVT,EVT Limited
-TPG,TPG Telecom
-VEA,Viva Energy Group
-AZJ,Aurizon Holdings
-BPT,Beach Energy
-WHC,Whitehaven Coal
-YAL,Yancoal Australia
-NEC,Nine Entertainment
-IGO,IGO Limited
-LYC,Lynas Rare Earths
-SFR,Sandfire Resources
-CIA,Champion Iron
-LTR,Liontown Resources
-PDN,Paladin Energy
-BRN,BrainChip Holdings
-MP1,Megaport
-APA,APA Group
-ASX,ASX Limited
-QUB,Qube Holdings
-SCG,Scentre Group
-TNE,Technology One
-NWL,Netwealth Group
-PNI,Pinnacle Investment Management
-HUB,HUB24
-LLC,Lendlease Group
+symbol,name,sector
+CBA,Commonwealth Bank,Financials
+BHP,BHP Group Limited,Materials
+WBC,Westpac Banking Corp,Financials
+NAB,National Australia Bank Limited,Financials
+ANZ,ANZ Group Holdings Limited,Financials
+WES,Wesfarmers Limited,Consumer Discretionary
+CSL,CSL Limited,Health Care
+MQG,Macquarie Group Limited,Financials
+GMG,Goodman Group,Real Estate
+FMG,Fortescue Ltd,Materials
+TLS,Telstra Group Limited,Communication Services
+RIO,Rio Tinto,Materials
+WDS,Woodside Energy Group Ltd,Energy
+TCL,Transurban Group,Industrials
+ALL,Aristocrat Leisure Limited,Consumer Discretionary
+SIG,Sigma Healthcare Limited,Health Care
+WOW,Woolworths Group Limited,Consumer Staples
+NST,Northern Star Resources Limited,Materials
+BXB,Brambles Limited,Industrials
+QBE,QBE Insurance Group Limited,Financials
+COL,Coles Group Limited,Consumer Staples
+REA,REA Group Ltd,Communication Services
+PME,Pro Medicus Limited,Health Care
+XRO,Xero Limited,Information Technology
+WTC,WiseTech Global Limited,Information Technology
+VAS,Vanguard Australian Shares Index ETF,Unclassified
+RMD,ResMed Inc,Health Care
+EVN,Evolution Mining Limited,Materials
+CPU,Computershare Limited,Industrials
+SCG,Scentre Group Limited,Real Estate
+SUN,Suncorp Group Limited,Financials
+STO,Santos Limited,Energy
+ORG,Origin Energy Limited,Utilities
+SGH,SGH Limited,Industrials
+FPH,Fisher & Paykel Healthcare Corporation Limited,Health Care
+COH,Cochlear Limited,Health Care
+IAG,Insurance Australia Group Limited,Financials
+SOLDA,Washington H. Soul Pattinson and Company Limited (Deferred),Financials
+QAN,Qantas Airways Limited,Industrials
+SGP,Stockland,Real Estate
+SOL,Washington H. Soul Pattinson and Company Limited,Financials
+LYC,Lynas Rare Earths Limited,Materials
+S32,South32 Limited,Materials
+VGS,Vanguard MSCI Index International Shares ETF,Unclassified
+MPL,Medibank Private Limited,Financials
+CAR,CAR Group Limited,Communication Services
+JHX,James Hardie Industries plc,Materials
+IVV,iShares S&P 500 ETF,Unclassified
+NEM,Newmont Corporation,Materials
+TNE,Technology One Limited,Information Technology
+AIA,Auckland International Airport Limited,Industrials
+TLC,The Lottery Corporation Limited,Consumer Discretionary
+APA,APA Group,Utilities
+VCX,Vicinity Centres,Real Estate
+ALQ,ALS Limited,Industrials
+JBH,JB Hi-Fi Limited,Consumer Discretionary
+ASX,ASX Limited,Financials
+IFT,Infratil Limited,Financials
+NXT,NEXTDC Limited,Information Technology
+CHC,Charter Hall Group,Real Estate
+ORI,Orica Limited,Materials
+SHL,Sonic Healthcare Limited,Health Care
+TPG,TPG Telecom Limited,Communication Services
+GPT,The GPT Group,Real Estate
+PLS,Pilbara Minerals Limited,Materials
+SEK,SEEK Limited,Communication Services
+BSL,BlueScope Steel Limited,Materials
+HUB,HUB24 Limited,Financials
+AFI,Australian Foundation Investment Company Limited,Financials
+APE,Eagers Automotive Limited,Consumer Discretionary
+MIN,Mineral Resources Limited,Materials
+HVN,Harvey Norman Holdings Limited,Consumer Discretionary
+MGR,Mirvac Group,Real Estate
+360,"Life360, Inc.",Information Technology
+A200,BetaShares Australia 200 ETF,Unclassified
+AMC,Amcor Limited,Materials
+MCY,Mercury NZ Limited,Utilities
+QUAL,VanEck MSCI International Quality ETF,Unclassified
+NDQ,BetaShares NASDAQ 100 ETF,Unclassified
+DXS,Dexus,Real Estate
+QUB,Qube Holdings Limited,Industrials
+IOZ,iShares Core S&P/ASX 200 ETF,Unclassified
+NWL,Netwealth Group Limited,Financials
+YAL,Yancoal Australia Ltd,Energy
+RHC,Ramsay Health Care Limited,Health Care
+SFR,Sandfire Resources Limited,Materials
+BEN,Bendigo and Adelaide Bank Limited,Financials
+ALD,Ampol Limited,Energy
+WOR,Worley Limited,Industrials
+REH,Reece Limited,Industrials
+ALX,Atlas Arteria,Industrials
+A2M,The A2 Milk Company Limited,Consumer Staples
+ARG,Argo Investments Limited,Financials
+MGOC,Magellan Global Fund (Open Class) (Managed Fund),Unclassified
+MEZ,Meridian Energy Limited,Utilities
+CDA,Codan Limited,Information Technology
+GMD,Genesis Minerals Limited,Materials
+EDV,Endeavour Group Limited,Consumer Staples
+PRU,Perseus Mining Limited,Materials
+VTS,Vanguard US Total Market Shares Index ETF,Unclassified
+CGF,Challenger Limited,Financials
+DACE,Dimensional Australian Core Equity Trust (Managed Fund),Unclassified
+STW,SPDR S&P/ASX 200 Fund,Unclassified
+RMS,Ramelius Resources Limited,Materials
+WHC,Whitehaven Coal Limited,Energy
+AZJ,Aurizon Holdings Limited,Industrials
+AGL,AGL Energy Limited,Utilities
+SDF,Steadfast Group Limited,Financials
+VGAD,Vanguard MSCI Index International Shares (Hedged) ETF,Unclassified
+DNL,Dyno Nobel Limited,Materials
+VHY,Vanguard Australian Shares High Yield ETF,Unclassified
+CWY,Cleanaway Waste Management Limited,Industrials
+CMM,Capricorn Metals Ltd,Materials
+IOO,iShares Global 100 ETF,Unclassified
+TLX,Telix Pharmaceuticals Limited,Health Care
+ANN,Ansell Limited,Health Care
+EBO,EBOS Group Limited,Health Care
+DOW,Downer EDI Limited,Industrials
+WGX,Westgold Resources Limited,Materials
+ZIP,Zip Co Limited,Financials
+DGCE,Dimensional Global Core Equity Trust (Managed Fund)  Unhedged Class,Unclassified
+GGP,Greatland Resources Limited,Materials
+VEU,Vanguard All-World Ex-US Shares Index ETF,Unclassified
+VAU,Vault Minerals Limited,Materials
+RRL,Regis Resources Limited,Materials
+VNT,Ventia Services Group Limited,Industrials
+TWE,Treasury Wine Estates Limited,Consumer Staples
+XYZ,Block Inc.,Financials
+BOQ,Bank of Queensland Limited,Financials
+AMP,AMP Limited,Financials
+GQG,GQG Partners Inc.,Financials
+AAA,BetaShares Australian High Interest Cash ETF,Unclassified
+PNI,Pinnacle Investment Management Group Limited,Financials
+MTS,Metcash Limited,Consumer Staples
+BRG,Breville Group Limited,Consumer Discretionary
+AUB,AUB Group Limited,Financials
+PDN,Paladin Energy Limited,Energy
+HYGG,Hyperion Global Growth Companies Fund (Managed Fund),Unclassified
+LOV,Lovisa Holdings Limited,Consumer Discretionary
+SPK,Spark New Zealand Limited,Communication Services
+IGO,IGO Limited,Materials
+TUA,Tuas Limited,Communication Services
+ETHI,BetaShares Global Sustainability Leaders ETF,Unclassified
+LNW,Light & Wonder Inc,Consumer Discretionary
+CEN,Contact Energy Limited,Utilities
+LLC,Lendlease Group,Real Estate
+VBND,Vanguard Global Aggregate Bond Index (Hedged) ETF,Unclassified
+DFGH,Dimensional Global Core Equity Trust (Managed Fund)  AUD Hedged Class,Unclassified
+DRO,Droneshield Limited,Industrials
+BFL,BSP Financial Group Limited,Financials
+SUL,Super Retail Group Limited,Consumer Discretionary
+CNU,Chorus Limited,Communication Services
+NHF,NIB Holdings Limited,Financials
+NHC,New Hope Corporation Limited,Energy
+WAF,West African Resources Limited,Materials
+VDHG,Vanguard Diversified High Growth Index ETF,Unclassified
+IAF,iShares Core Composite Bond ETF,Unclassified
+LTR,Liontown Resources Limited,Materials
+AAI,Alcoa Corporation,Unclassified
+VAP,Vanguard Australian Property Securities Index ETF,Unclassified
+NSR,National Storage REIT,Real Estate
+EMR,Emerald Resources NL,Materials
+IHVV,iShares S&P 500 (AUD Hedged) ETF,Unclassified
+FBU,Fletcher Building Limited,Industrials
+RWC,Reliance Worldwide Corporation Limited,Industrials
+MSB,Mesoblast Limited,Health Care
+MVW,Vaneck Vectors Australian Equal Weight ETF,Unclassified
+IFL,Insignia Financial Ltd,Financials
+VAF,Vanguard Australian Fixed Interest Index ETF,Unclassified
+NIC,Nickel Industries Limited,Materials
+SGM,Sims Limited,Materials
+CLW,Charter Hall Long WALE REIT,Real Estate
+BGBL,Betashares Global Shares ETF,Unclassified
+ARB,ARB Corporation Limited,Consumer Discretionary
+CIA,Champion Iron Limited,Materials
+VEA,Viva Energy Group Limited,Energy
+ASB,Austal Limited,Industrials
+SUBD,VanEck Australian Subordinated Debt ETF,Unclassified
+BPT,Beach Energy Limited,Energy
+TPW,Temple & Webster Group Limited,Consumer Discretionary
+MP1,Megaport Limited,Information Technology
+GDG,Generation Development Group Limited,Financials
+PMV,Premier Investments Limited,Consumer Discretionary
+HDN,HomeCo Daily Needs REIT,Real Estate
+RGN,Region Group,Real Estate
+ILU,Iluka Resources Limited,Materials
+MFF,MFF Capital Investments Limited,Financials
+BWP,BWP Trust,Real Estate
+L1G,L1 Group Limited,Financials
+CSC,Capstone Copper Corp,Materials
+PXA,PEXA Group Limited,Real Estate
+GYG,Guzman y Gomez Limited,Consumer Discretionary
+NEU,Neuren Pharmaceuticals Limited,Health Care
+FLT,Flight Centre Travel Group Limited,Consumer Discretionary
+SLX,Silex Systems Limited,Industrials
+RYM,Ryman Healthcare Limited,Health Care
+VGN,Virgin Australia Holdings Limited,Industrials
+HBRD,BetaShares Active Australian Hybrids Fund (managed fund),Unclassified
+SNZ,Summerset Group Holdings Limited,Health Care
+ORA,Orora Group Limited,Materials
+PRN,Perenti Limited,Materials
+GNE,Genesis Energy Limited,Utilities
+MXT,Metrics Master Income Trust,Financials
+CQR,Charter Hall Retail REIT,Real Estate
+TAH,Tabcorp Holdings Limited,Consumer Discretionary
+EVT,EVT Limited,Communication Services
+CTD,Corporate Travel Management Limited,Consumer Discretionary
+INA,Ingenia Communities Group,Real Estate
+MND,Monadelphous Group Limited,Industrials
+REG,Regis Healthcare Limited,Health Care
+OBM,Ora Banda Mining Ltd,Materials
+LSF,L1 Long Short Fund Limited,Financials
+CIP,Centuria Industrial REIT,Real Estate
+FRW,Freightways Group Limited,Industrials
+PPT,Perpetual Limited,Financials
+QHAL,VanEck MSCI International Quality (Hedged) ETF,Unclassified
+DBI,Dalrymple Bay Infrastructure Limited,Industrials
+NWH,NRW Holdings Limited,Industrials
+NXG,NexGen Energy (Canada) Ltd,Energy
+NCK,Nick Scali Limited,Consumer Discretionary
+IPX,IperionX Limited,Materials
+DRR,Deterra Royalties Limited,Materials
+ZIM,Zimplats Holdings Limited,Materials
+WAM,WAM Capital Limited,Financials
+SMR,Stanmore Resources Limited,Materials
+SDR,SiteMinder Limited,Information Technology
+PNR,Pantoro Gold Limited,Materials
+CAT,Catapult Sports Ltd,Information Technology
+GNC,GrainCorp Limited,Consumer Staples
+CNI,Centuria Capital Group,Real Estate
+GOZ,Growthpoint Properties Australia,Real Estate
+GLF,GemLife Communities Group,Real Estate
+NWS,News Corporation,Communication Services
+RSG,Resolute Mining Limited,Materials
+DDR,Dicker Data Limited,Information Technology
+HGBL,BetaShares Global Shares ETF - Currency Hedged,Unclassified
+ASK,Abacus Storage King,Real Estate
+MAF,MA Financial Group Limited,Financials
+JDO,Judo Capital Holdings Limited,Financials
+NEC,Nine Entertainment Co. Holdings Limited,Communication Services
+DMP,Domino's Pizza Enterprises Limited,Consumer Discretionary
+CU6,Clarity Pharmaceuticals Ltd,Health Care
+WLE,WAM Leaders Limited,Financials
+OCL,Objective Corporation Limited,Information Technology
+CYL,Catalyst Metals Limited,Materials
+WPR,Waypoint REIT,Real Estate
+MAQ,Macquarie Technology Group Limited,Information Technology
+IMD,IMDEX Limited,Materials
+QPON,BetaShares Australian Bank Senior Floating Rate Bond ETF,Unclassified
+MAD,Mader Group Limited,Industrials
+ABB,Aussie Broadband Limited,Communication Services
+SRG,SRG Global Limited,Industrials
+BGL,Bellevue Gold Limited,Materials
+AIZ,Air New Zealand Limited,Industrials
+IRE,Iress Limited,Information Technology
+MGH,MAAS Group Holdings Limited,Industrials
+FANG,Global X FANG+ ETF,Unclassified
+MFG,Magellan Financial Group Limited,Financials
+BGA,Bega Cheese Limited,Consumer Staples
+DYL,Deep Yellow Limited,Energy
+VGE,Vanguard FTSE Emerging Markets Shares ETF,Unclassified
+IFRA,VanEck FTSE Global Infrastructure (Hedged) ETF,Unclassified
+SLC,Superloop Limited,Communication Services
+VUL,Vulcan Energy Resources Limited,Materials
+QSML,Vaneck Vectors MSCI Inter Small Companies Qual ETF,Unclassified
+CBO,Cobram Estate Olives Limited,Consumer Staples
+IEL,IDP Education Limited,Consumer Discretionary
+CRED,BetaShares Australian Investment Grade Corporate Bond ETF,Unclassified
+SNL,Supply Network Limited,Consumer Discretionary
+WEB,WEB Travel Group Limited,Consumer Discretionary
+ARF,Arena REIT,Real Estate
+ELD,Elders Limited,Consumer Staples
+HLI,Helia Group Limited,Financials
+IEM,iShares MSCI Emerging Markets ETF,Unclassified
+IWLD,iShares Core MSCI World ex Australia ESG ETF,Unclassified
+RDX,Redox Limited,Industrials
+HACK,BetaShares Global Cybersecurity ETF,Unclassified
+AUI,Australian United Investment Company Limited,Financials
+BKI,BKI Investment Company Limited,Financials
+NGI,Navigator Global Investments Limited,Financials
+ALK,Alkane Resources Limited,Materials
+PDI,Predictive Discovery Limited,Materials
+DTL,Data#3 Limited,Information Technology
+GLIN,iShares Core FTSE Global Infrastructure (AUD Hedged) ETF,Unclassified
+IXJ,iShares Global Healthcare ETF,Unclassified
+VESG,Vanguard Ethically Conscious International Shares Index ETF,Unclassified
+NAN,Nanosonics Limited,Health Care
+SSM,Service Stream Limited,Industrials
+QAU,BetaShares Gold Bullion ETF - Currency Hedged,Unclassified
+HMC,HMC Capital Limited,Financials
+PGF,PM Capital Global Opportunities Fund,Financials
+KLS,Kelsian Group Limited,Industrials
+BVS,Bravura Solutions Limited,Information Technology
+DPM,DPM Metals Inc.,Materials
+TEA,Tasmea Limited,Industrials
+FFM,FireFly Metals Ltd,Materials
+VGB,Vanguard Australian Government Bond Index ETF,Unclassified
+GNP,GenusPlus Group Limited,Industrials
+FAIR,BetaShares Australian Sustainability Leaders ETF,Unclassified
+CKF,Collins Foods Limited,Consumer Discretionary
+SX2,Southern Cross Gold Consolidated Ltd,Materials
+VDGR,Vanguard Diversified Growth Index ETF,Unclassified
+BGP,Briscoe Group Limited,Consumer Discretionary
+IAA,iShares Asia 50 ETF,Unclassified
+LFG,Liberty Financial Group Limited,Financials
+EOS,Electro Optic Systems Holdings Limited,Industrials
+CMW,Cromwell Property Group,Real Estate
+APZ,Aspen Group Limited,Real Estate
+GDX,Vaneck Vectors Gold Miners ETF,Unclassified
+LFS,Latitude Financial Services Group Limited,Financials
+CQE,Charter Hall Social Infrastructure REIT,Real Estate
+SGLLV,Ricegrowers Limited,Consumer Staples
+AOV,Amotiv Limited,Consumer Discretionary
+WA1,WA1 Resources Ltd,Materials
+DUI,Diversified United Investment Limited,Financials
+GCI,Gryphon Capital Income Trust,Financials
+CIIH,ClearBridge Global Infrastructure Income Fund (Hedged) Active ETF,Unclassified
+HSN,Hansen Technologies Limited,Information Technology
+MMS,McMillan Shakespeare Limited,Industrials
+KAR,Karoon Energy Ltd,Energy
+VSO,Vanguard MSCI Australian Small Companies Index ETF,Unclassified
+KCN,Kingsgate Consolidated Limited,Materials
+SIQ,Smartgroup Corporation Ltd,Industrials
+BCI,BCI Minerals Limited,Materials
+DVP,Develop Global Limited,Materials
+RIC,Ridley Corporation Limited,Consumer Staples
+QAL,Qualitas Limited,Financials
+PPM,Pepper Money Limited,Financials
+RUL,RPMGlobal Holdings Limited,Information Technology
+ABG,Abacus Group,Real Estate
+C79,Chrysos Corporation Limited,Industrials
+MAH,Macmahon Holdings Limited,Materials
+AGVT,BetaShares Australian Government Bond ETF,Unclassified
+PL8,Plato Income Maximiser Limited,Financials
+VSL,Vulcan Steel Limited,Materials
+QOR,Qoria Limited,Information Technology
+RPL,Regal Partners Limited,Financials
+ERA,Energy Resources of Australia Ltd,Energy
+MOAT,VanEck Morningstar Wide Moat ETF,Unclassified
+AASF,Airlie Australian Share Fund (Managed Fund),Unclassified
+CIVH,ClearBridge Global Infrastructure Value Fund (Hedged) Active ETF,Unclassified
+ILB,iShares Government Inflation ETF,Unclassified
+IPH,IPH Limited,Industrials
+DGVA,Dimensional Global Value Trust  Active ETF,Unclassified
+BILL,iShares Core Cash ETF,Unclassified
+IDX,Integral Diagnostics Limited,Health Care
+QRI,Qualitas Real Estate Income Fund,Financials
+WBT,Weebit Nano Limited,Information Technology
+ASIA,BetaShares Asia Technology Tigers ETF,Unclassified
+CCP,Credit Corp Group Limited,Financials
+VIF,Vanguard International Fixed Interest Index (Hedged) ETF,Unclassified
+IJP,iShares MSCI Japan ETF,Unclassified
+DHHF,BetaShares Diversified All Growth ETF,Unclassified
+FCL,Fineos Corporation Holdings Plc,Information Technology
+CIN,Carlton Investments Limited,Financials
+QUS,BetaShares S&P 500 Equal Weight ETF,Unclassified
+IEU,iShares Europe ETF,Unclassified
+CUIV,ClearBridge Global Infrastructure Value Fund Active ETF,Unclassified
+WGB,WAM Global Limited,Financials
+HGH,Heartland Group Holdings Limited,Financials
+OZBD,BetaShares Australian Composite Bond ETF,Unclassified
+DTR,Dateline Resources Limited,Materials
+PPC,Peet Limited,Real Estate
+ARU,Arafura Rare Earths Limited,Materials
+DXI,Dexus Industria REIT,Real Estate
+PNV,Polynovo Limited,Health Care
+ING,Inghams Group Limited,Consumer Staples
+VVLU,Vanguard Global Value Equity Active ETF (Managed Fund),Unclassified
+ASG,Autosports Group Limited,Consumer Discretionary
+QLTY,Betashares Global Quality Leaders ETF,Unclassified
+PWH,PWR Holdings Limited,Consumer Discretionary
+IHWL,iShares Core MSCI World Ex Australia ESG Leaders (AUD Hedged) ETF,Unclassified
+AAC,Australian Agricultural Company Limited,Consumer Staples
+FLOT,VanEck Australian Floating Rate ETF,Unclassified
+BNDS,BetaShares Western Asset Australian Bond Fund (managed fund),Unclassified
+A4N,Alpha HPA Limited,Materials
+GTK,Gentrack Group Limited,Information Technology
+4DX,4DMedical Limited,Health Care
+QOZ,BetaShares FTSE RAFI Australia 200 ETF,Unclassified
+BAP,Bapcor Limited,Consumer Discretionary
+OPT,Opthea Limited,Health Care
+AEL,Amplitude Energy Limited,Energy
+DJW,Djerriwarrh Investments Limited,Financials
+NUF,Nufarm Limited,Materials
+NNUK,Nanuk New World Fund,Unclassified
+VDBA,Vanguard Diversified Balanced Index ETF,Unclassified
+MVA,Vaneck Australian Property ETF,Unclassified
+BOE,Boss Energy Limited,Energy
+CCL,Cuscal Limited,Financials
+OPH,Ophir High Conviction Fund,Financials
+LPGD,Loftus Peak Global Disruption Fund (Managed Fund),Unclassified
+ELV,Elevra Lithium Limited,Materials
+NXL,Nuix Limited,Information Technology
+MLX,Metals X Limited,Materials
+IJR,iShares S&P Small-Cap ETF,Unclassified
+AEF,Australian Ethical Investment Ltd,Financials
+BRE,Brazilian Rare Earths Limited,Materials
+SFY,SPDR S&P/ASX 50 Fund,Unclassified
+HM1,Hearts and Minds Investments Limited,Financials
+RFF,Rural Funds Group,Real Estate
+MYS,MyState Limited,Financials
+AX1,Accent Group Limited,Consumer Discretionary
+CWP,Cedar Woods Properties Limited,Real Estate
+SRV,Servcorp Limited,Real Estate
+AQLT,BetaShares Australian Quality ETF,Unclassified
+OML,oOh!media Limited,Communication Services
+VACF,Vanguard Australian Corp Fixed Interest Index ETF,Unclassified
+CVL,Civmec Limited,Industrials
+FML,Focus Minerals Limited,Materials
+CHN,Chalice Mining Limited,Materials
+KKC,KKR Credit Income Fund,Financials
+MIR,Mirrabooka Investments Limited,Financials
+ILC,iShares S&P/ASX 20 ETF,Unclassified
+VAE,Vanguard FTSE Asia Ex Japan Shares Index ETF,Unclassified
+BMN,Bannerman Energy Limited,Energy
+SKC,SkyCity Entertainment Group Limited,Consumer Discretionary
+RF1,Regal Investment Fund,Financials
+VISM,Vanguard MSCI International Small Companies Index ETF,Unclassified
+COF,Centuria Office Reit,Real Estate
+HNDQ,BetaShares NASDAQ 100 ETF  Currency Hedged,Unclassified
+PYC,PYC Therapeutics Limited,Health Care
+MYR,Myer Holdings Limited,Consumer Discretionary
+MQAE,Macquarie Core Australian Equity Active ETF,Unclassified
+JIN,Jumbo Interactive Limited,Consumer Discretionary
+IHOO,iShares Global 100 (AUD Hedged) ETF,Unclassified
+UNI,Universal Store Holdings Limited,Consumer Discretionary
+USTB,Global X US Treasury Bond ETF (Currency Hedged),Unclassified
+WHF,Whitefield Industrials Limited,Financials
+EQT,EQT Holdings Limited,Financials
+HETH,BetaShares Global Sustainability Leaders ETF - Currency Hedged,Unclassified
+BC8,Black Cat Syndicate Limited,Materials
+PFP,Propel Funeral Partners Limited,Consumer Discretionary
+GNG,GR Engineering Services Limited,Materials
+SRL,Sunrise Energy Metals Limited,Materials
+FGG,Future Generation Global Limited,Financials
+AFG,Australian Finance Group Ltd,Financials
+WTN,Winton Land Limited,Real Estate
+ACDC,Global X Battery Tech & Lithium ETF,Unclassified
+BLX,Beacon Lighting Group Limited,Consumer Discretionary
+29M,29Metals Limited,Materials
+IFM,Infomedia Ltd,Information Technology
+LIC,Lifestyle Communities Limited,Real Estate
+HLS,Healius Limited,Health Care
+GWA,GWA Group Limited,Industrials
+IVE,iShares MSCI EAFE ETF,Unclassified
+SBM,St Barbara Limited,Materials
+SXE,Southern Cross Electrical Engineering Limited,Industrials
+MOT,Metrics Income Opportunities Trust,Financials
+WGN,Wagners Holding Company Limited,Materials
+SMI,Santana Minerals Limited,Materials
+G6M,Group 6 Metals Limited,Materials
+MEK,Meeka Metals Limited,Materials
+YMAX,BetaShares Australian Top 20 Equity Yield Maximiser Fund (managed fund),Unclassified
+EHL,Emeco Holdings Limited,Industrials
+FPR,FleetPartners Group Limited,Financials
+BHYB,BetaShares Australian Major Bank Hybrids Index ETF,Unclassified
+VETH,Vanguard Ethically Conscious Australian Shares ETF,Unclassified
+REIT,VanEck FTSE International Property (Hedged) ETF,Unclassified
+EOL,Energy One Limited,Information Technology
+PCI,Perpetual Credit Income Trust,Unclassified
+RAC,Race Oncology Limited,Health Care
+TRA,Turners Automotive Group Limited,Consumer Discretionary
+XALG,Alphinity  Global  Equity  Fund  (Managed Fund),Unclassified
+SYL,Symal Group Limited,Industrials
+EX20,BetaShares Australian Ex-20 Portfolio Diversifier ETF,Unclassified
+MI6,Minerals 260 Limited,Materials
+MA1,MA Credit Income Trust,Unclassified
+CRN,Coronado Global Resources Inc.,Materials
+TYR,Tyro Payments Limited,Financials
+TWR,Tower Limited,Financials
+CUV,Clinuvel Pharmaceuticals Limited,Health Care
+FGX,Future Generation Australia Limited,Financials
+SHV,Select Harvests Limited,Consumer Staples
+SLF,SPDR S&P/ASX 200 Listed Property Fund,Unclassified
+VGL,Vista Group International Limited,Information Technology
+GEM,G8 Education Limited,Consumer Discretionary
+RBD,Restaurant Brands New Zealand Limited,Consumer Discretionary
+AYA,Artrya Limited,Health Care
+LRV,Larvotto Resources Limited,Materials
+WXOZ,SPDR S&P World ex Australia Carbon Control Fund,Unclassified
+SYI,SPDR MSCI Australia Select High Dividend Yield Fund,Unclassified
+PGC,Paragon Care Limited,Health Care
+MICH,Magellan Infrastructure Fund (Currency Hedged)(Managed Fund),Unclassified
+GEAR,BetaShares Geared Australian Equity Fund (hedge fund),Unclassified
+VBLD,Vanguard Global Infrastructure Index ETF,Unclassified
+ACL,Australian Clinical Labs Limited,Health Care
+PGA1,Plato Global Alpha Fund Complex ETF,Unclassified
+DUR,Duratec Limited,Industrials
+JMS,Jupiter Mines Limited,Materials
+LOT,Lotus Resources Limited,Energy
+EBR,EBR Systems Inc.,Health Care
+MEI,Meteoric Resources NL,Materials
+DIVI,Ausbil Active Dividend Income Fund - Active ETF,Unclassified
+WIA,WIA Gold Limited,Materials
+R3AL,Martin Currie Real Income Fund - Active ETF,Unclassified
+SPZ,Smart Parking Limited,Industrials
+OCA,Oceania Healthcare Limited,Health Care
+GLPR,iShares Core FTSE Global Property Ex Australia (AUD Hedged) ETF,Unclassified
+LIN,Lindian Resources Limited,Materials
+SEMI,Global X Semiconductor ETF,Unclassified
+LYL,Lycopodium Limited,Industrials
+IMR,"Imricor Medical Systems, Inc.",Health Care
+IZZ,iShares China Large-Cap ETF,Unclassified
+COG,COG Financial Services Limited,Financials
+THL,Tourism Holdings Rentals Limited,Industrials
+SHA,SHAPE Australia Corporation Limited,Industrials
+MTM,Metallium Limited,Materials
+VG1,VGI Partners Global Investments Limited,Financials
+IJH,iShares S&P Mid-Cap ETF,Unclassified
+VEQ,Vanguard FTSE Europe Shares ETF,Unclassified
+OBL,Omni Bridgeway Limited,Financials
+CGS,Cogstate Limited,Health Care
+PIC,Perpetual Equity Investment Company Limited,Financials
+DJRE,SPDR Dow Jones Global Real Estate ESG Fund,Unclassified
+IGL,IVE Group Limited,Communication Services
+WQG,WCM Global Growth Limited,Financials
+BOC,Bougainville Copper Limited,Materials
+MMI,Metro Mining Limited,Materials
+ICOR,iShares Core Corporate Bond ETF,Unclassified
+KSC,K&S Corporation Limited,Industrials
+LGI,LGI Limited,Utilities
+RARI,Russell Investments Australian Responsible Investment ETF,Unclassified
+WMI,WAM Microcap Limited,Financials
+TCG,Turaco Gold Limited,Materials
+AIS,Aeris Resources Limited,Materials
+CDP,Carindale Property Trust,Real Estate
+AMA,AMA Group Limited,Industrials
+ALI,Argo Global Listed Infrastructure Limited,Financials
+INR,Ioneer Ltd,Materials
+MMKT,Betashares Australian Cash Plus Fund (managed fund),Unclassified
+PMC,Platinum Capital Limited,Financials
+RMC,Resimac Group Limited,Financials
+PPS,Praemium Limited,Information Technology
+KPG,Kelly Partners Group Holdings Limited,Industrials
+MVE,Vaneck Vectors S&P/ASX Midcap ETF,Unclassified
+F100,BetaShares FTSE 100 ETF,Unclassified
+SYR,Syrah Resources Limited,Materials
+MGX,Mount Gibson Iron Limited,Materials
+NVX,Novonix Limited,Information Technology
+SKT,Sky Network Television Limited,Communication Services
+SKS,SKS Technologies Group Limited,Industrials
+HCW,HealthCo Healthcare and Wellness REIT,Real Estate
+TVN,Tivan Limited,Materials
+IGB,iShares Treasury ETF,Unclassified
+AD8,Audinate Group Limited,Information Technology
+DXC,Dexus Convenience Retail Reit,Real Estate
+AQZ,Alliance Aviation Services Limited,Industrials
+STK,Strickland Metals Limited,Materials
+PLUS,VanEck Australian Corporate Bond Plus ETF,Unclassified
+ATEC,BetaShares S&P/ASX Australian Technology ETF,Unclassified
+VLUE,VanEck MSCI International Value ETF,Unclassified
+GLOB,Barrow Hanley Global Share Fund (Managed Fund),Unclassified
+BFG,Bell Financial Group Limited,Financials
+TTT,Titomic Limited,Materials
+AMI,Aurelia Metals Limited,Materials
+IMM,Immutep Limited,Health Care
+FRGG,Franklin Global Growth Fund (Managed Fund),Unclassified
+BRN,Brainchip Holdings Ltd,Information Technology
+L1IF,L1 Capital International Fund (Managed Fund),Unclassified
+WCMQ,WCM Quality Global Growth Fund (Quoted Managed Fund),Unclassified
+SPY,SPDR S&P 500 ETF Trust,Unclassified
+SVM,Sovereign Metals Limited,Materials
+MVR,Vaneck Vectors Australian Resources ETF,Unclassified
+ESTX,Global X EURO STOXX 50 ETF,Unclassified
+IESG,iShares Core MSCI Australia ESG Leaders ETF,Unclassified
+FEX,Fenix Resources Ltd,Materials
+A1M,AIC Mines Limited,Materials
+NTU,Northern Minerals Limited,Materials
+FSML,Firetrail Australian Small Companies Fund - Active ETF,Unclassified
+STX,Strike Energy Limited,Energy
+OPPT,Magellan Global Opportunities Fund - Active ETF,Unclassified
+CVW,Clearview Wealth Limited,Financials
+FID,Fiducian Group Limited,Financials
+SGQ,St George Mining Limited,Materials
+EML,EML Payments Limited,Financials
+MYX,Mayne Pharma Group Limited,Health Care
+BBN,Baby Bunting Group Limited,Consumer Discretionary
+SM1,Synlait Milk Limited,Consumer Staples
+RG8,Regal Asian Investments Limited,Financials
+CMA,Carma Limited,Unclassified
+AZY,Antipa Minerals Limited,Materials
+NMG,New Murchison Gold Limited,Materials
+WIRE,Global X Copper Miners ETF,Unclassified
+AGX1,Antipodes Global Shares (Quoted Managed Fund),Unclassified
+EMXC,iShares MSCI Emerging Markets ex China ETF,Unclassified
+EUR,European Lithium Limited,Materials
+BTL,Beetaloo Energy Australia Limited,Energy
+MAU,Magnetic Resources NL,Materials
+KSL,Kina Securities Limited,Financials
+CXO,Core Lithium Ltd,Materials
+GDI,GDI Property Group,Real Estate
+PE1,Pengana Private Equity Trust,Financials
+IPG,IPD Group Ltd,Industrials
+GGUS,Betashares Geared US Equities Currency Hedged Complex ETF,Unclassified
+LHGG,Lakehouse Global Growth Fund Active ETF,Unclassified
+ELS,Elsight Limited,Information Technology
+QMIX,SPDR MSCI World Quality Mix Fund,Unclassified
+EMKT,VanEck MSCI Multifactor Emerging Markets Equity ETF,Unclassified
+RXR,Robex Resources Inc.,Materials
+PSQ,Pacific Smiles Group Limited,Health Care
+ADH,Adairs Limited,Consumer Discretionary
+IHD,iShares S&P/ASX Dividend Opportunities ETF,Unclassified
+MAET,Munro Global Growth Fund,Unclassified
+DN1,Dominion Income Trust 1,Unclassified
+TECH,Global X Morningstar Global Technology ETF,Unclassified
+ISEC,iShares Enhanced Cash ETF,Unclassified
+ACF,Acrow Limited,Industrials
+RBTZ,Betashares Global Robotics and Artificial Intelligence ETF,Unclassified
+CAY,Canyon Resources Limited,Materials
+QRE,BetaShares Australian Resources Sector ETF,Unclassified
+SST,Steamships Trading Company Limited,Industrials
+GLDN,iShares Physical Gold ETF,Unclassified
+SVL,Silver Mines Limited,Materials
+WXHG,SPDR S&P World ex Australia Carbon Control (Hedged) Fund,Unclassified
+PBH,Pointsbet Holdings Limited,Consumer Discretionary
+AGI,Ainsworth Game Technology Limited,Consumer Discretionary
+NVA,Nova Minerals Limited,Materials
+MC2,Marimaca Copper Corp,Unclassified
+AMH,AMCIL Limited,Financials
+WJL,Webjet Group Limited,Unclassified
+AUC,Ausgold Limited,Materials
+XGOV,VanEck 10+ Year Australian Government Bond ETF,Unclassified
+HZN,Horizon Oil Limited,Energy
+PIA,Pengana International Equities Limited,Financials
+TBR,Tribune Resources Ltd,Materials
+ATR,Astron Corporation Limited,Materials
+WDIV,SPDR S&P Global Dividend Fund,Unclassified
+PAC,Pacific Current Group Limited,Financials
+VYS,Vysarn Limited,Materials
+IHHY,iShares Global High Yield Bond (AUD Hedged) ETF,Unclassified
+PWR,Peter Warren Automotive Holdings Limited,Consumer Discretionary
+RCB,Russell Investments Australian Select Corporate Bond ETF,Unclassified
+OCC,Orthocell Limited,Health Care
+KGN,Kogan.com Limited,Consumer Discretionary
+HUM,Humm Group Limited,Financials
+RXL,Rox Resources Limited,Materials
+BNZ,Benz Mining Corp,Materials
+DUG,DUG Technology Ltd,Information Technology
+MSTR,Morningstar International Shares Active ETF (Managed Fund),Unclassified
+ERD,EROAD Limited,Information Technology
+ASL,Andean Silver Limited,Materials
+VLC,Vanguard MSCI Australian Large Companies Index ETF,Unclassified
+AESG,iShares Global Aggregate Bond ESG (AUD Hedged) ETF,Unclassified
+REP,RAM Essential Services Property Fund,Real Estate
+XRF,XRF Scientific Limited,Industrials
+HLO,Helloworld Travel Limited,Consumer Discretionary
+AFP,AFT Pharmaceuticals Limited,Health Care
+SVR,Solvar Limited,Financials
+SMLL,Betashares Australian Small Companies Select Fund (managed fund),Unclassified
+RDV,Russell Investments High Dividend Australian Shares ETF,Unclassified
+GRR,Grange Resources Limited,Materials
+ACE,Acusensus Limited,Information Technology
+DXB,Dimerix Limited,Health Care
+UMAX,BetaShares S&P 500 Yield Maximiser Fund (managed fund),Unclassified
+IHCB,iShares Core Global Corporate Bond (AUD Hedged) ETF,Unclassified
+MPW,Metal Powder Works Limited,Industrials
+SFC,Schaffer Corporation Limited,Consumer Discretionary
+CEL,Challenger Gold Limited,Materials
+AAR,Astral Resources NL,Materials
+SKO,Serko Limited,Information Technology
+WA8,Warriedar Resources Limited,Materials
+TBN,Tamboran Resources Limited,Energy
+WMX,WAM Income Maximiser Limited,Financials
+MRE,Metrics Real Estate Multi-Strategy Fund,Unclassified
+ATA,Atturra Limited,Information Technology
+GG8,Gorilla Gold Mines Ltd,Materials
+GVF,Staude Capital Global Value Fund Limited,Financials
+MTO,MotorCycle Holdings Limited,Consumer Discretionary
+FWD,Fleetwood Limited,Consumer Discretionary
+WC8,Wildcat Resources Limited,Materials
+BGD,Barton Gold Holdings Limited,Materials
+ARX,Aroa Biosurgery Limited,Health Care
+AR1,Austral Resources Australia Ltd,Materials
+GHIF,Ausbil Global Essential Infrastructure Fund (Hedged) - Active ETF,Unclassified
+TOK,Tolu Minerals Limited,Materials
+BCN,Beacon Minerals Limited,Materials
+MVF,Monash IVF Group Limited,Health Care
+ROBO,Global X ROBO Global Robotics & Automation ETF,Unclassified
+HVST,BetaShares Australian Dividend Harvester Fund (managed fund),Unclassified
+MVB,Vaneck Vectors Australian Banks ETF,Unclassified
+CRYP,BetaShares Crypto Innovators ETF,Unclassified
+VDCO,Vanguard Diversified Conservative Index ETF,Unclassified
+IVZ,Invictus Energy Limited,Energy
+ECF,Elanor Commercial Property Fund,Real Estate
+DFND,VanEck Global Defence ETF,Unclassified
+WRK,Wrkr Ltd,Information Technology
+LGL,Lynch Group Holdings Limited,Consumer Staples
+ARR,American Rare Earths Limited,Materials
+BTR,Brightstar Resources Limited,Materials
+BBT,betr Entertainment Limited,Consumer Discretionary
+USL,Unico Silver Limited,Materials
+RDY,ReadyTech Holdings Limited,Information Technology
+QHSM,VanEck MSCI International Small Companies Quality (AUD Hedged) ETF,Unclassified
+WAX,WAM Research Limited,Financials
+BOT,Botanix Pharmaceuticals Limited,Health Care
+SGR,The Star Entertainment Group Limited,Consumer Discretionary
+MM8,Medallion Metals Limited,Materials
+RGB,Russell Investments Australian Government Bond ETF,Unclassified
+BKY,Berkeley Energia Limited,Energy
+GDF,Garda Property Group,Real Estate
+STN,Saturn Metals Limited,Materials
+RHI,Red Hill Minerals Limited,Materials
+GRNV,VanEck MSCI Australian Sustainable Equity ETF,Unclassified
+IMB,Intelligent Monitoring Group Limited,Industrials
+CTT,Cettire Limited,Consumer Discretionary
+CVC,CVC Limited,Financials
+URNM,Betashares Global Uranium ETF,Unclassified
+LEND,VanEck Global Listed Private Credit (AUD Hedged) ETF,Unclassified
+PLT,Plenti Group Limited,Financials
+GRX,GreenX Metals Limited,Materials
+ESGI,VanEck MSCI International Sustainable Equity ETF,Unclassified
+CTM,Centaurus Metals Limited,Materials
+BBOZ,BetaShares Australian Equities Strong Bear Hedge Fund,Unclassified
+BIS,Bisalloy Steel Group Limited,Materials
+UOS,United Overseas Australia Limited,Real Estate
+ASM,Australian Strategic Materials Limited,Materials
+POL,Polymetals Resources Ltd,Materials
+EGR,EcoGraf Limited,Materials
+RIV,Rivco Australia Ltd,Utilities
+FRI,Finbar Group Limited,Real Estate
+PLA,Pacific Lime and Cement Limited,Materials
+EGH,Eureka Group Holdings Limited,Real Estate
+3DA,Amaero Ltd,Industrials
+PEN,Peninsula Energy Limited,Energy
+MQSD,Macquarie Subordinated Debt Active ETF,Unclassified
+ENR,Encounter Resources Limited,Materials
+IIND,BetaShares India Quality ETF,Unclassified
+WHI,Whitefield Income Limited,Unclassified
+PMT,PMET Resources Inc.,Materials
+GBND,BetaShares Sustainability Leaders Diversified Bond ETF - Currency Hedged,Unclassified
+LAU,Lindsay Australia Limited,Industrials
+EBND,VanEck Emerging Income Opportunities Active ETF (Managed Fund),Unclassified
+SWM,Seven West Media Limited,Communication Services
+WTM,Waratah Minerals Limited,Materials
+NYR,Nyrada Inc,Health Care
+MVS,Vaneck Vectors Small Companies Masters ETF,Unclassified
+GCQF,GCQ Global Equities Complex ETF,Unclassified
+GML,Gateway Mining Limited,Materials
+CCV,Cash Converters International Limited,Financials
+NDIA,Global X India Nifty 50 ETF,Unclassified
+IKE,ikeGPS Group Limited,Information Technology
+WWI,West Wits Mining Limited,Materials
+OMH,OM Holdings Limited,Materials
+CDM,Cadence Capital Limited,Financials
+SXL,Southern Cross Media Group Limited,Communication Services
+FDV,Frontier Digital Ventures Limited,Communication Services
+ARMR,Betashares Global Defence ETF,Unclassified
+TLG,Talga Group Ltd,Materials
+FXG,Felix Gold Limited,Materials
+URF,US Masters Residential Property Fund,Real Estate
+WMA,WAM Alternative Assets Limited,Financials
+FEMX,Fidelity Global Emerging Markets Fund,Unclassified
+APX,Appen Limited,Information Technology
+VEE,Veem Limited,Industrials
+NZM,NZME Limited,Communication Services
+ERM,Emmerson Resources Limited,Materials
+RNU,Renascor Resources Limited,Materials
+AEE,Aura Energy Limited,Energy
+WAR,WAM Strategic Value Limited,Financials
+NUGG,VanEck Gold Bullion ETF,Unclassified
+UTIP,Betashares Inflation-Protected U.S. Treasury Bond Currency Hedged ETF,Unclassified
+IKO,iShares MSCI South Korea Capped ETF,Unclassified
+DAI,Decidr AI Industries Ltd,Consumer Staples
+HPG,Hipages Group Holdings Limited,Communication Services
+LDX,Lumos Diagnostics Holdings Limited,Health Care
+AIM,Ai-Media Technologies Limited,Industrials
+MYG,Mayfield Group Holdings Limited,Industrials
+GBZ,GBM Resources Limited,Materials
+CUP,Count Limited,Industrials
+BTI,Bailador Technology Investments Limited,Financials
+CAA,Capral Limited,Materials
+VCF,Vanguard International Credit Securities Index (Hedged) ETF,Unclassified
+BET,Betmakers Technology Group,Consumer Discretionary
+AUE,Aurum Resources Limited,Materials
+SSG,Shaver Shop Group Limited,Consumer Discretionary
+RCT,Reef Casino Trust,Consumer Discretionary
+AKP,Audio Pixels Limited,Consumer Discretionary
+MCM,MC Mining Limited,Energy
+FDR,Finder Energy Holdings Limited,Energy
+DRE,Dreadnought Resources Limited,Materials
+WAT,Waterco Limited,Consumer Discretionary
+SOM,SomnoMed Limited,Health Care
+GXAI,Global X Artificial Intelligence ETF,Unclassified
+HJPN,BetaShares Japan ETF - Currency Hedged,Unclassified
+CEH,Coast Entertainment Holdings Limited,Consumer Discretionary
+BCK,Brockman Mining Ltd,Materials
+EMV,Emvision Medical Devices Limited,Health Care
+ANG,Austin Engineering Limited,Industrials
+EWC,Energy World Corporation Limited,Utilities
+KMD,KMD Brands Limited,Consumer Discretionary
+XARO,Activex Ardea Real Outcome Bond Fund (Managed Fund),Unclassified
+A1N,ARN Media Limited,Communication Services
+PAR,Paradigm Biopharmaceuticals Limited,Health Care
+TGM,Theta Gold Mines Limited,Materials
+CVN,Carnarvon Energy Limited,Energy
+ZEO,Zeotech Limited,Materials
+GSUS,Candriam Sustainable Global Equity Fund - Active ETF,Unclassified
+WDMF,iShares Edge MSCI World Multifactor ETF,Unclassified
+PEB,Pacific Edge Limited,Health Care
+ART,Airtasker Limited,Communication Services
+3PL,3P Learning Limited,Consumer Discretionary
+EZL,Euroz Hartleys Group Limited,Financials
+JEPI,JPMorgan Equity Premium Income Active ETF (Managed Fund),Unclassified
+MNRS,BetaShares Global Gold Miners ETF - Currency Hedged,Unclassified
+AHC,Austco Healthcare Limited,Health Care
+VVA,Viva Leisure Limited,Consumer Discretionary
+TMG,Trigg Minerals Limited,Materials
+PCX,Pengana Global Private Credit Trust,Unclassified
+TTM,Titan Minerals Limited,Materials
+HCH,Hot Chili Limited,Materials
+RML,Resolution Minerals Limited,Materials
+GGOV,BetaShares U.S. Treasury Bond 20+ Year ETF - Currency Hedged,Unclassified
+FHE,Frontier Energy Limited,Utilities
+TRE,Toubani Resources Inc,Materials
+DRUG,BetaShares Global Healthcare ETF - Currency Hedged,Unclassified
+OZR,SPDR S&P/ASX 200 Resources Fund,Unclassified
+QGL,Quantum Graphite Limited,Materials
+ETM,Energy Transition Minerals Ltd,Materials
+VTM,Victory Metals Limited,Materials
+SEC,Spheria Emerging Companies Limited,Financials
+AHX,Apiam Animal Health Limited,Health Care
+OMA,Omega Oil and Gas Limited,Energy
+GLN,Galan Lithium Limited,Materials
+BAOR,Aoris International Fund (Managed Fund) Class B,Unclassified
+A1G,African Gold Limited,Materials
+KOV,Korvest Ltd,Industrials
+HRZ,Horizon Minerals Limited,Materials
+TGF,Tribeca Global Natural Resources Limited,Financials
+HZR,Hazer Group Limited,Materials
+VDAL,Vanguard Diversified All Growth Index ETF,Unclassified
+BWN,Bhagwan Marine Limited,Industrials
+DGL,DGL Group Limited,Materials
+COI,Comet Ridge Limited,Energy
+JYC,Joyce Corporation Ltd,Consumer Discretionary
+KAU,Kaiser Reef Limited,Materials
+CLX,CTI Logistics Limited,Industrials
+VHM,VHM Limited,Materials
+EQR,EQ Resources Limited,Materials
+BRL,Bathurst Resources Limited,Materials
+APW,AIMS Property Securities Fund,Real Estate
+CY5,Cygnus Metals Limited,Materials
+DAOR,Aoris International Fund (Managed Fund) Class D,Unclassified
+U100,Global X US 100 ETF,Unclassified
+MCCL,Munro Climate Change Leaders Fund (Managed Fund),Unclassified
+KYP,Kinatico Limited,Information Technology
+STM,Sunstone Metals Limited,Materials
+ONE,Oneview Healthcare Plc,Health Care
+TBIL,VanEck 1-3 Month US Treasury Bond ETF,Unclassified
+TSO,Tesoro Gold Limited,Materials
+SPL,Starpharma Holdings Limited,Health Care
+GHHF,Betashares Wealth Builder Diversified All Growth Geared (30-40% LVR) Complex ETF,Unclassified
+RYD,Ryder Capital Limited,Financials
+CRD,Conrad Asia Energy Ltd,Energy
+PRG,PRL Global Limited,Materials
+YOJ,Yojee Limited,Information Technology
+NNWH,Nanuk New World Fund (Currency Hedged) Active Fund,Unclassified
+NDO,Nido Education Limited,Consumer Discretionary
+ORN,Orion Minerals Limited,Materials
+PSC,Prospect Resources Limited,Materials
+FAL,Falcon Metals Limited,Materials
+SNC,Sandon Capital Investments Limited,Financials
+LSX,Lion Selection Group Limited,Financials
+OFX,OFX Group Limited,Financials
+A11,Atlantic Lithium Limited,Materials
+CCR,Credit Clear Limited,Information Technology
+NOL,NobleOak Life Limited,Financials
+GARP,Global X S&P World ex Australia GARP ETF,Unclassified
+IFN,Infragreen Group Limited,Industrials
+FSA,FSA Group Limited,Financials
+MCA,Murray Cod Australia Limited,Consumer Staples
+MXI,MaxiPARTS Limited,Industrials
+BUB,Bubs Australia Limited,Consumer Staples
+AV1,Adveritas Limited,Information Technology
+ISO,iShares S&P/ASX Small Ordinaries ETF,Unclassified
+AUMF,iShares Edge MSCI Australia Multifactor ETF,Unclassified
+HNG,Hancock & Gore Ltd,Industrials
+VMM,Viridis Mining and Minerals Limited,Materials
+MOGL,Montaka Global Long Only Equites Fund (Managed Fund),Unclassified
+MHJ,Michael Hill International Limited,Consumer Discretionary
+VLS,Vita Life Sciences,Health Care
+IXI,iShares Global Consumer Staples ETF,Unclassified
+MLG,MLG Oz Limited,Materials
+GL1,Global Lithium Resources Limited,Materials
+SKK,Stakk Limited,Information Technology
+BBUS,BetaShares U.S. Equities Strong Bear Hedge Fund - Currency Hedged,Unclassified
+QPM,QPM Energy Limited,Materials
+BHM,Broken Hill Mines Limited,Materials
+RND,Rand Mining Limited,Materials
+HAS,Hastings Technology Metals Limited,Materials
+ACW,Actinogen Medical Limited,Health Care
+AKM,Aspire Limited,Materials
+EIQ,Echo IQ Limited,Information Technology
+ALC,Alcidion Group Limited,Health Care
+OSM,Osmond Resources Limited,Materials
+DLI,Delta Lithium Limited,Materials
+ARL,Ardea Resources Limited,Materials
+FLC,Fluence Corporation Limited,Utilities
+GPR,Geopacific Resources Limited,Materials
+TOR,Torque Metals Limited,Materials
+AGE,Alligator Energy Limited,Energy
+HRN,Horizon Gold Limited,Materials
+EL8,Elevate Uranium Limited,Energy
+FUEL,BetaShares Global Energy Companies ETF - Currency Hedged,Unclassified
+BRI,Big River Industries Limited,Materials
+EVO,Embark Early Education Limited,Consumer Discretionary
+TM1,Terra Metals Limited,Materials
+FND,Findi Limited,Financials
+GSCF,Ausbil Global SmallCap Fund - Active ETF,Unclassified
+SS1,Sun Silver Limited,Materials
+BM1,Ballard Mining Limited,Materials
+ASN,Anson Resources Limited,Materials
+TRJ,Trajan Group Holdings Limited,Health Care
+SPD,Southern Palladium Limited,Materials
+GOW,Gowing Brothers Limited,Financials
+GLB,Globe International Limited,Consumer Discretionary
+TOP,Thorney Opportunities Limited,Real Estate
+GHM,Golden Horse Minerals Limited,Materials
+HQLT,BetaShares Global Quality Leaders ETF - Currency Hedged,Unclassified
+B4P,Beforepay Group Limited,Financials
+KAI,Kairos Minerals Limited,Materials
+BBL,Brisbane Broncos Limited,Communication Services
+HGO,Hillgrove Resources Limited,Materials
+MDX,Mindax Limited,Materials
+RCE,Recce Pharmaceuticals Limited,Health Care
+ELT,Elementos Limited,Materials
+CLV,Clover Corporation Limited,Materials
+BNKS,BetaShares Global Banks  ETF  Currency Hedged,Unclassified
+VNL,Vinyl Group Ltd,Information Technology
+AS1,Asara Resources Limited,Materials
+SDI,SDI Limited,Health Care
+SHJ,Shine Justice Ltd,Consumer Discretionary
+OIL,Optiscan Imaging Limited,Health Care
+ENN,Elanor Investors Group,Consumer Discretionary
+TTX,Tetratherix Limited,Health Care
+KGL,KGL Resources Limited,Materials
+PIXX,Platinum International Fund (Quoted Managed Hedge Fund),Unclassified
+TWD,Tamawood Limited,Consumer Discretionary
+EXP,Experience Co Limited,Consumer Discretionary
+AXE,Archer Materials Limited,Information Technology
+FLN,Freelancer Limited,Industrials
+LKO,Lakes Blue Energy NL,Energy
+DZZF,BetaShares Ethical Diversified High Growth ETF,Unclassified
+IMU,Imugene Limited,Health Care
+ILA,Island Pharmaceuticals Limited,Health Care
+SND,Saunders International Limited,Industrials
+ATH,Alterity Therapeutics Limited,Health Care
+ESPO,VanEck Video Gaming and Esports ETF,Unclassified
+AL3,AML3D Limited,Industrials
+IXR,Ionic Rare Earths Limited,Materials
+YRL,Yandal Resources Limited,Materials
+ALA,Arovella Therapeutics Limited,Health Care
+LKY,Locksley Resources Limited,Materials
+PTN,Patronus Resources Limited,Materials
+KKO,Kinetiko Energy Ltd,Energy
+ABY,Adore Beauty Group Limited,Consumer Discretionary
+MHG,Magellan Global Equities Fund (Currency Hedged),Unclassified
+G50,G50 Corp Limited,Materials
+ORE,Orezone Gold Corporation,Materials
+PNC,Pioneer Credit Limited,Financials
+EZZ,EZZ Life Science Holdings Limited,Health Care
+KSN,Kingston Resources Limited,Materials
+CNB,Carnaby Resources Limited,Materials
+ST1,Spirit Technology Solutions Ltd,Information Technology
+LRM,Lion Rock Minerals Ltd,Materials
+ARN,Aldoro Resources Limited,Materials
+AVL,Australian Vanadium Limited,Materials
+PLY,PlaySide Studios Limited,Communication Services
+DTEC,Global X Defence Tech ETF,Unclassified
+ALR,Altair Minerals Limited,Materials
+IHEB,iShares JP Morgan USD Emerging Mkt Bnd AUD Hdg ETF,Unclassified
+GHLD,Global X Global Bullion (Currency Hedged) ETF,Unclassified
+BIO,Biome Australia Limited,Consumer Staples
+PTR,Petratherm Limited,Materials
+IOD,IODM Limited,Information Technology
+E200,SPDR S&P/ASX ESG 200 FUND,Unclassified
+LEVR,First Sentier Geared Australian Share Fund Complex ETF,Unclassified
+AVR,Anteris Technologies Ltd,Health Care
+CRS,Caprice Resources Limited,Materials
+BML,Boab Metals Limited,Materials
+CNEW,VanEck China New Economy ETF,Unclassified
+WOT,WOTSO,Real Estate
+CAM,Clime Capital Limited,Financials
+AVH,"AVITA Medical, Inc.",Health Care
+GHY,Gold Hydrogen Limited,Energy
+RZI,Raiz Invest Limited,Financials
+TGN,Tungsten Mining NL,Materials
+ATC,Altech Batteries Ltd,Materials
+IIGF,Intelligent Investor Australian Equity Growth Fund,Unclassified
+HMY,Harmoney Corp Limited,Financials
+CVV,Caravel Minerals Limited,Materials
+FGH,Foresta Group Holdings Limited,Materials
+ATOM,Global X Uranium ETF,Unclassified
+ARA,Ariadne Australia Limited,Financials
+CZR,CZR Resources Ltd,Materials
+LIS,Li-S Energy Limited,Industrials
+PCK,PainChek Limited,Health Care
+CHW,Chilwa Minerals Limited,Materials
+ECL,Excelsior Capital Limited,Industrials
+DRX,Diatreme Resources Limited,Materials
+HAV,Havilah Resources Limited,Materials
+VR1,Vection Technologies Ltd,Information Technology
+NZK,New Zealand King Salmon Investments Limited,Consumer Staples
+ATG,Articore Group Limited,Consumer Discretionary
+MTH,Mithril Silver and Gold Limited,Materials
+SGI,Stealth Group Holdings Ltd,Industrials
+PHX,PharmX Technologies Limited,Information Technology
+PPE,Peoplein Limited,Industrials
+LMG,Latrobe Magnesium Limited,Materials
+MAT,Matsa Resources Limited,Materials
+DBF,Duxton Farms Limited,Consumer Staples
+MQDB,Macquarie Dynamic Bond Active ETF (Managed Fund),Unclassified
+JPEQ,JPMorgan US 100Q Equity Premium Income Active ETF (Managed Fund),Unclassified
+OOO,BetaShares Crude Oil Index ETF-Currency Hedged Synthetic,Unclassified
+IVR,Investigator Resources Limited,Materials
+STP,Step One Clothing Limited,Consumer Discretionary
+EGL,The Environmental Group Limited,Industrials
+NMR,Native Mineral Resources Holdings Limited,Materials
+MME,MoneyMe Limited,Financials
+TOT,360 Capital Total Return Fund,Real Estate
+NNL,Nordic Resources Ltd,Materials
+MM1,Midas Minerals Ltd,Materials
+FRS,Forrestania Resources Limited,Materials
+XASG,Alphinity Global Sustainable Equity Fund (Managed Fund),Unclassified
+COS,COSOL Limited,Information Technology
+MKAX,Montaka Global Extension Fund,Unclassified
+RFG,Retail Food Group Limited,Consumer Discretionary
+ERTH,BetaShares Climate Change Innovation ETF,Unclassified
+CXL,Calix Limited,Materials
+CGUN,Claremont Global Fund (Managed Fund),Unclassified
+ACQ,Acorn Capital Investment Fund,Financials
+TZN,Terramin Australia Limited,Materials
+AYLD,Global X S&P/ASX 200 Covered Call ETF,Unclassified
+SHG,Singular Health Group Limited,Health Care
+ZYAU,Global X S&P/ASX 300 High Yield Plus ETF,Unclassified
+NWF,Newfield Resources Limited,Materials
+ATP,Atlas Pearls Ltd,Consumer Discretionary
+BXN,Bioxyne Limited,Consumer Staples
+IMA,Image Resources NL,Materials
+SNS,SenSen Networks Limited,Information Technology
+MMA,Maronan Metals Limited,Materials
+MQEG,Macquarie Core Global Equity Fund,Unclassified
+EDU,EDU Holdings Limited,Consumer Discretionary
+CYG,Coventry Group Ltd,Industrials
+NVU,Nanoveu Limited,Information Technology
+DCC,DigitalX Limited,Information Technology
+5GOV,VanEck 5-10 Year Australian Government Bond ETF,Unclassified
+CRI,Critica Limited,Materials
+E25,Element 25 Limited,Materials
+CD3,Cordish Dixon Private Equity Fund III,Financials
+CUE,Cue Energy Resources Limited,Energy
+FGR,First Graphene Limited,Materials
+LRT,Lowell Resources Fund,Financials
+AIQ,Alternative Investment Trust,Financials
+WAA,WAM Active Limited,Financials
+PCL,Pancontinental Energy NL,Energy
+VEFI,Vanguard Ethically Conscious Global Aggregate Bond Index Hedged ETF,Unclassified
+SEG,Sports Entertainment Group Limited,Communication Services
+ECH,Echelon Resources Limited,Energy
+ESK,Etherstack Plc,Information Technology
+AGY,Argosy Minerals Limited,Materials
+INES,Intelligent Investor Ethical Share Fund (Managed Fund),Unclassified
+HCRD,BetaShares Interest Rate Hedged Australian Investment Grade Corporate Bond ETF,Unclassified
+SPG,SPC Global Holdings Limited,Consumer Staples
+WVOL,iShares Edge MSCI World Minimum Volatility ETF,Unclassified
+LCY,Legacy Iron Ore Limited,Materials
+MVP,Medical Developments International Limited,Health Care
+IPD,ImpediMed Limited,Health Care
+ANO,Advance Zinctek Limited,Materials
+LKE,Lake Resources NL,Materials
+CUF,CuFe Ltd,Materials
+MX1,Micro-X Limited,Health Care
+LRK,Lark Distilling Co. Ltd,Consumer Staples
+TPC,TPC Consolidated Limited,Utilities
+MEU,Marmota Limited,Energy
+INIF,Intelligent Investor Australian Equity Income Fund (Managed Fund),Unclassified
+PEX,Peel Mining Limited,Materials
+CAF,Centrepoint Alliance Limited,Financials
+HEUR,BetaShares Europe ETF - Currency Hedged,Unclassified
+CLNE,VanEck Global Clean Energy ETF,Unclassified
+AHL,Adrad Holdings Limited,Consumer Discretionary
+TAM,Tanami Gold NL,Materials
+MQIO,Macquarie Income Opportunities Active ETF (Managed Fund),Unclassified
+JBY,James Bay Minerals Limited,Materials
+MAM,Microequities Asset Management Group,Financials
+GBR,Great Boulder Resources Limited,Materials
+IYLD,iShares Yield Plus ETF,Unclassified
+AFA,ASF Group Limited,Financials
+CYC,Cyclopharm Limited,Health Care
+GSS,Genetic Signatures Limited,Health Care
+TER,TerraCom Limited,Energy
+HIT,Hitech Group Australia Limited,Industrials
+M7T,Mach7 Technologies Limited,Health Care
+BSX,Blackstone Minerals Limited,Materials
+ZYUS,Global X S&P 500 High Yield Low Volatility ETF,Unclassified
+QFN,BetaShares Australian Financials Sector ETF,Unclassified
+CAE,Cannindah Resources Limited,Materials
+MSV,Mitchell Services Limited,Materials
+AII,Almonty Industries Inc,Materials
+IR1,Iris Metals Limited,Materials
+ATX,Amplia Therapeutics Limited,Health Care
+SSL,Sietel Limited,Real Estate
+NH3,NH3 Clean Energy Limited,Materials
+PVE,Po Valley Energy Limited,Energy
+BB1,BlinkLab Limited,Health Care
+VRX,VRX Silica Ltd,Materials
+FRM,Farm Pride Foods Ltd,Consumer Staples
+MRD,Mount Ridley Mines Limited,Materials
+OPN,Openn Negotiation Limited,Industrials
+PCG,Pengana Capital Group,Financials
+USD,BetaShares U.S. Dollar ETF,Unclassified
+GOVT,SPDR S&P/ASX Australian Government Bond Fund,Unclassified
+RKN,Reckon Limited,Information Technology
+IRI,Integrated Research Limited,Information Technology
+IISV,Intelligent Investor Select Value Share Fund (Managed Fund),Unclassified
+RAD,Radiopharm Theranostics Limited,Health Care
+LM8,Lunnon Metals Limited,Materials
+GROW,Schroder Real Return (Managed Fund),Unclassified
+POD,Podium Minerals Limited,Materials
+ESR,Estrella Resources Limited,Materials
+VTX,Vertex Minerals Limited,Materials
+EPM,Eclipse Metals Ltd,Energy
+GPEQ,VanEck Global Listed Private Equity ETF,Unclassified
+SB2,Salter Brothers Emerging Companies Limited,Financials
+VFY,Vitrafy Life Sciences Limited,Health Care
+SDV,SciDev Limited,Materials
+KPO,Kalina Power Limited,Utilities
+AAL,Alfabs Australia Limited,Industrials
+BCA,Black Canyon Limited,Materials
+CGHE,Claremont Global Fund (hedged) (Managed Fund),Unclassified
+AOF,Australian Unity Office Fund,Real Estate
+EMP,Emperor Energy Limited,Energy
+ADN,Andromeda Metals Limited,Materials
+LBL,Laserbond Limited,Industrials
+SMN,Structural Monitoring Systems Plc,Information Technology
+DEV,DevEx Resources Limited,Materials
+PFG,Prime Financial Group Limited,Financials
+CYP,Cynata Therapeutics Limited,Health Care
+CMP,Compumedics Limited,Health Care
+NUZ,Neurizon Therapeutics Limited,Health Care
+COB,Cobalt Blue Holdings Limited,Materials
+NXD,NextEd Group Limited,Consumer Discretionary
+TGP,360 Capital Group,Financials
+CLE,Cyclone Metals Limited,Materials
+SHM,Shriro Holdings Limited,Consumer Discretionary
+EXR,Elixir Energy Limited,Energy
+GOAT,VanEck Morningstar International Wide Moat ETF,Unclassified
+JAL,Jameson Resources Limited,Materials
+FFI,FFI Holdings Limited,Consumer Staples
+INCM,BetaShares Global Income Leaders ETF,Unclassified
+DCOR,Daintree Core Income Active ETF,Unclassified
+RWL,Rubicon Water Limited,Information Technology
+SWTZ,Switzer Dividend Growth Fund (Quoted Managed Fund),Unclassified
+EGG,Enero Group Limited,Communication Services
+FOOD,BetaShares Global Agriculture Companies ETF - Currency Hedged,Unclassified
+DVL,dorsaVi Ltd,Health Care
+M79,Mammoth Minerals Limited,Materials
+SRZ,Stellar Resources Limited,Materials
+RSM,Russell Investments Australian Semi-Government Bond ETF,Unclassified
+MTC,MetalsTech Limited,Materials
+SKY,Sky Metals Limited,Materials
+MKR,Manuka Resources Limited,Materials
+SHN,Sunshine Metals Limited,Materials
+JAN,Janison Education Group Limited,Information Technology
+AR3,Australian Rare Earths Limited,Materials
+TOE,Toro Energy Limited,Energy
+BOL,Boom Logistics Limited,Industrials
+FLX,Felix Group Holdings Ltd,Information Technology
+BMT,Beamtree Holdings Limited,Health Care
+CTE,Cryosite Limited,Health Care
+GUM,Gumtree Australia Markets Limited,Communication Services
+MPA,Mad Paws Holdings Limited,Consumer Discretionary
+AEBD,Betashares Ethical Australian Composite Bond ETF,Unclassified
+UBN,Urbanise.com Limited,Information Technology
+BCM,Brazilian Critical Minerals Limited,Materials
+MCE,Matrix Composites & Engineering Ltd,Energy
+PXX,PolarX Limited,Materials
+RTH,RAS Technology Holdings Limited,Industrials
+CC5,Clever Culture Systems Limited,Health Care
+SNAS,Global X Ultra Short Nasdaq 100 Hedge Fund,Unclassified
+MAY,Melbana Energy Limited,Energy
+EPY,Earlypay Ltd,Financials
+EMH,European Metals Holdings Limited,Materials
+CSX,CleanSpace Holdings Limited,Health Care
+GTN,GTN Limited,Communication Services
+DSK,Dusk Group Limited,Consumer Discretionary
+BVR,Bellavista Resources Limited,Materials
+PHO,PhosCo Ltd,Materials
+AQD,AusQuest Limited,Materials
+NSC,NAOS Small Cap Opportunities Company,Financials
+DGGF,BetaShares Ethical Diversified Growth ETF,Unclassified
+LPHD,Loftus Peak Global Disruption Hedged Active ETF,Unclassified
+FSI,Flagship Investments Limited,Financials
+BEAR,BetaShares Australian Equities Bear Hedge Fund,Unclassified
+PPL,Pureprofile Limited,Information Technology
+RTR,Rumble Resources Limited,Materials
+AUN,Aurumin Limited,Materials
+JREG,JPMorgan Global Research Enhanced Index Equity Active ETF (Managed Fund),Unclassified
+FEG,Far East Gold Ltd,Materials
+PIQ,Proteomics International Laboratories Ltd,Health Care
+DOC,Doctor Care Anywhere Group plc,Health Care
+AW1,American West Metals Limited,Materials
+TYP,Tryptamine Therapeutics Limited,Health Care
+WR1,Winsome Resources Limited,Materials
+AWJ,Auric Mining Limited,Materials
+SIO,Simonds Group Limited,Consumer Discretionary
+GTG,Genetic Technologies Limited,Health Care
+WTL,WT Financial Group Limited,Financials
+RDM,Red Metal Limited,Materials
+ION,Iondrive Limited,Materials
+TCF,360 Capital Mortgage REIT,Financials
+TEK,Thorney Technologies Limited,Energy
+DHOF,Daintree Hybrid Opportunities Fund (Managed Fund),Unclassified
+GNDQ,Betashares Wealth Builder Nasdaq 100 Geared (30-40% LVR) Complex ETF,Unclassified
+CPV,ClearVue Technologies Limited,Industrials
+CCA,Change Financial Limited,Financials
+RYZ,Ryzon Materials Limited,Materials
+NTD,NTAW Holdings Limited,Consumer Discretionary
+DME,Dome Gold Mines Limited,Materials
+AGD,Austral Gold Limited,Materials
+WCN,White Cliff Minerals Limited,Materials
+LTP,LTR Pharma Limited,Health Care
+IIQ,INOVIQ Ltd,Health Care
+HAR,Haranga Resources Limited,Materials
+HLTH,VanEck Global Healthcare Leaders ETF,Unclassified
+AQN,Aquirian Limited,Industrials
+ZNC,Zenith Minerals Limited,Materials
+WRLD,BetaShares Managed Risk Global Share Fund (managed fund),Unclassified
+SNT,Syntara Limited,Health Care
+COV,Cleo Diagnostics Limited,Health Care
+JLL,Jindalee Lithium Limited,Materials
+GCM,Green Critical Minerals Limited,Materials
+AI1,Adisyn Ltd,Information Technology
+ISLM,Hejaz Equities Fund (Managed Fund),Unclassified
+VHL,Vitasora Health Limited,Health Care
+AGC,Australian Gold and Copper Ltd,Materials
+TIP,Teaminvest Private Group Limited,Financials
+TDO,3D Energi Limited,Energy
+BCOM,Global X Bloomberg Commodity ETF (Synthetic),Unclassified
+RTG,RTG Mining Inc.,Materials
+WZR,Wisr Limited,Financials
+NXM,Nexus Minerals Limited,Materials
+JGH,Jade Gas Holdings Limited,Energy
+AR9,archTIS Limited,Information Technology
+MAP,Microba Life Sciences Limited,Health Care
+CTP,Central Petroleum Limited,Energy
+DUB,Dubber Corporation Limited,Information Technology
+NGE,NGE Capital Limited,Financials
+PTX,Prescient Therapeutics Limited,Health Care
+LSGE,Loomis Sayles Global Equity Fund,Unclassified
+NSB,Neuroscientific Biopharmaceuticals Limited,Health Care
+HGEN,Global X Hydrogen ETF,Unclassified
+FLG,Flagship Minerals Limited,Materials
+IMPQ,eInvest Future Impact Small Caps Fund,Unclassified
+MHOT,VanEck Morningstar Wide Moat (AUD Hedged) ETF,Unclassified
+RNT,Rent.com.au Limited,Communication Services
+ABV,Advanced Braking Technology Limited,Consumer Discretionary
+IBC,Ironbark Capital Limited,Financials
+SEN,Senetas Corporation Limited,Information Technology
+LLM,Loyal Metals Limited,Materials
+SFX,Sheffield Resources Limited,Materials
+SVG,Savannah Goldfields Limited,Materials
+NMT,Neometals Limited,Materials
+CKA,Cokal Limited,Materials
+KNB,Koonenberry Gold Limited,Materials
+CBE,Cobre Limited,Materials
+CLDD,BetaShares Cloud Computing ETF,Unclassified
+NXS,Next Science Limited,Health Care
+KAT,Katana Capital Limited,Financials
+ADO,AnteoTech Ltd,Materials
+S2R,S2 Resources Ltd,Materials
+ARD,Argent Minerals Limited,Materials
+QFE,QuickFee Limited,Financials
+KZR,Kalamazoo Resources Limited,Materials
+GAL,Galileo Mining Limited,Materials
+LEX,Lefroy Exploration Limited,Materials
+EMD,Emyria Limited,Health Care
+TVL,Touch Ventures Limited,Financials
+WAG,The Australian Wealth Advisors Group Limited,Financials
+WCE,West Coast Silver Limited,Materials
+WWG,Wiseway Group Limited,Industrials
+BOND,SPDR S&P/ASX Australian Bond Fund,Unclassified
+GT3,Green360 Technologies Limited,Materials
+WGR,Western Gold Resources Limited,Materials
+AVG,Australian Vintage Limited,Consumer Staples
+NGY,NuEnergy Gas Limited,Energy
+HVLU,VanEck MSCI International Value (AUD Hedged) ETF,Unclassified
+VML,Vital Metals Limited,Materials
+GBE,Globe Metals & Mining Limited,Materials
+GFL,Global Masters Fund Limited,Financials
+VNGS,Vaughan Nelson Global Equity SMID Fund (Quoted Managed Fund),Unclassified
+EDC,Eildon Capital Limited,Financials
+VIT,Vitura Health Limited,Health Care
+AHK,Ark Mines Ltd,Materials
+LEL,Lithium Energy Limited,Materials
+CG1,Carbonxt Group Limited,Materials
+OZF,SPDR S&P/ASX 200 Financials EX A-REIT Fund,Unclassified
+BWF,Blackwall Limited,Financials
+DVDY,VanEck Morningstar Australian Moat Income ETF,Unclassified
+UVA,Uvre Limited,Materials
+TNC,True North Copper Limited,Materials
+ICE,iCetana Limited,Information Technology
+LGM,Legacy Minerals Holdings Limited,Materials
+XRG,xReality Group Limited,Consumer Discretionary
+5GN,5G Networks Limited,Information Technology
+CVB,CurveBeam AI Limited,Health Care
+JRHG,JPMorgan Global Research Enhanced Index Equity Active ETF (Managed Fund) (Hedged),Unclassified
+MYE,Mastermyne Group Limited,Materials
+MNB,Minbos Resources Limited,Materials
+FPC,Fat Prophets Global Contrarian Fund,Financials
+EYE,Nova Eye Medical Limited,Health Care
+LGP,Little Green Pharma Ltd,Health Care
+REE,RareX Limited,Materials
+PPK,PPK Group Limited,Materials
+HYLD,Betashares S&P Australian Shares High Yield ETF,Unclassified
+GAME,Betashares Video Games and Esports ETF,Unclassified
+TIG,Tigers Realm Coal Limited,Materials
+KGD,Kula Gold Limited,Materials
+VRS,Veris Limited,Industrials
+IRD,Iron Road Limited,Materials
+CTO,Citigold Corporation Limited,Materials
+EAFZ,Ellerston Asia Growth Fund (Hedge Fund),Unclassified
+PWN,Parkway Corporate Limited,Materials
+MBH,Maggie Beer Holdings Limited,Consumer Staples
+BKT,Black Rock Mining Limited,Materials
+RIM,Rimfire Pacific Mining Limited,Materials
+BRK,Brookside Energy Limited,Energy
+DIFF,Perpetual Diversified Income Active ETF,Unclassified
+JPR,Jupiter Energy Limited,Energy
+FAR,FAR Limited,Energy
+CNQ,Clean TeQ Water Limited,Industrials
+XMET,BetaShares Energy Transition Metals ETF,Unclassified
+MEC,Morphic Ethical Equities Fund,Financials
+ROYL,BetaShares Global Royalties ETF,Unclassified
+COD,Coda Minerals Ltd,Materials
+FRX,Flexiroam Limited,Communication Services
+DGH,Desane Group Holdings Limited,Real Estate
+GCAP,VanEck Bentham Global Capital Securities Active ETF (Managed Fund),Unclassified
+CURE,Global X S&P Biotech ETF,Unclassified
+DRGN,Global X China Tech ETF,Unclassified
+PL9,Prairie Lithium Limited,Materials
+CLA,Celsius Resources Limited,Materials
+SIX,Sprintex Limited,Industrials
+DES,Desoto Resources Limited,Materials
+KP2,Kore Potash Plc,Materials
+DEM,De.mem Limited,Utilities
+DBBF,BetaShares Ethical Diversified Balanced ETF,Unclassified
+AQI,Alicanto Minerals Limited,Materials
+CETF,VanEck FTSE China A50 ETF,Unclassified
+HMD,HeraMED Limited,Health Care
+MPP,Metro Performance Glass,Industrials
+AGR,Aguia Resources Limited,Materials
+CD2,Cordish Dixon Private Equity Fund II,Financials
+KRM,Kingsrose Mining,Materials
+NOU,Noumi Limited,Consumer Staples
+RCM,Rapid Critical Metals Limited,Materials
+PC2,PC Gold Ltd,Materials
+AVM,Advance Metals Limited,Materials
+FUN,Fortuna Metals Limited,Materials
+RLF,RLF AgTech Ltd,Materials
+BBC,BNK Banking Corporation Limited,Financials
+HE8,Helios Energy Limited,Energy
+SEQ,Sequoia Financial Group Ltd,Financials
+AGN,Argenica Therapeutics Limited,Health Care
+NFM,New Frontier Minerals Limited,Materials
+XF1,Xref Limited,Information Technology
+CC9,Chariot Corporation Ltd,Materials
+AXN,Alliance Nickel Limited,Materials
+HYT,HyTerra Ltd,Energy
+D3E,D3 Energy Limited,Energy
+BTN,Butn Limited,Financials
+SWP,Swoop Holdings Limited,Communication Services
+AMS,Atomos Limited,Consumer Discretionary
+BDX,BCAL Diagnostics Limited,Health Care
+CXU,Cauldron Energy Limited,Energy
+GWR,GWR Group Limited,Materials
+ARV,Artemis Resources Limited,Materials
+QMAX,BetaShares NASDAQ 100 Yield Maximiser Fund (Managed Fund),Unclassified
+SLS,Solstice Minerals Limited,Materials
+MCP,McPherson's Limited,Consumer Staples
+3DP,Pointerra Limited,Information Technology
+ASV,Asset Vision Co Limited,Information Technology
+PH2,Pure Hydrogen Corporation Limited,Energy
+AUST,BetaShares Managed Risk Australian Share Fund (managed fund),Unclassified
+VBC,Verbrec Limited,Industrials
+CMX,ChemX Materials Limited,Materials
+CCX,City Chic Collective Limited,Consumer Discretionary
+LMS,Litchfield Minerals Limited,Unclassified
+DTZ,Dotz Nano Limited,Information Technology
+OEC,Orbital Corporation Limited,Industrials
+ECT,Environmental Clean Technologies Limited,Industrials
+CIW,Clime Investment Management Limited,Financials
+MFD,Mayfield Childcare Limited,Consumer Discretionary
+SNG,Siren Gold Limited,Materials
+VRC,Volt Resources Limited,Materials
+KME,Kip McGrath Education Centres Limited,Consumer Discretionary
+CCG,Comms Group Limited,Communication Services
+SHO,Sportshero Limited,Communication Services
+GTI,Gratifii Limited,Information Technology
+I88,Infini Resources Limited,Materials
+RLT,Renergen Limited,Energy
+LDR,Lode Resources Ltd,Materials
+WIN,WIN Metals Ltd,Materials
+GNM,Great Northern Minerals Limited,Materials
+EMC,Everest Metals Corporation Ltd,Materials
+BMR,Ballymore Resources Limited,Materials
+DEL,Delorean Corporation Limited,Utilities
+SSO,SPDR S&P/ASX Small Ordinaries Fund,Unclassified
+NCC,NAOS Emerging Opportunities Company Limited,Financials
+MAG,Magmatic Resources Limited,Materials
+ODY,Odyssey Gold Limited,Materials
+BLG,BluGlass Limited,Information Technology
+HVY,Heavy Minerals Limited,Materials
+ZGL,Zicom Group Limited,Industrials
+WEMG,SPDR S&P Emerging Markets Carbon Control Fund,Unclassified
+ASH,Ashley Services Group Limited,Industrials
+STG,Straker Limited,Industrials
+ADG,Adelong Gold Limited,Materials
+VIG,Victor Group Holdings Limited,Information Technology
+NAC,NAOS Ex-50 Opportunities Company Limited,Financials
+CFLO,Betashares Global Cash Flow Kings ETF,Unclassified
+CST,Castile Resources Limited,Materials
+GMVW,VanEck Geared Australian Equal Weight Fund (Hedge Fund),Unclassified
+FBM,Future Battery Minerals Limited,Materials
+M4M,Macro Metals Limited,Materials
+EQX,Equatorial Resources Limited,Materials
+KLR,Kaili Resources Limited,Materials
+TI1,Tombador Iron Limited,Materials
+SUH,Southern Hemisphere Mining Limited,Materials
+AUZ,Australian Mines Limited,Materials
+CCE,Carnegie Clean Energy Limited,Utilities
+AUDS,BetaShares Strong Australian Dollar Fund (hedge fund),Unclassified
+TKM,Trek Metals Limited,Materials
+GRV,Greenvale Energy Limited,Energy
+OCN,Oceana Lithium Limited,Materials
+SOR,Strategic Elements Ltd,Financials
+AEV,Avenira Limited,Materials
+ARI,Arika Resources Limited,Materials
+CRR,Critical Resources Limited,Materials
+CDO,Cadence Opportunities Fund Limited,Financials
+HAW,Hawthorn Resources Limited,Materials
+VMT,VMoto Limited,Consumer Discretionary
+QML,Qmines Limited,Materials
+QETH,Betashares Ethereum ETF,Unclassified
+MVOL,iShares Edge MSCI Australia Minimum Volatility ETF,Unclassified
+RHY,Rhythm Biosciences Limited,Health Care
+S66,Star Combo Pharma,Consumer Staples
+WMG,Western Mines Group Ltd,Materials
+KCC,Kincora Copper Limited,Materials
+IDA,Indiana Resources Limited,Materials
+AUQ,Alara Resources Limited,Materials
+GSN,Great Southern Mining Limited,Materials
+AMN,Agrimin Limited,Materials
+TCO,Transmetro Corporation Limited,Consumer Discretionary
+CVR,Cavalier Resources Limited,Materials
+MQWS,Macquarie Walter Scott Global Equity Active ETF (Managed Fund),Unclassified
+GUE,Global Uranium And Enrichment Ltd,Materials
+IPT,Impact Minerals Limited,Materials
+GA8,Goldarc Resources Limited,Materials
+ABX,ABx Group Limited,Materials
+KAL,Kalgoorlie Gold Mining Limited,Materials
+QBTC,Betashares Bitcoin ETF,Unclassified
+HIO,Hawsons Iron Limited,Materials
+SFM,Santa Fe Minerals Ltd,Materials
+EIGA,eInvest Income Generator Fund (Managed Fund),Unclassified
+NIM,Nimy Resources Limited,Materials
+EVR,EV Resources Limited,Materials
+PNN,Power Minerals Limited,Materials
+OVT,Ovanti Limited,Communication Services
+CLU,Cluey Ltd,Consumer Discretionary
+EAT,Entertainment Rewards Ltd,Communication Services
+ILT,Iltani Resources Limited,Materials
+BM8,Battery Age Minerals Limited,Materials
+HCT,Holista Colltech Limited,Consumer Staples
+SRT,Strata Investment Holdings Plc,Materials
+IAM,Income Asset Management Group Limited,Financials
+LCE,London City Equities Limited,Financials
+DTI,DTI Group,Information Technology
+US10,Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF,Unclassified
+NOX,Noxopharm Limited,Health Care
+AHF,Australian Dairy Nutritionals Limited,Consumer Staples
+GAP,Gale Pacific Limited,Consumer Discretionary
+FBR,FBR Limited,Industrials
+AMX,Aerometrex Limited,Industrials
+EPX,EPX Limited,Information Technology
+EVZ,EVZ Limited,Industrials
+HCL,HighCom Limited,Industrials
+HMX,Hammer Metals Limited,Materials
+FME,Future Metals NL,Materials
+IDT,IDT Australia Limited,Health Care
+PGD,Peregrine Gold Limited,Materials
+MRC,Mineral Commodities Ltd,Materials
+OLL,OpenLearning Limited,Information Technology
+VMC,Venus Metals Corporation Limited,Materials
+GC1,Glennon Small Companies Limited,Financials
+AAU,Antilles Gold Limited,Materials
+ATV,ActivePort Group Limited,Information Technology
+RMY,RMA Global Limited,Communication Services
+LM1,Leeuwin Metals Ltd,Materials
+LSR,Lodestar Minerals Limited,Materials
+AAM,AuMEGA Metals Ltd,Materials
+OSL,Oncosil Medical Ltd,Health Care
+TMB,Tambourah Metals Ltd,Materials
+SRJ,SRJ Technologies Group plc,Energy
+LIT,Livium Ltd,Industrials
+CAV,Carnavale Resources Ltd,Materials
+WAK,WA Kaolin Limited,Materials
+AINF,Global X Artificial Intelligence Infrastructure ETF,Unclassified
+G1C,Group One Capital Limited,Real Estate
+BDM,Burgundy Diamond Mines Limited,Materials
+MVL,Marvel Gold Limited,Materials
+CHL,Camplify Holdings Limited,Industrials
+S3GO,Firetrail S3 Global Opportunities Fund (Managed Fund),Unclassified
+OEL,Otto Energy Limited,Energy
+TMK,TMK Energy Limited,Energy
+RRR,Revolver Resources Holdings Ltd,Materials
+ZAG,Zuleika Gold Limited,Materials
+ODE,Odessa Minerals Limited,Materials
+HFR,Highfield Resources Limited,Materials
+BEZ,Besra Gold Inc,Materials
+RMX,Red Mountain Mining Limited,Materials
+FAU,First Au Limited,Materials
+TG6,TG Metals Limited,Materials
+TSL,Titanium Sands Limited,Materials
+BNL,Blue Star Helium Limited,Energy
+KRR,King River Resources Limited,Materials
+TOU,Tlou Energy Limited,Energy
+NUC,Nuchev Limited,Consumer Staples
+LEG,Legend Mining Limited,Materials
+DKM,Duketon Mining Limited,Materials
+ASP,Aspermont Limited,Communication Services
+RHT,Resonance Health Limited,Health Care
+TAL,Talius Group Limited,Information Technology
+88E,88 Energy Limited,Energy
+PVL,Powerhouse Ventures Limited,Financials
+HOR,Horseshoe Metals Limited,Materials
+VDIF,Vanguard Diversified Income ETF,Unclassified
+FTI,Fortifai Ltd,Communication Services
+CLG,Close the Loop Limited,Industrials
+FCT,Firstwave Cloud Technology Limited,Information Technology
+1GOV,VanEck 1-5 Year Australian Government Bond ETF,Unclassified
+RMI,Resource Minerals International Ltd,Materials
+SGA,Sarytogan Graphite Limited,Materials
+AZ9,Asian Battery Metals Plc,Materials
+STH,StepChange Holdings Limited,Information Technology
+MGU,Magnum Mining & Exploration Limited,Materials
+CXZ,Connexion Mobility Ltd,Information Technology
+QYLD,Global X Nasdaq 100 Covered Call ETF,Unclassified
+MOV,MOVE Logistics Group Limited,Industrials
+FRB,Firebird Metals Limited,Materials
+A3D,Aurora Labs Limited,Industrials
+TIA,Tian An Australia Limited,Real Estate
+MFOA,Milford Australian Absolute Growth Fund Quoted Class (Hedge Fund),Unclassified
+AVE,Avecho Biotechnology Limited,Health Care
+MLS,Metals Australia Limited,Materials
+ACP,Audalia Resources Limited,Materials
+AT1,Atomo Diagnostics Limited,Health Care
+USHY,Global X USD High Yield Bond ETF (Currency Hedged),Unclassified
+KAM,K2 Asset Management Holdings Ltd,Financials
+ECP,ECP Emerging Growth Limited,Financials
+CMD,Cassius Mining Limited,Materials
+CCM,Cadoux Limited,Materials
+PVT,Pivotal Metals Limited,Materials
+ENL,Enlitic Inc,Health Care
+ROC,RocketBoots Limited,Information Technology
+TR2,Tali Resources Ltd,Materials
+G11,G11 Resources Limited,Materials
+IMC,Immuron Limited,Health Care
+IBAL,iShares Balanced ESG ETF,Unclassified
+AVA,Ava Risk Group Limited,Information Technology
+TLM,Talisman Mining Limited,Materials
+TNY,Tinybeans Group Limited,Communication Services
+RDN,Raiden Resources Limited,Materials
+CPN,Caspin Resources Limited,Materials
+MEG,Megado Minerals Limited,Materials
+ORD,Ordell Minerals Limited,Unclassified
+LML,Lincoln Minerals Limited,Materials
+4DS,4DS Memory Limited,Information Technology
+TRP,Tissue Repair Ltd,Health Care
+ICI,iCandy Interactive Limited,Communication Services
+MPX,Mustera Property Group Limited,Real Estate
+GEN,Genmin Limited,Materials
+HTG,Harvest Technology Group Limited,Information Technology
+T3D,333D Limited,Industrials
+JCS,JCurve Solutions Limited,Information Technology
+ADV,Ardiden Limited,Materials
+EDE,Eden Innovations Ltd,Energy
+LPE,Locality Planning Energy Holdings Limited,Utilities
+AMU,American Uranium Limited,Materials
+TRI,TrivarX Limited,Health Care
+UNT,Unith Ltd,Communication Services
+HHR,Hartshead Resources NL,Energy
+ICL,Iceni Gold Limited,Materials
+MQYM,Macquarie Global Yield Maximiser Active ETF,Unclassified
+AAP,Australian Agricultural Projects Limited,Consumer Staples
+IGRO,iShares High Growth ESG ETF,Unclassified
+MIO,Macarthur Minerals Limited,Materials
+CQT,Conneqt Health Limited,Health Care
+EAX,Energy Action Limited,Industrials
+VBX,VBX Limited,Materials
+EME,Energy Metals Limited,Energy
+W2V,Way 2 VAT Ltd,Information Technology
+AGH,Althea Group Holdings Limited,Health Care
+BPP,Babylon Pump & Power Limited,Industrials
+SPQ,Superior Resources Limited,Materials
+BTC,BTC health Limited,Financials
+LU7,Lithium Universe Limited,Materials
+DGR,DGR Global Limited,Materials
+JAV,Javelin Minerals Limited,Materials
+ADX,ADX Energy Limited,Energy
+AZI,Altamin Limited,Materials
+NOV,Novatti Group Limited,Information Technology
+EXT,Excite Technology Services Limited,Information Technology
+ZNO,Zoono Group Limited,Materials
+FOS,FOS Capital Limited,Industrials
+EV8,Everlast Minerals Ltd,Materials
+PRX,Prodigy Gold NL,Materials
+LSA,Lachlan Star Limited,Materials
+FZR,Fitzroy River Corporation Ltd,Energy
+FMR,FMR Resources Limited,Communication Services
+AHN,Athena Resources Limited,Materials
+PGM,Platina Resources Limited,Materials
+BRU,Buru Energy Limited,Energy
+NHE,Noble Helium Limited,Energy
+LIB,Liberty Metals Ltd,Materials
+EQIN,Investors Mutual Equity Income Fund - Complex ETF,Unclassified
+NTI,Neurotech International Limited,Health Care
+G200,Betashares Wealth Builder Australia 200 Geared (30-40% LVR) Complex ETF,Unclassified
+H100,Betashares FTSE 100 Currency Hedged ETF,Unclassified
+1AE,Aurora Energy Metals Limited,Materials
+BRX,Belararox Limited,Materials
+RRE,Right Resources Limited,Unclassified
+AMD,Arrow Minerals Limited,Materials
+PGO,Pacgold Limited,Materials
+VR8,Vanadium Resources Limited,Materials
+LOC,Locate Technologies Limited,Information Technology
+CD1,Cordish Dixon Private Equity Fund I,Financials
+IS3,I Synergy Group Limited,Information Technology
+ADEF,Apostle Dundas Global Equity Fund,Unclassified
+LPM,Lithium Plus Minerals Ltd,Materials
+DXN,DXN Limited,Information Technology
+CYB,AUCyber Limited,Information Technology
+BTE,Botala Energy Ltd,Energy
+NC6,Nanollose Limited,Health Care
+SPN,Sparc Technologies Limited,Materials
+GUL,Gullewa Limited,Materials
+AVD,AVADA Group Limited,Industrials
+ACU,Acumentis Group Limited,Real Estate
+VMS,Venari Minerals NL,Materials
+PSL,Paterson Resources Limited,Materials
+CAZ,Cazaly Resources Limited,Materials
+RPM,RPM Automotive Group Limited,Consumer Discretionary
+AMO,Ambertech Limited,Information Technology
+NC1,NiCo Resources Limited,Materials
+AKA,Aureka Limited,Materials
+HTM,High-Tech Metals Limited,Materials
+EMB,Embelton Limited,Industrials
+AKG,Academies Australasia Group Limited,Consumer Discretionary
+QNDQ,Betashares Nasdaq 100 Equal Weight ETF,Unclassified
+MDR,MedAdvisor Limited,Health Care
+INV,InvestSMART Group Limited,Financials
+ROG,Red Sky Energy Limited,Energy
+FRE,Firebrick Pharma Limited,Health Care
+CR1,Constellation Resources Limited,Materials
+MXO,Motio Limited,Communication Services
+JNS,Janus Electric Holdings Limited,Utilities
+LNU,Linius Technologies Limited,Information Technology
+AD1,AdNeo Limited,Information Technology
+BDG,Black Dragon Gold Corp.,Materials
+WLD,Wellard Limited,Consumer Staples
+ALFA,VanEck Australian Long Short Complex ETF,Unclassified
+AUR,Auris Minerals Limited,Materials
+HMG,Hamelin Gold Limited,Materials
+LAM,Laramide Resources Ltd,Energy
+IGN,Ignite Limited,Industrials
+ADY,Admiralty Resources NL,Materials
+SNM,Sentinel Metals Limited,Unclassified
+CND,Condor Energy Limited,Energy
+RKT,RocketDNA Limited,Information Technology
+VPR,Volt Group Limited,Utilities
+GLA,Gladiator Resources Ltd,Materials
+MHK,Metal Hawk Limited,Materials
+CMG,Critical Minerals Group Limited,Materials
+CF1,Complii Fintech Solutions Ltd,Information Technology
+VSR,Voltaic Strategic Resources Ltd,Materials
+TRM,Truscott Mining Corporation,Materials
+BUGG,Global X Cybersecurity ETF,Unclassified
+ATS,Australis Oil & Gas Ltd,Energy
+ORP,Orpheus Uranium Limited,Materials
+SSH,SSH Group Ltd,Industrials
+1AI,Algorae Pharmaceuticals Limited,Health Care
+IG6,International Graphite Limited,Industrials
+TIO,Temas Resources Corp.,Unclassified
+1MC,Morella Corporation Limited,Materials
+IME,ImExHS Limited,Health Care
+TYX,Tyranna Resources Limited,Materials
+BLU,Blue Energy Limited,Energy
+RCL,ReadCloud Limited,Information Technology
+MAN,Mandrake Resources Limited,Materials
+NVO,Novo Resources Corp,Materials
+GDM,Great Divide Mining Ltd,Materials
+NXN,Nexsen Limited,Health Care
+ALM,Alma Metals Limited,Energy
+BMM,Bayan Mining and Minerals Limited,Materials
+GT1,Green Technology Metals Limited,Materials
+BMG,BMG Resources Limited,Materials
+SRR,Sarama Resources Limited,Materials
+SKM,Skylark Minerals Limited,Materials
+IVG,Invert Graphite Limited,Materials
+OD6,OD6 Metals Limited,Materials
+RVT,Richmond Vanadium Technology Limited,Materials
+GIVE,Perpetual ESG Australian Share Fund (Managed Fund),Unclassified
+OZM,OzAurum Resources Limited,Materials
+FG1,Flynn Gold Limited,Materials
+SPX,Spenda Limited,Information Technology
+RGL,Riversgold Limited,Materials
+AKO,Akora Resources Limited,Materials
+EVG,Evion Group NL,Materials
+KOB,Koba Resources Limited,Materials
+NGX,NGX Limited,Materials
+MHC,Manhattan Corporation Limited,Materials
+CP8,Canadian Phosphate Limited,Materials
+NFL,Norfolk Metals Limited,Materials
+1CG,One Click Group Limited,Industrials
+JAT,Jatcorp Limited,Consumer Discretionary
+AEI,Aeris Environmental Ltd,Industrials
+X2M,X2M Connect Limited,Information Technology
+KM1,Kali Metals Limited,Materials
+SCN,Scorpion Minerals Limited,Materials
+MRR,Minrex Resources Limited,Materials
+SP8,StreamPlay Studio Limited,Communication Services
+ENX,Enegex Limited,Materials
+FHS,Freehill Mining Limited,Materials
+DYM,Dynamic Metals Limited,Materials
+SOP,Synertec Corporation Limited,Industrials
+GG1,Green & Gold Minerals Limited,Materials
+ITM,iTech Minerals Ltd,Materials
+EQN,Equinox Resources Limited,Materials
+DAL,Dalaroo Metals Ltd,Materials
+KLV,Klevo Rewards Limited,Industrials
+AOH,Assetora Limited,Financials
+BNR,Bulletin Resources Limited,Materials
+WOA,Wide Open Agriculture Ltd,Consumer Staples
+IUSG,iShares U.S. Treasury Bond (AUD Hedged) ETF,Unclassified
+PRO,Prophecy International,Information Technology
+MRQ,MRG Metals Limited,Materials
+RIL,Redivium Limited,Materials
+UWC,Underwood Capital Limited,Financials
+RIIF,Resolution Capital Global Listed Infrastructure Fund  Active ETF,Unclassified
+GIB,Gibb River Diamonds Limited,Materials
+CBL,Control Bionics Limited,Health Care
+SW1,Swift Networks Group Limited,Communication Services
+SMM,Somerset Minerals Limited,Materials
+TMX,Terrain Minerals Limited,Materials
+NWM,Norwest Minerals Limited,Materials
+ODA,Orcoda Limited,Information Technology
+PAB,Patrys Limited,Health Care
+NAE,New Age Exploration Limited,Energy
+NES,Nelson Resources Limited,Materials
+UYLD,Global X S&P 500 Covered Call ETF,Unclassified
+ADD,Adavale Resources Limited,Materials
+NSM,North Stawell Minerals Limited,Materials
+OMX,Orange Minerals NL,Materials
+JNDQ,Betashares Nasdaq Next Gen 100 ETF,Unclassified
+PR2,Piche Resources Limited,Unclassified
+PV1,Provaris Energy Ltd,Energy
+GMN,Gold Mountain Limited,Materials
+PLN,Pioneer Lithium Limited,Materials
+BTM,Breakthrough Mineral Limited,Materials
+VMIN,Vanguard Global Minimum Volatility Active ETF (Managed Fund),Unclassified
+TRU,Truscreen Group Limited,Health Care
+ENV,Enova Mining Limited,Materials
+KTA,Krakatoa Resources Limited,Materials
+TON,Triton Minerals Limited,Materials
+RMBS,VanEck Australian RMBS ETF,Unclassified
+EGY,Energy Technologies,Industrials
+FL1,First Lithium Limited,Materials
+THB,Thunderbird Resources Limited,Materials
+HPR,High Peak Royalties Limited,Energy
+DRIV,BetaShares Electric Vehicles and Future Mobility ETF,Unclassified
+TZL,TZ Limited,Information Technology
+AJL,AJ Lucas Group,Industrials
+REZ,Resources & Energy Group Limited,Materials
+AFL,AF Legal Group Ltd,Industrials
+SVY,Stavely Minerals Limited,Materials
+RAG,Ragnar Metals Limited,Materials
+WNX,Wellnex Life Limited,Consumer Staples
+CCO,The Calmer Co International Limited,Consumer Staples
+SRK,Strike Resources Limited,Materials
+GED,Golden Deeps Limited,Materials
+BEO,Beonic Limited,Information Technology
+RAU,Resouro Strategic Metals Inc.,Materials
+5GG,Pentanet Limited,Communication Services
+EMU,Emu NL,Materials
+SFG,Seafarms Group Limited,Consumer Staples
+IND,Industrial Minerals Ltd,Materials
+JPHQ,JPMorgan US 100Q Equity Premium Income Active ETF (Managed Fund) (Hedged),Unclassified
+ALY,Alchemy Resources Limited,Materials
+RC1,Redcastle Resources Limited,Materials
+LNQ,Linq Minerals Limited,Materials
+CMO,Cosmo Metals Limited,Materials
+KSM,K2 Australian Small Cap Fund (Hedge Fund),Unclassified
+NAG,Nagambie Resources Limited,Materials
+NET,NetLinkz Limited,Information Technology
+30BB,Betashares 2030 Fixed Term Corporate Bond Active ETF,Unclassified
+PIM,Pinnacle Minerals Limited,Materials
+WEC,White Energy Company Limited,Energy
+GRIN,VanEck India Growth Leaders ETF,Unclassified
+CORE,Schroder Global Core Fund - Active ETF,Unclassified
+RWD,Reward Minerals Limited,Materials
+AU1,The Agency Group Australia,Real Estate
+MGL,Magontec Limited,Materials
+CMB,Cambium Bio Limited,Health Care
+GW1,Greenwing Resources Ltd,Materials
+AJX,Alexium International Group Limited,Materials
+SLA,Solara Minerals Ltd,Materials
+MGT,Magnetite Mines Limited,Materials
+AUG,Augustus Minerals Limited,Materials
+BSN,Basin Energy Limited,Energy
+HAL,Halo Technologies Holdings Limited,Financials
+EG1,Evergreen Lithium Limited,Materials
+BPH,BPH Energy Limited,Financials
+GWTH,VanEck MSCI International Growth ETF,Unclassified
+ICR,Intelicare Holdings Limited,Health Care
+CHM,Chimeric Therapeutics Limited,Health Care
+FFG,Fatfish Group Limited,Financials
+HWK,Hawk Resources Limited,Materials
+PGY,Pilot Energy Limited,Energy
+IBX,Imagion Biosystems Limited,Health Care
+THR,Thor Energy Plc,Materials
+RNV,Renerve Limited,Unclassified
+SP3,Spectur Limited,Information Technology
+AUV,Auravelle Metals Limited,Materials
+GAS,State Gas Limited,Energy
+TGH,Terragen Holdings Limited,Materials
+BAS,Bass Oil Limited,Energy
+XRA,Xenora Minerals Limited,Materials
+DTM,Dart Mining NL,Materials
+BPM,BPM Minerals Limited,Materials
+GRL,Godolphin Resources Limited,Materials
+PFE,Pantera Lithium Limited,Materials
+ERL,Empire Resources Limited,Materials
+ECS,ECS Botanics Holdings Ltd,Health Care
+CDT,Castle Minerals Limited,Materials
+BUX,Buxton Resources Limited,Materials
+N1H,N1 Holdings Limited,Financials
+PNM,Pacific Nickel Mines Limited,Materials
+TG1,TechGen Metals Limited,Materials
+SRN,Surefire Resources NL,Materials
+PIL,Peppermint Innovation Limited,Information Technology
+SMS,Star Minerals Limited,Materials
+HJZP,Hejaz Property Fund (Managed Fund),Unclassified
+GLE,GLG Corp Ltd,Consumer Discretionary
+PUR,Pursuit Minerals Limited,Materials
+5EA,"5E Advanced Materials, Inc",Materials
+TEM,Tempest Minerals Limited,Materials
+NRX,Noronex Limited,Materials
+ALB,Albion Resources Limited,Materials
+WSI,Weststar Industrial Limited,Materials
+TEE,Top End Energy Limited,Energy
+CTN,Catalina Resources Ltd,Materials
+KBC,Keybridge Capital Limited,Financials
+COY,Coppermoly Limited,Materials
+AA2,Ariana Resources plc,Materials
+14D,1414 Degrees Limited,Industrials
+RR1,Reach Resources Limited,Materials
+WHK,WhiteHawk Limited,Information Technology
+KNG,Kingsland Minerals Ltd,Materials
+SPA,Spacetalk Limited,Information Technology
+VKA,Viking Mines Limited,Materials
+IPC,Imperial Pacific Limited,Financials
+MTB,Mount Burgess Mining NL,Materials
+PEC,Perpetual Resources Limited,Materials
+PRS,Prospech Limited,Materials
+BSA,BSA Limited,Industrials
+RLG,RooLife Group Ltd,Communication Services
+MMR,MEC Resources Limited,Energy
+ZEU,Zeus Resources Limited,Energy
+NOR,Norwood Systems Limited,Information Technology
+QXR,QX Resources Limited,Materials
+BUR,Burley Minerals Ltd,Materials
+TAT,Tartana Minerals Limited,Materials
+FCAP,Fidelity Global Future Leaders Active ETF,Unclassified
+L1M,Lightning Minerals Ltd,Materials
+EPN,Epsilon Healthcare Limited,Health Care
+GTE,Great Western Exploration Limited,Materials
+EM2,Eagle Mountain Mining Limited,Materials
+AUK,Aumake Limited,Consumer Discretionary
+CAN,Cann Group Limited,Health Care
+FNX,Finexia Financial Group Limited,Financials
+MEM,Memphasys Limited,Health Care
+BUS,Bubalus Resources Limited,Materials
+AXL,Axel Ree Limited,Materials
+ANX,Anax Metals Limited,Materials
+XPN,XPON Technologies Group Limited,Information Technology
+YAR,Yari Minerals Limited,Materials
+SER,Strategic Energy Resources Limited,Materials
+SCP,Scalare Partners Holdings Limited,Financials
+PR1,Pure Resources Limited,Materials
+VAR,Variscan Mines Limited,Materials
+JAY,Jayride Group Limited,Industrials
+PER,Percheron Therapeutics Limited,Health Care
+CI1,Credit Intelligence Limited,Industrials
+ADR,Adherium Limited,Health Care
+KNI,Kuniko Limited,Materials
+T92,Terra Critical Minerals Limited,Energy
+IXC,Invex Therapeutics Limited,Health Care
+INF,Infinity Metals Limited,Materials
+BLZ,Blaze Minerals Limited,Energy
+RB6,Rubix Resources Limited,Materials
+ALPH,Schroder Global Equity Alpha Fund,Unclassified
+BGT,Bio-Gene Technology Limited,Materials
+TMS,Tennant Minerals Limited,Materials
+BCC,Beam Communications Holdings Limited,Information Technology
+MBK,Metal Bank Limited,Materials
+KLI,Killi Resources Limited,Materials
+SCT,Scout Security Limited,Consumer Discretionary
+LCL,LCL Resources Limited,Materials
+SOC,SOCO Corporation Limited,Information Technology
+AON,Apollo Minerals Limited,Materials
+ITEK,iShares Future Tech Innovators ETF,Unclassified
+PTL,Prestal Holdings Limited,Consumer Staples
+VEN,Vintage Energy Ltd,Energy
+CRB,Carbine Resources Limited,Materials
+CZN,Corazon Mining Limited,Materials
+RNX,Renegade Exploration Limited,Materials
+PAT,Patriot Resources Limited,Materials
+OZXX,Global  X  Australia  ex  Financials  & Resources ETF,Unclassified
+RKB,Rokeby Resources Limited,Materials
+EVE,Eve Health Group Limited,Consumer Staples
+BIM,Bindi Metals Limited,Materials
+MQR,Marquee Resources Limited,Materials
+HRE,Heavy Rare Earths Limited,Materials
+BCB,Bowen Coking Coal Limited,Materials
+PL3,Patagonia Lithium Limited,Materials
+NME,Nex Metals Explorations,Materials
+APL,Associate Global Partners Limited,Financials
+LAT,Latitude 66 Limited,Materials
+HLX,Helix Resources Limited,Materials
+OMG,OMG Group Limited,Consumer Staples
+EMN,Euro Manganese Inc,Materials
+OLY,Olympio Metals Limited,Materials
+T88,Taiton Resources Limited,Materials
+REM,RemSense Technologies Limited,Industrials
+SLM,Solis Minerals Limited,Materials
+AAJ,Aruma Resources Limited,Materials
+MCO,Myeco Group Ltd,Materials
+LYK,Yugo Metals Limited,Materials
+MRZ,Mont Royal Resources Limited,Materials
+VBS,Vectus Biosystems Limited,Health Care
+8IH,8I Holdings Limited,Financials
+NPM,New Peak Metals Limited,Materials
+IVX,Invion Limited,Health Care
+EV1,Evolution Energy Minerals Limited,Materials
+ENT,Enterprise Metals Limited,Materials
+WC1,West Cobar Metals Limited,Materials
+SNX,Sierra Nevada Gold Inc.,Materials
+SKN,Skin Elements Limited,Consumer Staples
+8CO,8common Limited,Information Technology
+WYX,Western Yilgarn NL,Materials
+AYM,Australia United Mining Limited,Materials
+JHPI,JPMorgan Equity Premium Income Active ETF (Managed Fund) (Hedged),Unclassified
+MDI,Middle Island Resources,Materials
+HIQ,HitIQ Limited,Health Care
+CPO,Culpeo Minerals Limited,Materials
+DDT,DataDot Technology Limited,Consumer Discretionary
+MTL,Mantle Minerals Limited,Materials
+AS2,Askari Metals Limited,Materials
+CGR,CGN Resources Limited,Materials
+TAR,Taruga Minerals Limited,Materials
+MOH,Moho Resources Limited,Materials
+JNO,Juno Minerals Limited,Materials
+SIV,SIV Capital Limited,Industrials
+RON,Ronin Resources Ltd,Materials
+KFM,Kingfisher Mining Limited,Materials
+GGE,Grand Gulf Energy Limited,Energy
+C1X,Cosmos Exploration Limited,Materials
+GES,Genesis Resources Limited,Materials
+GRE,Greentech Metals Limited,Materials
+CDE,Codeifai Limited,Industrials
+FIN,Fin Resources Limited,Materials
+H2G,GreenHy2 Limited,Industrials
+VMG,VDM Group Limited,Industrials
+AQX,Alice Queen Limited,Materials
+KNO,Knosys Limited,Information Technology
+NYM,Narryer Metals Limited,Materials
+RGT,Argent Biopharma Limited,Health Care
+VFX,Visionflex Group Limited,Health Care
+MGA,MetalsGrove Mining Ltd,Materials
+CBY,Canterbury Resources Limited,Materials
+NVQ,NoviqTech  Limited,Information Technology
+GDR,Golden Dragon Mining Ltd,Unclassified
+VRL,Verity Resources Limited,Materials
+CML,Connected Minerals Limited,Information Technology
+TEG,Triangle Energy (Global) Limited,Energy
+TAS,Tasman Resources Ltd,Materials
+ID8,Identitii Limited,Information Technology
+BEMG,Betashares MSCI Emerging Markets Complex ETF,Unclassified
+ACM,Australian Critical Minerals Limited,Materials
+AXI,Axiom Properties Limited,Real Estate
+KNM,Kneomedia Limited,Communication Services
+CAQ,CAQ Holdings Limited,Real Estate
+FNR,Far Northern Resources Limited,Materials
+RAS,Ragusa Minerals Limited,Materials
+ZMI,Zinc of Ireland NL,Materials
+RBX,Resource Base Limited,Materials
+XGL,Xamble Group Limited,Communication Services
+CUL,Cullen Resources Limited,Materials
+PVW,PVW Resources Limited,Materials
+A300,Global X Australia 300 ETF,Unclassified
+GLH,Global Health Limited,Health Care
+AKN,Auking Mining Limited,Materials
+ACR,Acrux Limited,Health Care
+OCT,Octava Minerals Limited,Materials
+BIT,Biotron Limited,Health Care
+MNC,Merino & Co Limited,Consumer Discretionary
+AUH,AustChina Holdings Limited,Energy
+CHR,Charger Metals NL,Materials
+AXP,AXP Energy Limited,Energy
+ARC,ARC Funds Limited,Financials
+EMT,EMetals Limited,Materials
+BYH,Bryah Resources Limited,Materials
+ASQ,Australian Silica Quartz Group Ltd,Materials
+LIO,Lion Energy Limited,Energy
+DWG,DataWorks Group Limited,Information Technology
+PBL,Parabellum Resources Limited,Materials
+OM1,Omnia Metals Group Limited,Materials
+AX8,Accelerate Resources Limited,Materials
+ADS,Adslot Limited,Information Technology
+HMI,Hiremii Limited,Industrials
+DUN,Dundas Minerals Limited,Materials
+AUA,Audeara Limited,Consumer Discretionary
+MHM,Mount Hope Mining Limited,Unclassified
+GR8,Great Dirt Resources Limited,Materials
+ADC,ACDC Metals Limited,Materials
+1AD,AdAlta Limited,Health Care
+IRX,InhaleRx Limited,Health Care
+GLL,Galilee Energy Limited,Energy
+HJHI,Hejaz High Income Active ETF,Unclassified
+G88,Golden Mile Resources Limited,Materials
+WBE,Whitebark Energy Limited,Energy
+SKUK,Hejaz Sukuk Active ETF (Managed Fund),Unclassified
+AER,Aeeris Ltd,Communication Services
+AYT,Austin Metals Limited,Materials
+RFT,Rectifier Technologies Ltd,Industrials
+GSM,Golden State Mining Limited,Materials
+SQX,SQX Resources Limited,Materials
+PKY,Pathkey.AI Ltd,Information Technology
+SIS,Simble Solutions Limited,Information Technology
+PPY,Papyrus Australia Limited,Materials
+OLI,Oliver's Real Food Limited,Consumer Discretionary
+REC,Recharge Metals Limited,Materials
+SMX,Strata Minerals Limited,Materials
+SLZ,Sultan Resources Ltd,Materials
+M24,Mamba Exploration Limited,Materials
+AIV,ActivEX Limited,Materials
+EFE,Eastern Resources Limited,Materials
+EEL,ENRG Elements Limited,Materials
+XST,Xstate Resources Limited,Energy
+ALV,Alvo Minerals Limited,Materials
+DSM,Desert Minerals Ltd,Materials
+A8G,Australasian Metals Limited,Materials
+ICN,Icon Energy Limited,Energy
+IFG,Infocus Group Holdings Limited,Information Technology
+DBO,Diablo Resources Limited,Materials
+ZMM,Zimi Limited,Information Technology
+E79,E79 Gold Mines Limited,Materials
+IEQ,International Equities Corporation Ltd,Real Estate
+SBR,Sabre Resources Limited,Materials
+OZZ,OZZ Resources Limited,Materials
+IMI,Infinity Mining Limited,Materials
+DM1,Desert Metals Limited,Materials
+CR3,Core Energy Minerals Ltd,Materials
+RIE,Riedel Resources Limited,Materials
+IPB,IPB Petroleum Limited,Energy
+RDS,Redstone Resources,Materials
+R8R,Regener8 Resources NL,Materials
+SLB,Stelar Metals Limited,Materials
+SHE,Stonehorse Energy Limited,Energy
+GTH,Gathid Limited,Information Technology
+RCR,Rincon Resources Limited,Materials
+PLG,Pearl Gull Iron Limited,Materials
+CPM,Cooper Metals Limited,Materials
+AM7,Arcadia Minerals Limited,Materials
+MOM,Moab Minerals Limited,Materials
+TD1,TALI Digital Limited,Health Care
+LVE,Love Group Global Limited,Communication Services
+M2M,Mt Malcolm Mines NL,Materials
+AM5,Antares Metals Limited,Materials
+GMTL,Global X Green Metal Miners ETF,Unclassified
+SHP,South Harz Potash Ltd,Materials
+HFY,Hubify Limited,Communication Services
+AQC,Australian Pacific Coal Limited,Materials
+CDR,Codrus Minerals Limited,Materials
+FUL,Fulcrum Lithium Ltd,Materials
+28BB,Betashares 2028 Fixed Term Corporate Bond Active ETF,Unclassified
+PFT,Pure Foods Tasmania Limited,Consumer Staples
+BHD,Benjamin Hornigold Limited,Financials
+PKO,Peako Limited,Materials
+ZLD,Zelira Therapeutics Limited,Health Care
+PET,Phoslock Environmental Technologies Limited,Industrials
+HYD,Hydrix Limited,Information Technology
+ERG,Eneco Refresh Ltd,Consumer Staples
+PKD,Parkd Ltd,Industrials
+RAN,Range International Limited,Materials
+HCD,Hydrocarbon Dynamics Limited,Energy
+CLZ,Classic Minerals Limited,Materials
+BOD,Bod Science Limited,Health Care
+EE1,Earths Energy Limited,Materials
+UBI,Universal Biosensors Inc,Health Care
+RSSL,Global X Russell 2000 ETF,Unclassified
+SRH,Saferoads Holdings Limited,Industrials
+SUM,Summit Minerals Limited,Materials
+BOA,Boadicea Resources Ltd,Materials
+NGS,Nutritional Growth Solutions Ltd,Consumer Staples
+NNG,NEXION Group Ltd,Information Technology
+SVNP,Savana US Small Caps Active ETF,Unclassified
+CR9,Corella Resources Ltd,Materials
+QEM,QEM Limited,Materials
+C29,C29 Metals Limited,Materials
+MML,McLaren Minerals Limited,Materials
+AOA,Ausmon Resources,Materials
+RLC,Reedy Lagoon Corporation,Materials
+M3M,M3 Mining Limited,Materials
+DAF,Discovery Alaska Limited,Materials
+LRD,Lord Resources Limited,Materials
+MEL,Metgasco Limited,Energy
+WSR,Westar Resources Limited,Materials
+OB1,Orbminco Limited,Materials
+CGO,CPT Global Limited,Information Technology
+ABE,Australian Bond Exchange Holdings Limited,Financials
+HT8,Harris Technology Group,Consumer Discretionary
+RBR,RBR Group Limited,Materials
+M2R,Miramar Resources Limited,Materials
+CL8,CL8 Holdings Limited,Industrials
+ANR,Anatara Lifesciences Ltd,Health Care
+HPC,The Hydration Pharmaceuticals Company Limited,Consumer Staples
+AVW,Avira Resources Limited,Materials
+USIG,Global  X  USD  Corporate  Bond  ETF (Currency Hedged),Unclassified
+OLH,Oldfields Holdings Limited,Industrials
+WEL,Winchester Energy Limited,Energy
+C7A,Clara Resources Australia Ltd,Materials
+OKJ,Oakajee Corporation,Materials
+TML,Timah Resources Limited,Utilities
+PNT,Panther Metals Ltd,Materials
+NRZ,NeuRizer Ltd,Materials
+CUS,Altitude Minerals Ltd,Materials
+NZS,New Zealand Coastal Seafoods,Consumer Staples
+EXL,Elixinol Wellness Limited,Consumer Staples
+PPG,Pro-Pac Packaging Limited,Materials
+IMLC,Investors Mutual Concentrated Australian Share Fund (Quoted Managed Fund),Unclassified
+CYQ,Cycliq Group Limited,Consumer Discretionary
+APC,APC Minerals Limited,Materials
+YOW,Yowie Group Ltd,Consumer Staples
+DMG,Dragon Mountain Gold,Materials
+BUY,Bounty Oil & Gas NL,Energy
+UCM,Uscom Limited,Health Care
+PRM,Prominence Energy Limited,Energy
+GGFD,Betashares Geared Long U.S. Treasury Bond Fund Currency Hedged (hedge fund),Unclassified
+PFM,Platformo Ltd,Information Technology
+NTM,NT Minerals Limited,Materials
+CT1,Constellation Technologies Limited,Information Technology
+ACS,Accent Resources NL,Materials
+KOR,Korab Resources Limited,Materials
+OEQ,Orion Equities Limited,Financials
+DMM,DMC Mining Limited,Materials
+GGAB,Betashares Geared Long Australian Government Bond Fund (hedge fund),Unclassified
+GGBL,Betashares Wealth Builder Global Shares Geared (30%-40% LVR) Complex ETF,Unclassified
+CTQ,Careteq Limited,Health Care
+BP8,BPH Global Ltd,Health Care
+BGE,Bridge SaaS Limited,Information Technology
+GOOD,Janus Henderson Sustainable Credit Active ETF (Managed Fund),Unclassified
+29BB,Betashares 2029 Fixed Term Corporate Bond Active ETF,Unclassified
+AOK,Australian Oil Company Limited,Energy
+AN1,Anagenics Limited,Consumer Staples
+KEY,Key Petroleum Limited,Energy
+T3MP,JPMorgan Climate Change Solutions Active ETF (Managed Fund),Unclassified
+OAK,Oakridge International Limited,Information Technology
+PLC,Premier1 Lithium Limited,Materials
+ULTB,iShares 20+ Year U.S. Treasury Bond (AUD Hedged) ETF,Unclassified
+OSX,Osteopore Limited,Health Care
+BMO,Bastion Minerals Limited,Materials
+GCR,Golden Cross Resources Ltd,Materials
+TFL,TasFoods Limited,Consumer Staples
+MSG,MCS Services Limited,Industrials
+CNJ,Conico Ltd,Materials
+HXL,Hexima Limited,Health Care
+MPR,MPR Australia Limited,Financials
+WBND,Betashares Global Aggregate Bond Currency Hedged ETF,Unclassified
+BEL,Bentley Capital Limited,Financials
+EQS,Equity Story Group Limited,Financials
+FHCO,Fidelity Australian High Conviction Active ETF,Unclassified
+QUE,Queste Communications Ltd,Financials
+FUTR,Janus Henderson Global Sustainable Equity Active ETF,Unclassified
+EMS,Eastern Metals Limited,Materials
+ATM,Aneka Tambang (Persero) Tbk,Materials
+ASAO,abrdn Sustainable Asian Opportunities Active ETF (Managed Fund),Unclassified
+BMH,Baumart Holdings Limited,Industrials
+IACT,iShares U.S. Factor Rotation Active ETF,Unclassified
+1TT,Thrive Tribe Technologies Limited,Information Technology
+WNR,Wingara AG Limited,Consumer Staples
+SAN,Sagalio Energy Limited,Energy
+BBFD,BetaShares Geared Short U.S. Treasury Bond Fund  Currency Hedged (hedge fund),Unclassified
+URAN,VanEck Uranium and Energy Innovation ETF,Unclassified
+GRPA,Global X S&P Australia GARP ETF,Unclassified
+FCG,Freedom Care Group Holdings Limited,Health Care
+MSI,Multistack International Limited,Industrials
+HCF,H&G High Conviction Limited,Financials
+SFIF,Seed Financial Income Fund Active ETF,Unclassified
+BBAB,BetaShares Geared Short Australian Government Bond Fund (hedge fund),Unclassified
+ICU,Investor Centre Limited,Financials
+EARN,PIMCO Short Term Active Yield Active ETF,Unclassified
+TR8,Tarrina Resources Limited,Consumer Staples

@@ -172,3 +172,40 @@ is empty.
 Local: serve `public/` on a static server and point Playwright at the pre-
 installed chromium (`PW_CHROMIUM` / `CHROME_PATH`). Canvas-heavy pages (chart)
 time out on screenshots — verify them via DOM checks, not screenshots.
+
+---
+
+## UX-20 additions (2026-07-26)
+
+- **⌘K palette** (`nav.js`) — every nav page gets Ctrl/Cmd-K: commands (pages,
+  markets, page-registered actions via `window.GBSPalette.register`) + a
+  cross-market setup search indexed lazily from the slim `*_prices.json`
+  files. The mobile MORE sheet's SEARCH row opens the same overlay.
+- **Chart page** (`chart.js`) — 🔔 tap-to-set price alerts (one-shot, stored in
+  `gbs:palerts:<market>:<sym>`; the dashboard re-checks the store on every
+  scan), ▶ REPLAY bar-by-bar scrubber, ⚖ VS relative-strength overlay (rebased
+  dashed line, persisted per market), and session/weekend shading (hidden-scale
+  histogram under the flash bands).
+- **Journal** — calendar week review with ‹ › paging (both books), the
+  R-distribution histogram, and per-row 📤 trade-card PNG export (canvas).
+- **Dashboard** — per-setup position sizing in the row detail (shares the
+  chart's `gbs:mysize-*` store), row density modes (`body.density-compact`),
+  SECTOR in the sort cycle (grouped headers), and a ⚠ partial-scan pill when
+  a payload's universe reads far below the market's typical size.
+- **PWA round 2** — manifest shortcuts + dedicated maskable icons,
+  `offline.html` as the SW's navigation last-resort (precached; sw CACHE v6).
+- **NOT done: splitting `app.js` into lazy modules.** Deliberate: the detail
+  builders share ~20 closures with the main IIFE, and the intent (don't pay
+  for unused work) is already served by lazy detail render, row windowing,
+  `?lite=1`, SWR + head-start fetch. Revisit only with a build step.
+
+## Universe resilience (2026-07-26)
+
+`scanner/universe.py` retries directory fetches (3x, backoff) and snapshots
+every successful full fetch to `data/universe_cache/<market>.json` (committed
+by scan.yml/crypto_bot.yml). A failed fetch falls back to the last-good
+snapshot BEFORE the bundled CSV — after a Saturday ASX scan silently ran on
+93 names when asx.com.au flaked. The ASX cache + `data_universe/asx_tickers.csv`
+were seeded from a mirror of the official directory (2,212 names, GICS
+sectors); the next successful live fetch replaces both organically. The
+dashboard's ⚠ partial-scan pill is the client-side tripwire.
