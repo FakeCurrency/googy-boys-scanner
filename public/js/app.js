@@ -1905,6 +1905,7 @@
     state.dataKey = `${state.market}:${state.mode}`;
     state.staleView = stale;
     updateVisitDiff(d);   // UX-20 #1: fix this visit's change-baseline
+    applySectorMap(d);    // Fix-10 #10: backfill sectors from the sidecar
     state.cur = d.currency_symbol || "$";
     updateScanTitle(d);
     const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
@@ -2070,6 +2071,27 @@
       try { sessionStorage.setItem(key, JSON.stringify(j)); } catch (_) {}
       return j;
     } catch (_) { return null; }
+  }
+
+  // Fix-10 #10: merge the published sector sidecar (scanner/sectorcache.py —
+  // fills NASDAQ's blank sectors incrementally) into scan rows that lack one.
+  // Display-only: powers the SECTOR sort/groups and the sector badges.
+  function applySectorMap(d) {
+    if (!d || !state.sectors) return;
+    const pre = `${state.market}:`;
+    (d.results || []).forEach((r) => {
+      if (r.sector) return;
+      const e = state.sectors[pre + r.symbol];
+      if (e && e.sector) r.sector = e.sector;
+    });
+  }
+  async function loadSectors() {
+    try {
+      const raw = await sessFetch("data/sector_map.json");
+      if (!raw || typeof raw !== "object") return;
+      state.sectors = raw;
+      if (state.data) { applySectorMap(state.data); renderRows(); }
+    } catch (_) { /* sector sidecar is optional */ }
   }
 
   async function loadCaps() {
@@ -2923,6 +2945,7 @@
   initKeyboard();
   bind();
   loadCaps();
+  loadSectors();   // Fix-10 #10
   loadEntryQuality();
   loadBotActivity();
   if (!MEASURE) setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);

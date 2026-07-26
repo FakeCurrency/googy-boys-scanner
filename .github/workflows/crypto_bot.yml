@@ -22,6 +22,12 @@ on:
     - cron: "22 * * * *"       # hourly, all days (weekday stock-session hours
                                # skipped by the gate job below — scan.yml owns
                                # crypto during those windows)
+    # :52 FRESHNESS BACKSTOP (Fix-10 #8, 2026-07-26): GitHub's scheduler
+    # silently dropped four hourly :22 fires in one day — 2-3h crypto gaps
+    # that stay under the watchdog's 6h alarm. This slot only exists to catch
+    # a dropped fire: the gate probes the LIVE crypto scan's age and SKIPS
+    # when data is fresh, so it costs one curl on healthy hours.
+    - cron: "52 * * * *"
   workflow_dispatch:
     inputs:
       args:
@@ -54,6 +60,23 @@ jobs:
         run: |
           DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
           HR=$(date -u +%H)
+          # :52 backstop (Fix-10 #8): freshness-gated, fail-open. Deliberately
+          # bypasses the weekday window-ownership skip below — if the data is
+          # stale, whichever workflow owned the hour has already missed it.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "52 * * * *" ]; then
+            AGE=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/data/crypto_vivek.json" \
+              | python3 -c "import json,sys,datetime as dt; j=json.load(sys.stdin); t=dt.datetime.fromisoformat(j['generated_at']); print('fresh' if (dt.datetime.now(dt.timezone.utc)-t).total_seconds()<3900 else 'stale')" \
+              2>/dev/null || echo "unknown")
+            echo "backstop :52 - live crypto data reads: $AGE"
+            if [ "$AGE" = "fresh" ]; then
+              echo "Backstop :52 - crypto scanned within 65 min. Skipping."
+              echo "run=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "Backstop :52 - stale or unreadable ($AGE). Running the missed cycle."
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
           if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -le 5 ]; then
             case "$HR" in
               0[0-6]|1[4-9]|2[01])

@@ -136,6 +136,14 @@ jobs:
         continue-on-error: true
         run: python -m scanner.marketcaps
 
+      # Fix-10 #10: incremental per-ticker sector cache (NASDAQ's directory
+      # has no sectors) — same fresh-IP window as the caps refresh, ~40
+      # missing symbols per run, best grades first. Display-only sidecar;
+      # never allowed to fail the run.
+      - name: Refresh sector cache
+        continue-on-error: true
+        run: python -m scanner.sectorcache
+
       - name: Run market scans (small markets first, then ASX uncontended)
         env:
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
@@ -261,7 +269,7 @@ jobs:
           # a run only ever stages/re-applies files it generated itself.
           # (SCANNED_MARKET is exported by the scan step above.)
           M="${SCANNED_MARKET:-all}"
-          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
+          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
           if [ "$M" = "all" ]; then MK="asx nasdaq crypto"; else MK="$M"; fi
           PATHS="$SHARED"
           for m in $MK; do
