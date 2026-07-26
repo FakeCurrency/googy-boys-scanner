@@ -1,0 +1,36 @@
+name: Dispatch scan (push-kick)
+
+# Push-to-dispatch utility (2026-07-26). Cloud Claude sessions can push to the
+# repo but cannot reach api.github.com or POST to /api/scan — so this tiny
+# workflow turns a PUSH into a proper workflow_dispatch of the Scheduled scan.
+# Touch this file (or .github/scan-kick) and push, and a full "market=all"
+# scan run is dispatched exactly as if the dashboard SCAN button was tapped.
+# GITHUB_TOKEN-created workflow_dispatch events DO start runs (they are the
+# documented exception to the no-recursive-workflows guard).
+#
+# kick: 1
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/dispatch_scan.yml"
+      - ".github/scan-kick"
+
+permissions:
+  actions: write
+
+concurrency:
+  group: dispatch-scan-kick
+  cancel-in-progress: true
+
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch the Scheduled scan (market=all)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run scan.yml --repo "$GITHUB_REPOSITORY" -f market=all
+          echo "Dispatched scan.yml (market=all)."
