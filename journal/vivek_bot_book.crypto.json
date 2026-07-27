@@ -4,57 +4,6 @@
   "market": "crypto",
   "open": [
     {
-      "id": "BDX:long:1W:2026-06-28",
-      "symbol": "BDX",
-      "name": "BDX",
-      "sector": "",
-      "market": "crypto",
-      "direction": "long",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "1W",
-      "entry": 0.08421043,
-      "stop": 0.00378941,
-      "tp1": 0.20377588,
-      "tp2": 0.32376775,
-      "tp3": 0.48375692,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.08042102,
-      "rr": 2.98,
-      "trigger_bar": null,
-      "entry_date": "2026-06-28",
-      "opened_at": "2026-06-28T11:26:02+00:00",
-      "status": "open",
-      "tp1_hit": false,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0015,
-      "gross_r": 0.0,
-      "cost_r": 0.0015,
-      "exits": [],
-      "mae": 0.08062101900577545,
-      "mfe": 0.09844696521759033,
-      "mae_r": -0.045,
-      "mfe_r": 0.177,
-      "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 437.52958794,
-      "notional": 36.66,
-      "leverage": 0.0,
-      "leverage_target": 3.0,
-      "risk_pct": 0.35,
-      "risk_usd": 35.0,
-      "source": "vivek_bot",
-      "unreal_r": -0.018,
-      "unreal_usd": -0.61,
-      "lens": "vivek",
-      "last_mark": 0.08280034
-    },
-    {
       "id": "XLM:long:1W:2026-07-01",
       "symbol": "XLM",
       "name": "XLM",
@@ -100,10 +49,10 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.161,
-      "unreal_usd": -5.63,
+      "unreal_r": -0.174,
+      "unreal_usd": -6.09,
       "lens": "vivek",
-      "last_mark": 0.182615
+      "last_mark": 0.18131299
     },
     {
       "id": "WBT:long:1D:2026-07-02",
@@ -151,10 +100,10 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": 0.224,
-      "unreal_usd": 7.83,
+      "unreal_r": 0.193,
+      "unreal_usd": 6.77,
       "lens": "vivek",
-      "last_mark": 57.32914734
+      "last_mark": 57.00402832
     },
     {
       "id": "WLD:long:1D:2026-07-03",
@@ -202,35 +151,98 @@
       "risk_pct": 0.35,
       "risk_usd": 35.0,
       "source": "vivek_bot",
-      "unreal_r": -0.513,
-      "unreal_usd": -17.94,
+      "unreal_r": -0.559,
+      "unreal_usd": -19.56,
       "lens": "vivek",
-      "last_mark": 0.35749999
+      "last_mark": 0.3522
     }
   ],
-  "closed": [],
+  "closed": [
+    {
+      "id": "BDX:long:1W:2026-06-28",
+      "symbol": "BDX",
+      "name": "BDX",
+      "sector": "",
+      "market": "crypto",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 0.08421043,
+      "stop": 0.00378941,
+      "tp1": 0.20377588,
+      "tp2": 0.32376775,
+      "tp3": 0.48375692,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.08042102,
+      "rr": 2.98,
+      "trigger_bar": null,
+      "entry_date": "2026-06-28",
+      "opened_at": "2026-06-28T11:26:02+00:00",
+      "status": "closed",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": -0.0178,
+      "gross_r": -0.0149,
+      "cost_r": 0.0029,
+      "exits": [
+        {
+          "reason": "time",
+          "price": 0.08301497,
+          "pct": 1.0,
+          "date": "2026-07-27"
+        }
+      ],
+      "mae": 0.08062101900577545,
+      "mfe": 0.09844696521759033,
+      "mae_r": -0.045,
+      "mfe_r": 0.177,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 437.52958794,
+      "notional": 36.66,
+      "leverage": 0.0,
+      "leverage_target": 3.0,
+      "risk_pct": 0.35,
+      "risk_usd": 35.0,
+      "source": "vivek_bot",
+      "unreal_r": -0.018,
+      "unreal_usd": -0.61,
+      "lens": "vivek",
+      "last_mark": 0.08301497,
+      "exit_price": 0.08301497,
+      "exit_date": "2026-07-27",
+      "exit_reason": "time",
+      "hold_days": 29
+    }
+  ],
   "guard": {
     "crypto": {
       "market": "crypto",
-      "day": "2026-07-26",
+      "day": "2026-07-27",
       "breached": false,
       "breach_kind": null,
       "limit_usd": 300.0,
       "limit_pct": 3.0,
-      "week_usd": -16.94,
+      "week_usd": -20.03,
       "week_limit_usd": 600.0,
       "week_limit_pct": 6.0,
-      "realised_usd": 0,
-      "open_realised_usd": -0.58,
-      "unrealised_usd": -16.36,
-      "session_usd": -16.93,
-      "open": 4
+      "realised_usd": -0.62,
+      "open_realised_usd": -0.53,
+      "unrealised_usd": -18.88,
+      "session_usd": -20.03,
+      "open": 3
     }
   },
   "summary": {
-    "open": 4,
-    "unreal_usd": -16.35,
-    "updated_day": "2026-07-26"
+    "open": 3,
+    "unreal_usd": -18.88,
+    "updated_day": "2026-07-27"
   },
-  "updated_at": "2026-07-26T23:17:43+00:00"
+  "updated_at": "2026-07-27T01:23:03+00:00"
 }
