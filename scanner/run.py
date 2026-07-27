@@ -156,9 +156,17 @@ def main() -> None:
             _sectors.enrich(sec["markets"][page_key], frames, universe,
                             MOVER_MIN_DVOL.get(page_key, 1_000_000),
                             market_key=page_key)
-    (pathlib.Path(args.out) / "sectors.json").write_text(json.dumps(sec, indent=2), encoding="utf-8")
+    # Keep the enrichment this run could not recompute (see sectors.carry_forward).
+    sec_file = pathlib.Path(args.out) / "sectors.json"
+    try:
+        carried = _sectors.carry_forward(
+            sec, json.loads(sec_file.read_text(encoding="utf-8")))
+    except Exception:
+        carried = 0  # no previous file / unreadable -> publish what we have
+    sec_file.write_text(json.dumps(sec, indent=2), encoding="utf-8")
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
-          f"US {len(sec['markets']['us']['sectors'])} sectors")
+          f"US {len(sec['markets']['us']['sectors'])} sectors"
+          + (f" | carried {carried} field(s) forward" if carried else ""))
 
     # FX honesty: the ASX book is A$ while NASDAQ/crypto are US$ — the journal
     # converts ASX P&L at this rate so combined totals stop mixing currencies

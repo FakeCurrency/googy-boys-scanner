@@ -268,7 +268,37 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
             msg += f", and the biggest faller was {l['symbol']} (down {abs(l['pct']):.1f}%)"
         parts.append(msg + ".")
     m["eli5"] = " ".join(parts)
+    m["enriched_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     return m
+
+
+# Everything enrich() computes from a scan's downloaded frames. A run that did
+# not scan a market CANNOT recompute these, so it must carry the last published
+# values forward instead of publishing the market without them.
+ENRICHED_KEYS = ("top_movers", "top_volume", "rotation_detail", "eli5",
+                 "enriched_at")
+
+
+def carry_forward(sec: dict, prev: dict) -> int:
+    """Copy ENRICHED_KEYS from the previously published sectors.json into any
+    market of ``sec`` that this run did not enrich. Returns how many were moved.
+
+    fetch() rebuilds the whole dict from scratch every run, so a crypto-only run
+    (crypto_bot.yml, hourly 24/7) used to publish ASX and US with these keys
+    simply GONE - the sectors page fell back to "No summary yet" and "No volume
+    data yet" until the next equity scan rebuilt them, which is most of the day.
+    Carrying the last values forward is not a fudge: outside market hours the
+    previous session's movers ARE the current answer, and enriched_at rides
+    along so the age is always auditable.
+    """
+    moved = 0
+    for key, m in (sec.get("markets") or {}).items():
+        old = ((prev.get("markets") or {}).get(key) or {})
+        for k in ENRICHED_KEYS:
+            if k not in m and k in old:
+                m[k] = old[k]
+                moved += 1
+    return moved
 
 
 def _num(s):
