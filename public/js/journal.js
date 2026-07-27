@@ -1098,6 +1098,10 @@
   // early, are stops honest (slippage), and how many losers were green first
   // (a tighter break-even rule would have saved them). Bot book only — the
   // manual side has no excursion marks.
+  // A close within this much of -1R counts as "at the stop" — marking is
+  // ~15-min delayed, so demanding an exact -1.00R would flag rounding as gaps.
+  const SLIP_EPS = 0.05;
+
   function renderExitQuality() {
     const box = $("#jr-xq");
     if (!box) return;
@@ -1124,19 +1128,35 @@
     } else {
       cells += cell("Winners", "0 yet", "");
     }
-    // losers: stop honesty + saveable
+    // losers: stop honesty + saveable. The average alone lies when one gap
+    // dominates (six exits near -1R plus a single -2.1R read as "-1.15R avg",
+    // which used to slip under a 0.25R verdict gate while the cell above it
+    // shouted "past plan"). Count how many actually breached the stop and name
+    // the worst one, and drive the verdict off the SAME threshold as the cell
+    // so the panel can never contradict itself.
     if (losers.length) {
       const lR = avg(losers, (t) => t.realized_r);
       const slip = -1 - lR;                        // how far past -1R the average loss lands
+      const worst = losers.reduce((w, t) => (t.realized_r < w.realized_r ? t : w), losers[0]);
+      const breached = losers.filter((t) => t.realized_r < -1 - SLIP_EPS);
       const saveable = losers.filter((t) => t.mfe_r >= 0.5);
       cells += cell("Losers", `${losers.length} · avg ${rfmt(lR)}`, rcls(lR));
-      cells += cell("Stop slippage", `${slip <= 0.05 ? "≈none" : rfmt(-slip) + " past plan"}`, slip > 0.25 ? "neg" : "",
+      cells += cell("Stop slippage", `${slip <= SLIP_EPS ? "≈none" : rfmt(-slip) + " avg past plan"}`, slip > SLIP_EPS ? "neg" : "",
         "Average loser vs the -1R plan — gaps/slippage make losses land beyond the stop");
-      cells += cell("Were green first", `${saveable.length}/${losers.length} ≥ +0.5R`, saveable.length ? "" : "",
+      cells += cell("Worst loss", `${up(worst.symbol)} ${rfmt(worst.realized_r)}`, rcls(worst.realized_r),
+        "The single deepest close — the tail the average hides");
+      cells += cell("Past the stop", `${breached.length}/${losers.length}`, breached.length ? "neg" : "",
+        "Losers that closed beyond -1R rather than at it");
+      cells += cell("Were green first", `${saveable.length}/${losers.length} ≥ +0.5R`, "",
         "Losers whose best excursion reached +0.5R before stopping out");
-      if (slip > 0.25) verdicts.push(`Average loss lands ${rfmt(lR)} vs the −1R plan — ${slip.toFixed(1)}R of gap/slippage; mostly a fill-quality fact, not a rule problem.`);
+      if (breached.length) {
+        verdicts.push(`${breached.length} of ${losers.length} losers closed past the −1R stop` +
+          ` (worst ${up(worst.symbol)} at ${rfmt(worst.realized_r)}, avg ${rfmt(lR)}) — gap/slippage rather than a rule` +
+          ` problem, but real risk per losing trade is running about ${(1 + slip).toFixed(2)}× the planned 1R.`);
+      } else {
+        verdicts.push("Losses are landing where the plan says they should — every loser closed at or inside −1R.");
+      }
       if (saveable.length >= 2) verdicts.push(`${saveable.length} losers were up ≥ +0.5R before stopping — evidence for an earlier break-even move.`);
-      if (!verdicts.length) verdicts.push("Losses are landing where the plan says they should.");
     }
     const sub = $("#jr-xq-sub");
     if (sub) sub.textContent = `${closed.length} closed with excursion marks`;
@@ -1170,7 +1190,45 @@
         <i class="jr-rd-bar ${b.hi <= 0 ? "neg" : "pos"}" style="height:${h}px"></i>
         <span class="jr-rd-lbl">${b.lbl}</span></div>`;
     }).join("");
+    // Describe the histogram that is actually on screen. The old caption was
+    // static prose about an idealised curve ("losses clustered at -1R with a
+    // right tail past +2R") and read as a description of the bars beneath it —
+    // so a book with no right tail at all still claimed to have one.
+    const note = $("#jr-rdist-note");
+    if (note) note.textContent = rdistNote(counts, closed.length);
     box.hidden = false;
+  }
+
+  // counts index: 0 = <=-2R, 1 = -2..-1, 2 = -1..0, 3 = 0..1, 4 = 1..2, 5 = 2..3, 6 = >3R
+  // Phrasing tracks the buckets exactly — bucket 1 is "at or just past -1R"
+  // (it spans -2R..-1R inclusive), NOT "inside the stop", or this caption would
+  // contradict the exit-quality panel's past-the-stop count sitting above it.
+  function rdistNote(counts, n) {
+    const deepLoss = counts[0], nearStop = counts[1], insideStop = counts[2];
+    const losses = deepLoss + nearStop + insideStop;
+    const wins = counts[3] + counts[4] + counts[5] + counts[6];
+    const rightTail = counts[4] + counts[5] + counts[6];   // better than +1R
+    const want = " A healthy curve clusters losses at −1R and earns a right tail past +2R.";
+    if (!wins) {
+      const parts = [];
+      if (insideStop) parts.push(`${insideStop} stopped inside −1R`);
+      if (nearStop) parts.push(`${nearStop} at or just past it`);
+      if (deepLoss) parts.push(`${deepLoss} beyond −2R`);
+      return `All ${n} closes sit left of zero — ${parts.join(", ")}.` +
+        ` There is no right tail yet, and the right tail is where the expectancy lives:` +
+        ` this system's edge assumes a handful of +2R and better winners pay for a majority of −1R losses.`;
+    }
+    if (!rightTail) {
+      return `${wins} of ${n} closes are green but none has cleared +1R, against ${losses} losses` +
+        `${deepLoss ? ` (${deepLoss} deeper than −2R)` : ""}.` +
+        ` Winners are being booked before they can pay for a full loss.` + want;
+    }
+    if (deepLoss >= Math.max(1, Math.round(losses * 0.25))) {
+      return `${deepLoss} of ${losses} losses landed past −2R — a fat left tail means stops are being` +
+        ` overrun or overridden, and each one costs two-plus winners to repair.` + want;
+    }
+    return `${losses} losses at the stop against ${rightTail} winners past +1R` +
+      ` — that is the shape the rules are built to produce.`;
   }
 
   function renderAll() {

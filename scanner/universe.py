@@ -134,6 +134,22 @@ def _pretty(name: str) -> str:
     return name.strip().title()
 
 
+def _fetch_failed(market_key: str, url: str, exc: Exception) -> list[dict]:
+    """Log WHY a directory fetch failed, then hand back an empty list.
+
+    The callers all swallowed the exception, so a source that dies (endpoint
+    moved, WAF starts refusing the scanner's user-agent, TLS change) looked
+    exactly like a source that is merely flaky: the cache fallback covered it
+    and nothing anywhere said which one it was. Printing the reason costs
+    nothing and turns the next failure into a diagnosis instead of a guess.
+    ASCII only - Windows consoles are cp1252.
+    """
+    host = url.split("/")[2] if "://" in url else url
+    print(f"  universe: {market_key} directory fetch FAILED from {host} - "
+          f"{type(exc).__name__}: {str(exc)[:160]}", flush=True)
+    return []
+
+
 def _fetch_asx_listed(suffix: str) -> list[dict]:
     """Fetch the entire ASX-listed universe from the official directory CSV.
 
@@ -141,8 +157,8 @@ def _fetch_asx_listed(suffix: str) -> list[dict]:
     """
     try:
         text = _http_get(ASX_LISTED_URL, timeout=45, headers=_BROWSER_HEADERS)
-    except Exception:
-        return []
+    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
+        return _fetch_failed("asx", ASX_LISTED_URL, exc)
 
     items: list[dict] = []
     seen: set[str] = set()
@@ -174,8 +190,8 @@ def _fetch_nasdaq_listed(suffix: str, tiers: str = "Q") -> list[dict]:
     S = Capital Market. Pass "QGS" for everything (~3,400)."""
     try:
         text = _http_get(NASDAQ_LISTED_URL, timeout=30)
-    except Exception:
-        return []
+    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
+        return _fetch_failed("nasdaq", NASDAQ_LISTED_URL, exc)
 
     items: list[dict] = []
     reader = csv.DictReader(io.StringIO(text), delimiter="|")
@@ -203,8 +219,8 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
     """
     try:
         data = json.loads(_http_get(COINGECKO_URL, timeout=30, headers=_BROWSER_HEADERS))
-    except Exception:
-        return []
+    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
+        return _fetch_failed("crypto", COINGECKO_URL, exc)
 
     items: list[dict] = []
     seen: set[str] = set()
