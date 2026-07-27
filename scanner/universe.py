@@ -59,6 +59,20 @@ def _is_stable(sym: str) -> bool:
 
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
+# asx.com.au stopped serving the directory CSV to the honest
+# "(compatible; FibScanner/1.0)" agent around 2026-07-25 - the endpoint is
+# alive and returns the file to an ordinary browser, so a WAF refusing a
+# bot-shaped user-agent is the likeliest cause. This is the full profile a
+# real browser sends. NASDAQ (no headers at all) and CoinGecko (the honest
+# agent above) both still work, so neither is touched.
+_ASX_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"),
+    "Accept": "text/csv,application/csv,text/plain,*/*;q=0.8",
+    "Accept-Language": "en-AU,en;q=0.9",
+    "Referer": "https://www.asx.com.au/",
+}
+
 
 def _http_get(url: str, timeout: int, headers: dict | None = None, attempts: int = 3) -> str:
     """GET with retries + backoff (5s, 10s). Directory endpoints flake, and a
@@ -156,9 +170,19 @@ def _fetch_asx_listed(suffix: str) -> list[dict]:
     The file has a few preamble lines, then rows of: "Company name","Code","GICS".
     """
     try:
-        text = _http_get(ASX_LISTED_URL, timeout=45, headers=_BROWSER_HEADERS)
-    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
-        return _fetch_failed("asx", ASX_LISTED_URL, exc)
+        text = _http_get(ASX_LISTED_URL, timeout=45, headers=_ASX_HEADERS)
+    except Exception:  # noqa: BLE001 - one retry on the old profile, then cache
+        # The browser profile is a GUESS at why the WAF refuses us. If the guess
+        # is wrong, try the header set that worked historically before dropping
+        # all the way to a frozen cache - a wrong diagnosis must not cost us a
+        # source that was merely having a bad minute. ASCII only (cp1252).
+        print("  universe: asx fetch with browser headers failed - "
+              "retrying on the legacy agent", flush=True)
+        try:
+            text = _http_get(ASX_LISTED_URL, timeout=45,
+                             headers=_BROWSER_HEADERS, attempts=1)
+        except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
+            return _fetch_failed("asx", ASX_LISTED_URL, exc)
 
     items: list[dict] = []
     seen: set[str] = set()

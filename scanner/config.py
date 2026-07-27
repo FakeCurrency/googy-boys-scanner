@@ -628,6 +628,17 @@ WATCHDOG_BOOK_MAX_AGE_H = 4.0          # combined book updated_at (money path)
 WATCHDOG_CRYPTO_SCAN_MAX_AGE_H = 4.0   # crypto_vivek.json generated_at
 WATCHDOG_PHASEMAP_MAX_LAG_DAYS = 2     # latest.json run_date lag
 WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
+# Ticker-roster freshness (data/universe_cache/<market>.json saved_at). The ASX
+# directory fetch died silently for three days in 2026-07 because a dead source
+# and a merely flaky one look identical from outside: the cache fallback covers
+# both. These make a dead source say so.
+# ASX/NASDAQ scan weekdays only, so their age is measured in WEEKDAY hours --
+# a flat wall-clock limit would have to exceed the 65h Fri-close/Mon-open gap
+# and would then take three days to notice anything. 40 weekday-hours lets one
+# fully missed session pass in silence and fires on the second.
+WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
+# Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
+WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
 # LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
 # GitHub already emails failures; the watchdog only covers SILENT problems.

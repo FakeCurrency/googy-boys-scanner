@@ -84,6 +84,35 @@ def _age_h(ts: dt.datetime | None, now: dt.datetime) -> float | None:
     return None if ts is None else (now - ts).total_seconds() / 3600.0
 
 
+def _weekday_age_h(ts: dt.datetime, now: dt.datetime) -> float:
+    """Age in hours counting only Mon-Fri (UTC) - the clock a weekday-only
+    pipeline actually runs on.
+
+    ASX and NASDAQ scan Mon-Fri, so wall-clock age balloons by ~65h over every
+    weekend through no fault of the pipeline. Charging only weekday hours means
+    one threshold works all week instead of one that has to be loose enough to
+    survive Friday-close-to-Monday-open and is therefore useless at catching a
+    source that died on Tuesday.
+    """
+    if now <= ts:
+        return 0.0
+    # Anything a month back is stale under any reading; short-circuit so a
+    # garbage/epoch timestamp cannot spin this loop for thousands of days.
+    raw = (now - ts).total_seconds() / 3600.0
+    if raw > 24 * 31:
+        return raw
+    total = 0.0
+    cur = ts
+    while cur < now:
+        midnight = (cur + dt.timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0)
+        seg_end = min(midnight, now)
+        if cur.weekday() < 5:
+            total += (seg_end - cur).total_seconds() / 3600.0
+        cur = seg_end
+    return total
+
+
 # ── probes ─────────────────────────────────────────────────────────────────────
 
 def _finding(key: str, severity: str, msg: str) -> dict:
@@ -151,6 +180,38 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
             "phasemap_stale", "WARNING",
             f"PhaseMap latest.json is {max(lags)} days behind - the nightly "
             f"has not produced a fresh snapshot"))
+
+    # Ticker rosters: data/universe_cache/<market>.json is re-stamped by every
+    # successful directory fetch, and load_universe() silently falls back to it
+    # when the fetch dies. That fallback is right - a scan on a day-old roster
+    # beats no scan - but it made a DEAD source (asx.com.au, 2026-07-25) look
+    # exactly like a flaky one for three days. Absent file stays silent: a fresh
+    # clone or a market that has never been scanned is not a fault.
+    for m in config.MARKETS:
+        f = root / "data" / "universe_cache" / f"{m}.json"
+        if not f.exists():
+            continue
+        try:
+            ts = _parse_ts(json.loads(f.read_text(encoding="utf-8")).get("saved_at"))
+        except Exception:
+            out.append(_finding(f"universe_unreadable_{m}", "WARNING",
+                                f"data/universe_cache/{m}.json unreadable"))
+            continue
+        if ts is None:
+            continue
+        wall = _age_h(ts, now)
+        if m == "crypto":
+            age, limit, unit = wall, config.WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H, "h"
+        else:
+            age = _weekday_age_h(ts, now)
+            limit, unit = config.WATCHDOG_UNIVERSE_MAX_AGE_H, "h of weekday time"
+        if age > limit:
+            out.append(_finding(
+                f"universe_stale_{m}", "WARNING",
+                f"{m.upper()} ticker roster last refreshed {wall:.0f}h ago "
+                f"({age:.0f}{unit}, limit {limit:.0f}) - the directory fetch is "
+                f"failing or no scan is running, so the universe is frozen and "
+                f"new listings cannot appear"))
 
     # Backups: newest timestamped dir. No dirs at all -> the run-history probe
     # owns that case (first backup may simply not have happened yet).

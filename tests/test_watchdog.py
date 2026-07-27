@@ -27,8 +27,17 @@ def _iso(hours_ago: float) -> str:
 
 # ── content probes ─────────────────────────────────────────────────────────────
 
+def _stamp_universe(root, stamps: dict) -> None:
+    """stamps: market key -> saved_at ISO string, written as a roster cache."""
+    d = root / "data" / "universe_cache"
+    d.mkdir(parents=True, exist_ok=True)
+    for m, ts in stamps.items():
+        (d / f"{m}.json").write_text(
+            json.dumps({"saved_at": ts, "items": []}), encoding="utf-8")
+
+
 def _tree(tmp_path, book_age_h=1.0, crypto_age_h=1.0, pm_lag_days=0,
-          backup_age_h=1.0, with_book=True):
+          backup_age_h=1.0, with_book=True, universe_age_h=1.0):
     (tmp_path / "journal").mkdir(parents=True)
     (tmp_path / "public" / "data").mkdir(parents=True)
     if with_book:
@@ -46,11 +55,71 @@ def _tree(tmp_path, book_age_h=1.0, crypto_age_h=1.0, pm_lag_days=0,
     b = tmp_path / "backups" / (NOW - dt.timedelta(hours=backup_age_h)).strftime(
         "%Y-%m-%dT%H-%M-%S")
     b.mkdir(parents=True)
+    if universe_age_h is not None:
+        _stamp_universe(tmp_path, {m: _iso(universe_age_h) for m in config.MARKETS})
     return tmp_path
 
 
 def test_content_all_fresh_is_silent(tmp_path):
     assert wd.probe_content(_tree(tmp_path), NOW) == []
+
+
+# ── ticker-roster freshness (2026-07-27: asx.com.au died silently for 3 days) ──
+
+def test_weekday_age_skips_the_weekend():
+    fri = dt.datetime(2026, 7, 17, 12, 0, tzinfo=dt.timezone.utc)
+    mon = dt.datetime(2026, 7, 20, 12, 0, tzinfo=dt.timezone.utc)
+    assert (mon - fri).total_seconds() / 3600 == 72.0        # wall clock
+    # Fri 12:00->Sat 00:00 = 12h, Sat+Sun = 0, Mon 00:00->12:00 = 12h
+    assert wd._weekday_age_h(fri, mon) == pytest.approx(24.0)
+    assert wd._weekday_age_h(mon, mon) == 0.0
+    assert wd._weekday_age_h(mon + dt.timedelta(hours=1), mon) == 0.0
+    # A garbage/epoch stamp must short-circuit, not walk a thousand days.
+    ancient = mon - dt.timedelta(days=400)
+    assert wd._weekday_age_h(ancient, mon) == pytest.approx(400 * 24)
+
+
+def test_content_no_universe_cache_is_silent(tmp_path):
+    # A fresh clone, or a market never scanned here, has no roster cache. That
+    # is not a fault - same rule the backups probe uses for an absent dir.
+    assert wd.probe_content(_tree(tmp_path, universe_age_h=None), NOW) == []
+
+
+def test_content_stale_asx_roster_is_warning(tmp_path):
+    t = _tree(tmp_path)
+    _stamp_universe(t, {"asx": "2026-07-16T12:00:00+00:00"})   # Thu -> 48 weekday-h
+    probs = wd.probe_content(t, NOW)
+    assert [p["key"] for p in probs] == ["universe_stale_asx"]
+    assert probs[0]["severity"] == "WARNING"
+    assert "frozen" in probs[0]["msg"]
+
+
+def test_content_weekend_gap_does_not_flag_a_weekday_market(tmp_path):
+    # THE false-alarm case this probe had to survive: ASX scans Mon-Fri, so a
+    # roster stamped at Friday's close is ~77h old by Monday lunch through
+    # nobody's fault. Charged in weekday hours it is 29h - inside the limit.
+    t = _tree(tmp_path)
+    _stamp_universe(t, {"asx": "2026-07-17T06:37:00+00:00"})   # Fri ASX close
+    assert wd.probe_content(t, NOW) == []
+
+
+def test_content_crypto_roster_is_judged_on_wall_clock(tmp_path):
+    # Crypto scans hourly 24/7, so for it a weekend is real downtime, not an
+    # off-hours gap: same 20h stamp is stale for crypto and fine for ASX.
+    t = _tree(tmp_path, universe_age_h=None)
+    _stamp_universe(t, {"crypto": _iso(20.0), "asx": _iso(20.0)})
+    probs = wd.probe_content(t, NOW)
+    assert [p["key"] for p in probs] == ["universe_stale_crypto"]
+    assert probs[0]["severity"] == "WARNING"
+
+
+def test_content_unreadable_universe_cache_is_warning(tmp_path):
+    t = _tree(tmp_path, universe_age_h=None)
+    d = t / "data" / "universe_cache"
+    d.mkdir(parents=True)
+    (d / "asx.json").write_text("{not json", encoding="utf-8")
+    probs = wd.probe_content(t, NOW)
+    assert [p["key"] for p in probs] == ["universe_unreadable_asx"]
 
 
 def test_content_stale_book_is_critical(tmp_path):
