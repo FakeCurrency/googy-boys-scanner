@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   878 pytest + 212 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   878 pytest + 262 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -93,7 +93,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 | Workflow | Schedule | Does |
 |---|---|---|
-| test.yml | every push/PR | pytest + 8 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest is `journal_stale.test.js` (TOP100 #24) |
+| test.yml | every push/PR | pytest + 10 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest are `risk_defaults.test.js` and `journal_money.test.js` (TOP100 Tier 2) |
 | scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only); `:47` ASX freshness backstop | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52` all days; the `:22` fire skips weekday scan.yml windows (scan.yml already scans crypto then), `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -823,6 +823,112 @@ rows are named in a WARNING, not just counted.
 
 ---
 
+## Journal arithmetic — TOP100 Tier 2 (2026-07-28, `fa4dafdb`)
+
+Tier 1 fixed the numbers the guards are computed FROM. **Tier 2 (25–40) is the
+layer the owner actually reads** — the P&L, the R, the drawdown, and the
+hand-typed mirrors that decide what the page shows when a fetch fails. Same rule
+as Tier 1: the items below changed a MODEL, so reading the code without them
+misleads. The rest of 25–40 are ordinary line fixes and live in the commit body.
+
+### A hand-closed partial booked only the last rung (#25)
+
+`ensureClosedR` guarded on `if (!t.exits.length && t.exit != null)`, so a trade
+that scaled 0.25 at tp1 and was then closed by hand booked **0.25 of its move and
+discarded the other 0.75**. Not a display bug: `computeCloseOutcome` reads the
+same resolver, so the understated R went into the stats, the equity curve and the
+win rate. Direction is asymmetric and therefore worse than a wash — a
+partially-scaled WINNER is under-reported (the good part is the tail you cut off)
+while a partially-scaled LOSER is flattered.
+
+- The fix sums `exits.map(e => e.frac)` and appends a synthetic exit for the
+  `1 - booked` remainder. **The full ladder sums to 0.90 by design**, so even a
+  trade that took all three rungs has a 10% runner that was never priced.
+- **It is idempotent because it runs on EVERY load, not once at close.** A second
+  pass must find the remainder already booked and do nothing; the test that pins
+  this calls it six times.
+- A legacy row carrying `booked_pct` but an EMPTY `exits` array is NOT booked
+  twice — that combination is how rows written before the ladder existed look.
+
+### `_init` is a session cache, and it used to be persisted (#26)
+
+`_init` memoises the per-row sizing derivation. `mjSaveLocal` stringified it, so
+it rode out to localStorage AND to the KV sync store — permanently freezing
+`risk_usd` at whatever constants happened to be loaded at the moment the row was
+first painted. Compounded by the first-paint ordering (#40): that was reliably
+the FALLBACK constants, not the published ones.
+
+- Now **non-enumerable** (so `JSON.stringify` cannot see it) and stamped with
+  `RULES_GEN`, which `loadBotRules()` bumps. A rules change invalidates every
+  cached derivation instead of leaving the page showing sizing from a previous
+  ruleset. The `loadMe()` immediately after the bump is what makes the
+  invalidation visible rather than merely correct.
+- **1R is pinned to the PLAN stop (`risk_stop`), not the CURRENT stop.** Trailing
+  a stop to breakeven used to rescale R that had already been banked, which makes
+  a trade look better the moment you protect it. Legacy rows with no `risk_stop`
+  recover the plan stop exactly from `entry ∓ risk`, on the correct side for
+  shorts.
+
+### Max drawdown was a function of row insertion order (#30)
+
+`stats()` walked the trades in STORE order while `series()` beside it sorted by
+exit date, so the headline drawdown and the equity curve under it could disagree
+about the same set of trades. **Both numbers look plausible, which is why it
+survived** — a book with a +5R, a −3R and a −1R reports −$400 in exit order and
+−$300 in store order, and nothing on the page tells you which you are reading.
+`byExit` now feeds both, copies before sorting (it must not reorder the caller's
+array), and treats an unparseable exit date as 0 rather than throwing.
+
+### The offline fallback had drifted, and only shows when nobody can check (#34)
+
+`risk_manager.js` carries `PUBLISHED_DEFAULTS`, a hand-typed mirror of five
+`config.py` constants. It is a real fallback, not dead code — `bot.js` fetches
+`data/bot_rules.json` and falls through to the mirror only when that fetch fails.
+**So the mirror is what the page shows exactly when the person reading it is
+least able to verify it.** It had drifted and lived that way for months: Python
+risked 0.35% over 30 positions while the JS said 0.25% over 5, and the portfolio
+cap read **2.0% against a live `PORTFOLIO_HEAT_LIMIT` of 7%**.
+
+- **The portfolio cap moving 2 → 7 is the one number here worth stating out
+  loud.** It is not a loosening of a limit that was binding — nothing in
+  `broker/` reads this engine (see Tier 1, the `risk_manager` wiring gap), so no
+  trade was ever blocked or allowed by it. It is a *display* correcting to the
+  Python that actually governs the book. If the wiring gap is ever closed, this
+  is the number that starts binding, at 7%.
+- **`maxPortfolioRiskPct` is the only entry that is not a straight copy** —
+  Python stores a fraction (0.07), every JS consumer wants a percent (7.0) — and
+  the unit conversion is precisely how it ended up at 2.0, a value that was
+  neither and had been a plausible cap once.
+- `test/risk_defaults.test.js` also asserts **`run.py` still PUBLISHES each
+  mirrored key**, which is the half a mirror test normally misses: stop
+  publishing one and `bot.js` falls through to the mirror for that key on EVERY
+  load rather than only offline, so the fallback silently becomes the value.
+
+### #27 was relabelled, not wired — deliberately
+
+The KILL SWITCH button on bot.html called `risk.activateKillSwitch()` and dimmed
+itself. No fetch, no dispatch, nothing server-side. Making it real is a
+live-trading gate and therefore **never autonomous**, so the fix went the other
+way: the button, its tooltip, its log line and its modal now all say what it
+actually does — blocks new entries **in this browser only**, does not close
+positions, does not reach a broker, does not stop the server bot — and name
+`kill_switch.yml` as the thing that does. A control that looks like it flattens
+the book and does not is worse than no control; a control that states its own
+scope is honest at the size it really is.
+
+### Tests
+
+`test/journal_money.test.js` (22) and `test/risk_defaults.test.js` (20), both
+registered in test.yml. **Both read the SHIPPED artefacts rather than mirroring
+them** — the money suite `vm`-slices ~15 real functions out of `public/js/journal.js`
+(the pattern from `journal_review`/`journal_stale`), and the defaults suite parses
+the real `config.py` and `bot.html` as source. A re-typed fixture drifts in step
+with the bug it is supposed to catch. The money suite ends with a **`?v=` floor
+check** that fails until `journal.html` requests `journal.js?v=63` or higher,
+which turns project rule 2 from a convention into a gate.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
@@ -880,7 +986,7 @@ data-provider key, Cloudflare Access.
 ```bash
 pip install -r requirements.txt
 python -m pytest -q                      # full gate (878 tests)
-node test/risk_manager.test.js           # + 7 more JS suites, 212 total; see test.yml
+node test/risk_manager.test.js           # + 9 more JS suites, 262 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan
