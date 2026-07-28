@@ -29,6 +29,8 @@ _EMOJI = {
     "scan_error":     "🔴",
     "anomaly":        "⚠️",
     "info":           "ℹ️",
+    # HORIZON's "look wider" — nothing is broken, something is running.
+    "sector_run":     "🔭",
 }
 
 

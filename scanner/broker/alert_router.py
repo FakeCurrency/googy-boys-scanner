@@ -42,12 +42,14 @@ _SEV_MAP = {
     "daily_report":    "INFO",
     "health":          "WARNING",
     "info":            "INFO",
+    "sector_run":      "NOTICE",
 }
 
 _CHAN_MAP = {
     "CRITICAL": ["telegram", "discord", "email"],
     "WARNING":  ["telegram", "discord"],
     "INFO":     [],
+    "NOTICE":   ["discord"],
 }
 
 _RATE_MAP = {
@@ -61,6 +63,7 @@ _RATE_MAP = {
     "circuit_breaker": 1800,
     "daily_report":    82800,
     "health":          3600,
+    "sector_run":      0,
     "DEFAULT":         300,
 }
 

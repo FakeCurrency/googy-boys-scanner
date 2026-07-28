@@ -581,3 +581,199 @@ def test_published_payload_carries_what_the_page_needs(paths):
     assert got["series"]["asx"]["days"] == ["2026-07-28"]
     # and it must round-trip as JSON — this is a published file
     json.loads(json.dumps(got))
+
+
+# ── the push (2026-07-28) ────────────────────────────────────────────────────
+#
+# The surface above only works on the days it gets opened, and the July miss
+# happened with every ingredient already on the page. These pin the one path
+# that reaches out instead of waiting to be looked at.
+
+@pytest.fixture
+def push(monkeypatch):
+    """Capture pings instead of sending them, with the push switched ON."""
+    sent = []
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT_PUSH", True)
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS", 7)
+    return sent
+
+
+def _memory(hist):
+    """The ping memory as it sits on disk — asserted through the published
+    shape, not an accessor, because the shape is what has to survive a
+    round-trip through `load_history`/`append_history` in CI."""
+    return (hist.get("alerts") or {}).get("sector_run") or {}
+
+
+def _blocks(hist, *, held=(), market="asx"):
+    """A published block for the fixture board, exactly as `update()` builds it."""
+    pos = list(held)
+    snap = sb.compute(market,
+                      _res("Unclassified", 91) + _res("Real_Estate", 14)
+                      + _res("Financials", 33) + _res("Consumer_Discretionary", 11),
+                      _uni(Unclassified=389, Real_Estate=62, Financials=198,
+                           Consumer_Discretionary=104), pos)
+    book = sb.book_state(pos)
+    return {market: {**snap, "book": book, "horizon": sb.horizon(snap, book, hist)}}
+
+
+def test_a_sustained_run_pings_once_with_the_streak_in_it(push):
+    hist = _run(14)
+    fired = sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
+    assert "asx|Consumer Discretionary" in fired
+    event, title, details = next(a for a in push if "Consumer Discretionary" in a[1])
+    assert event == "sector_run"
+    assert "LOOK WIDER" in title and "14 sessions" in title
+    # the number that separates a shrug from a miss in progress must be in the
+    # body too, not only in a title a phone may truncate
+    assert "14 straight sessions" in details
+    assert "11 A+/A across 104 listed names = 10.6%" in details
+
+
+def test_the_same_run_does_not_ping_again_tomorrow(push):
+    hist = _run(14)
+    blocks = _blocks(hist)
+    assert sb.notify(hist, blocks, "2026-07-14", send=lambda *a: push.append(a))
+    assert sb.notify(hist, blocks, "2026-07-15", send=lambda *a: push.append(a)) == []
+    assert sb.notify(hist, blocks, "2026-07-20", send=lambda *a: push.append(a)) == []
+    assert len([a for a in push if "Consumer Discretionary" in a[1]]) == 1
+
+
+def test_a_run_that_is_still_going_pings_again_after_the_repeat_window(push):
+    """A rotation that lasts a month must not go silent after one message —
+    the whole failure was four weeks of nothing being said."""
+    hist = _run(14)
+    blocks = _blocks(hist)
+    sb.notify(hist, blocks, "2026-07-14", send=lambda *a: push.append(a))
+    assert sb.notify(hist, blocks, "2026-07-21", send=lambda *a: push.append(a))
+    assert len([a for a in push if "Consumer Discretionary" in a[1]]) == 2
+
+
+def test_a_run_that_ends_is_forgotten_so_the_next_one_pings_fresh(push):
+    """Otherwise a sector that ran in July, stopped, and came back in October
+    would land inside a stale repeat window and say nothing."""
+    hist = _run(14)
+    sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
+    quiet = _blocks(hist, held=[_pos("CD0", "Consumer Discretionary")])
+    assert sb.notify(hist, quiet, "2026-07-15", send=lambda *a: push.append(a)) == []
+    # only the sector that stopped is forgotten; the other two are still running
+    assert "asx|Consumer Discretionary" not in _memory(hist)
+    assert "asx|Financials" in _memory(hist)
+    # ...and now it runs again, one day later, well inside the 7-day window
+    assert "asx|Consumer Discretionary" in sb.notify(
+        hist, _blocks(hist), "2026-07-16", send=lambda *a: push.append(a))
+
+
+def test_a_short_run_never_pings(push):
+    hist = _run(2)
+    assert sb.notify(hist, _blocks(hist), "2026-07-02",
+                     send=lambda *a: push.append(a)) == []
+    assert push == []
+
+
+def test_the_push_can_be_switched_off_without_touching_the_surface(monkeypatch):
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT_PUSH", False)
+    hist = _run(14)
+    sent = []
+    assert sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: sent.append(a)) == []
+    assert sent == []
+    # the note is still on the page — only the interruption is off
+    assert _blocks(hist)["asx"]["horizon"]["notes"][0].startswith("LOOK WIDER")
+
+
+def test_the_message_says_whether_the_book_could_have_acted(push):
+    """Room-and-not-taken and wanted-and-couldn't are different failures and
+    the reader must not have to go and look up which one this was."""
+    hist = _run(14)
+    sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
+    assert "30 free slots" in push[0][2]
+    assert "$150,000" in push[0][2]
+
+    full = [_pos(f"S{i}", "Materials") for i in range(30)]
+    hist2 = _run(14)
+    sb.notify(hist2, _blocks(hist2, held=full), "2026-07-14",
+              send=lambda *a: push.append(a))
+    capped = next(a for a in push if "FULL" in a[2])
+    assert "could not have taken this" in capped[2]
+
+
+def test_a_market_that_did_not_scan_keeps_its_memory(push):
+    """`blocks` carries carried-forward markets too; re-pinging one would be
+    the alarm reporting a stale streak as news."""
+    hist = _run(14)
+    sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
+    before = dict(_memory(hist))
+    # a crypto-only weekend: nothing recomputed, so notify sees no blocks
+    assert sb.notify(hist, {}, "2026-07-18", send=lambda *a: push.append(a)) == []
+    assert _memory(hist) == before
+
+
+def test_two_markets_both_ping_in_one_run(push):
+    """The router's rate limit is per EVENT TYPE, so it would have silenced the
+    second market — scan.yml runs them sequentially in one job."""
+    hist = _run(14)
+    hist = {"version": 1, "rows": hist["rows"] + _run(14, market="nasdaq")["rows"]}
+    blocks = {**_blocks(hist), **_blocks(hist, market="nasdaq")}
+    fired = sb.notify(hist, blocks, "2026-07-14", send=lambda *a: push.append(a))
+    assert {"asx|Consumer Discretionary", "nasdaq|Consumer Discretionary"} <= set(fired)
+
+
+def test_a_failing_send_is_not_recorded_as_sent(push):
+    """A dropped ping must be retried on the next scan, not written off."""
+    def boom(*a):
+        raise RuntimeError("webhook down")
+    hist = _run(14)
+    assert sb.notify(hist, _blocks(hist), "2026-07-14", send=boom) == []
+    assert _memory(hist) == {}
+    assert sb.notify(hist, _blocks(hist), "2026-07-14",
+                     send=lambda *a: push.append(a))
+
+
+def test_the_ping_memory_rides_in_the_history_file(paths, push, monkeypatch):
+    """Not journal/alert_state.json — scan.yml does not stage that, so every
+    Actions run would read 'never pinged' and fire again."""
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT", 1)
+    sent = []
+    monkeypatch.setattr("scanner.broker.alert_router.smart_send",
+                        lambda *a: sent.append(a))
+    markets = {"asx": {"results": _res("Consumer_Discretionary", 11),
+                       "universe": _uni(Consumer_Discretionary=104)}}
+    sb.update(markets, out_dir=paths / "pub", positions=[], day="2026-07-28")
+    on_disk = json.loads((paths / "sector_history.json").read_text())
+    assert on_disk["alerts"]["sector_run"]["asx|Consumer Discretionary"]["d"] == "2026-07-28"
+    assert len(sent) == 1
+    # and it survives the round-trip the streak itself depends on
+    assert len(on_disk["rows"]) == 1
+    sb.update(markets, out_dir=paths / "pub", positions=[], day="2026-07-29")
+    assert len(sent) == 1
+
+
+def test_a_broken_alert_path_never_costs_a_scan(paths, monkeypatch):
+    """Report-only means report-only: the data still publishes."""
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT_PUSH", True)
+    monkeypatch.setattr(sb, "notify", lambda *a, **k: 1 / 0)
+    got = sb.update({"asx": {"results": _res("Materials", 30),
+                             "universe": _uni(Materials=766)}},
+                    out_dir=paths / "pub", positions=[], day="2026-07-28")
+    assert got["markets"]["asx"]["sectors"]
+    assert (paths / "pub" / "sector_breadth.json").exists()
+
+
+def test_the_alert_routes_to_discord_only():
+    """Owner decision (2026-07-28): the same channel the confluence pings land
+    in. Nothing is BROKEN when this fires, so it must not sit in the same feed
+    at the same volume as order failures and circuit breakers."""
+    from scanner.broker import alert_router as ar
+    assert ar.get_severity("sector_run") == "NOTICE"
+    assert ar.get_channels("sector_run") == ["discord"]
+    # the router must not second-guess our per-sector dedupe
+    assert config.ALERT_RATE_LIMITS["sector_run"] == 0
+    assert ar._CHAN_MAP["NOTICE"] == ["discord"]     # config-less fallback agrees
+
+
+def test_the_message_is_plain_ascii(push):
+    """It is built by scanner code, and scanner code prints on cp1252 consoles."""
+    hist = _run(14)
+    sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
+    for event, title, details in push:
+        (event + title + details).encode("ascii")

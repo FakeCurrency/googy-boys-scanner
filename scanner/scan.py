@@ -236,7 +236,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             })
         except Exception as e:
             if progress:
-                print(f"  warning: VIVEK {yf_ticker} → {e}", flush=True)
+                print(f"  warning: VIVEK {yf_ticker} -> {e}", flush=True)
 
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)

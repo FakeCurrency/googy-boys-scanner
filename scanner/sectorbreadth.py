@@ -528,6 +528,180 @@ def cap_streak(hist: dict, market: str) -> int:
     return n
 
 
+# ── the push (2026-07-28) ─────────────────────────────────────────────────────
+#
+# Everything above this line is a surface you have to go and LOOK at. That was
+# also true of every number that would have shown the July rotation: the raw
+# ingredients were on the page for four weeks and the miss happened anyway,
+# because a dashboard only works on the days you open it. `SECTOR_BREADTH_RUN_
+# ALERT` is the point at which "a sector has been leading unheld" stops being a
+# thing worth publishing and becomes a thing worth interrupting someone about,
+# and this is the interruption. Discord, per the owner -- the same channel the
+# confluence pings already land in, so there is one place to look and not two.
+#
+# STILL REPORT-ONLY. It changes what gets SAID and never what gets taken. The
+# decisions this alert will provoke -- raise the 3-per-sector cap, tilt the
+# ranking toward a leading sector, take something outside A+ -- all change which
+# trades happen and all remain the owner's.
+
+_ALERT_EVENT = "sector_run"
+
+
+def _ping_memory(hist: dict) -> dict:
+    """The per-sector ping memory, stored INSIDE the history file.
+
+    Deliberately not `journal/alert_state.json`, which is where alert_router
+    keeps its own rate limits: that file is NOT in scan.yml's staging list, so
+    anything written to it dies with the Actions container. Every scan would
+    read "never pinged" and fire again, which for a run that by definition
+    lasts weeks means a ping every scan for a fortnight -- the precise way an
+    alert teaches you to ignore it.
+
+    `data/sector_history.json` is committed by the same workflow step that
+    commits the streak this alert is computed from, so the memory and the number
+    it guards can never disagree about what day it is. It round-trips safely:
+    `load_history` returns the parsed dict untouched and `append_history`
+    rewrites only `version` and `rows`.
+    """
+    box = hist.get("alerts")
+    if not isinstance(box, dict):
+        box = {}
+        hist["alerts"] = box
+    seen = box.get(_ALERT_EVENT)
+    if not isinstance(seen, dict):
+        seen = {}
+        box[_ALERT_EVENT] = seen
+    return seen
+
+
+def _day_gap(then: str, now: str):
+    """Calendar days between two YYYY-MM-DD stamps, or None if unparsable."""
+    try:
+        a = dt.date.fromisoformat(str(then)[:10])
+        b = dt.date.fromisoformat(str(now)[:10])
+    except Exception:
+        return None
+    return (b - a).days
+
+
+def _sector_row(blk: dict, sector: str) -> dict:
+    for b in blk.get("sectors") or []:
+        if b.get("sector") == sector:
+            return b
+    return {}
+
+
+def notify(hist: dict, blocks: dict, day: str, send=None) -> list[str]:
+    """Ping Discord for each sector whose unheld run has gone on long enough.
+
+    Fires the first time a sector appears in `horizon()["sustained"]`, then at
+    most once every `SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS` calendar days for as
+    long as the run lasts. A sector that stops leading, or that the book finally
+    buys, is FORGOTTEN -- so if it comes back in three months that is a new
+    rotation and pings on its own merits instead of landing inside a stale
+    repeat window.
+
+    Mutates `hist` (the caller writes it) and returns the keys it pinged.
+
+    A ping is recorded as sent whether or not a channel was actually configured
+    -- `smart_send` returns None either way. The cost is that wiring the webhook
+    up mid-run defers that sector's first ping to the repeat window; the
+    alternative, re-firing on every scan until something answers, is the noise
+    this function exists to avoid.
+
+    The repeat window is measured in calendar days rather than sessions on
+    purpose. Sessions are what the streak counts, and re-deriving them here
+    would mean two different definitions of "how long" in one alert; days are
+    what the owner reads the interval as, and a weekend inside the window costs
+    at most one extra silent day.
+
+    Rate limiting is entirely ours: `ALERT_RATE_LIMITS["sector_run"]` is 0 so
+    the router never second-guesses it. Its limit is per EVENT TYPE, which would
+    mean the first market to fire silenced the second -- and scan.yml runs the
+    markets sequentially in one job, so that is the normal case, not the edge.
+    Ours is per market and per sector, which is strictly tighter everywhere it
+    differs.
+    """
+    if not getattr(config, "SECTOR_BREADTH_RUN_ALERT_PUSH", False):
+        return []
+    if send is None:
+        try:
+            from .broker.alert_router import smart_send as send
+        except Exception:
+            return []
+    repeat = int(getattr(config, "SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS", 7) or 0)
+    seen = _ping_memory(hist)
+    site = str(getattr(config, "SITE_URL", "") or "").rstrip("/")
+    fired: list[str] = []
+
+    for market, blk in (blocks or {}).items():
+        hz = blk.get("horizon") or {}
+        sustained = list(hz.get("sustained") or [])
+        streaks = hz.get("unheld_streaks") or {}
+        book = blk.get("book") or {}
+        # Forget everything about THIS market that is no longer running. Scoped
+        # to the market in hand because `blocks` carries only what this run
+        # recomputed -- a crypto-only weekend must not wipe the ASX memory and
+        # re-ping the whole board on Monday.
+        for key in [k for k in seen if k.startswith(market + "|")]:
+            if key.split("|", 1)[1] not in sustained:
+                seen.pop(key, None)
+
+        for sector in sustained:
+            key = f"{market}|{sector}"
+            last = (seen.get(key) or {}).get("d")
+            if last:
+                if repeat <= 0:
+                    continue                       # first ping only, ever
+                gap = _day_gap(last, day)
+                if gap is not None and gap < repeat:
+                    continue
+            row = _sector_row(blk, sector)
+            n = int(streaks.get(sector) or 0)
+            rate = row.get("rate") or 0
+            free = book.get("free")
+            slot_value = float(book.get("position_notional") or 0)
+            lines = [
+                f"{sector} has led {market.upper()} on participation for {n} "
+                f"straight sessions and the book holds NONE of it.",
+                f"Today: {row.get('ag', 0)} A+/A across {row.get('names', 0)} "
+                f"listed names = {100 * rate:.1f}%.",
+            ]
+            # Capacity is the other half of the July post-mortem and it changes
+            # what the message MEANS: room-and-not-taken is a different failure
+            # from wanted-and-couldn't, and the reader should not have to go
+            # and look up which one this is.
+            if book.get("at_cap"):
+                lines.append(
+                    f"The book is FULL at {book.get('open')}/"
+                    f"{book.get('max_open')} - it could not have taken this. "
+                    f"Nothing frees up until something closes.")
+            elif free:
+                worth = (f" (about ${free * slot_value:,.0f} at "
+                         f"${slot_value:,.0f} a position)" if slot_value else "")
+                lines.append(f"The book has {free} free slots{worth} and has "
+                             f"used none of them here.")
+            others = [s for s in sustained if s != sector]
+            if others:
+                lines.append("Also running unheld: " + ", ".join(others) + ".")
+            if site:
+                lines.append(f"{site}/sectors.html?m={market}")
+            try:
+                send(_ALERT_EVENT,
+                     f"LOOK WIDER - {market.upper()} {sector}: {n} sessions "
+                     f"leading, nothing held",
+                     "\n".join(lines))
+            except Exception as e:                 # noqa: BLE001
+                print(f"  sector alert [{market}/{sector}]: failed ({e})",
+                      flush=True)
+                continue
+            seen[key] = {"d": day, "n": n}
+            fired.append(key)
+            print(f"  sector alert: {market} {sector} ({n} sessions unheld)",
+                  flush=True)
+    return fired
+
+
 # ── the publish step ──────────────────────────────────────────────────────────
 
 def _load_positions() -> list:
@@ -583,6 +757,15 @@ def update(markets: dict, out_dir=None, positions=None, day: str | None = None) 
                "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
                "book": book, "markets": blocks,
                "series": series(hist)}
+    # Push BEFORE the history write, so the ping memory lands in the same atomic
+    # write as the rows the streak is rebuilt from. Scoped to the markets this
+    # run recomputed, never the carried-forward ones -- `blocks` also holds the
+    # previous publish's blocks for markets that did not scan, and re-pinging a
+    # stale streak would be the alarm reporting yesterday as news.
+    try:
+        notify(hist, {m: blocks[m] for m in (markets or {}) if m in blocks}, day)
+    except Exception as e:                         # noqa: BLE001
+        print(f"  sector alert: skipped ({e})", flush=True)
     _write_json(HISTORY_FILE, hist)
     _write_json(out_dir / "sector_breadth.json", payload)
     return payload

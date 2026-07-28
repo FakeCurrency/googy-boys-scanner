@@ -473,6 +473,61 @@ SECTOR_BREADTH_PUBLISH_DAYS = 180
 #    being missed in progress, which is the whole reason this module exists.
 #    July ran nineteen. Report-only -- it changes the volume, never the trades.
 SECTOR_BREADTH_RUN_ALERT = 5
+#  • RUN_ALERT_PUSH: also push that run alarm to Discord (owner's choice, same
+#    channel as the confluence pings) instead of only colouring the page. A
+#    surface you have to open to be warned by is a surface that warns you after
+#    you already looked, which in July was never. Rate-limited through
+#    journal/alert_state.json so a 19-session run pings once, not nineteen times.
+SECTOR_BREADTH_RUN_ALERT_PUSH = True
+#  • RUN_ALERT_REPEAT_DAYS: re-ping an already-alerted sector only after this
+#    many days. 0 = never repeat while the run continues.
+SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS = 7
+
+# ── REGIME / RELATIVE STRENGTH (2026-07-28, scanner/regime.py) ────────────────
+# REPORT-ONLY, same as breadth above: nothing here reaches decide(). This block
+# is the OTHER half of the July post-mortem. Breadth answers "which sector is
+# setting up today"; this answers "is the market actually as bad as the index
+# says, and who is beating it" — the two things the owner could feel but could
+# not read anywhere. Every number below is arithmetic on daily closes, so the
+# full history recomputes on each run: no state file, no backfill, correct on
+# the first execution and able to describe JUNE.
+REGIME_ENABLED = True
+#  • DAYS: published sessions per market (~6 months). Long enough that a run
+#    that started in June is visible in full; the cost is only JSON size.
+REGIME_DAYS = 126
+#  • RET_WINDOWS: (fast, slow) return lookbacks in sessions, ~1 and ~3 months.
+#    The fast one is what "consumer discretionaries ran for a month" means.
+REGIME_RET_WINDOWS = (21, 63)
+#  • HL_WINDOW: lookback for new-highs-minus-new-lows.
+REGIME_HL_WINDOW = 20
+#  • FAST_SMA: the shorter participation line. The slow one is deliberately
+#    VIVEK_SMA (200) — the engine's OWN level — so "above the average" on this
+#    page means the same thing it means in a setup.
+REGIME_FAST_SMA = 50
+#  • TOP_N: how many sectors count as leading on relative strength, and the
+#    membership the rs_streak counter tests against.
+REGIME_TOP_N = 3
+#  • BENCHMARK: the cap-weighted index per market, used ONLY to state the
+#    divergence between it and the equal-weight median name. Markets absent
+#    from this map are skipped entirely (crypto has no sectors to rank).
+#    The relative-strength maths never uses it — the benchmark for rs21/rs63 is
+#    the market's own median name, which is survivorship-consistent with the
+#    numerator and cannot fail to download.
+REGIME_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC"}
+#  • RISK_ON/RISK_OFF_ABOVE200: the two cut points of the three-way state read
+#    (BROAD / MIXED / NARROW). Coarse on purpose — a count of names above a
+#    moving average does not support a finer scale than thirds.
+REGIME_RISK_ON_ABOVE200 = 0.55
+REGIME_RISK_OFF_ABOVE200 = 0.35
+#  • DIVERGENCE_MIN: how far the median name and the index must part before the
+#    page says so. Below this they are the same story told twice.
+REGIME_DIVERGENCE_MIN = 0.02
+#  • MIN_DAY_COVERAGE: a date on which fewer than this share of the market's
+#    best-covered session has a bar is a pseudo-session (a mis-dated bar, a
+#    half day, a foreign holiday) and is dropped rather than published as a day
+#    the market vanished.
+REGIME_MIN_DAY_COVERAGE = 0.5
+
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per
@@ -660,6 +715,12 @@ ALERT_SEVERITY = {
     "daily_report":    "INFO",
     "health":          "WARNING",
     "info":            "INFO",
+    # HORIZON's sustained-run alarm (2026-07-28, scanner/sectorbreadth.notify).
+    # Its own tier because neither existing one fits: INFO is silent, and the
+    # module is REPORT-ONLY, so calling a rotation a WARNING would put it beside
+    # order rejections and circuit breakers in the same feed and at the same
+    # volume. Nothing is wrong when this fires -- something is HAPPENING.
+    "sector_run":      "NOTICE",
 }
 
 # Set False to silence all Telegram sends without touching secrets.
@@ -671,6 +732,10 @@ ALERT_CHANNELS = {
     "CRITICAL": ["telegram", "discord", "email"],
     "WARNING":  ["telegram", "discord"],
     "INFO":     [],  # log only — no push notification for routine events
+    # Discord only, by owner decision (2026-07-28) — the same private channel
+    # the confluence pings land in, so market observations stay in one place
+    # and the email/Telegram legs remain reserved for things that are broken.
+    "NOTICE":   ["discord"],
 }
 
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
@@ -686,6 +751,12 @@ ALERT_RATE_LIMITS = {
     "daily_report":    82800,    # max 1 per 23h
     "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
+    # 0 = the router never suppresses this one; sectorbreadth.notify owns the
+    # dedupe entirely (per market AND per sector, memory in the history file).
+    # A limit here would be per EVENT TYPE, so the first market to fire would
+    # silence the second — and scan.yml runs the markets sequentially inside a
+    # single job, which makes that the normal case rather than an edge one.
+    "sector_run":      0,
     "DEFAULT":         300,
 }
 

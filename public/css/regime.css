@@ -1,0 +1,167 @@
+/* REGIME — participation, divergence and relative strength (2026-07-28).
+   See public/js/regime.js. Two skins from one vocabulary: a full board
+   (.rg-panel, sectors.html) and a compact strip (.rg-strip, index.html).
+
+   Deliberately quieter than HORIZON's palette. HORIZON shouts when the book is
+   missing something it could act on today; this surface is context, and context
+   that competes with an alarm for attention makes the alarm worth less. */
+
+/* ── shared ────────────────────────────────────────────────────────────────── */
+.rg-up { color: var(--green); }
+.rg-down { color: var(--red); }
+
+/* the three-way state read */
+.rg-state, .rg-strip-tag {
+  font: 800 9.5px/1 var(--sans); letter-spacing: 0.1em; text-transform: uppercase;
+  border-radius: 999px; padding: 5px 9px; white-space: nowrap;
+  color: var(--muted); background: var(--fill-2);
+}
+.rg-broad { color: var(--green); background: var(--green-soft, var(--fill-2)); }
+.rg-mixed { color: var(--orange); background: var(--orange-soft); }
+.rg-narrow { color: var(--red); background: var(--red-soft); }
+
+/* ── full panel ────────────────────────────────────────────────────────────── */
+.rg-panel {
+  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px 22px; margin: 0 0 24px; border-left: 5px solid var(--teal, var(--blue));
+}
+.rg-panel.is-narrow { border-left-color: var(--red); }
+.rg-panel.is-broad { border-left-color: var(--green); }
+
+.rg-top { margin-bottom: 16px; }
+.rg-title { font: 800 19px/1.2 var(--sans); letter-spacing: -0.2px; color: var(--text); margin: 0 0 6px; }
+.rg-title span { font-weight: 600; font-size: 14px; color: var(--muted); letter-spacing: 0; }
+.rg-sub { font: 500 13.5px/1.55 var(--sans); color: var(--muted); margin: 0; max-width: 72ch; }
+
+/* auto-fit, not `1fr 1fr`: a market that has never scanned publishes no block,
+   and a fixed two-column grid left the whole right half of the panel blank —
+   which reads as "something failed to load" rather than "there is one market". */
+.rg-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
+@media (max-width: 900px) { .rg-cols { grid-template-columns: 1fr; } }
+.rg-col { min-width: 0; }
+.rg-col-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding-bottom: 8px; margin-bottom: 12px; border-bottom: 2px solid var(--separator);
+}
+.rg-col-head h4 { font: 800 15px/1 var(--sans); color: var(--text); margin: 0; }
+.rg-col-meta { flex: 1 1 100%; font: 500 11.5px/1.4 var(--sans); color: var(--muted-2); }
+
+/* the divergence line — the July sentence, as two numbers that disagree */
+.rg-div {
+  background: var(--fill-2); border-radius: var(--radius-sm);
+  padding: 9px 12px; margin-bottom: 12px;
+}
+.rg-div.is-wide { background: var(--orange-soft); }
+.rg-div-lbl { display: block; font: 700 12px/1.4 var(--sans); color: var(--text-2); }
+.rg-div-num { display: block; margin-top: 3px; font: 600 11.5px/1.5 var(--sans); color: var(--muted); }
+.rg-div-num b { font-family: var(--mono, var(--sans)); font-weight: 800; }
+
+/* participation meters */
+.rg-meters { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+.rg-meter-top {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font: 600 11.5px/1 var(--sans); color: var(--muted); margin-bottom: 5px;
+}
+.rg-meter-top b { font: 800 12px/1 var(--mono, var(--sans)); color: var(--text-2); }
+.rg-meter-bar { position: relative; height: 7px; border-radius: 4px; background: var(--fill); overflow: hidden; }
+.rg-meter-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 4px; background: var(--blue); }
+/* net highs-minus-lows is signed, so it grows out from the centre both ways */
+.rg-meter-mid { background: linear-gradient(90deg, var(--fill) 49.6%, var(--separator) 49.6% 50.4%, var(--fill) 50.4%); }
+.rg-meter-mid i { border-radius: 2px; }
+.rg-meter-mid i.rg-up { background: var(--green); }
+.rg-meter-mid i.rg-down { background: var(--red); }
+
+/* the relative-strength leaderboard */
+.rg-rows { display: flex; flex-direction: column; }
+.rg-row {
+  display: grid; grid-template-columns: 18px minmax(0, 1.4fr) minmax(96px, 1.5fr) 52px 58px 34px;
+  align-items: center; gap: 8px; padding: 7px 6px; border-bottom: 0.5px solid var(--border-soft);
+}
+.rg-row:last-child { border-bottom: 0; }
+.rg-row.rg-head {
+  font: 700 9.5px/1.2 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted-2); border-bottom: 1px solid var(--separator); padding-bottom: 6px;
+}
+.rg-row.is-lead { background: var(--fill-2); }
+.rg-rank { font: 800 12px/1 var(--sans); color: var(--muted); text-align: right; }
+.rg-row.is-lead .rg-rank { color: var(--teal, var(--blue)); }
+.rg-sec { min-width: 0; font: 700 12.5px/1.25 var(--sans); color: var(--text-2); }
+.rg-sec b { font-weight: inherit; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-row.is-lead .rg-sec { color: var(--text); }
+
+/* RS is a SIGNED quantity against the market median, so the bar has to have a
+   zero in the middle of it. A left-anchored bar would draw -3% and +3% the same
+   length in the same direction, which is the one thing this column exists to
+   distinguish. */
+.rg-bar {
+  position: relative; height: 16px; border-radius: 4px; overflow: hidden;
+  background: linear-gradient(90deg, var(--fill) 49.6%, var(--separator) 49.6% 50.4%, var(--fill) 50.4%);
+}
+.rg-bar i { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; opacity: 0.5; }
+.rg-bar i.rg-up { background: var(--green); }
+.rg-bar i.rg-down { background: var(--red); }
+/* The label sits at the OUTER end of the bar, never centred. Centred puts it
+   exactly on the zero line, which is where the fill starts — so "+2.7%" drew
+   with the "+2." on the track and the "7%" on the green, changing background
+   mid-number. Anchoring it to the side the bar grows toward also means the
+   digits lean the way the number does, which is free legibility. */
+.rg-bar b {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font: 700 10.5px/1 var(--mono, var(--sans));
+}
+.rg-bar b.rg-up { right: 5px; }
+.rg-bar b.rg-down { left: 5px; }
+.rg-num { font: 600 11px/1 var(--mono, var(--sans)); text-align: right; }
+.rg-coil { font: 600 11px/1 var(--mono, var(--sans)); color: var(--text-2); text-align: right; }
+.rg-coil em { font-style: normal; color: var(--muted-2); }
+/* the streak: one session on top is noise, thirty is a rotation */
+.rg-run { font: 800 10px/1 var(--sans); color: var(--muted-2); text-align: center; }
+.rg-run.is-hot { color: var(--orange); }
+
+.rg-empty { font: 500 12.5px/1.5 var(--sans); color: var(--muted); margin: 8px 0; }
+.rg-notes { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.rg-note { font: 500 12px/1.55 var(--sans); color: var(--muted); margin: 0; }
+.rg-lead-note { font-weight: 600; color: var(--text-2); }
+.rg-src { font: 500 11px/1.5 var(--sans); color: var(--muted-2); margin: 10px 0 0; }
+.rg-disclaimer {
+  font: 500 11px/1.55 var(--sans); color: var(--muted-2);
+  margin: 16px 0 0; padding-top: 12px; border-top: 0.5px solid var(--border-soft);
+}
+.rg-disclaimer b { font-weight: 700; color: var(--muted); }
+
+/* ── compact strip (index.html) ────────────────────────────────────────────── */
+.rg-strip {
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+  padding: 10px 14px; margin: 0 0 14px; border-left: 4px solid var(--teal, var(--blue));
+}
+.rg-strip.is-narrow { border-left-color: var(--red); }
+.rg-strip.is-broad { border-left-color: var(--green); }
+.rg-strip-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rg-strip-part { font: 600 11.5px/1 var(--sans); color: var(--muted); white-space: nowrap; }
+.rg-strip-part b { font: 800 12.5px/1 var(--mono, var(--sans)); color: var(--text-2); }
+.rg-strip-div {
+  font: 600 11.5px/1 var(--sans); color: var(--muted);
+  background: var(--fill-2); border-radius: 999px; padding: 6px 11px; white-space: nowrap;
+}
+.rg-strip-div b { font-family: var(--mono, var(--sans)); font-weight: 800; }
+.rg-strip-lead {
+  display: inline-flex; align-items: baseline; gap: 6px; text-decoration: none;
+  font: 600 12px/1 var(--sans); color: var(--text-2);
+  background: var(--fill-2); border-radius: 999px; padding: 6px 11px; min-width: 0;
+}
+.rg-strip-lead:hover { background: var(--fill); }
+.rg-strip-lead em { font-style: normal; font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted-2); }
+.rg-strip-lead b { font-weight: 800; color: var(--text); font-family: var(--mono, var(--sans)); }
+.rg-strip-lead i { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--orange); }
+.rg-strip-more { margin-left: auto; font: 700 11px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
+.rg-strip-more:hover { text-decoration: underline; }
+.rg-strip-note { font: 500 11.5px/1.5 var(--sans); color: var(--muted); margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .rg-row { grid-template-columns: 16px minmax(0, 1.3fr) minmax(72px, 1fr) 50px 30px; }
+  .rg-row .rg-num { display: none; }
+  .rg-row.rg-head span:nth-child(4) { display: none; }
+  .rg-panel { padding: 16px 14px; }
+  .rg-strip-div { display: none; }
+}

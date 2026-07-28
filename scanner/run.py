@@ -57,6 +57,7 @@ def main() -> None:
     # numerator) together, and it is computed after the sector tape is written
     # so it can join the index changes that fetch already pays for.
     breadth_inputs: dict[str, dict] = {}
+    regime_blocks: dict[str, dict] = {}
 
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
     for market_key in markets:
@@ -82,7 +83,7 @@ def main() -> None:
             reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
             print(f"  coverage: {len(deep_frames)}/{len(universe)} ({cov}%)  "
                   f"{cache_stats['fresh']} fresh{reused_note}"
-                  f"{'  ⚠️ LOW' if cov < 80 and len(universe) > 50 else ''}", flush=True)
+                  f"{'  !! LOW' if cov < 80 and len(universe) > 50 else ''}", flush=True)
             # Guard: nothing fresh AND nothing cached → the source is fully blocked.
             # Skip rather than clobber yesterday's good JSON.
             if not deep_frames:
@@ -112,6 +113,22 @@ def main() -> None:
                 breadth_inputs[market_key]["results"] = vk["results"]
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
+
+            # REGIME + RELATIVE STRENGTH (2026-07-28). Computed HERE, inside the
+            # market loop, because it reads `deep_frames` — five years of bars
+            # for every name, the largest object in the scan — and this is the
+            # only point at which they exist. Carrying them out to compute all
+            # markets together at the end would hold two full markets of bars
+            # alive at once to save nothing. Only the finished block travels.
+            # Report-only; a failure costs one panel, never the scan.
+            try:
+                from . import regime as _regime
+                if _regime.wanted(market_key):
+                    regime_blocks[market_key] = _regime.compute(
+                        market_key, deep_frames, universe,
+                        bench=_regime.fetch_benchmark(market_key))
+            except Exception as e:                          # noqa: BLE001
+                print(f"  regime [{market_key}]: skipped ({e})", flush=True)
 
             # Slim per-market companion (2026-07-20, perf): the journal page
             # only needs symbol -> price + grade/dir to mark positions, but was
@@ -198,6 +215,18 @@ def main() -> None:
                 print(f"    ! {note}")
     except Exception as e:
         print(f"  breadth: skipped ({e})", flush=True)
+
+    # REGIME publish. The blocks were computed per-market above; this is only
+    # the merge-and-write, so a market that did not scan keeps its last read
+    # rather than being blanked.
+    try:
+        from . import regime as _regime
+        payload = _regime.publish(regime_blocks, out_dir=args.out)
+        for market, blk in ((payload or {}).get("markets") or {}).items():
+            if market in regime_blocks:
+                _regime.report(market, blk)
+    except Exception as e:
+        print(f"  regime: skipped ({e})", flush=True)
 
     # FX honesty: the ASX book is A$ while NASDAQ/crypto are US$ — the journal
     # converts ASX P&L at this rate so combined totals stop mixing currencies

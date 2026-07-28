@@ -68,6 +68,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
   sectorbreadth.py     HORIZON — sector participation + rotation (see below).
                        REPORT-ONLY: it never touches which trades get taken.
+  regime.py            REGIME — participation, index-vs-median divergence,
+                       sector relative strength, basing counts. Also REPORT-ONLY.
   broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
                        across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
                        bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
@@ -76,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   587 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   636 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -303,6 +305,69 @@ the owner's call, not a refactor. Keep it that way.
   index.html. Both hide themselves silently if the JSON is missing, so a
   market that has never run degrades to nothing rather than to an error.
 - Constants: `SECTOR_BREADTH_*` in `scanner/config.py`.
+- **The sustained-run alarm pushes to Discord** (2026-07-28, owner decision —
+  `sectorbreadth.notify()`). A dashboard only works on the days you open it, and
+  the raw ingredients of the July rotation were on the page for four weeks while
+  the miss happened anyway. `notify()` fires the first time a sector enters
+  `horizon()["sustained"]`, then at most once every
+  `SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS` (7) for as long as the run lasts.
+  - **Its own `NOTICE` severity tier**, routed to `["discord"]` only. INFO is
+    silent and WARNING would file a market observation beside kill switches and
+    order failures at the same volume. Nothing is *wrong* when this fires.
+  - **The ping memory lives in `data/sector_history.json`** under
+    `hist["alerts"]["sector_run"]`, NOT in `journal/alert_state.json`. The
+    router's own state file is not in scan.yml's staging list, so it dies with
+    the Actions container — every scan would read "never pinged" and re-fire,
+    which for a run that lasts weeks means a ping every scan for a fortnight.
+    The history file is committed by the same step that commits the streak the
+    alert is derived from, so the memory and the number can never disagree about
+    what day it is.
+  - **`ALERT_RATE_LIMITS["sector_run"] = 0` on purpose.** The router's limit is
+    per EVENT TYPE and scan.yml runs markets sequentially in one job, so ASX
+    firing would silently swallow NASDAQ. `notify()` owns the dedupe per market
+    AND per sector, which is strictly tighter everywhere it differs.
+  - A sector that stops leading, or that the book finally buys, is FORGOTTEN —
+    scoped to the market in hand, so a crypto-only weekend cannot wipe ASX
+    memory. Report-only: it changes what gets SAID, never what gets taken.
+
+---
+
+## REGIME — is the index telling the truth? (2026-07-28)
+
+The owner's framing: *"this scanner and this scanner alone is INSUFFICIENT."*
+HORIZON answers "which sector is running"; REGIME answers the question that sits
+underneath it — whether the index level is representative of the names in it,
+and which sectors are outperforming rather than merely numerous. Built to say,
+in one line, the thing the scanner could not previously express: *the index is up
+while the median name is down.*
+
+- **`scanner/regime.py`** — `compute(market, frames, universe, bench=...)` per
+  market, `publish()` merges and writes `public/data/regime.json`, `report()`
+  prints. Computed INSIDE `run.py`'s market loop because it reads `deep_frames`
+  (five years of bars for every name, the largest object in the scan) and that is
+  the only point at which they exist; only the finished block travels out.
+- **Four things, one payload.** (1) Participation — % above the 200-day and the
+  50-day, net highs-minus-lows. (2) Divergence — benchmark return vs the MEDIAN
+  name's return over the same window; `REGIME_DIVERGENCE_MIN` (2%) is where the
+  gap is called wide and the page says the index is being carried by its biggest
+  names. (3) Relative strength — each sector's median return against the market
+  median, with a top-3 streak so a one-day leader reads differently from a
+  thirty-session one. (4) Basing/coiling counts — names compressing but not yet
+  triggering, which is the pre-setup population a grade filter cannot show.
+- **Benchmarks are per market** (`REGIME_BENCHMARK`: ASX `^AXJO`, NASDAQ
+  `^IXIC`). Crypto has no index worth the name here and is not computed.
+- **REPORT-ONLY, same as HORIZON.** Nothing in `broker/` imports it. Whether a
+  narrow tape should change position sizing or the ranking is the owner's call.
+- **Front end:** `public/js/regime.js` + `public/css/regime.css`, two skins from
+  one vocabulary — `#regime-panel` on sectors.html (under the HORIZON board) and
+  `#regime-strip` on index.html. Both hide silently when the JSON is absent, so
+  the surface is invisible until the first scan writes it.
+- `public/data/regime.json` is in scan.yml's SHARED staging list (merged
+  per-market like sector_breadth.json). It has no history file — it recomputes
+  six months from bars every run, so there is nothing to lose.
+- Constants: `REGIME_*` in `scanner/config.py` (note: the older
+  `REGIME_ADX_THRESHOLD` / `REGIME_RANGING_*` trio belongs to the bot's
+  trend/range filter and is unrelated).
 
 ---
 
@@ -362,7 +427,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (587 tests)
+python -m pytest -q                      # full gate (636 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan
