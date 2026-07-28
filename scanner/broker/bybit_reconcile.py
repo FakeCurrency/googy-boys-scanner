@@ -33,8 +33,66 @@ def _positions_by_symbol(positions: list[dict]) -> dict[str, dict]:
     return out
 
 
-def _find_closed_pnl(symbol: str, direction: str, closed_records: list[dict]) -> dict | None:
-    """Find the most recent closed-PnL record matching symbol + direction."""
+def _rec_ms(rec: dict) -> float | None:
+    """When Bybit says this closed-PnL record happened, in epoch ms.
+
+    V5 returns `updatedTime` / `createdTime` as STRINGS of epoch milliseconds.
+    Returns None when neither is present or parseable, which the caller treats
+    as "cannot date this record" rather than as "old".
+    """
+    for key in ("updatedTime", "createdTime"):
+        raw = rec.get(key)
+        if raw in (None, ""):
+            continue
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _pos_open_ms(pos: dict) -> float | None:
+    """When this journal position was created, in epoch ms (None if unknown).
+
+    `opened_ts` is the SCAN's generated_at, i.e. strictly before the order was
+    placed, so it is the correct conservative floor: no exit of this position
+    can predate the scan that decided to open it. A naive timestamp is read as
+    UTC, matching what scan.py writes.
+    """
+    raw = pos.get("opened_ts")
+    if not raw:
+        return None
+    try:
+        ts = dt.datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=dt.timezone.utc)
+    return ts.timestamp() * 1000.0
+
+
+def _find_closed_pnl(symbol: str, direction: str, closed_records: list[dict],
+                     not_before_ms: float | None = None) -> dict | None:
+    """Most recent closed-PnL record matching symbol + direction + TIME.
+
+    THE TIME FILTER IS NOT A REFINEMENT (2026-07-28, TOP100 #20). The match used
+    to be symbol + side and nothing else, against the last 50 closed-PnL records
+    on the whole account. Re-enter a symbol you have traded before and the
+    position vanishing from the live list resolves against the PREVIOUS trade's
+    record: the journal books an exit that already happened, at the old trade's
+    P&L, with the old trade's exit price deciding stop-vs-target — while the
+    real position is still open at Bybit. It then reappears on the next
+    reconcile as an ORPHAN, because the journal has just closed the row that
+    claimed it. One bad match writes a fabricated trade into the record AND
+    strands live exposure that no guard is watching. BTC and ETH are re-entered
+    constantly, so this is the common case rather than the exotic one.
+
+    `not_before_ms` is the position's own creation time; records older than that
+    cannot be its exit, minus BYBIT_RECONCILE_SKEW_MIN of tolerance for clock
+    skew between the runner and the exchange. Records Bybit did not date, and
+    positions with no `opened_ts` (pre-2026 rows), fall back to the old
+    behaviour rather than silently refusing to close anything.
+    """
     wanted_side = "Buy" if direction == "long" else "Sell"
     matches = [
         r for r in closed_records
@@ -42,8 +100,71 @@ def _find_closed_pnl(symbol: str, direction: str, closed_records: list[dict]) ->
     ]
     if not matches:
         return None
+
+    if not_before_ms is not None:
+        from scanner import config
+        skew  = float(getattr(config, "BYBIT_RECONCILE_SKEW_MIN", 5.0)) * 60_000.0
+        floor = not_before_ms - skew
+        fresh = []
+        for r in matches:
+            ms = _rec_ms(r)
+            if ms is None or ms >= floor:
+                fresh.append(r)
+            else:
+                log.info("reconcile: ignoring closed-PnL record for %s dated "
+                         "before the position was opened (%.0f < %.0f)",
+                         symbol, ms, floor)
+        if not fresh:
+            return None
+        matches = fresh
+
     # Bybit returns records newest-first
     return matches[0]
+
+
+def _filled_units(pos: dict, size) -> float:
+    """The size the BROKER says is on, falling back to the size we asked for.
+
+    A partial fill (thin book, a limit that only half-worked) leaves the journal
+    holding the size that was REQUESTED, and every R in the system is then
+    divided by risk computed from a quantity that was never on. Bybit's `size`
+    is unsigned — direction lives on `side` — so it is used as an absolute.
+    """
+    try:
+        n = abs(float(size))
+    except (TypeError, ValueError):
+        n = 0.0
+    if n > 0:
+        return n
+    try:
+        return abs(float(pos.get("units") or 0)) or 1.0
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _risk_usd(pos: dict, units: float, fill_price: float | None = None) -> float:
+    """Dollars actually at risk: (real fill - stop) x real size.
+
+    ONE BASIS FOR OPEN AND CLOSED R (2026-07-28, TOP100 #19). The open branch
+    measured risk from the INTENDED entry and the closed branch from the ACTUAL
+    fill, so `current_r` stepped at the moment of close even when not a single
+    price had moved — the same trade, two different denominators, and the jump
+    read as a real move on the journal. `risk_per_trade` is the sizing INPUT and
+    is only used when there is no usable fill/stop pair to measure from, because
+    it describes the risk that was planned rather than the risk that was taken.
+    """
+    try:
+        stop = float(pos["stop"])
+        px   = float(fill_price if fill_price else (pos.get("fill_price") or pos["entry"]))
+    except (TypeError, ValueError, KeyError):
+        px = stop = 0.0
+    risk = abs(px - stop) * units
+    if risk > 0:
+        return risk
+    try:
+        return float(pos.get("risk_per_trade") or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _exit_reason(rec: dict, pos: dict) -> str:
@@ -165,11 +286,22 @@ def reconcile_journal(j: dict) -> dict:
             avg_price  = float(live.get("avgPrice", 0))   # actual average fill price
             mark_price = float(live.get("markPrice", 0))  # current mark price
 
-            entry    = float(pos.get("entry", 0))
             stop_p   = float(pos["stop"])
             target_p = float(pos["target"])
-            risk_usd = float(pos.get("risk_per_trade") or
-                             abs(entry - stop_p) * float(pos.get("units", 1)))
+
+            # THE SIZE THE BROKER SAYS IS ON, NOT THE ONE WE ASKED FOR
+            # (2026-07-28, TOP100 #19). A partial fill used to leave the journal
+            # holding the REQUESTED quantity for the life of the trade, and every
+            # R in the system was then divided by risk computed from a size that
+            # was never on. `risk_usd` is measured on the same basis as the closed
+            # branch below — actual fill against the stop, times the real size —
+            # because the two used to disagree: open measured from the INTENDED
+            # entry, closed from the ACTUAL fill, so `current_r` stepped at the
+            # moment of close without a single price having moved.
+            requested  = pos.get("units")
+            units      = _filled_units(pos, live.get("size"))
+            fill_price = avg_price if avg_price > 0 else pos.get("fill_price")
+            risk_usd   = _risk_usd(pos, units, avg_price if avg_price > 0 else None)
 
             stop_dist_pct   = (abs(mark_price - stop_p) / mark_price * 100
                                if mark_price > 0 else 0.0)
@@ -177,22 +309,40 @@ def reconcile_journal(j: dict) -> dict:
                                if mark_price > 0 else 0.0)
             current_r       = round(unreal / risk_usd, 2) if risk_usd > 0 else 0.0
 
-            fill_price = avg_price if avg_price > 0 else pos.get("fill_price")
-
-            survivors.append({
+            row = {
                 **pos,
                 "unreal_pnl":       round(unreal, 2),
                 "broker_status":    "open",
+                "units":            units,
                 "fill_price":       (round(fill_price, 8) if fill_price else pos.get("fill_price")),
                 "mark_price":       (round(mark_price, 6) if mark_price else None),
                 "current_r":        current_r,
                 "stop_dist_pct":    round(stop_dist_pct, 2),
                 "target_dist_pct":  round(target_dist_pct, 2),
-            })
+            }
+
+            # A partial fill is worth SAYING, not just silently correcting: the
+            # size we asked for is recorded once, on the reconcile that first
+            # sees the divergence, so the correction leaves an audit trail
+            # instead of overwriting what the sizer decided.
+            try:
+                diverged = abs(float(requested or 0) - units) > 1e-9 * max(1.0, units)
+            except (TypeError, ValueError):
+                diverged = False
+            if diverged:
+                if "units_requested" not in pos:
+                    row["units_requested"] = requested
+                log.warning("%s is open at Bybit for %s units, journal said %s "
+                            "- R is now measured against the size actually on",
+                            pos["symbol"], units, requested)
+
+            survivors.append(row)
             continue
 
-        # Position is gone from Bybit — find out why via closed_pnl
-        closed_rec = _find_closed_pnl(bybit_sym, direction, closed_pnl_records)
+        # Position is gone from Bybit — find out why via closed_pnl. The time
+        # floor is load-bearing, not a refinement: see _find_closed_pnl.
+        closed_rec = _find_closed_pnl(bybit_sym, direction, closed_pnl_records,
+                                      not_before_ms=_pos_open_ms(pos))
 
         if closed_rec:
             closed_pnl = float(closed_rec.get("closedPnl", 0))
@@ -202,11 +352,12 @@ def reconcile_journal(j: dict) -> dict:
             # (a taker round-trip on a ~$5k perp position is ~$5.50, not $40).
             pnl    = round(closed_pnl, 2)
 
+            # Same basis as the open branch above (TOP100 #19): dollars actually
+            # at risk = (real fill - stop) x the size the broker last confirmed.
             fill_price = float(pos.get("fill_price") or pos["entry"])
-            stop       = float(pos["stop"])
-            risk       = abs(fill_price - stop)
-            r_val      = (round(closed_pnl / (risk * float(pos.get("units", 1))), 2)
-                          if risk > 0 else 0.0)
+            units      = _filled_units(pos, None)
+            risk_usd   = _risk_usd(pos, units)
+            r_val      = round(closed_pnl / risk_usd, 2) if risk_usd > 0 else 0.0
 
             # Detect fill-price divergence from intended entry
             intended = float(pos["entry"])

@@ -7,6 +7,7 @@ import pathlib
 import pickle
 import random
 import time
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -57,12 +58,46 @@ def save_frame_cache(market_key: str, frames: dict[str, pd.DataFrame]) -> None:
         log.warning("frame cache: failed to save %s (%s)", p, e)
 
 
-def _frame_age_days(df: pd.DataFrame) -> int:
-    """How many days old the frame's most recent bar is (0 = today)."""
+def _frame_age_days(df: pd.DataFrame, tz: str | None = None) -> int:
+    """How many days old the frame's most recent bar is (0 = today).
+
+    MEASURED IN THE MARKET'S OWN CALENDAR when `tz` is given (2026-07-28,
+    TOP100 #23). "Today" is a property of the exchange, not of whatever machine
+    happens to be running the scan, and the bars are dated in exchange-local
+    time — so comparing them against the runner's date compares two different
+    calendars and is wrong by up to a day in BOTH directions:
+
+      * ASX (UTC+10/+11) — a scan at 23:00 UTC Tuesday is Wednesday in Sydney.
+        Tuesday's bar reads 0 days old against the UTC date and 1 against the
+        ASX date. This is the dangerous direction: it UNDERSTATES staleness, and
+        `vivek_bot`'s `stale_data` gate (VIVEK_BOT_MAX_DATA_AGE_DAYS) is what
+        stops the bot opening a position on a cache-reused frame describing a
+        market that has since moved.
+      * NASDAQ (UTC-4/-5) — the mirror image: a scan at 01:00 UTC reads the
+        session that closed four hours ago as a day old and can refuse a
+        perfectly fresh frame.
+
+    `tz` defaults to None, which keeps the old naive comparison, because the
+    fallback has to be something and a wrong timezone would be worse than none.
+    Every caller in the scan path passes the market's own zone; `scan.py`
+    already had `ZoneInfo(market.timezone)` in hand one line away.
+    """
+    # Resolve the zone SEPARATELY from the arithmetic. Folding it into the block
+    # below would make an unknown zone return 0 — i.e. "perfectly fresh" — which
+    # is the one answer a freshness check must never give by accident.
+    today = None
+    if tz:
+        try:
+            today = dt.datetime.now(ZoneInfo(tz)).date()
+        except Exception as e:                                    # noqa: BLE001
+            log.warning("frame age: unusable timezone %r (%s) - falling back to "
+                        "the runner's own date, which can be a day out", tz, e)
+    if today is None:
+        today = dt.datetime.now().date()
     try:
         last = df.index[-1]
         last = last.to_pydatetime() if hasattr(last, "to_pydatetime") else last
-        return max(0, (dt.datetime.now().date() - last.date()).days)
+        return max(0, (today - last.date()).days)
     except Exception:
         return 0
 
@@ -79,18 +114,43 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     merged = dict(fresh)
     reused = 0
     wanted = set(tickers)
-    for t in wanted:
-        if t not in merged and t in cache:
-            merged[t] = cache[t]
-            reused += 1
+    # A cached frame is only DATA for so long (TOP100 #24). Past the ceiling it
+    # is a fossil, and a fossil's last close is published as a live mark and used
+    # to mark held positions and test their stops. See FRAME_CACHE_MAX_AGE_DAYS.
+    max_age = int(getattr(config, "FRAME_CACHE_MAX_AGE_DAYS", 0) or 0)
+    mkt = config.MARKETS.get(market_key) if hasattr(config, "MARKETS") else None
+    tz = getattr(mkt, "timezone", None)
+    fossils: list[str] = []
+    for t in sorted(wanted):
+        if t in merged or t not in cache:
+            continue
+        if max_age and _frame_age_days(cache[t], tz) > max_age:
+            fossils.append(t)
+            continue
+        merged[t] = cache[t]
+        reused += 1
     # Persist only current-universe tickers so the cache doesn't accumulate
     # delisted names forever; freshly downloaded frames overwrite stale ones.
+    # A fossil is NOT re-saved: it is already excluded from `merged`, so a run
+    # with anything at all to save is also the run that drops it from disk. Note
+    # `save_frame_cache` refuses to write an EMPTY dict — so a run in which
+    # Yahoo returned nothing leaves the fossil on disk rather than wiping a
+    # cache that will be useful the moment Yahoo comes back. That guard wins on
+    # purpose: the fossil is refused at read time on every later run regardless,
+    # so nothing reaches the scanner off it and the only cost is disk.
     save_frame_cache(market_key, {t: df for t, df in merged.items() if t in wanted})
     stats = {"fresh": len(fresh), "reused": reused, "merged": len(merged),
-             "universe": len(tickers)}
+             "universe": len(tickers), "stale_dropped": len(fossils)}
     if reused:
         log.info("frame cache: reused %d cached tickers Yahoo dropped (now %d/%d)",
                  reused, len(merged), len(tickers))
+    if fossils:
+        # WARNING, not info: these names have silently left the scan. Named,
+        # because "12 dropped" is not something anyone can act on.
+        log.warning("frame cache [%s]: %d cached tickers are older than %dd and "
+                    "were NOT reused - they leave this scan rather than be priced "
+                    "off stale bars: %s", market_key, len(fossils), max_age,
+                    ", ".join(fossils[:12]) + (" ..." if len(fossils) > 12 else ""))
     return merged, stats
 
 # The full ASX universe has many thin/suspended names; silence yfinance's noisy

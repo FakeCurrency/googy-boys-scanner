@@ -76,6 +76,11 @@ UNASSIGNED_FILE = BOOK_DIR / "vivek_bot_book.unassigned.json"
 BOOK_VERSION = 2                   # v2 = per-market canonical files
 TIMEFRAMES = ("1D", "1W")          # server-side intraday timeframes (4H is browser-only)
 MAX_CLOSED = 4000                  # per MARKET file now (was: whole book)
+# How many daily reference marks to keep per position (vivek_guard windows).
+# The widest window the guard measures is the trailing SEVEN CALENDAR days, so
+# 9 stored sessions covers it on crypto (7 sessions a week) with slack, and
+# covers it nearly twice over on ASX/NASDAQ (5 a week ~= 13 calendar days).
+_DAY_MARK_KEEP = 9
 
 
 def _market_book_file(market: str) -> pathlib.Path:
@@ -369,7 +374,118 @@ def _save_market_book(market: str, mbook: dict) -> None:
     _write_combined()
 
 
-def _mark_sanity(pos: dict, price: float, market: str) -> float | None:
+def _summary_of(book: dict, day: str) -> dict:
+    """Book-level snapshot for the UI/header: open count + live unrealised P&L.
+
+    ONE WRITER (2026-07-28, TOP100 #21). `run_market` built this dict inline and
+    every other path that mutated the book left the previous run's copy in place,
+    so the two could not be kept in step by inspection.
+    """
+    open_ = book.get("open") or []
+    return {
+        "open": len(open_),
+        "unreal_usd": round(sum(p.get("unreal_usd", 0.0) or 0.0 for p in open_), 2),
+        "updated_day": day,
+    }
+
+
+def _book_mark(pos: dict) -> float | None:
+    """The last price this position was accepted at, or None if it has none."""
+    try:
+        px = float(pos.get("last_mark") or 0.0)
+    except (TypeError, ValueError):
+        return None
+    return px if px > 0 else None
+
+
+def _restamp(book: dict, market: str, day: str) -> None:
+    """Bring `summary` and `guard` back in step with the book about to be saved.
+
+    WHY THIS EXISTS (2026-07-28, TOP100 #21). `close_bot_position` moved a row
+    from `open` to `closed`, realised its R, and persisted — while `summary` still
+    counted the closed position as open and reported the P&L of a book that no
+    longer existed, and `guard` still described a session whose realised total had
+    just changed. The window was meant to be brief (the next scan recomputes both
+    from scratch) but nothing guarantees a next scan: close the last position of
+    the day on a Friday and the book carries a summary contradicting its own rows
+    all weekend, which is what the dashboard, the health check and any human
+    reading the file actually see.
+
+    NOT a trade change, and the distinction matters. `run_market` recomputes the
+    guard itself before `decide()` is ever called, so no entry decision has ever
+    been made against the stale copy and none is made differently now. What
+    changes is only what the SAVED book says about itself.
+
+    Priced off each position's own `last_mark`, the same fallback `kill_switch`
+    uses between scans: there is no quote feed on the manual-close path, and
+    handing the guard a `price_of` that returns None for everything would mark the
+    whole book unpriced and manufacture an `unmeasured` fail-closed breach out of
+    a routine close. `notified` is carried forward verbatim so the recompute
+    cannot make the next scan re-announce a breach it has already announced.
+    """
+    book["summary"] = _summary_of(book, day)
+
+    prev = ((book.get("guard") or {}).get(market) or {})
+    try:
+        equity = float(getattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
+        marks  = {str(p.get("symbol") or "").upper(): _book_mark(p)
+                  for p in book.get("open") or []}
+        guard  = vivek_guard.check(book, market, day, equity,
+                                   lambda s: marks.get(str(s or "").upper()))
+    except Exception as e:                                 # noqa: BLE001
+        # A stale guard is worse than a fresh one, but a book that failed to save
+        # is worse than both. Never let the restamp be the reason a close is lost.
+        log.warning("could not restamp the %s guard after a close: %s", market, e)
+        return
+    guard["notified"] = prev.get("notified") or ""
+    book.setdefault("guard", {})[market] = guard
+
+
+def _stamp_day_ref(pos: dict, day: str, price: float | None) -> None:
+    """Record the mark this position CARRIED INTO `day` (vivek_guard reference).
+
+    WHY (2026-07-28, TOP100 #13). A daily loss guard has to measure a day. To
+    do that it needs to know what each open position was worth when the day
+    began — otherwise the only reference it has is the ENTRY price, and it
+    charges a position's whole life to every session until it closes. So the
+    runner leaves a breadcrumb: `day_marks[day]` = the price the position was
+    last marked at BEFORE this day's first run touched it.
+
+    THE ORDERING IS LOAD-BEARING — this must be called BEFORE `_mark_sanity`,
+    which overwrites `last_mark` with today's observation. The reference has to
+    be the PREVIOUS run's mark, so that an overnight gap is charged to the
+    session it gapped INTO. Stamp it after the mark and the gap lands in no
+    session at all: it would sit between the two references and escape the
+    daily guard entirely, which is precisely the move the guard exists to catch.
+
+    Written once per day and never overwritten (crypto runs 48 scans a day), on
+    priced AND unpriced runs alike — a position nobody could price still
+    carried a value into the session, and `vivek_guard` fails closed against
+    exactly those. Falls back to the observed price only when there is no prior
+    mark at all (a book row that has never been through a stamping run).
+    """
+    if not day:
+        return
+    try:
+        ref = float(pos.get("last_mark") or 0.0)
+    except (TypeError, ValueError):
+        ref = 0.0
+    if ref != ref or ref <= 0:                       # missing, NaN or nonsense
+        ref = float(price) if price is not None else 0.0
+    if ref <= 0:
+        return
+    marks = pos.get("day_marks")
+    if not isinstance(marks, dict):
+        marks = {}
+    marks.setdefault(str(day), round(ref, 8))
+    if len(marks) > _DAY_MARK_KEEP:
+        for stale in sorted(marks)[:-_DAY_MARK_KEEP]:
+            marks.pop(stale, None)
+    pos["day_marks"] = marks
+
+
+def _mark_sanity(pos: dict, price: float, market: str,
+                 session_open: bool = True) -> float | None:
     """Gate an observed price before it may manage `pos`. Returns the price to
     use, or None to SKIP managing this run (freeze, like an unpriced run).
 
@@ -389,6 +505,27 @@ def _mark_sanity(pos: dict, price: float, market: str) -> float | None:
     Seeding: the first guarded observation of a position (no last_mark yet)
     is accepted unconditionally — legacy runners far from entry must not
     false-positive on rollout.
+
+    `session_open=False` FREEZES BUT DOES NOT SPEND (2026-07-28, TOP100 #18).
+    The accept-run budget is a promise that a real crash is delayed "a couple of
+    runs, never ignored" — and a run is only worth spending if it could have
+    acted. Managing is gated on `is_open` at the call site, so a closed-market
+    run never fills a stop no matter what this returns. Left counting, the three
+    runs of grace were consumed by scans that could not have used them: scan.yml
+    walks all three markets in every window, so while ASX is in session NASDAQ
+    gets scanned CLOSED. A split on a NASDAQ name overnight was therefore
+    auto-accepted after three ASX-window scans, `last_mark` was rebased to the
+    post-split price, and the guard passed the very first in-session tick — into
+    a stop still stored in the pre-split basis, which books a fake catastrophic
+    exit into the one and only track record. That is precisely the sequence this
+    function exists to prevent, arriving through its own escape hatch.
+
+    A closed-market suspect price still freezes (so `unreal_r`/`unreal_usd` are
+    not stamped from a bad print, and the loss guard reads no lie) and still
+    alerts ONCE on the transition into suspect, because a split showing up
+    before the open is worth knowing about before the open. It just does not
+    advance the counter, so the position enters its next session with the full
+    budget it was promised.
     """
     limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(market, 0.0)
     ref = pos.get("last_mark") or 0.0
@@ -400,7 +537,37 @@ def _mark_sanity(pos: dict, price: float, market: str) -> float | None:
         pos["last_mark"] = round(price, 8)
         pos.pop("suspect_price_runs", None)
         pos.pop("suspect_price", None)
+        pos.pop("suspect_closed", None)
         return price
+
+    if not session_open:
+        # Freeze without spending the budget. `suspect_closed` is the dedupe for
+        # the announcement, not a counter — there is nothing to count, because
+        # every one of these runs is worth the same zero.
+        first = not pos.get("suspect_closed")
+        pos["suspect_price"]  = round(price, 8)
+        pos["suspect_closed"] = True
+        log.warning("vivek_run: SUSPECT price for %s [%s] while the market is "
+                    "CLOSED: %.6g is %+.0f%% vs last mark %.6g (limit %.0f%%) - "
+                    "frozen, accept-run budget NOT spent",
+                    pos.get("symbol"), market, price, move * 100, ref, limit * 100)
+        if first:
+            try:
+                from .alert_dispatch import send as _alert
+                _alert("anomaly",
+                       f"SUSPECT price on {pos.get('symbol')} [{market}] - "
+                       f"appeared while the market was closed",
+                       f"Observed {price:.6g} vs last mark {ref:.6g} "
+                       f"({move * 100:+.0f}%; limit {limit * 100:.0f}%). Likely a "
+                       f"split/bad print. Marking is frozen and the position will "
+                       f"start its next session with the full "
+                       f"{int(getattr(config, 'VIVEK_MARK_SANITY_ACCEPT_RUNS', 3) or 3)}"
+                       f"-run challenge budget - check the stop basis before then.")
+            except Exception as e:
+                log.warning("could not send suspect-price alert: %s", e)
+        return None
+
+    pos.pop("suspect_closed", None)
     n = int(pos.get("suspect_price_runs") or 0) + 1
     pos["suspect_price_runs"] = n
     pos["suspect_price"] = round(price, 8)
@@ -686,6 +853,10 @@ def close_bot_position(symbol: str, market: str, price: float,
 
     book["open"] = [p for p in book["open"] if p is not match]
     book["closed"].append(match)
+    # The book's own description of itself has to change with it (TOP100 #21).
+    # `_close_time_stop` needs no equivalent: it only ever runs inside
+    # `run_market`, which recomputes both further down the same call.
+    _restamp(book, market, day)
     _save_market_book(market, book)
     log.info("close_bot_position: CLOSED %s %s [%s] @ %g -> %+.2fR (%s)",
              sym, match.get("direction"), market, price,
@@ -843,11 +1014,17 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                             market, pos["symbol"], pos["unpriced_runs"])
         else:
             pos.pop("unpriced_runs", None)
+        # Loss-guard day reference (2026-07-28, TOP100 #13) — BEFORE the sanity
+        # guard, which overwrites last_mark. See _stamp_day_ref: the reference
+        # must be the PREVIOUS run's mark or an overnight gap escapes the guard.
+        _stamp_day_ref(pos, day, price)
         # Mark-sanity guard (2026-07-21, Phase 6 P1): an impossible one-interval
         # move (split / bad print) must not book fake exits into the track
         # record. None -> skip managing this run, exactly like unpriced.
+        # `session_open` is what stops a closed-market scan burning the 3-run
+        # challenge budget on a run that could never have managed anything.
         if price is not None:
-            price = _mark_sanity(pos, price, market)
+            price = _mark_sanity(pos, price, market, session_open=is_open)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
@@ -883,8 +1060,40 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     book.setdefault("guard", {})[market] = guard
     if guard["breached"]:
         kind = guard.get("breach_kind") or "daily"
-        hit_usd = guard["session_usd"] if kind == "daily" else guard.get("week_usd", 0.0)
-        hit_lim = guard["limit_usd"] if kind == "daily" else guard.get("week_limit_usd", 0.0)
+        blind = list(guard.get("unpriced") or [])
+        if kind == "unmeasured":
+            # TOP100 #15. Nothing has breached on what we can SEE; the halt is
+            # because the part we could NOT see is big enough to carry a window
+            # over on its own stops. The message has to say that in the subject,
+            # not the body: "you are down $X" and "I cannot tell what you are
+            # down" call for completely different responses from him, and the
+            # second one is fixed by a price feed, not by closing anything.
+            hit_usd = guard.get("worst_session_usd", 0.0)
+            hit_lim = guard["limit_usd"]
+            subject = (f"VIVEK loss guard [{market}] — UNMEASURED, halting on the "
+                       f"worst case (${hit_usd:.2f})")
+            body = (
+                f"{len(blind)} open position(s) could not be priced this run, so "
+                f"the loss guard cannot rule out a breach and has failed CLOSED. "
+                f"Unpriced: {', '.join(blind) or '?'}.\n"
+                f"Measured P&L today ${guard['session_usd']:.2f} vs limit "
+                f"-${hit_lim:.2f}; worst case if every unpriced name gapped to "
+                f"its own stop ${hit_usd:.2f} today / "
+                f"${guard.get('worst_week_usd', 0.0):.2f} this week (weekly limit "
+                f"-${guard.get('week_limit_usd', 0.0):.2f}).\n"
+                f"New entries are halted for {day}. Open positions are still "
+                f"managed — but a position with no price cannot be stopped out, "
+                f"so check these names yourself. "
+                f"{'DRY RUN.' if dry_run else 'Paper book.'}")
+        else:
+            hit_usd = guard["session_usd"] if kind == "daily" else guard.get("week_usd", 0.0)
+            hit_lim = guard["limit_usd"] if kind == "daily" else guard.get("week_limit_usd", 0.0)
+            subject = f"VIVEK {kind}-loss guard [{market}] — P&L ${hit_usd:.2f}"
+            body = (f"Limit -${hit_lim:.2f}. New entries halted for {day}. "
+                    f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
+            if blind:
+                body += (f" NOTE: {len(blind)} position(s) unpriced this run "
+                         f"({', '.join(blind)}) — the real number may be worse.")
         log.warning("vivek_run [%s]: %s-LOSS GUARD — P&L $%.2f <= -$%.2f "
                     "— halting new entries for %s",
                     market, kind.upper(), hit_usd, hit_lim, day)
@@ -909,10 +1118,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         else:
             try:
                 from .alert_router import smart_send as _smart
-                _smart("vivek_guard",
-                       f"VIVEK {kind}-loss guard [{market}] — P&L ${hit_usd:.2f}",
-                       f"Limit -${hit_lim:.2f}. New entries halted for {day}. "
-                       f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
+                _smart("vivek_guard", subject, body)
                 guard["notified"] = _stamp
             except Exception as e:
                 log.warning("could not send guard alert: %s", e)
@@ -1013,7 +1219,13 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # ceiling of $150,000 plus whatever this market already held. Latent while
     # every position is $5,000 and the 30-slot cap binds first at exactly
     # $150,000, but it is a risk cap reading a number it believes is complete.
-    open_book = [{"symbol": p["symbol"], "direction": p["direction"],
+    # `direction` is READ, not required (2026-07-28, TOP100 #22). It used to be
+    # `p["direction"]`, so one row missing the key raised KeyError here and took
+    # the WHOLE market run with it — including the mark refresh and the stop
+    # checks on every other position, which is a worse failure than the caps
+    # miscounting. decide() classifies an unreadable direction as neither side,
+    # counts the slot it is really holding, and says so loudly.
+    open_book = [{"symbol": p["symbol"], "direction": p.get("direction"),
                   "sector": p.get("sector", ""),
                   "notional": p.get("notional", 0)}
                  for p in book["open"] if p.get("market") == market]
@@ -1073,11 +1285,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                      if p.get("market") == market and p.get("direction") == "short")
 
     # Book-level snapshot for the UI/header: total open + live unrealised P&L.
-    book["summary"] = {
-        "open": len(book["open"]),
-        "unreal_usd": round(sum(p.get("unreal_usd", 0.0) or 0.0 for p in book["open"]), 2),
-        "updated_day": day,
-    }
+    book["summary"] = _summary_of(book, day)
 
     if dry_run:
         log.info("vivek_run [%s]: DRY-RUN · %s · would add %d, close %d "

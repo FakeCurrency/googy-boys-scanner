@@ -48,6 +48,30 @@
   // "market:SYMBOL" → last scan price. The scan refreshes this every run, so it's
   // the reliable "Now" source for manual trades (no flaky live-quote fetch).
   const scanPrice = new Map();
+  // "market:SYMBOL" → how many sessions old that price is. SPARSE, mirroring the
+  // scan's own `price_age`: a key is present ONLY when the mark is older than
+  // today, so absent means fresh (TOP100 #24).
+  //
+  // Why this exists: a scan back-fills any ticker Yahoo dropped from the
+  // last-good frame cache, and that cached close is published into `prices`
+  // looking exactly like a live one. Every open position on this page is marked
+  // off that map — so a name Yahoo has not returned in a week was drawing a
+  // week-old close as its current price, computing an unrealised R off it, and
+  // showing nothing at all to say so. The number is not wrong so much as it is
+  // not what it claims to be, and that is the failure worth surfacing.
+  const scanAge = new Map();
+  const ageOf = (key) => scanAge.get(key) || 0;
+  const staleWord = (d) => `${d} session${d === 1 ? "" : "s"}`;
+  // Applied to a rendered "Now" cell. Both branches always run: a cell that has
+  // gone FRESH again must lose the badge, or the badge decays into decoration.
+  function markStale(cell, days) {
+    if (!cell) return;
+    cell.classList.toggle("jr-stale", days > 0);
+    cell.title = days > 0
+      ? `Priced off a ${staleWord(days)}-old close — this name was missing from the`
+        + ` latest scan and is being filled from the last-good cache.`
+      : "";
+  }
 
   // ── VIVEK sizing + cost model (live source: data/bot_rules.json) ───────────
   // ONE book of 30 slots across all three markets, $5,000 a position, $150,000
@@ -505,8 +529,18 @@
       const now = (t.unreal_r != null && risk > 0)
         ? (isLong ? t.entry + t.unreal_r * risk : t.entry - t.unreal_r * risk) : null;
       const ur = t.unreal_r, ud = t.unreal_usd != null ? t.unreal_usd * fxOf(t) : null;
+      // The bot side is marked SERVER-SIDE, but off the same merged frames the
+      // price map comes from — so it inherits the same fossil risk and earns the
+      // same badge (TOP100 #24). Built as attributes here rather than via
+      // markStale because this branch returns HTML, not a live cell.
+      const d = ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
+      const cls = "num jr-now" + (d > 0 ? " jr-stale" : "");
+      const tip = d > 0
+        ? ` title="Marked off a ${staleWord(d)}-old close - this name was missing`
+          + ` from the latest scan and is being filled from the last-good cache."`
+        : "";
       return {
-        now: `<td class="num jr-now" data-label="Now">${now != null ? px(now) : "—"}</td>`,
+        now: `<td class="${cls}" data-label="Now"${tip}>${now != null ? px(now) : "—"}</td>`,
         ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R">${ur != null ? rfmt(ur) : "—"}</td>`,
         ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}" data-label="$">${ud != null ? d2(ud) : "—"}</td>`,
       };
@@ -1069,9 +1103,17 @@
     const m = isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null;
     const age = m == null ? "" : m < 60 ? ` · marked ${m}m ago` : m < 2880 ? ` · marked ${Math.round(m / 60)}h ago` : ` · marked ${Math.round(m / 1440)}d ago`;
     const unpriced = meN - mePriced;
+    // TOP100 #24. Counted across BOTH sides — the bot's marks come off the same
+    // merged frames — and surfaced here as well as on the row, because this
+    // headline is the one number on the page that gets read every time, and a
+    // total summed partly from week-old closes should not present itself as
+    // today's P&L in silence.
+    const fossil = [...botOpen, ...(state.me.open || [])].filter(
+      (t) => ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase()) > 0).length;
     $("#jr-pnl-sub").textContent =
       `${nOpen} open position${nOpen === 1 ? "" : "s"} · US$${age}` +
-      (unpriced > 0 ? ` · ${unpriced} of yours awaiting a price` : "");
+      (unpriced > 0 ? ` · ${unpriced} of yours awaiting a price` : "") +
+      (fossil > 0 ? ` · ${fossil} priced off a stale close` : "");
     $("#jr-pnl-split").innerHTML =
       `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(botU)}">${d2(botU)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>` +
       (meN ? `<span class="jr-pnl-chip"><span class="ts-who">✏️ Me</span> <b class="${pcls(meU)}">${d2(meU)}</b> <span class="ts-who">· ${meN} open</span></span>` : "");
@@ -1371,7 +1413,7 @@
       g.rows.push(tr);
     }
 
-    const paint = (g, price) => {
+    const paint = (g, price, days) => {
       // Remember the freshest mark so the P&L headline uses live quotes too.
       if (price != null) scanPrice.set(g.key, price);
       if (g.manual && price != null) {
@@ -1384,11 +1426,12 @@
         if (!nowCell || !document.body.contains(nowCell)) continue;
         const urCell = tr.querySelector(".jr-ur");
         const udCell = tr.querySelector(".jr-ud");
-        if (price == null) { nowCell.textContent = "—"; continue; }
+        if (price == null) { nowCell.textContent = "—"; markStale(nowCell, 0); continue; }
         const isLong = src.direction !== "short";
         const risk = src.risk != null ? src.risk : Math.abs(src.entry - (src.stop ?? src.entry));
         const ru = src.risk_usd;
         nowCell.textContent = px(price);
+        markStale(nowCell, days || 0);      // TOP100 #24 — 0 clears a stale badge
         if (src.status === "closed") { nowCell.textContent = "closed"; continue; }
         if (risk > 0) {
           const ur = rOf(price, src.entry, risk, isLong);
@@ -1399,9 +1442,12 @@
     };
 
     // Scan price first (reliable, every scan); live quote only if absent.
+    // A live quote carries no staleness BY CONSTRUCTION — it was just fetched —
+    // so the age only travels with the scan-snapshot branch (TOP100 #24).
     await inBatches([...groups.values()], 6, async (g) => {
-      const price = scanPrice.has(g.key) ? scanPrice.get(g.key) : await priceFor(g.src);
-      paint(g, price);
+      const cached = scanPrice.has(g.key);
+      const price = cached ? scanPrice.get(g.key) : await priceFor(g.src);
+      paint(g, price, cached ? ageOf(g.key) : 0);
     });
 
     // Persist rule-computed changes (scale-outs, auto-close) LOCALLY only — never
@@ -1440,9 +1486,19 @@
             const s = String(sym).toUpperCase(), row = rows[sym] || {};
             if (!scanMeta.has(s)) scanMeta.set(s, { grade: row.grade || null, entry_type: null, dir: row.dir || null });
           }
-          const pm = j.prices || {};
+          const pm = j.prices || {}, ages = j.price_age || {};
           for (const sym in pm) {
-            if (pm[sym] != null) scanPrice.set(mkt + ":" + String(sym).toUpperCase(), +pm[sym]);
+            if (pm[sym] == null) continue;
+            const k = mkt + ":" + String(sym).toUpperCase();
+            scanPrice.set(k, +pm[sym]);
+            // `price_age` is SPARSE — present only for marks older than today.
+            // The delete is the load-bearing half: this loader re-runs every
+            // three minutes, and a name that has just come back into the scan
+            // must LOSE its badge. A stale badge that never clears is worse
+            // than none, because it teaches you to read past the ones that
+            // are real.
+            const a = +ages[sym] || 0;
+            if (a > 0) scanAge.set(k, a); else scanAge.delete(k);
           }
           return;
         }
@@ -1459,9 +1515,20 @@
         }
         // Universe-wide last-close snapshot — covers held names that are no longer
         // a current setup (so any open position can be priced from the scan).
+        // The full file has no `price_age` map, but its SETUP rows have carried
+        // `data_age_days` all along, so the badge still works for those; the
+        // universe-wide extras fall back to unknown, which renders as fresh.
+        // This is the pre-deploy fallback path only — the slim file above is
+        // what every real run reads.
         const pm = j.prices || {};
+        const rowAge = new Map((j.results || []).map(
+          (r) => [String(r.symbol || "").toUpperCase(), +r.data_age_days || 0]));
         for (const sym in pm) {
-          if (pm[sym] != null) scanPrice.set(mkt + ":" + String(sym).toUpperCase(), +pm[sym]);
+          if (pm[sym] == null) continue;
+          const s = String(sym).toUpperCase(), k = mkt + ":" + s;
+          scanPrice.set(k, +pm[sym]);
+          const a = rowAge.get(s) || 0;
+          if (a > 0) scanAge.set(k, a); else scanAge.delete(k);
         }
       } catch (_) { /* skip a missing/blocked file */ }
     }));

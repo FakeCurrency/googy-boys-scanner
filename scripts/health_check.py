@@ -15,8 +15,10 @@ Checks:
   1. scan_freshness    — health.json generated_at age vs config thresholds
   2. journal           — scalp_journal.json exists, open positions within limits
   3. circuit_breakers  — non-destructive check_all() on the live journal
-  4. log_sizes         — warn/critical if log files exceed size thresholds
-  5. fill_analysis     — warn if avg entry slippage exceeds the warn threshold
+  4. bot_book_guards   — REPORT-ONLY: what those guards would say about the BOT
+                         BOOK, which none of them are actually wired to
+  5. log_sizes         — warn/critical if log files exceed size thresholds
+  6. fill_analysis     — warn if avg entry slippage exceeds the warn threshold
 """
 
 import argparse
@@ -142,6 +144,54 @@ def _check_fill_analysis() -> tuple[int, str]:
         return _WARN, f"fill analysis parse error: {e}"
 
 
+def _check_bot_book_guards() -> tuple[int, str]:
+    """REPORT-ONLY: what the portfolio guards WOULD say about the bot book.
+
+    THIS CHECK ARMS NOTHING, and that is the entire design. The bot book is the
+    one and only track record -- 30 slots, $150,000 of notional -- and it is
+    guarded by none of the limits in risk_manager/circuit_breaker: every one of
+    those consumers (pre_trade_check, bybit_run, scaling_advisor) is on the
+    SCALP journal, and neither vivek_run nor vivek_bot imports any of them.
+    Wiring them in would change which trades get taken, which is the owner's
+    call, so this prints the answer and stops there.
+
+    It is a WARNING and not a CRITICAL for the same reason: nothing is broken
+    and nothing needs doing tonight. What is being reported is that a guard
+    which exists, and is configured, has no jurisdiction over the book that
+    matters -- worth seeing on a health report, not worth paging about.
+    """
+    bf = ROOT / "journal" / "vivek_bot_book.json"
+    if not bf.exists():
+        return _OK, "bot book guards: no book yet"
+    try:
+        book = json.loads(bf.read_text())
+        from scanner.broker.circuit_breaker import check_consecutive_losses
+        from scanner.broker.risk_manager import current_drawdown, trade_pnl
+
+        closed = [t for t in book.get("closed", []) if not t.get("skip_daily_count")]
+        consec = check_consecutive_losses(book, notify=False)
+        dd     = current_drawdown(book) * 100
+        # Chronological too, because "the last N closed" reads by append order
+        # and the bot book's three markets do not append in exit-date order.
+        by_date = sorted(closed, key=lambda t: (t.get("exit_date") or "", t.get("symbol") or ""))
+        n_req   = int(_cfg.CONSEC_LOSS_PAUSE)
+        tail    = by_date[-n_req:] if len(by_date) >= n_req else []
+        chrono  = sum(1 for t in tail if trade_pnl(t) < 0)
+
+        bits = [f"{len(closed)} closed", f"drawdown {dd:.2f}%",
+                f"consec losses {consec['consec_losses']}/{consec['threshold']}"]
+        if chrono != consec["consec_losses"]:
+            bits.append(f"({chrono}/{n_req} by exit date)")
+
+        would_fire = (not consec["ok"]) or chrono >= n_req
+        if would_fire:
+            return _WARN, ("bot book guards NOT WIRED — breaker WOULD have fired: "
+                           + ", ".join(bits) + ". Report-only; entries were not paused.")
+        return _OK, "bot book guards (report-only, not wired): " + ", ".join(bits)
+    except Exception as e:
+        return _WARN, f"bot book guard readout failed: {e}"
+
+
 # ── aggregator ────────────────────────────────────────────────────────────────
 
 def run_all_checks() -> dict:
@@ -150,6 +200,7 @@ def run_all_checks() -> dict:
         "scan_freshness":   _check_scan_freshness(),
         "journal":          _check_journal(),
         "circuit_breakers": _check_circuit_breakers(),
+        "bot_book_guards":  _check_bot_book_guards(),
         "log_sizes":        _check_log_sizes(),
         "fill_analysis":    _check_fill_analysis(),
     }

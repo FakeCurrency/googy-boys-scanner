@@ -139,6 +139,12 @@ def main() -> None:
                 "generated_at": vk["generated_at"],
                 "market": market_key,
                 "prices": vk["prices"],
+                # Sparse {symbol: days} — only the marks that are NOT from
+                # today's session (TOP100 #24). Absent = fresh. Carried into the
+                # slim file because this file IS the journal's price source: the
+                # page marks every open position off it, so a fossil close was
+                # being drawn as a live price with nothing on screen to say so.
+                "price_age": vk.get("price_age") or {},
                 "rows": {r["symbol"]: {"grade": r["grade"],
                                        "grade_raw": r.get("grade_raw"),
                                        "dir": r["dir"],

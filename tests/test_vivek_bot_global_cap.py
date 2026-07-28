@@ -261,3 +261,110 @@ def test_the_dashboard_is_told_about_the_global_cap():
     from scanner import run as scanner_run
     src = inspect.getsource(scanner_run.main)
     assert '"max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL' in src
+
+
+# ── TOP100 #22: the caps count a field they never validated ──────────────────
+# The side counters compared `str(p.get("direction"))` against the exact
+# lowercase string, and the POSITION ceiling was tested against their sum. Any
+# row whose direction was not exactly "long"/"short" — a hand edit, an import,
+# a broker adapter that says "Buy" — therefore counted as NEITHER side AND as
+# no position, so the book was allowed one extra slot per malformed row. Latent
+# on 2026-07-28 (all open rows read "long"), but it is a risk cap reading a
+# field it does not validate, which is not a state to leave sitting.
+
+def _odd(n, direction):
+    """n open rows carrying a direction the counters cannot read."""
+    return [{"symbol": f"X{i:02d}", "direction": direction,
+             "sector": SECTORS[i % len(SECTORS)]} for i in range(n)]
+
+
+def test_a_row_with_an_unreadable_direction_still_occupies_its_slot():
+    """29 clean + 1 unreadable is 30 held. Before the fix the ceiling saw 29 and
+    let a 31st position on."""
+    book = _held(29) + _odd(1, "Buy")
+    d = vb.decide(_rows(4), equity=10_000, market="asx", open_book=book,
+                  max_open_total=30, open_elsewhere=0)
+    assert d["plans"] == []
+    assert d["summary"]["total_open"] == 30
+
+
+def test_the_global_ceiling_counts_it_too():
+    """The cross-market gate reads the same counter, so the hole was in both."""
+    book = _held(2) + _odd(1, None)
+    d = vb.decide(_rows(4), equity=10_000, market="asx", open_book=book,
+                  max_open_total=30, open_elsewhere=27)
+    assert d["plans"] == []
+    assert d["summary"]["skip_reasons"]["global_cap"] == 4
+
+
+def test_a_missing_direction_key_is_read_as_unclassified_not_as_a_crash():
+    """vivek_run's projection used to do `p["direction"]`, so one row without the
+    key raised KeyError and took the whole market run with it — the mark refresh
+    and the stop checks on every OTHER position included. Fail-dark, not
+    fail-closed."""
+    book = _held(1) + [{"symbol": "NODIR", "sector": "Energy"}]
+    d = vb.decide(_rows(1), equity=10_000, market="asx", open_book=book)
+    assert d["summary"]["total_open"] == 3            # 2 held + 1 taken
+    assert d["summary"]["unclassified_direction"] == 1
+
+
+def test_casing_and_whitespace_are_the_same_side_not_a_third_one():
+    """"LONG" is a long. Reading it as neither is what created the third side."""
+    d = vb.decide([], equity=10_000, market="asx",
+                  open_book=_odd(2, " LONG ") + _odd(1, "Short"))
+    s = d["summary"]
+    assert s["longs"] == 2 and s["shorts"] == 1
+    assert s["unclassified_direction"] == 0
+
+
+def test_an_unreadable_direction_is_counted_by_neither_side_cap():
+    """A slot is a fact about the book; a SIDE is a claim about the trade. The
+    tree already disagrees with itself about what a missing direction means
+    (vivek_bot._exit_hits defaults it long, vivek_run._mark_position defaults it
+    short), so guessing here would only add a third opinion."""
+    d = vb.decide([], equity=10_000, market="asx", open_book=_odd(3, "flat"))
+    s = d["summary"]
+    assert s["total_open"] == 3
+    assert s["longs"] == 0 and s["shorts"] == 0
+    assert s["unclassified_direction"] == 3
+
+
+def test_the_discrepancy_is_published_not_only_logged(caplog):
+    """A log line inside a finished Actions run is not somewhere a risk-cap
+    discrepancy gets noticed. The count rides on the summary the dashboard reads,
+    and the WARNING names the symbols so the row can actually be found."""
+    with caplog.at_level("WARNING"):
+        d = vb.decide([], equity=10_000, market="asx",
+                      open_book=_held(2) + _odd(1, "Buy"))
+    assert d["summary"]["unclassified_direction"] == 1
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert "X00" in msg and "direction" in msg
+
+
+def test_a_healthy_book_reports_zero_and_reads_exactly_as_before():
+    """The field must be quiet on every real book, or it is just noise."""
+    d = vb.decide(_rows(2), equity=10_000, market="asx", open_book=_held(5))
+    s = d["summary"]
+    assert s["unclassified_direction"] == 0
+    assert s["total_open"] == s["longs"] + s["shorts"] == 7
+
+
+def test_the_direction_repair_can_only_ever_block_more_never_fewer():
+    """THE SAFETY PROPERTY, and the reason this was safe to do without asking.
+
+    Every counter the repair changes moves UP: a row that counted as neither now
+    counts as one. No threshold moved, no filter, grade or ordering was touched.
+    So for any book, the repaired decide() takes at most what the old one took —
+    it can tighten a cap that was leaking, never loosen one that was binding.
+    Swept across the shapes that matter rather than asserted once, because the
+    claim is universal.
+    """
+    for held, odd, direction in [(0, 0, "long"), (5, 0, "long"), (5, 1, "Buy"),
+                                 (0, 3, None), (9, 1, "LONG"), (7, 3, "")]:
+        book = _held(held) + _odd(odd, direction)
+        d = vb.decide(_rows(6), equity=10_000, market="asx", open_book=book,
+                      max_open_total=12, open_elsewhere=0)
+        # old behaviour: only exactly-"long"/"short" rows counted toward the cap
+        old_seen = sum(1 for p in book if str(p.get("direction")) in ("long", "short"))
+        old_room = max(0, 12 - old_seen)
+        assert len(d["plans"]) <= old_room

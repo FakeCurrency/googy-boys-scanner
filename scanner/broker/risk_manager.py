@@ -1,6 +1,17 @@
 """Portfolio-level risk management engine (Phase 5).
 
+WHICH JOURNAL THIS MODULE ACTUALLY GUARDS (2026-07-28). Every consumer —
+pre_trade_check, circuit_breaker, bybit_run, scaling_advisor,
+performance_report — hands it the SCALP journal. Nothing in vivek_run.py or
+vivek_bot.py calls any of it, so the **bot book is not protected by a single
+one of these limits**: not portfolio heat, not the drawdown breaker, not the
+consecutive-loss breaker. That is a wiring gap, not a bug in here, and closing
+it changes which trades get taken, so it is the owner's call — see
+scripts/health_check.py, which now reports what these guards WOULD say about
+the bot book without arming any of them.
+
 Functions:
+  trade_pnl()                  — realised P&L of one closed trade, either shape
   account_size()               — effective account size (config or live wallet)
   current_equity_and_peak()    — reconstruct equity curve from closed trades
   current_drawdown()           — current drawdown as a fraction (0.0–1.0)
@@ -15,9 +26,57 @@ Functions:
 """
 
 import logging
+import math
+
 from scanner import config as _cfg
 
 log = logging.getLogger(__name__)
+
+
+# ── reading a closed trade's P&L ──────────────────────────────────────────────
+
+def trade_pnl(t: dict) -> float:
+    """Realised dollar P&L of one CLOSED trade, from either journal shape.
+
+    THERE ARE TWO CLOSED-TRADE SHAPES IN THIS REPO AND ONLY ONE OF THEM HAS A
+    `pnl` FIELD (2026-07-28). scalp_journal writes `"pnl": pnl` on every close
+    (scalp_journal.py:176), so the bare `.get("pnl", 0)` this module was built
+    on is correct for the journal it was built for. The BOT BOOK -- the one and
+    only track record -- writes no `pnl` at all: it stores `realized_r` and the
+    `risk_usd` that R is denominated in, and kill_switch.py has always had to
+    hand-roll `(realized_r or 0) * (risk_usd or 0)` to read it.
+
+    That is not currently a live bug, because nothing hands a bot book to these
+    functions -- see the module docstring note. It is a live TRAP: the day
+    anything does, every closed trade reads as exactly breakeven, the equity
+    curve goes flat, drawdown reads 0.00%, and the consecutive-loss breaker
+    counts zero losses in a book that is losing. Nothing raises, nothing logs,
+    every check returns ok. So the reader is centralised here and the three
+    call sites share it, rather than each deciding again.
+
+    Order: an explicit `pnl` wins when it is a real number; otherwise derive it
+    from R. Both legs are None-safe (`.get("pnl", 0)` returns None, not 0, when
+    the key is present and null -- and `None < 0` raises TypeError, which in
+    check_consecutive_losses would take down the whole pre-trade check) and
+    NaN-safe (a NaN propagates silently through a sum and makes every
+    downstream comparison False, i.e. it disarms the guard rather than tripping
+    it, which is the worse direction to fail in).
+    """
+    raw = t.get("pnl")
+    if raw is not None:
+        try:
+            v = float(raw)
+        except (TypeError, ValueError):
+            v = float("nan")
+        if not math.isnan(v):
+            return v
+    try:
+        r    = float(t.get("realized_r") or 0.0)
+        risk = float(t.get("risk_usd") or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    v = r * risk
+    return 0.0 if math.isnan(v) else v
 
 
 # ── account size ─────────────────────────────────────────────────────────────
@@ -49,7 +108,7 @@ def current_equity_and_peak(journal: dict) -> tuple[float, float]:
     equity = account_size()
     peak   = equity
     for t in closed:
-        equity += t.get("pnl", 0)
+        equity += trade_pnl(t)
         if equity > peak:
             peak = equity
     return equity, peak

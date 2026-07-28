@@ -595,6 +595,44 @@ VIVEK_BOT_ACCOUNT_EQUITY = 150_000  # book size; scales the loss guards, NOT pos
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
 VIVEK_BOT_RECONCILE      = True    # reconcile broker fills (Phase 3; no-op while paper)
 
+# WHICH BROKER ACTUALLY HOLDS EACH MARKET'S POSITIONS (2026-07-28).
+# kill_switch.run_standalone checks the bot book PER MARKET — three separate
+# limits, three separate verdicts — but a broker flatten is ACCOUNT-WIDE:
+# bybit_client.close_all_positions() reduce-only-closes every position on the
+# account and cancel_all_orders() kills every resting order. Without this map an
+# ASX paper-book breach called cancel-all + close-all on Bybit, i.e. liquidated
+# a live crypto book that was inside its own limit, in response to a loss that
+# happened somewhere Bybit cannot see. Losing money on the ASX is not a reason
+# to sell your crypto.
+#
+#   ()          — no broker holds this market. A breach still alerts, logs and
+#                 counts as triggered; it just does not reach for an account
+#                 that holds none of the positions that lost the money.
+#   ("bybit",)  — flatten via bybit_client, and ONLY if BYBIT_API_KEY is set.
+#   ("alpaca",) — flatten via alpaca_client, and ONLY if ALPACA_API_KEY is set.
+#
+# A market MISSING from this dict falls back to the legacy try-Bybit-then-Alpaca
+# flatten and logs a WARNING. That default is deliberately the over-protective
+# one: a new market added without a line here is noisy, never quietly unguarded.
+VIVEK_KILL_SWITCH_BROKERS = {
+    "asx":    (),             # paper only — IBKR is not built
+    "nasdaq": ("alpaca",),    # legacy Alpaca path
+    "crypto": ("bybit",),     # Bybit USDT perps
+}
+
+# HOW FAR BEFORE A POSITION WAS OPENED A CLOSED-PNL RECORD MAY STILL BE ITS EXIT.
+# bybit_reconcile matches a vanished position against the account's last 50
+# closed-PnL records; without a time floor, re-entering a symbol you have traded
+# before resolves the NEW position against the PREVIOUS trade's record. The floor
+# is the position's own `opened_ts` (the scan's generated_at, i.e. strictly
+# before the order was placed) minus this many minutes of tolerance for clock
+# skew between the GitHub runner and the exchange. Generous on purpose: too much
+# tolerance re-admits only records from the same few minutes, while too little
+# refuses to close a position that really did close. 0 = exact floor, no
+# tolerance. Records Bybit did not date, and pre-2026 rows with no `opened_ts`,
+# bypass the filter entirely rather than becoming uncloseable.
+BYBIT_RECONCILE_SKEW_MIN = 5.0
+
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so
 # you can read big-money rotation (mega) AND discovery (small caps) separately.
@@ -993,6 +1031,22 @@ CHART_PERIOD = "10y"          # extended history fetched for result tickers only
 MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
 SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
+# HOW OLD A CACHED FRAME MAY BE AND STILL COUNT AS DATA (2026-07-28, TOP100 #24).
+# `data.merge_with_cache` back-fills tickers Yahoo dropped this run from the
+# last-good cache, which is exactly right for the ordinary case: a name misses
+# one batch and reappears. It had NO ceiling, so a ticker Yahoo has not returned
+# since March was still handed to the scanner as if it were today's bars — its
+# last close published as a live mark and used to mark held positions and test
+# their stops. That is not last-good data, it is a fossil, and a fossil price
+# can fabricate a stop-out as easily as it can hide one.
+# Generous on purpose. The cache exists to ride out outages, so the ceiling must
+# clear a multi-day Yahoo gap plus a long weekend without ever biting; only a
+# suspension or a delisting should reach it. Refusing a frame can only ever
+# REMOVE a name from the scan, never add one, and a held position that loses its
+# frame this way is re-fetched directly by vivek_run's off-universe path or
+# counted by `unpriced_runs` — visibly unpriced beats silently wrong.
+# 0 = off (unbounded reuse, the pre-2026-07-28 behaviour).
+FRAME_CACHE_MAX_AGE_DAYS = 10
 
 # Yahoo download throttling control. Yahoo rate-limits bursty/concurrent
 # requests (HTTP 429). The downloader stays FAST when Yahoo is healthy (short

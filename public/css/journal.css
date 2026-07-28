@@ -554,6 +554,21 @@
 }
 @keyframes jrFlipPulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
+/* A "Now" price that is NOT from today's session (TOP100 #24) — the name was
+   missing from the latest scan and is being filled from the last-good frame
+   cache. Dotted underline + dimmed, not a colour and not a pill: the price is
+   still the best number available and the row's P&L is still computed from it,
+   so this has to read as "provisional", not as an error. Deliberately the
+   quietest mark on the page — quieter than .jr-review (a decision to make) and
+   far quieter than .jr-flip (the chart turned against a live position). The
+   full explanation lives in the cell's title. */
+.jr-stale {
+  color: var(--muted-2);
+  text-decoration: underline dotted currentColor;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 /* ═══════════ Legibility pass (owner 2026-07-22) — P&L headline + folds ═══ */
 .jr-pnl {
   background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);

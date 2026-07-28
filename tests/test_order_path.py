@@ -7,6 +7,8 @@ fake Bybit client that returns V5-API-shaped payloads (recorded from the
 testnet docs), so the whole path is exercised with no network and no keys.
 """
 
+import datetime as dt
+
 import pytest
 
 from scanner import config
@@ -232,6 +234,254 @@ def test_reconcile_survives_broker_outage(monkeypatch):
     before = _journal_with([_open_trade()])
     j = br.reconcile_journal(before)
     assert len(j["open"]) == 1                                 # untouched, no fake closes
+
+
+# ── reconcile: a record must be able to BE this position's exit (#20) ─────────
+#
+# The match used to be symbol + side against the last 50 closed-PnL records on
+# the whole account, with no time filter at all. Re-enter a symbol you have
+# traded before and the new position resolves against the PREVIOUS trade's
+# record: the journal books an exit that already happened, at the old trade's
+# P&L, with the old trade's exit price deciding stop-vs-target -- while the real
+# position is still open at Bybit and then reappears as an ORPHAN, because the
+# journal has just closed the row that claimed it. BTC and ETH are re-entered
+# constantly, so this is the common case, not the exotic one.
+
+def _ms(*args) -> str:
+    """Epoch milliseconds as a STRING, which is how V5 returns timestamps."""
+    return str(int(dt.datetime(*args, tzinfo=dt.timezone.utc).timestamp() * 1000))
+
+
+def _iso(*args) -> str:
+    """The `opened_ts` shape scalp_journal writes (the scan's generated_at)."""
+    return dt.datetime(*args, tzinfo=dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def _dated(when: str, **over):
+    rec = _closed_rec(**over)
+    rec["updatedTime"] = when
+    return rec
+
+
+def _gone(monkeypatch, records):
+    """Nothing live at Bybit; these closed-PnL records on the account."""
+    monkeypatch.setattr(br.bc, "get_positions", lambda: [])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: records)
+
+
+def test_a_re_entered_symbol_does_not_close_against_the_previous_trades_record(monkeypatch):
+    """THE BUG. Yesterday's BTC trade is still in the last-50 window; today's
+    BTC position has not filled yet. Nothing may be booked."""
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 20, 3, 0), pnl=170.0, avg_exit=63590.0)])
+    fresh = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([fresh]))
+    assert j["closed"] == []                          # no fabricated trade
+    (p,) = j["open"]
+    assert p["broker_status"] == "pending"            # correctly still waiting
+
+
+def test_the_positions_own_exit_is_still_matched(monkeypatch):
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 27, 6, 0), pnl=170.0, avg_exit=63590.0)])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    (c,) = j["closed"]
+    assert c["reason"] == "target" and c["pnl"] == pytest.approx(170.0)
+
+
+def test_a_record_a_few_minutes_early_is_clock_skew_not_a_different_trade(monkeypatch):
+    """`opened_ts` is the RUNNER's clock and the record carries the EXCHANGE's.
+    Inside BYBIT_RECONCILE_SKEW_MIN they are the same instant."""
+    monkeypatch.setattr(config, "BYBIT_RECONCILE_SKEW_MIN", 5.0)
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 27, 2, 58), pnl=170.0, avg_exit=63590.0)])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    assert len(j["closed"]) == 1
+
+
+def test_a_record_outside_the_skew_window_is_a_different_trade(monkeypatch):
+    monkeypatch.setattr(config, "BYBIT_RECONCILE_SKEW_MIN", 5.0)
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 27, 2, 30), pnl=170.0, avg_exit=63590.0)])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    assert j["closed"] == [] and j["open"][0]["broker_status"] == "pending"
+
+
+def test_the_newest_qualifying_record_wins(monkeypatch):
+    """Two exits on the same symbol/side since the position opened -- Bybit
+    returns newest-first and the ordering must survive the filter."""
+    _gone(monkeypatch, [
+        _dated(_ms(2026, 7, 27, 9, 0), pnl=170.0, avg_exit=63590.0),   # newest
+        _dated(_ms(2026, 7, 27, 5, 0), pnl=-62.0, avg_exit=58810.0),
+        _dated(_ms(2026, 7, 20, 3, 0), pnl=999.0, avg_exit=63000.0),   # last trade
+    ])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    (c,) = j["closed"]
+    assert c["pnl"] == pytest.approx(170.0)
+
+
+def test_an_old_record_cannot_be_reached_past_a_qualifying_one(monkeypatch):
+    """The stale record must be DROPPED, not merely outranked -- if the only
+    fresh record is second in the list, the filter is what does the work."""
+    _gone(monkeypatch, [
+        _dated(_ms(2026, 7, 20, 3, 0), pnl=999.0, avg_exit=63000.0),   # stale, first
+        _dated(_ms(2026, 7, 27, 5, 0), pnl=-62.0, avg_exit=58810.0),
+    ])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    (c,) = j["closed"]
+    assert c["pnl"] == pytest.approx(-62.0) and c["reason"] == "stop"
+
+
+def test_a_row_with_no_opened_ts_keeps_the_old_behaviour(monkeypatch):
+    """Positions written before this field existed must not become uncloseable
+    -- the filter degrades to the old match rather than refusing to act."""
+    _gone(monkeypatch, [_dated(_ms(2020, 1, 1, 0, 0), pnl=170.0, avg_exit=63590.0)])
+    j = br.reconcile_journal(_journal_with([_open_trade()]))     # no opened_ts
+    assert len(j["closed"]) == 1
+
+
+def test_an_undated_record_is_not_assumed_to_be_old(monkeypatch):
+    """Same principle from the other side: a record Bybit did not date is
+    unknown, not stale, and unknown falls back to the old behaviour."""
+    _gone(monkeypatch, [_closed_rec(pnl=170.0, avg_exit=63590.0)])   # no timestamps
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    assert len(j["closed"]) == 1
+
+
+def test_created_time_is_read_when_updated_time_is_absent(monkeypatch):
+    rec = _closed_rec(pnl=170.0, avg_exit=63590.0)
+    rec["createdTime"] = _ms(2026, 7, 20, 3, 0)                  # stale, via the fallback key
+    _gone(monkeypatch, [rec])
+    pos = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([pos]))
+    assert j["closed"] == []
+
+
+def test_a_naive_opened_ts_is_read_as_utc_not_local(monkeypatch):
+    """scan.py can write a naive generated_at. Reading it as LOCAL time would
+    move the floor by up to a day and silently re-admit the previous trade --
+    on a UTC runner that is invisible, so the two forms are compared directly
+    rather than through a scenario the CI timezone would make pass anyway."""
+    assert (br._pos_open_ms({"opened_ts": "2026-07-27T03:00:00"}) ==
+            br._pos_open_ms({"opened_ts": "2026-07-27T03:00:00+00:00"}))
+
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 27, 1, 0), pnl=170.0, avg_exit=63590.0)])
+    pos = _open_trade(opened_ts="2026-07-27T03:00:00")           # no tzinfo
+    j = br.reconcile_journal(_journal_with([pos]))
+    assert j["closed"] == []
+
+
+def test_an_unparseable_opened_ts_does_not_strand_the_position(monkeypatch):
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 20, 3, 0), pnl=170.0, avg_exit=63590.0)])
+    j = br.reconcile_journal(_journal_with([_open_trade(opened_ts="whenever")]))
+    assert len(j["closed"]) == 1
+
+
+def test_a_short_is_still_matched_on_side_as_well_as_time(monkeypatch):
+    """The time filter narrows the candidates; it must not widen them."""
+    _gone(monkeypatch, [
+        _dated(_ms(2026, 7, 27, 9, 0), side="Buy", pnl=999.0, avg_exit=63000.0),
+        _dated(_ms(2026, 7, 27, 8, 0), side="Sell", pnl=-30.0, avg_exit=61190.0),
+    ])
+    short = _open_trade(direction="short", entry=60000, stop=61200, target=56400,
+                        fill_price=60000.0, opened_ts=_iso(2026, 7, 27, 3, 0))
+    j = br.reconcile_journal(_journal_with([short]))
+    (c,) = j["closed"]
+    assert c["pnl"] == pytest.approx(-30.0)
+
+
+# ── reconcile: R is measured against the size that was actually on (#19) ──────
+#
+# Two halves of one defect. The broker's filled `size` was never copied into
+# pos["units"], so a partial fill divided every R by a quantity that was never
+# on; and the open branch measured risk from the INTENDED entry while the closed
+# branch measured it from the ACTUAL fill, so current_r stepped at the moment of
+# close even when not a single price had moved.
+
+def test_a_partial_fill_records_the_size_actually_on(monkeypatch):
+    monkeypatch.setattr(br.bc, "get_positions", lambda: [_broker_pos(size=0.02)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    j = br.reconcile_journal(_journal_with([_open_trade(units=0.05)]))
+    (p,) = j["open"]
+    assert p["units"] == pytest.approx(0.02)
+    assert p["units_requested"] == pytest.approx(0.05)     # audit trail, written once
+
+
+def test_a_partial_fill_does_not_overwrite_what_was_first_requested(monkeypatch):
+    """The second reconcile sees units=0.02 as the journal value. Re-stamping
+    units_requested from it would erase the only record of the real ask."""
+    monkeypatch.setattr(br.bc, "get_positions", lambda: [_broker_pos(size=0.02)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    first  = br.reconcile_journal(_journal_with([_open_trade(units=0.05)]))
+    second = br.reconcile_journal(_journal_with(first["open"]))
+    assert second["open"][0]["units_requested"] == pytest.approx(0.05)
+
+
+def test_a_full_fill_leaves_no_partial_fill_marker(monkeypatch):
+    monkeypatch.setattr(br.bc, "get_positions", lambda: [_broker_pos(size=0.05)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    j = br.reconcile_journal(_journal_with([_open_trade(units=0.05)]))
+    (p,) = j["open"]
+    assert p["units"] == pytest.approx(0.05) and "units_requested" not in p
+
+
+def test_r_is_divided_by_the_risk_actually_taken(monkeypatch):
+    """0.02 filled of 0.05 asked: $25 unrealised is 1.03R on the size that is on,
+    not the 0.41R it reads against the size that was requested."""
+    monkeypatch.setattr(br.bc, "get_positions",
+                        lambda: [_broker_pos(size=0.02, unreal=25.0, avg=60010.0)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    j = br.reconcile_journal(_journal_with([_open_trade(units=0.05)]))
+    # risk = |60010 - 58800| x 0.02 = $24.20
+    assert j["open"][0]["current_r"] == pytest.approx(round(25.0 / 24.20, 2))
+
+
+def test_open_and_closed_r_share_one_denominator(monkeypatch):
+    """The same trade, the same dollars, reconciled live and then closed. R must
+    not step on the transition -- it used to, because the two branches measured
+    risk from different prices."""
+    slipped = _open_trade(opened_ts=_iso(2026, 7, 27, 3, 0))
+    monkeypatch.setattr(br.bc, "get_positions",
+                        lambda: [_broker_pos(unreal=90.0, avg=60300.0)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    live = br.reconcile_journal(_journal_with([slipped]))
+    open_r = live["open"][0]["current_r"]
+
+    _gone(monkeypatch, [_dated(_ms(2026, 7, 27, 9, 0), pnl=90.0, avg_exit=63590.0)])
+    closed = br.reconcile_journal(_journal_with(live["open"]))
+    assert closed["closed"][0]["r"] == pytest.approx(open_r)
+
+
+def test_the_planned_risk_no_longer_overrides_the_risk_actually_taken(monkeypatch):
+    """`risk_per_trade` is the sizing INPUT. It describes the risk that was
+    planned, so it cannot be the denominator once a real fill exists."""
+    monkeypatch.setattr(br.bc, "get_positions",
+                        lambda: [_broker_pos(size=0.02, unreal=25.0)])
+    monkeypatch.setattr(br.bc, "get_closed_pnl", lambda limit=50: [])
+    j = br.reconcile_journal(_journal_with([_open_trade(risk_per_trade=60.0)]))
+    assert j["open"][0]["current_r"] == pytest.approx(round(25.0 / 24.20, 2))
+
+
+def test_risk_falls_back_to_the_planned_number_when_nothing_can_be_measured():
+    """A zero-width stop (trailed to breakeven) would divide by zero. The
+    planned risk is wrong-but-finite, which beats a silent 0.0R."""
+    pos = {"entry": 60000.0, "stop": 60000.0, "fill_price": 60000.0,
+           "risk_per_trade": 60.0}
+    assert br._risk_usd(pos, 0.05) == pytest.approx(60.0)
+
+
+def test_a_size_bybit_reports_as_a_string_is_still_a_number():
+    assert br._filled_units({"units": 0.05}, "0.02") == pytest.approx(0.02)
+    assert br._filled_units({"units": 0.05}, None) == pytest.approx(0.05)
+    assert br._filled_units({"units": 0.05}, "junk") == pytest.approx(0.05)
+    assert br._filled_units({}, None) == pytest.approx(1.0)      # old default
+
+
+def test_a_short_size_is_unsigned_at_bybit_and_used_as_such():
+    assert br._filled_units({"units": -0.05}, "0.02") == pytest.approx(0.02)
+    assert br._filled_units({"units": -0.05}, None) == pytest.approx(0.05)
 
 
 # ── kill switch ───────────────────────────────────────────────────────────────

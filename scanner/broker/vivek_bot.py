@@ -471,6 +471,25 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
 
 # ── 5. process one market's scan into plans, with the book rules ──────────────
 
+def _side(direction) -> str | None:
+    """`direction` as one of "long" / "short", or None when it is neither.
+
+    Every writer in the tree emits the exact lowercase string, so this is not
+    about the happy path — it is about the rows that arrive from somewhere else:
+    a hand-edited book, an import, a future broker adapter that says "Buy". The
+    counters used to compare with `==` against a raw `str()`, so `"LONG"` was
+    silently a third side that no cap counted (TOP100 #22).
+
+    None is returned rather than a guess. The rest of the tree already
+    disagrees with itself about what an unreadable direction means —
+    `vivek_bot._exit_hits` defaults it to LONG, `vivek_run._mark_position`
+    defaults it to SHORT — so inventing a side here would just add a third
+    opinion. The caller's job is to say so out loud and count the slot.
+    """
+    s = str(direction or "").strip().lower()
+    return s if s in ("long", "short") else None
+
+
 def _sector_key(symbol: str, sector: str | None, market: str | None) -> str:
     """Sector bucket for the correlation cap. Crypto has no GICS sector, so
     coins get synthetic buckets: the configured majors are 'crypto-major',
@@ -549,8 +568,34 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     book = open_book or []
     open_syms: set[str] = {str(p.get("symbol") or "").upper() for p in book}
     existing = len(book)
-    longs = sum(1 for p in book if str(p.get("direction")) == "long")
-    shorts = sum(1 for p in book if str(p.get("direction")) == "short")
+    # THE POSITION CAP COUNTS ROWS; THE SIDE CAP COUNTS SIDES (2026-07-28,
+    # TOP100 #22). These used to be the same number: the ceiling was tested
+    # against `longs + shorts`, so any row whose `direction` was not the exact
+    # lowercase string counted as NEITHER and the book was allowed to run one
+    # position over its own limit per malformed row. `_side` now reads the field
+    # the way every other consumer means it (stripped, case-folded) and
+    # `open_count` tracks the rows themselves, so a row nobody can classify
+    # still occupies the slot it is actually occupying.
+    #
+    # This can only ever TIGHTEN: every counter it changes goes up, never down,
+    # so no trade blocked today becomes takeable. It moves no threshold and
+    # touches no filter, grade or ordering — the caps simply count what they
+    # have always claimed to count.
+    # `test_the_direction_repair_can_only_ever_block_more_never_fewer` pins that.
+    unclassified = [p for p in book if _side(p.get("direction")) is None]
+    longs = sum(1 for p in book if _side(p.get("direction")) == "long")
+    shorts = sum(1 for p in book if _side(p.get("direction")) == "short")
+    open_count = existing                      # rows held, whatever side they are
+    if unclassified:
+        # Never silent. A side cap that cannot see a position is a real hole,
+        # and the row is far more likely to be a hand edit or an import than
+        # anything the runner wrote — so name the symbols, not just the count.
+        log.warning("vivek_bot [%s]: %d of %d open rows carry an unreadable "
+                    "`direction` (%s) - they hold slots against the position cap "
+                    "but cannot be counted by the long/short caps",
+                    market, len(unclassified), existing,
+                    ", ".join(sorted(str(p.get("symbol") or "?")
+                                     for p in unclassified)[:8]))
     # Notional already committed in THIS market. Rows written before the
     # fixed-notional switch all carry `notional`; a row that somehow doesn't
     # contributes 0, which errs toward taking a trade rather than blocking one
@@ -607,15 +652,15 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             drop(out, "dup_symbol", f"already holding {sym}")
         elif sym in cooldown_syms:
             drop(out, "cooldown", f"{sym} stopped out recently — re-entry cooldown active")
-        elif longs + shorts >= max_pos:                 # existing + taken so far
+        elif open_count >= max_pos:                     # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
         elif elsewhere_unknown:
             drop(out, "global_cap_unknown",
                  "another market's book is unreadable — the global cap cannot "
                  "be evaluated, so no new entries this run")
-        elif max_total and open_elsewhere + longs + shorts >= max_total:
+        elif max_total and open_elsewhere + open_count >= max_total:
             drop(out, "global_cap",
-                 f"{open_elsewhere + longs + shorts} open across all markets "
+                 f"{open_elsewhere + open_count} open across all markets "
                  f"({open_elsewhere} elsewhere) — global cap {max_total}")
         elif (max_notional_total
               and (notional_elsewhere + open_notional
@@ -633,6 +678,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         else:
             plans.append(out)
             open_syms.add(sym)
+            open_count += 1
             open_notional += float(out["plan"].get("notional") or 0)
             if sector:
                 sector_counts[sector] += 1
@@ -644,7 +690,13 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     short_bias_met = shorts >= min_shorts
     summary = {
         "market": market, "setups": len(rows), "existing": existing,
-        "taken": len(plans), "total_open": longs + shorts,
+        "taken": len(plans), "total_open": open_count,
+        # Rows the side caps could not classify (TOP100 #22). 0 on every healthy
+        # book; non-zero means `longs + shorts` is short of `total_open` and the
+        # long/short reservation is partially blind. Published rather than only
+        # logged, because a log line inside a finished Actions run is not
+        # somewhere a discrepancy gets noticed.
+        "unclassified_direction": len(unclassified),
         # Global-cap context: what the OTHER markets were holding when this ran,
         # and the ceiling they share. max_open_total 0 = the gate is off;
         # open_elsewhere None = a sibling book was unreadable.

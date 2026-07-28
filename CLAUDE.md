@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   729 pytest + 199 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   878 pytest + 212 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -93,7 +93,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 | Workflow | Schedule | Does |
 |---|---|---|
-| test.yml | every push/PR | pytest + JS tests + syntax gate |
+| test.yml | every push/PR | pytest + 8 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest is `journal_stale.test.js` (TOP100 #24) |
 | scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only); `:47` ASX freshness backstop | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52` all days; the `:22` fire skips weekday scan.yml windows (scan.yml already scans crypto then), `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -632,6 +632,197 @@ while the median name is down.*
 
 ---
 
+## Risk arithmetic — TOP100 Tier 1 (2026-07-28)
+
+`TOP100.md` is a 100-item audit of the live tree, ranked not by severity but by
+what has to be true before the next fix can be trusted. **Tier 0 (1–12)** was
+every alert path that could fire into silence; **Tier 1 (13–24)** is the layer
+underneath it — the numbers the guards are computed from. Both are shipped. The
+items below are the ones that changed a MODEL rather than a line, so reading the
+code without them is misleading.
+
+### The guard measures a WINDOW now, off `day_marks` (#13/#14/#15)
+
+`vivek_guard.session_pnl` charged each open position's **whole-life** unrealised
+P&L, plus its whole-life banked partial-exit R, to today — every day, until it
+closed. The closed leg had always filtered `exit_date == day`; the open leg had
+no day filter at all. The live book said so out loud: crypto read
+`session_usd = -1827.46` (41% of a $4,500 daily limit spent before the session
+had done anything), while ASX read **+**$692.88, meaning a market holding old
+winners could take a catastrophic day and not breach. Both directions are the
+same bug — the number was not a day's P&L.
+
+- **The fix is a reference price per window.** Every position records the mark it
+  carried into each session in `day_marks`, and P&L is measured from that instead
+  of from entry. It telescopes exactly: summing every day's window over a
+  position's life returns its total P&L, no more and no less.
+- **`_stamp_day_ref` must be called BEFORE `_mark_sanity`, and the order is
+  load-bearing.** The reference has to be the PREVIOUS run's `last_mark`, so an
+  overnight gap is charged to the session it gapped *into*. Stamp it after the
+  mark and the gap lands between the two references and escapes the daily guard
+  entirely — precisely the move the guard exists to catch. Written once per day
+  and never overwritten (crypto runs 48 scans a day), on unpriced runs too.
+  `_DAY_MARK_KEEP = 9` covers the widest window (trailing 7 CALENDAR days) on
+  crypto with slack and nearly twice over on ASX/NASDAQ.
+- **Direction of the change, plainly:** for a book of older positions the daily
+  guard gets LOOSER (it no longer arrives pre-breached) and the weekly guard gets
+  TIGHTER on names bleeding for a fortnight (their old losses were being counted
+  into the window every day and are now counted once). No position, size, stop or
+  rule moved. `open_total_usd` still publishes the whole-life number.
+- **#15: it fails CLOSED now.** `if price is None: continue` silently disarmed
+  the guard during a data outage — the one moment you most want it armed. An
+  unpriced position is re-valued at its own STOP (the floor on what it can still
+  cost this window) and, if that is enough to breach, the guard halts new entries
+  and says `unmeasured` rather than saying all-clear about a book it cannot see.
+
+### The consecutive-loss breaker had never been able to trip (#16)
+
+`check_consecutive_losses` read `t.get("pnl", 0)`. The bot book writes
+`realized_r` / `gross_r` / `cost_r` / `risk_usd` and **no `pnl` at all**, so every
+closed trade read as exactly breakeven. Now centralised in
+`risk_manager.trade_pnl`, which takes an explicit `pnl` when it is a real number
+and otherwise derives dollars from `realized_r × risk_usd`. None-safe and
+NaN-safe on purpose: `None < 0` raises (taking down the whole pre-trade check),
+and a NaN propagates silently through a sum making every comparison False — it
+*disarms* a guard rather than tripping it, which is the worse way to fail.
+
+- **The larger finding, unrepaired because it is a trade decision:** every
+  consumer of `risk_manager` (`pre_trade_check`, `circuit_breaker`, `bybit_run`,
+  `scaling_advisor`, `performance_report`) is handed the SCALP journal. Nothing
+  in `vivek_run.py` or `vivek_bot.py` calls any of it, so **the bot book — the one
+  and only track record — is guarded by none of these limits**: not portfolio
+  heat, not the drawdown breaker, not the consecutive-loss breaker. Wiring that
+  up changes which trades get taken, so it is the owner's call.
+  `scripts/health_check.py` now REPORTS what those guards would say about the bot
+  book without arming any of them.
+- `check_consecutive_losses(journal, notify=False)` exists for exactly that
+  reporter: a read-only caller must not push "circuit breaker fired — new orders
+  paused" to Discord about a book whose entries were never paused.
+- **"The last N" means list order, not exit-date order, and is left that way.**
+  Same thing for the scalp journal; not the same thing for the bot book, where
+  three markets append into one file. Changing what "consecutive" means changes
+  when it fires, so it is noted in the docstring, not silently altered.
+
+### `VIVEK_KILL_SWITCH_BROKERS` — a book breach is per-market, a flatten is not (#17)
+
+`kill_switch.run_standalone` checks the bot book PER MARKET (three limits, three
+verdicts) but a broker flatten is ACCOUNT-WIDE: `close_all_positions()` closes
+everything on the account and `cancel_all_orders()` kills every resting order. So
+an ASX **paper**-book breach called cancel-all + close-all on Bybit — liquidating
+a live crypto book that was inside its own limit, over a loss that happened
+somewhere Bybit cannot see. Losing money on the ASX is not a reason to sell your
+crypto. The map says which broker actually holds each market (`asx: ()` paper
+only, `nasdaq: ("alpaca",)`, `crypto: ("bybit",)`); `()` still alerts, logs and
+counts as triggered, it just does not reach for an account holding none of the
+positions. **A market missing from the dict falls back to the legacy
+try-Bybit-then-Alpaca flatten and logs a WARNING** — deliberately the
+over-protective default, so a new market added without a line here is noisy
+rather than quietly unguarded.
+
+### Mark-sanity runs only while the market is open (#18)
+
+`_mark_sanity` gives a suspicious mark `ACCEPT_RUNS = 3` challenges before it is
+accepted. It was called outside the `is_open` gate, so three closed-market scans
+burned the entire budget on prices nobody was quoting — and a genuinely bad mark
+on the next open was accepted unchallenged.
+
+### Reconcile: stale `units`, and a time floor on closed-PnL matching (#19/#20)
+
+`reconcile_journal` never copied the broker's filled `size` into `pos["units"]`,
+so a partial fill booked full-size R. Separately, a vanished position was matched
+against the account's last 50 closed-PnL records with **no time filter**, so
+re-entering a symbol you had traded before resolved the NEW position against the
+PREVIOUS trade's record. The floor is the position's own `opened_ts` minus
+`BYBIT_RECONCILE_SKEW_MIN` (5 min) for runner-vs-exchange clock skew. Records
+Bybit did not date, and pre-2026 rows with no `opened_ts`, bypass the filter
+entirely rather than becoming uncloseable.
+
+### `_restamp` — one writer for `summary` and `guard` (#21)
+
+`close_bot_position` and `_close_time_stop` moved a row from `open` to `closed`,
+realised its R and persisted — while `summary` still counted the closed position
+as open and `guard` still described a session whose realised total had just
+changed. Meant to be brief (the next scan recomputes both), but nothing
+guarantees a next scan: close the last position of the day on a Friday and the
+book contradicts its own rows all weekend, which is what the dashboard, the
+health check and any human reading the file actually see. **Not a trade change** —
+`run_market` recomputes the guard itself before `decide()` is ever called, so no
+entry decision was ever made against the stale copy. Priced off each position's
+own `last_mark` (the same fallback `kill_switch` uses between scans), because a
+`price_of` returning None would mark the whole book unpriced and manufacture an
+`unmeasured` breach out of a routine close. `notified` is carried forward
+verbatim so the recompute cannot re-announce a breach already announced. It never
+raises: a stale guard is worse than a fresh one, but a book that failed to save
+is worse than both.
+
+### `_side` / `open_count` — the position cap counts ROWS (#22)
+
+**This one touched `scanner/broker/vivek_bot.py`, a file the owner has ringfenced
+as never-autonomous. It is flagged, and the argument for shipping it is that it
+is monotonically tightening.** The ceiling was tested against `longs + shorts`,
+each counted with `==` against a raw `str()`, so any row whose `direction` was not
+the exact lowercase string counted as NEITHER — and the book was allowed to run
+one position over its own limit per malformed row. `_side()` now reads the field
+the way every other consumer means it (stripped, case-folded) and `open_count`
+tracks the rows themselves. **Every counter it changes goes UP, never down: no
+trade blocked today becomes takeable.** It moves no threshold and touches no
+filter, grade or ordering — the caps simply count what they always claimed to.
+Pinned by `test_the_direction_repair_can_only_ever_block_more_never_fewer`.
+`_side` returns None rather than guessing, because the tree already disagrees with
+itself about an unreadable direction (`_exit_hits` defaults LONG,
+`_mark_position` defaults SHORT) and a third opinion helps nobody; unclassified
+rows are named in a WARNING, not just counted.
+
+### Frame age is measured in the MARKET's calendar, and a cache expires (#23/#24)
+
+- **#23:** `_frame_age_days` used the runner's naive local date, understating ASX
+  staleness by a day against `MAX_DATA_AGE_DAYS = 3`. It now takes the market's
+  `timezone`, which is what `scan.py` had always done one file over. The tz
+  fallback fails CLOSED — an unusable zone must not return 0 ("perfectly fresh").
+- **#24, the ceiling:** `merge_with_cache` back-fills tickers Yahoo dropped this
+  run from the last-good cache, which is right for the ordinary case. It had NO
+  limit, so a ticker Yahoo has not returned since March was handed to the scanner
+  as if it were today's bars — its last close published as a live mark, used to
+  mark held positions and test their stops. **A fossil price can fabricate a
+  stop-out as easily as it can hide one.** `FRAME_CACHE_MAX_AGE_DAYS = 10`,
+  generous on purpose (it must clear a multi-day Yahoo gap plus a long weekend;
+  only a suspension or delisting should reach it), reported as
+  `stats["stale_dropped"]` and a WARNING that NAMES the fossils. Refusing a frame
+  can only ever REMOVE a name from the scan, never add one, and a held position
+  that loses its frame is counted by `vivek_run`'s `unpriced_runs` (alerting at
+  3/10/30) — visibly unpriced beats silently wrong. `0 = off`.
+  - `save_frame_cache` refuses to write an EMPTY dict, so a run where Yahoo
+    returned nothing leaves the fossil on disk rather than wiping a cache that
+    will be useful the moment Yahoo comes back. That guard wins on purpose: the
+    fossil is refused at READ time on every later run regardless, so nothing
+    reaches the scanner off it and the only cost is disk.
+- **#24, the visibility half.** Everything INSIDE the ceiling is still a past
+  close presented as a live mark, so the age now travels with the price:
+  `scan.py` publishes a sparse `price_age` → `run.py` carries it in the slim
+  `<market>_prices.json` → `journal.js` loads it into `scanAge` and badges both
+  the manual and the bot `Now` cell (`.jr-stale` — dotted underline, deliberately
+  the quietest mark on the page, because the price is still the best number
+  available), and the P&L headline counts them.
+  - **SPARSE, and the `delete` is the load-bearing half.** Absent means fresh, so
+    a healthy ASX run does not write ~2,200 zeros and an old cached page keeps
+    working unchanged. But `loadScanMeta` re-runs every three minutes against
+    cells that persist, so a name coming back into the scan must actively LOSE
+    its key — a badge that never clears is worse than none, because it teaches
+    you to read past the ones that are real.
+  - The age is computed BEFORE the price snapshot, outside the scoring block. It
+    used to sit inside it, so a name that failed `evaluate` published a price and
+    NO age — and a held position that has dropped out of the setup list is
+    exactly the row that gets priced off cache for weeks.
+  - A live quote carries no age BY CONSTRUCTION (it was just fetched), so the
+    badge only travels with the scan-snapshot branch of `refreshLive`.
+- Tests: `tests/test_data_download.py` (17) + `test/journal_stale.test.js` (13,
+  which slices the real helpers out of the shipped file rather than mirroring
+  them). **`_ohlc()` in the download tests defaults to TODAY** — it used to be a
+  hard-coded past date, harmless until the ceiling existed and then a trap that
+  made every reuse test silently exercise the fossil path instead.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
@@ -688,7 +879,8 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (729 tests)
+python -m pytest -q                      # full gate (878 tests)
+node test/risk_manager.test.js           # + 7 more JS suites, 212 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

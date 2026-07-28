@@ -52,12 +52,36 @@ def _save_cb_state(cb_state: dict) -> None:
         log.warning("circuit_breaker: could not save state: %s", e)
 
 
-def check_consecutive_losses(journal: dict) -> dict:
+def check_consecutive_losses(journal: dict, notify: bool = True) -> dict:
     """Pause if the last N closed trades are all losses.
 
-    N is controlled by config.CONSEC_LOSS_PAUSE (default 4).
+    N is controlled by config.CONSEC_LOSS_PAUSE (default 3).
     Trades flagged skip_daily_count (stop-gaps) are excluded.
+
+    `notify=False` computes the verdict without pushing the alert, for callers
+    that are ASKING WHAT THIS WOULD SAY rather than acting on it. Without it a
+    read-only reporter (scripts/health_check.py's bot-book readout) announces
+    "circuit breaker fired -- new orders paused" to Discord about a book whose
+    entries were never paused, which is worse than not reporting at all. The
+    default is True so every existing caller behaves exactly as before.
+
+    P&L is read through risk_manager.trade_pnl, not `.get("pnl", 0)`, so a
+    journal that records R rather than dollars (the bot book) counts its losses
+    instead of reading every one of them as breakeven. No behaviour change for
+    the scalp journal this actually guards today — it carries `pnl`, and
+    trade_pnl returns it unchanged — but the previous form would have returned
+    "0 consecutive losses, all clear" on a book that was losing, silently, with
+    nothing raised and nothing logged.
+
+    "The last N" means the last N in LIST order, i.e. the order they were
+    appended, not exit-date order. For the scalp journal those are the same
+    thing. They are NOT the same thing in the bot book, where three markets
+    append into one file and the last four rows today span 23rd-28th July out
+    of order. Left as-is deliberately: this function gates live Bybit entries,
+    and changing what "consecutive" means changes when it fires.
     """
+    from .risk_manager import trade_pnl
+
     n_required = int(_cfg.CONSEC_LOSS_PAUSE)
     closed = [t for t in journal.get("closed", []) if not t.get("skip_daily_count")]
 
@@ -65,10 +89,10 @@ def check_consecutive_losses(journal: dict) -> dict:
         return {"ok": True, "consec_losses": 0, "threshold": n_required, "reason": ""}
 
     recent   = closed[-n_required:]
-    n_losses = sum(1 for t in recent if t.get("pnl", 0) < 0)
+    n_losses = sum(1 for t in recent if trade_pnl(t) < 0)
     fired    = n_losses >= n_required
 
-    if fired:
+    if fired and notify:
         log.warning("CONSECUTIVE LOSS BREAKER — last %d trades all losses (threshold %d)",
                     n_losses, n_required)
         try:

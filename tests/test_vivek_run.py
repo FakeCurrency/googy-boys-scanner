@@ -369,6 +369,149 @@ def test_close_bot_position_without_match_leaves_book_unwritten(tmp_path, monkey
     assert not (tmp_path / "vivek_bot_book.json").exists()  # nothing created/saved
 
 
+# ── a saved book has to agree with itself (#21) ───────────────────────────────
+#
+# close_bot_position moved a row from open to closed and persisted, leaving
+# `summary` counting the closed position as open and `guard` describing a
+# session whose realised total had just changed. The window was meant to be
+# brief -- the next scan recomputes both -- but nothing guarantees a next scan:
+# close the last position of the day on a Friday and the file contradicts its
+# own rows all weekend, which is exactly what the dashboard and the health check
+# read. Not a trade change: run_market recomputes the guard before decide() is
+# ever called, so no entry has ever been made against the stale copy.
+
+def _seed_book(tmp_path, market, open_, summary=None, guard=None):
+    """Write the CANONICAL per-market book — the file `close_bot_position` both
+    loads and saves. `vivek_bot_book.json` is the DERIVED combined view and
+    re-stamps its own `summary.updated_day` from the wall clock, so asserting
+    the restamp against it would test `_combined_view` and never `_restamp`."""
+    import json
+    book = {"version": 2, "mode": "paper", "market": market,
+            "open": list(open_), "closed": []}
+    if summary is not None:
+        book["summary"] = summary
+    if guard is not None:
+        book["guard"] = guard
+    _mfile(tmp_path, market).write_text(json.dumps(book), encoding="utf-8")
+    return lambda: json.loads(_mfile(tmp_path, market).read_text(encoding="utf-8"))
+
+
+def _closeable(tmp_path, monkeypatch, market="nasdaq", **over):
+    """One open position on disk, with a stale summary/guard already stamped."""
+    _enable(monkeypatch, tmp_path)
+    pos = _open_position("MDB", market)
+    pos.update(over)
+    return _seed_book(
+        tmp_path, market, [pos],
+        summary={"open": 1, "unreal_usd": -12.5, "updated_day": "2024-01-04"},
+        guard={market: {"breached": False, "session_usd": 0.0,
+                        "notified": "2024-01-04:daily"}})
+
+
+def test_a_manual_close_restamps_the_summary_it_just_invalidated(tmp_path, monkeypatch):
+    read = _closeable(tmp_path, monkeypatch)
+    vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    saved = read()
+    assert saved["summary"]["open"] == 0                  # was 1, and the row is gone
+    assert saved["summary"]["unreal_usd"] == 0.0          # no open rows left to carry it
+    assert saved["summary"]["updated_day"] == "2024-01-05"
+
+
+def test_the_summary_counts_the_rows_that_are_actually_left(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    a = _open_position("MDB", "nasdaq")
+    b = _open_position("AXON", "nasdaq")
+    b["unreal_usd"] = -40.0
+    read = _seed_book(tmp_path, "nasdaq", [a, b],
+                      summary={"open": 2, "unreal_usd": -40.0,
+                               "updated_day": "2024-01-04"})
+    vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    saved = read()
+    assert saved["summary"]["open"] == 1
+    assert saved["summary"]["unreal_usd"] == pytest.approx(-40.0)   # AXON's, still open
+
+
+def test_a_manual_close_moves_the_guard_it_just_changed(tmp_path, monkeypatch):
+    """Closing at 98 realises a loss on $35 of risk. The saved session P&L has to
+    show it, not the zero it was carrying before the close.
+
+    Asserted against the row's OWN `realized_r`, not the -0.5R the price move
+    implies: `_apply_costs` runs on close, so the realised figure is net of
+    slippage and fees. Hard-coding the gross number would make the test a
+    second, silently diverging implementation of the cost model."""
+    read = _closeable(tmp_path, monkeypatch)
+    vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    saved = read()
+    realized = saved["closed"][0]["realized_r"]
+    assert realized < -0.5                                 # net of costs, so WORSE
+    g = saved["guard"]["nasdaq"]
+    assert g["session_usd"] == pytest.approx(realized * 35.0, abs=0.01)
+    assert g["session_usd"] < 0                            # moved off the stale 0.0
+    assert g["breached"] is False                          # nowhere near the limit
+
+
+def test_the_restamped_guard_does_not_re_announce_an_old_breach(tmp_path, monkeypatch):
+    """`notified` is the next scan's dedupe memory. A recompute that dropped it
+    would make the following run re-announce a breach already announced."""
+    read = _closeable(tmp_path, monkeypatch)
+    vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    assert read()["guard"]["nasdaq"]["notified"] == "2024-01-04:daily"
+
+
+def test_the_restamp_prices_off_the_books_own_marks_not_nothing(tmp_path, monkeypatch):
+    """A price_of returning None for everything would mark the whole book
+    unpriced and manufacture an `unmeasured` fail-closed breach out of a routine
+    close. The remaining position carries a last_mark and must be counted."""
+    _enable(monkeypatch, tmp_path)
+    a = _open_position("MDB", "nasdaq")
+    b = _open_position("AXON", "nasdaq")
+    b["last_mark"] = 99.0                       # priceable from the book alone
+    read = _seed_book(tmp_path, "nasdaq", [a, b])
+    vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    g = read()["guard"]["nasdaq"]
+    assert g.get("unpriced") == []
+    assert g.get("breach_kind") != "unmeasured"
+
+
+def test_a_restamp_failure_never_costs_the_close(tmp_path, monkeypatch):
+    """A stale guard is worse than a fresh one; a close that failed to persist is
+    worse than both. The restamp must not be able to swallow the write."""
+    read = _closeable(tmp_path, monkeypatch)
+    monkeypatch.setattr(vr.vivek_guard, "check",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    closed = vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
+    saved = read()
+    assert closed is not None and saved["open"] == [] and len(saved["closed"]) == 1
+    assert saved["summary"]["open"] == 0            # summary still restamped
+
+
+def test_a_close_that_matches_nothing_restamps_nothing(tmp_path, monkeypatch):
+    """No match means the book is untouched AND unsaved -- including its stale
+    summary. Restamping here would write a file the caller was told not to."""
+    read = _closeable(tmp_path, monkeypatch)
+    assert vr.close_bot_position("NOPE", "nasdaq", 98.0, day="2024-01-05") is None
+    assert read()["summary"]["updated_day"] == "2024-01-04"   # untouched
+
+
+def test_a_time_stop_needs_no_restamp_because_run_market_recomputes(tmp_path, monkeypatch):
+    """The other close path runs INSIDE run_market, which recomputes summary and
+    guard further down the same call. Pinned so the asymmetry stays deliberate
+    rather than looking like an oversight."""
+    _enable(monkeypatch, tmp_path)
+    pos = _open_position("MDB", "nasdaq")
+    pos["entry_date"] = "2023-11-01"                       # long past MAX_HOLD_DAYS
+    read = _seed_book(tmp_path, "nasdaq", [pos],
+                      summary={"open": 1, "unreal_usd": -12.5,
+                               "updated_day": "2023-11-01"})
+    import scanner.data
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda tickers, period="6mo": {t: _frame(101.0) for t in tickers})
+    bk = vr.run_market("nasdaq", [], {}, [], now=_ny(2024, 1, 2, 12, 0))
+    assert bk["open"] == [] and bk["summary"]["open"] == 0
+    saved = read()
+    assert saved["summary"]["open"] == 0 and saved["summary"]["updated_day"] == "2024-01-02"
+
+
 def test_unpriceable_position_gets_auditable_counter(tmp_path, monkeypatch):
     """If a symbol truly has no data anywhere, the freeze must be VISIBLE:
     unpriced_runs counts up on the position instead of a silent stale mark."""
@@ -513,6 +656,126 @@ def test_sanity_crypto_headroom():
     assert vr._mark_sanity(pos, 260.0, "crypto") is None     # +68% > limit
 
 
+# ── the budget is only spendable by a run that could have used it (#18) ───────
+#
+# scan.yml walks all three markets in EVERY window, so while ASX is in session
+# NASDAQ is scanned closed. The 3-run challenge budget was being consumed by
+# runs that could not manage anything, so an overnight split was auto-accepted
+# before the market it belongs to had opened once.
+
+def test_a_closed_market_run_does_not_spend_the_challenge_budget(stub_alerts):
+    pos = _sane_pos()
+    for _ in range(5):                                   # five ASX-window scans
+        assert vr._mark_sanity(pos, 10.0, "asx", session_open=False) is None
+    assert "suspect_price_runs" not in pos               # nothing was spent
+    assert pos["last_mark"] == 100.0                     # basis NOT rebased
+
+
+def test_the_position_opens_its_next_session_with_the_full_budget(stub_alerts):
+    """THE BUG: three closed-market scans used to auto-accept a split price.
+
+    `last_mark` was rebased to the post-split price while `stop` stayed in the
+    pre-split basis, so the guard passed the very first in-session tick and the
+    runner booked a fake catastrophic exit into the one and only track record.
+    """
+    pos = _sane_pos()
+    for _ in range(3):
+        vr._mark_sanity(pos, 10.0, "asx", session_open=False)
+
+    # market opens: the challenge must start from ONE, not from "already spent"
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) is None
+    assert pos["suspect_price_runs"] == 1
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) is None
+    assert pos["suspect_price_runs"] == 2
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) == 10.0   # 3rd
+    assert pos["last_mark"] == 10.0
+
+
+def test_a_closed_market_suspect_price_still_freezes():
+    """Freezing is not the part being suppressed — only the counting is.
+
+    `price` is used after the is_open block to stamp unreal_r/unreal_usd, so a
+    closed-market bad print must still be withheld or the loss guard reads a
+    lie it can act on.
+    """
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=False) is None
+    assert pos["suspect_price"] == 10.0
+    assert pos["last_mark"] == 100.0
+
+
+def test_a_closed_market_suspect_alerts_exactly_once(monkeypatch):
+    """A split showing up before the open is worth knowing about before the
+    open — but scan.yml runs every 15 minutes and the market is shut for 16
+    hours, so alerting per run is 60+ pings about one unchanged fact."""
+    import scanner.broker.alert_dispatch as ad
+    sent: list = []
+    monkeypatch.setattr(ad, "send", lambda *a, **k: sent.append(a), raising=False)
+
+    pos = _sane_pos()
+    for _ in range(8):
+        vr._mark_sanity(pos, 10.0, "asx", session_open=False)
+    assert len(sent) == 1
+    assert "closed" in sent[0][1]
+
+
+def test_a_sane_closed_market_price_clears_the_closed_flag(stub_alerts):
+    pos = _sane_pos()
+    vr._mark_sanity(pos, 10.0, "asx", session_open=False)
+    assert pos["suspect_closed"] is True
+    assert vr._mark_sanity(pos, 101.0, "asx", session_open=False) == 101.0
+    assert "suspect_closed" not in pos and "suspect_price" not in pos
+
+
+def test_session_open_defaults_to_true_so_every_existing_caller_is_unchanged(
+        stub_alerts):
+    """The pre-existing tests above call _mark_sanity positionally. This pins
+    that the new kwarg cannot have quietly changed what they assert."""
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx") is None
+    assert pos["suspect_price_runs"] == 1                # counted, as before
+
+
+def test_a_closed_run_between_two_open_runs_does_not_break_the_streak(stub_alerts):
+    """Interleaving is the normal case, not the edge case: crypto is scanned in
+    every window and stocks are closed for most of them."""
+    pos = _sane_pos()
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) is None    # 1
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=False) is None   # skip
+    assert pos["suspect_price_runs"] == 1                                  # held
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) is None    # 2
+    assert vr._mark_sanity(pos, 10.0, "asx", session_open=True) == 10.0    # 3
+
+
+def test_a_closed_market_seed_still_seeds(stub_alerts):
+    """A position with no last_mark has no reference to be suspicious of, so
+    the closed-market branch must not be reachable before the guard is armed."""
+    pos = _sane_pos()
+    del pos["last_mark"]
+    assert vr._mark_sanity(pos, 180.0, "asx", session_open=False) == 180.0
+    assert pos["last_mark"] == 180.0 and "suspect_closed" not in pos
+
+
+def test_run_market_passes_the_real_session_state_not_a_constant(
+        tmp_path, monkeypatch, stub_alerts):
+    """End to end: the wiring, which is the half a unit test cannot see.
+
+    Opens a position in-session, then serves a split price on a CLOSED-session
+    run. The position must survive with its budget untouched.
+    """
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))          # 11:00 = open
+    assert len(bk["open"]) == 1
+
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
+                       now=_aest(2024, 1, 3, 20, 0))          # 20:00 = closed
+    assert len(bk["open"]) == 1 and len(bk["closed"]) == 0
+    assert "suspect_price_runs" not in bk["open"][0]          # budget intact
+    assert bk["open"][0]["suspect_closed"] is True
+
+
 def test_sanity_guard_prevents_fake_stop_out_in_run_market(tmp_path, monkeypatch):
     """End to end: a split price must NOT close the position via run_market."""
     _enable(monkeypatch, tmp_path)
@@ -631,3 +894,93 @@ def test_the_ceiling_still_admits_an_entry_that_genuinely_fits(tmp_path, monkeyp
                        {"BHP.AX": _frame(101.0), "RIO.AX": _frame(101.0)},
                        uni, now=_aest(2024, 1, 2, 11, 0))
     assert sorted(p["symbol"] for p in bk["open"]) == ["BHP", "RIO"]
+
+
+# ══ DAY REFERENCE MARKS (2026-07-28, TOP100 #13) ══════════════════════════════
+# `vivek_guard` measures a session's P&L from the mark the position CARRIED INTO
+# that session. Nothing wrote that number; these pin the writer. See
+# `_stamp_day_ref` — the ordering against `_mark_sanity` is the load-bearing bit.
+
+
+def test_day_ref_records_the_previous_runs_mark_not_todays_price():
+    pos = _sane_pos(last_mark=100.0)
+    vr._stamp_day_ref(pos, "2026-07-28", 108.0)
+    assert pos["day_marks"] == {"2026-07-28": 100.0}
+
+
+def test_day_ref_is_written_once_a_day_and_never_overwritten():
+    """Crypto runs 48 scans a day. The second one must not move the reference
+    forward, or the session's P&L shrinks toward zero every half hour."""
+    pos = _sane_pos(last_mark=100.0)
+    vr._stamp_day_ref(pos, "2026-07-28", 100.0)
+    pos["last_mark"] = 108.0                      # a later scan marked it up
+    vr._stamp_day_ref(pos, "2026-07-28", 108.0)
+    assert pos["day_marks"] == {"2026-07-28": 100.0}
+
+
+def test_day_ref_is_stamped_on_unpriced_runs_too():
+    """A position nobody could price still carried a value into the session,
+    and the guard's fail-closed branch values exactly those."""
+    pos = _sane_pos(last_mark=100.0)
+    vr._stamp_day_ref(pos, "2026-07-28", None)
+    assert pos["day_marks"] == {"2026-07-28": 100.0}
+
+
+def test_day_ref_falls_back_to_the_observed_price_for_a_never_marked_row():
+    pos = _sane_pos()
+    del pos["last_mark"]
+    vr._stamp_day_ref(pos, "2026-07-28", 108.0)
+    assert pos["day_marks"] == {"2026-07-28": 108.0}
+
+
+def test_day_ref_writes_nothing_when_there_is_nothing_honest_to_write():
+    """No prior mark AND no price: a fabricated reference would silently
+    mis-scope every window that reads it. An absent key degrades to `last_mark`
+    then `entry` in `ref_price`, which is the documented legacy floor."""
+    pos = _sane_pos()
+    del pos["last_mark"]
+    vr._stamp_day_ref(pos, "2026-07-28", None)
+    assert "day_marks" not in pos
+    vr._stamp_day_ref(_sane_pos(), "", 108.0)          # no day -> no stamp
+
+
+def test_day_ref_ignores_a_junk_last_mark():
+    pos = _sane_pos(last_mark="oops")
+    vr._stamp_day_ref(pos, "2026-07-28", 108.0)
+    assert pos["day_marks"] == {"2026-07-28": 108.0}
+    neg = _sane_pos(last_mark=-4.0)
+    vr._stamp_day_ref(neg, "2026-07-28", 108.0)
+    assert neg["day_marks"] == {"2026-07-28": 108.0}
+
+
+def test_day_ref_prunes_oldest_first_and_keeps_the_weekly_window():
+    """The widest window the guard measures is 7 CALENDAR days. Pruning below
+    that would silently fall back to the oldest surviving mark and charge more
+    of a position's life to the week than belongs to it."""
+    pos = _sane_pos(last_mark=100.0)
+    for n in range(1, 22):                         # 21 consecutive days
+        pos["last_mark"] = 100.0 + n
+        vr._stamp_day_ref(pos, f"2026-07-{n:02d}", None)
+    assert len(pos["day_marks"]) == vr._DAY_MARK_KEEP
+    kept = sorted(pos["day_marks"])
+    assert kept[0] == "2026-07-13" and kept[-1] == "2026-07-21"   # oldest dropped
+    assert vr._DAY_MARK_KEEP >= 8, "must span a 7-calendar-day window on crypto"
+
+
+def test_day_ref_beats_mark_sanity_to_the_punch_in_run_market(tmp_path, monkeypatch):
+    """THE ORDERING, END TO END. `_mark_sanity` overwrites `last_mark` with
+    today's observation. Stamp after it and an overnight gap sits between the
+    two references and is charged to NO session at all — it escapes the daily
+    guard entirely, which is the exact move the guard exists to catch."""
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert bk["open"][0]["last_mark"] == pytest.approx(101.0)
+    # Next session gaps up to 103. The reference for 01-03 must be 101 — where
+    # it CLOSED — so the gap counts as that session's P&L.
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(103.0)}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))
+    pos = bk["open"][0]
+    assert pos["day_marks"]["2024-01-03"] == pytest.approx(101.0)
+    assert pos["last_mark"] == pytest.approx(103.0)         # marked after

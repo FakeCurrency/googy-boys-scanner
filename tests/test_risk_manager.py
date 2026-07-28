@@ -182,3 +182,90 @@ def test_htf_bias_respects_disable_flag(monkeypatch):
     bias = {"BTCUSDT": {"weekly": "bull", "threeDay": "bull"}}
     # counter-trend would normally block, but the gate is disabled
     assert rm.check_htf_bias("BTCUSDT", "short", bias)["ok"] is True
+
+
+# ── trade_pnl: one reader for two closed-trade shapes ─────────────────────────
+#
+# The repo has two closed-trade shapes and only one carries a `pnl` field.
+# scalp_journal writes it on every close; the BOT BOOK -- the actual track
+# record -- writes `realized_r` and `risk_usd` instead. These pin that both read
+# correctly through one function, and that the malformed cases fail towards
+# zero rather than towards a crash or a silently-disarmed guard.
+
+def test_trade_pnl_returns_an_explicit_dollar_pnl_untouched():
+    """The scalp-journal shape. Must be byte-identical to the old .get('pnl')."""
+    assert rm.trade_pnl({"pnl": -50.0}) == -50.0
+    assert rm.trade_pnl({"pnl": 123.45}) == 123.45
+    assert rm.trade_pnl({"pnl": 0}) == 0.0
+
+
+def test_trade_pnl_derives_dollars_from_r_when_there_is_no_pnl_field():
+    """The BOT BOOK shape -- the one `.get('pnl', 0)` read as breakeven.
+
+    These are real rows from the live book: a 1.39R loss on $35 of risk is
+    -$48.59, not $0.00.
+    """
+    assert rm.trade_pnl({"realized_r": -1.3882, "risk_usd": 35.0}) == pytest.approx(-48.587)
+    assert rm.trade_pnl({"realized_r": 0.8133, "risk_usd": 35.0}) == pytest.approx(28.4655)
+
+
+def test_trade_pnl_prefers_an_explicit_pnl_over_the_r_derivation():
+    """Both present: the recorded dollars win. R is the fallback, not the truth."""
+    t = {"pnl": -10.0, "realized_r": 5.0, "risk_usd": 100.0}
+    assert rm.trade_pnl(t) == -10.0
+
+
+def test_trade_pnl_survives_an_explicit_null_pnl():
+    """`.get('pnl', 0)` returns None here, NOT 0 -- and `None < 0` raises.
+
+    A single null in a journal would take down the whole pre-trade check with a
+    TypeError, which is the worst possible failure: not a wrong answer, no
+    answer, at the moment an order is being decided.
+    """
+    assert rm.trade_pnl({"pnl": None}) == 0.0
+    assert rm.trade_pnl({"pnl": None, "realized_r": -2.0, "risk_usd": 50.0}) == -100.0
+
+
+def test_trade_pnl_treats_nan_as_zero_rather_than_letting_it_propagate():
+    """NaN DISARMS a guard rather than tripping it, so it must never survive.
+
+    A NaN in the sum makes the equity curve NaN, and every downstream
+    comparison against a NaN is False -- so `dd >= threshold` never fires and
+    the breaker reports all-clear for ever. Failing to 0.0 keeps the guard
+    armed for every other trade.
+    """
+    nan = float("nan")
+    assert rm.trade_pnl({"pnl": nan}) == 0.0
+    assert rm.trade_pnl({"pnl": nan, "realized_r": -1.0, "risk_usd": 20.0}) == -20.0
+    assert rm.trade_pnl({"realized_r": nan, "risk_usd": 20.0}) == 0.0
+
+
+def test_trade_pnl_is_zero_for_a_row_carrying_neither_shape():
+    assert rm.trade_pnl({}) == 0.0
+    assert rm.trade_pnl({"symbol": "BHP", "exit_date": "2026-07-28"}) == 0.0
+
+
+def test_trade_pnl_ignores_unparseable_junk_instead_of_raising():
+    assert rm.trade_pnl({"pnl": "not a number"}) == 0.0
+    assert rm.trade_pnl({"realized_r": "x", "risk_usd": 35.0}) == 0.0
+
+
+def test_equity_curve_reads_a_bot_book_that_records_r_instead_of_dollars():
+    """The trap this whole helper exists for, at the level that matters.
+
+    Four losing rows in bot-book shape used to leave equity exactly at the
+    starting balance and drawdown at 0.00% -- a losing book reporting as
+    untouched, with nothing raised and nothing logged.
+    """
+    book = {"closed": [
+        {"realized_r": -0.2726, "risk_usd": 35.0, "session_day": "2026-07-28"},
+        {"realized_r": -1.3882, "risk_usd": 35.0, "session_day": "2026-07-23"},
+        {"realized_r": -1.0299, "risk_usd": 35.0, "session_day": "2026-07-23"},
+        {"realized_r": -0.0178, "risk_usd": 35.0, "session_day": "2026-07-27"},
+    ]}
+    base = rm.account_size()
+    equity, peak = rm.current_equity_and_peak(book)
+    assert equity < base                     # the point: it is NOT flat
+    assert peak == base
+    assert equity == pytest.approx(base - 94.7975, abs=1e-3)
+    assert rm.current_drawdown(book) > 0

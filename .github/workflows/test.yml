@@ -70,6 +70,8 @@ jobs:
         run: node test/health.test.js
       - name: Journal review-chip tests (heavy-position flag)
         run: node test/journal_review.test.js
+      - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
+        run: node test/journal_stale.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

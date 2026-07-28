@@ -116,20 +116,38 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
 
     results: list[dict] = []
     prices: dict[str, float] = {}        # last close for EVERY scanned symbol
+    # ...and how old each of those closes is, in the MARKET's own calendar
+    # (TOP100 #24). SPARSE ON PURPOSE: only symbols with age > 0 are recorded.
+    # A scan publishes ~2,200 ASX marks and on a healthy run every one of them
+    # is 0, so writing the zeros would roughly double the slim prices file to
+    # say nothing. Absent therefore means fresh, which is also what every
+    # existing reader assumes today — so an old page keeps working unchanged.
+    price_age: dict[str, int] = {}
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
         symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
+        # Freshness measured on the RAW frame, in the MARKET's calendar
+        # (TOP100 #23) — `now` above is already the market's local time.
+        # Computed BEFORE the price snapshot (TOP100 #24) so that the mark and
+        # its age are stamped from the same frame in the same breath. It used to
+        # live below, inside the scoring block, which meant a name that failed
+        # `evaluate` published a price and NO age — and a held position that has
+        # dropped out of the setup list is exactly the row that gets priced off
+        # cache for weeks. The mark's age must not depend on whether the name
+        # happens to be a setup today.
+        age = _frame_age_days(df, market.timezone)
         # Snapshot the latest close for the whole universe (not just setups), so
         # the journal can price any open position — including held names that are
         # no longer a current setup — straight from the scan, every run.
         try:
             if len(df):
                 prices[symbol] = round(float(df["Close"].iloc[-1]), 8)
+                if age > 0:
+                    price_age[symbol] = age
         except Exception:
             pass
         try:
-            age = _frame_age_days(df)                        # measure freshness on the raw frame
             # Pin to COMPLETED bars: drop a still-forming trailing bar so a name's
             # grade/plan doesn't wobble as the current session's bar fills in.
             if (config.VIVEK_DROP_FORMING_BAR and len(df)
@@ -272,6 +290,10 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "pulse": pulse_data,
         "results": results,
         "prices": prices,                 # universe-wide last-close snapshot
+        # Sparse {symbol: days} for the marks above that are NOT from today's
+        # session (TOP100 #24). Absent symbol = fresh. Lets the journal say a
+        # mark is stale instead of drawing a cache-reused close as a live price.
+        "price_age": price_age,
     }
 
 
