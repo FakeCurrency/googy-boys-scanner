@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   878 pytest + 262 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   984 pytest (49 files) + 262 JS — EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -93,7 +93,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 | Workflow | Schedule | Does |
 |---|---|---|
-| test.yml | every push/PR | pytest + 10 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest are `risk_defaults.test.js` and `journal_money.test.js` (TOP100 Tier 2) |
+| test.yml | every push/PR | pytest + 10 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest are `risk_defaults.test.js` and `journal_money.test.js` (TOP100 Tier 2). New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) |
 | scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only); `:47` ASX freshness backstop | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52` all days; the `:22` fire skips weekday scan.yml windows (scan.yml already scans crypto then), `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -132,8 +132,14 @@ input; only fires when the close executed zero steps (an eviction never starts
 the job, whereas a human Cancel leaves finished steps behind); waits for the
 group's pending slot to clear first so the retry does not evict its evictor.
 
-**Silent-failure protection (2026-07-20, Phase 5):** the committing workflows
-(scan/crypto_bot/phasemap/backup_book) run `scripts/assert_staged.sh` after
+**Silent-failure protection (2026-07-20, Phase 5; extended 2026-07-28 by TOP100
+Tier 3).** Callers of `scripts/assert_staged.sh`, in full: scan, crypto_bot,
+phasemap, backup_book, reco_note, and — new in Tier 3 — close_position, gated to
+`journal_type=bot` only (see "Tier 3" below for why the swing/scalp path must
+stay a green no-op). `confluence.yml` deliberately has NO assert_staged and
+gates on an UNSTAGED working tree instead; `backfill_history.yml` deliberately
+has none at all. Both absences are pinned by tests so they read as decisions
+rather than omissions. Every caller runs it after
 staging — a scheduled run that stages none of its must-change outputs FAILS
 loudly instead of finishing green (the Phase 3 staging bug ran green 5x while
 committing nothing). `scanner/watchdog.py` (hosted in kill_switch.yml +
@@ -929,6 +935,137 @@ which turns project rule 2 from a convention into a gate.
 
 ---
 
+## CI honesty — TOP100 Tier 3 (2026-07-28, `a1d2e5b8`)
+
+Tier 0 fixed alerts that fired into silence, Tier 1 and 2 the numbers underneath
+them. **Tier 3 is the layer under both: the scheduled jobs that PRODUCE the
+numbers, and every way one of them could report success while publishing
+nothing.** Read this before editing any workflow — three of the rules below are
+now enforced by tests and will fail a push that breaks them.
+
+### `git add a b` is ALL-OR-NOTHING, and it is banned repo-wide
+
+With `b` missing it exits 128 (`pathspec did not match any files`) and stages
+**neither**. Verified in a scratch repo, not inferred. Paired with
+`2>/dev/null || true` — the form this repo used in five places — it swallows the
+message AND the status, and the next line finds an empty index that reads as
+"nothing changed", which in these workflows is also the true and common outcome.
+One icon, two questions.
+
+- **Stage one path at a time.** `test_workflow_hardening.py` bans the SHAPE by
+  counting pathspecs, not the spelling. That distinction was not academic: the
+  first version of the test matched `git add $PATHS` and passed while
+  `close_position.yml` was staging two literal paths in one call. `git add -A` /
+  `git add -u` are a different construct (they name no pathspec, so they cannot
+  fail on a missing one) and stay allowed.
+- **`|| true` on a `git add` is a PAIRING rule, not a ban.** Allowed only where
+  the same step also runs `assert_staged.sh`. Swallowing is genuinely right in
+  close_position's ten-path loop — roughly six are legitimately absent on any
+  given close — so what was missing there was never the silence, it was
+  something downstream that can tell "staged nothing" from "should have staged
+  something".
+
+### A bot close that stages nothing is a FAILURE, not a no-op
+
+`Nothing to commit (position not found or already closed).` + `exit 0` was
+describing, for `journal_type=bot`, a state that cannot occur: `vivek_run
+--close` exits non-zero when no open position matches and the default shell is
+`bash -e`, so reaching the commit step means the book WAS edited. An empty index
+there was a silent staging loss on the only track record — in the one workflow
+whose input is a deliberate human act, and whose loss is the hardest in the repo
+to notice (no cron behind it, no freshness badge for "a position you closed by
+hand is still showing open").
+
+- **Gated on the journal type, not blanket.** `journal.py --close-manual` prints
+  "no open X found - nothing changed" and returns **0**, so for swing/scalp the
+  empty index IS the honest no-op the message describes. A blanket gate would
+  turn a legitimate outcome red on the legacy pages.
+- **The gate names the CANONICAL per-market files and excludes the public
+  twin.** `assert_staged.sh` is **ANY-OF** semantics — it passes if at least one
+  listed path has a staged diff — so listing a `_write_combined()` derived view
+  would let it pass on a run that regenerated the view while the file the close
+  actually edited failed to stage.
+- **#45/#46/#47:** the close now retries its push five times and `exit 1`s like
+  every other writer (it had ONE attempt), regenerating the derived combined
+  book after each rebase; the redispatch waits on the right job state and fires
+  on `failure` as well as `cancelled`. **`push_exhausted` is the discriminator
+  that makes that safe** — contention is worth retrying, a close the integrity
+  gate REJECTED is not, and re-dispatching the latter would loop on a bad input.
+
+### `assert_staged` is the WRONG answer where a no-op is legitimate
+
+Nearly added one to `backfill_history.yml` and it would have been a new bug:
+`merge_rows` is documented idempotent, so a re-run drops and re-adds its own
+reconstructed rows while the output file stays byte-identical — a must-change
+gate would fail on exactly the property the script advertises, which is how a
+gate gets deleted rather than fixed. The right question is not "did the file
+change" but "does the file CONTAIN the reconstruction", which
+`_verify_merged()` answers by **re-reading the file off disk** (that is also the
+half that catches a write to the wrong path, a truncated write, or an
+`os.replace` that did not land). `confluence.yml` is the same family — it gates
+on an unstaged working tree instead. **Both absences are pinned by tests**, so
+they read as decisions rather than omissions; do not "fix" either.
+
+### #41 — the ASX crons had a four-week hole waiting in October
+
+Every ASX cron was written for AEST (UTC+10), correct only Apr–Oct. Under AEDT
+the 10:00–16:00 session becomes 23:00–05:00 UTC — it **opens on the previous UTC
+day** — so `7 0-5 * * 1-5` would have covered 11:00–16:00 only and the first
+hour of every session, the open, would have had no scan at all. Monday is worse:
+its open is *Sunday* 23:00 UTC, which `* * 1-5` excludes outright. Latent in July
+and live in October. Fixed the way `kill_switch.yml` fixed the same bug class:
+**let cron fire a SUPERSET and let the in-job gate decide with real Melbourne
+local time.** The two new 23:xx crons are no-ops under AEST. `test_workflow_dst.py`
+(21) pins it. When adding any market-hours cron, add the superset, not the
+offset you happen to be in.
+
+### #56 — SHA-pinning was weighed and deliberately NOT done
+
+All 36 `uses:` lines resolve to five distinct **first-party** actions
+(`checkout@v4`, `setup-python@v5`, `setup-node@v4`, `cache@v4`,
+`upload-artifact@v4`); there are zero third-party actions in the repo. `gh api`
+cannot reach any GitHub repo from these sessions (403 even on public first-party
+ones) and the one channel that does work routes through a summarising model, so
+transcribing five 40-hex SHAs into 36 load-bearing CI lines carries a
+catastrophic total failure mode — every workflow *including the test gate* dead
+at step 1, on a live trading system, with no green path left to notice. Enforced
+on the boundary that actually matters instead: **third-party actions MUST be
+40-hex pinned, nothing may float on `@main`/`@master`/`@latest`, and a tripwire
+asserts the first-party set is still exactly the five that were reviewed.**
+`dependabot.yml` rejected for now (pushes go straight to main, so PRs are noise,
+and `pull_request` is in test.yml's triggers so each burns minutes).
+The permissions half DID ship: `test.yml` had no block at all and now reads
+`contents: read`; `scan.yml`'s cheap `gate` job no longer inherits the
+workflow-level write it never needed. **The item's claim that `stop_watcher.yml`
+also lacked a block was stale — it has had `contents: read` all along.**
+
+### Also in this tier
+
+**#42** the destructive retry loop (only ever replace a path THIS run generated,
+or a sibling's newer copy is deleted and pushed). **#43** a push helper returning
+0 after five failed pushes. **#44** timeouts on all 7 previously-unbounded jobs —
+one stuck run in the `scan` group silently costs a whole session. **#48** four
+path-filter entries the suites READ but CI did not trigger on. **#49** scan.yml
+asserts four invariants per market, not just the combined book. **#50** backup
+completeness (`sector_history.json` — the only long sector memory — was not
+being backed up at all). **#51** `pipefail` on both `| tee` sites: GitHub's
+default shell is `bash -e {0}`, so **`-e` is already on but `pipefail` is NOT**.
+**#53** the sector-cache warning and a comment that had become false.
+
+### Tests
+
+`tests/test_workflow_hardening.py` (52), `tests/test_workflow_dst.py` (21),
+`tests/test_backup_completeness.py` (29); `test_workflow_mutex.py` 11 → 15.
+**New `tests/*.py` files need no registration** — `pytest` collects the
+directory; only new `test/*.test.js` files need a step in test.yml. The
+hardening suite also runs **`bash -n` over all 73 `run:` blocks in all 15
+workflows**, the cheapest gate this repo did not have: a YAML parse says nothing
+about the shell inside the scalars, and a broken `if`/`for`/`fi` is otherwise
+discovered by dispatching the workflow — which for a manual close means
+discovering it at the moment you are trying to record a real trade.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
@@ -985,7 +1122,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (878 tests)
+python -m pytest -q                      # full gate (984 tests / 49 files, 2026-07-28)
 node test/risk_manager.test.js           # + 9 more JS suites, 262 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
