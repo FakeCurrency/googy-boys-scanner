@@ -72,6 +72,14 @@
 .hz-row.is-lead .hz-sec { color: var(--text); }
 .hz-flag { flex: 0 0 auto; font: 600 9px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-2); font-style: normal; white-space: nowrap; }
 .hz-flag.warn { color: var(--orange); }
+/* the streak badge — how many sessions this leader has been held at zero.
+   Louder than a flag on purpose: "3rd on breadth, you hold none" is a shrug,
+   "for the 19th session" is the July miss, and only this tells them apart. */
+.hz-run {
+  flex: 0 0 auto; font: 800 9.5px/1 var(--sans); font-style: normal;
+  color: var(--orange); background: var(--orange-soft);
+  border-radius: 999px; padding: 3px 6px; white-space: nowrap;
+}
 /* an unranked row is context, not a contender — its bar never competes for the eye */
 .hz-row.is-unranked .hz-bar i { background: var(--fill); opacity: 1; }
 .hz-row.is-unranked .hz-bar b, .hz-row.is-unranked .hz-sec { color: var(--muted); }

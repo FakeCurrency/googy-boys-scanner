@@ -279,6 +279,165 @@ def test_series_is_aligned_to_the_day_axis_for_plotting():
     assert len(ser["open"]) == len(ser["days"])
 
 
+# ── the streak: the difference between a shrug and a miss in progress ────────
+
+def _run(days, *, held_on=(), market="asx"):
+    """History for `days` sessions of the real 2026-07-28 ASX board shape.
+
+    Unclassified leads it at 23.4% -- above every genuine sector -- which is
+    exactly the trap the reconstruction has to step over.
+    """
+    uni = _uni(Unclassified=389, Real_Estate=62, Financials=198,
+               Consumer_Discretionary=104)
+    hist = {"version": 1, "rows": []}
+    for d in range(1, days + 1):
+        held = ([_pos("CD0", "Consumer Discretionary", market=market)]
+                if d in held_on else [])
+        snap = sb.compute(market,
+                          _res("Unclassified", 91) + _res("Real_Estate", 14)
+                          + _res("Financials", 33)
+                          + _res("Consumer_Discretionary", 11),
+                          uni, held)
+        hist = sb.append_history(hist, snap, sb.book_state(held), f"2026-07-{d:02d}")
+    return hist
+
+
+def test_a_non_sector_bucket_cannot_take_a_leader_slot_in_the_reconstruction():
+    """THE defect this function shipped with, pinned.
+
+    History stores every bucket that had listed names, and on the real board
+    "Unclassified" (91/389 = 23.4%) outranks all three genuine leaders. The live
+    panel refuses it a rank; a reconstruction that forgets to would hand it slot
+    one every single day, push Consumer Discretionary out of the top three, and
+    report a streak of zero for the one sector the whole surface exists to
+    catch -- silently, and only for the sector that mattered.
+    """
+    hist = _run(6)
+    assert sb.unheld_streak(hist, "asx", "Consumer Discretionary") == 6
+    assert sb.unheld_streak(hist, "asx", "Unclassified") == 0   # never a leader
+
+
+def test_the_streak_counts_only_the_unbroken_recent_run():
+    # held on day 4 of 7 — the run is the three sessions since, not all seven
+    hist = _run(7, held_on=(4,))
+    assert sb.unheld_streak(hist, "asx", "Consumer Discretionary") == 3
+
+
+def test_a_sector_that_is_not_leading_has_no_streak():
+    hist = _run(5)
+    # Industrials never appears in these rows at all; a missing sector is a zero,
+    # not a crash and not an inherited count from the sector above it.
+    assert sb.unheld_streak(hist, "asx", "Industrials") == 0
+    assert sb.unheld_streak(hist, "nasdaq", "Consumer Discretionary") == 0
+    assert sb.unheld_streak({"rows": []}, "asx", "Consumer Discretionary") == 0
+
+
+def test_a_thin_sector_cannot_invent_a_streak_out_of_noise():
+    """Same bar as the live board: a 3-name sector reading 33% must not rank
+    here either, or the streak column fills with sectors nobody can trade."""
+    hist = {"version": 1, "rows": []}
+    uni = _uni(Tiny=3, Materials=766)
+    for d in range(1, 5):
+        snap = sb.compute("asx", _res("Tiny", 1) + _res("Materials", 30), uni)
+        hist = sb.append_history(hist, snap, sb.book_state([]), f"2026-07-{d:02d}")
+    assert hist["rows"][-1]["s"]["Tiny"] == [1, 3, 0, None]      # stored...
+    assert sb.unheld_streak(hist, "asx", "Tiny") == 0            # ...never led
+
+
+def test_the_streak_survives_a_gap_in_the_sessions():
+    """Weekends and holidays leave no row. A run of sessions is not broken by a
+    day the market was shut, and counting rows rather than dates is what makes
+    that true without the function needing a calendar."""
+    hist = _run(3)
+    for r in hist["rows"]:                       # 01, 02, 03 -> 01, 02, 09
+        if r["d"] == "2026-07-03":
+            r["d"] = "2026-07-09"
+    assert sb.unheld_streak(hist, "asx", "Consumer Discretionary") == 3
+
+
+def test_horizon_says_how_long_and_publishes_it_for_the_page():
+    """A one-day reading and a nineteen-day reading are different sentences and
+    the alarm has to read differently. This is the number the July post-mortem
+    could not produce afterwards, which is why it is computed live."""
+    hist = _run(19)
+    snap = sb.compute("asx",
+                      _res("Unclassified", 91) + _res("Real_Estate", 14)
+                      + _res("Financials", 33) + _res("Consumer_Discretionary", 11),
+                      _uni(Unclassified=389, Real_Estate=62, Financials=198,
+                           Consumer_Discretionary=104))
+    hz = sb.horizon(snap, sb.book_state([]), hist)
+    assert hz["unheld_streaks"]["Consumer Discretionary"] == 19
+    assert hz["longest_unheld"] == 19
+    assert any("19 sessions running" in n for n in hz["notes"])
+
+
+def _today_snap():
+    return sb.compute("asx",
+                      _res("Unclassified", 91) + _res("Real_Estate", 14)
+                      + _res("Financials", 33) + _res("Consumer_Discretionary", 11),
+                      _uni(Unclassified=389, Real_Estate=62, Financials=198,
+                           Consumer_Discretionary=104))
+
+
+def test_a_long_run_goes_loud_even_when_the_book_has_plenty_of_room():
+    """The reading the old `expand` rule could not produce, and the worse of the
+    two cases. Capped out is at least an explanation; a fortnight of leading
+    with nothing held AND 30 free slots is the scanner having pointed at it
+    every session while nothing happened. It must not read as business as
+    usual just because the book was not the thing in the way."""
+    hz = sb.horizon(_today_snap(), sb.book_state([]), _run(14))
+    assert hz["expand"] is True
+    assert "Consumer Discretionary" in hz["sustained"]
+    # first, because the dashboard strip shows only notes[0]
+    assert hz["notes"][0].startswith("LOOK WIDER")
+    assert "30 free slots" in hz["notes"][0]
+    # the banner must not call this a capacity problem — the book was wide open
+    assert "14 straight sessions" in hz["expand_why"]
+    assert "barely act" not in hz["expand_why"]
+
+
+def test_a_full_book_still_gets_the_capacity_wording():
+    full = [_pos(f"S{i}", "Materials") for i in range(30)]
+    hz = sb.horizon(_today_snap(), sb.book_state(full), {"rows": []})
+    assert hz["expand"] is True
+    assert "barely act" in hz["expand_why"]
+    assert sb.horizon(_today_snap(), sb.book_state([]), _run(1))["expand_why"] == ""
+
+
+def test_a_short_run_with_room_stays_calm():
+    """Below the threshold the page describes and does not shout. An alarm that
+    fires on day two is an alarm that gets scrolled past by day three."""
+    hz = sb.horizon(_today_snap(), sb.book_state([]), _run(2))
+    assert hz["expand"] is False
+    assert hz["sustained"] == []
+    assert not any(n.startswith("LOOK WIDER") for n in hz["notes"])
+
+
+def test_the_run_threshold_is_configurable(monkeypatch):
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT", 0)   # off
+    assert sb.horizon(_today_snap(), sb.book_state([]), _run(30))["sustained"] == []
+    monkeypatch.setattr(config, "SECTOR_BREADTH_RUN_ALERT", 2)
+    # every top-3 sector is unheld in this fixture, so all three qualify at 2
+    assert set(sb.horizon(_today_snap(), sb.book_state([]), _run(2))["sustained"]) == {
+        "Real Estate", "Financials", "Consumer Discretionary"}
+
+
+def test_a_first_day_leader_is_not_dressed_up_as_a_run():
+    """Day one says nothing extra. A badge on the first session would train the
+    eye to ignore the badge, which costs exactly what the badge is worth."""
+    hist = _run(1)
+    snap = sb.compute("asx",
+                      _res("Unclassified", 91) + _res("Real_Estate", 14)
+                      + _res("Financials", 33) + _res("Consumer_Discretionary", 11),
+                      _uni(Unclassified=389, Real_Estate=62, Financials=198,
+                           Consumer_Discretionary=104))
+    hz = sb.horizon(snap, sb.book_state([]), hist)
+    assert hz["unheld_streaks"]["Consumer Discretionary"] == 1
+    assert not any("sessions running" in n for n in hz["notes"])
+    # but the ZERO-held alarm itself still fires on day one
+    assert any("ZERO held" in n for n in hz["notes"])
+
+
 # ── the NASDAQ denominator ───────────────────────────────────────────────────
 
 def test_a_universe_with_no_sector_column_falls_back_to_the_classified_cache(tmp_path, monkeypatch):

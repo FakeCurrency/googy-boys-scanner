@@ -131,6 +131,10 @@
     // Scale off RANKED rows only: a 7-name bucket at 85.7% would otherwise set
     // the axis and squash every sector that actually has breadth behind it.
     const top = Math.max(0.01, ...list.filter((b) => b.rank).map((b) => b.rate || 0));
+    // How many sessions each unheld leader has been leading. A zero in the HELD
+    // column is a shrug on day one and the July miss on day nineteen, and the
+    // column cannot tell you which without this.
+    const streaks = (blk.horizon && blk.horizon.unheld_streaks) || {};
     return `<div class="hz-rows">
       <div class="hz-row hz-head">
         <span>#</span><span>Sector</span><span>Participation</span>
@@ -143,9 +147,13 @@
         const lead = b.rank && b.rank <= 3 && (b.rate || 0) > 0;
         const blind = lead && !b.held;
         const flag = unrankedFlag(b, minNames);
+        const run = blind ? (streaks[b.sector] || 0) : 0;
+        const runTag = run > 1
+          ? `<em class="hz-run" title="${run} consecutive sessions leading on breadth with nothing held. This is the number the July rotation needed and did not have.">${run}d</em>`
+          : "";
         return `<div class="hz-row${lead ? " is-lead" : ""}${blind ? " is-blind" : ""}${flag ? " is-unranked" : ""}">
           <span class="hz-rank">${b.rank || "·"}</span>
-          <span class="hz-sec"><b>${esc(b.sector)}</b>${flag}</span>
+          <span class="hz-sec"><b>${esc(b.sector)}</b>${flag}${runTag}</span>
           <span class="hz-bar"><i style="width:${w.toFixed(1)}%"></i><b>${pct(b.rate)}</b></span>
           <span class="hz-ag">${b.ag}<em>/${b.names}</em></span>
           <span class="hz-held${blind ? " zero" : ""}">${b.held}</span>
@@ -199,6 +207,11 @@
     const keys = Object.keys(MARKETS).filter((k) => blocks[k]);
     if (!keys.length) { host.hidden = true; return; }
     const expand = keys.some((k) => (blocks[k].horizon || {}).expand);
+    // The reason is published rather than assumed: a full book and a fortnight
+    // of leading-with-nothing-held both raise this banner and they are not the
+    // same failure, so the banner must not describe one as the other.
+    const why = keys.map((k) => (blocks[k].horizon || {}).expand_why)
+      .filter(Boolean)[0] || "something is running that the book is not in";
     host.hidden = false;
     host.className = "hz-panel" + (expand ? " is-expand" : "");
     host.innerHTML = `
@@ -207,7 +220,7 @@
           <h3 class="hz-title">HORIZON <span>— where the market is actually running</span></h3>
           <p class="hz-sub">Sectors ranked by <b>participation rate</b>, against what the book
             holds and whether it has room. ${expand
-              ? `<b class="hz-alarm">LOOK WIDER — something is running that the book is not in, and it can barely act.</b>`
+              ? `<b class="hz-alarm">LOOK WIDER — ${esc(why)}.</b>`
               : ""}</p>
         </div>
         ${bookHTML(data.book, false)}
@@ -234,16 +247,24 @@
     if (!blk) { host.hidden = true; host.innerHTML = ""; return; }
     const hz = blk.horizon || {};
     const leaders = (blk.sectors || []).filter((b) => b.rank && b.rank <= 3 && (b.rate || 0) > 0);
+    // The strip is the surface actually looked at every day, so the run belongs
+    // HERE more than anywhere. "0 held" is a shrug; "0 held · 19 sessions" is
+    // the sentence that would have interrupted July.
+    const streaks = hz.unheld_streaks || {};
     host.hidden = false;
     host.className = "hz-strip" + (hz.expand ? " is-expand" : (hz.unheld_leaders || []).length ? " is-warn" : "");
     host.innerHTML = `
       <div class="hz-strip-line">
         <span class="hz-strip-tag">${hz.expand ? "LOOK WIDER" : "HORIZON"}</span>
         <span class="hz-strip-leads">${leaders.length
-          ? leaders.map((b) => `<a class="hz-lead${b.held ? "" : " zero"}" href="sectors.html#horizon-panel"
-              title="${esc(b.sector)} — ${b.ag} A+/A of ${b.names} names, ${b.held} held">
+          ? leaders.map((b) => {
+              const run = b.held ? 0 : (streaks[b.sector] || 0);
+              return `<a class="hz-lead${b.held ? "" : " zero"}" href="sectors.html#horizon-panel"
+              title="${esc(b.sector)} — ${b.ag} A+/A of ${b.names} names, ${b.held} held${
+                run > 1 ? `, and it has led on breadth with nothing held for ${run} straight sessions` : ""}">
               ${esc(b.sector)} <b>${pct(b.rate)}</b>
-              <em>${b.held ? b.held + " held" : "0 held"}</em></a>`).join("")
+              <em>${b.held ? b.held + " held" : "0 held"}${run > 1 ? ` · ${run} sessions` : ""}</em></a>`;
+            }).join("")
           : `<span class="hz-lead flat">No sector is leading on breadth today.</span>`}</span>
         ${bookHTML(data.book, true)}
         <a class="hz-strip-more" href="sectors.html#horizon-panel">Full board →</a>

@@ -382,6 +382,52 @@ def trend(hist: dict, market: str, sector: str, window: int = 5) -> dict:
             "chg": None if prev is None else round(mean - prev, 4)}
 
 
+def unheld_streak(hist: dict, market: str, sector: str, top_n: int = 0) -> int:
+    """Consecutive most-recent sessions this sector led on rate holding NOTHING.
+
+    The single number the July post-mortem was missing. "Consumer Discretionary
+    is third on breadth and you hold none" is a fact you can shrug at once; "for
+    the 19th session running" is not the same sentence, and the difference
+    between them is the whole four weeks. A one-day reading cannot distinguish
+    a sector that popped this morning from one that has been asking to be
+    bought since June, and only the second is a miss in progress.
+
+    Counted from the persisted history rather than kept as a counter so it
+    stays correct across a re-run, a backfill, or a day the scan never fired.
+    Sessions, not calendar days: history holds one row per day the scan ran, so
+    a weekend or a public holiday does not break a run the way a real change in
+    the sector would. Today's row is written before this is called, so a sector
+    leading unheld for the first time today reads 1.
+    """
+    top_n = int(top_n or getattr(config, "SECTOR_BREADTH_TOP_N", 3) or 3)
+    min_names = int(getattr(config, "SECTOR_BREADTH_MIN_NAMES", 15) or 0)
+    n = 0
+    for r in reversed([r for r in hist.get("rows", []) if r.get("m") == market]):
+        cells = r.get("s") or {}
+        # Rebuild that day's ranking from the stored counts, applying the SAME
+        # three exclusions `compute` applies live, because history stores every
+        # bucket that had listed names -- including the ones that are not
+        # sectors. Today's stored ASX row is led by "Unclassified" at 91/389 =
+        # 23.4%, comfortably above every real sector on the board; without the
+        # `_NOT_A_SECTOR` test it would hold rank 1 in the reconstruction every
+        # day, push the genuine third-place sector out of the top three, and
+        # silently zero the streak of the exact sector this exists to catch.
+        rated = [(c[0] / c[1], c[0], name) for name, c in cells.items()
+                 if len(c) >= 2 and c[1] and c[1] >= min_names and c[0] / c[1] > 0
+                 and _norm(name) not in _NOT_A_SECTOR]
+        if not rated:
+            break
+        # Same tie-break as the live sort -- rate, then raw count, then name --
+        # so a reconstructed rank cannot disagree with the rank that was shown.
+        rated.sort(key=lambda t: (-t[0], -t[1], t[2]))
+        lead = {name for _, _, name in rated[:top_n]}
+        cell = cells.get(sector)
+        if sector not in lead or not cell or (len(cell) > 2 and cell[2]):
+            break
+        n += 1
+    return n
+
+
 # ── the alarm ─────────────────────────────────────────────────────────────────
 
 def horizon(snap: dict, book: dict, hist: dict, cap_streak: int = 0) -> dict:
@@ -412,22 +458,62 @@ def horizon(snap: dict, book: dict, hist: dict, cap_streak: int = 0) -> dict:
     elif book.get("free") is not None and book["free"] <= max(1, book["max_open"] // 10):
         notes.append(f"Only {book['free']} of {book['max_open']} slots free - "
                      f"the book is nearly out of room.")
+    # How long each unheld leader has been asking. A sector that led once is a
+    # coincidence; one that has led for nineteen sessions while the book held
+    # none of it is the July miss, live, and the note must read differently.
+    streaks = {b["sector"]: unheld_streak(hist, snap["market"], b["sector"], top_n)
+               for b in unheld}
     if unheld:
-        notes.append(
-            "Leading on breadth with ZERO held: "
-            + ", ".join(f"{b['sector']} ({b['ag']}/{b['names']} = "
-                        f"{100 * (b['rate'] or 0):.1f}%)" for b in unheld) + ".")
+        def _one(b):
+            s = streaks.get(b["sector"], 0)
+            run = f", {s} sessions running" if s > 1 else ""
+            return (f"{b['sector']} ({b['ag']}/{b['names']} = "
+                    f"{100 * (b['rate'] or 0):.1f}%{run})")
+        notes.append("Leading on breadth with ZERO held: "
+                     + ", ".join(_one(b) for b in unheld) + ".")
     for b in leaders:
         if max_sector and b["held"] >= max_sector:
             notes.append(f"{b['sector']} is leading and already at the "
                          f"{max_sector}-per-sector cap - the cap, not the "
                          f"market, is what is limiting it.")
+    # A run long enough to stop being a coincidence gets its own sentence, and
+    # that sentence goes FIRST because the compact strip on the dashboard shows
+    # only notes[0]. Two readings need different words: capped out is at least
+    # an explanation, whereas a fortnight of leading-and-unheld WITH free slots
+    # is the scanner having pointed at it every session and nothing happening.
+    run_alert = int(getattr(config, "SECTOR_BREADTH_RUN_ALERT", 5) or 0)
+    sustained = sorted(([b["sector"], streaks.get(b["sector"], 0)] for b in unheld
+                        if run_alert and streaks.get(b["sector"], 0) >= run_alert),
+                       key=lambda t: -t[1])
+    if sustained:
+        who = ", ".join(f"{s} ({n} sessions)" for s, n in sustained)
+        room = (book.get("free") or 0)
+        notes.insert(0, f"LOOK WIDER: {who} - leading on breadth with nothing "
+                        f"held, session after session. "
+                        + (f"The book has {room} free slots."
+                           if room and not book["at_cap"] else
+                           "The book has had no room to take it."))
     # `expand` is the actionable state: something is running that the book is
-    # not in, AND the book cannot or can barely act. That pair is the condition
-    # the owner asked to be told about.
-    expand = bool(unheld and (book["at_cap"] or (book.get("free") or 0) <= 3))
+    # not in, AND either the book cannot act on it or it has simply not, for
+    # long enough that "not yet" stopped being the explanation.
+    expand = bool(unheld and (book["at_cap"] or (book.get("free") or 0) <= 3)) \
+        or bool(sustained)
+    # The banner has to say WHICH of the two it is. Hard-coding "it can barely
+    # act" was fine while a full book was the only trigger and became a lie the
+    # moment a long run could fire it with 30 slots free -- and that version is
+    # the more damning one, so it must not be described as a capacity problem.
+    if sustained:
+        expand_why = (f"something has been running for {max(n for _, n in sustained)} "
+                      f"straight sessions that the book is not in")
+    elif expand:
+        expand_why = "something is running that the book is not in, and it can barely act"
+    else:
+        expand_why = ""
     return {"leaders": [b["sector"] for b in leaders],
             "unheld_leaders": [b["sector"] for b in unheld],
+            "unheld_streaks": streaks,
+            "longest_unheld": max(streaks.values()) if streaks else 0,
+            "sustained": [s for s, _ in sustained], "expand_why": expand_why,
             "at_cap": book["at_cap"], "cap_streak": cap_streak,
             "expand": expand, "notes": notes}
 

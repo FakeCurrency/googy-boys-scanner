@@ -467,6 +467,12 @@ SECTOR_BREADTH_TOP_N     = 3
 SECTOR_BREADTH_HISTORY_MAX = 2000
 #  • PUBLISH_DAYS: how much of that history is republished for the page to plot.
 SECTOR_BREADTH_PUBLISH_DAYS = 180
+#  • RUN_ALERT: sessions a top-N sector may lead on breadth with NOTHING held
+#    before the surface stops describing it and starts shouting. One day is a
+#    coincidence and the page should stay calm; a run this long is a rotation
+#    being missed in progress, which is the whole reason this module exists.
+#    July ran nineteen. Report-only -- it changes the volume, never the trades.
+SECTOR_BREADTH_RUN_ALERT = 5
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per

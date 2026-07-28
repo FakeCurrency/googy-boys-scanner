@@ -76,7 +76,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   576 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   587 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -263,6 +263,35 @@ the owner's call, not a refactor. Keep it that way.
 - **`data/sector_history.json` is the only long sector memory in the system**
   (the 7-day PhaseMap archive was too short to reconstruct July after the
   fact). One row per market per day, capped at 2,000; feeds the trend column.
+- **The STREAK is the number that separates a shrug from a miss in progress**
+  (2026-07-28). "Consumer Discretionary is third and you hold none" is a fact
+  you can wave off once; "for the 19th session running" is not the same
+  sentence, and the gap between them is the entire four weeks.
+  `unheld_streak()` counts consecutive most-recent SESSIONS a sector led on
+  rate while the book held zero of it, rebuilt from history rather than kept as
+  a counter so a re-run, a backfill or a skipped day cannot corrupt it. Rows
+  exist only for days the scan ran, so a weekend does not break a run.
+  `append_history` is called BEFORE `horizon()`, so a first-day leader reads 1.
+  - The reconstruction MUST re-apply all three of `compute()`'s exclusions —
+    `_NOT_A_SECTOR`, `MIN_NAMES`, rate > 0 — because history stores every
+    bucket that had listed names. Today's real ASX row is led by "Unclassified"
+    at 91/389 = 23.4%, above every genuine sector. Omitting the `_NOT_A_SECTOR`
+    test (the version this shipped with, caught pre-commit) hands it rank 1
+    every day, pushes the real third-place sector out of the top three, and
+    reports a streak of ZERO for the one sector the surface exists to catch —
+    silently, and only for the sector that mattered. Tie-break is
+    `(-rate, -ag, name)`, identical to the live sort, so a reconstructed rank
+    can never disagree with the rank that was displayed.
+- **`SECTOR_BREADTH_RUN_ALERT` (5 sessions) is when the surface stops
+  describing and starts shouting**, and it widened `expand`. The old rule fired
+  only when the book could not act; a fortnight of leading-with-nothing-held
+  and 30 slots FREE is the worse reading — being capped out is at least an
+  explanation — and it now raises the banner too. Because both states raise it,
+  `horizon()` publishes `expand_why` and the banner prints that instead of the
+  old hard-coded "it can barely act", which was a lie in the new case. The
+  sustained note is `notes.insert(0, ...)` on purpose: the dashboard strip
+  renders only `notes[0]`. Still report-only — it changes the volume, never the
+  trades.
 - **Both files must stay in `scan.yml`'s scoped `SHARED` staging list.**
   `public/data/sector_breadth.json` is shared, not per-market: a run recomputes
   only the market it scanned and MERGES it in, so an ASX-only run must stage
@@ -333,7 +362,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (576 tests)
+python -m pytest -q                      # full gate (587 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan
