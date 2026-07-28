@@ -52,6 +52,11 @@ def main() -> None:
     # NASDAQ scan -> "us" page).
     mover_inputs: dict[str, tuple] = {}
     MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
+    # Same idea, keyed by SCAN market rather than page: the sector-breadth
+    # surface needs this run's universe (the denominator) and results (the
+    # numerator) together, and it is computed after the sector tape is written
+    # so it can join the index changes that fetch already pays for.
+    breadth_inputs: dict[str, dict] = {}
 
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
     for market_key in markets:
@@ -94,6 +99,7 @@ def main() -> None:
             frames = {t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
             if market_key in ("asx", "nasdaq"):
                 mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
+                breadth_inputs[market_key] = {"universe": universe}
 
             # VIVEK (5.0-style 200 SMA reactions) -> <market>_vivek.json — the
             # only scan the app consumes.
@@ -102,6 +108,8 @@ def main() -> None:
                                         pulse_data=pulse_data, progress=False,
                                         from_cache=cache_stats["reused"])
             output.write(vk, args.out, name=f"{market_key}_vivek")
+            if market_key in breadth_inputs:
+                breadth_inputs[market_key]["results"] = vk["results"]
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
 
@@ -168,6 +176,28 @@ def main() -> None:
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors"
           + (f" | carried {carried} field(s) forward" if carried else ""))
+
+    # SECTOR BREADTH + HORIZON (2026-07-28). Runs LAST of the sector steps so it
+    # can read the index tape just written above, and after every market's bot
+    # run so `held` reflects today's book. Report-only: nothing it computes
+    # reaches a trade decision. Best-effort — a failure here must never cost a
+    # scan, and the previous published file simply stands.
+    try:
+        from . import sectorbreadth as _breadth
+        ready = {m: d for m, d in breadth_inputs.items() if d.get("results") is not None}
+        payload = _breadth.update(ready, out_dir=args.out) if ready else None
+        for market, blk in ((payload or {}).get("markets") or {}).items():
+            if market not in ready:
+                continue        # carried forward from a previous run, not rescanned
+            hz = blk["horizon"]
+            print(f"  breadth [{market}]: leaders {', '.join(hz['leaders']) or '-'}"
+                  f" | book {blk['book']['open']}/{blk['book']['max_open']}"
+                  f"{' AT CAP' if blk['book']['at_cap'] else ''}"
+                  f"{'  >> LOOK WIDER' if hz['expand'] else ''}")
+            for note in hz["notes"]:
+                print(f"    ! {note}")
+    except Exception as e:
+        print(f"  breadth: skipped ({e})", flush=True)
 
     # FX honesty: the ASX book is A$ while NASDAQ/crypto are US$ — the journal
     # converts ASX P&L at this rate so combined totals stop mixing currencies

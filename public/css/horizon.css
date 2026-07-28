@@ -1,0 +1,128 @@
+/* HORIZON — the rotation surface (2026-07-28). See public/js/horizon.js.
+   Two skins from one vocabulary: a full board (.hz-panel, sectors.html) and a
+   compact strip (.hz-strip, index.html). */
+
+/* ── shared ────────────────────────────────────────────────────────────────── */
+.hz-up { color: var(--green); }
+.hz-down { color: var(--red); }
+
+/* ── full panel ────────────────────────────────────────────────────────────── */
+.hz-panel {
+  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px 22px; margin: 0 0 24px; border-left: 5px solid var(--blue);
+}
+.hz-panel.is-expand { border-left-color: var(--orange); }
+
+.hz-top { display: flex; gap: 22px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.hz-title { font: 800 19px/1.2 var(--sans); letter-spacing: -0.2px; color: var(--text); margin: 0 0 6px; }
+.hz-title span { font-weight: 600; font-size: 14px; color: var(--muted); letter-spacing: 0; }
+.hz-sub { font: 500 13.5px/1.55 var(--sans); color: var(--muted); margin: 0; max-width: 62ch; }
+.hz-alarm { display: block; margin-top: 6px; color: var(--orange); font-weight: 800; }
+
+/* capacity — the number the July miss actually turned on */
+.hz-book { min-width: 260px; flex: 0 1 300px; background: var(--panel-2); border-radius: var(--radius-sm); padding: 12px 14px; }
+.hz-book-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.hz-book-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hz-book-num { font: 600 13px/1 var(--mono, var(--sans)); color: var(--text-2); }
+.hz-book-num b { font-weight: 800; color: var(--text); }
+.hz-book-bar { height: 7px; border-radius: 4px; background: var(--fill); margin: 9px 0 8px; overflow: hidden; }
+.hz-book-bar i { display: block; height: 100%; background: var(--green); border-radius: 4px; }
+.hz-book.tight .hz-book-bar i { background: var(--orange); }
+.hz-book.full .hz-book-bar i { background: var(--red); }
+.hz-book-note { font: 500 11.5px/1.5 var(--sans); color: var(--muted-2); margin: 0; }
+
+.hz-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; }
+@media (max-width: 900px) { .hz-cols { grid-template-columns: 1fr; } }
+.hz-col { min-width: 0; }
+.hz-col-head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2px solid var(--separator); }
+.hz-col-head h4 { font: 800 15px/1 var(--sans); color: var(--text); margin: 0; }
+.hz-col-meta { margin-left: auto; font: 600 11.5px/1 var(--sans); color: var(--muted); }
+
+/* the alarm lines */
+.hz-note {
+  font: 600 12.5px/1.5 var(--sans); color: var(--text-2); background: var(--orange-soft);
+  border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 8px;
+}
+.hz-note.hz-loud { background: var(--red-soft); color: var(--text); font-weight: 700; }
+.hz-note.hz-quiet { background: var(--fill-2); color: var(--muted); font-weight: 500; }
+
+/* leaderboard */
+.hz-rows { display: flex; flex-direction: column; }
+.hz-row {
+  display: grid; grid-template-columns: 18px minmax(0, 1.5fr) minmax(78px, 1.3fr) 52px 34px 76px 16px;
+  align-items: center; gap: 8px; padding: 7px 6px; border-bottom: 0.5px solid var(--border-soft);
+}
+.hz-row:last-child { border-bottom: 0; }
+.hz-row.hz-head {
+  font: 700 9.5px/1 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted-2); border-bottom: 1px solid var(--separator); padding-bottom: 6px;
+}
+.hz-row.is-lead { background: var(--fill-2); }
+.hz-row.is-blind { box-shadow: inset 3px 0 0 var(--orange); }
+.hz-rank { font: 800 12px/1 var(--sans); color: var(--muted); text-align: right; }
+.hz-row.is-lead .hz-rank { color: var(--blue); }
+/* name truncates, reason never does — a clipped "OFF-DIRE…" explains nothing */
+.hz-sec { display: flex; align-items: baseline; gap: 6px; min-width: 0; font: 700 12.5px/1.25 var(--sans); color: var(--text-2); }
+.hz-sec > b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hz-row.is-lead .hz-sec { color: var(--text); }
+.hz-flag { flex: 0 0 auto; font: 600 9px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-2); font-style: normal; white-space: nowrap; }
+.hz-flag.warn { color: var(--orange); }
+/* an unranked row is context, not a contender — its bar never competes for the eye */
+.hz-row.is-unranked .hz-bar i { background: var(--fill); opacity: 1; }
+.hz-row.is-unranked .hz-bar b, .hz-row.is-unranked .hz-sec { color: var(--muted); }
+.hz-bar { position: relative; height: 16px; background: var(--fill); border-radius: 4px; overflow: hidden; display: flex; align-items: center; }
+.hz-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--blue), var(--teal)); opacity: 0.55; }
+.hz-bar b { position: relative; font: 700 10.5px/1 var(--mono, var(--sans)); color: var(--text); padding-left: 6px; }
+.hz-ag { font: 600 11px/1 var(--mono, var(--sans)); color: var(--text-2); text-align: right; }
+.hz-ag em { font-style: normal; color: var(--muted-2); }
+.hz-held { font: 800 12px/1 var(--sans); color: var(--text); text-align: center; }
+.hz-held.zero { color: var(--orange); }
+.hz-idx { font: 600 10.5px/1 var(--mono, var(--sans)); color: var(--muted); text-align: right; }
+.hz-tr { font-size: 10px; text-align: center; }
+.hz-tr.flat { color: var(--muted-2); }
+
+.hz-empty { font: 500 12.5px/1.5 var(--sans); color: var(--muted); margin: 8px 0; }
+.hz-foot { font: 500 11.5px/1.55 var(--sans); color: var(--muted-2); margin: 10px 0 0; }
+.hz-disclaimer { font: 500 11px/1.5 var(--sans); color: var(--muted-2); margin: 16px 0 0; padding-top: 12px; border-top: 0.5px solid var(--border-soft); }
+
+/* ── compact strip (index.html) ────────────────────────────────────────────── */
+.hz-strip {
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+  padding: 10px 14px; margin: 0 0 14px; border-left: 4px solid var(--blue);
+}
+.hz-strip.is-warn { border-left-color: var(--orange); }
+.hz-strip.is-expand { border-left-color: var(--red); }
+.hz-strip-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hz-strip-tag {
+  font: 800 9.5px/1 var(--sans); letter-spacing: 0.1em; color: var(--blue);
+  background: var(--blue-soft); border-radius: 999px; padding: 5px 9px; white-space: nowrap;
+}
+.hz-strip.is-warn .hz-strip-tag { color: var(--orange); background: var(--orange-soft); }
+.hz-strip.is-expand .hz-strip-tag { color: var(--red); background: var(--red-soft); }
+.hz-strip-leads { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.hz-lead {
+  display: inline-flex; align-items: baseline; gap: 6px; text-decoration: none;
+  font: 600 12px/1 var(--sans); color: var(--text-2);
+  background: var(--fill-2); border-radius: 999px; padding: 6px 11px;
+}
+.hz-lead:hover { background: var(--fill); }
+.hz-lead b { font-weight: 800; color: var(--text); font-family: var(--mono, var(--sans)); }
+.hz-lead em { font-style: normal; font-size: 10.5px; color: var(--muted-2); }
+.hz-lead.zero em { color: var(--orange); font-weight: 700; }
+.hz-lead.flat { color: var(--muted); }
+.hz-book-mini { font: 600 11.5px/1 var(--sans); color: var(--muted); white-space: nowrap; }
+.hz-book-mini b { font-weight: 800; color: var(--text-2); font-family: var(--mono, var(--sans)); }
+.hz-book-mini.tight b, .hz-book-mini.tight span { color: var(--orange); }
+.hz-book-mini.full b, .hz-book-mini.full span { color: var(--red); }
+.hz-strip-more { font: 700 11px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
+.hz-strip-more:hover { text-decoration: underline; }
+.hz-strip-note { font: 600 11.5px/1.5 var(--sans); color: var(--muted); margin-top: 8px; }
+.hz-strip.is-expand .hz-strip-note { color: var(--text-2); }
+
+@media (max-width: 640px) {
+  .hz-row { grid-template-columns: 16px minmax(0, 1.4fr) minmax(60px, 1fr) 44px 28px; }
+  .hz-row .hz-idx, .hz-row .hz-tr { display: none; }
+  .hz-row.hz-head span:nth-child(6), .hz-row.hz-head span:nth-child(7) { display: none; }
+  .hz-panel { padding: 16px 14px; }
+  .hz-book { flex: 1 1 100%; }
+}

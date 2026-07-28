@@ -525,3 +525,109 @@ def test_sanity_guard_prevents_fake_stop_out_in_run_market(tmp_path, monkeypatch
                        now=_aest(2024, 1, 3, 11, 0))
     assert len(bk["open"]) == 1 and len(bk["closed"]) == 0   # NOT closed
     assert bk["open"][0]["suspect_price_runs"] == 1
+
+
+# ── sector back-fill sources on the OPEN BOOK (2026-07-28) ─────────────────────
+
+
+def _held(symbol, sector="", notional=5_000.0, entry=100.0, **kw):
+    """A schema-complete OPEN position, as run_market's mark-to-market expects
+    to find one (``_vpos`` above is the thinner shape verify_books works on)."""
+    p = {"id": f"{symbol}-1", "symbol": symbol, "name": symbol, "sector": sector,
+         "market": "asx", "direction": "long", "grade": "A+",
+         "entry_type": "reclaim", "timeframe": "1D",
+         "entry": entry, "stop": entry - 4.0,
+         "tp1": entry + 6.0, "tp2": entry + 12.0, "tp3": entry + 20.0,
+         "scale": list(config.VIVEK_TP_SCALE_LONG), "risk": 4.0, "rr": 3.0,
+         "trigger_bar": None, "entry_date": "2024-01-01",
+         "opened_at": "2024-01-01T00:00:00+00:00", "status": "open",
+         "tp1_hit": False, "tp2_hit": False, "tp3_hit": False, "booked_pct": 0.0,
+         "realized_r": 0.0, "gross_r": 0.0, "cost_r": 0.0, "exits": [],
+         "mae": entry, "mfe": entry, "mae_r": 0.0, "mfe_r": 0.0,
+         "entry_type_label": "reclaim", "units": notional / entry,
+         "notional": notional, "risk_usd": 100.0, "last_mark": entry}
+    p.update(kw)
+    return p
+
+
+#
+# The per-sector correlation cap exempts a row with no sector, so a HELD
+# position that carries none occupies a slot while being invisible to the cap
+# it should be filling. Back-fill originally read this scan's rows and then the
+# Yahoo cache; neither can reach a holding that has dropped out of the scan and
+# was never fetched — which is exactly the row that matters most. The market's
+# universe file is the third source and the only one with full coverage.
+
+def test_the_universe_backfills_sectors_the_scan_no_longer_lists(tmp_path, monkeypatch):
+    from scanner import sectorcache
+    monkeypatch.setattr(sectorcache, "load_cache", lambda: {})   # isolate: universe only
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[
+        _held("RIO"),        # in the universe
+        _held("ZZZ"),        # in neither
+    ])
+    uni = [{"symbol": "RIO", "yf": "RIO.AX", "sector": "Materials"}]
+
+    # An EMPTY scan: nothing to match on, so only the universe can fill this.
+    bk = vr.run_market("asx", [], {"RIO.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+
+    held = {p["symbol"]: p for p in bk["open"]}
+    assert held["RIO"]["sector"] == "Materials"     # cap can now count it
+    assert held["ZZZ"]["sector"] == ""              # unknown stays honestly blank
+    # ...and it PERSISTS, so the next run's cap sees it too.
+    import json
+    on_disk = {p["symbol"]: p for p in
+               json.loads(_mfile(tmp_path, "asx").read_text())["open"]}
+    assert on_disk["RIO"]["sector"] == "Materials"
+
+
+def test_a_sector_already_on_the_position_is_never_overwritten(tmp_path, monkeypatch):
+    """Back-fill fills holes; it does not re-taxonomise. Overwriting a non-blank
+    sector changes which trades get taken (REFINEMENTS #112, owner's call)."""
+    from scanner import sectorcache
+    monkeypatch.setattr(sectorcache, "load_cache", lambda: {})
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[
+        _held("RIO", sector="Metals & Mining")])
+    uni = [{"symbol": "RIO", "yf": "RIO.AX", "sector": "Materials"}]
+    bk = vr.run_market("asx", [], {"RIO.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert bk["open"][0]["sector"] == "Metals & Mining"
+
+
+# ── the portfolio ceiling must count THIS market's own exposure ───────────────
+
+def _notional_setup(tmp_path, monkeypatch, cap):
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL", float(cap))
+    monkeypatch.setattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 5_000.0)
+    # $5,000 already committed in THIS market, and nothing anywhere else.
+    _write_market_book(tmp_path, "asx", open_=[
+        _held("RIO", sector="Materials")])
+    return [{"symbol": "BHP", "yf": "BHP.AX", "sector": "Materials"},
+            {"symbol": "RIO", "yf": "RIO.AX", "sector": "Materials"}]
+
+
+def test_this_markets_own_notional_counts_against_the_portfolio_ceiling(tmp_path, monkeypatch):
+    """decide() seeds `open_notional` from the runner's `open_book` projection.
+    That projection dropped the `notional` field, so the ceiling counted every
+    market's exposure EXCEPT the one it was deciding for — an effective ceiling
+    of the configured one PLUS whatever this market already held."""
+    uni = _notional_setup(tmp_path, monkeypatch, cap=6_000)
+    bk = vr.run_market("asx", [_row(sector="Materials")],
+                       {"BHP.AX": _frame(101.0), "RIO.AX": _frame(101.0)},
+                       uni, now=_aest(2024, 1, 2, 11, 0))
+    # $5,000 held + $5,000 for BHP = $10,000 > the $6,000 ceiling -> declined.
+    # Unfixed, this market's $5,000 read as $0 and $5,000 <= $6,000 let it in.
+    assert [p["symbol"] for p in bk["open"]] == ["RIO"]
+
+
+def test_the_ceiling_still_admits_an_entry_that_genuinely_fits(tmp_path, monkeypatch):
+    """Control for the test above: the block must come from the arithmetic, not
+    from the seeded book blocking entries for some unrelated reason."""
+    uni = _notional_setup(tmp_path, monkeypatch, cap=11_000)
+    bk = vr.run_market("asx", [_row(sector="Materials")],
+                       {"BHP.AX": _frame(101.0), "RIO.AX": _frame(101.0)},
+                       uni, now=_aest(2024, 1, 2, 11, 0))
+    assert sorted(p["symbol"] for p in bk["open"]) == ["BHP", "RIO"]

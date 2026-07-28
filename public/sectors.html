@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=99" />
   <link rel="stylesheet" href="css/sectors.css?v=8" />
+  <link rel="stylesheet" href="css/horizon.css?v=1" />
   <script src="js/nav.js?v=13"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
@@ -41,6 +42,11 @@
       <p class="sec-sub" id="sec-sub">Loading…</p>
     </div>
 
+    <!-- HORIZON: sector participation vs what the book holds vs whether it has
+         room (js/horizon.js). Above the tape on purpose — the July rotation was
+         missed with all of the data below already on the page. -->
+    <section class="hz-panel" id="horizon-panel" hidden></section>
+
     <!-- two markets side by side: ASX (left) / US (right) -->
     <div class="sec-grid">
       <section class="sec-col" id="col-asx"></section>
@@ -51,5 +57,6 @@
   </main>
 
   <script src="js/sectors.js?v=9"></script>
+  <script src="js/horizon.js?v=1"></script>
 </body>
 </html>

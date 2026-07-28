@@ -445,6 +445,28 @@ VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
 # trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 3
+
+# ── SECTOR BREADTH / HORIZON (2026-07-28, scanner/sectorbreadth.py) ───────────
+# REPORT-ONLY. None of these change which trades get taken; they decide what the
+# rotation surface can see and remember. Written after the July post-mortem, in
+# which an entire sector ran for four weeks while the only published sector
+# number (a RAW setup count, dominated by how many names each sector lists) said
+# nothing, and the book sat at its ceiling for 20 straight sessions unable to
+# act even if it had.
+SECTOR_BREADTH_ENABLED   = True
+#  • MIN_NAMES: a sector with fewer listed names than this is computed but never
+#    RANKED. Participation rate on a 3-name sector is 0% or 33% and would top
+#    every leaderboard on noise alone.
+SECTOR_BREADTH_MIN_NAMES = 15
+#  • TOP_N: how many sectors count as "leading" for the unheld-leaders alarm.
+SECTOR_BREADTH_TOP_N     = 3
+#  • HISTORY_MAX: rows kept in data/sector_history.json (one per market per DAY,
+#    ~2 markets x 250 sessions = a year at 500). This file is the ONLY long
+#    sector memory in the system — the 7-day PhaseMap archive was too short to
+#    reconstruct the July rotation after the fact — so keep it generous.
+SECTOR_BREADTH_HISTORY_MAX = 2000
+#  • PUBLISH_DAYS: how much of that history is republished for the page to plot.
+SECTOR_BREADTH_PUBLISH_DAYS = 180
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per

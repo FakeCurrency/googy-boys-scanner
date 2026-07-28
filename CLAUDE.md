@@ -66,6 +66,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        (notify/alerts/pulse + broker paper_run/bracket_order/
                        reconcile DELETED 2026-07-20 — see git history)
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
+  sectorbreadth.py     HORIZON — sector participation + rotation (see below).
+                       REPORT-ONLY: it never touches which trades get taken.
   broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
                        across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
                        bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
@@ -74,7 +76,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   542 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   575 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -166,7 +168,13 @@ assert_staged call and a WATCHDOG_RUNS entry.
   (`sectorcache.enrich_rows`, straight after the ADV enrichment), and
   `sectorcache._scan_symbols` seeds the fetch list from the OPEN BOOK first
   (rank `-1`) so held sector-less names — which had dropped out of the scan and
-  could never acquire a sector — get backfilled. **Enrichment only ever writes
+  could never acquire a sector — get backfilled. **The book back-fill has three
+  sources, in order: today's scan rows → this market's UNIVERSE file → the
+  cache** (2026-07-28). The universe leg was missing and it is the only source
+  with full coverage — a scan lists the ~336 ASX names that set up, the universe
+  carries a sector for all 2,212 — which is why BGA/FPH/AIA sat sector-less
+  through every scan while occupying slots and, blank, staying exempt from the
+  very cap they should have been filling. **Enrichment only ever writes
   into a blank field:** a sector shipped with the universe (all ASX rows carry
   GICS) wins, and an empty/unreadable cache is a no-op, never a clear. A wrong
   sector here now changes which trades get taken, so treat cache edits as trade
@@ -187,6 +195,12 @@ assert_staged call and a WATCHDOG_RUNS entry.
   risk dial, not position size. Do not "fix" that by re-clamping `risk_pct` in
   fixed mode — see `tests/test_fixed_notional.py`. Set
   `VIVEK_BOT_POSITION_NOTIONAL = 0` to restore the old 0.35%-risk path exactly.
+  The `open_book` projection `run_market` hands `decide()` carries `notional`
+  (2026-07-28): `decide()` seeds `open_notional` from it, so omitting the field
+  made the $150,000 ceiling count every market's exposure EXCEPT the one it was
+  deciding for. Latent while every position is $5,000 and the 30-slot cap binds
+  first at exactly $150,000 — but it is a risk cap reading a number it believes
+  is complete, so it is fixed rather than noted.
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.
@@ -194,6 +208,64 @@ assert_staged call and a WATCHDOG_RUNS entry.
   Cloudflare KV (`gbs-sync.js`, `/api/journal?code=...`). The unified
   watchlist (stars from all lenses) lives INSIDE that store
   (`watchlists`, keys `<lens>:<market>:<TICKER>`, tombstoned un-stars).
+
+---
+
+## HORIZON — the rotation surface (2026-07-28)
+
+**Why it exists.** Owner post-mortem: ASX consumer discretionaries ran for four
+weeks while the market was "SHIT to trade", and the book held none of them. Two
+separate failures let that happen and the module addresses both.
+(1) The only published sector number was a RAW SETUP COUNT — Materials lists 766
+of the ASX's 2,212 names and out-counts everything on every scan regardless of
+what it is doing, so the count could never surface a 104-name sector waking up.
+(2) The book sat at its 10-slot ceiling for 20 straight sessions, so nothing
+could have been taken even had it been seen. A leaderboard alone would have been
+half an answer; the panel therefore always shows CAPACITY beside the leaders.
+
+**REPORT-ONLY, deliberately.** `sectorbreadth` is imported by `scanner/run.py`
+only, never by `broker/`. It reads the book; nothing reads it back. Every
+question it raises — raise the 3-per-sector cap? tilt the ranking? page on
+"leading sector, zero held"? — changes which trades get taken and is therefore
+the owner's call, not a refactor. Keep it that way.
+
+- **`scanner/sectorbreadth.py`** — `compute()` per market, `update()` publishes.
+  Participation rate = A+/A setups ÷ names in the sector; ranked descending by
+  rate, then by A+/A count. `run.py` fills `breadth_inputs[market]` only for
+  `("asx", "nasdaq")`, so a crypto-only weekend run never calls `update()`.
+- **The denominator is NOT the same on both markets** (`names_source`). ASX
+  divides by names LISTED in the sector (the universe carries GICS for all
+  2,212) — a true participation rate. NASDAQ's symbol file ships no sector
+  column, so it divides by the names a scan has CLASSIFIED so far via
+  `data/sector_map.json`. Ranking within NASDAQ is sound; the LEVEL is not
+  comparable to ASX and drifts down as coverage fills in. The page says so.
+- **Unranked rows are published, never ranked, and always carry a reason.**
+  `real: false` = not a sector (Unclassified/None — 389 ASX names; on the first
+  run that bucket topped the board at 23.4%, the exact failure the module
+  exists to correct wearing a different hat). `thin · N` = under
+  `SECTOR_BREADTH_MIN_NAMES` (15). `off-directory` = held under a label the
+  market's directory does not use, so there is no listing count to divide by —
+  this is REFINEMENTS #112 surfacing on the page (ASX `Financial Services` and
+  `Insurance` each hold 1 under Yahoo-style labels, and the 3-per-sector cap
+  counts them as separate buckets). Bars scale off RANKED rows only.
+- **Coverage is stated, not hidden.** 91 of 216 ASX A+/A sit in names carrying
+  no sector at all, so the footnote prints what share of the day's A+/A the
+  ranked sectors actually account for whenever the off-rank share tops 10%.
+  "Leading sector" is a claim about the part of the tape this board can see.
+- **`data/sector_history.json` is the only long sector memory in the system**
+  (the 7-day PhaseMap archive was too short to reconstruct July after the
+  fact). One row per market per day, capped at 2,000; feeds the trend column.
+- **Both files must stay in `scan.yml`'s scoped `SHARED` staging list.**
+  `public/data/sector_breadth.json` is shared, not per-market: a run recomputes
+  only the market it scanned and MERGES it in, so an ASX-only run must stage
+  the whole file or the NASDAQ block it just carried forward is dropped. Leave
+  the history file unstaged and every session starts from day one forever.
+- **Front end:** `public/js/horizon.js` + `public/css/horizon.css`, one
+  vocabulary in two skins — the full board `#horizon-panel` on sectors.html
+  (follows the market buttons) and the compact strip `#horizon-strip` on
+  index.html. Both hide themselves silently if the JSON is missing, so a
+  market that has never run degrades to nothing rather than to an error.
+- Constants: `SECTOR_BREADTH_*` in `scanner/config.py`.
 
 ---
 
@@ -253,7 +325,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (542 tests)
+python -m pytest -q                      # full gate (575 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

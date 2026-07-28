@@ -818,7 +818,28 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if sec:
                 pos["sector"] = sec
                 filled_book += 1
-        # ...then the cache, for holdings this scan no longer lists at all.
+        # ...then this market's UNIVERSE file, which is the canonical taxonomy
+        # (#112) and the only source with full coverage: today it carries a
+        # sector for 2,212 of 2,212 ASX names, while a scan lists only the ~336
+        # that produced a setup. A holding that has dropped out of the scan is
+        # exactly the row the cap most needs to see — it occupies a slot and,
+        # blank, is exempt from the cap it should be filling. Without this the
+        # back-fill reached only names still setting up, which is why three ASX
+        # positions (BGA/FPH/AIA) sat sector-less through every scan.
+        from_universe = {str(u.get("symbol") or "").upper():
+                         str(u.get("sector") or "").strip()
+                         for u in (universe or [])
+                         if str(u.get("sector") or "").strip()}
+        if from_universe:
+            for pos in held:
+                if str(pos.get("sector") or "").strip():
+                    continue
+                sec = from_universe.get(str(pos.get("symbol") or "").upper())
+                if sec:
+                    pos["sector"] = sec
+                    filled_book += 1
+        # ...then the cache, for holdings neither the scan nor the universe
+        # lists (NASDAQ ships no sector column, so this is its only source).
         filled_book += sectorcache.enrich_rows(held, market, cache)
         if filled_rows or filled_book:
             log.info("vivek_run [%s]: sector map filled %d scan rows and "
@@ -849,8 +870,15 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     except Exception as e:                                       # noqa: BLE001
         log.warning("vivek_run [%s]: sector merge skipped (%s) - the per-sector "
                     "cap will only bind on rows that already carry one", market, e)
+    # NOTIONAL RIDES ALONG TOO (2026-07-28). decide() seeds `open_notional` from
+    # this projection, so omitting the field made the $150,000 ceiling count
+    # every market's exposure EXCEPT the one it was deciding for — an effective
+    # ceiling of $150,000 plus whatever this market already held. Latent while
+    # every position is $5,000 and the 30-slot cap binds first at exactly
+    # $150,000, but it is a risk cap reading a number it believes is complete.
     open_book = [{"symbol": p["symbol"], "direction": p["direction"],
-                  "sector": p.get("sector", "")}
+                  "sector": p.get("sector", ""),
+                  "notional": p.get("notional", 0)}
                  for p in book["open"] if p.get("market") == market]
     # Global ceiling across every market (owner, 2026-07-28): the book may hold
     # VIVEK_BOT_MAX_OPEN_TOTAL positions distributed however the setups fall,
