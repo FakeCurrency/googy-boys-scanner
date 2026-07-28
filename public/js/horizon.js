@@ -53,13 +53,16 @@
     return "$" + Math.round(n);
   }
 
-  // Slots and dollars are two different capacity stories and right now they
-  // point OPPOSITE ways: 24 of 30 slots used reads 80% full, while $6.1k of
-  // $150k deployed reads 4% invested. Both are true — the 24 legacy holdings
-  // average ~$250 each because they were sized off the old $10k equity. Showing
-  // only slots understates the room; showing only dollars wildly overstates it.
-  // What is actually deployable is free slots x the fixed position size, and
-  // saying so is the whole point of a panel built after a capacity miss.
+  // Slots and dollars are two different capacity stories and they can point
+  // OPPOSITE ways. As of 2026-07-28 they agree: 30 slots x $5,000 is exactly
+  // the $150k ceiling, and the resize put every open position at the fixed
+  // size, so 24 of 30 slots used is also $120k of $150k deployed. They come
+  // apart again the moment VIVEK_BOT_POSITION_NOTIONAL is retuned away from
+  // max_notional / max_open, or a row is trimmed under target for risk. When
+  // that happens, showing only slots understates the room and showing only
+  // dollars overstates it — what is actually deployable is free slots x the
+  // fixed position size, and saying so is the whole point of a panel built
+  // after a capacity miss. The note below stays silent while they agree.
   function deployNote(book) {
     const free = book.free, per = book.position_notional || 0;
     if (!free || !per) return "";
@@ -68,8 +71,9 @@
     if (dollarFree <= room * 1.25) return "";   // the two caps agree; nothing to reconcile
     return `<b>${money(room)}</b> is what those ${free} slots can actually take
       (${free} × ${money(per)}). The dollar ceiling has ${money(dollarFree)} unused,
-      but slots are what bind — the ${book.open} you hold are mostly small
-      pre-transition positions totalling just ${money(book.notional)}.`;
+      but slots are what bind — a new position can only ever be ${money(per)}, so
+      the ${money(dollarFree - room)} above that is unreachable until the position
+      size is retuned.`;
   }
 
   function bookHTML(book, compact) {

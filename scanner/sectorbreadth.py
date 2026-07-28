@@ -301,9 +301,13 @@ def book_state(positions=None) -> dict:
         except (TypeError, ValueError):
             pass
     # Published so the page can say what free SLOTS are worth in dollars. The
-    # two ceilings currently disagree by an order of magnitude -- 24 of 30 slots
-    # used reads 80% full, $6.1k of $150k deployed reads 4% invested -- because
-    # the legacy holdings average ~$250 each, sized off the old $10,000 equity.
+    # two ceilings CAN disagree by an order of magnitude, and did until the
+    # 2026-07-28 resize: 24 of 30 slots used read 80% full while $6.1k of $150k
+    # deployed read 4% invested, because the legacy holdings averaged ~$250
+    # each, sized off the old $10,000 equity. Restating them at $5,000 closed
+    # that gap (24 x $5,000 = $120k, so 80% of slots is now 80% of notional),
+    # but the divergence is the GENERAL case, not a one-off -- the next retune
+    # of VIVEK_BOT_POSITION_NOTIONAL reopens it on every row already held.
     # Free slots x this number is the only figure that answers "how much can I
     # actually put to work", which is the question the July miss turned on.
     return {"open": len(positions), "max_open": max_open,
