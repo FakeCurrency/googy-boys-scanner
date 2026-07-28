@@ -65,6 +65,21 @@ jobs:
           # Every OTHER non-200 still fails here: 401/000/5xx mean the watcher
           # was configured and has now broken or gone unreachable, which is a
           # real regression and worth an email the moment it happens.
+          #
+          # 401 MUST STAY FATAL EVEN THOUGH IT ALSO FLOODS, and the reason is
+          # not symmetry -- it is that THIS JOB IS THE ONLY THING THAT CAN SEE
+          # IT. The watchdog's probe is unauthenticated by construction, so a
+          # 401 reads to it as "configured and correctly refusing an anonymous
+          # caller" = healthy. That is the right reading for an anonymous
+          # prober and the wrong one for the system: TICK_SECRET set in
+          # Cloudflare but absent or mismatched in GitHub means the watcher
+          # still is not running, and only a caller holding the secret can tell
+          # those two apart. Route 401 to a green run and the half-configured
+          # state becomes invisible to every channel at once -- exactly the
+          # blackout this whole commit exists to undo, wearing a better
+          # disguise. It is also the one flood that follows immediately from an
+          # action the owner just took, so it is feedback rather than ambience,
+          # and it stops the moment he sets the second half.
           code=""
           for attempt in 1 2 3; do
             # NO `|| echo 000` HERE. curl writes %{http_code} even when it fails
@@ -100,6 +115,12 @@ jobs:
               echo "**Fix:** Cloudflare Pages → the project → Settings → Environment"
               echo "variables → add \`TICK_SECRET\`, then set the identical value as the"
               echo "\`TICK_SECRET\` GitHub Actions secret. Redeploy for it to take effect."
+              echo ""
+              echo "**Do both halves in one sitting.** Setting it in Cloudflare alone"
+              echo "moves this job from 503 to **401** — configured, but this job cannot"
+              echo "authenticate — and a 401 DOES fail the run, every 5 minutes, until"
+              echo "the two values match. That is deliberate (see below), but it is a"
+              echo "loud way to find out you did half of it."
               echo ""
               echo "This job stays green on purpose: it is a setup gap, not a"
               echo "regression, and it would otherwise email 288 times a day. The"

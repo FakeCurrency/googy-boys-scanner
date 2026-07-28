@@ -169,6 +169,17 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   broken* (401 = secret mismatch between Cloudflare and GitHub, 000 =
   unreachable, 5xx = down) — still `exit 1`, still an email, because that is a
   real regression worth hearing about the moment it happens.
+- **401 stays fatal even though it floods too, and the reason is not symmetry.**
+  This job is the ONLY caller that holds the secret, so it is the only thing
+  that can see a half-configured setup. To the watchdog's deliberately
+  anonymous probe a 401 reads as "configured and correctly refusing an
+  anonymous caller" = healthy — right for the prober, wrong for the system,
+  because `TICK_SECRET` set in Cloudflare and absent in GitHub means the
+  watcher still is not running. Make 401 green and that state goes invisible to
+  every channel at once, which is the original blackout in a better disguise.
+  It is also the one flood that follows immediately from an action the owner
+  just took, so it is feedback rather than ambience. **Set both halves in one
+  sitting**; the 503 step summary says so at the point of action.
 - **Endpoint health moved to `watchdog.probe_endpoints()`**, which inherits the
   same state machine as every other finding: say it once, remind every
   `WATCHDOG_RENOTIFY_HOURS`, and — the thing a red run structurally cannot do —
