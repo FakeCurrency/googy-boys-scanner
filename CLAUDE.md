@@ -67,14 +67,14 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        reconcile DELETED 2026-07-20 — see git history)
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
   broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
-                       across all markets, one/symbol, 3/sector), vivek_run.py (paper book),
+                       across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
                        bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
                        circuit_breaker, pre_trade_check, ...
 phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   537 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   542 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -147,8 +147,17 @@ assert_staged call and a WATCHDOG_RUNS entry.
   `VIVEK_BOT_MAX_OPEN_TOTAL`; the per-market cap is set equal to it so one market
   CAN hold the whole book, and `vivek_run._open_elsewhere` counts the sibling
   market files before each decision — fail-closed if one is unreadable), one per
-  symbol, 3 per sector, daily+weekly loss guards, manual close via
-  close_position.yml journal_type=bot.
+  symbol, **3 per sector PER MARKET** (not global — see below), daily+weekly loss
+  guards, manual close via close_position.yml journal_type=bot.
+- **The correlation cap is the only limit that is still per-market**
+  (REFINEMENTS #113, owner decision). Positions (30), notional ($150,000) and
+  one-per-symbol are all cross-market; `decide()` seeds `sector_counts` from the
+  single market's `open_book`, so 3 ASX financials + 3 NASDAQ financials is six
+  of one real sector with every check passing. Not repaired — tightening what
+  gets taken is the owner's call — but `sectorcache.global_sector_load` logs a
+  per-scan WARNING naming any sector over the cap once all markets are counted.
+  The fix, if wanted, is a `sectors` Counter on `_book_elsewhere` plus a
+  `sector_elsewhere` kwarg, mirroring the two ceilings exactly.
 - **`data/sector_map.json` IS A SIGNAL PATH** (2026-07-28, owner-authorised —
   REFINEMENTS #38). It used to be display-only, which is why the 3-per-sector
   cap never bound on NASDAQ: `universe._fetch_nasdaq` has no sector column, rows
@@ -244,7 +253,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (537 tests)
+python -m pytest -q                      # full gate (542 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

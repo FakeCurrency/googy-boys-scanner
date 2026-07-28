@@ -833,6 +833,19 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                         "market's universe disagrees with, so the per-sector cap "
                         "counts them as separate buckets: %s (REFINEMENTS #112)",
                         market, len(odd), ", ".join(odd))
+        # The per-sector cap is per-MARKET; the position and notional ceilings
+        # are global. So a real sector can sit at 3-per-market across markets
+        # and every check still passes. Reported, never enforced — closing the
+        # gap changes which trades get taken (owner's call, REFINEMENTS #113).
+        heavy = sectorcache.global_sector_load(
+            book["open"], int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0))
+        if heavy:
+            log.warning("vivek_run [%s]: %d sector(s) exceed the %d-per-sector cap "
+                        "once ALL markets are counted together (the cap is enforced "
+                        "per market): %s (REFINEMENTS #113)",
+                        market, len(heavy),
+                        int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0),
+                        ", ".join(heavy))
     except Exception as e:                                       # noqa: BLE001
         log.warning("vivek_run [%s]: sector merge skipped (%s) - the per-sector "
                     "cap will only bind on rows that already carry one", market, e)

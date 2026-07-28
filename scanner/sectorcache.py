@@ -149,6 +149,45 @@ def diverging(positions, rows) -> list[str]:
     return sorted(out)
 
 
+def global_sector_load(positions, cap: int = 0) -> list[str]:
+    """Real sectors held ABOVE `cap` once every market is counted together.
+
+    The correlation cap is enforced PER MARKET — `decide()` seeds its counter
+    from `open_book`, which is one market's slice — while the 30-position and
+    $150,000 ceilings are GLOBAL (`open_elsewhere` / `notional_elsewhere`). So
+    three ASX financials plus three NASDAQ financials is six of one real sector
+    in a 30-slot book, and every per-market check passes. That gap only started
+    mattering when the position ceiling went global (2026-07-28); before it, a
+    per-market sector cap matched a per-market position cap.
+
+    Reported, never enforced: making the cap global changes which trades get
+    taken, so it is an owner decision (REFINEMENTS #113). This exists so the
+    concentration is a number in the log rather than a surprise in a drawdown.
+
+    Sectors are compared case-insensitively, matching `vivek_bot._sector_key`.
+    Blanks are skipped (the cap exempts them) and so are crypto's synthetic
+    buckets, which are per-market by construction and cannot collide with an
+    equity sector name.
+
+    Returns ``sector=count(markets)`` strings, worst first, for logging.
+    """
+    if not positions or cap <= 0:
+        return []
+    buckets: dict = {}
+    for pos in positions:
+        sector = str((pos or {}).get("sector") or "").strip()
+        if not sector:
+            continue
+        entry = buckets.setdefault(sector.lower(), {"n": 0, "markets": set(),
+                                                    "label": sector})
+        entry["n"] += 1
+        entry["markets"].add(str(pos.get("market") or "?"))
+    out = [(e["n"], e["label"], sorted(e["markets"]))
+           for e in buckets.values() if e["n"] > cap]
+    out.sort(key=lambda t: (-t[0], t[1]))
+    return [f"{label}={n}({'+'.join(mkts)})" for n, label, mkts in out]
+
+
 def _scan_symbols() -> list[tuple[int, str, str]]:
     """(grade_rank, market, symbol) for every scan row still missing a sector.
 

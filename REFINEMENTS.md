@@ -835,3 +835,27 @@ Only these two rows are affected: the 8 rows back-filled on 2026-07-28 came stra
 **Made visible meanwhile:** `sectorcache.diverging(positions, rows)` returns `SYM=stored->universe` for every held position whose sector the current scan contradicts, and `vivek_run.run_market` logs it as a WARNING naming the symbols on every scan. Blank-filling is unaffected — that fills nothing-shaped holes, this would overwrite an answer.
 
 *Files: scanner/sectorcache.py, scanner/broker/vivek_run.py, tests/test_sector_cache.py*
+
+## 113. The sector cap is per-market; the position and dollar ceilings are global
+**Impact 4 · Effort S · bot-broker · OWNER DECISION**
+
+Found 2026-07-28 while checking the #110 ceiling against the live book. Three of the book's four limits are now cross-market, and one is not:
+
+| Limit | Value | Scope |
+|---|---|---|
+| open positions | 30 | **global** — `open_elsewhere` |
+| open notional | $150,000 | **global** — `notional_elsewhere` |
+| per symbol | 1 | global by construction |
+| **per sector** | **3** | **per market — no `sector_elsewhere` exists** |
+
+`decide()` seeds `sector_counts` from `open_book`, which `vivek_run` builds as `[p for p in book["open"] if p.get("market") == market]`. So three ASX financials plus three NASDAQ financials is six of one real sector, every per-market check passes, and the summary reports the cap as enforced.
+
+**This is a consequence of the 30-total change, not a pre-existing bug.** While the position cap was per-market, a per-market sector cap matched it exactly. Making the book global (owner, 2026-07-28) left the correlation control as the only per-market limit — and correlation is precisely the risk that does not respect market boundaries. A drawdown in financials does not care which exchange the names trade on.
+
+Today's book does not breach it (Industrials sits at exactly 3, ASX 2 + NASDAQ 1), so this is a ceiling to raise deliberately rather than damage to repair. Note the interaction with #112: within ASX, `Financials`/`Insurance`/`Financial Services` are already three buckets, so ASX alone can reach 9 — fixing #112 does not fix this, and fixing this does not fix #112.
+
+**Not fixed autonomously** — it tightens which trades get taken, which is the owner's call. The fix is small and already precedented: `_book_elsewhere` reads every sibling market file and returns `{"count", "notional"}`; adding a `sectors` Counter to that dict and a `sector_elsewhere` kwarg to `decide()` follows the exact shape of the two ceilings above, including fail-closed when a sibling file is unreadable.
+
+**Made visible meanwhile:** `sectorcache.global_sector_load(positions, cap)` returns `sector=count(markets)` for every real sector held above the cap once all markets are counted together, and `vivek_run.run_market` logs it as a WARNING. Blanks are skipped because the cap exempts them; crypto's synthetic buckets are per-market by construction and cannot collide with an equity sector name.
+
+*Files: scanner/sectorcache.py, scanner/broker/vivek_run.py, tests/test_sector_cache.py*

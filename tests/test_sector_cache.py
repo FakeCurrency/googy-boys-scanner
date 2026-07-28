@@ -237,6 +237,60 @@ def test_diverging_matches_case_insensitively():
         "CCP=Insurance->Financials"]
 
 
+def test_global_sector_load_sees_what_the_per_market_cap_cannot():
+    """The live shape of REFINEMENTS #113.
+
+    Three ASX financials and three NASDAQ financials pass every per-market
+    check — decide() is handed one market's slice — while the book holds six
+    of one real sector against a 30-position ceiling that IS global.
+    """
+    book = ([{"symbol": f"A{i}", "market": "asx", "sector": "Financials"}
+             for i in range(3)]
+            + [{"symbol": f"N{i}", "market": "nasdaq", "sector": "Financials"}
+               for i in range(3)]
+            + [{"symbol": "AIA", "market": "asx", "sector": "Industrials"}])
+    assert sectorcache.global_sector_load(book, 3) == ["Financials=6(asx+nasdaq)"]
+    # At the cap is not over it — the report must not cry wolf on a legal book.
+    assert sectorcache.global_sector_load(book[:3] + book[6:], 3) == []
+
+
+def test_global_sector_load_is_off_unless_a_cap_is_given():
+    # cap<=0 means "no correlation cap configured"; reporting breaches of a
+    # limit that does not exist would be noise on every single scan.
+    book = [{"symbol": "X", "market": "asx", "sector": "Financials"}] * 9
+    assert sectorcache.global_sector_load(book, 0) == []
+    assert sectorcache.global_sector_load([], 3) == []
+
+
+def test_global_sector_load_skips_what_the_cap_skips():
+    """Blanks are exempt from the cap, so they must not appear in its report.
+
+    Crypto's synthetic crypto-major/crypto-alt buckets are per-market by
+    construction and cannot collide with an equity sector name, so they are
+    simply absent here rather than special-cased.
+    """
+    book = ([{"symbol": f"B{i}", "market": "nasdaq", "sector": ""} for i in range(9)]
+            + [{"symbol": f"C{i}", "market": "crypto"} for i in range(9)])
+    assert sectorcache.global_sector_load(book, 3) == []
+
+
+def test_global_sector_load_folds_case_like_the_cap_does():
+    # _sector_key lowercases before bucketing, so "Financials"/"financials" are
+    # ONE bucket to the cap and must be one bucket in the report too.
+    book = ([{"symbol": "A", "market": "asx", "sector": "Financials"}] * 2
+            + [{"symbol": "N", "market": "nasdaq", "sector": "financials"}] * 2)
+    out = sectorcache.global_sector_load(book, 3)
+    assert len(out) == 1 and out[0].startswith("Financials=4(")
+
+
+def test_global_sector_load_reports_worst_first():
+    book = ([{"symbol": "A", "market": "asx", "sector": "Materials"}] * 7
+            + [{"symbol": "N", "market": "nasdaq", "sector": "Technology"}] * 5
+            + [{"symbol": "E", "market": "asx", "sector": "Energy"}] * 2)
+    out = sectorcache.global_sector_load(book, 3)
+    assert [s.split("=")[0] for s in out] == ["Materials", "Technology"]
+
+
 def test_yf_symbol_suffix():
     assert sectorcache._yf_symbol("asx", "BHP") == "BHP.AX"
     assert sectorcache._yf_symbol("nasdaq", "NVDA") == "NVDA"
