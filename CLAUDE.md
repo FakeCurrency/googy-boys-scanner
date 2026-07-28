@@ -74,7 +74,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   ~290 tests — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   537 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -94,21 +94,32 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
 | kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) |
 | stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
-| close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals |
+| close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted.)
 
-**The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108).**
-scan.yml and crypto_bot.yml share concurrency `group: scan` so two writers can
-never touch the paper book at once (load-bearing: the 30-position cap is global,
-so concurrent writers could each read "23 open" and both open). That group sits
-on the *scan*/*crypto* JOBS, not at workflow level. GitHub keeps only ONE pending
-run per group and cancels the previously-pending one, so workflow-level scoping
-put the cheap gate jobs in the same queue — and every `:47` ASX backstop was
-being evicted by the `:52` crypto arrival five minutes later, before it could
-probe. Do not move these blocks back up to workflow level.
+**The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108,
+#109).** scan.yml, crypto_bot.yml and close_position.yml share concurrency
+`group: scan` so two writers can never touch the paper book at once
+(load-bearing: the 30-position cap is global, so concurrent writers could each
+read "23 open" and both open). That group sits on the *scan* / *crypto* / *close*
+JOBS, not at workflow level. GitHub keeps only ONE pending run per group and
+cancels the previously-pending one, so workflow-level scoping put the cheap gate
+jobs in the same queue — every `:47` ASX backstop was being evicted by the `:52`
+crypto arrival five minutes later, before it could probe, and a manual close
+dispatched behind a running scan was deleted outright, run and all. Do not move
+these blocks back up to workflow level; `tests/test_workflow_mutex.py` fails if
+you do.
+
+**close_position.yml re-dispatches itself if evicted** (owner decision). Because
+the mutex is on the job, an eviction now cancels that job and leaves the run
+alive, so the `redispatch` job — deliberately OUTSIDE the group — can see it and
+`gh workflow run` the same inputs again. Capped at 3 attempts via the `attempt`
+input; only fires when the close executed zero steps (an eviction never starts
+the job, whereas a human Cancel leaves finished steps behind); waits for the
+group's pending slot to clear first so the retry does not evict its evictor.
 
 **Silent-failure protection (2026-07-20, Phase 5):** the committing workflows
 (scan/crypto_bot/phasemap/backup_book) run `scripts/assert_staged.sh` after
@@ -138,19 +149,35 @@ assert_staged call and a WATCHDOG_RUNS entry.
   market files before each decision — fail-closed if one is unreadable), one per
   symbol, 3 per sector, daily+weekly loss guards, manual close via
   close_position.yml journal_type=bot.
-- **The 3-per-sector cap does NOT bind on NASDAQ** (REFINEMENTS #38): rows with
-  no sector are exempt, `universe._fetch_nasdaq` has no sector column, and
-  nothing else fills one in — 0 of 269 rows in the last NASDAQ scan carried a
-  sector. ASX rows all carry one; crypto is rescued by synthetic
-  `crypto-major`/`crypto-alt` buckets keyed off the symbol. Since one market may
-  now hold all 30 slots, a fully-NASDAQ book has NO correlation control.
-  `decide()` logs a warning and publishes `summary["sector_coverage"]`.
-  **The data already exists** — `scanner/sectorcache.py` maintains
-  `data/sector_map.json` (340 NASDAQ entries; it covers 269/269 of those same
-  scan rows) but it is declared display-only and nothing merges it into the
-  rows `decide()` sees. So the fix is WIRING, not sourcing. Doing it changes
-  which trades get taken — **owner decision, pending; do not ship it
-  autonomously.**
+- **`data/sector_map.json` IS A SIGNAL PATH** (2026-07-28, owner-authorised —
+  REFINEMENTS #38). It used to be display-only, which is why the 3-per-sector
+  cap never bound on NASDAQ: `universe._fetch_nasdaq` has no sector column, rows
+  with no sector are exempt from the cap, and 0 of 269 scanned rows carried one.
+  `vivek_run.run_market` now merges the cache into the rows `decide()` sees
+  (`sectorcache.enrich_rows`, straight after the ADV enrichment), and
+  `sectorcache._scan_symbols` seeds the fetch list from the OPEN BOOK first
+  (rank `-1`) so held sector-less names — which had dropped out of the scan and
+  could never acquire a sector — get backfilled. **Enrichment only ever writes
+  into a blank field:** a sector shipped with the universe (all ASX rows carry
+  GICS) wins, and an empty/unreadable cache is a no-op, never a clear. A wrong
+  sector here now changes which trades get taken, so treat cache edits as trade
+  changes. Crypto is still rescued by synthetic `crypto-major`/`crypto-alt`
+  buckets. `decide()` publishes `summary["sector_coverage"]`; expect ~1.0.
+  **Open (REFINEMENTS #112, owner decision):** SUN and AFG hold Yahoo-style
+  `Insurance` / `Financial Services` where the ASX universe says `Financials`,
+  so the cap reads three buckets where there is one. Reported by
+  `sectorcache.diverging` as a scan warning; NOT repaired, because overwriting
+  a non-blank sector is a trade change.
+- **Position sizing is FIXED NOTIONAL** (2026-07-28, owner: "5k position moving
+  forward on each 30 stocks and a cap of 150k"): `VIVEK_BOT_POSITION_NOTIONAL`
+  = $5,000 a position, `VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL` = $150,000 (the dollar
+  twin of the 30-slot cap), `VIVEK_BOT_ACCOUNT_EQUITY` = $150,000. Equity no
+  longer sizes positions — it scales the loss guards and the leverage ceiling,
+  which is why it had to move with the book. **The dollars RISKED now vary with
+  the stop distance** (~$50–$1,250, typically $250–$500); position COUNT is the
+  risk dial, not position size. Do not "fix" that by re-clamping `risk_pct` in
+  fixed mode — see `tests/test_fixed_notional.py`. Set
+  `VIVEK_BOT_POSITION_NOTIONAL = 0` to restore the old 0.35%-risk path exactly.
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.
@@ -217,7 +244,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (~290 tests)
+python -m pytest -q                      # full gate (537 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

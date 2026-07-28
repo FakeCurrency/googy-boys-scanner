@@ -34,7 +34,7 @@ GitHub Actions handles everything automatically:
 | `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
 | `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol. Also hosts the freshness watchdog |
 | `stop_watcher.yml` | Every 5 min | Curls /api/tick (cloud watcher for the KV-synced manual journal) |
-| `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals |
+| `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals. Re-dispatches itself (max 3) if the scan mutex evicts it — Runbook 4 |
 | `test.yml` | Every push/PR | pytest + JS tests |
 
 (Table rewritten 2026-07-20 — the previous one listed retired workflows:
@@ -78,6 +78,13 @@ Or trigger the `kill_switch.yml` workflow manually in GitHub Actions.
 The standalone check (kill_switch.yml, every 30 min, 24/7) reads the BOT BOOK
 per market and fires when a market's session P&L (today's realised + open
 unrealised) breaches VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY.
+
+**The dollar figure moved on 2026-07-28** with fixed-notional sizing: equity is
+now $150,000 (was $10,000), so the 3% daily limit is **$4,500 per market** and
+the 6% weekly limit is $9,000 — up from $300/$600. Equity no longer sizes
+positions (that is `VIVEK_BOT_POSITION_NOTIONAL`, a flat $5,000 x 30 slots);
+it survives precisely to scale these guards and the leverage ceiling, which is
+why it had to move with the book rather than stay at the old figure.
 Open positions are re-priced with LIVE quotes at check time (2026-07-20
 Phase 4) — one batched fetch; any symbol that can't be quoted falls back to
 the mark stamped at the last scan, so the check degrades gracefully instead
@@ -249,7 +256,8 @@ nothing, so the damage is contained at detection.
 ### Runbook 3 — Daily/weekly loss guard or kill switch fired
 1. The alert names the market and the breached limit
    (`VIVEK_BOT_MAX_DAILY_LOSS_PCT` 3% / `VIVEK_BOT_MAX_WEEKLY_LOSS_PCT` 6% of
-   `VIVEK_BOT_ACCOUNT_EQUITY`). The runner halts NEW entries for that market;
+   `VIVEK_BOT_ACCOUNT_EQUITY` — $4,500 / $9,000 since the 2026-07-28 equity
+   move; see Kill switch above). The runner halts NEW entries for that market;
    open positions keep being managed. The half-hourly kill switch
    (kill_switch.yml) independently re-checks the book with live quotes and
    only flattens a broker if broker keys are set (none are, in paper).
@@ -264,12 +272,24 @@ nothing, so the damage is contained at detection.
 ### Runbook 4 — Close one bot-book position manually
 GitHub → Actions → "Close position (manual)" → Run workflow:
 `journal_type=bot`, symbol, direction, market, exit price (use the live
-quote), exit date blank for today. It queues behind any running scan (same
-`scan` concurrency group — one book writer at a time; expect up to ~15 min,
-and note GitHub keeps only one run pending per group, so a close queued behind
-a scan can be evicted by a later arrival: check it actually ran) and runs
-the `--verify` gate after writing. `swing`/`scalp` journal_types edit the
-RETIRED legacy journals — never use them for the track record.
+quote), exit date blank for today. Leave `attempt` at 1 — it is the internal
+retry counter, not something you set. The close runs the `--verify` gate after
+writing. `swing`/`scalp` journal_types edit the RETIRED legacy journals — never
+use them for the track record.
+
+It queues behind any running scan (same `scan` concurrency group — one book
+writer at a time; expect up to ~15 min). GitHub keeps only ONE run pending per
+group, so a close waiting behind a scan can be evicted by a later arrival —
+**since 2026-07-28 it re-dispatches itself when that happens** (REFINEMENTS
+#109), up to 3 attempts, and you will see a fresh "Close position (manual)" run
+appear a couple of minutes later with `attempt=2`. What you should still check:
+
+- If the re-dispatch chain hits attempt 3 the last run FAILS loudly with a job
+  summary saying so. Run the close by hand at a quieter time.
+- A close that FAILED (red, not cancelled) is never retried — that is a real
+  error, usually a symbol/direction that matches no open position. Read the log.
+- A run you cancel yourself is not resurrected: the re-dispatch only fires when
+  the close job executed zero steps, which is what an eviction looks like.
 
 ### Runbook 5 — Frontend stale or site down
 1. `https://googy-boys-scanner.pages.dev/api/health` — 200 = the published

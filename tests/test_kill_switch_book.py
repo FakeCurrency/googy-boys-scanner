@@ -57,6 +57,10 @@ def test_run_standalone_fires_on_book_loss(tmp_path, monkeypatch, stub_alerts):
     p.write_text(json.dumps(book), encoding="utf-8")
     monkeypatch.setattr(ks, "BOOK_FILE", p, raising=False)
     monkeypatch.setattr(vr, "BOOK_FILE", p)
+    # Equity is PINNED here, not inherited: the config figure moved 10k -> 150k
+    # on 2026-07-28 with fixed-notional sizing, and this test is about the
+    # guard arithmetic (equity x pct), not about what the book happens to be.
+    monkeypatch.setattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 10_000)
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)   # $300 on 10k
 
     out = ks.run_standalone(dry_run=True)
@@ -117,6 +121,10 @@ def test_run_standalone_fires_on_live_move_stale_mark_says_fine(
     p = tmp_path / "vivek_bot_book.json"
     p.write_text(json.dumps(book), encoding="utf-8")
     monkeypatch.setattr(vr, "BOOK_FILE", p)
+    # Equity is PINNED here, not inherited: the config figure moved 10k -> 150k
+    # on 2026-07-28 with fixed-notional sizing, and this test is about the
+    # guard arithmetic (equity x pct), not about what the book happens to be.
+    monkeypatch.setattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 10_000)
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)   # $300 on 10k
     monkeypatch.setattr(ks, "_live_marks", lambda b: {("BHP", "asx"): 90.0})
     out = ks.run_standalone(dry_run=True)

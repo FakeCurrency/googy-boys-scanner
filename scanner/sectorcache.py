@@ -5,8 +5,17 @@ file carries none — so the dashboard's SECTOR view had nothing to group US
 names by. Same design as the market-cap cache (scanner/marketcaps.py):
 
   1. ``data/sector_map.json`` holds ``"<market>:<SYMBOL>" -> {"sector", "ts"}``,
-     mirrored to ``public/data/sector_map.json`` for the dashboard to merge in
-     (client-side, display only — nothing in any signal path reads this).
+     mirrored to ``public/data/sector_map.json`` for the dashboard to merge in.
+
+     THIS IS NOW A SIGNAL PATH (2026-07-28, owner-authorised — REFINEMENTS #38).
+     It used to be display-only, and that was the bug: vivek_bot's 3-per-sector
+     correlation cap exempts rows with no sector, so NASDAQ — whose universe
+     file carries none — had *no* correlation control at all while looking like
+     it did. It merely needed wiring, not sourcing: the cache already covered
+     269 of 269 rows in the last NASDAQ scan. ``enrich_rows`` below is that
+     wiring; ``vivek_run`` calls it before ``vivek_bot.decide``.
+     Consequence to respect when editing: a wrong sector here now changes which
+     trades get taken, not just how the dashboard groups them.
   2. Refreshed BEFORE the scan (the fresh-IP window marketcaps already uses),
      reading the PREVIOUS scan's results for symbols still missing a sector.
      Sectors are static, so cached entries are never re-fetched.
@@ -66,10 +75,108 @@ def save_cache(cache: dict) -> None:
             pass
 
 
+def sector_map_for(market: str, cache: dict | None = None) -> dict:
+    """``{SYMBOL: sector}`` for one market, symbol keys upper-cased.
+
+    Entries with a blank sector are dropped so callers can treat "present" as
+    "usable" — a key mapping to "" would otherwise overwrite nothing but still
+    read as a hit.
+    """
+    cache = load_cache() if cache is None else cache
+    prefix = f"{market}:"
+    out: dict = {}
+    for key, val in (cache or {}).items():
+        if not str(key).startswith(prefix):
+            continue
+        sector = (val or {}).get("sector") if isinstance(val, dict) else val
+        sector = str(sector or "").strip()
+        if sector:
+            out[str(key)[len(prefix):].upper()] = sector
+    return out
+
+
+def enrich_rows(rows, market: str, cache: dict | None = None) -> int:
+    """Fill ``sector`` on rows that lack one, from the cache. Returns how many.
+
+    Only ever WRITES into a blank field — a sector that shipped with the
+    universe (ASX does) always wins over the cache, which is best-effort Yahoo
+    data. Returns 0 and touches nothing when the cache has no entry for the
+    market, so an empty cache degrades to today's behaviour rather than
+    clearing sectors that were already right.
+    """
+    if not rows or not market:
+        return 0
+    lookup = sector_map_for(market, cache)
+    if not lookup:
+        return 0
+    filled = 0
+    for row in rows:
+        if str(row.get("sector") or "").strip():
+            continue
+        sector = lookup.get(str(row.get("symbol") or "").upper())
+        if sector:
+            row["sector"] = sector
+            filled += 1
+    return filled
+
+
+def diverging(positions, rows) -> list[str]:
+    """Held positions whose stored sector disagrees with this scan's rows.
+
+    Reported, never repaired. `enrich_rows` fills blanks; this finds the other
+    failure — a sector that is present but from a DIFFERENT taxonomy than the
+    one the market's universe ships today. Two ASX holdings carry Yahoo-style
+    'Insurance' / 'Financial Services' where the ASX universe says 'Financials'
+    for the same symbols, so the 3-per-sector cap sees three buckets where
+    there is one. Overwriting a non-blank sector changes which trades get
+    taken, so that is an owner decision (REFINEMENTS #112) and this function
+    exists only to stop it being invisible.
+
+    Returns ``SYM=stored->universe`` strings, sorted, for logging.
+    """
+    if not positions or not rows:
+        return []
+    from_scan = {str(r.get("symbol") or "").upper(): str(r.get("sector") or "").strip()
+                 for r in rows if str(r.get("sector") or "").strip()}
+    out = set()
+    for pos in positions:
+        sym = str(pos.get("symbol") or "").upper()
+        stored = str(pos.get("sector") or "").strip()
+        # A blank is enrich_rows' job, not a disagreement.
+        if not stored or sym not in from_scan or stored == from_scan[sym]:
+            continue
+        out.add(f"{sym}={stored}->{from_scan[sym]}")
+    return sorted(out)
+
+
 def _scan_symbols() -> list[tuple[int, str, str]]:
-    """(grade_rank, market, symbol) for every scan row still missing a sector."""
+    """(grade_rank, market, symbol) for every scan row still missing a sector.
+
+    OPEN POSITIONS ARE INCLUDED FIRST (2026-07-28). Now that the per-sector cap
+    reads this cache, a holding that has dropped out of the scan is the worst
+    case to leave uncovered: it occupies a slot but is exempt from the cap it
+    should be filling. Three of the book's NASDAQ positions were in exactly
+    that state — held, sector-less, and invisible to the fetch list because the
+    list was built from scan results only.
+    """
     out: list[tuple[int, str, str]] = []
     seen: set[str] = set()
+    book = ROOT / "journal" / "vivek_bot_book.json"
+    if book.exists():
+        try:
+            for pos in json.loads(book.read_text()).get("open", []):
+                market = str(pos.get("market") or "")
+                sym = str(pos.get("symbol") or "").upper()
+                if (not sym or not market
+                        or market not in {m for m, _ in _SCAN_FILES}
+                        or str(pos.get("sector") or "").strip()):
+                    continue
+                k = _key(market, sym)
+                if k not in seen:
+                    seen.add(k)
+                    out.append((-1, market, sym))   # ahead of every scan grade
+        except Exception:
+            pass                                    # best-effort, same as below
     for market, rel in _SCAN_FILES:
         path = ROOT / rel
         if not path.exists():

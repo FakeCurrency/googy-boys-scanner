@@ -10,3 +10,8 @@ pybit==5.16.0
 anthropic>=0.30
 # CI test gate (.github/workflows/test.yml)
 pytest==9.1.1
+# Test-only (2026-07-28): tests/test_workflow_mutex.py parses the workflow
+# files to pin the concurrency scoping. Nothing in the scanner imports yaml,
+# and it is NOT a transitive dep of anything above — without this pin the
+# workflow tests error on a clean CI image.
+PyYAML==6.0.3

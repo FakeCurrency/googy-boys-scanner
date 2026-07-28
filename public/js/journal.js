@@ -4,10 +4,13 @@
  *              written server-side every scan. Read-only here.
  *  • Me      = the trades you take from the charts (the shared manual store,
  *              localStorage + optional cross-device sync). Sized + managed by
- *              the SAME VIVEK rules as the bot: risk 0.35% of a $10k book,
- *              5× stocks / 3× crypto leverage cap, scale at TP1/2/3, SL → BE at
- *              TP1 → locked structure at TP2, close on the stop. You pick the
- *              setup; the rules run the trade. $ P&L uses 1R = the $ risked.
+ *              the SAME VIVEK rules as the bot: a fixed $5,000 of notional per
+ *              position out of a $150,000 book (30 slots), 5× stocks / 3×
+ *              crypto leverage cap, scale at TP1/2/3, SL → BE at TP1 → locked
+ *              structure at TP2, close on the stop. You pick the setup; the
+ *              rules run the trade. $ P&L uses 1R = the $ risked — which under
+ *              fixed sizing VARIES per trade with the stop distance, instead of
+ *              being the same 0.35% of equity every time.
  *
  *  All R/$ and equity curves are computed at render time and refreshed against
  *  live prices, so both sides update as trades open and close.
@@ -47,15 +50,21 @@
   const scanPrice = new Map();
 
   // ── VIVEK sizing + cost model (live source: data/bot_rules.json) ───────────
-  // Each market is sized off its own $10k book; the account spans all three, so
-  // the starting capital shown to the user is 3 × $10k = $30k.
-  // RISK_PCT / LEVERAGE / *_BPS below are OFFLINE FALLBACKS only — loadBotRules()
-  // overrides them from bot_rules.json (published from scanner/config.py every
-  // scan), so this file can never drift from the executing bot silently again.
-  const EQUITY = 10000, RISK_MIN = 0.25, RISK_MAX = 0.5;
-  let RISK_PCT = 0.35;                     // fallback — bot_rules.json wins
-  const START_CAPITAL = EQUITY * 3;        // $30k — ASX + NASDAQ + Crypto books
+  // ONE book of 30 slots across all three markets, $5,000 a position, $150,000
+  // total (owner, 2026-07-28). Was 3 × $10k risk-% books; the account is now a
+  // single $150k pool, so starting capital is EQUITY, not 3 × EQUITY (the old
+  // START_CAPITAL constant was exactly that 3× product and is now gone).
+  // Everything below is an OFFLINE FALLBACK only — loadBotRules() overrides
+  // from bot_rules.json (published from scanner/config.py every scan), so this
+  // file can never drift from the executing bot silently again.
+  const RISK_MIN = 0.25, RISK_MAX = 0.5;
+  let EQUITY = 150000;                     // fallback — bot_rules.account_equity wins
+  let POSITION_NOTIONAL = 5000;            // fallback — 0 would mean risk-% mode
+  let RISK_PCT = 0.35;                     // only consulted when POSITION_NOTIONAL is 0
   const money0 = (v) => "$" + Math.round(v).toLocaleString();
+  // Starting capital shown to the user. Derived, never hardcoded, so it tracks
+  // whatever the bot publishes.
+  const startCapital = () => EQUITY;
   const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };                    // fallback
   const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
   const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
@@ -68,9 +77,19 @@
       if (!r.ok) return;
       const j = await r.json();
       const drift = {};
-      if (typeof j.risk_pct === "number" && j.risk_pct !== RISK_PCT) {
-        drift.risk_pct = { fallback: RISK_PCT, live: j.risk_pct };
-        RISK_PCT = j.risk_pct;
+      // account_equity + position_notional joined the published set on
+      // 2026-07-28 with the fixed-notional switch. A bot_rules.json older than
+      // that omits them, so `typeof === "number"` (not `!= null`) is what keeps
+      // the fallbacks standing rather than zeroing the book on a stale file.
+      for (const [key, cur, set] of [
+        ["risk_pct", () => RISK_PCT, (v) => { RISK_PCT = v; }],
+        ["account_equity", () => EQUITY, (v) => { EQUITY = v; }],
+        ["position_notional", () => POSITION_NOTIONAL, (v) => { POSITION_NOTIONAL = v; }],
+      ]) {
+        if (typeof j[key] === "number" && j[key] !== cur()) {
+          drift[key] = { fallback: cur(), live: j[key] };
+          set(j[key]);
+        }
       }
       for (const [key, tgt] of [["leverage", LEVERAGE], ["commission_bps", COMMISSION_BPS], ["slippage_bps", SLIPPAGE_BPS]]) {
         const src = j[key];
@@ -115,16 +134,33 @@
     return "nasdaq";
   }
 
-  // Risk-based size: risk a slice of equity, cap notional at the market leverage.
-  // 1R in dollars === risk_usd, so $ P&L for any VIVEK trade = R × risk_usd.
+  // Position size — the exact mirror of vivek_bot.size_position, two modes:
+  //
+  //   FIXED NOTIONAL (default since 2026-07-28): buy POSITION_NOTIONAL dollars
+  //     of the thing. risk_usd falls out of the stop distance instead of being
+  //     set by it, so 1R is NOT constant across trades — a tight 2% stop risks
+  //     $100 on a $5,000 position, a wide 12% stop risks $600. R-multiples are
+  //     unaffected (they were always stop-relative); the $ column is what now
+  //     varies. That is the accepted trade-off of fixed sizing.
+  //   RISK % (POSITION_NOTIONAL === 0): the original path, unchanged — risk a
+  //     clamped slice of equity and derive the size from the stop.
+  //
+  // Both are capped at the market's leverage ceiling. 1R in dollars ===
+  // risk_usd either way, so $ P&L for any VIVEK trade stays R × risk_usd.
   function sizeOf(market, entry, stop) {
-    const riskPct = Math.min(Math.max(RISK_PCT, RISK_MIN), RISK_MAX) / 100;
     const dist = Math.abs(entry - stop);
     if (!(dist > 0) || !(entry > 0)) return { units: 0, risk_usd: 0, notional: 0, leverage: 0 };
-    let risk_usd = EQUITY * riskPct, units = risk_usd / dist, notional = units * entry;
+    const fixed = +POSITION_NOTIONAL || 0;
+    let units, notional, risk_usd;
+    if (fixed > 0) {
+      notional = fixed; units = notional / entry; risk_usd = units * dist;
+    } else {
+      const riskPct = Math.min(Math.max(RISK_PCT, RISK_MIN), RISK_MAX) / 100;
+      risk_usd = EQUITY * riskPct; units = risk_usd / dist; notional = units * entry;
+    }
     const maxN = EQUITY * (LEVERAGE[market] || LEVERAGE.asx);
     if (notional > maxN) { units = maxN / entry; notional = units * entry; risk_usd = units * dist; }
-    return { units, risk_usd, notional, leverage: notional / EQUITY };
+    return { units, risk_usd, notional, leverage: EQUITY ? notional / EQUITY : 0 };
   }
 
   const costsFor = (market) => [
@@ -305,9 +341,9 @@
   function statCards(host, s, accent) {
     const cell = (label, val, cls) =>
       `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls || ""}">${val}</div></div>`;
-    const equity = START_CAPITAL + s.totalD;          // realised account value
+    const equity = startCapital() + s.totalD;         // realised account value
     host.innerHTML =
-      cell("Account value", `${money0(equity)}<span class="stat-sub"> from ${money0(START_CAPITAL)}</span>`, pcls(s.totalD)) +
+      cell("Account value", `${money0(equity)}<span class="stat-sub"> from ${money0(startCapital())}</span>`, pcls(s.totalD)) +
       cell("Total $", dfmt(s.totalD), pcls(s.totalD)) +
       cell("Total R", rfmt(s.totalR), rcls(s.totalR)) +
       cell("Win rate", s.win == null ? "—" : s.win.toFixed(0) + "%", "") +
@@ -801,7 +837,7 @@
     };
     $("#cmp-stats").innerHTML =
       `<div class="cmp-head"><span></span><span class="cmp-bot">🤖 Claude</span><span></span><span class="cmp-me">✏️ Me</span></div>` +
-      row("Account value", START_CAPITAL + sb.totalD, START_CAPITAL + sm.totalD, money0, true) +
+      row("Account value", startCapital() + sb.totalD, startCapital() + sm.totalD, money0, true) +
       row("Total R", sb.totalR, sm.totalR, rfmt, true) +
       row("Total $", sb.totalD, sm.totalD, dfmt, true) +
       row("Win rate", sb.win || 0, sm.win || 0, (v) => v ? v.toFixed(0) + "%" : "—", true) +
@@ -1260,7 +1296,7 @@
     const ts = $("#jr-topsum");
     if (ts) {
       const cell = (who, st, openN) =>
-        `<span class="ts-who">${who}</span><span class="${pcls(st.totalD)}">${money0(START_CAPITAL + st.totalD)}</span>` +
+        `<span class="ts-who">${who}</span><span class="${pcls(st.totalD)}">${money0(startCapital() + st.totalD)}</span>` +
         `<span class="ts-who">· ${openN} open</span>`;
       ts.innerHTML = cell("🤖", sb, state.bot.open.length) + cell("✏️", sm, state.me.open.length);
     }

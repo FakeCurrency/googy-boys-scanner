@@ -202,6 +202,13 @@ def main() -> None:
         "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
         "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
         "max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL,
+        # Sizing (2026-07-28): position_notional > 0 means FIXED-NOTIONAL mode
+        # and risk_pct is then a derived per-trade figure, not an input. The
+        # journal mirrors these, so publishing them is what keeps the page's
+        # dollar P&L on the same basis as the executing bot.
+        "position_notional": config.VIVEK_BOT_POSITION_NOTIONAL,
+        "max_portfolio_notional": config.VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL,
+        "account_equity": config.VIVEK_BOT_ACCOUNT_EQUITY,
         "risk_pct": config.VIVEK_BOT_RISK_PCT,
         "leverage": dict(config.VIVEK_BOT_LEVERAGE),
         "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,

@@ -173,24 +173,33 @@ def _load_market_book(market: str) -> dict:
     return _read_json_or_abort(p, f"bot book [{market}]")
 
 
-def _open_elsewhere(market: str) -> int | None:
-    """How many positions every market EXCEPT `market` is holding right now,
-    read straight from the canonical per-market book files.
+def _book_elsewhere(market: str) -> dict | None:
+    """What every market EXCEPT `market` is holding right now — both the
+    position COUNT and the open NOTIONAL — read straight from the canonical
+    per-market book files.
 
-    This is the runner's half of the global position ceiling
-    (config.VIVEK_BOT_MAX_OPEN_TOTAL): vivek_bot.decide() only ever sees one
-    market's scan, so it cannot know what the others hold. Reading the sibling
-    files is safe and race-free by construction -- scan.yml and crypto_bot.yml
-    share `concurrency: group: scan` with cancel-in-progress false, so no two
-    market runs are ever live at once. A run still WRITES only its own file, so
-    the layout-v2 guarantee (cross-market clobber impossible) is untouched.
+    This is the runner's half of the two global ceilings
+    (config.VIVEK_BOT_MAX_OPEN_TOTAL and VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL):
+    vivek_bot.decide() only ever sees one market's scan, so it cannot know what
+    the others hold. Reading the sibling files is safe and race-free by
+    construction -- scan.yml and crypto_bot.yml share `concurrency: group: scan`
+    with cancel-in-progress false, so no two market runs are ever live at once.
+    A run still WRITES only its own file, so the layout-v2 guarantee
+    (cross-market clobber impossible) is untouched.
 
     Returns None when a sibling book cannot be parsed. The caller must then take
     NO new entries: a risk cap that silently ignores the markets it cannot see
     is worse than one that pauses. That state is never quiet -- the owning
     market's own run aborts on a corrupt book and fires a CRITICAL alert.
     """
-    total = 0
+    total, notional = 0, 0.0
+
+    def _add(rows) -> None:
+        nonlocal total, notional
+        for p in rows:
+            total += 1
+            notional += float(p.get("notional") or 0)
+
     for m in config.MARKETS:
         if m == market:
             continue
@@ -207,7 +216,7 @@ def _open_elsewhere(market: str) -> int | None:
         # Count every open row in the file rather than filtering on the market
         # tag: the file IS that market's book, and an untagged row must not go
         # uncounted against a risk cap. Matches how _combined_view merges them.
-        total += len(mb.get("open") or [])
+        _add(mb.get("open") or [])
     # Positions whose market is not in config.MARKETS live in UNASSIGNED_FILE.
     # They show on the journal page as open risk, and they belong to no market's
     # own open_book, so without this they would be invisible to the ceiling.
@@ -220,8 +229,14 @@ def _open_elsewhere(market: str) -> int | None:
                       "cap (%s) - taking no new entries until it is readable",
                       market, UNASSIGNED_FILE.name, e)
             return None
-        total += sum(1 for p in stray.get("entries", []) if p.get("status") == "open")
-    return total
+        _add([p for p in stray.get("entries", []) if p.get("status") == "open"])
+    return {"count": total, "notional": round(notional, 2)}
+
+
+def _open_elsewhere(market: str) -> int | None:
+    """Position count half of `_book_elsewhere` (None = a sibling is unreadable)."""
+    seen = _book_elsewhere(market)
+    return None if seen is None else seen["count"]
 
 
 def _combined_view(override: dict | None = None) -> dict:
@@ -770,6 +785,57 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # ADV is stamped on the rows for the liquidity gates; recently-stopped
     # symbols are handed over for the re-entry cooldown.
     _enrich_adv(results, frames, yf_map)
+    # Sector merge (2026-07-28, owner-authorised — REFINEMENTS #38). The
+    # 3-per-sector cap exempts rows with no sector, so NASDAQ had no
+    # correlation control whatsoever: its universe file ships no sector column.
+    # data/sector_map.json already covered every scanned NASDAQ row; nothing
+    # merged it in. Best-effort by design — a failure here leaves rows exactly
+    # as they were and decide() then logs its own loud "the cap cannot bind"
+    # warning, so this can never fail a scan.
+    #
+    # The SAME merge is applied to the open book, which back-fills positions
+    # opened before this existed (18 of the 23 rows carried sector:'') so the
+    # cap counts what is actually held, not just what is being added today.
+    try:
+        from .. import sectorcache
+        cache = sectorcache.load_cache()
+        filled_rows = sectorcache.enrich_rows(results, market, cache)
+        # Back-fill the OPEN BOOK from two sources, this scan's own rows FIRST:
+        # ASX ships GICS sectors on the universe rows themselves and so never
+        # lands in the Yahoo-sourced cache at all (0 asx keys in it today) —
+        # cache-only back-fill would leave every legacy ASX position exempt
+        # from the cap it should be occupying. `held` is a new list of the SAME
+        # dicts, so filling them mutates book["open"] in place, which is what
+        # persists the back-fill when the book is written back.
+        held = [p for p in book["open"] if p.get("market") == market]
+        from_scan = {str(r.get("symbol") or "").upper(): str(r.get("sector") or "").strip()
+                     for r in results if str(r.get("sector") or "").strip()}
+        filled_book = 0
+        for pos in held:
+            if str(pos.get("sector") or "").strip():
+                continue
+            sec = from_scan.get(str(pos.get("symbol") or "").upper())
+            if sec:
+                pos["sector"] = sec
+                filled_book += 1
+        # ...then the cache, for holdings this scan no longer lists at all.
+        filled_book += sectorcache.enrich_rows(held, market, cache)
+        if filled_rows or filled_book:
+            log.info("vivek_run [%s]: sector map filled %d scan rows and "
+                     "back-filled %d open positions", market, filled_rows, filled_book)
+        # Taxonomy divergence is REPORTED, never rewritten (2026-07-28) — see
+        # sectorcache.diverging. Blank-filling above is unaffected: that fills
+        # nothing-shaped holes, this would overwrite an answer, and overwriting
+        # changes which trades get taken (owner's call, REFINEMENTS #112).
+        odd = sectorcache.diverging(held, results)
+        if odd:
+            log.warning("vivek_run [%s]: %d held position(s) carry a sector this "
+                        "market's universe disagrees with, so the per-sector cap "
+                        "counts them as separate buckets: %s (REFINEMENTS #112)",
+                        market, len(odd), ", ".join(odd))
+    except Exception as e:                                       # noqa: BLE001
+        log.warning("vivek_run [%s]: sector merge skipped (%s) - the per-sector "
+                    "cap will only bind on rows that already carry one", market, e)
     open_book = [{"symbol": p["symbol"], "direction": p["direction"],
                   "sector": p.get("sector", "")}
                  for p in book["open"] if p.get("market") == market]
@@ -779,9 +845,18 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # cross-market count is supplied here; None = a sibling book is unreadable
     # and decide() will then take nothing.
     gate: dict = {}
-    if int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0):
-        gate = {"max_open_total": int(config.VIVEK_BOT_MAX_OPEN_TOTAL),
-                "open_elsewhere": _open_elsewhere(market)}
+    max_total = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0)
+    max_notional = float(getattr(config, "VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL", 0) or 0)
+    if max_total or max_notional:
+        # ONE read of the sibling books feeds BOTH ceilings, so the count and
+        # the notional can never disagree about what is open elsewhere.
+        seen = _book_elsewhere(market)
+        if max_total:
+            gate["max_open_total"] = max_total
+            gate["open_elsewhere"] = None if seen is None else seen["count"]
+        if max_notional:
+            gate["max_portfolio_notional"] = max_notional
+            gate["notional_elsewhere"] = None if seen is None else seen["notional"]
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
                                 cooldown_syms=_cooldown_symbols(book, market, day),
                                 **gate)

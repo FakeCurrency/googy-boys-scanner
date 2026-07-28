@@ -361,22 +361,31 @@ def test_entry_type_label_flows_into_the_ticket():
 
 # ── bot: sizing + per-market leverage ─────────────────────────────────────────
 
+# notional_target=0 forces the RISK-% path regardless of config. Since
+# 2026-07-28 the config default is fixed-notional sizing, so these three tests
+# would otherwise be silently re-testing the other mode. Fixed mode has its own
+# file: tests/test_fixed_notional.py.
+
 def test_sizing_risks_configured_pct():
-    s = vivek_bot.size_position(10_000, entry=100, stop=96, risk_pct=0.25)
+    s = vivek_bot.size_position(10_000, entry=100, stop=96, risk_pct=0.25,
+                                notional_target=0)
     assert s["risk_usd"] == pytest.approx(25.0) and s["units"] == pytest.approx(6.25)
+    assert s["sizing_mode"] == "risk_pct"
 
 
 def test_sizing_risk_clamped_to_quarter_to_half_band():
-    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=2.0)["risk_pct"] == 0.5    # clamp high
-    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=0.1)["risk_pct"] == 0.25   # clamp low
+    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=2.0,
+                                   notional_target=0)["risk_pct"] == 0.5    # clamp high
+    assert vivek_bot.size_position(10_000, 100, 90, risk_pct=0.1,
+                                   notional_target=0)["risk_pct"] == 0.25   # clamp low
 
 
 def test_leverage_is_5x_stocks_and_3x_crypto():
     # A tiny stop implies huge notional → leverage caps at the per-market max.
     # (Tested at the sizing layer: plan_trade now rejects sub-1% stops outright
     # via the stop_too_tight volatility floor — see test_vivek_bot_gates.py.)
-    asx = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=5)
-    cry = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=3)
+    asx = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=5, notional_target=0)
+    cry = vivek_bot.size_position(10_000, 100, 99.99, max_leverage=3, notional_target=0)
     assert asx["leverage"] <= 5 + 1e-9 and asx["leverage_capped"]
     assert cry["leverage"] <= 3 + 1e-9 and cry["leverage_capped"]
     # plan_trade stamps the per-market leverage target on a normal-width plan

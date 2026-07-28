@@ -25,22 +25,33 @@ on:
         description: "bot (the paper bot book — the real track record), swing or scalp"
         required: true
         default: bot
+      attempt:
+        description: "INTERNAL — auto re-dispatch counter. Leave at 1."
+        required: false
+        default: "1"
 
 permissions:
   contents: write
 
-# Joined the "scan" group (2026-07-20, review C4): journal_type=bot WRITES the
-# shared bot book, so a close must never run concurrently with a scan's
-# load->modify->write cycle (the C1 invariant: one book writer at a time).
-# Closes queue behind a running scan — expect up to ~15 min delay; correctness
-# over speed for the only track record.
-concurrency:
-  group: scan
-  cancel-in-progress: false
-
 jobs:
   close:
     runs-on: ubuntu-latest
+    # Joined the "scan" group (2026-07-20, review C4): journal_type=bot WRITES
+    # the shared bot book, so a close must never run concurrently with a scan's
+    # load->modify->write cycle (the C1 invariant: one book writer at a time).
+    # Closes queue behind a running scan — expect up to ~15 min delay;
+    # correctness over speed for the only track record.
+    #
+    # JOB-scoped, not workflow-scoped (2026-07-28, owner: "make it re-dispatch
+    # itself if evicted"). GitHub keeps exactly ONE pending run per group and a
+    # newly-queued member CANCELS the previously-pending one — so at workflow
+    # level a close that queued behind a running scan was silently deleted by
+    # the next scheduled scan, run and all, with nothing left alive to notice.
+    # Scoped to the job, the eviction cancels only THIS job; the run survives
+    # and the redispatch job below (deliberately outside the group) sees it.
+    concurrency:
+      group: scan
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -118,3 +129,92 @@ jobs:
             git pull --rebase origin main
             git push
           fi
+
+  # Survive a mutex eviction (2026-07-28, owner decision: "make it re-dispatch
+  # itself if evicted"). A manual close is a deliberate human act on the ONE
+  # AND ONLY track record; having it evaporate because a cron happened to queue
+  # behind it is the worst failure this repo has. This job is NOT in the `scan`
+  # group — that is the whole point, it has to outlive the job that was evicted.
+  #
+  # workflow_dispatch is one of the two events GITHUB_TOKEN is allowed to raise
+  # (the anti-recursion rule exempts it), so `gh workflow run` from here really
+  # does start a new run. `attempt` bounds the chain at 3 so a permanently
+  # contested mutex cannot loop forever.
+  redispatch:
+    needs: close
+    if: always() && needs.close.result == 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Re-queue this close
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.ref_name }}
+          ATTEMPT: ${{ github.event.inputs.attempt }}
+          SYMBOL: ${{ github.event.inputs.symbol }}
+          DIRECTION: ${{ github.event.inputs.direction }}
+          MARKET: ${{ github.event.inputs.market }}
+          PRICE: ${{ github.event.inputs.price }}
+          EXIT_DATE: ${{ github.event.inputs.exit_date }}
+          JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
+        run: |
+          set -u
+          attempt="${ATTEMPT:-1}"
+          case "$attempt" in ''|*[!0-9]*) attempt=1 ;; esac
+          if [ "$attempt" -ge 3 ]; then
+            echo "Attempt $attempt is at the cap of 3 - NOT re-queueing."
+            echo "Close $SYMBOL @ $PRICE gave up after 3 evictions - run it by hand." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # Only a mutex eviction gets resurrected. An evicted job never starts,
+          # so zero EXECUTED steps is that eviction's signature; a human hitting
+          # Cancel on a close that was already running leaves finished steps
+          # behind, and re-dispatching that would override a deliberate stop.
+          # Fail open (assume eviction) if the query itself fails - losing a
+          # close is worse than one redundant re-run, which the operator sees
+          # in the Actions list and can cancel.
+          executed=$(gh run view "$GITHUB_RUN_ID" --json jobs \
+            --jq '[.jobs[] | select(.name == "close") | .steps[]?
+                   | select(.conclusion == "success" or .conclusion == "failure")]
+                  | length' 2>/dev/null || echo 0)
+          if [ "${executed:-0}" -gt 0 ]; then
+            echo "close executed $executed step(s) before being cancelled - that is"
+            echo "not a mutex eviction (an evicted job never starts). Leaving it alone."
+            exit 0
+          fi
+
+          # Do not re-queue into a still-contested slot: one pending run per
+          # group means dispatching while a sibling waits would evict THAT one,
+          # and the two workflows would trade the slot back and forth. Bounded
+          # wait - after ~200s dispatch regardless, because an attempt that
+          # loses the race again is recoverable and a dropped close is not.
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            pending=$(gh run list --limit 60 --json status,workflowName \
+              --jq '[.[] | select(.status == "queued" or .status == "waiting"
+                                  or .status == "pending")
+                         | select(.workflowName == "Scheduled scan"
+                               or .workflowName == "Crypto bot (24/7 paper)"
+                               or .workflowName == "Confluence alert (post-nightly)"
+                               or .workflowName == "Close position (manual)")]
+                    | length' 2>/dev/null || echo 0)
+            [ "${pending:-0}" -eq 0 ] && break
+            echo "$pending scan-group run(s) still pending - waiting 20s"
+            sleep 20
+          done
+
+          next=$((attempt + 1))
+          echo "Evicted from the scan mutex - re-dispatching as attempt $next."
+          gh workflow run close_position.yml --ref "$REF" \
+            -f symbol="$SYMBOL" \
+            -f direction="$DIRECTION" \
+            -f market="$MARKET" \
+            -f price="$PRICE" \
+            -f exit_date="$EXIT_DATE" \
+            -f journal_type="$JOURNAL_TYPE" \
+            -f attempt="$next"
+          echo "Close $SYMBOL $DIRECTION @ $PRICE was evicted from the scan mutex and" \
+            "re-dispatched automatically (attempt $next of 3)." >> "$GITHUB_STEP_SUMMARY"

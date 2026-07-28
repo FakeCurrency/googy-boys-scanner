@@ -1,10 +1,10 @@
 name: Tests
 
-# The gate that was missing: ~155 Python tests (risk rules, circuit breakers,
-# journal P&L, pre-trade gate) + 55 PhaseMap tests + 111 JS risk-engine tests
+# The gate that was missing: the Python tests (risk rules, circuit breakers,
+# journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes.
+# runs the lot in ~2 minutes: 537 pytest + 190 JS assertions as of 2026-07-28.
 on:
   push:
     branches: [main]
@@ -16,7 +16,12 @@ on:
       - "public/js/**"
       - "functions/**"
       - "requirements.txt"
-      - ".github/workflows/test.yml"
+      # ALL workflows, not just this one (2026-07-28): tests/test_workflow_mutex.py
+      # asserts on the concurrency scoping and the close re-dispatch, so the very
+      # edits it exists to catch — a `concurrency:` block moved back up to
+      # workflow level, a renamed `name:` that empties the wait-loop filter —
+      # are edits to files that used to skip this gate entirely.
+      - ".github/workflows/**"
   pull_request:
   workflow_dispatch:
 
@@ -51,7 +56,7 @@ jobs:
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
-      - name: Risk-engine tests (46)
+      - name: Risk-engine tests (48)
         run: node test/risk_manager.test.js
       - name: Unit tests (65)
         run: node test/unit.test.js
@@ -110,7 +115,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: test/e2e/__baseline__
-          key: screenshot-baselines-v9-${{ runner.os }}
+          key: screenshot-baselines-v10-${{ runner.os }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"

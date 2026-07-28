@@ -264,7 +264,7 @@ The chip literally says 'H4 200 SMA' (vivek.py:181) for what is the Daily-200: a
 *Files: scanner/vivek.py, scanner/config.py*
 
 ## 38. Fix sector cap: empty NASDAQ sectors and unseeded legacy book rows
-**Impact 5 · Effort M · bot-broker · PARTLY FIXED — remainder is an OWNER DECISION**
+**Impact 5 · Effort M · bot-broker · FIXED 2026-07-28 (owner-authorised: "wire it in, and backfill the legacy ASX rows")**
 
 The VIVEK_BOT_MAX_PER_SECTOR=3 correlation cap is a silent no-op almost everywhere. **Impact raised 4 → 5 on 2026-07-28:** the book became a 30-position ceiling that any ONE market may fill on its own, so a fully-NASDAQ book now has no correlation control at all — the exact "30 miners" outcome the owner said the cap was there to prevent, when he chose to leave it at 3.
 
@@ -275,11 +275,17 @@ The VIVEK_BOT_MAX_PER_SECTOR=3 correlation cap is a silent no-op almost everywhe
 1. **NASDAQ rows reach `decide()` with no sector** — `universe._fetch_nasdaq` hardcodes `sector: ""` (the NASDAQ trader file has no sector column), so 0 of 269 scanned rows and 10 of 10 open positions carry one. `decide()`'s guard `max_sector and sector and ...` exempts them, so the cap never binds on NASDAQ. **This is a wiring gap, not a data gap** (corrected 2026-07-28 — an earlier draft of this item said a fallback grouping had to be invented): `scanner/sectorcache.py` already maintains `data/sector_map.json`, keyed `nasdaq:AAON -> {"sector": ...}`, refreshed by its own scan.yml step, and it covers **269 of those same 269 rows — 100%**. It was scoped display-only ("nothing in any signal path reads this"), so nothing merges it into the rows the bot sees. The fix is to merge it in before `decide()` and let the existing cap do its job; no new source and no invented grouping needed.
 2. **Legacy ASX rows are invisible to the seeding** — the 8 ASX positions opened before the 2026-07-20 ticket fix still carry `sector:''`, so the counter starts low and ASX can take 3 *more* in a sector a legacy row already occupies. Needs a one-off backfill from the universe cache.
 
-**Done 2026-07-28:** `decide()` now logs a warning when the cap is configured but under half the rows carry a sector, and publishes `summary["sector_coverage"]` / `summary["max_per_sector"]` so the blindness is visible instead of assumed-fixed.
+**Done 2026-07-28 (visibility):** `decide()` logs a warning when the cap is configured but under half the rows carry a sector, and publishes `summary["sector_coverage"]` / `summary["max_per_sector"]` so the blindness is visible instead of assumed-fixed.
 
-**Not done deliberately:** fixing (1) or (2) changes which trades get taken — bot risk, so it is the owner's call, not an autonomous one.
+**FIXED 2026-07-28 (the wiring itself, on the owner's authorisation).** `data/sector_map.json` stopped being display-only:
 
-*Files: scanner/broker/vivek_bot.py, scanner/broker/vivek_run.py, scanner/universe.py*
+- `sectorcache.sector_map_for(market, cache)` + `enrich_rows(rows, market, cache)` merge the cache into the rows `run_market()` hands `decide()`, right after the ADV enrichment. **Enrichment only ever writes into a BLANK field** — a sector shipped with the universe (every ASX row carries GICS) always wins over best-effort Yahoo data, and an empty or unreadable cache degrades to a no-op rather than clearing sectors that were already right. That last direction matters more than the first: blanking a sector switches the cap OFF for that row.
+- The backfill for (2) is the same code path plus a seeding change: `sectorcache._scan_symbols()` now reads the open book first and queues held sector-less names at rank `-1`, ahead of every scan grade. Before this the fetch list was built from scan results only, so a holding that had dropped out of the scan could never acquire a sector — it occupied a slot while staying exempt from the cap it should have been filling. Three NASDAQ positions were in exactly that state.
+- Pinned end-to-end in `tests/test_sector_cache.py::test_enriched_rows_make_the_sector_cap_bind`: four Technology A+ setups, un-enriched all four are taken, enriched three are and `skip_reasons["sector_cap"]` is 1.
+
+**Consequence to watch:** this is now a SIGNAL path. A wrong sector in the cache changes which trades get taken, and the cache is best-effort Yahoo data with no verification step. The module docstring and the test file both say so.
+
+*Files: scanner/sectorcache.py, scanner/broker/vivek_run.py, scanner/broker/vivek_bot.py, tests/test_sector_cache.py*
 
 ## 39. Reconcile exit detection relies on wrong Bybit closed-pnl fields
 **Impact 4 · Effort M · bot-broker**
@@ -779,3 +785,53 @@ GitHub allows exactly ONE pending run per concurrency group: queue a second and 
 **Fixed:** the mutex moved from workflow level onto the JOBS that write the book (`scan.scan`, `crypto_bot.crypto`). Gate jobs only curl and write nothing, so they now always execute and decide; a backstop that answers "fresh, skip" costs zero queue slots instead of evicting whatever was waiting. Mutual exclusion between writers — load-bearing now that the 30-position cap is global and two concurrent writers could each read "23 open" and both open — is unchanged. Not verifiable from this sandbox (api.github.com is proxy-blocked, so run history cannot be read directly); confirm from the Actions run list that :47/:52 runs now appear and conclude rather than vanishing.
 
 *Files: .github/workflows/scan.yml, .github/workflows/crypto_bot.yml*
+
+## 109. A manual close could be deleted by the scan queue with no trace
+**Impact 5 · Effort S · ops · FIXED 2026-07-28 (owner: "make it re-dispatch itself if evicted")**
+
+The #108 mechanic applied to the one workflow a human triggers by hand. `close_position.yml` held `group: scan` at WORKFLOW level, so a close dispatched while a scan was running went pending — and the next scheduled arrival (`:22`/`:47`/`:52`, four an hour during ASX mornings) cancelled the whole run. Not a failure, not a red X: a run that never existed. The operator sees a dispatch confirmation, the position stays open, and the only track record silently disagrees with what he believes he did. Worse than #108 by a wide margin, because a backstop that misses a cycle self-corrects on the next fire and a close never fires again on its own.
+
+**Fixed** in three parts:
+
+1. The mutex moved onto the `close` job. Mutual exclusion is unchanged — that job is the book writer — but the eviction now cancels one JOB and leaves the run alive.
+2. A `redispatch` job, deliberately NOT in the group (the whole point: it has to outlive what was evicted), runs on `always() && needs.close.result == 'cancelled'` and re-dispatches the same inputs. `workflow_dispatch` is one of the two events `GITHUB_TOKEN` is permitted to raise — the anti-recursion rule exempts it — so `gh workflow run` from inside Actions genuinely starts a new run.
+3. Bounds, because a retry loop on the track record is its own hazard. An `attempt` input caps the chain at 3. The job re-dispatches ONLY when the close executed zero steps, which is an eviction's signature — a human hitting Cancel on a close that was already running leaves finished steps behind, and resurrecting that would override a deliberate stop. Before re-queueing it waits (bounded ~200s) for the group's pending slot to clear, so the retry does not evict the sibling that evicted it and start a ping-pong.
+
+`tests/test_workflow_mutex.py` (11 tests) pins all of it, including that every dispatch input is threaded through the retry — a retry that silently dropped `market` or `journal_type` would close the wrong book and look like a legitimate outcome — and that the wait loop's workflow-name filter still matches real `name:` fields.
+
+*Files: .github/workflows/close_position.yml, tests/test_workflow_mutex.py, requirements.txt*
+
+## 110. Fixed-notional position sizing ($5,000 x 30 slots, $150,000 book)
+**Impact 5 · Effort M · bot-broker · SHIPPED 2026-07-28 (owner: "5k position moving forward on each 30 stocks and a cap of 150k")**
+
+Not a defect — an owner decision, recorded here because it changes what every trade looks like and because the reasoning has to survive the person who wrote it.
+
+Sizing was risk-derived: 0.35% of a $10,000 equity, i.e. the same ~$35 risked on every trade with the position size floating on the stop distance. It is now the mirror image — a fixed $5,000 of notional per position, 30 slots, $150,000 total.
+
+**The trade-off, stated plainly: the dollars RISKED per trade now vary.** A 2% stop on $5,000 risks $100; a 12% stop risks $600. The stop-width rules bound it to roughly $50-$1,250, typically $250-$500. That is the direct consequence of fixing size instead of risk, and it must not be "fixed" later by re-clamping `risk_pct` in fixed mode — `tests/test_fixed_notional.py` (22 tests) pins the behaviour and says so in its docstring. **Position COUNT, not position size, is the risk dial now.**
+
+**`VIVEK_BOT_ACCOUNT_EQUITY` moved 10,000 -> 150,000, which was forced, not incidental.** Equity no longer sizes positions but still scales the daily/weekly loss guards and the leverage ceiling; leaving it at 10,000 against a $150,000 book would have set the daily kill switch at $300 on 30 live positions. The move is what broke `test_kill_switch_book.py::test_run_standalone_fires_on_book_loss` (an $800 loss stopped tripping a limit that had become $4,500) — both affected tests now pin equity themselves, because they test the guard arithmetic, not the book size.
+
+`VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL = 150_000` is the dollar twin of the 30-slot cap and is enforced in `decide()` the same way `max_open_total` is: **off unless the runner passes it together with `notional_elsewhere`**, and fail-closed if a sibling market file is unreadable. Defaulting it from config would have silently capped the backtester and every other caller that never supplies the cross-market figure, evaluating a real ceiling against a fabricated zero. Setting `VIVEK_BOT_POSITION_NOTIONAL = 0` restores the risk-% path exactly, and a test pins that revert route.
+
+*Files: scanner/config.py, scanner/broker/vivek_bot.py, scanner/broker/vivek_run.py, scanner/run.py, public/js/journal.js, public/js/bot.js, public/journal.html, public/system.html, tests/test_fixed_notional.py, tests/test_vivek.py, tests/test_kill_switch_book.py*
+
+## 111. confluence.yml is the last workflow-scoped member of the scan mutex
+**Impact 2 · Effort S · ops**
+
+After #108 and #109, `confluence.yml` (daily 08:45 UTC) is the only remaining `group: scan` block at workflow level, so it is still deleted outright rather than cancelled-in-place if anything queues while it waits — one lost confluence ping, and no run in the list to explain it. Left alone deliberately: unlike a close it is not a human act on the track record, and unlike a backstop it has no cheap gate job to protect, so job-scoping alone changes how it dies rather than whether it does. Fixing it properly means either the #109 re-dispatch pattern or accepting the miss; it also evicts others when IT queues, which job-scoping does not address either.
+
+*Files: .github/workflows/confluence.yml*
+
+## 112. Two held ASX positions use a taxonomy the sector cap can't reconcile
+**Impact 4 · Effort S · bot-broker · OWNER DECISION**
+
+Found while verifying the #38 back-fill. SUN carries `sector: "Insurance"` and AFG `"Financial Services"` — Yahoo-style labels — while the ASX universe file this market scans from ships GICS and says `"Financials"` for both of those exact symbols, which is also what the back-fill wrote onto CCP. The per-sector cap buckets on the string, so it currently reads three separate sectors where there is one, and would allow 3 Financials + 3 Insurance + 3 Financial Services = **nine correlated financials** in a 30-slot book while reporting the cap as enforced.
+
+Only these two rows are affected: the 8 rows back-filled on 2026-07-28 came straight from `data/universe_cache/asx.json` and match it exactly, and the 7 NASDAQ rows match `data/sector_map.json` exactly. SUN and AFG predate that path and were seeded from whatever their opening scan row carried.
+
+**Not fixed autonomously** — rewriting a non-blank sector changes which trades get taken, and the #38 authorisation covered filling blanks. The fix if the owner wants it is one rule, not a synonym table: *the market's own universe file is the canonical taxonomy, so a stored sector that disagrees with it for the same symbol loses.* That is the same principle already in `enrich_rows` (the universe beats the best-effort cache), applied to disagreement rather than to absence. Effect would be to tighten the cap, never loosen it.
+
+**Made visible meanwhile:** `sectorcache.diverging(positions, rows)` returns `SYM=stored->universe` for every held position whose sector the current scan contradicts, and `vivek_run.run_market` logs it as a WARNING naming the symbols on every scan. Blank-filling is unaffected — that fills nothing-shaped holes, this would overwrite an answer.
+
+*Files: scanner/sectorcache.py, scanner/broker/vivek_run.py, tests/test_sector_cache.py*

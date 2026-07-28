@@ -21,10 +21,14 @@
   let risk = null;
 
   // Paper book equity. bot_status.json FROZE on 2026-06-25 (nothing writes it),
-  // so equity is CONFIGURED, not broker-read: bot_rules.json's `equity` wins if
-  // that file ever publishes one, else this constant. Never seeded from a stale
-  // feed — the header note on the page says exactly that.
-  const FALLBACK_EQUITY = 10000;
+  // so equity is CONFIGURED, not broker-read: bot_rules.json's `account_equity`
+  // wins, else this constant. Never seeded from a stale feed — the header note
+  // on the page says exactly that.
+  // 10,000 -> 150,000 on 2026-07-28 with the fixed-notional switch (30 slots ×
+  // $5,000). The old `equity` key this used to look for was never published by
+  // anything, so this fallback WAS the number on screen; `account_equity` is
+  // published from scanner/config.py as of that date and now wins.
+  const FALLBACK_EQUITY = 150000;
   const STATUS_URL = "data/bot_status.json";
   // A live feed would refresh every scan; anything older is a dead snapshot and
   // must never render as live (equity, today's stats, HTF bias, connections).
@@ -328,7 +332,7 @@
         : `<div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v stop num">${px(p.stop)}</span><span class="pos-metric-sub num">${stopBufR.toFixed(1)}R buffer</span></div>`;
       const riskMetric = p.stopAtBreakeven
         ? `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num" style="color:var(--green)">$0</span><span class="pos-metric-sub num" style="color:var(--green)">runner · ${plannedR.toFixed(1)}R plan</span></div>`
-        : `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num">${money(p.openRiskUsd, 0)}</span><span class="pos-metric-sub num">${(p.openRiskUsd / (window.__EQUITY || 10000) * 100).toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>`;
+        : `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num">${money(p.openRiskUsd, 0)}</span><span class="pos-metric-sub num">${(p.openRiskUsd / (window.__EQUITY || FALLBACK_EQUITY) * 100).toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>`;
       const tpMetric = p.tp1
         ? `<div class="pos-metric"><span class="pos-metric-k">${p.tp1Hit ? "TP1 ✓ (booked 25%)" : "TP1 (25%→BE)"}</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
         : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`;
@@ -595,10 +599,13 @@
 
     // The status feed still drives the log/journal panels, but equity is NEVER
     // seeded from it — bot_status.json froze 2026-06-25 and nothing writes it.
-    // Configured source: bot_rules.json `equity` if it ever publishes one, else
-    // FALLBACK_EQUITY (the header note flags it as configured, not broker-read).
+    // Configured source: bot_rules.json `account_equity` (published since
+    // 2026-07-28; `equity` is the legacy key nothing ever wrote, kept only so a
+    // hand-edited file still works), else FALLBACK_EQUITY — the header note
+    // flags it as configured, not broker-read.
     const seed = await fetchStatus();
-    const startingEquity = Number(srvRules && srvRules.equity) || FALLBACK_EQUITY;
+    const startingEquity = Number(srvRules && (srvRules.account_equity ?? srvRules.equity))
+      || FALLBACK_EQUITY;
 
     // Create the risk engine with the loaded equity. Execution costs come
     // from bot_rules.json's bps model (review H8) so the on-page journal's

@@ -204,14 +204,23 @@
     <section class="sys" id="sizing">
       <h2>6 · Sizing &amp; cost model <span class="who">(identical for bot, manual journal, cloud watcher)</span></h2>
       <ul>
-        <li><strong>Books:</strong> $10,000 per market (ASX · NASDAQ · Crypto) → $30,000 shown as starting capital.
-          The ASX book runs in <strong>A$</strong>; the journal converts its P&amp;L to US$ at the scan’s published
-          AUD/USD rate (<code>data/fx.json</code>) so combined totals never mix currencies at face value.</li>
+        <li><strong>Book:</strong> ONE pool of <span class="rule" data-r="account_equity">$150,000</span> across all
+          three markets (was $10,000 per market → $30,000; changed 2026-07-28 with fixed sizing). Any market can hold
+          any share of the 30 slots. The ASX side runs in <strong>A$</strong>; the journal converts its P&amp;L to US$
+          at the scan’s published AUD/USD rate (<code>data/fx.json</code>) so combined totals never mix currencies at
+          face value.</li>
         <li><strong>No compounding (deliberate):</strong> sizing always uses the starting book, never the running
-          balance — every trade risks the same $ so per-trade R stays comparable for the whole forward test.
-          Revisited when anything goes live.</li>
-        <li><strong>Risk per trade:</strong> <span class="rule" data-r="risk_pct">0.35%</span> of the market’s book
-          (clamped 0.25–0.5%). <strong>1R = the dollars risked</strong>, so $ P&amp;L = R × risk-$.</li>
+          balance, so per-trade figures stay comparable for the whole forward test. Revisited when anything goes live.</li>
+        <li><strong>Position size — fixed notional:</strong> <span class="rule" data-r="position_notional">$5,000</span>
+          of stock bought per entry, every entry, capped by a
+          <span class="rule" data-r="max_portfolio_notional">$150,000</span> total-open ceiling (30 × $5,000 exactly).
+          <strong>1R = the dollars risked</strong> and $ P&amp;L is still R × risk-$ — but under fixed sizing that
+          dollar figure now <em>varies with the stop distance</em> rather than being the same slice of equity every
+          time: a 2% stop risks $100, a 12% stop risks $600, bounded $50–$1,250 by the 1%/25% stop-width rules.
+          Position <em>count</em>, not position size, is the risk dial. Set <code>position_notional</code> to 0 to
+          revert to the risk-% path below, which is retained intact.</li>
+        <li><strong>Risk per trade (only when fixed notional is off):</strong>
+          <span class="rule" data-r="risk_pct">0.35%</span> of the book, clamped 0.25–0.5%.</li>
         <li><strong>Leverage cap on notional:</strong> <span class="rule" data-r="leverage">5× stocks · 3× crypto</span> —
           tight stops can’t create oversized positions.</li>
         <li><strong>Costs (baked into every realised R):</strong> commission
@@ -357,6 +366,13 @@
       // Older cached bot_rules.json has no global cap — leave the static cell.
       if (j.max_open_total != null) set("max_open_total", j.max_open_total || "off");
       set("risk_pct", j.risk_pct + "%");
+      // Sizing keys arrived 2026-07-28; a cached older file leaves the static cells.
+      const money0 = (v) => "$" + Math.round(v).toLocaleString();
+      if (typeof j.account_equity === "number") set("account_equity", money0(j.account_equity));
+      if (typeof j.position_notional === "number")
+        set("position_notional", j.position_notional ? money0(j.position_notional) : "off (risk-% mode)");
+      if (typeof j.max_portfolio_notional === "number")
+        set("max_portfolio_notional", j.max_portfolio_notional ? money0(j.max_portfolio_notional) : "off");
       set("max_daily_loss_pct", `−${j.max_daily_loss_pct}% / market / day`);
       if (j.leverage) set("leverage", `${j.leverage.asx}× stocks · ${j.leverage.crypto}× crypto`);
       if (j.max_per_sector != null) set("max_per_sector", j.max_per_sector || "off");

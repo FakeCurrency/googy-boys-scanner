@@ -186,31 +186,66 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
             "reason": why, "code": "OK", "_plan": plan}
 
 
-# ── 2. position sizing (0.25–0.5% risk; 5× stocks / 3× crypto) ────────────────
+# ── 2. position sizing (fixed notional; 5× stocks / 3× crypto leverage cap) ───
 
 def _leverage_for(market: str | None) -> float:
     return float(_cfg.VIVEK_BOT_LEVERAGE.get(market, _cfg.VIVEK_BOT_LEVERAGE["asx"]))
 
 
 def size_position(equity: float, entry: float, stop: float,
-                  risk_pct: float | None = None, max_leverage: float | None = None) -> dict:
-    """Risk-based size: risk a small % of equity, cap implied leverage at the
-    per-market leverage. Risk % is clamped to the 0.25–0.5 band."""
-    risk_pct = _cfg.VIVEK_BOT_RISK_PCT if risk_pct is None else risk_pct
-    risk_pct = min(max(risk_pct, 0.25), _cfg.VIVEK_RISK_PCT_MAX)      # 0.25–0.5 band
+                  risk_pct: float | None = None, max_leverage: float | None = None,
+                  notional_target: float | None = None) -> dict:
+    """Size one position. TWO modes, selected by config, both leverage-capped.
+
+    FIXED NOTIONAL (default since 2026-07-28, owner decision): every entry buys
+    the same dollar amount, `VIVEK_BOT_POSITION_NOTIONAL`. Units fall out of the
+    price and the DOLLAR RISK becomes the variable — risk_usd = notional x
+    (stop_dist / entry) — bounded by the MIN/MAX_STOP_PCT gates to roughly
+    $50–$1,250 on a $5,000 position. `risk_pct` is then a *derived, reported*
+    number, not an input, and is deliberately NOT clamped to the 0.25–0.5 band:
+    clamping a figure nothing consumes would only misreport the real exposure.
+
+    RISK-BASED (the original path, used when VIVEK_BOT_POSITION_NOTIONAL is 0):
+    risk a fixed % of equity per trade and let the stop distance set the units.
+    Risk % is clamped to the 0.25–0.5 band.
+
+    Pass `notional_target` to force fixed mode explicitly (>0) or force the risk
+    path (0) regardless of config — used by the tests to pin both behaviours.
+    """
     max_lev = _cfg.VIVEK_MAX_LEVERAGE if max_leverage is None else max_leverage
+    fixed = (getattr(_cfg, "VIVEK_BOT_POSITION_NOTIONAL", 0)
+             if notional_target is None else notional_target)
+    fixed = float(fixed or 0)
 
     stop_dist = abs(entry - stop)
     if stop_dist <= 0 or entry <= 0 or equity <= 0:
+        # Degenerate input: report the CONFIGURED risk_pct in risk mode (what
+        # would have been used) and 0.0 in fixed mode (nothing was risked).
+        rp = 0.0 if fixed > 0 else min(
+            max(_cfg.VIVEK_BOT_RISK_PCT if risk_pct is None else risk_pct, 0.25),
+            _cfg.VIVEK_RISK_PCT_MAX)
         return {"units": 0.0, "notional": 0.0, "risk_usd": 0.0,
-                "risk_pct": risk_pct, "leverage": 0.0, "stop_dist": stop_dist,
-                "leverage_capped": False}
+                "risk_pct": rp, "leverage": 0.0, "stop_dist": stop_dist,
+                "leverage_capped": False,
+                "sizing_mode": "fixed_notional" if fixed > 0 else "risk_pct"}
 
-    risk_usd = equity * (risk_pct / 100.0)
-    units = risk_usd / stop_dist
-    notional = units * entry
+    if fixed > 0:
+        mode = "fixed_notional"
+        notional = fixed
+        units = notional / entry
+        risk_usd = units * stop_dist
+    else:
+        mode = "risk_pct"
+        risk_pct = _cfg.VIVEK_BOT_RISK_PCT if risk_pct is None else risk_pct
+        risk_pct = min(max(risk_pct, 0.25), _cfg.VIVEK_RISK_PCT_MAX)   # 0.25–0.5 band
+        risk_usd = equity * (risk_pct / 100.0)
+        units = risk_usd / stop_dist
+        notional = units * entry
 
-    # Cap notional so implied leverage never exceeds the per-market max.
+    # Cap notional so implied leverage never exceeds the per-market max. In
+    # fixed mode this can only bite on an absurdly small equity (a $5,000
+    # position needs just 0.03x of a $150,000 book), but it stays as the
+    # backstop that makes the two modes share one invariant.
     max_notional = equity * max_lev
     capped = False
     if notional > max_notional:
@@ -219,11 +254,15 @@ def size_position(equity: float, entry: float, stop: float,
         notional = units * entry
         risk_usd = units * stop_dist
 
+    if mode == "fixed_notional":
+        risk_pct = round(risk_usd / equity * 100.0, 4) if equity else 0.0
+
     return {
         "units": round(units, 8), "notional": round(notional, 2),
         "risk_usd": round(risk_usd, 2), "risk_pct": risk_pct,
         "leverage": round(notional / equity if equity else 0.0, 2),
         "stop_dist": round(stop_dist, 8), "leverage_capped": capped,
+        "sizing_mode": mode,
     }
 
 
@@ -397,6 +436,12 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     responsible for counting the others — see vivek_run._open_elsewhere.
     Omit either and the global gate is simply off.
 
+    A DOLLAR ceiling rides alongside it: pass `max_portfolio_notional` together
+    with `notional_elsewhere` and total open exposure — this market's book, plus
+    everything taken this run, plus the other markets — stops at that figure. It
+    is the exposure twin of the position cap, is off unless asked for in the
+    same way, and fails closed through the same unreadable-sibling gate.
+
     Returns {plans, skipped, summary}; `plans` are the NEW entries this run.
     """
     from collections import Counter
@@ -407,8 +452,24 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     # book. A global risk cap that quietly ignores the markets it cannot see is
     # worse than one that pauses, so unknown = take nothing (see the gate below).
     _oe = kw.get("open_elsewhere", 0)
-    elsewhere_unknown = _oe is None
-    open_elsewhere = 0 if elsewhere_unknown else int(_oe or 0)
+    open_elsewhere = 0 if _oe is None else int(_oe or 0)
+    # Dollar twin of the position ceiling (2026-07-28): total OPEN NOTIONAL
+    # across every market may not exceed this. OFF unless the caller asks,
+    # exactly like max_open_total above — both are CROSS-MARKET figures that
+    # decide() cannot compute for itself, so defaulting them from config would
+    # mean silently enforcing a ceiling against a number (0 elsewhere) that only
+    # the runner can actually supply. The backtester and tooling call decide()
+    # without either kwarg and must keep getting plain per-market behaviour;
+    # vivek_run passes both from config on every real run.
+    max_notional_total = float(kw.get("max_portfolio_notional", 0) or 0)
+    _ne = kw.get("notional_elsewhere", 0)
+    notional_elsewhere = 0.0 if _ne is None else float(_ne or 0)
+    # EITHER cross-market figure coming back unknown fails BOTH gates closed —
+    # a risk cap that quietly ignores the markets it cannot see is worse than
+    # one that pauses. Only the ceiling actually configured can trip this: with
+    # the dollar cap off, an unknown notional is irrelevant and vice versa.
+    elsewhere_unknown = bool((max_total and _oe is None)
+                             or (max_notional_total and _ne is None))
     min_shorts = kw.get("min_shorts", _cfg.VIVEK_BOT_MIN_SHORTS)
     max_long = max(0, max_pos - min_shorts)          # reserve the short slots
     plans, skipped = [], []
@@ -421,6 +482,11 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     existing = len(book)
     longs = sum(1 for p in book if str(p.get("direction")) == "long")
     shorts = sum(1 for p in book if str(p.get("direction")) == "short")
+    # Notional already committed in THIS market. Rows written before the
+    # fixed-notional switch all carry `notional`; a row that somehow doesn't
+    # contributes 0, which errs toward taking a trade rather than blocking one
+    # — the position-count cap is the hard stop and is never estimated.
+    open_notional = sum(float(p.get("notional") or 0) for p in book)
 
     # Correlation control: positions per sector (existing + taken this run), so
     # the book can't quietly become one macro bet. Unknown sectors are exempt —
@@ -474,7 +540,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             drop(out, "cooldown", f"{sym} stopped out recently — re-entry cooldown active")
         elif longs + shorts >= max_pos:                 # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
-        elif max_total and elsewhere_unknown:
+        elif elsewhere_unknown:
             drop(out, "global_cap_unknown",
                  "another market's book is unreadable — the global cap cannot "
                  "be evaluated, so no new entries this run")
@@ -482,6 +548,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             drop(out, "global_cap",
                  f"{open_elsewhere + longs + shorts} open across all markets "
                  f"({open_elsewhere} elsewhere) — global cap {max_total}")
+        elif (max_notional_total
+              and (notional_elsewhere + open_notional
+                   + float(out["plan"].get("notional") or 0)) > max_notional_total):
+            drop(out, "notional_cap",
+                 f"${notional_elsewhere + open_notional:,.0f} open notional across all "
+                 f"markets (${notional_elsewhere:,.0f} elsewhere) + "
+                 f"${float(out['plan'].get('notional') or 0):,.0f} for this entry "
+                 f"exceeds the ${max_notional_total:,.0f} portfolio ceiling")
         elif direction == "long" and longs >= max_long:
             drop(out, "long_cap", f"long cap {max_long} reached — reserving the ≥{min_shorts}-short slots")
         elif max_sector and sector and sector_counts[sector] >= max_sector:
@@ -490,6 +564,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         else:
             plans.append(out)
             open_syms.add(sym)
+            open_notional += float(out["plan"].get("notional") or 0)
             if sector:
                 sector_counts[sector] += 1
             if direction == "long":
@@ -506,6 +581,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         # open_elsewhere None = a sibling book was unreadable.
         "open_elsewhere": None if elsewhere_unknown else open_elsewhere,
         "max_open_total": max_total,
+        # Exposure twin of the two above (2026-07-28). open_notional is the
+        # WHOLE-BOOK figure after this run — what was already held here, plus
+        # everything taken this run, plus the other markets — so it can be read
+        # straight off against the ceiling without re-adding the parts.
+        "notional_elsewhere": None if elsewhere_unknown else round(notional_elsewhere, 2),
+        "open_notional": (None if elsewhere_unknown
+                          else round(notional_elsewhere + open_notional, 2)),
+        "max_portfolio_notional": max_notional_total,
         "longs": longs, "shorts": shorts, "min_shorts": min_shorts,
         "short_bias_met": short_bias_met,
         # Fraction of this scan's rows the sector cap could actually see. Below

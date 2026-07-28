@@ -343,10 +343,10 @@ VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
 # free to distribute wherever the A+ setups actually are. The per-market number
 # below is therefore NOT the binding constraint any more -- it is set equal to
 # the global cap so one market CAN hold the whole book, and the ceiling that
-# really bites is VIVEK_BOT_MAX_OPEN_TOTAL. Total risk is unchanged from the old
-# 10-per-market shape: 30 x 0.35% = 10.5% of a market's equity, the same as
-# 3 markets x 10 x 0.35%. The per-sector cap (3) still stops the book becoming
-# one macro bet.
+# really bites is VIVEK_BOT_MAX_OPEN_TOTAL. The per-sector cap (3) still stops
+# the book becoming one macro bet. Sizing is fixed-notional -- see
+# VIVEK_BOT_POSITION_NOTIONAL below -- so 30 slots x $5,000 = the $150,000
+# portfolio ceiling exactly.
 VIVEK_BOT_MAX_POSITIONS  = 30      # max concurrent open positions PER MARKET
 # Global ceiling across ALL markets, enforced in vivek_run by counting the other
 # markets' canonical book files before deciding. This is race-free by
@@ -355,7 +355,40 @@ VIVEK_BOT_MAX_POSITIONS  = 30      # max concurrent open positions PER MARKET
 # a run's read of the other books cannot be stale. 0 = off (per-market only).
 VIVEK_BOT_MAX_OPEN_TOTAL = 30
 VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
-VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
+# ---------------------------------------------------------------------------
+# SIZING — FIXED NOTIONAL (owner decision, 2026-07-28):
+#   "5k position moving forward on each 30 stocks and a cap of 150k"
+#
+# Every entry now buys a FIXED dollar amount, not a risk-derived one. Set
+# VIVEK_BOT_POSITION_NOTIONAL = 0 to fall back to the old risk-% sizing path
+# (VIVEK_BOT_RISK_PCT below), which is retained intact for exactly that reason.
+#
+# WHAT THIS CHANGES, stated plainly because it is a real trade-off:
+#   * Risk per trade is no longer constant. Under risk-% sizing every loss was
+#     the same dollar amount and the STOP DISTANCE moved the share count. Under
+#     fixed notional the share count is constant and the STOP DISTANCE moves the
+#     loss: risk_usd = 5,000 x (stop distance / entry). The stop-distance gates
+#     bound it -- MIN_STOP_PCT 1% and MAX_STOP_PCT 25% -- so a 1R loss lands
+#     between $50 and $1,250, typically $250-$500 on a 5-10% structural stop.
+#   * Position count, not position size, is now the risk dial.
+#
+# WHY ACCOUNT_EQUITY MOVED WITH IT (see below): vivek_guard's daily/weekly
+# circuit breakers are equity x pct. A $5,000-notional book measured against the
+# old $10,000 paper equity would have tripped the 3% ($300) daily stop on the
+# FIRST ordinary stop-out and halted the bot more or less permanently. Equity is
+# therefore set to the owner's stated book size, which also makes the numbers
+# self-consistent: 30 x $5,000 = $150,000 = 1.0x equity, no margin implied.
+VIVEK_BOT_POSITION_NOTIONAL = 5_000     # target $ invested per position (0 = risk-% mode)
+# Ceiling on TOTAL open notional across every market, enforced in decide() the
+# same way the position ceiling is: the runner sums the sibling books and passes
+# what the other markets already hold. Redundant with 30 x $5,000 by
+# construction today -- deliberately so. It is the backstop that keeps the
+# dollar exposure honest if the slot count or the per-position size is ever
+# changed independently, and it is what actually binds if a future sizing mode
+# makes positions unequal. 0 = off.
+VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL = 150_000
+VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade — ONLY used when
+                                   # VIVEK_BOT_POSITION_NOTIONAL is 0 (0.25–0.5 band)
 # Tradeability gates — quality-of-fill filters, NOT strategy changes. They only
 # block pathological entries the paper model can't price honestly:
 #  • MIN_PRICE: sub-5c ASX names (e.g. a $0.021 micro-cap) trade with spreads
@@ -439,13 +472,21 @@ VIVEK_BOT_DRY_RUN        = False   # False = write the paper book so trades pers
                                    #   (paper only — places NO real order; live needs MODE=live +
                                    #    VIVEK_LIVE_CONFIRMED + a wired broker, none of which exist yet)
 VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"}  # "live" not wired yet
-# Sizing equity is FIXED-FRACTIONAL ON STARTING CAPITAL by deliberate decision
-# (2026-07-16): realised P&L does NOT compound into position sizing. Every
-# trade risks the same $ so per-trade R stays comparable across the whole
-# forward test — the point of the paper phase is measuring edge, not growth.
-# Revisit when the book goes live (real accounts compound whether you like it
-# or not). Values are in the market's quote currency (A$ for ASX, US$ else).
-VIVEK_BOT_ACCOUNT_EQUITY = 10_000  # paper equity used for sizing — never mutated by P&L
+# Equity does NOT compound by deliberate decision (2026-07-16): realised P&L is
+# never fed back into sizing, so per-trade figures stay comparable across the
+# whole forward test — the point of the paper phase is measuring edge, not
+# growth. Revisit when the book goes live (real accounts compound whether you
+# like it or not). Values are in the market's quote currency (A$ ASX, US$ else).
+#
+# RAISED 10,000 -> 150,000 on 2026-07-28 with the fixed-notional switch. Since
+# sizing is now VIVEK_BOT_POSITION_NOTIONAL, this number no longer sets position
+# size at all — its ONE remaining job is scaling the loss guards, which are
+# equity x pct (vivek_guard.check, kill_switch). Leaving it at 10,000 beside a
+# $150,000 book would have made the 3% daily stop $300 — less than a single
+# ordinary 1R loss — and the bot would have sat halted. At 150,000 the guard
+# keeps roughly the same headroom in R that it had before: $4,500/day against a
+# typical $250–$500 loss is ~9–18R, versus $300 against $35 (8.6R) before.
+VIVEK_BOT_ACCOUNT_EQUITY = 150_000  # book size; scales the loss guards, NOT position size
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
 VIVEK_BOT_RECONCILE      = True    # reconcile broker fills (Phase 3; no-op while paper)
 
