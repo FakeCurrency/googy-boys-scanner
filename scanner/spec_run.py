@@ -18,12 +18,11 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import json
 import os
 import sys
 import zoneinfo
 
-from . import config, data, reversal, spec, universe
+from . import config, data, output, reversal, scanerrors, spec, universe
 
 MARKETS = ("asx", "nasdaq")
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
@@ -92,13 +91,15 @@ def write_chart_json(market_key: str, sym: str, df) -> None:
          "v": int(r.Volume) if r.Volume == r.Volume else 0}
         for r in tail.itertuples()
     ]
-    path = os.path.join(out_dir, f"{sym}.json")
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
-        json.dump({"ticker": sym, "candles": candles}, fh,
-                  ensure_ascii=False, separators=(",", ":"))
-        fh.write("\n")
-    os.replace(tmp, path)
+    # TOP100 #62: this was already atomic (temp + os.replace) so #64 left it
+    # alone, but it kept json's default allow_nan=True — one NaN bar would emit
+    # a bare `NaN` token, which JSON.parse rejects, blanking the WHOLE chart
+    # page rather than one candle. Same formatting arguments, so the published
+    # bytes are unchanged.
+    output.write_json(os.path.join(out_dir, f"{sym}.json"),
+                      {"ticker": sym, "candles": candles},
+                      indent=None, separators=(",", ":"),
+                      ensure_ascii=False, newline=True)
 
 
 def scan_market(market_key: str, limit: int | None = None) -> dict:
@@ -111,6 +112,14 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
     frames = data.download(list(yf_map), period="2y", interval="1d")
 
     results = []
+    # TOP100 #66 — TWO logs, because these are two different failures and
+    # merging them would destroy the distinction that makes them worth counting.
+    # A `build_row` throw means the name is ABSENT from the page (indistinguish-
+    # able from "never set up", which is the whole defect). A `write_chart_json`
+    # throw is worse in a quieter way: the row IS published, so the site lists
+    # the name and its chart page then has no candles.
+    errors = scanerrors.ErrorLog(f"specs [{market_key}]")
+    chart_errors = scanerrors.ErrorLog(f"spec charts [{market_key}]")
     for yf_sym, df in frames.items():
         info = yf_map.get(yf_sym)
         if info is None or df is None or df.empty:
@@ -118,15 +127,23 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
         df = _with_date_column(df)
         try:
             row = build_row(info.get("symbol", yf_sym), info, df, cur)
-        except Exception:
-            continue           # one bad frame never kills the scan
+        except Exception as e:
+            # one bad frame never kills the scan — but it is no longer silent
+            errors.record(info.get("symbol", yf_sym), e)
+            continue
         if row:
             results.append(row)
             try:
                 write_chart_json(market_key, row["symbol"], df)
-            except Exception:
-                pass
+            except Exception as e:
+                chart_errors.record(row["symbol"], e)
     results.sort(key=lambda r: (GRADE_RANK.get(r["grade"], 9), -r["score"], -r["rr"]))
+    # Both printed unconditionally: a standing pair of zeros is what makes a
+    # jump legible. `scanned` differs per log on purpose — build_row is offered
+    # every downloaded frame, write_chart_json only the names that produced a
+    # row, so sharing one denominator would understate the chart failure rate.
+    errors.report(len(frames))
+    chart_errors.report(len(results))
 
     tz = zoneinfo.ZoneInfo("Australia/Melbourne")
     payload = {
@@ -136,13 +153,16 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
         "currency_symbol": cur,
         "universe_size": len(items),
         "results": results,
+        # TOP100 #66. `errors`/`error_sample` carry the SAME meaning as in the
+        # vivek payload — a name that failed to produce a row — so a reader does
+        # not have to learn two vocabularies. `chart_*` is the second failure
+        # mode above, kept separate rather than summed.
+        **errors.payload(),
+        **chart_errors.payload("chart_"),
     }
     path = os.path.join(OUT_DIR, f"{market_key}_spec.json")
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
-        json.dump(payload, fh, ensure_ascii=False, indent=1)
-        fh.write("\n")
-    os.replace(tmp, path)
+    # TOP100 #62 — see write_chart_json above; already atomic, still allow_nan.
+    output.write_json(path, payload, indent=1, ensure_ascii=False, newline=True)
     # repo hygiene: drop chart candles for names no longer in the results
     chart_dir = os.path.join(OUT_DIR, "spec_charts", market_key)
     keep = {r["symbol"] for r in results}

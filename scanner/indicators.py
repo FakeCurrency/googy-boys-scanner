@@ -3,6 +3,7 @@
 Frames are expected to have columns: Open, High, Low, Close, Volume.
 """
 
+import numpy as np
 import pandas as pd
 
 from . import config
@@ -38,14 +39,45 @@ def weekly_ema_state(df: pd.DataFrame) -> tuple[float, float, float] | None:
 
 
 def rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    """Wilder's RSI."""
+    """Wilder's RSI. NaN where RSI is genuinely undefined, rather than 100.
+
+    TOP100 #71. The old tail was ``.fillna(100)``, and the division above sends
+    THREE unrelated situations into that NaN — so all three came out of this
+    function reading "maximally overbought", which is right for exactly one of
+    them:
+
+    * **warm-up** — ``series.diff()`` is NaN on the first bar, so both averages
+      are NaN there. RSI does not exist yet. Reported 100.
+    * **no losses in the window** (``avg_loss == 0``, ``avg_gain > 0``) — RSI
+      really is 100. This is the one the fill was written for, and it is kept,
+      but it is now stated as its own rule instead of arriving as a side effect
+      of ``replace(0, nan)``.
+    * **a flat or halted series** (``avg_loss == 0`` AND ``avg_gain == 0``) — a
+      price that has not moved at all. Reported 100: the single most extreme
+      reading the indicator can produce, for the least eventful thing a price
+      can do. Now NaN.
+
+    The mask is written on the AVERAGES rather than on the output because that
+    is where the three cases are still distinguishable; by the time they are NaN
+    in ``out`` they are indistinguishable, which is precisely how one fill came
+    to cover all three.
+
+    **No live behaviour changes** (verified, not assumed): the two consumers —
+    ``spec.py`` and ``reversal.py`` — both do ``rsi > rsi_ma``, ``rsi >
+    rsi[-3]`` and ``lo <= rsi <= hi``, and every one of those is False against
+    NaN just as it was against the old 100 (100 > 100 is False, and 100 is
+    outside both bands). A halted name failed the RSI chip before and fails it
+    now. What changes is that a NaN can no longer be mistaken for a reading by
+    something new that consumes this series later.
+    """
     delta = series.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
     avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, float("nan"))
-    return (100 - 100 / (1 + rs)).fillna(100)
+    out = 100 - 100 / (1 + rs)
+    return out.mask((avg_loss == 0) & (avg_gain > 0), 100.0)
 
 
 def ema_ladder(df: pd.DataFrame) -> dict[int, pd.Series]:
@@ -65,39 +97,49 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
 
 
 def supertrend(df: pd.DataFrame, period: int = 14, mult: float = 3.0) -> pd.Series:
-    """SuperTrend trailing line (used for the Phase-2 trailing-stop display)."""
+    """SuperTrend trailing line (used for the Phase-2 trailing-stop display).
+
+    TOP100 #73. The bands below ARE vectorised; the trailing line is not, and
+    cannot be. Each final band is a running min/max whose RESET CONDITION reads
+    the running value itself (`close[i-1] > final_upper[i-1]`), and the direction
+    latch reads both finished bands, so bar i is not computable without bar i-1.
+    What made it cost 100 ms a frame was never the recurrence -- it was doing the
+    recurrence through `Series.iat`, ~7 pandas element lookups a bar over 1,300
+    bars for every name in the universe (~3.7 min of an ASX scan). It now runs
+    over plain numpy scalars: the same operations in the same order on the same
+    float64 values, so the output is BIT-IDENTICAL, which is the only acceptable
+    outcome for a line that sets trailing stops.
+    `tests/test_engine_truth.py` pins that against a frozen copy of the old loop.
+    """
     atr_ = atr(df, period)
     hl2 = (df["High"] + df["Low"]) / 2
-    upper = hl2 + mult * atr_
-    lower = hl2 - mult * atr_
-    close = df["Close"]
+    upper = np.asarray(hl2 + mult * atr_, dtype="float64")
+    lower = np.asarray(hl2 - mult * atr_, dtype="float64")
+    close = np.asarray(df["Close"], dtype="float64")
 
-    final_upper = upper.copy()
-    final_lower = lower.copy()
-    st = pd.Series(index=df.index, dtype="float64")
-    going_up = True
+    n = len(df)
+    st = np.full(n, np.nan, dtype="float64")
+    if n:
+        # NaN fails every comparison below, exactly as it did through `.iat` --
+        # a NaN band therefore carries the previous one forward and never flips
+        # the latch, rather than raising or silently reversing the trail.
+        final_upper = upper[0]
+        final_lower = lower[0]
+        going_up = True
+        st[0] = final_lower
+        for i in range(1, n):
+            prev_close = close[i - 1]
+            if upper[i] < final_upper or prev_close > final_upper:
+                final_upper = upper[i]
+            if lower[i] > final_lower or prev_close < final_lower:
+                final_lower = lower[i]
+            if going_up and close[i] < final_lower:
+                going_up = False
+            elif not going_up and close[i] > final_upper:
+                going_up = True
+            st[i] = final_lower if going_up else final_upper
 
-    for i in range(len(df)):
-        if i == 0:
-            st.iat[i] = lower.iat[i]
-            continue
-        final_upper.iat[i] = (
-            upper.iat[i]
-            if (upper.iat[i] < final_upper.iat[i - 1] or close.iat[i - 1] > final_upper.iat[i - 1])
-            else final_upper.iat[i - 1]
-        )
-        final_lower.iat[i] = (
-            lower.iat[i]
-            if (lower.iat[i] > final_lower.iat[i - 1] or close.iat[i - 1] < final_lower.iat[i - 1])
-            else final_lower.iat[i - 1]
-        )
-        if going_up and close.iat[i] < final_lower.iat[i]:
-            going_up = False
-        elif not going_up and close.iat[i] > final_upper.iat[i]:
-            going_up = True
-        st.iat[i] = final_lower.iat[i] if going_up else final_upper.iat[i]
-
-    return st
+    return pd.Series(st, index=df.index, dtype="float64")
 
 
 def pivot_highs(df: pd.DataFrame, window: int = 3) -> pd.Series:

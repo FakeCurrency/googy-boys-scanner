@@ -28,7 +28,7 @@ import time
 
 import requests
 
-from . import config
+from . import config, output
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 STATE_FILE = ROOT / "journal" / "discord_state.json"
@@ -50,8 +50,7 @@ def _load_state() -> dict:
 
 
 def _save_state(state: dict) -> None:
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    output.write_json(STATE_FILE, state)    # TOP100 #64 — atomic + NaN-safe
 
 
 # ── filtering / sorting ───────────────────────────────────────────────────────
@@ -227,8 +226,7 @@ def run(market_keys: list[str], send_all: bool = False, min_grade: str | None = 
     payloads = build_payloads(digests, total)
 
     # Always write a preview so you can see exactly what would post.
-    PREVIEW.parent.mkdir(parents=True, exist_ok=True)
-    PREVIEW.write_text(json.dumps(payloads, indent=2, ensure_ascii=False), encoding="utf-8")
+    output.write_json(PREVIEW, payloads, ensure_ascii=False)   # TOP100 #64
 
     webhook = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
     if dry_run or not webhook:

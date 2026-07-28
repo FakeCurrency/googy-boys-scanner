@@ -55,13 +55,12 @@ into `decide()` changes which trades get taken and is the owner's call.
 import argparse
 import datetime as dt
 import json
-import os
 import pathlib
 
 import numpy as np
 import pandas as pd
 
-from . import config
+from . import config, output
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PUBLIC_FILE = ROOT / "public" / "data" / "regime.json"
@@ -487,10 +486,14 @@ def notes(blk: dict) -> list:
 # -- the publish step ---------------------------------------------------------
 
 def _write_json(path: pathlib.Path, payload) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    """Publish compact JSON atomically. TOP100 #64 — this used to be a
+    byte-identical copy of the same five lines in the sibling module (and of
+    two more elsewhere); the tmp+os.replace half was already right, but each
+    copy carried json's `allow_nan=True` default, so a non-finite value that
+    slipped past the local rounding helper published a bare `NaN` token and
+    took the whole page down at JSON.parse. output.write_json is now the one
+    publisher, and it nulls non-finite floats before dumping."""
+    output.write_json(path, payload, indent=None, separators=(",", ":"), newline=True)
 
 
 def fetch_benchmark(market: str):

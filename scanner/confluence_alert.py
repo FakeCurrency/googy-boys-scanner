@@ -29,7 +29,7 @@ import json
 import os
 import pathlib
 
-from . import config
+from . import config, output
 from .discord import post_webhook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -124,10 +124,9 @@ def append_history(fresh: list[dict]) -> None:
         entries.insert(0, {"date": now, "market": a["market"], "ticker": a["ticker"],
                            "side": a["side"], "count": a["count"],
                            "lenses": a["lenses"]})
-    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    HISTORY_FILE.write_text(
-        json.dumps({"entries": entries[:HISTORY_CAP]}, indent=1) + "\n",
-        encoding="utf-8")
+    # TOP100 #64 — atomic + NaN-safe
+    output.write_json(HISTORY_FILE, {"entries": entries[:HISTORY_CAP]},
+                      indent=1, newline=True)
 
 
 def load_watch_keys() -> set[str]:
@@ -257,9 +256,7 @@ def main(argv=None) -> int:
 
 def _save_state_if_changed(old: dict, new: dict) -> None:
     if old != new:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(new, indent=2, sort_keys=True) + "\n",
-                              encoding="utf-8")
+        output.write_json(STATE_FILE, new, sort_keys=True, newline=True)
 
 
 if __name__ == "__main__":

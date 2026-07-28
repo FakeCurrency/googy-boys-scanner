@@ -58,6 +58,12 @@ def main() -> None:
     # so it can join the index changes that fetch already pays for.
     breadth_inputs: dict[str, dict] = {}
     regime_blocks: dict[str, dict] = {}
+    # TOP100 #67. A market that THREW used to print one line and let main() run
+    # to completion, so the process exited 0 — a scan that scanned nothing was
+    # indistinguishable in CI from a scan that found nothing, which is the one
+    # reading nobody investigates. Collected here, raised at the very END of
+    # main() so every publish step below still runs (see the exit block).
+    failed_markets: list[tuple[str, str]] = []
 
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
     for market_key in markets:
@@ -151,8 +157,8 @@ def main() -> None:
                                        "headline_tf": r.get("headline_tf")}
                          for r in vk["results"]},
             }
-            (pathlib.Path(args.out) / f"{market_key}_prices.json").write_text(
-                json.dumps(slim, separators=(",", ":")) + "\n", encoding="utf-8")
+            output.write_json(pathlib.Path(args.out) / f"{market_key}_prices.json",
+                              slim, indent=None, separators=(",", ":"), newline=True)
 
             # Track-record journal RETIRED (owner 2026-07-09): it logged EVERY
             # armed A+/A on every timeframe with no position cap — 200+ open
@@ -178,6 +184,13 @@ def main() -> None:
                     print(f"  bot book: skipped ({e})", flush=True)
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
+            # EXCEPTIONS ONLY — the deliberate `continue` above (no data
+            # downloaded, keep the existing JSON) is NOT counted here, on
+            # purpose. That path is a reported decision rather than a fault, it
+            # is already caught on scheduled runs by scan.yml's per-market
+            # assert_staged, and failing on it would turn every Yahoo-blocked
+            # crypto run red under crypto_bot.yml's plain `bash -e` step.
+            failed_markets.append((market_key, f"{type(e).__name__}: {e}"))
 
     # Sector & index dashboard (ASX + US) with an auto market read.
     from . import sectors as _sectors
@@ -195,7 +208,7 @@ def main() -> None:
             sec, json.loads(sec_file.read_text(encoding="utf-8")))
     except Exception:
         carried = 0  # no previous file / unreadable -> publish what we have
-    sec_file.write_text(json.dumps(sec, indent=2), encoding="utf-8")
+    output.write_json(sec_file, sec)
     print(f"  sectors: ASX {len(sec['markets']['asx']['sectors'])} sectors | "
           f"US {len(sec['markets']['us']['sectors'])} sectors"
           + (f" | carried {carried} field(s) forward" if carried else ""))
@@ -242,10 +255,10 @@ def main() -> None:
         fx_df = fx_frames.get("AUDUSD=X")
         rate = float(fx_df["Close"].dropna().iloc[-1]) if fx_df is not None else None
         if rate and 0.4 < rate < 1.2:                  # sanity band for AUD/USD
-            (pathlib.Path(args.out) / "fx.json").write_text(json.dumps({
+            output.write_json(pathlib.Path(args.out) / "fx.json", {
                 "audusd": round(rate, 4),
                 "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }, indent=2) + "\n", encoding="utf-8")
+            }, newline=True)
             print(f"  fx: AUDUSD {rate:.4f}")
     except Exception as e:
         print(f"  fx: skipped ({e})", flush=True)
@@ -308,8 +321,30 @@ def main() -> None:
         "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
         "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
     }
-    (pathlib.Path(args.out) / "bot_rules.json").write_text(
-        json.dumps(rules, indent=2) + "\n", encoding="utf-8")
+    output.write_json(pathlib.Path(args.out) / "bot_rules.json", rules, newline=True)
+
+    # TOP100 #67 — the exit, placed HERE rather than inside the loop on purpose.
+    # Raising at the throw site would skip the sectors / breadth / HORIZON /
+    # REGIME / FX / bot_rules publishes below it, so one market's bad frame
+    # would silently stop the OTHER markets' surfaces from updating: a fix that
+    # costs more than the defect. Everything publishes first; the process then
+    # reports what actually happened.
+    #
+    # Safe in both callers, checked: scan.yml runs each market as its own
+    # process under `set +e` with per-market rc capture and gates on ASX and
+    # NASDAQ only, so a crypto failure can never block an ASX commit.
+    # crypto_bot.yml runs `python -m scanner.run --market crypto` as a plain
+    # `bash -e` step, so a non-zero exit fails the crypto job — which is the
+    # whole point: it was green while doing nothing.
+    if failed_markets:
+        print(f"\n!! {len(failed_markets)} market(s) FAILED to scan "
+              f"- data for them is unchanged from the previous run:", flush=True)
+        for market_key, why in failed_markets:
+            print(f"    {market_key}: {why}", flush=True)
+        # stdout, then exit — Actions interleaves stdout and stderr unreliably,
+        # so a summary written to stderr can surface above the lines it summarises.
+        raise SystemExit(1)
+
 
 if __name__ == "__main__":
     main()

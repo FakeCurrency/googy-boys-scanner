@@ -25,15 +25,23 @@ def utc_now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def atomic_write(path: pathlib.Path, payload: str) -> None:
+def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None) -> None:
     """Write payload to path atomically via a temp file + rename (POSIX-safe).
 
     Guarantees the destination is never left half-written on a crash: the data
     lands in a sibling temp file first, then os.replace() swaps it in one step.
+
+    `newline` is passed straight to the temp file. The default (None) keeps the
+    long-standing behaviour for the journals — platform line-ending translation,
+    which on the Linux runners this actually executes on is the identity. Pass
+    "\\n" to pin LF regardless of platform; scanner/output.py does, because the
+    files it publishes are committed to git and a local Windows run would
+    otherwise re-write every published artefact with CRLF and diff the lot.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
-        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8"
+        mode="w", dir=path.parent, delete=False, suffix=".tmp", encoding="utf-8",
+        newline=newline,
     ) as f:
         f.write(payload)
         tmp = f.name

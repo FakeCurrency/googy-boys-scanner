@@ -54,12 +54,47 @@ def costs_for(market: str | None) -> tuple[float, float] | None:
     return (slip / 10_000.0, comm / 10_000.0)
 
 
+#: Exit reasons that fill as a RESTING LIMIT and therefore pay no slippage.
+#: This is the closed set the whole cost model turns on, so it is named here
+#: rather than inlined — see `_cost_r` for why the test is written as "not in
+#: this set" instead of "in the market set".
+_LIMIT_EXIT_REASONS = ("tp1", "tp2", "tp3")
+
+
 def _cost_r(trade: dict, slip_frac: float, comm_frac: float) -> float:
     """Round-trip cost of a trade expressed in R (risk multiples).
 
     Entry is a market fill → pays slippage + commission on the full position.
-    Each exit pays commission on its booked fraction; only a market exit (a stop
-    or trailed close) also pays slippage — a resting TP limit fills at its level.
+    Each exit pays commission on its booked fraction; only a market exit also
+    pays slippage — a resting TP limit fills at its own level.
+
+    TOP100 #74 — the test used to be
+    ``startswith(("stop", "time", "manual"))``, an allow-list of the MARKET
+    fills, and it was incomplete. Every ``"reason"`` ever written to an exit
+    record, enumerated from the tree rather than remembered: ``stop``
+    (``vivek_journal.py``, the ``_mark`` stop branch — note this covers TRAILED
+    closes too, since only the trade-level ``exit_reason`` becomes ``"trail"``),
+    ``tp1``/``tp2``/``tp3`` (``_mark``'s scale branch), ``time``
+    (``vivek_run``'s time-stop), ``manual`` (``vivek_run``'s hand close), and
+    ``eod`` (``vivek_backtest._force_close``). ``eod`` matched nothing, so the
+    backtest's forced end-of-sample closes — a market exit if anything is —
+    were priced as resting limits and paid commission only.
+
+    The fix is to INVERT the test rather than append ``"eod"`` to the list,
+    and the inversion is the point. An allow-list of market fills fails toward
+    the CHEAP side: a reason string added later (a new exit path, a renamed
+    one) silently under-charges, understating cost and overstating every R,
+    win rate and expectancy computed from it — and it does so quietly, because
+    nothing downstream can tell an under-charged trade from a good one. The
+    resting-limit set is genuinely closed by contrast: a limit exit is a TP
+    rung, all three are written by one branch of one function, and a fourth
+    rung would be a deliberate change to the ladder. So the unknown case now
+    lands on the EXPENSIVE side, where it shows up as a cost that is too high
+    — visible, conservative, and the direction a loss guard should err in.
+
+    ``startswith`` is kept over ``in`` because that is what the original did
+    and the reasons are written bare; a future ``"tp1_partial"`` should still
+    read as the limit it is.
     """
     entry, risk = trade.get("entry"), trade.get("risk")
     if not risk or risk <= 0 or not entry:
@@ -68,10 +103,7 @@ def _cost_r(trade: dict, slip_frac: float, comm_frac: float) -> float:
     for ex in trade.get("exits", []):
         frac = ex.get("pct", 0.0)
         px = ex.get("price", entry)
-        # TP limits pay no slippage; stop / time-stop / manual closes are
-        # market fills ("manual" added 2026-07-20 with the real bot-book
-        # close, review C4 — a hand-flattened position pays slippage too).
-        is_market = str(ex.get("reason", "")).startswith(("stop", "time", "manual"))
+        is_market = not str(ex.get("reason", "")).startswith(_LIMIT_EXIT_REASONS)
         cost_price += frac * px * (comm_frac + (slip_frac if is_market else 0.0))
     return cost_price / risk
 

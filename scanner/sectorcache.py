@@ -248,14 +248,41 @@ def _yf_symbol(market: str, symbol: str) -> str:
     return symbol + ".AX" if market == "asx" else symbol
 
 
-def _fetch_sector(yf_symbol: str) -> str:
-    """One symbol's sector from the Yahoo asset profile ('' on any failure)."""
+def _fetch_sector(yf_symbol: str) -> tuple[str, str]:
+    """(sector, outcome) for one symbol, outcome one of 'ok' / 'none' / 'failed'.
+
+    TOP100 #65 — this used to return ``''`` for two situations that are not the
+    same thing and do not have the same remedy:
+
+      * the profile fetch RAISED (rate limit, network, delisted, a Yahoo symbol
+        that does not resolve) — nothing was learned, and the name is worth
+        retrying;
+      * the profile came back fine and simply carries no sector — an ETF, a
+        trust, a shell. Retrying will return the same nothing tomorrow and every
+        day after.
+
+    Both landed in the same `got X/N` line, so a run where Yahoo rate-limited
+    every request and a run where every remaining name is genuinely an ETF
+    printed the identical sentence. Since REFINEMENTS #38 made this cache a
+    SIGNAL path — a blank sector is exempt from the 3-per-sector cap — "coverage
+    stopped improving" is a question about the correlation limit, and it needed
+    an answer better than one number.
+
+    The outcome is REPORTED, not acted on. Caching the 'none' verdict is the
+    obvious next step and is deliberately not taken here: it would be inert
+    today (``_targets`` filters on a falsy ``sector``, so a cached blank is
+    still "missing" and still refetched) and the version that is NOT inert —
+    teaching ``_targets`` to skip them — changes which names carry a sector,
+    hence which sectors the cap counts, hence which trades get taken. Owner's
+    call, not a refactor.
+    """
     try:
         import yfinance as yf
         info = yf.Ticker(yf_symbol).get_info() or {}
-        return str(info.get("sector") or "").strip()
     except Exception:
-        return ""
+        return "", "failed"
+    sector = str(info.get("sector") or "").strip()
+    return sector, ("ok" if sector else "none")
 
 
 def refresh(cap: int = _DEFAULT_CAP) -> dict:
@@ -266,16 +293,29 @@ def refresh(cap: int = _DEFAULT_CAP) -> dict:
         return cache
     print(f"  sectors: fetching up to {len(targets)} missing sector(s) ...")
     now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-    got = 0
+    got = none = failed = 0
     for market, sym in targets:
-        sector = _fetch_sector(_yf_symbol(market, sym))
-        if sector:
+        sector, outcome = _fetch_sector(_yf_symbol(market, sym))
+        if outcome == "ok":
             cache[_key(market, sym)] = {"sector": sector, "ts": now}
             got += 1
+        elif outcome == "none":
+            none += 1
+        else:
+            failed += 1
         time.sleep(_PACE_S)
     if got:
         save_cache(cache)
-    print(f"  sectors: got {got}/{len(targets)}; cache now holds {len(cache)} symbols")
+    # TOP100 #65 — three numbers, because they mean three different things and
+    # only one of them is a problem you can do anything about. Printed on every
+    # run including a clean one, so a standing `failed 0` is what makes a jump
+    # legible (same rule as the scan's error accounting).
+    print(f"  sectors: got {got} / none {none} / failed {failed} of "
+          f"{len(targets)}; cache now holds {len(cache)} symbols")
+    if failed:
+        print(f"  sectors: WARNING {failed} profile fetch(es) FAILED - those names "
+              f"learned nothing this run and stay exempt from the per-sector cap "
+              f"until a later scan succeeds")
     return cache
 
 

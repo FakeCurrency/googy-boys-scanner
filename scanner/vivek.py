@@ -216,8 +216,17 @@ def _structural_targets(df: pd.DataFrame, direction: str, entry: float, risk: fl
     support (pivot lows below entry). Targets must sit between MIN_R and MAX_R
     of risk away, and clustered pivots are merged so the three TPs are distinct.
     Returns [] when there's no usable structure (caller falls back to R-multiples).
+
+    The `risk` guard is `not (risk > 0)` for the same reason `_build_levels`'s is
+    (TOP100 #63) — but here it is DEPTH ONLY, and saying so matters more than the
+    line: the sole production caller already refuses a non-positive risk before it
+    gets here, so nothing reaches this with NaN today. It is written this way so
+    the helper stays correct if it ever acquires a second caller, not because a
+    path exists. Note the fallback would be worse than the bug it guards: []
+    means "no structure, use R-multiples", and R-multiples off a NaN risk are NaN
+    targets rather than no plan.
     """
-    if risk <= 0:
+    if not (risk > 0):
         return []
     pw = config.VIVEK_PIVOT_WINDOW
     look = df.tail(config.VIVEK_TARGET_LOOKBACK)
@@ -249,6 +258,34 @@ def _build_levels(df: pd.DataFrame, direction: str, entry: float, level: float,
     back to R-multiples placed strictly beyond the last target so ordering holds.
     R:R is measured to the ACTUAL TP2, so it genuinely varies between setups.
     Returns {} (caller treats as "no plan") when the stop gives non-positive risk.
+
+    TOP100 #63 — "non-positive" now means "not positive", which is not the same
+    test and is the whole item. ``risk <= 0`` is False for NaN, so a plan whose
+    risk was Not-a-Number was BUILT and published. NaN gets in easily: ``atr``
+    is ``max(atr, entry * 0.001)`` and Python's ``max`` propagates NaN (it keeps
+    the first argument because ``x > nan`` is False), and ``swing_low`` is a
+    rolling min that is NaN over an all-missing window.
+
+    What a NaN-risk plan then does downstream is the reason this is worth the
+    token: every gate that should catch it is written as a ``>`` or a ``<``, and
+    every one of those is False against NaN, so it passes all of them. ``rr``
+    is NaN so ``gate_grade``'s R:R floor does not bite; the bot's ``wide_stop``
+    and ``stop_too_tight`` tests both read ``stop_pct = NaN`` and both pass;
+    ``size_position``'s ``stop_dist <= 0`` guard passes and books
+    ``risk_usd = units * NaN = NaN``. That NaN then lands in the book, and a
+    NaN inside a sum makes every later comparison False — which **disarms the
+    daily and weekly loss guards for the entire book**, silently, off one bad
+    ATR bar. A corrupt row does not merely mis-price itself; it turns off the
+    thing that limits the damage.
+
+    Writing it as ``not (risk > 0)`` rather than adding an ``isfinite`` call is
+    deliberate: the positive test is the property the caller actually needs, and
+    it cannot be satisfied by NaN, by None-turned-nan, or by anything else that
+    is not a real positive number. **This can only ever REMOVE a plan, never add
+    one** — the docstring above has always promised no plan unless risk is
+    positive, so this is the contract being enforced rather than tightened. It
+    is still a change to which plans exist and is flagged as such (TOP100 #63);
+    reverting is one token.
     """
     atr = max(atr, entry * 0.001)
     buf = atr * config.VIVEK_ATR_STOP_MULT
@@ -264,7 +301,7 @@ def _build_levels(df: pd.DataFrame, direction: str, entry: float, level: float,
         scale = config.VIVEK_TP_SCALE_SHORT
         sign = -1
 
-    if risk <= 0:
+    if not (risk > 0):          # TOP100 #63 — NaN fails this; `risk <= 0` did not.
         return {}
 
     struct = _structural_targets(df, direction, entry, risk)
@@ -442,7 +479,28 @@ def _recent_reaction_bar(frame: pd.DataFrame, direction: str, level: float) -> i
 def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
     """A full timeframe plan for `frame`: the 200 SMA level, structural SL/TPs,
     and the trigger state — all from ONE place (Python), so the row, chart and
-    bot read identical numbers. Returns None when the frame is too short."""
+    bot read identical numbers. Returns None when the frame is too short.
+
+    TOP100 #72 — the level is NOT always a 200 SMA, and now it says so.
+    ``w = min(VIVEK_SMA, n)`` with ``VIVEK_MIN_TF_BARS = 30`` means a plan can be
+    built on a **30**-period average and published into a field the row, the
+    chart and the bot all read as "the 200 SMA". Weekly is where this actually
+    bites: five years of daily bars is only ~260 weeks, so a name listed three
+    years ago resamples to ~156 and its "weekly 200 SMA" is a 3-year average.
+    Two names side by side on the same page, same label, different indicator.
+
+    ``sma_window`` has carried the real number since the beginning and NOTHING
+    read it — grepped across ``.py``, ``.js`` and ``.html``, it appeared at this
+    line and nowhere else. So the fix is to SURFACE it, not to delete an unused
+    field: ``sma_proxy`` is the boolean a badge or a filter can act on, and it
+    is derived here rather than recomputed by each reader against its own copy
+    of 200.
+
+    Deliberately NOT a gate. Refusing short-history plans would change which
+    trades get taken, and the shorter average is often the honest best effort —
+    a two-year-old listing has no 200-week history and never will until it ages.
+    The defect was never the fallback; it was the fallback being silent.
+    """
     n = len(frame)
     if n < config.VIVEK_MIN_TF_BARS:
         return None
@@ -476,6 +534,7 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
         "swing_high": round(swing_high, 8),
         "swing_low": round(swing_low, 8),
         "sma_window": w,                                  # < 200 on short histories
+        "sma_proxy": bool(w < config.VIVEK_SMA),           # TOP100 #72 — say so
         "armed": trigger is not None,
         "entry_trigger": trigger["type"] if trigger else None,
         "trigger_bar": _date(trigger["bar"]) if trigger else None,

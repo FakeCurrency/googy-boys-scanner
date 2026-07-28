@@ -518,8 +518,8 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
             txt = ("✅ [Vivek 5.0] Watchdog recovered: "
                    + ", ".join(recovered) + f" (host: {host})")
             sent["RECOVERY"] = _dispatch("WARNING", txt)
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        state_path.write_text(json.dumps(new_state, indent=2), encoding="utf-8")
+        from .output import write_json      # TOP100 #64 — atomic + NaN-safe
+        write_json(state_path, new_state)
 
     # ASCII-only stdout (repo rule); markdown summary for the Actions page.
     print(f"{log_prefix} {len(findings)} finding(s), "

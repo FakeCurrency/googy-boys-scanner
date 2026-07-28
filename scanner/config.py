@@ -1079,6 +1079,19 @@ ORDER_RETRY_BACKOFF_BASE = 2    # base seconds for exponential backoff (2s, 4s, 
 # ---------------------------------------------------------------------------
 EVENT_BLACKOUT_ENABLED   = True  # skip new orders on high-impact economic event days
 
+# ---------------------------------------------------------------------------
+# Scan error visibility (TOP100 #60/#66/#67)
+# ---------------------------------------------------------------------------
+# Per-ticker exceptions used to be swallowed behind `if progress:` (production
+# passes progress=False) or a bare `pass`, so a name that threw EVERY session
+# was indistinguishable from a name that simply never set up. These bound how
+# much of that now travels in the published payload.
+SCAN_ERROR_SAMPLE_MAX    = 12   # error rows published per market (0 = count only)
+SCAN_ERROR_MSG_MAX       = 160  # chars kept per error message before truncation
+SCAN_ERROR_KINDS_MAX     = 4    # distinct exception types named in the summary line
+SCAN_ERROR_LOUD_PCT      = 5.0  # >= this % of names failing prints the '!!' marker
+                                # (0 = never loud)
+
 
 @dataclass(frozen=True)
 class MarketConfig:
@@ -1113,6 +1126,22 @@ MARKETS = {
         liquidity_min=3_000_000, volume_is_usd=True,
     ),
 }
+
+# Reporting currency for any figure that SUMS across markets, and the AUD/USD
+# rate to use when the published `public/data/fx.json` cannot be read.
+#
+# TOP100 #61: an ASX position's dollars are A$ (it is sized off an A$ entry
+# price) and NASDAQ/crypto dollars are US$, so a combined total added them at
+# face value and overstated the AUD leg by ~1/rate — roughly 43% at 0.70. R is
+# immune (it divides by the position's own risk, so the currency cancels), which
+# is exactly why the R figures looked sane while the dollar ones did not.
+#
+# The fallback is deliberately the SAME number `public/js/journal.js` falls back
+# to, so an offline page and an offline report cannot disagree about the rate
+# while both claim US$. It is a fallback, not an estimate: anything that uses it
+# must record that it did.
+REPORT_CURRENCY   = "USD"
+FX_AUDUSD_FALLBACK = 0.66
 
 # ---------------------------------------------------------------------------
 # Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)

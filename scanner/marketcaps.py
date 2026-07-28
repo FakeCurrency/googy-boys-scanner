@@ -68,13 +68,15 @@ def load_cache() -> dict:
 
 
 def save_cache(cache: dict) -> None:
-    payload = json.dumps(cache, indent=2, sort_keys=True)
-    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(payload)
+    # TOP100 #64 — both writes were non-atomic, and neither named an encoding,
+    # so a local Windows run wrote cp1252. Routed through output.write_json for
+    # the temp+os.replace swap and a pinned utf-8/LF, matching sectorcache.
+    from .output import write_json
+    kw = dict(sort_keys=True)
+    write_json(CACHE_FILE, cache, **kw)
     # Mirror to the web-served folder so the dashboard can read caps directly.
     try:
-        PUBLIC_FILE.parent.mkdir(parents=True, exist_ok=True)
-        PUBLIC_FILE.write_text(payload)
+        write_json(PUBLIC_FILE, cache, **kw)
     except Exception:
         pass
 

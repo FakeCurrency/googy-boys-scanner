@@ -10,7 +10,7 @@ import subprocess
 from collections import Counter
 from zoneinfo import ZoneInfo
 
-from . import config   # (pulse import removed 2026-07-20 — module retired & deleted)
+from . import config, scanerrors   # (pulse import removed 2026-07-20 — module retired & deleted)
 from .data import download, _frame_age_days
 from .universe import load_universe
 
@@ -123,6 +123,18 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # say nothing. Absent therefore means fresh, which is also what every
     # existing reader assumes today — so an old page keeps working unchanged.
     price_age: dict[str, int] = {}
+    # Per-ticker failures used to print behind `if progress:` and the only
+    # production caller (run.py) passes progress=False, so a scheduled scan said
+    # NOTHING about a name that threw every session (TOP100 #60). The print
+    # below is kept for interactive runs; this counts them for the log line and
+    # the payload regardless of who is watching.
+    errors = scanerrors.ErrorLog(f"vivek [{market_key}]")
+    # Separate log, because it is a separate failure with a separate blast
+    # radius. A throw here does not cost a SETUP — the name is still scored
+    # below — it costs the published MARK, and a held position with no mark is
+    # priced off a stale one by the journal without saying so. A column rename
+    # would empty `prices` for all 2,212 names at once and publish `{}`.
+    price_errors = scanerrors.ErrorLog(f"vivek prices [{market_key}]")
     scanned = 0
     for yf_ticker, df in frames.items():
         scanned += 1
@@ -145,8 +157,8 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 prices[symbol] = round(float(df["Close"].iloc[-1]), 8)
                 if age > 0:
                     price_age[symbol] = age
-        except Exception:
-            pass
+        except Exception as e:
+            price_errors.record(symbol, e)   # was a bare `pass` (TOP100 #60)
         try:
             # Pin to COMPLETED bars: drop a still-forming trailing bar so a name's
             # grade/plan doesn't wobble as the current session's bar fills in.
@@ -232,6 +244,13 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "grade_held_runs": held_runs,      # hysteresis state, read back next scan
                 "entry_trigger": hp.get("entry_trigger"),
                 "trigger_bar": hp.get("trigger_bar"),
+                # TOP100 #72 — is this row's HEADLINE level a real 200 SMA, or a
+                # short-history stand-in? Taken from `hp`, the plan the row shows
+                # and the bot reads, not from 1D, so it describes the number on
+                # screen. The payload's top-level "sma": 200 is a config echo and
+                # was the only thing saying 200 before this.
+                "sma_proxy": bool(hp.get("sma_proxy")),
+                "sma_window": hp.get("sma_window"),
                 "plans": plans,
                 "markers": markers,
                 "confluence": sig["confluence"],
@@ -253,8 +272,16 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                                             detail, market.currency_symbol),
             })
         except Exception as e:
+            errors.record(symbol, e)
             if progress:
                 print(f"  warning: VIVEK {yf_ticker} -> {e}", flush=True)
+
+    # Printed on EVERY run, including a clean one: "no line" and "the accounting
+    # never ran" look identical in a log, and a standing `0 failed of 2212` is
+    # what makes a jump to `41 failed` legible at a glance (TOP100 #60).
+    errors.report(scanned)
+    price_errors.report(scanned)
+    _report_sma_proxies(results)
 
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
@@ -294,7 +321,49 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         # session (TOP100 #24). Absent symbol = fresh. Lets the journal say a
         # mark is stale instead of drawing a cache-reused close as a live price.
         "price_age": price_age,
+        # `errors` (int) + `error_sample` (capped list) — TOP100 #60. Additive,
+        # so no VIVEK_SCHEMA_VERSION bump: the CI schema gates read
+        # `schema_version` alone and every consumer reads named keys. Bumping
+        # would mark every already-committed scan file as a build behind and
+        # show a stale-data warning on the site until all three markets rescan.
+        # Published even at zero, because "present and 0" is what distinguishes
+        # "accounted for, none failed" from "this file predates the accounting".
+        **errors.payload(),
+        **price_errors.payload("price_"),
     }
+
+
+def _report_sma_proxies(results: list[dict]) -> None:
+    """Say how many of this market's levels are a real 200 SMA and how many aren't.
+
+    TOP100 #72. `build_tf_plan` falls back to `min(VIVEK_SMA, bars)` when a frame
+    is short, so a "200 SMA" level can be a 30-period one and the payload's
+    top-level `"sma": 200` is a config echo that cannot contradict it. The count
+    is printed on EVERY run, clean ones included: a standing `0 use a shorter
+    proxy` is what makes the day it becomes 300 legible, and a line that only
+    appears when something is wrong is a line nobody has a baseline for.
+
+    The WARNING is scoped to `grade_raw` in TRADEABLE_GRADES rather than to every
+    proxy, because that is the set the bot is allowed to buy — a WATCH-grade
+    short-history name is a curiosity, an A+ one is a position sized off a level
+    that is not the level the strategy is named after. Reporting only; nothing
+    here filters, demotes or reorders anything.
+    """
+    if not results:
+        return
+    proxies = [r for r in results if r.get("sma_proxy")]
+    print(f"  sma: {len(results) - len(proxies)}/{len(results)} setups key off a full "
+          f"{config.VIVEK_SMA}-period level; {len(proxies)} use a shorter proxy")
+    if not proxies:
+        return
+    windows = [int(r.get("sma_window") or 0) for r in proxies]
+    buyable = sorted({str(r.get("symbol") or "?") for r in proxies
+                      if r.get("grade_raw") in config.TRADEABLE_GRADES})
+    print(f"    proxy windows {min(windows)}-{max(windows)} bars")
+    if buyable:
+        shown = ", ".join(buyable[:12]) + (" ..." if len(buyable) > 12 else "")
+        print(f"    WARNING {len(buyable)} tradeable-grade setup(s) priced off a "
+              f"proxy level: {shown}")
 
 
 def _finalize_vivek(results: list[dict]) -> Counter:

@@ -16,14 +16,13 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import json
 import os
 import random
 import sys
 
 import pandas as pd
 
-from . import config, data, spec, universe
+from . import config, data, output, spec, universe
 
 HORIZONS = (5, 10, 20)
 DEDUPE_BARS = 5          # one signal per fire-streak
@@ -226,9 +225,11 @@ def main(argv=None) -> int:
                    for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},
         "baseline_random": rnd,
     }
-    with open(os.path.join(pub_dir, f"specs_{args.market}.json"), "w",
-              encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(pub, indent=1) + "\n")
+    # TOP100 #64 — was a plain open()+write, so a crash mid-write published a
+    # truncated file. write_json keeps the utf-8 and the pinned LF this call
+    # already asked for, and adds the temp+os.replace swap.
+    output.write_json(os.path.join(pub_dir, f"specs_{args.market}.json"), pub,
+                      indent=1, newline=True)
     print(f"signals: {len(signals)}  target-first: {top.get('target')}%  "
           f"stopped: {top.get('stop')}%  report: {path}")
     return 0
