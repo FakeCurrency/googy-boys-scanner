@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   984 pytest (49 files) + 262 JS — EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   1152 pytest (53 files) + 262 JS — EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -1066,6 +1066,215 @@ discovering it at the moment you are trying to record a real trade.
 
 ---
 
+## Engine and backtest truth — TOP100 Tier 4 (2026-07-28, `a724713a`)
+
+Tier 0 fixed alerts that fired into silence, Tier 1 the numbers the guards are
+computed FROM, Tier 2 the numbers the owner READS, Tier 3 the jobs that PRODUCE
+them. **Tier 4 (57–74) is the layer under all four: where a number is
+COMPUTED.** Same rule as the tiers above — the items below changed a MODEL or
+recorded a decision, so reading the code without them misleads. The ordinary
+line fixes live in the commit body and in TOP100.md per item.
+
+### `risk <= 0` did not catch NaN, and a NaN disarms every guard it touches (#63)
+
+**TRADE-AFFECTING, shipped, and monotonically REMOVING.** `vivek.py` guarded a
+plan with `if risk <= 0: return None`. NaN is the only value in Python for which
+that test and `if not (risk > 0)` disagree, and NaN is exactly what got in:
+`atr = max(atr, entry * 0.001)` *keeps* a NaN (`0.1 > nan` is False, so `max`
+returns its first argument) and `swing_low` is a rolling min that is NaN over an
+all-missing window.
+
+- **What the NaN does after the plan is built is the reason this outranked
+  louder items.** Every gate that should stop it is a `>` or a `<` and all of
+  them are False against NaN, so it passes the lot — `gate_grade`'s R:R floor,
+  the bot's `wide_stop` and `stop_too_tight`, `size_position`'s `stop_dist <= 0`.
+  The row is then booked with `risk_usd = units * NaN`, and a NaN inside a sum
+  makes every later comparison False, which **disarms the daily and weekly loss
+  guards for the whole book** off one bad ATR bar. A corrupt row does not merely
+  mis-price itself; it switches off the thing that limits the damage.
+- **`output.py`'s `_finite` NaN-nulling never protected this path.**
+  `run.py:177` hands `vivek_run.run_market` the **in-memory** rows, so the
+  publish-time scrub only ever cleaned what the browser sees. That is what made
+  it a live hazard rather than a display one, and it is worth remembering for
+  any future "we already null NaNs" argument.
+- Safe to ship autonomously because it can only ever REMOVE a name from
+  consideration, never add one: the docstring always promised no plan unless
+  risk is positive, so this enforces the stated contract rather than tightening
+  it. No threshold, filter, grade or ordering moved.
+- The same form was applied depth-only in `_structural_targets`, documented as
+  unreachable today (its sole caller now refuses first). Worth having because
+  its fallback is *worse* than the bug: `[]` means "no structure, use
+  R-multiples", and R-multiples off a NaN risk are NaN TARGETS rather than no
+  plan.
+
+### #61 — the backtest half shipped; THE LIVE BOOK IS AN OWNER DECISION
+
+`total_usd` / `max_dd_usd` were adding AUD and USD at face value. Fixed in the
+backtest: `config.REPORT_CURRENCY` + `FX_AUDUSD_FALLBACK`, and
+`vivek_backtest.fx_rates()` reads the rate the **scan publishes** rather than
+fetching its own, so the report and the journal page can never quote different
+numbers. The conversion lives in `_risk_usd`, the single point where a trade's
+local dollars are produced — `_metrics` multiplies that by `mae_r` too, so
+converting in `_dollars` alone would have left the drawdown curve summing A$
+troughs into a US$ line.
+
+**The live half is NOT shipped and needs Viv.** `VIVEK_BOT_POSITION_NOTIONAL`
+($5,000) is a currency-less number handed straight to `notional = fixed; units =
+notional / entry`, and `entry` is quoted in the market's own currency. So an ASX
+position is really **A$5,000 = US$3,485** at 0.6969 while a NASDAQ one is
+US$5,000 — **the ASX book is ~30% smaller than intended, per position, and has
+been since the 2026-07-28 resize.** The same face-value addition is in
+`VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL`, in the `risk_usd` the daily/weekly guards
+accumulate, and in `VIVEK_BOT_REVIEW_DAILY_LOSS_PCT` (an ASX plan's A$ risk is
+compared against a US$ guard, so **ASX under-flags**). The fix is one line —
+divide `fixed` by `_fx_of(market)` before sizing — but it makes every future ASX
+position **~43% larger in units**, in the ringfenced file. That is position SIZE.
+Flagged, not taken.
+
+### Two items closed as FINDINGS, and neither may be "fixed" later
+
+- **#70 — the grade hysteresis counter is correct.** The item is right that
+  `vivek.py:570` resets the run counter on an alternating grade and wrong that
+  this is a bug. Replaying `scan.py`'s exact feedback loop: `8,7,7,7,7,7` →
+  `A+,A+,A+,A+,A,A` (one earned plus exactly `VIVEK_GRADE_HYSTERESIS_MAX_RUNS`
+  held, then decay); `8,5,5` → `A+,B+,B+` (a score CRASH demotes immediately,
+  because the hold requires `score >= cutoff - margin`); a direction flip kills
+  the hold on the spot; a promotion is never held back. Only the oscillating case
+  never demotes, and it never demotes because **every 8 genuinely RE-EARNS A+ on
+  its own score** — `raw_grade == prev_grade` hits the first early return and
+  hysteresis is not consulted at all. The counter bounds how long a grade may be
+  held WITHOUT being earned; this one was just earned. Carrying `held_runs`
+  through a re-earn — the change I nearly made to tick the box — would demote
+  exactly the A+/A boundary wobble the mechanism exists to smooth.
+  `test_oscillation_never_demotes_AND_THAT_IS_THE_POINT` is the pin and carries
+  the reasoning, so the next reader of `vivek.py:570` reaches it before the edit.
+  Still true and still harmless: the held grade inflates `sectorbreadth`'s A+/A
+  participation counts and `discord.py`'s tradeable list — both REPORT-ONLY, and
+  the bot buys `grade_raw`.
+- **#65 — the observability half shipped; the caching half is the DECISION, not
+  an unfinished edit.** `_fetch_sector` now returns a verdict beside the value —
+  `ok` / `none` (the profile came back and genuinely carries no sector) /
+  `failed` (the fetch raised) — and `refresh` counts all three, WARNING on any
+  `failed` and naming the consequence in the same line: **a sector-less row is
+  exempt from the 3-per-sector cap**, so a network flake does not merely lose a
+  label, it quietly widens a correlation limit. Before this, both outcomes were
+  the same empty string. What is NOT shipped is caching the `none` verdict:
+  `_targets` filters on truthiness, so a cached blank is still "missing" and gets
+  re-fetched every run — inert, which is why the observability half could ship
+  alone. Making it non-inert means one of two things and **both change which
+  trades get taken**: cache the blank and late-arriving sectors are never
+  acquired, or treat blank as a bucket the cap counts and start BLOCKING entries
+  taken today. `data/sector_map.json` is a signal path. Pinned behaviourally by
+  `test_caching_behaviour_is_deliberately_unchanged`.
+
+### `rsi()` reported "maximally overbought" for three different things (#71)
+
+`.fillna(100)` was doing three jobs with one number and only one was right. A
+genuine 100 (gains, no losses in the window) is preserved by the replacement,
+`out.mask((avg_loss == 0) & (avg_gain > 0), 100.0)`. The other two are now NaN:
+the **warm-up** bars, where "not computed yet" was being published as the most
+extreme reading the indicator has; and a **halted** series, where `avg_gain` and
+`avg_loss` are both zero and RSI is undefined — a name that had not moved a tick
+was reading 100. The mask is written on the AVERAGES rather than on the output
+because that is where the three cases are still distinguishable; by the time
+they are NaN in `out` they are not, which is precisely how one fill came to cover
+all three.
+
+**Nothing live moves, and that is proven rather than asserted**, twice over:
+`test_no_live_consumer_outcome_changes` runs the real `reversal.evaluate` over
+four frames against the shipped `rsi` and a monkeypatched pre-#71 copy and
+asserts every derived field is identical; and `evaluate` bails at
+`if c <= s26l: return None` — a perfectly flat close IS its own 26-SMA — so a
+halted frame is rejected several steps BEFORE the RSI chip under both versions.
+This is a correctness fix to a shared indicator ahead of the next consumer.
+
+### `sma_proxy` — the "200-SMA reaction" that was measured on 60 bars (#72)
+
+`sma_window` was published on every plan and read by nothing. It is the tell that
+a headline "200-SMA" level was measured against something shorter — a name with
+60 weekly bars gets a 60-bar proxy and the row said `200-SMA` either way. Now
+`build_tf_plan` publishes `sma_proxy = bool(w < config.VIVEK_SMA)` beside the
+window (derived once where the window is chosen, rather than each reader
+re-deriving it against a constant it must know), `scan.py` copies both onto the
+row from `hp` — **the headline plan, which is what the row displays and what the
+bot reads, and which is not always the 1D plan** — and `_report_sma_proxies`
+prints counts every run, escalating to a WARNING naming symbols only when a
+proxied setup carries `grade_raw in TRADEABLE_GRADES`. A WATCH-grade short
+history is a curiosity; an A+ one is a name the bot can buy on a level it has not
+really tested. **It is not a filter** — nothing skips, downgrades or reorders,
+and the minimum history is still `VIVEK_MIN_WEEKLY_BARS` / `VIVEK_MIN_TF_BARS`.
+Refusing a proxied A+ is #89's question and the owner's call; this is the
+instrumentation that lets it be answered with counts instead of intuition. Note
+the payload's top-level `sma` is only a config echo (always 200) and is NOT this
+number; a test says so, because reading it as the window in use is the exact
+mistake the field exists to prevent.
+
+### `supertrend` is 25x faster and BIT-IDENTICAL — and it is not vectorisable (#73)
+
+Measured before touching it: **87–100 ms per 1,300-bar frame**, which across the
+2,212-name ASX universe is **~3.2 minutes of every scan** for one indicator. Now
+**3.4 ms** (192 s → 7.6 s per universe).
+
+- **The item's word "vectorisable" was wrong and the docstring now says so.**
+  Each final band is a running min/max whose RESET CONDITION reads the running
+  value itself (`close[i-1] > final_upper[i-1]`), and the direction latch reads
+  both finished bands, so bar i genuinely needs bar i-1. What cost the 100 ms was
+  never the recurrence — it was running the recurrence through `Series.iat`, ~7
+  pandas element lookups per bar. The loop is kept and now walks plain numpy
+  scalars: same operations, same order, same float64 values. **"Nearly the same
+  trail" is worse than a slow one**, so bit-identity was the only acceptable
+  outcome for a line that sets trailing stops.
+- **Tested against a frozen copy of the pre-#73 loop kept inside the test file** —
+  comparing the new code against a re-derivation of itself would prove nothing.
+  Bit-identical across 10 lengths including 0/1/2/3 where the seeding lives, four
+  tapes, a NaN window, integer prices and a halted frame. Two named tests carry
+  reasoning rather than coverage: one asserts BOTH latch directions are actually
+  exercised (otherwise the equivalence only covers half the state machine), one
+  asserts a NaN band **holds** the trail flat rather than reversing it or going
+  NaN (a NaN trail compares False against every price and quietly stops stopping
+  anything — `ewm().mean()` skips NaN, so `atr` stays finite through the gap).
+- **The `<`/`>` band boundaries are EQUALITY-INERT**, and that is recorded rather
+  than chased: at exact float equality both branches assign the same value, so
+  `<`→`<=` mutations there are *equivalent mutants*, not test gaps. The one input
+  that even reaches exact equality is a fully frozen frame (ATR exactly 0 — a
+  halted ASX name), and `test_a_fully_frozen_frame_puts_the_trail_exactly_on_the_close`
+  pins that it does not divide, drift or go NaN.
+
+### Also in this tier
+
+**#57** the backtest's "PARITY" docstring described a 1D-plan requirement neither
+it nor the live scan had. **#58** it ran the 99-name NASDAQ CSV capped at 60
+symbols — the evidence file justifying the edge was computed on **4%** of the
+universe the bot trades. **#59** it applied no liquidity gate, and the caveat
+existed only in `portfolio_sim`, not in `aggregate`, which is the function whose
+output is published. **#68** `not_simulated` omitted `MAX_STOP_PCT`,
+`MIN_STOP_PCT`, `MIN_PRICE` and `EARNINGS_BUFFER_DAYS` — the honesty block was
+itself incomplete. **#69** drawdown booked P&L only at exit (and `or ""` sorted
+missing exit dates to the front), understating intra-trade drawdown. **#60/#66/#67**
+every per-ticker exception in the VIVEK and Specs scans was swallowed with no
+production output — a name that throws every session was indistinguishable from
+one that never sets up — and a market that failed *entirely* printed one line and
+exited 0; `scanner/scanerrors.py` is the shared reporter and `run.py` now tracks
+market failure. **#62/#64** publishing integrity: `allow_nan=True` meant one NaN
+emitted a bare `NaN` token and the browser's `response.json()` rejected the
+**entire market file** (blank page for one bad bar), and five publish sites wrote
+non-atomically against project rule 7 — all now route through `output.write_json`.
+`journal_common.atomic_write` gained a keyword-only `newline`, defaulting None to
+keep journal behaviour; `output.py` passes `"\n"` so a local Windows run cannot
+rewrite every published artefact with CRLF.
+
+### Tests
+
+`tests/test_backtest_truth.py` (25), `tests/test_engine_truth.py` (62),
+`tests/test_publish_integrity.py`, `tests/test_scan_errors.py` — **all four test
+the SHIPPED artefact rather than a mirror of it**, and every item in the tier was
+mutation-verified (fix reverted, the right tests confirmed red, source restored
+and re-grepped). New `tests/*.py` need no registration; `pytest` collects the
+directory. Gate at this commit: **1152 pytest across 53 files**, 262 JS across 10
+suites, pyflakes at its 9 pre-existing warnings.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
@@ -1122,7 +1331,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (984 tests / 49 files, 2026-07-28)
+python -m pytest -q                      # full gate (1152 tests / 53 files, 2026-07-28)
 node test/risk_manager.test.js           # + 9 more JS suites, 262 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
