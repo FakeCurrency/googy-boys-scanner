@@ -4,7 +4,7 @@ name: Tests
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes: 575 pytest + 190 JS assertions as of 2026-07-28.
+# runs the lot in ~2 minutes: 576 pytest + 190 JS assertions as of 2026-07-28.
 on:
   push:
     branches: [main]

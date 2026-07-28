@@ -76,7 +76,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   575 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   576 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 ```
@@ -248,6 +248,14 @@ the owner's call, not a refactor. Keep it that way.
   this is REFINEMENTS #112 surfacing on the page (ASX `Financial Services` and
   `Insurance` each hold 1 under Yahoo-style labels, and the 3-per-sector cap
   counts them as separate buckets). Bars scale off RANKED rows only.
+- **Capacity is stated in BOTH currencies, because they disagree.** 24 of 30
+  slots used reads 80% full; $6.1k of the $150k notional ceiling reads 4%
+  invested. Both are true — the 24 legacy holdings average ~$250 each, sized off
+  the old $10,000 equity. The number that answers "how much can I put to work"
+  is free slots × `VIVEK_BOT_POSITION_NOTIONAL` ($30k today), so `book_state()`
+  publishes `position_notional` and the panel prints the reconciliation whenever
+  the dollar headroom exceeds the slot headroom by more than 25%. Slots bind
+  first; do not read the notional bar as spare room.
 - **Coverage is stated, not hidden.** 91 of 216 ASX A+/A sit in names carrying
   no sector at all, so the footnote prints what share of the day's A+/A the
   ranked sectors actually account for whenever the off-rank share tops 10%.
@@ -325,7 +333,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (575 tests)
+python -m pytest -q                      # full gate (576 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

@@ -47,6 +47,31 @@
   // ── capacity ───────────────────────────────────────────────────────────────
   // The July miss was a capacity failure, not a detection one, so the book bar
   // is never optional — it sits beside the leaderboard on both surfaces.
+  function money(n) {
+    if (!isFinite(n)) return "—";
+    if (n >= 1000) return "$" + Math.round(n / 1000) + "k";
+    return "$" + Math.round(n);
+  }
+
+  // Slots and dollars are two different capacity stories and right now they
+  // point OPPOSITE ways: 24 of 30 slots used reads 80% full, while $6.1k of
+  // $150k deployed reads 4% invested. Both are true — the 24 legacy holdings
+  // average ~$250 each because they were sized off the old $10k equity. Showing
+  // only slots understates the room; showing only dollars wildly overstates it.
+  // What is actually deployable is free slots x the fixed position size, and
+  // saying so is the whole point of a panel built after a capacity miss.
+  function deployNote(book) {
+    const free = book.free, per = book.position_notional || 0;
+    if (!free || !per) return "";
+    const room = free * per;
+    const dollarFree = (book.max_notional || 0) - (book.notional || 0);
+    if (dollarFree <= room * 1.25) return "";   // the two caps agree; nothing to reconcile
+    return `<b>${money(room)}</b> is what those ${free} slots can actually take
+      (${free} × ${money(per)}). The dollar ceiling has ${money(dollarFree)} unused,
+      but slots are what bind — the ${book.open} you hold are mostly small
+      pre-transition positions totalling just ${money(book.notional)}.`;
+  }
+
   function bookHTML(book, compact) {
     if (!book) return "";
     const open = book.open || 0, max = book.max_open || 0;
@@ -54,18 +79,24 @@
     const state = book.at_cap ? "full" : (book.free <= 3 ? "tight" : "ok");
     const label = book.at_cap ? "FULL" : `${book.free} free`;
     if (compact) {
-      return `<span class="hz-book-mini hz-${state}" title="Open positions across all markets — the cap is global">
-        <b>${open}/${max}</b> <span>${esc(label)}</span></span>`;
+      const per = book.position_notional || 0;
+      const room = book.free && per ? ` · ${money(book.free * per)} to deploy` : "";
+      return `<span class="hz-book-mini hz-${state}" title="Open positions across all markets — the cap is global. ${book.free || 0} free slots at ${money(per)} each.">
+        <b>${open}/${max}</b> <span>${esc(label)}${room}</span></span>`;
     }
+    const deploy = deployNote(book);
     return `<div class="hz-book hz-${state}">
       <div class="hz-book-top">
         <span class="hz-book-lbl">Book capacity</span>
         <span class="hz-book-num"><b>${open}</b> / ${max} open · ${esc(label)}</span>
       </div>
       <div class="hz-book-bar"><i style="width:${w.toFixed(1)}%"></i></div>
-      <div class="hz-book-note">Positions are capped across ALL markets, so a full
-        book declines every new setup — the best one included — before any quality
-        check runs. That, not detection, is what cost the July rotation.</div>
+      ${book.max_notional ? `<div class="hz-book-sub">
+        <b>${money(book.notional)}</b> of ${money(book.max_notional)} deployed</div>` : ""}
+      <div class="hz-book-note">${deploy ? deploy + " " : ""}Positions are capped
+        across ALL markets, so a full book declines every new setup — the best one
+        included — before any quality check runs. That, not detection, is what cost
+        the July rotation.</div>
     </div>`;
   }
 

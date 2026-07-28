@@ -300,10 +300,18 @@ def book_state(positions=None) -> dict:
             notional += float(p.get("notional") or 0)
         except (TypeError, ValueError):
             pass
+    # Published so the page can say what free SLOTS are worth in dollars. The
+    # two ceilings currently disagree by an order of magnitude -- 24 of 30 slots
+    # used reads 80% full, $6.1k of $150k deployed reads 4% invested -- because
+    # the legacy holdings average ~$250 each, sized off the old $10,000 equity.
+    # Free slots x this number is the only figure that answers "how much can I
+    # actually put to work", which is the question the July miss turned on.
     return {"open": len(positions), "max_open": max_open,
             "free": max(0, max_open - len(positions)) if max_open else None,
             "at_cap": bool(max_open and len(positions) >= max_open),
-            "notional": round(notional, 2), "max_notional": max_notional}
+            "notional": round(notional, 2), "max_notional": max_notional,
+            "position_notional": float(
+                getattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 0) or 0)}
 
 
 # ── the persisted series ──────────────────────────────────────────────────────

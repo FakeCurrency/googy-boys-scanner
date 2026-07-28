@@ -156,6 +156,23 @@ def test_book_state_reports_capacity_globally():
     assert st["at_cap"] is False and st["free"] == 29
 
 
+def test_book_state_publishes_the_per_position_size():
+    """Free SLOTS are only meaningful in dollars once you know the slot size.
+
+    The two ceilings disagree by an order of magnitude while the legacy
+    positions are still on the book: 24/30 slots reads 80% full, $6.1k of $150k
+    reads 4% invested. The page reconciles them as free x position size, which
+    it cannot do unless this number rides along.
+    """
+    st = sb.book_state([_pos("BHP", "Materials", notional=250.0)])
+    assert st["position_notional"] == pytest.approx(
+        float(config.VIVEK_BOT_POSITION_NOTIONAL))
+    assert st["position_notional"] > 0            # fixed-notional mode is live
+    # the dollar cap looks wide open while the slot cap is what actually binds
+    assert st["notional"] == pytest.approx(250.0)
+    assert st["free"] * st["position_notional"] < st["max_notional"] - st["notional"]
+
+
 def test_horizon_fires_when_a_leading_sector_is_unheld_and_the_book_is_full():
     """The alarm that would have printed every day from 30 June to 27 July."""
     uni = _uni(Consumer_Discretionary=104, Materials=766)

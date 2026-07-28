@@ -29,7 +29,12 @@
 .hz-book-bar i { display: block; height: 100%; background: var(--green); border-radius: 4px; }
 .hz-book.tight .hz-book-bar i { background: var(--orange); }
 .hz-book.full .hz-book-bar i { background: var(--red); }
+/* dollars deployed — a second, quieter capacity line under the slot bar */
+.hz-book-sub { font: 600 11.5px/1 var(--sans); color: var(--muted); margin: 0 0 9px; }
+.hz-book-sub b { font-weight: 800; color: var(--text-2); font-family: var(--mono, var(--sans)); }
 .hz-book-note { font: 500 11.5px/1.5 var(--sans); color: var(--muted-2); margin: 0; }
+/* the deployable figure leads the note — it is the actionable number */
+.hz-book-note b { font-weight: 800; color: var(--text-2); }
 
 .hz-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; }
 @media (max-width: 900px) { .hz-cols { grid-template-columns: 1fr; } }
