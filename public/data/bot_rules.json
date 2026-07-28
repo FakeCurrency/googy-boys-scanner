@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-28T01:10:51Z",
+  "generated_at": "2026-07-28T03:39:35Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "min_grade": "A+",
   "min_rr": 1.5,
@@ -8,7 +8,8 @@
   ],
   "prefer_tf": "1W",
   "allow_shorts": false,
-  "max_positions": 10,
+  "max_positions": 30,
+  "max_open_total": 30,
   "risk_pct": 0.35,
   "leverage": {
     "asx": 5,
