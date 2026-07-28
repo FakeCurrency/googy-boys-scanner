@@ -78,13 +78,15 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   672 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   702 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
   reco_note.py         daily auto-written commentary (reco_note.yml)
   backfill_sector_history.py   replays the engine backwards to rebuild
                        data/sector_history.json (backfill_history.yml)
+  resize_book_notional.py      one-off: restates the OPEN book at the current
+                       fixed notional. Dry by default, idempotent, --apply
 ```
 
 ## Workflows (current)
@@ -208,16 +210,26 @@ assert_staged call and a WATCHDOG_RUNS entry.
   deciding for. Latent while every position is $5,000 and the 30-slot cap binds
   first at exactly $150,000 — but it is a risk cap reading a number it believes
   is complete, so it is fixed rather than noted.
-  - **The book is a MIXTURE and will be for a while.** The config landed at
-    03:34 UTC on 2026-07-28; the scan running at the time had already checked
-    out, so the six ASX positions it opened at 03:39 were sized by the old path
-    (risk-% off the $10,000 equity: ~$300 notional, $35 risk). All 24 open rows
-    are legacy-sized, averaging $256 against the intended $5,000 — the open book
-    is **$6.1k of a $150,000 target**, and because each legacy row still occupies
-    a full slot, filling the 6 free slots at $5,000 only reaches ~$36k. The rest
-    deploys as legacy positions CLOSE. Whether to leave them to run off or
-    resize them in place is an exposure decision and therefore the owner's.
-    Dollar P&L is not a like-for-like series across the transition; R and % are.
+  - **The book WAS a mixture; the owner chose to end it (2026-07-28).** The
+    config landed at 03:34 UTC; the scan already running had checked out before
+    it, so the six ASX positions filled at 03:39 were still sized by the old
+    path (risk-% off a $10,000 equity: ~$300 notional, $35 risk). All 24 open
+    rows were legacy-sized, averaging $256 against the intended $5,000 — an open
+    book of $6.1k against a $150,000 target, and because each legacy row still
+    occupied a full slot, filling the 6 free slots at $5,000 only reached ~$36k;
+    the remaining ~$114k was hostage to those rows closing one at a time over
+    weeks. Asked to choose, the owner said **resize now**. Run by
+    `scripts/resize_book_notional.py` — see the RESIZE section below for what it
+    restated and what it refused to touch. The book is now uniformly
+    `fixed_notional`, 24 × $5,000 = **$120,000 of the $150,000 cap**.
+  - **Dollar P&L is not a like-for-like series across 2026-07-28. R is.** This
+    is not a caveat, it is arithmetic: R divides by the position's own initial
+    risk, so scaling the size cancels out of it. The live proof from the resize
+    — total open P&L went **+$50.84 → −$715.16 while total open R did not move
+    off +1.452R**. Not one price changed. Under the old flat-$35 risk every
+    position contributed to the dollar sum equally, so the dollar total tracked
+    the R total; under fixed notional a position's dollar weight is its STOP
+    WIDTH, and the widest stops in the book happen to be the losers. Read R.
   - **`sizing_mode` is recorded on every new book row** (`"fixed_notional"` /
     `"risk_pct"`, empty on hand-built tickets). `size_position` always returned
     it and `decide()` splats it onto the ticket, but `_ticket_to_position` was
@@ -225,6 +237,54 @@ assert_staged call and a WATCHDOG_RUNS entry.
     without which mode produced them. Audit field only — nothing reads it to
     decide anything, and it is the one honest way to tell a legacy row from a
     new one once either number is retuned.
+
+### RESIZE — restating the legacy book (2026-07-28, `scripts/resize_book_notional.py`)
+
+- **It is a restatement, not a trade.** Nothing was bought, sold or re-marked.
+  Every row kept the price it was actually filled at and the stop it was
+  actually given; only the size attached to those prices moved. Restated:
+  `units`, `notional`, `risk_usd`, `unreal_usd`, `risk_pct`, `leverage`,
+  `sizing_mode`. Frozen and verified byte-identical afterwards across 38 fields
+  × 24 rows: `entry`, `stop`, `risk`, `tp1/2/3`, `scale`, `last_mark`,
+  `mae`/`mfe`, `exits`, `booked_pct`, `tp*_hit`, and every `_r` field.
+- **The 12 CLOSED positions were not touched and must never be.** They are the
+  only clean dollar track record the book has — the record of what was really
+  held at the size it was really held. `resize_market` does not even iterate
+  them, and a test asserts the closed list comes back byte-for-byte.
+- **It sizes off `entry - risk`, NOT the row's `stop`.** `stop` trails. BGA had
+  already taken tp1 and had its stop moved to breakeven, so sizing off the
+  stored stop would divide by a zero distance. `risk` is the per-unit risk
+  measured at fill and `entry - risk` reproduces the ORIGINAL stop exactly —
+  checked against every un-trailed row in the live book, and kept honest by a
+  test that asserts the property on whatever book is in the checkout.
+- **The numbers come from `vivek_bot.size_position`**, called with
+  `notional_target`, not from a scale factor computed in the script. A restated
+  row is therefore sized by the same code that sizes a new one and cannot drift
+  from it as the sizer is retuned.
+- **DRY BY DEFAULT and idempotent.** It writes nothing without `--apply`, and a
+  row already at the size the run would give it is skipped, so a second
+  `--apply` is a no-op rather than a compounding rescale. It refuses to write at
+  all if a frozen field moved (`AssertionError`, per market), then rebuilds the
+  DERIVED combined book + public twin via `vivek_run._write_combined()` and runs
+  `verify_books()`.
+- **WIDE STOPS — the consequence the notional figure hides, and the reason the
+  daily guard is now live.** Seven open rows (XLM 49.8%, MDB 45.5%, AXON 36.7%,
+  GLBE 36.6%, WLD 27.6%, RNW 26.1%, ADP 25.3%) have stops beyond the
+  `VIVEK_BOT_MAX_STOP_PCT = 25` gate every NEW entry must pass — they were
+  opened before it bound them. At a flat $5,000 each now risks $1,266–$2,489,
+  i.e. **28–55% of the $4,500 daily loss limit in a single name**. Book-wide,
+  open risk went **$840 → $23,500 (15.7% of equity)**. Before the resize a
+  whole-market stop-out cost ASX $385, 8.6% of its daily limit — the guard was
+  mathematically unreachable and therefore decorative. Now ASX $6,478 (144% of
+  it), NASDAQ $12,175 (271%), CRYPTO $4,847 (108%). The guard only halts NEW
+  entries for the session, it does not liquidate — but it is armed for the first
+  time and will fire. `--max-stop-pct 25` trims those seven back to $1,250 risk
+  each (the top of the band `size_position`'s own docstring names) for a
+  $111.3k book; it is **OFF by default because trimming is an exposure decision
+  and therefore the owner's**, not a migration detail.
+- Tests: `tests/test_resize_book_notional.py` (30). Most of them test what the
+  script refuses to do, because that is where its whole defence lives.
+
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.
@@ -272,14 +332,20 @@ the owner's call, not a refactor. Keep it that way.
   this is REFINEMENTS #112 surfacing on the page (ASX `Financial Services` and
   `Insurance` each hold 1 under Yahoo-style labels, and the 3-per-sector cap
   counts them as separate buckets). Bars scale off RANKED rows only.
-- **Capacity is stated in BOTH currencies, because they disagree.** 24 of 30
-  slots used reads 80% full; $6.1k of the $150k notional ceiling reads 4%
-  invested. Both are true — the 24 legacy holdings average ~$250 each, sized off
-  the old $10,000 equity. The number that answers "how much can I put to work"
-  is free slots × `VIVEK_BOT_POSITION_NOTIONAL` ($30k today), so `book_state()`
-  publishes `position_notional` and the panel prints the reconciliation whenever
-  the dollar headroom exceeds the slot headroom by more than 25%. Slots bind
-  first; do not read the notional bar as spare room.
+- **Capacity is stated in BOTH currencies, because they can disagree.** Slots
+  and dollars are two different readings of "how full is the book", and the
+  panel prints the reconciliation whenever the dollar headroom exceeds the slot
+  headroom by more than 25%. That gap was enormous before the resize — 24 of 30
+  slots read 80% full while $6.1k of the $150k ceiling read 4% invested,
+  because the 24 legacy holdings averaged ~$250 each, sized off the old $10,000
+  equity. **The 2026-07-28 resize closed it**: 24 × $5,000 = $120,000, so 80% of
+  the slots is now 80% of the notional and the two agree. Keep the divergence
+  logic — it is the general case, and the next retune of
+  `VIVEK_BOT_POSITION_NOTIONAL` reopens the gap on every row already held. The
+  number that answers "how much can I put to work" is still free slots ×
+  `VIVEK_BOT_POSITION_NOTIONAL` ($30k today), which `book_state()` publishes as
+  `position_notional`. Slots bind first; do not read the notional bar as spare
+  room.
 - **Coverage is stated, not hidden.** 91 of 216 ASX A+/A sit in names carrying
   no sector at all, so the footnote prints what share of the day's A+/A the
   ranked sectors actually account for whenever the off-rank share tops 10%.
@@ -497,7 +563,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (672 tests)
+python -m pytest -q                      # full gate (702 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan
