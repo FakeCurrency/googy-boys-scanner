@@ -33,6 +33,12 @@ concurrency:
 jobs:
   phasemap:
     runs-on: ubuntu-latest
+    # TOP100 #44 - full ASX directory (~2,000 names) plus the two small
+    # markets and the specs pass. Holds `group: phasemap`, so a hang here
+    # stalls every later PhaseMap refresh, not just this one. Same 120 as
+    # the other jobs that walk the whole ASX directory - scan.yml records a
+    # 40-80 min 3-market cycle and ASX is the bulk of it.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -79,9 +85,34 @@ jobs:
 
       # Specs — the third lens (volume-spike base breakouts, sub-$0.50).
       # Nightly cadence like PhaseMap; ASX + NASDAQ only (no crypto).
+      #
+      # TOP100 #54 (2026-07-28) — this was `continue-on-error: true` and
+      # nothing else, so a failed Specs run produced a neutral step icon on a
+      # nightly nobody opens and no other signal anywhere. That is not a
+      # cosmetic gap, because Specs is a CONFLUENCE LENS:
+      # `confluence_alert._read(DATA / f"{market}_spec.json")` loads the file
+      # and iterates `results` with NO freshness check, so a frozen spec file
+      # keeps voting. A "triple-lens agreement" @here ping can therefore be
+      # two live lenses plus a Specs row from last week, and the ping is the
+      # headline feature — it looks exactly like the real thing.
+      #
+      # The tolerance stays: Specs' own backtest calls it a shortlist
+      # generator, not an entry system, and killing the whole nightly PhaseMap
+      # publish because the third lens choked is the wrong trade. What changes
+      # is that the outcome is now RECORDED (an output the commit step reads)
+      # and SAID (::warning::, which renders in the run summary header rather
+      # than as a step icon). The explicit if/else is what makes the echo
+      # reachable: under continue-on-error the default `bash -e` aborts at the
+      # failing command and no message runs.
       - name: Run Specs scan
-        continue-on-error: true
-        run: python -m scanner.spec_run --market all
+        id: specs
+        run: |
+          if python -m scanner.spec_run --market all; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Specs scan FAILED - public/data/{asx,nasdaq}_spec.json are STALE. scanner/confluence_alert.py reads them with no freshness check, so tonight's confluence banners and @here pings may count a Specs leg that is days old. PhaseMap published normally."
+          fi
 
       # Confluence alert REMOVED from this workflow (2026-07-20, review H6):
       # its dedupe state (journal/confluence_state.json + alert_history.json)
@@ -121,6 +152,13 @@ jobs:
           PY
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)
+        env:
+          # TOP100 #54 — the Specs step is deliberately tolerated (see its
+          # comment), so its outcome has to travel to the gate below as DATA.
+          # Without this the gate cannot tell "Specs was allowed to fail" from
+          # "Specs succeeded and wrote nothing", and those want opposite
+          # responses: a warning, and a red job.
+          SPECS_OK: ${{ steps.specs.outputs.ok }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -131,7 +169,21 @@ jobs:
           # this run's stale checkout reverted the owners' fresher pushes.
           # journal/confluence_state.json dropped: confluence no longer runs here.
           PATHS="public/data/phasemap/asx public/data/phasemap/nasdaq public/data/phasemap/crypto public/data/phasemap/charts public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
-          git add $PATHS 2>/dev/null || true
+          # TOP100 #54 (2026-07-28) — was `git add $PATHS 2>/dev/null || true`.
+          # `git add a b` is ALL-OR-NOTHING: with one path missing it exits 128
+          # with "pathspec did not match any files" and stages NEITHER
+          # (verified, not assumed). Seven paths here, and the two spec files
+          # are exactly the ones a failed Specs step can leave absent on a fresh
+          # checkout — so the tolerated failure could take the PhaseMap
+          # snapshots down with it, silently, via the `|| true`. Staged one at
+          # a time so a missing sibling cannot veto a path that is present.
+          for p in $PATHS; do
+            if [ -e "$p" ]; then
+              git add -- "$p"
+            else
+              echo "::warning::$p is not present - nothing to stage for it"
+            fi
+          done
           # Must-change gate (2026-07-20 Phase 5): a successful nightly ALWAYS
           # advances every market's latest.json (run_date is daily) — staging
           # none of them means output is being lost; fail loudly. Manual
@@ -140,6 +192,21 @@ jobs:
             bash scripts/assert_staged.sh "phasemap asx"    public/data/phasemap/asx/latest.json
             bash scripts/assert_staged.sh "phasemap nasdaq" public/data/phasemap/nasdaq/latest.json
             bash scripts/assert_staged.sh "phasemap crypto" public/data/phasemap/crypto/latest.json
+            # TOP100 #54 — the spec files got the same must-change treatment,
+            # but GATED on the Specs step having reported success. Asserting
+            # them unconditionally would convert a deliberately-tolerated
+            # network failure into a red job, which is the tolerance decision
+            # reversed by the back door. Gated, the assert catches the case the
+            # tolerance never covered: Specs exited 0 and still wrote nothing.
+            # Safe because scanner/spec_run.py stamps `generated_at` on every
+            # successful scan_market and os.replace()s the file, so rc=0
+            # guarantees both files were rewritten and therefore differ.
+            if [ "$SPECS_OK" = "true" ]; then
+              bash scripts/assert_staged.sh "specs asx"    public/data/asx_spec.json
+              bash scripts/assert_staged.sh "specs nasdaq" public/data/nasdaq_spec.json
+            else
+              echo "::warning::Specs reported failure - skipping its must-change gate. The spec files on the site are last night's or older, and confluence_alert reads them with no freshness check."
+            fi
           else
             bash scripts/assert_staged.sh "phasemap (manual)" \
               public/data/phasemap/asx/latest.json \
@@ -160,8 +227,23 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             for p in $PATHS; do
-              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
-              git checkout "$SHA" -- "$p" 2>/dev/null || true
+              # TOP100 #42 — only ever REPLACE a path this run actually
+              # generated. The old form ran `git rm` unconditionally and then
+              # let the checkout fail silently into `|| true`, so any path
+              # present on the freshly-fetched main but ABSENT from $SHA was
+              # deleted, staged by the `git add -A` below, and pushed. Nothing
+              # in the loop could tell that apart from an intentional delete.
+              # It is not hypothetical: several listed paths exist only
+              # sometimes (the unassigned book is written only when migration
+              # finds strays), and every workflow in the scan group re-applies
+              # its own list on top of a main that a sibling may have just
+              # written — so the loop written to survive a push race could
+              # lose one instead. If $SHA does not have it, this run did not
+              # generate it, so main's copy is the newer one: leave it.
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
             done
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi

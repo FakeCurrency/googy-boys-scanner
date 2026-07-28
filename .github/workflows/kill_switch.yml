@@ -27,6 +27,10 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # TOP100 #44 - runs every 30 minutes, so a hung run would still be
+    # holding `group: kill-switch` when the next two are due. The check
+    # reads journals and probes run history; 15 is generous for that.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 

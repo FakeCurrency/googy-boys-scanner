@@ -29,8 +29,27 @@ on:
     # top of the hour — their own docs recommend a random minute — and this
     # repo has recorded 48-min drift and silently skipped morning runs. :07
     # keeps the same effective cadence while dodging the worst-load slot.
+    #
+    # TOP100 #41 — DAYLIGHT SAVING. Every ASX cron below is written for AEST
+    # (UTC+10), which is only correct Apr–Oct. From the first Sunday in October
+    # Melbourne moves to AEDT (UTC+11) and the 10:00–16:00 session becomes
+    # 23:00–05:00 UTC — i.e. it OPENS ON THE PREVIOUS UTC DAY. The `0-5` hours
+    # below then cover 11:00–16:00 AEDT only, and the first hour of every ASX
+    # session — the open, the hour that matters most — has no scan at all. For
+    # Monday it is worse: Monday's open is Sunday 23:00 UTC, which `* * 1-5`
+    # excludes outright, so nothing fires and nothing notices. This is latent
+    # right now (it is July, AEST) and would have gone live in October.
+    #
+    # Fixed the way kill_switch.yml fixed the same bug class: let cron fire a
+    # SUPERSET and let the gate decide with real Melbourne local time. The two
+    # 23:xx crons below are no-ops under AEST — the gate skips them outright —
+    # so nothing about today's behaviour changes.
     - cron: "7 0-5 * * 1-5"       # ASX  00:07–05:07 UTC (hourly)
     - cron: "47 0-5 * * 1-5"      # ASX BACKSTOP — no-op unless the :07 ghosted (gate job)
+    - cron: "7 23 * * 0-4"        # ASX AEDT OPEN — 23:07 UTC = 10:07 next-day AEDT.
+                                  # Sun–Thu because Monday's open is Sunday in UTC.
+                                  # Skipped by the gate while Melbourne is on AEST.
+    - cron: "47 23 * * 0-4"       # ASX AEDT OPEN BACKSTOP — same freshness probe as :47
     - cron: "37 6 * * 1-5"        # ASX  06:37 UTC ≈ 4:37 PM AEST (closing alert)
     - cron: "37 13 * * 1-5"       # NASDAQ open  13:37 UTC
     - cron: "7 14-20 * * 1-5"     # NASDAQ 14:07–20:07 UTC (hourly)
@@ -65,6 +84,22 @@ jobs:
   # always allowed, any day. Crypto stays live 24/7 via crypto_scalp.yml.
   gate:
     runs-on: ubuntu-latest
+    # TOP100 #44 - the gate only checks the clock and the freshness probe.
+    # It is outside the mutex, but a hung curl here blocks the scan job
+    # behind `needs:` just as effectively.
+    timeout-minutes: 5
+    # TOP100 #56 (2026-07-28) - the workflow-level `contents: write` above is
+    # for the SCAN job, which commits. This job checks out nothing, writes
+    # nothing but $GITHUB_OUTPUT, and its one network call is a curl to the
+    # public /api/health - yet it was handed a token that can push to main.
+    # Every scheduled fire of this workflow runs it, which makes it the most
+    # frequently-executed job in the repo and the cheapest place to take the
+    # write bit away. `read` rather than `none` deliberately: a future step
+    # here would almost certainly start with actions/checkout, and a checkout
+    # failing on permissions is the kind of error someone fixes by putting the
+    # write back.
+    permissions:
+      contents: read
     outputs:
       run: ${{ steps.check.outputs.run }}
       market_override: ${{ steps.check.outputs.market_override }}
@@ -72,6 +107,50 @@ jobs:
       - id: check
         run: |
           DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
+          SCHED="${{ github.event.schedule }}"
+
+          # TOP100 #41 — DAYLIGHT SAVING. The two 23:xx crons exist ONLY to
+          # cover the ASX open once Melbourne is on AEDT (UTC+11), when the
+          # session shifts to 23:00–05:00 UTC and its first hour falls on the
+          # previous UTC day. Under AEST (UTC+10) 23:07 UTC is 09:07 — an hour
+          # BEFORE the open — so they must not run. Ask the tz database rather
+          # than hardcoding the changeover dates, which move and which are the
+          # thing that made the original crons wrong in the first place.
+          #
+          # This branch returns EARLY and deliberately: 23:00 UTC Sunday is
+          # 10:00 Monday in Melbourne, and the `DOW -ge 6` weekend test further
+          # down reads UTC days, so letting a Sunday-night AEDT open reach it
+          # would downgrade the ASX open to a crypto-only scan. Handling the
+          # slot here means the weekend rule keeps its UTC semantics, which is
+          # what NASDAQ's Friday 21:07 UTC close scan depends on.
+          if [ "${{ github.event_name }}" = "schedule" ] && { [ "$SCHED" = "7 23 * * 0-4" ] || [ "$SCHED" = "47 23 * * 0-4" ]; }; then
+            OFFSET=$(python3 -c "import datetime as dt;from zoneinfo import ZoneInfo;print(int(dt.datetime.now(ZoneInfo('Australia/Melbourne')).utcoffset().total_seconds()//3600))" 2>/dev/null || echo "")
+            echo "AEDT-open slot [$SCHED] — Melbourne UTC offset reads: ${OFFSET:-unknown}"
+            if [ "$OFFSET" = "10" ]; then
+              echo "Melbourne is on AEST — 23:07 UTC is an hour before the open. Skipping."
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "market_override=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            # Not AEST (AEDT, or the offset probe failed): this IS the open.
+            # Fail open, same rule as the freshness backstops below — an extra
+            # pre-open scan costs one run, a missed open costs the session.
+            if [ "$SCHED" = "47 23 * * 0-4" ]; then
+              HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=asx&max_h=1" || echo "")
+              echo "AEDT open backstop health probe: $HEALTH"
+              if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
+                echo "Backstop 23:47 — an ASX scan already landed this hour. Skipping."
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                echo "market_override=" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "Backstop 23:47 — ASX data stale or probe failed. Running the missed open."
+            fi
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "market_override=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # :47 ASX BACKSTOP (2026-07-24): only exists to catch a :07 run the
           # GitHub scheduler silently never started. Ask the LIVE site whether
           # an ASX scan landed within the last hour (max_h=1); if yes, this run
@@ -144,6 +223,17 @@ jobs:
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
+    # TOP100 #44 - this job holds the `scan` mutex. Without an explicit
+    # timeout a hung step (a Yahoo socket that never returns, a push retry
+    # loop that never resolves) holds the group for GitHub's 6-hour default,
+    # and EVERY close, scan and crypto run queued behind it is evicted -
+    # GitHub keeps one pending run per group and cancels the previous one.
+    # One stuck run therefore costs a whole session of scans, silently.
+    # 120, not 60: the mutex comment above records a real full 3-market cycle
+    # at 40-80 min, so an hour-ish budget would kill healthy slow days and
+    # resurrect the failure-email problem. This is a hang detector - it bounds
+    # the blast radius at one session instead of six hours - not a perf budget.
+    timeout-minutes: 120
     concurrency:
       group: scan
       cancel-in-progress: false
@@ -179,11 +269,37 @@ jobs:
 
       # Fix-10 #10: incremental per-ticker sector cache (NASDAQ's directory
       # has no sectors) — same fresh-IP window as the caps refresh, ~40
-      # missing symbols per run, best grades first. Display-only sidecar;
-      # never allowed to fail the run.
+      # missing symbols per run, best grades first.
+      #
+      # TOP100 #53 (2026-07-28) — this comment used to end "Display-only
+      # sidecar; never allowed to fail the run." The first half stopped being
+      # true at REFINEMENTS #38: `broker/vivek_run.py` now calls
+      # `sectorcache.enrich_rows` on the rows `decide()` sees, so the map
+      # decides which names the 3-per-sector cap can SEE, and a row with no
+      # sector is exempt from the cap entirely. A stale line in a workflow is
+      # not cosmetic — "display-only" is the sentence a future reader (or I)
+      # would quote while widening this tolerance or deleting the step.
+      #
+      # The tolerance itself stays, and deliberately. This is a best-effort
+      # Yahoo fundamentals fetch; failing the whole 3-market cycle because it
+      # got throttled resurrects the failure-email problem for something that
+      # cannot corrupt anything — enrichment only ever writes into a BLANK
+      # field, so a failed refresh is a no-op on the existing map, never a
+      # clear. What changes is that coverage does not advance, which loosens
+      # the cap rather than tightening it, which is the direction you can
+      # afford to be quiet about for one run and not for twenty.
+      #
+      # So the failure is made LOUD instead of fatal. `continue-on-error: true`
+      # buys a neutral step icon on the run page of a job that fires ~20x a
+      # day and that nobody opens; `::warning::` renders in the run's summary
+      # header and names the actual consequence. The explicit `if !` is what
+      # makes the echo reachable at all — under continue-on-error the default
+      # `bash -e` aborts the step at the failing command and no message runs.
       - name: Refresh sector cache
-        continue-on-error: true
-        run: python -m scanner.sectorcache
+        run: |
+          if ! python -m scanner.sectorcache; then
+            echo "::warning::sector cache refresh FAILED - data/sector_map.json did not advance this run. It is a SIGNAL PATH (REFINEMENTS #38): rows with no sector are exempt from the 3-per-sector cap, so the cap binds LESS than intended until coverage refills. Check summary.sector_coverage in the scan output - expect ~1.0."
+          fi
 
       - name: Run market scans (small markets first, then ASX uncontended)
         env:
@@ -349,8 +465,54 @@ jobs:
           # NOTHING is always a bug (the Phase 3 staging bug ran green 5x
           # exactly this way). Manual dispatches (--dry-run/--limit tests)
           # only warn.
+          #
+          # TOP100 #49 - ONE path was being asserted, and it was the DERIVED one.
+          # `journal/vivek_bot_book.json` is `_write_combined()` output; the
+          # canonical state is the per-market files. So the gate passed on a run
+          # where two of three markets saved and the third silently did not -
+          # `run.py` wraps the whole bot layer in `except Exception: print("bot
+          # book: skipped")`, so a market's execution layer can throw, be
+          # swallowed, and leave the scan green with the combined book still
+          # changing because its SIBLINGS moved. It also said nothing at all
+          # about the scan's own output: a run that rewrote no *_vivek.json but
+          # re-stamped the book passed, which is the site freezing while the
+          # gate that exists to catch a frozen site nods it through.
+          #
+          # assert_staged's own contract: "all must change" = several calls, one
+          # path each. Four independent invariants, so four calls.
+          #   (1) the scan's data file, per market it actually scanned;
+          #   (2) that market's CANONICAL book file;
+          #   (3) the derived journal-side combined view (the old check);
+          #   (4) its public twin - written from the same payload by
+          #       `_write_combined`, so it can only diverge here by being
+          #       dropped from $SHARED, which is a one-token edit to a long
+          #       space-separated string and would freeze the dashboard's book
+          #       while the journal's advanced. `--verify` cannot see this: it
+          #       compares the working tree, not what got committed.
+          #
+          # CRYPTO IS EXEMPT, but only as one leg of a FULL cycle - which is
+          # exactly where the scan step itself declines to gate on it ("crypto
+          # is best-effort, keyless feeds can be flaky"; only RC_ASX and RC_NAS
+          # gate the job). On a crypto-only weekend run crypto IS the gating
+          # market and is asserted like any other. Making the gate stricter than
+          # the step it is gating would fail whole cycles over a flaky feed and
+          # resurrect the failure-email problem.
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-            bash scripts/assert_staged.sh "scan output" journal/vivek_bot_book.json
+            for m in $MK; do
+              if [ "$m" = "crypto" ] && [ "$M" = "all" ]; then
+                bash scripts/assert_staged.sh "scan output [crypto]" \
+                  "public/data/crypto_vivek.json" \
+                  || echo "::warning::crypto scan output not staged - best-effort leg of a full cycle"
+                bash scripts/assert_staged.sh "bot book [crypto]" \
+                  "journal/vivek_bot_book.crypto.json" \
+                  || echo "::warning::crypto book not staged - best-effort leg of a full cycle"
+              else
+                bash scripts/assert_staged.sh "scan output [$m]" "public/data/${m}_vivek.json"
+                bash scripts/assert_staged.sh "bot book [$m]" "journal/vivek_bot_book.${m}.json"
+              fi
+            done
+            bash scripts/assert_staged.sh "combined book (journal)" journal/vivek_bot_book.json
+            bash scripts/assert_staged.sh "combined book (public twin)" public/data/vivek_bot_book.json
           else
             bash scripts/assert_staged.sh "scan output (manual)" journal/vivek_bot_book.json \
               || echo "::warning::book not staged (manual run - dry-run or test args?)"
@@ -369,8 +531,23 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             for p in $PATHS; do
-              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
-              git checkout "$SHA" -- "$p" 2>/dev/null || true
+              # TOP100 #42 — only ever REPLACE a path this run actually
+              # generated. The old form ran `git rm` unconditionally and then
+              # let the checkout fail silently into `|| true`, so any path
+              # present on the freshly-fetched main but ABSENT from $SHA was
+              # deleted, staged by the `git add -A` below, and pushed. Nothing
+              # in the loop could tell that apart from an intentional delete.
+              # It is not hypothetical: several listed paths exist only
+              # sometimes (the unassigned book is written only when migration
+              # finds strays), and every workflow in the scan group re-applies
+              # its own list on top of a main that a sibling may have just
+              # written — so the loop written to survive a push race could
+              # lose one instead. If $SHA does not have it, this run did not
+              # generate it, so main's copy is the newer one: leave it.
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
             done
             # The COMBINED book is a DERIVED file shared by every scan-group
             # workflow (2026-07-20 evening incident): a run queued on an OLD

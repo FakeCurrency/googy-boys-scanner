@@ -59,7 +59,27 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           PATHS="phasemap/backtest/reports phasemap/backtest/stats public/data/phasemap/stats public/data/vivek_backtest.json"
-          git add $PATHS 2>/dev/null || true
+          # TOP100 #52/#54 follow-on (2026-07-28) — was
+          # `git add $PATHS 2>/dev/null || true`, the third occurrence of the
+          # construct that took confluence.yml and phasemap.yml down: `git add
+          # a b` is ALL-OR-NOTHING, so one missing path exits 128 and stages
+          # NEITHER, and the `|| true` then hands the empty index to the
+          # "No changes to commit" line below, which exits GREEN.
+          #
+          # Stated honestly: unlike those two, the bug is LATENT here — all
+          # four paths are tracked in the repo, so a fresh checkout always has
+          # them and the add cannot currently fail. It is repaired anyway
+          # because a latent instance is the one that gets copied into the next
+          # workflow, where it will not be latent; and because two of the three
+          # producing steps above are `continue-on-error: true`, so this step is
+          # already reached with results it cannot assume exist.
+          for p in $PATHS; do
+            if [ -e "$p" ]; then
+              git add -- "$p"
+            else
+              echo "::warning::$p is not present - nothing to stage for it"
+            fi
+          done
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
@@ -70,8 +90,23 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             for p in $PATHS; do
-              [ -e "$p" ] && git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
-              git checkout "$SHA" -- "$p" 2>/dev/null || true
+              # TOP100 #42 — only ever REPLACE a path this run actually
+              # generated. The old form ran `git rm` unconditionally and then
+              # let the checkout fail silently into `|| true`, so any path
+              # present on the freshly-fetched main but ABSENT from $SHA was
+              # deleted, staged by the `git add -A` below, and pushed. Nothing
+              # in the loop could tell that apart from an intentional delete.
+              # It is not hypothetical: several listed paths exist only
+              # sometimes (the unassigned book is written only when migration
+              # finds strays), and every workflow in the scan group re-applies
+              # its own list on top of a main that a sibling may have just
+              # written — so the loop written to survive a push race could
+              # lose one instead. If $SHA does not have it, this run did not
+              # generate it, so main's copy is the newer one: leave it.
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
             done
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi

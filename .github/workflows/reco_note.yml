@@ -32,8 +32,21 @@ jobs:
       - uses: actions/checkout@v4
 
       # stdlib-only — no pip install needed.
+      #
+      # TOP100 #51 (2026-07-28) — `a | tee b` exits with TEE's status, and tee
+      # succeeds essentially always. GitHub's default shell is `bash -e {0}`,
+      # so -e is on but pipefail is NOT: a generator that died mid-run left
+      # this step GREEN. The failure did surface one step later, as
+      # `assert_staged.sh` finding nothing staged — under the label "reco note
+      # not staged", which describes the symptom and names the wrong step. The
+      # traceback that would have explained it went to stderr, i.e. into the
+      # raw log and not into the file the next step reads. Both halves fixed:
+      # pipefail so the step fails where the fault is, and 2>&1 so the reason
+      # is in the captured output.
       - name: Generate the daily note
-        run: python3 scripts/reco_note.py | tee /tmp/reco_out.txt
+        run: |
+          set -o pipefail
+          python3 scripts/reco_note.py 2>&1 | tee /tmp/reco_out.txt
 
       - name: Commit & push (surgical — the note file only)
         run: |

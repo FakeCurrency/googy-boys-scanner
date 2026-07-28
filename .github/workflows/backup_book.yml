@@ -76,6 +76,22 @@ jobs:
           done
           echo "Could not push backup after retries"; exit 1
 
+      # TOP100 #50 (2026-07-28) — the gate above proves a DIRECTORY appeared.
+      # It cannot see what is IN it, so a path quietly dropped from
+      # BACKUP_FILES, or a source file gone from the tree (backup() prints
+      # "skip (not found)" and carries on), left this job green and surfaced at
+      # restore time — the one moment nothing can be done about it. This checks
+      # every REQUIRED_FILES entry is present, non-empty and parseable.
+      #
+      # DELIBERATELY LAST, after the commit and push. A verification step that
+      # runs first and fails destroys the thing it was verifying: the snapshot
+      # would never be committed and the off-tree artifact never uploaded, so
+      # the response to "tonight's backup is incomplete" would be to also not
+      # keep the incomplete one. An incomplete backup still beats none. The
+      # job goes red and the Discord alert fires either way.
+      - name: Verify the snapshot contains the track record
+        run: python3 scripts/backup_journal.py verify
+
       - name: Alert on failure (Discord)
         if: failure()
         env:

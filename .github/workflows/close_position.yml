@@ -36,6 +36,19 @@ permissions:
 jobs:
   close:
     runs-on: ubuntu-latest
+    # TOP100 #44 - this job holds the `scan` mutex. Without an explicit
+    # timeout a hung step (a Yahoo socket that never returns, a push retry
+    # loop that never resolves) holds the group for GitHub's 6-hour default,
+    # and EVERY close, scan and crypto run queued behind it is evicted -
+    # GitHub keeps one pending run per group and cancels the previous one.
+    # One stuck run therefore costs a whole session of scans, silently.
+    # A close is one symbol plus a push; 20 is a hang detector, not a budget.
+    timeout-minutes: 20
+    # TOP100 #47 — surfaced so `redispatch` can tell "the push never landed"
+    # (contention: retry it) from "the close itself was rejected" (bad symbol,
+    # integrity gate: must NOT be retried). See the long note on that job.
+    outputs:
+      push_exhausted: ${{ steps.commit.outputs.push_exhausted }}
     # Joined the "scan" group (2026-07-20, review C4): journal_type=bot WRITES
     # the shared bot book, so a close must never run concurrently with a scan's
     # load->modify->write cycle (the C1 invariant: one book writer at a time).
@@ -103,10 +116,12 @@ jobs:
         run: python -m scanner.broker.vivek_run --verify
 
       - name: Commit updated journal
+        id: commit
         env:
           SYMBOL: ${{ github.event.inputs.symbol }}
           DIRECTION: ${{ github.event.inputs.direction }}
           PRICE: ${{ github.event.inputs.price }}
+          JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -122,13 +137,103 @@ jobs:
                    public/data/journal.json public/data/scalp_journal.json; do
             git add -- "$p" 2>/dev/null || true
           done
+          # TOP100 #52/#54 follow-on (2026-07-28) — the `|| true` above is
+          # CORRECT here and stays: most of those ten paths legitimately do not
+          # exist on a given close (a bot close never touches scalp_journal,
+          # the unassigned book exists only when migration found strays), so
+          # warning per absentee would print ~6 lines of noise every run. What
+          # was missing is the thing that makes a swallowed status survivable
+          # anywhere else in this repo: something downstream that can tell
+          # "staged nothing" from "should have staged something".
+          #
+          # For journal_type=bot it can, and the asymmetry is the whole point.
+          # `vivek_run --close` exits NON-ZERO when no open position matches
+          # (see the step above), and the default shell is `bash -e`, so this
+          # step is only ever reached after the book was really edited — which
+          # makes "position not found or already closed" a description of a
+          # state that can no longer occur, and an empty index a STAGING BUG
+          # wearing its message. In the one workflow whose input is a
+          # deliberate human act on the only track record, and whose loss is
+          # the hardest in the repo to notice (no cron behind it, no freshness
+          # badge for "a position you closed by hand is still showing open").
+          #
+          # swing/scalp is genuinely different and must stay green: `journal.py
+          # --close-manual` prints "no open X found - nothing changed" and
+          # returns 0, so an empty index there is the honest no-op the message
+          # describes. Gated, not blanket, for exactly that reason.
+          if [ "$JOURNAL_TYPE" = "bot" ]; then
+            bash scripts/assert_staged.sh "bot close" \
+              journal/vivek_bot_book.asx.json \
+              journal/vivek_bot_book.nasdaq.json \
+              journal/vivek_bot_book.crypto.json \
+              journal/vivek_bot_book.json
+          fi
           if git diff --cached --quiet; then
             echo "Nothing to commit (position not found or already closed)."
-          else
-            git commit -m "journal: manual close $SYMBOL $DIRECTION @ $PRICE"
-            git pull --rebase origin main
-            git push
+            exit 0
           fi
+          git commit -m "journal: manual close $SYMBOL $DIRECTION @ $PRICE"
+
+          # TOP100 #45 — this used to be `git pull --rebase origin main` then a
+          # bare `git push`: ONE attempt, no retry, in the only workflow whose
+          # input is a deliberate human act on the one-and-only track record.
+          # Every other writer in this repo retries five times and exits 1;
+          # this one lost the close to any push that happened to land in the
+          # window between its pull and its push. Worse, a manual close is the
+          # single hardest thing to notice going missing — there is no cron
+          # behind it and no freshness badge for "a position you closed by hand
+          # is still showing as open". The `scan` mutex keeps SCANS out of the
+          # way, but phasemap, confluence, backup, reco-note and both backtests
+          # push to main without ever entering that group.
+          #
+          # Two changes, both matching the pattern the scan workflows already
+          # use. (1) Five attempts, then `exit 1` — never a green run with the
+          # close only in a deleted runner's filesystem. (2) Regenerate the
+          # DERIVED combined book AFTER each rebase: journal/vivek_bot_book.json
+          # and its public twin are `_write_combined()` output, not canonical
+          # state, so replaying this run's copy of them onto a main that moved
+          # publishes a view derived from neither tree — the same staleness
+          # scan.yml regenerates around, and the exact thing `--verify` fails
+          # the NEXT run for. The canonical per-market files are what the close
+          # actually edited; the combined pair is recomputed from them here.
+          for i in 1 2 3 4 5; do
+            if ! git pull --rebase origin main; then
+              # A genuine content conflict on the track record is NOT something
+              # to auto-resolve. Abort cleanly so the next attempt starts from a
+              # sane tree, and let the loop fall through to a loud failure.
+              git rebase --abort 2>/dev/null || true
+              echo "rebase onto main failed (attempt $i)"; sleep $((i * 3)); continue
+            fi
+            if [ "$JOURNAL_TYPE" = "bot" ]; then
+              python -m scanner.broker.vivek_run --rebuild-combined
+              # TOP100 #52/#54 follow-on (2026-07-28) — this was a TWO-path
+              # `git add` behind `|| true`, i.e. the all-or-nothing construct
+              # with the paths spelled out instead of held in a variable, in the
+              # same file whose loop above carries the 2026-07-20 hotfix comment
+              # warning against exactly that. The consequence is specific and
+              # silent: both files are `_write_combined()` OUTPUT, so a failed
+              # add means no amend, and the push then publishes the close with a
+              # combined book derived from neither tree — the staleness the
+              # comment above says this rebuild exists to prevent, and the thing
+              # `--verify` fails the NEXT run for, blaming the wrong run.
+              # Staged one at a time so a missing sibling cannot veto the other.
+              for p in journal/vivek_bot_book.json public/data/vivek_bot_book.json; do
+                git add -- "$p" 2>/dev/null || echo "::warning::$p could not be staged after rebuild-combined"
+              done
+              git diff --cached --quiet || git commit --amend --no-edit
+            fi
+            if git push origin HEAD:main; then echo "Pushed the close."; exit 0; fi
+            echo "push race — retry $i"; sleep $((i * 3))
+          done
+          # TOP100 #47 — mark this failure as CONTENTION, not rejection. The
+          # close ran, the book edit was correct, only the publish lost. That is
+          # the one failure worth re-dispatching, and it is safe to: a fresh run
+          # re-reads main, where the position is still open, and closes it
+          # again; if the push actually did land, `--close` finds no matching
+          # open position and exits non-zero rather than double-closing.
+          echo "push_exhausted=true" >> "$GITHUB_OUTPUT"
+          echo "Could not push the close after 5 attempts — the position is STILL OPEN on main."
+          exit 1
 
   # Survive a mutex eviction (2026-07-28, owner decision: "make it re-dispatch
   # itself if evicted"). A manual close is a deliberate human act on the ONE
@@ -140,9 +245,21 @@ jobs:
   # (the anti-recursion rule exempts it), so `gh workflow run` from here really
   # does start a new run. `attempt` bounds the chain at 3 so a permanently
   # contested mutex cannot loop forever.
+  #
+  # TOP100 #47 — `cancelled` is no longer the only resurrectable outcome. A
+  # FAILED close still must not be retried in general: a typo'd symbol or a
+  # tripped integrity gate would just fail again three times and bury the real
+  # error under two decoys. But since #45 the close can also fail for a reason
+  # that has nothing to do with its input — five lost push races in a row —
+  # and that failure is indistinguishable, from out here, from the eviction
+  # this job already resurrects: the edit was right, the publish lost. So the
+  # close now says which one it was, via the `push_exhausted` output, and only
+  # that specific failure joins `cancelled`. Everything else still stops.
   redispatch:
     needs: close
-    if: always() && needs.close.result == 'cancelled'
+    if: >-
+      always() && (needs.close.result == 'cancelled'
+      || needs.close.outputs.push_exhausted == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -153,6 +270,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REF: ${{ github.ref_name }}
           ATTEMPT: ${{ github.event.inputs.attempt }}
+          PUSH_EXHAUSTED: ${{ needs.close.outputs.push_exhausted }}
           SYMBOL: ${{ github.event.inputs.symbol }}
           DIRECTION: ${{ github.event.inputs.direction }}
           MARKET: ${{ github.event.inputs.market }}
@@ -177,14 +295,23 @@ jobs:
           # Fail open (assume eviction) if the query itself fails - losing a
           # close is worse than one redundant re-run, which the operator sees
           # in the Actions list and can cancel.
-          executed=$(gh run view "$GITHUB_RUN_ID" --json jobs \
-            --jq '[.jobs[] | select(.name == "close") | .steps[]?
-                   | select(.conclusion == "success" or .conclusion == "failure")]
-                  | length' 2>/dev/null || echo 0)
-          if [ "${executed:-0}" -gt 0 ]; then
-            echo "close executed $executed step(s) before being cancelled - that is"
-            echo "not a mutex eviction (an evicted job never starts). Leaving it alone."
-            exit 0
+          #
+          # TOP100 #47 - the exhausted-push case is EXEMPT from this check, and
+          # has to be: it is a close that ran every step and then could not
+          # publish, so its signature is the opposite of an eviction's. The
+          # close job vouched for it explicitly rather than this job guessing.
+          if [ "${PUSH_EXHAUSTED:-}" = "true" ]; then
+            echo "close ran but lost five push races - re-queueing the publish."
+          else
+            executed=$(gh run view "$GITHUB_RUN_ID" --json jobs \
+              --jq '[.jobs[] | select(.name == "close") | .steps[]?
+                     | select(.conclusion == "success" or .conclusion == "failure")]
+                    | length' 2>/dev/null || echo 0)
+            if [ "${executed:-0}" -gt 0 ]; then
+              echo "close executed $executed step(s) before being cancelled - that is"
+              echo "not a mutex eviction (an evicted job never starts). Leaving it alone."
+              exit 0
+            fi
           fi
 
           # Do not re-queue into a still-contested slot: one pending run per
@@ -192,17 +319,55 @@ jobs:
           # and the two workflows would trade the slot back and forth. Bounded
           # wait - after ~200s dispatch regardless, because an attempt that
           # loses the race again is recoverable and a dropped close is not.
+          #
+          # TOP100 #46 - THIS LOOP WAS LOOKING FOR THE WRONG THING. It counted
+          # runs whose RUN-level status is queued/waiting/pending, which is what
+          # a contested member of the `scan` group looked like back when the
+          # group was declared at WORKFLOW level. Since 2026-07-28 the three
+          # members that matter most - Scheduled scan, Crypto bot, and this very
+          # workflow - scope the group to a JOB, precisely so their cheap gate
+          # jobs stay out of the queue. Their runs therefore START (gate runs,
+          # run status = in_progress) while the mutex-holding job sits at
+          # `queued`. The filter below saw none of that, always counted 0, broke
+          # out of the wait on the first pass, and dispatched straight back into
+          # the contention it exists to sit out - so the retry could evict the
+          # very sibling it was queued behind, which is the failure this whole
+          # job was written to prevent. Two passes now:
+          #   (a) run-level, for the members still scoped at workflow level
+          #       (Confluence alert, Backfill sector history - the latter was
+          #       simply missing from the list, so a backfill holding the mutex
+          #       was invisible here);
+          #   (b) job-level, for the job-scoped members: a started run whose
+          #       scan/crypto/close job has not been picked up yet.
+          WATCHED='"Scheduled scan","Crypto bot (24/7 paper)","Confluence alert (post-nightly)","Close position (manual)","Backfill sector history"'
+          mutex_pending() {
+            n=$(gh run list --limit 60 --json status,workflowName \
+              --jq "[.[] | select(.status == \"queued\" or .status == \"waiting\"
+                                  or .status == \"pending\")
+                         | select(.workflowName as \$w | [$WATCHED] | index(\$w))]
+                    | length" 2>/dev/null || echo 0)
+            n=${n:-0}
+            ids=$(gh run list --limit 40 --json databaseId,status,workflowName \
+              --jq "[.[] | select(.status == \"in_progress\")
+                         | select(.workflowName as \$w | [$WATCHED] | index(\$w))
+                         | .databaseId] | .[]" 2>/dev/null | head -8)
+            for id in $ids; do
+              [ "$id" = "$GITHUB_RUN_ID" ] && continue
+              q=$(gh run view "$id" --json jobs \
+                --jq '[.jobs[] | select(.name == "scan" or .name == "crypto"
+                                        or .name == "close")
+                              | select(.status == "queued" or .status == "waiting"
+                                       or .status == "pending"
+                                       or .status == "requested")] | length' \
+                2>/dev/null || echo 0)
+              n=$((n + ${q:-0}))
+            done
+            echo "$n"
+          }
           for _ in 1 2 3 4 5 6 7 8 9 10; do
-            pending=$(gh run list --limit 60 --json status,workflowName \
-              --jq '[.[] | select(.status == "queued" or .status == "waiting"
-                                  or .status == "pending")
-                         | select(.workflowName == "Scheduled scan"
-                               or .workflowName == "Crypto bot (24/7 paper)"
-                               or .workflowName == "Confluence alert (post-nightly)"
-                               or .workflowName == "Close position (manual)")]
-                    | length' 2>/dev/null || echo 0)
+            pending=$(mutex_pending)
             [ "${pending:-0}" -eq 0 ] && break
-            echo "$pending scan-group run(s) still pending - waiting 20s"
+            echo "$pending scan-group run(s) still contesting the mutex - waiting 20s"
             sleep 20
           done
 

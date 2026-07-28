@@ -33,7 +33,14 @@ permissions:
 
 concurrency:
   group: vivek-backtest
-  cancel-in-progress: true
+  # TOP100 #43 — was `true`. This job commits after EACH market with
+  # `--status partial` and only the crypto leg flips it to `complete`, so
+  # cancelling a run mid-flight strands `vivek_backtest_longonly.json` at
+  # partial: a published record that looks finished to anything reading the
+  # file and is missing two markets. The run is monthly and takes up to 90
+  # minutes; there is no stampede to protect against, and letting the first
+  # one finish is strictly better than leaving the artefact half-written.
+  cancel-in-progress: false
 
 jobs:
   backtest:
@@ -64,7 +71,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           commit_push() {
-            git add "$OUT" 2>/dev/null || true
+            # TOP100 #52/#54 follow-on (2026-07-28) — the `2>/dev/null || true`
+            # here bought nothing and cost the only signal: $OUT is a single
+            # TRACKED path, so `git add` on it cannot fail on a checked-out
+            # tree, and if it ever did the swallowed status would fall straight
+            # through to the "no change" line below and return GREEN. This is
+            # the workflow that already shipped one silent-green failure (#43,
+            # see the note at the bottom of this loop); it does not need a
+            # second route to the same outcome.
+            git add -- "$OUT"
             if git diff --cached --quiet; then echo "no change"; return; fi
             git commit -m "data: VIVEK backtest${FLAG:+ (long-only)} [$1] $(date -u +'%Y-%m-%d %H:%M UTC')"
             SHA=$(git rev-parse HEAD)
@@ -78,6 +93,15 @@ jobs:
               if git push origin HEAD:main; then echo "pushed $1"; return; fi
               echo "push race — retry $i"; sleep $((i * 3))
             done
+            # TOP100 #43 — falling out of the retry loop used to return 0, so a
+            # run that failed to push all five times finished GREEN with the
+            # result only in a deleted runner's filesystem. Every sibling
+            # workflow ends its loop with `exit 1`; this one silently did not,
+            # which made it the one backtest whose disappearance looked like
+            # "no change this week". `set -e` is on, so returning 1 aborts the
+            # step at the market that failed rather than running the remaining
+            # markets against a tree that could not be published.
+            echo "Could not push [$1] after retries"; return 1
           }
 
           # NASDAQ first (mature 10y history → a meaningful first read fastest),

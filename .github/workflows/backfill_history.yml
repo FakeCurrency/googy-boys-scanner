@@ -102,6 +102,13 @@ jobs:
         env:
           IN_MARKET: ${{ github.event.inputs.market }}
         run: |
+          # TOP100 #55 (2026-07-28) — the replay step above says `set -e` and
+          # this one did not, which invites the reading that the difference is
+          # deliberate. It is not: GitHub's default shell is `bash -e {0}`, so
+          # -e was already on and the asymmetry was noise that looked like
+          # intent. Stated explicitly here so the two steps make the same
+          # promise in the same words.
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # ONE path. This workflow writes exactly one file and must never stage
@@ -111,11 +118,25 @@ jobs:
           for i in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
+            # TOP100 #55 — the merge now VERIFIES its own postcondition (see
+            # `_verify_merged`): it re-reads the history file off disk and
+            # proves every replayed session is in it, so a merge that reported
+            # success while landing nothing exits non-zero here instead of
+            # falling through to the "nothing to commit" line below.
+            #
+            # Note the deliberate ABSENCE of an assert_staged call, which every
+            # other committing workflow in this repo has. It would be wrong
+            # here: `merge_rows` is documented as idempotent, so a second run
+            # legitimately produces a byte-identical file, and a must-change
+            # gate would fail on exactly the property the script promises. The
+            # right question is not "did the file change" but "does the file
+            # contain the reconstruction" — which is what the merge now asserts,
+            # and which is true on a re-run too.
             python scripts/backfill_sector_history.py \
               --merge-only "$RUNNER_TEMP/backfill_rows.json"
             git add -- "$OUT"
             if git diff --cached --quiet; then
-              echo "nothing to commit — every session was already real"
+              echo "nothing to commit — the merge verified every replayed session is already in the file (real rows win, and a re-run is idempotent)"
               exit 0
             fi
             git diff --cached --stat | tail -3

@@ -102,8 +102,88 @@ def test_redispatch_fires_only_on_a_cancellation():
     assert "always()" in cond
     assert "cancelled" in cond
     # A FAILED close (bad symbol, integrity gate) must not be retried — it
-    # would fail identically three times and bury the real error.
+    # would fail identically three times and bury the real error. TOP100 #47
+    # added ONE exemption and did it without touching this rule: the close
+    # names its own contention failure via an output (see the test below), so
+    # `failure` itself is still never a trigger.
     assert "failure" not in cond
+
+
+def test_the_only_resurrectable_failure_is_the_one_the_close_vouches_for():
+    """TOP100 #47 — a lost push race is not a rejected close.
+
+    Since TOP100 #45 the close retries its push five times and then exits 1.
+    From out here that failure is indistinguishable from the eviction this job
+    already resurrects — the edit was right, only the publish lost — and it is
+    the one failure worth retrying. But it must be the CLOSE that says so, not
+    this job guessing from the result, because every other failure (bad symbol,
+    tripped integrity gate) still has to stop dead.
+    """
+    wf = _load(CLOSE)
+    close = wf["jobs"]["close"]
+    cond = wf["jobs"]["redispatch"]["if"]
+
+    assert "needs.close.outputs.push_exhausted" in cond, (
+        "the redispatch no longer consults the close's own verdict — it is "
+        "either back to guessing, or the exemption has silently widened"
+    )
+    # The output has to be declared on the job, or the expression above is
+    # permanently '' and the whole exemption is dead code that reads as live.
+    assert close.get("outputs", {}).get("push_exhausted"), (
+        "job `close` must declare a `push_exhausted` output; without it "
+        "needs.close.outputs.push_exhausted is always empty"
+    )
+    produced = close["outputs"]["push_exhausted"]
+    step_id = re.search(r"steps\.(\w+)\.outputs\.push_exhausted", produced)
+    assert step_id, f"unexpected output expression: {produced}"
+    step = next(
+        (s for s in close["steps"] if s.get("id") == step_id.group(1)), None
+    )
+    assert step is not None, (
+        f"the output points at step id '{step_id.group(1)}', which no longer exists"
+    )
+    assert 'push_exhausted=true" >> "$GITHUB_OUTPUT"' in step["run"], (
+        "the commit step never writes push_exhausted, so the exemption can "
+        "never fire and a lost push race is dropped exactly as before #45"
+    )
+
+    # And the eviction-signature check must SKIP it: an exhausted push executed
+    # every step, so the zero-executed-steps test would veto the very case the
+    # output exists to admit.
+    script = _redispatch_script()
+    assert '"${PUSH_EXHAUSTED:-}" = "true"' in script, (
+        "the step-count eviction check no longer exempts the exhausted-push "
+        "case — a close that ran and could not publish will be vetoed by it"
+    )
+
+
+def test_the_close_push_is_retried_rather_than_attempted_once():
+    """TOP100 #45 — the close was the only writer here with no retry.
+
+    Every other workflow that pushes to main loops five times and exits 1. This
+    one did a single `git push` after a single rebase, in the workflow whose
+    input is a deliberate human act on the one and only track record — and a
+    manual close is the hardest thing in the repo to notice going missing,
+    because there is no cron behind it and no freshness badge for "a position
+    you closed by hand still shows as open".
+    """
+    close = _load(CLOSE)["jobs"]["close"]
+    script = "\n".join(s.get("run", "") for s in close["steps"])
+    assert "for i in 1 2 3 4 5; do" in script, "the push retry loop is gone"
+    assert "git rebase --abort" in script, (
+        "a failed rebase must be aborted before the next attempt, or attempt 2 "
+        "starts from a tree mid-conflict"
+    )
+    # The combined book is DERIVED (_write_combined output). Replaying this
+    # run's copy onto a main that moved publishes a view derived from neither
+    # tree — which is exactly what `--verify` fails the NEXT run for.
+    assert "--rebuild-combined" in script, (
+        "the derived combined book is no longer regenerated after the rebase"
+    )
+    assert '"$JOURNAL_TYPE" = "bot"' in script, (
+        "--rebuild-combined must stay gated on the bot journal: it stamps "
+        "updated_at, so a legacy swing/scalp close would touch the bot book"
+    )
 
 
 def test_redispatch_can_actually_dispatch():
@@ -146,6 +226,37 @@ def test_the_retry_chain_is_bounded():
     assert "attempt + 1" in script
 
 
+def _watched_names():
+    """The display names the pre-dispatch wait loop filters GitHub's runs by.
+
+    They live in one `WATCHED='"A","B",…'` shell variable (TOP100 #46) rather
+    than in four inline comparisons, because two different jq passes consume
+    the same list and a list written twice is a list that drifts.
+    """
+    m = re.search(r"WATCHED='([^']*)'", _redispatch_script())
+    assert m, "the wait loop no longer builds a WATCHED list of workflow names"
+    return set(re.findall(r'"([^"]+)"', m.group(1)))
+
+
+def _scan_group_members():
+    """Every workflow that can hold `group: scan`, at either scope.
+
+    Enumerated from the tree rather than hand-listed: the omission TOP100 #46
+    found was 'Backfill sector history', a workflow added long after the wait
+    loop's list was written and never added to it.
+    """
+    members = {}
+    for path in sorted(WF.glob("*.yml")):
+        wf = _load(path.name)
+        scopes = [_group(wf.get("concurrency"))]
+        scopes += [
+            _group(j.get("concurrency")) for j in (wf.get("jobs") or {}).values()
+        ]
+        if "scan" in scopes:
+            members[path.name] = wf["name"]
+    return members
+
+
 def test_the_wait_loop_names_workflows_that_exist():
     """The pre-dispatch wait filters GitHub's run list by display name.
 
@@ -153,15 +264,75 @@ def test_the_wait_loop_names_workflows_that_exist():
     becomes a no-op, and the re-dispatch goes straight back into a contested
     slot — the ping-pong the loop exists to prevent.
     """
-    script = _redispatch_script()
-    quoted = set(re.findall(r'\.workflowName == "([^"]+)"', script))
-    assert quoted, "the wait loop no longer filters by workflow name"
+    watched = _watched_names()
     real = {_load(p.name)["name"] for p in WF.glob("*.yml")}
-    assert quoted <= real, f"names not found in .github/workflows: {sorted(quoted - real)}"
-    # Every scan-group member must be in the filter, or the loop clears while
-    # that member is still pending and we evict it.
-    for fname in JOB_SCOPED:
-        assert _load(fname)["name"] in quoted, fname
+    assert watched <= real, (
+        f"names not found in .github/workflows: {sorted(watched - real)}"
+    )
+
+
+def test_the_wait_loop_watches_every_member_of_the_group():
+    """A member missing from the filter is invisible while it holds the mutex.
+
+    That is not a degraded wait, it is the absence of one: the loop counts 0,
+    breaks on the first pass and dispatches straight into the contention it
+    exists to sit out — evicting the very sibling it was queued behind.
+    """
+    watched = _watched_names()
+    for fname, display in _scan_group_members().items():
+        assert display in watched, (
+            f"{fname} can hold `group: scan` as {display!r} but the wait loop "
+            "does not watch it"
+        )
+
+
+def test_the_wait_loop_looks_at_job_state_not_just_run_state():
+    """TOP100 #46 — the wait was reading the state the mutex stopped producing.
+
+    It counted runs whose RUN-level status is queued/waiting/pending. That is
+    what a contested member looked like when `group: scan` sat at WORKFLOW
+    level. Since the group moved onto the JOBS (deliberately, so the cheap gate
+    jobs stay out of the queue) a contested member's RUN is `in_progress` — its
+    gate is running — while the mutex-holding JOB sits at `queued`. The old
+    filter matched none of that, so it counted 0 every time and the wait was a
+    no-op that read as a wait.
+
+    Both passes have to survive: the run-level one still covers the members
+    scoped at workflow level, the job-level one covers the three that are not.
+    """
+    script = _redispatch_script()
+
+    # (a) run-level, for the workflow-scoped members.
+    assert "gh run list" in script
+    assert re.search(r'status.{0,4} == .{0,4}queued', script), (
+        "the run-level pass no longer looks for queued runs"
+    )
+
+    # (b) job-level, for the job-scoped members — the half #46 added.
+    assert 'gh run view "$id" --json jobs' in script, (
+        "the wait loop no longer inspects JOB state, so a run whose gate is "
+        "running while its mutex-holding job queues is counted as idle"
+    )
+    assert re.search(r'select\(\.status == "queued"', script), (
+        "the job-level pass no longer filters on a queued job"
+    )
+    # Every mutex-holding job name must be inspected, or that workflow's
+    # contention is invisible to the second pass.
+    for fname, jobname in JOB_SCOPED.items():
+        assert f'.name == "{jobname}"' in script, f"{fname}: job '{jobname}'"
+
+    # It must skip its OWN run: this workflow is in the watched list (it has to
+    # be — a second manual close contests the same slot), and its own close job
+    # is `cancelled`, not queued, but counting itself would still be a bug
+    # waiting on the next status GitHub invents.
+    assert '[ "$id" = "$GITHUB_RUN_ID" ] && continue' in script
+
+    # The wait stays bounded. An attempt that loses the race again is
+    # recoverable; a close that never dispatches is not.
+    assert re.search(r"for _ in 1 2 3 4 5 6 7 8 9 10; do", script), (
+        "the wait is no longer bounded — a permanently contested mutex would "
+        "hold this job until the 15-minute timeout instead of dispatching"
+    )
 
 
 def test_redispatch_ignores_a_close_that_had_already_started():

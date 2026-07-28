@@ -46,16 +46,41 @@ jobs:
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
           GBS_ALERT_FROM: ${{ secrets.GBS_ALERT_FROM }}
         run: |
-          python -m scanner.watchdog --test-alert | tee /tmp/alert_test.txt
+          # TOP100 #51 (2026-07-28) — `a | tee b` exits with TEE's status, and
+          # tee succeeds essentially always. GitHub's default shell is
+          # `bash -e {0}`: -e is on, pipefail is NOT. So a watchdog that threw
+          # left THIS job green — the one job whose entire purpose is to prove
+          # the alert path works before you trust it, reporting success about a
+          # self-test that crashed. The summary underneath then printed an
+          # empty code block under the words "the test ran", which is worse
+          # than no summary because it reads as "no routes configured".
+          #
+          # pipefail alone would fail the step BEFORE the summary is written,
+          # losing the output at exactly the moment it is worth most. So the
+          # status is captured, the summary is always written, and the step
+          # exits with the real code at the end. 2>&1 puts the traceback in the
+          # summary too, since stderr is where the reason lives and the raw log
+          # is not what this workflow tells you to read.
+          set -o pipefail
+          rc=0
+          python -m scanner.watchdog --test-alert 2>&1 | tee /tmp/alert_test.txt || rc=$?
           {
             echo "## Alert-path self-test"
             echo ""
-            echo "Green job = the test ran; **read the lines below** for what"
-            echo "actually delivered. Any route listed as NOT delivered means"
-            echo "that channel is unconfigured or failing — a CRITICAL would"
-            echo "silently skip it."
+            if [ "$rc" -ne 0 ]; then
+              echo "> **THE SELF-TEST ITSELF FAILED (exit $rc).** Nothing below"
+              echo "> can be read as evidence that a channel works — the run"
+              echo "> did not get far enough to find out. The traceback is in"
+              echo "> the block."
+            else
+              echo "Green job = the test ran; **read the lines below** for what"
+              echo "actually delivered. Any route listed as NOT delivered means"
+              echo "that channel is unconfigured or failing — a CRITICAL would"
+              echo "silently skip it."
+            fi
             echo ""
             echo '```'
             cat /tmp/alert_test.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc

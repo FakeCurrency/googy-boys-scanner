@@ -4,7 +4,10 @@ name: Tests
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes: 576 pytest + 190 JS assertions as of 2026-07-28.
+# runs the lot in ~2 minutes: 984 pytest (49 files) + 262 JS assertions across
+# 10 suites, measured 2026-07-28. The numbers are a smell test, not a gate —
+# a big drop means a directory stopped being collected, which is the failure
+# `pytest.ini` being in the path filter above exists to make visible.
 on:
   push:
     branches: [main]
@@ -16,6 +19,35 @@ on:
       - "public/js/**"
       - "functions/**"
       - "requirements.txt"
+      # TOP100 #48 — four paths the suites READ but the filter did not list, so
+      # editing any of them shipped to production with the gate skipped. A
+      # skipped gate is not a red run you can ignore, it is a green tick on a
+      # commit nothing checked.
+      #
+      #   scripts/**   4 pytest files import it (resize_book_notional,
+      #                backfill_sector_history, reco_note, health_check) — and
+      #                resize_book_notional is the one that RESTATES the track
+      #                record, whose tests are almost entirely about what it
+      #                refuses to do.
+      #   pytest.ini   decides what gets collected at all. An edit here can
+      #                silence whole directories, and the run that proves it
+      #                would never start.
+      #   public/css/**   test/contrast.test.js gates the design tokens in
+      #                styles.css; journal_review.test.js reads journal.css.
+      #   public/*.html   risk_defaults.test.js parses bot.html as source, and
+      #                journal_money.test.js enforces the `?v=` floor on
+      #                journal.html — i.e. project rule 2 (bump the version on
+      #                every asset edit) was enforced by a suite that did not
+      #                run when the edit was to the HTML. The e2e job serves
+      #                public/ wholesale, so these pages are what it walks.
+      #
+      # public/data/** stays OUT deliberately: every scan commits it ~20x a day
+      # and each run would pay a full Playwright install to re-test code that
+      # did not change.
+      - "scripts/**"
+      - "pytest.ini"
+      - "public/css/**"
+      - "public/*.html"
       # ALL workflows, not just this one (2026-07-28): tests/test_workflow_mutex.py
       # asserts on the concurrency scoping and the close re-dispatch, so the very
       # edits it exists to catch — a `concurrency:` block moved back up to
@@ -24,6 +56,20 @@ on:
       - ".github/workflows/**"
   pull_request:
   workflow_dispatch:
+
+# TOP100 #56 (2026-07-28) — this was the ONE workflow in the repo with no
+# permissions block, so its token was whatever the repository default happens
+# to be, which for a repo created before the read-only default (or switched
+# since) is read AND write. It is also the workflow with the widest trigger
+# surface — every push and every pull_request — and the only one that runs
+# third-party-authored code paths under test. It reads the tree and writes
+# nothing but artifacts, so it should never have been able to push.
+#
+# `actions: read` is not needed (nothing here calls the Actions API) and is
+# deliberately omitted; upload-artifact works under the default job token
+# without it.
+permissions:
+  contents: read
 
 concurrency:
   group: tests-${{ github.ref }}

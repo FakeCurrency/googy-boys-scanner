@@ -358,9 +358,61 @@ def merge_only(path: str) -> int:
     sectorbreadth._write_json(sectorbreadth.HISTORY_FILE, hist)
     print(f"  merged +{added} reconstructed, {skipped} real rows left alone "
           f"-> {len(hist['rows'])} rows", flush=True)
+    if _verify_merged(rows) != 0:
+        return 1
     for line in report(hist, market, blob.get("horizon") or ""):
         print(line, flush=True)
     return 0
+
+
+def _verify_merged(parked: list[dict]) -> int:
+    """Re-READ the history file and prove every parked session is in it.
+
+    TOP100 #55 (2026-07-28). The workflow's only gate on this step was
+    `git diff --cached --quiet` -> "nothing to commit - every session was
+    already real" -> exit 0, which is the sentence a half-hour replay prints
+    when it lands nothing at all. Every other committing workflow in this repo
+    answers that with `assert_staged`, and here that would be WRONG: the
+    docstring on `merge_rows` promises the backfill is idempotent, so a second
+    run legitimately produces a byte-identical file and would fail a
+    must-change gate on the very property the script advertises.
+
+    So the question is not "did the file change" but "does the file now CONTAIN
+    the reconstruction", which is true on the first run and on a re-run alike.
+    Answered by reading the file back off disk rather than re-inspecting the
+    dict that was just written, because that is the half that can also catch a
+    write to the wrong path, a truncated write, or a `_write_json` whose
+    os.replace silently did not land -- none of which the in-memory copy knows
+    about.
+
+    A row is allowed to be absent for exactly one reason: it fell off the far
+    end of SECTOR_BREADTH_HISTORY_MAX, which keeps the NEWEST rows. Anything
+    older than the oldest date that survived is excused and said out loud.
+    """
+    written = sectorbreadth.load_history().get("rows", []) or []
+    have = {(r.get("d"), r.get("m")) for r in written}
+    absent = [r for r in parked if (r.get("d"), r.get("m")) not in have]
+    if not absent:
+        return 0
+    floor = min((str(r.get("d")) for r in written), default="")
+    truncated = [r for r in absent if floor and str(r.get("d")) < floor]
+    lost = [r for r in absent if not (floor and str(r.get("d")) < floor)]
+    if truncated:
+        print(f"  {len(truncated)} session(s) predate the history cap "
+              f"(SECTOR_BREADTH_HISTORY_MAX, oldest kept {floor}) - expected",
+              flush=True)
+    if not lost:
+        return 0
+    dates = ", ".join(sorted(str(r.get("d")) for r in lost)[:8])
+    print(f"MERGE VERIFY FAILED: {len(lost)} replayed session(s) are NOT in "
+          f"{sectorbreadth.HISTORY_FILE.name} after the write: {dates}"
+          f"{' ...' if len(lost) > 8 else ''}\n"
+          f"The replay produced them and the merge reported success, so the "
+          f"rows were lost between the two. Do NOT let this commit: the file "
+          f"would be published as a complete reconstruction of a period it "
+          f"only partly covers, and the streak counter reads a gap as the end "
+          f"of a run.", file=sys.stderr, flush=True)
+    return 1
 
 
 def report(hist: dict, market: str, horizon: str) -> list[str]:
