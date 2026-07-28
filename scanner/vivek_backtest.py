@@ -46,6 +46,37 @@ TIMEFRAMES = ("1D", "3D", "1W")
 LEVEL_TFS = ("weekly", "3d", "h4")     # which 200-SMA produced the signal
 
 
+def _sizing_basis() -> dict:
+    """Which of the two sizing models priced this report's dollar columns.
+
+    ``_risk_usd`` calls ``size_position(EQUITY, ...)`` with no
+    ``notional_target``, so the report silently inherits whichever mode config
+    is in — and the two modes do not produce comparable dollars for the same
+    trades. The 2026-07-26 report priced at risk-% off a $10,000 equity; the
+    next one prices at a flat $5,000 per entry (owner decision, 2026-07-28).
+    Same trades, ``total_usd`` moves by an order of magnitude, and until now
+    nothing in the file recorded why.
+
+    Worse than uninformative: under ``fixed_notional`` the equity drops out of
+    the dollar column ENTIRELY. Units are ``notional / entry``, so EQUITY
+    survives only in the leverage cap — which a $5,000 position on a $150,000
+    book can never reach. ``equity`` alone therefore *reads* like the basis
+    while having no effect on it, which is the failure mode worth naming: a
+    number that looks like the answer to the question a reader is asking.
+
+    ``vivek_bot`` already stamps ``sizing_mode`` onto every live book row
+    (``tests/test_fixed_notional.py``). This is the same stamp on the report
+    that is supposed to be that book's evidence.
+
+    R-multiples are ratios and are unaffected by any of this, which is why the
+    Insights page reads ``total_r`` and never the dollars.
+    """
+    notional = float(getattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 0) or 0)
+    return {"equity": EQUITY,
+            "position_notional": notional,
+            "sizing_mode": "fixed_notional" if notional > 0 else "risk_pct"}
+
+
 # ── per-symbol replay ─────────────────────────────────────────────────────────
 
 def _candidate_mask(df: pd.DataFrame) -> np.ndarray:
@@ -783,6 +814,11 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
             "Intrabar fills assume the stop fills before the target within a bar.",
             "A+ setups are rare, so trade counts (N) can be small and noisy.",
             "4H is not backtested (no deep intraday history).",
+            "Dollar columns (total_usd, max_dd_usd) are priced under "
+            "params.sizing_mode and are NOT comparable across runs that "
+            "changed it — a switch between risk-% and fixed-notional moves "
+            "them by an order of magnitude on identical trades. Read total_r "
+            "and expectancy_r, which are ratios and carry across.",
             "Portfolio sim: the slot/symbol/sector/cooldown caps and the "
             "price + stop-distance gates ARE replayed; the time stop, the "
             "daily/weekly loss guards, the earnings buffer and the ADV gates "
@@ -802,7 +838,8 @@ def run_backtest(markets: list[str], limit: int | None, period: str,
         trades += tr
         coverage[mk] = cov
     params = {"markets": markets, "limit": limit, "period": period,
-              "exclude_funds": exclude_funds, "long_only": long_only, "equity": EQUITY,
+              "exclude_funds": exclude_funds, "long_only": long_only,
+              **_sizing_basis(),
               "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
     return build_report(trades, coverage, params, "complete")
 
@@ -886,7 +923,8 @@ def main() -> None:
     done = set(coverage)
     status = args.status or ("complete" if done >= set(config.MARKETS) else "partial")
     params = {"markets": sorted(done), "limit": args.limit or None, "period": args.period,
-              "exclude_funds": not args.include_funds, "long_only": args.long_only, "equity": EQUITY,
+              "exclude_funds": not args.include_funds, "long_only": args.long_only,
+              **_sizing_basis(),
               "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
     report = build_report(trades, coverage, params, status)
     _print(report)

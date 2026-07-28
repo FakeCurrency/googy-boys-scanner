@@ -1,4 +1,4 @@
-/* The screenshot gate's baseline has to prove where it came from (TOP100 #93).
+/* The screenshot gate's baseline has to prove where it came from (out of band).
  *
  * This is the suite for the half of the fix that a regex test cannot reach.
  * `tests/test_screenshot_determinism.py` pins that the clock is frozen, read

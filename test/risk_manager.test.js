@@ -589,6 +589,126 @@ test("close costs fall back to the legacy flat fee when no bps configured", () =
   assert.equal(r.costs, 2.0, "legacy flat round-turn fee preserved");
 });
 
+
+// ═════════════════ 9. POINT-VALUE PROVENANCE (out of band) ═══════════════════
+// `dollarsPerPoint` decides what a one-point move is worth, and for a symbol
+// the instrument table does not know it silently became 1. These tests do NOT
+// change that number — they pin that the engine now RECORDS which of the three
+// sources produced it, because the trap was never the 1, it was that a row
+// priced by a guess and a row priced by a spec looked identical.
+suite("Point-value provenance");
+
+test("an unknown symbol still prices at 1 — the arithmetic did not move", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "BHP.AX", direction: "long", entry: 40, stop: 38,
+                     target: 46, size_units: 100, current: 40 }]);
+  assert.equal(e.getOpenPositions()[0].dollarsPerPoint, 1,
+    "this commit records the fallback, it does not repair it");
+});
+
+test("...but the row now says the 1 was a fallback", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "BHP.AX", direction: "long", entry: 40, stop: 38,
+                     target: 46, size_units: 100, current: 40 }]);
+  assert.equal(e.getOpenPositions()[0].pointValueSource, "fallback");
+});
+
+test("a symbol the table knows records WHICH spec priced it", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+                     target: 21000, size_units: 1, current: 20000 }]);
+  const p = e.getOpenPositions()[0];
+  assert.equal(p.dollarsPerPoint, 20);
+  assert.equal(p.pointValueSource, "spec:/NQ");
+});
+
+test("an aliased class resolves to the class it aliases, not to the alias", () => {
+  // ALIASES maps "ASX" -> "STOCK.AX". The provenance must name the resolved
+  // spec, otherwise two rows priced by the same spec would read differently.
+  const e = mk();
+  e.loadPositions([{ symbol: "ASX", direction: "long", entry: 40, stop: 38,
+                     target: 46, size_units: 100, current: 40 }]);
+  const p = e.getOpenPositions()[0];
+  assert.equal(p.pointValueSource, "spec:STOCK.AX");
+  assert.equal(p.dollarsPerPoint, 0.66, "the AUD/USD offline fallback rate");
+});
+
+test("a feed-supplied point_value outranks the table and says so", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+                     target: 21000, size_units: 1, current: 20000, point_value: 7 }]);
+  const p = e.getOpenPositions()[0];
+  assert.equal(p.dollarsPerPoint, 7);
+  assert.equal(p.pointValueSource, "feed");
+});
+
+test("a non-numeric point_value is NOT treated as a feed answer", () => {
+  // `_num` would fall through to the spec anyway; the provenance must fall
+  // through with it rather than claiming an authority the number never had.
+  const e = mk();
+  e.loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+                     target: 21000, size_units: 1, current: 20000, point_value: "n/a" }]);
+  const p = e.getOpenPositions()[0];
+  assert.equal(p.dollarsPerPoint, 20);
+  assert.equal(p.pointValueSource, "spec:/NQ");
+});
+
+test("getUnpricedPositions lists exactly the guessed rows", () => {
+  const e = mk();
+  e.loadPositions([
+    { symbol: "BHP.AX", direction: "long", entry: 40, stop: 38, target: 46, size_units: 100, current: 40 },
+    { symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, target: 21000, size_units: 1, current: 20000 },
+    { symbol: "CBA.AX", direction: "long", entry: 100, stop: 95, target: 120, size_units: 10, current: 100 },
+  ]);
+  assert.deepEqual(e.getUnpricedPositions().sort(), ["BHP.AX", "CBA.AX"]);
+});
+
+test("a clean book reports nothing unpriced", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900,
+                     target: 21000, size_units: 1, current: 20000 }]);
+  assert.deepEqual(e.getUnpricedPositions(), []);
+});
+
+// Capture everything a verbose engine prints, construction included — the
+// engine logs its opening state, so a capture installed after `mk()` both
+// misses that line and leaks it into the CI log.
+function captureLog(fn) {
+  const seen = [], orig = console.log;
+  console.log = (...a) => seen.push(a.join(" "));
+  try { fn(); } finally { console.log = orig; }
+  return seen;
+}
+
+test("the unpriced warning names every symbol, so the console is actionable", () => {
+  const seen = captureLog(() => {
+    mk({ verbose: true }).loadPositions([
+      { symbol: "BHP.AX", direction: "long", entry: 40, stop: 38, target: 46, size_units: 100, current: 40 },
+      { symbol: "CBA.AX", direction: "long", entry: 100, stop: 95, target: 120, size_units: 10, current: 100 },
+    ]);
+  });
+  const warn = seen.find(l => l.includes("no $/point source"));
+  assert.ok(warn, "an unpriced book must say so");
+  assert.ok(warn.includes("BHP.AX") && warn.includes("CBA.AX"),
+    "naming the count without the symbols is not actionable");
+});
+
+test("a fully-priced book stays quiet", () => {
+  const seen = captureLog(() => {
+    mk({ verbose: true }).loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000,
+      stop: 19900, target: 21000, size_units: 1, current: 20000 }]);
+  });
+  assert.ok(!seen.some(l => l.includes("no $/point source")),
+    "a warning that fires on a clean book is a warning nobody reads");
+});
+
+test("reloading replaces the provenance rather than accumulating it", () => {
+  const e = mk();
+  e.loadPositions([{ symbol: "BHP.AX", direction: "long", entry: 40, stop: 38, target: 46, size_units: 100, current: 40 }]);
+  e.loadPositions([{ symbol: "/NQ", direction: "long", entry: 20000, stop: 19900, target: 21000, size_units: 1, current: 20000 }]);
+  assert.deepEqual(e.getUnpricedPositions(), []);
+});
+
 // ─────────────────────────────── summary ─────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);
 if (failed) { console.error(`FAILED  ${failed} failed, ${passed} passed`); process.exit(1); }

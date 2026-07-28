@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   1152 pytest (53 files) + 262 JS — EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   1193 pytest (55 files) + 613 JS (15 suites) — EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -1132,6 +1132,12 @@ divide `fixed` by `_fx_of(market)` before sizing — but it makes every future A
 position **~43% larger in units**, in the ringfenced file. That is position SIZE.
 Flagged, not taken.
 
+**#61 has a front-end twin, found 2026-07-28 and also flagged rather than
+fixed** — `dollarsPerPoint` in `public/js/risk_manager.js` falls back to `1` for
+a bare ASX ticker with no `STOCK.AX` class, which is ~43% overstated at 0.6969.
+The engine now RECORDS which source it used but changes no arithmetic; see "The
+Lighthouse budget was measuring the TAPE" below.
+
 ### Two items closed as FINDINGS, and neither may be "fixed" later
 
 - **#70 — the grade hysteresis counter is correct.** The item is right that
@@ -1453,11 +1459,18 @@ re-typed fixture drifts in step with the bug it is supposed to catch.
 
 ---
 
-## The screenshot gate was the daily failure email (2026-07-28)
+## The screenshot gate was A daily failure email (2026-07-28)
 
-Reported directly: *"we're getting one of these practically daily now."* It was
-`test.yml`'s screenshot-diff step, and it had been failing on the CALENDAR rather
-than on any change to the code. Read this before touching
+> **CORRECTED THE SAME DAY — this heading used to read "was THE daily failure
+> email" and that was wrong.** The defect below is real and worth having fixed,
+> but it is not what was going red that week. The gate that was actually failing
+> is the LIGHTHOUSE BUDGET, one section down; read both, and read that one first
+> if you are chasing a red run today. The two are the same shape — a gate
+> measuring something that moves on its own — which is precisely why fixing one
+> did not stop the emails and why I believed it had.
+
+`test.yml`'s screenshot-diff step had been failing on the CALENDAR rather than on
+any change to the code. Read this before touching
 `test/e2e/screenshot-diff.e2e.js` or the baseline cache key.
 
 - **The tell was in the fix history, not the code.** The cache key had been
@@ -1535,6 +1548,154 @@ than on any change to the code. Read this before touching
 
 ---
 
+## The Lighthouse budget was measuring the TAPE (2026-07-28)
+
+**This is the gate that was actually sending the daily failure emails.** The
+section above fixed a real defect in a different gate and I believed it had
+closed this; it had not, and the next run — of the fix commit itself — failed
+again. Read this one first if you are chasing a red run.
+
+### How it was found, and what I should have done a day earlier
+
+By **reproducing the job**, which is the whole lesson here. The section above was
+diagnosed from the *fix history* (nine cache-key bumps) and never from a failing
+run. "This gate has a permanent bug" and "this gate is what went red on Tuesday"
+are different claims; only the first was supported.
+
+CI *logs* are not readable from a sandbox session (`gh` and `api.github.com` both
+403), which is what made inference tempting. But the `e2e` job is **entirely
+reproducible locally** — that is the thing worth remembering:
+
+```bash
+git worktree add -f /tmp/ci-repro <sha>          # the exact commit CI ran
+export PW_CHROMIUM=/opt/pw-browsers/chromium     # preinstalled; NEVER `npx playwright install`
+node test/e2e/smoke.e2e.js                       # and screenshots / lighthouse / screenshot-diff
+```
+
+At `9d6221fe`: `javascript` green, `python` green, `e2e` **red on the third of
+five steps**, one line — `FAIL transfer 5.00MB < 5.0MB`.
+
+### What 5.00MB was made of
+
+4.15MB of committed scan data (`asx_vivek.json` 2.06, `phasemap/asx/latest.json`
+1.38, `vivek_backtest_longonly.json` 0.62, five smaller files 0.30) plus ~0.85MB
+of all code, CSS and fonts together.
+
+**The growth was legitimate market breadth, not bloat** — checked rather than
+assumed. Live vs fixture `asx_vivek.json` is the same schema with **343 rows
+against 204**, every field group scaling with the row count (1.68× the rows,
+1.74× the bytes). Nothing regressed. The budget was gated on **how many ASX
+stocks happened to set up that day**.
+
+### The two gates are the same shape — that is why one fix did not cover both
+
+Both were measuring something that moves on its own, so both failed on commits
+that did not change it. The screenshot gate's moving part was the **calendar**;
+this one's is the **tape**.
+
+The delivery mechanism is identical too, and it is worth internalising before
+adding any gate that reads `public/data/`: test.yml's path filter **deliberately
+excludes** `public/data/**`, so the ~20 daily scan commits never trigger the
+gate. The payload grows silently for days and the next unrelated **code** push
+wears the red. That exclusion is still correct — it exists so 20 daily commits
+don't each pay a Playwright install — but it makes any data-reading gate a
+delayed-action fuse pointed at whoever pushes next.
+
+- **Corollary that cost a day: a failing step ABORTS the job.** Lighthouse runs
+  two steps before `screenshot-diff`, so at `9d6221fe` the screenshot fix was
+  never merely unproven in CI — it was **unexecuted**. A green step later in a
+  job tells you nothing if an earlier one is red.
+
+### The fix is two layers, and only one of them is a gate
+
+1. **The gate serves a STAGED root, not `public/`.** A temp dir of symlinks to
+   every `public/` entry except `data`, plus one symlink pointing `data` at
+   `test/e2e/fixtures/data` — the same fixture set `screenshot-diff` routes to,
+   so the two e2e gates now measure and photograph the *same page*. It has to be
+   done at the HTTP root rather than with request interception because
+   **Lighthouse drives Chrome through `chrome-launcher`, not Playwright**, so
+   `ctx.route()` is not available to it. `unstageRoot` unlinks and removes the
+   dir in a `finally`, swallowing errors — a leaked temp dir is not worth failing
+   a gate over.
+2. **The real payload is still measured and is structurally incapable of failing
+   the run.** Derived from Lighthouse's own `network-requests` audit rather than
+   a hard-coded URL list, so it stays complete as pages add fetches and it
+   records 404s (a missing fixture gets named, not silently skipped). It returns
+   `null` when the audit is unreadable — **never a zeroed object**, which would
+   read as "0MB, all good". Prints every run, raises a `::warning::` past 7MB,
+   gates never.
+
+**Slimming a 4.45MB dashboard payload is a product decision, not a CI fix.** That
+is precisely why this half reports instead of gating — the CI job's business is
+regressions in code, and it had been quietly conscripted into having opinions
+about market breadth.
+
+With `/data/` pinned the budget could also come DOWN: **5.0MB → 2.5MB**, against
+a now-deterministic 1.86MB baseline. Post-fix: `transfer 1.86MB`, `CLS 0.123`,
+`live payload ~5.08MB` across 11 `/data/` requests — which independently
+corroborates the 5.00MB measured off live data by a different mechanism.
+
+### Tests, and the one deliberately NOT written
+
+`tests/test_lighthouse_budget.py` (14). Mutation-verified: 19 mutations, one at a
+time, every one caught.
+
+- **The pass found a real gap.** `test_the_page_is_loaded_in_measurement_mode`
+  asserted `"?lite=1" in src` — and the file's own header comment discusses
+  `?lite=1` at length, so stripping the query string off `URL_UNDER_TEST` left
+  the gate measuring un-pinned deferred work while the test stayed green **on the
+  prose**. It now asserts against the URL constant and against
+  `lighthouse(URL_UNDER_TEST,` being the navigation call. TOP100 #34's
+  mirror-drift in its cheapest form, and unreachable by reading.
+- **The test I nearly wrote and rejected:** asserting `TRANSFER_BUDGET_MB * MB <
+  (size of real public/data)`. It reads `public/data/`, so it goes red on a quiet
+  tape — rebuilding the exact tape-dependency the fix removes, one level up, in
+  the suite that exists to prevent it. The module docstring records this so it
+  does not get "added for completeness" later.
+
+### Two verification habits this cost enough to be worth keeping
+
+- **Prove a mechanism in a browser, not with grep.**
+  `tests/test_screenshot_determinism.py` can only check that `addInitScript`
+  appears in the source — it cannot tell an installed freeze from a decorative
+  one. A throwaway probe loaded the real page in two contexts, one frozen and one
+  not, and showed the page itself reporting `Date.now() === FROZEN_MS`, the
+  Proxy's escape hatches intact (`Date.parse`, `Date.UTC`, `instanceof`, explicit
+  args), and the control seeing a real clock already **2.76 days past** the
+  freeze — i.e. load-bearing today, not theoretically.
+- **A pipeline's `$?` is the LAST command's status.** `node x.js | tail -40; echo
+  "RC=$?"` reports `tail`'s exit code, which is always 0. Redirect to a log file
+  and echo `$?` immediately, or a failing gate reads as a passing one.
+
+### Two smaller findings shipped in the same batch
+
+Both are about a number that was right but had **nothing on it saying what it
+meant** — the failure mode that survives review because the value looks fine.
+
+- **The backtest's dollar column had no stated basis.** `_sizing_basis()` now
+  travels with both `params` call sites in `scanner/vivek_backtest.py`
+  (`equity`, `position_notional`, `sizing_mode`), and `build_report` carries a
+  caveat naming it and pointing readers at `total_r`. Not a wrong number — a
+  right number with no regime attached, which **after the 2026-07-28 resize is
+  the difference between two incomparable series** being read as one track
+  record. `tests/test_backtest_truth.py` 24 → 31.
+- **`dollarsPerPoint` provenance is now recorded** in `public/js/risk_manager.js`
+  — `"feed"` / `spec:<symbol>` / `"fallback"` — with a warn log and
+  `getUnpricedPositions()`. **The arithmetic is byte-for-byte unchanged**, and
+  that is the point: a bare ASX ticker has no `STOCK.AX` class, falls back to
+  `1`, and is ~43% overstated at 0.6969. That is the front-end twin of #61's
+  live half and it is **position sizing**, so it is FLAGGED FOR VIV, not fixed.
+  Latent today only because `vivek_bot_book.json` holds zero positions — it
+  becomes real the moment one is opened. `test/risk_manager.test.js` 54 → 65
+  (suite 9, with a `captureLog` helper); `bot.html` bumped `risk_manager.js?v=9`
+  → `?v=10` per the asset-version rule.
+
+- Gate at this commit: **1193 pytest across 55 files, 613 JS assertions across 15
+  suites**, all four e2e steps green locally including `screenshot-diff` at 0.00%
+  drift on four images.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
@@ -1591,8 +1752,8 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (1152 tests / 53 files, 2026-07-28)
-node test/risk_manager.test.js           # + 9 more JS suites, 262 total; see test.yml
+python -m pytest -q                      # full gate (1193 tests / 55 files, 2026-07-28)
+node test/risk_manager.test.js           # + 14 more JS suites, 613 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

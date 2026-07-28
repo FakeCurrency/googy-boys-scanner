@@ -695,11 +695,36 @@
      * Seed open positions from the dashboard feed. Does NOT gate (these are
      * already-open trades), but DOES re-apply the TP1→BE rule against each
      * position's current price so restored state is internally consistent.
+     *
+     * POINT-VALUE PROVENANCE (2026-07-28). `dollarsPerPoint` decides what a
+     * one-point move is WORTH, and it is resolved from three places of very
+     * different authority: the feed's own `point_value`, the instrument table,
+     * or — for anything the table does not know — a bare `1`. The ALIASES note
+     * above already calls the unknown-symbol fallback a trap, and names the
+     * reason it cannot be fixed by widening the alias map: a half-populated map
+     * prices SOME ASX positions in AUD-as-USD and others correctly, "with no
+     * way to tell which from the screen."
+     *
+     * `pointValueSource` is that way to tell. It does NOT change any number —
+     * the arithmetic on the line below is byte-for-byte what it was — it
+     * records which of the three answers was used, so an unpriced position is
+     * a thing you can see and count rather than a thing you can only deduce.
+     * Whether bare ASX tickers should resolve to the STOCK.AX class is a
+     * sizing decision and stays the owner's.
+     *
+     * Worth knowing while reading this: NOTHING in the repo writes
+     * `point_value` — the only reference is the read below — so today the feed
+     * branch is unreachable and every position takes the spec-or-fallback
+     * path. The `1` is correct for a US share (US$1 per US$1 of price) and
+     * wrong for an ASX one by the AUD/USD rate.
      */
     loadPositions(list) {
       this._positions = {};
+      const unpriced = [];
       (list || []).forEach(p => {
         const spec = this.getInstrumentSpec(p.symbol);
+        const fed = Number.isFinite(Number(p.point_value));
+        if (!fed && !spec) unpriced.push(p.symbol);
         const pos = {
           symbol: p.symbol,
           direction: p.direction,
@@ -710,6 +735,7 @@
           target: this._num(p.target, 0),
           units: this._num(p.size_units, this._num(p.units, 0)),
           dollarsPerPoint: this._num(p.point_value, spec ? spec.dollarsPerPoint : 1),
+          pointValueSource: fed ? "feed" : (spec ? `spec:${spec.symbol}` : "fallback"),
           current: this._num(p.current, this._num(p.entry, 0)),
           entryCount: this._num(p.entry_count, 1),
           openedAt: p.opened_at || null,
@@ -723,8 +749,27 @@
         // already passed TP1 shows the break-even stop immediately.
         this._applyTP1(pos, pos.current);
       });
+      if (unpriced.length) {
+        this._log("warn",
+          `${unpriced.length} position(s) have no $/point source and fell back to 1: ` +
+          `${unpriced.join(", ")}. For a US share that is correct; for an ASX one it ` +
+          `prices an AUD move as USD (~43% overstated at 0.70). Open risk and ` +
+          `unrealised P&L for these rows are in the quote currency, not the book's.`);
+      }
       this._emit();
       return this.getOpenPositions();
+    }
+
+    /**
+     * Which open positions are priced by the bare `1` fallback rather than by
+     * the feed or the instrument table. The counterpart to `pointValueSource`:
+     * a caller that wants to badge or refuse these rows asks here instead of
+     * re-deriving the resolution rules and drifting from them.
+     */
+    getUnpricedPositions() {
+      return this.getOpenPositions()
+        .filter(p => p.pointValueSource === "fallback")
+        .map(p => p.symbol);
     }
 
     /**

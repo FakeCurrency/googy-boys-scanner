@@ -13,6 +13,8 @@ trailed row), #74 (cost of a forced close).
 
 import json
 import math
+import pathlib
+import re
 
 import numpy as np
 import pandas as pd
@@ -355,3 +357,129 @@ def test_crypto_volume_is_already_dollars():
     df = _liq_frame([1e6] * n)
     assert bt._turnover_series(df, "crypto")[n - 1] == pytest.approx(1e6)
     assert bt._turnover_series(df, "nasdaq")[n - 1] == pytest.approx(1e7)
+
+
+# --------------------- the dollar column's basis (2026-07-28, out of band)
+#
+# Not a wrong number this time — a MISSING label on a right one. The report's
+# dollar columns are priced by whichever sizing model config is in, the two
+# models differ by an order of magnitude on identical trades, and `params`
+# recorded only `equity` — which under fixed-notional has no effect on those
+# dollars at all. The tests below pin the label, and pin the fact that makes
+# the label necessary.
+
+def _params_call_sites() -> list[str]:
+    """Every place the report's `params` dict is literally constructed."""
+    src = pathlib.Path(bt.__file__).read_text(encoding="utf-8")
+    return re.findall(r"params = \{(.*?)\}\n", src, re.S)
+
+
+def test_the_report_records_WHICH_sizing_model_priced_its_dollars():
+    """`equity` alone cannot answer it, and it is the field that looks like it can."""
+    basis = bt._sizing_basis()
+    assert set(basis) == {"equity", "position_notional", "sizing_mode"}
+    assert basis["sizing_mode"] in ("fixed_notional", "risk_pct")
+    # The mode must agree with the notional it is derived from, in both
+    # directions — a report claiming `risk_pct` while a notional is configured
+    # would be worse than no label.
+    assert (basis["sizing_mode"] == "fixed_notional") == (basis["position_notional"] > 0)
+    assert basis["sizing_mode"] == ("fixed_notional"
+                                    if float(getattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 0) or 0) > 0
+                                    else "risk_pct")
+
+
+def test_under_fixed_notional_the_equity_does_NOT_price_the_dollars(monkeypatch):
+    """The reason `equity` is not the basis, demonstrated rather than asserted.
+
+    This is the whole finding in one test. Under fixed-notional, units are
+    `notional / entry`, so a 15x change in EQUITY moves `_risk_usd` by exactly
+    nothing — while a reader looking at `params.equity: 10000` next to
+    `total_usd` would reasonably assume the two are connected.
+    """
+    tr = _trade(market="nasdaq", entry=100.0, stop=90.0, risk=10.0)
+    monkeypatch.setattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 5_000)
+
+    monkeypatch.setattr(bt, "EQUITY", 10_000)
+    small = bt._risk_usd(tr)
+    monkeypatch.setattr(bt, "EQUITY", 150_000)
+    big = bt._risk_usd(tr)
+    assert small == pytest.approx(big), "fixed-notional dollars must ignore equity"
+    # $5,000 at $100 = 50 units, 50 x $10 of stop = $500.
+    assert big == pytest.approx(500.0)
+
+
+def test_under_risk_pct_the_equity_DOES_price_the_dollars(monkeypatch):
+    """The other half — otherwise the test above would pass on a broken sizer."""
+    tr = _trade(market="nasdaq", entry=100.0, stop=90.0, risk=10.0)
+    monkeypatch.setattr(config, "VIVEK_BOT_POSITION_NOTIONAL", 0)
+
+    monkeypatch.setattr(bt, "EQUITY", 10_000)
+    small = bt._risk_usd(tr)
+    monkeypatch.setattr(bt, "EQUITY", 150_000)
+    big = bt._risk_usd(tr)
+    assert big == pytest.approx(small * 15), "risk-%% dollars must scale with equity"
+
+
+def test_the_two_params_call_sites_cannot_drift():
+    """`run_backtest` and the CLI both build `params`; only one used to be edited.
+
+    They are near-duplicates fifty lines apart, which is exactly the shape that
+    ships a labelled report from one entry point and an unlabelled one from the
+    other. Both must splat the single helper.
+    """
+    sites = _params_call_sites()
+    assert len(sites) >= 2, "params call sites moved -- re-point this test"
+    for body in sites:
+        assert "_sizing_basis()" in body, (
+            "a `params` dict is built without the sizing basis:\n" + body)
+        assert '"equity"' not in body, (
+            "equity is being stamped inline again, which is how one call site "
+            "would ship a labelled report and the other an unlabelled one -- "
+            "go through _sizing_basis():\n" + body)
+
+
+def test_the_caveat_names_the_field_a_reader_must_check():
+    """A caveat that does not name `sizing_mode` sends the reader nowhere."""
+    report = bt.build_report([], {}, bt._sizing_basis(), "complete")
+    dollar_caveats = [c for c in report["caveats"] if "total_usd" in c]
+    assert dollar_caveats, "the dollar columns lost their caveat"
+    text = " ".join(dollar_caveats)
+    assert "sizing_mode" in text and "total_r" in text, (
+        "the caveat must name both the field that explains the dollars and the "
+        "ratio a reader should use instead:\n" + text)
+
+
+def test_no_page_renders_a_dollar_figure_off_a_BACKTEST_artefact():
+    """The label above is only worth having if nothing reads past it.
+
+    `total_usd` is a legitimate field on the LIVE book (`vivek_bot_book.json`,
+    written by `vivek_guard`) and a trap on the backtest, and the two look
+    identical at a call site. Today the Insights page reads `total_r` and the
+    entry chips read `expectancy_r` — both ratios, both basis-free — and no
+    client file touches the dollars at all. This pins that, scoped to the files
+    that actually fetch a backtest artefact so it cannot go red on an unrelated
+    live-book render elsewhere.
+
+    If this fails on a file that legitimately shows the LIVE book's dollars,
+    the fix is to move that render into a file that does not also consume a
+    backtest — not to widen the test. The whole hazard is one file holding both
+    meanings of the same field name.
+    """
+    root = pathlib.Path(bt.__file__).resolve().parents[1]
+    client = sorted((root / "public" / "js").glob("*.js")) + sorted((root / "public").glob("*.html"))
+    consumers = [p for p in client if "vivek_backtest" in p.read_text(encoding="utf-8")]
+    assert consumers, "no client file fetches a backtest artefact -- re-point this test"
+
+    banned = ("total_usd", "max_dd_usd", "params.equity")
+    offences = []
+    for p in consumers:
+        src = p.read_text(encoding="utf-8")
+        offences += [f"{p.name}: {b}" for b in banned if b in src]
+    assert not offences, (
+        "a backtest artefact's dollar column is being read by client code:\n  "
+        + "\n  ".join(offences)
+        + "\n\nThose dollars are priced under params.sizing_mode, not under the "
+          "live book. Under fixed-notional the equity does not enter them at "
+          "all, so they cannot be scaled to the real account by any factor. "
+          "Render total_r / expectancy_r instead -- ratios carry across both "
+          "sizing models, which is why every existing consumer uses them.")
