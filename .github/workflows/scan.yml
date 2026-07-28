@@ -53,9 +53,10 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: scan
-  cancel-in-progress: false
+# NOTE: the "scan" mutex now lives on the `scan` JOB, not here at workflow
+# level. See the comment on that job — moving it is what lets the gate below
+# actually reach its own curl. Do not re-add a workflow-level concurrency
+# block: it re-breaks every freshness backstop in this repo at once.
 
 jobs:
   # Markets are closed on weekends, so scheduled stock scans there are pointless.
@@ -73,19 +74,31 @@ jobs:
           DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
           # :47 ASX BACKSTOP (2026-07-24): only exists to catch a :07 run the
           # GitHub scheduler silently never started. Ask the LIVE site whether
-          # a scan landed within the last hour (max_h=1); if yes, this run is
-          # redundant — skip. If the data is stale OR health is unreachable,
+          # an ASX scan landed within the last hour (max_h=1); if yes, this run
+          # is redundant — skip. If the data is stale OR health is unreachable,
           # run the missed scan (fail open: a broken probe must never leave
           # the site stale).
+          #
+          # market=asx IS LOAD-BEARING (2026-07-28). Without it the probe read
+          # the COMBINED bot book, whose updated_at moves whenever ANY market
+          # commits — so it answered "did the pipeline commit?" when the only
+          # question this backstop cares about is "did ASX scan?". Worked example
+          # from the commit log: at 01:47 UTC Mon 2026-07-27 the combined book was
+          # 24 min old (crypto_bot's 01:23 commit) so the old probe said ok:true
+          # and this backstop skipped — while the newest ASX scan was 4.6 h old
+          # (Sun 21:11) and the 00:07 + 01:07 ASX crons had both produced nothing.
+          # Exactly the miss it exists to catch, waved through by a probe aimed at
+          # the wrong file. Scoping it to this backstop's own market is the fix.
+          # Pinned by test/health.test.js ("the combined book hides a stale ASX").
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "47 0-5 * * 1-5" ]; then
-            HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?max_h=1" || echo "")
+            HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=asx&max_h=1" || echo "")
             echo "backstop health probe: $HEALTH"
             if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
-              echo "Backstop :47 — a scan already landed this hour. Skipping."
+              echo "Backstop :47 — an ASX scan already landed this hour. Skipping."
               echo "run=false" >> "$GITHUB_OUTPUT"
               echo "market_override=" >> "$GITHUB_OUTPUT"
             else
-              echo "Backstop :47 — data stale or probe failed. Running the missed scan."
+              echo "Backstop :47 — ASX data stale or probe failed. Running the missed scan."
               echo "run=true" >> "$GITHUB_OUTPUT"
               echo "market_override=" >> "$GITHUB_OUTPUT"
             fi
@@ -102,10 +115,38 @@ jobs:
             echo "market_override=" >> "$GITHUB_OUTPUT"
           fi
 
+  # THE "scan" MUTEX LIVES HERE, NOT AT WORKFLOW LEVEL (2026-07-28).
+  #
+  # Why it matters: this group is shared with crypto_bot.yml so the two never
+  # write the paper book at once — a real invariant, and load-bearing now that
+  # the book cap is GLOBAL (30 across all markets: two concurrent writers could
+  # each read "23 open" and both open, blowing the ceiling). That part is kept
+  # exactly as it was; only the SCOPE changed.
+  #
+  # What was broken: GitHub allows ONE pending run per concurrency group — a
+  # newly-queued run CANCELS the previously-pending one. With the group applied
+  # at workflow level, four arrivals per hour landed in a one-slot queue during
+  # ASX mornings (:07 scan, :22 crypto, :47 this backstop, :52 crypto backstop)
+  # while a full 3-market cycle runs 40–80 min. So whenever a scan was in
+  # progress, the :47 ASX backstop went pending and the :52 crypto arrival
+  # cancelled it five minutes later — every time, deterministically. Both of
+  # this repo's freshness backstops were added to catch dropped runs, and both
+  # were being dropped by each other before their gate job could run a single
+  # curl. That is the self-defeating shape: adding crons to a saturated
+  # one-slot queue makes cancellation MORE likely, not less.
+  #
+  # The fix: gate jobs are cheap (one curl, ~15 s) and write nothing, so they
+  # no longer belong in the mutex. They now always execute and decide; only
+  # this job — the one that actually scans and commits — queues. A backstop
+  # that decides "fresh, skip" now costs zero queue slots instead of evicting
+  # whatever was waiting. Mutual exclusion between writers is unchanged.
   scan:
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: scan
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 

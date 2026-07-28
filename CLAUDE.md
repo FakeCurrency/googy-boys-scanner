@@ -84,8 +84,8 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | Workflow | Schedule | Does |
 |---|---|---|
 | test.yml | every push/PR | pytest + JS tests + syntax gate |
-| scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only) | VIVEK scans + bot book + confluence alert |
-| crypto_bot.yml | hourly 24/7 | crypto scan + crypto slice of the bot book |
+| scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only); `:47` ASX freshness backstop | VIVEK scans + bot book + confluence alert |
+| crypto_bot.yml | `:22` + `:52` all days; the `:22` fire skips weekday scan.yml windows (scan.yml already scans crypto then), `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
 | backup_book.yml | daily 21:35 UTC | snapshots the bot book + journal state into `backups/` (keep 30) + uploads the set as a 90-day run artifact (off-tree copy, 2026-07-21) |
 | reco_note.yml | daily 08:52 UTC | auto-writes `public/data/reco_note.json` from committed scan data (`scripts/reco_note.py`, author "auto"); never overwrites a same-day hand-written Claude note; commentary only, outside every signal path (2026-07-23 — cloud scheduled Claude sessions can't reach the push token, so CI owns the daily cadence) |
@@ -99,6 +99,16 @@ data_universe/         bundled ticker CSVs (fallbacks)
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted.)
+
+**The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108).**
+scan.yml and crypto_bot.yml share concurrency `group: scan` so two writers can
+never touch the paper book at once (load-bearing: the 30-position cap is global,
+so concurrent writers could each read "23 open" and both open). That group sits
+on the *scan*/*crypto* JOBS, not at workflow level. GitHub keeps only ONE pending
+run per group and cancels the previously-pending one, so workflow-level scoping
+put the cheap gate jobs in the same queue — and every `:47` ASX backstop was
+being evicted by the `:52` crypto arrival five minutes later, before it could
+probe. Do not move these blocks back up to workflow level.
 
 **Silent-failure protection (2026-07-20, Phase 5):** the committing workflows
 (scan/crypto_bot/phasemap/backup_book) run `scripts/assert_staged.sh` after
@@ -129,13 +139,18 @@ assert_staged call and a WATCHDOG_RUNS entry.
   symbol, 3 per sector, daily+weekly loss guards, manual close via
   close_position.yml journal_type=bot.
 - **The 3-per-sector cap does NOT bind on NASDAQ** (REFINEMENTS #38): rows with
-  no sector are exempt, and `universe._fetch_nasdaq` has no sector column to
-  read, so 0 of ~1,400 NASDAQ names carry one. ASX rows all carry a sector;
-  crypto is rescued by synthetic `crypto-major`/`crypto-alt` buckets keyed off
-  the symbol. Since one market may now hold all 30 slots, a fully-NASDAQ book
-  has NO correlation control. `decide()` logs a warning and publishes
-  `summary["sector_coverage"]`. Fixing it changes which trades get taken —
-  **owner decision, pending; do not ship it autonomously.**
+  no sector are exempt, `universe._fetch_nasdaq` has no sector column, and
+  nothing else fills one in — 0 of 269 rows in the last NASDAQ scan carried a
+  sector. ASX rows all carry one; crypto is rescued by synthetic
+  `crypto-major`/`crypto-alt` buckets keyed off the symbol. Since one market may
+  now hold all 30 slots, a fully-NASDAQ book has NO correlation control.
+  `decide()` logs a warning and publishes `summary["sector_coverage"]`.
+  **The data already exists** — `scanner/sectorcache.py` maintains
+  `data/sector_map.json` (340 NASDAQ entries; it covers 269/269 of those same
+  scan rows) but it is declared display-only and nothing merges it into the
+  rows `decide()` sees. So the fix is WIRING, not sourcing. Doing it changes
+  which trades get taken — **owner decision, pending; do not ship it
+  autonomously.**
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.

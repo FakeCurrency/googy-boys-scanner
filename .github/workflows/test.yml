@@ -61,6 +61,8 @@ jobs:
         run: node test/cache.test.js
       - name: Design-token contrast gate (#96)
         run: node test/contrast.test.js
+      - name: Freshness-probe tests (/api/health per-market mode)
+        run: node test/health.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

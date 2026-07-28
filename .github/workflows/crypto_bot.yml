@@ -39,9 +39,12 @@ permissions:
   contents: write
   actions: read      # watchdog run-history probes (2026-07-20 Phase 5)
 
-concurrency:
-  group: scan
-  cancel-in-progress: false
+# NOTE: the "scan" mutex now lives on the `crypto` JOB below, not here at
+# workflow level (2026-07-28) — see the long comment there and the matching one
+# in scan.yml. Workflow-level grouping put this file's cheap gate job into the
+# same one-slot queue as the scans, so the :52 freshness backstop kept being
+# cancelled before it could probe, and kept cancelling scan.yml's :47 backstop
+# in turn. Do not re-add a workflow-level concurrency block here.
 
 jobs:
   # De-double the queue (2026-07-22): during weekday stock sessions scan.yml's
@@ -87,10 +90,18 @@ jobs:
           fi
           echo "run=true" >> "$GITHUB_OUTPUT"
 
+  # The "scan" mutex — job-scoped since 2026-07-28 (full rationale in scan.yml,
+  # on its `scan` job). Short version: this job is the one that writes the paper
+  # book, so this job is what must never run beside scan.yml's. The gate above
+  # only curls, so keeping it out of the queue lets it actually reach its probe
+  # instead of being cancelled by the next arrival in the group.
   crypto:
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: scan
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 

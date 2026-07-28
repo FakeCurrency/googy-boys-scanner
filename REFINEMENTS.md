@@ -272,7 +272,7 @@ The VIVEK_BOT_MAX_PER_SECTOR=3 correlation cap is a silent no-op almost everywhe
 
 **Still broken (verified against the live book, 2026-07-28):**
 
-1. **NASDAQ has no sector data at all** — `universe._fetch_nasdaq` hardcodes `sector: ""` (the NASDAQ trader file has no sector column), so 0 of 269 scanned rows and 10 of 10 open positions carry one. `decide()`'s guard `max_sector and sector and ...` exempts them, so the cap never binds on NASDAQ. Needs a name/industry-based fallback grouping (like scalp's `_corr_group`) or a real sector source.
+1. **NASDAQ rows reach `decide()` with no sector** — `universe._fetch_nasdaq` hardcodes `sector: ""` (the NASDAQ trader file has no sector column), so 0 of 269 scanned rows and 10 of 10 open positions carry one. `decide()`'s guard `max_sector and sector and ...` exempts them, so the cap never binds on NASDAQ. **This is a wiring gap, not a data gap** (corrected 2026-07-28 — an earlier draft of this item said a fallback grouping had to be invented): `scanner/sectorcache.py` already maintains `data/sector_map.json`, keyed `nasdaq:AAON -> {"sector": ...}`, refreshed by its own scan.yml step, and it covers **269 of those same 269 rows — 100%**. It was scoped display-only ("nothing in any signal path reads this"), so nothing merges it into the rows the bot sees. The fix is to merge it in before `decide()` and let the existing cap do its job; no new source and no invented grouping needed.
 2. **Legacy ASX rows are invisible to the seeding** — the 8 ASX positions opened before the 2026-07-20 ticket fix still carry `sector:''`, so the counter starts low and ASX can take 3 *more* in a sector a legacy row already occupies. Needs a one-off backfill from the universe cache.
 
 **Done 2026-07-28:** `decide()` now logs a warning when the cap is configured but under half the rows carry a sector, and publishes `summary["sector_coverage"]` / `summary["max_per_sector"]` so the blindness is visible instead of assumed-fixed.
@@ -763,3 +763,19 @@ mynames.html still carries explicit JOURNAL and ALERTS howto-links immediately b
 Refresh Data.bat and scan_scheduled.bat (tracked, untouched since 2026-06-16) run `scanner.run --journal` — feeding the dead legacy journal — and the root scan.log shows the last local scheduled run crashed on 2026-06-16 (ModuleNotFoundError: pandas); scans have run in GitHub Actions since. 'Start Fib Scanner.bat' also still brands the app 'Vivek's Beta Scanner', against the CLAUDE.md naming rule. Delete the two scan .bats and scan.log; keep/rename only the local-server launcher.
 
 *Files: Refresh Data.bat, scan_scheduled.bat, Start Fib Scanner.bat, scan.log*
+
+---
+
+# Found after the audit
+
+Items discovered during ordinary work rather than by the 2026-07-16 reviewer
+sweep. Same format, numbering continues.
+
+## 108. Stop the freshness backstops from cancelling each other in the scan queue
+**Impact 5 · Effort S · ops · FIXED 2026-07-28**
+
+GitHub allows exactly ONE pending run per concurrency group: queue a second and the previously-pending one is cancelled. `scan` was applied at WORKFLOW level in scan.yml and crypto_bot.yml, so during ASX mornings four arrivals per hour (:07 scan, :22 crypto, :47 ASX backstop, :52 crypto backstop) contended for a one-slot queue while a full 3-market cycle takes 40-80 min. Whenever a scan was in progress the :47 ASX backstop went pending and the :52 crypto arrival evicted it five minutes later — deterministically, before its gate job could run a single curl. Both backstops exist to catch dropped runs; each was reliably dropping the other. Consistent with the observed record: 07-27 produced 7 scan commits against ~15 scheduled crons, and crypto_bot committed 6 times against 48 scheduled fires. The self-defeating shape is general — adding crons to a saturated one-slot queue raises the cancellation rate rather than the coverage rate.
+
+**Fixed:** the mutex moved from workflow level onto the JOBS that write the book (`scan.scan`, `crypto_bot.crypto`). Gate jobs only curl and write nothing, so they now always execute and decide; a backstop that answers "fresh, skip" costs zero queue slots instead of evicting whatever was waiting. Mutual exclusion between writers — load-bearing now that the 30-position cap is global and two concurrent writers could each read "23 open" and both open — is unchanged. Not verifiable from this sandbox (api.github.com is proxy-blocked, so run history cannot be read directly); confirm from the Actions run list that :47/:52 runs now appear and conclude rather than vanishing.
+
+*Files: .github/workflows/scan.yml, .github/workflows/crypto_bot.yml*

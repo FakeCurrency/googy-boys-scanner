@@ -152,6 +152,14 @@ therefore the in-repo watchdog) is down:
 3. Add your email as the alert contact. Done — it emails on 503/timeouts
    and again on recovery. (`?max_h=N` overrides the threshold per-probe.)
 
+**Per-market mode (2026-07-28):** `?market=asx|nasdaq|crypto` asks "did THIS
+market scan?" instead of "is the pipeline alive?", reading that market's
+`public/data/<m>_prices.json` sidecar rather than the combined book. Use it when
+you want to know whether one market has gone quiet — the default answer stays
+green off any other market's commit, which is right for an uptime monitor and
+wrong for a per-market check. scan.yml's `:47` ASX backstop uses it; an unknown
+market name returns 400 rather than a misleadingly healthy 200.
+
 **Prove the alert channels deliver:**
 ```bash
 python -m scanner.watchdog --test-alert   # with DISCORD_WEBHOOK_URL / GBS_SMTP_* / TELEGRAM_* exported
@@ -257,7 +265,9 @@ nothing, so the damage is contained at detection.
 GitHub → Actions → "Close position (manual)" → Run workflow:
 `journal_type=bot`, symbol, direction, market, exit price (use the live
 quote), exit date blank for today. It queues behind any running scan (same
-concurrency group — one book writer at a time; expect up to ~15 min) and runs
+`scan` concurrency group — one book writer at a time; expect up to ~15 min,
+and note GitHub keeps only one run pending per group, so a close queued behind
+a scan can be evicted by a later arrival: check it actually ran) and runs
 the `--verify` gate after writing. `swing`/`scalp` journal_types edit the
 RETIRED legacy journals — never use them for the track record.
 
