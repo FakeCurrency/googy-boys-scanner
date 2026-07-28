@@ -873,14 +873,40 @@ WATCHDOG_RUNS = {
     # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
     # It commits nothing, which is exactly why it needs an entry here: every
     # other watchdog target is caught by its output going stale, and this one
-    # has no output. Until today it could not even fail -- a non-200 emitted a
-    # warning and exited 0 -- so a dead /api/tick was invisible from both
-    # directions at once. The workflow now exits 1 after 3 failed attempts and
-    # the watchdog reads "last SUCCESSFUL run", so a persistent outage trips
-    # this within the hour. CRITICAL because while it is down no paper stop or
-    # target is evaluated unless a chart page happens to be open.
+    # has no output. This entry now answers exactly ONE question -- "is the
+    # 5-minute cron still firing at all?" -- because the workflow deliberately
+    # exits 0 on a 503 (see stop_watcher.yml and WATCHDOG_TICK_URL below), so a
+    # green run no longer implies a healthy endpoint. Endpoint HEALTH is
+    # probe_endpoints()'s job; schedule health is this one's. CRITICAL because
+    # while the cron is dead no paper stop or target is evaluated unless a
+    # chart page happens to be open.
     "stop_watcher.yml": {"max_age_h": 1.0, "severity": "CRITICAL"},
 }
+
+# Cloud stop/target watcher endpoint (functions/api/tick.js), probed directly by
+# watchdog.probe_endpoints (2026-07-28). Committed files cannot vouch for this
+# service: it writes nothing to the repo, so the ONLY way to know it works is to
+# ask it.
+#
+# PROBED UNAUTHENTICATED, ON PURPOSE. tick.js validates its own configuration
+# and then the caller's credential BEFORE it touches KV or evaluates a single
+# position, so an anonymous GET can never fire a stop, close a trade or read a
+# journal. Never add the real TICK_SECRET here to "probe it properly" -- that
+# would make the monitor run an extra unscheduled tick every 30 minutes, i.e.
+# the monitor would start moving the thing it is monitoring.
+#
+# The three answers, and why the middle one is the healthy one:
+#   503 -> TICK_SECRET (or JOURNAL_KV) missing in Cloudflare. The watcher has
+#          never been switched on; paper stops/targets only fire while a chart
+#          page is open. WARNING: a setup gap the owner closes in Cloudflare.
+#   401 -> configured, and correctly refusing an anonymous caller. HEALTHY --
+#          this is the response a working deployment gives this probe, so no
+#          finding is raised.
+#   200 -> it ran for a caller with no secret at all. The endpoint is WIDE OPEN
+#          and anyone who knows the URL can walk every synced journal. CRITICAL,
+#          and a security finding rather than a freshness one.
+WATCHDOG_TICK_URL = "https://googy-boys-scanner.pages.dev/api/tick"
+WATCHDOG_TICK_ENABLED = True
 
 # Phase 7: Health check thresholds
 HEALTH_SCAN_STALE_WARN_H = 2    # warn if health.json is older than this many hours

@@ -44,8 +44,27 @@ jobs:
           # when TICK_SECRET is unset in Cloudflare — on all 288 runs a day and
           # every one of them showed green. Nothing else watches this endpoint,
           # so "green" was the entire signal, and it meant nothing. Three tries
-          # absorb a genuine transient; a persistent outage now fails the job so
+          # absorb a genuine transient; a persistent outage fails the job so
           # GitHub emails about it.
+          #
+          # 503 IS THE ONE NON-200 THAT DOES NOT FAIL THE JOB (2026-07-28,
+          # second pass — and this is a deliberate exception, not a relapse into
+          # the meaningless green above). tick.js checks its own configuration
+          # BEFORE it does any work: no TICK_SECRET (or no JOURNAL_KV) -> 503,
+          # configured-but-unauthenticated -> 401. So 503 does not mean "the
+          # watcher broke", it means "the watcher was never switched on" — a
+          # standing setup gap that only the repo owner can close, in the
+          # Cloudflare dashboard. Failing on it emails 288 times a DAY, every
+          # day, about a fact that will not change until he acts; the first
+          # version of this shipped at 11:42 UTC and the flood started five
+          # minutes later. An alarm that cannot stop ringing gets muted, and a
+          # muted channel is how the original blackout happened. The 503 case
+          # therefore moves to scanner/watchdog.py probe_endpoints(), which has
+          # the state to say it ONCE, remind every WATCHDOG_RENOTIFY_HOURS, and
+          # say so again when it recovers — none of which a red run can do.
+          # Every OTHER non-200 still fails here: 401/000/5xx mean the watcher
+          # was configured and has now broken or gone unreachable, which is a
+          # real regression and worth an email the moment it happens.
           code=""
           for attempt in 1 2 3; do
             # NO `|| echo 000` HERE. curl writes %{http_code} even when it fails
@@ -63,17 +82,44 @@ jobs:
             if [ "$attempt" != "3" ]; then sleep 10; fi
           done
 
+          # NOT-CONFIGURED: loud on the run page, silent in your inbox. The
+          # watchdog owns this alarm (once, then every 6h, then on recovery).
+          if [ "$code" = "503" ]; then
+            echo "::warning::stop watcher NOT CONFIGURED — /api/tick is fail-closed (HTTP 503)."
+            echo "TICK_SECRET is unset in Cloudflare, so the cloud watcher has never run."
+            echo "Paper stops/targets only fire while a chart page is open."
+            {
+              echo "## Stop watcher NOT CONFIGURED"
+              echo ""
+              echo "\`${URL}\` returned **HTTP 503** — the documented fail-closed state."
+              echo ""
+              echo "\`TICK_SECRET\` is not set in the Cloudflare Pages project, so the"
+              echo "cloud stop/target watcher has never been able to run. Paper stops"
+              echo "and targets only fire while a chart page is open on some device."
+              echo ""
+              echo "**Fix:** Cloudflare Pages → the project → Settings → Environment"
+              echo "variables → add \`TICK_SECRET\`, then set the identical value as the"
+              echo "\`TICK_SECRET\` GitHub Actions secret. Redeploy for it to take effect."
+              echo ""
+              echo "This job stays green on purpose: it is a setup gap, not a"
+              echo "regression, and it would otherwise email 288 times a day. The"
+              echo "watchdog reports it once and reminds every 6h until it clears."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           if [ "$code" != "200" ]; then
             echo "::error::stop watcher DOWN — /api/tick returned HTTP ${code} on 3 consecutive attempts."
             echo "Paper stops and targets are NOT being evaluated while this fails."
-            echo "503 = TICK_SECRET missing or mismatched in Cloudflare; 000 = unreachable."
+            echo "401 = TICK_SECRET mismatched between Cloudflare and GitHub; 000 = unreachable."
             {
               echo "## Stop watcher DOWN"
               echo ""
               echo "\`${URL}\` returned **HTTP ${code}** on 3 consecutive attempts."
               echo ""
-              echo "Paper stops/targets are not being evaluated. 503 usually means"
-              echo "\`TICK_SECRET\` is unset or mismatched in Cloudflare."
+              echo "Paper stops/targets are not being evaluated. 401 means the watcher IS"
+              echo "configured in Cloudflare but this job's \`TICK_SECRET\` does not match"
+              echo "it; 000 means the site could not be reached at all."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi

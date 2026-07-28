@@ -14,6 +14,14 @@ Closes the two silent failure classes the 2026-07-20 incident exposed:
      costing zero commits (a committed heartbeat would trigger a Cloudflare
      deploy every 30 minutes and require giving the kill-switch job write
      access — both rejected by design).
+  C. SERVICES WITH NO OUTPUT (2026-07-28) — probes A and B both work by
+     watching something get stale, so a service that commits nothing and runs
+     nowhere near Actions is invisible to both. The cloud stop/target watcher
+     (/api/tick) closes paper positions inside Cloudflare KV and leaves no
+     trace in this repo; the only way to know it works is to ask it, which is
+     what probe_endpoints() does. It had in fact never been switched on at
+     all — TICK_SECRET was unset in Cloudflare, so it returned its
+     fail-closed 503 to every one of 288 calls a day, indefinitely.
 
 Hosted as a step inside TWO existing 24/7 workflows (kill_switch.yml at
 :15/:45 and crypto_bot.yml hourly) so there is no new cron to be skipped and
@@ -48,6 +56,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import urllib.error
 import urllib.request
 
 from . import config
@@ -354,6 +363,70 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
     return out
 
 
+def _default_status(url: str) -> tuple[int, str]:
+    """GET a URL and return (status_code, first bytes of body).
+
+    NO Authorization header, deliberately -- see WATCHDOG_TICK_URL in config.
+    urllib raises on 4xx/5xx instead of returning them, so both outcomes are
+    unpacked into one shape here; a transport failure (DNS, TLS, timeout,
+    connection refused) reports code 0, which callers treat as unreachable.
+    """
+    req = urllib.request.Request(url, headers={"User-Agent": "Vivek5.0-watchdog"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return int(r.getcode() or 0), r.read(400).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read(400).decode("utf-8", "replace")
+        except Exception:                                          # noqa: BLE001
+            body = ""
+        return int(getattr(e, "code", 0) or 0), body
+    except Exception:                                              # noqa: BLE001
+        return 0, ""
+
+
+def probe_endpoints(fetch_status, now: dt.datetime) -> list[dict]:
+    """Live-service probes for the things no committed file can vouch for.
+
+    The freshness probes above all work by watching an output get stale. The
+    cloud stop/target watcher has no output -- it closes paper positions inside
+    Cloudflare KV and commits nothing -- so staleness cannot see it and the
+    endpoint has to be asked directly. See WATCHDOG_TICK_URL in config for the
+    three states and why 401 is the healthy one.
+    """
+    out: list[dict] = []
+    if not getattr(config, "WATCHDOG_TICK_ENABLED", True):
+        return out
+    url = getattr(config, "WATCHDOG_TICK_URL", "") or ""
+    if not url:
+        return out
+
+    code, _body = fetch_status(url)
+
+    if code == 401:
+        return out                      # configured and refusing anon = healthy
+    if code == 200:
+        out.append(_finding(
+            "tick_endpoint_open", "CRITICAL",
+            "/api/tick answered an UNAUTHENTICATED request (HTTP 200) - the "
+            "cloud watcher is open to anyone who knows the URL and every synced "
+            "journal is reachable through it. Set TICK_SECRET in Cloudflare."))
+    elif code == 503:
+        out.append(_finding(
+            "tick_not_configured", "WARNING",
+            "/api/tick is fail-closed (HTTP 503): TICK_SECRET is not set in "
+            "Cloudflare, so the cloud stop/target watcher has never run. Paper "
+            "stops and targets only fire while a chart page is open."))
+    else:
+        shown = "is unreachable" if code == 0 else f"returned HTTP {code}"
+        out.append(_finding(
+            "tick_unreachable", "WARNING",
+            f"/api/tick {shown} - the cloud stop/target watcher cannot be "
+            f"reached, so paper stops and targets are not being evaluated "
+            f"unless a chart page is open."))
+    return out
+
+
 # ── alert state machine (pure) ─────────────────────────────────────────────────
 
 def reconcile(state: dict, findings: list[dict], now: dt.datetime,
@@ -421,6 +494,7 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
     notes: list[str] = []
     findings = probe_content(ROOT, now)
     findings += probe_runs(_default_fetch, now, notes=notes)
+    findings += probe_endpoints(_default_status, now)
 
     state_path = pathlib.Path(os.environ.get("WATCHDOG_STATE", str(STATE_FILE)))
     try:

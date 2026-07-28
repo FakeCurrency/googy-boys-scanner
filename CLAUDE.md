@@ -103,7 +103,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
 | kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) |
-| stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
+| stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal). Fails the job on a non-200 EXCEPT 503 — see "The tick endpoint" below |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
@@ -142,6 +142,52 @@ and alerts on staleness with strict noise rules (first / 6h reminder /
 recovery; red runs are GitHub's to email about). Thresholds: config
 WATCHDOG_*. When adding a workflow that commits data, give it an
 assert_staged call and a WATCHDOG_RUNS entry.
+
+### The tick endpoint — and why a 503 must NOT fail the job (2026-07-28)
+
+**`/api/tick` has never run in production.** `TICK_SECRET` is not set in the
+Cloudflare Pages project, and `functions/api/tick.js` fails closed: no secret →
+**503**, configured-but-unauthenticated → **401**. An unauthenticated probe of
+the live URL returns 503, which is proof of the unset secret rather than an
+inference. Consequence, and it is the important half of this section: **paper
+stops and targets only fire while a chart page is open on some device.** Closing
+it is the owner's action — set `TICK_SECRET` in Cloudflare Pages → Settings →
+Environment variables and mirror the identical value as the `TICK_SECRET`
+GitHub Actions secret. It is a credential; do not generate or handle one.
+
+- **stop_watcher.yml used to exit 0 on every non-200**, so all 288 daily runs
+  showed green against an endpoint that had never worked. Nothing else watched
+  it, so "green" was the entire signal and it meant nothing. Making it `exit 1`
+  fixed the blind spot and immediately created a worse one: a failure email
+  every five minutes, for ever, about a fact only the owner can change. An alarm
+  that cannot stop ringing gets muted, and a muted channel is how the original
+  blackout happened.
+- **The split is the fix: one icon was being asked two questions.** 503 means
+  *never switched on* (a standing setup gap) — the job stays green and says so
+  loudly on the run page via `::warning::` plus a step summary carrying the
+  exact Cloudflare steps. Every OTHER non-200 means *was configured and has now
+  broken* (401 = secret mismatch between Cloudflare and GitHub, 000 =
+  unreachable, 5xx = down) — still `exit 1`, still an email, because that is a
+  real regression worth hearing about the moment it happens.
+- **Endpoint health moved to `watchdog.probe_endpoints()`**, which inherits the
+  same state machine as every other finding: say it once, remind every
+  `WATCHDOG_RENOTIFY_HOURS`, and — the thing a red run structurally cannot do —
+  **announce recovery**. Three states, deliberately: 401 → healthy (configured
+  and correctly refusing an anonymous caller), 503 → WARNING, 200 → **CRITICAL**,
+  because an unauthenticated 200 means the watcher is open to anyone who knows
+  the URL and every synced journal is reachable through it. That is a security
+  finding, not a freshness one.
+- **The probe is UNAUTHENTICATED BY CONSTRUCTION and must stay that way.**
+  Sending the real secret to "probe it properly" would make the monitor fire an
+  extra unscheduled tick every 30 minutes — the monitor would start moving the
+  thing it monitors. `tests/test_watchdog.py::test_tick_probe_is_never_sent_a_credential`
+  fails if a credential ever reaches the URL.
+- **`WATCHDOG_RUNS["stop_watcher.yml"]` is retained but re-scoped** to one
+  question — "is the 5-minute cron still firing at all?" — since a green run no
+  longer implies a healthy endpoint. Note the two mechanisms cancelled rather
+  than complemented each other while this was broken: `probe_runs` stays silent
+  when a workflow's latest run FAILED (on the rule that GitHub emailed already),
+  so the watchdog was mute for exactly as long as the inbox was flooded.
 
 ---
 
