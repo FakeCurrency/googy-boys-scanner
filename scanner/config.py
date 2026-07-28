@@ -544,6 +544,28 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # the trailing 7 calendar days + open unrealised falls to -this% of equity,
 # new entries halt until the window rolls off. 0 = off.
 VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
+# REVIEW threshold (2026-07-28, owner's instruction). NOT a gate — nothing is
+# ever skipped for crossing it. When a plan the bot has already decided to take
+# would risk this % or more of the daily loss guard above, the ticket carries a
+# `review` flag so the owner can decide whether to let the bot take it or take
+# it himself, sized his own way. The two numbers it sits between: the hard
+# MAX_STOP_PCT gate caps any new position at 25% x $5,000 = $1,250 of risk,
+# which is 27.8% of the $4,500 guard, so a threshold at or above ~28 could
+# never fire; a typical A+ plan runs a 5-12% stop, i.e. $250-$600, i.e. 6-13%
+# of the guard. 15 therefore flags the genuinely wide half without crying wolf
+# on ordinary trades. 0 = off.
+VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
+
+# Push the review flag to Discord when a flagged position is actually opened
+# (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
+# and the difference is the point: that one digests EVERY open and close through
+# alert_dispatch, which fires every configured channel including email, so it is
+# off to avoid emailing routine trades. This one fires only on the flagged
+# minority, at NOTICE, to Discord alone. A flag nobody sees on the day is not a
+# flag -- the whole instruction was so the owner could decide before the trade
+# has moved. Set False to keep the flag on the row and the page but stop the
+# push.
+VIVEK_BOT_REVIEW_PUSH = True
 
 # ── Autonomous runner (scanner/broker/vivek_run.py) — Phase 1-2: dry-run + paper
 # book. NO live execution is wired yet. Live trading requires, all together:
@@ -721,6 +743,13 @@ ALERT_SEVERITY = {
     # order rejections and circuit breakers in the same feed and at the same
     # volume. Nothing is wrong when this fires -- something is HAPPENING.
     "sector_run":      "NOTICE",
+    # A position was opened carrying a review flag (2026-07-28, owner: "Flag
+    # this in the future so i can verify whether claude or I should take the
+    # position or not"). Same tier and the same reason: the trade passed every
+    # rule and was taken correctly, so nothing is broken -- but it is heavy
+    # enough that the owner may want it as HIS position rather than the bot's,
+    # and that decision has a shelf life measured in hours.
+    "trade_review":    "NOTICE",
 }
 
 # Set False to silence all Telegram sends without touching secrets.
@@ -757,6 +786,13 @@ ALERT_RATE_LIMITS = {
     # silence the second — and scan.yml runs the markets sequentially inside a
     # single job, which makes that the normal case rather than an edge one.
     "sector_run":      0,
+    # 0 for the same per-EVENT-TYPE reason, plus a sharper one: this fires only
+    # when a flagged position was actually OPENED, which is inherently one-shot
+    # -- a position is opened once and never again -- so there is no storm to
+    # limit. What a limit WOULD do is silently drop the second flagged open of a
+    # sequential multi-market run, i.e. lose a decision the owner asked to be
+    # given. Missing one of these is the failure mode; repeating one is not.
+    "trade_review":    0,
     "DEFAULT":         300,
 }
 

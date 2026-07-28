@@ -43,6 +43,7 @@ _SEV_MAP = {
     "health":          "WARNING",
     "info":            "INFO",
     "sector_run":      "NOTICE",
+    "trade_review":    "NOTICE",
 }
 
 _CHAN_MAP = {
@@ -64,6 +65,7 @@ _RATE_MAP = {
     "daily_report":    82800,
     "health":          3600,
     "sector_run":      0,
+    "trade_review":    0,
     "DEFAULT":         300,
 }
 

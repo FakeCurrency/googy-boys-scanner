@@ -68,6 +68,8 @@ jobs:
         run: node test/contrast.test.js
       - name: Freshness-probe tests (/api/health per-market mode)
         run: node test/health.test.js
+      - name: Journal review-chip tests (heavy-position flag)
+        run: node test/journal_review.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

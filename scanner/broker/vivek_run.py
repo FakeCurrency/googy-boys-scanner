@@ -475,6 +475,19 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     # infer it from the notional, which stops working the moment either number
     # is retuned. Audit field: nothing reads it to make a decision.
     snap["sizing_mode"] = plan.get("sizing_mode", "")
+    # REVIEW FLAGS ride down onto the book row (2026-07-28, owner: "Flag this in
+    # the future so i can verify whether claude or I should take the position or
+    # not"). The flag is computed on the TICKET, which lives for the length of
+    # one decide() call and is then gone -- if it does not land here it exists
+    # only in a log line inside a finished Actions run, which is not a place a
+    # decision gets made. On the row it reaches the journal page, the Discord
+    # ping below, and any later post-mortem asking "was this one marked when it
+    # was taken?". Stored as the plan's list verbatim, empty list when clean, so
+    # "no flags" and "written before flags existed" stay distinguishable at
+    # every reader. Report-only, exactly as on the ticket: nothing downstream
+    # branches on it -- vivek_run does not size, skip or close differently for a
+    # flagged row, and the daily/weekly guards never read it.
+    snap["review"] = list(plan.get("review") or [])
     snap["source"] = "vivek_bot"
     snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
     # Signal-vs-fill: record the plan's entry level next to the actual fill so
@@ -492,6 +505,96 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     # positions without last_mark get seeded on their first guarded run.)
     snap["last_mark"] = round(float(snap["entry"]), 8)
     return snap
+
+
+def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
+    """Ping Discord for positions opened carrying a review flag.
+
+    Owner, 2026-07-28: "Flag this in the future so i can verify whether claude
+    or I should take the position or not." This is the delivery half of that.
+    The flag itself is computed in `vivek_bot.review_flags` and is REPORT-ONLY;
+    so is this. By the time it runs the position is open and saved -- nothing
+    here can un-take it, and nothing here tries.
+
+    What it is actually for: the owner's choice is not take-or-skip (the bot has
+    already taken it, correctly, under rules that are his) but WHOSE position it
+    is. Leave it and it is the bot's, sized $5,000 like everything else. Close
+    it in the book and it is his, sized however he wants. That choice has a
+    shelf life of hours, so it has to arrive as a push and not as a row on a
+    page he might open on Thursday.
+
+    Called AFTER `_save_market_book`, deliberately: a dry run returns before
+    that line and must stay silent, and pinging about a position that then
+    failed to persist would be worse than not pinging at all.
+
+    The COMBINED share is the number worth the message on its own. One flagged
+    open at 27% of the daily guard is a judgement call; three in one run at 27%
+    each is 81% of the day gone on three names, and nobody is summing that by
+    hand from three separate notifications -- which is the argument for one
+    message per run rather than one per position, quite apart from the noise.
+
+    Rate limiting is ours, not the router's (`ALERT_RATE_LIMITS["trade_review"]`
+    is 0). Opens are inherently one-shot, so there is no storm to suppress; a
+    limit could only ever drop the second market's flagged open in a sequential
+    run, and losing one of these is the whole failure mode.
+
+    Returns the symbols it pinged about (empty if none, or if the push is off).
+    """
+    flagged = [p for p in (opened or []) if p.get("review")]
+    if not flagged:
+        return []
+    if not getattr(config, "VIVEK_BOT_REVIEW_PUSH", True):
+        return []
+    if send is None:
+        try:
+            from .alert_router import smart_send as send
+        except Exception:                                  # noqa: BLE001
+            return []
+
+    limit = 0.0
+    try:
+        from . import vivek_bot as _vb
+        limit = _vb.daily_loss_limit()
+    except Exception:                                      # noqa: BLE001
+        pass
+
+    lines, total = [], 0.0
+    for p in flagged:
+        risk = float(p.get("risk_usd") or 0)
+        total += risk
+        note = ""
+        for f in p.get("review") or []:
+            if f.get("note"):
+                note = str(f["note"])
+                break
+        lines.append(f"{str(p.get('symbol','?')).upper()} "
+                     f"{str(p.get('direction','?')).upper()} @ {p.get('entry')} "
+                     f"(stop {p.get('stop')}) - {note}")
+    if limit > 0 and len(flagged) > 1:
+        lines.append(f"Together they put ${total:,.0f} at risk, "
+                     f"{total / limit * 100:.0f}% of the ${limit:,.0f} daily guard, "
+                     f"in one run.")
+    lines.append("The bot has taken these under your rules and they stay taken. "
+                 "Leave them and they are the bot's at $"
+                 f"{float(getattr(config, 'VIVEK_BOT_POSITION_NOTIONAL', 0) or 0):,.0f} "
+                 "each; close them in the book and take them yourself if you want "
+                 "them sized your way.")
+    site = str(getattr(config, "SITE_URL", "") or "").rstrip("/")
+    if site:
+        lines.append(f"{site}/journal.html")
+
+    n = len(flagged)
+    try:
+        send("trade_review",
+             f"YOUR CALL - {market.upper()}: {n} heavy position"
+             f"{'s' if n != 1 else ''} opened",
+             "\n".join(lines))
+    except Exception as e:                                 # noqa: BLE001
+        log.warning("could not send trade-review alert: %s", e)
+        return []
+    syms = [str(p.get("symbol", "")).upper() for p in flagged]
+    log.info("trade-review alert [%s]: %s", market, ", ".join(syms))
+    return syms
 
 
 def _close_time_stop(pos: dict, price: float, day: str,
@@ -964,6 +1067,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     log.info("vivek_run [%s]: %s · %s · +%d new, %d closed (%d open, %d short)",
              market, mode.upper(), "OPEN" if is_open else "closed-session",
              added, closed_now, book_open, book_short)
+
+    _notify_reviews(market, opened_events)
 
     # Trade-event digest through the shared alert dispatcher. OFF by default:
     # the scan workflow exports SMTP creds and alert_dispatch fires every

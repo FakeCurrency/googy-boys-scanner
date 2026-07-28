@@ -266,6 +266,68 @@ def size_position(equity: float, entry: float, stop: float,
     }
 
 
+# ── 2b. review flags — REPORT-ONLY, never a gate ──────────────────────────────
+#
+# Added 2026-07-28 on the owner's instruction: "flag this in the future so I can
+# verify whether Claude or I should take the position or not."
+#
+# READ THIS BEFORE EDITING. Everything in this section runs AFTER every rule has
+# already returned take=True and after the ticket is fully sized. It adds a key
+# and returns. It must never skip, resize, or reorder anything — which trades get
+# taken, and how big they are, is the owner's call, and a flag exists precisely
+# so that call stays his instead of being pre-empted by code. If a future change
+# makes a flag suppress a trade, that is a rule change wearing a flag's clothes
+# and it needs asking first.
+#
+# What it measures: a plan's 1R loss against the DAILY LOSS GUARD, not against
+# equity. Equity-relative risk stopped being the interesting number when sizing
+# went fixed-notional — every position is $5,000, so what varies is the stop
+# width, and the stop width is exactly what decides how much of a day's loss
+# budget one name can eat.
+
+def daily_loss_limit() -> float:
+    """Dollars the daily guard trips at: equity x MAX_DAILY_LOSS_PCT.
+
+    Same two config values vivek_guard.check and kill_switch read, deliberately
+    recomputed here rather than imported from either — this is a display figure
+    on a plan, and it must not become a reason for the guard and the flag to
+    share a code path that a later edit could make circular.
+    """
+    equity = float(getattr(_cfg, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
+    pct = float(getattr(_cfg, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0) or 0)
+    if equity <= 0 or pct <= 0:
+        return 0.0
+    return round(equity * pct / 100.0, 2)
+
+
+def review_flags(ticket: dict) -> list[dict]:
+    """Annotations on a ticket the bot has ALREADY decided to take.
+
+    Returns a possibly-empty list. An empty list is the normal case and means
+    nothing needed a human look — not that the trade was checked and cleared.
+    """
+    flags: list[dict] = []
+    limit = daily_loss_limit()
+    thresh = float(getattr(_cfg, "VIVEK_BOT_REVIEW_DAILY_LOSS_PCT", 0) or 0)
+    risk = float(ticket.get("risk_usd") or 0)
+    if limit > 0 and thresh > 0 and risk > 0:
+        share = risk / limit * 100.0
+        if share >= thresh:
+            entry = float(ticket.get("entry") or 0)
+            stop = float(ticket.get("stop") or 0)
+            spct = abs(entry - stop) / entry * 100.0 if entry > 0 else 0.0
+            flags.append({
+                "code": "heavy_risk",
+                "share_pct": round(share, 1),
+                "stop_pct": round(spct, 1),
+                "risk_usd": round(risk, 2),
+                "limit_usd": limit,
+                "note": (f"a 1R loss here is ${risk:,.0f} - {share:.0f}% of the "
+                         f"${limit:,.0f} daily loss guard, on a {spct:.0f}% stop"),
+            })
+    return flags
+
+
 # ── 3. full trade plan ────────────────────────────────────────────────────────
 
 def plan_trade(row: dict, equity: float, market: str | None = None,
@@ -342,11 +404,18 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
         "scale": scale, "rr": decision["rr"], "leverage_target": max_lev,
         **sizing,
     }
+    # REPORT-ONLY (section 2b). The trade is already decided at this point; this
+    # only marks the ones worth the owner's eye before they are taken.
+    ticket["review"] = review_flags(ticket)
+    marks = "".join(f"  [{f['code']}]" for f in ticket["review"])
     log.info("PLAN  %-8s A+ %-5s %s · %s · entry %g SL %g · %g units  $%.0f notional  "
-             "risk $%.2f (%.2f%%)  lev %.1fx%s",
+             "risk $%.2f (%.2f%%)  lev %.1fx%s%s",
              ticket["symbol"], direction, tf, ticket["entry_type"], entry, stop,
              ticket["units"], ticket["notional"], ticket["risk_usd"], ticket["risk_pct"],
-             ticket["leverage"], "  [lev-capped]" if ticket["leverage_capped"] else "")
+             ticket["leverage"], "  [lev-capped]" if ticket["leverage_capped"] else "",
+             marks)
+    for f in ticket["review"]:
+        log.warning("REVIEW %-8s %s", ticket["symbol"], f["note"])
     return {**decision, "plan": ticket}
 
 

@@ -423,6 +423,29 @@
   // after entry and the chart may show the opposite setup today.
   const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "▼ SHORT" : "▲ LONG"}</span>`;
   // Warn chip when the CURRENT scan reads the opposite way to an open trade.
+  // Review chip — this position was flagged HEAVY when the bot took it
+  // (server-side, scanner/broker/vivek_bot.review_flags; owner 2026-07-28:
+  // "Flag this in the future so i can verify whether claude or I should take
+  // the position or not"). The Discord ping is what arrives in time to act on;
+  // this is the same fact on the page, for the trade you are looking at.
+  //
+  // It renders on CLOSED rows too, on purpose. The flag records what was known
+  // at ENTRY, and the only way to ever learn whether the threshold is set
+  // sensibly is to be able to look back at the flagged ones and see how they
+  // actually went. Hiding it once the trade closes would delete exactly the
+  // evidence that answers that.
+  //
+  // Absent key = written before flags existed. Empty array = checked, clean.
+  // Both render nothing, but they are not the same thing and the book keeps
+  // them apart — do not collapse the two by defaulting the key server-side.
+  const reviewChip = (t) => {
+    const f = (t.review || [])[0];
+    if (!f) return "";
+    const share = f.share_pct != null ? `${Math.round(f.share_pct)}% of the day` : "heavy";
+    const title = f.note ? String(f.note)
+      : "Flagged heavy at entry — a big share of the daily loss guard in one name";
+    return `<span class="jr-review" title="${esc(title)}">⚑ ${esc(share)}</span>`;
+  };
   const flipChip = (t) => {
     if (t.status === "closed") return "";
     const now = (scanMeta.get(symKey(t)) || {}).dir;
@@ -460,7 +483,7 @@
   // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
     `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal" title="Open ${up(t.symbol)} chart">` +
-    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${flipChip(t)}</td>`;
+    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${reviewChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
     if (ms == null) return "—";

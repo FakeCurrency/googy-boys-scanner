@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   702 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   729 pytest + 199 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -282,8 +282,76 @@ assert_staged call and a WATCHDOG_RUNS entry.
   each (the top of the band `size_position`'s own docstring names) for a
   $111.3k book; it is **OFF by default because trimming is an exposure decision
   and therefore the owner's**, not a migration detail.
+- **ASKED AND DECLINED — the seven keep full size (2026-07-28, owner: "Disregard
+  the daily stop for the positiosn that have already been taken").** Do NOT run
+  `--max-stop-pct`, and do not re-raise the trim as a suggestion. The position
+  he took is that these were opened under the rules in force at the time and are
+  not to be re-cut because a later gate would have stopped them; the guard
+  applies to what is taken NEXT. What he asked for instead was to be TOLD before
+  the next one — see the review flag below. The consequence stays exactly as
+  measured above and is now a known, accepted exposure rather than an oversight:
+  a whole-market stop-out still costs ASX 144% / NASDAQ 271% / crypto 108% of a
+  day's guard, and the guard still only halts new entries rather than
+  liquidating.
 - Tests: `tests/test_resize_book_notional.py` (30). Most of them test what the
   script refuses to do, because that is where its whole defence lives.
+
+### REVIEW FLAGS — "should Claude take this, or should I?" (2026-07-28)
+
+Owner, in the same breath as declining the trim: *"Flag this in the future so i
+can verify whether claude or I should take the position or not."* A plan whose
+1R loss is a large share of the daily loss guard now arrives marked.
+
+- **A FLAG IS NOT A GATE, and that is the whole design.** `review_flags()` runs
+  in `vivek_bot.plan_trade` AFTER every rule has said take; it adds a key and
+  returns. Nothing skips, resizes, reorders or closes because of it —
+  `evaluate_setup`, the `wide_stop` / `stop_too_tight` / `min_price` /
+  `illiquid` / `size_vs_adv` skips and `decide()` are untouched. Changing which
+  trades get taken is the owner's call, so the flag tells him there is a
+  decision to make and then gets out of the way.
+  `tests/test_review_flags.py::test_a_flagged_plan_is_still_taken_because_a_flag_is_not_a_gate`
+  pins it, and is the one test in there that must never be "fixed" to agree with
+  a future gate.
+- **`VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0`** — flag when `risk_usd` is ≥ this
+  % of `daily_loss_limit()` ($4,500 = equity × `MAX_DAILY_LOSS_PCT`). The number
+  sits between two others and cannot sensibly be moved without checking both:
+  `MAX_STOP_PCT` caps any NEW position at 25% × $5,000 = $1,250 of risk = **27.8%
+  of the guard**, so any threshold ≥ ~28 is dead code that would never fire and
+  nobody would notice; a typical A+ plan runs a 5–12% stop = $250–$600 = 6–13%.
+  15 flags the genuinely wide half without crying wolf. A test asserts
+  `0 < threshold < ceiling` so the dead-code case fails loudly. 0 = off.
+- **Three hops, because a flag nobody sees is not a flag.** The ticket carries
+  `review` (a list, empty when clean); `_ticket_to_position` copies it onto the
+  book row; `vivek_run._notify_reviews` pushes it to Discord. Skip any hop and
+  the mark survives only in a log line inside a finished Actions run, which is
+  not a place a decision gets made.
+- **The push is `trade_review`, NOTICE → Discord only, rate limit 0**
+  (`VIVEK_BOT_REVIEW_PUSH`, ON — unlike `VIVEK_BOT_NOTIFY_TRADES` beside it,
+  which digests every open/close through every channel including email and stays
+  off). Fires AFTER `_save_market_book`, so a dry run is silent and nothing is
+  announced that failed to persist. One message per run, not per position,
+  because the number worth the message is the COMBINED share: three flagged
+  opens at 27% each is 80% of the day gone in one run and nobody sums that by
+  hand across three notifications. Rate limit 0 for the same per-EVENT-TYPE
+  reason as `sector_run` — markets run sequentially in one job, so a limit could
+  only ever drop the second market's flagged open, and losing one is the entire
+  failure mode.
+- **The message says the trade is already TAKEN.** The choice on offer is not
+  take-or-skip but *whose position it is*: leave it and it is the bot's at
+  $5,000, or close it in the book and take it yourself sized your own way. A
+  message that read like a pre-trade approval request would misdescribe what the
+  system actually does, and a test asserts the wording.
+- **Front end:** `reviewChip` in `public/js/journal.js` (`.jr-review`,
+  journal.css) — amber, outlined, no pulse, deliberately quieter than `.jr-flip`,
+  which is a live warning that the chart turned. **It renders on CLOSED rows
+  too, on purpose**: the flag records what was known at entry, and how the
+  flagged trades actually went is the only evidence that will ever say whether
+  15.0 is set sensibly. An absent `review` key (row written before flags
+  existed) and an empty list (checked, clean) both render nothing but are NOT the
+  same thing — do not collapse them by defaulting the key server-side.
+- Tests: `tests/test_review_flags.py` (27) + `test/journal_review.test.js` (9,
+  which slices the real `reviewChip` out of the shipped file rather than
+  mirroring it, so a rename fails the suite instead of silently testing a copy).
 
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
@@ -563,7 +631,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (702 tests)
+python -m pytest -q                      # full gate (729 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

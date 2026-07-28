@@ -31,6 +31,8 @@ _EMOJI = {
     "info":           "ℹ️",
     # HORIZON's "look wider" — nothing is broken, something is running.
     "sector_run":     "🔭",
+    # "your call" — the bot took it; do you want it, or does it?
+    "trade_review":   "🖐",
 }
 
 
