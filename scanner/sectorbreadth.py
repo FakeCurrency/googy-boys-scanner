@@ -398,6 +398,11 @@ def unheld_streak(hist: dict, market: str, sector: str, top_n: int = 0) -> int:
     a weekend or a public holiday does not break a run the way a real change in
     the sector would. Today's row is written before this is called, so a sector
     leading unheld for the first time today reads 1.
+
+    A run stops at a session whose held count is null. Null means reconstructed
+    from a date before the bot book existed, where "held nothing" cannot be
+    distinguished from "no book to hold anything" -- so the streak reports only
+    the part of the run we can actually stand behind.
     """
     top_n = int(top_n or getattr(config, "SECTOR_BREADTH_TOP_N", 3) or 3)
     min_names = int(getattr(config, "SECTOR_BREADTH_MIN_NAMES", 15) or 0)
@@ -422,7 +427,19 @@ def unheld_streak(hist: dict, market: str, sector: str, top_n: int = 0) -> int:
         rated.sort(key=lambda t: (-t[0], -t[1], t[2]))
         lead = {name for _, _, name in rated[:top_n]}
         cell = cells.get(sector)
-        if sector not in lead or not cell or (len(cell) > 2 and cell[2]):
+        if sector not in lead or not cell:
+            break
+        # UNKNOWN IS NOT ZERO. `held` is written null -- never 0 -- for a
+        # reconstructed session that predates the bot book's memory (earliest
+        # entry 2026-06-28); before that there was no book, so whether it held
+        # the sector is not merely unrecorded but unknowable. Counting through a
+        # null the way we count through a zero would have manufactured streaks
+        # of up to six months the first time a backfill landed and fired the
+        # alarm on every sector at once, which is the one failure mode that
+        # costs this number its credibility permanently. A run that reaches back
+        # into the unknown stops at the edge of what we can honestly claim.
+        held = cell[2] if len(cell) > 2 else 0
+        if held is None or held:
             break
         n += 1
     return n

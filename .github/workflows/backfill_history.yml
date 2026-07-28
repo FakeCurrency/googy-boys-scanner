@@ -1,0 +1,127 @@
+name: Backfill sector history
+
+# MANUAL ONLY, on purpose. This replays the real VIVEK engine over the last N
+# sessions to rebuild `data/sector_history.json` backwards — the file HORIZON's
+# trend column and its unheld-run streak both read out of, which only started
+# being written on 2026-07-28, a week after the ASX Consumer Discretionary
+# rotation it exists to catch had already run. Until it is filled the streak can
+# only ever say "1" and the trend column has nothing to trend.
+#
+# It is not scheduled because it is not a maintenance job: the live scan writes
+# today's row every session, so once the gap is filled there is nothing left to
+# fill. Re-running is safe (rows merge, real rows always beat reconstructed
+# ones, a second run adds nothing) but it costs ~25 minutes of a runner for a
+# result that does not change.
+#
+# RUN --dry-run FIRST. It downloads, replays, merges in memory and prints the
+# post-mortem — which sectors led, for how long, between which dates — without
+# writing a byte. That report is the actual deliverable; the file is what keeps
+# it true tomorrow.
+#
+# CONCURRENCY: group `scan`, deliberately. sector_history.json is a SHARED file
+# that every scan run also writes; running this alongside one is a lost-update
+# race on the one file in the repo with no other copy of its contents.
+on:
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market to reconstruct"
+        default: "asx"
+        required: false
+        type: choice
+        options: ["asx", "nasdaq"]
+      sessions:
+        description: "Sessions to publish (126 ~= six months)"
+        default: "126"
+        required: false
+      warmup:
+        description: "Leading sessions computed then DISCARDED (cold hysteresis)"
+        default: "10"
+        required: false
+      limit:
+        description: "First N names only — for a cheap smoke test (0 = all)"
+        default: "0"
+        required: false
+      dry_run:
+        description: "Report only, write nothing"
+        default: true
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # ~24 min measured for ASX x 126 sessions on 4 workers (53.8 ms per
+    # name-day full path, but only ~15% of names reach build_plans). Doubled,
+    # because a runner that dies at the cap has done all the downloading and
+    # all the replaying and published none of it.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The replay NEVER writes the repo. It parks its rows in the runner's temp
+      # dir and prints the post-mortem; the commit step below owns every write.
+      # That split is what makes the push retry safe: each attempt re-merges the
+      # parked rows against a freshly-reset main, so the first attempt and the
+      # fifth run identical code and a scan that landed mid-replay is folded in
+      # rather than reverted.
+      - name: Replay the engine
+        env:
+          # Free-text inputs via env, never ${{ }} inside run: (2026-07-20
+          # security pass) — an input is attacker-controlled string data.
+          IN_MARKET: ${{ github.event.inputs.market }}
+          IN_SESSIONS: ${{ github.event.inputs.sessions }}
+          IN_WARMUP: ${{ github.event.inputs.warmup }}
+          IN_LIMIT: ${{ github.event.inputs.limit }}
+        run: |
+          set -e
+          MK="${IN_MARKET:-asx}"
+          ARGS="--market $MK --sessions ${IN_SESSIONS:-126} --warmup ${IN_WARMUP:-10}"
+          LIM="${IN_LIMIT:-0}"
+          [ "$LIM" != "0" ] && ARGS="$ARGS --limit $LIM"
+          # 4 workers, not nproc: the runner has 4 cores and each worker holds a
+          # slice of the 5y frame set in memory. Oversubscribing swaps.
+          python scripts/backfill_sector_history.py $ARGS --workers 4 \
+            --dry-run --rows-out "$RUNNER_TEMP/backfill_rows.json"
+
+      - name: Commit the reconstruction
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          IN_MARKET: ${{ github.event.inputs.market }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # ONE path. This workflow writes exactly one file and must never stage
+          # anything else a workflow in the "scan" concurrency group owns.
+          OUT="data/sector_history.json"
+          MSG="data: backfill sector history [${IN_MARKET:-asx}] $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            python scripts/backfill_sector_history.py \
+              --merge-only "$RUNNER_TEMP/backfill_rows.json"
+            git add -- "$OUT"
+            if git diff --cached --quiet; then
+              echo "nothing to commit — every session was already real"
+              exit 0
+            fi
+            git diff --cached --stat | tail -3
+            git commit -m "$MSG"
+            if git push origin HEAD:main; then echo "pushed"; exit 0; fi
+            echo "push race — retry $i"; sleep $((i * 3))
+          done
+          echo "::error::could not push after 5 attempts"
+          exit 1

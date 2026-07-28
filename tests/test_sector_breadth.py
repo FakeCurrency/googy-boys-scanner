@@ -344,6 +344,36 @@ def test_a_thin_sector_cannot_invent_a_streak_out_of_noise():
     assert sb.unheld_streak(hist, "asx", "Tiny") == 0            # ...never led
 
 
+def test_an_unknown_held_count_stops_the_streak_instead_of_extending_it():
+    """UNKNOWN IS NOT ZERO -- the one line the backfill is load-bearing on.
+
+    A reconstructed session from before the bot book existed writes `held: null`,
+    because "the book held none of this sector" and "there was no book" are not
+    the same claim and only the first is evidence of a miss. `None` is falsy, so
+    the obvious `if cell[2]: break` counts straight THROUGH the unknown days and
+    reports the whole reconstructed period as one unbroken run. The first
+    backfill would then have handed every sector a six-month streak at once and
+    paged the owner about all of them -- destroying the credibility of the only
+    number on the board that was built to be believed.
+    """
+    hist = _run(5)                                  # 5 sessions, leading, unheld
+    for r in hist["rows"][:2]:                      # the oldest two: reconstructed
+        r["r"] = 1
+        for cell in r["s"].values():
+            cell[2] = None
+    assert sb.unheld_streak(hist, "asx", "Consumer Discretionary") == 3
+
+
+def test_a_held_position_and_an_unknown_stop_the_streak_the_same_way():
+    """Both are "stop counting", and the run reported is only the part we can
+    stand behind. A null on the MOST RECENT session means we cannot claim even
+    one honest unheld day, so the answer is zero, not one."""
+    hist = _run(4)
+    for cell in hist["rows"][-1]["s"].values():
+        cell[2] = None
+    assert sb.unheld_streak(hist, "asx", "Consumer Discretionary") == 0
+
+
 def test_the_streak_survives_a_gap_in_the_sessions():
     """Weekends and holidays leave no row. A run of sessions is not broken by a
     day the market was shut, and counting rows rather than dates is what makes

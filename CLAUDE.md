@@ -78,9 +78,13 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   636 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   670 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
+scripts/               CI-side one-offs and helpers, NOT imported by the engine
+  reco_note.py         daily auto-written commentary (reco_note.yml)
+  backfill_sector_history.py   replays the engine backwards to rebuild
+                       data/sector_history.json (backfill_history.yml)
 ```
 
 ## Workflows (current)
@@ -100,6 +104,7 @@ data_universe/         bundled ticker CSVs (fallbacks)
 | stop_watcher.yml | 5-min 24/7 | curls /api/tick (cloud watcher for the KV manual journal) |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
+| backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted.)
@@ -274,6 +279,10 @@ the owner's call, not a refactor. Keep it that way.
   a counter so a re-run, a backfill or a skipped day cannot corrupt it. Rows
   exist only for days the scan ran, so a weekend does not break a run.
   `append_history` is called BEFORE `horizon()`, so a first-day leader reads 1.
+  - **A run stops at a session whose `held` is null**, not just at a held
+    position. Null means reconstructed from before the bot book existed, where
+    "held nothing" cannot be told apart from "no book to hold anything" — so the
+    streak reports only the part of the run we can stand behind. See BACKFILL.
   - The reconstruction MUST re-apply all three of `compute()`'s exclusions —
     `_NOT_A_SECTOR`, `MIN_NAMES`, rate > 0 — because history stores every
     bucket that had listed names. Today's real ASX row is led by "Unclassified"
@@ -329,6 +338,50 @@ the owner's call, not a refactor. Keep it that way.
   - A sector that stops leading, or that the book finally buys, is FORGOTTEN —
     scoped to the market in hand, so a crypto-only weekend cannot wipe ASX
     memory. Report-only: it changes what gets SAID, never what gets taken.
+
+### BACKFILL — filling the memory backwards (2026-07-28)
+
+`scripts/backfill_sector_history.py` + `.github/workflows/backfill_history.yml`.
+History only started being written on 2026-07-28, a week after the ASX Consumer
+Discretionary rotation it exists to catch had already run: until the gap is
+filled the streak can only ever say "1" and the trend column has nothing to
+trend. The script replays the REAL engine — `evaluate` → liquidity gate →
+`score_and_grade` → hysteresis → `build_plans` → `gate_grade`, scan.py's order,
+on frames truncated to each session — and writes rows marked `"r": 1`.
+
+- **UNKNOWN IS NOT ZERO — the one rule the whole thing rests on.** The bot
+  book's earliest entry is 2026-06-28; before that, whether the book held a
+  sector is not merely unrecorded but *unknowable* — there was no book. Those
+  `held` cells are written `null`, never `0`, and **`unheld_streak` now stops at
+  a null exactly as it stops at a held position** (`sectorbreadth.py`). Counting
+  through a null the way we count through a zero would have manufactured streaks
+  of up to six months the first time a backfill landed and fired the Discord
+  alarm on every sector at once — the one failure mode that costs that number
+  its credibility permanently.
+- **Honest about its own error bars.** REAL: the per-name grade, the liquidity
+  gate recomputed per session, the sector denominator from the same universe
+  file. KNOWN WRONG and bounded: survivorship (today's universe, so delisted
+  names are missing), and hysteresis chains once per DAY where live chains once
+  per SCAN — which skews A+/A LOW, i.e. wrong in the conservative direction.
+  The first `--warmup` sessions are computed then DISCARDED because their
+  hysteresis is cold. The still-forming trailing bar is dropped using
+  `_bar_is_forming` with **market-local** time (it compares the wall clock
+  against the market's own close, so handing it UTC would misjudge every ASX
+  session).
+- **The replay never writes the repo.** `--rows-out` parks the reconstruction in
+  `$RUNNER_TEMP`; `--merge-only` folds it into the history file as it stands
+  now. That split is what makes the push retry safe: each attempt re-merges the
+  parked rows against a freshly-reset `origin/main`, so a scan that landed
+  mid-replay is folded in rather than reverted, and attempt 1 and attempt 5 run
+  identical code. Real rows always beat reconstructed ones; a re-run is
+  idempotent.
+- **Manual only (`workflow_dispatch`), `dry_run` defaulting TRUE**, in the
+  `scan` concurrency group. Not scheduled because it is not maintenance — the
+  live scan writes today's row every session, so once the gap is filled there is
+  nothing left to fill, and a re-run costs ~25 min of a runner for a result that
+  does not change. Run the dry pass first: the printed post-mortem (which
+  sectors led, for how long, between which dates) is the actual deliverable; the
+  file is what keeps it true tomorrow.
 
 ---
 
@@ -427,7 +480,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (636 tests)
+python -m pytest -q                      # full gate (670 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan
