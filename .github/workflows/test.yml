@@ -130,6 +130,12 @@ jobs:
         run: node test/leaks.test.js
       - name: Derived-state + fault-scoping rules (TOP100 #84-#88, 55)
         run: node test/statekeep.test.js
+      # Runs in the CHEAP job on purpose. It exercises the baseline-provenance
+      # sentinel out of the e2e file without a browser, so the rule that keeps
+      # the screenshot gate from going red on a stale baseline is checked on
+      # every push in ~50ms rather than behind a Playwright install.
+      - name: Screenshot baseline-provenance sentinel (TOP100 #93, 14)
+        run: node test/screenshot_sentinel.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
@@ -173,11 +179,41 @@ jobs:
       # Baselines are cached per-environment (CI-native rendering) so cross-env
       # font differences never false-fail; first run self-baselines and passes,
       # later runs diff. Bump the cache key to accept an intentional visual change.
+      #
+      # v10 -> v11 (2026-07-28) is NOT an intentional visual change, and the ten
+      # bumps before it were not either. THIS GATE HAS BEEN THE RECURRING FAILURE
+      # EMAIL. The runner clock was reaching the page, so the journal shots
+      # re-rendered themselves against a baseline that — deliberately — never
+      # re-saves. Measured with /data/ pinned to fixtures so the CLOCK was the
+      # only variable: journal-desktop steps to 2.39% drift the moment its cached
+      # baseline is two days old, and stays there (2.39% at 2, 3, 5 and 7 days —
+      # a day-bucket boundary, not slow decay), against a 2% budget.
+      #
+      # `actions/cache@v4` on an exact key persists and refreshes on access, so
+      # "two days old" is not a phase, it is permanent: once past it EVERY later
+      # run fails until the key moves. That is what nine bumps were doing — each
+      # re-cut the baseline, bought a day, and went red again. The clock is now
+      # frozen in screenshot-diff.e2e.js, so the baseline's AGE stops being an
+      # input at all.
+      #
+      # The fixture digest in the key is the other half. FROZEN_MS is derived
+      # from the fixtures, so refreshing them MOVES the clock and repaints every
+      # relative-time row at once. With the digest, that cuts a fresh cache entry
+      # which self-baselines and SAVES; without it the run would lean on the
+      # script's `.clock` sentinel, which discards and re-cuts but cannot save
+      # (cache@v4 does not re-save on a key hit), leaving the gate green but
+      # comparing nothing until a human bumped the version. Cost, stated plainly:
+      # a commit that refreshes fixtures AND changes the UI has its visual diff
+      # skipped for one run. That is the same trade the sentinel makes, and it is
+      # the right way round — an unreviewed run beats an unactionable red.
+      #
+      # NO `restore-keys`, ever: a prefix fallback would restore the very
+      # baseline a bump exists to discard.
       - name: Restore screenshot baselines
         uses: actions/cache@v4
         with:
           path: test/e2e/__baseline__
-          key: screenshot-baselines-v10-${{ runner.os }}
+          key: screenshot-baselines-v11-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"

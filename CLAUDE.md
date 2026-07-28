@@ -93,7 +93,8 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 | Workflow | Schedule | Does |
 |---|---|---|
-| test.yml | every push/PR | pytest + 10 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — the newest are `risk_defaults.test.js` and `journal_money.test.js` (TOP100 Tier 2). New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) |
+| dispatch_scan.yml | on push to itself or `.github/scan-kick` | turns a PUSH into a real `workflow_dispatch` of scan.yml (`market=all`). **The only way a cloud Claude session can trigger a scan** — these sessions can push but cannot reach api.github.com or POST to /api/scan. Touch `.github/scan-kick`, push, done. `permissions: actions: write`; GITHUB_TOKEN-created dispatches DO start runs (the documented exception to the no-recursive-workflows guard) |
+| test.yml | every push/PR | pytest + 15 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run) — the newest is `screenshot_sentinel.test.js`. New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) |
 | scan.yml | market-hours crons, SEQUENTIAL markets (weekend = crypto-only); `:47` ASX freshness backstop | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52` all days; the `:22` fire skips weekday scan.yml windows (scan.yml already scans crypto then), `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -1449,6 +1450,88 @@ re-typed fixture drifts in step with the bug it is supposed to catch.
   or it never runs.** All four are registered. Gate at this commit: **1160 pytest
   across 53 files, 588 JS assertions across 14 suites**, pyflakes at its 9
   pre-existing warnings.
+
+---
+
+## The screenshot gate was the daily failure email (2026-07-28)
+
+Reported directly: *"we're getting one of these practically daily now."* It was
+`test.yml`'s screenshot-diff step, and it had been failing on the CALENDAR rather
+than on any change to the code. Read this before touching
+`test/e2e/screenshot-diff.e2e.js` or the baseline cache key.
+
+- **The tell was in the fix history, not the code.** The cache key had been
+  bumped nine times, v1 → v10. Ten intentional visual changes in a repo this size
+  is implausible; one defect reset ten times is not. Each bump re-cut the
+  baseline, bought about a day, and went red again.
+- **Measured, with the data held still.** A throwaway probe pinned `/data/` to
+  the e2e fixtures — removing the scan output as a variable — and swept only the
+  page clock: `journal-desktop` reaches **2.39% drift the moment its cached
+  baseline is two days old**, against a 2% budget, and reads exactly 2.39% at 2,
+  3, 5 and 7 days. FLAT, not rising. journal.js renders relative ages, so what
+  the gate was photographing was a single day-bucket boundary repainting a block
+  of rows at once — a step function, which is why "it fails some days" never
+  resolved into a pattern anyone chased. `journal-390` sits one row behind at
+  1.90%, i.e. it was next.
+- **`actions/cache@v4` is what turned a bad day into a permanent state.** An
+  exact key with no `restore-keys` persists and is refreshed on access, so the
+  baseline never ages out on its own: once past two days, EVERY subsequent run
+  fails until the key moves. The gate could not recover by itself, which is
+  exactly why it needed a human nine times.
+- **Why roughly one email a day and not twenty:** test.yml's path filter
+  deliberately excludes `public/data/**`, so the ~20 daily scan commits never
+  trigger it. It runs on pushes to code — one or two a day.
+
+### The fix is three layers and only the middle one persists
+
+1. **The page clock is frozen** to the fixture book's own `updated_at`
+   (`FROZEN_MS`), installed CONTEXT-level via `ctx.addInitScript` before
+   `newPage()` so nothing can read the real clock first. The baseline's AGE stops
+   being an input at all. A `Proxy` rather than `class extends Date`, because the
+   page parses its own timestamps with `new Date(t.opened_at)` and explicit
+   arguments must pass straight through — pin only the zero-arg construction and
+   `now()`.
+2. **The cache key digests the fixtures** —
+   `hashFiles('test/e2e/fixtures/data/*.json')`. `FROZEN_MS` is derived from
+   those files, so refreshing them MOVES the clock and legitimately repaints
+   every relative-time row. With the digest that cuts a FRESH cache entry, which
+   self-baselines and **saves**. This is the only layer that persists.
+3. **A `.clock` sentinel inside `__baseline__`** — the floor. It records the
+   instant that drew the baseline and lives inside the cached directory so it is
+   restored or missed as one unit with the pictures it describes. Two states mean
+   "not drawn by this clock": the stamp disagrees with today's `FROZEN_MS`, or
+   there is no stamp at all beside PNGs that plainly exist (the shape of a
+   pre-freeze baseline restored from an old cache — the one case a key bump
+   cannot see). Both **DISCARD and re-cut rather than fail.**
+
+- **The discard-don't-fail asymmetry IS the item, not a softening.** A
+  re-baseline costs one run of comparison. A red costs a person's attention on a
+  push they cannot act on, and a channel that cries wolf gets muted — which is
+  the damage that outlives the bug, because the next red is a genuine one.
+  `test_a_baseline_from_a_dead_clock_is_DISCARDED_not_failed` pins the shape
+  (no exit, no failure counter, no throw inside the reconcile) precisely because
+  the tempting future edit is "make it strict".
+- **The sentinel's own limitation is stated in both files rather than hidden.**
+  cache@v4 does **not** re-save on a key HIT, so a discard cannot persist: if the
+  fixtures ever move without the key moving, every run discards, re-cuts and
+  passes — green for ever, comparing nothing. The reset log names that symptom
+  and the remedy ("bump the screenshot-baselines key in test.yml") in those
+  words, and a test asserts the reset count reaches the run summary so a discard
+  LOOP is visible rather than silent.
+- **NO `restore-keys` on that cache, ever** — a prefix fallback restores the very
+  baseline a bump exists to discard.
+- Tests: `test/screenshot_sentinel.test.js` (14 — slices `CLOCK` and
+  `reconcileBaselineClock` out of the shipped e2e file and runs them against real
+  temp directories, per the standing rule that a re-typed fixture drifts in step
+  with the bug) and `tests/test_screenshot_determinism.py` (13), all
+  mutation-verified. The JS suite runs in the CHEAP `javascript` job on purpose —
+  no browser needed, ~50ms, checked on every push rather than behind a Playwright
+  install.
+- **One of those tests closes a gap open since Tier 5:**
+  `test_every_javascript_suite_has_a_step_in_the_workflow` walks `test/*.test.js`
+  and fails if any of them has no `node test/<file>` step. The rule was written
+  down in three places and enforced by nothing — an unregistered suite is not a
+  weak gate, it is a file full of green assertions that CI never runs.
 
 ---
 
