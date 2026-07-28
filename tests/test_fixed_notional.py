@@ -286,3 +286,46 @@ def test_an_unreadable_sibling_makes_both_halves_unknown(book_dir):
 def test_the_count_wrapper_still_answers_for_callers_that_only_want_slots(book_dir):
     _write_book(book_dir, "nasdaq", [_pos("AAPL"), _pos("MSFT")])
     assert vr._open_elsewhere("asx") == 2
+
+
+# ── the book records WHICH sizer produced the row ────────────────────────────
+
+def test_the_book_row_records_the_sizing_mode_not_just_the_numbers(monkeypatch):
+    # The book is a permanent mixture: rows opened before the switch landed on
+    # 2026-07-28 03:34 UTC were sized risk-% off a $10,000 equity (~$400
+    # notional, $35 risk), everything after is fixed $5,000. Without the label
+    # the only way to tell them apart is to infer it from the notional, which
+    # stops working the first time either number is retuned.
+    captured = {}
+
+    def _snap(row, tf, jplan, market, entry_price, day):
+        return {"symbol": row["symbol"], "entry": entry_price, "status": "open"}
+
+    monkeypatch.setattr(vr, "_snapshot", _snap)
+    sizing = vb.size_position(config.VIVEK_BOT_ACCOUNT_EQUITY, entry=100.0, stop=96.0)
+    plan = {"symbol": "AAA", "name": "AAA Ltd", "sector": "Banks", "direction": "long",
+            "grade": "A+", "entry_type": "reclaim", "entry_type_label": "Reclaim",
+            "timeframe": "1W", "entry": 100.0, "stop": 96.0,
+            "tp1": 106.0, "tp2": 112.0, "tp3": 120.0, "scale": [0.25, 0.5, 0.15],
+            "trigger_bar": None, "leverage_target": 5.0, **sizing}
+    pos = vr._ticket_to_position({"plan": plan}, 100.0, "asx", "2026-07-28")
+    captured.update(pos or {})
+    assert captured["sizing_mode"] == "fixed_notional"
+    assert captured["notional"] == 5_000.0
+
+
+def test_a_plan_without_the_field_records_an_empty_string_not_a_crash(monkeypatch):
+    # Defensive: a caller assembling a ticket by hand (a replay, a fixture)
+    # must not take the runner down, and must not be silently labelled fixed.
+    monkeypatch.setattr(vr, "_snapshot",
+                        lambda row, tf, jplan, m, px, day: {"symbol": row["symbol"],
+                                                            "entry": px})
+    plan = {"symbol": "BBB", "name": "BBB Ltd", "sector": "Banks", "direction": "long",
+            "grade": "A+", "entry_type": "reclaim", "entry_type_label": "Reclaim",
+            "timeframe": "1W", "entry": 100.0, "stop": 96.0,
+            "tp1": 106.0, "tp2": 112.0, "tp3": 120.0, "scale": [0.25, 0.5, 0.15],
+            "trigger_bar": None, "leverage_target": 5.0,
+            "units": 1.0, "notional": 100.0, "leverage": 0.0,
+            "risk_pct": 0.35, "risk_usd": 35.0}
+    pos = vr._ticket_to_position({"plan": plan}, 100.0, "asx", "2026-07-28")
+    assert pos["sizing_mode"] == ""

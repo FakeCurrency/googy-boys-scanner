@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   670 pytest + 190 JS — run on EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   672 pytest + 190 JS — run on EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -208,6 +208,23 @@ assert_staged call and a WATCHDOG_RUNS entry.
   deciding for. Latent while every position is $5,000 and the 30-slot cap binds
   first at exactly $150,000 — but it is a risk cap reading a number it believes
   is complete, so it is fixed rather than noted.
+  - **The book is a MIXTURE and will be for a while.** The config landed at
+    03:34 UTC on 2026-07-28; the scan running at the time had already checked
+    out, so the six ASX positions it opened at 03:39 were sized by the old path
+    (risk-% off the $10,000 equity: ~$300 notional, $35 risk). All 24 open rows
+    are legacy-sized, averaging $256 against the intended $5,000 — the open book
+    is **$6.1k of a $150,000 target**, and because each legacy row still occupies
+    a full slot, filling the 6 free slots at $5,000 only reaches ~$36k. The rest
+    deploys as legacy positions CLOSE. Whether to leave them to run off or
+    resize them in place is an exposure decision and therefore the owner's.
+    Dollar P&L is not a like-for-like series across the transition; R and % are.
+  - **`sizing_mode` is recorded on every new book row** (`"fixed_notional"` /
+    `"risk_pct"`, empty on hand-built tickets). `size_position` always returned
+    it and `decide()` splats it onto the ticket, but `_ticket_to_position` was
+    not copying it down, so the book kept the numbers of a sizing decision
+    without which mode produced them. Audit field only — nothing reads it to
+    decide anything, and it is the one honest way to tell a legacy row from a
+    new one once either number is retuned.
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.
@@ -480,7 +497,7 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (670 tests)
+python -m pytest -q                      # full gate (672 tests)
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

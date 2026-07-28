@@ -465,6 +465,16 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     snap["leverage_target"] = plan["leverage_target"]
     snap["risk_pct"] = plan["risk_pct"]
     snap["risk_usd"] = plan["risk_usd"]
+    # WHICH SIZER PRODUCED THIS ROW (2026-07-28). size_position returns it and
+    # decide() splats it onto the ticket, but nothing was copying it down here,
+    # so the book recorded the NUMBERS of a sizing decision without recording
+    # which mode made them. The book is now a permanent mixture -- positions
+    # opened before 03:34 UTC today were sized risk-% off a $10,000 equity
+    # (~$400 notional, $35 risk), everything after is fixed $5,000 -- and
+    # without this label the only way to tell a legacy row from a new one is to
+    # infer it from the notional, which stops working the moment either number
+    # is retuned. Audit field: nothing reads it to make a decision.
+    snap["sizing_mode"] = plan.get("sizing_mode", "")
     snap["source"] = "vivek_bot"
     snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
     # Signal-vs-fill: record the plan's entry level next to the actual fill so
