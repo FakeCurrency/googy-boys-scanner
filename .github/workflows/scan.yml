@@ -497,9 +497,37 @@ jobs:
           # market and is asserted like any other. Making the gate stricter than
           # the step it is gating would fail whole cycles over a flaky feed and
           # resurrect the failure-email problem.
+          # 2026-07-28 incident. A market whose download comes back fully empty
+          # AND whose frame cache has nothing to fall back on takes run.py's
+          # deliberate `continue`: it keeps yesterday's JSON rather than
+          # clobbering it, and exits 0 on purpose, because that is a REPORTED
+          # DECISION, not a fault (TOP100 #67 - failing on it would turn every
+          # upstream Yahoo outage red). The asserts below could not see that
+          # decision. All they saw was "<market>_vivek.json has no staged diff",
+          # byte-identical to the 2026-07-20 silent-staging bug they exist to
+          # catch - so a blocked feed failed the whole cycle and mailed a red
+          # run for an outage nobody can fix.
+          #
+          # run.py names exactly those markets in .scan-skipped
+          # (scanner/config.py SCAN_SKIP_MARKER; untracked, appended once per
+          # skipping process, fresh per checkout). That file is the
+          # DISCRIMINATOR this gate was missing - and a discriminator is the
+          # point: swallowing the failure instead would also swallow the
+          # difference between "decided to publish nothing" and "silently
+          # published nothing", which is how a gate gets deleted rather than
+          # fixed. Markets named there warn; every market that CLAIMED to scan
+          # is still gated exactly as hard as before.
+          SKIPPED=""
+          if [ -f .scan-skipped ]; then
+            SKIPPED=$(tr -d '\r' < .scan-skipped | tr '\n' ' ')
+            echo "::warning::source fully blocked for: ${SKIPPED}- previous JSON kept, must-change gate advisory for those markets only"
+          fi
+          skipped() { case " $SKIPPED " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
             for m in $MK; do
-              if [ "$m" = "crypto" ] && [ "$M" = "all" ]; then
+              if skipped "$m"; then
+                echo "::warning::${m}: no data downloaded and no cache to fall back on - scan deliberately published nothing, so ${m} data is UNCHANGED from the previous run. Not a staging failure."
+              elif [ "$m" = "crypto" ] && [ "$M" = "all" ]; then
                 bash scripts/assert_staged.sh "scan output [crypto]" \
                   "public/data/crypto_vivek.json" \
                   || echo "::warning::crypto scan output not staged - best-effort leg of a full cycle"
@@ -511,8 +539,19 @@ jobs:
                 bash scripts/assert_staged.sh "bot book [$m]" "journal/vivek_bot_book.${m}.json"
               fi
             done
-            bash scripts/assert_staged.sh "combined book (journal)" journal/vivek_bot_book.json
-            bash scripts/assert_staged.sh "combined book (public twin)" public/data/vivek_bot_book.json
+            # The combined books are re-stamped by _write_combined() whenever ANY
+            # market's bot layer runs, so a PARTIAL skip must still gate hard -
+            # the markets that did scan are obliged to move them, and that is the
+            # case the 2026-07-20 bug actually looked like. Only a cycle where
+            # EVERY market skipped leaves them legitimately untouched.
+            ALL_SKIPPED=1
+            for m in $MK; do skipped "$m" || ALL_SKIPPED=0; done
+            if [ "$ALL_SKIPPED" = "1" ]; then
+              echo "::warning::every market this cycle ($MK) published nothing - the bot layer never ran, so the combined books are unchanged too. Not a staging failure."
+            else
+              bash scripts/assert_staged.sh "combined book (journal)" journal/vivek_bot_book.json
+              bash scripts/assert_staged.sh "combined book (public twin)" public/data/vivek_bot_book.json
+            fi
           else
             bash scripts/assert_staged.sh "scan output (manual)" journal/vivek_bot_book.json \
               || echo "::warning::book not staged (manual run - dry-run or test args?)"

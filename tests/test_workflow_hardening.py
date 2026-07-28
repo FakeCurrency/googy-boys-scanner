@@ -34,6 +34,8 @@ import subprocess
 
 import pytest
 
+from scanner import config
+
 yaml = pytest.importorskip("yaml")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -538,3 +540,169 @@ def test_the_first_party_actions_are_the_five_we_reviewed():
     assert seen == {"actions/checkout", "actions/setup-python",
                     "actions/setup-node", "actions/cache",
                     "actions/upload-artifact"}, sorted(seen)
+
+
+# --------------------------------------------------------------------------
+# 2026-07-28 incident - the skip marker, EXERCISED rather than pattern-matched
+# --------------------------------------------------------------------------
+# This is principle 2 of the header ("a tolerated step needs a DISCRIMINATOR")
+# applied to the case that actually shipped a failure email. `run.py` has one
+# path where a market publishes nothing and exits 0 on purpose: the download
+# came back fully empty AND the frame cache had nothing to fall back on, so it
+# keeps yesterday's JSON rather than clobbering it. That is a reported decision,
+# not a fault. `scan.yml`'s per-market `assert_staged` could not see the
+# decision - "no staged diff" is byte-identical to the 2026-07-20 silent-staging
+# bug - so an upstream outage failed the whole cycle.
+#
+# The fix is a marker file, and a marker file is exactly the kind of thing that
+# rots quietly: rename it on one side, and the gate silently goes back to
+# failing on outages (or, far worse, silently stops gating at all). So these
+# tests EXTRACT the gate's shell out of the YAML and RUN it against a stub
+# `assert_staged` - the same "verify in a scratch repo, don't infer" standard
+# the rest of this file was written to.
+
+
+def _scan_commit_body() -> str:
+    return str(_step(_load("scan.yml"), "scan", "Commit & push fresh data")["run"])
+
+
+def _gate_block() -> str:
+    """The staging gate only: from the marker read to the end of its if/else.
+
+    Sliced rather than copied, so the thing under test is the shipping YAML and
+    an edit to it cannot leave these tests passing against a stale duplicate.
+    """
+    lines = _scan_commit_body().splitlines()
+    start = next(i for i, l in enumerate(lines) if l.strip() == 'SKIPPED=""')
+    manual = next(i for i, l in enumerate(lines) if "scan output (manual)" in l)
+    end = next(i for i in range(manual, len(lines)) if lines[i].strip() == "fi")
+    return "\n".join(lines[start:end + 1])
+
+
+def _run_gate(tmp_path, *, skipped=(), staged_ok=False,
+              market="all", mk="asx nasdaq crypto", event="schedule"):
+    """Run the real gate shell with a stubbed assert_staged. Returns (rc, out).
+
+    `staged_ok` is what the stub reports for EVERY path, which is the only two
+    states that matter here: a run where everything landed, and a run where
+    nothing did. The gate's whole job is deciding whether the second one is a
+    bug or a reported outage, and the marker is the only input it has.
+    """
+    (tmp_path / "scripts").mkdir(parents=True, exist_ok=True)
+    stub = tmp_path / "scripts" / "assert_staged.sh"
+    stub.write_text(
+        '#!/usr/bin/env bash\necho "ASSERT-CALLED: $1"\nexit %d\n'
+        % (0 if staged_ok else 1),
+        encoding="utf-8",
+    )
+    if skipped:
+        (tmp_path / config.SCAN_SKIP_MARKER).write_text(
+            "".join(f"{m}\n" for m in skipped), encoding="ascii")
+    script = tmp_path / "gate.sh"
+    script.write_text(
+        f'GITHUB_EVENT_NAME="{event}"\nM="{market}"\nMK="{mk}"\n' + _gate_block(),
+        encoding="utf-8",
+    )
+    # `bash -e` is what GitHub Actions runs `run:` blocks under (default shell
+    # is `bash -e {0}`; pipefail is NOT set). Testing under anything else would
+    # test a gate that does not exist.
+    p = subprocess.run(["bash", "-e", str(script)], cwd=tmp_path,
+                       capture_output=True, text=True)
+    return p.returncode, p.stdout + p.stderr
+
+
+def test_the_gate_still_fails_a_run_that_staged_nothing_and_claimed_nothing(tmp_path):
+    """The 2026-07-20 bug, unchanged. If this ever goes green the fix has eaten
+    the gate it was meant to narrow, which is the failure mode that matters
+    more than the one being fixed."""
+    rc, out = _run_gate(tmp_path, staged_ok=False)
+    assert rc != 0, out
+    assert "ASSERT-CALLED: scan output [asx]" in out
+
+
+def test_a_market_that_deliberately_published_nothing_does_not_fail_the_cycle(tmp_path):
+    """The incident itself: every market's source blocked, nothing staged,
+    nothing wrong. run.py already exited 0; the gate now agrees."""
+    rc, out = _run_gate(tmp_path, skipped=("asx", "nasdaq", "crypto"), staged_ok=False)
+    assert rc == 0, out
+    assert "ASSERT-CALLED" not in out, (
+        "a market named in the marker must not be asserted at all:\n" + out)
+    assert "UNCHANGED from the previous run" in out
+
+
+def test_a_skip_excuses_only_the_market_that_skipped(tmp_path):
+    """The narrowing that makes this a discriminator and not just tolerance.
+
+    ASX blocked does not buy NASDAQ an excuse - and NASDAQ silently staging
+    nothing is precisely the bug the gate exists for, so it must still be red
+    on the same run where ASX is forgiven.
+    """
+    rc, out = _run_gate(tmp_path, skipped=("asx",), staged_ok=False)
+    assert rc != 0, out
+    assert "ASSERT-CALLED: scan output [nasdaq]" in out
+    assert "ASSERT-CALLED: scan output [asx]" not in out
+
+
+def test_only_an_all_skipped_cycle_relaxes_the_combined_books(tmp_path):
+    """`_write_combined()` re-stamps the books whenever ANY market's bot layer
+    runs, so a partial skip leaves the markets that DID scan obliged to move
+    them. Only a cycle where every market skipped leaves them legitimately
+    untouched. Crypto is the sharp case: its own asserts are tolerated, so if
+    the all-skipped test were written as "no hard failure" it would pass here
+    too and the combined-book gate would be gone on every crypto-blocked run.
+    """
+    rc, out = _run_gate(tmp_path, skipped=("asx", "nasdaq"), staged_ok=False)
+    assert rc != 0, out
+    assert "ASSERT-CALLED: combined book (journal)" in out
+
+
+def test_a_normal_run_is_untouched_by_any_of_this(tmp_path):
+    rc, out = _run_gate(tmp_path, staged_ok=True)
+    assert rc == 0, out
+    for label in ("scan output [asx]", "bot book [nasdaq]",
+                  "combined book (journal)", "combined book (public twin)"):
+        assert f"ASSERT-CALLED: {label}" in out
+
+
+def test_the_workflow_reads_the_exact_path_the_scanner_writes():
+    """Two files, one filename, no import between them - the classic way a
+    marker-file contract dies silently. Renaming it in config.py without
+    touching scan.yml sends the gate back to failing on outages."""
+    body = _scan_commit_body()
+    assert config.SCAN_SKIP_MARKER in body, (
+        f"scan.yml must read {config.SCAN_SKIP_MARKER!r} "
+        "(scanner/config.py SCAN_SKIP_MARKER)")
+    src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
+    assert "config.SCAN_SKIP_MARKER" in src, (
+        "run.py must write the marker via config, not a second literal")
+
+
+def test_the_scanner_records_the_skip_on_the_path_that_takes_it():
+    """The other half of the contract. If run.py stops writing the marker the
+    gate is not wrong, it is just uninformed - and the symptom is identical to
+    the incident, so it would be re-diagnosed from scratch."""
+    src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8").splitlines()
+    guard = next(i for i, l in enumerate(src) if l.strip() == "if not deep_frames:")
+    stop = next(i for i in range(guard, len(src)) if src[i].strip() == "continue")
+    assert any("_record_skip(market_key)" in l for l in src[guard:stop]), (
+        "the deliberate no-data skip must record itself BEFORE it continues, "
+        "or scan.yml cannot tell it apart from a staging bug")
+
+
+def test_the_skip_marker_is_never_committed():
+    """It describes ONE run. Committed, an outage on Monday would silence
+    Tuesday's gate - a marker file that survives its run is worse than none."""
+    # Ask git, not the file. The first version of this read .gitignore and
+    # substring-matched, which passed against a COMMENTED-OUT rule - the exact
+    # mutation it was written to catch. git is the only thing whose opinion on
+    # what is ignored actually counts.
+    p = subprocess.run(["git", "check-ignore", "-q", config.SCAN_SKIP_MARKER],
+                       cwd=ROOT, capture_output=True, text=True)
+    assert p.returncode == 0, (
+        f"{config.SCAN_SKIP_MARKER} is not gitignored (git check-ignore "
+        f"rc={p.returncode}); one run's outage would silence the next run's gate"
+    )
+    staged = [l for _, l in _code(_scan_commit_body())
+              if l.startswith("SHARED=") or l.startswith("PATHS=")]
+    assert staged, "staging scope moved; re-point this test"
+    assert not [l for l in staged if config.SCAN_SKIP_MARKER in l]

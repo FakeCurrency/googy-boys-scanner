@@ -1090,6 +1090,29 @@ SCAN_ERROR_SAMPLE_MAX    = 12   # error rows published per market (0 = count onl
 SCAN_ERROR_MSG_MAX       = 160  # chars kept per error message before truncation
 SCAN_ERROR_KINDS_MAX     = 4    # distinct exception types named in the summary line
 SCAN_ERROR_LOUD_PCT      = 5.0  # >= this % of names failing prints the '!!' marker
+
+# ---------------------------------------------------------------------------
+# Deliberate-skip marker (TOP100 #67 follow-up, 2026-07-28 incident)
+# ---------------------------------------------------------------------------
+# `run.py` has ONE path where a market publishes nothing and that is CORRECT:
+# the download came back fully empty AND the frame cache had nothing to fall
+# back on, so the market keeps yesterday's JSON rather than clobbering it with
+# an empty scan. That path exits 0 on purpose — it is a reported decision, not
+# a fault, and failing on it would turn every upstream Yahoo outage red.
+#
+# `scan.yml`'s per-market `assert_staged` gate cannot see that decision. All it
+# sees is "<market>_vivek.json has no staged diff", which is byte-identical to
+# the silent-staging bug the gate was built to catch (2026-07-20). It therefore
+# failed the whole cycle for an outage nobody can fix — the failure-email
+# problem this repo has now talked itself out of three times.
+#
+# This file is the discriminator between the two. run.py appends a market key
+# here when (and only when) it takes that deliberate skip; scan.yml reads it and
+# downgrades exactly those markets' asserts to a loud warning, leaving the gate
+# hard for every market that claimed to scan. Untracked and per-workspace: CI
+# checks out fresh each run, and the three sequential market processes share one
+# checkout, hence append rather than overwrite.
+SCAN_SKIP_MARKER = ".scan-skipped"
                                 # (0 = never loud)
 
 

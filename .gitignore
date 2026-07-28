@@ -30,6 +30,12 @@ _to_delete/
 # Last-good per-ticker frame cache (restored across CI runs via actions/cache)
 .cache/
 
+# Per-run marker: which markets deliberately published nothing because their
+# download came back fully blocked (scanner/config.py SCAN_SKIP_MARKER). Read
+# by scan.yml within the same run and meaningless outside it — committing it
+# would let one run's outage silence the next run's gate.
+.scan-skipped
+
 # Claude cloud-session push credential (local only, never commit)
 .claude/gh_token.txt
 test/e2e/__shots__/

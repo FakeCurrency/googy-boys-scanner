@@ -17,6 +17,31 @@ from .data import download, merge_with_cache
 from .universe import load_universe
 
 DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _record_skip(market_key: str) -> None:
+    """Note that `market_key` deliberately published nothing this run.
+
+    Read by scan.yml, which otherwise cannot tell this decision apart from the
+    silent-staging bug its per-market `assert_staged` exists to catch — see the
+    SCAN_SKIP_MARKER block in config.py for the full incident.
+
+    APPEND, never truncate: a full cycle runs `scanner.run` three times in one
+    checkout (nasdaq, crypto, asx) and each process must be able to add itself
+    without erasing an earlier one's line.
+
+    Best-effort by construction. This is bookkeeping ABOUT a degraded run; a
+    read-only filesystem or a lost race on it must never be the thing that takes
+    the scan down, which would invert the entire point of the fix.
+    """
+    try:
+        with open(REPO_ROOT / config.SCAN_SKIP_MARKER, "a", encoding="ascii") as fh:
+            fh.write(f"{market_key}\n")
+    except Exception as e:   # noqa: BLE001 - deliberately total, see docstring
+        print(f"  (could not record skip marker for {market_key}: "
+              f"{type(e).__name__}) - CI will treat this as a hard miss",
+              flush=True)
 
 
 def main() -> None:
@@ -95,6 +120,7 @@ def main() -> None:
             if not deep_frames:
                 print(f"  no data for {market_key} (download blocked/empty) — "
                       f"keeping existing JSON", flush=True)
+                _record_skip(market_key)
                 continue
             # PULSE fully retired (UI 2026-07-03; fetch finally removed
             # 2026-07-20, hygiene pass): this was still a Yahoo macro download
