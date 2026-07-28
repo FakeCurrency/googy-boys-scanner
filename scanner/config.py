@@ -339,7 +339,21 @@ VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # so the bot is long-only for now — shorts disabled and no short slots reserved.
 # The short machinery is retained behind the flag in case it's reworked later.
 VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
-VIVEK_BOT_MAX_POSITIONS  = 10      # max concurrent open positions PER MARKET
+# Book size (owner, 2026-07-28): 30 open positions TOTAL across every market,
+# free to distribute wherever the A+ setups actually are. The per-market number
+# below is therefore NOT the binding constraint any more -- it is set equal to
+# the global cap so one market CAN hold the whole book, and the ceiling that
+# really bites is VIVEK_BOT_MAX_OPEN_TOTAL. Total risk is unchanged from the old
+# 10-per-market shape: 30 x 0.35% = 10.5% of a market's equity, the same as
+# 3 markets x 10 x 0.35%. The per-sector cap (3) still stops the book becoming
+# one macro bet.
+VIVEK_BOT_MAX_POSITIONS  = 30      # max concurrent open positions PER MARKET
+# Global ceiling across ALL markets, enforced in vivek_run by counting the other
+# markets' canonical book files before deciding. This is race-free by
+# construction: scan.yml and crypto_bot.yml share `concurrency: group: scan`
+# with cancel-in-progress false, so no two market runs are ever live at once and
+# a run's read of the other books cannot be stale. 0 = off (per-market only).
+VIVEK_BOT_MAX_OPEN_TOTAL = 30
 VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade (flexible 0.25–0.5 band)
 # Tradeability gates — quality-of-fill filters, NOT strategy changes. They only

@@ -177,7 +177,8 @@
         <tr><td>Preferred timeframe</td><td class="rule blue" data-r="prefer_tf">1W</td><td>Weekly plans first (less noise), falls back to 1D</td></tr>
         <tr><td>Minimum R:R (to TP2)</td><td class="rule" data-r="min_rr">1.5</td><td>Skip poor-reward setups</td></tr>
         <tr><td>Funds / REITs / ETFs / LICs</td><td class="rule red" data-r="exclude_funds">excluded</td><td>They hug the 200-SMA (false reactions) and CFD brokers don’t list them</td></tr>
-        <tr><td>Positions per market</td><td class="rule" data-r="max_positions">10</td><td>Book cap — full book benches new setups until something closes</td></tr>
+        <tr><td>Open positions (all markets)</td><td class="rule" data-r="max_open_total">30</td><td>The binding book cap — ASX, NASDAQ and crypto share it, so the book concentrates wherever the A+ setups are instead of holding a fixed slice each. A full book benches new setups until something closes</td></tr>
+        <tr><td>Positions per market</td><td class="rule" data-r="max_positions">30</td><td>Set equal to the total, so one market <em>can</em> hold the whole book — the shared cap above is what actually binds</td></tr>
         <tr><td>One per symbol</td><td class="rule">always</td><td>No pyramiding</td></tr>
         <tr><td>Per-sector cap</td><td class="rule amber" data-r="max_per_sector">3</td><td>The book can’t become one macro bet (unknown sectors exempt)</td></tr>
         <tr><td>Price floor</td><td class="rule amber" data-r="min_price">ASX ≥ $0.05 · NASDAQ ≥ $1</td><td>Sub-floor spreads are worth multiple R — paper fills there are fiction</td></tr>
@@ -353,6 +354,8 @@
       set("min_rr", j.min_rr);
       set("exclude_funds", j.exclude_funds ? "excluded" : "allowed");
       set("max_positions", j.max_positions);
+      // Older cached bot_rules.json has no global cap — leave the static cell.
+      if (j.max_open_total != null) set("max_open_total", j.max_open_total || "off");
       set("risk_pct", j.risk_pct + "%");
       set("max_daily_loss_pct", `−${j.max_daily_loss_pct}% / market / day`);
       if (j.leverage) set("leverage", `${j.leverage.asx}× stocks · ${j.leverage.crypto}× crypto`);

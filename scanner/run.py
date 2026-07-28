@@ -197,6 +197,7 @@ def main() -> None:
         "prefer_tf": config.VIVEK_BOT_PREFER_TF,
         "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
         "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
+        "max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL,
         "risk_pct": config.VIVEK_BOT_RISK_PCT,
         "leverage": dict(config.VIVEK_BOT_LEVERAGE),
         "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,

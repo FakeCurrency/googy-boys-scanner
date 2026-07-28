@@ -378,14 +378,31 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     book caps (Rule 5) are evaluated against the CURRENT open book passed in via
     `open_book` (a list of {symbol, direction} already held in this market), so
     the limits hold ACROSS RUNS, not just within one scan: at most
-    VIVEK_BOT_MAX_POSITIONS (10) open, at most (10 − VIVEK_BOT_MIN_SHORTS) = 6
-    long so ≥4 short slots stay reserved, and one position per symbol.
+    VIVEK_BOT_MAX_POSITIONS open in this market, at most
+    (max_positions − VIVEK_BOT_MIN_SHORTS) long so the reserved short slots stay
+    free, and one position per symbol. Numbers are deliberately not quoted here
+    — scanner/config.py is the single source of truth and this docstring has
+    already gone stale once.
+
+    A GLOBAL ceiling across markets is also supported: pass `max_open_total`
+    together with `open_elsewhere` (how many positions the OTHER markets are
+    holding right now) and the book stops at that total no matter which market
+    the setups land in. decide() only ever sees one market, so the runner is
+    responsible for counting the others — see vivek_run._open_elsewhere.
+    Omit either and the global gate is simply off.
 
     Returns {plans, skipped, summary}; `plans` are the NEW entries this run.
     """
     from collections import Counter
 
     max_pos = kw.get("max_positions", _cfg.VIVEK_BOT_MAX_POSITIONS)
+    max_total = int(kw.get("max_open_total", 0) or 0)
+    # open_elsewhere=None means the runner could not read a sibling market's
+    # book. A global risk cap that quietly ignores the markets it cannot see is
+    # worse than one that pauses, so unknown = take nothing (see the gate below).
+    _oe = kw.get("open_elsewhere", 0)
+    elsewhere_unknown = _oe is None
+    open_elsewhere = 0 if elsewhere_unknown else int(_oe or 0)
     min_shorts = kw.get("min_shorts", _cfg.VIVEK_BOT_MIN_SHORTS)
     max_long = max(0, max_pos - min_shorts)          # reserve the short slots
     plans, skipped = [], []
@@ -434,6 +451,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
             drop(out, "cooldown", f"{sym} stopped out recently — re-entry cooldown active")
         elif longs + shorts >= max_pos:                 # existing + taken so far
             drop(out, "book_full", f"already at the {max_pos}-position cap for {market}")
+        elif max_total and elsewhere_unknown:
+            drop(out, "global_cap_unknown",
+                 "another market's book is unreadable — the global cap cannot "
+                 "be evaluated, so no new entries this run")
+        elif max_total and open_elsewhere + longs + shorts >= max_total:
+            drop(out, "global_cap",
+                 f"{open_elsewhere + longs + shorts} open across all markets "
+                 f"({open_elsewhere} elsewhere) — global cap {max_total}")
         elif direction == "long" and longs >= max_long:
             drop(out, "long_cap", f"long cap {max_long} reached — reserving the ≥{min_shorts}-short slots")
         elif max_sector and sector and sector_counts[sector] >= max_sector:
@@ -453,12 +478,21 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     summary = {
         "market": market, "setups": len(rows), "existing": existing,
         "taken": len(plans), "total_open": longs + shorts,
+        # Global-cap context: what the OTHER markets were holding when this ran,
+        # and the ceiling they share. max_open_total 0 = the gate is off;
+        # open_elsewhere None = a sibling book was unreadable.
+        "open_elsewhere": None if elsewhere_unknown else open_elsewhere,
+        "max_open_total": max_total,
         "longs": longs, "shorts": shorts, "min_shorts": min_shorts,
         "short_bias_met": short_bias_met,
         "skipped": len(skipped), "skip_reasons": dict(reasons),
     }
-    log.info("VIVEK bot [%s]: +%d new (book %d→%d) — %d long / %d short%s · skips: %s",
-             market, summary["taken"], existing, summary["total_open"], longs, shorts,
+    log.info("VIVEK bot [%s]: +%d new (book %d→%d%s) — %d long / %d short%s · skips: %s",
+             market, summary["taken"], existing, summary["total_open"],
+             ("" if not max_total else
+              f", ?/{max_total} all markets" if elsewhere_unknown else
+              f", {open_elsewhere + longs + shorts}/{max_total} all markets"),
+             longs, shorts,
              "" if short_bias_met else f"  ⚠ short bias unmet (<{min_shorts})",
              summary["skip_reasons"] or "none")
     return {"plans": plans, "skipped": skipped, "summary": summary}

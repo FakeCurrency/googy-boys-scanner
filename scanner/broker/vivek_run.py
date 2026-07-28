@@ -169,6 +169,57 @@ def _load_market_book(market: str) -> dict:
     return _read_json_or_abort(p, f"bot book [{market}]")
 
 
+def _open_elsewhere(market: str) -> int | None:
+    """How many positions every market EXCEPT `market` is holding right now,
+    read straight from the canonical per-market book files.
+
+    This is the runner's half of the global position ceiling
+    (config.VIVEK_BOT_MAX_OPEN_TOTAL): vivek_bot.decide() only ever sees one
+    market's scan, so it cannot know what the others hold. Reading the sibling
+    files is safe and race-free by construction -- scan.yml and crypto_bot.yml
+    share `concurrency: group: scan` with cancel-in-progress false, so no two
+    market runs are ever live at once. A run still WRITES only its own file, so
+    the layout-v2 guarantee (cross-market clobber impossible) is untouched.
+
+    Returns None when a sibling book cannot be parsed. The caller must then take
+    NO new entries: a risk cap that silently ignores the markets it cannot see
+    is worse than one that pauses. That state is never quiet -- the owning
+    market's own run aborts on a corrupt book and fires a CRITICAL alert.
+    """
+    total = 0
+    for m in config.MARKETS:
+        if m == market:
+            continue
+        p = _market_book_file(m)
+        if not p.exists():
+            continue                    # fresh clone / never scanned -> 0 open
+        try:
+            mb = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:          # noqa: BLE001 - logged; caller fails closed
+            log.error("vivek_run [%s]: cannot read %s for the global position "
+                      "cap (%s) - taking no new entries until it is readable",
+                      market, p.name, e)
+            return None
+        # Count every open row in the file rather than filtering on the market
+        # tag: the file IS that market's book, and an untagged row must not go
+        # uncounted against a risk cap. Matches how _combined_view merges them.
+        total += len(mb.get("open") or [])
+    # Positions whose market is not in config.MARKETS live in UNASSIGNED_FILE.
+    # They show on the journal page as open risk, and they belong to no market's
+    # own open_book, so without this they would be invisible to the ceiling.
+    # They are "elsewhere" from every market's point of view -> always counted.
+    if UNASSIGNED_FILE.exists():
+        try:
+            stray = json.loads(UNASSIGNED_FILE.read_text(encoding="utf-8"))
+        except Exception as e:          # noqa: BLE001 - same fail-closed rule
+            log.error("vivek_run [%s]: cannot read %s for the global position "
+                      "cap (%s) - taking no new entries until it is readable",
+                      market, UNASSIGNED_FILE.name, e)
+            return None
+        total += sum(1 for p in stray.get("entries", []) if p.get("status") == "open")
+    return total
+
+
 def _combined_view(override: dict | None = None) -> dict:
     """The combined book, merged from the canonical per-market files (plus any
     preserved unassigned entries). `override` = {market: mbook} lets a dry-run
@@ -718,8 +769,18 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     open_book = [{"symbol": p["symbol"], "direction": p["direction"],
                   "sector": p.get("sector", "")}
                  for p in book["open"] if p.get("market") == market]
+    # Global ceiling across every market (owner, 2026-07-28): the book may hold
+    # VIVEK_BOT_MAX_OPEN_TOTAL positions distributed however the setups fall,
+    # instead of a fixed slice per market. decide() sees one market, so the
+    # cross-market count is supplied here; None = a sibling book is unreadable
+    # and decide() will then take nothing.
+    gate: dict = {}
+    if int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0):
+        gate = {"max_open_total": int(config.VIVEK_BOT_MAX_OPEN_TOTAL),
+                "open_elsewhere": _open_elsewhere(market)}
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
-                                cooldown_syms=_cooldown_symbols(book, market, day))
+                                cooldown_syms=_cooldown_symbols(book, market, day),
+                                **gate)
 
     # 4) fill new entries at the current intraday price (session only, guard clear).
     added, chased, earnings_skipped = 0, 0, 0

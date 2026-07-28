@@ -175,7 +175,7 @@
               <div class="rule-row">
                 <span class="rule-label">Risk per trade</span>
                 <select class="rule-control" id="rule-risk-pct">
-                  <option value="0.25">0.25%</option><option value="0.5">0.5%</option><option value="1">1.0%</option><option value="1.5">1.5%</option><option value="2">2.0%</option>
+                  <option value="0.25">0.25%</option><option value="0.35">0.35%</option><option value="0.5">0.5%</option><option value="1">1.0%</option><option value="1.5">1.5%</option><option value="2">2.0%</option>
                 </select>
               </div>
               <div class="rule-row">
@@ -186,8 +186,15 @@
               </div>
               <div class="rule-row">
                 <span class="rule-label">Max open positions</span>
+                <!-- Options must be able to REPRESENT what data/bot_rules.json
+                     publishes (bot.js adopts the executing bot's numbers on a
+                     fresh browser). A value with no matching <option> leaves the
+                     select blank and Save then writes it back as 0 — which is
+                     how this row silently proposed a zero-position cap once the
+                     book moved past 5. Keep the live cap listed here. -->
                 <select class="rule-control" id="rule-max-positions">
                   <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="30">30</option>
                 </select>
               </div>
               <div class="rule-row">

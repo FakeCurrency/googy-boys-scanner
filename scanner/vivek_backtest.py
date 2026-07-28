@@ -278,7 +278,7 @@ def run_market_trades(mk: str, limit: int | None, period: str,
 # ── portfolio-level simulation ───────────────────────────────────────────────
 # The per-trade replay answers "does a signal have edge?"; this answers the
 # question the bot actually lives with: does that edge SURVIVE slot contention
-# once the book rules (10 slots, one/symbol, sector cap, cooldown) compete for
+# once the book rules (slot cap, one/symbol, sector cap, cooldown) compete for
 # capital? Chronological, per market, using the same rules as the live bot.
 # The time stop and daily/weekly guards need intra-trade price paths the slim
 # records don't carry, so they are NOT simulated (noted in the output).
@@ -289,7 +289,19 @@ def portfolio_sim(trades: list[dict]) -> dict:
 
     skip_types = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
     long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
+    # Slot count. The live book's binding constraint is now a GLOBAL cap shared
+    # across markets (VIVEK_BOT_MAX_OPEN_TOTAL), but this sim runs one market at
+    # a time and structurally cannot model cross-market contention. Using the
+    # per-market cap (equal to the global one) would let each of 3 markets fill
+    # a whole book and overstate how many trades the real book can carry, so the
+    # sim gets that market's AVERAGE share of the shared cap instead. A market
+    # that wins contention can hold more than this live; the sim is deliberately
+    # the conservative reading, and it keeps these numbers comparable with the
+    # published history from when the cap really was per-market.
     max_pos = config.VIVEK_BOT_MAX_POSITIONS
+    _total_cap = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0)
+    if _total_cap:
+        max_pos = min(max_pos, max(1, _total_cap // max(len(config.MARKETS), 1)))
     max_sector = int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0)
     cooldown = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
 

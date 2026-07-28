@@ -443,7 +443,7 @@ def _short(sym):
     return _row(symbol=sym, dir="SHORT", plans={"1D": _short_plan()})
 
 
-# ── bot: book rules (A+ only, 10/market, ≥4 short) ──────────────────────────────
+# ── bot: book rules (A+ only, per-market cap, short-slot reserve) ───────────────
 
 @pytest.fixture
 def shorts_on(monkeypatch):
@@ -451,6 +451,22 @@ def shorts_on(monkeypatch):
     exercise it — the bot ships long-only, but the logic is retained."""
     monkeypatch.setattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
     monkeypatch.setattr(config, "VIVEK_BOT_MIN_SHORTS", 4)
+
+
+@pytest.fixture
+def small_book(monkeypatch):
+    """Pin a 10-position per-market cap for the book-size tests.
+
+    These tests are about the MECHANISM — a full book refuses, existing
+    positions seed the counters, the short slots stay reserved — not about
+    whatever number config happens to carry. Hardcoding that number is exactly
+    what went stale when the owner raised the book to 30 total on 2026-07-28,
+    so they now set their own small cap and read it back from this fixture.
+    The live shape is pinned once, deliberately, in
+    tests/test_vivek_bot_global_cap.py.
+    """
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_POSITIONS", 10)
+    return 10
 
 
 def test_decide_is_long_only_by_default():
@@ -466,26 +482,29 @@ def test_decide_takes_only_a_plus():
     assert out["summary"]["skip_reasons"].get("not_a_plus") == 2
 
 
-def test_decide_caps_at_ten_per_market(shorts_on):
-    rows = [_short(f"S{i}") for i in range(14)]            # 14 shorts (no long cap in play)
+def test_decide_stops_at_the_per_market_cap(shorts_on, small_book):
+    cap = small_book
+    rows = [_short(f"S{i}") for i in range(cap + 4)]       # shorts only: no long cap in play
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
-    assert out["summary"]["taken"] == 10
+    assert out["summary"]["taken"] == cap
     assert out["summary"]["skip_reasons"].get("book_full") == 4
 
 
-def test_decide_reserves_short_slots_caps_longs_at_six(shorts_on):
-    rows = [_long(f"L{i}") for i in range(10)]             # all longs available
+def test_decide_reserves_the_short_slots_by_capping_longs(shorts_on, small_book):
+    long_cap = small_book - config.VIVEK_BOT_MIN_SHORTS   # 10 − 4 = 6
+    rows = [_long(f"L{i}") for i in range(long_cap + 4)]   # only longs on offer
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
-    assert out["summary"]["longs"] == 6 and out["summary"]["shorts"] == 0
-    assert out["summary"]["short_bias_met"] is False
+    assert out["summary"]["longs"] == long_cap and out["summary"]["shorts"] == 0
+    assert out["summary"]["short_bias_met"] is False       # the slots stay empty, not filled by longs
     assert out["summary"]["skip_reasons"].get("long_cap") == 4
 
 
-def test_decide_fills_ten_with_at_least_four_short(shorts_on):
+def test_decide_fills_the_book_keeping_the_short_minimum(shorts_on, small_book):
+    cap, min_shorts = small_book, config.VIVEK_BOT_MIN_SHORTS
     rows = [_long(f"L{i}") for i in range(8)] + [_short(f"S{i}") for i in range(8)]
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
-    assert out["summary"]["taken"] == 10
-    assert out["summary"]["longs"] == 6 and out["summary"]["shorts"] == 4
+    assert out["summary"]["taken"] == cap
+    assert out["summary"]["longs"] == cap - min_shorts and out["summary"]["shorts"] == min_shorts
     assert out["summary"]["short_bias_met"] is True
 
 
@@ -502,22 +521,23 @@ def test_decide_passes_market_leverage_through(shorts_on):
 
 # ── bot: book awareness (caps/short-bias hold ACROSS runs via open_book) ────────
 
-def test_decide_seeds_counts_from_the_existing_book(shorts_on):
+def test_decide_seeds_counts_from_the_existing_book(shorts_on, small_book):
     """An existing book pre-loads the counters so a new run only fills the gap."""
-    book = [{"symbol": f"S{i}", "direction": "short"} for i in range(4)]
+    cap, min_shorts = small_book, config.VIVEK_BOT_MIN_SHORTS
+    book = [{"symbol": f"S{i}", "direction": "short"} for i in range(min_shorts)]
     out = vivek_bot.decide([_long(f"L{i}") for i in range(8)],
                            equity=10_000, market="asx", open_book=book)
     # 4 shorts already held → 6 long slots remain; the run adds 6 new longs only.
-    assert out["summary"]["existing"] == 4
-    assert out["summary"]["taken"] == 6
-    assert out["summary"]["total_open"] == 10
-    assert out["summary"]["shorts"] == 4 and out["summary"]["short_bias_met"] is True
+    assert out["summary"]["existing"] == min_shorts
+    assert out["summary"]["taken"] == cap - min_shorts
+    assert out["summary"]["total_open"] == cap
+    assert out["summary"]["shorts"] == min_shorts and out["summary"]["short_bias_met"] is True
 
 
-def test_decide_respects_ten_cap_already_full_book():
+def test_decide_takes_nothing_when_the_book_is_already_full(small_book):
     """A full book means no new entries regardless of incoming setups."""
     book = ([{"symbol": f"S{i}", "direction": "short"} for i in range(4)] +
-            [{"symbol": f"L{i}", "direction": "long"} for i in range(6)])
+            [{"symbol": f"L{i}", "direction": "long"} for i in range(small_book - 4)])
     out = vivek_bot.decide([_long("NEW")], equity=10_000, market="asx", open_book=book)
     assert out["summary"]["taken"] == 0
     assert out["summary"]["skip_reasons"].get("book_full") == 1
@@ -531,12 +551,13 @@ def test_decide_does_not_re_add_a_held_symbol():
     assert out["summary"]["skip_reasons"].get("dup_symbol") == 1
 
 
-def test_decide_long_cap_counts_existing_longs(shorts_on):
-    """Five longs already open → only one more long allowed before the 6 cap."""
-    book = [{"symbol": f"L{i}", "direction": "long"} for i in range(5)]
+def test_decide_long_cap_counts_existing_longs(shorts_on, small_book):
+    """One short of the long cap already open → exactly one more gets in."""
+    long_cap = small_book - config.VIVEK_BOT_MIN_SHORTS   # 6
+    book = [{"symbol": f"L{i}", "direction": "long"} for i in range(long_cap - 1)]
     out = vivek_bot.decide([_long("L5"), _long("L6")],
                            equity=10_000, market="asx", open_book=book)
-    assert out["summary"]["longs"] == 6
+    assert out["summary"]["longs"] == long_cap
     assert out["summary"]["taken"] == 1
     assert out["summary"]["skip_reasons"].get("long_cap") == 1
 
