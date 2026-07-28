@@ -1239,9 +1239,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0028,
       "exits": [],
-      "mae": 0.17027999460697174,
+      "mae": 0.1701889932155609,
       "mfe": 0.2102919965982437,
-      "mae_r": -0.286,
+      "mae_r": -0.287,
       "mfe_r": 0.119,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 25188.28241102,
@@ -1251,15 +1251,18 @@
       "risk_pct": 1.6596,
       "risk_usd": 2489.33,
       "source": "vivek_bot",
-      "unreal_r": -0.286,
-      "unreal_usd": -710.94,
+      "unreal_r": -0.287,
+      "unreal_usd": -713.23,
       "lens": "vivek",
-      "last_mark": 0.17027999,
+      "last_mark": 0.17018899,
       "notional_before": 74.2,
       "units_before": 393.28591279,
       "risk_usd_before": 35.0,
       "resized_at": "2026-07-28T07:58:57+00:00",
-      "sizing_mode": "fixed_notional"
+      "sizing_mode": "fixed_notional",
+      "day_marks": {
+        "2026-07-28": 0.17027999
+      }
     },
     {
       "id": "WBT:long:1D:2026-07-02",
@@ -1307,15 +1310,18 @@
       "risk_pct": 0.6531,
       "risk_usd": 979.62,
       "source": "vivek_bot",
-      "unreal_r": 0.046,
-      "unreal_usd": 44.7,
+      "unreal_r": 0.047,
+      "unreal_usd": 46.13,
       "lens": "vivek",
-      "last_mark": 55.4136734,
+      "last_mark": 55.42937851,
       "notional_before": 181.8,
       "units_before": 3.32413331,
       "risk_usd_before": 35.0,
       "resized_at": "2026-07-28T07:58:57+00:00",
-      "sizing_mode": "fixed_notional"
+      "sizing_mode": "fixed_notional",
+      "day_marks": {
+        "2026-07-28": 55.4136734
+      }
     },
     {
       "id": "WLD:long:1D:2026-07-03",
@@ -1363,15 +1369,18 @@
       "risk_pct": 0.9184,
       "risk_usd": 1377.67,
       "source": "vivek_bot",
-      "unreal_r": -0.819,
-      "unreal_usd": -1127.79,
+      "unreal_r": -0.842,
+      "unreal_usd": -1160.22,
       "lens": "vivek",
-      "last_mark": 0.3224,
+      "last_mark": 0.3197,
       "notional_before": 139.47,
       "units_before": 346.39372952,
       "risk_usd_before": 35.0,
       "resized_at": "2026-07-28T07:58:57+00:00",
-      "sizing_mode": "fixed_notional"
+      "sizing_mode": "fixed_notional",
+      "day_marks": {
+        "2026-07-28": 0.3224
+      }
     }
   ],
   "closed": [
@@ -2156,21 +2165,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -1815.6,
+      "week_usd": -33.91,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "realised_usd": 0,
-      "open_realised_usd": -20.95,
-      "unrealised_usd": -1794.03,
-      "session_usd": -1814.98,
+      "week_unpriced_worst_usd": 0.0,
+      "worst_session_usd": -33.29,
+      "worst_week_usd": -33.91,
+      "realised_usd": 0.0,
+      "open_realised_usd": 0.0,
+      "unrealised_usd": -33.29,
+      "session_usd": -33.29,
+      "unpriced": [],
+      "unpriced_worst_usd": 0.0,
       "open": 3,
+      "open_total_usd": -1848.27,
       "notified": ""
     }
   },
   "summary": {
     "open": 24,
-    "unreal_usd": -768.58,
+    "unreal_usd": -801.87,
     "updated_day": "2026-07-28"
   },
-  "updated_at": "2026-07-28T12:18:24+00:00"
+  "updated_at": "2026-07-28T15:08:54+00:00"
 }
