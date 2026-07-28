@@ -66,8 +66,8 @@
 
   function rowHTML(m, t, x, scans, ci) {
     const stars = [...x.stars].map((lens) =>
-      `<span class="mn-star-chip" title="Starred on ${lens.toUpperCase()}${x.starDates[lens] ? " " + x.starDates[lens] : ""}">★ ${lens.toUpperCase()}` +
-      `<button class="mn-unstar" data-lens="${lens}" data-market="${m}" data-ticker="${esc(t)}" title="Remove this star" aria-label="Unstar">✕</button></span>`).join("");
+      `<span class="mn-star-chip" title="Starred on ${esc(lens.toUpperCase())}${x.starDates[lens] ? " " + esc(x.starDates[lens]) : ""}">★ ${esc(lens.toUpperCase())}` +
+      `<button class="mn-unstar" data-lens="${esc(lens)}" data-market="${esc(m)}" data-ticker="${esc(t)}" title="Remove this star" aria-label="Unstar">✕</button></span>`).join("");
     const trade = x.trade
       ? `<span class="mn-star-chip mn-trade-chip" title="Open paper position">📓 OPEN ${esc(String(x.trade.direction || "").toUpperCase())} @ ${esc(String(x.trade.entry))}${x.trade.lens ? " · " + esc(String(x.trade.lens).toUpperCase()) : ""}</span>`
       : "";

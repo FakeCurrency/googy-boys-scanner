@@ -1275,6 +1275,183 @@ suites, pyflakes at its 9 pre-existing warnings.
 
 ---
 
+## The browser layer — TOP100 Tier 5 (2026-07-28)
+
+Tiers 0–4 worked backwards from the alerts to the engine that computes them.
+**Tier 5 (75–88) is the last layer: the page itself** — what it escapes, what it
+paints as live, what it leaks, and what it does with a fault. Every item here is
+front-end only; nothing in `scanner/` or `broker/` moved, and no item changes
+which trades get taken. As with the tiers above, only the items that changed a
+MODEL or recorded a decision are written up; the line fixes live in the commit
+body and in TOP100.md per item.
+
+**Four of these items shipped with their TOP100 entry partly WRONG, and the
+correction is recorded beside the tick rather than quietly absorbed.** The
+entries were written by reading the code; the fixes were written by running it.
+Where they disagree, the tick means "the real defect was found and fixed", not
+"the description was accurate" — see #85, #87 and #88 below, and the retraction
+at the end.
+
+### #78/#79 — a cached payload is not a live one, and a poll must know its market
+
+`app.js` painted a cached scan with no age check — the front-end twin of Tier 1's
+#24, and the same failure in the same direction: a price from an unknown time ago
+presented with the confidence of one from just now. #79 is the sharper half. A
+`pollForFreshScan` in flight had no cancellation and applied whatever came back,
+so **switching markets mid-poll landed ASX rows on the NASDAQ view** — a page
+that is not merely stale but wrong about which market it is showing, with nothing
+on screen saying so. The poll now checks the market it was started for before it
+applies anything, and drops the payload if the answer changed underneath it.
+
+### #84 — a memo keyed on a generation counter, not on a timestamp
+
+The close preview re-parsed the entire journal out of localStorage on **every
+keystroke**. The fix is a one-row memo (`closeRow` + `closeRowGen`) invalidated
+by a `mjGen` counter that every writer bumps.
+
+- **The generation counter is what makes it safe, and the discipline is that
+  every writer must bump it.** `mjSaveLocal`, `mjSave` and `afterStoreChange`
+  each start with `mjGen++`; the cross-tab `storage` listener routes through
+  `afterStoreChange` rather than doing its own thing. Add a fourth writer that
+  forgets to bump and the modal shows a row that no longer exists in the store —
+  a test asserts all three still contain the bump, so the omission fails a push
+  rather than surfacing as an unreproducible stale-preview report.
+- **The memo is cleared on `closeModal()`, not merely invalidated.** It must not
+  outlive the modal: a held row plus a matching generation is indistinguishable
+  from a fresh read, so the next open of a DIFFERENT row within the same
+  generation would answer from the previous one. `openCloseModal` seeds it from
+  the read it just did rather than forcing a second.
+
+### #85 — common-subexpression elimination, and the cache that was deliberately refused
+
+`getCurrentRiskState()` walked the open book **six times per read**, and it is the
+most-called method on the engine (`_emit()` after every mutation, every
+`subscribe()`, and bot.js's 30s `loadData()`). Now two walks.
+
+- **It is CSE, NOT a cache, and that distinction is the whole design.** No value
+  is held across calls, so nothing can go stale. The alternative — memoising the
+  result — was rejected because `getPositionUnrealized` reads `pos.current`,
+  which `onPrice()`/`onPrices()` move **without any signal a memo could key on**:
+  they only `_emit()` when TP1 actually fires, so an ordinary tick moves the
+  number and announces nothing. A risk read answering with a price from a minute
+  ago is a worse failure than a slow one. `test/statekeep.test.js` pins this
+  behaviourally (a price move must land on the very next read) *and* pins the
+  comment that says so, because the comment is what stands between the next
+  reader and re-introducing the memo.
+- **Bit-identical, not merely close.** A risk figure that drifts in the last cent
+  is a support ticket nobody can reproduce. The accumulator preserves the exact
+  key order the old `reduce` summed in and still rounds once at the end.
+- **The hoist made the calls strictly FEWER, never more.** The old
+  `atBE || this.getPositionOpenRisk(p) <= 0` short-circuited, so a break-even
+  position skipped its second call; hoisting means one call per position instead
+  of one *or* two. A test pins the direction with a fixture that deliberately
+  contains a break-even row — without one the property is vacuous.
+- **The item's "called from bot.js:828 (1s)" is FALSE.** The only 1-second
+  interval is `startClocks`'s `tick`, which touches nothing on this engine. The
+  real cadence is 30s plus every mutation. The cost per read was real; the
+  frequency in the item was not, and the comment in the source now says so, so
+  nobody re-derives the urgency from the item.
+- **The comment above the method named `updatePrice`/`updatePrices` for months.
+  Neither has ever existed.** Corrected to `onPrice()`/`onPrices()`. A test now
+  asserts every method the comment cites in backticks is a real method on
+  `RiskManager.prototype` — the general form, since the two named regexes beside
+  it only catch the instance we already knew about.
+
+### #86 — the layout read is deferred and coalesced, not removed
+
+`ensureActiveVisible` called `getBoundingClientRect()` inside the render path.
+The read still has to happen — the strip genuinely needs to know whether the
+active chip is off-screen — so it is deferred into a `requestAnimationFrame` and
+coalesced behind a `_visRaf` guard: five calls in one frame schedule one frame
+and force zero layouts. The reader half was split into `_scrollActiveIntoStrip`,
+which has **exactly one caller** on purpose, and a test counts it: a second
+caller would be a path that bypasses the coalescing entirely, which is the only
+way this regresses.
+
+### #87 — the feed's rows and this session's rows are different things
+
+`bot.js` assigned the status fetch straight onto `LOG` and `JOURNAL` every 30
+seconds, so **anything that happened in this browser was erased on the next
+refresh** — including the kill-switch confirmation line, which is the one log
+entry a person goes looking for to check that the thing they just clicked
+actually happened.
+
+- The two halves are now held apart (`FEED_*` / `LOCAL_*`) and composed
+  newest-first into the rendered `LOG` / `JOURNAL`. `_ms` maps an unparseable or
+  absent timestamp to **0, not NaN**, so undated rows sort to the BACK; NaN would
+  make every comparison False and scatter them unpredictably through the list.
+  Ties keep the local row first — `concat` puts local first and `Array.prototype
+  .sort` is stable, which is spec-required since ES2019 and not an accident of V8.
+- **They are merged, never deduped**, deliberately: a locally-closed trade and
+  its feed twin are the same trade seen from two sides and will differ in their
+  fields, so a dedupe would have to pick a winner and would sometimes pick the
+  staler one. The duplicate is visible and self-correcting on the next scan; a
+  wrong single row is neither.
+- **A failed fetch clears `FEED_LOG` and re-renders the merge** rather than
+  blanking the panel, so an outage costs you the server's lines and keeps your
+  own. The item called `LOG`/`JOURNAL` "globals" — they are module-scoped `let`s
+  inside the page IIFE. The defect was real; the word was not.
+
+### #88 — the `.catch` was catching the wrong thing
+
+`horizon.js` and `regime.js` chained `.then(mount)` **before** `.catch(...)`, so
+the catch that exists to handle *"the JSON is not there yet"* was also swallowing
+every fault thrown by the renderers inside `mount` — and its handler hides both
+hosts. A renderer bug therefore made the surface silently vanish, which is
+indistinguishable from the market simply never having run, and it is the failure
+mode that keeps a broken panel invisible for weeks.
+
+- **The catch is now scoped to the fetch and the parse only**, with `mount` after
+  it. A test asserts the ordering by index and that `.then(mount)` no longer
+  precedes it.
+- **A renderer fault is REPORTED, not disguised**: `draw()` wraps each surface so
+  a throwing strip cannot stop a panel that rendered fine, and `report()`
+  re-raises asynchronously via `setTimeout(() => { throw err; }, 0)` rather than
+  `console.error`. The async re-raise reaches `window.onerror` and the telemetry
+  behind it; a `console.error` reaches a devtools panel nobody has open.
+- **`DATA` is module-scoped and `render()` reads it, so the market switch redraws
+  from the CURRENT payload.** The item's claim that the buttons get re-bound over
+  a stale snapshot is wrong twice over — `mount` binds once behind a `BOUND`
+  flag, and the buttons are static HTML — but the stale-snapshot risk it was
+  pointing at is real and this is what closes it. `host.hidden = false` was
+  already present in all four renderers.
+- Both files are covered by **the same parameterised suite**, so the two surfaces
+  cannot diverge silently — which is the actual risk with a file pair this close.
+
+**RETRACTED, and must not be re-propagated: "sectors.html has no market
+switcher" is NOT a defect.** `renderPanel` columns every market via
+`Object.keys(MARKETS)` and never calls `activeMarket()` — the panel is
+market-independent by construction. Do not "fix" it by adding a switcher.
+
+### Tests
+
+`test/escaping.test.js` (203), `test/staleview.test.js` (17),
+`test/leaks.test.js` (45), `test/statekeep.test.js` (55) — **all four slice the
+SHIPPED files and execute the real declarations**, per the standing rule that a
+re-typed fixture drifts in step with the bug it is supposed to catch.
+
+- **The sandboxes are built with `new Function(body)()`, NOT `vm.runInContext`,
+  and the reason is worth knowing before you copy the pattern.** A `vm` context
+  is a separate realm, so its `Array.prototype` differs and every cross-realm
+  `deepStrictEqual` fails for reasons that have nothing to do with the code under
+  test. `new Function` keeps the same realm while still function-scoping every
+  top-level `var`/`let`/`function` in the body, so nothing leaks.
+- **`fnSrc()` slices a function by asking the PARSER where it ends** — it walks
+  candidate `}` positions and lets `new Function("return (" + cand + ");")`
+  decide which one closes the declaration. A hand-rolled brace balancer desyncs
+  on the first regex literal or brace-inside-a-string.
+- Every item in the tier was mutation-verified: **36 mutations applied one at a
+  time to the shipped sources, each confirmed to turn the right tests red**, then
+  the sources restored and compared byte-for-byte. One real gap was found that
+  way and closed (deleting the "NOT a cache" sentence from #85's comment left the
+  suite green).
+- **A new `test/*.test.js` file needs its own step in `.github/workflows/test.yml`
+  or it never runs.** All four are registered. Gate at this commit: **1160 pytest
+  across 53 files, 588 JS assertions across 14 suites**, pyflakes at its 9
+  pre-existing warnings.
+
+---
+
 ## Development rules
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY

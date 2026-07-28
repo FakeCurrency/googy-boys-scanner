@@ -35,7 +35,12 @@
     XLC: ["Comms & media", "META, GOOGL, NFLX"],
   };
 
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  // TOP100 #75. This covered [&<>] only, while `renderMacro` interpolates
+  // straight into a double-quoted attribute (`data-countdown="${esc(ev.when)}"`)
+  // — a `"` in that value closed the attribute and everything after it was
+  // parsed as markup. Now the same five characters every other page escapes.
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const fmtNum = (v) => v == null ? "—"
     : v.toLocaleString(undefined, { minimumFractionDigits: Math.abs(v) >= 1000 ? 1 : 2, maximumFractionDigits: Math.abs(v) >= 1000 ? 1 : 2 });
   const fmtPct = (v) => v == null ? "" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";

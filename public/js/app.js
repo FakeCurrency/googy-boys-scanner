@@ -59,7 +59,7 @@
   // (just uncached) if cache.js somehow fails to load.
   const _cache = (typeof window !== "undefined" && window.GBSCache) || {
     set() {}, get() { return null; }, getStale() { return null; },
-    setHead() {}, getHead() { return null; },
+    setHead() {}, getHead() { return null; }, ageMs() { return Infinity; },
     HEAD_PREFIX: "gbs:cache:head:", HEAD_ROWS: 60,
   };
   const cacheSet      = (k, d) => _cache.set(k, d);
@@ -67,6 +67,18 @@
   const cacheGetStale = (k)    => _cache.getStale(k);
   const cacheSetHead  = (k, d) => _cache.setHead(k, d);
   const cacheGetHead  = (k)    => _cache.getHead(k);
+  const cacheAgeMs    = (k)    => (_cache.ageMs ? _cache.ageMs(k) : Infinity);
+
+  // The two staleness rules this file used to spell out inline, written as
+  // values so they can be evaluated and tested for real (test/staleview.test.js)
+  // rather than pinned by grepping the source for a comparison.
+  //
+  // #78 — is a cached payload still current? `at` is when it was FETCHED, and a
+  // missing `at` means "no idea", which must read as stale, never as fresh.
+  const cacheIsFresh = (at, now, ttl) => at != null && isFinite(at) && (now - at) < ttl;
+  // #79 — may a background poller paint and announce? Only the newest poller,
+  // and only while the market/mode it was launched against is still on screen.
+  const pollMayApply = (token, current, key, liveKey) => token === current && key === liveKey;
   const HEAD_PREFIX   = _cache.HEAD_PREFIX;
   const HEAD_ROWS     = _cache.HEAD_ROWS;
 
@@ -116,6 +128,7 @@
         _refreshRemaining = AUTO_REFRESH_S;
         const key = `${state.market}:${state.mode}`;
         delete state.cache[key];
+        delete state.cacheAt[key];
         localStorage.removeItem(CACHE_PREFIX + key);
         load(true);
       }
@@ -133,6 +146,7 @@
     dataKey: null,      // "<market>:<mode>" the on-screen data belongs to
     staleView: false,   // true = SWR paint awaiting fresh · "failed" = refresh failed
     cache: {},
+    cacheAt: {},        // "<market>:<mode>" -> ms the payload was FETCHED (#78)
     cur: "$",
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
@@ -235,6 +249,13 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
+  // A NUMBER destined for an attribute that is read back with `+`. `esc` is the
+  // wrong tool here: it would render a missing value as `""`, and `+""` is 0 —
+  // a silent, plausible zero in a position-size calculation. This emits digits
+  // (so it needs no escaping by construction) or empty, and `numAttrOf` below
+  // turns empty back into NaN so "absent" stays absent instead of becoming 0.
+  const numAttr = (v) => (v == null || !isFinite(+v)) ? "" : String(+v);
+  const numAttrOf = (s) => (s == null || s === "") ? NaN : +s;
 
   // ----------------------------------------------------------- watchlist
   // Since 2026-07-03 stars live in the UNIFIED synced store (PM.watch inside
@@ -647,7 +668,7 @@
     const shown = ordered.slice(0, CHIP_CAP);
     const hidden = ordered.length - shown.length;
     if (hidden > 0)
-      shown.push(`<span class="rbadge chip-more" title="${hidden} more — expand the row for every chip">+${hidden}</span>`);
+      shown.push(`<span class="rbadge chip-more" title="${esc(hidden)} more — expand the row for every chip">+${esc(hidden)}</span>`);
     return shown.join("");
   }
 
@@ -1171,7 +1192,7 @@
         return `<span class="vk-axis-seg ${cls}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%"></span>`;
       };
       const tick = (p, lbl, cls) => p == null ? "" :
-        `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${lbl} ${cur}${num(p)}"><i></i>${lbl}</span>`;
+        `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${esc(lbl)} ${esc(cur)}${num(p)}"><i></i>${esc(lbl)}</span>`;
       const nowPct = now != null && r.entry ? ((r.entry - now) / now * 100) : null;
       const rr = r.rr || 0;
       const rwW = Math.max(8, Math.min(88, (rr / (1 + rr)) * 100));
@@ -1203,7 +1224,7 @@
           `<label>acct $<input class="vk-size-in" data-k="acct" type="number" inputmode="decimal" min="0" step="100" placeholder="10000"></label>` +
           `<label>risk <input class="vk-size-in" data-k="risk" type="number" inputmode="decimal" min="0.1" max="5" step="0.1" value="1">%</label>` +
           `<span class="vk-size-out"></span>`;
-      return `<div class="vk-size" data-entry="${r.entry}" data-stop="${r.stop}" title="${set
+      return `<div class="vk-size" data-entry="${numAttr(r.entry)}" data-stop="${numAttr(r.stop)}" title="${set
         ? "Sized from the account + risk saved in the chart page's My-size box (gears the whole site) — edit it on any chart."
         : "Saved on this device only; the chart page's My-size box shares the same values."}">💰 ${inner}</div>`;
     })();
@@ -1689,7 +1710,7 @@
       const cls = dir === "LONG" ? "vkf-long" : "vkf-short";
       const title = off ? `No ${dir.toLowerCase()} setups in this view` : `Show only ${dir.toLowerCase()} setups`;
       return `<button class="vkf-chip ${cls}${active ? " is-active" : ""}${off ? " vkf-off" : ""}" ` +
-        `data-dir="${dir}"${off ? " disabled" : ""} title="${title}">${label} <b>${n}</b></button>`;
+        `data-dir="${esc(dir)}"${off ? " disabled" : ""} title="${esc(title)}">${esc(label)} <b>${esc(n)}</b></button>`;
     };
     const nRecent = all.filter(triggeredRecently).length;
     const nHigh = all.filter(isHighConviction).length;
@@ -1737,7 +1758,33 @@
   // #41: nudge the active filter chip into view WITHIN the mobile toolbar strip
   // (horizontal-only — never scrolls the page vertically). No-op when the strip
   // isn't overflowing (desktop / few chips).
+  // TOP100 #86 — DEFERRED, and the deferral is the fix rather than a tidy-up.
+  // `_scrollActiveIntoStrip` reads four layout properties (`scrollWidth`,
+  // `clientWidth`, two `getBoundingClientRect`s). It was called at the tail of
+  // `renderEntryFilters`, i.e. immediately after that function had rewritten
+  // `#vk-filters`'s innerHTML — and reading geometry straight after a DOM write
+  // forces the browser to lay the page out synchronously, right there, on the
+  // interaction path. On a filter click it happened TWICE: once from
+  // `renderEntryFilters`'s own tail, then again from the click handler after
+  // `renderRows()` had rebuilt the entire results list, which is the most
+  // expensive layout the page ever does.
+  //
+  // A frame's delay costs nothing here — the strip is already on screen and the
+  // scroll it triggers is `behavior: "smooth"` anyway — while the read now
+  // happens AFTER the layout the browser was going to perform regardless.
+  // Coalescing is the other half: both calls in a click land in one frame, so
+  // the pair costs one read, and the state read is the FINAL one rather than an
+  // intermediate that was about to be overwritten.
+  //
+  // A hidden tab never runs rAF, so the callback simply waits for the tab to
+  // come back — correct on its own terms, since a smooth scroll nobody can see
+  // is not worth forcing a layout for.
+  let _visRaf = 0;
   function ensureActiveVisible() {
+    if (_visRaf) return;
+    _visRaf = requestAnimationFrame(() => { _visRaf = 0; _scrollActiveIntoStrip(); });
+  }
+  function _scrollActiveIntoStrip() {
     const line = document.querySelector("#toolbar .tb-line");
     if (!line || line.scrollWidth <= line.clientWidth) return;
     const el = document.querySelector("#vk-filters .vkf-chip.is-active")
@@ -2116,9 +2163,30 @@
     // Check localStorage cache first (5-min TTL)
     if (!state.cache[key]) {
       const lsCached = cacheGet(key);
-      if (lsCached) state.cache[key] = lsCached;
+      if (lsCached) {
+        state.cache[key] = lsCached;
+        // Inherit the STORED fetch time, not "now". A payload written four
+        // minutes ago is four minutes old the moment it is read back;
+        // stamping it fresh would hand it another full TTL.
+        const a = cacheAgeMs(key);
+        state.cacheAt[key] = Date.now() - (isFinite(a) ? a : 0);
+      }
     }
-    if (state.cache[key]) { applyPayload(state.cache[key]); return; }
+    // TOP100 #78. `state.cache` is an in-MEMORY copy that lives as long as the
+    // tab does, and the ONLY thing that ever evicted it was the auto-refresh
+    // tick — which only evicts the market you are currently LOOKING AT. So:
+    // open on ASX, switch to NASDAQ, leave the tab up for the afternoon (the
+    // refresh clock faithfully keeping NASDAQ current), switch back to ASX —
+    // and the morning's payload repainted as live. Same title, same "updated"
+    // stamp, no "updating…" chip, and no fetch, because this line returned
+    // before the fetch could run. It is the front-end twin of #24: the
+    // dashboard's own memory was the one cache with no age on it. The memory
+    // copy now gets the same five-minute life its localStorage twin has, and
+    // anything older falls through to the stale-paint-then-revalidate path
+    // below instead of being presented as the current scan.
+    if (state.cache[key] && cacheIsFresh(state.cacheAt[key], Date.now(), CACHE_TTL_MS)) {
+      applyPayload(state.cache[key]); return;
+    }
     // Stale-while-revalidate (UI Wave 1): if this market/mode isn't already on
     // screen, paint the best cached copy NOW — expired full payload first,
     // else the slim head cache — marked "updating…", then fetch fresh and swap.
@@ -2127,7 +2195,11 @@
     const alreadyShowing = state.data && state.dataKey === key;
     let painted = alreadyShowing;
     if (!alreadyShowing) {
-      const stale = cacheGetStale(key) || cacheGetHead(key);
+      // The aged in-memory copy first: it is the FULL payload, so it beats both
+      // the expired localStorage copy (same data, one JSON.parse away) and the
+      // 60-row head. It is only reached when it is past TTL, and it paints
+      // marked stale, so age is disclosed rather than hidden.
+      const stale = state.cache[key] || cacheGetStale(key) || cacheGetHead(key);
       if (stale) { applyPayload(stale, true); painted = true; }
       else if (!silent) {
         $("#scan-title").textContent = "Loading latest scan…";
@@ -2149,6 +2221,7 @@
         d = await res.json();
       }
       state.cache[key] = d;
+      state.cacheAt[key] = Date.now();
       cacheSet(key, d);
       cacheSetHead(key, d);
       // If the user switched market while this fetch was in flight, keep the
@@ -2281,24 +2354,45 @@
 
     // Poll for a new generated_at after triggering a cloud scan.
     // Checks every 30s for up to 5 minutes, then gives up quietly.
+    //
+    // TOP100 #79. Two defects, and both ended in a FALSE "Scan complete".
+    //
+    //   * The target moved but the baseline did not. Each tick re-read
+    //     `state.market`, while `oldGenAt` was captured from the market you
+    //     STARTED on. Switch ASX -> NASDAQ mid-poll and it fetched NASDAQ,
+    //     compared NASDAQ's generated_at against the ASX one, found them
+    //     different — they always are — and announced that your scan had
+    //     finished: repainting, restarting the refresh clock and flashing
+    //     success for a scan that never ran on the market you were looking at.
+    //   * Nothing cancelled it. Two taps on reload left two pollers alive for
+    //     five minutes, racing to apply payloads and flash over each other.
+    //
+    // The target is now pinned at poll start and a token retires the previous
+    // poller, so a superseded or navigated-away poll can still WARM the cache
+    // — the fetch was worth keeping — but it cannot paint or speak.
+    let _pollToken = 0;
     async function pollForFreshScan(oldGenAt) {
+      const token = ++_pollToken;
+      const market = state.market, mode = state.mode;
+      const key = `${market}:${mode}`;
       for (let i = 0; i < 10; i++) {
         await new Promise(r => setTimeout(r, 30000));
+        if (token !== _pollToken) return;            // a newer poll took over
         try {
-          const url = dataFile(state.market, state.mode);
-          const r = await fetch(url, { cache: "no-cache" });
+          const r = await fetch(dataFile(market, mode), { cache: "no-cache" });
           if (!r.ok) continue;
           const d = await r.json();
-          if (d.generated_at && d.generated_at !== oldGenAt) {
-            const key = `${state.market}:${state.mode}`;
-            state.cache[key] = d;
-            cacheSet(key, d);
-            cacheSetHead(key, d);
+          if (!d.generated_at || d.generated_at === oldGenAt) continue;
+          state.cache[key] = d;
+          state.cacheAt[key] = Date.now();
+          cacheSet(key, d);
+          cacheSetHead(key, d);
+          if (pollMayApply(token, _pollToken, key, `${state.market}:${state.mode}`)) {
             applyPayload(d);
             startAutoRefresh();
             flashScan(`Scan complete — updated to ${window.PM ? PM.fmtMelb(d.generated_at) : fmtTime(d.generated_at, d.tz_label)}.`, "ok");
-            return;
           }
+          return;
         } catch (_) {}
       }
     }
@@ -2335,6 +2429,7 @@
       }
       // Show current data immediately; then poll for the fresh data in the background
       delete state.cache[`${state.market}:${state.mode}`];
+      delete state.cacheAt[`${state.market}:${state.mode}`];
       await load();
       setTimeout(() => {
         btn.classList.remove("spinning");
@@ -2705,6 +2800,15 @@
     // All FOUR cities visible (owner 2026-07-22: "I wanna be able to see
     // london/china without hovering"). 2×2 grid: MEL/NY with seconds in the
     // left column, China/London HH:MM in the right; dates ride the tooltip.
+    //
+    // TOP100 #80 — the ONE unguarded repeating timer on this page. Every other
+    // interval here already returns early on a hidden tab; this one ran four
+    // Intl.DateTimeFormat passes plus five DOM writes every second regardless,
+    // which in a backgrounded tab left open overnight is ~57,000 formatter runs
+    // painting text nobody can see. (Browsers throttle background intervals to
+    // ~1/minute, so it is wasteful rather than ruinous — but the work is
+    // strictly pointless, and the clock has to be repainted on return anyway.)
+    if (document.hidden) return;
     const now = new Date();
     const parts = {};
     for (const c of CLOCKS) parts[c.id] = _fmtClock(c.fmt, c.date, now);
@@ -2722,6 +2826,12 @@
   initDailyQuote();
   updateClocks();
   setInterval(updateClocks, 1000);
+  // Repaint the instant the tab comes back rather than waiting out the next
+  // tick. Without this the guard above would be a visible regression: return to
+  // the tab and the first thing you see is a clock showing when you LEFT, which
+  // on a page whose whole job is telling you which market is open is the one
+  // stale number that actually misleads.
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) updateClocks(); });
 
   // Warm the other markets in the background after first paint so the
   // ASX / NASDAQ / CRYPTO toggle renders instantly from cache.
@@ -2732,7 +2842,10 @@
       fetch(dataFile(m, state.mode), { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (d && !state.cache[key]) { state.cache[key] = d; cacheSet(key, d); cacheSetHead(key, d); }
+          if (d && !state.cache[key]) {
+            state.cache[key] = d; state.cacheAt[key] = Date.now();
+            cacheSet(key, d); cacheSetHead(key, d);
+          }
         })
         .catch(() => {});
     }
@@ -2836,7 +2949,7 @@
       localStorage.setItem("gbs:mysize-risk", String(riskP));
     } catch (_) {}
     const out = wrap.querySelector(".vk-size-out");
-    const entry = +wrap.dataset.entry, stop = +wrap.dataset.stop;
+    const entry = numAttrOf(wrap.dataset.entry), stop = numAttrOf(wrap.dataset.stop);
     const dist = Math.abs(entry - stop);
     if (out) out.innerHTML = (acct > 0 && riskP > 0 && dist > 0)
       ? sizeCalcText(acct, riskP, dist, entry, state.cur) : "";

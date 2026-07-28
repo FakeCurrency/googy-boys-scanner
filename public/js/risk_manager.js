@@ -1082,22 +1082,41 @@
       const positions = this.getOpenPositions();
       const n = positions.length;
       const portfolioCapUsd = this._round(this.equity * this.config.maxPortfolioRiskPct / 100, 2);
-      const openRiskUsd = this.getOpenRiskUsd();
-      const freeBudgetUsd = this._round(Math.max(0, portfolioCapUsd - openRiskUsd), 2);
-      const budgetUsedPct = portfolioCapUsd > 0 ? this._round(openRiskUsd / portfolioCapUsd * 100, 1) : 0;
 
-      let riskOnCount = 0, riskFreeCount = 0, unrealizedUsd = 0, unrealizedR = 0;
+      // TOP100 #85 — the open-risk sum is accumulated IN this sweep rather than
+      // by a `getOpenRiskUsd()` call above it. That call walked the same book
+      // and called `getPositionOpenRisk` on every position, and the loop below
+      // then called it a second time on most of them.
+      //
+      // Bit-identical, not merely close, and the reasons are worth stating
+      // because a risk figure that drifts in the last cent is a support ticket
+      // nobody can reproduce: `positions` is `Object.keys(_positions).map(...)`,
+      // so it preserves the exact key order the old `reduce` summed in; the
+      // accumulator still starts at 0 and still rounds ONCE at the end; and
+      // `getPositionOpenRisk` reads only own scalar fields, which a shallow
+      // clone carries verbatim.
+      //
+      // Note the old `atBE || this.getPositionOpenRisk(p) <= 0` SHORT-CIRCUITED,
+      // so a break-even position skipped its second call. Hoisting the value
+      // means it is now computed exactly once per position instead of once or
+      // twice — strictly fewer calls in every case, never more.
+      let riskOnCount = 0, riskFreeCount = 0, unrealizedUsd = 0, unrealizedR = 0, openRiskRaw = 0;
       const bias = { aligned: 0, partial: 0, counter: 0, unknown: 0 };
       const weakRunners = [];
       positions.forEach(p => {
         const atBE = !!p.stopAtBreakeven;
-        if (atBE || this.getPositionOpenRisk(p) <= 0) riskFreeCount++; else riskOnCount++;
+        const openRisk = this.getPositionOpenRisk(p);
+        openRiskRaw += openRisk;
+        if (atBE || openRisk <= 0) riskFreeCount++; else riskOnCount++;
         const u = this.getPositionUnrealized(p); unrealizedUsd += u;
         const ir = this._initialRiskUsd(p); if (ir > 0) unrealizedR += u / ir;
         const strength = this.checkBiasAlignment(p.symbol, p.direction).strength;
         bias[strength] = (bias[strength] || 0) + 1;
         if (atBE && strength === "counter") weakRunners.push(p.symbol);
       });
+      const openRiskUsd = this._round(openRiskRaw, 2);
+      const freeBudgetUsd = this._round(Math.max(0, portfolioCapUsd - openRiskUsd), 2);
+      const budgetUsedPct = portfolioCapUsd > 0 ? this._round(openRiskUsd / portfolioCapUsd * 100, 1) : 0;
       unrealizedUsd = this._round(unrealizedUsd, 2);
       unrealizedR = this._round(unrealizedR, 2);
 
@@ -1232,11 +1251,33 @@
     }
 
     /* --------------------------------------------------------------- state */
+    // TOP100 #85 — this is the single most-called method on the engine: every
+    // `_emit()` after every mutation, every `subscribe()`, and bot.js's 30s
+    // `loadData()`. It used to walk the open book SIX times per read —
+    // `getOpenPositions()` (which CLONES every position), `getOpenRiskUsd()`
+    // inside `getBookHealth()`, that method's own `forEach`, then
+    // `positionCount()`, `getOpenRiskUsd()` again, and `getOpenRiskPct()` which
+    // is a third `getOpenRiskUsd()`. Two of those walks now do the whole job.
+    //
+    // This is common-subexpression elimination, NOT a cache: no value is held
+    // across calls, so nothing here can go stale. That was a deliberate choice
+    // over memoising the result — `getPositionUnrealized` reads `pos.current`,
+    // which `onPrice()`/`onPrices()` move without any signal a memo could key
+    // on (they only `_emit()` when TP1 actually fires, so an ordinary tick
+    // moves the number and announces nothing), and a risk read that answers
+    // with a price from a minute ago is a worse failure than a slow one. The 3x
+    // came free; the 4th would have cost correctness.
+    //
+    // (The TOP100 entry claims a 1-second caller in bot.js. Re-checked: the 1s
+    // interval is `startClocks`, which touches nothing on this engine. The real
+    // cadence is 30s plus every mutation. The cost per read was real; the
+    // frequency in the item was not.)
     getCurrentRiskState() {
       const gate = this.canEnterNewTradeQuiet();
       const count = this._state.consecutiveLossCount;
       const max = this.config.maxConsecutiveLosses;
-      const stance = this.getPortfolioStance();
+      const health = this.getBookHealth();
+      const stance = this.getPortfolioStance(health);
       return {
         consecutiveLossCount: count,
         maxConsecutiveLosses: max,
@@ -1252,13 +1293,17 @@
         canEnter: gate.allowed,
         blockReason: gate.reason,
         blockCode: gate.code,
-        // portfolio / book-level risk
-        positionCount: this.positionCount(),
+        // portfolio / book-level risk — all four read off the single `health`
+        // walk above. `health.positionCount` IS `positionCount()` (both are the
+        // key count of `_positions`), `health.openRiskUsd` IS `getOpenRiskUsd()`
+        // (same sum, same rounding), and the percent is `getOpenRiskPct()`'s
+        // own body with the re-walk substituted out.
+        positionCount: health.positionCount,
         maxPositions: this.config.maxPositions,
-        openRiskUsd: this.getOpenRiskUsd(),
-        openRiskPct: this.getOpenRiskPct(),
+        openRiskUsd: health.openRiskUsd,
+        openRiskPct: this.equity > 0 ? this._round(health.openRiskUsd / this.equity * 100, 2) : 0,
         maxPortfolioRiskPct: this.config.maxPortfolioRiskPct,
-        portfolioCapUsd: this._round(this.equity * this.config.maxPortfolioRiskPct / 100, 2),
+        portfolioCapUsd: health.portfolioCapUsd,
         scaleOutPct: this.config.scaleOutPct,
         // Portfolio Intelligence (lightweight) — full detail via getPortfolioIntel().
         bookPosture: stance.stance,

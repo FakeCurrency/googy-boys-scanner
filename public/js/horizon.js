@@ -21,8 +21,8 @@
 (() => {
   "use strict";
 
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (v) => v == null ? "—" : (100 * v).toFixed(1) + "%";
   const signed = (v) => v == null ? "" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
   const cls = (v) => v == null ? "" : (v >= 0 ? "hz-up" : "hz-down");
@@ -110,7 +110,7 @@
     const up = t.chg > 0.005, down = t.chg < -0.005;
     const arrow = up ? "▲" : down ? "▼" : "→";
     const k = up ? "hz-up" : down ? "hz-down" : "flat";
-    return `<span class="hz-tr ${k}" title="${(100 * t.chg).toFixed(1)} pts vs the ${t.days}-session mean">${arrow}</span>`;
+    return `<span class="hz-tr ${k}" title="${(100 * t.chg).toFixed(1)} pts vs the ${esc(t.days)}-session mean">${arrow}</span>`;
   }
 
   // Why a row carries no rank. A blank rank with a long bar beside it is the
@@ -153,7 +153,7 @@
         const flag = unrankedFlag(b, minNames);
         const run = blind ? (streaks[b.sector] || 0) : 0;
         const runTag = run > 1
-          ? `<em class="hz-run" title="${run} consecutive sessions leading on breadth with nothing held. This is the number the July rotation needed and did not have.">${run}d</em>`
+          ? `<em class="hz-run" title="${esc(run)} consecutive sessions leading on breadth with nothing held. This is the number the July rotation needed and did not have.">${esc(run)}d</em>`
           : "";
         return `<div class="hz-row${lead ? " is-lead" : ""}${blind ? " is-blind" : ""}${flag ? " is-unranked" : ""}">
           <span class="hz-rank">${b.rank || "·"}</span>
@@ -278,22 +278,67 @@
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────
+  // TOP100 #88 — the payload is held HERE rather than captured in the closure
+  // `mount(data)` used to hand to every market-switch listener. One assignment
+  // is then the whole of "show a newer scan", instead of a re-render bound to
+  // whatever `data` happened to be in scope when the listeners were attached;
+  // and there is exactly one answer, at any moment, to what these two surfaces
+  // are drawing.
+  let DATA = null;
+  let BOUND = false;
+
+  // A renderer fault must be REPORTED, never disguised as a missing file, and
+  // it must not take the OTHER surface down with it. Both used to happen: the
+  // `.catch()` sat after `.then(mount)`, so anything thrown inside
+  // renderPanel/renderStrip landed in the handler whose job is "the JSON isn't
+  // there yet" — and since `mount` draws the panel first, a strip that threw on
+  // one bad row hid a panel that had already rendered perfectly.
+  //
+  // The re-raise is asynchronous on purpose. `telemetry.js` (#99) beacons
+  // window.onerror into a ring buffer that `window.__gbsErrors()` reads back
+  // after the fact, so a bare console.error would isolate the surface at the
+  // cost of dropping the fault out of the one record that survives the glitch.
+  // Thrown from a timer it reaches that beacon, while being outside both this
+  // call stack (so the second surface still draws) and the fetch chain (so it
+  // cannot reach the fetch's own .catch and hide anything).
+  function report(err) { setTimeout(() => { throw err; }, 0); }
+
+  function draw(id, fn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try { fn(el, DATA); } catch (err) { report(err); }
+  }
+
+  function render() {
+    if (!DATA) return;
+    // The panel is market-INDEPENDENT — it columns every market the payload
+    // carries — so only the strip actually moves on a market switch. Both are
+    // drawn anyway: re-rendering the panel is idempotent, and a render() that
+    // means "draw everything from DATA" is the version that stays correct when
+    // a future caller refreshes DATA rather than switching markets.
+    draw("horizon-panel", renderPanel);
+    draw("horizon-strip", renderStrip);
+  }
+
   function mount(data) {
-    const panel = document.getElementById("horizon-panel");
-    const strip = document.getElementById("horizon-strip");
-    if (panel) renderPanel(panel, data);
-    if (strip) {
-      renderStrip(strip, data);
-      // app.js owns the market switch and broadcasts nothing, so listen on the
-      // buttons directly and re-render after it has flipped is-active.
-      document.querySelectorAll(".market-btn").forEach((b) =>
-        b.addEventListener("click", () => setTimeout(() => renderStrip(strip, data), 0)));
-    }
+    DATA = data;
+    render();
+    // app.js owns the market switch and broadcasts nothing, so listen on the
+    // buttons directly and re-render after it has flipped is-active. Guarded:
+    // mount() is called once today, and a second call must refresh the payload
+    // rather than stack a second listener on every button.
+    if (BOUND) return;
+    const btns = document.querySelectorAll(".market-btn");
+    if (!btns.length) return;   // sectors.html ships no switch; its panel needs none
+    BOUND = true;
+    btns.forEach((b) => b.addEventListener("click", () => setTimeout(render, 0)));
   }
 
   fetch("data/sector_breadth.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(mount)
+    // Scoped to the FETCH AND PARSE ONLY, which is the whole of #88: hiding the
+    // surface is the right answer to "the file is not there", and the wrong
+    // answer to every other failure.
     .catch(() => {
       // Silent: this is a secondary surface and a missing file must never
       // disturb the page it sits on.
@@ -301,5 +346,7 @@
         const el = document.getElementById(id);
         if (el) el.hidden = true;
       });
-    });
+      return null;
+    })
+    .then((data) => { if (data) mount(data); });
 })();

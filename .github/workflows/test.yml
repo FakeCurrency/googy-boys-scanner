@@ -4,8 +4,8 @@ name: Tests
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes: 984 pytest (49 files) + 262 JS assertions across
-# 10 suites, measured 2026-07-28. The numbers are a smell test, not a gate —
+# runs the lot in ~2 minutes: 1160 pytest (53 files) + 588 JS assertions across
+# 14 suites, measured 2026-07-28. The numbers are a smell test, not a gate —
 # a big drop means a directory stopped being collected, which is the failure
 # `pytest.ini` being in the path filter above exists to make visible.
 on:
@@ -122,6 +122,14 @@ jobs:
         run: node test/risk_defaults.test.js
       - name: Journal money-path tests (TOP100 #25/#26/#30/#33, 22)
         run: node test/journal_money.test.js
+      - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
+        run: node test/escaping.test.js
+      - name: Stale-payload + racing-poll rules (TOP100 #78/#79, 17)
+        run: node test/staleview.test.js
+      - name: Leak + backoff rules (TOP100 #80/#81/#82/#83, 45)
+        run: node test/leaks.test.js
+      - name: Derived-state + fault-scoping rules (TOP100 #84-#88, 55)
+        run: node test/statekeep.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

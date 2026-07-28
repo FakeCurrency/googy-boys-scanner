@@ -32,8 +32,8 @@
 (() => {
   "use strict";
 
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (v) => v == null ? "—" : Math.round(100 * v) + "%";
   const sgn = (v) => v == null ? "—" : (v >= 0 ? "+" : "") + (100 * v).toFixed(1) + "%";
   const cls = (v) => v == null ? "" : (v >= 0 ? "rg-up" : "rg-down");
@@ -138,7 +138,7 @@
             <i class="${cls(rs)}" style="width:${width}%;${rs >= 0 ? "left:50%" : "right:50%"}"></i>
             <b class="${cls(rs)}">${sgn(rs)}</b></span>
           <span class="rg-num ${cls(r.latest.rs63)}">${sgn(r.latest.rs63)}</span>
-          <span class="rg-coil" title="${r.latest.near} of ${r.names} names within ${
+          <span class="rg-coil" title="${esc(r.latest.near)} of ${esc(r.names)} names within ${
             Math.round(100 * (w.near_tol || 0.04))}% of their ${w.sma_slow || 200}-day average and not yet triggered">
             ${r.latest.near || 0}<em>/${r.names}</em></span>
           <span class="rg-run${run > 4 ? " is-hot" : ""}">${run > 1 ? run + "d" : "—"}</span>
@@ -228,20 +228,48 @@
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────
+  // TOP100 #88, identical shape and identical cause to horizon.js — see the
+  // long note there. In short: the payload is module-scoped rather than
+  // captured by the listener closure, a renderer fault is reported instead of
+  // being mistaken for a missing file, and the two surfaces fail independently
+  // (mount draws the panel first, so a strip that threw used to hide a panel
+  // that had rendered fine).
+  let DATA = null;
+  let BOUND = false;
+
+  // Async re-raise so telemetry.js's window.onerror beacon records it, while
+  // staying outside this call stack and outside the fetch chain.
+  function report(err) { setTimeout(() => { throw err; }, 0); }
+
+  function draw(id, fn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try { fn(el, DATA); } catch (err) { report(err); }
+  }
+
+  function render() {
+    if (!DATA) return;
+    // Panel columns every market in the payload and never reads activeMarket();
+    // only the strip moves on a switch. Drawn together anyway so render() means
+    // "everything, from DATA" and stays right when DATA is what changes.
+    draw("regime-panel", renderPanel);
+    draw("regime-strip", renderStrip);
+  }
+
   function mount(data) {
-    const panel = document.getElementById("regime-panel");
-    const strip = document.getElementById("regime-strip");
-    if (panel) renderPanel(panel, data);
-    if (strip) {
-      renderStrip(strip, data);
-      document.querySelectorAll(".market-btn").forEach((b) =>
-        b.addEventListener("click", () => setTimeout(() => renderStrip(strip, data), 0)));
-    }
+    DATA = data;
+    render();
+    if (BOUND) return;
+    const btns = document.querySelectorAll(".market-btn");
+    if (!btns.length) return;   // sectors.html ships no switch; its panel needs none
+    BOUND = true;
+    btns.forEach((b) => b.addEventListener("click", () => setTimeout(render, 0)));
   }
 
   fetch("data/regime.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(mount)
+    // Scoped to the FETCH AND PARSE ONLY — hiding the surface answers "the file
+    // is not there", and nothing else.
     .catch(() => {
       // Silent: a secondary surface must never disturb the page it sits on, and
       // this file does not exist until the first scan after it shipped.
@@ -249,5 +277,7 @@
         const el = document.getElementById(id);
         if (el) el.hidden = true;
       });
-    });
+      return null;
+    })
+    .then((data) => { if (data) mount(data); });
 })();

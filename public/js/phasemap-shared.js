@@ -18,7 +18,11 @@ window.PM = (() => {
     if (x >= 1e6) return "$" + (x / 1e6).toFixed(1) + "M";
     return "$" + Math.round(x / 1e3) + "k";
   };
-  const esc = (s) => String(s).replace(/[&<>"']/g,
+  // Null-safe like the other nine copies. This one was `String(s)`, so
+  // `esc(null)` rendered the literal word "null" into the page — which is why
+  // several call sites here and in phasemap.js/specs.js/mynames.js carry a
+  // defensive `|| ""`. The guard belongs in one place, not at every caller.
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const SOURCE_LABELS = {
@@ -405,7 +409,7 @@ window.PM = (() => {
         const arrow = x.side === "short" ? "▼" : "▲";
         const cls = x.count >= 3 ? "pm-conf pm-conf-3" : "";
         const tag = x.count >= 3 ? "🎯 " : "";
-        return `<a class="${cls}" title="${x.lenses.join(" + ")} — open the combined chart" ` +
+        return `<a class="${cls}" title="${esc(x.lenses.join(" + "))} — open the combined chart" ` +
           `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
           `${tag}${esc(x.ticker)} ${arrow}${x.count >= 3 ? " ×3" : ""}</a>`;
       }).join("") +

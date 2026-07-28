@@ -141,5 +141,56 @@ test("head and full caches do not collide", () => {
   assert.strictEqual(C.getHead("m").results[0].symbol, "HEAD");
 });
 
+// ---- ageMs: the real stored age, which `get` cannot express (TOP100 #78) -----
+// app.js holds a payload in memory for as long as the tab lives, so it needs
+// "how old is the copy I already have?" — a question `get` (fresh-enough-or-
+// nothing) cannot answer. Without it, a payload read back out of localStorage
+// four minutes old was stamped fresh and handed another full TTL.
+test("ageMs reports the stored age, not zero", () => {
+  reset();
+  C.set("asx:vivek", { results: [] });
+  assert.strictEqual(C.ageMs("asx:vivek"), 0);
+  NOW += 4 * 60 * 1000;
+  assert.strictEqual(C.ageMs("asx:vivek"), 4 * 60 * 1000);
+});
+
+test("ageMs keeps counting past the TTL, when get() has gone blind", () => {
+  reset();
+  C.set("k", { results: [] });
+  NOW += 90 * 60 * 1000;
+  assert.strictEqual(C.get("k"), null);                  // expired: get hides it
+  assert.ok(C.getStale("k"), "getStale still has the payload");
+  assert.strictEqual(C.ageMs("k"), 90 * 60 * 1000);      // ...and this says how old
+});
+
+test("ageMs is Infinity for a key that was never stored", () => {
+  reset();
+  assert.strictEqual(C.ageMs("never:seen"), Infinity);
+});
+
+test("ageMs is Infinity for an oversized payload the cache refused", () => {
+  reset();
+  // set() skips anything over 500KB, so there is no stored ts to age. Infinity
+  // is the honest answer: app.js must not treat "not written" as "brand new".
+  C.set("big", { results: [{ pad: "x".repeat(600000) }] });
+  assert.strictEqual(C.get("big"), null);
+  assert.strictEqual(C.ageMs("big"), Infinity);
+});
+
+test("ageMs survives corrupt or ts-less entries", () => {
+  reset();
+  globalThis.localStorage.setItem(C.CACHE_PREFIX + "bad", "{not json");
+  globalThis.localStorage.setItem(C.CACHE_PREFIX + "nots", JSON.stringify({ data: { results: [] } }));
+  assert.strictEqual(C.ageMs("bad"), Infinity);
+  assert.strictEqual(C.ageMs("nots"), Infinity);
+});
+
+test("ageMs never goes negative when the clock steps backwards", () => {
+  reset();
+  C.set("k", { results: [] });
+  NOW -= 60 * 1000;   // DST shift / NTP correction
+  assert.strictEqual(C.ageMs("k"), 0);
+});
+
 Date.now = realNow;
 console.log(process.exitCode ? "\nSOME CACHE TESTS FAILED" : `\nALL ${passed} cache tests passed`);

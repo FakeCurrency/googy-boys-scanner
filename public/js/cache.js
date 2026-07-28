@@ -92,8 +92,25 @@
     return null;
   }
 
+  // Age of the stored FULL payload in ms; Infinity when there is none.
+  //
+  // TOP100 #78. `get` deals in "fresh enough, or nothing", which cannot answer
+  // "how old is the copy I am already holding?" — and app.js holds one in
+  // memory for as long as the tab lives. It needs the real stored fetch time so
+  // a payload read back out of localStorage inherits its actual age instead of
+  // being stamped fresh and handed another full TTL.
+  function ageMs(key) {
+    var s = store(); if (!s) return Infinity;
+    try {
+      var item = JSON.parse(s.getItem(CACHE_PREFIX + key) || "null");
+      if (item && typeof item.ts === "number") return Math.max(0, Date.now() - item.ts);
+    } catch (_) {}
+    return Infinity;
+  }
+
   var api = {
     set: set, get: get, getStale: getStale, setHead: setHead, getHead: getHead,
+    ageMs: ageMs,
     CACHE_PREFIX: CACHE_PREFIX, CACHE_TTL_MS: CACHE_TTL_MS,
     HEAD_PREFIX: HEAD_PREFIX, HEAD_ROWS: HEAD_ROWS,
   };

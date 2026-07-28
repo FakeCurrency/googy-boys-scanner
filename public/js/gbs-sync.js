@@ -22,10 +22,52 @@
   const CODE_KEY = "gbs:sync_code";
   const API = "/api/journal";
 
+  // ── tombstone ceiling (TOP100 #83) ─────────────────────────────────────────
+  // `deleted` is an append-only list of trade ids and NOTHING had ever removed
+  // an entry from it. It is unioned on every merge and round-trips through
+  // localStorage AND the KV store on every sync, so it only ever grows — for
+  // the life of the journal, across every device, permanently. That is a slow
+  // leak with a sharp edge on the end of it: `saveLocal` writes the whole
+  // journal as ONE localStorage value, so the failure at the end of the road is
+  // a QuotaExceeded on a save — i.e. the trade you just typed not persisting.
+  // `cache.js` refuses to store anything over 500 KB rather than risk the same
+  // outcome, and its comment names it: "a silently lost trade".
+  //
+  // 500 ids is ~15 KB of JSON and is far past any plausible use of a manual
+  // journal that holds 30 positions — this is a backstop against unbounded
+  // growth, not a working limit anyone should reach.
+  const TOMBSTONE_MAX = 500;
+
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
     if (!Array.isArray(d.trades)) d.trades = [];
     if (!Array.isArray(d.deleted)) d.deleted = [];
+    // Keep the NEWEST ids, drop from the front. Age is the right axis: an old
+    // tombstone has had the longest time to reach every device, so it is the
+    // one whose loss is least likely to resurrect anything.
+    //
+    // The order is only APPROXIMATELY chronological and the approximation is
+    // worth stating. Locally it is exact (journal.js appends on delete). After
+    // a merge it is `[...local.deleted, ...remote.deleted]` through a Set — so
+    // local's list in local order, then whatever ids only the remote had, in
+    // the remote's order. No comparison against a clock happens anywhere.
+    // Consequence at the extreme: two journals BOTH at the cap with no ids in
+    // common resolve entirely in favour of the remote. That needs 1000
+    // disjoint deletions to reach, and it is named here rather than defended
+    // against, because every defence for it (a {id, ts} schema, a smarter
+    // victim policy) costs the thing below.
+    //
+    // The elements stay BARE ID STRINGS. Older clients that have not reloaded
+    // still run `data.deleted.includes(id)` and `new Set([...a.deleted])`
+    // against this array, and a device mid-flight on the previous build is the
+    // normal case for a store whose entire job is to be read by both.
+    //
+    // THE TRADE-OFF, stated rather than buried: a device offline across more
+    // than TOMBSTONE_MAX deletions could re-introduce one deleted trade on its
+    // next merge. That is strictly better than the failure it replaces — the
+    // whole journal failing to save — and unlike that one it is visible and
+    // recoverable, by deleting the row again.
+    if (d.deleted.length > TOMBSTONE_MAX) d.deleted = d.deleted.slice(-TOMBSTONE_MAX);
     if (typeof d.capital !== "number") d.capital = 10000;
     if (typeof d.brokerage !== "number") d.brokerage = 10;
     // Per-asset defaults — canonical here so every caller gets consistent values.
@@ -140,28 +182,62 @@
   // day) can NEVER be exceeded — even if something tries to write in a loop.
   // Local storage always saves; only the cloud push is skipped once the budget
   // is spent. Counter is per-device and resets at UTC midnight.
+  // TOP100 #83 — CHECKING THE BUDGET AND SPENDING IT ARE SEPARATE, and that
+  // split IS the fix. The old `_putBudgetOk()` incremented the counter and THEN
+  // the caller attempted the PUT, so a request that never reached the server
+  // still burned a slot. Backwards, and not by a rounding error:
+  // `syncOutDebounced` fires on every journal edit, so a phone editing trades
+  // in a tunnel spends the whole day's budget on fetches that threw — and comes
+  // back onto the network with nothing left to sync with until UTC midnight.
+  // The offline stretch consumed the quota it was meant to protect and bought
+  // no writes at all, which is the exact inversion of what a budget is for.
   const PUT_BUDGET = 400;
-  function _putBudgetOk() {
+  const BUDGET_KEY = "gbs:put_budget";
+
+  function _budgetState() {
+    const day = new Date().toISOString().slice(0, 10);   // UTC date
     try {
-      const day = new Date().toISOString().slice(0, 10);   // UTC date
-      const raw = JSON.parse(localStorage.getItem("gbs:put_budget") || "{}");
-      const used = raw.day === day ? (raw.n || 0) : 0;
-      if (used >= PUT_BUDGET) return false;
-      localStorage.setItem("gbs:put_budget", JSON.stringify({ day, n: used + 1 }));
-      return true;
-    } catch (_) { return true; }
+      const raw = JSON.parse(localStorage.getItem(BUDGET_KEY) || "{}");
+      return { day, used: raw.day === day ? (raw.n || 0) : 0 };
+    } catch (_) {
+      // An unreadable or corrupt counter reads as UNUSED, exactly as the old
+      // `catch (_) { return true; }` did. This budget guards a COST, not a
+      // correctness property, so a device whose storage is broken must still be
+      // able to sync — failing closed here would silently un-sync it instead.
+      return { day, used: 0 };
+    }
+  }
+
+  // Read-only. Never writes, so it is safe to call before an attempt that may
+  // not happen.
+  function _putBudgetCheck() { return _budgetState().used < PUT_BUDGET; }
+
+  // Called ONLY once the server has actually answered, because that is the
+  // moment a KV write can have happened. `functions/api/journal.js` writes KV
+  // inside the request — the journal itself, plus the rate-limit counters that
+  // run before it — so a NON-OK response can still have cost quota and is
+  // charged too: a ceiling is only a ceiling if it counts conservatively. The
+  // one case charged nothing is a fetch that REJECTED. A connection dropped
+  // after the server had already written is undercounted by one, which the 600
+  // slots between PUT_BUDGET and the real 1000/day limit exist to absorb.
+  function _putBudgetSpend() {
+    try {
+      const { day, used } = _budgetState();
+      localStorage.setItem(BUDGET_KEY, JSON.stringify({ day, n: used + 1 }));
+    } catch (_) { /* a counter we cannot write is a counter we cannot enforce */ }
   }
 
   async function put(d) {
     const code = getCode();
     if (!code) return { ok: false };
-    if (!_putBudgetOk()) return { ok: false, skipped: "budget" };   // stay inside the free tier
+    if (!_putBudgetCheck()) return { ok: false, skipped: "budget" };   // stay inside the free tier
     try {
       const res = await fetch(API, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "X-Sync-Code": code },
         body: JSON.stringify(normalize(d)),
       });
+      _putBudgetSpend();          // the server answered — quota may have moved
       const j = await res.json().catch(() => null);
       return { ok: res.ok, configured: j ? j.configured : null };
     } catch (_) {

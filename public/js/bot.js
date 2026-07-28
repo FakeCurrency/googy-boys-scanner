@@ -544,7 +544,9 @@
       // total cost (fees) and realized net P/L — rule 11 enforced in logic.
       if (r.journalEntry) {
         const je = r.journalEntry;
-        JOURNAL.unshift({
+        // #87: into LOCAL_JOURNAL, so the next 30s refresh replaces only the
+        // feed half and this row survives it.
+        LOCAL_JOURNAL.unshift({
           id: "T-" + String(Date.now()).slice(-4),
           opened: je.opened, closed: je.closed,
           duration: fmtDuration(je.durationMs),
@@ -555,6 +557,7 @@
           reason: je.reason, r: je.r, win: je.win,
           strategy: meta.strategy || "",
         });
+        composeJournal();   // #87: fold the new row in before anything reads JOURNAL
         window.__JSUMMARY = computeJournalSummary(JOURNAL);
         populateJournalFilters(JOURNAL);
         renderJournalTable();
@@ -600,16 +603,71 @@
   }
 
   // ── Execution log ──────────────────────────────────────────────────────────
-  let LOG = [];
+  // TOP100 #87 — the feed's rows and THIS SESSION's rows are held APART, and
+  // `LOG` is composed from the two rather than being a thing that gets
+  // assigned. `loadData()` used to run `LOG = d.log || []` every 30 seconds,
+  // which silently discarded every line `prependLog()` had put there: the
+  // TP1-sim and close lines, the demo closes, the loss-counter reset, the
+  // pause/resume messages, the kill-switch messages, and the entry ENDORSED /
+  // BLOCKED / DEFERRED verdicts — i.e. the record of what the person did in
+  // this browser, which exists nowhere else. `bot_status.json` is written by a
+  // scheduled scan and can never carry those lines back.
+  //
+  // The kill-switch line is what makes this more than an annoyance: trip the
+  // switch, read the confirmation, look away for half a minute, and you come
+  // back to a log with no evidence it happened — on the page whose whole job is
+  // to say what the bot is currently allowed to do.
+  const LOCAL_LOG_MAX = 200;   // a session's own lines are click-driven, so this is a DOM ceiling, not a policy
+  let FEED_LOG = [];    // what the last status fetch carried
+  let LOCAL_LOG = [];   // what happened in THIS browser since the page loaded
+  let LOG = [];         // the merge of the two — what renderLog() draws
+  // Absent/unparseable dates sort to the BACK, never the front — the mistake
+  // TOP100 #69 made with `or ""` on exit dates, where the rows we knew least
+  // about ended up leading the list. Every real timestamp here is positive, so
+  // 0 is a sentinel that lands last under a descending sort without any
+  // special-casing in the comparator.
+  function _ms(v) { const t = v ? new Date(v).getTime() : NaN; return Number.isFinite(t) ? t : 0; }
+  // Merged newest-first on `ts` rather than concatenated, because a 30s refresh
+  // can legitimately deliver a feed line NEWER than a local one from earlier in
+  // the session. `sort` is stable (spec-required since ES2019), so a local and
+  // a feed row sharing a timestamp keep local first.
+  function composeLog() { LOG = LOCAL_LOG.concat(FEED_LOG).sort((a, b) => _ms(b.ts) - _ms(a.ts)); return LOG; }
   function renderLog(log) {
     const wrap = $("#bot-log"); if (!wrap || !log) return;
     const map = { enter: "▶", signal: "◉", win: "✓", loss: "✗", kill: "⏻", system: "·", error: "⚠" };
     wrap.innerHTML = log.map(e => `<div class="log-row log-${e.type}"><span class="log-icon">${map[e.type] || "·"}</span><span class="log-time num">${fmtTs(e.ts)}</span><span class="log-msg">${esc(e.msg)}</span></div>`).join("");
   }
-  function prependLog(entry) { LOG.unshift(entry); renderLog(LOG); }
+  function prependLog(entry) {
+    LOCAL_LOG.unshift(entry);
+    if (LOCAL_LOG.length > LOCAL_LOG_MAX) LOCAL_LOG.length = LOCAL_LOG_MAX;
+    renderLog(composeLog());
+  }
 
   // ── Journal ────────────────────────────────────────────────────────────────
-  let JOURNAL = [];
+  // TOP100 #87, same shape and the same cause — `JOURNAL = d.journal || []` sat
+  // on the same line as the LOG assignment. A trade closed through the browser's
+  // paper engine (the `.pos-close-btn` handler above, which unshifts a row and
+  // recomputes the summary tiles from it) vanished from the table 30 seconds
+  // later, taking `window.__JSUMMARY` back to the feed's static seed with it.
+  // The engine close reaches no server, so nothing ever brings that row back.
+  //
+  // The two sets are disjoint by construction: feed rows are the scheduled
+  // scan's record, local rows are this browser's paper engine, and the local id
+  // (`T-` + a clock suffix) is not a shape the publisher mints. So they are
+  // MERGED, not deduped — a dedupe on symbol or price here could only ever hide
+  // a real second trade in the same name.
+  let FEED_JOURNAL = [], LOCAL_JOURNAL = [], JOURNAL = [];
+  // Sorted on `closed` for the same reason the log is sorted on `ts`, and safe
+  // to sort: `computeJournalSummary` re-sorts chronologically for its
+  // consecutive-loss run and is otherwise order-independent, and
+  // `filteredJournal`'s period anchor is a max. Nothing downstream reads
+  // insertion order — that hazard is the one TOP100 #30 fixed on the manual
+  // journal, where a drawdown walked store order while the curve beside it
+  // walked exit order and the two disagreed about the same trades.
+  function composeJournal() {
+    JOURNAL = LOCAL_JOURNAL.concat(FEED_JOURNAL).sort((a, b) => _ms(b.closed) - _ms(a.closed));
+    return JOURNAL;
+  }
   function renderJournalSummary(s) {
     if (!s) return;
     $("#journal-summary").innerHTML = `
@@ -964,7 +1022,10 @@
       markFeedState(stale, d);
       window.__DATA = d; window.__JSUMMARY = d.journal_summary;
       window.__EQUITY = stale ? risk.getCurrentRiskState().equity : (d.equity || d.capital);
-      JOURNAL = d.journal || []; LOG = d.log || [];
+      // #87: replace the FEED half only. The session's own rows are held in
+      // LOCAL_JOURNAL / LOCAL_LOG and survive every refresh; compose re-merges.
+      FEED_JOURNAL = d.journal || []; composeJournal();
+      FEED_LOG = d.log || []; composeLog();
 
       // Feed live equity + loss counter to the engine — but ONLY from a live
       // feed. A stale snapshot's June numbers must not masquerade as current.
@@ -1003,7 +1064,13 @@
     } catch (e) {
       markFeedState(true, null);
       showToast("Bot data unavailable — showing empty state.", "warn");
-      renderPositionsFromEngine(); renderPortfolioIntel(); renderLog([]);
+      // #87: the FEED is what became unavailable, so only the feed half is
+      // dropped. `renderLog([])` used to blank the panel outright, which threw
+      // away this session's own lines over a failure that says nothing about
+      // them — and a failed fetch is exactly when someone is reading the log to
+      // work out what the page still knows.
+      renderPositionsFromEngine(); renderPortfolioIntel();
+      FEED_LOG = []; renderLog(composeLog());
     }
   }
 

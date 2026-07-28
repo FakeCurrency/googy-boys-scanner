@@ -23,6 +23,10 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const up  = (s) => esc(String(s == null ? "" : s).toUpperCase());
+  // Numbers headed for an attribute — digits only, so attribute-safe by
+  // construction, and a missing value stays missing rather than becoming the
+  // empty string that `+` would silently read as 0. Mirrors app.js.
+  const numAttr = (v) => (v == null || !isFinite(+v)) ? "" : String(+v);
 
   const GRADE_CLS = { "A+": "g-aplus", "A": "g-a", "B+": "g-b", "B": "g-b", "WATCH": "g-c", "C": "g-c" };
   const rcls = (r) => (r >= 0 ? "r-pos" : "r-neg");
@@ -643,7 +647,7 @@
       };
     }
     return {
-      now: `<td class="num jr-now" data-label="Now" data-entry="${t.entry}" data-stop="${t.stop ?? ""}" data-long="${isLong}" data-ru="${t.risk_usd ?? ""}">…</td>`,
+      now: `<td class="num jr-now" data-label="Now" data-entry="${numAttr(t.entry)}" data-stop="${numAttr(t.stop)}" data-long="${esc(isLong)}" data-ru="${numAttr(t.risk_usd)}">…</td>`,
       ur: `<td class="num jr-ur" data-label="R">—</td>`,
       ud: `<td class="num jr-ud" data-label="$">—</td>`,
     };
@@ -926,6 +930,17 @@
 
   // ── store (manual side) ───────────────────────────────────────────────────
   const MJ_KEY = "gbs:manual_journal";
+  // TOP100 #84 — a generation counter for the manual store. `mjLoad()` is not
+  // cheap: it reads localStorage, `JSON.parse`s the whole journal and runs
+  // `normalize()` over every trade (which now also walks up to TOMBSTONE_MAX
+  // deleted ids). Anything that wants to hold ONE parsed row across a burst of
+  // events compares this instead of re-parsing defensively on each one.
+  //
+  // Bumped by EVERY path that can change the store: both writers below, the
+  // post-sync-in refresh, and the cross-tab `storage` event. That set is what
+  // makes a cache off it exactly as fresh as a re-read would have been — miss
+  // one and the cache is a bug, so bump here rather than at the call site.
+  let mjGen = 0;
   function mjLoad() {
     if (window.GBSSync) return window.GBSSync.load();
     try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
@@ -936,11 +951,13 @@
   // price, so they must NEVER be pushed to the shared cloud store — doing so on
   // every price move is what burned the KV write quota.
   function mjSaveLocal(d) {
+    mjGen++;
     if (window.GBSSync) { window.GBSSync.saveLocal(d); return; }
     localStorage.setItem(MJ_KEY, JSON.stringify(d));
   }
   // Cloud save: ONLY for genuine user actions (take / close / delete / import).
   function mjSave(d) {
+    mjGen++;
     if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
     localStorage.setItem(MJ_KEY, JSON.stringify(d));
   }
@@ -1698,6 +1715,26 @@
 
   // ── close modal (Me) ──────────────────────────────────────────────────────
   let closeId = null;
+  // TOP100 #84 — the row being closed, held across the keystroke burst.
+  // `updateClosePreview` runs on every `input` event in the exit-price field, and
+  // it used to `mjLoad().trades.find(...)` each time: a full localStorage read +
+  // JSON.parse + normalize() of the entire journal, per character typed, to find
+  // one row that cannot have changed between two keystrokes. Typing "1234.56" did
+  // it seven times.
+  //
+  // The cache is keyed on `mjGen` as well as the id, so it is invalidated by
+  // every path that writes the store — including a cross-tab write and a sync
+  // pull landing WHILE the modal is open. That is why this is a memo and not a
+  // snapshot: a stale preview is a worse bug than a slow one, and the identity
+  // it must preserve is "shows what a fresh read would have shown".
+  let closeRow = null, closeRowGen = -1;
+  function closeRowNow() {
+    if (!closeId) return null;
+    if (closeRow && closeRow.id === closeId && closeRowGen === mjGen) return closeRow;
+    closeRow = mjLoad().trades.find((x) => x.id === closeId) || null;
+    closeRowGen = mjGen;
+    return closeRow;
+  }
   // #82: what closing at `exit` WOULD book — realised R + $ impact. Clones the
   // trade and runs the exact same resolver the load path uses (ensureClosedR
   // via the same field-sets saveClose does), so the preview equals the outcome.
@@ -1715,7 +1752,7 @@
   function updateClosePreview() {
     const box = $("#jr-close-preview");
     if (!box) return;
-    const t = closeId && mjLoad().trades.find((x) => x.id === closeId);
+    const t = closeRowNow();
     const exit = parseFloat($("#jr-exit-price").value);
     const out = t ? computeCloseOutcome(t, exit) : null;
     if (!out || out.r == null) { box.hidden = true; return; }
@@ -1732,6 +1769,7 @@
     const t = mjLoad().trades.find((x) => x.id === id);
     if (!t) return;
     closeId = id;
+    closeRow = t; closeRowGen = mjGen;   // #84: seed from the read we just did
     $("#jr-modal-title").textContent = "Close " + String(t.symbol || "").toUpperCase();
     $("#jr-exit-price").value = "";
     $("#jr-price-tag").textContent = "loading live…";
@@ -1743,7 +1781,10 @@
       updateClosePreview();
     });
   }
-  function closeModal() { $("#jr-close-overlay").hidden = true; closeId = null; }
+  function closeModal() {
+    $("#jr-close-overlay").hidden = true;
+    closeId = null; closeRow = null; closeRowGen = -1;   // #84: never outlive the modal
+  }
 
   // Remove a manual trade entirely (no P&L logged) — for setups you logged but
   // didn't actually take (e.g. a fund/REIT not listed on your broker). Records a
@@ -1806,7 +1847,11 @@
     pill.className = "jr-sync-pill " + cls;
     pill.textContent = txt;
   }
-  function afterStoreChange() { loadMe(); renderAll(); refreshLive(); }
+  // Every caller has just had the store replaced under it by something OTHER
+  // than the two writers above — a `syncIn()` pull, a `syncOut()` round trip, an
+  // import merge. #84's cache keys off `mjGen`, so the bump belongs here rather
+  // than at four call sites where the fifth would eventually be forgotten.
+  function afterStoreChange() { mjGen++; loadMe(); renderAll(); refreshLive(); }
   function wireSync() {
     // Backup / Restore
     const exportBtn = $("#mj-export-btn");
@@ -1929,7 +1974,10 @@
     $("#jr-exit-price").addEventListener("input", updateClosePreview);   // #82 live R/$ preview
     $("#jr-close-overlay").addEventListener("click", (e) => { if (e.target.id === "jr-close-overlay") closeModal(); });
     // react to manual trades opened on another tab/device
-    window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) { loadMe(); renderAll(); refreshLive(); } });
+    // #84: `afterStoreChange()` rather than the same three calls inline — the
+    // cross-tab write is exactly the invalidation a per-keystroke re-read used
+    // to cover for free, so it has to bump the generation like every other one.
+    window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) afterStoreChange(); });
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
     setInterval(() => { if (!document.hidden) refreshLive(); }, 20000);
     // Pick up a fresh scan while the page is open: re-pull the bot book + scan

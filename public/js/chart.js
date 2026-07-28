@@ -15,6 +15,35 @@
   };
   const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
+  // ── per-render teardown (TOP100 #80/#81) ──────────────────────────────────
+  // render() is RE-ENTRANT — eight call sites, and every timeframe button is
+  // one of them. Everything it wired was wired unconditionally and never
+  // removed: a 30s live-box refresh, a 20s stock quote poll, a window resize
+  // handler, and two or three onLiveTick subscribers. Each render built a BRAND
+  // NEW box element (document.createElement) and appended it, so after a
+  // session of clicking D/3D/W/M/3M the page held one orphaned interval, one
+  // orphaned resize listener and three orphaned tick subscribers PER CLICK,
+  // every one of them still doing full work — findOpen(), a large HTML build,
+  // an innerHTML write — against a node render() had already detached. Not a
+  // slow leak of bytes; a growing pile of live work with no visible output.
+  //
+  // The `beforeunload → clearInterval` teardowns that were there did nothing
+  // about this, and could not: they fire when the page is being DESTROYED, at
+  // which point every interval dies anyway. They were cargo cult, and worse
+  // than inert — a beforeunload listener is a bfcache hazard, so the "fix" was
+  // costing back-navigation performance to solve nothing. They are replaced
+  // here, not supplemented.
+  //
+  // This is `sectors.js`'s clearInterval-before-re-set pattern generalised:
+  // whatever the previous render wired, the next render unwires first.
+  const _renderTeardown = [];
+  const onRenderTeardown = (fn) => { _renderTeardown.push(fn); };
+  function tearDownPreviousRender() {
+    // LIFO and pop-as-you-go: a teardown that throws must not strand the ones
+    // behind it, and must not be run twice by a later render.
+    while (_renderTeardown.length) { try { _renderTeardown.pop()(); } catch (_) {} }
+  }
+
   const params = new URLSearchParams(location.search);
   const VALID_MARKETS = new Set(["asx", "nasdaq", "crypto", "scalp"]);
   const marketRaw = (params.get("m") || "asx").toLowerCase();
@@ -174,7 +203,18 @@
   // Shared with the simulate buttons / live box so a buy/sell fills at the true
   // live price and every dependent widget reacts on each tick.
   const liveState = { price: null, entryLineFns: null, listeners: [] };
-  const onLiveTick = (fn) => { liveState.listeners.push(fn); };
+  // Every subscriber is registered from inside render() (wireSim, initAlerts,
+  // wireLiveBox), so each one is scoped to the render that added it — otherwise
+  // a price tick fans out to N copies of the same handler writing into N-1
+  // detached boxes. Unsubscribing here rather than at the three call sites is
+  // deliberate: a fourth caller added later inherits the teardown for free.
+  const onLiveTick = (fn) => {
+    liveState.listeners.push(fn);
+    onRenderTeardown(() => {
+      const i = liveState.listeners.indexOf(fn);
+      if (i >= 0) liveState.listeners.splice(i, 1);
+    });
+  };
 
   const posId = params.get("pos");   // open-position id passed from the journal
 
@@ -1520,7 +1560,10 @@
     };
     tick();
     const iv = setInterval(tick, 20000);
-    window.addEventListener("beforeunload", () => clearInterval(iv), { once: true });
+    // Was a beforeunload clearInterval, which is a no-op (page teardown clears
+    // intervals anyway) AND a bfcache hazard. This poll writes into the price
+    // element of the render that started it; the next render owns that element.
+    onRenderTeardown(() => clearInterval(iv));
   }
 
   // ── VIVEK "setups across timeframes" strip ──────────────────────────────────
@@ -1608,6 +1651,12 @@
   }
 
   function render(d) {
+    // FIRST line, before anything is wired: whatever the previous render left
+    // running is stopped here. render() is re-entrant (every timeframe button
+    // is a call site), so this is the only place the previous pass's intervals,
+    // listeners and tick subscribers can be reached — by the time the new box
+    // node exists, the old one has already been orphaned.
+    tearDownPreviousRender();
     header(d); footer(d); wireSim(d); wireSizeCalc(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
@@ -2962,6 +3011,56 @@
     }
   }
 
+  // ── live-stream reconnect policy (TOP100 #82) ────────────────────────────
+  // `ws.onclose = () => setTimeout(connect, 3000)` had three defects, and the
+  // quiet one is the worst:
+  //
+  //   1. NO BACKOFF. Binance down, wifi off, a laptop lid closed on a coffee
+  //      shop captive portal — the tab hammers a dead endpoint every 3s for as
+  //      long as it is open. Overnight that is ~28,000 connection attempts from
+  //      one tab, which is how an IP earns a rate-limit ban from the exchange
+  //      whose prices the whole live box depends on.
+  //   2. NO CAP, so nothing ever slows down; the failure never gets cheaper.
+  //   3. THE DEAD END: `catch (_) { return; }` around `new WebSocket(...)`
+  //      scheduled NOTHING. A constructor throw (blocked URL, exhausted socket
+  //      pool) killed the feed permanently — the price box freezes on its last
+  //      value and looks exactly like a market that has stopped moving.
+  //
+  // And the correctness bug underneath all three: a `setTimeout(connect, 3000)`
+  // already in flight when `switchTo` fired kept its appointment, so socket B
+  // (15m) came up beside socket A (1h) and both interleaved bars into the SAME
+  // array and the SAME candle series. `wsGen` below is the fix — the same
+  // generation-token shape as `_pollToken` in app.js (#79) — and it is what
+  // makes the backoff safe to add rather than merely polite.
+  const WS_BACKOFF_BASE_MS = 3000;    // ceiling for the first retry (the old fixed wait)
+  const WS_BACKOFF_MAX_MS  = 60000;   // a dead feed retries once a minute, not 20x
+  const WS_STABLE_MS       = 30000;   // uptime that counts as "this connection worked"
+  // EQUAL jitter — the delay is drawn from [ceil/2, ceil], so it can never
+  // exceed the cap. A ±25% scheme around the ceiling would overshoot MAX, and
+  // the point of a cap is that it is one. Jitter at all because every open tab
+  // on a network reconnects off the same outage: without it they retry in
+  // lockstep for ever, which is a self-inflicted thundering herd.
+  const wsBackoffMs = (fails, rnd) => {
+    const ceil = Math.min(WS_BACKOFF_MAX_MS, WS_BACKOFF_BASE_MS * Math.pow(2, Math.max(0, fails | 0)));
+    // The clamp is written to be TOTAL — every input maps to [0, 1], including
+    // NaN. `Math.min(1, Math.max(0, rnd))` looks equivalent and is not: it
+    // returns NaN for a NaN `rnd`, the delay comes back NaN, and
+    // `setTimeout(fn, NaN)` fires IMMEDIATELY. That is a reconnect storm wearing
+    // a backoff's clothes — the exact failure this function exists to prevent,
+    // reachable only through the argument nobody checks. Unreachable today (the
+    // one call site passes `Math.random()`), but "the delay never exceeds
+    // WS_BACKOFF_MAX_MS" should be an invariant of the function, not a property
+    // of its current caller.
+    const j = rnd > 0 ? (rnd < 1 ? rnd : 1) : 0;   // NaN fails `> 0` and lands on 0
+    return Math.round(ceil / 2 + (ceil / 2) * j);
+  };
+  // Reset on a STABLE close, never on `onopen`. Resetting when the socket opens
+  // is the classic version of this bug: a server that accepts the handshake and
+  // immediately hangs up would zero the counter every single time and put the
+  // 3-second storm straight back, wearing a backoff's clothes. A failed
+  // handshake (upMs 0) therefore counts as a failure, and so does a throw.
+  const wsNextFails = (fails, upMs) => (upMs >= WS_STABLE_MS ? 0 : (fails | 0) + 1);
+
   // Live Binance feed controller. The forming candle ticks in real time, the
   // indicators recompute on each update, and the timeframe (15m/30m/1h) can be
   // switched on the fly. Falls back silently to whatever was painted if the
@@ -2971,6 +3070,11 @@
     const N_DISP = 120, KEEP = 1000;   // KEEP = Binance max per request → deepest intraday history
     const liveEl = $("#ct-live"), priceEl = $("#ct-price");
     let bars = [], ws = null, stopped = false, lastCalc = 0, lastPx = null;
+    // wsGen is the generation token: every socket, every handler and every
+    // pending retry timer is stamped with the generation that created it, and
+    // anything from an older generation is inert. wsTimer holds the one pending
+    // retry so closeWs can cancel it rather than merely outrun it.
+    let wsGen = 0, wsFails = 0, wsTimer = null;
     let iv = "1h", ivSec = 3600;
 
     const restURL   = () => `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${iv}&limit=${KEEP}`;
@@ -3020,10 +3124,30 @@
       });
     }
 
+    function retry(gen) {
+      if (stopped || gen !== wsGen) return;
+      const wait = wsBackoffMs(wsFails - 1, Math.random());
+      clearTimeout(wsTimer);
+      wsTimer = setTimeout(() => { if (!stopped && gen === wsGen) connect(); }, wait);
+    }
+
     function connect() {
       if (stopped) return;
-      try { ws = new WebSocket(streamURL()); } catch (_) { return; }
-      ws.onmessage = (ev) => {
+      const gen = wsGen;                 // this socket belongs to THIS generation
+      let upAt = 0;
+      let sock;
+      try { sock = new WebSocket(streamURL()); }
+      catch (_) {
+        // Previously `return`, which ended the feed for good. A throw is a
+        // failure like any other and must be retried on the same schedule.
+        wsFails = wsNextFails(wsFails, 0);
+        retry(gen);
+        return;
+      }
+      ws = sock;
+      sock.onopen = () => { upAt = Date.now(); };
+      sock.onmessage = (ev) => {
+        if (gen !== wsGen) return;       // a socket from a superseded timeframe
         let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
         const k = m.k; if (!k) return;
         const t = Math.floor(k.t / 1000);
@@ -3047,11 +3171,25 @@
           setMarks(c.markers);
         }
       };
-      ws.onclose = () => { if (!stopped) setTimeout(connect, 3000); };
-      ws.onerror = () => { try { ws.close(); } catch (_) {} };
+      sock.onclose = () => {
+        if (gen !== wsGen) return;       // closeWs() already moved on
+        wsFails = wsNextFails(wsFails, upAt ? Date.now() - upAt : 0);
+        retry(gen);
+      };
+      sock.onerror = () => { try { sock.close(); } catch (_) {} };
     }
 
-    function closeWs() { if (ws) { try { ws.onclose = null; ws.close(); } catch (_) {} } ws = null; }
+    // Bumping the generation is what makes this a real cancel rather than a
+    // request to stop: any handler or pending timer still holding the old `gen`
+    // sees it no longer matches and does nothing. Clearing `onmessage` as well
+    // as `onclose` matters — a socket already in the middle of closing can
+    // still deliver a buffered frame into the wrong timeframe's bar array.
+    function closeWs() {
+      wsGen++;
+      clearTimeout(wsTimer); wsTimer = null;
+      if (ws) { try { ws.onclose = null; ws.onmessage = null; ws.close(); } catch (_) {} }
+      ws = null;
+    }
 
     function start() { load().then(connect).catch(() => {}); }
     function switchTo(ivKey) {
@@ -3059,10 +3197,22 @@
       if (!niv || niv === iv) return;
       iv = niv; ivSec = niv === "15m" ? 900 : niv === "30m" ? 1800 : 3600;
       closeWs(); lastPx = null;
+      // Safe to zero the counter here because `load()` must RESOLVE before
+      // connect runs: a deliberate user action that also proves the network is
+      // up should not inherit an outage's accumulated wait.
+      wsFails = 0;
       load().then(connect).catch(() => {});
     }
 
-    window.addEventListener("beforeunload", () => { stopped = true; closeWs(); });
+    // This one used to be a `beforeunload`, and unlike the clearInterval pairs
+    // it did real work — but at the wrong moment. makeLive is called from
+    // INSIDE render (the crypto branch), so a re-render built a second
+    // controller while the first kept streaming into the PREVIOUS chart's
+    // series objects: not just wasted sockets, but `S.candle.update()` calls
+    // against a chart that has been disposed. Tearing down per render closes
+    // the socket at the instant it stops having anything valid to paint into;
+    // at real page unload the browser drops the socket regardless.
+    onRenderTeardown(() => { stopped = true; closeWs(); });
     return { start, switchTo };
   }
 
@@ -3129,6 +3279,22 @@
     // Re-apply the saved spot the first time the box is shown and on resize.
     box.__restorePos = restore;
     window.addEventListener("resize", restore);
+    // The `mousedown`/`touchstart` pair above cannot leak — they are on `box`,
+    // which the next render abandons wholesale. `resize` is on WINDOW, which
+    // outlives every box, and `restore` closes over this one: without the
+    // removal below, every timeframe click left another handler measuring and
+    // repositioning a detached node on every resize event. The document-level
+    // drag handlers are only attached mid-drag and `onUp` removes them, but a
+    // fetch can resolve into a re-render while the mouse is still down, so they
+    // are swept here too (removeEventListener on an unattached handler is a
+    // no-op, which is why this is safe to do unconditionally).
+    onRenderTeardown(() => {
+      window.removeEventListener("resize", restore);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onUp);
+    });
   }
 
   // 🤖 Claude's open positions get a DOG-BALLS banner pinned over the chart
@@ -3306,8 +3472,11 @@
 
     onLiveTick(update);
     update();
+    // `update()` does real work — findOpen(), a large HTML build, an innerHTML
+    // write — against THIS render's box. Left running, every timeframe click
+    // added another copy painting into a node nobody can see.
     const durIv = setInterval(() => { if (findOpen()) update(); }, 30000);
-    window.addEventListener("beforeunload", () => clearInterval(durIv), { once: true });
+    onRenderTeardown(() => clearInterval(durIv));
   }
 
   // ── entry point ────────────────────────────────────────────────────────────
@@ -3363,8 +3532,17 @@
           }
           liveState.listeners.forEach((fn) => { try { fn(price); } catch (_) {} });
         };
-        const pollIv = setInterval(stockTick, 15000);
-        window.addEventListener("beforeunload", () => clearInterval(pollIv), { once: true });
+        // BOOT-scoped, not render-scoped, and deliberately NOT on the
+        // onRenderTeardown registry: renderPosition runs once per page load and
+        // this interval is created BEFORE the first render() call below, so
+        // registering it would have that very first render tear it down and the
+        // stock quote would never poll at all. One interval for the life of the
+        // page is the correct lifetime here. The `beforeunload → clearInterval`
+        // that used to sit on this line is gone rather than converted: the page
+        // being destroyed already clears every interval, so it bought nothing
+        // and cost back-navigation performance (a beforeunload listener makes
+        // the page ineligible for the bfcache).
+        setInterval(stockTick, 15000);
       }
 
       // Try to fetch the scan JSON for chart context; fall back to a minimal stub so
