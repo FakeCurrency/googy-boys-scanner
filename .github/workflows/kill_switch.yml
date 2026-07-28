@@ -56,6 +56,21 @@ jobs:
           BYBIT_TESTNET:     ${{ secrets.BYBIT_TESTNET }}
           ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          # ALERT SECRETS ARE LOAD-BEARING HERE (2026-07-28). Without them
+          # kill_switch.py:88-94 -> alert_dispatch.send finds every channel
+          # unconfigured, all three return False, and the whole thing exits down
+          # log.debug("alert skipped") — i.e. THE KILL SWITCH FIRES SILENTLY.
+          # The watchdog step below has always exported the full set; this step,
+          # the one that can flatten the account, had none of it. Never remove
+          # these to "tidy up" the env block.
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+          GBS_SMTP_HOST:       ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT:       ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER:       ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS:       ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO:        ${{ secrets.GBS_ALERT_TO }}
           # Input passes through env, never ${{ }} inside run: (2026-07-20
           # security pass) — this job holds the broker keys, and the free-text
           # input could otherwise inject shell into it.

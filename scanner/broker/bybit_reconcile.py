@@ -91,15 +91,42 @@ def _sweep_orphans(j: dict, live_positions: list[dict], known_symbols: set[str],
                   "avg=%s — unmanaged exposure, review immediately",
                   p["symbol"], p.get("side"), p.get("size"), p.get("avgPrice"))
     j["orphans"] = orphans
-    if orphans:
+
+    # ROUTED, AND DEDUPED ON THE SET OF SYMBOLS (2026-07-28).
+    # Two defects fixed at once. (1) It called alert_dispatch.send, the
+    # LOW-level path with no severity tier and no rate limit, so
+    # "orphan_position" never appeared in ALERT_SEVERITY and could not be
+    # routed, silenced or acknowledged like every other event; it also meant
+    # `send` fired all three channels unconditionally, which is right for the
+    # severity but right by accident. (2) It re-fired on EVERY reconcile for as
+    # long as the orphan existed, and an orphan exists until a human adopts or
+    # closes it - i.e. the alert that matters most is the one guaranteed to
+    # become wallpaper fastest.
+    #
+    # The fix is not a rate limit. A time window would swallow a genuinely NEW
+    # orphan arriving inside it, and a new orphan is the whole point. Dedupe is
+    # on the SORTED SET OF SYMBOLS instead, carried on the journal beside the
+    # orphan list itself - same shape as vivek_run's guard stamp and
+    # sectorbreadth's ping memory, and for the same reason: the memory must be
+    # committed by whatever commits the finding, or the two disagree about what
+    # has already been said. A changed set (one appears, or one is dealt with
+    # and another remains) re-announces; an unchanged set stays quiet.
+    seen_key = ",".join(sorted(o["symbol"] for o in orphans))
+    if orphans and j.get("orphans_notified") != seen_key:
         try:
-            from .alert_dispatch import send as _alert
-            _alert("orphan_position",
+            from .alert_router import smart_send as _smart
+            _smart("orphan_position",
                    f"Bybit holds {len(orphans)} position(s) the journal doesn't know",
                    "\n".join(f"{o['symbol']} {o['side']} size={o['size']} avg={o['avg_price']}"
-                             for o in orphans))
+                             for o in orphans)
+                   + "\nUnmanaged exposure: no stop-watcher, guard or kill-switch "
+                     "is accounting for these. Adopt or close them manually.")
+            j["orphans_notified"] = seen_key
         except Exception as e:
             log.warning("could not send orphan alert: %s", e)
+    elif not orphans:
+        # Cleared - the next orphan, even the same symbol, is news again.
+        j.pop("orphans_notified", None)
 
 
 def reconcile_journal(j: dict) -> dict:

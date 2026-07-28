@@ -253,6 +253,53 @@ def run_standalone(dry_run: bool = False) -> dict:
     return out
 
 
+def _write_step_summary(result: dict, dry_run: bool) -> None:
+    """Put a fired kill switch on the Actions run page, not just in the log.
+
+    THE FIRING LEAVES NO OTHER TRACE (2026-07-28). This workflow holds
+    `permissions: contents: read` and has no commit step, so nothing it learns
+    reaches the repo; the book is not stamped, no state file is written, and
+    `run_standalone` returns to a `__main__` that discarded its result. Until
+    today the alert was the ONLY output, and the alert had no secrets exported
+    (see the env block in kill_switch.yml), so a fired switch was a green run
+    with a warning buried 300 lines into a collapsed step. A green run that
+    flattened the account and a green run that found nothing looked identical
+    from the Actions list, which is the only place anyone looks.
+
+    Deliberately NOT made to fail the job: firing is the safety net WORKING,
+    and a red run here would train the eye to ignore red on the one workflow
+    where red must mean something. The summary is the signal.
+
+    Deliberately does NOT halt the next scan either — `vivek_run`'s own
+    `vivek_guard` owns that, in the book, per market. Wiring this into entry
+    decisions changes which trades get taken and is the owner's call.
+    """
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    fired = result.get("triggered") or []
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            if fired:
+                fh.write("## KILL SWITCH TRIGGERED\n\n")
+                fh.write(f"Markets: **{', '.join(fired)}**\n\n")
+                fh.write(
+                    "Dry run - nothing was flattened.\n" if dry_run else
+                    "Broker flatten + cancel-all was attempted for any market "
+                    "with credentials set. The PAPER BOOK IS UNCHANGED - it "
+                    "still shows these positions open, and the next scan is "
+                    "governed by `vivek_guard`, not by this run.\n"
+                )
+                fh.write(f"\nChecked: {', '.join(result.get('checked') or [])}\n")
+            else:
+                fh.write(
+                    f"Kill switch OK - no market breached "
+                    f"({', '.join(result.get('checked') or []) or 'none'} checked).\n"
+                )
+    except Exception as e:      # a summary must never break the safety net
+        log.warning("kill-switch: could not write step summary: %s", e)
+
+
 if __name__ == "__main__":
     import argparse
     logging.basicConfig(
@@ -263,4 +310,10 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Run the daily-loss kill-switch check")
     p.add_argument("--dry-run", action="store_true", help="Log only, don't flatten")
     args = p.parse_args()
-    run_standalone(dry_run=args.dry_run)
+    _result = run_standalone(dry_run=args.dry_run)
+    _write_step_summary(_result, args.dry_run)
+    if _result.get("triggered"):
+        # ::error:: so it surfaces in the Actions UI annotation rail even when
+        # the job stays green. See _write_step_summary for why it stays green.
+        print("::error::KILL SWITCH TRIGGERED for: "
+              + ", ".join(_result["triggered"]))

@@ -15,11 +15,23 @@ import logging
 import pathlib
 
 from scanner import config as _cfg
-from scanner.journal_common import atomic_write as _atomic_write
 
 log  = logging.getLogger(__name__)
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 _STATE_FILE = ROOT / "journal" / "alert_state.json"
+
+# journal/alert_state.json HAS TWO OWNERS AND ONE OF THEM IS NOT THIS MODULE
+# (2026-07-28). alert_router owns `last_sent` + `acknowledged`; this module owns
+# `cb_state`. Both used to read the whole document, edit their own corner and
+# write the whole document back, which is correct only if they never interleave.
+# They do interleave: check_all() calls smart_send() for a cleared breaker, and
+# the router stamps last_sent from a copy of the file loaded BEFORE this module
+# started, so whichever writes second silently reverts the other. Concretely
+# that either replays a resolved-breaker alert forever or resets a fired
+# breaker to clear. Both mutators below now go through alert_router.update_state,
+# which re-reads immediately before writing, so the loss window is the mutate
+# call rather than the whole check_all() body. Do not reintroduce a local
+# read-modify-write here.
 
 
 def _load_cb_state() -> dict:
@@ -33,17 +45,9 @@ def _load_cb_state() -> dict:
 
 
 def _save_cb_state(cb_state: dict) -> None:
-    _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if _STATE_FILE.exists():
-            data = json.loads(_STATE_FILE.read_text(encoding="utf-8"))
-        else:
-            data = {}
-    except Exception:
-        data = {}
-    data["cb_state"] = cb_state
-    try:
-        _atomic_write(_STATE_FILE, json.dumps(data, indent=2))
+        from .alert_router import update_state
+        update_state(lambda st: st.__setitem__("cb_state", cb_state))
     except Exception as e:
         log.warning("circuit_breaker: could not save state: %s", e)
 

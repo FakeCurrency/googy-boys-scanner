@@ -875,23 +875,47 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
 
     # 2) daily-loss guardrail — once the session is down ≥ the limit, stop adding
     #    risk for the rest of the day (open positions are still managed above).
+    # The previous run's ping memory has to be read BEFORE the new guard dict
+    # replaces it on the next line, or every scan re-announces the same breach.
+    _prev_notified = ((book.get("guard") or {}).get(market) or {}).get("notified") or ""
     guard = vivek_guard.check(book, market, day, equity, price_of)
+    guard["notified"] = _prev_notified          # carried forward, stamped below
     book.setdefault("guard", {})[market] = guard
     if guard["breached"]:
         kind = guard.get("breach_kind") or "daily"
         hit_usd = guard["session_usd"] if kind == "daily" else guard.get("week_usd", 0.0)
         hit_lim = guard["limit_usd"] if kind == "daily" else guard.get("week_limit_usd", 0.0)
-        log.warning("vivek_run [%s]: %s-LOSS GUARD — P&L $%.2f ≤ -$%.2f "
+        log.warning("vivek_run [%s]: %s-LOSS GUARD — P&L $%.2f <= -$%.2f "
                     "— halting new entries for %s",
                     market, kind.upper(), hit_usd, hit_lim, day)
-        try:
-            from .alert_dispatch import send as _alert
-            _alert("vivek_guard",
-                   f"VIVEK {kind}-loss guard [{market}] — P&L ${hit_usd:.2f}",
-                   f"Limit -${hit_lim:.2f}. New entries halted for {day}. "
-                   f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
-        except Exception as e:
-            log.warning("could not send guard alert: %s", e)
+        # ROUTED, and deduped in the BOOK (2026-07-28). Three things were wrong
+        # with the old `alert_dispatch.send` call here:
+        #   1. it skipped the router, so a CRITICAL guard breach arrived with no
+        #      severity, no channel policy and the generic fallback emoji;
+        #   2. nothing deduped it, so a breached crypto guard — 48 scans a day,
+        #      24/7 — would have fired 48 identical CRITICALs down every channel;
+        #   3. the router's own rate limit could not have fixed (2), because it
+        #      is keyed per EVENT TYPE and scan.yml runs the markets sequentially
+        #      in ONE job: any nonzero limit silently swallows the second
+        #      market's breach, which is the message you cannot afford to lose.
+        # So the dedupe lives where `sector_run`'s does — in the file the same
+        # run commits — keyed by day AND kind AND (by construction, since the
+        # per-market book files are canonical) market. The stamp is written only
+        # after a channel accepts, so a failed send retries on the next scan.
+        _stamp = f"{day}:{kind}"
+        if _prev_notified == _stamp:
+            log.info("vivek_run [%s]: guard breach already announced for %s",
+                     market, _stamp)
+        else:
+            try:
+                from .alert_router import smart_send as _smart
+                _smart("vivek_guard",
+                       f"VIVEK {kind}-loss guard [{market}] — P&L ${hit_usd:.2f}",
+                       f"Limit -${hit_lim:.2f}. New entries halted for {day}. "
+                       f"{'DRY RUN.' if dry_run else 'Paper book — managing open positions only.'}")
+                guard["notified"] = _stamp
+            except Exception as e:
+                log.warning("could not send guard alert: %s", e)
 
     # 3) decide NEW entries against the CURRENT book (caps/short-bias across runs).
     # Sector rides along so decide() can enforce the per-sector correlation cap;

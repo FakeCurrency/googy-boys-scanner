@@ -79,9 +79,21 @@ def test_anomaly_breaker_respects_disable_flag(monkeypatch):
 
 @pytest.fixture
 def isolated_state(tmp_path, monkeypatch):
-    """Redirect the breaker's persisted state file into a temp dir."""
-    monkeypatch.setattr(cb, "_STATE_FILE", tmp_path / "alert_state.json")
-    return tmp_path / "alert_state.json"
+    """Redirect the breaker's persisted state file into a temp dir.
+
+    BOTH names have to move, and that they are the same file is the point
+    (2026-07-28): `_save_cb_state` now writes through
+    `alert_router.update_state`, so the breaker no longer does its own
+    read-modify-write on journal/alert_state.json. The router owns `last_sent`
+    and `acknowledged`, this module owns `cb_state`, and the single writer is
+    what stops one silently reverting the other when check_all()'s
+    cleared-breaker smart_send interleaves with its own state save.
+    """
+    from scanner.broker import alert_router as ar
+    state = tmp_path / "alert_state.json"
+    monkeypatch.setattr(cb, "_STATE_FILE", state)
+    monkeypatch.setattr(ar, "STATE_FILE", state)
+    return state
 
 
 def test_check_all_clean_journal_is_ok(make_journal, isolated_state, stub_alerts):

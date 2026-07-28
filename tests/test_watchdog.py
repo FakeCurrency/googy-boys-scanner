@@ -37,13 +37,28 @@ def _stamp_universe(root, stamps: dict) -> None:
 
 
 def _tree(tmp_path, book_age_h=1.0, crypto_age_h=1.0, pm_lag_days=0,
-          backup_age_h=1.0, with_book=True, universe_age_h=1.0):
+          backup_age_h=1.0, with_book=True, universe_age_h=1.0,
+          combined_age_h=None, canonical=True):
+    """combined_age_h defaults to book_age_h: the honest case, where the derived
+    view is written by the same run that wrote the canonical files.
+    canonical=False writes ONLY the derived combined book — the shape that used
+    to pass every freshness check by itself (2026-07-28)."""
     (tmp_path / "journal").mkdir(parents=True)
     (tmp_path / "public" / "data").mkdir(parents=True)
     if with_book:
         (tmp_path / "journal" / "vivek_bot_book.json").write_text(
-            json.dumps({"open": [], "closed": [], "updated_at": _iso(book_age_h)}),
+            json.dumps({"open": [], "closed": [],
+                        "updated_at": _iso(book_age_h if combined_age_h is None
+                                           else combined_age_h)}),
             encoding="utf-8")
+        if canonical:
+            # The CANONICAL per-market files are what a run actually writes;
+            # the combined book is derived from them. probe_content reads these.
+            for m in config.MARKETS:
+                (tmp_path / "journal" / f"vivek_bot_book.{m}.json").write_text(
+                    json.dumps({"version": 2, "market": m, "open": [], "closed": [],
+                                "updated_at": _iso(book_age_h)}),
+                    encoding="utf-8")
     (tmp_path / "public" / "data" / "crypto_vivek.json").write_text(
         json.dumps({"generated_at": _iso(crypto_age_h)}), encoding="utf-8")
     for m in config.MARKETS:

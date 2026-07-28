@@ -750,6 +750,21 @@ ALERT_SEVERITY = {
     # enough that the owner may want it as HIS position rather than the bot's,
     # and that decision has a shelf life measured in hours.
     "trade_review":    "NOTICE",
+    # The paper book's daily/weekly loss guard tripped and new entries are
+    # halted for the session (2026-07-28, scanner/broker/vivek_run). CRITICAL
+    # alongside `daily_loss` because it is the same event seen from the book
+    # rather than from the broker: a real risk limit was hit and the system has
+    # changed what it will do. It used to fire through alert_dispatch.send
+    # directly, which meant no severity at all.
+    "vivek_guard":     "CRITICAL",
+    # Bybit holds a position the journal has never heard of (2026-07-28,
+    # broker/bybit_reconcile._sweep_orphans). CRITICAL and not negotiable: it is
+    # REAL exposure that no stop-watcher, no loss guard and no kill-switch is
+    # counting, because every one of those reads the journal and the journal
+    # does not know the position exists. The severity is the point -- it used to
+    # go out through alert_dispatch.send, which has no tier at all, so this
+    # could not be routed, deduped or acknowledged like anything else.
+    "orphan_position": "CRITICAL",
 }
 
 # Set False to silence all Telegram sends without touching secrets.
@@ -793,6 +808,21 @@ ALERT_RATE_LIMITS = {
     # sequential multi-market run, i.e. lose a decision the owner asked to be
     # given. Missing one of these is the failure mode; repeating one is not.
     "trade_review":    0,
+    # 0 for the third time, for the third variation of the same reason: the
+    # limit is per EVENT TYPE and the markets run sequentially inside one job,
+    # so any nonzero value here could only ever drop the SECOND market's breach.
+    # vivek_run owns the dedupe instead, keyed on day + breach kind and stored
+    # in the per-market book — tighter than a global timer everywhere it
+    # differs, and it cannot disagree with itself about what day it is because
+    # the same commit writes both.
+    "vivek_guard":     0,
+    # 0, and the dedupe is on the SET OF ORPHAN SYMBOLS rather than on a clock
+    # (bybit_reconcile._sweep_orphans). A time window is the wrong tool here:
+    # an orphan persists until a human adopts or closes it, so a window long
+    # enough to stop the alert becoming wallpaper is also long enough to
+    # swallow a genuinely NEW orphan appearing inside it -- and the new one is
+    # the entire reason the probe runs.
+    "orphan_position": 0,
     "DEFAULT":         300,
 }
 
@@ -840,6 +870,16 @@ WATCHDOG_RUNS = {
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
+    # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
+    # It commits nothing, which is exactly why it needs an entry here: every
+    # other watchdog target is caught by its output going stale, and this one
+    # has no output. Until today it could not even fail -- a non-200 emitted a
+    # warning and exited 0 -- so a dead /api/tick was invisible from both
+    # directions at once. The workflow now exits 1 after 3 failed attempts and
+    # the watchdog reads "last SUCCESSFUL run", so a persistent outage trips
+    # this within the hour. CRITICAL because while it is down no paper stop or
+    # target is evaluated unless a chart page happens to be open.
+    "stop_watcher.yml": {"max_age_h": 1.0, "severity": "CRITICAL"},
 }
 
 # Phase 7: Health check thresholds

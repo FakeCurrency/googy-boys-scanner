@@ -33,6 +33,10 @@ _EMOJI = {
     "sector_run":     "🔭",
     # "your call" — the bot took it; do you want it, or does it?
     "trade_review":   "🖐",
+    # The book's own loss guard tripped — new entries halted for the session.
+    "vivek_guard":    "⛔",
+    # Real exposure at the broker that the journal has never heard of.
+    "orphan_position": "👻",
 }
 
 
@@ -120,4 +124,15 @@ def send(event_type: str, title: str, details: str = "") -> None:
     if channels:
         log.info("alert sent via %s  event=%s", ",".join(channels), event_type)
     else:
-        log.debug("alert skipped (no channels configured)  event=%s", event_type)
+        # WARNING, not DEBUG (2026-07-28). `send` is the LOW-level path with no
+        # severity tier, so unlike the router there is no legitimate "meant to
+        # be silent" case here — every caller of `send` believes it is telling
+        # somebody something. Reaching this branch means no channel is
+        # configured at all, which in CI means a workflow step is missing its
+        # secrets. kill_switch.yml shipped that way and a fired kill switch was
+        # silent; it was invisible precisely because this line was DEBUG.
+        log.warning(
+            "alert NOT DELIVERED (no channel configured)  event=%s  title=%s  "
+            "— check this workflow step's env block",
+            event_type, title,
+        )

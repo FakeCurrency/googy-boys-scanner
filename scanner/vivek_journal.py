@@ -91,15 +91,36 @@ def _load() -> dict:
             j.setdefault("open", [])
             j.setdefault("closed", [])
             return j
-        except Exception:
+        except Exception as e:
             # A corrupt/half-written file must never crash the run or be silently
             # overwritten — park it for inspection and start from a clean book.
+            #
+            # BUT IT MUST NOT BE SILENT EITHER (2026-07-28). Parking + a WARNING
+            # log line is a complete recovery on paper and a complete
+            # disappearance in practice: the run goes green, the file it starts
+            # from is empty, and the only notice is one line inside a finished
+            # Actions run nobody opens because nothing looked wrong. Compare
+            # vivek_run.py, which hits the same condition and fails LOUD. The
+            # two paths reading corrupted state should not disagree about
+            # whether that is worth telling somebody. `scan_error` is CRITICAL,
+            # rate limit 0.
+            bad = JOURNAL_FILE.with_suffix(".corrupt.json")
             try:
-                bad = JOURNAL_FILE.with_suffix(".corrupt.json")
                 JOURNAL_FILE.replace(bad)
-                log.warning("vivek journal corrupt — parked at %s, starting fresh", bad.name)
-            except Exception:
-                pass
+                log.error("vivek journal CORRUPT — parked at %s, starting fresh "
+                          "from an EMPTY book (%s)", bad.name, e)
+            except Exception as move_err:
+                log.error("vivek journal CORRUPT and could not be parked (%s) — "
+                          "starting fresh from an EMPTY book (%s)", move_err, e)
+            try:
+                from scanner.broker.alert_router import smart_send as _smart
+                _smart("scan_error",
+                       "VIVEK journal file was corrupt — starting from empty",
+                       f"{JOURNAL_FILE.name} would not parse ({e}). Parked as "
+                       f"{bad.name}; this run began from an EMPTY book, so any "
+                       f"state it held is not in play until the file is restored.")
+            except Exception as alert_err:
+                log.warning("could not send journal-corrupt alert: %s", alert_err)
     return {"version": JOURNAL_VERSION, "open": [], "closed": []}
 
 

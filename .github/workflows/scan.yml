@@ -192,6 +192,17 @@ jobs:
           GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
+          # SMTP ALONE IS NOT ENOUGH (2026-07-28). Email is the only channel
+          # CRITICAL doesn't share with anything else; the two tiers that carry
+          # the scan's own observations route elsewhere. NOTICE is Discord-ONLY
+          # (config.ALERT_CHANNELS), so with no webhook here `trade_review`
+          # ("should Claude take this, or should I?") and `sector_run` (HORIZON's
+          # sustained-run alarm) resolved to an empty channel list every scan —
+          # both features were shipped dark. WARNING is telegram+discord, so it
+          # was landing nowhere too. Do not trim this back to SMTP.
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
           # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
           ARGS: ${{ github.event.inputs.args }}
         run: |

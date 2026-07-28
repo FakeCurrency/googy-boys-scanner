@@ -126,6 +126,17 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
 
     # THE money path: is the track record being maintained? Every non-dry bot
     # run re-stamps updated_at; crypto runs hourly 24/7, so >4h = stalled.
+    #
+    # FRESHNESS IS READ OFF THE CANONICAL PER-MARKET FILES, NOT THE COMBINED ONE
+    # (2026-07-28). journal/vivek_bot_book.json is DERIVED - book layout v2 made
+    # journal/vivek_bot_book.<market>.json the files a run actually writes, and
+    # the combined view is regenerated from them. `vivek_run --rebuild-combined`
+    # stamps the derived file with the wall clock of the REBUILD, so the probe
+    # this replaces was satisfied by the act of rebuilding, whatever it
+    # rebuilt from. A run that scanned nothing, or scanned and saved nothing,
+    # still refreshed the number being checked. That is a staleness detector
+    # that its own pipeline resets, which is the one shape of monitor that is
+    # worse than no monitor: it reports health it has not measured.
     book = root / "journal" / "vivek_bot_book.json"
     if not book.exists():
         out.append(_finding("book_missing", "CRITICAL",
@@ -133,18 +144,68 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
                             "record file is gone; restore from git/backups"))
     else:
         try:
-            age = _age_h(_parse_ts(json.loads(
-                book.read_text(encoding="utf-8")).get("updated_at")), now)
+            combined_ts = _parse_ts(json.loads(
+                book.read_text(encoding="utf-8")).get("updated_at"))
         except Exception as e:
-            age = None
+            combined_ts = None
             out.append(_finding("book_unreadable", "CRITICAL",
                                 f"combined book unreadable ({e}) - see "
                                 f"--verify / OPERATIONS.md"))
-        if age is not None and age > config.WATCHDOG_BOOK_MAX_AGE_H:
-            out.append(_finding("book_stale", "CRITICAL",
-                                f"bot book updated_at is {age:.1f}h old "
-                                f"(limit {config.WATCHDOG_BOOK_MAX_AGE_H:.0f}h) - "
-                                f"no run has saved the track record recently"))
+
+        # Freshest canonical write across all markets == "some run saved the
+        # book". Missing per-market files are not an error on their own: a
+        # market that has never run has nothing to write.
+        ages: dict[str, float] = {}
+        newest: dt.datetime | None = None
+        for market in config.MARKETS:
+            mf = root / "journal" / f"vivek_bot_book.{market}.json"
+            if not mf.exists():
+                continue
+            try:
+                ts = _parse_ts(json.loads(
+                    mf.read_text(encoding="utf-8")).get("updated_at"))
+            except Exception:
+                out.append(_finding(f"book_unreadable_{market}", "CRITICAL",
+                                    f"canonical book vivek_bot_book.{market}.json "
+                                    f"unreadable - see --verify / OPERATIONS.md"))
+                continue
+            age_m = _age_h(ts, now)
+            if age_m is None:
+                continue
+            ages[market] = age_m
+            if ts is not None and (newest is None or ts > newest):
+                newest = ts
+
+        if not ages:
+            # Combined exists but no canonical file does: layout v2 says the
+            # per-market files ARE the book, so this is not "no runs yet".
+            out.append(_finding("book_canonical_missing", "CRITICAL",
+                                "no journal/vivek_bot_book.<market>.json exists "
+                                "- the combined book is derived from files that "
+                                "are not there; run --rebuild-combined/--verify"))
+        else:
+            age = min(ages.values())
+            if age > config.WATCHDOG_BOOK_MAX_AGE_H:
+                detail = ", ".join(f"{m} {a:.1f}h" for m, a in sorted(ages.items()))
+                out.append(_finding("book_stale", "CRITICAL",
+                                    f"bot book updated_at is {age:.1f}h old "
+                                    f"(limit {config.WATCHDOG_BOOK_MAX_AGE_H:.0f}h) - "
+                                    f"no run has saved the track record recently "
+                                    f"[{detail}]"))
+
+            # The combined view running AHEAD of every file it is derived from
+            # means a rebuild ran with no scan behind it - harmless in itself,
+            # and the exact thing that used to hide the finding above.
+            if (combined_ts is not None and newest is not None
+                    and (combined_ts - newest).total_seconds() / 3600.0
+                    > config.WATCHDOG_BOOK_MAX_AGE_H):
+                lead = (combined_ts - newest).total_seconds() / 3600.0
+                out.append(_finding(
+                    "book_combined_ahead", "WARNING",
+                    f"combined book is {lead:.1f}h NEWER than the freshest "
+                    f"canonical per-market file - a --rebuild-combined ran "
+                    f"without a scan behind it; the combined view is fresh, "
+                    f"the data in it is not"))
 
     # Crypto scan output: generated_at is wall-clock at scan time, hourly 24/7.
     cv = root / "public" / "data" / "crypto_vivek.json"

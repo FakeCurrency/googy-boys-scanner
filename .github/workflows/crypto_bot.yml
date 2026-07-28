@@ -135,6 +135,21 @@ jobs:
         env:
           # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
           ARGS: ${{ github.event.inputs.args }}
+          # ALERT SECRETS (2026-07-28). This step used to export ARGS and
+          # nothing else, so EVERY alert the 24/7 crypto path can raise was
+          # dropped on the floor: the loss-guard breach (vivek_run.py:887-894),
+          # the trade_review "your call" push (:550), the mark-sanity anomaly
+          # (:372-432) and the book-corrupt alarm (:101-111). Crypto is the one
+          # market that trades while nobody is awake, which makes it the one
+          # market where a silent alert path is the whole failure.
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+          GBS_SMTP_HOST:       ${{ secrets.GBS_SMTP_HOST }}
+          GBS_SMTP_PORT:       ${{ secrets.GBS_SMTP_PORT }}
+          GBS_SMTP_USER:       ${{ secrets.GBS_SMTP_USER }}
+          GBS_SMTP_PASS:       ${{ secrets.GBS_SMTP_PASS }}
+          GBS_ALERT_TO:        ${{ secrets.GBS_ALERT_TO }}
         run: python -m scanner.run --market crypto $ARGS
 
       - name: Verify VIVEK data schema (crypto)
