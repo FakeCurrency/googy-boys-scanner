@@ -10,8 +10,12 @@ gates below), so this can run on every scan with zero risk.
 What it does each run, per market:
 
   1. Loads the persistent book (journal/vivek_bot_book.json) — Gap 1. The book
-     survives across runs, so the 10-position cap, ≥4-short bias and one-per-
-     symbol rules hold over time, not just within a single scan.
+     survives across runs, so the position caps, short-slot reserve and one-per-
+     symbol rules hold over time, not just within a single scan. The book-size
+     ceiling is GLOBAL (config.VIVEK_BOT_MAX_OPEN_TOTAL, 30 open across every
+     market), so this step also counts the sibling markets' canonical book
+     files via `_open_elsewhere` — and refuses new entries outright if any of
+     them is unreadable, rather than guessing low and blowing the cap.
   2. Marks every OPEN position to the observed intraday price (reusing the
      journal's `_mark` / `manage_position`), booking scale-outs and closing on
      stops — but only during the delay-adjusted market session.

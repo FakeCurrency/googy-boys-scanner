@@ -66,8 +66,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        (notify/alerts/pulse + broker paper_run/bracket_order/
                        reconcile DELETED 2026-07-20 — see git history)
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
-  broker/              vivek_bot.py (decision engine: A+ only, 10/market,
-                       one/symbol, short-slot reserve), vivek_run.py (paper book),
+  broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
+                       across all markets, one/symbol, 3/sector), vivek_run.py (paper book),
                        bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
                        circuit_breaker, pre_trade_check, ...
 phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
@@ -122,8 +122,20 @@ assert_staged call and a WATCHDOG_RUNS entry.
   combined view (same old schema; regenerate with
   `python -m scanner.broker.vivek_run --rebuild-combined`; audit with
   `--verify` — the scan/close workflows run it as a failing gate). A+ only (grade_raw,
-  unsmoothed), max 10/market, one per symbol, daily+weekly loss guards, manual
-  close via close_position.yml journal_type=bot.
+  unsmoothed), **max 30 open across ALL markets combined** (owner, 2026-07-28 —
+  `VIVEK_BOT_MAX_OPEN_TOTAL`; the per-market cap is set equal to it so one market
+  CAN hold the whole book, and `vivek_run._open_elsewhere` counts the sibling
+  market files before each decision — fail-closed if one is unreadable), one per
+  symbol, 3 per sector, daily+weekly loss guards, manual close via
+  close_position.yml journal_type=bot.
+- **The 3-per-sector cap does NOT bind on NASDAQ** (REFINEMENTS #38): rows with
+  no sector are exempt, and `universe._fetch_nasdaq` has no sector column to
+  read, so 0 of ~1,400 NASDAQ names carry one. ASX rows all carry a sector;
+  crypto is rescued by synthetic `crypto-major`/`crypto-alt` buckets keyed off
+  the symbol. Since one market may now hold all 30 slots, a fully-NASDAQ book
+  has NO correlation control. `decide()` logs a warning and publishes
+  `summary["sector_coverage"]`. Fixing it changes which trades get taken —
+  **owner decision, pending; do not ship it autonomously.**
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.

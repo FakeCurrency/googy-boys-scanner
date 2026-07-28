@@ -353,7 +353,8 @@ that has never been restored is a hope, not a backup.
 (`bybit_run.py`), which does not run on any schedule today. They are built
 and unit-tested, and become load-bearing only when live execution is wired.
 The PAPER book's active protections are the ones above: daily/weekly loss
-guards, 10/market + one-per-symbol caps, re-entry cooldown
+guards, the 30-open-across-all-markets ceiling + one-per-symbol and
+3-per-sector caps, re-entry cooldown
 (`VIVEK_BOT_REENTRY_COOLDOWN_DAYS` 7), time stop (`VIVEK_BOT_MAX_HOLD_DAYS`
 28), mark-sanity guard, book integrity gates.
 

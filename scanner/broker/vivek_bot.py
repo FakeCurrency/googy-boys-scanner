@@ -16,9 +16,15 @@ The rules it enforces (locked-in, audited on every decision):
      (e.g. to mirror the timeframe the user has selected on the chart).
   4. SIZING: risk 0.25–0.5% of equity per trade; leverage is 5× for stocks
      (ASX/NASDAQ) and 3× for crypto. Effective size + leverage are logged.
-  5. BOOK (per market): at most 10 open, of which AT LEAST 4 must be short — so
-     at most 6 longs. The bot reserves the short slots to hold a deliberate
-     short bias and never lets the book run long-heavy. One position per symbol.
+  5. BOOK: the binding ceiling is GLOBAL — config.VIVEK_BOT_MAX_OPEN_TOTAL open
+     positions across every market combined (30, owner 2026-07-28), free to sit
+     wherever the A+ setups actually are. decide() only ever sees one market, so
+     the runner passes the other markets' count in as `open_elsewhere`; the
+     per-market cap is set equal to the global one and is no longer what binds.
+     One position per symbol, at most config.VIVEK_BOT_MAX_PER_SECTOR (3) per
+     sector — the correlation control that stops the book becoming one macro
+     bet. If VIVEK_BOT_MIN_SHORTS is non-zero the bot also reserves that many
+     short slots and caps longs accordingly (it is 0 today: long-only).
 
 Single source of truth: it reads the SAME per-timeframe plans the row, chart and
 journal use (row["plans"][tf]) — it never recomputes a level.
@@ -426,6 +432,23 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         if sk:
             sector_counts[sk] += 1
 
+    # The cap above exempts rows with no sector, so a market whose universe
+    # carries no sector data has NO correlation control at all -- it merely
+    # looks like it does. NASDAQ is exactly that today (universe._fetch_nasdaq
+    # has no sector column to read: 0 of ~1,400 names carry one), and that
+    # matters far more since the book became a 30-position ceiling that any
+    # single market is allowed to fill on its own. Report it loudly instead of
+    # letting it stay invisible. This deliberately does NOT change what gets
+    # taken -- that is an owner decision on the risk path, not an autonomous one.
+    sector_known = sum(1 for r in rows
+                       if _sector_key(r.get("symbol"), r.get("sector"), market))
+    sector_cov = round(sector_known / len(rows), 3) if rows else 1.0
+    if max_sector and rows and sector_cov < 0.5:
+        log.warning("vivek_bot [%s]: the %d-per-sector cap is configured but only "
+                    "%d/%d scanned rows carry a sector - the cap cannot bind on "
+                    "the rest, so this market has no correlation control",
+                    market, max_sector, sector_known, len(rows))
+
     # Re-entry cooldown: symbols recently stopped out (supplied by the runner
     # from the closed book) are untouchable — no churning the same level.
     cooldown_syms = {str(s).upper() for s in (kw.get("cooldown_syms") or ())}
@@ -485,6 +508,9 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         "max_open_total": max_total,
         "longs": longs, "shorts": shorts, "min_shorts": min_shorts,
         "short_bias_met": short_bias_met,
+        # Fraction of this scan's rows the sector cap could actually see. Below
+        # 1.0 the correlation control is partially blind; at 0.0 it is off.
+        "sector_coverage": sector_cov, "max_per_sector": max_sector,
         "skipped": len(skipped), "skip_reasons": dict(reasons),
     }
     log.info("VIVEK bot [%s]: +%d new (book %d→%d%s) — %d long / %d short%s · skips: %s",

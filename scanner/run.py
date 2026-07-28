@@ -126,7 +126,8 @@ def main() -> None:
             # Track-record journal RETIRED (owner 2026-07-09): it logged EVERY
             # armed A+/A on every timeframe with no position cap — 200+ open
             # trades whose early expectancy read as noise. The bot book
-            # (A+ only, 10/market, short-slot reserve) is the only track
+            # (A+ only, a 30-position ceiling across all markets, one per
+            # symbol, 3 per sector) is the only track
             # record now. vivek_journal.py stays: the backtester and the bot
             # runner import its trade-management primitives.
 
@@ -186,8 +187,11 @@ def main() -> None:
 
     # Publish the executing bot's ACTUAL rules (scanner/config.py) so the
     # dashboard risk engine reads the same numbers instead of drifting on its
-    # own JS defaults (2026-07-09 — the two engines had already diverged:
-    # Python risked 0.35%/10 positions while the JS defaults said 0.25%/5).
+    # own JS defaults (2026-07-09 — the two engines had already diverged: at
+    # that time Python risked 0.35%/10 positions while the JS defaults said
+    # 0.25%/5. Both numbers below are read live from config, so don't update
+    # that parenthetical when the caps move — it is a record of the drift that
+    # motivated publishing them, not a statement about today's rules).
     rules = {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "scanner/config.py — single source of truth for bot rules",

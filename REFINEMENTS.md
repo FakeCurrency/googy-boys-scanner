@@ -263,10 +263,21 @@ The chip literally says 'H4 200 SMA' (vivek.py:181) for what is the Daily-200: a
 
 *Files: scanner/vivek.py, scanner/config.py*
 
-## 38. Fix sector cap: empty NASDAQ/crypto sectors and dropped book sectors
-**Impact 4 · Effort M · bot-broker**
+## 38. Fix sector cap: empty NASDAQ sectors and unseeded legacy book rows
+**Impact 5 · Effort M · bot-broker · PARTLY FIXED — remainder is an OWNER DECISION**
 
-The VIVEK_BOT_MAX_PER_SECTOR=3 correlation cap is a silent no-op almost everywhere. (1) universe.py returns sector:'' for every NASDAQ (line 129) and crypto (154/164) name, and decide()'s guard `max_sector and sector and ...` (vivek_bot.py line 364) exempts empty sectors — so the NASDAQ book can be 6 longs in one industry. (2) Cross-run seeding is broken on ALL markets including ASX: plan_trade's ticket carries no sector, and _ticket_to_position (vivek_run.py lines 97-103) builds the snapshot row without a sector key, so every stored position has sector:'' and the open_book seeding (lines 210-212) counts nothing. Carry row['sector'] through ticket and snapshot, add a name/industry-based fallback grouping for NASDAQ (like scalp's _corr_group), and log a loud warning when the cap is configured but the rows carry no sector data.
+The VIVEK_BOT_MAX_PER_SECTOR=3 correlation cap is a silent no-op almost everywhere. **Impact raised 4 → 5 on 2026-07-28:** the book became a 30-position ceiling that any ONE market may fill on its own, so a fully-NASDAQ book now has no correlation control at all — the exact "30 miners" outcome the owner said the cap was there to prevent, when he chose to leave it at 3.
+
+**Fixed since this was written:** crypto now gets synthetic `crypto-major`/`crypto-alt` buckets keyed off the symbol (`_sector_key`), so its cap binds despite an empty stored sector; and `plan_trade`'s ticket now persists `row["sector"]` (vivek_bot.py:289), so positions opened from 2026-07-20 onward seed the cross-run counter correctly.
+
+**Still broken (verified against the live book, 2026-07-28):**
+
+1. **NASDAQ has no sector data at all** — `universe._fetch_nasdaq` hardcodes `sector: ""` (the NASDAQ trader file has no sector column), so 0 of 269 scanned rows and 10 of 10 open positions carry one. `decide()`'s guard `max_sector and sector and ...` exempts them, so the cap never binds on NASDAQ. Needs a name/industry-based fallback grouping (like scalp's `_corr_group`) or a real sector source.
+2. **Legacy ASX rows are invisible to the seeding** — the 8 ASX positions opened before the 2026-07-20 ticket fix still carry `sector:''`, so the counter starts low and ASX can take 3 *more* in a sector a legacy row already occupies. Needs a one-off backfill from the universe cache.
+
+**Done 2026-07-28:** `decide()` now logs a warning when the cap is configured but under half the rows carry a sector, and publishes `summary["sector_coverage"]` / `summary["max_per_sector"]` so the blindness is visible instead of assumed-fixed.
+
+**Not done deliberately:** fixing (1) or (2) changes which trades get taken — bot risk, so it is the owner's call, not an autonomous one.
 
 *Files: scanner/broker/vivek_bot.py, scanner/broker/vivek_run.py, scanner/universe.py*
 

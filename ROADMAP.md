@@ -15,7 +15,7 @@ the three-lens pivot).
 
 | Area | Reality |
 |------|---------|
-| **Edge / profitability** | ❓ **Still unproven — but now honestly instrumented.** The firehose track-record journal (200+ uncapped positions, noise expectancy) was retired 2026-07-09. The ONLY track record is now the bot book: A+ only, 10/market, one per symbol, daily loss guards. It has ~18 open / 2 closed — **too early to read. The single most valuable thing right now is letting it accumulate 20–30 closed trades untouched.** |
+| **Edge / profitability** | ❓ **Still unproven — but now honestly instrumented.** The firehose track-record journal (200+ uncapped positions, noise expectancy) was retired 2026-07-09. The ONLY track record is now the bot book: A+ only, 30 open across all markets combined (owner raised it from 10/market on 2026-07-28), one per symbol, 3 per sector, daily loss guards. It has ~23 open / 7 closed — **too early to read. The single most valuable thing right now is letting it accumulate 20–30 closed trades untouched.** |
 | Scanners | ✅ **Three lenses live.** VIVEK (200-SMA reaction, W/3D/D plans, A+/A/B+ grades), PhaseMap (sweep→displacement zones, nightly, spec doc is source of truth), Specs (3× volume-spike base breakouts, discovery-only per its own backtest). Multi-lens confluence banners + Discord pings + ALERTS log. |
 | Universes | ✅ ASX full (~2,000) · NASDAQ Global Select (~1,430, expanded from 99 on 2026-07-10) · crypto top-100 + pinned extras. |
 | Backtests | ✅ Weekly walk-forward (lens_backtest.yml, owns `vivek_backtest.json`, feeds Insights) + monthly long-only evidence file (vivek_backtest.yml). PhaseMap + Specs replays weekly. All still **survivor-biased on yfinance** — see priority 2. |

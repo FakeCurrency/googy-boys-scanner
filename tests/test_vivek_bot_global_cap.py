@@ -202,6 +202,55 @@ def test_untagged_rows_in_a_sibling_book_are_still_counted(book_dir):
     assert vr._open_elsewhere("asx") == 2
 
 
+# ── the correlation control the owner kept, and where it does NOT reach ──────
+#
+# He left the sector cap at 3 precisely so a 30-position book could not become
+# one macro bet. On NASDAQ it cannot do that job: universe._fetch_nasdaq has no
+# sector column, so every row arrives with sector='' and decide() exempts them.
+# These tests PIN THE HOLE rather than paper over it — fixing it changes which
+# trades get taken (bot risk = owner's call), so when he says go, the first two
+# below are the ones that must flip. See REFINEMENTS #38.
+
+def _sectorless_rows(n):
+    rows = _rows(n)
+    for r in rows:
+        r["sector"] = ""
+    return rows
+
+
+def test_a_market_with_no_sector_data_has_no_correlation_control():
+    # 30 NASDAQ setups that could all be semis: nothing refuses them today.
+    d = vb.decide(_sectorless_rows(30), equity=10_000, market="nasdaq",
+                  open_book=[], max_open_total=30, open_elsewhere=0)
+    assert len(d["plans"]) == 30                      # <- the hole, pinned
+    assert "sector_cap" not in d["summary"]["skip_reasons"]
+
+
+def test_the_blind_sector_cap_is_reported_rather_than_hidden(caplog):
+    with caplog.at_level("WARNING"):
+        d = vb.decide(_sectorless_rows(12), equity=10_000, market="nasdaq",
+                      open_book=[], max_open_total=30, open_elsewhere=0)
+    assert d["summary"]["sector_coverage"] == 0.0
+    assert d["summary"]["max_per_sector"] == config.VIVEK_BOT_MAX_PER_SECTOR
+    assert "no correlation control" in caplog.text
+    assert "0/12 scanned rows carry a sector" in caplog.text
+
+
+def test_a_market_that_does_carry_sectors_reports_full_coverage():
+    d = vb.decide(_rows(9), equity=10_000, market="asx", open_book=[],
+                  max_open_total=30, open_elsewhere=0)
+    assert d["summary"]["sector_coverage"] == 1.0
+
+
+def test_crypto_keeps_its_correlation_control_without_gics_sectors():
+    # Coins carry no sector either, but _sector_key buckets them major/alt off
+    # the symbol — so crypto's cap DOES bind. This is the pattern NASDAQ needs.
+    d = vb.decide(_sectorless_rows(10), equity=10_000, market="crypto",
+                  open_book=[], max_open_total=30, open_elsewhere=0)
+    assert len(d["plans"]) == config.VIVEK_BOT_MAX_PER_SECTOR
+    assert d["summary"]["sector_coverage"] == 1.0
+
+
 # ── the published rules ──────────────────────────────────────────────────────
 
 def test_the_dashboard_is_told_about_the_global_cap():
