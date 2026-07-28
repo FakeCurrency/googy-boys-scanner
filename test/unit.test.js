@@ -175,12 +175,33 @@ test("id clash: newer mtime wins", () => {
   assert.equal(m.trades[0].status, "closed");
 });
 
-test("id clash: equal mtime → b (last-processed) wins", () => {
+test("id clash: equal mtime → the FIRST argument (local) wins", () => {
+  // TOP100 #32. Every caller is merge(local, remote), so a tie has to resolve
+  // to the copy the user can actually see. This used to assert the opposite,
+  // pinning `>=` — which meant a legacy row (no mtime on EITHER side, so the
+  // comparison is 0 vs 0 and always ties) was replaced by the remote copy on
+  // every single sync, silently.
   const ta = { id: "x", mtime: 100, v: "a" };
   const tb = { id: "x", mtime: 100, v: "b" };
   const m = merge({ trades: [ta], updated_at: 0 },
                   { trades: [tb], updated_at: 0 });
-  assert.equal(m.trades[0].v, "b");
+  assert.equal(m.trades[0].v, "a");
+});
+
+test("id clash: NO mtime on either side → local still wins", () => {
+  // The shape that actually occurs. Both sides read `|| 0`, so this is a tie,
+  // and under `>=` the local row lost every time the page synced.
+  const m = merge({ trades: [{ id: "x", v: "local"  }], updated_at: 0 },
+                  { trades: [{ id: "x", v: "remote" }], updated_at: 0 });
+  assert.equal(m.trades[0].v, "local");
+});
+
+test("id clash: a genuinely newer remote edit still wins", () => {
+  // The other half — preferring local on a TIE must not mean preferring local
+  // full stop, or an edit made on the phone would never reach the desktop.
+  const m = merge({ trades: [{ id: "x", mtime: 100, v: "local"  }], updated_at: 0 },
+                  { trades: [{ id: "x", mtime: 200, v: "remote" }], updated_at: 0 });
+  assert.equal(m.trades[0].v, "remote");
 });
 
 test("tombstone on a removes trade from result", () => {

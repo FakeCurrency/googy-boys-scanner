@@ -30,6 +30,16 @@ function mk(cfg) {
   return new RiskManager(Object.assign({ equity: 10000, verbose: false, storage: makeStorage() }, cfg));
 }
 
+// TOP100 #34/#35 — the sizing-maths tests below used to run on whatever the
+// per-trade default happened to be and assert dollar figures derived from it by
+// hand. That coupled "does the floor round the right way" to "what is the risk
+// budget this quarter", so moving the published default from 0.25% to 0.35%
+// broke four arithmetic tests that have nothing to do with the change. They now
+// pass the rate in EXPLICITLY and the default gets one test of its own, which
+// is the only place it belongs.
+const SIZING_PCT = 0.25;
+function mkSized(cfg) { return mk(Object.assign({ maxRiskPerTradePct: SIZING_PCT }, cfg)); }
+
 // ── tiny runner ──────────────────────────────────────────────────────────────
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -42,15 +52,22 @@ function test(name, fn) {
 }
 function suite(n) { console.log(`\n── ${n} ──`); }
 
-// ═════════════════════════ 1. POSITION SIZING (0.25%) ════════════════════════
-suite("position sizing — 0.25% of equity");
+// ══════════════════════════════ 1. POSITION SIZING ═══════════════════════════
+suite("position sizing — budget arithmetic");
 
-test("default max risk per trade is 0.25%", () => {
-  assert.equal(mk().config.maxRiskPerTradePct, 0.25);
+test("per-trade default is whatever the published config says, not a literal", () => {
+  // The number itself is pinned against scanner/config.py by
+  // test/risk_defaults.test.js. All this test owes is that the constructor
+  // reads its default from the mirror instead of carrying a private opinion —
+  // a bare literal here is how 0.25% survived six months after the engine
+  // moved to 0.35%.
+  assert.equal(mk().config.maxRiskPerTradePct, RiskManager.PUBLISHED_DEFAULTS.maxRiskPerTradePct);
+  assert.equal(mk().config.maxPortfolioRiskPct, RiskManager.PUBLISHED_DEFAULTS.maxPortfolioRiskPct);
+  assert.equal(mk().config.maxPositions, RiskManager.PUBLISHED_DEFAULTS.maxPositions);
 });
 
 test("/NQ at $20/pt, 50pt stop → risk = 0.25% of 10k = $25 budget", () => {
-  const r = mk().calculatePositionSize("/NQ", 50);
+  const r = mkSized().calculatePositionSize("/NQ", 50);
   assert.equal(r.maxRiskUsd, 25);            // 10000 * 0.0025 * 1.0
   // riskPerUnit = 50 * 20 = 1000 → rawUnits 0.025 → floored to 0.02
   assert.equal(r.riskPerUnit, 1000);
@@ -59,13 +76,13 @@ test("/NQ at $20/pt, 50pt stop → risk = 0.25% of 10k = $25 budget", () => {
 });
 
 test("sizing scales with equity", () => {
-  const e = mk({ equity: 40000 });
+  const e = mkSized({ equity: 40000 });
   const r = e.calculatePositionSize("/NQ", 50);
   assert.equal(r.maxRiskUsd, 100);           // 40000 * 0.0025
 });
 
 test("volatility factor shrinks NatGas budget", () => {
-  const r = mk().calculatePositionSize("NG", 0.05);
+  const r = mkSized().calculatePositionSize("NG", 0.05);
   assert.equal(r.maxRiskUsd, 10);            // 10000 * 0.0025 * 0.4
 });
 
@@ -75,9 +92,67 @@ test("alias 'Gold' resolves to GC", () => {
 });
 
 test("never sizes above the budget (floor, not round)", () => {
-  const r = mk().calculatePositionSize("GC", 7);   // 7*100=700/u, 25/700=0.0357
-  assert.equal(r.recommendedUnits, 0.03);          // floored, not 0.04
+  const r = mkSized().calculatePositionSize("GC", 7); // 7*100=700/u, 25/700=0.0357
+  assert.equal(r.recommendedUnits, 0.03);             // floored, not 0.04
   assert.ok(r.actualRiskUsd <= r.maxRiskUsd);
+});
+
+// ── TOP100 #35: the instrument table stopped being futures-only ──────────────
+// The six futures rows above are exercised by every test in this suite; these
+// pin the three classes the bot ACTUALLY trades, and specifically the property
+// the futures rows cannot test — that a tradeable increment is honoured.
+
+test("an equity sizes in WHOLE shares, never 0.1-lot fractions", () => {
+  const r = mkSized({ equity: 150000 }).calculatePositionSize("STOCK", 0.5);
+  assert.equal(r.unitStep, 1);
+  assert.equal(r.unitLabel, "share");
+  assert.equal(r.recommendedUnits % 1, 0, "a fractional share is not a size an exchange accepts");
+  assert.ok(r.actualRiskUsd <= r.maxRiskUsd + 1e-9, "rounding must floor, never lift risk over budget");
+});
+
+test("a crypto perp keeps fractional precision (0.0001 step)", () => {
+  const r = mkSized({ equity: 150000 }).calculatePositionSize("CRYPTO", 900);
+  assert.equal(r.unitStep, 0.0001);
+  assert.equal(r.unitLabel, "unit");
+  assert.ok(r.recommendedUnits > 0 && r.recommendedUnits < 1, "sub-1 is a normal crypto size");
+  // …and it must not be reported to more decimals than the step can trade.
+  assert.equal(r.recommendedUnits, +r.recommendedUnits.toFixed(4));
+});
+
+test("a sub-1 crypto size carries NO 'use a micro lot' note — that IS the size", () => {
+  const r = mkSized({ equity: 1000 }).calculatePositionSize("CRYPTO", 900);
+  assert.equal(r.note, null, "the old text told you to fix a trade that was fine");
+});
+
+test("an equity that cannot fill 1 share says so, and does not suggest a micro lot", () => {
+  const r = mkSized({ equity: 1000 }).calculatePositionSize("STOCK", 900);
+  assert.equal(r.recommendedUnits, 0);
+  assert.ok(/Not even 1 share/.test(r.note), r.note);
+  assert.ok(!/micro/.test(r.note), "there is no micro-BHP");
+});
+
+test("futures rounding and notes are byte-identical to before #35", () => {
+  const r = mkSized().calculatePositionSize("/NQ", 200);
+  assert.equal(r.unitStep, null, "no step on a futures row = the legacy path");
+  assert.equal(r.unitLabel, "contract");
+  assert.equal(r.recommendedUnits, 0);
+  assert.ok(/micro\/CFD lot/.test(r.note), r.note);
+});
+
+test("the ASX row prices in AUD and converts at the FX rate, spec kept whole", () => {
+  const base = RiskManager.DEFAULT_INSTRUMENTS["STOCK.AX"];
+  assert.equal(base.quoteCcy, "AUD");
+  // bot.js spreads the shipped spec before overriding the rate; a bare
+  // { dollarsPerPoint } would drop unitStep and silently restore 0.1-lot sizing.
+  const e = mkSized({
+    equity: 150000,
+    instruments: { "STOCK.AX": Object.assign({}, base, { dollarsPerPoint: 0.6969 }) },
+  });
+  const r = e.calculatePositionSize("STOCK.AX", 0.5);
+  assert.equal(r.dollarsPerPoint, 0.6969);
+  assert.equal(r.unitStep, 1, "the override must not flatten the rest of the spec");
+  assert.equal(r.recommendedUnits % 1, 0);
+  assert.equal(e.calculatePositionSize("ASX", 0.5).spec, "STOCK.AX", "class alias resolves");
 });
 
 test("unknown instrument returns an error, never throws", () => {
@@ -481,9 +556,13 @@ test("neutral book endorses a clean, in-budget entry with a size multiplier", ()
 });
 
 test("stance soft-cap is always ≤ the hard portfolio cap", () => {
-  const e = mk(); // equity 10000, maxPortfolioRiskPct 2 → hard cap $200
+  // Derived, not hardcoded (TOP100 #34): this read `<= 200`, which was the hard
+  // cap only while maxPortfolioRiskPct happened to be 2. The invariant under
+  // test is the relationship between the two caps, not either one's value.
+  const e = mk();
+  const hardCapUsd = e.equity * (e.config.maxPortfolioRiskPct / 100);
   const s = e.getPortfolioStance();
-  assert.ok(s.effectiveCapUsd <= 200 + 1e-6, "soft cap never exceeds the hard cap");
+  assert.ok(s.effectiveCapUsd <= hardCapUsd + 1e-6, "soft cap never exceeds the hard cap");
 });
 
 // ── execution costs: bps model vs legacy flat fee (2026-07-20, review H8) ────

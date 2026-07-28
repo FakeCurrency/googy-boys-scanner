@@ -48,8 +48,19 @@
     if (logMeta) logMeta.textContent = stale ? (d ? `stale · as of ${feedDate(d)}` : "unavailable") : "live";
   }
 
-  // Sizing-calculator instrument list (engine resolves aliases like YM→/YM).
-  const CALC_INSTRUMENTS = ["/NQ", "YM", "GC", "SI", "CL", "NG"];
+  // TOP100 #35 — there WAS a `CALC_INSTRUMENTS` list here, six futures symbols
+  // long, and nothing in the file ever read it. It was a second, unreferenced
+  // copy of the Size Calculator's instrument list that had been quietly wrong
+  // for as long as the real list (the `#sz-instrument` <select> in bot.html) had
+  // been right, and a reader grepping for "what can the calculator size?" found
+  // it first. Deleted rather than corrected: two sources of truth for one list
+  // is the defect, and updating the dead one would have preserved it.
+  //
+  // The select's `value`s are the engine's instrument keys, so a typo there
+  // surfaces as `Unknown instrument "STOCK.AXX"` at runtime and nowhere else.
+  // `test/risk_defaults.test.js` parses bot.html and asserts every option value
+  // resolves through RiskManager.DEFAULT_INSTRUMENTS / ALIASES, which is the
+  // check the dead constant looked like it was providing and never did.
 
   // ── Default rules ──────────────────────────────────────────────────────────
   const DEFAULT_RULES = {
@@ -61,6 +72,24 @@
     leverage: 2.5,
     use_scanner_targets: true, trail_supertrend: true,
     scale_out_tp1: true, be_after_tp1: true, multi_entry: true,
+  };
+  // What the EXECUTING bot publishes, once init() has fetched it (TOP100 #36).
+  // DEFAULT_RULES above is a 2025-era hardcode — risk 0.25% vs 0.35%, 5
+  // positions vs 30, min RR 2 vs 1.5 — so "Reset" used to restore numbers that
+  // had not described the bot for months, i.e. the button labelled "put this
+  // back to correct" made the page MORE wrong the more the real rules moved.
+  let SRV_RULES = null;
+  const SRV_KEYS = ["risk_pct", "max_positions", "min_rr", "loss_limit"];
+  // Server keys are named for the engine; a couple differ from this page's.
+  const srvValue = (k) => {
+    if (!SRV_RULES) return null;
+    const v = k === "loss_limit" ? SRV_RULES.consec_loss_pause : SRV_RULES[k];
+    return typeof v === "number" ? v : null;
+  };
+  const rulesDefaults = () => {
+    const d = { ...DEFAULT_RULES };
+    for (const k of SRV_KEYS) { const v = srvValue(k); if (v != null) d[k] = v; }
+    return d;
   };
   const loadRules = () => { try { return { ...DEFAULT_RULES, ...JSON.parse(localStorage.getItem(RULES_KEY)) }; } catch (_) { return { ...DEFAULT_RULES }; } };
   const saveRules = r => localStorage.setItem(RULES_KEY, JSON.stringify(r));
@@ -82,15 +111,29 @@
   // max-consecutive-losses immediately (not just the static seed from JSON).
   function computeJournalSummary(trades) {
     if (!trades || !trades.length) return { win_rate: 0, profit_factor: 0, expectancy: 0, max_consec_losses: 0, period_trades: 0 };
-    const wins = trades.filter(t => t.net > 0), losses = trades.filter(t => t.net <= 0);
+    // A FLAT CLOSE IS A SCRATCH, NOT A LOSS (TOP100 #38). `net <= 0` swept
+    // every break-even exit into the loss bucket — and break-even exits are not
+    // an edge case here, they are a RULE: "Move SL to BE after TP1" is on by
+    // default, so a runner stopped at break-even is the designed outcome of a
+    // trade that already worked. Counting those as losses understated win rate
+    // and, worse, extended the consecutive-loss streak. The executing engine
+    // disagrees: scanner/broker/circuit_breaker.check_consecutive_losses counts
+    // only `trade_pnl(t) < 0`, so a scratch BREAKS the streak there — which is
+    // what the breaker that can actually stop the bot believes.
+    const wins = trades.filter(t => t.net > 0), losses = trades.filter(t => t.net < 0);
+    const decided = wins.length + losses.length;   // scratches are neither
     const grossWin = wins.reduce((a, t) => a + t.net, 0);
     const grossLoss = Math.abs(losses.reduce((a, t) => a + t.net, 0));
     // max consecutive losses across the (closed-desc) journal
     const chrono = [...trades].sort((a, b) => new Date(a.closed) - new Date(b.closed));
     let run = 0, maxRun = 0;
-    chrono.forEach(t => { if (t.net <= 0) { run += 1; maxRun = Math.max(maxRun, run); } else run = 0; });
+    chrono.forEach(t => { if (t.net < 0) { run += 1; maxRun = Math.max(maxRun, run); } else run = 0; });
     return {
-      win_rate: Math.round(wins.length / trades.length * 100),
+      // Denominator is DECIDED trades. A scratch is not a failure to win, so
+      // parking it in the denominator would penalise the break-even rule for
+      // working; leaving it in the numerator would reward it. It belongs to
+      // neither side, and 0 decided trades reports 0 rather than NaN.
+      win_rate: decided ? Math.round(wins.length / decided * 100) : 0,
       profit_factor: grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? 99 : 0),
       expectancy: trades.reduce((a, t) => a + t.net, 0) / trades.length,
       max_consec_losses: maxRun,
@@ -178,7 +221,10 @@
     const killBanner = $("#kill-banner"), riskBanner = $("#risk-banner");
     if (state.isKillSwitchActive) {
       killBanner.classList.add("show");
-      $("#kill-banner-text").innerHTML = `<strong>KILL SWITCH ACTIVE</strong> — Trading disabled. Reason: ${esc(state.lastKillSwitchReason || "manual")}${state.lastKillSwitchAction ? " · " + esc(state.lastKillSwitchAction) : ""} — click to reset`;
+      // TOP100 #27: "Trading disabled" was false in both halves — the server bot
+      // keeps scanning and opening, and every open position keeps running. What
+      // is disabled is the entry check on this page, in this browser.
+      $("#kill-banner-text").innerHTML = `<strong>NEW ENTRIES BLOCKED HERE</strong> — this browser only; open positions and the server bot are unaffected. Reason: ${esc(state.lastKillSwitchReason || "manual")} — click to reset`;
       riskBanner.classList.remove("show");
     } else {
       killBanner.classList.remove("show");
@@ -199,8 +245,16 @@
     else { killBtn.classList.remove("is-active"); killBtn.textContent = "⏻ KILL SWITCH"; bar.dataset.status = "paper"; }
 
     // ── Last kill event line (roadmap) ────────────────────────────────────
+    // TOP100 #27: `lastKillSwitchAction` is PERSISTED, so every browser that
+    // ever pressed the old button still has "Closed all positions" sitting in
+    // localStorage and would keep replaying it here long after the label was
+    // fixed. The two legacy strings are therefore filtered on read rather than
+    // migrated — there is no write path left that can produce them again, and a
+    // migration would have to run before this line to be worth anything.
     if (state.lastKillSwitchTime) {
-      $("#roadmap-kill-line").innerHTML = `Last kill switch: <strong>${fmtDateShort(state.lastKillSwitchTime)} · ${esc(state.lastKillSwitchReason || "manual")}</strong>${state.lastKillSwitchAction ? " — " + esc(state.lastKillSwitchAction) : ""}`;
+      const LEGACY = ["Closed all positions", "Left positions to stops"];
+      const act = LEGACY.includes(state.lastKillSwitchAction) ? null : state.lastKillSwitchAction;
+      $("#roadmap-kill-line").innerHTML = `Last kill switch: <strong>${fmtDateShort(state.lastKillSwitchTime)} · ${esc(state.lastKillSwitchReason || "manual")}</strong>${act ? " — " + esc(act) : ""}`;
     }
 
     // ── Sizing readout (0.25% rule live from the engine) ──────────────────
@@ -257,23 +311,80 @@
   }
 
   // ── Position sizing calculator (routed through the engine) ─────────────────
+  //
+  // TOP100 #35. This function had exactly one instrument shape in mind and said
+  // so in three places: it printed sizes on a 0.1-lot grid, labelled the input
+  // "pts" and the rate "$ per point", and called the answer "whole contract(s)".
+  // All three are right for /NQ and all three are wrong for the things the bot
+  // actually trades — "buy 12.4 shares of BHP" is not a size any exchange will
+  // accept, and there is no such thing as a contract of it. The engine now
+  // carries `unitStep` / `unitLabel` / `quoteCcy` out of the instrument spec,
+  // and the display follows those rather than assuming futures.
+  //
+  // A "point" is one unit of the QUOTE currency for a share or a perp, and an
+  // index point for a futures contract — the same word for two different
+  // things, which is why the labels below are rewritten per instrument rather
+  // than left generic. On the ASX row the two currencies genuinely differ:
+  // stops are entered in A$ and `dollarsPerPoint` is the AUD/USD rate, because
+  // the book is denominated in US$. Saying "US$ per A$1 move" is the only
+  // wording that makes 0.6969 read as a rate instead of a typo.
   function updateSizeCalc() {
     if (!risk) return;
     const inst = $("#sz-instrument").value;
     const stopDist = Number($("#sz-stop-dist").value) || 0;
     const r = risk.calculatePositionSize(inst, stopDist);
-    $("#sz-ppt").textContent = r.dollarsPerPoint != null ? "$" + r.dollarsPerPoint.toLocaleString("en-AU") : "—";
+
+    // `unitStep` is present only on the cash rows (#35); its absence IS the
+    // "this is a futures contract" test, and it is the engine's own field
+    // rather than a symbol list this file would have to keep in sync.
+    const cash = r.unitStep != null;
+    const ccy = r.quoteCcy === "AUD" ? "A$" : "US$";
+    const unit = r.unitLabel || "contract";
+    if ($("#sz-stop-label")) $("#sz-stop-label").textContent = cash ? `Stop distance (${ccy})` : "Stop distance (pts)";
+    // "US$ per US$1 move" is true but reads like a stutter, so the US rows drop
+    // the redundant prefix. The ASX row keeps BOTH currencies because that row
+    // is the only one where they differ and the whole point of the line is that
+    // the rate converts between them.
+    if ($("#sz-ppt-label")) $("#sz-ppt-label").textContent = !cash ? "US$ per point"
+      : (r.quoteCcy === "AUD" ? "US$ per A$1 move" : "US$ per $1 move");
+
+    // An FX rate needs its 4th decimal and a $20 contract does not: 0.6969
+    // through the old toLocaleString came out "0.697", which is a different
+    // rate. Two decimals at or above 1, four below.
+    $("#sz-ppt").textContent = r.dollarsPerPoint != null
+      ? "$" + (r.dollarsPerPoint >= 1 ? r.dollarsPerPoint.toFixed(2) : r.dollarsPerPoint.toFixed(4))
+      : "—";
+
+    if ($("#sz-result-unit")) $("#sz-result-unit").textContent = r.error ? "" : (unit + "s");
     if (r.error) {
       $("#sz-result").textContent = "—";
       $("#sz-result-risk").textContent = "—"; $("#sz-result-pct").textContent = r.error;
       if ($("#sz-result-note")) $("#sz-result-note").textContent = r.error;
       return;
     }
+
+    // Print to the step's own precision — never finer, because a decimal place
+    // the instrument cannot trade is a fabricated one. Stepless futures keep
+    // the legacy 0.1/0.01 formatting so nothing about those rows moved.
     const u = r.recommendedUnits;
-    $("#sz-result").textContent = u >= 1 ? (u % 1 === 0 ? u.toFixed(0) : u.toFixed(1)) : u.toFixed(2);
+    const dp = cash ? Math.max(0, -Math.floor(Math.log10(r.unitStep))) : null;
+    $("#sz-result").textContent = cash
+      ? u.toFixed(dp)
+      : (u >= 1 ? (u % 1 === 0 ? u.toFixed(0) : u.toFixed(1)) : u.toFixed(2));
+
     $("#sz-result-risk").textContent = money(r.actualRiskUsd, 0);
     $("#sz-result-pct").textContent = r.actualRiskPct.toFixed(2) + "% of equity";
-    if ($("#sz-result-note")) $("#sz-result-note").textContent = r.feasibleWholeContract ? `${r.wholeContracts} whole contract(s)` : (r.note || "recommended size");
+    // "whole contract(s)" was the note for every instrument. A share is already
+    // whole by construction, so repeating the size back as "12 whole shares"
+    // says nothing; the useful line there is what the fractional remainder was
+    // rounded away from, which is what `rawUnits` carries.
+    if ($("#sz-result-note")) {
+      $("#sz-result-note").textContent = r.note
+        ? r.note
+        : (r.unitStep >= 1 ? `rounded down from ${r.rawUnits.toFixed(2)}`
+          : r.feasibleWholeContract ? `${r.wholeContracts} whole ${unit}${r.wholeContracts === 1 ? "" : "s"}`
+            : "recommended size");
+    }
   }
 
   // ── Positions (swing cards) — rendered from ENGINE state ───────────────────
@@ -289,6 +400,42 @@
     const arr = v => v === "bull" ? "▲" : v === "bear" ? "▼" : "■";
     return `<span class="pos-bias-chip ${cls}" title="${esc(align.reason)}">HTF W${arr(b.weekly)} 3D${arr(b.threeDay)}</span>`;
   }
+
+  // Drift between the rules on this page and the rules the bot is executing,
+  // ON the page (TOP100 #36). This used to be a console.warn, which is to say
+  // it was invisible: the table sat there showing "5 positions / 0.25% risk"
+  // with no hint that the thing placing the orders was on 30 and 0.35%.
+  function renderRulesDrift() {
+    const el = $("#rules-drift");
+    if (!el) return;
+    const rows = SRV_KEYS
+      .map((k) => [k, srvValue(k)])
+      .filter(([k, v]) => v != null && RULES[k] !== v);
+    if (!rows.length) { el.hidden = true; el.textContent = ""; return; }
+    const label = { risk_pct: "Risk per trade", max_positions: "Max positions",
+                    min_rr: "Min R:R", loss_limit: "Consecutive-loss pause" };
+    el.hidden = false;
+    el.innerHTML = "<strong>⚠ These are not the bot's rules.</strong> "
+      + "scanner/config.py is what actually executes; Reset adopts it.<ul>"
+      + rows.map(([k, v]) =>
+          `<li>${esc(label[k] || k)}: shown <b class="num">${esc(RULES[k])}</b>`
+          + ` · bot <b class="num">${esc(v)}</b></li>`).join("")
+      + "</ul>";
+  }
+
+  // The ONE equity denominator for every risk percentage on this page (#37).
+  // The open-risk % used to divide by `window.__EQUITY || FALLBACK_EQUITY`:
+  // `window.__EQUITY` is set from bot_status.json, which froze on 2026-06-25
+  // and which nothing writes any more, so that percentage was computed against
+  // either a year-old snapshot or a hardcoded constant — while the budget line
+  // three panels away divided by the ENGINE's equity, seeded from
+  // bot_rules.json `account_equity`. Two percentages, two denominators, no way
+  // to tell from the page which one you were reading. The engine's number is
+  // the one the sizing actually uses, so it is the one that wins here.
+  const riskEquity = () => {
+    const e = risk && risk.getCurrentRiskState ? +risk.getCurrentRiskState().equity : 0;
+    return e > 0 ? e : FALLBACK_EQUITY;
+  };
 
   // Merge engine positions with cosmetic metadata + derived live numbers.
   function mergedBook() {
@@ -332,7 +479,7 @@
         : `<div class="pos-metric"><span class="pos-metric-k">Stop</span><span class="pos-metric-v stop num">${px(p.stop)}</span><span class="pos-metric-sub num">${stopBufR.toFixed(1)}R buffer</span></div>`;
       const riskMetric = p.stopAtBreakeven
         ? `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num" style="color:var(--green)">$0</span><span class="pos-metric-sub num" style="color:var(--green)">runner · ${plannedR.toFixed(1)}R plan</span></div>`
-        : `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num">${money(p.openRiskUsd, 0)}</span><span class="pos-metric-sub num">${(p.openRiskUsd / (window.__EQUITY || FALLBACK_EQUITY) * 100).toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>`;
+        : `<div class="pos-metric"><span class="pos-metric-k">Open risk</span><span class="pos-metric-v num">${money(p.openRiskUsd, 0)}</span><span class="pos-metric-sub num">${(p.openRiskUsd / riskEquity() * 100).toFixed(2)}% · ${plannedR.toFixed(1)}R plan</span></div>`;
       const tpMetric = p.tp1
         ? `<div class="pos-metric"><span class="pos-metric-k">${p.tp1Hit ? "TP1 ✓ (booked 25%)" : "TP1 (25%→BE)"}</span><span class="pos-metric-v target num">${px(p.tp1)}</span><span class="pos-metric-sub target num">Final: ${px(p.target)} · ${toTargetR.toFixed(1)}R</span></div>`
         : `<div class="pos-metric"><span class="pos-metric-k">Target</span><span class="pos-metric-v target num">${px(p.target)}</span><span class="pos-metric-sub num">${toTargetR.toFixed(1)}R to go</span></div>`;
@@ -583,19 +730,14 @@
     try {
       const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
       if (r.ok) {
-        const srv = srvRules = await r.json();
-        const map = { risk_pct: srv.risk_pct, max_positions: srv.max_positions, min_rr: srv.min_rr };
+        srvRules = SRV_RULES = await r.json();
         if (!localStorage.getItem(RULES_KEY)) {
-          for (const [k, v] of Object.entries(map)) if (v != null) RULES[k] = v;
-        } else {
-          const drift = Object.entries(map).filter(([k, v]) => v != null && RULES[k] !== v);
-          if (drift.length) console.warn(
-            "[bot] rules drift vs the EXECUTING bot (scanner/config.py):",
-            Object.fromEntries(drift.map(([k]) => [k, { yours: RULES[k], bot: map[k] }])));
+          for (const k of SRV_KEYS) { const v = srvValue(k); if (v != null) RULES[k] = v; }
         }
       }
     } catch (_) { /* offline — JS defaults stand */ }
     populateRulesForm(RULES);
+    renderRulesDrift();
 
     // The status feed still drives the log/journal panels, but equity is NEVER
     // seeded from it — bot_status.json froze 2026-06-25 and nothing writes it.
@@ -613,11 +755,52 @@
     // round-turn stays only as an offline fallback. "default" market bps
     // are used because the sim instruments span markets.
     const bps = (dict) => (dict && (dict.default != null ? dict.default : null));
+    // TOP100 #34. `maxPortfolioRiskPct` and `scaleOutPct` are the two engine
+    // numbers this page was NOT seeding, and the portfolio cap is why that
+    // mattered: seeding risk_pct (0.35) and max_positions (30) while leaving the
+    // book cap on its own default meant the page ran a ceiling that binds at 5.7
+    // positions directly underneath a panel advertising 30. Both now come from
+    // the same published file as everything else; a number missing from it
+    // falls through to PUBLISHED_DEFAULTS, which mirrors the same constants.
+    // NOT wired to the rules form — neither is an editable rule, so there is
+    // nothing for Save/Reset to put back and they are seeded once, here.
+    const srvNum = (v) => (typeof v === "number" && isFinite(v) ? v : undefined);
+
+    // TOP100 #35 — the ASX row's `dollarsPerPoint` IS the AUD/USD rate (a A$1.00
+    // move on one share is US$0.70, and this book is denominated in US$). The
+    // engine ships 0.66 as an offline fallback; the live rate is published in
+    // data/fx.json by scanner/run.py, and it is the SAME file journal.js
+    // converts ASX P&L with, so the sizing page and the P&L page cannot end up
+    // disagreeing about what an ASX dollar is worth. A missing or malformed
+    // file leaves the fallback standing rather than sizing off NaN.
+    //
+    // Spread over the shipped spec, not replaced: the constructor merges
+    // `cfg.instruments` at WHOLE-ENTRY granularity (Object.assign, one level),
+    // so a bare `{ dollarsPerPoint }` would silently drop unitStep, unitLabel,
+    // quoteCcy and the name — and the row would go back to sizing in 0.1-share
+    // lots with no error anywhere.
+    let instrumentOverrides;
+    try {
+      const fx = await fetch("data/fx.json", { cache: "no-cache" });
+      if (fx.ok) {
+        const j = await fx.json();
+        if (j && j.audusd > 0) {
+          instrumentOverrides = {
+            "STOCK.AX": Object.assign({}, RiskManager.DEFAULT_INSTRUMENTS["STOCK.AX"], { dollarsPerPoint: +j.audusd }),
+          };
+        }
+      }
+    } catch (_) { /* offline — the 0.66 fallback stands, and says so on screen */ }
+
     risk = new RiskManager({
       equity: startingEquity,
+      instruments: instrumentOverrides,
       maxRiskPerTradePct: RULES.risk_pct,
       maxConsecutiveLosses: RULES.loss_limit,
       maxPositions: RULES.max_positions,
+      maxPortfolioRiskPct: srvNum(srvRules && srvRules.portfolio_heat_limit_pct),
+      // Long side deliberately — see the scaleOutPct note in risk_manager.js.
+      scaleOutPct: srvNum(srvRules && srvRules.tp_scale && srvRules.tp_scale.long && srvRules.tp_scale.long[0]),
       commissionBps: (srvRules && bps(srvRules.commission_bps)) || 0,
       slippageBps: (srvRules && bps(srvRules.slippage_bps)) || 0,
     });
@@ -635,11 +818,14 @@
     $("#rules-save-btn").addEventListener("click", () => {
       RULES = collectRules(); saveRules(RULES); populateRulesForm(RULES);
       risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit, maxPositions: RULES.max_positions });
+      renderRulesDrift();
       showToast("Rules saved.", "ok");
     });
     $("#rules-reset-btn").addEventListener("click", () => {
-      if (confirm("Reset all rules to defaults?")) {
-        RULES = { ...DEFAULT_RULES }; saveRules(RULES); populateRulesForm(RULES);
+      // Reset to what the BOT is actually running, not to a 2025 hardcode (#36).
+      if (confirm("Reset all rules to the executing bot's published values?")) {
+        RULES = rulesDefaults(); saveRules(RULES); populateRulesForm(RULES);
+        renderRulesDrift();
         risk.setConfig({ maxRiskPerTradePct: RULES.risk_pct, maxConsecutiveLosses: RULES.loss_limit, maxPositions: RULES.max_positions });
         showToast("Rules reset.", "ok");
       }
@@ -711,28 +897,33 @@
 
     // kill switch flow
     $("#kill-btn").addEventListener("click", () => {
-      if (risk.getCurrentRiskState().isKillSwitchActive) { if (confirm("Kill switch is active. Reset and re-enable trading?")) doDeactivateKill(); return; }
+      if (risk.getCurrentRiskState().isKillSwitchActive) { if (confirm("New entries are blocked in this browser. Unblock them?")) doDeactivateKill(); return; }
       openKillModal($$("#positions-body .pos-card").length || 0);
     });
     $("#kill-cancel").addEventListener("click", closeKillModal);
     $("#kill-modal").addEventListener("click", e => { if (e.target.id === "kill-modal") closeKillModal(); });
+    // TOP100 #27. `actionLabel` is not cosmetic — it is persisted by
+    // risk_manager as `lastKillSwitchAction` and replayed forever afterwards in
+    // the kill banner and the roadmap's "Last kill switch" line. It used to
+    // read "Closed all positions", so a page you opened weeks later still told
+    // you the book had been flattened on a day when not one order was sent.
+    // The dimming of the position cards to 35% opacity was the same lie in
+    // pixels — the cards represent LIVE rows that kept running — so it goes too,
+    // along with the restore in doDeactivateKill that only existed to undo it.
     $("#kill-confirm").addEventListener("click", () => {
-      const action = ($('input[name="kill-action"]:checked') || {}).value || "close";
       const reason = $("#kill-reason").value.trim() || "manual";
-      const actionLabel = action === "close" ? "Closed all positions" : "Left positions to stops";
+      const actionLabel = "New entries blocked in this browser";
       closeKillModal();
       risk.activateKillSwitch(reason, actionLabel);
-      prependLog({ ts: new Date().toISOString(), type: "kill", msg: `KILL SWITCH (${reason}) — ${actionLabel} · trading disabled` });
-      showToast("Kill switch activated — trading disabled.", "err");
-      if (action === "close") $$("#positions-body .pos-card").forEach(c => c.style.opacity = "0.35");
+      prependLog({ ts: new Date().toISOString(), type: "kill", msg: `KILL SWITCH (${reason}) — new entries blocked in this browser · positions and the server bot untouched` });
+      showToast("New entries blocked here — positions untouched.", "err");
     });
-    $("#kill-banner-reset").addEventListener("click", () => { if (confirm("Reset kill switch and re-enable trading?")) doDeactivateKill(); });
+    $("#kill-banner-reset").addEventListener("click", () => { if (confirm("Unblock new entries in this browser?")) doDeactivateKill(); });
 
     function doDeactivateKill() {
       risk.deactivateKillSwitch();
-      prependLog({ ts: new Date().toISOString(), type: "system", msg: "Kill switch reset — trading re-enabled" });
-      showToast("Kill switch reset — trading re-enabled.", "ok");
-      $$("#positions-body .pos-card").forEach(c => c.style.opacity = "1");
+      prependLog({ ts: new Date().toISOString(), type: "system", msg: "Kill switch reset — this browser accepts new entries again" });
+      showToast("Reset — this browser accepts new entries again.", "ok");
     }
 
     // sizing calc live

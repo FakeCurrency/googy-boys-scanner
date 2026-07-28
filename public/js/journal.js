@@ -90,6 +90,10 @@
   // whatever the bot publishes.
   const startCapital = () => EQUITY;
   const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };                    // fallback
+  // Exit ladder — FALLBACK ONLY. The live one is scanner/config.py
+  // VIVEK_TP_SCALE_LONG / _SHORT, published as bot_rules.tp_scale and adopted
+  // by loadBotRules() below (TOP100 #33). Note it sums to 0.90 by design: a
+  // 10% runner is left on after TP3 and is closed by hand.
   const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
   const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
   const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
@@ -115,6 +119,22 @@
           set(j[key]);
         }
       }
+      // The exit ladder (TOP100 #33). These three fractions decide how much of
+      // a position each TP books, so they are the multiplier on every scaled R
+      // this page reports — and they were a hand-typed copy of
+      // scanner/config.py VIVEK_TP_SCALE_LONG/SHORT that nothing compared. A
+      // trade already carries its own `scale` from the day it was taken
+      // (ensureInit pins it), so adopting a new ladder only ever affects
+      // positions opened from here on, which is the correct scope.
+      if (j.tp_scale && typeof j.tp_scale === "object") {
+        for (const side of ["long", "short"]) {
+          const v = j.tp_scale[side];
+          if (!Array.isArray(v) || v.length !== 3 || !v.every((x) => typeof x === "number")) continue;
+          if (v.every((x, i) => x === SCALE[side][i])) continue;
+          drift["tp_scale." + side] = { fallback: SCALE[side].slice(), live: v.slice() };
+          SCALE[side] = v.slice();
+        }
+      }
       for (const [key, tgt] of [["leverage", LEVERAGE], ["commission_bps", COMMISSION_BPS], ["slippage_bps", SLIPPAGE_BPS]]) {
         const src = j[key];
         if (!src || typeof src !== "object") continue;
@@ -127,6 +147,7 @@
       }
       if (Object.keys(drift).length) {
         console.warn("[journal] sizing fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
+        RULES_GEN++;  // invalidate every cached ensureInit, or the loadMe() below is a no-op
         loadMe();     // re-derive manual sizing with the live constants
       }
     } catch (_) { /* offline — fallbacks stand */ }
@@ -209,13 +230,38 @@
   const isVivek = (t) => t && t.stop != null && t.tp1 != null;
 
   // ── auto-management of a manual position (mirror of vivek_journal._mark) ──────
+  //
+  // Session-scoped generation stamp for `_init` (TOP100 #26). loadBotRules()
+  // bumps it when bot_rules.json disagrees with the fallbacks, which is what
+  // finally makes its "re-derive manual sizing with the live constants" comment
+  // true: `_init` used to be a plain boolean, so the loadMe() that line fires
+  // re-entered ensureInit and returned on its FIRST line, re-deriving nothing.
+  let RULES_GEN = 1;
+
   function ensureInit(t) {
-    if (t._init) return;
+    if (t._init === RULES_GEN) return;
     t.market = marketOf(t);
     const isLong = t.direction !== "short";
     if (isVivek(t)) {
-      t.risk = Math.abs(t.entry - t.stop);
-      t.risk_usd = sizeOf(t.market, t.entry, t.stop).risk_usd;
+      // THE 1R DENOMINATOR IS PINNED TO THE PLAN STOP (TOP100 #26). `manage()`
+      // TRAILS `t.stop` — to break-even when tp1 fills, to tp1 when tp2 fills —
+      // so deriving risk from the LIVE stop silently rescales every R already
+      // booked on the trade. After a tp1 trail the stop IS the entry, so `risk`
+      // came out exactly 0 and `realized_r` came out Infinity; saveClose()
+      // `delete`s `_init` on every manual close, which is precisely the path
+      // that hit it, and computeCloseOutcome does the same so the preview
+      // agreed with the corrupted outcome.
+      // A legacy row has no `risk_stop`, but its stored `risk` was written from
+      // the plan stop back when the stop still WAS the plan stop, so the plan
+      // stop is recoverable from it exactly — no guessing, no migration.
+      if (t.risk_stop == null) {
+        t.risk_stop = t.risk > 0 ? (isLong ? t.entry - t.risk : t.entry + t.risk) : t.stop;
+      }
+      t.risk = Math.abs(t.entry - t.risk_stop);
+      // risk_usd, UNLIKE risk, must track the live constants: it is a dollar
+      // figure derived from account equity and position notional, and those
+      // only arrive once bot_rules.json has loaded.
+      t.risk_usd = sizeOf(t.market, t.entry, t.risk_stop).risk_usd;
       if (!Array.isArray(t.scale)) t.scale = SCALE[isLong ? "long" : "short"];
     }
     if (t.gross_r == null) t.gross_r = 0;
@@ -224,7 +270,16 @@
     if (t.tp1_hit == null) { t.tp1_hit = false; t.tp2_hit = false; t.tp3_hit = false; }
     if (t.mae == null) t.mae = t.entry;
     if (t.mfe == null) t.mfe = t.entry;
-    t._init = true;
+    // `_init` is a per-session CACHE, never data — defined NON-ENUMERABLE so
+    // JSON.stringify cannot carry it out through any of the three paths that
+    // serialise a trade (localStorage here, the KV PUT body and localStorage in
+    // gbs-sync, the Backup export). A persisted `_init` froze risk_usd at
+    // whatever constants the first device to touch the row happened to have
+    // loaded — forever, on every device, because the early return above fired
+    // before a single line of sizing ran. Everything above is now idempotent,
+    // so re-running this is cheap and correct rather than merely cheap.
+    Object.defineProperty(t, "_init",
+      { value: RULES_GEN, writable: true, configurable: true, enumerable: false });
   }
   function finalizeR(t) {
     const [slip, comm] = costsFor(t.market);
@@ -288,14 +343,47 @@
     return material ? (t.status === "closed" ? "close" : "book") : false;
   }
   // Make sure a CLOSED manual trade has its realized R/$ resolved once.
+  //
+  // THE REMAINDER IS THE POINT (TOP100 #25). This used to guard on
+  // `!t.exits.length`, which is only ever true of a trade that never scaled out
+  // at all — so the un-booked tail of every OTHER closed trade was dropped on
+  // the floor. Two shapes, both live:
+  //
+  //   partial ladder — tp1 (0.25) filled, closed by hand: 0.75 of the position
+  //     exits at the manual price and books nothing.
+  //   FULL ladder — SCALE is [0.25, 0.50, 0.15], which sums to 0.90. Even a
+  //     trade that hit all three targets is still holding a 0.10 runner, and
+  //     that runner was never priced either. Every completed VIVEK winner on
+  //     this page has been under-reported by a tenth of its move.
+  //
+  // The exit price was sitting on the row the whole time, unread. And because
+  // `computeCloseOutcome` deep-clones the trade and calls this same resolver,
+  // the close PREVIEW was wrong by exactly the same amount as the outcome it
+  // predicted — which is why the two never disagreed and nothing looked broken.
+  //
+  // IDEMPOTENCY IS LOAD-BEARING: this runs on EVERY load (the `closed` branch
+  // of the render loop), not once at close time. Once the remainder is booked
+  // `booked_pct` is 1, so `remaining` is 0 and every later pass is a no-op —
+  // the same once-only property the old `!t.exits.length` guard had by accident.
+  // `booked` takes the LARGER of the summed exits and the stored `booked_pct`
+  // so a legacy row carrying a `booked_pct` with an empty `exits` array cannot
+  // be booked twice: under-booking is the bug being fixed here, but
+  // double-booking would invent R that was never made, which is worse.
   function ensureClosedR(t) {
     if (t.status !== "closed") return;
     ensureInit(t);
     if (!isVivek(t)) { t.realized_r = null; return; }
-    if (!t.exits.length && t.exit != null) {       // a manual full close from the chart
+    const summed = (t.exits || []).reduce((s, e) => s + (+e.pct || 0), 0);
+    const booked = Math.max(summed, +t.booked_pct || 0);
+    const remaining = round(1 - booked, 6);
+    // `manage()` refuses a zero-width stop rather than dividing by it, and so
+    // does this: one degenerate row would otherwise put a NaN into gross_r and
+    // NaN poisons every $ aggregate on the page, not just its own.
+    if (remaining > 1e-9 && t.exit != null && t.risk > 0) {
       const isLong = t.direction !== "short";
-      t.gross_r = round(rOf(t.exit, t.entry, t.risk, isLong), 4);
-      t.exits = [{ reason: "manual", price: t.exit, pct: 1, date: t.exit_date || today() }];
+      t.gross_r = round((t.gross_r || 0) + remaining * rOf(t.exit, t.entry, t.risk, isLong), 4);
+      t.exits.push({ reason: "manual", price: round(t.exit, 8), pct: remaining,
+                     date: t.exit_date || today() });
       t.booked_pct = 1;
     }
     finalizeR(t);
@@ -337,9 +425,19 @@
   }
 
   // ── stats + equity ────────────────────────────────────────────────────────
+  // A drawdown is a property of the ORDER trades closed in, not of the set
+  // (TOP100 #30). `closed` arrives in whatever order the store appended it —
+  // for the bot book that is market-by-market, so every NASDAQ trade of the
+  // year lands before the first ASX one — and max drawdown was being measured
+  // by walking that arbitrary permutation, while the equity chart directly
+  // beside it sorted by exit time. The two numbers described different curves.
+  // Both now walk THIS order, so they cannot disagree again.
+  const byExit = (closed) => closed.slice().sort((a, b) => (exitMs(a) || 0) - (exitMs(b) || 0));
+
   function stats(closed, openN) {
-    const rs = closed.map((t) => t.realized_r).filter((r) => r != null);
-    const ds = closed.map((t) => dollarsOf(t)).filter((v) => v != null);
+    const ordered = byExit(closed);
+    const rs = ordered.map((t) => t.realized_r).filter((r) => r != null);
+    const ds = ordered.map((t) => dollarsOf(t)).filter((v) => v != null);
     const wins = rs.filter((r) => r > 0).length;
     // max drawdown on the cumulative $ curve
     let cum = 0, peak = 0, dd = 0;
@@ -354,8 +452,7 @@
   }
   // Equity series ordered by exit time: cumulative R and cumulative $.
   function series(closed) {
-    const sorted = closed.slice().filter((t) => t.realized_r != null)
-      .sort((a, b) => (exitMs(a) || 0) - (exitMs(b) || 0));
+    const sorted = byExit(closed.filter((t) => t.realized_r != null));
     let r = 0, d = 0;
     const pts = [{ r: 0, d: 0, date: sorted.length ? sorted[0].entry_date || null : null }];
     for (const t of sorted) { r += t.realized_r; d += (dollarsOf(t) || 0); pts.push({ r: round(r, 3), d: round(d, 2), date: t.exit_date || null }); }
@@ -1346,7 +1443,17 @@
     renderLensTracker();
     const note = $("#bot-note");
     if (note) {
-      if (state.bot.open.length || state.bot.closed.length) {
+      if (botLoadErr) {
+        // TOP100 #29. Takes priority over the freshness line, which would
+        // otherwise print a reassuring "marked 4m ago" off the timestamp of the
+        // stale copy still in memory — the marks are as old as the last
+        // SUCCESSFUL load, not as old as that field claims.
+        const stale = state.bot.open.length || state.bot.closed.length;
+        note.textContent = stale
+          ? `⚠ bot book failed to load (${botLoadErr}) — showing the last good copy, marks are frozen`
+          : `⚠ bot book failed to load (${botLoadErr})`;
+        note.style.color = "var(--red)";
+      } else if (state.bot.open.length || state.bot.closed.length) {
         // Freshness instead of blank: how old are the bot's marks? Amber >2h.
         const t = Date.parse(state.bot.updated_at || "");
         const m = isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null;
@@ -1418,7 +1525,20 @@
       if (price != null) scanPrice.set(g.key, price);
       if (g.manual && price != null) {
         const r = manage(g.manual, price);   // false | "book" | "close"
-        if (r) { meChanged = true; if (r === "close") meClosed = true; }
+        if (r) {
+          meChanged = true;
+          if (r === "close") meClosed = true;
+          // A LADDER EVENT IS NOT RE-DERIVABLE (TOP100 #31), so it gets an
+          // mtime like any other real change. `manage()` books a TP and TRAILS
+          // THE STOP at the instant price crosses the level; a device that was
+          // closed during that move only ever sees a later price, and if price
+          // has since fallen back below tp1 it will never book tp1 at all — it
+          // will sit on the ORIGINAL stop and eventually take a full loss on a
+          // trade the other device had already moved to break-even. Without an
+          // mtime the booked copy also loses every merge tie (gbs-sync #32), so
+          // the device that got it right was the one that got overwritten.
+          g.manual.mtime = Date.now();
+        }
       }
       const src = g.src;
       for (const tr of g.rows) {
@@ -1450,11 +1570,16 @@
       paint(g, price, cached ? ageOf(g.key) : 0);
     });
 
-    // Persist rule-computed changes (scale-outs, auto-close) LOCALLY only — never
-    // to the cloud (each device re-derives them, so cloud pushes here just burned
-    // the KV quota). Only RE-RENDER when a position actually closed (rows move
-    // between the open/closed tables).
-    if (meChanged) mjSaveLocal(data);
+    // Persist rule-computed changes (scale-outs, stop trails, auto-close) to the
+    // CLOUD as well as locally (TOP100 #31). The old comment here said each
+    // device re-derives them so a cloud push was pure quota burn — but a device
+    // re-derives from a point-in-time PRICE, not from the price series, so it
+    // can only reconstruct a ladder event it happened to be open for. What
+    // actually burned the quota was MAE/MFE drift on every tick, and `manage()`
+    // already returns false for that: `meChanged` is set ONLY by "book" or
+    // "close", which is at most four events in a trade's entire life.
+    // Only RE-RENDER when a position actually closed (rows move tables).
+    if (meChanged) mjSave(data);
     if (meClosed) { loadMe(data); renderAll(); }
     // Live quotes may have upgraded manual marks — refresh the P&L headline.
     renderPnlHeadline();
@@ -1462,11 +1587,31 @@
 
   // ── loaders ───────────────────────────────────────────────────────────────
   function loadMe(data) { state.me = splitMe(data || mjLoad()); }
+  // TOP100 #29. This used to say `catch (_) { /* keep empty */ }`, and the
+  // comment was the giveaway: "keep empty" is only true on the FIRST load.
+  // `loadBot` is re-run by the refresh loop against a `state.bot` that is
+  // already populated, so a failed fetch keeps the LAST GOOD BOOK on screen —
+  // open positions, marks, P&L headline, the lot — with nothing anywhere saying
+  // the number is frozen. That is the failure mode you least want on a page
+  // whose entire job is telling you what is open right now: the book stops
+  // updating and looks exactly like a book that has not changed.
+  //
+  // `r.ok` was swallowed the same way. A 404 (the file has never been
+  // published) and a 500 (Cloudflare is having a bad day) both fell through
+  // the `if` in silence.
+  let botLoadErr = null;
   async function loadBot() {
     try {
       const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
-      if (r.ok) state.bot = splitBot(await r.json());
-    } catch (_) { /* keep empty */ }
+      if (!r.ok) { botLoadErr = `HTTP ${r.status}`; return; }
+      state.bot = splitBot(await r.json());
+      botLoadErr = null;   // cleared only by a load that actually succeeded
+    } catch (e) {
+      // Offline, DNS, CORS, or a truncated body that failed to parse. The
+      // message is not shown to the user (it is browser-specific and unhelpful);
+      // the fact of it is.
+      botLoadErr = "unreachable";
+    }
   }
   // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
   // source for manual trades) from the live scans. Re-runnable: prices overwrite.
@@ -1798,9 +1943,19 @@
   }
 
   async function init() {
+    // #40: the first paint used to run entirely on the FALLBACK constants —
+    // equity, position notional, leverage, fees — so every $ figure on the page
+    // was provisional for as long as the fetch took, and silently wrong to
+    // anyone who read it inside that window. bot_rules.json is a small
+    // same-origin file that is almost always warm, so wait for it. The wait is
+    // CAPPED so a slow or dead network degrades to the old behaviour — paint
+    // the fallbacks now, correct them when the rules land (RULES_GEN makes that
+    // repaint real) — rather than holding a blank page on a flaky connection.
+    const rules = loadBotRules();
+    await Promise.race([rules, new Promise((r) => setTimeout(r, 1500))]);
     loadMe();
-    renderAll();                 // paint Me immediately
-    await Promise.all([loadBot(), loadScanMeta(), loadFx(), loadBotRules()]);
+    renderAll();                 // paint Me with the live constants
+    await Promise.all([loadBot(), loadScanMeta(), loadFx(), rules]);
     renderAll();                 // repaint with Claude + live rules + grade/setup fallback
     wire();
     wireSync();

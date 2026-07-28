@@ -10,18 +10,24 @@
      backend service later — swap the localStorage adapter for a DB and the rest
      is unchanged.
    - All mutating methods: validate input → mutate → persist → log → emit.
-   - The engine is the single source of truth for: consecutive-loss count,
-     kill-switch state, and the 2% position-sizing rule. The dashboard JSON is
-     only a seed on first run and a feed for live equity.
+   - The engine is the single source of truth for: consecutive-loss count and
+     kill-switch state. It is NOT the source of truth for the RULES — every
+     threshold is published by scanner/config.py via data/bot_rules.json and
+     seeded in by bot.js; PUBLISHED_DEFAULTS below is a mirror for the offline
+     case. The dashboard JSON is only a seed on first run and a feed for live
+     equity.
+   - SCOPE, so the rules below are not read as more than they are: this engine
+     gates the entry checks that run IN THIS PAGE. It holds no broker
+     connection, places no order, and nothing in scanner/broker/ reads it back.
 
    HARD RULES ENFORCED
-     1. Max risk per trade = 0.25% of CURRENT equity (configurable).
-     2. Block all new entries when consecutive losses >= 3 (configurable).
+     1. Max risk per trade = maxRiskPerTradePct of CURRENT equity.
+     2. Block all new entries at maxConsecutiveLosses in a row.
      3. The loss counter ONLY resets on a winning trade (net P/L > 0) or a
         manual reset. Break-even (net == 0) leaves it unchanged.
      4. An active kill switch also blocks all new entries.
-     5. Position sizing respects the 0.25% rule AND per-instrument point values.
-     6. TP1 → book 25% + move stop to break-even → risk-free runner.
+     5. Position sizing respects rule 1 AND per-instrument point values.
+     6. TP1 → book scaleOutPct + move stop to break-even → risk-free runner.
      7. Weekly+3D higher-timeframe bias blocks counter-trend entries.
      8. closePosition() computes start time, duration, fees and realized P/L
         for the trade journal.
@@ -36,12 +42,83 @@
   const LEGACY_COUNTER_KEY = "gbs_bot_counter_v1";
   const LEGACY_KILL_KEY = "gbs_bot_kill_v1";
 
+  // ── Published engine constants — MIRRORS, not opinions (TOP100 #34) ────────
+  //
+  // Every value here is a copy of a `scanner/config.py` constant, and each is
+  // named beside the constant it mirrors. They used to be five bare literals
+  // buried in the constructor's `!= null ? … : X` chain, where nothing declared
+  // them as copies of anything and nothing could check them — so they drifted,
+  // for months, in the direction that is hardest to notice: the page kept
+  // saying a smaller, safer-sounding number than the engine was running.
+  //
+  //   maxRiskPerTradePct   0.25 → 0.35   VIVEK_BOT_RISK_PCT
+  //   maxPortfolioRiskPct  2.0  → 7.0    PORTFOLIO_HEAT_LIMIT (0.07) × 100
+  //   maxPositions         5    → 30     VIVEK_BOT_MAX_POSITIONS
+  //   maxConsecutiveLosses 3    = 3      CONSEC_LOSS_PAUSE
+  //   scaleOutPct          0.25 = 0.25   VIVEK_TP_SCALE_LONG[0]
+  //
+  // THE PORTFOLIO CAP IS THE ONE THAT MATTERED, and it broke the page's own
+  // internal arithmetic rather than merely disagreeing with Python. bot.js
+  // already adopted `risk_pct` (0.35) and `max_positions` (30) from
+  // bot_rules.json but had no key to adopt the third with, so the live page ran
+  // 0.35% per trade against a 2% book cap — a ceiling that binds at 5.7
+  // positions while the panel two rows up advertises 30. Attempt Entry number
+  // six was refused as a PORTFOLIO_RISK_LIMIT breach on a book the executing
+  // bot considers a fifth full. Seeding two of three numbers is worse than
+  // seeding none: it produces a coherent-looking engine that is internally
+  // impossible.
+  //
+  // FLAGGED, because the direction is a LOOSENING: raising the cap lets this
+  // page's entry checks pass trades the 2% version refused. It is in bounds
+  // only because nothing here reaches a broker — this engine gates the advisory
+  // checks that run in the browser, holds no connection, and is never read by
+  // `scanner/broker/` (see the kill-switch note in bot.js). 7.0 is not a number
+  // chosen here; it is PORTFOLIO_HEAT_LIMIT, which is what the Python twin of
+  // this layer (`broker/risk_manager.py` → `pre_trade_check`) has enforced all
+  // along.
+  //
+  // These are FALLBACKS. bot.js overrides all five from bot_rules.json on every
+  // load; they are what an offline page, a unit test or a bare `new
+  // RiskManager({equity})` gets. That is exactly why they must match: a fallback
+  // that disagrees with the published value has not removed the drift, it has
+  // moved it somewhere with no drift warning. `test/risk_defaults.test.js`
+  // parses scanner/config.py and fails if any pair below stops agreeing.
+  const PUBLISHED_DEFAULTS = {
+    maxRiskPerTradePct: 0.35,   // config.VIVEK_BOT_RISK_PCT
+    maxConsecutiveLosses: 3,    // config.CONSEC_LOSS_PAUSE
+    maxPortfolioRiskPct: 7.0,   // config.PORTFOLIO_HEAT_LIMIT * 100
+    scaleOutPct: 0.25,          // config.VIVEK_TP_SCALE_LONG[0]
+    maxPositions: 30,           // config.VIVEK_BOT_MAX_POSITIONS
+  };
+
   // ── Instrument specifications ──────────────────────────────────────────────
-  // dollarsPerPoint  : P/L for a 1.00 move in price, per 1 contract/lot.
+  // dollarsPerPoint  : P/L in USD for a 1.00 move in price, per 1 unit.
   // volatilityFactor : scales the risk budget DOWN for jumpy instruments so the
   //                    engine sizes them smaller (NatGas especially).
   // minStopPoints    : a sane floor to reject absurdly tight stops.
+  // unitStep         : tradeable increment. ABSENT = the legacy futures/CFD
+  //                    rounding (0.1 lots at or above 1, 0.01 below).
+  // unitLabel        : what one unit is called, for the calculator's prose.
   // tickValue is implied by dollarsPerPoint; keep it simple for now.
+  //
+  // TOP100 #35 — THE THREE `STOCK*`/`CRYPTO` ROWS ARE THE ADDITION, and the
+  // reason is that this table listed six futures contracts and nothing else,
+  // while the system it belongs to trades ASX equities, NASDAQ equities and
+  // crypto perps and has never sent an order for /NQ, YM, GC, SI, CL or NG in
+  // its life. So the Size Calculator answered fluently for six instruments that
+  // do not exist here and returned `Unknown instrument "BHP.AX"` for the three
+  // that do — a calculator that works only on the trades you will never take.
+  //
+  // The futures rows STAY. They are not dead weight: 48 tests in
+  // test/risk_manager.test.js exercise the sizing maths through them, and
+  // deleting the rows would delete that coverage to make a cosmetic point. They
+  // are simply no longer the only thing on offer.
+  //
+  // `unitStep: 1` on the equity rows is the substantive half. The legacy
+  // rounding hands back 0.1-granularity sizes, so before this the calculator's
+  // honest answer for a share would have been "buy 12.4 shares" — a size no
+  // exchange will accept, presented to two decimal places as though it were
+  // precise. Crypto keeps a fine step because fractional coins are real.
   const DEFAULT_INSTRUMENTS = {
     "/NQ": { name: "NAS100", dollarsPerPoint: 20,   volatilityFactor: 1.0, minStopPoints: 10 },
     "/YM": { name: "US30",   dollarsPerPoint: 5,    volatilityFactor: 1.0, minStopPoints: 10 },
@@ -51,9 +128,37 @@
     // NatGas is the most volatile of the set — a deliberately reduced factor
     // shrinks its position size for the same nominal stop.
     "NG":  { name: "NatGas", dollarsPerPoint: 1000, volatilityFactor: 0.4, minStopPoints: 0.02 },
+
+    // ── What this system actually trades ─────────────────────────────────
+    // volatilityFactor is 1.0 on all three ON PURPOSE. The haircuts above are
+    // per-CONTRACT judgements about six named instruments; there is no
+    // equivalent per-name number for 2,212 ASX tickers, and the executing bot
+    // applies none — it sizes every name at the same fixed notional
+    // (VIVEK_BOT_POSITION_NOTIONAL). Inventing a 0.7 for "crypto is jumpy"
+    // would be a risk parameter with no source, which is the whole class of
+    // problem #34 just finished removing.
+    // minStopPoints is 0 because a floor in POINTS cannot express what the
+    // executing bot enforces: VIVEK_BOT_MIN_STOP_PCT is a PERCENTAGE, and 0.05
+    // points is a wide stop on a 40c ASX name and a rounding error on MDB. A
+    // wrong floor here would fire on the cheap names and never on the dear
+    // ones, so there is none rather than a decorative one.
+    "STOCK":    { name: "US stock",    dollarsPerPoint: 1,    volatilityFactor: 1.0, minStopPoints: 0, unitStep: 1,      unitLabel: "share", quoteCcy: "USD" },
+    // dollarsPerPoint is the AUD/USD rate: a 1.00 AUD move on one share is
+    // US$0.70, and the book is denominated in USD. 0.66 is only the offline
+    // fallback — bot.js overrides it from data/fx.json, the same published rate
+    // journal.js converts ASX P&L with, so the two pages cannot disagree about
+    // what an ASX dollar is worth.
+    "STOCK.AX": { name: "ASX stock",   dollarsPerPoint: 0.66, volatilityFactor: 1.0, minStopPoints: 0, unitStep: 1,      unitLabel: "share", quoteCcy: "AUD" },
+    "CRYPTO":   { name: "Crypto perp", dollarsPerPoint: 1,    volatilityFactor: 1.0, minStopPoints: 0, unitStep: 0.0001, unitLabel: "unit",  quoteCcy: "USD" },
   };
 
   // Aliases so callers can pass either the ticker or the friendly name.
+  // NOTE the new entries alias CLASSES, never individual tickers. Aliasing
+  // "BHP.AX" → STOCK.AX for the whole ASX universe is the tempting next step
+  // and it is a trap: `loadPositions` falls back to dollarsPerPoint 1 for an
+  // unknown symbol, so a half-populated alias map would silently price SOME
+  // ASX positions in AUD-as-USD and others correctly, with no way to tell which
+  // from the screen. One explicit class, chosen by the user, or nothing.
   const ALIASES = {
     "NAS100": "/NQ", "NQ": "/NQ",
     "US30": "/YM", "YM": "/YM", "/YM": "/YM",
@@ -61,6 +166,9 @@
     "SILVER": "SI", "XAG": "SI",
     "CRUDE": "CL", "OIL": "CL", "WTI": "CL",
     "NATGAS": "NG", "NATURALGAS": "NG", "GAS": "NG",
+    "SHARE": "STOCK", "EQUITY": "STOCK", "US": "STOCK", "NASDAQ": "STOCK",
+    "ASX": "STOCK.AX", "STOCKAX": "STOCK.AX", "AU": "STOCK.AX",
+    "PERP": "CRYPTO", "COIN": "CRYPTO",
   };
 
   // ── Block reason codes (stable identifiers for UI / telemetry) ─────────────
@@ -84,16 +192,17 @@
      * @param {number}  cfg.equity                 Account equity (USD). Seed from
      *                                             bot_status.json / broker wallet;
      *                                             never hardcode in production.
+     * Every default below comes from PUBLISHED_DEFAULTS — a mirror of
+     * scanner/config.py, not a second opinion. Do not restate the numbers in
+     * this docblock: they moved once already while the prose said otherwise.
+     *
      * @param {number}  [cfg.maxRiskPerTradePct]   Max risk per trade as % of equity.
-     *                                             Default 0.25 (the trader's rule).
      * @param {number}  [cfg.maxConsecutiveLosses] Hard-stop after N losses in a row.
-     *                                             Default 3.
      * @param {number}  [cfg.maxPortfolioRiskPct]  Cap on TOTAL open risk across the
-     *                                             whole book, as % of equity. Default 2.0.
+     *                                             whole book, as % of equity.
      * @param {number}  [cfg.scaleOutPct]          Fraction booked at TP1 (rest runs).
-     *                                             Default 0.25 (25%).
      * @param {number}  [cfg.maxPositions]         Hard cap on concurrent open
-     *                                             positions. Default 5.
+     *                                             positions.
      * @param {number}  [cfg.roundTurnFeeUsd]      Entry+exit fees booked on close,
      *                                             used for net P/L. Default 2.0.
      * @param {Object}  [cfg.instruments]          Override/extend instrument specs.
@@ -102,18 +211,30 @@
      */
     constructor(cfg = {}) {
       this.config = {
-        // Risk budget per trade as a % of CURRENT equity (the trader's 0.25% rule).
-        maxRiskPerTradePct: cfg.maxRiskPerTradePct != null ? cfg.maxRiskPerTradePct : 0.25,
+        // Risk budget per trade as a % of CURRENT equity. NOTE the executing
+        // bot has been in FIXED-NOTIONAL mode since 2026-07-28, where this is a
+        // derived per-trade figure rather than an input (CLAUDE.md "Position
+        // sizing is FIXED NOTIONAL"); this page still sizes off it because the
+        // sizing calculator's whole job is "what would N% of equity buy me".
+        maxRiskPerTradePct: cfg.maxRiskPerTradePct != null ? cfg.maxRiskPerTradePct : PUBLISHED_DEFAULTS.maxRiskPerTradePct,
         // Block all new entries once this many consecutive losses is reached.
-        maxConsecutiveLosses: cfg.maxConsecutiveLosses != null ? cfg.maxConsecutiveLosses : 3,
+        maxConsecutiveLosses: cfg.maxConsecutiveLosses != null ? cfg.maxConsecutiveLosses : PUBLISHED_DEFAULTS.maxConsecutiveLosses,
         // Total open risk across ALL positions may not exceed this % of equity.
-        // With 0.25%/trade this allows a basket of several concurrent trades
-        // while still capping book-level drawdown if every stop hits at once.
-        maxPortfolioRiskPct: cfg.maxPortfolioRiskPct != null ? cfg.maxPortfolioRiskPct : 2.0,
+        // Must stay >= maxRiskPerTradePct × maxPositions or the position cap is
+        // unreachable and the page contradicts itself — the exact state #34
+        // found (0.35 × 30 = 10.5% of open risk allowed by one rule, 2% by the
+        // other). It is still the tighter of the two at 7%, which is the point:
+        // it is a book-level ceiling, not a restatement of the slot count.
+        maxPortfolioRiskPct: cfg.maxPortfolioRiskPct != null ? cfg.maxPortfolioRiskPct : PUBLISHED_DEFAULTS.maxPortfolioRiskPct,
         // Fraction of a position closed when TP1 is reached (the rest runs).
-        scaleOutPct: cfg.scaleOutPct != null ? cfg.scaleOutPct : 0.25,
+        // The engine holds ONE number; the ladder is side-dependent upstream
+        // (VIVEK_TP_SCALE_SHORT banks 0.50 at TP1). bot.js seeds the LONG value
+        // because this page's book is long-only in practice — a short seeded
+        // here would under-book its own runner, so it is left to the caller
+        // rather than guessed per position.
+        scaleOutPct: cfg.scaleOutPct != null ? cfg.scaleOutPct : PUBLISHED_DEFAULTS.scaleOutPct,
         // Hard cap on number of concurrent open positions.
-        maxPositions: cfg.maxPositions != null ? cfg.maxPositions : 5,
+        maxPositions: cfg.maxPositions != null ? cfg.maxPositions : PUBLISHED_DEFAULTS.maxPositions,
         // Round-turn cost (entry + exit fees/commission) booked against a trade
         // when it closes. Used by closePosition() to compute net P/L for the
         // journal. Override per-close via opts.costs if you have exact fills.
@@ -331,6 +452,11 @@
         instrument, spec: spec ? spec.symbol : null, name: spec ? spec.name : null,
         dollarsPerPoint: spec ? spec.dollarsPerPoint : null,
         volatilityFactor: spec ? spec.volatilityFactor : null,
+        // TOP100 #35 — carried out so the calculator can say "shares" rather
+        // than "contracts" and label the $/point row in the right currency.
+        unitLabel: spec ? (spec.unitLabel || "contract") : null,
+        unitStep: spec ? (spec.unitStep || null) : null,
+        quoteCcy: spec ? (spec.quoteCcy || "USD") : null,
         stopDistancePoints: this._num(stopDistancePoints, NaN),
         maxRiskUsd: 0, riskPerUnit: 0, rawUnits: 0,
         recommendedUnits: 0, wholeContracts: 0,
@@ -346,7 +472,11 @@
       if (!Number.isFinite(stop) || stop <= 0) { out.error = "Stop distance must be > 0"; return out; }
       if (stop < spec.minStopPoints) { out.note = `Stop below ${spec.name} minimum (${spec.minStopPoints} pts)`; }
 
-      // ── The per-trade risk rule (0.25% default), volatility-adjusted ─────
+      // ── The per-trade risk rule, volatility-adjusted ─────────────────────
+      // No number named here on purpose (TOP100 #34): this comment said "0.25%
+      // default" for months after the default became 0.35%, in the one place no
+      // test could catch it. The value is config.maxRiskPerTradePct, seeded from
+      // bot_rules.json and mirrored by PUBLISHED_DEFAULTS.
       const maxRiskUsd = this.equity * (this.config.maxRiskPerTradePct / 100) * spec.volatilityFactor;
       const riskPerUnit = stop * spec.dollarsPerPoint;
       const rawUnits = riskPerUnit > 0 ? maxRiskUsd / riskPerUnit : 0;
@@ -354,9 +484,22 @@
       // Whole futures contracts (floor) + a CFD/micro-friendly fractional size.
       const wholeContracts = Math.floor(rawUnits);
       // Always FLOOR so the resulting risk can never exceed the risk budget.
-      const recommendedUnits = rawUnits >= 1
-        ? Math.floor(rawUnits * 10) / 10      // 0.1-lot granularity once >= 1
-        : Math.max(0, Math.floor(rawUnits * 100) / 100); // 0.01 granularity sub-1
+      // That invariant is why there is no epsilon anywhere below: a nudge to
+      // rescue 12.9999999 → 13 would also let a genuinely-13.0000001 answer
+      // through, and this rounding is the only thing standing between the
+      // budget and a size that exceeds it. One share light beats one over.
+      //
+      // TOP100 #35: `unitStep` is the tradeable increment. Absent (every
+      // futures row, and therefore every pre-existing test) the legacy
+      // 0.1/0.01 rounding applies unchanged; present, the size lands on a
+      // multiple of it, so an equity comes back as whole shares instead of
+      // "12.4 shares" and a crypto perp keeps its fractional precision.
+      const step = this._num(spec.unitStep, 0);
+      const recommendedUnits = step > 0
+        ? +(Math.floor(rawUnits / step) * step).toFixed(Math.max(0, -Math.floor(Math.log10(step))))
+        : (rawUnits >= 1
+          ? Math.floor(rawUnits * 10) / 10      // 0.1-lot granularity once >= 1
+          : Math.max(0, Math.floor(rawUnits * 100) / 100)); // 0.01 granularity sub-1
       const actualRiskUsd = recommendedUnits * riskPerUnit;
 
       Object.assign(out, {
@@ -370,8 +513,22 @@
         feasibleWholeContract: wholeContracts >= 1,
         withinLimit: actualRiskUsd <= maxRiskUsd + 1e-6,
       });
-      if (!out.feasibleWholeContract && !out.note) {
-        out.note = `< 1 full contract fits the ${this.config.maxRiskPerTradePct}% budget — use a micro/CFD lot.`;
+      // TOP100 #35: "use a micro/CFD lot" was the advice for every instrument
+      // that could not carry one whole unit. It is sound for a futures contract,
+      // and it is nonsense twice over otherwise — there is no micro-BHP, and a
+      // crypto perp sized at 0.0038 has no problem to solve, that IS the size.
+      // Three instruments, three readings, so the branch is on `step`:
+      //   step >= 1 (shares)  — a sub-1 answer is genuinely unfillable, say so.
+      //   0 < step < 1 (perp) — fractional is the normal case, say NOTHING. The
+      //                         old text told you to fix a trade that was fine.
+      //   step === 0 (future) — unchanged, and `feasibleWholeContract` means
+      //                         what it says on a contract. (`_num(…, 0)` above
+      //                         maps an absent unitStep to 0, never to null.)
+      if (!out.feasibleWholeContract && !out.note && !(step > 0 && step < 1)) {
+        const unit = spec.unitLabel || "contract";
+        out.note = (step >= 1)
+          ? `Not even 1 ${unit} fits the ${this.config.maxRiskPerTradePct}% budget at this stop — widen the budget or tighten the stop.`
+          : `< 1 full ${unit} fits the ${this.config.maxRiskPerTradePct}% budget — use a micro/CFD lot.`;
       }
       if (Number.isFinite(currentPrice) && currentPrice > 0) {
         out.stopDistancePct = this._round(stop / currentPrice * 100, 2);
@@ -443,7 +600,11 @@
       this._state.lastKillSwitchAction = action || null;
       this._state.lastKillSwitchTime = new Date().toISOString();
       this._persist();
-      this._log("kill", `KILL SWITCH ACTIVATED — reason: ${this._state.lastKillSwitchReason}${action ? " · " + action : ""}. All new entries blocked.`);
+      // TOP100 #27. This engine gates the ENTRY CHECKS THAT RUN IN THIS PAGE and
+      // nothing else — it holds no broker connection and the server bot never
+      // reads it. "All new entries blocked" read as a system-wide halt; it is a
+      // halt of this device's advisory layer.
+      this._log("kill", `KILL SWITCH ACTIVATED — reason: ${this._state.lastKillSwitchReason}${action ? " · " + action : ""}. New entries blocked in this browser; open positions and the server bot are unaffected.`);
       this._emit();
       return this.getCurrentRiskState();
     }
@@ -451,7 +612,7 @@
       this._state.isKillSwitchActive = false;
       // Keep lastKillSwitch* as an audit trail of the most recent activation.
       this._persist();
-      this._log("info", "Kill switch deactivated — trading re-enabled (subject to loss counter).");
+      this._log("info", "Kill switch deactivated — this browser accepts new entries again (subject to loss counter).");
       this._emit();
       return this.getCurrentRiskState();
     }
@@ -1120,6 +1281,11 @@
   // Expose constants for callers/tests.
   RiskManager.REASON = REASON;
   RiskManager.DEFAULT_INSTRUMENTS = DEFAULT_INSTRUMENTS;
+  // TOP100 #34 — exported so test/risk_defaults.test.js can compare each entry
+  // against the scanner/config.py constant it claims to mirror. Frozen because
+  // a caller mutating this would change the fallbacks of every RiskManager
+  // built afterwards, which is the drift again with extra steps.
+  RiskManager.PUBLISHED_DEFAULTS = Object.freeze({ ...PUBLISHED_DEFAULTS });
 
   // UMD-ish export: window global for the browser, module.exports for Node.
   if (typeof module !== "undefined" && module.exports) module.exports = RiskManager;

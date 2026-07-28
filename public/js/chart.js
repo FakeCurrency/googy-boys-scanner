@@ -118,6 +118,59 @@
   const SIM_CRYPTO_MARGIN   = 500;
   const SIM_CRYPTO_LEVERAGE = 10;
   const SIM_STOCK_SIZE      = 1000;
+
+  // ── Trading costs — ONE model, the published one (TOP100 #28) ──────────────
+  //
+  // This page used to charge a FLAT round-trip brokerage: `2 * (isCrypto ? 5 :
+  // 10)` dollars, out of `stock_brokerage`/`crypto_brokerage` on the manual
+  // journal blob. Those two fields have no editor anywhere in the app — they are
+  // schema defaults written by gbs-sync and never touched again — so they were
+  // not a setting, they were a second hardcoded cost model sitting next to the
+  // real one. journal.js prices the SAME rows in basis points per market,
+  // adopted from `bot_rules.json`, which is itself published from
+  // `scanner/config.py` every scan and mirrors `vivek_journal._cost_r`.
+  //
+  // A flat fee is not merely a different number, it is a different SHAPE: it
+  // does not scale with position size, so it was roughly 3x too heavy on a
+  // $1,000 sim stock position and far too light on anything real. Every dollar
+  // figure this page showed therefore disagreed with the journal's figure for
+  // the identical trade, and there was no way to tell which one to believe.
+  //
+  // What remains different, deliberately, is the SIZE each page prices: this
+  // page costs the `shares` it actually booked, while the journal re-prices
+  // every manual row at the bot's fixed notional so the Me-vs-Claude comparison
+  // is like-for-like (see journal.js `sizeOf` and CLAUDE.md "Position sizing is
+  // FIXED NOTIONAL"). That is a sizing convention, not a second cost model.
+  const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
+  const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
+  const costsFor = (mkt) => [
+    (SLIPPAGE_BPS[mkt]   ?? SLIPPAGE_BPS.default)   / 1e4,
+    (COMMISSION_BPS[mkt] ?? COMMISSION_BPS.default) / 1e4,
+  ];
+  // Cost of ONE leg, in dollars, on `units` at `price`. `slipped` is false only
+  // for a resting take-profit limit, which is filled by the exchange at the
+  // price you named — the same carve-out journal.js `costR` makes.
+  const legCost = (mkt, units, price, slipped) => {
+    const [slip, comm] = costsFor(mkt);
+    return Math.abs(units || 0) * (price || 0) * (comm + (slipped ? slip : 0));
+  };
+  // The published constants win over the fallbacks above, exactly as in
+  // journal.js `loadBotRules`. Silent on failure: an offline page keeps the
+  // fallbacks rather than showing nothing.
+  (async () => {
+    try {
+      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
+      if (!r.ok) return;
+      const j = await r.json();
+      for (const [key, tgt] of [["commission_bps", COMMISSION_BPS], ["slippage_bps", SLIPPAGE_BPS]]) {
+        const src = j[key];
+        if (!src || typeof src !== "object") continue;
+        for (const m of Object.keys(tgt)) {
+          if (typeof src[m] === "number" && src[m] >= 0) tgt[m] = src[m];
+        }
+      }
+    } catch (_) { /* offline — fallbacks stand */ }
+  })();
   // Shared with the simulate buttons / live box so a buy/sell fills at the true
   // live price and every dependent widget reacts on each tick.
   const liveState = { price: null, entryLineFns: null, listeners: [] };
@@ -1093,6 +1146,24 @@
 
   // Real-money position sizer: your account + risk% against THIS setup's
   // entry/stop → exact share count for the broker order. Persisted locally.
+  //
+  // TOP100 #39 (REFINEMENTS #1, verified still live). This used to read
+  // `d.entry` / `d.stop` — the DEFAULT timeframe's plan — inside a closure that
+  // nothing re-invoked, so switching W→D redrew every level line, relabelled
+  // the whole R ladder, rewrote the footer, and left the share count sitting
+  // there computed off the weekly stop. The failure is silent and it is
+  // one-directional: a weekly stop is the widest in the ladder, so the stale
+  // number is always TOO SMALL against a daily plan — a size that looks
+  // conservative, reads as deliberate, and belongs to a trade you are no longer
+  // looking at. Nothing on screen said which timeframe it meant, so there was
+  // no way to catch it by eye either.
+  //
+  // The fix is `_activeLevels`, the same channel wireSim already uses to make
+  // Simulate-Buy log the timeframe on screen rather than the default one, plus
+  // a recompute hook applyVivekLevels calls after it swaps the plan.
+  // DELIBERATELY not a re-invocation of wireSizeCalc: that rebuilds host
+  // innerHTML, which would blow away focus and caret position mid-keystroke on
+  // every switch. Only the output line is recomputed.
   function wireSizeCalc(d) {
     const host = $("#cf-mysize");
     if (!host) return;
@@ -1108,22 +1179,39 @@
       `<label>risk <input id="ms-risk" type="number" min="0.1" max="5" step="0.1" value="${risk}">%</label>` +
       `<span class="ms-out" id="ms-out"></span>`;
     const out = $("#ms-out");
+    // The plan actually on screen. Falls back to the top-level plan for the
+    // non-VIVEK charts that have no per-timeframe levels, and for the first
+    // paint — render() wires this before the chart has drawn once, so
+    // `_activeLevels` does not exist yet and `d` is the correct answer.
+    const planNow = () => {
+      const lv = d._activeLevels;
+      return (lv && lv.entry != null && lv.stop != null) ? lv : d;
+    };
     const calc = () => {
       acct = +($("#ms-acct").value || 0);
       risk = +($("#ms-risk").value || 0);
       try { localStorage.setItem(LS_ACCT, String(acct)); localStorage.setItem(LS_RISK, String(risk)); } catch (_) {}
-      const dist = Math.abs(d.entry - d.stop);
+      const plan = planNow();
+      const dist = Math.abs(plan.entry - plan.stop);
       if (!(acct > 0) || !(risk > 0) || !(dist > 0)) { out.textContent = ""; return; }
       const riskD = acct * risk / 100;
       const shares = riskD / dist;
       const units = shares >= 100 ? Math.floor(shares) : +shares.toFixed(4);
-      const notional = shares * d.entry;
+      const notional = shares * plan.entry;
+      // NAME the timeframe. The number is only meaningful against one plan, and
+      // the whole defect above was that it silently belonged to a different one.
+      const tf = d._activeTf ? ` <span class="ms-tf">${esc(d._activeTf)} plan</span>` : "";
       out.innerHTML = `→ <strong>${units.toLocaleString()}</strong> units ` +
         `≈ ${cur}${Math.round(notional).toLocaleString()} notional · ` +
-        `1R = ${cur}${riskD.toFixed(0)}${notional > acct ? ` · ×${(notional / acct).toFixed(1)} leverage` : ""}`;
+        `1R = ${cur}${riskD.toFixed(0)}${notional > acct ? ` · ×${(notional / acct).toFixed(1)} leverage` : ""}${tf}`;
     };
     $("#ms-acct").addEventListener("input", calc);
     $("#ms-risk").addEventListener("input", calc);
+    // Hung off `d` rather than a module-scoped variable because applyVivekLevels
+    // lives in another function and `d` is already the channel between them.
+    // A stale handle is impossible: a new render() overwrites it before the new
+    // chart can call it.
+    d._recalcMySize = calc;
     calc();
   }
 
@@ -1149,7 +1237,12 @@
     // because the scalp universe also contains commodities (GOLD, OIL) and ASX
     // stocks (BHP, CBA) which must NOT be sized/priced as 10× crypto.
     const isCrypto = d.asset_type === "crypto" || market === "crypto";
-    const simBrok  = (data) => isCrypto ? data.crypto_brokerage : data.stock_brokerage;
+    // TOP100 #28 — same three cost buckets as the live box and the journal. A
+    // simulated fill lands in the SAME manual journal as a hand-logged one and
+    // is re-priced there, so pricing it differently here made the sim's own
+    // "P&L" and the journal's disagree about a trade neither of them disputed.
+    const simMkt = isCrypto ? "crypto"
+      : (d.asset_type === "asx" || market === "asx") ? "asx" : "nasdaq";
 
     // Re-label AND re-colour the buttons to match the setup direction: the entry
     // action is coloured by its side (long entry = green ▲, short entry = red ▼),
@@ -1178,10 +1271,10 @@
       const px = livePx || liveState.price;
       if (px) {
         const m      = dir === "long" ? 1 : -1;
-        const data   = mjLoad();
-        const brok   = simBrok(data);
-        const unreal = t.shares * m * (px - t.entry);  // unrealised, before close brok
-        const net    = unreal - 2 * brok;               // what you'd bank if closed now
+        const unreal = t.shares * m * (px - t.entry);  // unrealised, before costs
+        // Closing now is a market exit on both legs (TOP100 #28).
+        const net    = unreal - legCost(simMkt, t.shares, t.entry, true)
+                              - legCost(simMkt, t.shares, px, true);
         const pnlCls = net >= 0 ? " live" : " neg";
         const sign   = net >= 0 ? "+" : "";
         statusEl.className = `sim-status${pnlCls}`;
@@ -1213,7 +1306,10 @@
       rec.mtime = Date.now();
       mjSaveLocal(data);   // rule-computed auto-close → local only
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
-      const pnl = t.shares * m * (fillPx - t.entry) - 2 * simBrok(data);
+      // Stop = market order (pays slippage); target = resting limit (does not).
+      const pnl = t.shares * m * (fillPx - t.entry)
+                - legCost(simMkt, t.shares, t.entry, true)
+                - legCost(simMkt, t.shares, fillPx, stopped);
       statusEl.className = `sim-status${pnl >= 0 ? " live" : " neg"}`;
       statusEl.textContent = `${stopped ? "🛑 Stopped out" : "🎯 Target hit"} @ ${fmt(fillPx, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)}`;
       buyBtn.disabled = false; sellBtn.disabled = true;
@@ -1342,7 +1438,10 @@
       }
       if (liveState.entryLineFns) liveState.entryLineFns.remove();
       const m   = dir === "long" ? 1 : -1;
-      const pnl = (t.shares * m * (px - t.entry) - 2 * simBrok(data));
+      // A button-press close is a market exit — both legs pay slippage (#28).
+      const pnl = t.shares * m * (px - t.entry)
+                - legCost(simMkt, t.shares, t.entry, true)
+                - legCost(simMkt, t.shares, px, true);
       statusEl.className = "sim-status" + (pnl >= 0 ? " live" : "");
       statusEl.textContent = `Closed @ ${fmt(px, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} — logged to My Trades`;
       buyBtn.disabled = false; sellBtn.disabled = true;
@@ -1885,6 +1984,13 @@
       d._activeLevels = lv;
       d._activeTf = key;
       renderVivekFooter(d, lv, key);
+      // TOP100 #39 — the size on screen is derived from `entry - stop`, so the
+      // two lines above just invalidated it. Recompute the OUTPUT LINE only:
+      // calling wireSizeCalc again would rebuild host.innerHTML and destroy the
+      // caret mid-keystroke of anyone typing their account size. Guarded because
+      // render() wires the sizer AFTER the first applyVivekLevels on some paths,
+      // and because a chart with no entry/stop hides the panel and never sets it.
+      if (typeof d._recalcMySize === "function") d._recalcMySize();
     }
 
     // ── open-position context (entry marker + floating LIVE box) ──────────────
@@ -3081,7 +3187,11 @@
     // always carry a real asset_type, so an index/commodity (NAS100, GOLD) is
     // correctly treated as a stock-style position rather than crypto.
     const isCryptoPos = d.asset_type === "crypto" || market === "crypto";
-    const posBrok    = (data) => isCryptoPos ? data.crypto_brokerage : data.stock_brokerage;
+    // TOP100 #28 — the market key the cost tables are indexed by. Same three
+    // buckets journal.js `marketOf` resolves to, so an ASX name is charged ASX
+    // bps on both pages rather than crypto bps on one of them.
+    const posMkt = isCryptoPos ? "crypto"
+      : (d.asset_type === "asx" || market === "asx") ? "asx" : "nasdaq";
     const box = document.createElement("div");
     box.className = "live-pos-box";
     box.style.display = "none";
@@ -3128,7 +3238,14 @@
       rec.mtime = Date.now();
       mjSaveLocal(data);   // rule-computed auto-close → local only
       const m   = posDir === "long" ? 1 : -1;
-      const pnl = t.shares * m * (fillPx - t.entry) - 2 * posBrok(data);
+      // TOP100 #28. The exit leg is charged by HOW it filled, not by a flat fee:
+      // a stop is a market order and pays slippage, a target is the resting
+      // limit you named and does not. journal.js `costR` makes exactly this
+      // carve-out, so the banner and the journal row now agree on the sign and
+      // the size of the cost instead of only on the gross move.
+      const cost = legCost(posMkt, t.shares, t.entry, true)
+                 + legCost(posMkt, t.shares, fillPx, stopped);
+      const pnl = t.shares * m * (fillPx - t.entry) - cost;
       banner.className = "lpb-banner " + (stopped ? "neg" : "pos");
       banner.innerHTML = `${stopped ? "🛑 STOP HIT" : "🎯 TARGET HIT"} — auto-closed @ ${fmt(fillPx, cur)} · ` +
         `P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} <small>(logged to your journal)</small>`;
@@ -3146,9 +3263,17 @@
       // Apply the saved drag position once the box has real dimensions.
       if (wasHidden && box.__restorePos) box.__restorePos();
       const m     = posDir === "long" ? 1 : -1;
-      const data  = mjLoad(), brok = posBrok(data);
       const price = px || liveState.price || t.entry;
-      const net   = t.shares * m * (price - t.entry) - 2 * brok;
+      // TOP100 #28. "If I closed right now" is a MARKET exit, so both legs pay
+      // slippage — which is also what journal.js will charge this row the moment
+      // you close it by hand. Note the journal's OPEN "$" column is deliberately
+      // GROSS (it mirrors the server-published `unreal_usd` on the Claude side so
+      // the two halves of that page compare like with like); this box has always
+      // been the net "what would I bank" number and stays one, now with the cost
+      // printed rather than buried.
+      const cost  = legCost(posMkt, t.shares, t.entry, true)
+                  + legCost(posMkt, t.shares, price, true);
+      const net   = t.shares * m * (price - t.entry) - cost;
       const move  = (price - t.entry) / t.entry * 100 * m;       // signed in trade's favour
       let rStr = "—", rCls = "";
       if (t.stop != null) {
@@ -3171,6 +3296,11 @@
           `<span class="lpb-k">Target</span><span class="lpb-v pos">${t.target != null ? fmt(t.target, cur) : "—"}${distTgt != null ? ` <small>(${distTgt.toFixed(2)}%)</small>` : ""}</span>` +
           `<span class="lpb-k">Opened</span><span class="lpb-v">${t.entry_date || "—"} ${t.entry_time || ""}</span>` +
           `<span class="lpb-k">In trade</span><span class="lpb-v">${dur(t)}</span>` +
+          // TOP100 #28: the cost is stated, not silently netted off. It is the
+          // only line here the market cannot move, and it is what the P&L above
+          // is net OF — a headline that quietly absorbs it reads as a losing
+          // trade when the move was flat.
+          `<span class="lpb-k">Costs</span><span class="lpb-v">−${cur}${cost.toFixed(2)} <small>(round trip)</small></span>` +
         `</div>`;
     }
 

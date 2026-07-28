@@ -56,9 +56,9 @@ jobs:
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
-      - name: Risk-engine tests (48)
+      - name: Risk-engine tests (54)
         run: node test/risk_manager.test.js
-      - name: Unit tests (65)
+      - name: Unit tests (67)
         run: node test/unit.test.js
       - name: Cloud-watcher VIVEK parity tests (21)
         run: node test/vivek_manage.test.js
@@ -72,6 +72,10 @@ jobs:
         run: node test/journal_review.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
         run: node test/journal_stale.test.js
+      - name: Risk-default + size-calculator drift gate (TOP100 #34/#35, 20)
+        run: node test/risk_defaults.test.js
+      - name: Journal money-path tests (TOP100 #25/#26/#30/#33, 22)
+        run: node test/journal_money.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

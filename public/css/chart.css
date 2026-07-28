@@ -50,6 +50,11 @@
   color: var(--text); font: 600 12px/1 var(--mono, monospace); }
 .cf-mysize input#ms-risk { width: 52px; }
 .cf-mysize .ms-out { color: var(--text); }
+/* TOP100 #39 — the size is only meaningful against ONE timeframe's plan, and the
+   defect being fixed was that it silently belonged to a different one. Naming the
+   plan makes a mismatch visible by eye rather than only by arithmetic. Muted and
+   small: it is a provenance mark, not a number. */
+.cf-mysize .ms-tf { color: var(--muted); font-weight: 700; letter-spacing: .03em; }
 
 /* recent ex-dividend — levels are on the ADJUSTED series, broker raw prices differ */
 .ct-divadj { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--blue);

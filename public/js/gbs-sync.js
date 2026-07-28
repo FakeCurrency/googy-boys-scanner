@@ -72,7 +72,17 @@
     for (const t of [...a.trades, ...b.trades]) {
       if (!t || !t.id || deleted.has(t.id)) continue;
       const ex = byId.get(t.id);
-      if (!ex || (t.mtime || 0) >= (ex.mtime || 0)) byId.set(t.id, t);
+      // ON A TIE, THE FIRST ARGUMENT WINS (TOP100 #32). Every caller passes
+      // merge(LOCAL, remote), so the first argument is the copy the user is
+      // sitting in front of and can see on screen. `>=` handed the tie to
+      // whichever journal came second — the remote one, always — and a tie is
+      // not the rare same-millisecond race it looks like: any pair of rows
+      // where NEITHER side carries an mtime ties at `0 >= 0`, which is every
+      // legacy row and was every row touched by a rule-computed scale-out
+      // before that path started stamping mtime. The visible copy losing to an
+      // invisible one is the failure that teaches you not to trust the journal.
+      // A genuine edit from another device bumps mtime, so it still wins on `>`.
+      if (!ex || (t.mtime || 0) > (ex.mtime || 0)) byId.set(t.id, t);
     }
     const newer = (b.updated_at || 0) >= (a.updated_at || 0) ? b : a;
     const rNewer = newer === b ? rawB : rawA;

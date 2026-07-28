@@ -293,6 +293,20 @@ def main() -> None:
         # Cost model (bps) — mirrored by the journal + cloud watcher
         "commission_bps": dict(config.VIVEK_COMMISSION_BPS),
         "slippage_bps": dict(config.VIVEK_SLIPPAGE_BPS),
+        # Exit ladder (TOP100 #33). public/js/journal.js re-typed these three
+        # fractions as a JS literal and nothing ever compared the two, so the
+        # page's booked-R for every scaled exit rode on a copy that could drift
+        # from the executing ladder without a single test failing. Publishing
+        # them lets the journal ADOPT the real ones and shout when they differ,
+        # which is the same contract every other number here already has.
+        "tp_scale": {
+            "long": list(config.VIVEK_TP_SCALE_LONG),
+            "short": list(config.VIVEK_TP_SCALE_SHORT),
+        },
+        # Portfolio limits the browser-side risk engine re-declared as its own
+        # defaults (TOP100 #34) — published so it can stop guessing.
+        "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
+        "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
     }
     (pathlib.Path(args.out) / "bot_rules.json").write_text(
         json.dumps(rules, indent=2) + "\n", encoding="utf-8")

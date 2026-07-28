@@ -228,6 +228,13 @@
     .sizing-calc-title { font: 600 10px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
     .sizing-result { margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--separator); display: flex; align-items: baseline; justify-content: space-between; }
     .sizing-result-val { font: 800 22px/1 var(--bot-mono); color: var(--green); }
+    /* TOP100 #35 — the size used to be a bare number, which is readable only if
+       you already know the instrument's unit. "12" is 12 shares, 12 contracts or
+       12 coins depending on the row above it, and those are not close to the
+       same trade. Baseline-aligned so it reads as a suffix, muted so it never
+       competes with the figure. */
+    .sizing-result-line { display: flex; align-items: baseline; gap: 5px; }
+    .sizing-result-unit { font: 500 11px/1 var(--sans); color: var(--muted); }
     .sizing-result-sub { font: 500 11px/1 var(--sans); color: var(--muted); text-align: right; }
     .sizing-bar-wrap { height: 6px; background: var(--fill); border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
     .sizing-bar { height: 100%; border-radius: 4px; background: var(--blue); transition: width 0.4s; }
@@ -381,12 +388,13 @@
     .bot-modal-title { font: 700 15px/1.2 var(--sans); color: var(--text); }
     .bot-modal-body { padding: 18px 20px; }
     .bot-modal-text { font: 500 13px/1.5 var(--sans); color: var(--text-2); margin-bottom: 16px; }
-    .modal-choice { display: flex; flex-direction: column; gap: 9px; margin-bottom: 16px; }
-    .modal-choice-opt { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 11px; border: 1.5px solid var(--border); background: var(--fill-2); cursor: pointer; transition: all 0.12s; }
-    .modal-choice-opt:has(input:checked) { border-color: var(--red); background: var(--red-soft); }
-    .modal-choice-opt input { margin-top: 2px; accent-color: var(--red); }
-    .modal-choice-h { font: 600 12.5px/1.3 var(--sans); color: var(--text); }
-    .modal-choice-s { font: 500 11px/1.4 var(--sans); color: var(--muted); margin-top: 2px; }
+    /* TOP100 #27. The .modal-choice* block that lived here dressed up a radio
+       pair ("close all positions" / "leave them to their stops") that decided
+       nothing — both branches took the same no-op path. Deleted with the markup
+       rather than left orphaned, because a styled control class is an invitation
+       to re-add the control. What replaces it is a note, not a choice. */
+    .bot-modal-note { font: 500 12px/1.5 var(--sans); color: var(--text-2); background: var(--fill-2); border: 0.5px solid var(--border); border-left: 2.5px solid var(--red); border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; }
+    .bot-modal-note code { font: 600 11px/1.4 var(--mono, ui-monospace, monospace); color: var(--text); background: var(--fill); border-radius: 5px; padding: 1px 5px; }
     .modal-reason-input { width: 100%; font: 500 12px/1.4 var(--sans); color: var(--text); background: var(--fill); border: 0.5px solid var(--border); border-radius: 10px; padding: 9px 11px; margin-bottom: 16px; box-sizing: border-box; }
     .modal-reason-input:focus { outline: none; border-color: var(--red); }
     .bot-modal-actions { display: flex; gap: 10px; }

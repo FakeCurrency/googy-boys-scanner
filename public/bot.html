@@ -20,7 +20,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=99" />
-  <link rel="stylesheet" href="css/bot.css?v=1" />
+  <link rel="stylesheet" href="css/bot.css?v=2" />
   <script src="js/nav.js?v=13"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
@@ -55,7 +55,7 @@
     </div>
     <div class="bot-status-right">
       <button class="bot-action-btn bot-btn-pause is-running" id="bot-toggle">⏸ PAUSE BOT</button>
-      <button class="kill-btn" id="kill-btn">⏻ KILL SWITCH</button>
+      <button class="kill-btn" id="kill-btn" title="Blocks new entries in THIS browser only. It does not close positions, does not reach a broker, and does not stop the server bot — that is kill_switch.yml in GitHub Actions.">⏻ KILL SWITCH</button>
     </div>
   </div>
 
@@ -216,6 +216,11 @@
               <div class="rule-toggle-row"><span class="rule-toggle-label">Multiple entries on pullbacks</span><input type="checkbox" class="rule-toggle" id="rule-multi-entry" /></div>
             </div>
 
+            <!-- TOP100 #36: drift vs the EXECUTING bot used to go to the console
+                 only, where nobody reads it, while this table showed the stale
+                 numbers as if they were the rules in force. -->
+            <div class="rules-drift" id="rules-drift" hidden></div>
+
             <div class="rules-btn-row">
               <button class="rules-save-btn" id="rules-save-btn">Save Rules</button>
               <button class="rules-reset-btn" id="rules-reset-btn">Reset</button>
@@ -256,26 +261,41 @@
               <div class="sizing-calc-title">Size Calculator</div>
               <div class="rule-row">
                 <span class="rule-label">Instrument</span>
-                <select class="rule-control" id="sz-instrument" style="min-width:110px">
-                  <option value="/NQ">/NQ · NAS100</option>
-                  <option value="YM">YM · US30</option>
-                  <option value="GC">GC · Gold</option>
-                  <option value="SI">SI · Silver</option>
-                  <option value="CL">CL · Crude</option>
-                  <option value="NG">NG · NatGas</option>
+                <!-- TOP100 #35: this list was the six futures contracts only.
+                     The bot trades ASX equities, NASDAQ equities and crypto
+                     perps and has never traded any of the six, so the three
+                     real ones lead and are grouped apart from the legacy set. -->
+                <select class="rule-control" id="sz-instrument" style="min-width:132px">
+                  <optgroup label="What the bot trades">
+                    <option value="STOCK">Stock · NASDAQ (US$)</option>
+                    <option value="STOCK.AX">Stock · ASX (A$)</option>
+                    <option value="CRYPTO">Crypto perp (US$)</option>
+                  </optgroup>
+                  <optgroup label="Futures (not traded here)">
+                    <option value="/NQ">/NQ · NAS100</option>
+                    <option value="YM">YM · US30</option>
+                    <option value="GC">GC · Gold</option>
+                    <option value="SI">SI · Silver</option>
+                    <option value="CL">CL · Crude</option>
+                    <option value="NG">NG · NatGas</option>
+                  </optgroup>
                 </select>
               </div>
+              <!-- These three labels are the STOCK (first option) wording, not
+                   generic placeholders — bot.js rewrites all of them per
+                   instrument, and a pre-JS render that said "pts" under a
+                   selected equity would be wrong for the half-second it showed. -->
               <div class="rule-row">
-                <span class="rule-label">Stop distance (pts)</span>
-                <input type="number" class="rule-control" id="sz-stop-dist" min="1" step="1" value="50" style="min-width:84px" />
+                <span class="rule-label" id="sz-stop-label">Stop distance (US$)</span>
+                <input type="number" class="rule-control" id="sz-stop-dist" min="0" step="any" value="0.50" style="min-width:84px" />
               </div>
               <div class="rule-row">
-                <span class="rule-label">$ per point</span>
-                <span class="sizing-line-v num" id="sz-ppt">$20.00</span>
+                <span class="rule-label" id="sz-ppt-label">US$ per $1 move</span>
+                <span class="sizing-line-v num" id="sz-ppt">$1.00</span>
               </div>
               <div class="sizing-result">
                 <div>
-                  <div class="sizing-result-val num" id="sz-result">0.2</div>
+                  <div class="sizing-result-line"><span class="sizing-result-val num" id="sz-result">0.2</span><span class="sizing-result-unit" id="sz-result-unit">shares</span></div>
                   <div class="stat-tile-sub" id="sz-result-note">recommended size</div>
                 </div>
                 <div class="sizing-result-sub">risk <span class="num" id="sz-result-risk">$200</span><br /><span class="num" id="sz-result-pct">1.93%</span> of equity</div>
@@ -417,24 +437,25 @@
     <div class="bot-modal">
       <div class="bot-modal-head">
         <span class="bot-modal-head-icon">⏻</span>
-        <span class="bot-modal-title">Activate Kill Switch</span>
+        <span class="bot-modal-title">Block new entries in this browser</span>
       </div>
       <div class="bot-modal-body">
-        <p class="bot-modal-text">This immediately blocks all new entries. Choose what happens to the <strong id="kill-modal-poscount">3</strong> open position(s):</p>
-        <div class="modal-choice">
-          <label class="modal-choice-opt">
-            <input type="radio" name="kill-action" value="close" checked />
-            <div><div class="modal-choice-h">Close all positions now</div><div class="modal-choice-s">Market-exit everything immediately at current price</div></div>
-          </label>
-          <label class="modal-choice-opt">
-            <input type="radio" name="kill-action" value="leave" />
-            <div><div class="modal-choice-h">Leave positions to their stops</div><div class="modal-choice-s">Stop new entries but let open trades run to SL / target</div></div>
-          </label>
-        </div>
+        <!-- TOP100 #27: this modal used to offer "Close all positions now —
+             market-exit everything immediately at current price". Nothing in
+             this file, bot.js or risk_manager.js has ever placed an order. The
+             confirm handler set a flag in localStorage, dimmed the position
+             cards to 35% opacity and logged "Closed all positions" — so the
+             page reported a flatten that never happened, in the one moment you
+             would most need to believe it. Wiring this to the real kill switch
+             would create a live-trading gate from the browser, which is the
+             owner's call and not a refactor, so the control now states what it
+             actually does and names where the real one lives. -->
+        <p class="bot-modal-text">This blocks the entry checks on this page from passing any new setup, on <strong>this device only</strong>. It is a local reminder, not a broker action.</p>
+        <p class="bot-modal-note"><strong>Your <span id="kill-modal-poscount">3</span> open position(s) are not touched.</strong> They keep running to their stops and targets, and the server bot keeps scanning and opening trades on its own schedule. The kill switch that actually halts the book and flattens a broker account is <code>kill_switch.yml</code> — run it from the GitHub Actions tab.</p>
         <input type="text" class="modal-reason-input" id="kill-reason" placeholder="Reason (optional) — e.g. news event, connectivity, manual" />
         <div class="bot-modal-actions">
           <button class="modal-cancel-btn" id="kill-cancel">Cancel</button>
-          <button class="modal-confirm-btn" id="kill-confirm">Activate Kill Switch</button>
+          <button class="modal-confirm-btn" id="kill-confirm">Block new entries here</button>
         </div>
       </div>
     </div>
@@ -445,7 +466,7 @@
     <p class="credit">Vivek 5.0 · AI Bot terminal · risk-first autonomous execution</p>
   </footer>
 
-  <script src="js/risk_manager.js?v=7"></script>
-  <script src="js/bot.js?v=14"></script>
+  <script src="js/risk_manager.js?v=8"></script>
+  <script src="js/bot.js?v=15"></script>
 </body>
 </html>
