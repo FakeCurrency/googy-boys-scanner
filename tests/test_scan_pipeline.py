@@ -130,3 +130,82 @@ def test_bot_buys_off_grade_raw_not_the_smoothed_grade():
     legacy = dict(row)                    # pre-v4 JSON: no grade_raw field
     legacy.pop("grade_raw")
     assert vivek_bot.evaluate_setup(legacy)["take"] is True   # falls back to grade
+
+
+# ── the pipeline funnel: drop-offs as numbers, not feelings (2026-07-29) ─────
+# Published with every scan so "is a filter too restrictive?" is answerable
+# from the artefact. Counted at the loop's own `continue` points — pure
+# observation; these tests also pin the identity so a future drop point that
+# forgets its counter shows up as a hole in the arithmetic.
+
+def _run_full(monkeypatch, frames=None, uni=None):
+    uni = uni or [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP", "sector": "Materials"}]
+    return scan.scan_vivek_market("asx", universe=uni,
+                                  frames=frames or {"BHP.AX": _frame()},
+                                  pulse_data=[], progress=False)
+
+
+def test_funnel_counts_a_clean_setup_through_to_grades(monkeypatch):
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    f = _run_full(monkeypatch)["funnel"]
+    assert f["universe"] == 1 and f["with_data"] == 1
+    assert f["setups"] == 1 and f["grades"].get("A+") == 1
+    assert f["no_setup"] == f["illiquid_setup"] == f["below_score"] == f["no_plan"] == 0
+
+
+def test_funnel_counts_no_setup(monkeypatch):
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(vivek, "evaluate", lambda df: None)
+    f = _run_full(monkeypatch)["funnel"]
+    assert f["no_setup"] == 1 and f["setups"] == 0
+
+
+def test_funnel_counts_an_illiquid_setup_separately(monkeypatch):
+    # The interesting number: a name that HAD a setup and was dropped for
+    # turnover — the row a too-tight liquidity floor would be killing.
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 0.0)
+    f = _run_full(monkeypatch)["funnel"]
+    assert f["illiquid_setup"] == 1 and f["no_setup"] == 0 and f["setups"] == 0
+
+
+def test_funnel_counts_below_score_and_no_plan(monkeypatch):
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(vivek, "score_and_grade", lambda sig: (0, None, []))
+    assert _run_full(monkeypatch)["funnel"]["below_score"] == 1
+    _stub_engine(monkeypatch, {})          # no plans at all -> no headline plan
+    f = _run_full(monkeypatch)["funnel"]
+    assert f["no_plan"] == 1 and f["setups"] == 0
+
+
+def test_funnel_identity_holds_with_a_thrown_name(monkeypatch):
+    # Two names: one clean A+, one whose evaluate throws. The thrown one lands
+    # in `errors`, and the identity must still balance exactly.
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    real_frame = _frame()
+    calls = {"n": 0}
+
+    def evaluate(df):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("synthetic failure")
+        return dict(_SIG)
+    monkeypatch.setattr(vivek, "evaluate", evaluate)
+    uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP", "sector": "Materials"},
+           {"yf": "RIO.AX", "symbol": "RIO", "name": "RIO", "sector": "Materials"}]
+    out = _run_full(monkeypatch, frames={"BHP.AX": real_frame, "RIO.AX": real_frame}, uni=uni)
+    f = out["funnel"]
+    assert f["errors"] == 1 and f["setups"] == 1
+    assert (f["with_data"] == f["no_setup"] + f["illiquid_setup"] + f["below_score"]
+            + f["no_plan"] + f["errors"] + f["setups"]), f"funnel does not balance: {f}"
+
+
+def test_funnel_is_additive_not_a_schema_bump(monkeypatch):
+    # Same contract as `errors` (TOP100 #60): consumers read named keys and the
+    # schema gates read schema_version alone, so this key must ride the
+    # CURRENT version rather than forcing every committed scan stale.
+    from scanner import config
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    out = _run_full(monkeypatch)
+    assert out["schema_version"] == config.VIVEK_SCHEMA_VERSION
+    assert isinstance(out["funnel"], dict)

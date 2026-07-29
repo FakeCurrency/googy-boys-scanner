@@ -136,6 +136,13 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # would empty `prices` for all 2,212 names at once and publish `{}`.
     price_errors = scanerrors.ErrorLog(f"vivek prices [{market_key}]")
     scanned = 0
+    # Pipeline funnel (2026-07-29): how many names each stage dropped, so "is
+    # a filter too restrictive?" is a number instead of a feeling. Counted at
+    # the loop's own `continue` points — pure observation, no gate moves. The
+    # stages are SEQUENTIAL (a name dropped for no_setup was never liquidity-
+    # checked), so illiquid_setup counts names that HAD a setup and were too
+    # thin — the exact rows a too-tight liquidity floor would be killing.
+    funnel = {"no_setup": 0, "illiquid_setup": 0, "below_score": 0, "no_plan": 0}
     for yf_ticker, df in frames.items():
         scanned += 1
         symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
@@ -167,12 +174,15 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 df = df.iloc[:-1]
             sig = vivek.evaluate(df)
             if sig is None:
+                funnel["no_setup"] += 1
                 continue
             turnover = _liquidity(df, market)
             if turnover < market.liquidity_min:
+                funnel["illiquid_setup"] += 1
                 continue
             points, raw_grade, fired = vivek.score_and_grade(sig)
             if raw_grade is None:
+                funnel["below_score"] += 1
                 continue
             # Hysteresis: hold the prior (higher) grade through small score wobble.
             # Applied BEFORE the gate so a genuine un-arm / low-R:R still demotes.
@@ -204,6 +214,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             # entirely.
             hp = gate_plan or lv
             if not hp or float(hp.get("rr") or 0) <= 0:
+                funnel["no_plan"] += 1
                 continue
             gate_rr = float(hp.get("rr") or 0)
             markers = vivek.build_markers(plans)
@@ -314,6 +325,19 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "score_max": config.VIVEK_SCORE_MAX,
         "sma": config.VIVEK_SMA,
         "sector_counts": dict(counts.most_common()),
+        # Pipeline funnel (2026-07-29, additive like `errors` below — no schema
+        # bump). Self-contained on purpose: a reader gets the whole story from
+        # this one key without joining scanned/downloaded/errors themselves.
+        # Identity, pinned by tests: with_data = no_setup + illiquid_setup +
+        # below_score + no_plan + errors + setups.
+        "funnel": {
+            "universe": len(universe),
+            "with_data": downloaded,
+            **funnel,
+            "errors": errors.payload()["errors"],
+            "setups": len(results),
+            "grades": dict(Counter(r["grade"] for r in results)),
+        },
         "pulse": pulse_data,
         "results": results,
         "prices": prices,                 # universe-wide last-close snapshot
