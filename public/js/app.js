@@ -2234,9 +2234,26 @@
         state.staleView = "failed";
         updateScanTitle(state.data);
       } else if (!silent) {
-        $("#scan-title").textContent = "No scan data yet";
-        $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
-          <p>Run the scanner to generate the data, then refresh.</p></div>`;
+        // Cold cache and nothing painted: say WHICH failure this is
+        // (2026-07-29). A 404 means the artefact is genuinely absent; anything
+        // else is a connection/CDN problem where the data exists and "run the
+        // scanner" would be wrong twice over — that case gets a retry button
+        // (and the auto-refresh interval keeps retrying regardless).
+        const kind = (window.PM && PM.loadFailKind) ? PM.loadFailKind(e) : "unreachable";
+        if (kind === "missing") {
+          $("#scan-title").textContent = "No scan data yet";
+          $("#results").innerHTML = `<div class="placeholder"><h3>No ${mode} data for ${market.toUpperCase()}</h3>
+            <p>Run the scanner to generate the data, then refresh.</p></div>`;
+        } else {
+          $("#scan-title").textContent = "Couldn't load the scan";
+          $("#results").innerHTML = `<div class="placeholder"><h3>Couldn't reach the ${market.toUpperCase()} data</h3>
+            <p>Connection problem — the scan is there, this device just couldn't fetch it.
+            It retries automatically, or:</p>
+            ${(window.PM && PM.retryHTML) ? PM.retryHTML("retry-load")
+              : '<button type="button" class="market-btn pm-retry" id="retry-load">Tap to retry</button>'}</div>`;
+          const b = document.getElementById("retry-load");
+          if (b) b.addEventListener("click", () => { b.disabled = true; load(); });
+        }
       }
     }
   }

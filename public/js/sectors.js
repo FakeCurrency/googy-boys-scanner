@@ -305,7 +305,13 @@
       render(d);
     })
     .catch(() => {
-      document.getElementById("sec-sub").textContent = "No sector data yet — calendar & news still load below.";
+      // A rejected fetch here is a CONNECTION failure, not missing data (the
+      // no-data case resolves with an empty payload above). Say so —
+      // "no sector data yet" told people to wait for a scan that had already
+      // happened (2026-07-29). A reload retries; calendar & news are separate
+      // fetches and still load.
+      document.getElementById("sec-sub").textContent =
+        "Couldn't reach sector data (connection problem) — reload to retry; calendar & news still load below.";
       render({ markets: { asx: {}, us: {} } });
     });
 })();

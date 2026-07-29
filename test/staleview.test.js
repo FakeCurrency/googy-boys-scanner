@@ -201,4 +201,71 @@ test("every in-memory cache write records when it was fetched", () => {
     `${drops} cache deletes but ${dropStamps} cacheAt deletes — they must pair`);
 });
 
+// ---------------------------------------------------------------------------
+// Cold-load failure honesty (2026-07-29): only a 404 is "missing" — every
+// other first-load failure is the CONNECTION, where "run the scanner" was
+// wrong twice over and the page must offer a retry instead.
+// ---------------------------------------------------------------------------
+const SHARED = fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap-shared.js"), "utf8");
+
+// Run the real PM factory in a minimal DOM-less sandbox and take the real
+// loadFailKind — not a re-typed copy of it.
+const loadFailKind = (() => {
+  const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => {} },
+    document: undefined, fetch: () => Promise.reject(new Error("no net in tests")),
+    console, JSON, Math, Date, String, Number, Array, Object, Promise, RegExp, parseFloat, parseInt };
+  sandbox.globalThis = sandbox;
+  require("vm").createContext(sandbox);
+  try { require("vm").runInContext(SHARED, sandbox); } catch (e) {
+    assert.fail("phasemap-shared.js no longer evaluates in a bare context: " + e.message);
+  }
+  assert.ok(sandbox.window.PM && typeof sandbox.window.PM.loadFailKind === "function",
+    "PM.loadFailKind is missing — the cold-fail split lost its shared classifier");
+  return sandbox.window.PM.loadFailKind;
+})();
+
+test("both real throw shapes classify: bare status (app.js) and 'HTTP N' (lens pages)", () => {
+  assert.strictEqual(loadFailKind(new Error("404")), "missing");
+  assert.strictEqual(loadFailKind(new Error("HTTP 404")), "missing");
+  assert.strictEqual(loadFailKind(new Error("500")), "unreachable");
+  assert.strictEqual(loadFailKind(new Error("HTTP 503")), "unreachable");
+});
+
+test("a network throw is unreachable — TypeError('Failed to fetch') has no status", () => {
+  assert.strictEqual(loadFailKind(new TypeError("Failed to fetch")), "unreachable");
+  assert.strictEqual(loadFailKind(new TypeError("NetworkError when attempting to fetch resource.")), "unreachable");
+});
+
+test("garbage input degrades to unreachable (retry-able), never to missing", () => {
+  // "missing" suppresses the retry button, so it is the claim that needs
+  // evidence; anything unparseable must fall to the retry-able side.
+  for (const bad of [null, undefined, {}, new Error(""), new Error("weird")]) {
+    assert.strictEqual(loadFailKind(bad), "unreachable", `input: ${String(bad)}`);
+  }
+});
+
+test("a 404 buried in prose does not read as missing — the status must END the message", () => {
+  // "Failed to fetch data/404_names.json: timeout" is a NETWORK failure that
+  // happens to contain digits; only a trailing status token counts.
+  assert.strictEqual(loadFailKind(new Error("404 names failed to load")), "unreachable");
+});
+
+test("every cold-fail page renders a wired retry, not an onclick string", () => {
+  const pages = {
+    "app.js": APP,
+    "phasemap.js": fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap.js"), "utf8"),
+    "specs.js": fs.readFileSync(path.join(__dirname, "..", "public", "js", "specs.js"), "utf8"),
+  };
+  for (const [name, src] of Object.entries(pages)) {
+    assert.ok(/loadFailKind/.test(src), `${name} no longer consults PM.loadFailKind`);
+    assert.ok(/retryHTML|pm-retry/.test(src), `${name} lost its retry control`);
+    assert.ok(/addEventListener\("click",[^)]*load\(\)/.test(src.replace(/\s+/g, " ")) ||
+              /addEventListener\("click", \(\) => \{ b\.disabled = true; load\(\); \}\)/.test(src.replace(/\s+/g, " ")),
+      `${name}'s retry button is not wired back to load()`);
+  }
+  // and the shared control never uses an inline onclick (an eval sink)
+  assert.ok(!/onclick=/.test(SHARED.slice(SHARED.indexOf("function retryHTML"))),
+    "retryHTML must not emit inline onclick handlers");
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

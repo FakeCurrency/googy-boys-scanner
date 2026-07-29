@@ -575,9 +575,21 @@
       });
     } catch (err) {
       state.data = null;
-      $("#pm-sub").textContent =
-        `No ${state.market.toUpperCase()} PhaseMap scan yet (${err.message})`;
-      $("#pm-list").innerHTML = `<div class="pm-empty">Run: python -m phasemap.run --market ${PM.esc(state.market)}</div>`;
+      // 404 = the artefact is genuinely missing; anything else is a
+      // connection/CDN failure where the scan EXISTS and deserves a retry
+      // button, not a "run the scanner" shrug (2026-07-29).
+      if (PM.loadFailKind(err) === "missing") {
+        $("#pm-sub").textContent =
+          `No ${state.market.toUpperCase()} PhaseMap scan yet (${err.message})`;
+        $("#pm-list").innerHTML = `<div class="pm-empty">Run: python -m phasemap.run --market ${PM.esc(state.market)}</div>`;
+      } else {
+        $("#pm-sub").textContent =
+          `Couldn't load the ${state.market.toUpperCase()} PhaseMap scan — connection problem.`;
+        $("#pm-list").innerHTML =
+          `<div class="pm-empty">The scan is there; this device couldn't fetch it. ${PM.retryHTML("pm-retry-load")}</div>`;
+        const b = document.getElementById("pm-retry-load");
+        if (b) b.addEventListener("click", () => { b.disabled = true; load(); });
+      }
       renderCounts();
       $("#pm-more").hidden = true;
       return;

@@ -220,7 +220,17 @@
     } catch (err) {
       state.data = null;
       $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()}`;
-      $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;
+      // Same split as the other lens pages (2026-07-29): only a 404 means the
+      // scan is missing; a network/CDN failure gets the truth and a retry.
+      if (PM.loadFailKind(err) === "missing") {
+        $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;
+      } else {
+        $("#sp-sub").innerHTML =
+          PM.esc(`Couldn't load the ${state.market.toUpperCase()} specs scan — connection problem. `) +
+          PM.retryHTML("sp-retry-load");
+        const b = document.getElementById("sp-retry-load");
+        if (b) b.addEventListener("click", () => { b.disabled = true; load(); });
+      }
     }
     render();
   }

@@ -465,10 +465,35 @@ window.PM = (() => {
       `${on ? "★" : "☆"}</button>`;
   }
 
+  /* Cold-load failure classification (2026-07-29). Every lens page's
+   * first-load catch used to say "No scan yet — run the scanner", which
+   * misdiagnoses the failures that actually happen in the field: the USER'S
+   * connection is down (phone, train, cafe wifi) or the CDN hiccuped — cases
+   * where the data exists and "run the scanner" is wrong twice over, and where
+   * the honest answer is a retry button, not a shrug. Only a 404 means the
+   * artefact is genuinely missing; everything else — network throw, 5xx,
+   * empty message — is "unreachable" and worth retrying.
+   *
+   * The two message shapes it has to read (both real, do not "simplify"):
+   *   app.js               throw new Error(res.status)   → "404"
+   *   phasemap.js/specs.js throw new Error("HTTP " + s)  → "HTTP 404"
+   */
+  function loadFailKind(err) {
+    const m = /(\d{3})$/.exec(String((err && err.message) || "").trim());
+    return m && +m[1] === 404 ? "missing" : "unreachable";
+  }
+
+  // One retry control everywhere (reuses the market-btn pill so no CSS ships).
+  // Pages wire the click themselves — an onclick string would be an eval sink.
+  function retryHTML(id) {
+    return `<button type="button" class="market-btn pm-retry" id="${esc(id)}">` +
+      `Tap to retry</button>`;
+  }
+
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            stepperHTML, whyHTML, glossaryHTML,
            isFundReit, toggleSpeak, watch, starHTML,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
-           staleBadgeHTML, fmtMelb };
+           staleBadgeHTML, fmtMelb, loadFailKind, retryHTML };
 })();
