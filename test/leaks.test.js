@@ -611,7 +611,9 @@ atest("the whole journal still round-trips through a real syncOut", async () => 
     if (opt && opt.method === "PUT") { sent = JSON.parse(opt.body); return { ok: true, json: async () => ({ configured: true }) }; }
     return { ok: true, json: async () => ({ configured: true, data: { trades: [{ id: "remote", mtime: 3 }], deleted: ["y"], updated_at: 5 } }) };
   };
-  const merged = await Sync.syncOut();
+  const r = await Sync.syncOut();          // {ok, journal} since 2026-07-29
+  assert.strictEqual(r.ok, true);
+  const merged = r.journal;
   assert.deepStrictEqual(merged.trades.map((t) => t.id).sort(), ["local", "remote"]);
   assert.deepStrictEqual(merged.deleted.sort(), ["x", "y"]);
   assert.ok(sent, "the PUT never happened");
@@ -645,6 +647,87 @@ test("checking the budget and spending it are separate functions", () => {
     "the spend must come AFTER the server has answered, not before the attempt");
   assert.ok(body.indexOf("_putBudgetSpend()") < body.indexOf("} catch"),
     "a fetch that REJECTED must skip the spend entirely");
+});
+
+// ── syncIn/syncOut report success by VALUE — {ok, journal} (2026-07-29) ─────
+// The journal page's status pill used to print "Synced at HH:MM" off the mere
+// RETURN of these functions. pull()/put() report failure by value, never by
+// throw, so a rate-limited or offline sync still "returned" and the pill lied
+// about the exact silent-sync-loss it exists to surface. These pin the shape.
+
+atest("syncIn: a failed pull reports ok:false and leaves local as the journal", async () => {
+  reset();
+  Sync.setCode("abc");
+  Sync.saveLocal({ trades: [{ id: "keep-me", mtime: 5 }] });
+  fetchImpl = async () => ({ ok: false, json: async () => ({ configured: true }) });   // 429 shape
+  const r = await Sync.syncIn();
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.reason, "pull-failed");
+  assert.strictEqual(r.journal.trades[0].id, "keep-me");
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+atest("syncIn: an empty remote is SUCCESS (first sync of a new code)", async () => {
+  reset();
+  Sync.setCode("abc");
+  fetchImpl = async () => ({ ok: true, json: async () => ({ configured: true, data: null }) });
+  const r = await Sync.syncIn();
+  assert.strictEqual(r.ok, true, "no remote journal yet is not a failure");
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+atest("syncIn: a good pull merges and reports ok:true", async () => {
+  reset();
+  Sync.setCode("abc");
+  fetchImpl = async () => ({ ok: true, json: async () => ({ configured: true,
+    data: { trades: [{ id: "remote-1", mtime: 9 }], deleted: [] } }) });
+  const r = await Sync.syncIn();
+  assert.strictEqual(r.ok, true);
+  assert.ok(r.journal.trades.some((t) => t.id === "remote-1"));
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+atest("syncOut: ok requires BOTH legs — a failed pull is only half a sync", async () => {
+  reset();
+  Sync.setCode("abc");
+  let calls = 0;
+  fetchImpl = async () => (++calls === 1
+    ? { ok: false, json: async () => ({ configured: true }) }        // pull 429
+    : { ok: true, json: async () => ({ configured: true }) });       // put lands
+  const r = await Sync.syncOut();
+  assert.strictEqual(r.ok, false, "the other device's edits are still not here");
+  assert.strictEqual(r.reason, "pull-failed");
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+atest("syncOut: a spent budget reports reason 'budget', not a silent success", async () => {
+  reset();
+  Sync.setCode("abc");
+  const today = new Date().toISOString().slice(0, 10);
+  globalThis.localStorage.setItem(BUDGET_KEY, JSON.stringify({ day: today, n: PUT_BUDGET }));
+  const r = await Sync.syncOut();
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.reason, "budget");
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+atest("syncOut: both legs green reports ok:true and the merged journal", async () => {
+  reset();
+  Sync.setCode("abc");
+  fetchImpl = async () => ({ ok: true, json: async () => ({ configured: true, data: null }) });
+  const r = await Sync.syncOut();
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.reason, undefined);
+  assert.ok(Array.isArray(r.journal.trades));
+  globalThis.localStorage.removeItem(CODE_KEY);
+});
+
+test("journal.js prints 'Synced at' only behind r.ok (source contract)", () => {
+  const fsx = require("fs");
+  const jsrc = fsx.readFileSync(require("path").join(__dirname, "..", "public", "js", "journal.js"), "utf8");
+  const silent = jsrc.slice(jsrc.indexOf("const silentPull"), jsrc.indexOf("visibilitychange"));
+  assert.ok(/if\s*\(r\.ok\)\s*syncedAt\(\)/.test(silent),
+    "silentPull must gate the success stamp on the sync result, not on returning");
 });
 
 // ---------------------------------------------------------------------------

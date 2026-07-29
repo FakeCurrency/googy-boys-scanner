@@ -16,7 +16,7 @@
  * run (fail closed) — an open watcher would let anyone walk every journal.
  */
 
-import { fetchBinancePrice, fetchYahooChart } from "./_prices.js";
+import { fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol } from "./_prices.js";
 import { isVivek, manageVivek } from "./_vivek_manage.js";
 
 const json = (status, body) =>
@@ -52,7 +52,12 @@ async function cryptoPrice(sym, cache) {
   let px = await fetchBinancePrice(sym);
   if (px == null) {
     try {
-      const result = await fetchYahooChart(sym, { interval: "1m", range: "1d" });
+      // Yahoo crypto MUST be "<base>-USD" — journal symbols are bare bases, and
+      // a bare base resolves to a same-named EQUITY (BDX → Becton Dickinson,
+      // ~$230), which for a watcher means auto-closing a position off the wrong
+      // instrument's price. Every other Yahoo-crypto call site normalises;
+      // this one closing trades made it the worst place to be the exception.
+      const result = await fetchYahooChart(yahooCryptoSymbol(sym), { interval: "1m", range: "1d" });
       px = result?.meta?.regularMarketPrice ?? null;
     } catch (_) { px = null; }
   }

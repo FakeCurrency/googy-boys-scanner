@@ -1937,15 +1937,23 @@
           window.GBSSync.setCode(""); reflect();
           syncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg"); return;
         }
-        await window.GBSSync.syncOut(); afterStoreChange(); reflect();
+        const r = await window.GBSSync.syncOut(); afterStoreChange(); reflect();
+        if (!r.ok) { syncStatus("Code saved, but the first sync didn't go through — will retry on the next change.", "neg"); reflectSyncPill(true); }
       } catch (_) { syncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg"); reflectSyncPill(true); }
     };
     const syncedAt = () => syncStatus("Synced at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), "live");
+    // "Synced at" is only ever printed off r.ok === true (2026-07-29). syncIn/
+    // syncOut report failure by VALUE, not by throw — the old code path printed
+    // the success stamp off the mere return, so a rate-limited or offline sync
+    // showed "Synced at HH:MM" while cross-device sync had silently stopped.
+    const syncFailMsg = (r) => r && r.reason === "budget"
+      ? "Daily sync budget spent — trades save locally; cloud sync resumes at UTC midnight."
+      : "Sync failed — will retry on the next change.";
     if (onBtn) onBtn.addEventListener("click", enable);
     if (offBtn) offBtn.addEventListener("click", () => { window.GBSSync.setCode(""); reflect(); syncStatus("Sync off — this device keeps its own copy."); });
-    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { await window.GBSSync.syncOut(); afterStoreChange(); syncedAt(); } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); reflectSyncPill(true); } });
+    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { const r = await window.GBSSync.syncOut(); afterStoreChange(); if (r.ok) syncedAt(); else { syncStatus(syncFailMsg(r), "neg"); reflectSyncPill(true); } } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); reflectSyncPill(true); } });
     codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
-    const silentPull = async () => { if (!window.GBSSync.enabled()) return; try { await window.GBSSync.syncIn(); afterStoreChange(); syncedAt(); } catch (_) {} };
+    const silentPull = async () => { if (!window.GBSSync.enabled()) return; try { const r = await window.GBSSync.syncIn(); afterStoreChange(); if (r.ok) syncedAt(); } catch (_) {} };
     document.addEventListener("visibilitychange", () => { if (!document.hidden) silentPull(); });
     setInterval(() => { if (!document.hidden) silentPull(); }, 60000);
     reflect();

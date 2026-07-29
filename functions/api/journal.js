@@ -41,20 +41,37 @@ const cleanCode = (request) =>
 // be ≥8 chars; the enumeration guard below is what keeps short codes viable.
 const MIN_CODE_LEN = 4;
 
-// Per-IP request throttle across GET+PUT — caps code enumeration regardless of
-// hit or miss. KV read+increment is not atomic, so racing requests can slip a
-// few past the cap; acceptable for an abuse guard (not a security boundary on
-// its own — the miss counter below backs it up). Fail-open on KV errors: a
-// limiter outage must never break sync.
-const REQS_PER_HOUR = 30;
+// Per-IP hourly throttle — PUTS ONLY (2026-07-29). It used to count GET+PUT at
+// 30/hr, which sat UNDER the journal page's own poll cadence: journal.js runs
+// silentPull() every 60s while the tab is visible (= 60 GET/hr), plus a pull on
+// every visibilitychange, plus a pull+put per edit. A tab left open therefore
+// rate-limited ITSELF out of cloud sync within ~30 minutes of every UTC hour —
+// and the client swallowed the 429 and kept printing "Synced at", so the
+// lockout was invisible. Any GET cap below the poll cadence re-creates that.
+//
+// GETs are now uncapped here on purpose, for three reasons that stack:
+//   1. Enumeration (the thing the old cap named) is guarded by the MISS counter
+//      below — a wrong code is a miss, 30 misses/day locks the IP out. A GET
+//      with the RIGHT code is the owner; there is nothing to throttle.
+//   2. Reads are the cheap KV resource (100k/day free vs 1k writes/day), and a
+//      KV-backed limiter cannot protect reads anyway — every check IS a read.
+//   3. The old limiter wrote KV on EVERY allowed request (up to 720 writes/day
+//      per IP just for counting) — directly against the miss-counter's own
+//      stated goal ("the write quota stays protected"). Counting only PUTs
+//      keeps counter writes proportional to journal writes.
+//
+// KV read+increment is not atomic, so racing PUTs can slip a few past the cap;
+// acceptable for an abuse guard (the client's own PUT_BUDGET backs it up).
+// Fail-open on KV errors: a limiter outage must never break sync.
+const PUTS_PER_HOUR = 30;
 
-async function overRateLimit(env, request) {
+async function overPutLimit(env, request) {
   try {
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     const bucket = new Date().toISOString().slice(0, 13);   // UTC hour bucket
     const key = `ratelimit:journal:${ip}:${bucket}`;
     const n = parseInt((await env.JOURNAL_KV.get(key)) || "0", 10) + 1;
-    if (n > REQS_PER_HOUR) return true;
+    if (n > PUTS_PER_HOUR) return true;   // over the cap → refuse WITHOUT writing
     await env.JOURNAL_KV.put(key, String(n), { expirationTtl: 7200 });
     return false;
   } catch (_) { return false; }
@@ -92,10 +109,8 @@ export const onRequestGet = async ({ env, request }) => {
   }
   const code = cleanCode(request);
   if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
-  if (await overRateLimit(env, request)) {
-    return json(429, { ok: false, configured: true,
-      message: "Too many sync requests from this connection — try again in an hour." });
-  }
+  // No hourly cap on GET — see PUTS_PER_HOUR above. The miss counter is the
+  // enumeration guard; a capped GET was locking out the page's own polling.
   if (await tooManyMisses(env, request)) {
     return json(429, { ok: false, configured: true,
       message: "Too many unknown sync codes from this connection today — try again tomorrow." });
@@ -115,9 +130,9 @@ export const onRequestPut = async ({ env, request }) => {
   }
   const code = cleanCode(request);
   if (code.length < MIN_CODE_LEN) return json(400, { ok: false, configured: true, message: "Sync code must be at least 4 characters." });
-  if (await overRateLimit(env, request)) {
+  if (await overPutLimit(env, request)) {
     return json(429, { ok: false, configured: true,
-      message: "Too many sync requests from this connection — try again in an hour." });
+      message: "Too many sync writes from this connection — try again in an hour. (Your journal is saved locally.)" });
   }
   if (await tooManyMisses(env, request)) {
     return json(429, { ok: false, configured: true,

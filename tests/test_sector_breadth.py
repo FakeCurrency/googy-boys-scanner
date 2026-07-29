@@ -807,3 +807,58 @@ def test_the_message_is_plain_ascii(push):
     sb.notify(hist, _blocks(hist), "2026-07-14", send=lambda *a: push.append(a))
     for event, title, details in push:
         (event + title + details).encode("ascii")
+
+
+# ── the history day key follows the EXCHANGE calendar, not UTC's ─────────────
+# (2026-07-29) Rows are counted as SESSIONS by unheld_streak/cap_streak, so the
+# key has to be the market's own calendar date. Under AEDT the ASX session
+# 10:00–16:00 Sydney spans TWO UTC dates (23:00–05:00), so a UTC key wrote two
+# rows for one session and the 5-session "LOOK WIDER" alert tripped after ~2.5
+# real sessions. NASDAQ mirrors it today with no DST needed: 00:00–05:00 UTC is
+# still the PREVIOUS calendar day in New York.
+
+def test_session_day_uses_each_markets_own_timezone():
+    """Wiring pin: the tz comes from config.MARKETS, per market."""
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    assert sb._session_day("asx") == dt.datetime.now(
+        ZoneInfo("Australia/Sydney")).strftime("%Y-%m-%d")
+    assert sb._session_day("nasdaq") == dt.datetime.now(
+        ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+    assert sb._session_day("crypto") == dt.datetime.now(
+        dt.timezone.utc).strftime("%Y-%m-%d")
+
+
+def test_session_day_survives_an_unknown_market_as_utc():
+    import datetime as dt
+    assert sb._session_day("nope") == dt.datetime.now(
+        dt.timezone.utc).strftime("%Y-%m-%d")
+
+
+def test_update_forced_day_still_applies_to_every_market(tmp_path, monkeypatch):
+    """The backfill contract: an explicit `day` is used verbatim — the
+    session-day derivation only kicks in when no day is forced. HISTORY_FILE is
+    monkeypatched onto tmp: update() writes the module-level path, and a test
+    that touched the repo's real history would be scan pollution."""
+    monkeypatch.setattr(sb, "HISTORY_FILE", tmp_path / "sector_history.json")
+    uni = _uni(Materials=766)
+    markets = {"asx": {"results": _res("Materials", 10), "universe": uni}}
+    payload = sb.update(markets, out_dir=tmp_path, positions=[], day="2020-01-01")
+    assert payload is not None
+    rows = json.loads((tmp_path / "sector_history.json").read_text(encoding="utf-8"))["rows"]
+    assert [r["d"] for r in rows] == ["2020-01-01"], "forced day must reach append_history verbatim"
+
+
+def test_update_without_a_forced_day_keys_rows_on_the_markets_session(tmp_path, monkeypatch):
+    """Plumbing pin, deterministic on purpose: asserting against the REAL
+    _session_day would pass under a UTC-key regression whenever the two
+    calendars happen to agree (they do for ASX during AEST daytime — which is
+    exactly why the bug sat latent). Stubbing it proves update() ROUTES through
+    the per-market session day rather than a shared UTC one."""
+    monkeypatch.setattr(sb, "HISTORY_FILE", tmp_path / "sector_history.json")
+    monkeypatch.setattr(sb, "_session_day", lambda m: f"SESSION-{m}")
+    uni = _uni(Materials=766)
+    markets = {"asx": {"results": _res("Materials", 10), "universe": uni}}
+    assert sb.update(markets, out_dir=tmp_path, positions=[]) is not None
+    rows = json.loads((tmp_path / "sector_history.json").read_text(encoding="utf-8"))["rows"]
+    assert [r["d"] for r in rows] == ["SESSION-asx"]

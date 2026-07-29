@@ -41,6 +41,7 @@ import argparse
 import datetime as dt
 import json
 import pathlib
+from zoneinfo import ZoneInfo
 
 from . import config, output
 
@@ -728,6 +729,32 @@ def notify(hist: dict, blocks: dict, day: str, send=None) -> list[str]:
 
 # ── the publish step ──────────────────────────────────────────────────────────
 
+def _session_day(market: str) -> str:
+    """The calendar date of the trading session this scan belongs to — in the
+    MARKET's own timezone, not UTC's.
+
+    History rows are keyed per market per DAY and the streak counters treat
+    rows as SESSIONS, so the key has to follow the exchange calendar. Under
+    AEDT (UTC+11, ~Oct–Apr) the ASX session 10:00–16:00 Sydney runs 23:00–05:00
+    UTC — it SPANS TWO UTC DATES, so a UTC key writes two rows for one session
+    and `unheld_streak`/`cap_streak` count a single session twice, tripping the
+    5-session "LOOK WIDER" alert after ~2.5 real sessions. Latent for ASX under
+    AEST (UTC+10: the session sits inside one UTC date), live every October —
+    the same class of bug the market-hours crons fixed in TOP100 #41.
+
+    NASDAQ has the mirror problem TODAY, no DST needed: an all-market scan
+    fired during the ASX morning (00:00–05:00 UTC) is still the previous
+    calendar day in New York, so the UTC key dated NY's session one day
+    forward. Both keys agree during each market's own session, so the switch
+    creates no discontinuity there, and a previously mis-dated row is replaced
+    by the correct session's last write (per-(day,market) last-write-wins).
+    Same `ZoneInfo(market.timezone)` pattern as data.py and scan.py.
+    """
+    m = config.MARKETS.get(market)
+    tz = ZoneInfo(m.timezone) if m else dt.timezone.utc
+    return dt.datetime.now(tz).strftime("%Y-%m-%d")
+
+
 def _load_positions() -> list:
     try:
         return list(json.loads(BOOK_FILE.read_text(encoding="utf-8")).get("open", []))
@@ -747,6 +774,9 @@ def update(markets: dict, out_dir=None, positions=None, day: str | None = None) 
         return None
     out_dir = pathlib.Path(out_dir) if out_dir else PUBLIC_FILE.parent
     positions = _load_positions() if positions is None else list(positions)
+    # An explicit `day` (backfill, tests) applies to every market verbatim.
+    # Otherwise each market gets its OWN session date — see _session_day.
+    forced_day = day
     day = day or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
 
     try:
@@ -768,7 +798,7 @@ def update(markets: dict, out_dir=None, positions=None, day: str | None = None) 
         snap = compute(market, data.get("results"), data.get("universe"),
                        positions,
                        ((tape.get("markets") or {}).get(_TAPE_KEY.get(market, market))))
-        hist = append_history(hist, snap, book, day)
+        hist = append_history(hist, snap, book, forced_day or _session_day(market))
         streak = cap_streak(hist, market)
         for b in snap["sectors"]:
             b["trend"] = trend(hist, market, b["sector"])

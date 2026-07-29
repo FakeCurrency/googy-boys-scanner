@@ -53,6 +53,15 @@ export const onRequestPost = async ({ env, request }) => {
   // 5 minutes, and a hard daily cap across all markets. Degrades to
   // no-limiting if the KV binding is absent, so a misconfig can't brick the
   // button. (Reuses the JOURNAL_KV namespace — see functions/api/journal.js.)
+  //
+  // The cooldown/counter are written BEFORE the GitHub call (closing the
+  // double-click race) and REFUNDED if the dispatch fails (2026-07-29). They
+  // used to stick on failure, so an expired token meant: 502 to the user, no
+  // run dispatched — and then five minutes of 429 "it's still running" about a
+  // scan that never existed, plus a burned daily slot per attempt. The refund
+  // has the same non-atomicity the increment does (a concurrent success could
+  // land between write and refund); rare-path, accepted for an abuse guard.
+  let refundGuard = null;
   if (env.JOURNAL_KV) {
     try {
       const cdKey = `ratelimit:scan:${market}`;
@@ -73,6 +82,12 @@ export const onRequestPost = async ({ env, request }) => {
       }
       await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 300 });
       await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
+      refundGuard = async () => {
+        try {
+          await env.JOURNAL_KV.delete(cdKey);
+          await env.JOURNAL_KV.put(dayKey, String(used), { expirationTtl: 172800 });
+        } catch (_) { /* refund is best-effort */ }
+      };
     } catch (_) { /* KV hiccup → let the request through */ }
   }
 
@@ -116,9 +131,14 @@ export const onRequestPost = async ({ env, request }) => {
       429: "GitHub is rate-limiting scan requests — wait a minute and try again.",
     }[res.status] || `GitHub rejected the request (${res.status}).`;
 
+    if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
     return json(502, { ok: false, configured: true, status: res.status, message: friendly });
   } catch (err) {
     const aborted = err && err.name === "AbortError";
+    // On timeout the dispatch MAY still have landed server-side, so the
+    // cooldown is deliberately NOT refunded — a duplicate run costs more than
+    // a 5-minute wait. A clean network failure dispatched nothing: refund.
+    if (!aborted && refundGuard) await refundGuard();
     return json(aborted ? 504 : 502, {
       ok: false,
       configured: true,

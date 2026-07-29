@@ -66,6 +66,11 @@ export const onRequestPost = async ({ request, env }) => {
 
   // Abuse guard (2026-07-09): public endpoint, each call burns an Actions run.
   // One close per symbol per minute + daily cap. No KV binding → no limiting.
+  // Written before the dispatch (closes the double-click race), REFUNDED if the
+  // dispatch fails (2026-07-29) — a failed dispatch used to leave a minute of
+  // "give it a minute to process" about a close that never existed, and burned
+  // a daily slot. Same non-atomicity as the increment; rare-path, accepted.
+  let refundGuard = null;
   if (env.JOURNAL_KV) {
     try {
       const cdKey = `ratelimit:close:${inputs.symbol}`;
@@ -79,6 +84,12 @@ export const onRequestPost = async ({ request, env }) => {
       }
       await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 60 });
       await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
+      refundGuard = async () => {
+        try {
+          await env.JOURNAL_KV.delete(cdKey);
+          await env.JOURNAL_KV.put(dayKey, String(used), { expirationTtl: 172800 });
+        } catch (_) { /* refund is best-effort */ }
+      };
     } catch (_) { /* KV hiccup → let it through */ }
   }
 
@@ -108,9 +119,13 @@ export const onRequestPost = async ({ request, env }) => {
     }
 
     // Never echo the upstream body — it can carry token/repo details.
+    if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
     return json(502, { ok: false, message: `GitHub rejected the request (${res.status}).` });
   } catch (err) {
     const aborted = err?.name === "AbortError";
+    // Timeout: the dispatch MAY have landed — keep the cooldown (a duplicate
+    // close-run costs more than a one-minute wait). Clean failure: refund.
+    if (!aborted && refundGuard) await refundGuard();
     return json(aborted ? 504 : 502, {
       ok: false,
       message: aborted ? "GitHub took too long — try again." : "Network error reaching GitHub.",

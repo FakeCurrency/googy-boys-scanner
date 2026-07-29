@@ -28,6 +28,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+from zoneinfo import ZoneInfo
 
 from . import config, output
 from .discord import post_webhook
@@ -89,23 +90,79 @@ def compute_alignments(market: str) -> list[dict]:
     return out
 
 
-def diff_new(alignments: list[dict], state: dict) -> tuple[list[dict], dict]:
-    """New or upgraded alignments vs the saved state. Lapsed keys are pruned so
-    a re-formed alignment pings again."""
-    new_state, fresh = {}, []
+def _state_key(a: dict) -> str:
+    return f"{a['market']}:{a['ticker']}:{a['side']}"
+
+
+def diff_new(alignments: list[dict], state: dict) -> list[dict]:
+    """New or upgraded alignments vs the saved state (for the ALERTS-page log).
+
+    State values are SIGNED (see build_state): the magnitude is the last count
+    this layer has SEEN, so history compares against abs(prev) — an alignment
+    persisting at the same count is not news, whether or not it was posted.
+    """
+    return [a for a in alignments if a["count"] > abs(state.get(_state_key(a), 0))]
+
+
+def build_state(alignments: list[dict], state: dict, posted_keys: set[str]) -> dict:
+    """Next state. Lapsed keys are pruned so a re-formed alignment pings again.
+
+    SIGNED COUNTS (2026-07-29): +count means "this count was actually POSTED",
+    -count means "seen for the history log, but never delivered". The old state
+    recorded a bare +count for EVERYTHING current — including 2-lens alignments
+    that were below DISCORD_CONF_MIN_LENSES and not watchlisted, and including
+    runs where the watchlist itself was unavailable (GBS_SYNC_CODE unset, or
+    the /api/journal fetch flaked, both of which return an empty watch set).
+    That burned the count: star the name a day later and `count > prev` is
+    `2 > 2` — the ping the watchlist bypass exists for can never fire. The
+    webhook secret already had exactly this protection ("don't mark as seen");
+    the sign extends it to the watchlist without re-logging persisting
+    alignments to the ALERTS page every run.
+
+    Pre-fix state files hold bare positive counts, which read as "posted" —
+    correct for everything at/above the threshold, conservative (no
+    retroactive ping) for the sub-threshold entries burned before the fix.
+    """
+    out = {}
     for a in alignments:
-        key = f"{a['market']}:{a['ticker']}:{a['side']}"
+        key = _state_key(a)
         prev = state.get(key, 0)
-        new_state[key] = a["count"]
-        if a["count"] > prev:
-            fresh.append(a)
-    return fresh, new_state
+        if key in posted_keys:
+            out[key] = a["count"]                    # delivered at this count
+        elif abs(prev) == a["count"]:
+            out[key] = prev                          # unchanged — keep its sign
+        else:
+            out[key] = -a["count"]                   # seen, not delivered
+    return out
+
+
+def _market_tz(market: str):
+    m = config.MARKETS.get(market)
+    return ZoneInfo(m.timezone) if m else dt.timezone.utc
+
+
+def _entry_session_day(e: dict) -> str:
+    """A stored history entry's date in ITS market's calendar, for dedup.
+
+    Dedup runs on the MARKET's calendar date, not UTC's: one AEDT ASX session
+    runs 23:00–05:00 UTC — two UTC dates — so a UTC day key can log the same
+    alignment twice per session (same class as sectorbreadth._session_day).
+    The stored `date` field stays a UTC timestamp; BOTH sides of the comparison
+    convert to the market's day, or the boundary hour would just move instead
+    of closing."""
+    try:
+        stamp = dt.datetime.fromisoformat(str(e.get("date", "")))
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=dt.timezone.utc)
+        return stamp.astimezone(_market_tz(str(e.get("market", "")))).strftime("%Y-%m-%d")
+    except ValueError:
+        return str(e.get("date", ""))[:10]         # unparseable → old behaviour
 
 
 def append_history(fresh: list[dict]) -> None:
     """Site-side alert log (public/data/phasemap/alert_history.json) — Discord
     pings scroll away; the ALERTS page doesn't. Written for EVERY new
-    alignment regardless of the Discord lens threshold, deduped per day."""
+    alignment regardless of the Discord lens threshold, deduped per market-day."""
     if not fresh:
         return
     try:
@@ -114,11 +171,11 @@ def append_history(fresh: list[dict]) -> None:
         hist = {}
     entries = hist.get("entries", [])
     now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-    day = now[:10]
-    seen = {(str(e.get("date", ""))[:10], e.get("market"), e.get("ticker"),
+    seen = {(_entry_session_day(e), e.get("market"), e.get("ticker"),
              e.get("side"), e.get("count")) for e in entries}
     for a in fresh:
-        key = (day, a["market"], a["ticker"], a["side"], a["count"])
+        key = (dt.datetime.now(_market_tz(a["market"])).strftime("%Y-%m-%d"),
+               a["market"], a["ticker"], a["side"], a["count"])
         if key in seen:
             continue
         entries.insert(0, {"date": now, "market": a["market"], "ticker": a["ticker"],
@@ -214,16 +271,23 @@ def main(argv=None) -> int:
             state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
         except Exception:
             state = {}
-    fresh, new_state = diff_new(alignments, state)
+    fresh = diff_new(alignments, state)
     # Discord only carries alignments at/above the lens threshold (default:
     # triples only). The site still shows every 2-lens alignment visually —
-    # state tracks them all, so a 2->3 upgrade always pings.
+    # state tracks them all (signed, see build_state), so a 2->3 upgrade
+    # always pings.
     min_lenses = getattr(config, "DISCORD_CONF_MIN_LENSES", 2)
     # Starred names + open positions bypass the threshold: YOUR names ping
     # at 2 lenses even while the channel is triples-only.
     watch = load_watch_keys()
-    to_post = [a for a in fresh
-               if a["count"] >= min_lenses or _watch_key(a) in watch]
+    # Post = eligible (threshold or watchlisted) AND above the SIGNED prev —
+    # so a count that was only ever logged (-2, e.g. starred after it formed,
+    # or the watchlist was unreachable when it formed) still pings, while a
+    # count that was delivered (+2) never re-pings. Drawn from `alignments`,
+    # not `fresh`: the star-later ping is precisely the not-"new" case.
+    to_post = [a for a in alignments
+               if (a["count"] >= min_lenses or _watch_key(a) in watch)
+               and a["count"] > state.get(_state_key(a), 0)]
     starred = sum(1 for a in to_post if _watch_key(a) in watch)
     print(f"confluence: {len(alignments)} active, {len(fresh)} new/upgraded, "
           f"{len(to_post)} to post (>= {min_lenses} lenses or watchlisted; "
@@ -231,7 +295,7 @@ def main(argv=None) -> int:
     if not args.dry_run:
         append_history(fresh)   # the ALERTS page log — independent of Discord
     if not to_post:
-        _save_state_if_changed(state, new_state)
+        _save_state_if_changed(state, build_state(alignments, state, set()))
         return 0
 
     payloads = build_payloads(to_post, watch)
@@ -249,8 +313,9 @@ def main(argv=None) -> int:
         if not post_webhook(url, p):
             print("confluence: post failed — state NOT saved (will retry next run)")
             return 0
-    print(f"confluence: posted {len(fresh)} alignment(s) to Discord")
-    _save_state_if_changed(state, new_state)
+    print(f"confluence: posted {len(to_post)} alignment(s) to Discord")
+    _save_state_if_changed(state, build_state(alignments, state,
+                                              {_state_key(a) for a in to_post}))
     return 0
 
 

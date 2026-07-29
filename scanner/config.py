@@ -1166,6 +1166,30 @@ MARKETS = {
 REPORT_CURRENCY   = "USD"
 FX_AUDUSD_FALLBACK = 0.66
 
+# Sanity band for the LIVE AUD/USD fetch (run.py) — a rate outside this range
+# is a bad tick or the wrong instrument, and publishing it would poison every
+# US$ conversion on the site until the next scan. AUD/USD has spent recent
+# decades roughly between 0.48 (2001) and 1.10 (2011); the band is deliberately
+# wider than any plausible print, so it only ever rejects garbage.
+FX_AUDUSD_SANITY_MIN = 0.4
+FX_AUDUSD_SANITY_MAX = 1.2
+
+# ---------------------------------------------------------------------------
+# Scan pipeline thresholds (run.py) — moved from inline literals 2026-07-29
+# ---------------------------------------------------------------------------
+# Coverage below this prints a "!! LOW" marker on the scan log line. Reporting
+# only — the publish decision stays "did we get ANYTHING at all".
+SCAN_COVERAGE_LOW_PCT = 80
+# ...unless the universe is tiny (curated lists, --limit runs), where a couple
+# of misses swing the percentage and the marker would be noise.
+SCAN_COVERAGE_MIN_UNIVERSE = 50
+
+# Minimum average daily dollar-volume for a name to qualify as a sector-page
+# "mover" (sectors.enrich) — per PAGE market key. Movers are trade candidates
+# in the owner's eye, so illiquid names that spike on nothing are excluded.
+SECTOR_MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
+SECTOR_MOVER_MIN_DVOL_DEFAULT = 1_000_000
+
 # ---------------------------------------------------------------------------
 # Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)
 # ---------------------------------------------------------------------------

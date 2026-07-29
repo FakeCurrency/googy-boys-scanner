@@ -245,22 +245,42 @@
     }
   }
 
-  // Pull remote → merge into local → save. Returns the (possibly merged) journal.
+  // Pull remote → merge into local → save.
+  //
+  // RETURN SHAPE (2026-07-29): {ok, journal, reason?} — not the bare journal.
+  // `ok` answers "did the cloud round-trip actually work", because the journal
+  // page's status pill used to print "Synced at HH:MM" off the mere RETURN of
+  // this function — and pull() reports failure by VALUE ({ok:false}), never by
+  // throw, so a rate-limited or offline pull still "returned" and the pill lied
+  // about the exact state (silent sync loss) it exists to surface. Every page
+  // caller ignores the return or only fires side effects, so widening the shape
+  // breaks nobody; journal.js now checks `.ok` before claiming success.
+  // `ok:true` with no remote data yet is a SUCCESS (first sync of a new code).
   async function syncIn() {
     const local = load();
+    if (!getCode()) return { ok: false, journal: local, reason: "no-code" };
     const r = await pull();
-    if (!r.ok || !r.data) return local;
-    return saveLocal(merge(local, r.data));
+    if (!r.ok) return { ok: false, journal: local, reason: "pull-failed" };
+    if (!r.data) return { ok: true, journal: local };
+    return { ok: true, journal: saveLocal(merge(local, r.data)) };
   }
 
-  // Merge remote first (so we never clobber remote-only trades), save, then push.
+  // Merge remote first (so we never clobber remote-only trades), save, then
+  // push. Same {ok, journal, reason?} shape as syncIn; `ok` requires BOTH legs
+  // (a push that lands after a failed pull is only half a sync — the other
+  // device's edits are still not here, so "Synced" would still be a lie).
   async function syncOut() {
     const local = load();
+    if (!getCode()) return { ok: false, journal: local, reason: "no-code" };
     const r = await pull();
     const merged = r.ok && r.data ? merge(local, r.data) : local;
     saveLocal(merged);
-    await put(merged);
-    return merged;
+    const pushed = await put(merged);
+    const ok = !!(r.ok && pushed && pushed.ok);
+    const reason = !r.ok ? "pull-failed"
+      : pushed && pushed.skipped === "budget" ? "budget"
+      : pushed && pushed.ok ? undefined : "push-failed";
+    return reason === undefined ? { ok, journal: merged } : { ok, journal: merged, reason };
   }
 
   let pushT = null;

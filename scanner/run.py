@@ -76,7 +76,8 @@ def main() -> None:
     # stock-level winners/losers & rotation depth (ASX scan -> "asx" page,
     # NASDAQ scan -> "us" page).
     mover_inputs: dict[str, tuple] = {}
-    MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
+    MOVER_MIN_DVOL = getattr(config, "SECTOR_MOVER_MIN_DVOL",
+                             {"asx": 1_000_000, "us": 10_000_000})
     # Same idea, keyed by SCAN market rather than page: the sector-breadth
     # surface needs this run's universe (the denominator) and results (the
     # numerator) together, and it is computed after the sector tape is written
@@ -112,9 +113,11 @@ def main() -> None:
                 market_key, fresh, [u["yf"] for u in universe])
             cov = 100 * len(deep_frames) // max(len(universe), 1)
             reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
+            low = (cov < getattr(config, "SCAN_COVERAGE_LOW_PCT", 80)
+                   and len(universe) > getattr(config, "SCAN_COVERAGE_MIN_UNIVERSE", 50))
             print(f"  coverage: {len(deep_frames)}/{len(universe)} ({cov}%)  "
                   f"{cache_stats['fresh']} fresh{reused_note}"
-                  f"{'  !! LOW' if cov < 80 and len(universe) > 50 else ''}", flush=True)
+                  f"{'  !! LOW' if low else ''}", flush=True)
             # Guard: nothing fresh AND nothing cached → the source is fully blocked.
             # Skip rather than clobber yesterday's good JSON.
             if not deep_frames:
@@ -225,7 +228,8 @@ def main() -> None:
     for page_key, (frames, universe) in mover_inputs.items():
         if page_key in sec["markets"]:
             _sectors.enrich(sec["markets"][page_key], frames, universe,
-                            MOVER_MIN_DVOL.get(page_key, 1_000_000),
+                            MOVER_MIN_DVOL.get(page_key, getattr(
+                                config, "SECTOR_MOVER_MIN_DVOL_DEFAULT", 1_000_000)),
                             market_key=page_key)
     # Keep the enrichment this run could not recompute (see sectors.carry_forward).
     sec_file = pathlib.Path(args.out) / "sectors.json"
@@ -280,7 +284,8 @@ def main() -> None:
         fx_frames = download(["AUDUSD=X"], period="5d")
         fx_df = fx_frames.get("AUDUSD=X")
         rate = float(fx_df["Close"].dropna().iloc[-1]) if fx_df is not None else None
-        if rate and 0.4 < rate < 1.2:                  # sanity band for AUD/USD
+        if rate and (getattr(config, "FX_AUDUSD_SANITY_MIN", 0.4) < rate
+                     < getattr(config, "FX_AUDUSD_SANITY_MAX", 1.2)):
             output.write_json(pathlib.Path(args.out) / "fx.json", {
                 "audusd": round(rate, 4),
                 "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
