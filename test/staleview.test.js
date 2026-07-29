@@ -288,4 +288,70 @@ test("renderFunnel exists, is wired into applyPayload, and escapes what it inter
     "chips are the UNUSUAL-volume names — a >=2x floor keeps 1.0x noise out");
 });
 
+// ---------------------------------------------------------------------------
+// Fetch timeouts (2026-07-29, Phase B): a HUNG connection neither resolves nor
+// rejects — the one mechanism that could strand the deck on the skeleton
+// forever. Every scan/data load must carry the abort signal so a hang becomes
+// a rejection and takes the same retry path as any failure.
+// ---------------------------------------------------------------------------
+test("PM.fetchTimeout attaches a real abort signal and classifies as retry-able", () => {
+  // Synchronous on purpose: this suite's runner does not await async fns, so
+  // an async body here would false-PASS. The call SHAPE is asserted (the stub
+  // records what fetch was handed); the real end-to-end abort is proven by
+  // the browser hang-probe run before every ship of this path.
+  const seen = [];
+  const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => {} },
+    console, JSON, Math, Date, String, Number, Array, Object, Promise, RegExp,
+    parseFloat, parseInt, AbortSignal, setTimeout, clearTimeout,
+    fetch: (url, opts) => { seen.push({ url, opts }); return new Promise(() => {}); } };
+  sandbox.globalThis = sandbox;
+  require("vm").createContext(sandbox);
+  require("vm").runInContext(SHARED, sandbox);
+  const PM = sandbox.window.PM;
+  assert.ok(typeof PM.fetchTimeout === "function", "PM.fetchTimeout is missing");
+  assert.ok(PM.DATA_FETCH_TIMEOUT_MS >= 10000,
+    "a tight timeout aborts real slow-3G progress on a ~0.5MB payload");
+  PM.fetchTimeout("data/x.json", { cache: "no-cache" }, 50);
+  assert.strictEqual(seen.length, 1);
+  assert.ok(seen[0].opts && seen[0].opts.signal instanceof AbortSignal,
+    "fetchTimeout must hand fetch an AbortSignal — without it a hang is forever");
+  assert.strictEqual(seen[0].opts.cache, "no-cache", "caller opts must survive the wrap");
+  // ...and a timeout rejection classifies as retry-able, never as 'missing'
+  assert.strictEqual(PM.loadFailKind(Object.assign(new Error("signal timed out"),
+    { name: "TimeoutError" })), "unreachable");
+  assert.strictEqual(PM.loadFailKind(Object.assign(new Error("The operation was aborted."),
+    { name: "AbortError" })), "unreachable");
+});
+
+test("the index.html preload timeout stays in step with PM's constant", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+  const inline = /AbortSignal\.timeout\((\d+)\)/.exec(html);
+  assert.ok(inline, "the head-start preload lost its timeout — app.js AWAITS " +
+    "that promise, so a hung preload strands the deck before app.js even fetches");
+  const shared = /DATA_FETCH_TIMEOUT_MS = (\d+)/.exec(SHARED);
+  assert.ok(shared, "PM's DATA_FETCH_TIMEOUT_MS constant is gone");
+  assert.strictEqual(inline[1], shared[1],
+    "index.html inline timeout and PM.DATA_FETCH_TIMEOUT_MS have drifted apart");
+});
+
+test("every data fetch in the deck's scripts goes through the timeout helper", () => {
+  // app.js: fetchT wraps PM.fetchTimeout; no bare fetch( may remain.
+  const APP2 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
+  assert.ok(/const fetchT = /.test(APP2), "app.js lost its fetchT wrapper");
+  const bare = (APP2.match(/[^.\w]fetch\(/g) || []).length;
+  // exactly ONE bare fetch( is allowed: the fallback inside fetchT itself
+  assert.strictEqual(bare, 1,
+    `app.js has ${bare} bare fetch( sites — every data load must go through fetchT`);
+  for (const [file, min] of [["phasemap.js", 3], ["specs.js", 1]]) {
+    const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", file), "utf8");
+    const wrapped = (src.match(/PM\.fetchTimeout\(/g) || []).length;
+    assert.ok(wrapped >= min, `${file}: expected >=${min} PM.fetchTimeout call(s), found ${wrapped}`);
+    assert.ok(!/[^.\w]fetch\(`data\//.test(src), `${file} still fetches data/ without a timeout`);
+  }
+  for (const file of ["horizon.js", "regime.js"]) {
+    const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", file), "utf8");
+    assert.ok(/PM\.fetchTimeout/.test(src), `${file} (deck strip) is not timeout-wrapped`);
+  }
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

@@ -78,7 +78,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   1248 pytest (58 files) + 643 JS (16 suites) — EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   1248 pytest (58 files) + 646 JS (16 suites) — EVERY push (test.yml)
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -1753,7 +1753,7 @@ data-provider key, Cloudflare Access.
 ```bash
 pip install -r requirements.txt
 python -m pytest -q                      # full gate (1248 tests / 58 files, 2026-07-29)
-node test/risk_manager.test.js           # + 15 more JS suites, 643 total; see test.yml
+node test/risk_manager.test.js           # + 15 more JS suites, 646 total; see test.yml
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

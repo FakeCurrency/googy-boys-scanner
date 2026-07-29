@@ -351,7 +351,7 @@ window.PM = (() => {
      it's always as fresh as whatever each lens last published. */
   const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
   async function loadConfluence(market, vivekData = null) {
-    const grab = (url) => fetch(url, { cache: "no-cache" })
+    const grab = (url) => fetchTimeout(url, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null);
     // Wave 2 (2026-07-22): the dashboard already holds the full VIVEK payload
     // it just rendered — callers can pass it in so the same file isn't
@@ -465,6 +465,30 @@ window.PM = (() => {
       `${on ? "★" : "☆"}</button>`;
   }
 
+  /* Data-fetch timeout (2026-07-29, Phase B). A NETWORK FAILURE rejects and
+   * lands in the cold-load retry states below — but a HUNG connection neither
+   * resolves nor rejects, and was the one remaining mechanism that could
+   * leave the deck on "Loading latest scan…" forever. Every scan/data load
+   * now carries an abort signal so a hang BECOMES a rejection and takes the
+   * same honest retry path as any other failure.
+   *
+   * 20s: the ASX payload is ~2MB (≈0.5MB compressed) and a slow-3G phone
+   * legitimately needs 10–15s — a tighter limit would abort real progress on
+   * the exact devices that most need the data. Feature-detected: a browser
+   * without AbortSignal.timeout gets the old no-timeout behaviour rather
+   * than a synchronous throw on every fetch.
+   *
+   * KEEP IN STEP with the inline copy in index.html's head-start preload —
+   * that script runs before this file loads and cannot use PM; a test pins
+   * the two numbers to each other. */
+  const DATA_FETCH_TIMEOUT_MS = 20000;
+
+  function fetchTimeout(url, opts, ms) {
+    const t = ms || DATA_FETCH_TIMEOUT_MS;
+    const canTime = typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function";
+    return fetch(url, canTime ? { ...(opts || {}), signal: AbortSignal.timeout(t) } : (opts || {}));
+  }
+
   /* Cold-load failure classification (2026-07-29). Every lens page's
    * first-load catch used to say "No scan yet — run the scanner", which
    * misdiagnoses the failures that actually happen in the field: the USER'S
@@ -495,5 +519,6 @@ window.PM = (() => {
            stepperHTML, whyHTML, glossaryHTML,
            isFundReit, toggleSpeak, watch, starHTML,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
-           staleBadgeHTML, fmtMelb, loadFailKind, retryHTML };
+           staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
+           fetchTimeout, DATA_FETCH_TIMEOUT_MS };
 })();

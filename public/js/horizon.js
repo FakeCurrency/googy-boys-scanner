@@ -334,7 +334,7 @@
     btns.forEach((b) => b.addEventListener("click", () => setTimeout(render, 0)));
   }
 
-  fetch("data/sector_breadth.json", { cache: "no-cache" })
+  ((window.PM && PM.fetchTimeout) ? PM.fetchTimeout : fetch)("data/sector_breadth.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     // Scoped to the FETCH AND PARSE ONLY, which is the whole of #88: hiding the
     // surface is the right answer to "the file is not there", and the wrong

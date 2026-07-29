@@ -33,9 +33,15 @@
     // preloads the market the link asked for, not the last-used one.
     try { var _qm = new URLSearchParams(location.search).get("m"); if (_qm) _pm = _qm.toLowerCase(); } catch (_e2) {}
     if (["asx", "nasdaq", "crypto"].indexOf(_pm) < 0) _pm = "asx";
+    /* Timeout (2026-07-29, Phase B): app.js AWAITS this promise before its own
+       fetch, so a HUNG preload used to strand the deck on the skeleton with no
+       rejection to catch. 20000ms — KEEP IN STEP with PM.DATA_FETCH_TIMEOUT_MS
+       in phasemap-shared.js (this runs before PM loads; a test pins the two).
+       Feature-detected: no AbortSignal.timeout → old no-timeout behaviour. */
+    var _sig; try { _sig = AbortSignal.timeout(20000); } catch (_e3) { _sig = undefined; }
     window.__scanPreload = {
       market: _pm,
-      promise: fetch("data/" + _pm + "_vivek.json", { cache: "no-cache" })
+      promise: fetch("data/" + _pm + "_vivek.json", { cache: "no-cache", signal: _sig })
         .then(function (r) { return r.ok ? r.json() : null; })
         .catch(function () { return null; })
     };
@@ -153,7 +159,7 @@
         <button class="seg-btn tb-watch" id="watch-toggle" aria-pressed="false"
           title="Your starred names, from every lens — tap to show only them">★ <span class="seg-count" id="watch-count">0</span></button>
         <button class="seg-btn tb-watch tb-dim is-active" id="fund-dim" aria-pressed="true"
-          title="FUND / REIT rows are dimmed — the bot never trades them and most CFD brokers don't list them. Tap to show them at full strength.">⚠ FUNDS</button>
+          title="FUND / REIT rows are dimmed — the bot never trades them and most CFD brokers don't list them. Tap to show them at full strength. (A filter, not a warning.)">FUNDS DIMMED</button>
         <div class="tb-chips" id="vk-filters" hidden></div>
         <div class="tb-sort" role="group" aria-label="Sort">
           <button class="tb-sort-label" id="sort-cycle" title="Sort — tap to cycle: SCORE → PRICE → R:R → M.C → A-Z → SECTOR (sector groups the tape)">SCORE</button>
@@ -179,10 +185,10 @@
   </footer>
 
   <script src="js/gbs-sync.js?v=10"></script>
-  <script src="js/phasemap-shared.js?v=11"></script>
+  <script src="js/phasemap-shared.js?v=12"></script>
   <script src="js/cache.js?v=2"></script>
-  <script src="js/app.js?v=105"></script>
-  <script src="js/horizon.js?v=5"></script>
-  <script src="js/regime.js?v=2"></script>
+  <script src="js/app.js?v=106"></script>
+  <script src="js/horizon.js?v=6"></script>
+  <script src="js/regime.js?v=3"></script>
 </body>
 </html>

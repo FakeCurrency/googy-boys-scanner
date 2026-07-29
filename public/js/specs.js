@@ -196,7 +196,7 @@
   async function load() {
     $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()} · loading…`;
     try {
-      const res = await fetch(`data/${state.market}_spec.json`, { cache: "no-cache" });
+      const res = await PM.fetchTimeout(`data/${state.market}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
       $("#sp-title").textContent =

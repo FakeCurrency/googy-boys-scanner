@@ -266,7 +266,7 @@
     btns.forEach((b) => b.addEventListener("click", () => setTimeout(render, 0)));
   }
 
-  fetch("data/regime.json", { cache: "no-cache" })
+  ((window.PM && PM.fetchTimeout) ? PM.fetchTimeout : fetch)("data/regime.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     // Scoped to the FETCH AND PARSE ONLY — hiding the surface answers "the file
     // is not there", and nothing else.

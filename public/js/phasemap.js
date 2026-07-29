@@ -527,8 +527,8 @@
       // narrations ship in a sidecar file (latest.json is ~25% lighter);
       // fetched in parallel and merged back. Old full payloads still work.
       const [res, narrRes] = await Promise.all([
-        fetch(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" }),
-        fetch(`data/phasemap/${state.market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
+        PM.fetchTimeout(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" }),
+        PM.fetchTimeout(`data/phasemap/${state.market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
       ]);
       if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
@@ -540,7 +540,7 @@
         // cache-busted by the wanted run_date (shared, CDN-friendly buster).
         if (nj && nj.run_date && state.data.run_date && nj.run_date !== state.data.run_date) {
           try {
-            const r2 = await fetch(
+            const r2 = await PM.fetchTimeout(
               `data/phasemap/${state.market}/narrations.json?rd=${encodeURIComponent(state.data.run_date)}`,
               { cache: "reload" });
             if (r2.ok) nj = await r2.json();

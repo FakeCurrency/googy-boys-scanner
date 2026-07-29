@@ -7,6 +7,13 @@
 (() => {
   "use strict";
 
+  // Every data fetch goes through PM.fetchTimeout (2026-07-29, Phase B): a
+  // hung connection becomes a rejection and takes the same retry path as any
+  // failure, instead of stranding the deck on the skeleton. Guarded so a
+  // missing PM (load-order surprise) degrades to plain fetch, never a throw.
+  const fetchT = (url, opts, ms) =>
+    (window.PM && PM.fetchTimeout) ? PM.fetchTimeout(url, opts, ms) : fetch(url, opts || {});
+
   // ---- constants -----------------------------------------------------------
   const CACHE_PREFIX   = "gbs:cache:";
   const CACHE_TTL_MS   = 5 * 60 * 1000;   // 5 min localStorage cache
@@ -181,7 +188,7 @@
     b.classList.toggle("is-active", on);
     b.setAttribute("aria-pressed", on ? "true" : "false");
   }
-  // ⚠ FUNDS chip (v2 #47): active = FUND/REIT rows dimmed.
+  // FUNDS DIMMED chip (v2 #47, relabelled 2026-07-29): active = FUND/REIT rows dimmed.
   function syncFundDim() {
     const b = document.getElementById("fund-dim");
     if (!b) return;
@@ -934,7 +941,7 @@
 
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
-    // they crowd the A+ list. Toggled by the ⚠ FUNDS chip; hover/open restores.
+    // they crowd the A+ list. Toggled by the FUNDS DIMMED chip; hover/open restores.
     const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
     return `<div class="row-wrap${dimCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
@@ -996,7 +1003,7 @@
     if (!sym || _prefetched.has(sym)) return;
     _prefetched.add(sym);
     const modeDir = state.mode === "reversal" ? "_rev" : state.mode === "spec" ? "_spec" : state.mode === "short" ? "_short" : "";
-    fetch(`data/charts/${state.market}${modeDir}/${encodeURIComponent(sym)}.json`, { cache: "force-cache" }).catch(() => {});
+    fetchT(`data/charts/${state.market}${modeDir}/${encodeURIComponent(sym)}.json`, { cache: "force-cache" }).catch(() => {});
   }
 
   // Lazy detail (Wave 2, 2026-07-22): the expanded panel used to be rendered
@@ -1595,7 +1602,7 @@
     let pill = document.getElementById("sys-pill");
     let health = null;
     try {
-      const r = await fetch("/api/health?max_h=4", { cache: "no-store" });
+      const r = await fetchT("/api/health?max_h=4", { cache: "no-store" });
       if (r.ok || r.status === 503) health = await r.json();
     } catch (_) {}
     if (!health || typeof health.ok !== "boolean") { if (pill) pill.hidden = true; return; }
@@ -2089,7 +2096,7 @@
     const box = $("#bot-activity");
     if (!box) return;
     try {
-      const res = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
+      const res = await fetchT("data/vivek_bot_book.json", { cache: "no-cache" });
       if (!res.ok) return;
       const b = await res.json();
       const evts = [];
@@ -2152,7 +2159,7 @@
     const key = "gbs:sess:" + url;
     try { const c = sessionStorage.getItem(key); if (c) return JSON.parse(c); } catch (_) {}
     try {
-      const res = await fetch(url, { cache: "no-cache" });
+      const res = await fetchT(url, { cache: "no-cache" });
       if (!res.ok) return null;
       const j = await res.json();
       try { sessionStorage.setItem(key, JSON.stringify(j)); } catch (_) {}
@@ -2256,7 +2263,7 @@
         d = await pre.promise.catch(() => null);
       }
       if (!d) {
-        const res = await fetch(dataFile(market, mode), { cache: "no-cache" });
+        const res = await fetchT(dataFile(market, mode), { cache: "no-cache" });
         if (!res.ok) throw new Error(res.status);
         d = await res.json();
       }
@@ -2436,7 +2443,7 @@
         await new Promise(r => setTimeout(r, 30000));
         if (token !== _pollToken) return;            // a newer poll took over
         try {
-          const r = await fetch(dataFile(market, mode), { cache: "no-cache" });
+          const r = await fetchT(dataFile(market, mode), { cache: "no-cache" });
           if (!r.ok) continue;
           const d = await r.json();
           if (!d.generated_at || d.generated_at === oldGenAt) continue;
@@ -2468,7 +2475,7 @@
       const timer = setTimeout(() => ctrl.abort(), 12000);
       let scanTriggered = false;
       try {
-        const res = await fetch("/api/scan", {
+        const res = await fetchT("/api/scan", {
           method: "POST", signal: ctrl.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ market: mkt }),
@@ -2530,7 +2537,7 @@
       renderRows();
     });
 
-    // ⚠ FUNDS dim toggle (v2 #47) — active chip = funds dimmed (the default).
+    // FUNDS DIMMED toggle (v2 #47) — active chip = funds dimmed (the default).
     const fundDim = document.getElementById("fund-dim");
     if (fundDim) fundDim.addEventListener("click", () => {
       state.dimFunds = state.dimFunds === false;
@@ -2585,7 +2592,7 @@
     let lensIdx = { market: null, phasemap: [], specs: [] };
     async function loadLensIndex() {
       if (lensIdx.market === state.market) return lensIdx;
-      const grab = (url) => fetch(url, { cache: "no-cache" })
+      const grab = (url) => fetchT(url, { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const [pm, sp] = await Promise.all([
         grab(`data/phasemap/${state.market}/latest.json`),
@@ -2896,7 +2903,7 @@
     for (const m of ["asx", "nasdaq", "crypto"]) {
       const key = `${m}:${state.mode}`;
       if (m === state.market || state.cache[key]) continue;
-      fetch(dataFile(m, state.mode), { cache: "no-cache" })
+      fetchT(dataFile(m, state.mode), { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d && !state.cache[key]) {
