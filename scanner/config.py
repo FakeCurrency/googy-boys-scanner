@@ -1185,6 +1185,23 @@ SCAN_HEALTH_FILE = "data/scan_health.json"
 # exception itself. Sample is capped (same reasoning as SCAN_ERROR_SAMPLE_MAX)
 # and sorted by that multiple, so the payload cost stays ~1KB.
 SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX = 12
+
+# ---------------------------------------------------------------------------
+# The "liquidity arriving" list (owner-ruled 2026-07-30: "Green-light, narrow
+# implementation only.") — public/data/<market>_arriving.json
+# ---------------------------------------------------------------------------
+# TWO-LEG entry rule, exactly as ruled, applied only to names the floor KILLED:
+#   leg A: today's turnover ALONE clears the market's existing floor
+#          (market.liquidity_min — the floor itself is BYTE-UNTOUCHED), and
+#   leg B: today's volume >= SCAN_ARRIVING_MIN_RVOL x the name's own 20d avg.
+# Leg A is load-bearing: rvol alone is the pump signature (an 18x day on A$500
+# of dust). REPORT-ONLY and structurally fenced: the list lives in its own
+# file, which nothing in scanner/broker/ opens (test-pinned); rows carry no
+# grade/plan/entry fields; qualifying names are still DROPPED from the scan
+# exactly as before. Never fed to Specs/VIVEK/PhaseMap, never re-graded.
+SCAN_ARRIVING_MIN_RVOL = 3.0
+SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
+                               # not multiple — the multiple is the pump smell)
                                 # (0 = never loud)
 
 

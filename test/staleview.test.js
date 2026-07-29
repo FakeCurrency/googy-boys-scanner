@@ -286,6 +286,16 @@ test("renderFunnel exists, is wired into applyPayload, and escapes what it inter
     "absent sample (older payload) must not be presented as 'none show volume'");
   assert.ok(/rvol\s*\|\|\s*0\)\s*>=\s*2/.test(body),
     "chips are the UNUSUAL-volume names — a >=2x floor keeps 1.0x noise out");
+  // The arriving list (owner-ruled, 2026-07-30): count in the summary, rows
+  // lazily fetched from the FENCED file — through the timeout helper, escaped,
+  // and only when the payload advertises a count.
+  assert.ok(/liquidity arriving/.test(body), "the summary lost the arriving count");
+  assert.ok(/fetchT\(`data\/\$\{slot\.dataset\.market\}_arriving\.json`/.test(body),
+    "arriving rows must load lazily from the fenced file via the timeout helper");
+  assert.ok(/n\(f\.arriving\)\s*\?\s*`<div class="sf-arriving"/.test(body),
+    "the lazy slot must be gated on the payload's arriving count");
+  assert.ok(/encodeURIComponent\(r\.symbol\)/.test(body.slice(body.indexOf("sf-arriving"))),
+    "arriving chip hrefs must URI-encode the symbol");
 });
 
 // ---------------------------------------------------------------------------

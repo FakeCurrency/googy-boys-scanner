@@ -1697,7 +1697,8 @@
       `Pipeline: ${n(f.universe)} scanned → ${n(f.with_data)} with data → ` +
       `${n(f.setups)} setups (${n(f.no_setup)} no setup · ${n(f.illiquid_setup)} illiquid` +
       `${n(f.below_score) + n(f.no_plan) ? ` · ${n(f.below_score) + n(f.no_plan)} below bar` : ""}` +
-      `${n(f.errors) ? ` · ${n(f.errors)} errored` : ""})`;
+      `${n(f.errors) ? ` · ${n(f.errors)} errored` : ""})` +
+      `${n(f.arriving) ? ` · ${n(f.arriving)} liquidity arriving` : ""}`;
     // Absent sample (payload predates the field) is NOT the same claim as an
     // empty one — only a present-and-empty array may say "none show volume".
     const hasSample = Array.isArray(f.illiquid_sample);
@@ -1715,8 +1716,34 @@
         n(f.illiquid_setup)
           ? `${n(f.illiquid_setup)} name(s) had a setup but sit under the liquidity floor.${volNote}`
           : `Nothing was dropped for liquidity this scan.`
-      }</div>`;
+      }${n(f.arriving) ? `<div class="sf-arriving" data-market="${esc(state.market)}"></div>` : ""}</div>`;
     box.hidden = false;
+    // The "liquidity arriving" rows live in the FENCED report file
+    // (<market>_arriving.json — owner-ruled, report-only, never the bot's),
+    // fetched lazily on first open so the deck pays nothing for it.
+    const slot = box.querySelector(".sf-arriving");
+    if (slot) {
+      const fill = () => {
+        if (slot.dataset.loaded) return;
+        slot.dataset.loaded = "1";
+        fetchT(`data/${slot.dataset.market}_arriving.json`, { cache: "no-cache" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((a) => {
+            const rows = (a && Array.isArray(a.results)) ? a.results : [];
+            if (!rows.length) { slot.textContent = ""; return; }
+            slot.innerHTML =
+              `Cleared the floor on TODAY'S turnover alone (report-only — still not traded):` +
+              `<div class="sf-chips">` +
+              rows.map((r) => (r && r.symbol)
+                ? `<a class="sf-chip" href="chart.html?m=${esc(slot.dataset.market)}&s=${encodeURIComponent(r.symbol)}&mode=vivek">` +
+                  `${esc(r.symbol)}${r.fund ? " ⚠FUND" : ""} <span class="sf-rvol">${esc(String(r.rvol))}×</span></a>`
+                : "").join("") +
+              `</div>`;
+          })
+          .catch(() => { slot.textContent = ""; });
+      };
+      if (box.open) fill(); else box.addEventListener("toggle", () => { if (box.open) fill(); }, { once: true });
+    }
   }
 
   function renderEntryFilters(d) {

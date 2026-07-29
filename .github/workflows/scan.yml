@@ -453,7 +453,10 @@ jobs:
           if [ "$M" = "all" ]; then MK="asx nasdaq crypto"; else MK="$M"; fi
           PATHS="$SHARED"
           for m in $MK; do
-            PATHS="$PATHS public/data/${m}_vivek.json public/data/${m}_prices.json journal/vivek_bot_book.${m}.json data/universe_cache/${m}.json"
+            # ${m}_arriving.json (2026-07-30, owner-ruled): the fenced
+            # report-only "liquidity arriving" file. Staged like any artefact;
+            # nothing in scanner/broker/ reads it (test-pinned).
+            PATHS="$PATHS public/data/${m}_vivek.json public/data/${m}_prices.json public/data/${m}_arriving.json journal/vivek_bot_book.${m}.json data/universe_cache/${m}.json"
           done
           echo "staging scope: $M -> $PATHS"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`

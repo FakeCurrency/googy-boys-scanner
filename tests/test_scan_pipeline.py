@@ -254,3 +254,122 @@ def test_illiquid_sample_is_present_and_empty_when_nothing_dropped(monkeypatch):
     _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
     out = _run_full(monkeypatch)
     assert out["funnel"]["illiquid_sample"] == []
+
+
+# ── the "liquidity arriving" list (owner-ruled 2026-07-30) ───────────────────
+# Two-leg rule on the floor's kills; its own fenced file; report-only. These
+# tests ARE the four fences from the design note — each one pins a boundary
+# the ruling made a hard limit.
+
+def _spiky_frame(close=100.0, hist_vol=1_000.0, today_vol=5_000.0):
+    f = _frame()
+    f["Close"] = close
+    f["Volume"] = hist_vol
+    f.loc[f.index[-1], "Volume"] = today_vol
+    return f
+
+
+def _run_arriving(monkeypatch, tmp_path, frames, uni=None):
+    uni = uni or [{"yf": "THN.AX", "symbol": "THN", "name": "Thin Co", "sector": "Energy"}]
+    out = scan.scan_vivek_market("asx", universe=uni, frames=frames,
+                                 pulse_data=[], progress=False, out_root=str(tmp_path))
+    import json as _json
+    arr = _json.loads((tmp_path / "asx_arriving.json").read_text(encoding="utf-8"))
+    return out, arr
+
+
+def test_arriving_two_legs_qualify_together(monkeypatch, tmp_path):
+    """Today clears the floor alone AND rvol >= 3: publishes, with the schema
+    the design note promised — and the name is STILL dropped from the scan."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 50_000.0)   # avg under the floor
+    # today: 100.0 x 5,000 = A$500k >= A$100k floor; rvol = 5000/1200 = 4.2
+    out, arr = _run_arriving(monkeypatch, tmp_path, {"THN.AX": _spiky_frame()})
+    assert [r["symbol"] for r in arr["results"]] == ["THN"]
+    row = arr["results"][0]
+    assert row["turnover_today"] == 500_000 and row["rvol"] == 4.2
+    assert row["turnover_avg20"] == 50_000 and row["adv_usd"] == 50_000.0
+    assert row["fund"] is False and row["dir"] == "LONG"
+    assert arr["rule"]["floor"] == 100_000 and arr["rule"]["min_rvol"] == 3.0
+    # fence: still dropped — not graded, not published, counted as a kill
+    assert out["results"] == []
+    assert out["funnel"]["illiquid_setup"] == 1
+    assert out["funnel"]["arriving"] == 1
+
+
+def test_arriving_leg_a_excludes_dust_no_matter_the_multiple(monkeypatch, tmp_path):
+    """An 18x day on dust stays out — leg A is the load-bearing half."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 500.0)
+    # today: 0.01 x 90,000 = A$900 << floor, rvol = 90000/5450 = 16.5
+    out, arr = _run_arriving(monkeypatch, tmp_path,
+                             {"THN.AX": _spiky_frame(close=0.01, hist_vol=1_000, today_vol=90_000)})
+    assert arr["results"] == []                      # present AND empty
+    assert out["funnel"]["illiquid_setup"] == 1      # still an audited kill
+    assert out["funnel"]["arriving"] == 0
+
+
+def test_arriving_leg_b_excludes_ordinary_volume(monkeypatch, tmp_path):
+    """Today clears the floor but volume is ordinary (rvol < 3): not 'arriving'."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 90_000.0)
+    # today: 100 x 4,400 = A$440k >= floor, rvol = 4400/(19*4000+4400 over 20)=4400/4020=1.1
+    out, arr = _run_arriving(monkeypatch, tmp_path,
+                             {"THN.AX": _spiky_frame(hist_vol=4_000, today_vol=4_400)})
+    assert arr["results"] == []
+    assert out["funnel"]["arriving"] == 0
+
+
+def test_arriving_rows_carry_no_tradeable_fields(monkeypatch, tmp_path):
+    """Fence 4: no grade, no grade_raw, no plans, no entry — a mis-wire into a
+    bot path fails the bot's own field requirements instead of trading."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 50_000.0)
+    _out, arr = _run_arriving(monkeypatch, tmp_path, {"THN.AX": _spiky_frame()})
+    row = arr["results"][0]
+    for banned in ("grade", "grade_raw", "plans", "entry", "stop", "tp1", "score"):
+        assert banned not in row, f"arriving row must never carry '{banned}'"
+
+
+def test_arriving_results_identity_fence(monkeypatch, tmp_path):
+    """Fence 2: the published results array is IDENTICAL whether or not a
+    qualifying name exists — the list is computed from the drop path."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    liq = {"BHP.AX": 10_000_000.0, "THN.AX": 50_000.0}
+
+    def fake_liq(df, m, _map=liq):
+        # keyed by frame identity via a column marker set below
+        return _map["THN.AX"] if float(df["Volume"].iloc[-1]) == 5_000.0 else _map["BHP.AX"]
+    monkeypatch.setattr(scan, "_liquidity", fake_liq)
+    uni2 = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP", "sector": "Materials"},
+            {"yf": "THN.AX", "symbol": "THN", "name": "Thin Co", "sector": "Energy"}]
+    out_with, arr_with = _run_arriving(monkeypatch, tmp_path,
+                                       {"BHP.AX": _frame(), "THN.AX": _spiky_frame()}, uni=uni2)
+    out_without, _ = _run_arriving(monkeypatch, tmp_path, {"BHP.AX": _frame()},
+                                   uni=[uni2[0]])
+    assert [r["symbol"] for r in arr_with["results"]] == ["THN"]
+    strip = lambda rows: [{k: v for k, v in r.items()} for r in rows]  # noqa: E731
+    assert strip(out_with["results"]) == strip(out_without["results"]), \
+        "a qualifying thin name must not change the published results in ANY way"
+
+
+def test_arriving_fund_shaped_names_arrive_pre_tagged(monkeypatch, tmp_path):
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 50_000.0)
+    uni = [{"yf": "IHEB.AX", "symbol": "IHEB", "name": "iShares Core Bond ETF", "sector": ""}]
+    _out, arr = _run_arriving(monkeypatch, tmp_path, {"IHEB.AX": _spiky_frame()}, uni=uni)
+    assert arr["results"][0]["fund"] is True
+
+
+def test_fence_1_nothing_in_broker_ever_opens_the_arriving_file():
+    """Fence 1, the structural one: the bot's input surface is the scan
+    payload; no CODE-shaped reference to the arriving artefact may appear in
+    scanner/broker/. (The bare English word 'arriving' exists in two old
+    comments there — prose is not a wire, so the probe matches the file stem
+    and identifier shapes instead.)"""
+    import pathlib as _pl
+    broker = _pl.Path(scan.__file__).parent / "broker"
+    offenders = [p.name for p in broker.glob("*.py")
+                 if any(tok in p.read_text(encoding="utf-8", errors="ignore")
+                        for tok in ("_arriving", "arriving.json", "ARRIVING"))]
+    assert offenders == [], f"broker code references the arriving artefact: {offenders}"

@@ -33,6 +33,18 @@ def _code_sha() -> str:
         return ""
 
 
+def _fund_tag(info: dict) -> bool:
+    """The SAME fund/REIT detection the bot's EXCLUDE_FUNDS rule uses — imported,
+    never re-typed (the repo's mirror-drift rule). Fail-open to False: a broken
+    import must not take the scan down, and an untagged fund in a REPORT-ONLY
+    file is a cosmetic miss, not a position."""
+    try:
+        from .broker.vivek_bot import _is_fund_or_reit
+        return bool(_is_fund_or_reit(info))
+    except Exception:                                  # noqa: BLE001
+        return False
+
+
 def _liquidity(df, market) -> float:
     # Crypto: Yahoo "Volume" is already USD dollar-volume; stocks: price * shares.
     if getattr(market, "volume_is_usd", False):
@@ -144,6 +156,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # thin — the exact rows a too-tight liquidity floor would be killing.
     funnel = {"no_setup": 0, "illiquid_setup": 0, "below_score": 0, "no_plan": 0}
     illiquid_sample: list[dict] = []   # the floor's kills, with volume context
+    arriving: list[dict] = []          # the fenced two-leg subset (owner-ruled)
     for yf_ticker, df in frames.items():
         scanned += 1
         symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
@@ -198,6 +211,34 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                         "turnover": int(turnover),
                         "rvol": rvol,
                     })
+                    # The "liquidity arriving" list (owner-ruled 2026-07-30):
+                    # of the floor's kills, the two-leg subset where today's
+                    # turnover ALONE clears the untouched floor AND today's
+                    # volume is >= SCAN_ARRIVING_MIN_RVOL x the name's own
+                    # average. The name is STILL DROPPED (this branch ends in
+                    # `continue` exactly as before) — it is recorded for the
+                    # fenced report file only, with no grade/plan/entry fields.
+                    today_turnover = float(df["Close"].iloc[-1]) * float(vol.iloc[-1])
+                    if (today_turnover >= market.liquidity_min
+                            and rvol >= float(getattr(config, "SCAN_ARRIVING_MIN_RVOL", 3.0))):
+                        info = meta.get(yf_ticker, {})
+                        arriving.append({
+                            "symbol": symbol,
+                            "name": info.get("name", symbol),
+                            "sector": info.get("sector", ""),
+                            "dir": "LONG" if sig["direction"] == "long" else "SHORT",
+                            "price": round(float(df["Close"].iloc[-1]), 8),
+                            "turnover_avg20": int(turnover),
+                            "turnover_today": int(today_turnover),
+                            "rvol": rvol,
+                            # Same value as turnover_avg20, under the bot-gate
+                            # field name (20d avg dollar volume, quote ccy) —
+                            # the standing thin-row rule from the brief. The
+                            # bot never reads this FILE; the field is here so
+                            # no thin row anywhere lacks it.
+                            "adv_usd": round(float(turnover), 2),
+                            "fund": _fund_tag(info),
+                        })
                 except (KeyError, IndexError, TypeError, ValueError):
                     pass
                 continue
@@ -323,6 +364,32 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         # Restore by swapping [] back to pulse.fetch().
         pulse_data = []
     downloaded = len(frames)
+
+    # The "liquidity arriving" report file (owner-ruled 2026-07-30) — its OWN
+    # artefact, never a payload key: the bot's entire input surface is this
+    # function's RETURN VALUE, so a separate file cannot reach it by
+    # construction. Present-and-empty when nothing qualifies (absent means an
+    # older build; empty means "checked, none today" — different claims).
+    # Written only when out_root is provided (run.py always provides it;
+    # unit tests pass a tmp dir and read it back).
+    if out_root:
+        from . import output as _output
+        _output.write_json(
+            pathlib.Path(out_root) / f"{market_key}_arriving.json",
+            {
+                "schema_version": 1,
+                "market": market_key,
+                "generated_at": now.isoformat(timespec="seconds"),
+                "rule": {
+                    "floor": market.liquidity_min,
+                    "min_rvol": float(getattr(config, "SCAN_ARRIVING_MIN_RVOL", 3.0)),
+                    "note": ("today's turnover alone >= floor AND today's volume >= "
+                             "min_rvol x own 20d avg; report-only, never traded"),
+                },
+                "results": sorted(arriving, key=lambda r: -r["turnover_today"])[
+                    :int(getattr(config, "SCAN_ARRIVING_MAX", 12) or 0)],
+            }, newline=True)
+
     return {
         "market": market.key,
         "label": market.label,
@@ -364,6 +431,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             "illiquid_sample": sorted(illiquid_sample,
                                       key=lambda r: -r["rvol"])[
                 :int(getattr(config, "SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX", 12) or 0)],
+            # COUNT only — the rows live in <market>_arriving.json, the fenced
+            # report file nothing in scanner/broker/ opens (owner-ruled).
+            "arriving": len(arriving),
         },
         "pulse": pulse_data,
         "results": results,
