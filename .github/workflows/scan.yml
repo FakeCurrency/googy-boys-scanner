@@ -445,7 +445,11 @@ jobs:
           # has — leave it unstaged and every session starts from day one forever.
           # (regime.json has no such memory — it recomputes six months from bars
           # every run — but it is merged the same way, so it stages the same way.)
-          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/sector_breadth.json data/sector_history.json public/data/regime.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
+          # data/scan_health.json (2026-07-29): the consecutive-dry-run counter
+          # run.py keeps per market. It MUST be in this list — the whole point
+          # is surviving the container across runs (a dry run's only diff can
+          # be this file, which is what makes the outage visible in the log).
+          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/sector_breadth.json data/sector_history.json data/scan_health.json public/data/regime.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json"
           if [ "$M" = "all" ]; then MK="asx nasdaq crypto"; else MK="$M"; fi
           PATHS="$SHARED"
           for m in $MK; do

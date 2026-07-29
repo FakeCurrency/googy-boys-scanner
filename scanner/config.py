@@ -359,6 +359,16 @@ VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 # SIZING — FIXED NOTIONAL (owner decision, 2026-07-28):
 #   "5k position moving forward on each 30 stocks and a cap of 150k"
 #
+# THE 5,000 IS IN EACH MARKET'S OWN CURRENCY (owner decision, 2026-07-29:
+# "It's fine make the US 5k USD and the AUS 5k AUD"). The constant is
+# currency-less and `notional / entry` prices entry in the market's local
+# currency, so an ASX position buys A$5,000 of stock and a NASDAQ one US$5,000
+# — that asymmetry (~US$3,500 vs US$5,000 at 0.70) was flagged as #61's live
+# half and the owner EXPLICITLY KEPT IT. Do not "fix" it by converting the
+# notional through FX before sizing; that exact one-liner was offered and
+# declined. Cross-market AGGREGATES (report dollars, drawdown) still convert
+# to REPORT_CURRENCY — that half shipped in the backtest and stays.
+#
 # Every entry now buys a FIXED dollar amount, not a risk-derived one. Set
 # VIVEK_BOT_POSITION_NOTIONAL = 0 to fall back to the old risk-% sizing path
 # (VIVEK_BOT_RISK_PCT below), which is retained intact for exactly that reason.
@@ -424,6 +434,22 @@ VIVEK_BOT_MAX_HOLD_DAYS  = 28
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+#  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
+#    position has been open for 2 weeks with minimal movement for me then to
+#    manually make a decision"). REPORT-ONLY — it closes nothing, changes
+#    nothing, takes nothing; it pings so the OWNER decides. It fills the gap
+#    the two automatic rules leave: MAX_HOLD_DAYS (28) auto-closes pre-TP1
+#    stalls but says nothing at the half-way mark, and runners past TP1 are
+#    exempt from it FOREVER — a +0.1R runner can squat a scarce slot for
+#    months with nothing ever asking whether it should. "Minimal movement" is
+#    |unreal_r| below the threshold; a row further red than that is the stop's
+#    business, not this probe's. Re-pings while still stale every REPEAT days;
+#    a row that starts moving drops its stamp, so a LATER re-stall is a fresh
+#    episode. 0 days = probe off.
+VIVEK_BOT_STALE_PROBE_DAYS       = 14
+VIVEK_BOT_STALE_PROBE_MAX_ABS_R  = 0.5
+VIVEK_BOT_STALE_PROBE_REPEAT_DAYS = 7
+VIVEK_BOT_STALE_PROBE_PUSH       = True
 #  • MAX_DATA_AGE_DAYS (2026-07-20): rows built from the last-good frame cache
 #    carry data_age_days > 0 when Yahoo dropped the ticker this run. A trigger
 #    "armed" on multi-day-old data is fiction — the real market has moved —
@@ -788,6 +814,19 @@ ALERT_SEVERITY = {
     # enough that the owner may want it as HIS position rather than the bot's,
     # and that decision has a shelf life measured in hours.
     "trade_review":    "NOTICE",
+    # A position has sat ≥2 weeks with minimal movement (2026-07-29, owner:
+    # "maybe a PROBE ... for me then to manually make a decision"). Same tier
+    # as its siblings for the same reason: nothing is broken, a decision is
+    # due — and it is explicitly the owner's, the probe takes none itself.
+    "stale_position":  "NOTICE",
+    # A market's scan came back EMPTY N runs in a row (2026-07-29, owner said
+    # yes to the build after the 2026-07-29 outage: Yahoo throttled every ASX
+    # scan of the morning session and the "no data - keeping existing JSON"
+    # exit is deliberately GREEN, so nothing said the dashboard had quietly
+    # stopped updating). One dry run is weather; several in a row is an
+    # outage. NOTICE, not WARNING: the pipeline is healthy, the DATA SOURCE
+    # is refusing, and the fix (wait / press SCAN later) is the owner's.
+    "scan_dry":        "NOTICE",
     # The paper book's daily/weekly loss guard tripped and new entries are
     # halted for the session (2026-07-28, scanner/broker/vivek_run). CRITICAL
     # alongside `daily_loss` because it is the same event seen from the book
@@ -846,6 +885,16 @@ ALERT_RATE_LIMITS = {
     # sequential multi-market run, i.e. lose a decision the owner asked to be
     # given. Missing one of these is the failure mode; repeating one is not.
     "trade_review":    0,
+    # 0 — the probe owns its dedupe (per-position stale_pinged stamp in the
+    # book, REPEAT_DAYS between reminders); a per-EVENT-TYPE limit here would
+    # drop the second market's stale list in a sequential full cycle.
+    "stale_position":  0,
+    # 0 — same per-EVENT-TYPE reason as its neighbours (a full cycle scans
+    # three markets sequentially in one job; a limit would drop the second
+    # market's outage), and the dedupe is structural anyway: the counter in
+    # data/scan_health.json fires only at EXACTLY the threshold, once per
+    # outage episode, and resets on the first successful publish.
+    "scan_dry":        0,
     # 0 for the third time, for the third variation of the same reason: the
     # limit is per EVENT TYPE and the markets run sequentially inside one job,
     # so any nonzero value here could only ever drop the SECOND market's breach.
@@ -1113,6 +1162,18 @@ SCAN_ERROR_LOUD_PCT      = 5.0  # >= this % of names failing prints the '!!' mar
 # checks out fresh each run, and the three sequential market processes share one
 # checkout, hence append rather than overwrite.
 SCAN_SKIP_MARKER = ".scan-skipped"
+
+# Consecutive-dry-run alarm (2026-07-29, owner-approved threshold 3). A "dry"
+# run is run.py's deliberate "no data - keeping existing JSON" exit: the source
+# returned nothing and yesterday's artefact was kept rather than clobbered.
+# That exit is GREEN by design, which the 2026-07-29 Yahoo throttling showed
+# cuts both ways: every ASX scan of the morning session ran dry and nothing
+# said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
+# scan.yml's SHARED staging list, so it survives the Actions container — the
+# same lesson as sectorbreadth's ping memory), resets on the first successful
+# publish, and pings Discord ONCE per episode, exactly at the threshold.
+SCAN_DRY_ALERT_RUNS = 3
+SCAN_HEALTH_FILE = "data/scan_health.json"
                                 # (0 = never loud)
 
 

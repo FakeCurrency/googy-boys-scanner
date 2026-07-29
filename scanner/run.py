@@ -44,6 +44,68 @@ def _record_skip(market_key: str) -> None:
               flush=True)
 
 
+def _scan_health(market_key: str, published: bool, send=None) -> int:
+    """Count CONSECUTIVE dry runs per market and ping ONCE at the threshold.
+
+    A "dry" run is the deliberate keeping-existing-JSON exit above: green by
+    design, which the 2026-07-29 Yahoo throttling proved is also invisible by
+    design — every ASX scan of a session ran dry and nothing said so. One dry
+    run is weather; SCAN_DRY_ALERT_RUNS in a row is an outage worth a NOTICE.
+
+    The counter lives in config.SCAN_HEALTH_FILE, which scan.yml's SHARED
+    staging list commits — the same container-death lesson as sectorbreadth's
+    ping memory (journal/alert_state.json is NOT staged, so any state kept
+    there reads "never fired" every run). Firing EXACTLY at the threshold —
+    `==`, not `>=` — is the whole dedupe: one ping per episode, no repeat
+    while the outage drags on (the external /api/health monitor owns
+    escalation), and the counter resets on the first successful publish.
+
+    Best-effort like _record_skip: health bookkeeping must never take the
+    scan down. Returns the consecutive-dry count after this run (0 when
+    published), which is also what the tests assert on.
+    """
+    path = REPO_ROOT / getattr(config, "SCAN_HEALTH_FILE", "data/scan_health.json")
+    try:
+        try:
+            health = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            health = {}
+        if not isinstance(health, dict):
+            health = {}
+        row = health.get(market_key)
+        if not isinstance(row, dict):
+            row = {}
+        now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if published:
+            row = {"dry": 0, "last_publish": now,
+                   "last_dry": row.get("last_dry")}
+        else:
+            row = {"dry": int(row.get("dry") or 0) + 1,
+                   "last_publish": row.get("last_publish"), "last_dry": now}
+        health[market_key] = row
+        output.write_json(path, health, sort_keys=True, newline=True)
+
+        threshold = int(getattr(config, "SCAN_DRY_ALERT_RUNS", 3) or 0)
+        if not published and threshold and row["dry"] == threshold:
+            if send is None:
+                try:
+                    from .broker.alert_router import smart_send as send
+                except Exception:
+                    return row["dry"]
+            last = row.get("last_publish") or "unknown"
+            send("scan_dry",
+                 f"{market_key.upper()} scans running dry",
+                 f"{threshold} consecutive scans returned no data - the "
+                 f"dashboard is still showing the artefact from {last}. "
+                 f"The source (Yahoo) is likely throttling; scheduled runs "
+                 f"keep retrying, or press SCAN on the site to force one.")
+        return row["dry"]
+    except Exception as e:   # noqa: BLE001 - bookkeeping must never kill the scan
+        print(f"  (scan-health bookkeeping failed for {market_key}: "
+              f"{type(e).__name__})", flush=True)
+        return -1
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fibonacci-EMA market scanner")
     parser.add_argument(
@@ -124,6 +186,10 @@ def main() -> None:
                 print(f"  no data for {market_key} (download blocked/empty) — "
                       f"keeping existing JSON", flush=True)
                 _record_skip(market_key)
+                dry = _scan_health(market_key, published=False)
+                if dry > 0:
+                    print(f"  scan-health: {dry} consecutive dry run(s) for "
+                          f"{market_key}", flush=True)
                 continue
             # PULSE fully retired (UI 2026-07-03; fetch finally removed
             # 2026-07-20, hygiene pass): this was still a Yahoo macro download
@@ -144,6 +210,7 @@ def main() -> None:
                                         pulse_data=pulse_data, progress=False,
                                         from_cache=cache_stats["reused"])
             output.write(vk, args.out, name=f"{market_key}_vivek")
+            _scan_health(market_key, published=True)
             if market_key in breadth_inputs:
                 breadth_inputs[market_key]["results"] = vk["results"]
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "

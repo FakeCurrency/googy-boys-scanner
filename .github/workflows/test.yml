@@ -4,7 +4,7 @@ name: Tests
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes: 1218 pytest (56 files) + 637 JS assertions across
+# runs the lot in ~2 minutes: 1239 pytest (58 files) + 637 JS assertions across
 # 16 suites, measured 2026-07-29. The numbers are a smell test, not a gate —
 # a big drop means a directory stopped being collected, which is the failure
 # `pytest.ini` being in the path filter above exists to make visible.

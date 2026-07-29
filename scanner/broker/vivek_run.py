@@ -764,6 +764,103 @@ def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
     return syms
 
 
+def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
+    """Ping the owner about positions that have sat still long enough to need
+    a human decision. REPORT-ONLY: it closes nothing and takes nothing.
+
+    Owner ask, 2026-07-29 (answering "what rotation rule do you want" with):
+    "no rotation rule. maybe a PROBE that position has been open for 2 weeks
+    with minimal movement for me then to manually make a decision."
+
+    Who this catches that the automatic rules never will: MAX_HOLD_DAYS (28)
+    time-stops a pre-TP1 stall but says nothing at the half-way mark, and a
+    runner past TP1 is exempt from it FOREVER — a +0.1R runner can squat one
+    of 30 scarce slots for months with nothing ever asking about it. "Minimal
+    movement" is |unreal_r| < STALE_PROBE_MAX_ABS_R: a row further red than
+    that is the stop's business, further green is a working position.
+
+    Dedupe is per POSITION, stamped into the row (`stale_pinged`, a date) so
+    it commits with the book and survives the container — the same lesson as
+    every other alert memory in this repo. Re-pings every REPEAT_DAYS while
+    the row still qualifies; a row that starts moving loses its stamp, so a
+    later re-stall is a fresh episode. Rows without `unreal_r` (unpriced this
+    run) are SKIPPED, not flagged — no price means no movement claim, and the
+    unpriced-runs warning above already owns that failure.
+
+    Called after `_save_market_book`; re-saves iff a stamp changed. A save
+    that then fails re-pings next run — for a reminder, failing toward
+    repetition beats failing toward silence.
+    """
+    days_min = int(getattr(config, "VIVEK_BOT_STALE_PROBE_DAYS", 0) or 0)
+    if days_min <= 0 or not getattr(config, "VIVEK_BOT_STALE_PROBE_PUSH", True):
+        return []
+    max_r = float(getattr(config, "VIVEK_BOT_STALE_PROBE_MAX_ABS_R", 0.5) or 0.5)
+    repeat = int(getattr(config, "VIVEK_BOT_STALE_PROBE_REPEAT_DAYS", 7) or 0)
+
+    def _days_between(a: str, b: str) -> int | None:
+        try:
+            return (dt.date.fromisoformat(b) - dt.date.fromisoformat(a)).days
+        except Exception:
+            return None
+
+    stale, changed = [], False
+    for pos in book.get("open") or []:
+        if pos.get("status") != "open" or pos.get("market", market) != market:
+            continue
+        held = _held_days(pos, day)
+        ur = pos.get("unreal_r")
+        qualifies = (held is not None and held >= days_min
+                     and isinstance(ur, (int, float)) and abs(ur) < max_r)
+        if not qualifies:
+            if pos.pop("stale_pinged", None) is not None:
+                changed = True                     # moving again — fresh episode later
+            continue
+        stamp = pos.get("stale_pinged")
+        since = _days_between(str(stamp), day) if stamp else None
+        if stamp and (since is None or since < repeat):
+            continue                               # already pinged this episode
+        pos["stale_pinged"] = day
+        changed = True
+        stale.append((pos, held, float(ur)))
+
+    if changed:
+        _save_market_book(market, book)
+    if not stale:
+        return []
+    if send is None:
+        try:
+            from .alert_router import smart_send as send
+        except Exception:                                  # noqa: BLE001
+            return []
+
+    lines = []
+    for pos, held, ur in stale:
+        leg = "past TP1, runner" if pos.get("tp1_hit") else \
+            f"pre-TP1 (time stop at {int(getattr(config, 'VIVEK_BOT_MAX_HOLD_DAYS', 0) or 0)}d)"
+        lines.append(f"{str(pos.get('symbol', '?')).upper()} "
+                     f"{str(pos.get('direction', '?')).upper()} - {held}d held, "
+                     f"{ur:+.2f}R, {leg}")
+    lines.append("Going nowhere is a decision too - these hold "
+                 f"{len(stale)} of the book's slots. Close in the book to free "
+                 "the slot, or leave them and this asks again in "
+                 f"{repeat} day(s).")
+    site = str(getattr(config, "SITE_URL", "") or "").rstrip("/")
+    if site:
+        lines.append(f"{site}/journal.html")
+    n = len(stale)
+    try:
+        send("stale_position",
+             f"YOUR CALL - {market.upper()}: {n} position"
+             f"{'s' if n != 1 else ''} sitting still",
+             "\n".join(lines))
+    except Exception as e:                                 # noqa: BLE001
+        log.warning("could not send stale-position probe: %s", e)
+        return []
+    syms = [str(p.get("symbol", "")).upper() for p, _h, _u in stale]
+    log.info("stale-position probe [%s]: %s", market, ", ".join(syms))
+    return syms
+
+
 def _close_time_stop(pos: dict, price: float, day: str,
                      costs: tuple[float, float] | None) -> None:
     """Close a stalled position at the observed price (exit_reason 'time') —
@@ -1301,6 +1398,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
              added, closed_now, book_open, book_short)
 
     _notify_reviews(market, opened_events)
+    _stale_probe(market, book, day)
 
     # Trade-event digest through the shared alert dispatcher. OFF by default:
     # the scan workflow exports SMTP creds and alert_dispatch fires every

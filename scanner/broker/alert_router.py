@@ -44,6 +44,8 @@ _SEV_MAP = {
     "info":            "INFO",
     "sector_run":      "NOTICE",
     "trade_review":    "NOTICE",
+    "scan_dry":        "NOTICE",
+    "stale_position":  "NOTICE",
     # KEEP THESE TWO TABLES IN STEP WITH scanner/config.py (2026-07-28).
     # `get_severity` falls back to "WARNING" for anything it does not know, so a
     # missing key here is not an error — it is a silent DOWNGRADE. Both of the
@@ -76,6 +78,8 @@ _RATE_MAP = {
     "health":          3600,
     "sector_run":      0,
     "trade_review":    0,
+    "scan_dry":        0,
+    "stale_position":  0,
     # Both own their dedupe elsewhere (vivek_run's per-market book stamp; the
     # orphan symbol set on the journal), so a limit here could only ever drop a
     # message that the real dedupe had already decided was worth sending.
