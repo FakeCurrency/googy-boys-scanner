@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "market": "crypto",
+  "generated_at": "2026-07-29T23:27:32+00:00",
+  "rule": {
+    "floor": 3000000,
+    "min_rvol": 3.0,
+    "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
+  },
+  "results": []
+}
