@@ -209,3 +209,48 @@ def test_funnel_is_additive_not_a_schema_bump(monkeypatch):
     out = _run_full(monkeypatch)
     assert out["schema_version"] == config.VIVEK_SCHEMA_VERSION
     assert isinstance(out["funnel"], dict)
+
+
+def test_illiquid_sample_carries_volume_context(monkeypatch):
+    """The floor's kills publish WHO they were and whether volume is arriving —
+    the evidence for the owner's liquidity-exception decision (2026-07-29)."""
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 0.0)
+    spiky = _frame()
+    spiky.loc[spiky.index[-1], "Volume"] = 5_000_000.0   # 5M vs 19x1M history
+    out = scan.scan_vivek_market(
+        "asx", universe=[{"yf": "THN.AX", "symbol": "THN", "name": "Thin", "sector": "Energy"}],
+        frames={"THN.AX": spiky}, pulse_data=[], progress=False)
+    sample = out["funnel"]["illiquid_sample"]
+    assert len(sample) == 1
+    row = sample[0]
+    assert row["symbol"] == "THN" and row["dir"] == "LONG"
+    assert row["turnover"] == 0
+    # avg20 includes today's bar: (19*1M + 5M)/20 = 1.2M -> 5/1.2 = 4.2x
+    assert row["rvol"] == 4.2
+
+
+def test_illiquid_sample_is_sorted_by_rvol_and_capped(monkeypatch):
+    from scanner import config
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    monkeypatch.setattr(scan, "_liquidity", lambda df, m: 0.0)
+    monkeypatch.setattr(config, "SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX", 1, raising=False)
+    quiet, spiky = _frame(), _frame()
+    spiky.loc[spiky.index[-1], "Volume"] = 5_000_000.0
+    out = scan.scan_vivek_market(
+        "asx",
+        universe=[{"yf": "AAA.AX", "symbol": "AAA", "name": "A", "sector": "Energy"},
+                  {"yf": "BBB.AX", "symbol": "BBB", "name": "B", "sector": "Energy"}],
+        frames={"AAA.AX": quiet, "BBB.AX": spiky}, pulse_data=[], progress=False)
+    sample = out["funnel"]["illiquid_sample"]
+    assert [r["symbol"] for r in sample] == ["BBB"], \
+        "the cap must keep the HIGHEST-rvol name, not the first-iterated one"
+    assert out["funnel"]["illiquid_setup"] == 2, "the count still covers everyone"
+
+
+def test_illiquid_sample_is_present_and_empty_when_nothing_dropped(monkeypatch):
+    # The UI's "none show unusual volume" claim is only allowed off a
+    # PRESENT-and-empty array; an absent key means an older payload.
+    _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
+    out = _run_full(monkeypatch)
+    assert out["funnel"]["illiquid_sample"] == []

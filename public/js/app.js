@@ -1673,6 +1673,45 @@
     box.title = `Generated ${melb}` + (d.code_sha ? ` · built from ${d.code_sha}` : "");
   }
 
+  // Pipeline funnel disclosure (2026-07-29): the scan publishes WHERE names
+  // dropped out (funnel key, additive since schema stays put) — this renders it
+  // as one tappable line so "why isn't X showing?" has an answer on the page.
+  // The expanded body names the floor's kills where volume is ARRIVING
+  // (illiquid_sample: today's volume as a multiple of the name's own 20-day
+  // average) — the rows the owner is worried the liquidity floor is killing.
+  // REPORT-ONLY on both sides: the scan still drops them; this just says so.
+  function renderFunnel(d) {
+    const box = $("#scan-funnel");
+    if (!box) return;
+    const f = d && d.setup_type === "vivek" ? d.funnel : null;
+    if (!f || typeof f.universe !== "number") { box.hidden = true; box.innerHTML = ""; return; }
+    const n = (x) => (typeof x === "number" ? x : 0);
+    const summary =
+      `Pipeline: ${n(f.universe)} scanned → ${n(f.with_data)} with data → ` +
+      `${n(f.setups)} setups (${n(f.no_setup)} no setup · ${n(f.illiquid_setup)} illiquid` +
+      `${n(f.below_score) + n(f.no_plan) ? ` · ${n(f.below_score) + n(f.no_plan)} below bar` : ""}` +
+      `${n(f.errors) ? ` · ${n(f.errors)} errored` : ""})`;
+    // Absent sample (payload predates the field) is NOT the same claim as an
+    // empty one — only a present-and-empty array may say "none show volume".
+    const hasSample = Array.isArray(f.illiquid_sample);
+    const sample = hasSample ? f.illiquid_sample : [];
+    const chips = sample.filter((r) => r && r.symbol && (r.rvol || 0) >= 2).map((r) =>
+      `<a class="sf-chip" href="chart.html?m=${esc(state.market)}&s=${encodeURIComponent(r.symbol)}&mode=vivek">` +
+      `${esc(r.symbol)} <span class="sf-rvol">${esc(String(r.rvol))}×</span></a>`).join("");
+    const volNote = !hasSample ? ""
+      : chips ? ` Volume is arriving in these today (multiple of their own 20-day average):` +
+                `<div class="sf-chips">${chips}</div>`
+      : ` None of them show unusual volume today.`;
+    box.innerHTML =
+      `<summary>${esc(summary)}</summary>` +
+      `<div class="sf-body">${
+        n(f.illiquid_setup)
+          ? `${n(f.illiquid_setup)} name(s) had a setup but sit under the liquidity floor.${volNote}`
+          : `Nothing was dropped for liquidity this scan.`
+      }</div>`;
+    box.hidden = false;
+  }
+
   function renderEntryFilters(d) {
     const box = $("#vk-filters");
     if (!box) return;
@@ -1960,6 +1999,7 @@
     const nSetups = d._head && d._full_count != null ? d._full_count : d.results.length;
     $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${nSetups} setups${dqNote}${riskNote} · auto-refreshes hourly`;
     renderFreshness(d);
+    renderFunnel(d);
     // Degraded-universe tripwire (2026-07-26): a flaky ticker-directory fetch
     // once dropped a Saturday ASX scan to the 94-name bundled CSV — results
     // looked normal but covered ~5% of the market. If this payload's universe

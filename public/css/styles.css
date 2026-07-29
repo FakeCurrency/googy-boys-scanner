@@ -412,6 +412,27 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: var(--orange); background: var(--orange-soft);
   border-color: color-mix(in srgb, var(--orange) 30%, transparent);
 }
+/* Pipeline funnel disclosure (2026-07-29) — why names were excluded, on tap. */
+.scan-funnel { margin-top: 6px; }
+.scan-funnel > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center;
+  font: 600 11px/1 var(--mono); letter-spacing: 0.02em; color: var(--muted-2);
+  padding: 4px 0; -webkit-tap-highlight-color: transparent;
+}
+.scan-funnel > summary::-webkit-details-marker { display: none; }
+.scan-funnel > summary::before { content: "▸ "; color: var(--muted-2); }
+.scan-funnel[open] > summary::before { content: "▾ "; }
+.scan-funnel .sf-body {
+  margin: 6px 0 2px; font: 500 12px/1.6 var(--sans); color: var(--muted);
+}
+.scan-funnel .sf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.scan-funnel .sf-chip {
+  display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
+  font: 600 11px/1 var(--mono); color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--border);
+  padding: 5px 9px; border-radius: 7px;
+}
+.scan-funnel .sf-chip .sf-rvol { color: var(--orange); }
 .vkf-note { font: 600 11.5px/1 var(--sans); color: var(--muted-2); }
 
 /* ================================================== VIVEK paper track record */

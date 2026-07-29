@@ -268,4 +268,24 @@ test("every cold-fail page renders a wired retry, not an onclick string", () => 
     "retryHTML must not emit inline onclick handlers");
 });
 
+// ---------------------------------------------------------------------------
+// The funnel disclosure (2026-07-29): rendered from the published funnel key,
+// with the honesty split between "sample absent" (older payload — say nothing)
+// and "sample present and empty" (allowed to say none show unusual volume).
+// ---------------------------------------------------------------------------
+test("renderFunnel exists, is wired into applyPayload, and escapes what it interpolates", () => {
+  const APP2 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
+  assert.ok(/function renderFunnel\(/.test(APP2), "renderFunnel is gone");
+  assert.ok(/renderFreshness\(d\);\s*\n\s*renderFunnel\(d\);/.test(APP2),
+    "renderFunnel must render wherever a payload is applied, beside renderFreshness");
+  const body = APP2.slice(APP2.indexOf("function renderFunnel("), APP2.indexOf("function renderEntryFilters("));
+  assert.ok(/esc\(r\.symbol\)/.test(body), "chip symbols must go through esc()");
+  assert.ok(/encodeURIComponent\(r\.symbol\)/.test(body), "chip hrefs must URI-encode the symbol");
+  assert.ok(/esc\(summary\)/.test(body), "the summary line must be escaped");
+  assert.ok(/hasSample/.test(body) && /Array\.isArray\(f\.illiquid_sample\)/.test(body),
+    "absent sample (older payload) must not be presented as 'none show volume'");
+  assert.ok(/rvol\s*\|\|\s*0\)\s*>=\s*2/.test(body),
+    "chips are the UNUSUAL-volume names — a >=2x floor keeps 1.0x noise out");
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

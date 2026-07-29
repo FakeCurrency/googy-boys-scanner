@@ -1174,6 +1174,17 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # publish, and pings Discord ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
+
+# Funnel detail (2026-07-29, owner's strategy-audit ask): of the names that HAD
+# a setup and were dropped by the liquidity floor, publish the few where volume
+# is ARRIVING — today's volume as a multiple of the name's own 20-day average.
+# A sleepy average with a big today-multiple is the "breakout being born in a
+# thin name" the owner is worried the floor is killing; a low multiple is just
+# a thin name. REPORT-ONLY: the floor still drops every one of them — this is
+# the evidence for whether the floor needs an owner-ruled exception, not the
+# exception itself. Sample is capped (same reasoning as SCAN_ERROR_SAMPLE_MAX)
+# and sorted by that multiple, so the payload cost stays ~1KB.
+SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX = 12
                                 # (0 = never loud)
 
 

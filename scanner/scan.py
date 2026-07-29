@@ -143,6 +143,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     # checked), so illiquid_setup counts names that HAD a setup and were too
     # thin — the exact rows a too-tight liquidity floor would be killing.
     funnel = {"no_setup": 0, "illiquid_setup": 0, "below_score": 0, "no_plan": 0}
+    illiquid_sample: list[dict] = []   # the floor's kills, with volume context
     for yf_ticker, df in frames.items():
         scanned += 1
         symbol = meta.get(yf_ticker, {}).get("symbol", yf_ticker)
@@ -179,6 +180,26 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             turnover = _liquidity(df, market)
             if turnover < market.liquidity_min:
                 funnel["illiquid_setup"] += 1
+                # Volume context for the strategy audit (2026-07-29): is volume
+                # ARRIVING in this thin name today? today's volume over the
+                # name's own 20-day average. The except names the EXPECTED
+                # frame defects (missing/renamed Volume column, empty tail,
+                # unparseable values) and skipping the REPORT row on them is a
+                # decision — the scan row was already dropped for liquidity a
+                # line above, so nothing tradeable is lost. A broad handler
+                # here would trip the repo's own bare-pass guard (TOP100 #60).
+                try:
+                    vol = df["Volume"].astype(float)
+                    avg20 = float(vol.tail(20).mean() or 0.0)
+                    rvol = round(float(vol.iloc[-1]) / avg20, 1) if avg20 > 0 else 0.0
+                    illiquid_sample.append({
+                        "symbol": symbol,
+                        "dir": "LONG" if sig["direction"] == "long" else "SHORT",
+                        "turnover": int(turnover),
+                        "rvol": rvol,
+                    })
+                except (KeyError, IndexError, TypeError, ValueError):
+                    pass
                 continue
             points, raw_grade, fired = vivek.score_and_grade(sig)
             if raw_grade is None:
@@ -337,6 +358,12 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             "errors": errors.payload()["errors"],
             "setups": len(results),
             "grades": dict(Counter(r["grade"] for r in results)),
+            # The floor's kills where volume is ARRIVING (sorted by today's
+            # multiple of the name's own 20-day average, capped) — evidence
+            # for the owner's liquidity-exception decision, never a gate.
+            "illiquid_sample": sorted(illiquid_sample,
+                                      key=lambda r: -r["rvol"])[
+                :int(getattr(config, "SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX", 12) or 0)],
         },
         "pulse": pulse_data,
         "results": results,
