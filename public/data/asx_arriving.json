@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "market": "asx",
+  "generated_at": "2026-07-30T12:40:24+10:00",
+  "rule": {
+    "floor": 100000,
+    "min_rvol": 3.0,
+    "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
+  },
+  "results": [
+    {
+      "symbol": "BFL",
+      "name": "BSP Financial Group Limited",
+      "sector": "Financials",
+      "dir": "LONG",
+      "price": 8.06000042,
+      "turnover_avg20": 62866,
+      "turnover_today": 417814,
+      "rvol": 6.7,
+      "adv_usd": 62866.64,
+      "fund": false
+    },
+    {
+      "symbol": "IHEB",
+      "name": "iShares JP Morgan USD Emerging Mkt Bnd AUD Hdg ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 76.19999695,
+      "turnover_avg20": 55082,
+      "turnover_today": 320344,
+      "rvol": 5.8,
+      "adv_usd": 55082.66,
+      "fund": true
+    },
+    {
+      "symbol": "GOVT",
+      "name": "SPDR S&P/ASX Australian Government Bond Fund",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 24.18000031,
+      "turnover_avg20": 68217,
+      "turnover_today": 237858,
+      "rvol": 3.5,
+      "adv_usd": 68217.05,
+      "fund": true
+    },
+    {
+      "symbol": "AUQ",
+      "name": "Alara Resources Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.036,
+      "turnover_avg20": 28453,
+      "turnover_today": 223219,
+      "rvol": 8.4,
+      "adv_usd": 28453.05,
+      "fund": false
+    },
+    {
+      "symbol": "CIN",
+      "name": "Carlton Investments Limited",
+      "sector": "Financials",
+      "dir": "SHORT",
+      "price": 33.88000107,
+      "turnover_avg20": 66464,
+      "turnover_today": 203517,
+      "rvol": 3.1,
+      "adv_usd": 66464.13,
+      "fund": false
+    },
+    {
+      "symbol": "GDF",
+      "name": "Garda Property Group",
+      "sector": "Real Estate",
+      "dir": "LONG",
+      "price": 1.05499995,
+      "turnover_avg20": 47358,
+      "turnover_today": 187534,
+      "rvol": 3.9,
+      "adv_usd": 47358.1,
+      "fund": false
+    },
+    {
+      "symbol": "FRI",
+      "name": "Finbar Group Limited",
+      "sector": "Real Estate",
+      "dir": "SHORT",
+      "price": 0.67000002,
+      "turnover_avg20": 36018,
+      "turnover_today": 120230,
+      "rvol": 3.4,
+      "adv_usd": 36018.69,
+      "fund": false
+    },
+    {
+      "symbol": "MOGL",
+      "name": "Montaka Global Long Only Equites Fund (Managed Fund)",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 3.9749999,
+      "turnover_avg20": 38815,
+      "turnover_today": 118248,
+      "rvol": 3.0,
+      "adv_usd": 38815.87,
+      "fund": true
+    },
+    {
+      "symbol": "FSA",
+      "name": "FSA Group Limited",
+      "sector": "Financials",
+      "dir": "SHORT",
+      "price": 1.21000004,
+      "turnover_avg20": 19987,
+      "turnover_today": 102730,
+      "rvol": 5.4,
+      "adv_usd": 19987.77,
+      "fund": false
+    }
+  ]
+}
