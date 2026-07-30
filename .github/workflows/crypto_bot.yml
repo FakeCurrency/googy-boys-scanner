@@ -11,6 +11,10 @@ name: Crypto bot (24/7 paper)
 # Paper only: scanner.run maintains the JSON paper book — it places NO real
 # orders (no broker is wired). Pushing to main triggers a Cloudflare redeploy.
 on:
+  # SCHEDULE RE-REGISTRATION (2026-07-30): the scheduler stopped creating runs
+  # for EVERY cron in this repo after ~01:15 UTC — the same window in which
+  # GitHub's ref backend was erroring (crypto_bot #255, "fatal error in
+  # commit_refs"). This touch re-registers all schedules (2026-07-24 precedent).
   schedule:
     # :22 (2026-07-22): off GitHub's congested :00 slot, and offset from
     # scan.yml's :07 crons so the two never co-arrive at the shared queue.

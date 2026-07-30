@@ -9,6 +9,10 @@ name: Backup bot book
 #   python scripts/backup_journal.py restore <backup-dir>
 
 on:
+  # SCHEDULE RE-REGISTRATION (2026-07-30): the scheduler stopped creating runs
+  # for EVERY cron in this repo after ~01:15 UTC — the same window in which
+  # GitHub's ref backend was erroring (crypto_bot #255, "fatal error in
+  # commit_refs"). This touch re-registers all schedules (2026-07-24 precedent).
   schedule:
     # Daily 21:35 UTC — right after the 21:00 NASDAQ-close scan has committed,
     # so each night's snapshot captures that day's final book. Runs weekends

@@ -9,6 +9,10 @@ name: Scheduled scan
 # wall-clock per full cycle; buys an intact track record.
 # Pushing to main triggers Cloudflare Pages to redeploy the site automatically.
 on:
+  # SCHEDULE RE-REGISTRATION (2026-07-30): the scheduler stopped creating runs
+  # for EVERY cron in this repo after ~01:15 UTC — the same window in which
+  # GitHub's ref backend was erroring (crypto_bot #255, "fatal error in
+  # commit_refs"). This touch re-registers all schedules (2026-07-24 precedent).
   schedule:
     # Hourly during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
     # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
