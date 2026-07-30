@@ -380,14 +380,28 @@ jobs:
           bad = []
           for f in files:
               try:
-                  v = json.load(open(f)).get("schema_version")
+                  doc = json.load(open(f))
               except Exception as e:
                   bad.append(f"{f}: unreadable ({e})"); continue
-              if v != want:
-                  bad.append(f"{f}: schema_version {v} != expected {want}")
+              if doc.get("schema_version") != want:
+                  bad.append(f"{f}: schema_version {doc.get('schema_version')} != expected {want}")
+                  continue
+              # v5 PAIRING CHECK (payload diet): the detail sidecar must
+              # exist, parse, match the version AND carry the summary's
+              # generated_at — a run that pushes one file and loses the
+              # other fails HERE, not as a deck whose expand can't load.
+              det = f.replace("_vivek.json", "_vivek_detail.json")
+              try:
+                  dd = json.load(open(det))
+              except Exception as e:
+                  bad.append(f"{det}: unreadable ({e})"); continue
+              if dd.get("schema_version") != want:
+                  bad.append(f"{det}: schema_version {dd.get('schema_version')} != expected {want}")
+              elif dd.get("generated_at") != doc.get("generated_at"):
+                  bad.append(f"{det}: generated_at {dd.get('generated_at')} != summary {doc.get('generated_at')}")
           if bad:
               print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
-          print(f"schema gate OK - {len(files)} file(s) at v{want} (scope: {market})")
+          print(f"schema gate OK - {len(files)} pair(s) at v{want} (scope: {market})")
           PY
 
       # Track-record integrity gate (Phase 4): a malformed / cross-contaminated
@@ -465,7 +479,7 @@ jobs:
             # ${m}_arriving.json (2026-07-30, owner-ruled): the fenced
             # report-only "liquidity arriving" file. Staged like any artefact;
             # nothing in scanner/broker/ reads it (test-pinned).
-            PATHS="$PATHS public/data/${m}_vivek.json public/data/${m}_prices.json public/data/${m}_arriving.json journal/vivek_bot_book.${m}.json data/universe_cache/${m}.json"
+            PATHS="$PATHS public/data/${m}_vivek.json public/data/${m}_vivek_detail.json public/data/${m}_prices.json public/data/${m}_arriving.json journal/vivek_bot_book.${m}.json data/universe_cache/${m}.json"
           done
           echo "staging scope: $M -> $PATHS"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`

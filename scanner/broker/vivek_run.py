@@ -1504,6 +1504,26 @@ def main() -> None:
             print(f"[{market_key}] no scan JSON ({pub.name}) — run the scanner first")
             continue
         results = json.loads(pub.read_text(encoding="utf-8")).get("results", [])
+        # v5 payload split (2026-07-31): the published summary carries LITE
+        # plans only, and plan_trade builds tickets from row["plans"][tf] —
+        # so this STANDALONE path re-joins the detail sidecar to reconstruct
+        # exactly the rows the scheduled in-memory path hands run_market.
+        # MERGE-ONLY (no decision logic here) and FAIL-CLOSED: without the
+        # sidecar the rows keep lite plans and evaluate_setup skips them —
+        # the same "run the scanner first" posture as a missing scan file.
+        det = pub.with_name(f"{market_key}_vivek_detail.json")
+        drows = {}
+        if det.exists():
+            try:
+                drows = (json.loads(det.read_text(encoding="utf-8")) or {}).get("rows") or {}
+            except (OSError, ValueError):
+                print(f"[{market_key}] detail sidecar unreadable — rows stay lite (fail-closed)")
+        elif results and not any("analysis" in r for r in results[:5]):
+            print(f"[{market_key}] no detail sidecar ({det.name}) — lite rows, entries will be skipped")
+        for r in results:
+            extra = drows.get(str(r.get("symbol") or ""))
+            if isinstance(extra, dict):
+                r.update(extra)
         universe = load_universe(market_key, full=True)
         fresh = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
         frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe])

@@ -124,7 +124,7 @@ jobs:
         run: node test/journal_money.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
         run: node test/escaping.test.js
-      - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend rules (TOP100 #78/#79, 36)
+      - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend + v5-split rules (TOP100 #78/#79, 42)
         run: node test/staleview.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82/#83 + sync honesty, 52)
         run: node test/leaks.test.js

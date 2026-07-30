@@ -253,11 +253,16 @@ def test_the_price_snapshot_failure_is_counted_apart_from_the_setup_failure():
     assert "price_errors.record(symbol, e)" in src
 
 
-def test_the_schema_version_is_deliberately_not_bumped():
-    """Additive fields need no bump, and bumping is actively HARMFUL here: it
-    marks every already-committed scan file as a build behind and shows a
-    stale-data warning on the site until all three markets have rescanned."""
-    assert config.VIVEK_SCHEMA_VERSION == 4
+def test_the_schema_version_is_bumped_only_for_structural_change():
+    """The `errors` field was ADDITIVE and deliberately did NOT bump (v4) —
+    bumping marks every committed scan file a build behind until all three
+    markets rescan. v5 (2026-07-31, owner-ruled payload diet) IS a structural
+    change — rows' heavy groups moved to a sidecar — and the bump is the
+    load-bearing discriminator: the deck fetches the detail sidecar if and
+    only if the summary says v5+, so a pre-split cached payload can never
+    trigger a fetch that has nothing to answer it. The one-cycle "build
+    behind" window is the accepted cost, same trade as v4->v3 before it."""
+    assert config.VIVEK_SCHEMA_VERSION == 5
 
 
 @pytest.mark.parametrize("name", ["SCAN_ERROR_SAMPLE_MAX", "SCAN_ERROR_MSG_MAX",

@@ -138,10 +138,10 @@ def test_fence_2_nothing_in_scanner_or_broker_reads_the_file_back():
 
 def test_fence_3_run_py_appends_after_the_publish_not_before():
     src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
-    publish = src.index('output.write(vk, args.out, name=f"{market_key}_vivek")')
+    publish = src.index("output.write_vivek_pair(vk, args.out, market_key)")
     call = src.index("funnelhistory.append(market_key, vk, args.out)")
     assert call > publish, (
-        "the history must record what was PUBLISHED - append after output.write")
+        "the history must record what was PUBLISHED - append after the publish")
 
 
 def test_fence_4_the_report_call_cannot_kill_the_scan():

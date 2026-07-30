@@ -445,6 +445,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .scan-funnel .sf-spark { color: var(--blue); flex: none; opacity: 0.9; }
 .scan-funnel .sf-hist-vals { color: var(--muted-2); font: 500 11px/1 var(--mono); }
+/* v5 payload split — the expanded panel's own loading / retry states.
+   Quiet, panel-scoped: a detail fetch failure must read as "this panel",
+   never as "the page broke". */
+.detail-inner .dp-loading { color: var(--muted-2); font: 500 12px/1.6 var(--sans); padding: 8px 0; }
+.detail-inner .dp-retry { color: var(--muted); font: 500 12px/1.6 var(--sans); padding: 8px 0; }
+.detail-inner .dp-retry-btn {
+  margin-left: 8px; cursor: pointer;
+  font: 600 11px/1 var(--sans); color: var(--blue);
+  background: var(--blue-soft); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 8px;
+}
 .vkf-note { font: 600 11.5px/1 var(--sans); color: var(--muted-2); }
 
 /* ================================================== VIVEK paper track record */

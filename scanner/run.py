@@ -209,7 +209,12 @@ def main() -> None:
                                         universe=universe, frames=deep_frames,
                                         pulse_data=pulse_data, progress=False,
                                         from_cache=cache_stats["reused"])
-            output.write(vk, args.out, name=f"{market_key}_vivek")
+            # v5 payload split (owner-ruled payload diet): summary + detail
+            # sidecar in one publish step. ORDER IS THE FENCE: run_market
+            # below receives `vk`'s in-memory rows, and split_vivek never
+            # mutates its input — the bot sees full plans regardless of what
+            # the browser downloads first.
+            output.write_vivek_pair(vk, args.out, market_key)
             _scan_health(market_key, published=True)
             # Funnel history (owner-ruled Task 2): append this publish's
             # counts to the report-only trend file. Same posture as regime

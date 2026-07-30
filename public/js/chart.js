@@ -3736,6 +3736,21 @@
           // Carry the per-scan currency onto the row so the fallback labels match.
           row.currency_symbol = row.currency_symbol || j.currency_symbol || "$";
         }
+        // v5 payload split (2026-07-31): a split summary carries LITE plans
+        // only, and the ladder below draws full per-TF plans + markers. Join
+        // the detail sidecar for THIS symbol before handing the row on. A
+        // failed sidecar fetch degrades to the summary row — the headline
+        // entry/SL/TP fields still live there, so the chart still renders
+        // its ladder; only per-TF depth is lost.
+        if (row && j && +j.schema_version >= 5 && mode === "vivek" && !isScalp) {
+          return fetch(`data/${market}_vivek_detail.json`, { cache: "no-cache" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((dj) => {
+              const extra = dj && dj.rows && dj.rows[row.symbol];
+              return extra ? Object.assign({}, row, extra) : row;
+            })
+            .catch(() => row);
+        }
         return row || null;
       })
       .catch(() => null);

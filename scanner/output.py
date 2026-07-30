@@ -129,3 +129,63 @@ def write(payload: dict, out_dir: str | pathlib.Path, name: str | None = None) -
     out = pathlib.Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     return write_json(out / f"{name or payload['market']}.json", payload)
+
+
+# ── v5 payload split (owner-ruled payload diet, 2026-07-31) ──────────────────
+
+def split_vivek(vk: dict) -> tuple[dict, dict]:
+    """(summary, detail) for the v5 payload split.
+
+    NEVER mutates ``vk`` — the fence the design note promises: ``run_market``
+    receives the in-memory FULL rows *before* publish, so the split cannot
+    change what the bot sees, and ``tests/test_payload_split.py`` pins that
+    this function leaves its input byte-identical.
+
+    Summary rows keep every field under its existing name; ``plans`` keeps its
+    shape but each timeframe is pruned to ``config.VIVEK_SUMMARY_PLAN_FIELDS``
+    (the drift-pin tuple — see its comment for the consumer-by-consumer
+    argument). The four heavy groups (``config.VIVEK_DETAIL_ROW_FIELDS``) move
+    to the detail sidecar keyed by symbol so consumers join in O(1).
+    """
+    from . import config
+
+    lite = tuple(getattr(config, "VIVEK_SUMMARY_PLAN_FIELDS", ()))
+    heavy = tuple(getattr(config, "VIVEK_DETAIL_ROW_FIELDS", ()))
+    srows, drows = [], {}
+    for r in vk.get("results") or []:
+        if not isinstance(r, dict):
+            continue
+        s = {k: v for k, v in r.items() if k not in heavy}
+        plans = r.get("plans")
+        if isinstance(plans, dict):
+            s["plans"] = {tf: {k: p[k] for k in lite if k in p}
+                          for tf, p in plans.items() if isinstance(p, dict)}
+        # None-valued heavy keys (a quiet row's `plans: null`) carry no
+        # content — dropping them keeps the sidecar to rows that actually
+        # have something to say, and the front-end merge treats an absent
+        # symbol as "no heavy content this scan".
+        d = {k: r[k] for k in heavy if r.get(k) is not None}
+        sym = str(r.get("symbol") or "")
+        if d and sym:
+            drows[sym] = d
+        srows.append(s)
+    summary = {**vk, "results": srows}
+    detail = {"schema_version": vk.get("schema_version"),
+              "market": vk.get("market"),
+              "generated_at": vk.get("generated_at"),
+              "rows": drows}
+    return summary, detail
+
+
+def write_vivek_pair(vk: dict, out_dir: str | pathlib.Path, market: str) -> pathlib.Path:
+    """Publish the summary + detail pair for one market, summary path returned.
+
+    Both files carry the same ``schema_version`` and ``generated_at`` — the
+    pairing the scan.yml / crypto_bot.yml schema gates verify, so a run that
+    pushes one file and loses the other fails loudly instead of shipping a
+    deck whose expand can never load.
+    """
+    summary, detail = split_vivek(vk)
+    p = write(summary, out_dir, name=f"{market}_vivek")
+    write(detail, out_dir, name=f"{market}_vivek_detail")
+    return p

@@ -468,4 +468,56 @@ test("sparkline survives a flat series without dividing by zero", () => {
   assert.ok(svg.includes("<polyline") && !svg.includes("NaN"));
 });
 
+
+/* ── v5 payload split: the deck's lazy detail layer (owner-ruled) ─────────── */
+const needsDetail = pull("needsDetail");
+const mergeDetail = pull("mergeDetail");
+
+test("needsDetail: only a v5+ summary asks for the sidecar", () => {
+  assert.strictEqual(needsDetail({ schema_version: 5 }), true);
+  assert.strictEqual(needsDetail({ schema_version: 4 }), false);
+  assert.strictEqual(needsDetail(null), false);
+});
+test("mergeDetail passes a pre-split row straight through", () => {
+  const r = { symbol: "BHP", analysis: "inline" };
+  assert.strictEqual(mergeDetail(r, null, false), r);
+});
+test("mergeDetail returns null while the sidecar is needed but absent", () => {
+  assert.strictEqual(mergeDetail({ symbol: "BHP" }, null, true), null);
+});
+test("mergeDetail overlays the heavy fields and leaves the summary intact", () => {
+  const r = { symbol: "BHP", grade: "A+", plans: { "1W": { armed: true } } };
+  const drows = { BHP: { analysis: "full", plans: { "1W": { armed: true, entry: 41 } } } };
+  const m = mergeDetail(r, drows, true);
+  assert.strictEqual(m.analysis, "full");
+  assert.strictEqual(m.plans["1W"].entry, 41);
+  assert.strictEqual(m.grade, "A+");
+  assert.strictEqual(r.analysis, undefined, "the summary row must not be mutated");
+});
+test("mergeDetail: a symbol absent from the sidecar merges to itself", () => {
+  const r = { symbol: "QUIET" };
+  assert.strictEqual(mergeDetail(r, { OTHER: {} }, true), r);
+});
+
+// THE OWNER'S DRIFT-PIN, behavioural half: the REAL isHighConviction pulled
+// from the shipped file must return true on a plan carrying ONLY the five
+// lite fields — proof the summary keeps everything the list logic reads.
+function pullFn(name) {
+  const at = APP.search(new RegExp("function\\s+" + name + "\\s*\\("));
+  assert.ok(at >= 0, "app.js no longer defines function " + name);
+  for (let i = APP.indexOf("}", at); i > 0 && i - at < 4000; i = APP.indexOf("}", i + 1)) {
+    const cand = APP.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); return eval("(" + cand + ")"); } // eslint-disable-line no-eval
+    catch (_) { /* keep walking */ }
+  }
+  assert.fail("could not slice function " + name);
+}
+test("isHighConviction passes on a LITE-only plan (the five drift-pin fields)", () => {
+  const isHighConviction = pullFn("isHighConviction");
+  const litePlan = { armed: true, entry_trigger: "reclaim", structural_tps: 2,
+                    level_tf: "weekly", direction: "long" };
+  assert.strictEqual(isHighConviction({ grade: "B+", plans: { "1W": litePlan } }), true);
+  assert.strictEqual(isHighConviction({ grade: "A+", plans: { "1W": { ...litePlan, entry_trigger: "retest" } } }), false);
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

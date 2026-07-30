@@ -198,10 +198,23 @@ jobs:
           from scanner import config
           want = config.VIVEK_SCHEMA_VERSION
           f = "public/data/crypto_vivek.json"
-          v = json.load(open(f)).get("schema_version")
-          if v != want:
-              print(f"SCHEMA GATE FAILED: {f}: schema_version {v} != expected {want}"); sys.exit(1)
-          print(f"schema gate OK — {f} at v{want}")
+          doc = json.load(open(f))
+          if doc.get("schema_version") != want:
+              print(f"SCHEMA GATE FAILED: {f}: schema_version {doc.get('schema_version')} != expected {want}"); sys.exit(1)
+          # v5 PAIRING CHECK (payload diet): the detail sidecar must exist,
+          # parse, match the version AND carry the summary's generated_at —
+          # a run that pushes one file and loses the other fails HERE, not
+          # as a deck whose row-expand can never load.
+          det = f.replace("_vivek.json", "_vivek_detail.json")
+          try:
+              dd = json.load(open(det))
+          except Exception as e:
+              print(f"SCHEMA GATE FAILED: {det}: unreadable ({e})"); sys.exit(1)
+          if dd.get("schema_version") != want:
+              print(f"SCHEMA GATE FAILED: {det}: schema_version {dd.get('schema_version')} != expected {want}"); sys.exit(1)
+          if dd.get("generated_at") != doc.get("generated_at"):
+              print(f"SCHEMA GATE FAILED: {det}: generated_at {dd.get('generated_at')} != summary {doc.get('generated_at')}"); sys.exit(1)
+          print(f"schema gate OK — {f} + detail sidecar paired at v{want}")
           PY
 
       # Track-record integrity gate (Phase 4): a malformed / cross-contaminated
@@ -229,7 +242,7 @@ jobs:
           # public/data/funnel_history.json (2026-07-30, Task 2): this run's
           # crypto publish appends its funnel row there — same written-by-this-
           # run invariant as everything else in the list.
-          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json public/data/funnel_history.json"
+          PATHS="public/data/crypto_vivek.json public/data/crypto_vivek_detail.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json public/data/funnel_history.json"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
           # stages NOTHING when any single pathspec matches no file. The
           # unassigned book file only exists when migration finds strays, so

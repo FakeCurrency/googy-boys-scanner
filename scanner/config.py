@@ -231,7 +231,30 @@ GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
 # v4 (2026-07-20, reviews H1+H2) = adds grade_raw (unsmoothed grade the bot
 # buys off) + headline_tf, and the row's headline entry/stop/TP/R:R now come
 # from the TRADED plan (gated TF when armed, 1D fallback) instead of always 1D.
-VIVEK_SCHEMA_VERSION   = 4
+# v5 (2026-07-31, owner-ruled payload diet) = the PAYLOAD SPLIT: the summary
+# file keeps every first-paint field with rows' `plans` pruned to
+# VIVEK_SUMMARY_PLAN_FIELDS, and the four heavy row groups
+# (VIVEK_DETAIL_ROW_FIELDS) move to `<market>_vivek_detail.json`, keyed by
+# symbol, fetched by the deck on first row-expand. The scheduled bot path is
+# untouched by construction (run_market receives the in-memory FULL rows
+# before publish); the standalone vivek_run CLI re-joins the sidecar.
+VIVEK_SCHEMA_VERSION   = 5
+
+# THE LITE-PLAN DRIFT-PIN (owner clarification, 2026-07-31 ruling): the exact
+# per-timeframe plan fields the SUMMARY keeps, named so they cannot drift.
+# Every list-path consumer reads ONLY these:
+#   app.js  isHighConviction()  -> armed, entry_trigger, structural_tps
+#   app.js  tfDots()            -> plan presence per TF + armed
+#   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
+#   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
+# recs.js, mynames.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# marketcaps/sectorcache/breadth/regime read ROW-level fields only — no plans.
+# chart.js, the expanded row and the CSV/copy paths read FULL plans from the
+# detail sidecar. tests/test_payload_split.py pins this tuple's contents and
+# test/staleview.test.js proves isHighConviction passes on a lite-only plan.
+VIVEK_SUMMARY_PLAN_FIELDS = ("armed", "entry_trigger", "structural_tps",
+                             "level_tf", "direction")
+VIVEK_DETAIL_ROW_FIELDS   = ("plans", "detail", "analysis", "markers")
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)

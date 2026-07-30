@@ -151,6 +151,9 @@
     sortDir: null,      // "asc" | "desc"; null = the sort's natural default
     data: null,
     dataKey: null,      // "<market>:<mode>" the on-screen data belongs to
+    detail: { gen: "", rows: null, promise: null }, // v5 split: lazy heavy rows
+                        // keyed by "<market>|<generated_at>" — a new payload
+                        // or a market switch invalidates by key mismatch
     staleView: false,   // true = SWR paint awaiting fresh · "failed" = refresh failed
     cache: {},
     cacheAt: {},        // "<market>:<mode>" -> ms the payload was FETCHED (#78)
@@ -1006,16 +1009,79 @@
     fetchT(`data/charts/${state.market}${modeDir}/${encodeURIComponent(sym)}.json`, { cache: "force-cache" }).catch(() => {});
   }
 
+  // v5 payload split (owner-ruled payload diet, 2026-07-31): the four heavy
+  // row groups (plans-full / detail / analysis / markers) live in
+  // data/<m>_vivek_detail.json, keyed by symbol. Both helpers are PURE —
+  // test/staleview.test.js slices them by name.
+  //
+  // needsDetail: only a v5+ summary needs the sidecar; a pre-split payload
+  // carries the heavy fields inline and must NEVER trigger a detail fetch
+  // (old deploys have no sidecar to fetch — a chip that can never succeed).
+  const needsDetail = (d) => !!d && +d.schema_version >= 5;
+  // mergeDetail(row, detailRows, isSplit): the row itself pre-split; null
+  // while the sidecar is still needed but not loaded; the merged row once it
+  // is. A symbol absent from the sidecar merges to itself — it simply has no
+  // heavy content this scan.
+  const mergeDetail = (r, drows, isSplit) => {
+    if (!r) return null;
+    if (!isSplit) return r;
+    if (!drows) return null;
+    const extra = drows[r.symbol];
+    return extra ? Object.assign({}, r, extra) : r;
+  };
+  const detailKey = () =>
+    `${state.market}|${(state.data && state.data.generated_at) || ""}`;
+  // One in-flight fetch per payload generation; a failed fetch clears the
+  // promise so Retry actually retries instead of replaying the rejection.
+  function ensureDetail() {
+    if (!needsDetail(state.data)) return Promise.resolve(null);
+    const key = detailKey();
+    if (state.detail.rows && state.detail.gen === key) return Promise.resolve(state.detail.rows);
+    if (state.detail.promise && state.detail.gen === key) return state.detail.promise;
+    state.detail.gen = key;
+    state.detail.rows = null;
+    state.detail.promise = fetchT(`data/${state.market}_vivek_detail.json`, { cache: "no-cache" })
+      .then((res) => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+      .then((j) => {
+        state.detail.rows = (j && j.rows) || {};
+        return state.detail.rows;
+      })
+      .catch((e) => { state.detail.promise = null; throw e; });
+    return state.detail.promise;
+  }
+
   // Lazy detail (Wave 2, 2026-07-22): the expanded panel used to be rendered
   // for EVERY row up-front — the bulk of the list's HTML for content almost
   // never opened. Now it's built on first expand (and gets a fresher scan-age
   // stamp as a bonus). dataset.filled makes repeat opens free.
+  //
+  // v5 adds the second lazy layer: on a split payload the heavy fields come
+  // from the detail sidecar, fetched here on FIRST expand. Failure shows a
+  // retry chip inside this panel only — the LIST never degrades.
   function fillDetail(wrap) {
     const inner = wrap.querySelector(".detail-inner");
     if (!inner || inner.dataset.filled) return;
-    const r = ((state.data && state.data.results) || [])
+    const raw = ((state.data && state.data.results) || [])
       .find((x) => x.symbol === wrap.dataset.sym);
-    if (!r) return;
+    if (!raw) return;
+    const isSplit = needsDetail(state.data);
+    const r = mergeDetail(raw, state.detail.gen === detailKey() ? state.detail.rows : null, isSplit);
+    if (!r) {
+      if (inner.dataset.loading) return;
+      inner.dataset.loading = "1";
+      inner.innerHTML = `<div class="dp-loading">Loading full setup…</div>`;
+      ensureDetail()
+        .then(() => { delete inner.dataset.loading; fillDetail(wrap); })
+        .catch(() => {
+          delete inner.dataset.loading;
+          inner.innerHTML =
+            `<div class="dp-retry">Couldn't load the full setup — the list above is unaffected. ` +
+            `<button type="button" class="dp-retry-btn">Retry</button></div>`;
+          const b = inner.querySelector(".dp-retry-btn");
+          if (b) b.addEventListener("click", () => { inner.innerHTML = ""; fillDetail(wrap); }, { once: true });
+        });
+      return;
+    }
     // #51: copy-debug lives in the expanded panel now (off the row) — one
     // clean tap target per row, the developer tool tucked where it belongs.
     const copyBtn = `<button class="dp-copy row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy this setup's raw data">` +
@@ -2855,7 +2921,12 @@
       const copyBtn = e.target.closest(".row-copy-debug");
       if (copyBtn) {
         const sym = copyBtn.dataset.sym;
-        const r = (state.data && state.data.results || []).find((x) => x.symbol === sym);
+        const raw = (state.data && state.data.results || []).find((x) => x.symbol === sym);
+        // v5 split: copy the MERGED row when the sidecar is in (the button
+        // lives inside an expanded panel, so it normally is); fall back to
+        // the summary row rather than copying nothing.
+        const r = mergeDetail(raw, state.detail.gen === detailKey() ? state.detail.rows : null,
+                              needsDetail(state.data)) || raw;
         if (r && navigator.clipboard) {
           navigator.clipboard.writeText(JSON.stringify(r, null, 2)).then(() => {
             copyBtn.style.color = "var(--green)";
