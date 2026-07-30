@@ -433,6 +433,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   padding: 5px 9px; border-radius: 7px;
 }
 .scan-funnel .sf-chip .sf-rvol { color: var(--orange); }
+/* Funnel-history trend (Task 2) — quiet by design: it lives inside the
+   disclosure and reads as evidence, not alarm. Existing tokens only. */
+.scan-funnel .sf-hist { margin-top: 10px; display: grid; gap: 4px; }
+.scan-funnel .sf-hist:empty { display: none; }
+.scan-funnel .sf-hist-head { color: var(--muted-2); font: 500 11px/1.4 var(--sans); }
+.scan-funnel .sf-hist-row { display: flex; align-items: center; gap: 8px; }
+.scan-funnel .sf-hist-label {
+  color: var(--muted); font: 600 11px/1 var(--mono);
+  min-width: 86px; letter-spacing: 0.03em;
+}
+.scan-funnel .sf-spark { color: var(--blue); flex: none; opacity: 0.9; }
+.scan-funnel .sf-hist-vals { color: var(--muted-2); font: 500 11px/1 var(--mono); }
 .vkf-note { font: 600 11.5px/1 var(--sans); color: var(--muted-2); }
 
 /* ================================================== VIVEK paper track record */

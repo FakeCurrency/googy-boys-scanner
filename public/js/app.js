@@ -1687,6 +1687,41 @@
   // (illiquid_sample: today's volume as a multiple of the name's own 20-day
   // average) — the rows the owner is worried the liquidity floor is killing.
   // REPORT-ONLY on both sides: the scan still drops them; this just says so.
+  // Funnel-history helpers (owner-ruled Task 2) — PURE on purpose:
+  // test/staleview.test.js slices both by name and runs them against fixture
+  // payloads, so keep them free of DOM, state and fetch.
+  //
+  // funnelSeries buckets the columnar committed history to ONE row per day
+  // (the day's LAST scan wins — intraday funnel wiggle is noise at trend
+  // scale, and days are what the eye reads), newest `maxDays` days, for one
+  // market. Returns null unless every column zips with `t` — a malformed
+  // file must render as nothing, never as rows whose timestamp belongs to a
+  // different scan's counts.
+  const funnelSeries = (h, market, maxDays) => {
+    const blk = h && h.markets && h.markets[market];
+    if (!blk || !Array.isArray(blk.t) || !blk.t.length) return null;
+    const cols = ["scanned", "with_data", "published", "floor_killed", "arriving"];
+    if (cols.some((c) => !Array.isArray(blk[c]) || blk[c].length !== blk.t.length)) return null;
+    const byDay = new Map();
+    for (let i = 0; i < blk.t.length; i++) byDay.set(String(blk.t[i]).slice(0, 10), i);
+    const days = [...byDay.keys()].sort().slice(-(maxDays || 60));
+    const series = {};
+    for (const c of cols) series[c] = days.map((d) => +blk[c][byDay.get(d)] || 0);
+    return { days, series };
+  };
+  // A dependency-free polyline sparkline. `currentColor` so the CSS token on
+  // .sf-spark owns the colour; empty/flat-1-point input renders nothing.
+  const sparkline = (vals, w = 96, hgt = 20) => {
+    const v = (vals || []).map(Number).filter((x) => isFinite(x));
+    if (v.length < 2) return "";
+    const lo = Math.min(...v), hi = Math.max(...v), span = (hi - lo) || 1;
+    const pts = v.map((x, i) =>
+      `${((i / (v.length - 1)) * (w - 2) + 1).toFixed(1)},${(hgt - 1 - ((x - lo) / span) * (hgt - 2)).toFixed(1)}`).join(" ");
+    return `<svg class="sf-spark" viewBox="0 0 ${w} ${hgt}" width="${w}" height="${hgt}" aria-hidden="true">` +
+      `<polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.5" ` +
+      `stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  };
+
   function renderFunnel(d) {
     const box = $("#scan-funnel");
     if (!box) return;
@@ -1716,15 +1751,42 @@
         n(f.illiquid_setup)
           ? `${n(f.illiquid_setup)} name(s) had a setup but sit under the liquidity floor.${volNote}`
           : `Nothing was dropped for liquidity this scan.`
-      }${n(f.arriving) ? `<div class="sf-arriving" data-market="${esc(state.market)}"></div>` : ""}</div>`;
+      }${n(f.arriving) ? `<div class="sf-arriving" data-market="${esc(state.market)}"></div>` : ""}<div class="sf-hist" data-market="${esc(state.market)}"></div></div>`;
     box.hidden = false;
-    // The "liquidity arriving" rows live in the FENCED report file
-    // (<market>_arriving.json — owner-ruled, report-only, never the bot's),
-    // fetched lazily on first open so the deck pays nothing for it.
+    // Two lazy fills on first open, so the deck pays nothing until asked:
+    // the "liquidity arriving" rows (FENCED report file, owner-ruled) and the
+    // funnel-history trend (Task 2 — the same five counts as the summary
+    // line, drawn across the committed history; report-only, nothing reads
+    // it back).
+    const hist = box.querySelector(".sf-hist");
+    const fillHist = () => {
+      if (!hist || hist.dataset.loaded) return;
+      hist.dataset.loaded = "1";
+      fetchT("data/funnel_history.json", { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((h) => {
+          const s = funnelSeries(h, hist.dataset.market, 60);
+          if (!s || s.days.length < 2) { hist.textContent = ""; return; }
+          const label = { scanned: "scanned", with_data: "with data",
+                          published: "published", floor_killed: "floor-killed",
+                          arriving: "arriving" };
+          hist.innerHTML =
+            `<div class="sf-hist-head">Funnel trend · ${s.days.length} days · ` +
+            `${esc(s.days[0])} → ${esc(s.days[s.days.length - 1])} (last scan of each day)</div>` +
+            Object.keys(label).map((c) => {
+              const v = s.series[c];
+              return `<div class="sf-hist-row"><span class="sf-hist-label">${label[c]}</span>` +
+                sparkline(v) +
+                `<span class="sf-hist-vals">${esc(String(v[0]))} → ${esc(String(v[v.length - 1]))}</span></div>`;
+            }).join("");
+        })
+        .catch(() => { hist.textContent = ""; });
+    };
     const slot = box.querySelector(".sf-arriving");
-    if (slot) {
+    if (slot || hist) {
       const fill = () => {
-        if (slot.dataset.loaded) return;
+        fillHist();
+        if (!slot || slot.dataset.loaded) return;
         slot.dataset.loaded = "1";
         fetchT(`data/${slot.dataset.market}_arriving.json`, { cache: "no-cache" })
           .then((r) => (r.ok ? r.json() : null))

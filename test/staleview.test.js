@@ -419,4 +419,53 @@ test("the strip renders the stall line only when the probe flagged something, es
     "the title must keep saying the probe is report-only");
 });
 
+
+/* ── Funnel-history trend (owner-ruled Task 2) ──────────────────────────────
+ * The five counts the summary line already shows, drawn across the committed
+ * history file. Both helpers are pure and pulled from the SHIPPED app.js —
+ * a malformed file must render as NOTHING, never as rows whose timestamp
+ * belongs to a different scan's counts. */
+const funnelSeries = pull("funnelSeries");
+const sparkline = pull("sparkline");
+
+const HIST = { markets: { asx: {
+  t: ["2026-07-28T01:00:00+00:00", "2026-07-28T05:00:00+00:00", "2026-07-29T01:00:00+00:00"],
+  scanned: [2200, 2210, 2212], with_data: [2100, 2105, 2120],
+  published: [300, 310, 328], floor_killed: [280, 290, 299], arriving: [4, 7, 9],
+} } };
+
+test("funnelSeries buckets to one row per day and the day's LAST scan wins", () => {
+  const s = funnelSeries(HIST, "asx", 60);
+  assert.deepStrictEqual(s.days, ["2026-07-28", "2026-07-29"]);
+  assert.deepStrictEqual(s.series.scanned, [2210, 2212]);
+  assert.deepStrictEqual(s.series.floor_killed, [290, 299]);
+  assert.deepStrictEqual(s.series.arriving, [7, 9]);
+});
+test("funnelSeries returns null for a market with no rows (and for no file)", () => {
+  assert.strictEqual(funnelSeries(HIST, "nasdaq", 60), null);
+  assert.strictEqual(funnelSeries(null, "asx", 60), null);
+});
+test("funnelSeries refuses a column that does not zip with t", () => {
+  const bad = JSON.parse(JSON.stringify(HIST));
+  bad.markets.asx.arriving = [1];
+  assert.strictEqual(funnelSeries(bad, "asx", 60), null);
+});
+test("funnelSeries maxDays keeps only the newest days", () => {
+  const s = funnelSeries(HIST, "asx", 1);
+  assert.deepStrictEqual(s.days, ["2026-07-29"]);
+  assert.deepStrictEqual(s.series.published, [328]);
+});
+test("sparkline draws one point per value and nothing under two values", () => {
+  const svg = sparkline([1, 5, 3]);
+  assert.ok(svg.includes("<polyline"));
+  assert.strictEqual(svg.match(/[\d.]+,[\d.]+/g).length, 3);
+  assert.strictEqual(sparkline([7]), "");
+  assert.strictEqual(sparkline([]), "");
+  assert.strictEqual(sparkline(null), "");
+});
+test("sparkline survives a flat series without dividing by zero", () => {
+  const svg = sparkline([4, 4, 4, 4]);
+  assert.ok(svg.includes("<polyline") && !svg.includes("NaN"));
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

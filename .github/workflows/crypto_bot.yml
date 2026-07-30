@@ -226,7 +226,10 @@ jobs:
           # only scan.yml staged the file — so the committed counter lagged a
           # day behind and a real crypto dry spell would alert late or never.
           # Same invariant as the rest of the list: written by this run.
-          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json"
+          # public/data/funnel_history.json (2026-07-30, Task 2): this run's
+          # crypto publish appends its funnel row there — same written-by-this-
+          # run invariant as everything else in the list.
+          PATHS="public/data/crypto_vivek.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json public/data/funnel_history.json"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
           # stages NOTHING when any single pathspec matches no file. The
           # unassigned book file only exists when migration finds strays, so

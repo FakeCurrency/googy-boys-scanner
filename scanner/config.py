@@ -1204,6 +1204,19 @@ SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
                                # not multiple — the multiple is the pump smell)
                                 # (0 = never loud)
 
+# Funnel history (2026-07-30, owner-ruled Task 2) — an APPEND-ONLY record of
+# each scan's funnel counts (scanned / with-data / published / floor-killed /
+# arriving) so the one-scan snapshot ("299 killed today") becomes a trend
+# ("does the floor tighten into rallies?"). Written by scanner/funnelhistory.py
+# from run.py's publish loop; REPORT-ONLY — nothing in scanner/broker/ reads it
+# back (test-pinned, same fence as the arriving list). Columnar per market to
+# keep the committed artefact small.
+SCAN_FUNNEL_HISTORY_FILE = "funnel_history.json"   # under the publish root
+SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (crypto ~40 days at
+                                  # 48 scans/day, ASX ~8 months at 8/day —
+                                  # uneven on purpose: the cap is a size
+                                  # guard, the chart buckets by day anyway)
+
 
 @dataclass(frozen=True)
 class MarketConfig:

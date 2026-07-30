@@ -211,6 +211,15 @@ def main() -> None:
                                         from_cache=cache_stats["reused"])
             output.write(vk, args.out, name=f"{market_key}_vivek")
             _scan_health(market_key, published=True)
+            # Funnel history (owner-ruled Task 2): append this publish's
+            # counts to the report-only trend file. Same posture as regime
+            # below — a report artefact must never kill the scan, so the
+            # failure is named and the scan walks on.
+            try:
+                from . import funnelhistory
+                funnelhistory.append(market_key, vk, args.out)
+            except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
+                print(f"  WARNING funnel history append failed: {e.__class__.__name__}: {e}")
             if market_key in breadth_inputs:
                 breadth_inputs[market_key]["results"] = vk["results"]
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
