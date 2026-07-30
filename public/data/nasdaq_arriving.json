@@ -1,11 +1,24 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-07-30T15:49:35-04:00",
+  "generated_at": "2026-07-30T17:23:49-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "LUNG",
+      "name": "Pulmonx Corporation - Common Stock",
+      "sector": "",
+      "dir": "LONG",
+      "price": 1.61000001,
+      "turnover_avg20": 675519,
+      "turnover_today": 7702249,
+      "rvol": 10.6,
+      "adv_usd": 675519.89,
+      "fund": false
+    }
+  ]
 }
