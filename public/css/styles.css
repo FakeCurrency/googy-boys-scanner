@@ -1765,6 +1765,15 @@ body { letter-spacing: -0.012em; }
 .ba-kind-close.neg { color: var(--red); }
 .ba-ago { font: 500 10.5px/1 var(--sans); color: var(--muted-2); }
 .ba-more { margin-left: auto; font: 700 11px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
+/* Stall-probe line (2026-07-30): its own full-width row inside the strip so it
+   cannot be skimmed past — the probe's flags, the owner's call. */
+.ba-stall {
+  flex-basis: 100%; display: block; text-decoration: none;
+  font: 600 11px/1.5 var(--mono); color: var(--orange);
+  background: var(--orange-soft); border-radius: 7px; padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--orange) 26%, transparent);
+}
+.ba-stall:hover { color: var(--text); }
 
 /* Journal — compact account summary living in the (sticky) topbar. */
 .jr-topsum {

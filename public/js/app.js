@@ -2119,6 +2119,32 @@
     if (m < 48 * 60) return `${Math.round(m / 60)}h ago`;
     return `${Math.round(m / 1440)}d ago`;
   }
+  // Pure: book JSON → the deck strip's facts (owner-ordered 2026-07-30: "make
+  // the open paper book + stall status impossible to miss"). Dependency-free
+  // on purpose — test/staleview.test.js extracts THIS expression and drives it
+  // with synthetic books. `stalled` comes from the probe's own `stale_pinged`
+  // stamps in the committed book, so the deck re-types NO thresholds: it shows
+  // exactly what the stall probe flagged, or nothing.
+  const bookFacts = (b) => {
+    const open = (b && Array.isArray(b.open)) ? b.open : [];
+    const closed = (b && Array.isArray(b.closed)) ? b.closed : [];
+    const mkts = { asx: 0, nasdaq: 0, crypto: 0 };
+    let ur = 0, urN = 0;
+    const stalled = [];
+    for (const p of open) {
+      if (p && mkts[p.market] != null) mkts[p.market]++;
+      if (p && typeof p.unreal_r === "number" && isFinite(p.unreal_r)) { ur += p.unreal_r; urN++; }
+      if (p && p.stale_pinged) stalled.push(String(p.symbol || "?"));
+    }
+    let wins = 0, losses = 0, realized = 0;
+    for (const p of closed) {
+      const r = +((p && p.realized_r) ?? NaN);
+      if (isFinite(r)) { realized += r; if (r > 0) wins++; else losses++; }
+    }
+    return { open: open.length, mkts, unreal: urN ? ur : null,
+             wins, losses, realized: (wins + losses) ? realized : null, stalled };
+  };
+
   async function loadBotActivity() {
     const box = $("#bot-activity");
     if (!box) return;
@@ -2146,20 +2172,29 @@
       // day) · last action age. Click expands the event list; the 3-min
       // re-render keeps an expanded list expanded. Journal → link stays put.
       const wasOpen = !!box.querySelector(".ba-events:not([hidden])");
-      const nOpen = (b.open || []).length;
-      const melbDay = (t) => new Intl.DateTimeFormat("en-CA",
-        { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).format(t);
-      const today = melbDay(Date.now());
-      const closedToday = evts.filter((e) => e.kind === "close" && isFinite(e.t) && melbDay(e.t) === today);
-      const rSum = closedToday.reduce((s, e) => s + (isFinite(+e.r) ? +e.r : 0), 0);
-      const rTxt = closedToday.length ? `${rSum >= 0 ? "+" : ""}${rSum.toFixed(1)}R today` : "no closes today";
-      const sumTxt = `Bot: ${nOpen} open · ${rTxt} · last action ${agoText(recent[0].t)}`;
+      // The scoreboard, made unavoidable (owner-ordered 2026-07-30): open
+      // count with the market split, live unrealized R across the book, the
+      // honest closed record, and — on its own line so it cannot be skimmed
+      // past — the positions the stall probe has flagged as sitting still.
+      const facts = bookFacts(b);
+      const fmtR = (r) => (r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(1)}R`);
+      const sumTxt =
+        `Paper book: ${facts.open} open (${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
+        `${facts.mkts.crypto} CRY) · unrealized ${fmtR(facts.unreal)} · ` +
+        `record ${facts.wins}W–${facts.losses}L ${fmtR(facts.realized)}`;
+      const shown = facts.stalled.slice(0, 6);
+      const stallTxt = facts.stalled.length
+        ? `⏳ ${facts.stalled.length} sitting still — probe-flagged: ${shown.join(", ")}` +
+          `${facts.stalled.length > shown.length ? ` +${facts.stalled.length - shown.length} more` : ""} · your call`
+        : "";
       box.hidden = false;
       box.innerHTML =
         `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" ` +
           `title="The paper bot book — click for the recent events">🤖 ${esc(sumTxt)}` +
           `<span class="ba-chev" aria-hidden="true">▾</span></button>` +
         `<a class="ba-more" href="journal.html">Journal →</a>` +
+        (stallTxt ? `<a class="ba-stall" href="journal.html" ` +
+          `title="Open ≥2 weeks with minimal movement, flagged by the stall probe — it never closes anything; the decision is yours">${esc(stallTxt)}</a>` : "") +
         `<div class="ba-events"${wasOpen ? "" : " hidden"}>` +
         recent.map((e) =>
           `<a class="ba-item" href="journal.html" title="${esc(e.sub)}">` +

@@ -364,4 +364,59 @@ test("every data fetch in the deck's scripts goes through the timeout helper", (
   }
 });
 
+// ---------------------------------------------------------------------------
+// The paper-book deck strip (owner-ordered 2026-07-30): the scoreboard made
+// unavoidable. bookFacts is the pure half — extracted and driven here with
+// synthetic books; the stall count comes from the probe's OWN stale_pinged
+// stamps, so the deck re-types no thresholds.
+// ---------------------------------------------------------------------------
+const bookFacts = pull("bookFacts");
+
+test("bookFacts: split, unrealized sum, record and stall flags from a real-shaped book", () => {
+  const b = {
+    open: [
+      { symbol: "BGA", market: "asx", unreal_r: 0.32, stale_pinged: "2026-07-30" },
+      { symbol: "AIA", market: "asx", unreal_r: -0.1 },
+      { symbol: "MDB", market: "nasdaq", unreal_r: 1.4, stale_pinged: "2026-07-29" },
+      { symbol: "XLM", market: "crypto", unreal_r: 0.0 },
+    ],
+    closed: [{ realized_r: 2.0 }, { realized_r: -1.0 }, { realized_r: -1.5 }],
+  };
+  const f = bookFacts(b);
+  assert.deepStrictEqual(f.mkts, { asx: 2, nasdaq: 1, crypto: 1 });
+  assert.strictEqual(f.open, 4);
+  assert.ok(Math.abs(f.unreal - 1.62) < 1e-9);
+  assert.strictEqual(f.wins, 1); assert.strictEqual(f.losses, 2);
+  assert.ok(Math.abs(f.realized - -0.5) < 1e-9);
+  assert.deepStrictEqual(f.stalled, ["BGA", "MDB"],
+    "stalled = the probe's stamps, in book order — nothing recomputed");
+});
+
+test("bookFacts: honesty at the edges — no priced rows means unreal is null, not 0", () => {
+  const f = bookFacts({ open: [{ symbol: "X", market: "asx" }], closed: [] });
+  assert.strictEqual(f.unreal, null, "'+0.0R' would claim a measurement nobody made");
+  assert.strictEqual(f.realized, null, "no closed trades = no record, not 0R");
+  assert.deepStrictEqual(bookFacts(null).stalled, []);
+  assert.strictEqual(bookFacts({}).open, 0);
+});
+
+test("bookFacts: a zero-R close counts as a loss, never a win", () => {
+  // Costs make a flat exit negative in practice, but the boundary must not
+  // flatter the record if one ever lands exactly on zero.
+  const f = bookFacts({ open: [], closed: [{ realized_r: 0 }] });
+  assert.strictEqual(f.wins, 0); assert.strictEqual(f.losses, 1);
+});
+
+test("the strip renders the stall line only when the probe flagged something, escaped, to the journal", () => {
+  const APP3 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
+  const body = APP3.slice(APP3.indexOf("async function loadBotActivity"), APP3.indexOf("function startClocks") > 0 ? APP3.indexOf("function startClocks") : undefined);
+  assert.ok(/const facts = bookFacts\(b\)/.test(body), "the strip must render from bookFacts, not ad-hoc sums");
+  assert.ok(/facts\.stalled\.length\s*\?/.test(body) || /stallTxt \?/.test(body),
+    "the stall line must be GATED on the probe having flagged something");
+  assert.ok(/esc\(stallTxt\)/.test(body), "the stall line text must go through esc()");
+  assert.ok(/class="ba-stall" href="journal\.html"/.test(body), "the stall line must link to the journal");
+  assert.ok(/never closes anything; the decision is yours/.test(body),
+    "the title must keep saying the probe is report-only");
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

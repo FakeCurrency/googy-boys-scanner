@@ -4,7 +4,7 @@ name: Tests
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
 # existed but NOTHING ran them — regressions only surfaced when they broke a
 # scheduled scan (e.g. the 2026-07-05 schema-gate failure). Now every push
-# runs the lot in ~2 minutes: 1255 pytest (58 files) + 646 JS assertions across
+# runs the lot in ~2 minutes: 1255 pytest (58 files) + 650 JS assertions across
 # 16 suites, measured 2026-07-29. The numbers are a smell test, not a gate —
 # a big drop means a directory stopped being collected, which is the failure
 # `pytest.ini` being in the path filter above exists to make visible.
@@ -124,7 +124,7 @@ jobs:
         run: node test/journal_money.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
         run: node test/escaping.test.js
-      - name: Stale-payload + racing-poll + cold-fail + timeout rules (TOP100 #78/#79, 26)
+      - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip rules (TOP100 #78/#79, 30)
         run: node test/staleview.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82/#83 + sync honesty, 52)
         run: node test/leaks.test.js
@@ -225,7 +225,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: test/e2e/__baseline__
-          key: screenshot-baselines-v11-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          # v11 -> v12 (2026-07-30): INTENTIONAL visual change — the deck's bot
+          # strip became the paper-book scoreboard (owner-ordered): market
+          # split + unrealized R + closed record + the stall-probe line. The
+          # diff was eyeballed before this bump: one new element, everything
+          # below shifts one line, nothing else moved.
+          key: screenshot-baselines-v12-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
