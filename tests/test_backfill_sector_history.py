@@ -488,3 +488,51 @@ def test_a_grade_on_a_warmup_day_is_discarded_not_a_crash():
     rows = bf.build_rows("asx", per_name, GRID, _uni(Materials=20), [], HORIZON)
     assert [r["d"] for r in rows] == GRID           # no warm-up row published
     assert rows[0]["s"]["Materials"][0] == 3        # grid days still counted
+
+# ── the NASDAQ empty-sector case (run #4, 2026-07-30) ────────────────────────
+
+def test_a_sectorless_universe_reconstructs_EMPTY_rows_which_is_the_run4_bug():
+    """The shape that shipped 124 vacuous rows: NASDAQ's universe carries no
+    sector column, so without a fallback every reconstructed row has zero
+    cells — nothing fabricated, nothing counted, six months of nothing. This
+    test pins the failure so the repair below has something to be measured
+    against; if it ever starts producing cells WITHOUT enrichment, the
+    fallback's premise has changed and both tests deserve a fresh look."""
+    bare = [{"symbol": f"NV{i}", "sector": ""} for i in range(20)]
+    per_name = [(f"NV{i}", "", {"g": {d: "A+" for d in GRID}}) for i in range(6)]
+    rows = bf.build_rows("nasdaq", per_name, GRID, bare, [], HORIZON)
+    assert all(r["s"] == {} for r in rows)
+
+
+def test_the_sector_map_fallback_fills_blanks_and_the_universe_still_wins():
+    """The owner-approved repair: blanks are classified from the committed
+    cache exactly the way the live scan does it (sectorcache.enrich_rows), a
+    universe-carried sector is never overwritten, and the enriched rows give
+    build_rows real numerators AND denominators — the two halves run #4 lost."""
+    universe = ([{"symbol": f"NV{i}", "sector": ""} for i in range(20)]
+                + [{"symbol": "GICS0", "sector": "Materials"}])
+    cache = {f"nasdaq:NV{i}": {"sector": "Technology"} for i in range(20)}
+    cache["nasdaq:GICS0"] = {"sector": "Utilities"}          # must NOT win
+    filled = sb_cache_enrich(universe, "nasdaq", cache)
+    assert filled == 20
+    assert universe[-1]["sector"] == "Materials"             # universe wins
+    per_name = [(f"NV{i}", "", {"g": {d: "A+" for d in GRID}}) for i in range(6)]
+    rows = bf.build_rows("nasdaq", per_name, GRID, universe, [], HORIZON)
+    cell = rows[0]["s"]["Technology"]
+    assert cell[0] == 6 and cell[1] == 20                    # ag / listed
+
+
+def test_main_actually_calls_the_enrichment_between_load_and_replay():
+    """Run #4's bug class is not 'the mechanism is wrong' but 'main never
+    invokes it'. Source contract, per the repo's standing pattern: the shipped
+    script must call sectorcache.enrich_rows on the universe after
+    load_universe and before the frames download."""
+    src = (ROOT / "scripts" / "backfill_sector_history.py").read_text(encoding="utf-8")
+    load = src.index("load_universe(market, full=True)")
+    dl = src.index("frames = download(")
+    assert "sectorcache.enrich_rows(universe, market)" in src[load:dl]
+
+
+def sb_cache_enrich(rows, market, cache):
+    from scanner import sectorcache
+    return sectorcache.enrich_rows(rows, market, cache)

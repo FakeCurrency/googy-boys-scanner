@@ -79,7 +79,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scanner import config, sectorbreadth  # noqa: E402
+from scanner import config, sectorbreadth, sectorcache  # noqa: E402
 
 _WARMUP_DEFAULT = 10
 
@@ -499,6 +499,21 @@ def main() -> int:
     from scanner.universe import load_universe
 
     universe = load_universe(market, full=True)
+    # SECTOR FALLBACK (run #4, 2026-07-30 — owner-approved repair). NASDAQ's
+    # universe ships no sector column, so run #4 reconstructed 124 rows with
+    # ZERO sector cells: `sector_of` (numerator attribution), `listed` (the
+    # denominator) and `held_on` all read `u["sector"]` and every one came up
+    # blank. The live scan closed this exact gap with the committed classified
+    # cache — sectorcache.enrich_rows writes ONLY into blank fields, a
+    # universe-carried sector (ASX ships GICS on all 2,212) always wins, and a
+    # missing cache degrades to a no-op — so the reconstruction now stands on
+    # the same source the live NASDAQ breadth already stands on
+    # (names_source: "classified"). Same caveat family as the universe itself:
+    # today's classification applied to past sessions.
+    filled = sectorcache.enrich_rows(universe, market)
+    if filled:
+        print(f"  sector fallback: {filled} names classified from "
+              f"data/sector_map.json (universe carried no sector)", flush=True)
     if args.limit:
         universe = universe[:args.limit]
     print(f"backfill {market}: {len(universe)} names, "
