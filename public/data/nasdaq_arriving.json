@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "market": "crypto",
-  "generated_at": "2026-07-30T03:19:59+00:00",
+  "market": "nasdaq",
+  "generated_at": "2026-07-29T23:19:00-04:00",
   "rule": {
-    "floor": 3000000,
+    "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
