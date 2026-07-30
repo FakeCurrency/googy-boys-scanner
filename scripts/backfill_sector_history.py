@@ -277,7 +277,15 @@ def build_rows(market: str, per_name: list, grid: list[str], universe: list,
         if not key:
             continue
         for day, grade in (res.get("g") or {}).items():
-            if grade in tradeable:
+            # `day in by_day` is load-bearing (run #1, KeyError '2026-01-16'):
+            # per-name series are graded across the FULL replay grid, which
+            # includes the warm-up sessions the publish grid deliberately
+            # drops — so the first name graded tradeable on a warm-up day
+            # crashed the whole 36-minute replay at the very last step. Grid
+            # days are the publish window; anything outside it (warm-up, or a
+            # stray frame date the session grid never had) is discarded here,
+            # which is what "computed then DISCARDED" always promised.
+            if grade in tradeable and day in by_day:
                 by_day[day][key] += 1
 
     rows = []

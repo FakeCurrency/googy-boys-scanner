@@ -476,3 +476,15 @@ def test_merge_only_refuses_an_empty_parked_file(tmp_path, _history):
     empty.write_text(json.dumps({"market": "asx", "horizon": HORIZON, "rows": []}))
     assert bf.merge_only(str(empty)) == 1
     assert json.loads(_history.read_text())["rows"] == []
+
+def test_a_grade_on_a_warmup_day_is_discarded_not_a_crash():
+    """Run #1 (2026-07-30) died with KeyError '2026-01-16' at the LAST step of a
+    36-minute replay: per-name series carry grades for the warm-up sessions the
+    publish grid deliberately drops, and `by_day` was keyed by the publish grid
+    alone. A warm-up grade must be discarded — that is the documented meaning of
+    warm-up — and must never reach the numerator of a published row."""
+    warmup_day = "2026-06-20"                      # predates GRID entirely
+    per_name = _named("Materials", 3, days=[warmup_day] + GRID)
+    rows = bf.build_rows("asx", per_name, GRID, _uni(Materials=20), [], HORIZON)
+    assert [r["d"] for r in rows] == GRID           # no warm-up row published
+    assert rows[0]["s"]["Materials"][0] == 3        # grid days still counted
