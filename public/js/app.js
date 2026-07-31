@@ -1809,7 +1809,8 @@
       `${esc(r.symbol)} <span class="sf-rvol">${esc(String(r.rvol))}×</span></a>`).join("");
     const volNote = !hasSample ? ""
       : chips ? ` Volume is arriving in these today (multiple of their own 20-day average):` +
-                `<div class="sf-chips">${chips}</div>`
+                `<div class="sf-chips">${chips}</div>` +
+                (n(f.arriving) ? "" : ` None cleared the stricter two-leg “arriving” gate — today's dollars alone over the floor on ≥3× average volume.`)
       : ` None of them show unusual volume today.`;
     box.innerHTML =
       `<summary>${esc(summary)}</summary>` +
@@ -2018,7 +2019,7 @@
         ? { h: "Your watchlist is empty", p: "Tap the ☆ on any setup to add it here." }
         : activeFilters.length
           ? { h: "No setups match these filters", p: `${activeFilters.join(" + ")} has no matches in ${state.market ? state.market.toUpperCase() : "this market"} on this tab — tap a pill or filter to widen, or switch market/tab.` }
-          : { h: "No setups in this tab", p: "Try another grade tab or market, or check back after the next scan." };
+          : { h: "No setups in this tab", p: "The gates are strict — a quiet tape can pass nothing, and that is the honest reading. Try another grade tab or market, or check back after the next scan (ASX and NASDAQ scan only while their market trades; crypto scans around the clock)." };
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
       return;
     }

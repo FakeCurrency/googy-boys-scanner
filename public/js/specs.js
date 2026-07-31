@@ -204,10 +204,22 @@
       const total = Number(mk.graduated_total) || grads.length;
       const watching = mk.seen && typeof mk.seen === "object"
         ? Object.keys(mk.seen).length : 0;
-      if (!total && !watching) return;        // nothing to say yet
       // From the market alone — state.data may still hold the PREVIOUS
       // market's payload when this fires at the top of a market switch.
       const cur = state.market === "asx" ? "A$" : "$";
+      if (!total && !watching) {
+        // The registry exists but this market has nothing recorded yet —
+        // say so instead of vanishing, so "no graduates" reads as the
+        // surface's honest state rather than a broken strip (owner item 3;
+        // still display-only, still fed by the same report file).
+        host.innerHTML = `<div class="spg-head">
+            <span class="spg-title">SPECS → VIVEK GRADUATES</span>
+            <b class="spg-count">0</b>
+            <span class="spg-note">none yet for ${PM.esc(state.market.toUpperCase())} — Specs names enter the watch on first appearance and are counted when they later cross into the published VIVEK scan</span>
+          </div>`;
+        host.hidden = false;
+        return;
+      }
       const rows = grads.slice(-6).reverse().map((g) => `<div class="spg-row">
           <b class="spg-sym">${PM.esc(g.symbol || "")}</b>
           <span class="spg-name">${PM.esc(g.name || "")}</span>

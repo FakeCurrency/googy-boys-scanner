@@ -443,7 +443,8 @@ window.PM = (() => {
     const days = Math.floor(hours / 24);
     const age = days >= 2 ? `${days} DAYS` : `${Math.round(hours)}H`;
     return ` <span class="pm-stale-badge" title="This lens refreshes nightly — the last ` +
-      `successful scan is older than expected. Check the GitHub Actions runs.">` +
+      `successful scan is older than expected. A weekend or market holiday is ` +
+      `the usual benign cause; if it is a weekday, check the GitHub Actions runs.">` +
       `⚠ SCAN ${age} OLD</span>`;
   }
 
