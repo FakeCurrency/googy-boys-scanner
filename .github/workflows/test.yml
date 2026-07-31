@@ -168,6 +168,19 @@ jobs:
           npx playwright install --with-deps chromium
       - name: E2E smoke (dashboard + recs · desktop + 390px)
         run: node test/e2e/smoke.e2e.js
+      # Hang-probe (owner-ruled, 2026-07-31): a data fetch that neither
+      # resolves nor rejects — the one failure mode Phase B exists for, and
+      # the one no unit test can exercise. The probe HOLDS the deck's market
+      # payload request open (Playwright route, never fulfilled) and asserts
+      # the 20s abort really fires in a real browser, the "Tap to retry"
+      # state appears wired, and the page stays usable mid-hang (market
+      # switch paints fixture rows while the hung request is still pending).
+      # ~70s of genuine wall-clock waiting is the point: the timeout under
+      # test is real, not mocked. Test-only — production fetch logic is
+      # untouched, and /data/ is fixture-pinned like the two gates below, so
+      # this can never fail on a quiet live tape.
+      - name: Hang-probe (hung fetch -> timeout -> Tap to retry)
+        run: node test/e2e/hangprobe.e2e.js
       # Mobile screenshot matrix (#40): 6 pages x 360/390/430, asserts zero
       # overflow and uploads the shots so mobile layout is reviewable per run.
       - name: Mobile screenshot matrix (360/390/430)
