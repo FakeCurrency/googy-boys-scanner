@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-07-30",
+  "run_date": "2026-07-31",
   "ruleset_version": "1.3.1",
   "universe_size": 101,
   "narrations_file": "narrations.json",
@@ -1314,51 +1314,6 @@
       "name": "Bitcoin",
       "sector": "Crypto",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "CRV",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.2017,
-          "high": 0.2088,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-26"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.1969,
-          "high": 0.2017,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-07-26"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.517,
-        "dist_to_yearly_open_pct": -0.4179,
-        "avg_turnover_20d": 30949786,
-        "close": 0.2088,
-        "sweep_date": "2026-07-26",
-        "sweep_depth_pct": 0.0341,
-        "bars_remaining": 1
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Curve DAO",
-      "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "DASH",
