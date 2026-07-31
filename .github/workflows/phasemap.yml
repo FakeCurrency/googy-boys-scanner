@@ -172,11 +172,19 @@ jobs:
           # and stats/ (owned by lens_backtest.yml); re-applying those from
           # this run's stale checkout reverted the owners' fresher pushes.
           # journal/confluence_state.json dropped: confluence no longer runs here.
-          PATHS="public/data/phasemap/asx public/data/phasemap/nasdaq public/data/phasemap/crypto public/data/phasemap/charts public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts"
+          # spec_graduation.json (2026-07-31): the Specs->VIVEK graduation
+          # registry — spec_run is its ONLY writer, so it belongs to this
+          # workflow's list. Deliberately NOT in the must-change gate below:
+          # specgrad is report-only and its failure is swallowed by design
+          # (spec_run still exits 0), so a must-change assert would convert a
+          # tolerated report failure into a red nightly — the funnel history
+          # in scan.yml made the same call. A missed night self-heals on the
+          # next one.
+          PATHS="public/data/phasemap/asx public/data/phasemap/nasdaq public/data/phasemap/crypto public/data/phasemap/charts public/data/asx_spec.json public/data/nasdaq_spec.json public/data/spec_charts public/data/spec_graduation.json"
           # TOP100 #54 (2026-07-28) — was `git add $PATHS 2>/dev/null || true`.
           # `git add a b` is ALL-OR-NOTHING: with one path missing it exits 128
           # with "pathspec did not match any files" and stages NEITHER
-          # (verified, not assumed). Seven paths here, and the two spec files
+          # (verified, not assumed). Eight paths here, and the two spec files
           # are exactly the ones a failed Specs step can leave absent on a fresh
           # checkout — so the tolerated failure could take the PhaseMap
           # snapshots down with it, silently, via the `|| true`. Staged one at

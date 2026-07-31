@@ -1240,6 +1240,20 @@ SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (crypto ~40 days at
                                   # uneven on purpose: the cap is a size
                                   # guard, the chart buckets by day anyway)
 
+# Specs -> VIVEK graduation watch (2026-07-31, owner-ruled) — the tally of
+# names the Specs lens surfaced (sub-$0.50 discoveries) that LATER appeared in
+# the published <m>_vivek.json, i.e. crossed the 50c line and/or the liquidity
+# floor into VIVEK eligibility and set up there. Written by scanner/specgrad.py
+# from spec_run's nightly publish path alone; REPORT-ONLY, same fence as the
+# arriving list and the funnel history — nothing in scanner/broker/ reads
+# spec_graduation.json back (test-pinned); the display is public/js/specs.js.
+SPEC_GRAD_FILE     = "spec_graduation.json"   # under the publish root
+SPEC_GRAD_SEEN_MAX = 2000   # per-market watch cap (oldest first_seen trimmed;
+                            # Specs publishes ~0-10 names a night, so this is
+                            # years of headroom, not a number that will bind)
+SPEC_GRAD_MAX      = 400    # per-market graduations kept (newest tail); the
+                            # lifetime tally survives trims in graduated_total
+
 
 @dataclass(frozen=True)
 class MarketConfig:

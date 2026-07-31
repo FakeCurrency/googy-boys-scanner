@@ -19,7 +19,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=103" />
-  <link rel="stylesheet" href="css/phasemap.css?v=17" />
+  <link rel="stylesheet" href="css/phasemap.css?v=18" />
   <script src="js/nav.js?v=13"></script>
   <script src="js/sw-register.js?v=3" defer></script>
 </head>
@@ -55,6 +55,10 @@
       <div class="deck-pills" id="sp-pills" role="group" aria-label="Spec filters"></div>
     </section>
 
+    <!-- Specs → VIVEK graduation watch (report-only, 2026-07-31): hidden
+         until data/spec_graduation.json has something to say -->
+    <section class="spg" id="sp-grads" hidden></section>
+
     <nav class="view-tabs" id="sp-tabs" role="tablist" aria-label="View">
       <button class="view-tab is-active" data-view="results" role="tab" aria-selected="true">Results <span class="watch-count" id="sp-count-results">0</span></button>
       <button class="view-tab" data-view="watchlist" role="tab" aria-selected="false" title="Starred names — they stay here even after the setup ends">★ Watchlist <span class="watch-count" id="sp-count-watchlist">0</span></button>
@@ -88,6 +92,6 @@
 
   <script src="js/gbs-sync.js?v=10"></script>
   <script src="js/phasemap-shared.js?v=12"></script>
-  <script src="js/specs.js?v=10"></script>
+  <script src="js/specs.js?v=11"></script>
 </body>
 </html>

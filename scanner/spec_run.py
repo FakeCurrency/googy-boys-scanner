@@ -190,7 +190,18 @@ def main(argv=None) -> int:
             print(f"unknown/unsupported market: {m}")
             return 2
     for m in markets:
-        scan_market(m, limit=args.limit)
+        payload = scan_market(m, limit=args.limit)
+        # Specs -> VIVEK graduation watch (owner-ruled, 2026-07-31): fold the
+        # published results into the report-only registry, AFTER the specs
+        # publish so it records what actually shipped. Same posture as
+        # run.py's funnel-history hook — a report artefact must never kill
+        # the scan, so the failure is named and the loop walks on.
+        try:
+            from . import specgrad
+            specgrad.update(m, OUT_DIR, payload)
+        except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
+            print(f"[{m}] WARNING spec graduation update failed: "
+                  f"{e.__class__.__name__}: {e}")
     return 0
 
 

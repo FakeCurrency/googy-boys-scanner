@@ -185,6 +185,45 @@
     $("#sp-count-watchlist").textContent = PM.watch.count("specs", state.market);
   }
 
+  // ── Specs → VIVEK graduates (owner-ruled, 2026-07-31) ────────────────────
+  // Report-only evidence strip: names this lens surfaced FIRST that later
+  // appeared in the published VIVEK scan — the discovery lens feeding the
+  // core lens, counted. Reads data/spec_graduation.json (written nightly by
+  // scanner/specgrad.py); absent, broken or empty → the strip stays hidden.
+  // Nothing here feeds grades, filters or the bot — display only.
+  async function loadGrads() {
+    const host = $("#sp-grads");
+    if (!host) return;
+    host.hidden = true;
+    try {
+      const res = await PM.fetchTimeout("data/spec_graduation.json", { cache: "no-cache" });
+      if (!res.ok) return;                    // no registry yet — invisible
+      const reg = await res.json();
+      const mk = (reg && reg.markets && reg.markets[state.market]) || {};
+      const grads = Array.isArray(mk.graduates) ? mk.graduates : [];
+      const total = Number(mk.graduated_total) || grads.length;
+      const watching = mk.seen && typeof mk.seen === "object"
+        ? Object.keys(mk.seen).length : 0;
+      if (!total && !watching) return;        // nothing to say yet
+      // From the market alone — state.data may still hold the PREVIOUS
+      // market's payload when this fires at the top of a market switch.
+      const cur = state.market === "asx" ? "A$" : "$";
+      const rows = grads.slice(-6).reverse().map((g) => `<div class="spg-row">
+          <b class="spg-sym">${PM.esc(g.symbol || "")}</b>
+          <span class="spg-name">${PM.esc(g.name || "")}</span>
+          <span class="spg-path">${PM.esc(cur)}${fp(g.spec_price)} → ${PM.esc(cur)}${fp(g.vivek_price)}</span>
+          ${g.grade ? `<span class="spg-grade" title="VIVEK grade on graduation day">${PM.esc(g.grade)}</span>` : ""}
+          <span class="spg-days" title="Days from first Specs appearance to VIVEK graduation">${PM.esc(g.days != null ? g.days + "d" : "—")}</span>
+        </div>`).join("");
+      host.innerHTML = `<div class="spg-head">
+          <span class="spg-title">SPECS → VIVEK GRADUATES</span>
+          <b class="spg-count">${Number(total) || 0}</b>
+          <span class="spg-note">names this lens surfaced first that later crossed into the published VIVEK scan · watching ${Number(watching) || 0}</span>
+        </div>${rows ? `<div class="spg-rows">${rows}</div>` : ""}`;
+      host.hidden = false;
+    } catch (_) { /* report-only strip — it never breaks the page */ }
+  }
+
   function syncMarketButtons() {
     $$("#sp-market .market-btn").forEach((b) => {
       const on = b.dataset.market === state.market;
@@ -195,6 +234,7 @@
 
   async function load() {
     $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()} · loading…`;
+    loadGrads();   // graduation strip rides beside the scan, never gates it
     try {
       const res = await PM.fetchTimeout(`data/${state.market}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
