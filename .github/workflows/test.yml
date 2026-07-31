@@ -186,7 +186,8 @@ jobs:
       - name: Mobile screenshot matrix (360/390/430)
         run: node test/e2e/screenshots.e2e.js
       # Lighthouse budget tripwire (#70): fails ONLY on an egregious layout-
-      # stability or payload regression (CLS < 0.50, transfer < 2.5MB). TTI is
+      # stability or payload regression (CLS < 0.50, transfer < 1.7MB — the
+      # payload-diet lock-in: un-splitting v5 reads ~1.86MB and goes red). TTI is
       # printed but NOT gated — it swings ~2x on shared runners and a flaky
       # perf gate would just resurrect the failure-email problem. Reuses the
       # chromium Playwright already installed above (no second browser download).

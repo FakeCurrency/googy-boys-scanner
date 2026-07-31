@@ -80,7 +80,19 @@ const MB = 1024 * 1024;
 // --- Budgets -------------------------------------------------------------- //
 // GATED. Sized above the fixture-pinned baseline, not above whatever the tape
 // did today -- that was the bug. Both move only when a human decides they move.
-const TRANSFER_BUDGET_MB = 2.5;
+//
+// 2.5 -> 1.7 (owner item 4, 2026-07-31): the payload-diet lock-in. The v5
+// split cut the fixture-pinned first paint 1.86MB -> 1.15MB measured, and a
+// budget still sized above the PRE-split number would wave through the one
+// regression it exists to catch -- a change that quietly undoes the diet
+// reads ~1.86MB on these same fixtures and MUST be red. Arithmetic for 1.7:
+//   1.15  measured baseline today (204-row ASX summary fixture, 0.46MB)
+//   +0.35 a broad-tape fixture refresh (the widest live summary yet is
+//         0.79MB at 345 rows -- refreshing fixtures to such a day adds this)
+//   = ~1.5 legitimate worst case, 1.7 leaves ~13% slack over it
+//   < 1.86 the measured pre-split first paint on the SAME fixtures, so
+//         un-splitting the payload cannot stay green.
+const TRANSFER_BUDGET_MB = 1.7;
 const CLS_BUDGET = 0.5;
 // NOT gated. Above today's real 5.00MB so it does not cry wolf from day one,
 // well below the ~13MB the payload could reach before anyone would call it
@@ -201,7 +213,7 @@ const CHROME = process.env.PW_CHROMIUM || process.env.CHROME_PATH || undefined;
     // test/e2e/fixtures/data, so nothing a scheduled scan commits can move them.
     check(bytes < TRANSFER_BUDGET_MB * MB,
       `transfer ${(bytes / MB).toFixed(2)}MB < ${TRANSFER_BUDGET_MB.toFixed(1)}MB ` +
-      `(fixture-pinned /data/, deterministic 1.86MB baseline - if this moved and no ` +
+      `(fixture-pinned /data/, deterministic 1.15MB baseline - if this moved and no ` +
       `asset did, test/e2e/fixtures/data/ was refreshed)`);
     check(cls < CLS_BUDGET,
       `CLS ${cls.toFixed(3)} < ${CLS_BUDGET.toFixed(2)} ` +
