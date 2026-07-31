@@ -3,22 +3,22 @@
   "label": "ASX",
   "setup_type": "vivek",
   "schema_version": 5,
-  "code_sha": "f8edc8d",
+  "code_sha": "411bb3f",
   "currency": "AUD",
   "currency_symbol": "A$",
   "timezone": "Australia/Sydney",
   "tz_label": "AEST",
-  "generated_at": "2026-07-31T17:00:33+10:00",
-  "scanned": 2125,
-  "downloaded": 2125,
-  "from_cache": 110,
-  "fresh": 2015,
+  "generated_at": "2026-07-31T19:40:04+10:00",
+  "scanned": 2131,
+  "downloaded": 2131,
+  "from_cache": 1,
+  "fresh": 2130,
   "universe_size": 2212,
   "coverage_pct": 96,
   "score_max": 10,
   "sma": 200,
   "sector_counts": {
-    "Unclassified": 146,
+    "Unclassified": 145,
     "Financials": 53,
     "Materials": 47,
     "Industrials": 20,
@@ -33,18 +33,18 @@
   },
   "funnel": {
     "universe": 2212,
-    "with_data": 2125,
-    "no_setup": 1482,
-    "illiquid_setup": 302,
+    "with_data": 2131,
+    "no_setup": 1484,
+    "illiquid_setup": 307,
     "below_score": 0,
     "no_plan": 1,
     "errors": 0,
-    "setups": 340,
+    "setups": 339,
     "grades": {
-      "A+": 107,
-      "A": 76,
-      "B+": 152,
-      "WATCH": 5
+      "A+": 105,
+      "A": 77,
+      "B+": 153,
+      "WATCH": 4
     },
     "illiquid_sample": [
       {
@@ -52,6 +52,18 @@
         "dir": "LONG",
         "turnover": 5222,
         "rvol": 19.2
+      },
+      {
+        "symbol": "ULTB",
+        "dir": "SHORT",
+        "turnover": 18819,
+        "rvol": 18.0
+      },
+      {
+        "symbol": "KP2",
+        "dir": "SHORT",
+        "turnover": 5390,
+        "rvol": 16.5
       },
       {
         "symbol": "EPN",
@@ -78,28 +90,10 @@
         "rvol": 10.2
       },
       {
-        "symbol": "AOA",
-        "dir": "SHORT",
-        "turnover": 350,
-        "rvol": 10.0
-      },
-      {
         "symbol": "MEC",
         "dir": "LONG",
         "turnover": 11498,
         "rvol": 7.9
-      },
-      {
-        "symbol": "BBC",
-        "dir": "SHORT",
-        "turnover": 7178,
-        "rvol": 7.5
-      },
-      {
-        "symbol": "OKJ",
-        "dir": "LONG",
-        "turnover": 664,
-        "rvol": 6.2
       },
       {
         "symbol": "BTC",
@@ -118,6 +112,12 @@
         "dir": "LONG",
         "turnover": 75280,
         "rvol": 5.6
+      },
+      {
+        "symbol": "A3D",
+        "dir": "SHORT",
+        "turnover": 23199,
+        "rvol": 5.1
       }
     ],
     "arriving": 8
@@ -245,7 +245,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 51.05429708,
+      "level": 51.05429743,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -261,17 +261,17 @@
       "confluence": true,
       "price": 51.74000168,
       "headline_tf": "3D",
-      "entry": 51.05429708,
-      "stop": 50.79072424,
-      "tp1": 51.46662401,
-      "tp2": 51.84989462,
-      "tp3": 52.07937538,
+      "entry": 51.05429743,
+      "stop": 50.79072461,
+      "tp1": 51.46662019,
+      "tp2": 51.84989845,
+      "tp3": 52.0793792,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.26357285,
+      "risk": 0.26357282,
       "rr": 3.02,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -309,7 +309,7 @@
         51.63000107,
         51.74000168
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -349,7 +349,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 6.73870834,
+      "level": 6.73870836,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -365,17 +365,17 @@
       "confluence": true,
       "price": 6.84000015,
       "headline_tf": "1W",
-      "entry": 6.73870834,
+      "entry": 6.73870836,
       "stop": 6.14146424,
       "tp1": 7.29849195,
-      "tp2": 8.53044066,
-      "tp3": 9.72492887,
+      "tp2": 8.53044071,
+      "tp3": 9.72492894,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.59724411,
+      "risk": 0.59724412,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -453,7 +453,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 2.43615912,
+      "level": 2.43615907,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -471,9 +471,9 @@
       "headline_tf": "1W",
       "entry": 2.46000004,
       "stop": 2.17380741,
-      "tp1": 2.70049544,
-      "tp2": 3.31857794,
-      "tp3": 3.8909632,
+      "tp1": 2.7004952,
+      "tp2": 3.31857792,
+      "tp3": 3.89096318,
       "scale": [
         0.25,
         0.5,
@@ -557,7 +557,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 6.23774699,
+      "level": 6.237747,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -576,7 +576,7 @@
       "entry": 6.28999996,
       "stop": 5.71195164,
       "tp1": 6.85829842,
-      "tp2": 8.02414492,
+      "tp2": 8.02414491,
       "tp3": 9.18024155,
       "scale": [
         0.25,
@@ -621,7 +621,7 @@
         6.25,
         6.28999996
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -661,7 +661,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 1.85397708,
+      "level": 1.85397711,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -677,17 +677,17 @@
       "confluence": true,
       "price": 1.88999999,
       "headline_tf": "1W",
-      "entry": 1.85397708,
-      "stop": 1.69220379,
-      "tp1": 1.98517133,
-      "tp2": 2.33929693,
-      "tp3": 2.6628435,
+      "entry": 1.85397711,
+      "stop": 1.6922038,
+      "tp1": 1.9851712,
+      "tp2": 2.33929703,
+      "tp3": 2.66284365,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.16177328,
+      "risk": 0.16177331,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -725,7 +725,7 @@
         1.91999996,
         1.88999999
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -782,16 +782,16 @@
       "price": 1.35000002,
       "headline_tf": "1W",
       "entry": 1.35000002,
-      "stop": 1.17720547,
+      "stop": 1.17720542,
       "tp1": 1.51129595,
-      "tp2": 1.86838368,
-      "tp3": 2.21397278,
+      "tp2": 1.86838385,
+      "tp3": 2.21397307,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.17279455,
+      "risk": 0.17279461,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -829,7 +829,7 @@
         1.32000005,
         1.35000002
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -972,7 +972,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 95.67652752,
+      "level": 95.67652756,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -988,17 +988,17 @@
       "confluence": true,
       "price": 97.01999664,
       "headline_tf": "3D",
-      "entry": 95.67652752,
-      "stop": 95.21367116,
+      "entry": 95.67652756,
+      "stop": 95.21367111,
       "tp1": 96.25673052,
       "tp2": 96.94843922,
-      "tp3": 97.2337886,
+      "tp3": 97.23379623,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.46285636,
+      "risk": 0.46285645,
       "rr": 2.75,
       "rr_text": "2.8:1",
       "liquidity": "OK",
@@ -1036,7 +1036,7 @@
         96.69999695,
         97.01999664
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -1076,7 +1076,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 1.75194321,
+      "level": 1.7519432,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -1180,7 +1180,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "h4",
-      "level": 48.76099264,
+      "level": 48.76099249,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1196,8 +1196,8 @@
       "confluence": true,
       "price": 49.68999863,
       "headline_tf": "1D",
-      "entry": 48.76099264,
-      "stop": 48.64463863,
+      "entry": 48.76099249,
+      "stop": 48.64463848,
       "tp1": 48.97685623,
       "tp2": 49.06032181,
       "tp3": 49.37599816,
@@ -1206,7 +1206,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.11635402,
+      "risk": 0.116354,
       "rr": 2.57,
       "rr_text": "2.6:1",
       "liquidity": "OK",
@@ -1244,7 +1244,7 @@
         49.54000092,
         49.68999863
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -1284,7 +1284,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 18.66171007,
+      "level": 18.66171008,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1300,9 +1300,9 @@
       "confluence": true,
       "price": 18.87000084,
       "headline_tf": "3D",
-      "entry": 18.66171007,
+      "entry": 18.66171008,
       "stop": 18.49999806,
-      "tp1": 18.89402407,
+      "tp1": 18.89402598,
       "tp2": 19.05999947,
       "tp3": 19.15704417,
       "scale": [
@@ -1310,7 +1310,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.16171201,
+      "risk": 0.16171202,
       "rr": 2.46,
       "rr_text": "2.5:1",
       "liquidity": "LIQUID",
@@ -1348,7 +1348,7 @@
         18.75,
         18.87000084
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -1387,7 +1387,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 4.21106134,
+      "level": 4.21106133,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1491,7 +1491,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 50.43200258,
+      "level": 50.43200211,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1507,17 +1507,17 @@
       "confluence": true,
       "price": 51.38000107,
       "headline_tf": "3D",
-      "entry": 50.43200258,
-      "stop": 50.32144867,
-      "tp1": 50.52324167,
-      "tp2": 50.63727951,
-      "tp3": 50.8297186,
+      "entry": 50.43200211,
+      "stop": 50.32144828,
+      "tp1": 50.52323021,
+      "tp2": 50.6372757,
+      "tp3": 50.82970715,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.11055391,
+      "risk": 0.11055383,
       "rr": 1.86,
       "rr_text": "1.9:1",
       "liquidity": "OK",
@@ -1555,7 +1555,7 @@
         51.34000015,
         51.38000107
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -1595,7 +1595,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 14.26777958,
+      "level": 14.26777956,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1611,7 +1611,7 @@
       "confluence": true,
       "price": 14.5,
       "headline_tf": "1W",
-      "entry": 14.26777958,
+      "entry": 14.26777956,
       "stop": 13.687727,
       "tp1": 14.76000023,
       "tp2": 15.30421257,
@@ -1621,7 +1621,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.58005259,
+      "risk": 0.58005257,
       "rr": 1.79,
       "rr_text": "1.8:1",
       "liquidity": "OK",
@@ -1659,7 +1659,7 @@
         14.64000034,
         14.5
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -1763,7 +1763,7 @@
         8.72000027,
         8.77000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -1907,7 +1907,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 49.25676294,
+      "level": 49.256763,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1923,17 +1923,17 @@
       "confluence": true,
       "price": 49.90999985,
       "headline_tf": "1D",
-      "entry": 49.55981039,
+      "entry": 49.55981026,
       "stop": 49.02166508,
-      "tp1": 50.00847626,
+      "tp1": 50.00847244,
       "tp2": 50.3809251,
-      "tp3": 52.25053694,
+      "tp3": 52.25053614,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.53814531,
+      "risk": 0.53814518,
       "rr": 1.53,
       "rr_text": "1.5:1",
       "liquidity": "OK",
@@ -1971,7 +1971,7 @@
         49.70999908,
         49.90999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -2010,7 +2010,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 50.34374002,
+      "level": 50.34374012,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2026,8 +2026,8 @@
       "confluence": false,
       "price": 51.06000137,
       "headline_tf": "1D",
-      "entry": 50.34374002,
-      "stop": 50.21330478,
+      "entry": 50.34374012,
+      "stop": 50.21330488,
       "tp1": 50.64284161,
       "tp2": 51.15999985,
       "tp3": 51.22521747,
@@ -2074,7 +2074,7 @@
         50.93999863,
         51.06000137
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -2113,7 +2113,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 24.56925274,
+      "level": 24.56925267,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2129,8 +2129,8 @@
       "confluence": false,
       "price": 25.02000046,
       "headline_tf": "1D",
-      "entry": 24.56925274,
-      "stop": 24.54468349,
+      "entry": 24.56925267,
+      "stop": 24.54468342,
       "tp1": 24.64153464,
       "tp2": 24.68647147,
       "tp3": 24.75091869,
@@ -2177,7 +2177,7 @@
         25.02000046,
         25.02000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -2217,7 +2217,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 25.04238605,
+      "level": 25.04238593,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2233,17 +2233,17 @@
       "confluence": true,
       "price": 25.48999977,
       "headline_tf": "3D",
-      "entry": 25.04238605,
-      "stop": 24.93183675,
-      "tp1": 25.15599763,
-      "tp2": 25.39795817,
-      "tp3": 25.46625651,
+      "entry": 25.04238593,
+      "stop": 24.93183666,
+      "tp1": 25.15599572,
+      "tp2": 25.39795626,
+      "tp3": 25.46625842,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.11054929,
+      "risk": 0.11054927,
       "rr": 3.22,
       "rr_text": "3.2:1",
       "liquidity": "OK",
@@ -2281,7 +2281,7 @@
         25.45000076,
         25.48999977
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -2320,7 +2320,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 40.28094994,
+      "level": 40.28095057,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2336,17 +2336,17 @@
       "confluence": false,
       "price": 41.0,
       "headline_tf": "3D",
-      "entry": 40.28094994,
-      "stop": 40.01351761,
+      "entry": 40.28095057,
+      "stop": 40.0135182,
       "tp1": 40.54119815,
-      "tp2": 41.1201424,
-      "tp3": 41.35384288,
+      "tp2": 41.12014622,
+      "tp3": 41.35383906,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.26743233,
+      "risk": 0.26743237,
       "rr": 3.14,
       "rr_text": "3.1:1",
       "liquidity": "LIQUID",
@@ -2384,7 +2384,7 @@
         40.77000046,
         41.0
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -2526,7 +2526,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 7.09123203,
+      "level": 7.09123205,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -2544,8 +2544,8 @@
       "headline_tf": "1W",
       "entry": 7.23999977,
       "stop": 6.26465632,
-      "tp1": 8.02704726,
-      "tp2": 10.16603012,
+      "tp1": 8.02704535,
+      "tp2": 10.16603013,
       "tp3": 12.11671703,
       "scale": [
         0.25,
@@ -2732,7 +2732,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 49.42914461,
+      "level": 49.42914398,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2748,11 +2748,11 @@
       "confluence": false,
       "price": 50.25,
       "headline_tf": "1D",
-      "entry": 49.42914461,
-      "stop": 49.37971547,
-      "tp1": 49.50328833,
-      "tp2": 49.57743205,
-      "tp3": 49.67629033,
+      "entry": 49.42914398,
+      "stop": 49.37971484,
+      "tp1": 49.5032877,
+      "tp2": 49.57743141,
+      "tp3": 49.6762897,
       "scale": [
         0.25,
         0.5,
@@ -2796,7 +2796,7 @@
         50.24000168,
         50.25
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -2938,7 +2938,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 99.1212001,
+      "level": 99.12120056,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -2954,11 +2954,11 @@
       "confluence": false,
       "price": 100.76999664,
       "headline_tf": "1D",
-      "entry": 99.1212001,
-      "stop": 99.0220789,
-      "tp1": 99.2698819,
-      "tp2": 99.4185637,
-      "tp3": 99.6168061,
+      "entry": 99.12120056,
+      "stop": 99.02207936,
+      "tp1": 99.26988236,
+      "tp2": 99.41856416,
+      "tp3": 99.61680656,
       "scale": [
         0.25,
         0.5,
@@ -3002,7 +3002,7 @@
         100.73999786,
         100.76999664
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -3144,7 +3144,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 2.90995089,
+      "level": 2.90995088,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3160,17 +3160,17 @@
       "confluence": false,
       "price": 2.95000005,
       "headline_tf": "3D",
-      "entry": 2.90995089,
+      "entry": 2.90995088,
       "stop": 2.72923006,
       "tp1": 3.06019363,
-      "tp2": 3.45211338,
-      "tp3": 3.81355504,
+      "tp2": 3.45211331,
+      "tp3": 3.81355494,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.18072083,
+      "risk": 0.18072081,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -3247,7 +3247,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 99.0914711,
+      "level": 99.09147163,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3263,11 +3263,11 @@
       "confluence": false,
       "price": 100.76000214,
       "headline_tf": "1D",
-      "entry": 99.0914711,
-      "stop": 98.99237963,
-      "tp1": 99.24010831,
-      "tp2": 99.38874551,
-      "tp3": 99.58692846,
+      "entry": 99.09147163,
+      "stop": 98.99238016,
+      "tp1": 99.24010884,
+      "tp2": 99.38874605,
+      "tp3": 99.58692899,
       "scale": [
         0.25,
         0.5,
@@ -3311,7 +3311,7 @@
         100.77999878,
         100.76000214
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -3367,16 +3367,16 @@
       "price": 25.21999931,
       "headline_tf": "3D",
       "entry": 24.94000053,
-      "stop": 24.10160519,
-      "tp1": 26.19759356,
-      "tp2": 27.45518658,
-      "tp3": 29.13197727,
+      "stop": 24.10160518,
+      "tp1": 26.19759357,
+      "tp2": 27.45518661,
+      "tp3": 29.13197732,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.83839535,
+      "risk": 0.83839536,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -3414,7 +3414,7 @@
         25.14999962,
         25.21999931
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -3453,7 +3453,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 58.33542545,
+      "level": 58.33542587,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3472,8 +3472,8 @@
       "entry": 59.25999832,
       "stop": 56.69293039,
       "tp1": 61.86999893,
-      "tp2": 66.96120211,
-      "tp3": 72.09533797,
+      "tp2": 66.96120212,
+      "tp3": 72.09533798,
       "scale": [
         0.25,
         0.5,
@@ -3517,7 +3517,7 @@
         57.59000015,
         59.25999832
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -3556,7 +3556,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 97.97004314,
+      "level": 97.97004238,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3573,16 +3573,16 @@
       "price": 99.69999695,
       "headline_tf": "1W",
       "entry": 98.15263373,
-      "stop": 90.82612005,
-      "tp1": 109.14240425,
-      "tp2": 120.13217477,
-      "tp3": 134.78520214,
+      "stop": 90.82611996,
+      "tp1": 109.14240438,
+      "tp2": 120.13217504,
+      "tp3": 134.78520258,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 7.32651368,
+      "risk": 7.32651377,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -3620,7 +3620,7 @@
         99.58999634,
         99.69999695
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -3643,109 +3643,6 @@
       }
     },
     {
-      "symbol": "WBND",
-      "name": "Betashares Global Aggregate Bond Currency Hedged ETF",
-      "sector": "Unclassified",
-      "dir": "SHORT",
-      "setup_type": "vivek",
-      "grade": "A+",
-      "grade_raw": "A+",
-      "score": 9,
-      "score_max": 10,
-      "chips": [
-        "H4 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION",
-        "STRONG STRUCTURE"
-      ],
-      "level_tf": "h4",
-      "level": 49.38433664,
-      "at_level": true,
-      "reaction": "reject",
-      "entry_types": [
-        "reclaim"
-      ],
-      "armed": true,
-      "armed_tf": "1D",
-      "grade_held_runs": 0,
-      "entry_trigger": "reclaim",
-      "trigger_bar": "2026-07-30",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 49.31000137,
-      "headline_tf": "1D",
-      "entry": 49.31000137,
-      "stop": 49.71647555,
-      "tp1": 48.81485532,
-      "tp2": 48.09057885,
-      "tp3": 47.27763049,
-      "scale": [
-        0.5,
-        0.25,
-        0.15
-      ],
-      "risk": 0.40647418,
-      "rr": 3.0,
-      "rr_text": "3.0:1",
-      "liquidity": "LIQUID",
-      "turnover": 2051052,
-      "data_age_days": 1,
-      "spark": [
-        49.54771805,
-        49.56752777,
-        49.55762482,
-        49.6764679,
-        49.75569916,
-        49.84482956,
-        49.80521393,
-        49.92405701,
-        49.75,
-        49.63999939,
-        49.74000168,
-        49.59999847,
-        49.70000076,
-        49.47000122,
-        49.40999985,
-        49.56000137,
-        49.40000153,
-        49.36000061,
-        49.43999863,
-        49.41999817,
-        49.47999954,
-        49.36999893,
-        49.38999939,
-        49.34000015,
-        49.25,
-        49.15000153,
-        49.45999908,
-        49.5,
-        49.45999908,
-        49.31000137
-      ],
-      "sector_count": 146,
-      "plans": {
-        "1D": {
-          "armed": true,
-          "entry_trigger": "reclaim",
-          "structural_tps": 1,
-          "direction": "short"
-        },
-        "3D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "short"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "short"
-        }
-      }
-    },
-    {
       "symbol": "MVS",
       "name": "Vaneck Vectors Small Companies Masters ETF",
       "sector": "Unclassified",
@@ -3762,7 +3659,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 20.37443062,
+      "level": 20.37443064,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3778,7 +3675,7 @@
       "confluence": false,
       "price": 20.47999954,
       "headline_tf": "3D",
-      "entry": 20.37443062,
+      "entry": 20.37443064,
       "stop": 19.56481224,
       "tp1": 21.64736938,
       "tp2": 22.78489685,
@@ -3788,7 +3685,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.80961838,
+      "risk": 0.8096184,
       "rr": 2.98,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -3826,7 +3723,7 @@
         20.20999908,
         20.47999954
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -3968,7 +3865,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 24.95377117,
+      "level": 24.95377164,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3984,17 +3881,17 @@
       "confluence": false,
       "price": 25.44000053,
       "headline_tf": "1D",
-      "entry": 24.95377117,
-      "stop": 24.90523348,
-      "tp1": 25.02473914,
-      "tp2": 25.08718681,
+      "entry": 24.95377164,
+      "stop": 24.90523396,
+      "tp1": 25.02474105,
+      "tp2": 25.08718491,
       "tp3": 25.32999992,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.04853769,
+      "risk": 0.04853768,
       "rr": 2.75,
       "rr_text": "2.8:1",
       "liquidity": "OK",
@@ -4032,7 +3929,7 @@
         25.39999962,
         25.44000053
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -4174,7 +4071,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 12.73593622,
+      "level": 12.73593618,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -4190,17 +4087,17 @@
       "confluence": false,
       "price": 12.68999958,
       "headline_tf": "3D",
-      "entry": 12.73593622,
+      "entry": 12.73593618,
       "stop": 13.45240652,
       "tp1": 11.83547052,
       "tp2": 10.91082478,
-      "tp3": 9.15358468,
+      "tp3": 9.15358451,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.71647031,
+      "risk": 0.71647033,
       "rr": 2.55,
       "rr_text": "2.5:1",
       "liquidity": "OK",
@@ -4238,7 +4135,7 @@
         12.68000031,
         12.68999958
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -4380,7 +4277,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 53.83130394,
+      "level": 53.83130381,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4396,9 +4293,9 @@
       "confluence": false,
       "price": 54.77000046,
       "headline_tf": "1D",
-      "entry": 53.83130394,
-      "stop": 53.57657986,
-      "tp1": 54.09456646,
+      "entry": 53.83130381,
+      "stop": 53.57657973,
+      "tp1": 54.09456263,
       "tp2": 54.4576168,
       "tp3": 54.76389371,
       "scale": [
@@ -4444,7 +4341,7 @@
         54.5,
         54.77000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -4483,7 +4380,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 4.99043824,
+      "level": 4.99043827,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -4499,17 +4396,17 @@
       "confluence": false,
       "price": 4.90999985,
       "headline_tf": "3D",
-      "entry": 4.99043824,
+      "entry": 4.99043827,
       "stop": 5.27964708,
       "tp1": 4.74155369,
       "tp2": 4.27870155,
-      "tp3": 3.91818945,
+      "tp3": 3.91818992,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.28920884,
+      "risk": 0.28920882,
       "rr": 2.46,
       "rr_text": "2.5:1",
       "liquidity": "OK",
@@ -4547,7 +4444,7 @@
         4.82999992,
         4.90999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -4586,7 +4483,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 16.63272155,
+      "level": 16.6327217,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4602,9 +4499,9 @@
       "confluence": false,
       "price": 16.87999916,
       "headline_tf": "1D",
-      "entry": 16.63272155,
-      "stop": 16.57841166,
-      "tp1": 16.69750937,
+      "entry": 16.6327217,
+      "stop": 16.57841182,
+      "tp1": 16.69751129,
       "tp2": 16.76546107,
       "tp3": 16.88999939,
       "scale": [
@@ -4650,7 +4547,7 @@
         16.84000015,
         16.87999916
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -4689,7 +4586,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 43.39874435,
+      "level": 43.39874413,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4705,17 +4602,17 @@
       "confluence": false,
       "price": 43.90999985,
       "headline_tf": "3D",
-      "entry": 42.98216459,
-      "stop": 42.75599531,
+      "entry": 42.98216436,
+      "stop": 42.75599495,
       "tp1": 43.26454286,
       "tp2": 43.50977225,
-      "tp3": 43.6768581,
+      "tp3": 43.67685423,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.22616929,
+      "risk": 0.22616941,
       "rr": 2.33,
       "rr_text": "2.3:1",
       "liquidity": "LIQUID",
@@ -4753,7 +4650,7 @@
         43.75999832,
         43.90999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -4792,7 +4689,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 4.87921623,
+      "level": 4.87921624,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -4808,11 +4705,11 @@
       "confluence": true,
       "price": 4.86000013,
       "headline_tf": "1W",
-      "entry": 4.87921623,
+      "entry": 4.87921624,
       "stop": 5.05566952,
-      "tp1": 4.63746287,
-      "tp2": 4.48730255,
-      "tp3": 3.99694981,
+      "tp1": 4.6374624,
+      "tp2": 4.48730208,
+      "tp3": 3.99694986,
       "scale": [
         0.5,
         0.25,
@@ -4895,7 +4792,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 2.98192906,
+      "level": 2.98192907,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4911,7 +4808,7 @@
       "confluence": false,
       "price": 3.02999997,
       "headline_tf": "3D",
-      "entry": 2.98192906,
+      "entry": 2.98192907,
       "stop": 2.70827794,
       "tp1": 3.31999993,
       "tp2": 3.58306657,
@@ -5062,7 +4959,7 @@
         42.84000015,
         43.08000183
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -5101,7 +4998,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 21.98267212,
+      "level": 21.98267218,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -5121,7 +5018,7 @@
       "stop": 22.77396853,
       "tp1": 20.9427948,
       "tp2": 20.12594776,
-      "tp3": 18.96845055,
+      "tp3": 18.96845245,
       "scale": [
         0.5,
         0.25,
@@ -5165,7 +5062,7 @@
         21.82999992,
         21.89999962
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -5204,7 +5101,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 64.40766462,
+      "level": 64.40766481,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -5221,7 +5118,7 @@
       "price": 64.26000214,
       "headline_tf": "1W",
       "entry": 85.68405886,
-      "stop": 126.07248988,
+      "stop": 126.07249033,
       "tp1": 41.73769598,
       "tp2": 4.369887,
       "tp3": 4.28420294,
@@ -5230,7 +5127,7 @@
         0.25,
         0.15
       ],
-      "risk": 40.38843102,
+      "risk": 40.38843146,
       "rr": 2.01,
       "rr_text": "2.0:1",
       "liquidity": "LIQUID",
@@ -5268,7 +5165,7 @@
         61.40000153,
         64.26000214
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -5301,7 +5198,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 34.3711281,
+      "level": 34.37112834,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -5317,7 +5214,7 @@
       "confluence": false,
       "price": 33.81000137,
       "headline_tf": "3D",
-      "entry": 34.3711281,
+      "entry": 34.37112834,
       "stop": 36.36701434,
       "tp1": 32.54060702,
       "tp2": 30.60000038,
@@ -5327,7 +5224,7 @@
         0.25,
         0.15
       ],
-      "risk": 1.99588624,
+      "risk": 1.995886,
       "rr": 1.89,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -5507,7 +5404,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 64.24468071,
+      "level": 64.24468079,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -5523,17 +5420,17 @@
       "confluence": false,
       "price": 64.5,
       "headline_tf": "3D",
-      "entry": 64.24468071,
+      "entry": 64.24468079,
       "stop": 58.01424778,
       "tp1": 69.89054288,
-      "tp2": 75.97564648,
-      "tp3": 95.39684534,
+      "tp2": 75.97563884,
+      "tp3": 95.39684581,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 6.23043293,
+      "risk": 6.23043301,
       "rr": 1.88,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -5777,7 +5674,7 @@
         23.54999924,
         23.82999992
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -5880,7 +5777,7 @@
         29.57999992,
         29.54999924
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -5919,7 +5816,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 27.88109163,
+      "level": 27.88109152,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -6292,7 +6189,7 @@
         62.22000122,
         62.0
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -6434,7 +6331,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 19.01404571,
+      "level": 19.01404572,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6498,7 +6395,7 @@
         19.09000015,
         19.04999924
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -6538,7 +6435,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 12.80716096,
+      "level": 12.80716095,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -6554,17 +6451,17 @@
       "confluence": true,
       "price": 12.56000042,
       "headline_tf": "3D",
-      "entry": 12.80716096,
+      "entry": 12.80716095,
       "stop": 13.28667951,
       "tp1": 12.36938647,
       "tp2": 12.03013201,
-      "tp3": 10.40956824,
+      "tp3": 10.40956817,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.47951854,
+      "risk": 0.47951856,
       "rr": 1.62,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -6602,7 +6499,7 @@
         12.44999981,
         12.56000042
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -6744,7 +6641,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 10.6041447,
+      "level": 10.60414482,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6760,11 +6657,11 @@
       "confluence": false,
       "price": 10.73999977,
       "headline_tf": "1D",
-      "entry": 10.6041447,
-      "stop": 10.53909933,
-      "tp1": 10.66263085,
-      "tp2": 10.70576565,
-      "tp3": 10.75081518,
+      "entry": 10.60414482,
+      "stop": 10.53909944,
+      "tp1": 10.6626318,
+      "tp2": 10.70576661,
+      "tp3": 10.75081614,
       "scale": [
         0.25,
         0.5,
@@ -6808,7 +6705,7 @@
         10.71000004,
         10.73999977
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -6847,7 +6744,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 49.19070314,
+      "level": 49.19070354,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6863,17 +6760,17 @@
       "confluence": false,
       "price": 49.33000183,
       "headline_tf": "3D",
-      "entry": 49.19070314,
-      "stop": 45.71924737,
-      "tp1": 52.11808002,
+      "entry": 49.19070354,
+      "stop": 45.71924736,
+      "tp1": 52.11807619,
       "tp2": 54.59518193,
-      "tp3": 66.54798203,
+      "tp3": 66.54798448,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.47145578,
+      "risk": 3.47145619,
       "rr": 1.56,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -6911,7 +6808,7 @@
         49.43999863,
         49.33000183
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -7014,7 +6911,7 @@
         92.16000366,
         92.55000305
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -7078,7 +6975,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.79760366,
+      "risk": 0.79760365,
       "rr": 3.81,
       "rr_text": "3.8:1",
       "liquidity": "LIQUID",
@@ -7154,7 +7051,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 4.56423568,
+      "level": 4.56423565,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -7170,17 +7067,17 @@
       "confluence": false,
       "price": 4.42999983,
       "headline_tf": "1W",
-      "entry": 4.56423568,
+      "entry": 4.56423565,
       "stop": 4.85397201,
       "tp1": 3.68000007,
       "tp2": 3.48831709,
-      "tp3": 3.26650126,
+      "tp3": 3.26650082,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.28973633,
+      "risk": 0.28973636,
       "rr": 3.71,
       "rr_text": "3.7:1",
       "liquidity": "LIQUID",
@@ -7358,7 +7255,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 4.25325993,
+      "level": 4.25325995,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -7377,7 +7274,7 @@
       "entry": 4.26999998,
       "stop": 3.07913625,
       "tp1": 6.03869963,
-      "tp2": 8.06285445,
+      "tp2": 8.06285495,
       "tp3": 10.22431864,
       "scale": [
         0.25,
@@ -7440,108 +7337,6 @@
           "armed": true,
           "entry_trigger": "reclaim",
           "structural_tps": 2,
-          "direction": "long"
-        }
-      }
-    },
-    {
-      "symbol": "CEL",
-      "name": "Challenger Gold Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A+",
-      "grade_raw": "A+",
-      "score": 8,
-      "score_max": 10,
-      "chips": [
-        "WEEKLY 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "weekly",
-      "level": 2.0786,
-      "at_level": true,
-      "reaction": "bounce",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": true,
-      "armed_tf": "1W",
-      "grade_held_runs": 0,
-      "entry_trigger": "retest",
-      "trigger_bar": "2026-07-31",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 2.0999999,
-      "headline_tf": "1W",
-      "entry": 2.0786,
-      "stop": 1.62159638,
-      "tp1": 3.20000005,
-      "tp2": 3.5,
-      "tp3": 3.9000001,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.45700361,
-      "rr": 3.11,
-      "rr_text": "3.1:1",
-      "liquidity": "OK",
-      "turnover": 290507,
-      "data_age_days": 1,
-      "spark": [
-        2.5999999,
-        2.5999999,
-        2.5,
-        2.29999995,
-        2.29999995,
-        2.29999995,
-        2.20000005,
-        2.4000001,
-        2.4000001,
-        2.5999999,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5,
-        2.5999999,
-        2.5,
-        2.4000001,
-        2.5,
-        2.4000001,
-        2.5,
-        2.5,
-        2.5,
-        2.4000001,
-        2.4000001,
-        2.24000001,
-        2.0999999
-      ],
-      "sector_count": 47,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
           "direction": "long"
         }
       }
@@ -7768,7 +7563,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 5.91099578,
+      "level": 5.91099577,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -7784,17 +7579,17 @@
       "confluence": false,
       "price": 5.71000004,
       "headline_tf": "1W",
-      "entry": 5.91099578,
+      "entry": 5.91099577,
       "stop": 7.58537576,
       "tp1": 4.17452043,
-      "tp2": 0.88785585,
+      "tp2": 0.88785579,
       "tp3": 0.29554979,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 1.67437998,
+      "risk": 1.67437999,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -8283,7 +8078,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 30.86211316,
+      "level": 30.86211329,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -8347,7 +8142,7 @@
         31.20000076,
         31.26000023
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -8370,109 +8165,6 @@
       }
     },
     {
-      "symbol": "DFND",
-      "name": "VanEck Global Defence ETF",
-      "sector": "Unclassified",
-      "dir": "SHORT",
-      "setup_type": "vivek",
-      "grade": "A+",
-      "grade_raw": "A+",
-      "score": 8,
-      "score_max": 10,
-      "chips": [
-        "3D 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION",
-        "OK STRUCTURE"
-      ],
-      "level_tf": "3d",
-      "level": 32.85872775,
-      "at_level": true,
-      "reaction": "reject",
-      "entry_types": [
-        "reclaim"
-      ],
-      "armed": true,
-      "armed_tf": "3D",
-      "grade_held_runs": 0,
-      "entry_trigger": "reclaim",
-      "trigger_bar": "2026-07-30",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 32.59000015,
-      "headline_tf": "3D",
-      "entry": 32.59000015,
-      "stop": 36.04794888,
-      "tp1": 25.93602621,
-      "tp2": 22.21615396,
-      "tp3": 15.30025649,
-      "scale": [
-        0.5,
-        0.25,
-        0.15
-      ],
-      "risk": 3.45794873,
-      "rr": 3.0,
-      "rr_text": "3.0:1",
-      "liquidity": "OK",
-      "turnover": 699719,
-      "data_age_days": 0,
-      "spark": [
-        32.75137329,
-        31.79744911,
-        32.33704376,
-        31.90344238,
-        30.98806,
-        31.01696587,
-        31.73000145,
-        32.40000153,
-        33.02999878,
-        34.31999969,
-        34.06000137,
-        34.75,
-        34.11999893,
-        33.08000183,
-        32.84999847,
-        32.22000122,
-        31.80999947,
-        32.15000153,
-        32.0,
-        31.36000061,
-        31.36000061,
-        31.68000031,
-        32.47000122,
-        32.04999924,
-        32.93999863,
-        33.25,
-        33.06999969,
-        33.61000061,
-        32.5,
-        32.59000015
-      ],
-      "sector_count": 146,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "short"
-        },
-        "3D": {
-          "armed": true,
-          "entry_trigger": "reclaim",
-          "structural_tps": 1,
-          "direction": "short"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
-          "direction": "short"
-        }
-      }
-    },
-    {
       "symbol": "DCOR",
       "name": "Daintree Core Income Active ETF",
       "sector": "Unclassified",
@@ -8489,7 +8181,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "h4",
-      "level": 50.66011934,
+      "level": 50.66011969,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -8506,16 +8198,16 @@
       "price": 51.74000168,
       "headline_tf": "1W",
       "entry": 50.86832463,
-      "stop": 49.9826844,
-      "tp1": 52.19678499,
-      "tp2": 53.52524534,
-      "tp3": 55.29652582,
+      "stop": 49.98268525,
+      "tp1": 52.19678371,
+      "tp2": 53.52524279,
+      "tp3": 55.29652157,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.88564024,
+      "risk": 0.88563939,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -8553,7 +8245,7 @@
         51.68999863,
         51.74000168
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -8591,7 +8283,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 18.30033942,
+      "level": 18.30033934,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -8607,8 +8299,8 @@
       "confluence": false,
       "price": 18.51000023,
       "headline_tf": "1W",
-      "entry": 18.30033942,
-      "stop": 16.82502537,
+      "entry": 18.30033934,
+      "stop": 16.82502538,
       "tp1": 19.74063133,
       "tp2": 22.69430364,
       "tp3": 24.02769039,
@@ -8617,7 +8309,7 @@
         0.5,
         0.15
       ],
-      "risk": 1.47531405,
+      "risk": 1.47531395,
       "rr": 2.98,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -8693,7 +8385,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 44.58390103,
+      "level": 44.5839009,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -8709,17 +8401,17 @@
       "confluence": false,
       "price": 44.34000015,
       "headline_tf": "1W",
-      "entry": 44.58390103,
-      "stop": 47.8243399,
+      "entry": 44.5839009,
+      "stop": 47.82433989,
       "tp1": 37.43788095,
       "tp2": 35.47999954,
-      "tp3": 31.44007822,
+      "tp3": 31.44008012,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 3.24043887,
+      "risk": 3.24043899,
       "rr": 2.81,
       "rr_text": "2.8:1",
       "liquidity": "LIQUID",
@@ -8780,6 +8472,109 @@
       }
     },
     {
+      "symbol": "DFND",
+      "name": "VanEck Global Defence ETF",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "setup_type": "vivek",
+      "grade": "A+",
+      "grade_raw": "A+",
+      "score": 8,
+      "score_max": 10,
+      "chips": [
+        "3D 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION",
+        "OK STRUCTURE"
+      ],
+      "level_tf": "3d",
+      "level": 32.85872766,
+      "at_level": true,
+      "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
+      "armed": true,
+      "armed_tf": "3D",
+      "grade_held_runs": 0,
+      "entry_trigger": "reclaim",
+      "trigger_bar": "2026-07-30",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 32.59000015,
+      "headline_tf": "3D",
+      "entry": 32.59000015,
+      "stop": 36.04794888,
+      "tp1": 25.93602621,
+      "tp2": 23.69285803,
+      "tp3": 15.30025649,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 3.45794873,
+      "rr": 2.57,
+      "rr_text": "2.6:1",
+      "liquidity": "OK",
+      "turnover": 699719,
+      "data_age_days": 0,
+      "spark": [
+        32.75137329,
+        31.79744911,
+        32.33704376,
+        31.90344238,
+        30.98806,
+        31.01696587,
+        31.73000145,
+        32.40000153,
+        33.02999878,
+        34.31999969,
+        34.06000137,
+        34.75,
+        34.11999893,
+        33.08000183,
+        32.84999847,
+        32.22000122,
+        31.80999947,
+        32.15000153,
+        32.0,
+        31.36000061,
+        31.36000061,
+        31.68000031,
+        32.47000122,
+        32.04999924,
+        32.93999863,
+        33.25,
+        33.06999969,
+        33.61000061,
+        32.5,
+        32.59000015
+      ],
+      "sector_count": 145,
+      "plans": {
+        "1D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "short"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "structural_tps": 2,
+          "direction": "short"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "short"
+        }
+      }
+    },
+    {
       "symbol": "IHCB",
       "name": "iShares Core Global Corporate Bond (AUD Hedged) ETF",
       "sector": "Unclassified",
@@ -8796,7 +8591,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 90.94623478,
+      "level": 90.94623539,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -8815,7 +8610,7 @@
       "entry": 90.94999695,
       "stop": 90.07937558,
       "tp1": 91.79213071,
-      "tp2": 93.10233599,
+      "tp2": 93.10232821,
       "tp3": 95.30310377,
       "scale": [
         0.25,
@@ -8860,7 +8655,7 @@
         90.61000061,
         90.94999695
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -8898,7 +8693,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 6.88584497,
+      "level": 6.88584493,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -8914,9 +8709,9 @@
       "confluence": false,
       "price": 6.98000002,
       "headline_tf": "1W",
-      "entry": 6.88584497,
-      "stop": 6.16289225,
-      "tp1": 7.52295787,
+      "entry": 6.88584493,
+      "stop": 6.16289222,
+      "tp1": 7.52295888,
       "tp2": 8.63648225,
       "tp3": 9.54132015,
       "scale": [
@@ -8924,7 +8719,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.72295272,
+      "risk": 0.72295271,
       "rr": 2.42,
       "rr_text": "2.4:1",
       "liquidity": "LIQUID",
@@ -9017,16 +8812,16 @@
       "price": 21.57999992,
       "headline_tf": "1W",
       "entry": 21.57999992,
-      "stop": 17.71941575,
+      "stop": 17.71941576,
       "tp1": 25.70999908,
-      "tp2": 30.67819834,
+      "tp2": 30.67820028,
       "tp3": 33.33194528,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.86058417,
+      "risk": 3.86058416,
       "rr": 2.36,
       "rr_text": "2.4:1",
       "liquidity": "LIQUID",
@@ -9167,7 +8962,7 @@
         38.68000031,
         38.75
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -9206,7 +9001,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "h4",
-      "level": 125.37171677,
+      "level": 125.37171658,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -9222,17 +9017,17 @@
       "confluence": true,
       "price": 126.66000366,
       "headline_tf": "3D",
-      "entry": 123.84291111,
-      "stop": 122.72829168,
+      "entry": 123.84291122,
+      "stop": 122.72829186,
       "tp1": 125.48374176,
-      "tp2": 126.35170262,
-      "tp3": 128.41161523,
+      "tp2": 126.35169497,
+      "tp3": 128.41162293,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.11461943,
+      "risk": 1.11461937,
       "rr": 2.25,
       "rr_text": "2.2:1",
       "liquidity": "LIQUID",
@@ -9270,7 +9065,7 @@
         126.30999756,
         126.66000366
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -9309,7 +9104,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 14.0917144,
+      "level": 14.09171428,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -9325,7 +9120,7 @@
       "confluence": false,
       "price": 14.06999969,
       "headline_tf": "1D",
-      "entry": 14.0917144,
+      "entry": 14.09171428,
       "stop": 14.85721887,
       "tp1": 13.27000046,
       "tp2": 12.57236889,
@@ -9335,7 +9130,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.76550447,
+      "risk": 0.76550458,
       "rr": 1.98,
       "rr_text": "2.0:1",
       "liquidity": "OK",
@@ -9535,13 +9330,13 @@
       "stop": 1.4385512,
       "tp1": 1.67592295,
       "tp2": 1.7632812,
-      "tp3": 2.12270033,
+      "tp3": 2.12270034,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.11402485,
+      "risk": 0.11402486,
       "rr": 1.85,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -9721,7 +9516,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 1.25678885,
+      "level": 1.25678884,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -9737,11 +9532,11 @@
       "confluence": false,
       "price": 1.26499999,
       "headline_tf": "1D",
-      "entry": 1.25678885,
+      "entry": 1.25678884,
       "stop": 1.21369596,
       "tp1": 1.29499996,
       "tp2": 1.33307932,
-      "tp3": 1.47225332,
+      "tp3": 1.47225327,
       "scale": [
         0.25,
         0.5,
@@ -9943,10 +9738,10 @@
       "price": 6.13999987,
       "headline_tf": "1W",
       "entry": 5.76471949,
-      "stop": 5.33980147,
+      "stop": 5.33980146,
       "tp1": 6.20280282,
       "tp2": 6.47284207,
-      "tp3": 7.88930958,
+      "tp3": 7.88930961,
       "scale": [
         0.25,
         0.5,
@@ -9956,10 +9751,9 @@
       "rr": 1.67,
       "rr_text": "1.7:1",
       "liquidity": "OK",
-      "turnover": 121352,
-      "data_age_days": 1,
+      "turnover": 114601,
+      "data_age_days": 0,
       "spark": [
-        6.00408506,
         5.99411154,
         5.99411154,
         5.97416401,
@@ -9988,9 +9782,10 @@
         6.05999994,
         6.05000019,
         6.05000019,
+        6.13999987,
         6.13999987
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -10148,16 +9943,16 @@
       "price": 2.56999993,
       "headline_tf": "1W",
       "entry": 2.56999993,
-      "stop": 2.24057776,
+      "stop": 2.24057775,
       "tp1": 2.88000011,
       "tp2": 3.1141839,
-      "tp3": 4.21711079,
+      "tp3": 4.21711085,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.32942217,
+      "risk": 0.32942218,
       "rr": 1.65,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -10234,7 +10029,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 67.30622011,
+      "level": 67.30621967,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -10250,8 +10045,8 @@
       "confluence": false,
       "price": 68.15000153,
       "headline_tf": "3D",
-      "entry": 67.30622011,
-      "stop": 65.3000712,
+      "entry": 67.30621967,
+      "stop": 65.30007119,
       "tp1": 69.22813416,
       "tp2": 70.59750604,
       "tp3": 71.96866518,
@@ -10260,7 +10055,7 @@
         0.5,
         0.15
       ],
-      "risk": 2.00614891,
+      "risk": 2.00614849,
       "rr": 1.64,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -10298,7 +10093,7 @@
         68.20999908,
         68.15000153
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -10353,17 +10148,17 @@
       "confluence": false,
       "price": 12.85999966,
       "headline_tf": "1W",
-      "entry": 12.0174187,
-      "stop": 10.31239522,
+      "entry": 12.01741872,
+      "stop": 10.31239523,
       "tp1": 13.53999996,
       "tp2": 14.78906252,
-      "tp3": 17.45506953,
+      "tp3": 17.45506759,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.70502348,
+      "risk": 1.70502349,
       "rr": 1.63,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -10542,7 +10337,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 5.24749461,
+      "level": 5.24749459,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -10550,7 +10345,7 @@
       ],
       "armed": true,
       "armed_tf": "1W",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-31",
       "sma_proxy": false,
@@ -10558,17 +10353,17 @@
       "confluence": false,
       "price": 5.11000013,
       "headline_tf": "1W",
-      "entry": 5.24749461,
+      "entry": 5.24749459,
       "stop": 5.67476886,
       "tp1": 4.78905486,
       "tp2": 3.8960138,
-      "tp3": 3.11112339,
+      "tp3": 3.11112325,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.42727424,
+      "risk": 0.42727427,
       "rr": 3.16,
       "rr_text": "3.2:1",
       "liquidity": "LIQUID",
@@ -10652,7 +10447,7 @@
       ],
       "armed": true,
       "armed_tf": "3D",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-30",
       "sma_proxy": false,
@@ -10663,8 +10458,8 @@
       "entry": 5.72574374,
       "stop": 6.74710975,
       "tp1": 4.68277678,
-      "tp2": 2.66164572,
-      "tp3": 0.61891371,
+      "tp2": 2.66164571,
+      "tp3": 0.61891368,
       "scale": [
         0.5,
         0.25,
@@ -10754,7 +10549,7 @@
       ],
       "armed": true,
       "armed_tf": "3D",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "reclaim",
       "trigger_bar": "2026-07-30",
       "sma_proxy": false,
@@ -10833,6 +10628,108 @@
       }
     },
     {
+      "symbol": "CLW",
+      "name": "Charter Hall Long WALE REIT",
+      "sector": "Real Estate",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A+",
+      "grade_raw": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "3D 200 SMA",
+        "CLEAN REACTION",
+        "STRONG STRUCTURE"
+      ],
+      "level_tf": "3d",
+      "level": 3.71619768,
+      "at_level": false,
+      "reaction": "bounce",
+      "entry_types": [
+        "retest"
+      ],
+      "armed": true,
+      "armed_tf": "3D",
+      "grade_held_runs": 2,
+      "entry_trigger": "retest",
+      "trigger_bar": "2026-07-30",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 3.80999994,
+      "headline_tf": "3D",
+      "entry": 3.71619768,
+      "stop": 3.48314057,
+      "tp1": 4.00508628,
+      "tp2": 4.23805507,
+      "tp3": 4.88148325,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.23305711,
+      "rr": 2.24,
+      "rr_text": "2.2:1",
+      "liquidity": "LIQUID",
+      "turnover": 4932535,
+      "data_age_days": 0,
+      "spark": [
+        3.68758154,
+        3.66791463,
+        3.71708226,
+        3.72691584,
+        3.7662499,
+        3.72000003,
+        3.6500001,
+        3.6099999,
+        3.61999989,
+        3.6500001,
+        3.6500001,
+        3.5999999,
+        3.66000009,
+        3.61999989,
+        3.6400001,
+        3.66000009,
+        3.63000011,
+        3.63000011,
+        3.66000009,
+        3.69000006,
+        3.71000004,
+        3.70000005,
+        3.67000008,
+        3.67000008,
+        3.68000007,
+        3.73000002,
+        3.80999994,
+        3.83999991,
+        3.78999996,
+        3.80999994
+      ],
+      "sector_count": 19,
+      "plans": {
+        "1D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 2,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "long"
+        }
+      }
+    },
+    {
       "symbol": "MTS",
       "name": "Metcash Limited",
       "sector": "Consumer Staples",
@@ -10857,7 +10754,7 @@
       ],
       "armed": true,
       "armed_tf": "1W",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-31",
       "sma_proxy": false,
@@ -10865,11 +10762,11 @@
       "confluence": true,
       "price": 3.03999996,
       "headline_tf": "1W",
-      "entry": 3.18816656,
-      "stop": 3.34266627,
+      "entry": 3.18816657,
+      "stop": 3.34266628,
       "tp1": 3.0471382,
-      "tp2": 2.90244166,
-      "tp3": 2.73005248,
+      "tp2": 2.90244189,
+      "tp3": 2.73005225,
       "scale": [
         0.5,
         0.25,
@@ -10936,108 +10833,6 @@
       }
     },
     {
-      "symbol": "CLW",
-      "name": "Charter Hall Long WALE REIT",
-      "sector": "Real Estate",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A+",
-      "grade_raw": "A",
-      "score": 7,
-      "score_max": 10,
-      "chips": [
-        "3D 200 SMA",
-        "CLEAN REACTION",
-        "STRONG STRUCTURE"
-      ],
-      "level_tf": "3d",
-      "level": 3.7161977,
-      "at_level": false,
-      "reaction": "bounce",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": true,
-      "armed_tf": "3D",
-      "grade_held_runs": 1,
-      "entry_trigger": "retest",
-      "trigger_bar": "2026-07-30",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 3.80999994,
-      "headline_tf": "3D",
-      "entry": 3.7161977,
-      "stop": 3.48314057,
-      "tp1": 3.94394797,
-      "tp2": 4.12402599,
-      "tp3": 4.32803735,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.23305713,
-      "rr": 1.75,
-      "rr_text": "1.8:1",
-      "liquidity": "LIQUID",
-      "turnover": 4932535,
-      "data_age_days": 0,
-      "spark": [
-        3.68758154,
-        3.66791463,
-        3.71708226,
-        3.72691584,
-        3.7662499,
-        3.72000003,
-        3.6500001,
-        3.6099999,
-        3.61999989,
-        3.6500001,
-        3.6500001,
-        3.5999999,
-        3.66000009,
-        3.61999989,
-        3.6400001,
-        3.66000009,
-        3.63000011,
-        3.63000011,
-        3.66000009,
-        3.69000006,
-        3.71000004,
-        3.70000005,
-        3.67000008,
-        3.67000008,
-        3.68000007,
-        3.73000002,
-        3.80999994,
-        3.83999991,
-        3.78999996,
-        3.80999994
-      ],
-      "sector_count": 19,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
-          "direction": "long"
-        }
-      }
-    },
-    {
       "symbol": "BTI",
       "name": "Bailador Technology Investments Limited",
       "sector": "Financials",
@@ -11061,7 +10856,7 @@
       ],
       "armed": true,
       "armed_tf": "1W",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-31",
       "sma_proxy": false,
@@ -11071,8 +10866,8 @@
       "headline_tf": "1W",
       "entry": 1.06785736,
       "stop": 1.12289605,
-      "tp1": 1.0181378,
-      "tp2": 0.9745897,
+      "tp1": 1.01813773,
+      "tp2": 0.97458971,
       "tp3": 0.92000002,
       "scale": [
         0.5,
@@ -11155,7 +10950,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 19.51903675,
+      "level": 19.51903691,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -11171,8 +10966,8 @@
       "confluence": false,
       "price": 19.80999947,
       "headline_tf": "1D",
-      "entry": 19.51903675,
-      "stop": 19.46634298,
+      "entry": 19.51903691,
+      "stop": 19.46634314,
       "tp1": 19.61960506,
       "tp2": 19.79999924,
       "tp3": 19.85000038,
@@ -11219,7 +11014,7 @@
         19.79000092,
         19.80999947
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -11257,7 +11052,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 38.67674953,
+      "level": 38.6767494,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -11273,8 +11068,8 @@
       "confluence": false,
       "price": 39.24000168,
       "headline_tf": "3D",
-      "entry": 38.67674953,
-      "stop": 38.4621614,
+      "entry": 38.6767494,
+      "stop": 38.46216126,
       "tp1": 39.12908659,
       "tp2": 39.44850922,
       "tp3": 39.81000137,
@@ -11321,7 +11116,7 @@
         39.11000061,
         39.24000168
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -11423,7 +11218,7 @@
         30.31999969,
         30.63999939
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -11461,7 +11256,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 95.09478046,
+      "level": 95.09478004,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -11477,9 +11272,9 @@
       "confluence": false,
       "price": 96.62999725,
       "headline_tf": "3D",
-      "entry": 95.09478046,
-      "stop": 94.69785259,
-      "tp1": 96.1531601,
+      "entry": 95.09478004,
+      "stop": 94.69785217,
+      "tp1": 96.15315247,
       "tp2": 96.48623869,
       "tp3": 96.80129677,
       "scale": [
@@ -11525,7 +11320,7 @@
         96.30999756,
         96.62999725
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -11627,7 +11422,7 @@
         6.84000015,
         7.38999987
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -11767,7 +11562,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 22.76808799,
+      "level": 22.76808796,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -11783,17 +11578,17 @@
       "confluence": true,
       "price": 22.12999916,
       "headline_tf": "1W",
-      "entry": 22.76808799,
-      "stop": 24.6865898,
+      "entry": 22.76808796,
+      "stop": 24.68658981,
       "tp1": 18.38248274,
       "tp2": 16.97639316,
-      "tp3": 15.72554022,
+      "tp3": 15.72553928,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 1.91850181,
+      "risk": 1.91850185,
       "rr": 3.02,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -11831,7 +11626,7 @@
         21.87999916,
         22.12999916
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -11869,7 +11664,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 24.75812675,
+      "level": 24.75812689,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -11886,16 +11681,16 @@
       "price": 25.28000069,
       "headline_tf": "1D",
       "entry": 25.04047465,
-      "stop": 24.73308627,
-      "tp1": 25.50155723,
-      "tp2": 25.9626398,
-      "tp3": 26.57741657,
+      "stop": 24.73308641,
+      "tp1": 25.50155701,
+      "tp2": 25.96263937,
+      "tp3": 26.57741585,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.30738838,
+      "risk": 0.30738824,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -11933,7 +11728,7 @@
         25.28000069,
         25.28000069
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -12175,7 +11970,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 3.29970239,
+      "level": 3.29970241,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -12192,16 +11987,16 @@
       "price": 3.25,
       "headline_tf": "3D",
       "entry": 3.25,
-      "stop": 3.62231708,
+      "stop": 3.6223171,
       "tp1": 2.58324814,
-      "tp2": 2.13304876,
-      "tp3": 1.3884146,
+      "tp2": 2.13304871,
+      "tp3": 1.38841451,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.37231708,
+      "risk": 0.3723171,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -12379,7 +12174,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 2.66609428,
+      "level": 2.66609431,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -12397,9 +12192,9 @@
       "headline_tf": "3D",
       "entry": 2.61999989,
       "stop": 2.78822365,
-      "tp1": 2.46366616,
+      "tp1": 2.46366639,
       "tp2": 2.1153286,
-      "tp3": 1.77888108,
+      "tp3": 1.77888107,
       "scale": [
         0.5,
         0.25,
@@ -12851,7 +12646,7 @@
         36.27999878,
         36.40000153
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -12953,7 +12748,7 @@
         8.23999977,
         8.57999992
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -13008,16 +12803,16 @@
       "price": 25.85000038,
       "headline_tf": "1W",
       "entry": 24.61780204,
-      "stop": 21.53915778,
+      "stop": 21.53915774,
       "tp1": 27.11028567,
-      "tp2": 33.85373482,
-      "tp3": 40.01102334,
+      "tp2": 33.85373494,
+      "tp3": 40.01102354,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.07864426,
+      "risk": 3.0786443,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -13055,7 +12850,7 @@
         24.5,
         25.85000038
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -13072,6 +12867,108 @@
         "1W": {
           "armed": true,
           "entry_trigger": "break",
+          "structural_tps": 1,
+          "direction": "long"
+        }
+      }
+    },
+    {
+      "symbol": "WBND",
+      "name": "Betashares Global Aggregate Bond Currency Hedged ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A",
+      "grade_raw": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "h4",
+      "level": 49.38618887,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim"
+      ],
+      "armed": true,
+      "armed_tf": "1W",
+      "grade_held_runs": 0,
+      "entry_trigger": "reclaim",
+      "trigger_bar": "2026-07-31",
+      "sma_proxy": true,
+      "sma_window": 52,
+      "confluence": false,
+      "price": 49.40999985,
+      "headline_tf": "1W",
+      "entry": 49.40999985,
+      "stop": 48.46783331,
+      "tp1": 50.29999924,
+      "tp2": 52.23649946,
+      "tp3": 54.12083254,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.94216654,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "LIQUID",
+      "turnover": 2075114,
+      "data_age_days": 0,
+      "spark": [
+        49.56752777,
+        49.55762482,
+        49.6764679,
+        49.75569916,
+        49.84482956,
+        49.80521393,
+        49.92405701,
+        49.75,
+        49.63999939,
+        49.74000168,
+        49.59999847,
+        49.70000076,
+        49.47000122,
+        49.40999985,
+        49.56000137,
+        49.40000153,
+        49.36000061,
+        49.43999863,
+        49.41999817,
+        49.47999954,
+        49.36999893,
+        49.38999939,
+        49.34000015,
+        49.25,
+        49.15000153,
+        49.45999908,
+        49.5,
+        49.45999908,
+        49.31000137,
+        49.40999985
+      ],
+      "sector_count": 145,
+      "plans": {
+        "1D": {
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "structural_tps": 2,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 3,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": true,
+          "entry_trigger": "reclaim",
           "structural_tps": 1,
           "direction": "long"
         }
@@ -13195,7 +13092,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 93.01450043,
+      "level": 93.01450027,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -13211,8 +13108,8 @@
       "confluence": false,
       "price": 94.47000122,
       "headline_tf": "1D",
-      "entry": 93.01450043,
-      "stop": 92.7754679,
+      "entry": 93.01450027,
+      "stop": 92.77546775,
       "tp1": 93.54018205,
       "tp2": 93.7134585,
       "tp3": 94.25761147,
@@ -13259,7 +13156,7 @@
         94.25,
         94.47000122
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -13565,7 +13462,7 @@
         9.22999954,
         9.61999989
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -13603,7 +13500,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 12.9513996,
+      "level": 12.95139959,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -13667,7 +13564,7 @@
         12.89000034,
         13.14999962
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -13705,7 +13602,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 93.48326309,
+      "level": 93.48326267,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -13721,7 +13618,7 @@
       "confluence": false,
       "price": 93.23999786,
       "headline_tf": "3D",
-      "entry": 93.48326309,
+      "entry": 93.48326267,
       "stop": 98.47573578,
       "tp1": 87.73660902,
       "tp2": 80.26172876,
@@ -13731,7 +13628,7 @@
         0.25,
         0.15
       ],
-      "risk": 4.99247268,
+      "risk": 4.99247311,
       "rr": 2.65,
       "rr_text": "2.6:1",
       "liquidity": "LIQUID",
@@ -13769,7 +13666,7 @@
         91.69000244,
         93.23999786
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -14098,6 +13995,108 @@
       }
     },
     {
+      "symbol": "RSM",
+      "name": "Russell Investments Australian Semi-Government Bond ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A",
+      "grade_raw": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "3D 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "3d",
+      "level": 19.927641,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "retest"
+      ],
+      "armed": true,
+      "armed_tf": "3D",
+      "grade_held_runs": 0,
+      "entry_trigger": "retest",
+      "trigger_bar": "2026-07-30",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 20.29000092,
+      "headline_tf": "3D",
+      "entry": 19.927641,
+      "stop": 19.84202032,
+      "tp1": 20.01948125,
+      "tp2": 20.12941231,
+      "tp3": 20.20739606,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.08562069,
+      "rr": 2.36,
+      "rr_text": "2.4:1",
+      "liquidity": "OK",
+      "turnover": 828856,
+      "data_age_days": 0,
+      "spark": [
+        20.24328613,
+        20.28253746,
+        20.27272415,
+        20.32178688,
+        20.34141159,
+        20.33159828,
+        20.31999969,
+        20.31999969,
+        20.27000046,
+        20.29000092,
+        20.34000015,
+        20.30999947,
+        20.29000092,
+        20.28000069,
+        20.30999947,
+        20.26000023,
+        20.26000023,
+        20.28000069,
+        20.29999924,
+        20.28000069,
+        20.22999954,
+        20.26000023,
+        20.21999931,
+        20.19000053,
+        20.11000061,
+        20.17000008,
+        20.25,
+        20.29000092,
+        20.21999931,
+        20.29000092
+      ],
+      "sector_count": 145,
+      "plans": {
+        "1D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 3,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 3,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "long"
+        }
+      }
+    },
+    {
       "symbol": "HLI",
       "name": "Helia Group Limited",
       "sector": "Financials",
@@ -14215,7 +14214,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 54.31486193,
+      "level": 54.31486195,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -14232,16 +14231,16 @@
       "price": 54.99000168,
       "headline_tf": "3D",
       "entry": 54.99000168,
-      "stop": 51.36535127,
-      "tp1": 57.9389987,
+      "stop": 51.36535115,
+      "tp1": 57.93899484,
       "tp2": 63.2699866,
-      "tp3": 73.11325372,
+      "tp3": 73.1132543,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.62465041,
+      "risk": 3.62465053,
       "rr": 2.28,
       "rr_text": "2.3:1",
       "liquidity": "OK",
@@ -14279,7 +14278,7 @@
         52.88999939,
         54.99000168
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -14317,7 +14316,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 19.89465115,
+      "level": 19.89465117,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -14333,8 +14332,8 @@
       "confluence": false,
       "price": 19.60000038,
       "headline_tf": "3D",
-      "entry": 19.89465115,
-      "stop": 20.20411873,
+      "entry": 19.89465117,
+      "stop": 20.20411875,
       "tp1": 19.55223905,
       "tp2": 19.20029904,
       "tp3": 18.19000053,
@@ -14419,7 +14418,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 31.41859116,
+      "level": 31.41859114,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -14483,7 +14482,7 @@
         31.29999924,
         31.20999908
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -14502,108 +14501,6 @@
           "entry_trigger": null,
           "structural_tps": 3,
           "direction": "short"
-        }
-      }
-    },
-    {
-      "symbol": "RSM",
-      "name": "Russell Investments Australian Semi-Government Bond ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A",
-      "grade_raw": "A",
-      "score": 7,
-      "score_max": 10,
-      "chips": [
-        "3D 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "3d",
-      "level": 19.92764059,
-      "at_level": true,
-      "reaction": "bounce",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": true,
-      "armed_tf": "3D",
-      "grade_held_runs": 0,
-      "entry_trigger": "retest",
-      "trigger_bar": "2026-07-30",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 20.29000092,
-      "headline_tf": "3D",
-      "entry": 19.92764059,
-      "stop": 19.84201991,
-      "tp1": 20.01947742,
-      "tp2": 20.11966537,
-      "tp3": 20.20739606,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.08562069,
-      "rr": 2.24,
-      "rr_text": "2.2:1",
-      "liquidity": "OK",
-      "turnover": 828856,
-      "data_age_days": 0,
-      "spark": [
-        20.24328613,
-        20.28253746,
-        20.27272415,
-        20.32178688,
-        20.34141159,
-        20.33159828,
-        20.31999969,
-        20.31999969,
-        20.27000046,
-        20.29000092,
-        20.34000015,
-        20.30999947,
-        20.29000092,
-        20.28000069,
-        20.30999947,
-        20.26000023,
-        20.26000023,
-        20.28000069,
-        20.29999924,
-        20.28000069,
-        20.22999954,
-        20.26000023,
-        20.21999931,
-        20.19000053,
-        20.11000061,
-        20.17000008,
-        20.25,
-        20.29000092,
-        20.21999931,
-        20.29000092
-      ],
-      "sector_count": 146,
-      "plans": {
-        "1D": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
         }
       }
     },
@@ -14827,7 +14724,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 19.92969055,
+      "level": 19.92969049,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -14843,8 +14740,8 @@
       "confluence": false,
       "price": 20.20000076,
       "headline_tf": "3D",
-      "entry": 19.92969055,
-      "stop": 19.81419177,
+      "entry": 19.92969049,
+      "stop": 19.81419172,
       "tp1": 20.02738105,
       "tp2": 20.17618828,
       "tp3": 20.26646527,
@@ -14891,7 +14788,7 @@
         20.06999969,
         20.20000076
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -15197,7 +15094,7 @@
         15.61999989,
         15.61999989
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -15456,10 +15353,10 @@
       "price": 1.15499997,
       "headline_tf": "1D",
       "entry": 1.12421545,
-      "stop": 1.10427514,
-      "tp1": 1.1457921,
+      "stop": 1.10427515,
+      "tp1": 1.14579222,
       "tp2": 1.16238542,
-      "tp3": 1.17675962,
+      "tp3": 1.1767595,
       "scale": [
         0.25,
         0.5,
@@ -15541,7 +15438,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 10.47754011,
+      "level": 10.47753996,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -15557,9 +15454,9 @@
       "confluence": false,
       "price": 10.61999989,
       "headline_tf": "1D",
-      "entry": 10.47754011,
-      "stop": 10.4496795,
-      "tp1": 10.50056362,
+      "entry": 10.47753996,
+      "stop": 10.44967935,
+      "tp1": 10.50041278,
       "tp2": 10.53037548,
       "tp3": 10.58000052,
       "scale": [
@@ -15605,7 +15502,7 @@
         10.63000011,
         10.61999989
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -15643,7 +15540,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 6.77783958,
+      "level": 6.77783963,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -15659,7 +15556,7 @@
       "confluence": false,
       "price": 7.01000023,
       "headline_tf": "3D",
-      "entry": 6.77783958,
+      "entry": 6.77783963,
       "stop": 6.39982132,
       "tp1": 7.26000023,
       "tp2": 7.48999977,
@@ -15669,7 +15566,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.37801826,
+      "risk": 0.37801831,
       "rr": 1.88,
       "rr_text": "1.9:1",
       "liquidity": "OK",
@@ -15809,7 +15706,7 @@
         6.13999987,
         6.15999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -15847,7 +15744,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 2.98465473,
+      "level": 2.98465472,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -15863,17 +15760,17 @@
       "confluence": false,
       "price": 3.00999999,
       "headline_tf": "3D",
-      "entry": 2.98465473,
+      "entry": 2.98465472,
       "stop": 2.8251382,
       "tp1": 3.11999989,
-      "tp2": 3.2736454,
+      "tp2": 3.27364563,
       "tp3": 3.37034095,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.15951653,
+      "risk": 0.15951652,
       "rr": 1.81,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -15965,7 +15862,7 @@
       "confluence": false,
       "price": 1.19000006,
       "headline_tf": "3D",
-      "entry": 1.15786166,
+      "entry": 1.15786167,
       "stop": 1.11863217,
       "tp1": 1.20451224,
       "tp2": 1.22869921,
@@ -16133,6 +16030,108 @@
           "armed": false,
           "entry_trigger": null,
           "structural_tps": 1,
+          "direction": "long"
+        }
+      }
+    },
+    {
+      "symbol": "CMW",
+      "name": "Cromwell Property Group",
+      "sector": "Real Estate",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A",
+      "grade_raw": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "h4",
+      "level": 0.42245374,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "retest"
+      ],
+      "armed": true,
+      "armed_tf": "1D",
+      "grade_held_runs": 0,
+      "entry_trigger": "retest",
+      "trigger_bar": "2026-07-31",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 0.43000001,
+      "headline_tf": "1D",
+      "entry": 0.42245374,
+      "stop": 0.40292647,
+      "tp1": 0.44,
+      "tp2": 0.45725002,
+      "tp3": 0.52009009,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.01952727,
+      "rr": 1.78,
+      "rr_text": "1.8:1",
+      "liquidity": "OK",
+      "turnover": 780693,
+      "data_age_days": 0,
+      "spark": [
+        0.45233336,
+        0.45233336,
+        0.44741669,
+        0.4425,
+        0.4425,
+        0.44499999,
+        0.435,
+        0.41999999,
+        0.41999999,
+        0.42500001,
+        0.41999999,
+        0.42500001,
+        0.41999999,
+        0.41999999,
+        0.41999999,
+        0.42500001,
+        0.41999999,
+        0.42500001,
+        0.43000001,
+        0.435,
+        0.435,
+        0.43000001,
+        0.43000001,
+        0.42500001,
+        0.42500001,
+        0.435,
+        0.435,
+        0.44499999,
+        0.435,
+        0.43000001
+      ],
+      "sector_count": 19,
+      "plans": {
+        "1D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 2,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
           "direction": "long"
         }
       }
@@ -16337,108 +16336,6 @@
           "armed": false,
           "entry_trigger": null,
           "structural_tps": 1,
-          "direction": "long"
-        }
-      }
-    },
-    {
-      "symbol": "CMW",
-      "name": "Cromwell Property Group",
-      "sector": "Real Estate",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A",
-      "grade_raw": "A",
-      "score": 7,
-      "score_max": 10,
-      "chips": [
-        "H4 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "h4",
-      "level": 0.42245374,
-      "at_level": true,
-      "reaction": "bounce",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": true,
-      "armed_tf": "1D",
-      "grade_held_runs": 0,
-      "entry_trigger": "retest",
-      "trigger_bar": "2026-07-31",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 0.43000001,
-      "headline_tf": "1D",
-      "entry": 0.42245374,
-      "stop": 0.40292647,
-      "tp1": 0.44,
-      "tp2": 0.45576447,
-      "tp3": 0.46774519,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.01952727,
-      "rr": 1.71,
-      "rr_text": "1.7:1",
-      "liquidity": "OK",
-      "turnover": 780693,
-      "data_age_days": 0,
-      "spark": [
-        0.45233336,
-        0.45233336,
-        0.44741669,
-        0.4425,
-        0.4425,
-        0.44499999,
-        0.435,
-        0.41999999,
-        0.41999999,
-        0.42500001,
-        0.41999999,
-        0.42500001,
-        0.41999999,
-        0.41999999,
-        0.41999999,
-        0.42500001,
-        0.41999999,
-        0.42500001,
-        0.43000001,
-        0.435,
-        0.435,
-        0.43000001,
-        0.43000001,
-        0.42500001,
-        0.42500001,
-        0.435,
-        0.435,
-        0.44499999,
-        0.435,
-        0.43000001
-      ],
-      "sector_count": 19,
-      "plans": {
-        "1D": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
           "direction": "long"
         }
       }
@@ -17056,6 +16953,108 @@
       }
     },
     {
+      "symbol": "IXI",
+      "name": "iShares Global Consumer Staples ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "A",
+      "grade_raw": "A",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "3D 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION"
+      ],
+      "level_tf": "3d",
+      "level": 96.36889648,
+      "at_level": true,
+      "reaction": "bounce",
+      "entry_types": [
+        "retest"
+      ],
+      "armed": true,
+      "armed_tf": "3D",
+      "grade_held_runs": 0,
+      "entry_trigger": "retest",
+      "trigger_bar": "2026-07-30",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 98.0,
+      "headline_tf": "3D",
+      "entry": 96.36889648,
+      "stop": 93.80562956,
+      "tp1": 98.62987053,
+      "tp2": 100.48438878,
+      "tp3": 102.1567059,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 2.56326693,
+      "rr": 1.61,
+      "rr_text": "1.6:1",
+      "liquidity": "OK",
+      "turnover": 525046,
+      "data_age_days": 0,
+      "spark": [
+        94.10764313,
+        94.99629211,
+        96.79332733,
+        98.01768494,
+        98.33364868,
+        98.95570374,
+        98.58049774,
+        97.25,
+        97.08999634,
+        98.66999817,
+        98.15000153,
+        97.69999695,
+        98.86000061,
+        98.08000183,
+        96.87999725,
+        97.73000336,
+        97.73999786,
+        96.16999817,
+        96.27999878,
+        98.15000153,
+        98.05999756,
+        97.44000244,
+        96.86000061,
+        96.80999756,
+        96.04000092,
+        96.19999695,
+        97.98999786,
+        100.16999817,
+        100.41000366,
+        98.0
+      ],
+      "sector_count": 145,
+      "plans": {
+        "1D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "retest",
+          "structural_tps": 3,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "long"
+        }
+      }
+    },
+    {
       "symbol": "QMAX",
       "name": "BetaShares NASDAQ 100 Yield Maximiser Fund (Managed Fund)",
       "sector": "Unclassified",
@@ -17071,7 +17070,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 28.54403674,
+      "level": 28.54403698,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -17135,7 +17134,7 @@
         28.36000061,
         28.94000053
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -17147,108 +17146,6 @@
           "armed": false,
           "entry_trigger": null,
           "structural_tps": 1,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
-        }
-      }
-    },
-    {
-      "symbol": "IXI",
-      "name": "iShares Global Consumer Staples ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "A",
-      "grade_raw": "A",
-      "score": 7,
-      "score_max": 10,
-      "chips": [
-        "3D 200 SMA",
-        "AT THE LEVEL",
-        "CLEAN REACTION"
-      ],
-      "level_tf": "3d",
-      "level": 96.36889668,
-      "at_level": true,
-      "reaction": "bounce",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": true,
-      "armed_tf": "3D",
-      "grade_held_runs": 0,
-      "entry_trigger": "retest",
-      "trigger_bar": "2026-07-30",
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 98.0,
-      "headline_tf": "3D",
-      "entry": 96.36889668,
-      "stop": 93.80562956,
-      "tp1": 98.62987053,
-      "tp2": 100.38739699,
-      "tp3": 102.1567059,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 2.56326712,
-      "rr": 1.57,
-      "rr_text": "1.6:1",
-      "liquidity": "OK",
-      "turnover": 525046,
-      "data_age_days": 0,
-      "spark": [
-        94.10764313,
-        94.99629211,
-        96.79332733,
-        98.01768494,
-        98.33364868,
-        98.95570374,
-        98.58049774,
-        97.25,
-        97.08999634,
-        98.66999817,
-        98.15000153,
-        97.69999695,
-        98.86000061,
-        98.08000183,
-        96.87999725,
-        97.73000336,
-        97.73999786,
-        96.16999817,
-        96.27999878,
-        98.15000153,
-        98.05999756,
-        97.44000244,
-        96.86000061,
-        96.80999756,
-        96.04000092,
-        96.19999695,
-        97.98999786,
-        100.16999817,
-        100.41000366,
-        98.0
-      ],
-      "sector_count": 146,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": true,
-          "entry_trigger": "retest",
-          "structural_tps": 3,
           "direction": "long"
         },
         "1W": {
@@ -17339,7 +17236,7 @@
         8.14000034,
         9.19999981
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -17543,7 +17440,7 @@
         31.79999924,
         32.13999939
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -17683,7 +17580,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 11.20305202,
+      "level": 11.20305207,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17785,7 +17682,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 12.87746569,
+      "level": 12.87746579,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17802,10 +17699,10 @@
       "price": 13.40999985,
       "headline_tf": "1W",
       "entry": 13.3180999,
-      "stop": 11.39829742,
-      "tp1": 16.19780361,
-      "tp2": 19.07750732,
-      "tp3": 22.91711227,
+      "stop": 11.39829741,
+      "tp1": 16.19780362,
+      "tp2": 19.07750735,
+      "tp3": 22.91711232,
       "scale": [
         0.25,
         0.5,
@@ -17849,7 +17746,7 @@
         13.39000034,
         13.40999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -17904,16 +17801,16 @@
       "price": 31.78000069,
       "headline_tf": "3D",
       "entry": 31.13999939,
-      "stop": 28.58245296,
-      "tp1": 34.97631904,
-      "tp2": 38.81263868,
-      "tp3": 43.92773154,
+      "stop": 28.58245289,
+      "tp1": 34.97631914,
+      "tp2": 38.81263888,
+      "tp3": 43.92773188,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 2.55754643,
+      "risk": 2.5575465,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -17951,7 +17848,7 @@
         31.63999939,
         31.78000069
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -18091,7 +17988,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 13.40044988,
+      "level": 13.4004499,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -18107,7 +18004,7 @@
       "confluence": false,
       "price": 13.77999973,
       "headline_tf": "3D",
-      "entry": 13.40044988,
+      "entry": 13.4004499,
       "stop": 11.8091037,
       "tp1": 14.86691281,
       "tp2": 16.50693201,
@@ -18117,7 +18014,7 @@
         0.5,
         0.15
       ],
-      "risk": 1.59134618,
+      "risk": 1.5913462,
       "rr": 1.95,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -18209,7 +18106,7 @@
       "confluence": true,
       "price": 4.36999989,
       "headline_tf": "1W",
-      "entry": 4.54708542,
+      "entry": 4.5470854,
       "stop": 4.95572373,
       "tp1": 4.02622837,
       "tp2": 3.75500011,
@@ -18219,7 +18116,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.40863832,
+      "risk": 0.40863833,
       "rr": 1.94,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -18499,7 +18396,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 1.10149983,
+      "level": 1.10149982,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -18515,10 +18412,10 @@
       "confluence": false,
       "price": 1.07500005,
       "headline_tf": "3D",
-      "entry": 1.10149983,
-      "stop": 1.12988026,
+      "entry": 1.10149982,
+      "stop": 1.12988025,
       "tp1": 1.07692305,
-      "tp2": 1.05861028,
+      "tp2": 1.05861017,
       "tp3": 1.03597549,
       "scale": [
         0.5,
@@ -18600,7 +18497,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 2.23885623,
+      "level": 2.2388562,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -18608,7 +18505,7 @@
       ],
       "armed": true,
       "armed_tf": "3D",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-30",
       "sma_proxy": false,
@@ -18616,17 +18513,17 @@
       "confluence": false,
       "price": 2.18000007,
       "headline_tf": "3D",
-      "entry": 2.23885623,
+      "entry": 2.2388562,
       "stop": 2.31744672,
       "tp1": 2.086557,
       "tp2": 2.01952421,
-      "tp3": 1.87790145,
+      "tp3": 1.87790134,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 0.07859048,
+      "risk": 0.07859052,
       "rr": 2.79,
       "rr_text": "2.8:1",
       "liquidity": "OK",
@@ -18701,7 +18598,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 46.66393,
+      "level": 46.66392996,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -18709,7 +18606,7 @@
       ],
       "armed": true,
       "armed_tf": "3D",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-30",
       "sma_proxy": false,
@@ -18717,7 +18614,7 @@
       "confluence": false,
       "price": 45.41999817,
       "headline_tf": "3D",
-      "entry": 46.66393,
+      "entry": 46.66392996,
       "stop": 49.02857864,
       "tp1": 44.15909747,
       "tp2": 40.09000015,
@@ -18727,7 +18624,7 @@
         0.25,
         0.15
       ],
-      "risk": 2.36464865,
+      "risk": 2.36464869,
       "rr": 2.78,
       "rr_text": "2.8:1",
       "liquidity": "LIQUID",
@@ -18810,7 +18707,7 @@
       ],
       "armed": true,
       "armed_tf": "1D",
-      "grade_held_runs": 1,
+      "grade_held_runs": 2,
       "entry_trigger": "retest",
       "trigger_bar": "2026-07-31",
       "sma_proxy": false,
@@ -18973,7 +18870,7 @@
         99.13999939,
         99.44000244
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19014,7 +18911,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 47.59719692,
+      "level": 47.59719706,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -19033,16 +18930,16 @@
       "price": 47.77000046,
       "headline_tf": "1D",
       "entry": 47.77000046,
-      "stop": 47.4996307,
+      "stop": 47.49963069,
       "tp1": 48.40000153,
       "tp2": 48.74979926,
-      "tp3": 49.30071259,
+      "tp3": 49.3007164,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.27036976,
+      "risk": 0.27036977,
       "rr": 3.62,
       "rr_text": "3.6:1",
       "liquidity": "OK",
@@ -19080,7 +18977,7 @@
         48.22999954,
         47.77000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19121,7 +19018,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 45.10912937,
+      "level": 45.10912952,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -19140,16 +19037,16 @@
       "price": 45.91999817,
       "headline_tf": "1D",
       "entry": 45.91999817,
-      "stop": 45.27848625,
-      "tp1": 46.88226605,
-      "tp2": 47.84453393,
-      "tp3": 49.12755778,
+      "stop": 45.27848631,
+      "tp1": 46.88226596,
+      "tp2": 47.84453376,
+      "tp3": 49.12755748,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.64151192,
+      "risk": 0.64151186,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -19187,7 +19084,7 @@
         45.79000092,
         45.91999817
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19293,7 +19190,7 @@
         62.25999832,
         62.91999817
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19400,7 +19297,7 @@
         18.85000038,
         18.82999992
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19441,7 +19338,7 @@
         "LOW R:R (1.5)"
       ],
       "level_tf": "3d",
-      "level": 35.58298832,
+      "level": 35.58298805,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -19457,8 +19354,8 @@
       "confluence": true,
       "price": 35.75999832,
       "headline_tf": "3D",
-      "entry": 35.58298832,
-      "stop": 35.37496695,
+      "entry": 35.58298805,
+      "stop": 35.37496667,
       "tp1": 35.75567823,
       "tp2": 35.89383542,
       "tp3": 36.08850595,
@@ -19467,7 +19364,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.20802137,
+      "risk": 0.20802138,
       "rr": 1.49,
       "rr_text": "1.5:1",
       "liquidity": "LIQUID",
@@ -19505,7 +19402,7 @@
         35.65000153,
         35.75999832
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -19961,7 +19858,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 6.60782168,
+      "level": 6.60782167,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20067,7 +19964,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 99.40432964,
+      "level": 99.40432999,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20086,16 +19983,16 @@
       "price": 101.27999878,
       "headline_tf": "1D",
       "entry": 101.27999878,
-      "stop": 99.92576071,
+      "stop": 99.92576045,
       "tp1": 102.48999786,
-      "tp2": 105.34271299,
-      "tp3": 108.05118912,
+      "tp2": 105.34271377,
+      "tp3": 108.05119044,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.35423807,
+      "risk": 1.35423833,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -20133,7 +20030,7 @@
         101.15000153,
         101.27999878
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20173,7 +20070,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 44.88126776,
+      "level": 44.88126791,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20192,16 +20089,16 @@
       "price": 45.41999817,
       "headline_tf": "1D",
       "entry": 45.41999817,
-      "stop": 44.73939999,
-      "tp1": 46.44089544,
-      "tp2": 47.46179271,
-      "tp3": 48.82298907,
+      "stop": 44.73940014,
+      "tp1": 46.44089521,
+      "tp2": 47.46179225,
+      "tp3": 48.82298831,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.68059818,
+      "risk": 0.68059803,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -20239,7 +20136,7 @@
         45.25,
         45.41999817
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20279,7 +20176,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 9.90717964,
+      "level": 9.90717966,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20298,16 +20195,16 @@
       "price": 10.10000038,
       "headline_tf": "1D",
       "entry": 10.10000038,
-      "stop": 9.89601627,
-      "tp1": 10.40597655,
-      "tp2": 10.71195273,
-      "tp3": 11.11992095,
+      "stop": 9.89601628,
+      "tp1": 10.40597653,
+      "tp2": 10.71195268,
+      "tp3": 11.11992087,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.20398411,
+      "risk": 0.2039841,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -20345,7 +20242,7 @@
         10.10000038,
         10.10000038
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20385,7 +20282,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 22.59362732,
+      "level": 22.59362728,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20406,8 +20303,8 @@
       "entry": 22.84000015,
       "stop": 22.49986077,
       "tp1": 23.35020923,
-      "tp2": 23.86041831,
-      "tp3": 24.54069708,
+      "tp2": 23.8604183,
+      "tp3": 24.54069707,
       "scale": [
         0.25,
         0.5,
@@ -20451,7 +20348,7 @@
         22.75,
         22.84000015
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20491,7 +20388,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 22.77976154,
+      "level": 22.77976151,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -20510,16 +20407,16 @@
       "price": 23.23999977,
       "headline_tf": "1D",
       "entry": 23.23999977,
-      "stop": 22.92379795,
-      "tp1": 23.7143025,
-      "tp2": 24.18860522,
-      "tp3": 24.82100885,
+      "stop": 22.92379804,
+      "tp1": 23.71430236,
+      "tp2": 24.18860495,
+      "tp3": 24.82100841,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.31620182,
+      "risk": 0.31620173,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -20557,7 +20454,7 @@
         23.18000031,
         23.23999977
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20769,7 +20666,7 @@
         13.80000019,
         14.48999977
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20809,7 +20706,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 42.38792732,
+      "level": 42.38792751,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -20875,7 +20772,7 @@
         42.18000031,
         42.29000092
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -20915,7 +20812,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 22.8725694,
+      "level": 22.87256943,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -21619,7 +21516,7 @@
         44.5,
         44.70999908
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -21869,7 +21766,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 1.52461282,
+      "level": 1.52461284,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -21887,16 +21784,16 @@
       "price": 1.55499995,
       "headline_tf": "1D",
       "entry": 1.55499995,
-      "stop": 1.50948035,
-      "tp1": 1.62327934,
-      "tp2": 1.69155873,
-      "tp3": 1.78259791,
+      "stop": 1.50948037,
+      "tp1": 1.62327932,
+      "tp2": 1.69155869,
+      "tp3": 1.78259785,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.04551959,
+      "risk": 0.04551958,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -22039,7 +21936,7 @@
         1.48500001,
         1.47000003
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -22453,7 +22350,7 @@
         11.71000004,
         11.75
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -22492,7 +22389,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 19.088904,
+      "level": 19.08890417,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -22595,7 +22492,7 @@
         "LOW R:R (1.5)"
       ],
       "level_tf": "weekly",
-      "level": 0.87280109,
+      "level": 0.87280108,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -22611,17 +22508,17 @@
       "confluence": false,
       "price": 0.88,
       "headline_tf": "1W",
-      "entry": 0.87280109,
+      "entry": 0.87280108,
       "stop": 0.71887586,
       "tp1": 1.005,
-      "tp2": 1.10078082,
-      "tp3": 1.64242721,
+      "tp2": 1.1007807,
+      "tp3": 1.64242719,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.15392523,
+      "risk": 0.15392522,
       "rr": 1.48,
       "rr_text": "1.5:1",
       "liquidity": "OK",
@@ -22763,7 +22660,7 @@
         7.28999996,
         7.25
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -22884,6 +22781,109 @@
         "1W": {
           "armed": true,
           "entry_trigger": "break",
+          "structural_tps": 1,
+          "direction": "short"
+        }
+      }
+    },
+    {
+      "symbol": "CEL",
+      "name": "Challenger Gold Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "setup_type": "vivek",
+      "grade": "B+",
+      "grade_raw": "B+",
+      "score": 8,
+      "score_max": 10,
+      "chips": [
+        "WEEKLY 200 SMA",
+        "AT THE LEVEL",
+        "CLEAN REACTION",
+        "LOW R:R (1.3)"
+      ],
+      "level_tf": "weekly",
+      "level": 2.07845,
+      "at_level": true,
+      "reaction": "reject",
+      "entry_types": [
+        "reclaim"
+      ],
+      "armed": true,
+      "armed_tf": "1W",
+      "grade_held_runs": 0,
+      "entry_trigger": "reclaim",
+      "trigger_bar": "2026-07-31",
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 2.06999993,
+      "headline_tf": "1W",
+      "entry": 2.06999993,
+      "stop": 3.59840364,
+      "tp1": 0.77999997,
+      "tp2": 0.10557,
+      "tp3": 0.1035,
+      "scale": [
+        0.5,
+        0.25,
+        0.15
+      ],
+      "risk": 1.52840371,
+      "rr": 1.29,
+      "rr_text": "1.3:1",
+      "liquidity": "OK",
+      "turnover": 196278,
+      "data_age_days": 0,
+      "spark": [
+        2.5999999,
+        2.5,
+        2.29999995,
+        2.29999995,
+        2.29999995,
+        2.20000005,
+        2.4000001,
+        2.4000001,
+        2.5999999,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5999999,
+        2.5,
+        2.4000001,
+        2.5,
+        2.4000001,
+        2.5,
+        2.5,
+        2.5,
+        2.4000001,
+        2.4000001,
+        2.24000001,
+        2.0999999,
+        2.06999993
+      ],
+      "sector_count": 47,
+      "plans": {
+        "1D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "short"
+        },
+        "3D": {
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "structural_tps": 2,
+          "direction": "short"
+        },
+        "1W": {
+          "armed": true,
+          "entry_trigger": "reclaim",
           "structural_tps": 1,
           "direction": "short"
         }
@@ -23279,7 +23279,7 @@
         57.50999832,
         57.43999863
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -23382,7 +23382,7 @@
         46.04999924,
         46.04999924
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -23485,7 +23485,7 @@
         2.31999993,
         2.29999995
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -23740,7 +23740,7 @@
       ],
       "armed": false,
       "armed_tf": null,
-      "grade_held_runs": 1,
+      "grade_held_runs": 0,
       "entry_trigger": null,
       "trigger_bar": null,
       "sma_proxy": false,
@@ -23835,7 +23835,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 10.99941532,
+      "level": 10.99941535,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -24251,7 +24251,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 1.87384969,
+      "level": 1.87384968,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24269,16 +24269,16 @@
       "price": 1.92999995,
       "headline_tf": "1D",
       "entry": 1.92999995,
-      "stop": 1.85572217,
-      "tp1": 2.04141662,
-      "tp2": 2.15283328,
-      "tp3": 2.30138884,
+      "stop": 1.85572216,
+      "tp1": 2.04141663,
+      "tp2": 2.15283331,
+      "tp3": 2.30138888,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.07427778,
+      "risk": 0.07427779,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -24286,7 +24286,7 @@
       "data_age_days": 0,
       "spark": [
         1.86825955,
-        1.88304794,
+        1.88304782,
         1.87318897,
         1.87811852,
         1.87811852,
@@ -24355,7 +24355,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 2.43316295,
+      "level": 2.43316294,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24459,7 +24459,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 25.82202867,
+      "level": 25.82202899,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24477,16 +24477,16 @@
       "price": 26.36000061,
       "headline_tf": "1D",
       "entry": 26.36000061,
-      "stop": 25.79566866,
-      "tp1": 27.20649853,
-      "tp2": 28.05299645,
-      "tp3": 29.18166034,
+      "stop": 25.79566899,
+      "tp1": 27.20649804,
+      "tp2": 28.05299547,
+      "tp3": 29.18165872,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.56433195,
+      "risk": 0.56433162,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -24524,7 +24524,7 @@
         26.34000015,
         26.36000061
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -24563,7 +24563,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 90.43729694,
+      "level": 90.43729736,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24628,7 +24628,7 @@
         91.12999725,
         93.05999756
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -24732,7 +24732,111 @@
         144.88000488,
         142.28999329
       ],
-      "sector_count": 146,
+      "sector_count": 145,
+      "plans": {
+        "1D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "long"
+        },
+        "3D": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 1,
+          "direction": "long"
+        },
+        "1W": {
+          "armed": false,
+          "entry_trigger": null,
+          "structural_tps": 0,
+          "direction": "long"
+        }
+      }
+    },
+    {
+      "symbol": "PL8",
+      "name": "Plato Income Maximiser Limited",
+      "sector": "Financials",
+      "dir": "LONG",
+      "setup_type": "vivek",
+      "grade": "B+",
+      "grade_raw": "B+",
+      "score": 7,
+      "score_max": 10,
+      "chips": [
+        "H4 200 SMA",
+        "CLEAN REACTION",
+        "STRONG STRUCTURE",
+        "WATCHING (no trigger)"
+      ],
+      "level_tf": "h4",
+      "level": 1.38511177,
+      "at_level": false,
+      "reaction": "bounce",
+      "entry_types": [
+        "reclaim",
+        "break"
+      ],
+      "armed": false,
+      "armed_tf": null,
+      "grade_held_runs": 0,
+      "entry_trigger": null,
+      "trigger_bar": null,
+      "sma_proxy": false,
+      "sma_window": 200,
+      "confluence": false,
+      "price": 1.41499996,
+      "headline_tf": "1D",
+      "entry": 1.41499996,
+      "stop": 1.36337174,
+      "tp1": 1.51861566,
+      "tp2": 1.56988463,
+      "tp3": 1.67314108,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.05162822,
+      "rr": 3.0,
+      "rr_text": "3.0:1",
+      "liquidity": "OK",
+      "turnover": 630880,
+      "data_age_days": 0,
+      "spark": [
+        1.34977019,
+        1.35475087,
+        1.37467372,
+        1.35973155,
+        1.36969304,
+        1.37467372,
+        1.36471236,
+        1.37467372,
+        1.38961577,
+        1.37965441,
+        1.39459646,
+        1.38961577,
+        1.38463509,
+        1.39459646,
+        1.39957714,
+        1.39459646,
+        1.40455782,
+        1.39957714,
+        1.42448068,
+        1.40455782,
+        1.40455782,
+        1.41451931,
+        1.41949999,
+        1.42999995,
+        1.42499995,
+        1.41999996,
+        1.41999996,
+        1.41499996,
+        1.41499996,
+        1.41499996
+      ],
+      "sector_count": 53,
       "plans": {
         "1D": {
           "armed": false,
@@ -24836,7 +24940,7 @@
         118.59999847,
         117.51999664
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -24875,7 +24979,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 31.49379987,
+      "level": 31.49379997,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24893,16 +24997,16 @@
       "price": 32.79999924,
       "headline_tf": "1D",
       "entry": 32.79999924,
-      "stop": 31.14891941,
-      "tp1": 35.27661897,
-      "tp2": 37.75323871,
-      "tp3": 41.05539835,
+      "stop": 31.14891952,
+      "tp1": 35.27661881,
+      "tp2": 37.75323839,
+      "tp3": 41.05539783,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.65107982,
+      "risk": 1.65107972,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -24940,7 +25044,7 @@
         32.79000092,
         32.79999924
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -24979,7 +25083,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 1.07802911,
+      "level": 1.0780291,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -24987,7 +25091,7 @@
       ],
       "armed": false,
       "armed_tf": null,
-      "grade_held_runs": 1,
+      "grade_held_runs": 0,
       "entry_trigger": null,
       "trigger_bar": null,
       "sma_proxy": false,
@@ -24996,16 +25100,16 @@
       "price": 1.10000002,
       "headline_tf": "1D",
       "entry": 1.10000002,
-      "stop": 1.0669178,
-      "tp1": 1.12954019,
-      "tp2": 1.1992467,
-      "tp3": 1.26541115,
+      "stop": 1.06691781,
+      "tp1": 1.12954044,
+      "tp2": 1.19924666,
+      "tp3": 1.26541109,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.03308223,
+      "risk": 0.03308221,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -25043,7 +25147,7 @@
         1.10000002,
         1.10000002
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -25186,7 +25290,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 96.11332703,
+      "level": 96.11332681,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -25203,16 +25307,16 @@
       "price": 99.79000092,
       "headline_tf": "1D",
       "entry": 99.79000092,
-      "stop": 96.39244683,
-      "tp1": 104.88633204,
-      "tp2": 109.98266316,
-      "tp3": 116.77777133,
+      "stop": 96.39244707,
+      "tp1": 104.88633168,
+      "tp2": 109.98266244,
+      "tp3": 116.77777013,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.39755408,
+      "risk": 3.39755384,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -25250,7 +25354,7 @@
         99.34999847,
         99.79000092
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -25393,7 +25497,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 49.37886688,
+      "level": 49.37886702,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -25410,16 +25514,16 @@
       "price": 50.47000122,
       "headline_tf": "1D",
       "entry": 50.47000122,
-      "stop": 49.32839688,
-      "tp1": 52.18240773,
-      "tp2": 53.89481424,
-      "tp3": 56.17802292,
+      "stop": 49.32839701,
+      "tp1": 52.18240753,
+      "tp2": 53.89481384,
+      "tp3": 56.17802225,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.14160434,
+      "risk": 1.14160421,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -25457,7 +25561,7 @@
         50.45999908,
         50.47000122
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -25703,7 +25807,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 29.84428494,
+      "level": 29.844285,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -25721,16 +25825,16 @@
       "price": 30.95999908,
       "headline_tf": "1D",
       "entry": 30.95999908,
-      "stop": 29.53386926,
-      "tp1": 33.09919382,
-      "tp2": 35.23838856,
-      "tp3": 38.09064822,
+      "stop": 29.53386918,
+      "tp1": 33.09919394,
+      "tp2": 35.23838879,
+      "tp3": 38.0906486,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.42612983,
+      "risk": 1.4261299,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -25768,7 +25872,7 @@
         30.70000076,
         30.95999908
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -25871,7 +25975,7 @@
         7.6500001,
         7.84000015
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -25910,7 +26014,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 44.14724674,
+      "level": 44.14724665,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -25928,16 +26032,16 @@
       "price": 45.63999939,
       "headline_tf": "1D",
       "entry": 45.63999939,
-      "stop": 43.84014455,
-      "tp1": 48.33978166,
-      "tp2": 51.03956392,
-      "tp3": 54.63927361,
+      "stop": 43.84014445,
+      "tp1": 48.3397818,
+      "tp2": 51.03956421,
+      "tp3": 54.63927408,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.79985484,
+      "risk": 1.79985494,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -25975,7 +26079,7 @@
         46.08000183,
         45.63999939
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -26014,7 +26118,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 72.71564571,
+      "level": 72.71564598,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -26032,16 +26136,16 @@
       "price": 71.09999847,
       "headline_tf": "1D",
       "entry": 71.09999847,
-      "stop": 73.72248302,
+      "stop": 73.72248328,
       "tp1": 68.68825757,
       "tp2": 64.72883069,
-      "tp3": 57.98757576,
+      "tp3": 57.98757443,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 2.62248454,
+      "risk": 2.62248481,
       "rr": 2.43,
       "rr_text": "2.4:1",
       "liquidity": "LIQUID",
@@ -26079,7 +26183,7 @@
         70.37000275,
         71.09999847
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -26183,7 +26287,7 @@
         52.00999832,
         51.18999863
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -26222,7 +26326,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 31.68884235,
+      "level": 31.68884241,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -26288,110 +26392,6 @@
         32.79000092
       ],
       "sector_count": 13,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 2,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
-        }
-      }
-    },
-    {
-      "symbol": "PL8",
-      "name": "Plato Income Maximiser Limited",
-      "sector": "Financials",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "B+",
-      "grade_raw": "B+",
-      "score": 7,
-      "score_max": 10,
-      "chips": [
-        "H4 200 SMA",
-        "CLEAN REACTION",
-        "STRONG STRUCTURE",
-        "WATCHING (no trigger)"
-      ],
-      "level_tf": "h4",
-      "level": 1.38511178,
-      "at_level": false,
-      "reaction": "bounce",
-      "entry_types": [
-        "reclaim",
-        "break"
-      ],
-      "armed": false,
-      "armed_tf": null,
-      "grade_held_runs": 0,
-      "entry_trigger": null,
-      "trigger_bar": null,
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 1.41499996,
-      "headline_tf": "1D",
-      "entry": 1.41499996,
-      "stop": 1.36337175,
-      "tp1": 1.45956686,
-      "tp2": 1.51861554,
-      "tp3": 1.67314105,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.05162822,
-      "rr": 2.01,
-      "rr_text": "2.0:1",
-      "liquidity": "OK",
-      "turnover": 630880,
-      "data_age_days": 0,
-      "spark": [
-        1.34977019,
-        1.35475087,
-        1.37467372,
-        1.35973155,
-        1.36969304,
-        1.37467372,
-        1.36471236,
-        1.37467372,
-        1.38961577,
-        1.37965441,
-        1.39459646,
-        1.38961577,
-        1.38463509,
-        1.39459646,
-        1.39957714,
-        1.39459646,
-        1.40455782,
-        1.39957714,
-        1.42448068,
-        1.40455782,
-        1.40455782,
-        1.41451931,
-        1.41949999,
-        1.42999995,
-        1.42499995,
-        1.41999996,
-        1.41999996,
-        1.41499996,
-        1.41499996,
-        1.41499996
-      ],
-      "sector_count": 53,
       "plans": {
         "1D": {
           "armed": false,
@@ -26533,7 +26533,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 10.43883895,
+      "level": 10.43883897,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -26542,7 +26542,7 @@
       ],
       "armed": false,
       "armed_tf": null,
-      "grade_held_runs": 1,
+      "grade_held_runs": 0,
       "entry_trigger": null,
       "trigger_bar": null,
       "sma_proxy": false,
@@ -26551,16 +26551,16 @@
       "price": 10.72999954,
       "headline_tf": "1D",
       "entry": 10.72999954,
-      "stop": 10.22403649,
+      "stop": 10.22403651,
       "tp1": 11.21000004,
       "tp2": 11.68000031,
-      "tp3": 13.25981479,
+      "tp3": 13.2598147,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.50596305,
+      "risk": 0.50596303,
       "rr": 1.88,
       "rr_text": "1.9:1",
       "liquidity": "OK",
@@ -26598,7 +26598,7 @@
         10.56999969,
         10.72999954
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -26909,7 +26909,7 @@
         12.22000027,
         12.27000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -27568,7 +27568,7 @@
         "LOW R:R (1.5)"
       ],
       "level_tf": "h4",
-      "level": 2.84091756,
+      "level": 2.84091755,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -27584,17 +27584,17 @@
       "confluence": false,
       "price": 2.8599999,
       "headline_tf": "3D",
-      "entry": 2.77847003,
+      "entry": 2.77847005,
       "stop": 2.65379237,
       "tp1": 2.88000011,
-      "tp2": 2.96260856,
-      "tp3": 3.40185836,
+      "tp2": 2.96260832,
+      "tp3": 3.40185843,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.12467766,
+      "risk": 0.12467768,
       "rr": 1.48,
       "rr_text": "1.5:1",
       "liquidity": "OK",
@@ -27632,7 +27632,7 @@
         2.9000001,
         2.8599999
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -27791,7 +27791,7 @@
       "confluence": false,
       "price": 4.9000001,
       "headline_tf": "3D",
-      "entry": 4.77321503,
+      "entry": 4.773215,
       "stop": 4.63046327,
       "tp1": 4.88999987,
       "tp2": 4.97658619,
@@ -27801,7 +27801,7 @@
         0.5,
         0.15
       ],
-      "risk": 0.14275175,
+      "risk": 0.14275173,
       "rr": 1.42,
       "rr_text": "1.4:1",
       "liquidity": "OK",
@@ -27839,7 +27839,7 @@
         4.86000013,
         4.9000001
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -27879,7 +27879,7 @@
         "LOW R:R (1.4)"
       ],
       "level_tf": "3d",
-      "level": 2.07060649,
+      "level": 2.07060647,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -27897,9 +27897,9 @@
       "headline_tf": "1D",
       "entry": 2.1099999,
       "stop": 2.03140989,
-      "tp1": 2.17294192,
-      "tp2": 2.22062043,
-      "tp3": 2.50294992,
+      "tp1": 2.17294205,
+      "tp2": 2.22062041,
+      "tp3": 2.50294994,
       "scale": [
         0.25,
         0.5,
@@ -27913,11 +27913,11 @@
       "data_age_days": 0,
       "spark": [
         1.97830236,
-        1.98814476,
-        1.98814476,
+        1.98814452,
+        1.98814452,
         1.96846008,
-        1.98814476,
-        1.98814476,
+        1.98814452,
+        1.98814452,
         2.00782919,
         2.03735614,
         2.04719853,
@@ -28149,7 +28149,7 @@
         24.88999939,
         23.80999947
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28188,7 +28188,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 107.86303219,
+      "level": 107.86303226,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28205,16 +28205,16 @@
       "price": 111.08000183,
       "headline_tf": "1D",
       "entry": 111.08000183,
-      "stop": 106.75961677,
-      "tp1": 117.56057942,
-      "tp2": 124.04115702,
-      "tp3": 132.68192714,
+      "stop": 106.75961685,
+      "tp1": 117.56057931,
+      "tp2": 124.04115679,
+      "tp3": 132.68192676,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 4.32038506,
+      "risk": 4.32038499,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -28252,7 +28252,7 @@
         110.91999817,
         111.08000183
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28291,7 +28291,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 144.83472099,
+      "level": 144.83472191,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28308,16 +28308,16 @@
       "price": 149.75999451,
       "headline_tf": "1D",
       "entry": 149.75999451,
-      "stop": 143.36597699,
-      "tp1": 159.35102077,
-      "tp2": 168.94204704,
-      "tp3": 181.73008207,
+      "stop": 143.36597792,
+      "tp1": 159.35101939,
+      "tp2": 168.94204427,
+      "tp3": 181.73007745,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 6.39401751,
+      "risk": 6.39401659,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -28355,7 +28355,7 @@
         149.49000549,
         149.75999451
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28394,7 +28394,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 34.83690729,
+      "level": 34.8369071,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28411,16 +28411,16 @@
       "price": 35.95999908,
       "headline_tf": "1D",
       "entry": 35.95999908,
-      "stop": 34.48128931,
-      "tp1": 38.17806374,
-      "tp2": 40.39612839,
-      "tp3": 43.35354793,
+      "stop": 34.48128912,
+      "tp1": 38.17806403,
+      "tp2": 40.39612897,
+      "tp3": 43.35354889,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.47870977,
+      "risk": 1.47870996,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -28458,7 +28458,7 @@
         35.90000153,
         35.95999908
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28497,7 +28497,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 18.33361576,
+      "level": 18.33361573,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28514,16 +28514,16 @@
       "price": 18.77000046,
       "headline_tf": "1D",
       "entry": 18.77000046,
-      "stop": 18.12271016,
+      "stop": 18.12271013,
       "tp1": 19.31170047,
-      "tp2": 20.71187135,
-      "tp3": 22.00645195,
+      "tp2": 20.71187144,
+      "tp3": 22.00645209,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.6472903,
+      "risk": 0.64729033,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -28561,7 +28561,7 @@
         18.65999985,
         18.77000046
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28600,7 +28600,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 77.6603545,
+      "level": 77.66035446,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28617,16 +28617,16 @@
       "price": 80.22000122,
       "headline_tf": "1D",
       "entry": 80.22000122,
-      "stop": 76.87675611,
-      "tp1": 85.23486889,
-      "tp2": 90.24973656,
-      "tp3": 96.93622679,
+      "stop": 76.87675607,
+      "tp1": 85.23486895,
+      "tp2": 90.24973668,
+      "tp3": 96.93622698,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.34324511,
+      "risk": 3.34324515,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -28664,7 +28664,7 @@
         80.05999756,
         80.22000122
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28703,7 +28703,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 11.80202476,
+      "level": 11.80202479,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -28723,7 +28723,7 @@
       "stop": 11.66654174,
       "tp1": 12.75018834,
       "tp2": 13.40037629,
-      "tp3": 14.26729357,
+      "tp3": 14.26729356,
       "scale": [
         0.25,
         0.5,
@@ -28767,7 +28767,7 @@
         12.07999992,
         12.10000038
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -28805,7 +28805,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 1.61625016,
+      "level": 1.61625017,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -28908,7 +28908,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 1.91789905,
+      "level": 1.91789903,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -28925,16 +28925,16 @@
       "price": 1.98000002,
       "headline_tf": "1D",
       "entry": 1.98000002,
-      "stop": 1.90087374,
-      "tp1": 2.09868944,
-      "tp2": 2.21737885,
-      "tp3": 2.37563141,
+      "stop": 1.90087372,
+      "tp1": 2.09868946,
+      "tp2": 2.21737891,
+      "tp3": 2.3756315,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.07912628,
+      "risk": 0.0791263,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -28972,7 +28972,7 @@
         1.97039402,
         1.98000002
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -29114,7 +29114,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 9.7513213,
+      "level": 9.75132128,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -29131,16 +29131,16 @@
       "price": 10.11999989,
       "headline_tf": "1D",
       "entry": 10.11999989,
-      "stop": 9.56107959,
+      "stop": 9.56107957,
       "tp1": 10.84500027,
-      "tp2": 11.79676076,
-      "tp3": 12.91460134,
+      "tp2": 11.79676083,
+      "tp3": 12.91460146,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.55892029,
+      "risk": 0.55892031,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -29178,7 +29178,7 @@
         9.89000034,
         10.11999989
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -29217,7 +29217,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 1.95720731,
+      "level": 1.95720732,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -29235,9 +29235,9 @@
       "headline_tf": "1D",
       "entry": 2.0,
       "stop": 1.938574,
-      "tp1": 2.09213901,
-      "tp2": 2.18427801,
-      "tp3": 2.30713002,
+      "tp1": 2.092139,
+      "tp2": 2.184278,
+      "tp3": 2.30712999,
       "scale": [
         0.25,
         0.5,
@@ -29281,7 +29281,7 @@
         2.0,
         2.0
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -29320,7 +29320,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 26.44677062,
+      "level": 26.44677057,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -29337,16 +29337,16 @@
       "price": 27.42000008,
       "headline_tf": "1D",
       "entry": 27.42000008,
-      "stop": 26.21665736,
-      "tp1": 29.22501415,
-      "tp2": 31.03002823,
-      "tp3": 33.43671367,
+      "stop": 26.21665731,
+      "tp1": 29.22501423,
+      "tp2": 31.03002838,
+      "tp3": 33.43671391,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.20334272,
+      "risk": 1.20334277,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -29384,7 +29384,7 @@
         27.45999908,
         27.42000008
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -29423,7 +29423,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 38.32107606,
+      "level": 38.32107596,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -29487,7 +29487,7 @@
         39.49000168,
         39.31000137
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -30157,7 +30157,7 @@
       "price": 1.66999996,
       "headline_tf": "3D",
       "entry": 1.70887921,
-      "stop": 1.73986566,
+      "stop": 1.73986565,
       "tp1": 1.61865616,
       "tp2": 1.58500004,
       "tp3": 1.55499995,
@@ -30204,7 +30204,7 @@
         1.66999996,
         1.66999996
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -30544,7 +30544,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 37.55669182,
+      "level": 37.55669186,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -30608,7 +30608,7 @@
         38.54999924,
         38.56000137
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -30847,7 +30847,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 58.28281168,
+      "level": 58.28281179,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -30864,16 +30864,16 @@
       "price": 59.81000137,
       "headline_tf": "1D",
       "entry": 59.81000137,
-      "stop": 57.92009329,
-      "tp1": 62.6448635,
-      "tp2": 65.47972562,
-      "tp3": 69.25954179,
+      "stop": 57.9200934,
+      "tp1": 62.64486333,
+      "tp2": 65.47972528,
+      "tp3": 69.25954122,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.88990808,
+      "risk": 1.88990797,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -30911,7 +30911,7 @@
         59.31000137,
         59.81000137
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -31049,7 +31049,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 9.67030493,
+      "level": 9.6703046,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -31065,17 +31065,17 @@
       "confluence": false,
       "price": 9.89000034,
       "headline_tf": "1W",
-      "entry": 9.71529219,
-      "stop": 8.96612937,
-      "tp1": 10.83903642,
-      "tp2": 11.96278065,
-      "tp3": 13.46110629,
+      "entry": 9.71529184,
+      "stop": 8.96612924,
+      "tp1": 10.83903575,
+      "tp2": 11.96277965,
+      "tp3": 13.46110486,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.74916282,
+      "risk": 0.7491626,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -31113,7 +31113,7 @@
         9.85999966,
         9.89000034
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -31169,8 +31169,8 @@
       "entry": 1.35000002,
       "stop": 1.28748079,
       "tp1": 1.40999997,
-      "tp2": 1.53755771,
-      "tp3": 1.66259617,
+      "tp2": 1.53755772,
+      "tp3": 1.66259618,
       "scale": [
         0.25,
         0.5,
@@ -31315,7 +31315,7 @@
         77.16999817,
         76.15000153
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -31655,7 +31655,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 14.27045883,
+      "level": 14.27045881,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -31672,16 +31672,16 @@
       "price": 14.84000015,
       "headline_tf": "1D",
       "entry": 14.84000015,
-      "stop": 13.9422179,
-      "tp1": 16.18667353,
-      "tp2": 17.5333469,
-      "tp3": 19.3289114,
+      "stop": 13.94221789,
+      "tp1": 16.18667355,
+      "tp2": 17.53334694,
+      "tp3": 19.32891147,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.89778225,
+      "risk": 0.89778226,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -31719,7 +31719,7 @@
         15.25,
         14.84000015
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -31756,7 +31756,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 9.84853389,
+      "level": 9.848534,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -31773,16 +31773,16 @@
       "price": 10.09000015,
       "headline_tf": "1D",
       "entry": 10.09000015,
-      "stop": 9.8374075,
-      "tp1": 10.46888913,
-      "tp2": 10.8477781,
-      "tp3": 11.3529634,
+      "stop": 9.83740761,
+      "tp1": 10.46888896,
+      "tp2": 10.84777777,
+      "tp3": 11.35296285,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.25259265,
+      "risk": 0.25259254,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -31820,7 +31820,7 @@
         10.06999969,
         10.09000015
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -31921,7 +31921,7 @@
         28.20999908,
         28.84000015
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -32160,7 +32160,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 22.32308568,
+      "level": 22.32308562,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -32224,7 +32224,7 @@
         22.90999985,
         23.03000069
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -32261,7 +32261,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 87.11630114,
+      "level": 87.11630138,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -32277,7 +32277,7 @@
       "confluence": false,
       "price": 85.20999908,
       "headline_tf": "3D",
-      "entry": 87.11630114,
+      "entry": 87.11630138,
       "stop": 92.80058687,
       "tp1": 79.49060864,
       "tp2": 74.58188641,
@@ -32287,7 +32287,7 @@
         0.25,
         0.15
       ],
-      "risk": 5.68428573,
+      "risk": 5.68428548,
       "rr": 2.21,
       "rr_text": "2.2:1",
       "liquidity": "LIQUID",
@@ -33070,7 +33070,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 31.66075397,
+      "level": 31.66075398,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -33235,7 +33235,7 @@
         4.34000015,
         4.28999996
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -33337,7 +33337,7 @@
         10.11999989,
         10.15999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -33438,7 +33438,7 @@
         88.13999939,
         91.79000092
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -33778,7 +33778,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 9.31660635,
+      "level": 9.31660634,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -33842,7 +33842,7 @@
         9.57999992,
         9.68000031
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -33879,7 +33879,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 22.0581489,
+      "level": 22.05814895,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -33943,7 +33943,7 @@
         21.93000031,
         22.69000053
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": true,
@@ -33980,7 +33980,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 15.00985573,
+      "level": 15.0098558,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -34044,7 +34044,7 @@
         14.65999985,
         14.52999973
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34081,7 +34081,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 25.33604909,
+      "level": 25.33604912,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -34098,16 +34098,16 @@
       "price": 26.15999985,
       "headline_tf": "1D",
       "entry": 26.15999985,
-      "stop": 25.11480132,
-      "tp1": 27.72779764,
-      "tp2": 29.29559543,
-      "tp3": 31.38599249,
+      "stop": 25.11480135,
+      "tp1": 27.7277976,
+      "tp2": 29.29559535,
+      "tp3": 31.38599235,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.04519853,
+      "risk": 1.0451985,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -34145,7 +34145,7 @@
         26.06999969,
         26.15999985
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34246,7 +34246,7 @@
         33.61000061,
         34.20000076
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34382,7 +34382,7 @@
         "WEEKLY 200 SMA"
       ],
       "level_tf": "weekly",
-      "level": 1.90228888,
+      "level": 1.90228887,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -34446,7 +34446,7 @@
         1.95000005,
         1.97500002
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34647,7 +34647,7 @@
         61.22000122,
         61.33000183
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34683,7 +34683,7 @@
         "H4 200 SMA"
       ],
       "level_tf": "h4",
-      "level": 65.57730385,
+      "level": 65.57730366,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -34700,16 +34700,16 @@
       "price": 67.87999725,
       "headline_tf": "1D",
       "entry": 67.87999725,
-      "stop": 65.12428489,
-      "tp1": 72.01356579,
-      "tp2": 76.14713433,
-      "tp3": 81.65855906,
+      "stop": 65.1242847,
+      "tp1": 72.01356608,
+      "tp2": 76.1471349,
+      "tp3": 81.65856,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 2.75571236,
+      "risk": 2.75571255,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -34747,7 +34747,7 @@
         67.27999878,
         67.87999725
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -34783,7 +34783,7 @@
         "H4 200 SMA"
       ],
       "level_tf": "h4",
-      "level": 1.98700347,
+      "level": 1.98700345,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -34800,16 +34800,16 @@
       "price": 2.05999994,
       "headline_tf": "1D",
       "entry": 2.05999994,
-      "stop": 1.96939446,
-      "tp1": 2.19590817,
-      "tp2": 2.3318164,
-      "tp3": 2.51302737,
+      "stop": 1.96939443,
+      "tp1": 2.19590821,
+      "tp2": 2.33181648,
+      "tp3": 2.51302751,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.09060549,
+      "risk": 0.09060551,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -34853,106 +34853,6 @@
           "armed": false,
           "entry_trigger": null,
           "structural_tps": 0,
-          "direction": "long"
-        },
-        "3D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
-        },
-        "1W": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 0,
-          "direction": "long"
-        }
-      }
-    },
-    {
-      "symbol": "IACT",
-      "name": "iShares U.S. Factor Rotation Active ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "setup_type": "vivek",
-      "grade": "WATCH",
-      "grade_raw": "WATCH",
-      "score": 3,
-      "score_max": 10,
-      "chips": [
-        "H4 200 SMA"
-      ],
-      "level_tf": "h4",
-      "level": 28.37296567,
-      "at_level": false,
-      "reaction": "hold",
-      "entry_types": [
-        "retest"
-      ],
-      "armed": false,
-      "armed_tf": null,
-      "grade_held_runs": 0,
-      "entry_trigger": null,
-      "trigger_bar": null,
-      "sma_proxy": false,
-      "sma_window": 200,
-      "confluence": false,
-      "price": 29.51000023,
-      "headline_tf": "1D",
-      "entry": 29.51000023,
-      "stop": 28.11010901,
-      "tp1": 30.88999939,
-      "tp2": 33.70967388,
-      "tp3": 36.50945632,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 1.39989122,
-      "rr": 3.0,
-      "rr_text": "3.0:1",
-      "liquidity": "OK",
-      "turnover": 455565,
-      "data_age_days": 1,
-      "spark": [
-        30.02803421,
-        30.11787987,
-        29.99808502,
-        30.07794762,
-        30.42734337,
-        30.06796646,
-        30.26762009,
-        30.60703278,
-        30.63999939,
-        30.57999992,
-        30.38999939,
-        30.42000008,
-        30.39999962,
-        30.25,
-        30.31999969,
-        30.38999939,
-        30.47999954,
-        30.44000053,
-        30.54000092,
-        30.46999931,
-        29.85000038,
-        29.95000076,
-        30.03000069,
-        30.15999985,
-        30.07999992,
-        30.12000084,
-        30.19000053,
-        29.89999962,
-        30.03000069,
-        29.51000023
-      ],
-      "sector_count": 146,
-      "plans": {
-        "1D": {
-          "armed": false,
-          "entry_trigger": null,
-          "structural_tps": 1,
           "direction": "long"
         },
         "3D": {
@@ -35047,7 +34947,7 @@
         12.42000008,
         12.18000031
       ],
-      "sector_count": 146,
+      "sector_count": 145,
       "plans": {
         "1D": {
           "armed": false,
@@ -35163,7 +35063,7 @@
     "ALX": 5.03000021,
     "A2M": 6.88999987,
     "ARG": 9.05000019,
-    "MGOC": 2.71000004,
+    "MGOC": 2.72000003,
     "MEZ": 4.59000015,
     "CDA": 40.08000183,
     "GMD": 5.71000004,
@@ -35304,7 +35204,7 @@
     "RSG": 0.93000001,
     "DDR": 12.52999973,
     "HGBL": 84.83000183,
-    "ASK": 1.29499996,
+    "ASK": 1.28999996,
     "MAF": 5.71000004,
     "JDO": 0.97000003,
     "NEC": 0.95999998,
@@ -35582,7 +35482,7 @@
     "BOC": 0.215,
     "MMI": 1.40999997,
     "ICOR": 94.47000122,
-    "KSC": 2.97000003,
+    "KSC": 3.04999995,
     "LGI": 2.38000011,
     "RARI": 29.54999924,
     "WMI": 1.46500003,
@@ -35717,7 +35617,7 @@
     "IHCB": 90.94999695,
     "MPW": 1.83000004,
     "SFC": 19.60000038,
-    "CEL": 2.0999999,
+    "CEL": 2.06999993,
     "AAR": 0.13,
     "SKO": 1.21000004,
     "TBN": 0.235,
@@ -35762,7 +35662,7 @@
     "GRNV": 31.20999908,
     "IMB": 0.625,
     "CTT": 0.215,
-    "CVC": 1.70000005,
+    "CVC": 1.79999995,
     "URNM": 9.61999989,
     "LEND": 14.52999973,
     "PLT": 0.75999999,
@@ -35903,7 +35803,7 @@
     "SPL": 0.75,
     "GHHF": 36.18000031,
     "RYD": 2.03999996,
-    "CRD": 0.55000001,
+    "CRD": 0.59500003,
     "PRG": 1.25999999,
     "YOJ": 0.23999999,
     "NNWH": 1.29499996,
@@ -35947,7 +35847,7 @@
     "DLI": 0.17,
     "ARL": 0.42500001,
     "FLC": 0.078,
-    "GPR": 0.027,
+    "GPR": 0.028,
     "TOR": 0.18000001,
     "AGE": 0.052,
     "HRN": 0.94999999,
@@ -35981,7 +35881,7 @@
     "SDI": 1.39750004,
     "SHJ": 0.58999997,
     "OIL": 0.145,
-    "ENN": 0.082,
+    "ENN": 0.071,
     "TTX": 7.44999981,
     "KGL": 0.175,
     "PIXX": 4.9000001,
@@ -36083,7 +35983,7 @@
     "SHG": 0.19499999,
     "ZYAU": 10.47000027,
     "ATP": 0.093,
-    "BXN": 0.80000001,
+    "BXN": 0.81,
     "IMA": 0.018,
     "SNS": 0.028,
     "MMA": 0.38,
@@ -36332,7 +36232,7 @@
     "CG1": 0.083,
     "OZF": 31.82999992,
     "BWF": 0.13500001,
-    "DVDY": 20.48999977,
+    "DVDY": 20.57999992,
     "TNC": 0.38,
     "ICE": 0.033,
     "LGM": 0.125,
@@ -36375,10 +36275,10 @@
     "CLA": 0.005,
     "SIX": 0.07,
     "DES": 0.115,
-    "KP2": 0.06,
+    "KP2": 0.059,
     "DEM": 0.096,
     "DBBF": 25.97999954,
-    "AQI": 1.09500003,
+    "AQI": 1.11500001,
     "CETF": 62.0,
     "HMD": 0.037,
     "MPP": 1.04499996,
@@ -36398,7 +36298,7 @@
     "NFM": 0.005,
     "XF1": 0.055,
     "CC9": 0.049,
-    "AXN": 0.028,
+    "AXN": 0.025,
     "HYT": 0.014,
     "D3E": 0.36000001,
     "BTN": 0.017,
@@ -36454,7 +36354,7 @@
     "M4M": 0.006,
     "EQX": 0.145,
     "KLR": 0.082,
-    "TI1": 0.41,
+    "TI1": 0.47499999,
     "SUH": 0.03,
     "AUZ": 0.021,
     "CCE": 0.19,
@@ -36612,7 +36512,7 @@
     "LPE": 0.08,
     "AMU": 0.067,
     "TRI": 0.016,
-    "UNT": 0.007,
+    "UNT": 0.006,
     "HHR": 0.014,
     "ICL": 0.021,
     "MQYM": 49.68999863,
@@ -36748,7 +36648,7 @@
     "FHS": 0.001,
     "DYM": 0.435,
     "SOP": 0.055,
-    "GG1": 0.155,
+    "GG1": 0.17,
     "ITM": 0.033,
     "DAL": 0.07,
     "KLV": 0.048,
@@ -36769,7 +36669,7 @@
     "ODA": 0.088,
     "PAB": 0.033,
     "NAE": 0.002,
-    "NES": 0.0035,
+    "NES": 0.004,
     "UYLD": 10.47999954,
     "ADD": 0.035,
     "NSM": 0.021,
@@ -36796,7 +36696,7 @@
     "SVY": 0.016,
     "RAG": 0.019,
     "WNX": 0.056,
-    "CCO": 0.001,
+    "CCO": 0.002,
     "SRK": 0.023,
     "GED": 0.043,
     "BEO": 0.075,
@@ -36903,7 +36803,7 @@
     "SER": 0.12,
     "SCP": 0.06,
     "PR1": 0.27500001,
-    "VAR": 0.003,
+    "VAR": 0.004,
     "JAY": 0.006,
     "PER": 0.003,
     "CI1": 0.11,
@@ -37038,598 +36938,200 @@
     "GLL": 0.006,
     "HJHI": 1.08000004,
     "G88": 0.007,
+    "SKUK": 0.94499999,
+    "AER": 0.055,
     "AYT": 0.003,
+    "RFT": 0.006,
+    "GSM": 0.011,
     "SQX": 0.05,
     "PKY": 0.029,
+    "SIS": 0.005,
     "PPY": 0.008,
+    "OLI": 0.006,
+    "REC": 0.017,
+    "SMX": 0.019,
+    "SLZ": 0.007,
+    "M24": 0.017,
+    "AIV": 0.025,
+    "EFE": 0.031,
+    "XST": 0.01,
+    "ALV": 0.019,
+    "DSM": 0.69999999,
+    "A8G": 0.097,
+    "ICN": 0.006,
+    "IFG": 0.004,
     "DBO": 0.014,
+    "ZMM": 0.004,
+    "E79": 0.022,
+    "IEQ": 0.04,
     "SBR": 0.007,
+    "OZZ": 0.05165,
     "IMI": 0.008,
     "DM1": 0.007,
+    "CR3": 0.007,
+    "RIE": 0.019,
+    "RDS": 0.003,
+    "R8R": 0.125,
+    "SLB": 0.23999999,
     "SHE": 0.011,
+    "GTH": 0.018,
+    "RCR": 0.013,
     "PLG": 0.031,
+    "CPM": 0.056,
+    "AM7": 0.045,
     "MOM": 0.0015,
     "TD1": 0.081,
     "LVE": 0.095,
+    "M2M": 0.006,
+    "AM5": 0.006,
+    "GMTL": 11.80000019,
+    "HFY": 0.011,
     "AQC": 0.0065,
+    "CDR": 0.026,
+    "FUL": 0.075,
     "28BB": 24.89999962,
+    "PFT": 0.019,
+    "BHD": 0.25,
     "PKO": 0.006,
     "ZLD": 0.5,
-    "PET": 0.005,
+    "PET": 0.006,
+    "HYD": 0.003,
     "ERG": 0.019,
     "PKD": 0.033,
+    "RAN": 0.175,
     "CLZ": 0.001,
+    "BOD": 0.024,
+    "EE1": 0.005,
+    "UBI": 0.014,
+    "RSSL": 11.60000038,
     "SRH": 0.09,
+    "BOA": 0.054,
+    "NGS": 0.022,
+    "NNG": 0.02,
+    "SVNP": 1.85500002,
+    "CR9": 0.007,
     "QEM": 0.015,
+    "C29": 0.012,
+    "MML": 0.012,
     "AOA": 0.002,
+    "RLC": 0.002,
+    "M3M": 0.024,
     "DAF": 0.01,
+    "LRD": 0.014,
     "MEL": 0.011,
+    "WSR": 0.007,
+    "OB1": 0.013,
+    "CGO": 0.09,
     "ABE": 0.013,
     "HT8": 0.023,
+    "RBR": 0.016,
+    "M2R": 0.002,
+    "CL8": 0.013,
     "ANR": 0.01,
+    "HPC": 0.004,
+    "AVW": 0.007,
+    "USIG": 9.10999966,
+    "OLH": 0.012,
+    "WEL": 0.0015,
+    "C7A": 0.003,
+    "OKJ": 0.04,
+    "TML": 0.047,
+    "PNT": 0.006,
     "NRZ": 0.001,
+    "NZS": 0.02,
+    "EXL": 0.007,
+    "PPG": 0.018,
+    "IMLC": 3.78999996,
+    "CYQ": 0.005,
+    "APC": 0.007,
+    "YOW": 0.014,
+    "DMG": 0.004,
+    "BUY": 0.019,
     "UCM": 0.012,
     "PRM": 0.001,
+    "GGFD": 18.65999985,
+    "PFM": 0.019,
+    "NTM": 0.003,
     "CT1": 0.003,
-    "BGE": 0.019,
-    "GOOD": 50.25999832,
-    "TFL": 0.005,
-    "MPR": 0.005,
-    "QUE": 0.05,
-    "FUTR": 36.08000183,
-    "BMH": 0.01,
-    "MSI": 0.003,
-    "PPG": 0.018,
+    "ACS": 0.012,
     "KOR": 0.008,
     "OEQ": 0.19,
+    "DMM": 0.058,
+    "GGAB": 19.09000015,
+    "GGBL": 27.12999916,
+    "CTQ": 0.011,
+    "BP8": 0.002,
+    "BGE": 0.019,
+    "GOOD": 50.25999832,
+    "29BB": 24.71999931,
     "AOK": 0.003,
     "AN1": 0.007,
-    "T3MP": 75.36000061,
-    "FHCO": 6.30999994,
-    "1TT": 0.002,
-    "29BB": 24.71999931,
-    "A8G": 0.097,
-    "ACS": 0.012,
-    "ADV": 0.33500001,
-    "AER": 0.055,
-    "AIV": 0.025,
-    "ALV": 0.018,
-    "AM5": 0.006,
-    "AM7": 0.04,
-    "APC": 0.008,
-    "ASAO": 1.29499996,
-    "ATM": 0.89999998,
-    "AVW": 0.007,
-    "BBAB": 21.69000053,
-    "BBFD": 20.84000015,
-    "BEL": 0.012,
-    "BHD": 0.25,
-    "BOA": 0.052,
-    "BP8": 0.002,
-    "BUY": 0.019,
-    "C29": 0.012,
-    "C7A": 0.003,
-    "CDR": 0.026,
-    "CGO": 0.09,
-    "CL8": 0.013,
-    "CNJ": 0.007,
-    "CPM": 0.058,
-    "CR3": 0.0075,
-    "CR9": 0.007,
-    "CTQ": 0.011,
-    "CYQ": 0.005,
-    "DMG": 0.005,
-    "DSM": 0.69999999,
-    "E79": 0.025,
-    "EARN": 20.01000023,
-    "EE1": 0.005,
-    "EFE": 0.031,
-    "EXL": 0.006,
-    "FCG": 0.037,
-    "FUL": 0.075,
-    "GCR": 0.002,
-    "GGAB": 19.09000015,
-    "GGBL": 27.11000061,
-    "GGFD": 18.45999908,
-    "GMTL": 11.52000046,
-    "GRPA": 25.62000084,
-    "GSM": 0.011,
-    "HCF": 0.03,
-    "HFY": 0.012,
-    "HPC": 0.004,
-    "HXL": 0.052,
-    "HYD": 0.0035,
-    "IACT": 29.51000023,
-    "ICU": 0.001,
-    "IEQ": 0.04,
-    "IFG": 0.004,
-    "IMLC": 3.78999996,
     "KEY": 0.1,
-    "LRD": 0.013,
-    "M24": 0.017,
-    "M2M": 0.006,
-    "M2R": 0.002,
-    "M3M": 0.024,
-    "MML": 0.011,
-    "MSG": 0.003,
-    "NGS": 0.022,
-    "NTM": 0.003,
+    "T3MP": 75.36000061,
     "OAK": 0.08,
-    "OB1": 0.013,
-    "OKJ": 0.04,
-    "OLH": 0.012,
-    "OLI": 0.006,
-    "OSX": 0.0045,
-    "OZZ": 0.05165,
-    "PFM": 0.019,
-    "PFT": 0.026,
-    "PLC": 0.008,
-    "PNT": 0.006,
-    "R8R": 0.125,
-    "RAN": 0.185,
-    "RBR": 0.016,
-    "RCR": 0.013,
-    "RDS": 0.003,
-    "REC": 0.017,
-    "RFT": 0.006,
-    "RIE": 0.019,
-    "RLC": 0.002,
-    "RSSL": 11.64000034,
-    "SAN": 0.009,
-    "SFIF": 10.77000046,
-    "SIS": 0.005,
-    "SKUK": 0.95499998,
-    "SLB": 0.23999999,
-    "SLZ": 0.007,
-    "SMX": 0.018,
-    "SVNP": 1.84500003,
-    "TML": 0.047,
-    "TR8": 0.015,
-    "UBI": 0.014,
-    "ULTB": 84.84999847,
-    "URAN": 15.09000015,
-    "USIG": 9.10999966,
-    "WBND": 49.31000137,
-    "WEL": 0.0015,
+    "PLC": 0.009,
+    "ULTB": 84.34999847,
+    "OSX": 0.004,
+    "GCR": 0.002,
+    "TFL": 0.005,
+    "MSG": 0.004,
+    "CNJ": 0.007,
+    "HXL": 0.052,
+    "MPR": 0.005,
+    "WBND": 49.40999985,
+    "BEL": 0.012,
+    "FHCO": 6.30999994,
+    "QUE": 0.05,
+    "FUTR": 36.08000183,
+    "ATM": 0.89999998,
+    "ASAO": 1.29499996,
+    "BMH": 0.01,
+    "IACT": 29.84000015,
+    "1TT": 0.002,
     "WNR": 0.008,
-    "WSR": 0.006,
-    "XST": 0.011,
-    "YOW": 0.014,
-    "ZMM": 0.004
+    "SAN": 0.009,
+    "BBFD": 20.84000015,
+    "URAN": 15.0,
+    "GRPA": 25.62000084,
+    "FCG": 0.037,
+    "MSI": 0.003,
+    "HCF": 0.03,
+    "SFIF": 10.77999973,
+    "BBAB": 21.69000053,
+    "ICU": 0.001,
+    "EARN": 20.01000023,
+    "TR8": 0.015,
+    "ADV": 0.33500001
   },
   "price_age": {
-    "QUB": 1,
-    "MGOC": 1,
-    "CTD": 1,
-    "FRW": 1,
-    "ASK": 1,
-    "BGP": 1,
     "QOR": 14,
-    "ERA": 1,
-    "DTR": 1,
-    "OPT": 1,
-    "WTN": 1,
-    "TRA": 1,
-    "OCA": 1,
-    "KSC": 1,
-    "SKT": 1,
-    "FRGG": 1,
-    "SM1": 1,
     "MAU": 38,
-    "SST": 1,
-    "CEL": 1,
-    "GHIF": 1,
-    "BKY": 1,
-    "CVC": 1,
-    "OMH": 1,
     "ERM": 29,
     "AKP": 149,
-    "BCK": 1,
-    "GSUS": 1,
-    "3PL": 1,
     "PCX": 1,
-    "BRL": 1,
-    "APW": 1,
-    "CRD": 1,
-    "YOJ": 1,
-    "FSA": 1,
-    "VLS": 1,
-    "QPM": 1,
-    "RND": 1,
-    "GPR": 1,
-    "FND": 1,
-    "GOW": 1,
-    "MDX": 1,
     "SDI": 24,
-    "SHJ": 1,
-    "ENN": 1,
-    "FLN": 1,
-    "SND": 1,
     "MHG": 51,
-    "AVR": 1,
-    "WOT": 1,
-    "ARA": 1,
-    "PCK": 1,
-    "MKAX": 1,
-    "BXN": 1,
-    "ESK": 1,
-    "ANO": 1,
-    "TPC": 1,
     "PEX": 29,
-    "MAM": 1,
-    "SSL": 1,
     "OPN": 88,
-    "CGHE": 1,
-    "NXD": 1,
-    "JAL": 1,
-    "FFI": 1,
-    "RWL": 1,
     "TOE": 32,
-    "FLX": 1,
-    "CTE": 1,
-    "GUM": 1,
     "MCE": 4,
-    "CC5": 1,
-    "EPY": 1,
-    "PHO": 1,
-    "GTG": 1,
-    "TEK": 1,
-    "DME": 1,
-    "TDO": 1,
-    "KNB": 1,
-    "KAT": 1,
-    "TVL": 1,
-    "WAG": 1,
-    "WWG": 1,
-    "GFL": 1,
-    "CG1": 1,
-    "DVDY": 1,
-    "ICE": 1,
-    "PPK": 1,
-    "EAFZ": 1,
-    "PWN": 1,
-    "JPR": 1,
-    "FAR": 1,
-    "DGH": 1,
-    "DES": 1,
-    "KP2": 1,
-    "DBBF": 1,
-    "AQI": 1,
-    "MPP": 1,
-    "BBC": 1,
-    "NFM": 1,
-    "AXN": 1,
-    "BTN": 1,
-    "SWP": 1,
-    "CMX": 1,
-    "ECT": 1,
-    "CIW": 1,
-    "MFD": 1,
-    "VRC": 1,
-    "WIN": 1,
-    "GNM": 1,
-    "STG": 1,
-    "VIG": 1,
-    "TI1": 1,
-    "S66": 1,
-    "SFM": 1,
-    "HCT": 1,
-    "SRT": 1,
-    "IAM": 1,
-    "LCE": 1,
     "DTI": 32,
-    "AMX": 1,
-    "VMC": 1,
-    "WAK": 1,
-    "BDM": 1,
-    "TG6": 1,
-    "TSL": 1,
-    "TOU": 1,
-    "NUC": 1,
-    "DKM": 1,
-    "TAL": 1,
-    "PVL": 1,
-    "FCT": 1,
-    "STH": 1,
-    "MOV": 1,
-    "TIA": 1,
-    "ACP": 1,
-    "TNY": 1,
-    "4DS": 1,
-    "MPX": 1,
-    "HTG": 1,
-    "JCS": 1,
-    "LPE": 1,
-    "TRI": 1,
-    "UNT": 1,
     "HHR": 37,
-    "ICL": 1,
-    "AAP": 1,
-    "EAX": 1,
-    "EME": 1,
-    "BPP": 1,
-    "SPQ": 1,
-    "EV8": 1,
-    "FZR": 1,
-    "AHN": 1,
-    "BRU": 1,
-    "EQIN": 1,
-    "NTI": 1,
-    "BRX": 1,
-    "VR8": 1,
-    "ADEF": 1,
-    "LPM": 1,
-    "AVD": 1,
-    "AMO": 1,
-    "EMB": 1,
-    "AKG": 1,
-    "INV": 1,
-    "CR1": 1,
-    "AD1": 1,
-    "AUR": 1,
-    "IGN": 1,
-    "ADY": 1,
-    "VPR": 1,
-    "MHK": 1,
-    "SSH": 1,
-    "RCL": 1,
-    "SRR": 1,
-    "FG1": 1,
-    "SPX": 1,
-    "NGX": 1,
-    "NFL": 1,
-    "JAT": 1,
-    "AEI": 1,
-    "KM1": 1,
-    "GG1": 1,
-    "DAL": 1,
     "AOH": 164,
-    "MRQ": 1,
-    "RIL": 1,
-    "GIB": 1,
-    "NES": 1,
-    "NSM": 1,
-    "OMX": 1,
-    "GMN": 1,
-    "TRU": 1,
-    "ENV": 1,
-    "TON": 1,
-    "EGY": 1,
-    "FL1": 1,
-    "HPR": 1,
-    "TZL": 1,
-    "AJL": 1,
-    "AFL": 1,
-    "RAG": 1,
-    "CCO": 1,
-    "RAU": 1,
-    "EMU": 1,
-    "SFG": 1,
-    "RC1": 1,
-    "CMO": 1,
     "NET": 149,
-    "RWD": 1,
-    "MGL": 1,
-    "CMB": 1,
-    "AJX": 1,
-    "AUG": 1,
-    "BSN": 1,
-    "ICR": 1,
-    "FFG": 1,
-    "PGY": 1,
-    "GAS": 1,
-    "TGH": 1,
-    "N1H": 1,
     "PNM": 10,
-    "PIL": 1,
-    "HJZP": 1,
-    "GLE": 1,
-    "TEM": 1,
-    "ALB": 1,
-    "WSI": 1,
-    "TEE": 1,
-    "KBC": 1,
-    "COY": 1,
-    "KNG": 1,
-    "IPC": 1,
-    "BSA": 1,
-    "EM2": 1,
-    "FNX": 1,
-    "MEM": 1,
-    "YAR": 1,
-    "SER": 1,
-    "SCP": 1,
-    "VAR": 1,
-    "JAY": 1,
     "CI1": 164,
-    "KNI": 1,
-    "BLZ": 1,
-    "ALPH": 1,
     "SCT": 101,
-    "SOC": 1,
-    "PTL": 1,
-    "CRB": 1,
-    "RNX": 1,
-    "RKB": 1,
-    "BIM": 1,
-    "NME": 1,
-    "APL": 1,
-    "EMN": 1,
-    "OLY": 1,
-    "T88": 1,
-    "REM": 1,
-    "AAJ": 1,
-    "MCO": 1,
-    "VBS": 1,
-    "8IH": 1,
-    "ENT": 1,
-    "8CO": 1,
-    "DDT": 1,
-    "MTL": 1,
-    "CGR": 1,
-    "JNO": 1,
-    "SIV": 1,
-    "KFM": 1,
-    "GGE": 1,
-    "FIN": 1,
     "VMG": 252,
-    "AQX": 1,
-    "KNO": 1,
-    "NYM": 1,
-    "MGA": 1,
-    "NVQ": 1,
-    "TEG": 1,
-    "ID8": 1,
-    "AXI": 1,
     "KNM": 143,
-    "CAQ": 1,
-    "FNR": 1,
-    "RAS": 1,
-    "XGL": 1,
-    "GLH": 1,
-    "OCT": 1,
-    "BIT": 1,
-    "CHR": 1,
-    "ARC": 1,
-    "ASQ": 1,
-    "LIO": 1,
-    "DWG": 1,
-    "PBL": 1,
-    "ADS": 1,
-    "DUN": 1,
-    "AUA": 1,
-    "GR8": 1,
-    "GLL": 1,
-    "DM1": 1,
-    "SHE": 1,
-    "PLG": 1,
-    "MOM": 1,
-    "AQC": 1,
-    "ZLD": 1,
-    "PET": 1,
-    "CLZ": 1,
-    "SRH": 1,
-    "AOA": 1,
-    "DAF": 1,
-    "MEL": 1,
-    "HT8": 1,
-    "ANR": 1,
-    "NRZ": 1,
-    "UCM": 1,
-    "BGE": 1,
-    "GOOD": 1,
-    "TFL": 1,
-    "MPR": 1,
-    "QUE": 1,
-    "BMH": 1,
-    "MSI": 1,
-    "PPG": 1,
+    "ICN": 200,
+    "GTH": 207,
+    "BOD": 241,
+    "NNG": 95,
+    "NZS": 221,
     "KOR": 1,
-    "OEQ": 1,
-    "AN1": 1,
-    "T3MP": 1,
-    "1TT": 1,
-    "29BB": 1,
-    "A8G": 1,
-    "ACS": 1,
-    "ADV": 4,
-    "AER": 1,
-    "AIV": 1,
-    "ALV": 1,
-    "AM5": 1,
-    "AM7": 1,
-    "APC": 1,
-    "ASAO": 1,
-    "ATM": 1,
-    "AVW": 1,
-    "BBAB": 1,
-    "BBFD": 1,
-    "BEL": 1,
-    "BHD": 1,
-    "BOA": 1,
-    "BP8": 1,
-    "BUY": 1,
-    "C29": 1,
-    "C7A": 1,
-    "CDR": 1,
-    "CGO": 1,
-    "CL8": 1,
-    "CNJ": 1,
-    "CPM": 1,
-    "CR3": 1,
-    "CR9": 1,
-    "CYQ": 1,
-    "DMG": 1,
-    "DSM": 1,
-    "E79": 1,
-    "EARN": 1,
-    "EE1": 1,
-    "EFE": 1,
-    "EXL": 1,
-    "FCG": 1,
-    "FUL": 1,
-    "GCR": 1,
-    "GGAB": 1,
-    "GGFD": 1,
-    "GMTL": 1,
-    "GRPA": 1,
-    "GSM": 1,
-    "HCF": 1,
-    "HFY": 1,
-    "HPC": 1,
-    "HXL": 1,
-    "HYD": 1,
-    "IACT": 1,
-    "ICU": 1,
-    "IEQ": 1,
-    "IFG": 1,
-    "KEY": 1,
-    "LRD": 1,
-    "M24": 1,
-    "M2M": 1,
-    "M2R": 1,
-    "M3M": 1,
-    "MML": 1,
-    "MSG": 1,
-    "NGS": 1,
-    "NTM": 1,
-    "OAK": 1,
-    "OB1": 1,
-    "OKJ": 1,
-    "OLH": 1,
-    "OLI": 1,
-    "OSX": 1,
-    "OZZ": 1,
-    "PFM": 1,
-    "PFT": 1,
-    "PLC": 1,
-    "PNT": 1,
-    "R8R": 1,
-    "RAN": 1,
-    "RBR": 1,
-    "RCR": 1,
-    "REC": 1,
-    "RFT": 1,
-    "RIE": 1,
-    "RLC": 1,
-    "SAN": 1,
-    "SIS": 1,
-    "SKUK": 1,
-    "SLB": 1,
-    "SLZ": 1,
-    "SMX": 1,
-    "SVNP": 1,
-    "TML": 1,
-    "UBI": 1,
-    "ULTB": 1,
-    "USIG": 1,
-    "WBND": 1,
-    "WEL": 1,
-    "WNR": 1,
-    "WSR": 1,
-    "XST": 1,
-    "YOW": 1,
-    "ZMM": 1
+    "DMM": 185,
+    "ADV": 4
   },
   "errors": 0,
   "error_sample": [],
