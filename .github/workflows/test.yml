@@ -130,6 +130,8 @@ jobs:
         run: node test/leaks.test.js
       - name: Derived-state + fault-scoping rules (TOP100 #84-#88, 55)
         run: node test/statekeep.test.js
+      - name: Stalled-position decision surface (read-only, probe marks only)
+        run: node test/stalled.test.js
       # Runs in the CHEAP job on purpose. It exercises the baseline-provenance
       # sentinel out of the e2e file without a browser, so the rule that keeps
       # the screenshot gate from going red on a stale baseline is checked on

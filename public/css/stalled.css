@@ -1,0 +1,66 @@
+/* STALLED — the position decision surface (2026-08-01). See public/js/stalled.js.
+   One compact strip at the top of journal.html: amber, because nothing is
+   broken — a decision is due, and it is the owner's. */
+
+.st-strip {
+  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+  border-left: 5px solid var(--orange);
+  padding: 14px 18px; margin: 0 0 18px;
+}
+
+.st-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.st-tag {
+  font: 800 11px/1 var(--sans); letter-spacing: 0.08em; color: var(--orange);
+  background: var(--orange-soft); border-radius: var(--radius-sm); padding: 5px 9px;
+  white-space: nowrap;
+}
+.st-sum { font: 500 13px/1.5 var(--sans); color: var(--muted); }
+.st-sum b { font-weight: 800; color: var(--text); font-family: var(--mono, var(--sans)); }
+
+.st-rows { margin-top: 10px; }
+.st-row {
+  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(150px, 1.4fr) 64px 44px minmax(120px, 1.2fr);
+  align-items: center; gap: 10px; padding: 6px 4px;
+  border-bottom: 0.5px solid var(--border-soft);
+  font: 500 12.5px/1.35 var(--sans); color: var(--text-2);
+}
+.st-row:last-child { border-bottom: 0; }
+.st-row.st-cols {
+  font: 700 10px/1 var(--sans); letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted-2); border-bottom: 1px solid var(--separator); padding-bottom: 5px;
+}
+
+.st-sym b { font-weight: 800; color: var(--text); }
+.st-sym em { font-style: normal; font: 600 10px/1 var(--sans); color: var(--muted-2); margin-left: 5px; }
+.st-days { color: var(--muted); }
+.st-days em { font-style: normal; color: var(--muted-2); }
+.st-r { font-family: var(--mono, var(--sans)); font-weight: 700; text-align: right; }
+.st-up { color: var(--green); }
+.st-down { color: var(--red); }
+.st-grade { font-weight: 800; color: var(--grade-aplus); text-align: center; }
+
+/* The call chip: quiet amber outline for a decision, red once the time-stop is
+   due — the row the automatic rule is about to take out of the owner's hands. */
+.st-call {
+  justify-self: start;
+  font: 700 10.5px/1 var(--sans); letter-spacing: 0.03em;
+  color: var(--orange); border: 1px solid var(--orange);
+  border-radius: 999px; padding: 4px 9px; white-space: nowrap;
+  cursor: help;
+}
+.st-row.st-due .st-call { color: var(--red); border-color: var(--red); }
+
+.st-foot { font: 500 11.5px/1.5 var(--sans); color: var(--muted-2); margin: 10px 0 0; }
+.st-foot b { color: var(--muted); }
+
+/* Wide content scrolls inside its own container — the page body must never
+   scroll horizontally (repo rule; the 390px journal screenshot is a gate). */
+.st-rows { overflow-x: auto; }
+
+@media (max-width: 640px) {
+  .st-row { grid-template-columns: minmax(60px, auto) minmax(0, 1fr) 52px minmax(84px, auto); gap: 6px; }
+  .st-grade { display: none; }
+  .st-row.st-cols span:nth-child(4) { display: none; }
+  .st-days { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .st-sym em { display: block; margin: 2px 0 0; }
+}
