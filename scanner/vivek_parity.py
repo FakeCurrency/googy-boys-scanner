@@ -170,13 +170,24 @@ def _adv_ok(adv: float | None, notional: float, market: str) -> str | None:
     return None
 
 
-def _stamp_mfe_checkpoints(tr: dict, held: int) -> None:
+def _stamp_mfe_checkpoints(tr: dict, held: int, close: float | None = None) -> None:
+    """Stamp peak MFE and day-close mark-to-market R at calendar checkpoints."""
     mfe = tr.get("mfe_r") or 0.0
     bucket = tr.setdefault("mfe_r_at", {})
+    close_bucket = tr.setdefault("close_r_at", {})
+    close_r = None
+    if close is not None and tr.get("risk"):
+        is_long = tr.get("direction") == "long"
+        try:
+            close_r = _r_of(float(close), float(tr["entry"]), float(tr["risk"]), is_long)
+        except Exception:
+            close_r = None
     for d in MFE_DAYS:
         key = str(d)
         if held >= d and key not in bucket:
             bucket[key] = round(float(mfe), 4)
+        if held >= d and key not in close_bucket and close_r is not None:
+            close_bucket[key] = round(float(close_r), 4)
 
 
 def _close_special(tr: dict, price: float, day: str, reason: str, costs) -> None:
@@ -223,7 +234,7 @@ def _manage_parity_bar(tr: dict, high: float, low: float, close: float, day: str
 
     held = _held_days(tr, day)
     if tr["status"] == "open":
-        _stamp_mfe_checkpoints(tr, held)
+        _stamp_mfe_checkpoints(tr, held, close)
 
     # Early momentum cut (variant V2) — pre-TP1 only.
     if (tr["status"] == "open" and rules.early_cut_day and rules.early_cut_mfe is not None
@@ -303,6 +314,7 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
                     tr["market"] = market
                     tr["level_tf"] = row.get("level_tf")
                     tr["mfe_r_at"] = {}
+                    tr["close_r_at"] = {}
                     tr["path"] = []  # compact OHLC path for exit-variant re-sim
                     open_tr = tr
                 else:
@@ -319,7 +331,7 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
                                costs, is_last=(j == n - 1), rules=rules)
             if open_tr["status"] == "closed":
                 # final mfe checkpoints up to hold
-                _stamp_mfe_checkpoints(open_tr, open_tr.get("hold_days") or 0)
+                _stamp_mfe_checkpoints(open_tr, open_tr.get("hold_days") or 0, float(c[j]))
                 # V1 variants need price data AFTER a time-stop exit so a longer
                 # (or off) hold can be re-simulated. Append ~90 calendar bars of
                 # passive OHLC; re_exit replays management over the whole path
@@ -380,8 +392,8 @@ def _slim_parity(tr: dict) -> dict:
     keys = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
             "direction", "entry", "stop", "risk", "exit", "entry_date", "exit_date",
             "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "mfe_r",
-            "hold_days", "mfe_r_at", "sector", "tp1_hit", "tp2_hit", "tp3_hit",
-            "path")
+            "hold_days", "mfe_r_at", "close_r_at", "sector", "tp1_hit", "tp2_hit",
+            "tp3_hit", "adv_usd", "taken", "path")
     return {k: tr.get(k) for k in keys}
 
 
@@ -686,7 +698,8 @@ def variant_passes(baseline_taken: list[dict], variant_taken: list[dict]) -> dic
 # ── driver ────────────────────────────────────────────────────────────────────
 
 def run_market_parity(mk: str, limit: int | None, period: str,
-                      rules: ParityRules | None = None) -> tuple[list[dict], dict]:
+                      rules: ParityRules | None = None,
+                      exclude_symbols: set[str] | None = None) -> tuple[list[dict], dict]:
     from .universe import load_universe
     from .data import download
 
@@ -695,8 +708,14 @@ def run_market_parity(mk: str, limit: int | None, period: str,
     if getattr(config, "VIVEK_BOT_EXCLUDE_FUNDS", True):
         uni_all = [u for u in uni_all
                    if not _is_fund_or_reit({"name": u.get("name"), "sector": u.get("sector")})]
+    excl = {str(s).upper() for s in (exclude_symbols or set())}
+    uni_before = len(uni_all)
+    if excl:
+        uni_all = [u for u in uni_all if str(u.get("symbol") or "").upper() not in excl]
+        log.info("[parity/%s] %s — excluded %d in-sample symbols (%d remain)",
+                 rules.name, mk, uni_before - len(uni_all), len(uni_all))
     uni = _sample(uni_all, limit)
-    log.info("[parity/%s] %s — downloading %d of %d (%s)",
+    log.info("[parity/%s] %s — downloading %d of %d eligible (%s)",
              rules.name, mk, len(uni), len(uni_all), period)
     frames = download([u["yf"] for u in uni], period=period)
     meta = {u["yf"]: u for u in uni}
@@ -718,8 +737,11 @@ def run_market_parity(mk: str, limit: int | None, period: str,
              rules.name, mk, len(trades), len(uni))
     return trades, {
         "symbols": len(uni), "universe": len(uni_all),
+        "universe_before_exclude": uni_before,
+        "excluded": len(excl),
         "sampled_pct": round(100 * len(uni) / max(len(uni_all), 1), 1),
         "trades": len(trades),
+        "sampled_symbols": [u.get("symbol") for u in uni],
     }
 
 
@@ -727,17 +749,19 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
                         params: dict, variant_results: dict | None = None) -> dict:
     # Drop paths from published baseline trades (keep mfe_r_at); paths stay only
     # inside the process for variant re-exit. Caller may strip before write.
+    port = portfolio_sim_parity(baseline_trades)
+    taken = _taken_list(baseline_trades)
+    taken_ids = {(t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
+                 for t in taken}
     published = []
     for t in baseline_trades:
         p = dict(t)
         p.pop("path", None)
+        tid = (t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
+        p["taken"] = tid in taken_ids
+        p.setdefault("mfe_r_at", {})
+        p.setdefault("close_r_at", {})
         published.append(p)
-
-    port = portfolio_sim_parity(baseline_trades)
-    taken_ids = {(t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
-                 for t in baseline_trades}
-    # portfolio_sim returns metrics only — recover taken list the same way
-    taken = _taken_list(baseline_trades)
 
     report = {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -932,16 +956,53 @@ def best_variant(variant_results: dict) -> dict:
                     "reason": "no variant passed ASX+NASDAQ+both-halves gate"}
 
 
+def load_exclude_map(path) -> dict[str, set[str]]:
+    """Load {market: [symbols]} exclusion file written by a prior parity run."""
+    import json
+    from pathlib import Path
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(raw, dict) and "by_market" in raw:
+        raw = raw["by_market"]
+    out: dict[str, set[str]] = {}
+    for mk, syms in (raw or {}).items():
+        out[str(mk)] = {str(s).upper() for s in (syms or [])}
+    return out
+
+
+def sample_symbol_map(coverage: dict) -> dict[str, list[str]]:
+    return {mk: list(cov.get("sampled_symbols") or [])
+            for mk, cov in (coverage or {}).items()}
+
+
+def reconstruct_is_sample(limit: int = 120) -> dict[str, list[str]]:
+    """Deterministically rebuild the first-run sample (same _sample stride)."""
+    from .universe import load_universe
+    out = {}
+    for mk in config.MARKETS:
+        uni_all = load_universe(mk, full=True)
+        if getattr(config, "VIVEK_BOT_EXCLUDE_FUNDS", True):
+            uni_all = [u for u in uni_all
+                       if not _is_fund_or_reit({"name": u.get("name"),
+                                                 "sector": u.get("sector")})]
+        uni = _sample(uni_all, limit)
+        out[mk] = [u.get("symbol") for u in uni]
+    return out
+
+
 def run_parity(markets: list[str], limit: int | None, period: str,
-               run_variants: bool = True) -> dict:
+               run_variants: bool = True,
+               exclude_map: dict[str, set[str]] | None = None,
+               tag: str = "parity") -> dict:
     trades, coverage = [], {}
     rules = baseline_rules()
+    exclude_map = exclude_map or {}
     for mk in markets:
-        tr, cov = run_market_parity(mk, limit, period, rules=rules)
+        tr, cov = run_market_parity(mk, limit, period, rules=rules,
+                                    exclude_symbols=exclude_map.get(mk))
         trades += tr
         coverage[mk] = cov
     params = {
-        "mode": "parity",
+        "mode": tag,
         "markets": list(markets),
         "limit": limit,
         "period": period,
@@ -950,12 +1011,15 @@ def run_parity(markets: list[str], limit: int | None, period: str,
         "grades": ["A+"],
         "time_stop_days": rules.resolved_hold(),
         "mfe_days": list(MFE_DAYS),
+        "excluded_counts": {mk: len(exclude_map.get(mk) or []) for mk in markets},
         **_sizing_basis(),
         "intrabar": "pessimistic (stop-first)",
     }
     variant_results = run_variants_on_baseline(trades) if run_variants else {}
     report = build_parity_report(trades, coverage, params, variant_results)
+    report["mode"] = tag
     report["best_variant"] = best_variant(variant_results) if variant_results else {}
+    report["sampled_symbols"] = sample_symbol_map(coverage)
     return report
 
 

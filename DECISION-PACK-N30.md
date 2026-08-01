@@ -17,7 +17,7 @@
 | Does that match the live book? | **Yes in shape.** Live 21 closed: **−6.40R**, 38% win. All −9.05R of stop losses were full-size; the +2.64R gain side was 28d time-stops + manual cuts. Parity reproduces the same exit anatomy at scale. |
 | Which **single** rule change most improves R/slot-month under the formal PASS gate? | **V2 — early momentum cut at day 14 if peak mfe_r < 0.5.** Only variant that PASSed ASX **and** NASDAQ **and** both time halves. Lift is real but **small** (+0.0036 R/sm) and the book remains **net negative** (−0.015 R/sm). |
 | Best economic candidate that failed the formal gate? | **V3 — weekly `level_tf` only.** +0.074 R/sm overall, **+0.105R/trade**, PF 1.50, n=197 — but ASX R/sm did not improve (−0.0522 → −0.0535). Not a PASS. |
-| What should the 30 × $5k slots do next month? | **Do not raise size or go live.** Keep paper. Prefer **iterate**: (1) trial V2 early-cut as a paper overlay or next rule candidate once n≥30 is logged; (2) instrument and watch **weekly-level** vs h4 splits on the live book (now stamped); (3) do **not** lengthen/remove the 28d time-stop on current evidence. |
+| What should the 30 × $5k slots do next month? | **Do not raise size or go live.** Keep paper under frozen rules. **OOS follow-up (see `NEXT-CYCLE-PROTOCOL.md`):** level split **NOT CONFIRMED** (G2 failed on NASDAQ). Do not ship `level_tf` gate or V2 alone. Next work = stop-quality redesign, not a config flip. |
 
 **Survivorship caveat:** every historical number below excludes delisted names and uses yfinance dividend-adjusted dailies. Treat magnitudes as directional evidence, not investable edge.
 
@@ -44,45 +44,49 @@
 
 **Coverage (this run):** stratified sample **120 ASX + 120 NASDAQ + 95 crypto (full)** over **5y**  
 (ASX 6.7% of 1,792 liquid non-fund names; NASDAQ 8.7% of 1,372; crypto 100%).  
-Artefact: `public/data/vivek_backtest_parity.json`.
+Artefact: `public/data/vivek_backtest_parity.json` (per-trade records with `taken` flag; recompute any row below from `trades` where `taken==true`).
 
 | Cohort | n | Win% | Exp R | Total R | R / slot-month | Slot-months |
 |---|---|---|---|---|---|---|
-| Eligible signals (pre-slot) | 764 | 49.0 | −0.012 | −9.28 | — | — |
-| **Portfolio taken (live caps)** | **614** | **48.0** | **−0.033** | **−20.21** | **−0.0191** | 1056.5 |
+| Eligible signals (pre-slot) | 763 | 49.0 | −0.012 | −9.13 | −0.007 | 1311.6 |
+| **Portfolio taken (live caps)** | **613** | **48.1** | **−0.033** | **−20.05** | **−0.019** | *(from portfolio block)* |
 | Peak open | 30 | | | | skips: cooldown 11, sector 88, book_full 51 | |
 
 ### 1c. Exit anatomy (portfolio taken) — the smoking gun, scaled
 
-| Exit | n | Win% | Exp R | Total R | Avg hold |
-|---|---|---|---|---|---|
-| **stop** | 139 | 0.0 | **−1.287** | **−178.87** | 14.0d |
-| **time** (28d pre-TP1) | 314 | 51.0 | +0.044 | +13.89 | 29.5d |
-| **trail** | 119 | 80.7 | +0.477 | +56.78 | 44.7d |
-| **target** | 35 | 100.0 | +2.514 | +88.00 | 234.6d |
-| eod | 7 | 57.1 | ~0 | ~0 | — |
+*Source: `baseline.portfolio_slices.by_exit_reason` on the committed artefact.*
+
+| Exit | n | Exp R | Total R | Avg hold |
+|---|---|---|---|---|
+| **stop** | 139 | **−1.287** | **−178.87** | 14.0d |
+| **time** (28d pre-TP1) | 313 | +0.045 | +14.04 | 29.5d |
+| **trail** | 119 | +0.477 | +56.78 | 44.7d |
+| **target** | 35 | +2.514 | +88.00 | 234.6d |
+| eod | 7 | +0.001 | 0.00 | — |
 
 **Read:** the system does not pay for its stops. Winners that reach the ladder pay; time-stop is approximately flat-to-slightly-positive slot hygiene; stops are a −179R hole. This is the same structure as the live 21.
 
-### 1d. By market / level / entry (portfolio taken)
+### 1d. By market / level (portfolio taken)
+
+*Source: `baseline.portfolio_slices` on the committed artefact.*
 
 | Slice | n | Exp R | Total R | R/sm |
 |---|---|---|---|---|
-| ASX | 132 | −0.095 | −12.49 | −0.052 |
-| NASDAQ | 423 | +0.001 | +0.39 | +0.001 |
-| crypto | 59 | −0.137 | −8.10 | −0.055 |
-| **level weekly** | 179 | **+0.064** | **+11.47** | — |
-| **level 3d** | 102 | **+0.069** | **+7.02** | — |
-| **level h4** | 333 | **−0.116** | **−38.69** | — |
-| entry reclaim | 581 | −0.028 | −15.99 | — |
-| entry break | 33 | −0.128 | −4.21 | — |
+| ASX | 132 | −0.095 | −12.49 | −0.0522 |
+| NASDAQ | 422 | +0.001 | +0.55 | +0.0008 |
+| crypto | 59 | −0.137 | −8.10 | −0.0553 |
+| **level weekly** | 179 | **+0.064** | **+11.47** | **+0.0362** |
+| **level 3d** | 102 | **+0.069** | **+7.02** | **+0.0498** |
+| **level h4** | 332 | **−0.116** | **−38.54** | **−0.0644** |
 
-| Time half (split entry 2024-04-10) | n | Exp R | R/sm |
+| Time half | n | Exp R | R/sm |
 |---|---|---|---|
 | First | 307 | −0.065 | −0.033 |
-| Second | 307 | −0.001 | −0.0005 |
+| Second | 306 | −0.001 | −0.0005 |
 
 Second half is less bad, not good. No half is a clean positive book under live rules.
+
+> **OOS update (2026-08-01):** a disjoint 240+240 run is in `vivek_backtest_parity_oos.json`. Pre-registered gates G1/G3 **passed**, **G2 failed** (NASDAQ h4 not worse than weekly+3d). Level split **not confirmed** — see `NEXT-CYCLE-PROTOCOL.md`. Do not ship a level gate from §1d alone.
 
 ### 1e. Published Insights backtest vs parity (why the old number lied)
 

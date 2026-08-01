@@ -902,6 +902,15 @@ def main() -> None:
                          "public/data/vivek_backtest_parity.json by default")
     ap.add_argument("--no-variants", action="store_true",
                     help="with --parity: skip the variant grid (baseline only)")
+    ap.add_argument("--exclude-from", default=None,
+                    help="with --parity: JSON path of {market:[symbols]} to exclude "
+                         "(for out-of-sample runs disjoint from a prior sample)")
+    ap.add_argument("--sample-out", default=None,
+                    help="with --parity: write this run's sampled symbols JSON "
+                         "(for later --exclude-from)")
+    ap.add_argument("--tag", default="parity",
+                    help="with --parity: mode/tag stamp on the report "
+                         "(e.g. parity_oos)")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
@@ -910,8 +919,11 @@ def main() -> None:
         from . import vivek_parity as parity
         # Default out/period for parity differ from the Insights walk-forward.
         if args.out == str(OUT_FILE):
-            out = ROOT / getattr(config, "VIVEK_PARITY_OUT_FILE",
-                                 "public/data/vivek_backtest_parity.json")
+            default_name = ("public/data/vivek_backtest_parity_oos.json"
+                            if args.exclude_from else
+                            getattr(config, "VIVEK_PARITY_OUT_FILE",
+                                    "public/data/vivek_backtest_parity.json"))
+            out = ROOT / default_name
         else:
             out = pathlib.Path(args.out)
         period = args.period
@@ -919,11 +931,26 @@ def main() -> None:
             # argparse default is 10y; parity default is the config knob (5y).
             period = getattr(config, "VIVEK_PARITY_DEFAULT_PERIOD", "5y")
         set_fx_path(out)
+        excl = parity.load_exclude_map(args.exclude_from) if args.exclude_from else None
+        tag = args.tag or ("parity_oos" if args.exclude_from else "parity")
         report = parity.run_parity(markets, args.limit or None, period,
-                                   run_variants=not args.no_variants)
+                                   run_variants=not args.no_variants,
+                                   exclude_map=excl, tag=tag)
         parity.print_parity(report)
         out.parent.mkdir(parents=True, exist_ok=True)
         output.write_json(out, report)
+        if args.sample_out:
+            sample_path = pathlib.Path(args.sample_out)
+            sample_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "generated_at": report.get("generated_at"),
+                "tag": tag,
+                "params": {"limit": args.limit or None, "period": period,
+                           "markets": list(markets)},
+                "by_market": report.get("sampled_symbols") or {},
+            }
+            output.write_json(sample_path, payload)
+            print(f"wrote sample map {sample_path}")
         print(f"\nwrote {out}  (parity complete, markets: {sorted(report.get('coverage', {}))})")
         return
 

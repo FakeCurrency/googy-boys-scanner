@@ -1,0 +1,406 @@
+{
+  "generated_from": {
+    "is": "vivek_backtest_parity.json",
+    "oos": "vivek_backtest_parity_oos.json",
+    "is_generated_at": "2026-08-01T10:15:37Z",
+    "oos_generated_at": "2026-08-01T12:20:31Z"
+  },
+  "disjointness": {
+    "overlap": {},
+    "ok": true,
+    "oos_counts": {
+      "asx": 240,
+      "nasdaq": 240
+    },
+    "is_counts": {
+      "asx": 120,
+      "nasdaq": 120,
+      "crypto": 95
+    }
+  },
+  "gates": {
+    "G1": {
+      "pass": true,
+      "weekly_3d_overall_rsm": 0.0207,
+      "weekly_3d_nasdaq_rsm": 0.0118,
+      "n_overall": 293,
+      "n_nasdaq": 215,
+      "rule": "weekly+3d R/sm > 0 overall AND on NASDAQ alone"
+    },
+    "G2": {
+      "pass": false,
+      "asx_h4_rsm": -0.0683,
+      "asx_w3_rsm": 0.0575,
+      "nasdaq_h4_rsm": 0.0192,
+      "nasdaq_w3_rsm": 0.0118,
+      "rule": "h4 R/sm < weekly+3d R/sm on ASX and NASDAQ separately"
+    },
+    "G3": {
+      "pass": true,
+      "nasdaq_w3_2x_cost_rsm": 0.0087,
+      "n": 215,
+      "rule": "G1 NASDAQ weekly+3d survives 2\u00d7 cost_r"
+    },
+    "confirmed": false,
+    "slices": {
+      "weekly_3d": {
+        "n": 293,
+        "win_rate": 53.6,
+        "avg_r": 0.043,
+        "expectancy_r": 0.043,
+        "profit_factor": 1.15,
+        "total_r": 12.56,
+        "total_usd": 10819.25,
+        "max_dd_usd": -21288.74,
+        "max_dd_open_usd": -21391.59,
+        "slot_months": 607.6386,
+        "r_per_slot_month": 0.0207
+      },
+      "h4": {
+        "n": 294,
+        "win_rate": 46.6,
+        "avg_r": 0.001,
+        "expectancy_r": 0.001,
+        "profit_factor": 1.0,
+        "total_r": 0.17,
+        "total_usd": -7525.73,
+        "max_dd_usd": -28325.29,
+        "max_dd_open_usd": -28677.0,
+        "slot_months": 731.5975,
+        "r_per_slot_month": 0.0002
+      },
+      "weekly": {
+        "n": 173,
+        "win_rate": 56.6,
+        "avg_r": 0.038,
+        "expectancy_r": 0.038,
+        "profit_factor": 1.15,
+        "total_r": 6.62,
+        "total_usd": 2299.5,
+        "max_dd_usd": -13679.82,
+        "max_dd_open_usd": -13867.43,
+        "slot_months": 330.8419,
+        "r_per_slot_month": 0.02
+      },
+      "3d": {
+        "n": 120,
+        "win_rate": 49.2,
+        "avg_r": 0.05,
+        "expectancy_r": 0.05,
+        "profit_factor": 1.14,
+        "total_r": 5.94,
+        "total_usd": 8519.74,
+        "max_dd_usd": -8899.91,
+        "max_dd_open_usd": -9002.77,
+        "slot_months": 276.7967,
+        "r_per_slot_month": 0.0215
+      },
+      "by_market_level": {
+        "asx:weekly": {
+          "n": 49,
+          "win_rate": 61.2,
+          "avg_r": 0.104,
+          "expectancy_r": 0.104,
+          "profit_factor": 1.59,
+          "total_r": 5.08,
+          "total_usd": 1486.58,
+          "max_dd_usd": -1454.69,
+          "max_dd_open_usd": -1530.42,
+          "slot_months": 85.0924,
+          "r_per_slot_month": 0.0598
+        },
+        "asx:3d": {
+          "n": 29,
+          "win_rate": 51.7,
+          "avg_r": 0.058,
+          "expectancy_r": 0.058,
+          "profit_factor": 1.21,
+          "total_r": 1.7,
+          "total_usd": 1436.0,
+          "max_dd_usd": -1967.91,
+          "max_dd_open_usd": -2037.44,
+          "slot_months": 32.9199,
+          "r_per_slot_month": 0.0515
+        },
+        "asx:h4": {
+          "n": 72,
+          "win_rate": 30.6,
+          "avg_r": -0.15,
+          "expectancy_r": -0.15,
+          "profit_factor": 0.73,
+          "total_r": -10.82,
+          "total_usd": -7372.7,
+          "max_dd_usd": -11207.44,
+          "max_dd_open_usd": -11310.14,
+          "slot_months": 158.4887,
+          "r_per_slot_month": -0.0683
+        },
+        "nasdaq:weekly": {
+          "n": 124,
+          "win_rate": 54.8,
+          "avg_r": 0.012,
+          "expectancy_r": 0.012,
+          "profit_factor": 1.04,
+          "total_r": 1.53,
+          "total_usd": 812.92,
+          "max_dd_usd": -12732.23,
+          "max_dd_open_usd": -12975.84,
+          "slot_months": 245.7495,
+          "r_per_slot_month": 0.0062
+        },
+        "nasdaq:3d": {
+          "n": 91,
+          "win_rate": 48.4,
+          "avg_r": 0.047,
+          "expectancy_r": 0.047,
+          "profit_factor": 1.13,
+          "total_r": 4.25,
+          "total_usd": 7083.74,
+          "max_dd_usd": -8889.39,
+          "max_dd_open_usd": -8992.24,
+          "slot_months": 243.8768,
+          "r_per_slot_month": 0.0174
+        },
+        "nasdaq:h4": {
+          "n": 222,
+          "win_rate": 51.8,
+          "avg_r": 0.05,
+          "expectancy_r": 0.05,
+          "profit_factor": 1.12,
+          "total_r": 10.99,
+          "total_usd": -153.04,
+          "max_dd_usd": -19072.01,
+          "max_dd_open_usd": -19423.72,
+          "slot_months": 573.1088,
+          "r_per_slot_month": 0.0192
+        }
+      }
+    }
+  },
+  "asx_diagnosis": {
+    "n": 282,
+    "total_r": -16.539,
+    "gross_r": -12.834,
+    "cost_r": 3.705,
+    "cost_share_of_abs_mass": 0.224,
+    "stops_n": 61,
+    "stop_overshoot_n": 49,
+    "stop_overshoot_rate": 0.803,
+    "stop_mean_r": -1.198,
+    "liquidity_bands": {
+      "unknown": {
+        "n": 132,
+        "win_rate": 43.2,
+        "avg_r": -0.095,
+        "expectancy_r": -0.095,
+        "profit_factor": 0.75,
+        "total_r": -12.49,
+        "total_usd": -7441.45,
+        "max_dd_usd": -10006.4,
+        "max_dd_open_usd": -10122.59,
+        "slot_months": 239.5072,
+        "r_per_slot_month": -0.0522
+      },
+      "thin": {
+        "n": 18,
+        "win_rate": 38.9,
+        "avg_r": -0.27,
+        "expectancy_r": -0.27,
+        "profit_factor": 0.54,
+        "total_r": -4.87,
+        "total_usd": -3427.19,
+        "max_dd_usd": -3861.24,
+        "max_dd_open_usd": -3914.07,
+        "slot_months": 15.6057,
+        "r_per_slot_month": -0.3118
+      },
+      "mid": {
+        "n": 68,
+        "win_rate": 39.7,
+        "avg_r": -0.002,
+        "expectancy_r": -0.002,
+        "profit_factor": 1.0,
+        "total_r": -0.11,
+        "total_usd": -2291.74,
+        "max_dd_usd": -6900.73,
+        "max_dd_open_usd": -7021.7,
+        "slot_months": 155.6632,
+        "r_per_slot_month": -0.0007
+      },
+      "deep": {
+        "n": 64,
+        "win_rate": 51.6,
+        "avg_r": 0.015,
+        "expectancy_r": 0.015,
+        "profit_factor": 1.05,
+        "total_r": 0.93,
+        "total_usd": 1268.81,
+        "max_dd_usd": -841.81,
+        "max_dd_open_usd": -998.89,
+        "slot_months": 105.232,
+        "r_per_slot_month": 0.0089
+      }
+    },
+    "fundish_symbols": [],
+    "by_level": {
+      "weekly": {
+        "n": 97,
+        "win_rate": 54.6,
+        "avg_r": 0.025,
+        "expectancy_r": 0.025,
+        "profit_factor": 1.12,
+        "total_r": 2.44,
+        "total_usd": -498.47,
+        "max_dd_usd": -4622.76,
+        "max_dd_open_usd": -5179.62,
+        "slot_months": 134.7023,
+        "r_per_slot_month": 0.0181
+      },
+      "3d": {
+        "n": 42,
+        "win_rate": 47.6,
+        "avg_r": -0.053,
+        "expectancy_r": -0.053,
+        "profit_factor": 0.85,
+        "total_r": -2.21,
+        "total_usd": -446.76,
+        "max_dd_usd": -4034.26,
+        "max_dd_open_usd": -4213.48,
+        "slot_months": 41.3306,
+        "r_per_slot_month": -0.0535
+      },
+      "h4": {
+        "n": 143,
+        "win_rate": 35.7,
+        "avg_r": -0.117,
+        "expectancy_r": -0.117,
+        "profit_factor": 0.76,
+        "total_r": -16.76,
+        "total_usd": -10946.32,
+        "max_dd_usd": -16771.82,
+        "max_dd_open_usd": -16822.04,
+        "slot_months": 339.9754,
+        "r_per_slot_month": -0.0493
+      }
+    },
+    "by_exit": {
+      "time": {
+        "n": 156,
+        "expectancy_r": 0.007,
+        "total_r": 1.07
+      },
+      "stop": {
+        "n": 61,
+        "expectancy_r": -1.198,
+        "total_r": -73.07
+      },
+      "trail": {
+        "n": 47,
+        "expectancy_r": 0.403,
+        "total_r": 18.95
+      },
+      "target": {
+        "n": 13,
+        "expectancy_r": 2.803,
+        "total_r": 36.44
+      },
+      "eod": {
+        "n": 5,
+        "expectancy_r": 0.014,
+        "total_r": 0.07
+      }
+    },
+    "kind": "mixed_artefact",
+    "conclusion": "ASX underperformance is partly a LEVEL MIX artefact (h4 drag), not pure market edgelessness \u2014 weekly still weak-to-flat; costs are 22% of |gross|+|cost| mass; stop overshoot 80% of stops."
+  },
+  "capacity_oos_weekly_3d": {
+    "eligible_n": 293,
+    "taken_n": 293,
+    "fill_rate": 1.0,
+    "peak_open": 22,
+    "skipped": {},
+    "slot_months": 607.6386,
+    "r_per_slot_month": 0.0207,
+    "expectancy_r": 0.043,
+    "total_r": 12.56,
+    "slots": 30
+  },
+  "capacity_is_plus_oos_weekly_3d": {
+    "eligible_n": 574,
+    "taken_n": 568,
+    "fill_rate": 0.99,
+    "peak_open": 30,
+    "skipped": {
+      "book_full": 5,
+      "sector_cap": 1
+    },
+    "slot_months": 1056.3614,
+    "r_per_slot_month": 0.0284,
+    "expectancy_r": 0.053,
+    "total_r": 30.01,
+    "slots": 30
+  },
+  "live_counterfactual": {
+    "levels_only": {
+      "live_n": 21,
+      "live_total_r": -6.4035,
+      "kept_levels": [
+        "weekly",
+        "3d"
+      ],
+      "kept_n": 7,
+      "kept_total_r": -1.009,
+      "dropped_n": 14,
+      "dropped_total_r": -5.3945,
+      "dropped_symbols": [
+        "WHC",
+        "MVF",
+        "CCP",
+        "PMV",
+        "KLS",
+        "BGA",
+        "TSLA",
+        "AMSF",
+        "KHC",
+        "MDB",
+        "BDX",
+        "WLD",
+        "XLM",
+        "WBT"
+      ],
+      "with_v2_total_r": -1.009,
+      "v2_applied": false
+    },
+    "levels_plus_v2": {
+      "live_n": 21,
+      "live_total_r": -6.4035,
+      "kept_levels": [
+        "weekly",
+        "3d"
+      ],
+      "kept_n": 7,
+      "kept_total_r": -1.009,
+      "dropped_n": 14,
+      "dropped_total_r": -5.3945,
+      "dropped_symbols": [
+        "WHC",
+        "MVF",
+        "CCP",
+        "PMV",
+        "KLS",
+        "BGA",
+        "TSLA",
+        "AMSF",
+        "KHC",
+        "MDB",
+        "BDX",
+        "WLD",
+        "XLM",
+        "WBT"
+      ],
+      "with_v2_total_r": -1.009,
+      "v2_applied": true
+    }
+  },
+  "verdict": "NOT CONFIRMED \u2014 level split failed one or more pre-registered gates; entry signal needs redesign or narrower proposal"
+}

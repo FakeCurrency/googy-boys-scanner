@@ -194,6 +194,40 @@ def test_frozen_fingerprint_detects_r_move():
     assert bf.frozen_fingerprint(pos3) != a
 
 
+def test_exclude_map_and_taken_flag_schema():
+    """OOS plumbing: exclusion loader + taken stamp on published trades."""
+    from scanner.vivek_parity import load_exclude_map, build_parity_report, baseline_rules
+    import tempfile, json, pathlib
+    with tempfile.TemporaryDirectory() as d:
+        p = pathlib.Path(d) / "ex.json"
+        p.write_text(json.dumps({"by_market": {"asx": ["AAA", "bbb"]}}), encoding="utf-8")
+        m = load_exclude_map(p)
+        assert m["asx"] == {"AAA", "BBB"}
+    trades = [
+        {"symbol": "A", "market": "asx", "grade": "A+", "entry_type": "reclaim",
+         "direction": "long", "timeframe": "1W", "sector": "s1",
+         "entry_date": "2024-01-02", "exit_date": "2024-02-01",
+         "exit_reason": "time", "realized_r": 0.1, "entry": 10, "stop": 9, "risk": 1},
+        {"symbol": "B", "market": "asx", "grade": "A+", "entry_type": "reclaim",
+         "direction": "long", "timeframe": "1W", "sector": "s2",
+         "entry_date": "2024-01-02", "exit_date": "2024-02-01",
+         "exit_reason": "time", "realized_r": -0.1, "entry": 10, "stop": 9, "risk": 1},
+    ]
+    rep = build_parity_report(trades, {"asx": {"symbols": 2}}, {"mode": "t"}, {})
+    assert all("taken" in t for t in rep["trades"])
+    assert all("close_r_at" in t for t in rep["trades"])
+    assert sum(1 for t in rep["trades"] if t["taken"]) == rep["baseline"]["portfolio"]["taken"]
+
+
+def test_close_r_checkpoint_stamps_with_close_price():
+    from scanner.vivek_parity import _stamp_mfe_checkpoints
+    tr = {"direction": "long", "entry": 100.0, "risk": 10.0, "mfe_r": 0.3,
+          "mfe_r_at": {}, "close_r_at": {}}
+    _stamp_mfe_checkpoints(tr, held=10, close=103.0)
+    assert "10" in tr["mfe_r_at"]
+    assert tr["close_r_at"]["10"] == pytest.approx(0.3)
+
+
 def test_config_parity_constants_exist():
     assert config.VIVEK_PARITY_OUT_FILE.endswith("vivek_backtest_parity.json")
     assert config.VIVEK_PARITY_MFE_DAYS
