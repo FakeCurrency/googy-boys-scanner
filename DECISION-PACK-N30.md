@@ -155,7 +155,7 @@ Fails only because ASX R/sm does not improve (essentially flat-to-worse on thin 
 ## 4. What the 30 slots × $150k should do next month
 
 1. **Do not scale** size, leverage, or live capital. Parity says the live machine is negative; the live book agrees in structure.
-2. **Do not kill** on n=21 alone — but n=614 parity trades is enough to reject “scale now.”
+2. **Do not kill** on n=21 alone — but n=613 parity trades is enough to reject “scale now.”
 3. **Iterate candidates (priority order):**
    1. **Watch weekly vs h4 on the live book** now that `level_tf` is stamped — if live weekly continues to dominate, V3 becomes the next rule trial (accept ASX thin-n risk explicitly).
    2. **V2 day-14 / mfe&lt;0.5 early cut** — only formal PASS; implement as paper overlay only after owner sign-off (rule change resets the n clock).
