@@ -299,7 +299,7 @@ def main(argv=None) -> int:
         return 0
 
     payloads = build_payloads(to_post, watch)
-    url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+    url = config.clean_secret(os.environ.get("DISCORD_WEBHOOK_URL", ""))
     if args.dry_run:
         print(json.dumps(payloads, indent=2)[:2500])
         return 0

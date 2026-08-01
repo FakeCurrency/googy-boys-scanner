@@ -1046,6 +1046,26 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 # ---------------------------------------------------------------------------
 # Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
 # the module writes a preview and no-ops (never fails the workflow).
+
+
+def clean_secret(value) -> str:
+    """Strip the invisible baggage a hand-pasted secret can carry.
+
+    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
+    a byte-order mark, invisible in the GitHub secrets box — which urllib
+    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
+    in try/log-warning, so the entire Discord channel (stale probes, trade
+    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
+    as that paste was in place; the evidence brief's first delivery was
+    simply the first caller that let the exception fail a run out loud.
+
+    Every consumer of a pasted credential routes through here, so the next
+    stray BOM, zero-width character or trailing newline dies at the boundary
+    instead of inside a swallowed exception. Interior characters are never
+    touched — this trims ends only.
+    """
+    return str(value or "").strip(
+        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
 DISCORD_USERNAME       = "Vivek 5.0"
 DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
 DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)

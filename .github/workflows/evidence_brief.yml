@@ -86,9 +86,15 @@ jobs:
           fi
           python - <<'EOF'
           import json, os, urllib.request
+          # Same trim as scanner.config.clean_secret (inlined - the workflow
+          # must not depend on repo imports): the live webhook secret was
+          # pasted with a leading U+FEFF, which urllib rejects as an unknown
+          # url type. Ends only; interior bytes untouched.
+          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
+              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
           body = open("brief.txt", encoding="utf-8").read()[:1800]
           req = urllib.request.Request(
-              os.environ["DISCORD_WEBHOOK_URL"],
+              url,
               data=json.dumps({"content": "```\n" + body + "\n```"}).encode(),
               headers={"Content-Type": "application/json"})
           urllib.request.urlopen(req, timeout=30)

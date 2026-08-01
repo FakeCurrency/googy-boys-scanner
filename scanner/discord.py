@@ -228,7 +228,7 @@ def run(market_keys: list[str], send_all: bool = False, min_grade: str | None = 
     # Always write a preview so you can see exactly what would post.
     output.write_json(PREVIEW, payloads, ensure_ascii=False)   # TOP100 #64
 
-    webhook = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
+    webhook = config.clean_secret(os.getenv("DISCORD_WEBHOOK_URL", ""))
     if dry_run or not webhook:
         why = "dry-run" if dry_run else "DISCORD_WEBHOOK_URL not set"
         print(f"discord: {total} setup(s) — {why}; preview written to {PREVIEW}.")

@@ -20,6 +20,17 @@ from email.mime.text import MIMEText
 
 log = logging.getLogger(__name__)
 
+
+def _cred(name: str) -> str:
+    """Read a pasted credential tolerantly — see config.clean_secret for the
+    live incident (a BOM inside DISCORD_WEBHOOK_URL silenced the whole
+    Discord channel because every sender here swallows its exceptions)."""
+    try:
+        from scanner.config import clean_secret
+        return clean_secret(os.environ.get(name, ""))
+    except Exception:                                     # noqa: BLE001
+        return os.environ.get(name, "").strip()
+
 _EMOJI = {
     "kill_switch":    "🛑",
     "daily_loss":     "📉",
@@ -47,8 +58,8 @@ def _telegram(text: str) -> bool:
             return False
     except Exception:
         pass
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    chat  = os.environ.get("TELEGRAM_CHAT_ID", "")
+    token = _cred("TELEGRAM_BOT_TOKEN")
+    chat  = _cred("TELEGRAM_CHAT_ID")
     if not (token and chat):
         return False
     url  = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -64,7 +75,7 @@ def _telegram(text: str) -> bool:
 
 
 def _discord(text: str) -> bool:
-    url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    url = _cred("DISCORD_WEBHOOK_URL")
     if not url:
         return False
     data = _json.dumps({"content": text}).encode()
@@ -79,10 +90,10 @@ def _discord(text: str) -> bool:
 
 
 def _email(subject: str, body: str) -> bool:
-    host = os.environ.get("GBS_SMTP_HOST", "")
-    user = os.environ.get("GBS_SMTP_USER", "")
-    pwd  = os.environ.get("GBS_SMTP_PASS", "")
-    to   = os.environ.get("GBS_ALERT_TO", "")
+    host = _cred("GBS_SMTP_HOST")
+    user = _cred("GBS_SMTP_USER")
+    pwd  = _cred("GBS_SMTP_PASS")
+    to   = _cred("GBS_ALERT_TO")
     if not (host and user and pwd and to):
         return False
     port = int(os.environ.get("GBS_SMTP_PORT", "587"))
