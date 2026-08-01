@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-07-31",
+  "run_date": "2026-08-01",
   "ruleset_version": "1.3.1",
   "universe_size": 101,
   "narrations_file": "narrations.json",
@@ -78,10 +78,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.259,
-        "dist_to_yearly_open_pct": -0.2839,
-        "avg_turnover_20d": 18675863,
-        "close": 0.079,
+        "retrace_pct": 0.2431,
+        "dist_to_yearly_open_pct": -0.2857,
+        "avg_turnover_20d": 18617858,
+        "close": 0.0788,
         "sweep_date": "2026-07-25",
         "sweep_depth_pct": 0.0349,
         "displacement_date": "2026-07-27"
@@ -127,7 +127,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 640.9787,
-          "high": 643.7646,
+          "high": 643.7885,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-06-02"
@@ -158,10 +158,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2609,
-        "dist_to_yearly_open_pct": -0.3142,
-        "avg_turnover_20d": 1003573155,
-        "close": 592.0128,
+        "retrace_pct": 0.2336,
+        "dist_to_yearly_open_pct": -0.3207,
+        "avg_turnover_20d": 1020690463,
+        "close": 586.427,
         "sweep_date": "2026-05-31",
         "sweep_depth_pct": 0.0237,
         "displacement_date": "2026-06-02"
@@ -170,7 +170,7 @@
       "route_to": null,
       "name": "BNB",
       "sector": "Crypto",
-      "next": "bounces staying below 640.98–643.76; next objective the 541.96–651.52 zone (T1)"
+      "next": "bounces staying below 640.98–643.79; next objective the 541.96–651.52 zone (T1)"
     },
     {
       "ticker": "GRAM",
@@ -208,7 +208,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 1.6094,
-          "high": 1.6256,
+          "high": 1.6254,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-07-07"
@@ -253,10 +253,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1008,
-        "dist_to_yearly_open_pct": 518.3401,
-        "avg_turnover_20d": 54521883,
-        "close": 1.4277,
+        "retrace_pct": 0.0505,
+        "dist_to_yearly_open_pct": 510.0055,
+        "avg_turnover_20d": 54313574,
+        "close": 1.4048,
         "sweep_date": "2026-07-04",
         "sweep_depth_pct": 0.0108,
         "displacement_date": "2026-07-07"
@@ -265,7 +265,7 @@
       "route_to": null,
       "name": "Gram (prev. Toncoin)",
       "sector": "Crypto",
-      "next": "bounces staying below 1.609–1.626; next objective the 1.372–1.642 zone (T1)"
+      "next": "bounces staying below 1.609–1.625; next objective the 1.372–1.642 zone (T1)"
     },
     {
       "ticker": "KAS",
@@ -304,7 +304,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0285,
+          "low": 0.0284,
           "high": 0.0287,
           "status": "UNTESTED",
           "rule": "touch",
@@ -313,8 +313,8 @@
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.0278,
-          "high": 0.0282,
+          "low": 0.0277,
+          "high": 0.0281,
           "status": "UNTESTED",
           "created_date": "2026-07-27"
         },
@@ -336,10 +336,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.184,
-        "dist_to_yearly_open_pct": -0.3555,
-        "avg_turnover_20d": 7719185,
-        "close": 0.0277,
+        "retrace_pct": 0.0349,
+        "dist_to_yearly_open_pct": -0.3663,
+        "avg_turnover_20d": 7583249,
+        "close": 0.0272,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0359,
         "displacement_date": "2026-07-27"
@@ -348,7 +348,7 @@
       "route_to": null,
       "name": "Kaspa",
       "sector": "Crypto",
-      "next": "bounces staying below 0.0285–0.0287; next objective the 0.0261–0.0284 zone (T1)"
+      "next": "bounces staying below 0.0284–0.0287; next objective the 0.0261–0.0284 zone (T1)"
     },
     {
       "ticker": "M",
@@ -520,10 +520,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.347,
-        "dist_to_yearly_open_pct": -0.041,
-        "avg_turnover_20d": 53182375,
-        "close": 0.018,
+        "retrace_pct": 0.4319,
+        "dist_to_yearly_open_pct": -0.0539,
+        "avg_turnover_20d": 50767967,
+        "close": 0.0178,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0014,
         "displacement_date": "2026-07-05"
@@ -626,120 +626,119 @@
       "next": "bounces staying below 0.0002–0.0002; next objective the 0.0001–0.0001 zone (T2)"
     },
     {
-      "ticker": "LINK",
-      "direction": "bearish",
+      "ticker": "M",
+      "direction": "bullish",
       "state": "RUNNING",
-      "tier": "A",
+      "tier": "Watch",
       "tags": [
-        "FAST_FLIP"
+        "ILLIQUID"
       ],
       "regime": "EXPANSION",
       "zones": [
         {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 8.82,
-          "high": 8.8653,
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0002,
+          "high": 0.0002,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
           ],
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 8.8653,
-          "high": 9.0029,
+          "low": 0.0002,
+          "high": 0.0002,
           "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-27"
+          "rule": "close_below_low",
+          "created_date": "2026-07-30"
         },
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 8.5188,
-          "high": 8.587,
+          "low": 0.0002,
+          "high": 0.0002,
           "status": "UNTESTED",
           "rule": "touch",
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 8.3359,
-          "high": 8.4371,
+          "low": 0.0002,
+          "high": 0.0002,
           "status": "UNTESTED",
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 8.139,
-          "high": 8.4172,
-          "status": "RESPECTED",
-          "confluence": 2,
+          "low": 0.0002,
+          "high": 0.0003,
+          "status": "TESTED",
+          "confluence": 3,
           "sources": [
             "fib_ext_10",
-            "equal_lows"
+            "equal_highs",
+            "fib_ext_1618"
           ],
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 7.7325,
-          "high": 8.0978,
+          "low": 0.0003,
+          "high": 0.0003,
           "status": "UNTESTED",
-          "confluence": 2,
+          "confluence": 1,
           "sources": [
-            "prior_low",
-            "fib_ext_1618"
+            "equal_highs"
           ],
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 7.4233,
-          "high": 7.5962,
+          "low": 0.0003,
+          "high": 0.0003,
           "status": "UNTESTED",
-          "confluence": 1,
+          "confluence": 2,
           "sources": [
-            "equal_lows"
+            "equal_highs",
+            "box_high"
           ],
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         },
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 6.9536,
-          "high": 7.327,
+          "low": 0.0003,
+          "high": 0.0003,
           "status": "UNTESTED",
-          "confluence": 3,
+          "confluence": 1,
           "sources": [
-            "box_low",
-            "equal_lows",
-            "quarterly_open"
+            "equal_highs"
           ],
-          "created_date": "2026-07-27"
+          "created_date": "2026-07-30"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4105,
-        "dist_to_yearly_open_pct": -0.3061,
-        "avg_turnover_20d": 217990266,
-        "close": 8.4568,
-        "sweep_date": "2026-07-27",
-        "sweep_depth_pct": 0.0051,
-        "displacement_date": "2026-07-27"
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.4058,
+        "avg_turnover_20d": 0,
+        "close": 0.0002,
+        "sweep_date": "2026-07-30",
+        "sweep_depth_pct": 0.0165,
+        "displacement_date": "2026-07-30"
       },
       "smt": null,
       "route_to": null,
-      "name": "Chainlink",
+      "name": "MemeCore",
       "sector": "Crypto",
-      "next": "bounces staying below 8.52–8.59; next objective the 8.14–8.42 zone (T1)"
+      "next": "pullbacks staying above 0.0002–0.0002; next objective the 0.0002–0.0003 zone (T1)"
     },
     {
       "ticker": "TRX",
@@ -840,10 +839,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2948,
-        "dist_to_yearly_open_pct": 0.155,
-        "avg_turnover_20d": 419974794,
-        "close": 0.3283,
+        "retrace_pct": 0.2478,
+        "dist_to_yearly_open_pct": 0.1457,
+        "avg_turnover_20d": 425818989,
+        "close": 0.3257,
         "sweep_date": "2026-05-28",
         "sweep_depth_pct": 0.0417,
         "displacement_date": "2026-05-28"
@@ -853,121 +852,6 @@
       "name": "TRON",
       "sector": "Crypto",
       "next": "bounces staying below 0.340–0.342; next objective the 0.309–0.317 zone (T4)"
-    },
-    {
-      "ticker": "M",
-      "direction": "bullish",
-      "state": "DISPLACED",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "EXPANSION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.0002,
-          "high": 0.0002,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.0002,
-          "high": 0.0002,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0002,
-          "high": 0.0002,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0002,
-          "high": 0.0002,
-          "status": "UNTESTED",
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.0002,
-          "high": 0.0003,
-          "status": "UNTESTED",
-          "confluence": 3,
-          "sources": [
-            "fib_ext_10",
-            "equal_highs",
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.0003,
-          "high": 0.0003,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_highs"
-          ],
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 0.0003,
-          "high": 0.0003,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "equal_highs",
-            "box_high"
-          ],
-          "created_date": "2026-07-30"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 0.0003,
-          "high": 0.0003,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_highs"
-          ],
-          "created_date": "2026-07-30"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.4058,
-        "avg_turnover_20d": 0,
-        "close": 0.0002,
-        "sweep_date": "2026-07-30",
-        "sweep_depth_pct": 0.0165,
-        "displacement_date": "2026-07-30"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "MemeCore",
-      "sector": "Crypto",
-      "next": "shallow pullbacks holding above the 0.0002–0.0002 area, drawing toward the 0.0002–0.0003 zone (T1)"
     },
     {
       "ticker": "A7A5",
@@ -1002,19 +886,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2484,
-        "dist_to_yearly_open_pct": -0.0383,
-        "avg_turnover_20d": 335,
-        "close": 0.012,
+        "retrace_pct": 0.2707,
+        "dist_to_yearly_open_pct": -0.0305,
+        "avg_turnover_20d": 393,
+        "close": 0.0121,
         "sweep_date": "2026-07-30",
         "sweep_depth_pct": 0.0144,
-        "bars_remaining": 4
+        "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
       "name": "A7A5",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "AAVE",
@@ -1047,19 +931,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6527,
-        "dist_to_yearly_open_pct": -0.3194,
-        "avg_turnover_20d": 225434216,
-        "close": 99.442,
+        "retrace_pct": 0.0513,
+        "dist_to_yearly_open_pct": -0.3588,
+        "avg_turnover_20d": 225338566,
+        "close": 93.6818,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0031,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Aave",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "ADA",
@@ -1092,64 +976,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2615,
-        "dist_to_yearly_open_pct": -0.4902,
-        "avg_turnover_20d": 277069197,
-        "close": 0.1697,
+        "retrace_pct": 0.343,
+        "dist_to_yearly_open_pct": -0.4954,
+        "avg_turnover_20d": 279972113,
+        "close": 0.168,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0432,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Cardano",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "ATOM",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 1.2859,
-          "high": 1.2951,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-28"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.2649,
-          "high": 1.2859,
-          "status": "TESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-07-28"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.1936,
-        "dist_to_yearly_open_pct": -0.3354,
-        "avg_turnover_20d": 22087914,
-        "close": 1.2805,
-        "sweep_date": "2026-07-28",
-        "sweep_depth_pct": 0.0071,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Cosmos Hub",
-      "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "BCH",
@@ -1182,19 +1021,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2527,
-        "dist_to_yearly_open_pct": -0.6377,
-        "avg_turnover_20d": 105581226,
-        "close": 217.023,
+        "retrace_pct": 0.6835,
+        "dist_to_yearly_open_pct": -0.6494,
+        "avg_turnover_20d": 105771934,
+        "close": 210.0143,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0263,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Bitcoin Cash",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "BTC",
@@ -1227,19 +1066,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4452,
-        "dist_to_yearly_open_pct": -0.2604,
-        "avg_turnover_20d": 24172776656,
-        "close": 64725.3086,
+        "retrace_pct": 1.3572,
+        "dist_to_yearly_open_pct": -0.2822,
+        "avg_turnover_20d": 24997029685,
+        "close": 62813.7461,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0025,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Bitcoin",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "DASH",
@@ -1272,19 +1111,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.8577,
-        "dist_to_yearly_open_pct": -0.2724,
-        "avg_turnover_20d": 48541743,
-        "close": 30.2702,
+        "retrace_pct": 0.5586,
+        "dist_to_yearly_open_pct": -0.2597,
+        "avg_turnover_20d": 48370882,
+        "close": 30.7965,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0365,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Dash",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "DOT",
@@ -1311,25 +1150,25 @@
           "type": "INVALIDATION_HARD",
           "low": 0.7373,
           "high": 0.753,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "rule": "close_below_low",
           "created_date": "2026-07-28"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3822,
-        "dist_to_yearly_open_pct": -0.5707,
-        "avg_turnover_20d": 75877938,
-        "close": 0.768,
+        "retrace_pct": 0.7919,
+        "dist_to_yearly_open_pct": -0.5763,
+        "avg_turnover_20d": 76502441,
+        "close": 0.7581,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0009,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Polkadot",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "ETH",
@@ -1362,19 +1201,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5081,
-        "dist_to_yearly_open_pct": -0.3538,
-        "avg_turnover_20d": 9759061212,
-        "close": 1917.3729,
+        "retrace_pct": 0.0998,
+        "dist_to_yearly_open_pct": -0.373,
+        "avg_turnover_20d": 9926631350,
+        "close": 1860.3459,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0067,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Ethereum",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "FIL",
@@ -1407,19 +1246,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3131,
-        "dist_to_yearly_open_pct": -0.4494,
-        "avg_turnover_20d": 55036832,
-        "close": 0.7133,
+        "retrace_pct": 0.2863,
+        "dist_to_yearly_open_pct": -0.4485,
+        "avg_turnover_20d": 56337062,
+        "close": 0.7145,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0044,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Filecoin",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "GRAM",
@@ -1436,7 +1275,7 @@
           "type": "DEMAND",
           "low": 1.3818,
           "high": 1.3836,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -1454,19 +1293,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3508,
-        "dist_to_yearly_open_pct": 518.3401,
-        "avg_turnover_20d": 54521883,
-        "close": 1.4277,
+        "retrace_pct": 0.675,
+        "dist_to_yearly_open_pct": 510.0055,
+        "avg_turnover_20d": 54313574,
+        "close": 1.4048,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0013,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Gram (prev. Toncoin)",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "ICP",
@@ -1481,7 +1320,7 @@
           "type": "DEMAND",
           "low": 2.0167,
           "high": 2.0499,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -1499,19 +1338,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.534,
-        "dist_to_yearly_open_pct": -0.2716,
-        "avg_turnover_20d": 31303567,
-        "close": 2.0674,
+        "retrace_pct": 0.5234,
+        "dist_to_yearly_open_pct": -0.2712,
+        "avg_turnover_20d": 30848116,
+        "close": 2.0685,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0162,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Internet Computer",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "JST",
@@ -1544,109 +1383,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6429,
-        "dist_to_yearly_open_pct": 1.4629,
-        "avg_turnover_20d": 29254576,
-        "close": 0.1028,
+        "retrace_pct": 0.6556,
+        "dist_to_yearly_open_pct": 1.4653,
+        "avg_turnover_20d": 28896101,
+        "close": 0.103,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0018,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "JUST",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
-    },
-    {
-      "ticker": "LTC",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 48.0075,
-          "high": 48.1822,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-26"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 48.1822,
-          "high": 48.8329,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-26"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.311,
-        "dist_to_yearly_open_pct": -0.4068,
-        "avg_turnover_20d": 224824726,
-        "close": 45.5436,
-        "sweep_date": "2026-07-26",
-        "sweep_depth_pct": 0.0036,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Litecoin",
-      "sector": "Crypto",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
-    },
-    {
-      "ticker": "NEXO",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.7276,
-          "high": 0.7402,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-26"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.7162,
-          "high": 0.7276,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-07-26"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.769,
-        "dist_to_yearly_open_pct": -0.1712,
-        "avg_turnover_20d": 6342351,
-        "close": 0.7317,
-        "sweep_date": "2026-07-26",
-        "sweep_depth_pct": 0.017,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "NEXO",
-      "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "OKB",
@@ -1679,19 +1428,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.9002,
-        "dist_to_yearly_open_pct": -0.2109,
-        "avg_turnover_20d": 18438893,
-        "close": 86.4377,
+        "retrace_pct": 0.7821,
+        "dist_to_yearly_open_pct": -0.2155,
+        "avg_turnover_20d": 18660172,
+        "close": 85.9417,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0023,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "OKB",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "ONDO",
@@ -1724,19 +1473,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.607,
-        "dist_to_yearly_open_pct": 0.1598,
-        "avg_turnover_20d": 126543169,
-        "close": 0.4159,
+        "retrace_pct": 0.0184,
+        "dist_to_yearly_open_pct": 0.0869,
+        "avg_turnover_20d": 129937082,
+        "close": 0.3898,
         "sweep_date": "2026-07-30",
         "sweep_depth_pct": 0.0183,
-        "bars_remaining": 4
+        "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
       "name": "Ondo",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "QNT",
@@ -1751,7 +1500,7 @@
           "type": "DEMAND",
           "low": 59.6391,
           "high": 60.1307,
-          "status": "UNTESTED",
+          "status": "TESTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -1769,19 +1518,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5114,
-        "dist_to_yearly_open_pct": -0.1253,
-        "avg_turnover_20d": 5527692,
-        "close": 60.6861,
+        "retrace_pct": 0.7713,
+        "dist_to_yearly_open_pct": -0.1334,
+        "avg_turnover_20d": 5462111,
+        "close": 60.1292,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0082,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Quant",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "RENDER",
@@ -1814,19 +1563,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4275,
-        "dist_to_yearly_open_pct": 0.1018,
-        "avg_turnover_20d": 16018336,
-        "close": 1.4149,
+        "retrace_pct": 1.4946,
+        "dist_to_yearly_open_pct": 0.0679,
+        "avg_turnover_20d": 15956602,
+        "close": 1.3714,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.013,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Render",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "WBT",
@@ -1853,25 +1602,25 @@
           "type": "INVALIDATION_HARD",
           "low": 54.2788,
           "high": 54.9164,
-          "status": "UNTESTED",
+          "status": "TESTED",
           "rule": "close_below_low",
           "created_date": "2026-07-28"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1609,
-        "dist_to_yearly_open_pct": 0.0054,
-        "avg_turnover_20d": 75010123,
-        "close": 56.4848,
+        "retrace_pct": 1.036,
+        "dist_to_yearly_open_pct": -0.0238,
+        "avg_turnover_20d": 76616100,
+        "close": 54.8452,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0124,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "WhiteBIT Coin",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "XLM",
@@ -1886,7 +1635,7 @@
           "type": "DEMAND",
           "low": 0.1688,
           "high": 0.1689,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -1898,25 +1647,25 @@
           "type": "INVALIDATION_HARD",
           "low": 0.1652,
           "high": 0.1688,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "rule": "close_below_low",
           "created_date": "2026-07-29"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5304,
-        "dist_to_yearly_open_pct": -0.1434,
-        "avg_turnover_20d": 129280703,
-        "close": 0.1719,
+        "retrace_pct": 0.5138,
+        "dist_to_yearly_open_pct": -0.1429,
+        "avg_turnover_20d": 129508425,
+        "close": 0.172,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0003,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Stellar",
       "sector": "Crypto",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "AERO",
@@ -1933,7 +1682,7 @@
         "dist_to_yearly_open_pct": -0.4462,
         "avg_turnover_20d": 1,
         "close": 0.0,
-        "bars_in_box": 30,
+        "bars_in_box": 31,
         "box_low": 0.0,
         "box_high": 0.0001,
         "box_height_pct": 0.5833,
@@ -1956,13 +1705,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5313,
-        "avg_turnover_20d": 8333746,
-        "close": 1.6314,
-        "bars_in_box": 4,
+        "dist_to_yearly_open_pct": -0.5353,
+        "avg_turnover_20d": 8243191,
+        "close": 1.6176,
+        "bars_in_box": 5,
         "box_low": 1.5646,
-        "box_high": 1.7737,
-        "box_height_pct": 0.1337,
+        "box_high": 1.7731,
+        "box_height_pct": 0.1333,
         "cluster_low": 1.5646,
         "cluster_high": 1.5739
       },
@@ -1982,10 +1731,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3142,
-        "avg_turnover_20d": 1003573155,
-        "close": 592.0128,
-        "bars_in_box": 8,
+        "dist_to_yearly_open_pct": -0.3207,
+        "avg_turnover_20d": 1020690463,
+        "close": 586.427,
+        "bars_in_box": 9,
         "box_low": 538.5992,
         "box_high": 601.447,
         "box_height_pct": 0.1167,
@@ -2008,10 +1757,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3907,
-        "avg_turnover_20d": 8476188,
-        "close": 0.0552,
-        "bars_in_box": 25,
+        "dist_to_yearly_open_pct": -0.4007,
+        "avg_turnover_20d": 8301669,
+        "close": 0.0543,
+        "bars_in_box": 26,
         "box_low": 0.0531,
         "box_high": 0.0662,
         "box_height_pct": 0.2476,
@@ -2034,10 +1783,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5931,
-        "avg_turnover_20d": 117198287,
-        "close": 0.0812,
-        "bars_in_box": 25,
+        "dist_to_yearly_open_pct": -0.5979,
+        "avg_turnover_20d": 115636739,
+        "close": 0.0803,
+        "bars_in_box": 26,
         "box_low": 0.0702,
         "box_high": 0.0982,
         "box_height_pct": 0.3977,
@@ -2060,10 +1809,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4176,
-        "avg_turnover_20d": 35502732,
-        "close": 0.4001,
-        "bars_in_box": 14,
+        "dist_to_yearly_open_pct": -0.3984,
+        "avg_turnover_20d": 34704842,
+        "close": 0.4133,
+        "bars_in_box": 15,
         "box_low": 0.3119,
         "box_high": 0.4806,
         "box_height_pct": 0.5411,
@@ -2086,10 +1835,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3696,
-        "avg_turnover_20d": 2428950,
-        "close": 6.5111,
-        "bars_in_box": 49,
+        "dist_to_yearly_open_pct": -0.3698,
+        "avg_turnover_20d": 2229140,
+        "close": 6.5088,
+        "bars_in_box": 50,
         "box_low": 6.3361,
         "box_high": 6.9474,
         "box_height_pct": 0.0965,
@@ -2103,32 +1852,6 @@
       "next": "a run of the 6.34–6.37 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "HBAR",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3557,
-        "avg_turnover_20d": 47906052,
-        "close": 0.0684,
-        "bars_in_box": 8,
-        "box_low": 0.0653,
-        "box_high": 0.0807,
-        "box_height_pct": 0.2358,
-        "cluster_low": 0.0653,
-        "cluster_high": 0.0657
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Hedera",
-      "sector": "Crypto",
-      "next": "a run of the 0.0653–0.0657 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
       "ticker": "INJ",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -2138,10 +1861,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.1941,
-        "avg_turnover_20d": 82899693,
-        "close": 4.9995,
-        "bars_in_box": 14,
+        "dist_to_yearly_open_pct": 0.161,
+        "avg_turnover_20d": 81218112,
+        "close": 4.8609,
+        "bars_in_box": 15,
         "box_low": 4.0734,
         "box_high": 5.4745,
         "box_height_pct": 0.344,
@@ -2169,7 +1892,7 @@
         "dist_to_yearly_open_pct": -0.9814,
         "avg_turnover_20d": 28,
         "close": 0.0,
-        "bars_in_box": 1,
+        "bars_in_box": 2,
         "box_low": 0.0,
         "box_high": 0.0003,
         "box_height_pct": 23.7273,
@@ -2197,7 +1920,7 @@
         "dist_to_yearly_open_pct": -0.9814,
         "avg_turnover_20d": 28,
         "close": 0.0,
-        "bars_in_box": 5,
+        "bars_in_box": 6,
         "box_low": 0.0,
         "box_high": 0.0003,
         "box_height_pct": 23.7273,
@@ -2211,6 +1934,32 @@
       "next": "a run of the 0.0000–0.0000 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "LEO",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0156,
+        "avg_turnover_20d": 300668,
+        "close": 9.7578,
+        "bars_in_box": 71,
+        "box_low": 9.0436,
+        "box_high": 9.8353,
+        "box_height_pct": 0.0875,
+        "cluster_low": 9.8138,
+        "cluster_high": 9.8353
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "LEO Token",
+      "sector": "Crypto",
+      "next": "a run of the 9.81–9.84 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "LINK",
       "direction": "bullish",
       "state": "TRAP_SET",
@@ -2220,10 +1969,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3061,
-        "avg_turnover_20d": 217990266,
-        "close": 8.4568,
-        "bars_in_box": 29,
+        "dist_to_yearly_open_pct": -0.3304,
+        "avg_turnover_20d": 220184249,
+        "close": 8.1613,
+        "bars_in_box": 30,
         "box_low": 7.0224,
         "box_high": 8.8653,
         "box_height_pct": 0.2624,
@@ -2274,10 +2023,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0535,
-        "avg_turnover_20d": 107885075,
-        "close": 4098.5625,
-        "bars_in_box": 15,
+        "dist_to_yearly_open_pct": -0.0662,
+        "avg_turnover_20d": 112558689,
+        "close": 4043.5837,
+        "bars_in_box": 16,
         "box_low": 3950.9036,
         "box_high": 4204.9209,
         "box_height_pct": 0.0643,
@@ -2300,10 +2049,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.041,
-        "avg_turnover_20d": 53182375,
-        "close": 0.018,
-        "bars_in_box": 24,
+        "dist_to_yearly_open_pct": -0.0539,
+        "avg_turnover_20d": 50767967,
+        "close": 0.0178,
+        "bars_in_box": 25,
         "box_low": 0.0162,
         "box_high": 0.019,
         "box_height_pct": 0.1771,
@@ -2354,10 +2103,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5484,
-        "avg_turnover_20d": 11246675,
+        "dist_to_yearly_open_pct": -0.5443,
+        "avg_turnover_20d": 10776236,
         "close": 0.0047,
-        "bars_in_box": 21,
+        "bars_in_box": 22,
         "box_low": 0.0043,
         "box_high": 0.0051,
         "box_height_pct": 0.1836,
@@ -2371,6 +2120,32 @@
       "next": "a run of the 0.0050–0.0051 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "VET",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.5443,
+        "avg_turnover_20d": 10776236,
+        "close": 0.0047,
+        "bars_in_box": 1,
+        "box_low": 0.0043,
+        "box_high": 0.0051,
+        "box_height_pct": 0.1836,
+        "cluster_low": 0.0043,
+        "cluster_high": 0.0043
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "VeChain",
+      "sector": "Crypto",
+      "next": "a run of the 0.0043–0.0043 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "VIRTUAL",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -2380,10 +2155,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1134,
-        "avg_turnover_20d": 54956611,
-        "close": 0.5719,
-        "bars_in_box": 4,
+        "dist_to_yearly_open_pct": -0.1561,
+        "avg_turnover_20d": 49826355,
+        "close": 0.5444,
+        "bars_in_box": 5,
         "box_low": 0.5041,
         "box_high": 0.6785,
         "box_height_pct": 0.346,
@@ -2406,10 +2181,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1134,
-        "avg_turnover_20d": 54956611,
-        "close": 0.5719,
-        "bars_in_box": 24,
+        "dist_to_yearly_open_pct": -0.1561,
+        "avg_turnover_20d": 49826355,
+        "close": 0.5444,
+        "bars_in_box": 25,
         "box_low": 0.5041,
         "box_high": 0.6785,
         "box_height_pct": 0.346,
@@ -2432,10 +2207,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0533,
-        "avg_turnover_20d": 154319063,
-        "close": 4093.4219,
-        "bars_in_box": 15,
+        "dist_to_yearly_open_pct": -0.0662,
+        "avg_turnover_20d": 160226552,
+        "close": 4037.5374,
+        "bars_in_box": 16,
         "box_low": 3949.7515,
         "box_high": 4197.2949,
         "box_height_pct": 0.0627,
@@ -2449,32 +2224,6 @@
       "next": "a run of the 4183.87–4197.29 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "XDC",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4846,
-        "avg_turnover_20d": 7256271,
-        "close": 0.0263,
-        "bars_in_box": 11,
-        "box_low": 0.0268,
-        "box_high": 0.0299,
-        "box_height_pct": 0.1156,
-        "cluster_low": 0.0268,
-        "cluster_high": 0.0268
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "XDC Network",
-      "sector": "Crypto",
-      "next": "a run of the 0.0268–0.0268 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
       "ticker": "XMR",
       "direction": "bullish",
       "state": "TRAP_SET",
@@ -2484,10 +2233,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1681,
-        "avg_turnover_20d": 86085694,
-        "close": 360.4529,
-        "bars_in_box": 8,
+        "dist_to_yearly_open_pct": -0.1729,
+        "avg_turnover_20d": 87620212,
+        "close": 358.3418,
+        "bars_in_box": 9,
         "box_low": 299.9545,
         "box_high": 371.6907,
         "box_height_pct": 0.2392,
@@ -2534,7 +2283,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 6.4637,
+          "low": 6.4643,
           "high": 6.5253,
           "status": "VIOLATED",
           "rule": "touch",
@@ -2601,10 +2350,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.6552,
-        "dist_to_yearly_open_pct": -0.4771,
-        "avg_turnover_20d": 237734857,
-        "close": 6.4341,
+        "retrace_pct": 0.7502,
+        "dist_to_yearly_open_pct": -0.4817,
+        "avg_turnover_20d": 239888793,
+        "close": 6.3782,
         "sweep_date": "2026-07-25",
         "sweep_depth_pct": 0.0232,
         "displacement_date": "2026-07-25"
@@ -2612,6 +2361,122 @@
       "smt": null,
       "route_to": "fib_reversal",
       "name": "Avalanche",
+      "sector": "Crypto",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "LINK",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 8.82,
+          "high": 8.8653,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 8.8653,
+          "high": 9.0029,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 8.4541,
+          "high": 8.5256,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 8.2369,
+          "high": 8.357,
+          "status": "UNTESTED",
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 8.139,
+          "high": 8.4172,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_lows"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 7.7325,
+          "high": 8.0978,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 7.4233,
+          "high": 7.5962,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 6.9536,
+          "high": 7.327,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "box_low",
+            "equal_lows",
+            "quarterly_open"
+          ],
+          "created_date": "2026-07-27"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.144,
+        "dist_to_yearly_open_pct": -0.3304,
+        "avg_turnover_20d": 220184249,
+        "close": 8.1613,
+        "sweep_date": "2026-07-27",
+        "sweep_depth_pct": 0.0051,
+        "displacement_date": "2026-07-27"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Chainlink",
       "sector": "Crypto",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
@@ -2652,7 +2517,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.3594,
+          "low": 0.3592,
           "high": 0.3658,
           "status": "VIOLATED",
           "rule": "touch",
@@ -2707,10 +2572,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0862,
-        "dist_to_yearly_open_pct": 0.1598,
-        "avg_turnover_20d": 126543169,
-        "close": 0.4159,
+        "retrace_pct": 0.3019,
+        "dist_to_yearly_open_pct": 0.0869,
+        "avg_turnover_20d": 129937082,
+        "close": 0.3898,
         "sweep_date": "2026-07-14",
         "sweep_depth_pct": 0.0303,
         "displacement_date": "2026-07-15"
@@ -2755,7 +2620,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 4036.5324,
+          "low": 4035.7357,
           "high": 4050.8021,
           "status": "VIOLATED",
           "rule": "touch",
@@ -2774,7 +2639,7 @@
           "type": "TARGET",
           "low": 4084.095,
           "high": 4139.9029,
-          "status": "TESTED",
+          "status": "RESPECTED",
           "confluence": 2,
           "sources": [
             "fib_ext_10",
@@ -2825,10 +2690,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0799,
-        "dist_to_yearly_open_pct": -0.0535,
-        "avg_turnover_20d": 107885075,
-        "close": 4098.5625,
+        "retrace_pct": 0.5635,
+        "dist_to_yearly_open_pct": -0.0662,
+        "avg_turnover_20d": 112558689,
+        "close": 4043.5837,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0064,
         "displacement_date": "2026-07-29"
@@ -2959,7 +2824,7 @@
           "type": "DEMAND",
           "low": 3990.3171,
           "high": 4021.4568,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "confluence": 3,
           "sources": [
             "sweep_wick",
@@ -2980,7 +2845,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 4032.1878,
+          "low": 4031.4023,
           "high": 4046.1144,
           "status": "VIOLATED",
           "rule": "touch",
@@ -2999,7 +2864,7 @@
           "type": "TARGET",
           "low": 4077.0619,
           "high": 4131.109,
-          "status": "TESTED",
+          "status": "RESPECTED",
           "confluence": 2,
           "sources": [
             "fib_ext_10",
@@ -3050,10 +2915,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0761,
-        "dist_to_yearly_open_pct": -0.0533,
-        "avg_turnover_20d": 154319063,
-        "close": 4093.4219,
+        "retrace_pct": 0.5769,
+        "dist_to_yearly_open_pct": -0.0662,
+        "avg_turnover_20d": 160226552,
+        "close": 4037.5374,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.0077,
         "displacement_date": "2026-07-29"
@@ -3063,6 +2928,50 @@
       "name": "Tether Gold",
       "sector": "Crypto",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ATOM",
+      "direction": "bullish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 1.2859,
+          "high": 1.2951,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.2649,
+          "high": 1.2859,
+          "status": "VIOLATED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 3.249,
+        "dist_to_yearly_open_pct": -0.3649,
+        "avg_turnover_20d": 22562009,
+        "close": 1.2237,
+        "sweep_date": "2026-07-28",
+        "sweep_depth_pct": 0.0071
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cosmos Hub",
+      "sector": "Crypto",
+      "next": "a new trap to build — the swept low failed on a closing basis"
     }
   ]
 }
