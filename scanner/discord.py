@@ -179,7 +179,10 @@ def post_webhook(url: str, payload: dict, retries: int | None = None) -> bool:
     retries = config.DISCORD_POST_RETRIES if retries is None else retries
     for attempt in range(retries + 1):
         try:
-            resp = requests.post(url, json=payload, timeout=15)
+            # Named UA: Discord's edge can 403 default library agents as bots
+            # (same reason as alert_dispatch._UA).
+            resp = requests.post(url, json=payload, timeout=15,
+                                 headers={"User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
             if resp.status_code in (200, 204):
                 return True
             if resp.status_code == 429:  # rate limited — honour Retry-After

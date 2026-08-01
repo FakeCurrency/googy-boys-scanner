@@ -21,6 +21,11 @@ from email.mime.text import MIMEText
 log = logging.getLogger(__name__)
 
 
+# Discord (and anything behind Cloudflare) may 403 a default Python UA as a
+# bot. A named agent is both politer and deliverable.
+_UA = "vivek5-alerts/1.0 (+github-actions)"
+
+
 def _cred(name: str) -> str:
     """Read a pasted credential tolerantly — see config.clean_secret for the
     live incident (a BOM inside DISCORD_WEBHOOK_URL silenced the whole
@@ -66,7 +71,8 @@ def _telegram(text: str) -> bool:
     data = _json.dumps({"chat_id": chat, "text": text}).encode()
     try:
         req = urllib.request.Request(
-            url, data=data, headers={"Content-Type": "application/json"})
+            url, data=data, headers={"Content-Type": "application/json",
+                                     "User-Agent": _UA})
         urllib.request.urlopen(req, timeout=10)
         return True
     except Exception as e:
@@ -81,7 +87,8 @@ def _discord(text: str) -> bool:
     data = _json.dumps({"content": text}).encode()
     try:
         req = urllib.request.Request(
-            url, data=data, headers={"Content-Type": "application/json"})
+            url, data=data, headers={"Content-Type": "application/json",
+                                     "User-Agent": _UA})
         urllib.request.urlopen(req, timeout=10)
         return True
     except Exception as e:
