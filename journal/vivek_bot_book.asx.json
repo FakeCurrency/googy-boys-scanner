@@ -70,7 +70,9 @@
         "2026-07-30": 34.66999817,
         "2026-07-31": 34.24000168,
         "2026-08-01": 34.02000046
-      }
+      },
+      "level_tf": "3d",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "SUN:long:3D:2026-07-20",
@@ -134,7 +136,9 @@
         "2026-07-30": 19.56999969,
         "2026-07-31": 19.42000008,
         "2026-08-01": 19.19000053
-      }
+      },
+      "level_tf": "3d",
+      "level_tf_source": "scan"
     },
     {
       "id": "AFG:long:1W:2026-07-20",
@@ -198,7 +202,9 @@
         "2026-07-30": 1.58000004,
         "2026-07-31": 1.59500003,
         "2026-08-01": 1.57500005
-      }
+      },
+      "level_tf": "weekly",
+      "level_tf_source": "scan"
     },
     {
       "id": "WHI:long:1W:2026-07-28",
@@ -262,7 +268,9 @@
         "2026-07-30": 1.30499995,
         "2026-07-31": 1.32000005,
         "2026-08-01": 1.35000002
-      }
+      },
+      "level_tf": "h4",
+      "level_tf_source": "scan"
     },
     {
       "id": "GOZ:long:1W:2026-07-28",
@@ -326,7 +334,9 @@
         "2026-07-30": 2.25,
         "2026-07-31": 2.22000003,
         "2026-08-01": 2.23000002
-      }
+      },
+      "level_tf": "3d",
+      "level_tf_source": "scan"
     },
     {
       "id": "ACL:long:1D:2026-07-28",
@@ -390,7 +400,9 @@
         "2026-07-30": 2.43000007,
         "2026-07-31": 2.4000001,
         "2026-08-01": 2.38000011
-      }
+      },
+      "level_tf": "h4",
+      "level_tf_source": "scan"
     },
     {
       "id": "WA1:long:1W:2026-07-28",
@@ -518,7 +530,9 @@
         "2026-07-30": 2.79999995,
         "2026-07-31": 2.75999999,
         "2026-08-01": 2.79999995
-      }
+      },
+      "level_tf": "h4",
+      "level_tf_source": "scan"
     },
     {
       "id": "USL:long:1D:2026-07-28",
@@ -582,7 +596,9 @@
         "2026-07-30": 0.67500001,
         "2026-07-31": 0.66500002,
         "2026-08-01": 0.69499999
-      }
+      },
+      "level_tf": "h4",
+      "level_tf_source": "scan"
     },
     {
       "id": "WBC:long:1D:2026-07-30",
@@ -642,7 +658,9 @@
         "2026-08-01": 37.86999893
       },
       "unreal_r": -0.166,
-      "unreal_usd": -33.46
+      "unreal_usd": -33.46,
+      "level_tf": "h4",
+      "level_tf_source": "scan"
     },
     {
       "id": "AUB:long:1W:2026-07-31",
@@ -710,7 +728,9 @@
         "2026-08-01": 27.86000061
       },
       "unreal_r": -0.099,
-      "unreal_usd": -117.03
+      "unreal_usd": -117.03,
+      "level_tf": "weekly",
+      "level_tf_source": "scan"
     }
   ],
   "closed": [
@@ -773,7 +793,9 @@
       "exit_date": "2026-07-08",
       "exit_reason": "stop",
       "hold_days": 9,
-      "lens": "vivek"
+      "lens": "vivek",
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "MAQ:long:1D:2026-06-29",
@@ -834,7 +856,9 @@
       "exit_date": "2026-07-08",
       "exit_reason": "stop",
       "hold_days": 9,
-      "lens": "vivek"
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "NXT:long:1D:2026-06-30",
@@ -895,7 +919,9 @@
       "exit_price": 13.06999969,
       "exit_date": "2026-07-20",
       "exit_reason": "stop",
-      "hold_days": 20
+      "hold_days": 20,
+      "level_tf": "3d",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "MVF:long:1D:2026-07-08",
@@ -956,7 +982,9 @@
       "exit_price": 0.67500001,
       "exit_date": "2026-07-20",
       "exit_reason": "stop",
-      "hold_days": 12
+      "hold_days": 12,
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "CCP:long:1D:2026-06-29",
@@ -1018,7 +1046,9 @@
       "exit_price": 13.67000008,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "PMV:long:1W:2026-06-29",
@@ -1080,7 +1110,9 @@
       "exit_price": 13.72999954,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "KLS:long:1D:2026-06-29",
@@ -1142,7 +1174,9 @@
       "exit_price": 4.34000015,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "FWD:long:1W:2026-06-29",
@@ -1204,7 +1238,9 @@
       "exit_price": 2.23000002,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "weekly",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "EVT:long:1W:2026-06-29",
@@ -1266,7 +1302,9 @@
       "exit_price": 12.32999992,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "3d",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "BGA:long:1D:2026-06-29",
@@ -1346,7 +1384,9 @@
       "exit_price": 6.09,
       "exit_date": "2026-08-01",
       "exit_reason": "manual",
-      "hold_days": 33
+      "hold_days": 33,
+      "level_tf": "h4",
+      "level_tf_source": "evaluate"
     },
     {
       "id": "AIA:long:1W:2026-07-08",
@@ -1420,7 +1460,9 @@
       "exit_price": 7.24,
       "exit_date": "2026-08-01",
       "exit_reason": "manual",
-      "hold_days": 24
+      "hold_days": 24,
+      "level_tf": "weekly",
+      "level_tf_source": "evaluate"
     }
   ],
   "guard": {
@@ -1453,5 +1495,5 @@
     "unreal_usd": 519.88,
     "updated_day": "2026-08-01"
   },
-  "updated_at": "2026-08-01T06:35:25+00:00"
+  "updated_at": "2026-08-01T10:51:51+00:00"
 }
