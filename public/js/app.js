@@ -544,7 +544,15 @@
   // its lens count.
   const eyesRank = (rows) => (rows || []).slice().sort((a, b) => {
     const ap = (x) => (x.detail && x.detail.vivek && x.detail.vivek.grade === "A+") ? 1 : 0;
-    return (b.count - a.count) || (ap(b) - ap(a)) || a.ticker.localeCompare(b.ticker);
+    // Owner fix (2026-08-01): PM-leg quality (RUNNING > DISPLACED > SWEPT,
+    // then PM tier) breaks ties INSIDE a grade band, so EVT (RUNNING/A+)
+    // outranks an alphabetically-earlier SWEPT/Watch dual. Count stays the
+    // primary key and WHAT QUALIFIES is untouched — with every current name
+    // a dual, this key is what stops the strip sorting by the alphabet.
+    const pq = (x) => (typeof PM !== "undefined" && PM.pmLegQuality)
+      ? PM.pmLegQuality(x.detail && x.detail.phasemap) : 0;
+    return (b.count - a.count) || (ap(b) - ap(a)) || (pq(b) - pq(a)) ||
+      a.ticker.localeCompare(b.ticker);
   });
 
   const eyesHTML = (rows, market, cap) => {
@@ -558,17 +566,28 @@
       const ap = isAp(x);
       const arrow = x.side === "short" ? "▼" : "▲";
       const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
-      const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "");
+      // Owner fix (2026-08-01): the deck's EXISTING fund/LIC/ETF heuristic
+      // now travels to the chips — a CQE-type name stops dressing like an
+      // FMG-type name. Display only; nothing reads the marker back.
+      const v = x.detail && x.detail.vivek;
+      const fund = !!(typeof PM !== "undefined" && PM.isFundReit && v &&
+        PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker }));
+      const leg = x.detail && x.detail.phasemap;
+      const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "") +
+        (fund ? " ey-fund" : "");
       // "displays as A+": the confluence set carries the DISPLAYED grade
       // (smoothed), and the bot buys grade_raw — an honest chip claims the
       // page's own grade, not the bot's decision.
       const title = `${x.lenses.join(" + ")} aligned ${x.side.toUpperCase()}` +
+        (leg ? ` — PhaseMap ${leg.state}${leg.tier ? "/" + leg.tier : ""}` : "") +
         (ap ? " — and VIVEK grades it A+" : "") +
+        (fund ? " — FUND / REIT-type name" : "") +
         " — open the combined chart";
       return `<a class="${cls}" title="${esc(title)}" ` +
         `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
         `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
         `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
+        `${fund ? `<em class="ey-tag ey-fund-tag">FUND</em>` : ""}` +
         `<span class="ey-n">×${x.count}</span></a>`;
     }).join("");
     const more = ranked.length > cap

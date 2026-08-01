@@ -105,12 +105,19 @@ window.PM = (() => {
     "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
   const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
   const NON_OP_SECTORS = ["not applicable", "not applic", "n/a"];
+  // (2026-08-01, owner display fix) WORD-BOUNDARY keyword matching. The old
+  // includes() matched "ETF" INSIDE "N-ETF-LIX" and badged Netflix as a fund.
+  // \b keeps "CHARTER HALL TRUST" caught while leaving NETFLIX/TRUSTEE-class
+  // names alone. The keyword LIST is unchanged — only how it is matched.
+  const FUND_KW_RE = new RegExp("\\b(" + FUND_NAME_KW
+    .map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b");
+
   function isFundReit(rec) {
     const sector = String(rec.sector || "").trim().toLowerCase();
     if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
     if (NON_OP_SECTORS.includes(sector)) return true;
     const name = String(rec.name || rec.ticker || "").toUpperCase();
-    return FUND_NAME_KW.some((kw) => name.includes(kw));
+    return FUND_KW_RE.test(name);
   }
 
   function identityHTML(rec) {
@@ -350,6 +357,17 @@ window.PM = (() => {
      full house). Computed client-side from the three latest scan files so
      it's always as fresh as whatever each lens last published. */
   const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
+
+  // PM leg quality — DISPLAY ORDERING ONLY (2026-08-01, owner fix #1): a
+  // stronger state outranks a stronger tier, mirroring the engine's own
+  // escalation. NOT part of qualification — a SWEPT/Watch leg still aligns;
+  // it just sorts after RUNNING/A+ when a surface orders its chips.
+  const PM_STATE_RANK = { RUNNING: 3, DISPLACED: 2, SWEPT: 1 };
+  const PM_TIER_RANK = { "A+": 3, A: 2, B: 1, Watch: 0 };
+  function pmLegQuality(leg) {
+    if (!leg) return -1;
+    return (PM_STATE_RANK[leg.state] || 0) * 10 + (PM_TIER_RANK[leg.tier] || 0);
+  }
   async function loadConfluence(market, vivekData = null) {
     const grab = (url) => fetchTimeout(url, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -367,14 +385,23 @@ window.PM = (() => {
       const e = ent(r.symbol);
       const side = String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long";
       if (!e[side].includes("VIVEK")) e[side].push("VIVEK");
-      e.detail.vivek = { grade: r.grade, side };
+      // name + sector ride along for DISPLAY (fund badge on chips) — the
+      // qualification rule reads none of this.
+      e.detail.vivek = { grade: r.grade, side, name: r.name, sector: r.sector };
     });
     ((pm && pm.results) || []).forEach((r) => {
       if (!PM_ACTIVE_STATES.includes(r.state)) return;
       const e = ent(r.ticker);
       const side = r.direction === "bearish" ? "short" : "long";
       if (!e[side].includes("PHASEMAP")) e[side].push("PHASEMAP");
-      e.detail.phasemap = { state: r.state, tier: r.tier, side };
+      const leg = { state: r.state, tier: r.tier, side };
+      // ~97 ASX names carry ACTIVE rows in BOTH directions. Keep the best
+      // leg PER SIDE so of() can hand back the ALIGNED one — a long chip's
+      // tooltip used to cite whichever row happened to load last, including
+      // the bearish read (2026-08-01 fix; qualification untouched).
+      e.pmBest = e.pmBest || {};
+      if (pmLegQuality(leg) > pmLegQuality(e.pmBest[side])) e.pmBest[side] = leg;
+      e.detail.phasemap = leg;
     });
     ((spec && spec.results) || []).forEach((r) => {
       const e = ent(r.symbol);
@@ -388,7 +415,10 @@ window.PM = (() => {
         const side = e.long.length >= e.short.length ? "long" : "short";
         const lenses = e[side];
         if (lenses.length < 2) return null;
-        return { ticker, lenses, side, count: lenses.length, detail: e.detail };
+        const detail = e.pmBest && e.pmBest[side]
+          ? Object.assign({}, e.detail, { phasemap: e.pmBest[side] })
+          : e.detail;
+        return { ticker, lenses, side, count: lenses.length, detail };
       },
       all() {
         return Object.keys(map)
@@ -521,5 +551,5 @@ window.PM = (() => {
            isFundReit, toggleSpeak, watch, starHTML,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
-           fetchTimeout, DATA_FETCH_TIMEOUT_MS };
+           fetchTimeout, DATA_FETCH_TIMEOUT_MS, pmLegQuality };
 })();

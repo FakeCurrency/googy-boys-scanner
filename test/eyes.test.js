@@ -44,9 +44,47 @@ function sliceConst(name) {
   assert.fail(`could not slice "${name}" out of app.js`);
 }
 
+// Function-declaration slicer (the fnSrc pattern): walk candidate closers
+// and let the parser say which one ends the declaration.
+function sliceFn(src, name, where) {
+  const at = src.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
+  assert.ok(at >= 0, `${where} no longer defines function "${name}"`);
+  for (let i = src.indexOf("}", at); i > 0 && i - at < 8000; i = src.indexOf("}", i + 1)) {
+    const candidate = src.slice(at, i + 1);
+    try { new Function(`return (${candidate});`); return candidate; }
+    catch (_) { /* keep walking */ }
+  }
+  assert.fail(`could not slice function "${name}" out of ${where}`);
+}
+function sliceConstFrom(src, name, where) {
+  const at = src.search(new RegExp(`\\bconst\\s+${name}\\s*=`));
+  assert.ok(at >= 0, `${where} no longer defines "${name}"`);
+  const start = src.indexOf("=", at) + 1;
+  for (let i = src.indexOf(";", start); i > 0 && i - start < 8000; i = src.indexOf(";", i + 1)) {
+    const candidate = src.slice(start, i).trim();
+    try { new Function(`return (${candidate});`); return `const ${name} = ${candidate};`; }
+    catch (_) { /* keep walking */ }
+  }
+  assert.fail(`could not slice "${name}" out of ${where}`);
+}
+
+// The strip's quality + fund reads come from PM (phasemap-shared.js). Build
+// the sandbox's PM from the SHIPPED implementations, not a re-typed stub —
+// this is what makes the NFLX word-boundary regression test test the fix.
+const SHARED = fs.readFileSync(path.resolve(__dirname, "../public/js/phasemap-shared.js"), "utf8");
+const PM_REAL = new Function(
+  ["PM_STATE_RANK", "PM_TIER_RANK"].map((n) => sliceConstFrom(SHARED, n, "phasemap-shared.js")).join("\n") +
+  "\n" + sliceFn(SHARED, "pmLegQuality", "phasemap-shared.js") +
+  "\n" + ["FUND_SECTOR_HINTS", "NON_OP_SECTORS", "FUND_NAME_KW", "FUND_KW_RE"]
+    .map((n) => sliceConstFrom(SHARED, n, "phasemap-shared.js")).join("\n") +
+  "\n" + sliceFn(SHARED, "isFundReit", "phasemap-shared.js") +
+  "\nreturn { pmLegQuality, isFundReit };")();
+
 const NAMES = ["esc", "eyesRank", "eyesHTML"];
 const { eyesRank, eyesHTML } =
-  new Function(NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`)();
+  new Function("PM", NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`)(PM_REAL);
+// A second sandbox with NO PM at all — the strip must degrade, never throw.
+const bare = new Function("PM", NAMES.map(sliceConst).join("\n") + `\nreturn { eyesRank, eyesHTML };`)(undefined);
 
 const mk = (t, count, grade, side) => ({
   ticker: t, count, side: side || "long",
@@ -120,6 +158,84 @@ test("a hostile ticker cannot break out of the markup", () => {
   const evil = mk(`"><img src=x onerror=alert(1)>`, 3, "A+");
   const html = eyesHTML([evil], "asx");
   assert.ok(!html.includes("<img"), html);
+});
+
+// ── PM-leg quality ranking + fund markers (owner fixes, 2026-08-01) ─────────
+suite("quality ranking");
+
+const mkq = (t, grade, state, tier, extra) => Object.assign(mk(t, 2, grade), {
+  detail: {
+    vivek: Object.assign({ grade, side: "long" }, extra || {}),
+    phasemap: state ? { state, tier, side: "long" } : undefined,
+  },
+});
+
+test("inside the A+ tier, a RUNNING/A+ leg outranks an alphabetically earlier SWEPT/Watch leg", () => {
+  // The EVT-vs-COG case from the review: the alphabet used to decide this.
+  const rows = [mkq("COG", "A+", "SWEPT", "Watch"), mkq("EVT", "A+", "RUNNING", "A+")];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["EVT", "COG"]);
+});
+
+test("state dominates tier, and tier breaks ties within a state", () => {
+  const rows = [mkq("SWA", "A+", "SWEPT", "A+"), mkq("RUNW", "A+", "RUNNING", "Watch"),
+    mkq("SWW", "A+", "SWEPT", "Watch"), mkq("DIS", "A+", "DISPLACED", "A")];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["RUNW", "DIS", "SWA", "SWW"]);
+});
+
+test("the key order is pinned: count, then A+, THEN leg quality, then alphabet", () => {
+  // An A+ on the weakest leg still beats a non-A+ on the strongest leg, and
+  // a triple on the weakest leg beats every dual — quality refines, it never
+  // reorders the owner's established hierarchy.
+  const rows = [mkq("STRONG", "A", "RUNNING", "A+"), mkq("WEAKAP", "A+", "SWEPT", "Watch")];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["WEAKAP", "STRONG"]);
+  const trip = Object.assign(mk("TRIPW", 3, "B+"), { detail: { vivek: { grade: "B+" },
+    phasemap: { state: "SWEPT", tier: "Watch" } } });
+  assert.deepEqual(eyesRank([mkq("DUALSTR", "A+", "RUNNING", "A+"), trip]).map((x) => x.ticker),
+    ["TRIPW", "DUALSTR"]);
+});
+
+test("equal quality still falls back to the alphabet, deterministically", () => {
+  const rows = [mkq("ZZZ", "A+", "SWEPT", "Watch"), mkq("AAA", "A+", "SWEPT", "Watch")];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["AAA", "ZZZ"]);
+});
+
+test("without PM the strip degrades to the old order instead of throwing", () => {
+  const rows = [mkq("COG", "A+", "SWEPT", "Watch"), mkq("EVT", "A+", "RUNNING", "A+")];
+  assert.deepEqual(bare.eyesRank(rows).map((x) => x.ticker), ["COG", "EVT"]);
+  assert.ok(bare.eyesHTML(rows, "asx").includes("ey-chip"));
+});
+
+test("the chip title states the PhaseMap leg it ranked on", () => {
+  const html = eyesHTML([mkq("EVT", "A+", "RUNNING", "A+")], "asx");
+  assert.ok(html.includes("PhaseMap RUNNING/A+"), html);
+});
+
+suite("fund markers");
+
+test("a fund-named chip carries the marker and the dimming class", () => {
+  const html = eyesHTML([mkq("CQE", "A+", "SWEPT", "Watch",
+    { name: "Charter Hall Social Infrastructure REIT", sector: "Real Estate" })], "asx");
+  assert.ok(html.includes("ey-fund"), html);
+  assert.ok(html.includes(">FUND<"), html);
+  assert.ok(html.includes("FUND / REIT-type name"), html);
+});
+
+test("NETFLIX is clean — the ETF keyword no longer matches inside words", () => {
+  // The false positive the owner ordered fixed: includes() saw N-ETF-LIX.
+  const html = eyesHTML([mkq("NFLX", "A+", "SWEPT", "Watch",
+    { name: "Netflix, Inc. - Common Stock", sector: "Communication Services" })], "nasdaq");
+  assert.ok(!html.includes("ey-fund"), html);
+  assert.ok(!html.includes(">FUND<"), html);
+  // ...while the real vehicles keep their flags through the same regex:
+  assert.ok(PM_REAL.isFundReit({ name: "BETASHARES AUSTRALIA 200 ETF", ticker: "A200" }));
+  assert.ok(PM_REAL.isFundReit({ name: "VanEck Global X Thing", ticker: "GX" }));
+  assert.ok(!PM_REAL.isFundReit({ name: "Netflix, Inc. - Common Stock", ticker: "NFLX" }));
+});
+
+test("an operating company with no fund traits renders unmarked", () => {
+  const html = eyesHTML([mkq("FMG", "A+", "SWEPT", "Watch",
+    { name: "Fortescue Ltd", sector: "Materials" })], "asx");
+  assert.ok(!html.includes("ey-fund"), html);
 });
 
 // ── wiring — a surface nobody sees is not a surface ──────────────────────────

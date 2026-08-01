@@ -61,3 +61,13 @@
   border-radius: 999px; padding: 6px 10px; cursor: pointer;
 }
 .ey-more:hover { border-color: var(--blue); }
+
+/* FUND/LIC marker on chips (owner fix, 2026-08-01) — the deck's existing
+   heuristic surfaced where the ranking lives. Amber like the row badge,
+   compact like the A+ tag; the chip itself dims a touch so an operating
+   company and a listed vehicle stop reading identically at a glance. */
+.ey-chip.ey-fund { opacity: 0.78; }
+.ey-tag.ey-fund-tag {
+  color: var(--orange); border-color: rgba(255,159,10,0.55);
+  background: rgba(255,159,10,0.10);
+}
