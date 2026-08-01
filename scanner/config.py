@@ -457,6 +457,30 @@ VIVEK_BOT_MAX_HOLD_DAYS  = 28
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+
+# ── Parity backtest + n≥30 decision pack (simulation-only; live bot UNTOUCHED)
+# These knobs exist so the parity replay and its variant grid read ONE place
+# instead of scattering magic numbers through vivek_backtest / vivek_parity.
+# Changing them does NOT change the live bot — vivek_bot.py / vivek_run.py never
+# import the VIVEK_PARITY_* names. The live time-stop remains VIVEK_BOT_MAX_HOLD_DAYS.
+VIVEK_PARITY_OUT_FILE = "public/data/vivek_backtest_parity.json"
+VIVEK_PARITY_DEFAULT_PERIOD = "5y"
+# MFE checkpoints stamped on every parity trade (calendar days from entry).
+# Used by the V2 early-momentum variants and the decision pack.
+VIVEK_PARITY_MFE_DAYS = (5, 10, 14, 21)
+# V1 time-stop grid (calendar days, pre-TP1 only — same shape as live).
+# 0 / None in a variant means "off". Baseline uses VIVEK_BOT_MAX_HOLD_DAYS.
+VIVEK_PARITY_V1_HOLD_DAYS = (42, 56, 0)
+# V2 early-momentum cut grid: (hold_day, mfe_r_floor). Cut if held >= day,
+# still pre-TP1, and peak mfe_r is still below the floor.
+VIVEK_PARITY_V2_CUTS = (
+    (10, 0.25), (10, 0.50),
+    (14, 0.25), (14, 0.50),
+)
+# A variant only PASSES if its R/slot-month improvement holds in BOTH ASX and
+# NASDAQ and in BOTH time halves of the sample (crypto is reported but not a
+# pass gate — thin N).
+VIVEK_PARITY_PASS_MARKETS = ("asx", "nasdaq")
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes

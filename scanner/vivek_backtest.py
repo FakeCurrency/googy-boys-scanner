@@ -894,9 +894,39 @@ def main() -> None:
     ap.add_argument("--status", choices=["partial", "complete"],
                     help="override the report status (default: auto)")
     ap.add_argument("--out", default=str(OUT_FILE))
+    # Parity mode (n≥30 decision pack): exact live lifecycle + variant grid.
+    # Simulation only — does not touch vivek_bot.py / the live book rules.
+    ap.add_argument("--parity", action="store_true",
+                    help="replay the LIVE bot lifecycle (A+/long-only/time-stop/ADV/"
+                         "global slots) and run the V1–V4 variant grid; writes "
+                         "public/data/vivek_backtest_parity.json by default")
+    ap.add_argument("--no-variants", action="store_true",
+                    help="with --parity: skip the variant grid (baseline only)")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
+
+    if args.parity:
+        from . import vivek_parity as parity
+        # Default out/period for parity differ from the Insights walk-forward.
+        if args.out == str(OUT_FILE):
+            out = ROOT / getattr(config, "VIVEK_PARITY_OUT_FILE",
+                                 "public/data/vivek_backtest_parity.json")
+        else:
+            out = pathlib.Path(args.out)
+        period = args.period
+        if period == "10y":
+            # argparse default is 10y; parity default is the config knob (5y).
+            period = getattr(config, "VIVEK_PARITY_DEFAULT_PERIOD", "5y")
+        set_fx_path(out)
+        report = parity.run_parity(markets, args.limit or None, period,
+                                   run_variants=not args.no_variants)
+        parity.print_parity(report)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        output.write_json(out, report)
+        print(f"\nwrote {out}  (parity complete, markets: {sorted(report.get('coverage', {}))})")
+        return
+
     out = pathlib.Path(args.out)
     # TOP100 #61 — before ANY report is built, so the memo cannot be primed from
     # the default location by a stray earlier call. See `set_fx_path`.

@@ -64,7 +64,9 @@
         "2026-07-30": 273.36999512,
         "2026-07-31": 263.86999512
       },
-      "stale_pinged": "2026-07-30"
+      "stale_pinged": "2026-07-30",
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "RNW:long:1W:2026-07-09",
@@ -127,7 +129,9 @@
         "2026-07-30": 5.98999977,
         "2026-07-31": 6.17000008
       },
-      "stale_pinged": "2026-07-28"
+      "stale_pinged": "2026-07-28",
+      "level_tf": "weekly",
+      "level_tf_source": "backfill"
     },
     {
       "id": "AXON:long:1D:2026-07-09",
@@ -190,7 +194,9 @@
         "2026-07-30": 531.20001221,
         "2026-07-31": 525.29998779
       },
-      "stale_pinged": "2026-07-28"
+      "stale_pinged": "2026-07-28",
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "CLAR:long:1D:2026-07-09",
@@ -253,7 +259,9 @@
         "2026-07-30": 3.25999999,
         "2026-07-31": 3.21000004
       },
-      "stale_pinged": "2026-07-28"
+      "stale_pinged": "2026-07-28",
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "STRF:long:1W:2026-07-23",
@@ -317,7 +325,9 @@
         "2026-07-29": 96.36000061,
         "2026-07-30": 96.94000244,
         "2026-07-31": 98.0
-      }
+      },
+      "level_tf": "weekly",
+      "level_tf_source": "backfill"
     },
     {
       "id": "YORW:long:1D:2026-07-23",
@@ -381,7 +391,9 @@
         "2026-07-29": 31.90999985,
         "2026-07-30": 31.54999924,
         "2026-07-31": 30.90999985
-      }
+      },
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "BKNG:long:1D:2026-07-28",
@@ -442,7 +454,9 @@
         "2026-07-31": 193.24000549
       },
       "unreal_r": -0.099,
-      "unreal_usd": -61.35
+      "unreal_usd": -61.35,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "CERT:long:1D:2026-07-28",
@@ -512,7 +526,9 @@
         "2026-07-31": 7.78000021
       },
       "unreal_r": -0.035,
-      "unreal_usd": -38.69
+      "unreal_usd": -38.69,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "CRAI:long:1D:2026-07-28",
@@ -582,7 +598,9 @@
         "2026-07-31": 183.94999695
       },
       "unreal_r": -0.041,
-      "unreal_usd": -34.87
+      "unreal_usd": -34.87,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "INMD:long:3D:2026-07-28",
@@ -652,7 +670,9 @@
         "2026-07-31": 15.09500027
       },
       "unreal_r": -0.142,
-      "unreal_usd": -122.65
+      "unreal_usd": -122.65,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "LINE:long:3D:2026-07-28",
@@ -713,7 +733,9 @@
         "2026-07-31": 42.84999847
       },
       "unreal_r": -0.087,
-      "unreal_usd": -51.19
+      "unreal_usd": -51.19,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "BANF:long:3D:2026-07-28",
@@ -774,7 +796,9 @@
         "2026-07-31": 112.16000366
       },
       "unreal_r": -0.429,
-      "unreal_usd": -178.36
+      "unreal_usd": -178.36,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "XP:long:3D:2026-07-28",
@@ -844,7 +868,9 @@
         "2026-07-31": 17.20000076
       },
       "unreal_r": 0.071,
-      "unreal_usd": 52.39
+      "unreal_usd": 52.39,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "KDP:long:1W:2026-07-29",
@@ -913,7 +939,9 @@
         "2026-07-31": 31.56999969
       },
       "unreal_r": -0.039,
-      "unreal_usd": -29.9
+      "unreal_usd": -29.9,
+      "level_tf": "weekly",
+      "level_tf_source": "backfill"
     }
   ],
   "closed": [
@@ -977,7 +1005,9 @@
       "exit_price": 320.94000244,
       "exit_date": "2026-07-23",
       "exit_reason": "stop",
-      "hold_days": 22
+      "hold_days": 22,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "AMSF:long:1D:2026-07-09",
@@ -1039,7 +1069,9 @@
       "exit_price": 30.12999916,
       "exit_date": "2026-07-23",
       "exit_reason": "stop",
-      "hold_days": 14
+      "hold_days": 14,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "KHC:long:1D:2026-06-29",
@@ -1109,7 +1141,9 @@
       "exit_price": 27.08499908,
       "exit_date": "2026-07-28",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "MDB:long:1W:2026-06-30",
@@ -1181,7 +1215,9 @@
       "exit_price": 320.47000122,
       "exit_date": "2026-07-29",
       "exit_reason": "time",
-      "hold_days": 29
+      "hold_days": 29,
+      "level_tf": "h4",
+      "level_tf_source": "backfill"
     },
     {
       "id": "ADUS:long:1W:2026-07-09",
@@ -1255,7 +1291,9 @@
       "exit_price": 115.48,
       "exit_date": "2026-08-01",
       "exit_reason": "manual",
-      "hold_days": 23
+      "hold_days": 23,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     },
     {
       "id": "GLBE:long:1W:2026-07-09",
@@ -1329,7 +1367,9 @@
       "exit_price": 39.31,
       "exit_date": "2026-08-01",
       "exit_reason": "manual",
-      "hold_days": 23
+      "hold_days": 23,
+      "level_tf": "3d",
+      "level_tf_source": "backfill"
     }
   ],
   "guard": {
@@ -1362,5 +1402,5 @@
     "unreal_usd": -542.45,
     "updated_day": "2026-08-01"
   },
-  "updated_at": "2026-08-01T06:39:01+00:00"
+  "updated_at": "2026-08-01T09:25:56+00:00"
 }

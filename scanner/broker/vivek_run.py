@@ -599,10 +599,17 @@ def _mark_sanity(pos: dict, price: float, market: str,
     return None
 
 
-def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) -> dict | None:
+def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
+                        level_tf: str | None = None) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
     intraday price with the journal's don't-chase guard. Carries entry_type +
-    label + timeframe + grade + sector end-to-end. Returns None to not-chase."""
+    label + timeframe + grade + sector end-to-end. Returns None to not-chase.
+
+    ``level_tf`` is AUDIT-ONLY (which 200-SMA produced the signal: weekly/3d/h4).
+    It never gates entry, sizing, or management — stamped so the n≥30 ruling can
+    split expectancy by level without re-deriving history. vivek_bot.py is not
+    touched; the runner copies it off the scan row at fill time.
+    """
     plan = out["plan"]
     tf = plan["timeframe"]
     # Reuse the journal's snapshot so the fill model (don't-chase, risk, MAE/MFE,
@@ -657,6 +664,12 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str) ->
     snap["review"] = list(plan.get("review") or [])
     snap["source"] = "vivek_bot"
     snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
+    # AUDIT-ONLY level_tf (n≥30 pack). Prefer the scan-row value the runner
+    # passed in; fall back to anything already on the ticket. Never default to
+    # a guessed timeframe — missing stays missing so backfill can fill it.
+    ltf = level_tf if level_tf is not None else plan.get("level_tf")
+    if ltf:
+        snap["level_tf"] = ltf
     # Signal-vs-fill: record the plan's entry level next to the actual fill so
     # the scan-cadence slippage is MEASURED, not assumed. Positive bps = the
     # fill was worse than the signal (paid up on a long / sold down on a short).
@@ -1353,6 +1366,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     earnings_gate = (market in (getattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ()) or ()))
     earnings_buffer = int(getattr(config, "VIVEK_BOT_EARNINGS_BUFFER_DAYS", 0) or 0)
     opened_events: list[dict] = []          # for the end-of-run alert digest
+    # symbol → level_tf from this scan's rows (audit stamp on new tickets).
+    level_tf_by_sym = {
+        str(r.get("symbol") or "").upper(): r.get("level_tf")
+        for r in (results or []) if r.get("symbol")
+    }
     if is_open and not guard["breached"]:
         for out in decision["plans"]:
             sym = out["plan"]["symbol"]
@@ -1366,7 +1384,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 log.info("SKIP  %-8s [earnings] reports within %dd — gap risk",
                          sym, earnings_buffer)
                 continue
-            pos = _ticket_to_position(out, price, market, day)
+            pos = _ticket_to_position(
+                out, price, market, day,
+                level_tf=level_tf_by_sym.get(str(sym or "").upper()),
+            )
             if pos is None:                              # don't chase
                 chased += 1
                 continue
