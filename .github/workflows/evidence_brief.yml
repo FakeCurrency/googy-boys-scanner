@@ -1,0 +1,95 @@
+# Daily Evidence Brief (owner-ruled, 2026-08-01: "Turn on the Daily Evidence
+# Brief ... It is short, factual, and keeps the evidence surfaces in front of
+# you without requiring you to dig.")
+#
+# Runs scripts/evidence_brief.py — a READ-ONLY reporter over committed
+# artifacts (tests/test_evidence_brief.py pins that it writes nothing and
+# imports nothing from scanner/ or broker/) — and delivers the printed brief
+# to the run's step summary and to Discord. Delivery lives HERE and not in the
+# script on purpose: the script's no-imports/no-writes properties are pinned,
+# so the workflow is the only place a channel can be attached without
+# weakening them.
+#
+# NOT in the `scan` concurrency group: that group exists to serialize BOOK
+# WRITERS, and this job writes nothing — it reads whatever main held at
+# checkout. No assert_staged (commits nothing — same family as the pinned
+# confluence/backfill absences) and no WATCHDOG_RUNS entry (the CLAUDE.md rule
+# binds workflows that COMMIT data; a missed brief is a quiet morning, and the
+# artifacts it reads are each already watched by their own producers).
+#
+# THE BRIEF'S "ISSUE" FLAG DOES NOT FAIL THE RUN. The script exits 1 when the
+# brief names an issue (stale pipeline etc.) — that is content, not a crash,
+# and it reaches the owner INSIDE the delivered brief with "ISSUE:" on the
+# first line. Turning it into a red run would double-report what the watchdog
+# already owns, in the one form (a daily failure email about a fact the run
+# cannot change) this repo has already learned gets muted — the stop_watcher
+# 503 lesson. Any OTHER exit code is a real crash and stays fatal.
+#
+# 21:00 UTC = 7:00am Melbourne under AEST, 8:00am under AEDT. A morning brief
+# does not need the DST superset treatment (test_workflow_dst.py binds
+# MARKET-HOURS crons, where an hour's drift is a missed open; here it is the
+# difference between coffee and breakfast).
+
+name: Evidence brief
+
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # stdlib-only by design — no pip install, nothing to cache.
+      - name: Build the brief
+        run: |
+          set +e
+          python scripts/evidence_brief.py > brief.txt 2> brief.err
+          rc=$?
+          set -e
+          cat brief.txt
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+            echo "::error::evidence_brief.py crashed (rc=$rc)"
+            cat brief.err
+            exit "$rc"
+          fi
+          {
+            echo '```'
+            cat brief.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Discord is where every other owner-facing ping already goes. A missing
+      # webhook degrades to the step summary rather than failing: the brief
+      # was still produced, and a red run about a missing secret is the
+      # unactionable-alarm shape again. Posted as one fenced message; the
+      # brief's 15-line budget keeps it far under Discord's 2000-char limit,
+      # and the head -c is a belt against that ever changing.
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL not set - brief delivered to step summary only"
+            exit 0
+          fi
+          python - <<'EOF'
+          import json, os, urllib.request
+          body = open("brief.txt", encoding="utf-8").read()[:1800]
+          req = urllib.request.Request(
+              os.environ["DISCORD_WEBHOOK_URL"],
+              data=json.dumps({"content": "```\n" + body + "\n```"}).encode(),
+              headers={"Content-Type": "application/json"})
+          urllib.request.urlopen(req, timeout=30)
+          EOF
