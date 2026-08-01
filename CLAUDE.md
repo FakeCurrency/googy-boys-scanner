@@ -108,9 +108,38 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
+| evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary + Discord (owner-ruled 2026-08-01). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
-paper_run/bracket_order/reconcile modules deleted.)
+paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
+2026-08-01.)
+
+### ALERT DELIVERY — the channel was dead behind TWO stacked failures (2026-08-01)
+
+Found live when the evidence brief's first Discord post failed a run out loud
+— the one thing the router's own senders never do (they try/log-warning), so
+**every Discord alert (stale probes, trade reviews, sector alarms, guard and
+kill-switch notices) had been failing silently**. The `test_alerts.yml`
+self-test corroborated: `sent via NONE — NOT delivered: telegram,discord,email`.
+
+1. **The stored `DISCORD_WEBHOOK_URL` begins with U+FEFF** (a BOM, invisible
+   in the GitHub secrets box). urllib rejects it as `unknown url type:
+   ﻿https`. Fixed at the boundary: `config.clean_secret()` trims
+   whitespace + BOM/zero-width chars from the ENDS only, and every pasted
+   credential routes through it (`alert_dispatch._cred` for Discord/Telegram/
+   SMTP; `confluence_alert` + `discord.py` webhook reads; the brief workflow
+   inlines the same trim). A `.strip()` alone never removed U+FEFF — it is
+   category Cf, not whitespace. Re-pasting the secret also works; the code fix
+   makes the next stray paste a non-event. `tests/test_alert_credentials.py`.
+2. **Discord's edge 403s Python's default User-Agent as a bot.** With the BOM
+   stripped the post reached Discord and got `HTTP Error 403: Forbidden`; a
+   named UA (`vivek5-alerts/1.0`, `alert_dispatch._UA`) fixed it — proven by
+   the brief's run #3 delivering. Applied at all three post sites
+   (alert_dispatch urllib ×2, discord.post_webhook requests, the workflow).
+
+Still true after the fix: **Telegram and SMTP are UNCONFIGURED** (empty
+secrets), so Discord is the only live channel. Run `test_alerts.yml` after any
+alert-secret change and read the job log — it is the only end-to-end proof.
 
 **The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108,
 #109).** scan.yml, crypto_bot.yml and close_position.yml share concurrency
@@ -424,6 +453,33 @@ can verify whether claude or I should take the position or not."* A plan whose
   Cloudflare KV (`gbs-sync.js`, `/api/journal?code=...`). The unified
   watchlist (stars from all lenses) lives INSIDE that store
   (`watchlists`, keys `<lens>:<market>:<TICKER>`, tombstoned un-stars).
+
+---
+
+## Two owner-ruled surfaces, 2026-08-01 (read-only, additive)
+
+- **STALLED — the position decision surface** (`public/js/stalled.js` +
+  `stalled.css`, `#stalled-strip` at the top of journal.html). Lists exactly
+  the rows the stale probe stamped (`stale_pinged`) — symbol/market, days
+  held, mark age, unrealized R, grade, and the keep / 28d-time-stop /
+  free-the-slot framing, with a summary line (count, combined R, $ at risk as
+  % of equity, slots occupied against the global cap). NO new stall logic —
+  the engine's stamp is the whole definition — and NO write path; closing
+  stays manual via close_position.yml. Day arithmetic uses the book's own
+  `summary.updated_day`. Hides when the cohort is empty (e2e fixtures carry
+  no stamps, so the screenshot gate is untouched). `test/stalled.test.js`.
+- **WHAT NEEDS MY EYES — confluence prominence on the deck** (`renderEyes()`
+  in app.js + `eyes.css`, `#eyes-strip` inside `#deck`, ABOVE the pills).
+  Owner: "make dual/triple lens agreement and any name that is both A+ and
+  multi-lens the loudest thing on the main deck." Ranked chips from the same
+  client-computed confluence set the ⨂ pill counts — triple beats dual, A+
+  first inside each tier, triples pulse, a triple turns the strip amber-hot,
+  "+N more" engages the Multi-lens filter. Partially reverses the Wave 3
+  banner retirement BY OWNER RULING (the pill and row chips stay; this is
+  additive). The A+ tag claims the DISPLAYED grade — the bot buys grade_raw.
+  `test/eyes.test.js`.
+
+Both are pure surface: nothing in `broker/` reads them, no trade changes.
 
 ---
 
