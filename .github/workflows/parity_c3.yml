@@ -1,0 +1,93 @@
+# Parity C3 — third and FINAL confirmation sample for the weekly+3d cohort.
+#
+# WHY THIS EXISTS (2026-08-01, Claude): the residual-edge assessment left exactly
+# one live lead, the weekly+3d standalone book. This workflow produces the C3
+# evidence in CI because cloud Claude sessions cannot reach Yahoo Finance; CI is
+# where every scan already runs. Pre-registered gates (fixed BEFORE this run):
+#   W-1: weekly+3d pooled R/slot-month > 0 on C3 (taken set, pessimistic fills)
+#   W-2: weekly+3d NASDAQ-alone R/slot-month > 0 on C3 (pessimistic)
+#   W-3: W-1 and W-2 both survive at 2x cost_r
+# Gates are computed by Claude from the committed artifact, not in this job —
+# this job only PRODUCES the evidence. Simulation only: no trade rules change,
+# vivek_bot.py and PhaseMap maths untouched, the book is not read or written.
+#
+# ONE-SHOT, not scheduled: like backfill_history.yml, once the artifact exists
+# there is nothing left to produce. Re-run by touching .github/parity-c3-kick
+# or via workflow_dispatch. NOT in the `scan` concurrency group: it writes only
+# its own two new files, which no other workflow touches.
+
+name: Parity C3 confirmation
+
+on:
+  push:
+    paths:
+      - ".github/parity-c3-kick"
+      - ".github/workflows/parity_c3.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: parity-c3
+  cancel-in-progress: false
+
+jobs:
+  c3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build C3 exclusion list (union of IS + OOS samples)
+        run: |
+          python - <<'PY'
+          import json, os
+          merged = {}
+          for path in ("public/data/vivek_parity_is_symbols.json",
+                       "public/data/vivek_parity_oos_symbols.json"):
+              for market, syms in json.load(open(path)).items():
+                  merged.setdefault(market, set()).update(syms)
+          out = {m: sorted(s) for m, s in merged.items()}
+          dest = os.path.join(os.environ["RUNNER_TEMP"], "exclude_c3.json")
+          with open(dest, "w") as fh:
+              json.dump(out, fh)
+          print("C3 exclusions per market:", {m: len(s) for m, s in out.items()})
+          PY
+
+      - name: Run C3 parity (240+240, 5y, baseline only)
+        run: |
+          python -m scanner.vivek_backtest --parity --market asx --market nasdaq \
+            --limit 240 --period 5y --no-variants \
+            --exclude-from "$RUNNER_TEMP/exclude_c3.json" \
+            --sample-out public/data/vivek_parity_c3_symbols.json \
+            --tag parity_c3 \
+            --out public/data/vivek_backtest_parity_c3.json
+
+      - name: Commit and push the C3 artifact
+        run: |
+          git config user.name "parity-c3"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/data/vivek_backtest_parity_c3.json
+          git add public/data/vivek_parity_c3_symbols.json
+          bash scripts/assert_staged.sh parity_c3 public/data/vivek_backtest_parity_c3.json
+          git commit -m "data: parity C3 confirmation run (weekly+3d final test)"
+          ok=0
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              ok=1
+              break
+            fi
+            git pull --rebase origin main
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::parity_c3: push failed after 5 attempts"
+            exit 1
+          fi
