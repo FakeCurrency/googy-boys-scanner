@@ -531,6 +531,73 @@
   }
 
   // ------------------------------------------------- deck pills (Wave 3)
+  // ── WHAT NEEDS MY EYES (owner-ruled 2026-08-01) ────────────────────────────
+  // Dual/triple lens agreement, and any name that is both A+ and multi-lens,
+  // rendered as the LOUDEST thing on the deck. Pure surface: it reads the
+  // same client-computed confluence set the ⨂ pill counts, links to charts,
+  // and changes nothing about what the bot takes.
+  //
+  // Ranking is (lens count desc, A+ first, ticker) — a triple outranks any
+  // dual, and inside a tier the name the bot could actually buy leads. The
+  // A+ read comes from the VIVEK detail the confluence loader already
+  // carries; a PhaseMap+Specs dual has no VIVEK grade and simply ranks by
+  // its lens count.
+  const eyesRank = (rows) => (rows || []).slice().sort((a, b) => {
+    const ap = (x) => (x.detail && x.detail.vivek && x.detail.vivek.grade === "A+") ? 1 : 0;
+    return (b.count - a.count) || (ap(b) - ap(a)) || a.ticker.localeCompare(b.ticker);
+  });
+
+  const eyesHTML = (rows, market, cap) => {
+    const ranked = eyesRank(rows);
+    if (!ranked.length) return "";
+    cap = cap || 8;
+    const nTriple = ranked.filter((x) => x.count >= 3).length;
+    const isAp = (x) => !!(x.detail && x.detail.vivek && x.detail.vivek.grade === "A+");
+    const nAp = ranked.filter(isAp).length;
+    const chips = ranked.slice(0, cap).map((x) => {
+      const ap = isAp(x);
+      const arrow = x.side === "short" ? "▼" : "▲";
+      const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
+      const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "");
+      // "displays as A+": the confluence set carries the DISPLAYED grade
+      // (smoothed), and the bot buys grade_raw — an honest chip claims the
+      // page's own grade, not the bot's decision.
+      const title = `${x.lenses.join(" + ")} aligned ${x.side.toUpperCase()}` +
+        (ap ? " — and VIVEK grades it A+" : "") +
+        " — open the combined chart";
+      return `<a class="${cls}" title="${esc(title)}" ` +
+        `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
+        `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
+        `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
+        `<span class="ey-n">×${x.count}</span></a>`;
+    }).join("");
+    const more = ranked.length > cap
+      ? `<button class="ey-more" type="button" data-eyes-more title="Filter the list below to every multi-lens name">+${ranked.length - cap} more</button>`
+      : "";
+    return `<span class="ey-label" title="Names where 2+ lenses agree on direction right now — the highest-signal thing this page knows">` +
+      `👁 WHAT NEEDS MY EYES</span>` +
+      `<span class="ey-sum">${ranked.length} aligned${nTriple ? ` · <b>${nTriple} triple</b>` : ""}${nAp ? ` · <b>${nAp} A+</b>` : ""}</span>` +
+      chips + more;
+  };
+
+  function renderEyes() {
+    const host = $("#eyes-strip");
+    if (!host) return;
+    const rows = state.confl ? state.confl.all() : [];
+    const html = rows.length ? eyesHTML(rows, state.market) : "";
+    if (!html) { host.hidden = true; host.innerHTML = ""; return; }
+    host.hidden = false;
+    host.classList.toggle("is-hot", rows.some((x) => x.count >= 3));
+    host.innerHTML = html;
+    const more = host.querySelector("[data-eyes-more]");
+    if (more) more.addEventListener("click", () => {
+      state.vkConfl = true;
+      savePrefs();
+      renderDeckPills(state.data);
+      renderRows();
+    });
+  }
+
   // Replaces the 4 stat cards + at-level strip + confluence banner. A+/A are
   // shortcuts to the grade tabs; Multi-lens and At-level are FILTER TOGGLES
   // (the old banners' content, now one click away instead of two strips).
@@ -2194,6 +2261,7 @@
     // re-render rows with chips + refresh the deck's Multi-lens pill count.
     if (window.PM && PM.loadConfluence) {
       state.confl = null;
+      renderEyes();   // hide the stale strip while the new market's lenses load
       // Pass the payload we just rendered so the vivek file isn't fetched
       // twice (Wave 2). A head-cache paint is truncated — let it fetch full.
       PM.loadConfluence(state.market, d._head ? null : d).then((c) => {
@@ -2201,6 +2269,7 @@
         state.confl = c;
         renderRows();
         renderDeckPills(d);
+        renderEyes();
         notifyTriples(c.all());
         notifyWatchArms(d.results || []);   // UX #6: ★ names newly arming/triggering
         checkPriceAlerts(d.results || []);  // UX-20 #4: chart-set price alert lines
@@ -2211,6 +2280,10 @@
   // Confluence banner strip retired (Wave 3, 2026-07-22): the deck's
   // ⨂ Multi-lens pill filters the rows to aligned names instead — the rows
   // themselves carry the confluence chip, so nothing is lost, one band is.
+  // PARTIALLY REVERSED 2026-08-01 by owner ruling: renderEyes() puts the
+  // aligned names back on the deck face, louder than the old banner ever was
+  // ("the cockpit must make the important decisions impossible to miss").
+  // The pill and chips stay; the strip is additive, not a replacement.
 
   function skeleton() {
     // 8 shimmer placeholders sized like real row cards (see .skeleton CSS)

@@ -1,0 +1,63 @@
+/* WHAT NEEDS MY EYES (owner-ruled 2026-08-01) — see renderEyes() in app.js.
+   The loudest surface on the deck, by design: dual/triple lens agreement and
+   the A+ names inside it. Everything else on the page whispers; this one is
+   allowed to shout, because it is the one list the owner asked never to miss. */
+
+.eyes {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 10px 0 2px; padding: 10px 12px;
+  background: var(--blue-soft);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius-sm);
+}
+/* A triple in the set turns the whole strip hot. */
+.eyes.is-hot {
+  background: var(--orange-soft);
+  border-color: var(--orange);
+}
+
+.ey-label {
+  font: 800 10.5px/1 var(--sans); letter-spacing: 0.09em;
+  color: var(--text); white-space: nowrap;
+}
+.eyes.is-hot .ey-label { color: var(--orange); }
+.ey-sum { font: 600 11.5px/1 var(--sans); color: var(--muted); white-space: nowrap; }
+.ey-sum b { color: var(--text); font-weight: 800; }
+
+.ey-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 700 12.5px/1 var(--sans); color: var(--text); text-decoration: none;
+  background: var(--panel); border: 1px solid var(--border-2);
+  border-radius: 999px; padding: 6px 11px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.ey-chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+.ey-chip b { font-weight: 800; }
+.ey-n { font: 700 10px/1 var(--mono, var(--sans)); color: var(--muted); }
+
+/* A+ inside the alignment — the bot-tradeable subset, green-tagged. */
+.ey-chip.ey-ap { border-color: var(--green); }
+.ey-tag {
+  font: 800 9.5px/1 var(--sans); font-style: normal; letter-spacing: 0.02em;
+  color: #04110a; background: var(--grade-aplus);
+  border-radius: 5px; padding: 2px 4px;
+}
+
+/* Triples pulse. One or two of these a week is the expected rate — the pulse
+   earns its volume by being rare, and prefers-reduced-motion stills it. */
+.ey-chip.ey-3 { border-color: var(--orange); box-shadow: 0 0 0 0 rgba(255, 159, 10, 0.5); animation: ey-pulse 2s infinite; }
+@keyframes ey-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 159, 10, 0.45); }
+  70% { box-shadow: 0 0 0 9px rgba(255, 159, 10, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 159, 10, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ey-chip.ey-3 { animation: none; }
+}
+
+.ey-more {
+  font: 700 11px/1 var(--sans); color: var(--blue);
+  background: none; border: 1px dashed var(--border-2);
+  border-radius: 999px; padding: 6px 10px; cursor: pointer;
+}
+.ey-more:hover { border-color: var(--blue); }
