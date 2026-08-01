@@ -50,10 +50,15 @@ jobs:
         run: |
           python - <<'PY'
           import json, os
+          # The symbols files are structured artifacts: the market map lives
+          # under "by_market" (same contract vivek_parity.load_exclude_map
+          # uses). The first version of this step iterated the TOP-LEVEL keys
+          # as if they were markets and produced garbage - fixed 2026-08-01.
           merged = {}
           for path in ("public/data/vivek_parity_is_symbols.json",
                        "public/data/vivek_parity_oos_symbols.json"):
-              for market, syms in json.load(open(path)).items():
+              raw = json.load(open(path))
+              for market, syms in raw.get("by_market", raw).items():
                   merged.setdefault(market, set()).update(syms)
           out = {m: sorted(s) for m, s in merged.items()}
           dest = os.path.join(os.environ["RUNNER_TEMP"], "exclude_c3.json")
