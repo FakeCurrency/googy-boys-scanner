@@ -599,6 +599,25 @@ def _mark_sanity(pos: dict, price: float, market: str,
     return None
 
 
+def _apply_level_gate(results: list[dict]) -> tuple[list[dict], int]:
+    """Return (rows decide() may consider, dropped count) under the W3 gate.
+
+    VIVEK_BOT_LEVEL_TF_ALLOW empty/unset -> gate OFF: the input list is
+    returned unchanged (same object, zero dropped) so prior behaviour is
+    byte-identical. Gate ON -> only rows whose level_tf normalises into the
+    allowlist survive; missing/blank level_tf is dropped (FAIL-CLOSED - see
+    the call site and config comment for the evidence trail). Pure function
+    over the rows list: it never reads or writes the book.
+    """
+    allow = tuple(str(a).strip().lower()
+                  for a in (getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()))
+    if not allow:
+        return results, 0
+    kept = [r for r in (results or [])
+            if str(r.get("level_tf") or "").strip().lower() in allow]
+    return kept, len(results or []) - len(kept)
+
+
 def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
                         level_tf: str | None = None) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
@@ -649,6 +668,14 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # infer it from the notional, which stops working the moment either number
     # is retuned. Audit field: nothing reads it to make a decision.
     snap["sizing_mode"] = plan.get("sizing_mode", "")
+    # CYCLE MARKER (2026-08-02, w3 gate enablement). Audit-only tag so pre-gate
+    # and in-cycle cohorts never blur in later reads - the sizing_mode
+    # precedent one line up: nothing reads it to make a decision, and a row
+    # written while no cycle is active simply has no key (absent != empty,
+    # same convention as the review flags below).
+    _cycle = str(getattr(config, "VIVEK_BOT_CYCLE_TAG", "") or "")
+    if _cycle:
+        snap["cycle"] = _cycle
     # REVIEW FLAGS ride down onto the book row (2026-07-28, owner: "Flag this in
     # the future so i can verify whether claude or I should take the position or
     # not"). The flag is computed on the TICKET, which lives for the length of
@@ -1357,6 +1384,22 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         if max_notional:
             gate["max_portfolio_notional"] = max_notional
             gate["notional_elsewhere"] = None if seen is None else seen["notional"]
+    # W3-ONLY LEVEL GATE (owner-signed 2026-08-02, cycle "w3-1"). Filters the
+    # CANDIDATE rows decide() may consider down to the levels in
+    # VIVEK_BOT_LEVEL_TF_ALLOW - the only cohort that passed all three
+    # pre-registered confirmation samples. Deliberately OUTSIDE the ringfenced
+    # vivek_bot.py: decide() and every skip/cap/guard inside it are untouched;
+    # this narrows what it is shown, exactly like VIVEK_BOT_EXCLUDE_FUNDS
+    # narrows by instrument type. FAIL-CLOSED: a row with no readable level_tf
+    # is dropped and counted - an unlabelled level is precisely the row the
+    # evidence cannot vouch for. Held positions, exits, time-stops and guards
+    # never pass through here (they run in steps 1-2 above off the book).
+    results, level_gate_skipped = _apply_level_gate(results)
+    if level_gate_skipped:
+        log.info("vivek_run [%s]: level gate (%s) dropped %d candidate row(s) "
+                 "before decide()", market,
+                 "/".join(getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()),
+                 level_gate_skipped)
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
                                 cooldown_syms=_cooldown_symbols(book, market, day),
                                 **gate)
