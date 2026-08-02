@@ -181,8 +181,10 @@ def _aest(y, m, d, hh, mm):
 
 
 def _row():
+    # level_tf: live scan rows always carry it; the w3 level gate is
+    # FAIL-CLOSED, so a fixture row without it never reaches decide().
     return {"symbol": "BHP", "name": "BHP", "sector": "", "grade": "A+",
-            "dir": "LONG", "entry_types": ["reclaim"],
+            "dir": "LONG", "entry_types": ["reclaim"], "level_tf": "weekly",
             "plans": {"1D": {"armed": True, "entry_trigger": "reclaim",
                              "trigger_bar": "2024-01-01", "entry": 100.0,
                              "stop": 96.0, "tp1": 106.0, "tp2": 112.0,

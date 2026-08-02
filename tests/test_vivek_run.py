@@ -37,7 +37,11 @@ def _row(symbol="BHP", direction="long", **kw):
     plans = kw.pop("plans", None) or ({"1D": _plan()} if direction == "long" else {"1D": _short_plan()})
     r = {"symbol": symbol, "name": symbol, "sector": "", "grade": "A+",
          "dir": "SHORT" if direction == "short" else "LONG",
-         "entry_types": ["reclaim"], "plans": plans}
+         # level_tf mirrors the live scan rows (every published row carries the
+         # headline plan's level). Without it the 2026-08-02 W3 level gate
+         # (fail-closed by design) would drop every fixture row before
+         # decide() and these tests would stop testing what they claim to.
+         "entry_types": ["reclaim"], "level_tf": "weekly", "plans": plans}
     r.update(kw)
     return r
 
