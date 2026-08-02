@@ -113,3 +113,11 @@ def test_cycle_tag_is_stamped_only_while_a_cycle_is_active():
     assert src.index('snap["sizing_mode"]') < src.index('snap["cycle"]')
     assert "if _cycle:" in src, (
         "no cycle -> NO key at all (absent != empty, the review-flags rule)")
+
+
+def test_config_ships_the_gate_and_the_cycle_tag():
+    assert tuple(config.VIVEK_BOT_LEVEL_TF_ALLOW) == ("weekly", "3d")
+    assert config.VIVEK_BOT_CYCLE_TAG == "w3-1"
+    # The gate must never be widenable to an unknown level by accident: the
+    # allowlist may only ever contain levels the engine actually publishes.
+    assert set(config.VIVEK_BOT_LEVEL_TF_ALLOW) <= {"weekly", "3d", "h4"}
