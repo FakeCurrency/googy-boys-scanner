@@ -1,6 +1,6 @@
 # PhaseMap backtest — ASX
 
-Generated 2026-07-26 · ruleset v1.3.1 · universe 93 tickers · history period 5y · zero-lookahead replay through the production SetupEngine.
+Generated 2026-08-02 · ruleset v1.3.1 · universe 2212 tickers · history period 5y · zero-lookahead replay through the production SetupEngine.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** this run used the yfinance prototype feed, which has NO delisted-stock history. Every statistic below is computed on survivors only and is therefore optimistic. Do not publish these numbers; re-run on a provider with delisted data (Norgate/EODHD) first.
 
@@ -8,27 +8,27 @@ A **signal** is a displacement confirmation (state DISPLACED). Forward returns a
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | T1 hit | bars→T1 | MAE |
 |---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 871 | +1.0% | +1.0% | +1.4% | 39.4% | 9.5 | -5.4% |
-| tier A+ | 99 | +0.8% | +1.4% | +1.7% | 37.4% | 11.5 | -4.8% |
-| tier A | 484 | +1.2% | +1.1% | +1.6% | 41.5% | 9.3 | -5.5% |
-| long | 374 | +1.3% | +2.0% | +2.6% | 44.7% | 9.0 | -5.0% |
-| short | 497 | +0.8% | +0.2% | +0.5% | 35.4% | 10.0 | -5.7% |
-| liquid | 870 | +1.0% | +1.0% | +1.4% | 39.3% | 9.5 | -5.4% |
-| illiquid | 1 | +3.8% | +10.0% | +3.5% | 100.0% | 7.0 | -4.2% |
-| price >= $1 | 860 | +1.1% | +1.1% | +1.5% | 39.4% | 9.5 | -5.3% |
-| cents (<$1) | 11 | -5.4% | -6.4% | -3.1% | 36.4% | 11.5 | -17.0% |
-| in-sample | 666 | +1.0% | +1.1% | +1.6% | 39.5% | 9.7 | -5.1% |
-| out-of-sample | 205 | +1.0% | +0.5% | +0.7% | 39.0% | 8.9 | -6.4% |
+| ALL SIGNALS | 15558 | +0.7% | +0.7% | +0.7% | 31.0% | 10.0 | -11.3% |
+| tier A+ | 1936 | +0.2% | +0.1% | +0.6% | 29.6% | 10.9 | -10.5% |
+| tier A | 8774 | +0.7% | +0.8% | +0.7% | 31.3% | 10.1 | -11.7% |
+| long | 7042 | +0.9% | +1.0% | +1.1% | 30.3% | 9.1 | -10.9% |
+| short | 8516 | +0.5% | +0.5% | +0.5% | 31.6% | 10.6 | -11.6% |
+| liquid | 5015 | +1.3% | +1.3% | +1.7% | 39.8% | 9.2 | -7.1% |
+| illiquid | 10543 | +0.4% | +0.5% | +0.3% | 26.9% | 10.5 | -13.3% |
+| price >= $1 | 6689 | +0.7% | +0.6% | +0.7% | 37.4% | 9.0 | -5.2% |
+| cents (<$1) | 8869 | +0.7% | +0.8% | +0.8% | 26.2% | 11.0 | -15.9% |
+| in-sample | 11868 | +0.7% | +0.7% | +0.9% | 31.1% | 10.2 | -11.0% |
+| out-of-sample | 3690 | +0.7% | +0.7% | +0.3% | 30.7% | 9.4 | -12.4% |
 
 ## Baselines (same tickers, same window)
-- Random entry (871 samples, seeded): fwd 5: +0.4% · fwd 10: +0.5% · fwd 20: +1.0%
-- Buy & hold (93 tickers): +51.4% mean total return over the replay window
+- Random entry (14975 samples, seeded): fwd 5: +0.3% · fwd 10: +4.0% · fwd 20: +1.1%
+- Buy & hold (1743 tickers): +26.0% mean total return over the replay window
 
 ## The 50% rule, measured
-- Signals that stalled (momentum zone touched): 780
-- Saved capital (hard floor broke first after the stall): 260
-- Cut a winner (T1 was still consumed first): 317
-- Neither within the tracking window: 203
+- Signals that stalled (momentum zone touched): 13745
+- Saved capital (hard floor broke first after the stall): 4221
+- Cut a winner (T1 was still consumed first): 4479
+- Neither within the tracking window: 5045
 
 In-sample = signals before 2025-07-01; out-of-sample = after. If a cohort doesn't beat the baselines out-of-sample, the spec says cut it and note it here.
 
