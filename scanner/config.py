@@ -354,6 +354,23 @@ VIVEK_BOT_EXCLUDE_FUNDS = True
 # flat-to-negative while "reclaim" carries the edge, so the bot skips these
 # entry types. Selection-only; the scanner still shows them. Empty list = take all.
 VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
+# W3-ONLY LEVEL GATE (owner-signed 2026-08-02, pre-registered cycle "w3-1").
+# The bot considers only candidate rows whose headline plan level_tf is in this
+# tuple. Evidence: three disjoint pre-registered samples (IS / OOS / C3) each
+# passed gates W-1/W-2/W-3 - weekly+3d is the program's only thrice-replicated
+# positive cohort (+0.056R/trade, +0.031 R/slot-month pooled over 918 trades,
+# survives 2x cost; survivorship caveat applies - see RESEARCH ledger and
+# reviews/2026-08-02-c3-verdict in the project). Empty tuple = gate OFF (all
+# levels, prior behaviour byte-identical). FAIL-CLOSED in vivek_run: a row with
+# a missing/blank level_tf is dropped and counted, never waved through.
+# Candidate ENTRIES only - held positions, exits, time-stops and loss guards
+# are untouched by this gate.
+VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
+# Audit-only cycle tag stamped on new book rows while a pre-registered live
+# cycle runs (the sizing_mode precedent: nothing reads it to decide anything;
+# it exists so pre-gate and in-cycle cohorts never blur in later reads).
+# Empty string = no active cycle, no stamp.
+VIVEK_BOT_CYCLE_TAG = "w3-1"
 VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
