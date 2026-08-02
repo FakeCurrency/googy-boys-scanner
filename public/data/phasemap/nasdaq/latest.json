@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-08-01",
+  "run_date": "2026-08-02",
   "ruleset_version": "1.3.1",
   "universe_size": 1425,
   "narrations_file": "narrations.json",
@@ -266,14 +266,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 15.6823,
+          "low": 15.6345,
           "high": 16.909,
           "status": "CONSUMED",
           "confluence": 5,
           "sources": [
             "equal_lows",
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -3295,7 +3295,7 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 46.2872,
+          "low": 46.2873,
           "high": 53.1695,
           "status": "RESPECTED",
           "confluence": 3,
@@ -7594,8 +7594,8 @@
           "sources": [
             "equal_highs",
             "fib_ext_10",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-31"
         },
@@ -8448,7 +8448,7 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 142.2535,
+          "low": 142.2536,
           "high": 165.6129,
           "status": "UNTESTED",
           "confluence": 3,
@@ -8463,7 +8463,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 83.0711,
-          "high": 92.4859,
+          "high": 92.486,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -9631,8 +9631,8 @@
           "sources": [
             "box_low",
             "equal_lows",
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "quarterly_open",
             "fib_ext_1618",
             "fib_ext_10"
@@ -33419,8 +33419,8 @@
           "confluence": 3,
           "sources": [
             "equal_lows",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-20"
         },
@@ -38495,7 +38495,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 303.6288,
-          "high": 322.9569,
+          "high": 322.957,
           "status": "RESPECTED",
           "confluence": 3,
           "sources": [
@@ -39628,8 +39628,8 @@
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "prior_low"
           ],
           "created_date": "2026-07-29"
@@ -40876,8 +40876,8 @@
           "sources": [
             "fib_ext_1618",
             "equal_lows",
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "box_low",
             "fib_ext_10"
           ],
@@ -44017,7 +44017,7 @@
           "id": "t1",
           "type": "TARGET",
           "low": 184.939,
-          "high": 205.233,
+          "high": 205.2331,
           "status": "RESPECTED",
           "confluence": 7,
           "sources": [
@@ -45496,8 +45496,8 @@
           "status": "UNTESTED",
           "confluence": 2,
           "sources": [
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-07-27"
         }
