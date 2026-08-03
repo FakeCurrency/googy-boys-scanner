@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-08-02",
+  "run_date": "2026-08-03",
   "ruleset_version": "1.3.1",
   "universe_size": 1425,
   "narrations_file": "narrations.json",
@@ -266,14 +266,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 15.6345,
+          "low": 15.6823,
           "high": 16.909,
           "status": "CONSUMED",
           "confluence": 5,
           "sources": [
             "equal_lows",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -719,8 +719,8 @@
           "confluence": 3,
           "sources": [
             "prior_high",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-06-26"
         },
@@ -1412,7 +1412,7 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 168.9512,
+          "low": 168.9511,
           "high": 199.941,
           "status": "RESPECTED",
           "confluence": 6,
@@ -7594,8 +7594,8 @@
           "sources": [
             "equal_highs",
             "fib_ext_10",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-07-31"
         },
@@ -8463,7 +8463,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 83.0711,
-          "high": 92.486,
+          "high": 92.4859,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -10442,7 +10442,7 @@
       "metrics": {
         "retrace_pct": 0.0523,
         "dist_to_yearly_open_pct": 0.5441,
-        "avg_turnover_20d": 33013510,
+        "avg_turnover_20d": 33013793,
         "close": 26.65,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0181,
@@ -40876,8 +40876,8 @@
           "sources": [
             "fib_ext_1618",
             "equal_lows",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "box_low",
             "fib_ext_10"
           ],
@@ -44130,8 +44130,8 @@
             "fib_ext_10",
             "equal_highs",
             "fib_ext_1618",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-06-26"
         },
