@@ -706,3 +706,80 @@ def test_the_skip_marker_is_never_committed():
               if l.startswith("SHARED=") or l.startswith("PATHS=")]
     assert staged, "staging scope moved; re-point this test"
     assert not [l for l in staged if config.SCAN_SKIP_MARKER in l]
+
+
+# ── stop_watcher: curl's exit code must never BE the step's exit code ─────────
+# Found live, 2026-08-04, run #372: `Process completed with exit code 28`.
+# 28 is curl's "operation timed out", not any exit this script writes. GitHub's
+# default shell is `bash -e {0}`, so the bare `code=$(curl ...)` assignment
+# aborted the step the moment curl failed - upstream of the normalisation, the
+# retry loop, the 503 branch and the exit-1 branch alike. The log carries the
+# proof: not one "attempt N" line was printed before the step died. The three
+# tries that exist to absorb a transient were therefore unreachable by the most
+# common transient there is, and one 30-second stall was reported as "stop
+# watcher DOWN". Run #277 (Jul 28) is the same signature, so it is twice now.
+
+def _tick_run_block():
+    return _load("stop_watcher.yml")["jobs"]["tick"]["steps"][0]["run"]
+
+
+def test_a_curl_failure_cannot_kill_the_step_before_it_retries(tmp_path):
+    """BEHAVIOURAL, and it has to be: the source-level pin below cannot tell a
+    guarded assignment from a decorative comment about one. Runs the SHIPPED run
+    block under `bash -e` (what GitHub actually uses) against a curl that fails
+    exactly as #372's did, and asserts the job reaches its own verdict instead
+    of dying with curl's."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # Fails like a timeout does: writes the -w value ("000"), exits 28.
+    (bin_dir / "curl").write_text('#!/bin/sh\nprintf 000\nexit 28\n')
+    (bin_dir / "sleep").write_text('#!/bin/sh\nexit 0\n')   # keep the retry cheap
+    for f in ("curl", "sleep"):
+        (bin_dir / f).chmod(0o755)
+
+    script = tmp_path / "step.sh"
+    script.write_text(_tick_run_block())
+    p = subprocess.run(
+        ["bash", "-e", str(script)], capture_output=True, text=True, timeout=60,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp_path),
+             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md")})
+
+    assert p.returncode != 28, (
+        "the step died with CURL's exit code - `bash -e` aborted the "
+        "`code=$(curl ...)` assignment, so the retry loop never ran")
+    assert p.returncode == 1, (
+        f"a sustained outage must reach the job's own exit 1, got "
+        f"{p.returncode}: {p.stdout[-300:]}{p.stderr[-300:]}")
+    assert "attempt 3: HTTP 000" in p.stdout, (
+        "all three attempts must actually run before the job calls it down")
+    assert "stop watcher DOWN" in p.stdout
+
+
+def test_the_curl_status_guard_and_its_reason_both_survive():
+    """Source pin beside the behavioural one. The guard is a lone `|| true` on a
+    long line and reads like debris, so what protects it is the comment naming
+    the run it came from - delete the reasoning and the next cleanup deletes the
+    guard. NOT interchangeable with `|| echo 000`, which appends a SECOND value
+    to curl's output (the "000000" bug) instead of neutralising its status."""
+    block = _tick_run_block()
+    # CODE lines only, via the house helper — the reasoning for this guard is
+    # written into the YAML beside it and NAMES `|| echo 000` as the thing it is
+    # not, so a naive `not in` over the whole block reads the justification as
+    # the offence. (Caught by this very test on first run; same trap #52 hit.)
+    code = [l for _, l in _code(block)]
+    curl_lines = [l for l in code if "curl -sS" in l]
+    assert len(curl_lines) == 1, "one probe, one guard - re-point this test"
+    assert curl_lines[0].rstrip().endswith("|| true"), (
+        "an unguarded command substitution under `bash -e` aborts the step on "
+        "any curl failure, which is exactly what run #372 did")
+    assert not [l for l in code if "|| echo 000" in l], (
+        "that is the 000000 bug, not the guard")
+    assert "exit 28" in block, "the comment must keep naming what this catches"
+
+
+def test_the_normalisation_still_covers_an_empty_capture():
+    """`|| true` keeps whatever curl managed to write, which on a hard failure
+    can be nothing at all. Under `set -u` an EMPTY code must still resolve to
+    000 rather than falling through as a bare string into the comparisons."""
+    assert re.search(r'case "\$code" in \[0-9\]\[0-9\]\[0-9\]\) ;; \*\) code="000"',
+                     _tick_run_block()), "the 3-digit normalisation has moved"

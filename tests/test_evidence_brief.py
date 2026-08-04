@@ -29,7 +29,8 @@ def test_it_runs_against_the_real_checkout_and_stays_in_budget():
     # every ruled section is present, every run
     text = p.stdout
     for token in ("funnel asx", "funnel nasdaq", "funnel crypto",
-                  "arriving:", "graduation:", "book:", "human eyes today:"):
+                  "arriving:", "graduation:", "book:", "cycle w3-1:",
+                  "human eyes today:"):
         assert token in text, f"brief lost its '{token}' section"
 
 
@@ -71,3 +72,17 @@ def test_the_line_budget_is_enforced_in_the_script_itself():
     # The budget is a contract, not a habit — the script must hard-fail on
     # overflow rather than quietly growing past the owner's 15 lines.
     assert re.search(r"assert len\(lines\) <= 15", SRC)
+
+
+def test_the_cycle_clock_carries_the_frozen_protocol_numbers():
+    # The w3-1 read is pre-registered (owner-signed 2026-08-02): 30 closes,
+    # judged against the w3 cohort's own sim band. The reporter carries those
+    # numbers as FROZEN constants — it may not import scanner.config, and
+    # changing any of them mid-cycle is the retuning the protocol forbids,
+    # so this pin makes a quiet edit fail a push instead.
+    assert 'CYCLE = "w3-1"' in SRC
+    assert "CYCLE_TARGET = 30" in SRC
+    assert "+0.056" in SRC and "+0.10" in SRC, "the sim band is part of the protocol"
+    # Counted on the entry-time stamp, never inferred from dates — the one
+    # rule that keeps pre-gate history out of the cycle read.
+    assert 't.get("cycle") == CYCLE' in SRC
