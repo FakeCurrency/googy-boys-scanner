@@ -11,8 +11,10 @@ grows stops being one, so overflow is a hard error rather than a drift.
 
 Covers exactly the ruled set: pipeline health (real issues only), funnel
 snapshot + direction, arriving names (or zero), graduation events (or zero),
-paper book delta vs the newest backup (closes, new stalls, R change), and one
-"what needs human eyes" line whose default answer is nothing.
+paper book delta vs the newest backup (closes, new stalls, R change), the
+cycle w3-1 clock (added at enablement, owner-signed 2026-08-02 - see
+RESEARCH-LEDGER.md), and one "what needs human eyes" line whose default
+answer is nothing.
 """
 from __future__ import annotations
 
@@ -25,6 +27,18 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "public", "data")
 NOW = datetime.datetime.now(datetime.timezone.utc)
+
+# Cycle w3-1 - the pre-registered 30-close live read (owner-signed 2026-08-02;
+# protocol + evidence in RESEARCH-LEDGER.md). These are FROZEN protocol
+# numbers, deliberately hardcoded: the brief may not import scanner.config
+# (read-only pins), and retuning any of them mid-cycle is what the protocol
+# forbids. The band is the w3 cohort's thrice-replicated sim expectancy
+# (parity IS/OOS/C3 pessimistic fills; midpoint from the fill study) - the
+# frozen reference the live number is judged against at n=30:
+# pass >= 0 R/trade AND >= 0 R/slot-month; kill <= -0.05 R/trade.
+CYCLE = "w3-1"
+CYCLE_TARGET = 30
+CYCLE_BAND = "band pess +0.056 / mid +0.10 R/t"
 
 
 def _load(path):
@@ -143,6 +157,22 @@ def main() -> int:
                      f"closes since: {closes_txt} | new stalls: {', '.join(new_stalls) or 'none'}")
     else:
         lines.append(f"book: {len(op)}/30 open, R {open_r:+.2f} | no backup baseline for deltas")
+
+    # -- cycle w3-1 clock: closes toward the pre-registered n=30 read --------
+    # Counted on rows STAMPED cycle=="w3-1" (written at entry by the runner),
+    # so pre-gate history can never blur into the cycle. R/slot-month uses
+    # each closed row's own hold_days (omitted until a close carries one).
+    cyc_closed = [t for t in book.get("closed") or [] if t.get("cycle") == CYCLE]
+    cyc_open = sum(1 for p in op if p.get("cycle") == CYCLE)
+    if cyc_closed:
+        tot = sum(t.get("realized_r") or 0 for t in cyc_closed)
+        sm = sum(t.get("hold_days") or 0 for t in cyc_closed) / 30.4375
+        stats = f"exp {tot / len(cyc_closed):+.3f}R/t" + (
+            f", {tot / sm:+.3f} R/sm" if sm > 0 else "")
+    else:
+        stats = "no closes yet"
+    lines.append(f"cycle {CYCLE}: {len(cyc_closed)}/{CYCLE_TARGET} closed ({stats}) | "
+                 f"{cyc_open} open gated | {CYCLE_BAND}")
 
     # -- the one human line --------------------------------------------------
     lines.append("human eyes today: " + ("; ".join(issues) if issues else "nothing"))
