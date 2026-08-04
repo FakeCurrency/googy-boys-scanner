@@ -216,6 +216,24 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   It is also the one flood that follows immediately from an action the owner
   just took, so it is feedback rather than ambience. **Set both halves in one
   sitting**; the 503 step summary says so at the point of action.
+- **The 200/503/other taxonomy above was never reachable on a curl-level
+  failure, and that was the whole of run #372 (2026-08-04).** `Process completed
+  with exit code 28` — curl's "operation timed out", not any exit this workflow
+  writes. GitHub's default shell is `bash -e {0}`, so the bare
+  `code=$(curl ...)` assignment ABORTED THE STEP the instant curl failed:
+  upstream of the 3-digit normalisation, of the retry loop, of the 503 branch
+  and of the `exit 1` branch alike. The log is the proof — not one `attempt N`
+  line printed. So the three tries that exist to absorb a transient were
+  unreachable by the most common transient there is, and a single 30-second
+  stall was emailed as "stop watcher DOWN" (run #277 on Jul 28 is the same
+  signature; those two are the ONLY failures this job has ever had). Fixed with
+  `|| true` on that one assignment — which neutralises curl's STATUS without
+  appending a second value to its OUTPUT, the distinction from the `|| echo 000`
+  that caused the earlier "000000" bug. This job judges on the HTTP code, never
+  on curl's exit code. Pinned behaviourally (the shipped run block executed under
+  `bash -e` against a curl stubbed to fail exactly as #372's did, asserting it
+  reaches `exit 1` and prints `attempt 3` rather than dying with 28) plus two
+  source pins, in `tests/test_workflow_hardening.py`.
 - **Endpoint health moved to `watchdog.probe_endpoints()`**, which inherits the
   same state machine as every other finding: say it once, remind every
   `WATCHDOG_RENOTIFY_HOURS`, and — the thing a red run structurally cannot do —
