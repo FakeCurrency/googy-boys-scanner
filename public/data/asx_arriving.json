@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-05T04:53:19+10:00",
+  "generated_at": "2026-08-05T06:46:42+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "US10",
+      "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 49.22999954,
+      "turnover_avg20": 92424,
+      "turnover_today": 470688,
+      "rvol": 5.1,
+      "adv_usd": 92424.11,
+      "fund": true
+    },
     {
       "symbol": "ECT",
       "name": "Environmental Clean Technologies Limited",
@@ -21,15 +33,27 @@
       "fund": false
     },
     {
-      "symbol": "US10",
-      "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
+      "symbol": "INES",
+      "name": "Intelligent Investor Ethical Share Fund (Managed Fund)",
       "sector": "Unclassified",
-      "dir": "SHORT",
-      "price": 49.31000137,
-      "turnover_avg20": 71322,
-      "turnover_today": 344035,
-      "rvol": 4.9,
-      "adv_usd": 71322.44,
+      "dir": "LONG",
+      "price": 3.25999999,
+      "turnover_avg20": 43205,
+      "turnover_today": 351731,
+      "rvol": 7.9,
+      "adv_usd": 43205.91,
+      "fund": true
+    },
+    {
+      "symbol": "HLTH",
+      "name": "VanEck Global Healthcare Leaders ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 11.68000031,
+      "turnover_avg20": 80304,
+      "turnover_today": 294978,
+      "rvol": 3.6,
+      "adv_usd": 80304.21,
       "fund": true
     },
     {
@@ -126,18 +150,6 @@
       "turnover_today": 127695,
       "rvol": 3.2,
       "adv_usd": 41933.52,
-      "fund": false
-    },
-    {
-      "symbol": "PFG",
-      "name": "Prime Financial Group Limited",
-      "sector": "Financials",
-      "dir": "SHORT",
-      "price": 0.215,
-      "turnover_avg20": 41601,
-      "turnover_today": 125997,
-      "rvol": 3.0,
-      "adv_usd": 41601.2,
       "fund": false
     }
   ]
