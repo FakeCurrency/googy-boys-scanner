@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* Guard-rail tests for the four state-touching Pages Functions —
- * functions/api/journal.js, scan.js, close.js, tick.js.
+/* Guard-rail tests for the five state-touching Pages Functions —
+ * functions/api/journal.js, scan.js, close.js, tick.js, heartbeat.js.
  *
  * WHY THIS FILE EXISTS (2026-07-29): three of these guards were verified wrong
  * the same day, and none of them had a single test.
@@ -320,11 +320,198 @@ const tickTests = async () => {
   });
 };
 
+// ═════════ 4. heartbeat.js — the self-heal leg, and what it must NOT do ══════
+//
+// Added 2026-08-04, the day GitHub's cron scheduler dropped fires across three
+// workflows at once and the ASX session went 3h39m unscanned during a live
+// pre-registered cycle. Every backstop in this repo is itself a cron, so all of
+// them were dropped by the same outage — adding a fourth cron could not have
+// helped. /api/heartbeat is the uncorrelated leg: an EXTERNAL monitor pings it
+// and it dispatches a scan when one is overdue.
+//
+// It lives in this file rather than its own because it is the fifth
+// state-touching Pages Function and it inherits scan.js's refund contract
+// verbatim — the two belong where they can be read against each other.
+
+const hbTests = async () => {
+  suite("heartbeat.js — heal when overdue, and never page on success");
+
+  const load = (fetchImpl) => loadModule("heartbeat.js", {
+    strip: [[/export async function onRequestGet/, "async function onRequestGet"]],
+    sandboxExtra: { fetch: fetchImpl },
+  });
+  const minsAgo = (m) => new Date(Date.now() - m * 6e4).toISOString();
+  // book: an object to serve as vivek_bot_book.json, or a number = HTTP status.
+  const envFor = (book, extra) => ({
+    ASSETS: {
+      fetch: async () => (typeof book === "number"
+        ? new Response("err", { status: book })
+        : new Response(JSON.stringify(book), { status: 200 })),
+    },
+    ...extra,
+  });
+  const call = (H, env, qs) => H.onRequestGet({
+    env, request: new Request("https://x/api/heartbeat" + (qs || "")),
+  });
+  const FRESH = { updated_at: minsAgo(10) };
+  const STALE = { updated_at: minsAgo(200) };
+
+  await test("a SUCCESSFUL HEAL returns 200 — an alarm that fires on success gets muted", async () => {
+    const H = load(ghFetchStub(204));
+    const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }));
+    const b = await r.json();
+    assert.equal(r.status, 200, "stale is the condition this exists to FIX, not a fault to report");
+    assert.equal(b.action, "dispatched");
+    assert.equal(b.healthy, false, "it still records that the book WAS stale");
+  });
+
+  await test("a fresh book dispatches NOTHING", async () => {
+    let hits = 0;
+    const H = load(async (...a) => { hits++; return ghFetchStub(204)(...a); });
+    const r = await call(H, envFor(FRESH, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }));
+    assert.equal(r.status, 200);
+    assert.equal((await r.json()).action, "none");
+    assert.equal(hits, 0, "a healthy pipeline must never be dispatched at");
+  });
+
+  await test("an unreadable stamp FAILS LOUD — 503, and no dispatch", async () => {
+    // Reading it as stale would dispatch a scan on every probe, for ever, off
+    // one corrupt file; reading it as fresh hides the outage. Neither.
+    let hits = 0;
+    const H = load(async (...a) => { hits++; return ghFetchStub(204)(...a); });
+    const r = await call(H, envFor({ updated_at: "not-a-date" },
+      { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }));
+    assert.equal(r.status, 503);
+    assert.ok(/updated_at/.test((await r.json()).error));
+    assert.equal(hits, 0);
+  });
+
+  await test("an unreadable asset is 503, not a heal", async () => {
+    const H = load(ghFetchStub(204));
+    const r = await call(H, envFor(404, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }));
+    assert.equal(r.status, 503);
+  });
+
+  await test("stale with no token is 503 — a disarmed healer nothing else can see", async () => {
+    const H = load(ghFetchStub(204));
+    const r = await call(H, envFor(STALE, { JOURNAL_KV: fakeKV() }));
+    assert.equal(r.status, 503);
+    assert.equal((await r.json()).action, "cannot_heal");
+  });
+
+  await test("a FRESH book with no token stays green — an unarmed healer only matters once needed", async () => {
+    const H = load(ghFetchStub(204));
+    const r = await call(H, envFor(FRESH, { JOURNAL_KV: fakeKV() }));
+    assert.equal(r.status, 200);
+  });
+
+  await test("the 5-minute cooldown key is SHARED with /api/scan", async () => {
+    // Load-bearing: a manual SCAN and a heal must never dispatch the same run
+    // twice. The key below is exactly what scan.js writes.
+    let hits = 0;
+    const H = load(async (...a) => { hits++; return ghFetchStub(204)(...a); });
+    const kv = fakeKV({ "ratelimit:scan:all": "1" });
+    const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }));
+    assert.equal(r.status, 200, "a heal already in flight is the system working");
+    assert.equal((await r.json()).action, "cooling_down");
+    assert.equal(hits, 0);
+  });
+
+  await test("the DAILY cap key is NOT shared — the healer cannot eat the SCAN button", async () => {
+    const H = load(ghFetchStub(204));
+    const kv = fakeKV();
+    await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }));
+    const keys = [...kv.store.keys()];
+    assert.ok(keys.some((k) => k.startsWith("ratelimit:heal:day:")), JSON.stringify(keys));
+    assert.ok(!keys.some((k) => k.startsWith("ratelimit:scan:day:")),
+      "a shared daily budget lets an automated healer starve the owner's manual SCAN on exactly the day he reaches for it");
+  });
+
+  await test("hitting the heal cap while STILL stale is 503 — a runaway healer is worse than a stopped one", async () => {
+    let hits = 0;
+    const H = load(async (...a) => { hits++; return ghFetchStub(204)(...a); });
+    const day = new Date().toISOString().slice(0, 10);
+    const kv = fakeKV({ ["ratelimit:heal:day:" + day]: "24" });
+    const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }));
+    assert.equal(r.status, 503);
+    assert.equal((await r.json()).action, "heal_cap_reached");
+    assert.equal(hits, 0);
+  });
+
+  await test("a 401 refunds the cooldown and never echoes GitHub's body", async () => {
+    const H = load(ghFetchStub(401));
+    const kv = fakeKV();
+    const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t0ken", JOURNAL_KV: kv }));
+    const b = await r.json();
+    assert.equal(r.status, 503);
+    assert.equal(b.action, "dispatch_failed");
+    assert.ok(/GH_DISPATCH_TOKEN/.test(b.error), b.error);
+    assert.ok(!/t0ken/.test(JSON.stringify(b)), "the token must never reach the caller");
+    assert.ok(!kv.store.has("ratelimit:scan:all"),
+      "nothing was dispatched — the retry must not be blocked for five minutes");
+  });
+
+  await test("a network error refunds; a TIMEOUT deliberately does not", async () => {
+    const kvNet = fakeKV();
+    let r = await call(load(ghFetchStub("network")),
+      envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kvNet }));
+    assert.equal((await r.json()).action, "dispatch_error");
+    assert.ok(!kvNet.store.has("ratelimit:scan:all"), "a clean failure dispatched nothing");
+
+    const kvAbort = fakeKV();
+    r = await call(load(ghFetchStub("abort")),
+      envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kvAbort }));
+    assert.equal((await r.json()).action, "dispatch_timeout");
+    assert.ok(kvAbort.store.has("ratelimit:scan:all"),
+      "on timeout the dispatch MAY have landed — a duplicate scan costs more than a five-minute wait");
+  });
+
+  await test("the cooldown is written BEFORE the dispatch, closing the double-fire race", async () => {
+    const kv = fakeKV();
+    let seen = null;
+    const H = load(async () => {
+      seen = kv.store.get("ratelimit:scan:all");
+      return { status: 204, ok: true, json: async () => ({}) };
+    });
+    await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }));
+    assert.equal(seen, "1", "a concurrent probe mid-dispatch must already see the cooldown");
+  });
+
+  await test("stale_min is clamped to 15..720 with a 90-minute default", async () => {
+    const H = load(ghFetchStub(204));
+    const env = () => envFor(FRESH, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() });
+    const at = async (qs) => (await (await call(H, env(), qs)).json()).stale_min;
+    assert.equal(await at(""), 90);
+    assert.equal(await at("?stale_min=1"), 90);
+    assert.equal(await at("?stale_min=9999"), 90);
+    assert.equal(await at("?stale_min=45"), 45);
+  });
+
+  await test("answers are never cached and always carry the age they decided on", async () => {
+    const H = load(ghFetchStub(204));
+    const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }));
+    assert.equal(r.headers.get("Cache-Control"), "no-store");
+    assert.ok((await r.json()).age_min > 90);
+  });
+
+  await test("the two decisions most likely to be 'tidied away' keep their reasoning in the source", async () => {
+    // The tempting future edits are "surely stale should be RED" and "surely
+    // this should need a secret". Both are wrong here for reasons that only
+    // exist in the comments, so the comments are load-bearing.
+    const src = SRC("heartbeat.js");
+    assert.ok(/RETURNS 200 WHEN IT HEALS/.test(src), "the 200-on-heal rationale was deleted");
+    assert.ok(/alarm that fires on success/.test(src));
+    assert.ok(/UNAUTHENTICATED BY CONSTRUCTION/.test(src),
+      "if this ever grows a secret it must be a decision, not a drift");
+  });
+};
+
 // ── summary (sequential so the suite headers stay attached to their tests) ───
 (async () => {
   await jTests();
   await scanTests();
   await tickTests();
+  await hbTests();
   console.log(`\napi_guards.test.js: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();
