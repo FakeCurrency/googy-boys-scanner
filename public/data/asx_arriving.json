@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-05T19:31:13+10:00",
+  "generated_at": "2026-08-06T01:59:46+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "US10",
+      "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 49.22999954,
+      "turnover_avg20": 92424,
+      "turnover_today": 470688,
+      "rvol": 5.1,
+      "adv_usd": 92424.11,
+      "fund": true
+    },
     {
       "symbol": "RTR",
       "name": "Rumble Resources Limited",
@@ -31,18 +43,6 @@
       "rvol": 12.0,
       "adv_usd": 31605.96,
       "fund": false
-    },
-    {
-      "symbol": "DBBF",
-      "name": "BetaShares Ethical Diversified Balanced ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 26.38999939,
-      "turnover_avg20": 46154,
-      "turnover_today": 360197,
-      "rvol": 7.7,
-      "adv_usd": 46154.69,
-      "fund": true
     },
     {
       "symbol": "INES",
@@ -69,6 +69,18 @@
       "fund": false
     },
     {
+      "symbol": "HLTH",
+      "name": "VanEck Global Healthcare Leaders ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 11.68000031,
+      "turnover_avg20": 80304,
+      "turnover_today": 294978,
+      "rvol": 3.6,
+      "adv_usd": 80304.21,
+      "fund": true
+    },
+    {
       "symbol": "CAF",
       "name": "Centrepoint Alliance Limited",
       "sector": "Financials",
@@ -81,30 +93,6 @@
       "fund": false
     },
     {
-      "symbol": "LSGE",
-      "name": "Loomis Sayles Global Equity Fund",
-      "sector": "Unclassified",
-      "dir": "SHORT",
-      "price": 1.96000004,
-      "turnover_avg20": 64724,
-      "turnover_today": 230027,
-      "rvol": 3.5,
-      "adv_usd": 64724.96,
-      "fund": true
-    },
-    {
-      "symbol": "GOW",
-      "name": "Gowing Brothers Limited",
-      "sector": "Financials",
-      "dir": "SHORT",
-      "price": 2.19000006,
-      "turnover_avg20": 19394,
-      "turnover_today": 157062,
-      "rvol": 8.1,
-      "adv_usd": 19394.21,
-      "fund": false
-    },
-    {
       "symbol": "LSX",
       "name": "Lion Selection Group Limited",
       "sector": "Financials",
@@ -114,18 +102,6 @@
       "turnover_today": 141094,
       "rvol": 3.0,
       "adv_usd": 47582.05,
-      "fund": false
-    },
-    {
-      "symbol": "BSA",
-      "name": "BSA Limited",
-      "sector": "Industrials",
-      "dir": "LONG",
-      "price": 0.28999999,
-      "turnover_avg20": 41933,
-      "turnover_today": 127695,
-      "rvol": 3.2,
-      "adv_usd": 41933.52,
       "fund": false
     }
   ]
