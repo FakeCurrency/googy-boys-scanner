@@ -1,25 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-06T05:56:52+10:00",
+  "generated_at": "2026-08-06T07:29:18+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "US10",
-      "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
-      "sector": "Unclassified",
-      "dir": "SHORT",
-      "price": 49.22999954,
-      "turnover_avg20": 92424,
-      "turnover_today": 470688,
-      "rvol": 5.1,
-      "adv_usd": 92424.11,
-      "fund": true
-    },
     {
       "symbol": "RTR",
       "name": "Rumble Resources Limited",
@@ -45,15 +33,15 @@
       "fund": false
     },
     {
-      "symbol": "INES",
-      "name": "Intelligent Investor Ethical Share Fund (Managed Fund)",
+      "symbol": "DBBF",
+      "name": "BetaShares Ethical Diversified Balanced ETF",
       "sector": "Unclassified",
       "dir": "LONG",
-      "price": 3.25999999,
-      "turnover_avg20": 43205,
-      "turnover_today": 351731,
-      "rvol": 7.9,
-      "adv_usd": 43205.91,
+      "price": 26.38999939,
+      "turnover_avg20": 46154,
+      "turnover_today": 360197,
+      "rvol": 7.7,
+      "adv_usd": 46154.69,
       "fund": true
     },
     {
@@ -69,18 +57,6 @@
       "fund": false
     },
     {
-      "symbol": "HLTH",
-      "name": "VanEck Global Healthcare Leaders ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 11.68000031,
-      "turnover_avg20": 80304,
-      "turnover_today": 294978,
-      "rvol": 3.6,
-      "adv_usd": 80304.21,
-      "fund": true
-    },
-    {
       "symbol": "CAF",
       "name": "Centrepoint Alliance Limited",
       "sector": "Financials",
@@ -91,6 +67,18 @@
       "rvol": 4.8,
       "adv_usd": 52395.27,
       "fund": false
+    },
+    {
+      "symbol": "LSGE",
+      "name": "Loomis Sayles Global Equity Fund",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 1.96000004,
+      "turnover_avg20": 64724,
+      "turnover_today": 230027,
+      "rvol": 3.5,
+      "adv_usd": 64724.96,
+      "fund": true
     },
     {
       "symbol": "LSX",
