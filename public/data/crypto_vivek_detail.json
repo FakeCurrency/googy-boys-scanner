@@ -1,1129 +1,26 @@
 {
   "schema_version": 5,
   "market": "crypto",
-  "generated_at": "2026-08-05T09:27:01+00:00",
+  "generated_at": "2026-08-05T10:02:24+00:00",
   "rows": {
-    "CAKE": {
-      "plans": {
-        "1D": {
-          "entry": 1.44605328,
-          "stop": 1.52098112,
-          "tp1": 1.37636101,
-          "tp2": 1.31784403,
-          "tp3": 1.26850605,
-          "risk": 0.07492784,
-          "rr": 1.71,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 1.31784403,
-          "trail": 1.44605328,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 1.44605328,
-          "swing_high": 1.47912705,
-          "swing_low": 1.35360396,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-08-03",
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 1.43259597,
-          "stop": 2.14493704,
-          "tp1": 0.36408436,
-          "tp2": 0.07306239,
-          "tp3": 0.0716298,
-          "risk": 0.71234108,
-          "rr": 1.91,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.07306239,
-          "trail": 1.43259597,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 2.05542901,
-          "swing_high": 1.48002005,
-          "swing_low": 1.28660703,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 609
-        },
-        "1W": {
-          "entry": 1.43259597,
-          "stop": 2.54686523,
-          "tp1": 0.07449499,
-          "tp2": 0.07306239,
-          "tp3": 0.0716298,
-          "risk": 1.11426926,
-          "rr": 1.22,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.07306239,
-          "trail": 1.43259597,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 2.36137024,
-          "swing_high": 1.55631006,
-          "swing_low": 1.13049805,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 1.44605328,
-        "weekly_sma200": 2.36137024,
-        "daily_sma200": 1.44605328,
-        "dist_pct": -0.94,
-        "at_level": true,
-        "reaction": "reject",
-        "structure": 1.0,
-        "confluence": false,
-        "weekly_bars": 262,
-        "atr": 0.04185407,
-        "entry": 1.44605328,
-        "stop": 1.52098112,
-        "tp1": 1.37636101,
-        "tp2": 1.31784403,
-        "tp3": 1.26850605,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 0.07492784,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 1.71
-      },
-      "analysis": "CAKE is being rejected at the H4 (daily proxy) 200 SMA ($1.4461), 0.9% away, with a clean structure. A short reaction setup: enter $1.4461, stop $1.5210 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 $1.3764 / TP2 $1.3178 / TP3 $1.2685; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-08-03",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-03",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ],
-        "3D": [],
-        "1W": []
-      }
-    },
-    "BDX": {
-      "plans": {
-        "1D": {
-          "entry": 0.08124643,
-          "stop": 0.08879239,
-          "tp1": 0.074093,
-          "tp2": 0.01236,
-          "tp3": 0.00858702,
-          "risk": 0.00754596,
-          "rr": 9.13,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.01236,
-          "trail": 0.08124643,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 0.08124643,
-          "swing_high": 0.084911,
-          "swing_low": 0.080387,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-07-29",
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 0.080707,
-          "stop": 0.10858926,
-          "tp1": 0.058338,
-          "tp2": 0.01236,
-          "tp3": 0.00403535,
-          "risk": 0.02788226,
-          "rr": 2.45,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.01236,
-          "trail": 0.080707,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 0.07746203,
-          "swing_high": 0.101233,
-          "swing_low": 0.080014,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 609
-        },
-        "1W": {
-          "entry": 0.080707,
-          "stop": 0.11015441,
-          "tp1": 0.041973,
-          "tp2": 0.01236,
-          "tp3": 0.00403535,
-          "risk": 0.02944741,
-          "rr": 2.32,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.01236,
-          "trail": 0.080707,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 0.06007204,
-          "swing_high": 0.101233,
-          "swing_low": 0.01236,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 0.08124643,
-        "weekly_sma200": 0.06007204,
-        "daily_sma200": 0.08124643,
-        "dist_pct": -0.67,
-        "at_level": true,
-        "reaction": "reject",
-        "structure": 0.6,
-        "confluence": false,
-        "weekly_bars": 262,
-        "atr": 0.00388139,
-        "entry": 0.08124643,
-        "stop": 0.08879239,
-        "tp1": 0.074093,
-        "tp2": 0.01236,
-        "tp3": 0.00858702,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 0.00754596,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "measured"
-        ],
-        "structural_tps": 2,
-        "rr": 9.13
-      },
-      "analysis": "BDX is being rejected at the H4 (daily proxy) 200 SMA ($0.0812), 0.7% away, with a workable structure. A short reaction setup: enter $0.0812, stop $0.0888 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 $0.0741 / TP2 $0.0124 / TP3 $0.0086; move SL to break-even at TP1, then below new support at TP2. 9.1R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-07-29",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-03",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ],
-        "3D": [],
-        "1W": []
-      }
-    },
-    "XMR": {
-      "plans": {
-        "1D": {
-          "entry": 362.2791748,
-          "stop": 384.19901122,
-          "tp1": 336.52435303,
-          "tp2": 317.92907715,
-          "tp3": 302.7354126,
-          "risk": 21.91983641,
-          "rr": 2.02,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 317.92907715,
-          "trail": 362.2791748,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 362.46839203,
-          "swing_high": 371.69073486,
-          "swing_low": 334.25164795,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "reclaim",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-08-03",
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 362.2791748,
-          "stop": 398.56529576,
-          "tp1": 319.98251343,
-          "tp2": 292.53826904,
-          "tp3": 268.75012207,
-          "risk": 36.28612096,
-          "rr": 1.92,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 292.53826904,
-          "trail": 362.2791748,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 320.02501373,
-          "swing_high": 371.69073486,
-          "swing_low": 301.92446899,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": "2026-06-30",
-          "bars": 609
-        },
-        "1W": {
-          "entry": 362.2791748,
-          "stop": 490.16495583,
-          "tp1": 233.09095764,
-          "tp2": 140.72457886,
-          "tp3": 18.11395874,
-          "risk": 127.88578103,
-          "rr": 1.73,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 140.72457886,
-          "trail": 362.2791748,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 224.44222588,
-          "swing_high": 438.40426636,
-          "swing_low": 292.53826904,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 362.46839203,
-        "weekly_sma200": 224.44222588,
-        "daily_sma200": 362.46839203,
-        "dist_pct": -0.05,
-        "at_level": true,
-        "reaction": "reject",
-        "structure": 0.6,
-        "confluence": false,
-        "weekly_bars": 262,
-        "atr": 12.50827635,
-        "entry": 362.2791748,
-        "stop": 384.19901122,
-        "tp1": 336.52435303,
-        "tp2": 317.92907715,
-        "tp3": 302.7354126,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 21.91983641,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 2.02
-      },
-      "analysis": "XMR is being rejected at the H4 (daily proxy) 200 SMA ($362.4684), 0.1% away, with a workable structure. A short reaction setup: enter $362.2792, stop $384.1990 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 $336.5244 / TP2 $317.9291 / TP3 $302.7354; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-08-03",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-03",
-            "kind": "trigger",
-            "label": "reclaim"
-          }
-        ],
-        "3D": [
-          {
-            "date": "2026-06-30",
-            "kind": "reaction"
-          }
-        ],
-        "1W": []
-      }
-    },
-    "BTC": {
-      "plans": {
-        "1D": {
-          "entry": 63460.8984375,
-          "stop": 72584.27486084,
-          "tp1": 49775.83380249,
-          "tp2": 36090.76916749,
-          "tp3": 17844.01632082,
-          "risk": 9123.37642334,
-          "rr": 3.0,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 36090.76916749,
-          "trail": 63460.8984375,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 70964.72787109,
-          "swing_high": 66282.3828125,
-          "swing_low": 62226.578125,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 63460.8984375,
-          "stop": 94121.64961262,
-          "tp1": 17469.77167481,
-          "tp2": 3236.50582031,
-          "tp3": 3173.04492188,
-          "risk": 30660.75117512,
-          "rr": 1.96,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 3236.50582031,
-          "trail": 63460.8984375,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 90891.23738281,
-          "swing_high": 66910.0625,
-          "swing_low": 57747.765625,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 609
-        },
-        "1W": {
-          "entry": 63682.49152344,
-          "stop": 85008.6692331,
-          "tp1": 38521.89453125,
-          "tp2": 24930.296875,
-          "tp3": 3184.12457617,
-          "risk": 21326.17770967,
-          "rr": 1.82,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 24930.296875,
-          "trail": 63682.49152344,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 63682.49152344,
-          "swing_high": 79173.5,
-          "swing_low": 57747.765625,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-07",
-          "reaction_bar": "2026-08-07",
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "weekly",
-        "level": 63682.49152344,
-        "weekly_sma200": 63682.49152344,
-        "daily_sma200": 70964.72787109,
-        "dist_pct": -0.35,
-        "at_level": true,
-        "reaction": "reject",
-        "structure": 0.4,
-        "confluence": false,
-        "weekly_bars": 262,
-        "atr": 1619.54698974,
-        "entry": 63682.49152344,
-        "stop": 85008.6692331,
-        "tp1": 38521.89453125,
-        "tp2": 24930.296875,
-        "tp3": 3184.12457617,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 21326.17770967,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "measured"
-        ],
-        "structural_tps": 2,
-        "rr": 1.82
-      },
-      "analysis": "BTC is being rejected at the Weekly 200 SMA ($63682.4915), 0.3% away, with thin structure. A short reaction setup: enter $63682.4915, stop $85008.6692 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 $38521.8945 / TP2 $24930.2969 / TP3 $3184.1246; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
-      "markers": {
-        "1D": [],
-        "3D": [],
-        "1W": [
-          {
-            "date": "2026-08-07",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-07",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ]
-      }
-    },
-    "OKB": {
-      "plans": {
-        "1D": {
-          "entry": 86.22679901,
-          "stop": 89.40442509,
-          "tp1": 82.32919312,
-          "tp2": 79.19016266,
-          "tp3": 76.80815887,
-          "risk": 3.17762608,
-          "rr": 2.21,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 79.19016266,
-          "trail": 86.22679901,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 84.28035629,
-          "swing_high": 87.38462067,
-          "swing_low": 81.00091553,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": "2026-07-26",
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 86.64832911,
-          "stop": 91.92675772,
-          "tp1": 81.18110657,
-          "tp2": 72.40686035,
-          "tp3": 66.2749939,
-          "risk": 5.27842861,
-          "rr": 2.7,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 72.40686035,
-          "trail": 86.64832911,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 86.64832911,
-          "swing_high": 87.38462067,
-          "swing_low": 76.80815887,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-02",
-          "reaction_bar": "2026-08-02",
-          "bars": 609
-        },
-        "1W": {
-          "entry": 86.22679901,
-          "stop": 109.12623258,
-          "tp1": 66.2749939,
-          "tp2": 44.44677734,
-          "tp3": 30.41293716,
-          "risk": 22.89943357,
-          "rr": 1.82,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 44.44677734,
-          "trail": 86.22679901,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 62.08558639,
-          "swing_high": 99.21873474,
-          "swing_low": 66.2749939,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "3d",
-        "level": 86.64832911,
-        "weekly_sma200": 62.08558639,
-        "daily_sma200": 84.28035629,
-        "dist_pct": -0.49,
-        "at_level": true,
-        "reaction": "reject",
-        "structure": 0.0,
-        "confluence": false,
-        "weekly_bars": 262,
-        "atr": 2.01980442,
-        "entry": 86.64832911,
-        "stop": 91.92675772,
-        "tp1": 81.18110657,
-        "tp2": 72.40686035,
-        "tp3": 66.2749939,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 5.27842861,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 2.7
-      },
-      "analysis": "OKB is being rejected at the 3-Day 200 SMA ($86.6483), 0.5% away, with thin structure. A short reaction setup: enter $86.6483, stop $91.9268 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 $81.1811 / TP2 $72.4069 / TP3 $66.2750; move SL to break-even at TP1, then below new support at TP2. 2.7R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-07-26",
-            "kind": "reaction"
-          }
-        ],
-        "3D": [
-          {
-            "date": "2026-08-02",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-02",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ],
-        "1W": []
-      }
-    },
-    "WBT": {
-      "plans": {
-        "1D": {
-          "entry": 53.78777079,
-          "stop": 52.40303627,
-          "tp1": 55.16782761,
-          "tp2": 56.61226273,
-          "tp3": 57.8382988,
-          "risk": 1.38473452,
-          "rr": 2.04,
-          "direction": "long",
-          "scale": [
-            0.25,
-            0.5,
-            0.15
-          ],
-          "target": 56.61226273,
-          "trail": 53.78777079,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "structural"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 53.78777079,
-          "swing_high": 57.76277924,
-          "swing_low": 54.10984039,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-08-03",
-          "bars": 1439
-        },
-        "3D": {
-          "entry": 55.00814056,
-          "stop": 41.26293611,
-          "tp1": 75.62594724,
-          "tp2": 96.24375392,
-          "tp3": 123.73416282,
-          "risk": 13.74520445,
-          "rr": 3.0,
-          "direction": "long",
-          "scale": [
-            0.25,
-            0.5,
-            0.15
-          ],
-          "target": 96.24375392,
-          "trail": 55.00814056,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 44.15200215,
-          "swing_high": 58.22820282,
-          "swing_low": 46.33695221,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": "2026-06-09",
-          "bars": 480
-        },
-        "1W": {
-          "entry": 55.00814056,
-          "stop": 18.97666217,
-          "tp1": 109.05535816,
-          "tp2": 163.10257575,
-          "tp3": 235.16553254,
-          "risk": 36.0314784,
-          "rr": 3.0,
-          "direction": "long",
-          "scale": [
-            0.25,
-            0.5,
-            0.15
-          ],
-          "target": 163.10257575,
-          "trail": 55.00814056,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 23.62128399,
-          "swing_high": 58.45610809,
-          "swing_low": 42.43136597,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": null,
-          "bars": 207
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 53.78777079,
-        "weekly_sma200": 23.62128399,
-        "daily_sma200": 53.78777079,
-        "dist_pct": 2.22,
-        "at_level": false,
-        "reaction": "bounce",
-        "structure": 1.0,
-        "confluence": false,
-        "weekly_bars": 207,
-        "atr": 1.38473452,
-        "entry": 53.78777079,
-        "stop": 52.40303627,
-        "tp1": 55.16782761,
-        "tp2": 56.61226273,
-        "tp3": 57.8382988,
-        "scale": [
-          0.25,
-          0.5,
-          0.15
-        ],
-        "risk": 1.38473452,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "structural"
-        ],
-        "structural_tps": 3,
-        "rr": 2.04
-      },
-      "analysis": "WBT is bouncing off the H4 (daily proxy) 200 SMA ($53.7878), 2.2% away, with a clean structure. A long reaction setup: enter $53.7878, stop $52.4030 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $55.1678 / TP2 $56.6123 / TP3 $57.8383; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-08-03",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-03",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ],
-        "3D": [
-          {
-            "date": "2026-06-09",
-            "kind": "reaction"
-          }
-        ],
-        "1W": []
-      }
-    },
-    "XLM": {
-      "plans": {
-        "1D": {
-          "entry": 0.1766573,
-          "stop": 0.19462357,
-          "tp1": 0.15669499,
-          "tp2": 0.140016,
-          "tp3": 0.08682594,
-          "risk": 0.01796627,
-          "rr": 2.04,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.140016,
-          "trail": 0.1766573,
-          "tp_basis": [
-            "structural",
-            "structural",
-            "measured"
-          ],
-          "target_basis": "structural",
-          "structural_tps": 2,
-          "level": 0.1766573,
-          "swing_high": 0.187436,
-          "swing_low": 0.16840801,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-08-03",
-          "bars": 1825
-        },
-        "3D": {
-          "entry": 0.17116199,
-          "stop": 0.28914552,
-          "tp1": 0.00890042,
-          "tp2": 0.00872926,
-          "tp3": 0.0085581,
-          "risk": 0.11798352,
-          "rr": 1.38,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.00872926,
-          "trail": 0.17116199,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 0.27069408,
-          "swing_high": 0.215047,
-          "swing_low": 0.16840801,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": "2026-05-31",
-          "bars": 609
-        },
-        "1W": {
-          "entry": 0.17116199,
-          "stop": 0.33082008,
-          "tp1": 0.00890042,
-          "tp2": 0.00872926,
-          "tp3": 0.0085581,
-          "risk": 0.15965809,
-          "rr": 1.02,
-          "direction": "short",
-          "scale": [
-            0.5,
-            0.25,
-            0.15
-          ],
-          "target": 0.00872926,
-          "trail": 0.17116199,
-          "tp_basis": [
-            "measured",
-            "measured",
-            "measured"
-          ],
-          "target_basis": "measured",
-          "structural_tps": 0,
-          "level": 0.18348357,
-          "swing_high": 0.29659301,
-          "swing_low": 0.140016,
-          "sma_window": 200,
-          "sma_proxy": false,
-          "armed": false,
-          "entry_trigger": null,
-          "trigger_bar": null,
-          "reaction_bar": "2026-07-31",
-          "bars": 262
-        }
-      },
-      "detail": {
-        "setup_type": "vivek",
-        "level_tf": "h4",
-        "level": 0.1766573,
-        "weekly_sma200": 0.18348357,
-        "daily_sma200": 0.1766573,
-        "dist_pct": -3.21,
-        "at_level": false,
-        "reaction": "reject",
-        "structure": 0.6,
-        "confluence": true,
-        "weekly_bars": 262,
-        "atr": 0.00718757,
-        "entry": 0.1766573,
-        "stop": 0.19462357,
-        "tp1": 0.15669499,
-        "tp2": 0.140016,
-        "tp3": 0.08682594,
-        "scale": [
-          0.5,
-          0.25,
-          0.15
-        ],
-        "risk": 0.01796627,
-        "tp_basis": [
-          "structural",
-          "structural",
-          "measured"
-        ],
-        "structural_tps": 2,
-        "rr": 2.04
-      },
-      "analysis": "XLM is being rejected at the H4 (daily proxy) 200 SMA ($0.1767), 3.2% away with Weekly+H4 200 SMA confluence, with a workable structure. A short reaction setup: enter $0.1767, stop $0.1946 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 $0.1567 / TP2 $0.1400 / TP3 $0.0868; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
-      "markers": {
-        "1D": [
-          {
-            "date": "2026-08-03",
-            "kind": "reaction"
-          },
-          {
-            "date": "2026-08-03",
-            "kind": "trigger",
-            "label": "retest"
-          }
-        ],
-        "3D": [
-          {
-            "date": "2026-05-31",
-            "kind": "reaction"
-          }
-        ],
-        "1W": [
-          {
-            "date": "2026-07-31",
-            "kind": "reaction"
-          }
-        ]
-      }
-    },
     "SUN": {
       "plans": {
         "1D": {
-          "entry": 0.01797414,
-          "stop": 0.01878565,
-          "tp1": 0.017022,
-          "tp2": 0.016481,
-          "tp3": 0.015775,
-          "risk": 0.00081152,
-          "rr": 1.84,
-          "direction": "short",
+          "entry": 0.017962,
+          "stop": 0.01739504,
+          "tp1": 0.018842,
+          "tp2": 0.019659,
+          "tp3": 0.02053,
+          "risk": 0.00056696,
+          "rr": 2.99,
+          "direction": "long",
           "scale": [
-            0.5,
             0.25,
+            0.5,
             0.15
           ],
-          "target": 0.016481,
-          "trail": 0.01797414,
+          "target": 0.019659,
+          "trail": 0.017962,
           "tp_basis": [
             "structural",
             "structural",
@@ -1131,41 +28,41 @@
           ],
           "target_basis": "structural",
           "structural_tps": 3,
-          "level": 0.01797414,
-          "swing_high": 0.018537,
+          "level": 0.01796066,
+          "swing_high": 0.018501,
           "swing_low": 0.017632,
           "sma_window": 200,
           "sma_proxy": false,
           "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-03",
-          "reaction_bar": "2026-08-03",
-          "bars": 1825
+          "entry_trigger": "reclaim",
+          "trigger_bar": "2026-08-04",
+          "reaction_bar": "2026-08-04",
+          "bars": 1826
         },
         "3D": {
-          "entry": 0.017956,
-          "stop": 0.02023187,
-          "tp1": 0.015838,
-          "tp2": 0.01112839,
-          "tp3": 0.00657666,
-          "risk": 0.00227587,
-          "rr": 3.0,
-          "direction": "short",
+          "entry": 0.017962,
+          "stop": 0.01552792,
+          "tp1": 0.019985,
+          "tp2": 0.021637,
+          "tp3": 0.023379,
+          "risk": 0.00243408,
+          "rr": 1.51,
+          "direction": "long",
           "scale": [
-            0.5,
             0.25,
+            0.5,
             0.15
           ],
-          "target": 0.01112839,
-          "trail": 0.017956,
+          "target": 0.021637,
+          "trail": 0.017962,
           "tp_basis": [
             "structural",
-            "measured",
-            "measured"
+            "structural",
+            "structural"
           ],
-          "target_basis": "measured",
-          "structural_tps": 1,
-          "level": 0.01960501,
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 0.01960504,
           "swing_high": 0.019018,
           "swing_low": 0.016156,
           "sma_window": 200,
@@ -1173,33 +70,33 @@
           "armed": false,
           "entry_trigger": null,
           "trigger_bar": null,
-          "reaction_bar": "2026-05-28",
+          "reaction_bar": "2026-05-22",
           "bars": 609
         },
         "1W": {
-          "entry": 0.017956,
-          "stop": 0.02181638,
-          "tp1": 0.012779,
-          "tp2": 0.00803,
-          "tp3": 0.00556,
-          "risk": 0.00386038,
-          "rr": 2.57,
-          "direction": "short",
+          "entry": 0.017962,
+          "stop": 0.01293356,
+          "tp1": 0.025492,
+          "tp2": 0.041209,
+          "tp3": 0.04372322,
+          "risk": 0.00502843,
+          "rr": 4.62,
+          "direction": "long",
           "scale": [
-            0.5,
             0.25,
+            0.5,
             0.15
           ],
-          "target": 0.00803,
-          "trail": 0.017956,
+          "target": 0.041209,
+          "trail": 0.017962,
           "tp_basis": [
             "structural",
             "structural",
-            "structural"
+            "measured"
           ],
           "target_basis": "structural",
-          "structural_tps": 3,
-          "level": 0.01422113,
+          "structural_tps": 2,
+          "level": 0.01422116,
           "swing_high": 0.02053,
           "swing_low": 0.016156,
           "sma_window": 200,
@@ -1214,51 +111,851 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 0.01797414,
-        "weekly_sma200": 0.01422113,
-        "daily_sma200": 0.01797414,
-        "dist_pct": -0.1,
+        "level": 0.01796066,
+        "weekly_sma200": 0.01422116,
+        "daily_sma200": 0.01796066,
+        "dist_pct": 0.01,
         "at_level": true,
-        "reaction": "reject",
-        "structure": 0.0,
+        "reaction": "bounce",
+        "structure": 1.0,
         "confluence": false,
         "weekly_bars": 262,
-        "atr": 0.00024865,
-        "entry": 0.01797414,
-        "stop": 0.01878565,
-        "tp1": 0.017022,
-        "tp2": 0.016481,
-        "tp3": 0.015775,
+        "atr": 0.00023696,
+        "entry": 0.017962,
+        "stop": 0.01739504,
+        "tp1": 0.018842,
+        "tp2": 0.019659,
+        "tp3": 0.02053,
         "scale": [
-          0.5,
           0.25,
+          0.5,
           0.15
         ],
-        "risk": 0.00081152,
+        "risk": 0.00056696,
         "tp_basis": [
           "structural",
           "structural",
           "structural"
         ],
         "structural_tps": 3,
-        "rr": 1.84
+        "rr": 2.99
       },
-      "analysis": "SUN is being rejected at the H4 (daily proxy) 200 SMA ($0.0180), 0.1% away, with thin structure. A short reaction setup: enter $0.0180, stop $0.0188 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 $0.0170 / TP2 $0.0165 / TP3 $0.0158; move SL to break-even at TP1, then below new support at TP2. 1.8R to TP2.",
+      "analysis": "SUN is bouncing off the H4 (daily proxy) 200 SMA ($0.0180), 0.0% away, with a clean structure. A long reaction setup: enter $0.0180, stop $0.0174 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $0.0188 / TP2 $0.0197 / TP3 $0.0205; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-04",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-04",
+            "kind": "trigger",
+            "label": "reclaim"
+          }
+        ],
+        "3D": [
+          {
+            "date": "2026-05-22",
+            "kind": "reaction"
+          }
+        ],
+        "1W": []
+      }
+    },
+    "OKB": {
+      "plans": {
+        "1D": {
+          "entry": 86.80527496,
+          "stop": 79.55921038,
+          "tp1": 94.71102142,
+          "tp2": 99.21873474,
+          "tp3": 121.1207428,
+          "risk": 7.24606458,
+          "rr": 1.71,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 99.21873474,
+          "trail": 86.80527496,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 84.14089577,
+          "swing_high": 87.38462067,
+          "swing_low": 81.49317932,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-08-03",
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 86.80527496,
+          "stop": 72.26602182,
+          "tp1": 99.21873474,
+          "tp2": 118.26519012,
+          "tp3": 210.07498169,
+          "risk": 14.53925314,
+          "rr": 2.16,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 118.26519012,
+          "trail": 86.80527496,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 86.65122149,
+          "swing_high": 87.38462067,
+          "swing_low": 76.80815887,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "trigger_bar": "2026-08-02",
+          "reaction_bar": "2026-08-02",
+          "bars": 609
+        },
+        "1W": {
+          "entry": 86.80527496,
+          "stop": 52.18098093,
+          "tp1": 118.26519012,
+          "tp2": 235.21783447,
+          "tp3": 257.02877808,
+          "risk": 34.62429403,
+          "rr": 4.29,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 235.21783447,
+          "trail": 86.80527496,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 62.08847877,
+          "swing_high": 99.21873474,
+          "swing_low": 66.2749939,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-02-06",
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "3d",
+        "level": 86.65122149,
+        "weekly_sma200": 62.08847877,
+        "daily_sma200": 84.14089577,
+        "dist_pct": 0.18,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 1.93396894,
+        "entry": 86.80527496,
+        "stop": 72.26602182,
+        "tp1": 99.21873474,
+        "tp2": 118.26519012,
+        "tp3": 210.07498169,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 14.53925314,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 2.16
+      },
+      "analysis": "OKB is bouncing off the 3-Day 200 SMA ($86.6512), 0.2% away, with a clean structure. A long reaction setup: enter $86.8053, stop $72.2660 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $99.2187 / TP2 $118.2652 / TP3 $210.0750; move SL to break-even at TP1, then below new support at TP2. 2.2R to TP2.",
       "markers": {
         "1D": [
           {
             "date": "2026-08-03",
             "kind": "reaction"
+          }
+        ],
+        "3D": [
+          {
+            "date": "2026-08-02",
+            "kind": "reaction"
           },
           {
-            "date": "2026-08-03",
+            "date": "2026-08-02",
+            "kind": "trigger",
+            "label": "reclaim"
+          }
+        ],
+        "1W": [
+          {
+            "date": "2026-02-06",
+            "kind": "reaction"
+          }
+        ]
+      }
+    },
+    "BTC": {
+      "plans": {
+        "1D": {
+          "entry": 64055.953125,
+          "stop": 60637.76635551,
+          "tp1": 66910.0625,
+          "tp2": 69230.359375,
+          "tp3": 71985.7421875,
+          "risk": 3418.18676949,
+          "rr": 1.51,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 69230.359375,
+          "trail": 64055.953125,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 70807.38205078,
+          "swing_high": 65760.484375,
+          "swing_low": 62226.578125,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 64055.953125,
+          "stop": 54485.45244653,
+          "tp1": 75988.3984375,
+          "tp2": 82792.2109375,
+          "tp3": 88758.7265625,
+          "risk": 9570.50067847,
+          "rr": 1.96,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 82792.2109375,
+          "trail": 64055.953125,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 90894.21265625,
+          "swing_high": 66910.0625,
+          "swing_low": 57747.765625,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 609
+        },
+        "1W": {
+          "entry": 64055.953125,
+          "stop": 51880.69544324,
+          "tp1": 82792.2109375,
+          "tp2": 97860.6015625,
+          "tp3": 108268.4453125,
+          "risk": 12175.25768176,
+          "rr": 2.78,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 97860.6015625,
+          "trail": 64055.953125,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 63685.46679688,
+          "swing_high": 79173.5,
+          "swing_low": 57747.765625,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "trigger_bar": "2026-08-07",
+          "reaction_bar": "2026-07-24",
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "weekly",
+        "level": 63685.46679688,
+        "weekly_sma200": 63685.46679688,
+        "daily_sma200": 70807.38205078,
+        "dist_pct": 0.58,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 0.4,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 1588.81176949,
+        "entry": 64055.953125,
+        "stop": 51880.69544324,
+        "tp1": 82792.2109375,
+        "tp2": 97860.6015625,
+        "tp3": 108268.4453125,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 12175.25768176,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 2.78
+      },
+      "analysis": "BTC is bouncing off the Weekly 200 SMA ($63685.4668), 0.6% away, with thin structure. A long reaction setup: enter $64055.9531, stop $51880.6954 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $82792.2109 / TP2 $97860.6016 / TP3 $108268.4453; move SL to break-even at TP1, then below new support at TP2. 2.8R to TP2.",
+      "markers": {
+        "1D": [],
+        "3D": [],
+        "1W": [
+          {
+            "date": "2026-07-24",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-07",
+            "kind": "trigger",
+            "label": "reclaim"
+          }
+        ]
+      }
+    },
+    "BDX": {
+      "plans": {
+        "1D": {
+          "entry": 0.082821,
+          "stop": 0.07657029,
+          "tp1": 0.092793,
+          "tp2": 0.09827,
+          "tp3": 0.11407455,
+          "risk": 0.00625071,
+          "rr": 2.47,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.09827,
+          "trail": 0.082821,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "measured"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 2,
+          "level": 0.08121822,
+          "swing_high": 0.084911,
+          "swing_low": 0.080387,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "trigger_bar": "2026-08-04",
+          "reaction_bar": "2026-08-04",
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 0.082821,
+          "stop": 0.07010442,
+          "tp1": 0.094074,
+          "tp2": 0.104986,
+          "tp3": 0.1464039,
+          "risk": 0.01271658,
+          "rr": 1.74,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.104986,
+          "trail": 0.082821,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "measured"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 2,
+          "level": 0.0774726,
+          "swing_high": 0.101233,
+          "swing_low": 0.080014,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-06-21",
+          "bars": 609
+        },
+        "1W": {
+          "entry": 0.082821,
+          "stop": 0.00343858,
+          "tp1": 0.20189461,
+          "tp2": 0.32096823,
+          "tp3": 0.47973306,
+          "risk": 0.07938241,
+          "rr": 3.0,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.32096823,
+          "trail": 0.082821,
+          "tp_basis": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "target_basis": "measured",
+          "structural_tps": 0,
+          "level": 0.06008261,
+          "swing_high": 0.101233,
+          "swing_low": 0.01236,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2025-07-11",
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 0.08121822,
+        "weekly_sma200": 0.06008261,
+        "daily_sma200": 0.08121822,
+        "dist_pct": 1.94,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 0.6,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 0.00381672,
+        "entry": 0.082821,
+        "stop": 0.07657029,
+        "tp1": 0.092793,
+        "tp2": 0.09827,
+        "tp3": 0.11407455,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 0.00625071,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "measured"
+        ],
+        "structural_tps": 2,
+        "rr": 2.47
+      },
+      "analysis": "BDX is bouncing off the H4 (daily proxy) 200 SMA ($0.0812), 1.9% away, with a workable structure. A long reaction setup: enter $0.0828, stop $0.0766 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 $0.0928 / TP2 $0.0983 / TP3 $0.1141; move SL to break-even at TP1, then below new support at TP2. 2.5R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-04",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-04",
+            "kind": "trigger",
+            "label": "reclaim"
+          }
+        ],
+        "3D": [
+          {
+            "date": "2026-06-21",
+            "kind": "reaction"
+          }
+        ],
+        "1W": [
+          {
+            "date": "2025-07-11",
+            "kind": "reaction"
+          }
+        ]
+      }
+    },
+    "WBT": {
+      "plans": {
+        "1D": {
+          "entry": 53.77866333,
+          "stop": 52.42971935,
+          "tp1": 55.16782761,
+          "tp2": 56.61226273,
+          "tp3": 57.8382988,
+          "risk": 1.34894398,
+          "rr": 2.1,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 56.61226273,
+          "trail": 53.77866333,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 53.77866333,
+          "swing_high": 57.56005096,
+          "swing_low": 54.10984039,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "retest",
+          "trigger_bar": "2026-08-04",
+          "reaction_bar": "2026-08-04",
+          "bars": 1440
+        },
+        "3D": {
+          "entry": 55.42522812,
+          "stop": 41.24727994,
+          "tp1": 76.69215039,
+          "tp2": 97.95907266,
+          "tp3": 126.31496902,
+          "risk": 14.17794818,
+          "rr": 3.0,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 97.95907266,
+          "trail": 55.42522812,
+          "tp_basis": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "target_basis": "measured",
+          "structural_tps": 0,
+          "level": 44.15408759,
+          "swing_high": 58.22820282,
+          "swing_low": 46.33695221,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-06-09",
+          "bars": 480
+        },
+        "1W": {
+          "entry": 55.42522812,
+          "stop": 18.96100599,
+          "tp1": 110.12156131,
+          "tp2": 164.81789449,
+          "tp3": 237.74633875,
+          "risk": 36.46422213,
+          "rr": 3.0,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 164.81789449,
+          "trail": 55.42522812,
+          "tp_basis": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "target_basis": "measured",
+          "structural_tps": 0,
+          "level": 23.62336943,
+          "swing_high": 58.45610809,
+          "swing_low": 42.43136597,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 207
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 53.77866333,
+        "weekly_sma200": 23.62336943,
+        "daily_sma200": 53.77866333,
+        "dist_pct": 2.97,
+        "at_level": false,
+        "reaction": "bounce",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 207,
+        "atr": 1.34894398,
+        "entry": 53.77866333,
+        "stop": 52.42971935,
+        "tp1": 55.16782761,
+        "tp2": 56.61226273,
+        "tp3": 57.8382988,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 1.34894398,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 2.1
+      },
+      "analysis": "WBT is bouncing off the H4 (daily proxy) 200 SMA ($53.7787), 3.0% away, with a clean structure. A long reaction setup: enter $53.7787, stop $52.4297 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $55.1678 / TP2 $56.6123 / TP3 $57.8383; move SL to break-even at TP1, then below new support at TP2. 2.1R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-04",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-04",
             "kind": "trigger",
             "label": "retest"
           }
         ],
         "3D": [
           {
-            "date": "2026-05-28",
+            "date": "2026-06-09",
+            "kind": "reaction"
+          }
+        ],
+        "1W": []
+      }
+    },
+    "XMR": {
+      "plans": {
+        "1D": {
+          "entry": 350.66851807,
+          "stop": 384.39088788,
+          "tp1": 317.92907715,
+          "tp2": 292.53826904,
+          "tp3": 182.05666902,
+          "risk": 33.72236981,
+          "rr": 1.72,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 292.53826904,
+          "trail": 350.66851807,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "measured"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 2,
+          "level": 361.12255127,
+          "swing_high": 371.69073486,
+          "swing_low": 334.25164795,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "reclaim",
+          "trigger_bar": "2026-08-04",
+          "reaction_bar": "2026-08-04",
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 350.66851807,
+          "stop": 399.19116552,
+          "tp1": 302.7354126,
+          "tp2": 268.75012207,
+          "tp3": 233.09095764,
+          "risk": 48.52264745,
+          "rr": 1.69,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 268.75012207,
+          "trail": 350.66851807,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 319.96696045,
+          "swing_high": 371.69073486,
+          "swing_low": 301.92446899,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-06-30",
+          "bars": 609
+        },
+        "1W": {
+          "entry": 350.66851807,
+          "stop": 490.65469757,
+          "tp1": 233.09095764,
+          "tp2": 140.72457886,
+          "tp3": 17.5334259,
+          "risk": 139.9861795,
+          "rr": 1.5,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 140.72457886,
+          "trail": 350.66851807,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "measured"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 2,
+          "level": 224.38417259,
+          "swing_high": 438.40426636,
+          "swing_low": 292.53826904,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 361.12255127,
+        "weekly_sma200": 224.38417259,
+        "daily_sma200": 361.12255127,
+        "dist_pct": -2.98,
+        "at_level": false,
+        "reaction": "reject",
+        "structure": 0.6,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 12.70015301,
+        "entry": 350.66851807,
+        "stop": 384.39088788,
+        "tp1": 317.92907715,
+        "tp2": 292.53826904,
+        "tp3": 182.05666902,
+        "scale": [
+          0.5,
+          0.25,
+          0.15
+        ],
+        "risk": 33.72236981,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "measured"
+        ],
+        "structural_tps": 2,
+        "rr": 1.72
+      },
+      "analysis": "XMR is being rejected at the H4 (daily proxy) 200 SMA ($361.1226), 3.0% away, with a workable structure. A short reaction setup: enter $350.6685, stop $384.3909 (beyond the reaction); targets set at prior support (2/3 from real structure). Scale 50% / 25% / 15% into TP1 $317.9291 / TP2 $292.5383 / TP3 $182.0567; move SL to break-even at TP1, then below new support at TP2. 1.7R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-04",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-04",
+            "kind": "trigger",
+            "label": "reclaim"
+          }
+        ],
+        "3D": [
+          {
+            "date": "2026-06-30",
             "kind": "reaction"
           }
         ],
@@ -1268,13 +965,13 @@
     "TRX": {
       "plans": {
         "1D": {
-          "entry": 0.32850799,
-          "stop": 0.31347051,
+          "entry": 0.32693499,
+          "stop": 0.3135353,
           "tp1": 0.353284,
           "tp2": 0.37633201,
-          "tp3": 0.4036954,
-          "risk": 0.01503748,
-          "rr": 3.18,
+          "tp3": 0.39393345,
+          "risk": 0.01339969,
+          "rr": 3.69,
           "direction": "long",
           "scale": [
             0.25,
@@ -1282,7 +979,7 @@
             0.15
           ],
           "target": 0.37633201,
-          "trail": 0.32850799,
+          "trail": 0.32693499,
           "tp_basis": [
             "structural",
             "structural",
@@ -1290,7 +987,7 @@
           ],
           "target_basis": "structural",
           "structural_tps": 2,
-          "level": 0.31711448,
+          "level": 0.31720235,
           "swing_high": 0.33307901,
           "swing_low": 0.32326901,
           "sma_window": 200,
@@ -1299,15 +996,15 @@
           "entry_trigger": null,
           "trigger_bar": null,
           "reaction_bar": "2026-07-28",
-          "bars": 1825
+          "bars": 1826
         },
         "3D": {
-          "entry": 0.32850799,
-          "stop": 0.28529749,
+          "entry": 0.32693499,
+          "stop": 0.28516669,
           "tp1": 0.36978701,
-          "tp2": 0.45813949,
-          "tp3": 0.5445605,
-          "risk": 0.0432105,
+          "tp2": 0.45223989,
+          "tp3": 0.53577649,
+          "risk": 0.0417683,
           "rr": 3.0,
           "direction": "long",
           "scale": [
@@ -1315,8 +1012,8 @@
             0.5,
             0.15
           ],
-          "target": 0.45813949,
-          "trail": 0.32850799,
+          "target": 0.45223989,
+          "trail": 0.32693499,
           "tp_basis": [
             "structural",
             "measured",
@@ -1324,7 +1021,7 @@
           ],
           "target_basis": "measured",
           "structural_tps": 1,
-          "level": 0.29324892,
+          "level": 0.29324106,
           "swing_high": 0.33317101,
           "swing_low": 0.31403399,
           "sma_window": 200,
@@ -1336,12 +1033,12 @@
           "bars": 609
         },
         "1W": {
-          "entry": 0.32850799,
-          "stop": 0.17180617,
-          "tp1": 0.56356071,
-          "tp2": 0.79861344,
-          "tp3": 1.11201707,
-          "risk": 0.15670182,
+          "entry": 0.32693499,
+          "stop": 0.17167538,
+          "tp1": 0.55982441,
+          "tp2": 0.79271383,
+          "tp3": 1.10323306,
+          "risk": 0.15525961,
           "rr": 3.0,
           "direction": "long",
           "scale": [
@@ -1349,8 +1046,8 @@
             0.5,
             0.15
           ],
-          "target": 0.79861344,
-          "trail": 0.32850799,
+          "target": 0.79271383,
+          "trail": 0.32693499,
           "tp_basis": [
             "measured",
             "measured",
@@ -1358,7 +1055,7 @@
           ],
           "target_basis": "measured",
           "structural_tps": 0,
-          "level": 0.18574415,
+          "level": 0.18573628,
           "swing_high": 0.37633201,
           "swing_low": 0.311759,
           "sma_window": 200,
@@ -1373,36 +1070,36 @@
       "detail": {
         "setup_type": "vivek",
         "level_tf": "h4",
-        "level": 0.31711448,
-        "weekly_sma200": 0.18574415,
-        "daily_sma200": 0.31711448,
-        "dist_pct": 3.47,
+        "level": 0.31720235,
+        "weekly_sma200": 0.18573628,
+        "daily_sma200": 0.31720235,
+        "dist_pct": 2.98,
         "at_level": false,
         "reaction": "bounce",
         "structure": 0.6,
         "confluence": false,
         "weekly_bars": 262,
-        "atr": 0.00364398,
-        "entry": 0.32850799,
-        "stop": 0.31347051,
+        "atr": 0.00366705,
+        "entry": 0.32693499,
+        "stop": 0.3135353,
         "tp1": 0.353284,
         "tp2": 0.37633201,
-        "tp3": 0.4036954,
+        "tp3": 0.39393345,
         "scale": [
           0.25,
           0.5,
           0.15
         ],
-        "risk": 0.01503748,
+        "risk": 0.01339969,
         "tp_basis": [
           "structural",
           "structural",
           "measured"
         ],
         "structural_tps": 2,
-        "rr": 3.18
+        "rr": 3.69
       },
-      "analysis": "TRX is bouncing off the H4 (daily proxy) 200 SMA ($0.3171), 3.5% away, with a workable structure. A long reaction setup: enter $0.3285, stop $0.3135 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 $0.3533 / TP2 $0.3763 / TP3 $0.4037; move SL to break-even at TP1, then below new support at TP2. 3.2R to TP2.",
+      "analysis": "TRX is bouncing off the H4 (daily proxy) 200 SMA ($0.3172), 3.0% away, with a workable structure. A long reaction setup: enter $0.3269, stop $0.3135 (beyond the reaction); targets set at prior resistance (2/3 from real structure). Scale 25% / 50% / 15% into TP1 $0.3533 / TP2 $0.3763 / TP3 $0.3939; move SL to break-even at TP1, then below new support at TP2. 3.7R to TP2.",
       "markers": {
         "1D": [
           {
@@ -1452,40 +1149,40 @@
           "armed": false,
           "entry_trigger": null,
           "trigger_bar": null,
-          "reaction_bar": "2026-08-03",
-          "bars": 923
+          "reaction_bar": "2026-08-04",
+          "bars": 924
         },
         "3D": {
-          "entry": 2.01e-06,
+          "entry": 2e-06,
           "stop": 2.01e-06,
-          "tp1": 2e-06,
-          "tp2": 2e-06,
-          "tp3": 2e-06,
-          "risk": 0.0,
-          "rr": 5.48,
+          "tp1": 1.98e-06,
+          "tp2": 1.96e-06,
+          "tp3": 1.94e-06,
+          "risk": 1e-08,
+          "rr": 3.0,
           "direction": "short",
           "scale": [
             0.5,
             0.25,
             0.15
           ],
-          "target": 2e-06,
-          "trail": 2.01e-06,
+          "target": 1.96e-06,
+          "trail": 2e-06,
           "tp_basis": [
-            "structural",
+            "measured",
             "measured",
             "measured"
           ],
           "target_basis": "measured",
-          "structural_tps": 1,
+          "structural_tps": 0,
           "level": 2.01e-06,
           "swing_high": 2e-06,
           "swing_low": 2e-06,
           "sma_window": 200,
           "sma_proxy": false,
-          "armed": true,
-          "entry_trigger": "retest",
-          "trigger_bar": "2026-08-02",
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
           "reaction_bar": "2026-08-02",
           "bars": 308
         },
@@ -1537,11 +1234,11 @@
         "confluence": false,
         "weekly_bars": 133,
         "atr": 0.0,
-        "entry": 2.01e-06,
-        "stop": 2.01e-06,
+        "entry": 2e-06,
+        "stop": 2e-06,
         "tp1": 2e-06,
-        "tp2": 2e-06,
-        "tp3": 2e-06,
+        "tp2": 1.99e-06,
+        "tp3": 1.99e-06,
         "scale": [
           0.5,
           0.25,
@@ -1549,18 +1246,18 @@
         ],
         "risk": 0.0,
         "tp_basis": [
-          "structural",
+          "measured",
           "measured",
           "measured"
         ],
-        "structural_tps": 1,
-        "rr": 5.48
+        "structural_tps": 0,
+        "rr": 3.0
       },
-      "analysis": "HTX is fading below the 3-Day 200 SMA ($0.0000), 0.5% away, with thin structure. A short reaction setup: enter $0.0000, stop $0.0000 (beyond the reaction); targets set at prior support (1/3 from real structure). Scale 50% / 25% / 15% into TP1 $0.0000 / TP2 $0.0000 / TP3 $0.0000; move SL to break-even at TP1, then below new support at TP2. 5.5R to TP2.",
+      "analysis": "HTX is fading below the 3-Day 200 SMA ($0.0000), 0.5% away, with thin structure. A short reaction setup: enter $0.0000, stop $0.0000 (beyond the reaction); targets set by R-multiples (no clear structure nearby). Scale 50% / 25% / 15% into TP1 $0.0000 / TP2 $0.0000 / TP3 $0.0000; move SL to break-even at TP1, then below new support at TP2. 3.0R to TP2.",
       "markers": {
         "1D": [
           {
-            "date": "2026-08-03",
+            "date": "2026-08-04",
             "kind": "reaction"
           }
         ],
@@ -1568,13 +1265,162 @@
           {
             "date": "2026-08-02",
             "kind": "reaction"
+          }
+        ],
+        "1W": []
+      }
+    },
+    "CAKE": {
+      "plans": {
+        "1D": {
+          "entry": 1.44266029,
+          "stop": 1.51994347,
+          "tp1": 1.37636101,
+          "tp2": 1.31784403,
+          "tp3": 1.26850605,
+          "risk": 0.07728318,
+          "rr": 1.62,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 1.31784403,
+          "trail": 1.44266029,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 1.44266029,
+          "swing_high": 1.47912705,
+          "swing_low": 1.35360396,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "retest",
+          "trigger_bar": "2026-08-04",
+          "reaction_bar": "2026-08-04",
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 1.413715,
+          "stop": 2.14484264,
+          "tp1": 0.31702355,
+          "tp2": 0.07209947,
+          "tp3": 0.07068575,
+          "risk": 0.73112763,
+          "rr": 1.83,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 0.07209947,
+          "trail": 1.413715,
+          "tp_basis": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "target_basis": "measured",
+          "structural_tps": 0,
+          "level": 2.0553346,
+          "swing_high": 1.48002005,
+          "swing_low": 1.28660703,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 609
+        },
+        "1W": {
+          "entry": 1.413715,
+          "stop": 2.54677083,
+          "tp1": 0.07351318,
+          "tp2": 0.07209947,
+          "tp3": 0.07068575,
+          "risk": 1.13305582,
+          "rr": 1.18,
+          "direction": "short",
+          "scale": [
+            0.5,
+            0.25,
+            0.15
+          ],
+          "target": 0.07209947,
+          "trail": 1.413715,
+          "tp_basis": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "target_basis": "measured",
+          "structural_tps": 0,
+          "level": 2.36127584,
+          "swing_high": 1.55631006,
+          "swing_low": 1.13049805,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 1.44266029,
+        "weekly_sma200": 2.36127584,
+        "daily_sma200": 1.44266029,
+        "dist_pct": -2.05,
+        "at_level": false,
+        "reaction": "reject",
+        "structure": 0.4,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 0.04081642,
+        "entry": 1.44266029,
+        "stop": 1.51994347,
+        "tp1": 1.37636101,
+        "tp2": 1.31784403,
+        "tp3": 1.26850605,
+        "scale": [
+          0.5,
+          0.25,
+          0.15
+        ],
+        "risk": 0.07728318,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 1.62
+      },
+      "analysis": "CAKE is being rejected at the H4 (daily proxy) 200 SMA ($1.4427), 2.0% away, with thin structure. A short reaction setup: enter $1.4427, stop $1.5199 (beyond the reaction); targets set at prior support (3/3 from real structure). Scale 50% / 25% / 15% into TP1 $1.3764 / TP2 $1.3178 / TP3 $1.2685; move SL to break-even at TP1, then below new support at TP2. 1.6R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-04",
+            "kind": "reaction"
           },
           {
-            "date": "2026-08-02",
+            "date": "2026-08-04",
             "kind": "trigger",
             "label": "retest"
           }
         ],
+        "3D": [],
         "1W": []
       }
     }
