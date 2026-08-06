@@ -336,8 +336,13 @@ const tickTests = async () => {
 const hbTests = async () => {
   suite("heartbeat.js — heal when overdue, and never page on success");
 
+  // Both exports must be stripped. `onRequestGet` is a function DECLARATION, so
+  // the vm puts it on the sandbox by itself; `onRequestHead` is a `const`, which
+  // lives in a lexical environment the test can never reach — hence the
+  // globalThis form (same reason journal.js's loader uses it).
   const load = (fetchImpl) => loadModule("heartbeat.js", {
-    strip: [[/export async function onRequestGet/, "async function onRequestGet"]],
+    strip: [[/export async function onRequestGet/, "async function onRequestGet"],
+            [/export const onRequestHead/, "globalThis.onRequestHead"]],
     sandboxExtra: { fetch: fetchImpl },
   });
   const minsAgo = (m) => new Date(Date.now() - m * 6e4).toISOString();

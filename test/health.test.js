@@ -20,10 +20,14 @@ const vm = require("vm");
 
 // ---- load the real handler --------------------------------------------------
 const SRC = path.join(__dirname, "..", "functions", "api", "health.js");
-const source = fs.readFileSync(SRC, "utf8").replace(
-  /export\s+async\s+function\s+onRequestGet/,
-  "async function onRequestGet",
-);
+// BOTH exports have to come off. onRequestHead was added 2026-08-07 (a HEAD
+// probe was falling through to the static assets and 404ing — see the note in
+// heartbeat.js); it is a `const`, so the vm keeps it in a lexical environment
+// this suite cannot reach, hence the globalThis form. api_guards.test.js owns
+// the behavioural pin for it; this replace only keeps the file evaluable here.
+const source = fs.readFileSync(SRC, "utf8")
+  .replace(/export\s+async\s+function\s+onRequestGet/, "async function onRequestGet")
+  .replace(/export\s+const\s+onRequestHead/, "globalThis.onRequestHead");
 const sandbox = { Response, Request, URL, Date, Number, Math, Array, JSON, String, Set };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
