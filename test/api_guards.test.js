@@ -499,6 +499,40 @@ const hbTests = async () => {
     assert.ok((await r.json()).age_min > 90);
   });
 
+  await test("HEAD is answered, not 404'd — the trap that silently disarmed the whole loop", async () => {
+    // Cloudflare Pages sends a method with NO handler onward to the static
+    // assets; nothing is served at /api/heartbeat, so an unhandled HEAD is a
+    // 404 and the handler never runs. UptimeRobot's current dashboard defaults
+    // NEW monitors to HEAD, so the first armed heartbeat monitor reported DOWN
+    // for its entire life against a healthy endpoint while the healer executed
+    // zero times (2026-08-07). Both dashboards looked armed; nothing was
+    // connected. Verified live: HEAD -> 404, GET -> 200, same URL, same minute.
+    const H = load(ghFetchStub(204));
+    assert.equal(typeof H.onRequestHead, "function",
+      "no onRequestHead export — every HEAD probe 404s before reaching the healer");
+    assert.equal(H.onRequestHead, H.onRequestGet,
+      "HEAD must do the same work and return the same status; the runtime drops the body");
+    const r = await H.onRequestHead({
+      env: envFor(FRESH, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() }),
+      request: new Request("https://x/api/heartbeat"),
+    });
+    assert.equal(r.status, 200);
+  });
+
+  await test("the ALARM answers HEAD too — same trap, worse blast radius", async () => {
+    // /api/health was not broken (its monitor predates the HEAD default and
+    // sends GET) and is fixed anyway: it is the last thing still speaking when
+    // GitHub's scheduler dies. Recreate that monitor, or let UptimeRobot
+    // migrate its default, and the alarm goes permanently red against a healthy
+    // pipeline until somebody reads a 404 carefully.
+    const HL = loadModule("health.js", {
+      strip: [[/export async function onRequestGet/, "async function onRequestGet"],
+              [/export const onRequestHead/, "globalThis.onRequestHead"]],
+    });
+    assert.equal(typeof HL.onRequestHead, "function", "health.js must answer HEAD");
+    assert.equal(HL.onRequestHead, HL.onRequestGet);
+  });
+
   await test("the two decisions most likely to be 'tidied away' keep their reasoning in the source", async () => {
     // The tempting future edits are "surely stale should be RED" and "surely
     // this should need a secret". Both are wrong here for reasons that only
