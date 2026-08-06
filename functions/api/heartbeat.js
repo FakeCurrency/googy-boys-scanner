@@ -223,3 +223,22 @@ export async function onRequestGet(context) {
     clearTimeout(timer);
   }
 }
+
+/* HEAD must answer, not 404 — found live 2026-08-07.
+ *
+ * Cloudflare Pages routes a method with no matching handler onward to the
+ * STATIC assets, and there is no file at /api/heartbeat, so an unhandled HEAD
+ * returns 404 — the handler above never executes at all. UptimeRobot's current
+ * dashboard defaults NEW http monitors to HEAD (the older /api/health monitor
+ * predates that default and sends GET, which is why one worked and one did
+ * not). So the first armed heartbeat monitor spent its entire life reporting
+ * DOWN against a perfectly healthy endpoint while the healer ran zero times:
+ * a self-heal loop that looked armed on both dashboards and was not connected
+ * at either end. A monitor is worth exactly what its probe reaches.
+ *
+ * Same handler, same status code, same side effects — the runtime drops the
+ * body for HEAD, which is all a prober reads anyway. Deliberately NOT
+ * `onRequest`: this endpoint dispatches a workflow, and POST/PUT/DELETE have
+ * no business doing that.
+ */
+export const onRequestHead = onRequestGet;

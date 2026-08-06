@@ -88,3 +88,14 @@ export async function onRequestGet(context) {
     return json(503, { ok: false, error: String(e && e.message || e) });
   }
 }
+
+/* HEAD must answer, not 404 — see the same note in heartbeat.js (2026-08-07).
+ *
+ * This one was NOT broken: its UptimeRobot monitor predates the HEAD default
+ * and sends GET. It is fixed anyway because the trap is identical and the
+ * blast radius here is worse — this endpoint is the ALARM, the last thing that
+ * still speaks when GitHub's scheduler dies. Recreate this monitor one day, or
+ * let UptimeRobot migrate its default, and the alarm goes permanently red
+ * against a healthy pipeline until someone reads a 404 carefully.
+ */
+export const onRequestHead = onRequestGet;
