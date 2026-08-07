@@ -1,0 +1,13 @@
+2026-06-22 22:26:58 UTC  INFO     starting  mode=TESTNET  dry_run=False
+2026-06-22 22:26:58 UTC  INFO     reconciling Bybit positions…
+2026-06-22 22:26:58 UTC  ERROR    could not fetch Bybit positions: You have breached the ip rate limit or your ip is from the usa. (ErrCode: 403) (ErrTime: 22:26:58).
+Request → GET https://api-testnet.bybit.com/v5/position/list: category=linear&settleCoin=USDT.
+2026-06-22 22:26:58 UTC  INFO     scan ts=2026-06-22T22:26:57+00:00  session_day=2026-06-23  trace_id=5ef2f021  scanner_version=7.0.0
+2026-06-22 22:26:58 UTC  INFO     pre-trade gate  trades_used=0/5  today_pnl=0.00  loss_limit=-500.00
+2026-06-22 22:26:58 UTC  INFO     live_deployment_stage=1
+2026-06-22 22:26:58 UTC  INFO     run complete  submitted=0  skipped_corr_cap=0  skipped_non_crypto=0  skipped_regime=0
+2026-06-22 22:26:58 UTC  INFO     performance report written  trades_all=14  total_pnl=-810.79  week_wr=11.1%  week_avg_r=-0.44  expectancy=-0.3277R
+2026-06-22 22:26:58 UTC  INFO     expectancy  trades=14  E=-0.3277R ($-32.77/trade)  wr=28.6%  avg_win=1.523R  avg_loss=1.068R  edge=1.426  [low_sample (14<20) — estimate unreliable]
+2026-06-22 22:26:58 UTC  INFO     health runtime snapshot  open=0  heat=0.0%  dd=4.0%  cb_ok=True
+2026-06-22 22:26:58 UTC  INFO     scaling advisor  stage=1  level=0  streak=0 wk  dd=4.0%  Not yet at Level 1. Need 4 more profitable week(s) with drawdown < 5%. Current: 0 profitable week streak, DD 4.1%.
+2026-06-22 22:26:58 UTC  INFO     attribution report written  trades=14  engines=scalp  regimes=ranging,unknown
