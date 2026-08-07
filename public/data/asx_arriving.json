@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-08T01:12:10+10:00",
+  "generated_at": "2026-08-08T02:14:27+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "ITM",
+      "name": "iTech Minerals Ltd",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.044,
+      "turnover_avg20": 30016,
+      "turnover_today": 519517,
+      "rvol": 16.6,
+      "adv_usd": 30016.37,
+      "fund": false
+    },
     {
       "symbol": "NH3",
       "name": "NH3 Clean Energy Limited",
