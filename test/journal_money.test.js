@@ -93,12 +93,39 @@ vm.runInContext(
   + slice("function exitMs(t) {", "\n  }") + "\n"
   + slice("const byExit = (closed) =>", ";\n") + "\n"
   + slice("function stats(closed, openN) {", "\n  }") + "\n"
+  // ── the open-positions sort (2026-08-07) ──
+  // paintOpen / refreshLive are the DOM half and are stubbed; everything that
+  // DECIDES an order is real code lifted out of the shipped file.
+  + slice("const scanPrice = new Map()", ";\n") + "\n"
+  + slice("function openedMs(t) {", "\n  }") + "\n"
+  + slice("const OPEN_SORT_KEYS =", ";\n") + "\n"
+  + slice("let openSort = {", ";") + "\n"
+  + slice("function openMetric(t, side) {", "\n  }") + "\n"
+  + slice("const openSortValue = (t, side, key) =>", ";\n") + "\n"
+  + slice("function sortedOpen(list, side) {", "\n  }") + "\n"
+  + "let painted = [];\n"
+  + "function paintOpen(side) { painted.push(side); }\n"
+  + "function refreshLive() { painted.push('refresh'); }\n"
+  + slice("function setOpenSort(key) {", "\n  }") + "\n"
   + "this.ensureInit = ensureInit; this.ensureClosedR = ensureClosedR;"
   + "this.stats = stats; this.byExit = byExit; this.sizeOf = sizeOf;"
   + "this.bumpGen = () => { RULES_GEN++; }; this.gen = () => RULES_GEN;"
-  + "this.setScale = (s) => { SCALE = s; };",
+  + "this.setScale = (s) => { SCALE = s; };"
+  + "this.openMetric = openMetric; this.sortedOpen = sortedOpen;"
+  + "this.setOpenSort = setOpenSort; this.scanPrice = scanPrice;"
+  + "this.sortState = () => ({ ...openSort });"
+  + "this.resetSort = () => { openSort = { key: 'opened', dir: -1 }; painted = []; };"
+  + "this.painted = () => painted.slice();",
   ctx);
 const { ensureInit, ensureClosedR, stats, byExit, sizeOf, bumpGen, gen, setScale } = ctx;
+const { openMetric, sortedOpen, setOpenSort, scanPrice, sortState, resetSort, painted } = ctx;
+
+// CODE-only view of the source. A substring ban that reads its own explanatory
+// comment as the offence passes forever against the bug it describes — this
+// file's comments name `localStorage` and `.sort(` deliberately.
+const CODE = SRC.split("\n")
+  .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
+  .join("\n");
 
 // A closed VIVEK long with round numbers: entry 100, stop 90, so 1R = 10 points.
 // Exit at 130 is +3R gross on whatever fraction of the position is still on.
@@ -347,6 +374,214 @@ test("journal.js adopts bot_rules.tp_scale and shouts when it differs", () => {
     "loadMe() that follows re-derives nothing (TOP100 #26)");
 });
 
+// ── the open-positions sort ──────────────────────────────────────────────────
+// Owner-requested 2026-08-07: "toggle by which one is currently in the BEST $
+// or R". The ordering itself is cosmetic; what is NOT cosmetic is what a row
+// claims while being ordered, which is why these pins are here in the money
+// suite rather than a view suite of their own.
+suite("open sort — the two books do not carry the same numbers");
+
+// A manual (Me) position: no unreal_r, no unreal_usd. Those cells are painted
+// by refreshLive AFTER render, so the sort has to re-derive them itself.
+const mePos = (over) => Object.assign({
+  id: "x", market: "asx", direction: "long", status: "open",
+  entry: 10, stop: 9, risk: 1, risk_stop: 9, risk_usd: 500,
+  opened_at: "2026-07-20T01:00:00Z",
+}, over);
+// A bot position: marked server-side, arrives with both numbers on it.
+const botPos = (over) => Object.assign({
+  id: "b", market: "nasdaq", direction: "long", status: "open",
+  entry: 100, stop: 90, risk: 10, unreal_r: 0.5, unreal_usd: 250,
+  opened_at: "2026-07-20T01:00:00Z",
+}, over);
+
+test("the bot side reads the numbers the scan already computed", () => {
+  const m = openMetric(botPos({ unreal_r: 1.25, unreal_usd: 600 }), "bot");
+  assert.equal(m.r, 1.25);
+  assert.equal(m.usd, 600);          // nasdaq → fx 1
+});
+
+test("the me side derives from the scan price, because nothing on the row has it", () => {
+  resetSort(); scanPrice.clear();
+  const t = mePos({ symbol: "AAA" });
+  // Sorting off the RENDERED cell would sort the literal "—": at this point in
+  // the page's life refreshLive has not run and the row carries no R at all.
+  assert.equal(t.unreal_r, undefined);
+  scanPrice.set("asx:AAA", 12);      // +2R on a 1-point risk
+  const m = openMetric(t, "me");
+  assert.equal(m.r, 2);
+  assert.equal(m.usd, 2 * 500 * 0.66, "ASX dollars must be FX-converted, not taken at face value");
+});
+
+test("a short is measured in its own direction", () => {
+  resetSort(); scanPrice.clear();
+  scanPrice.set("asx:BBB", 8);
+  const m = openMetric(mePos({ symbol: "BBB", direction: "short" }), "me");
+  assert.equal(m.r, 2, "price 8 against a short entered at 10 is +2R, not -2R");
+});
+
+test("an unpriced row is UNKNOWN, never a flat zero", () => {
+  resetSort(); scanPrice.clear();
+  // Zero would be a lie that sorts into the middle of the table, where it reads
+  // as a real number someone might act on.
+  assert.equal(openMetric(mePos({ symbol: "GONE" }), "me").r, null);
+  assert.equal(openMetric(botPos({ unreal_r: undefined }), "bot").r, null);
+  assert.equal(openMetric(botPos({ unreal_usd: undefined }), "bot").usd, null);
+});
+
+test("a zero-risk row cannot divide its way to Infinity", () => {
+  resetSort(); scanPrice.clear();
+  scanPrice.set("asx:FLAT", 11);
+  const m = openMetric(mePos({ symbol: "FLAT", risk: 0, stop: 10 }), "me");
+  assert.equal(m.r, null);
+});
+
+test("a row with no risk_usd still sorts by R, it just has no dollars", () => {
+  resetSort(); scanPrice.clear();
+  scanPrice.set("asx:CCC", 11);
+  const m = openMetric(mePos({ symbol: "CCC", risk_usd: null }), "me");
+  assert.equal(m.r, 1);
+  assert.equal(m.usd, null);
+});
+
+suite("open sort — ordering");
+
+const book = () => {
+  scanPrice.clear();
+  scanPrice.set("asx:WIN", 12);      // +2.0R · risk_usd 100 → $132
+  scanPrice.set("asx:BIG", 10.5);    // +0.5R · risk_usd 900 → $297
+  scanPrice.set("asx:LOSE", 9.5);    // -0.5R · risk_usd 200 → -$66
+  return [
+    mePos({ id: "win", symbol: "WIN", risk_usd: 100, opened_at: "2026-07-01T00:00:00Z" }),
+    mePos({ id: "big", symbol: "BIG", risk_usd: 900, opened_at: "2026-07-02T00:00:00Z" }),
+    mePos({ id: "lose", symbol: "LOSE", risk_usd: 200, opened_at: "2026-07-03T00:00:00Z" }),
+    mePos({ id: "dark", symbol: "DARK", risk_usd: 300, opened_at: "2026-07-04T00:00:00Z" }),
+  ];
+};
+const ids = (list) => list.map((t) => t.id).join(",");
+
+test("default is newest opened first — unchanged from before the sort existed", () => {
+  resetSort();
+  assert.equal(ids(sortedOpen(book(), "me")), "dark,lose,big,win");
+});
+
+test("R descending puts the best R at the top", () => {
+  resetSort(); const b = book(); setOpenSort("r");
+  assert.equal(ids(sortedOpen(b, "me")), "win,big,lose,dark");
+});
+
+test("$ descending is a DIFFERENT order to R — that is the point of two keys", () => {
+  resetSort(); const b = book(); setOpenSort("usd");
+  // BIG is only +0.5R but carries 9x the size, so it is the bigger dollar win.
+  // If this ever equals the R order, one of the two keys has stopped working.
+  assert.equal(ids(sortedOpen(b, "me")), "big,win,lose,dark");
+});
+
+test("UNKNOWN sinks to the bottom in BOTH directions", () => {
+  // The one that actually matters. Reversing the sort must not promote "we
+  // don't know what this is worth" to the top of the table, where it sits in
+  // the position reserved for the worst loser and reads as one.
+  resetSort(); const b = book();
+  setOpenSort("r");
+  assert.equal(ids(sortedOpen(b, "me")).split(",").pop(), "dark", "descending");
+  setOpenSort("r");                                     // reverse
+  assert.equal(sortState().dir, 1);
+  assert.equal(ids(sortedOpen(b, "me")), "lose,big,win,dark", "ascending — dark STILL last");
+});
+
+test("ties break by newest, so the order cannot jitter between renders", () => {
+  resetSort(); scanPrice.clear();
+  const same = [
+    mePos({ id: "old", symbol: "T1", opened_at: "2026-07-01T00:00:00Z" }),
+    mePos({ id: "new", symbol: "T2", opened_at: "2026-07-05T00:00:00Z" }),
+  ];
+  scanPrice.set("asx:T1", 11); scanPrice.set("asx:T2", 11);   // identical +1R
+  setOpenSort("r");
+  assert.equal(ids(sortedOpen(same, "me")), "new,old");
+});
+
+test("sortedOpen does not mutate the caller's array", () => {
+  // Same house rule byExit is held to above: state.bot.open / state.me.open are
+  // the LIVE books, and reordering them reorders every other surface that reads
+  // them — silently, and only for whoever clicked.
+  resetSort(); const b = book(); const before = ids(b);
+  setOpenSort("usd");
+  sortedOpen(b, "me");
+  assert.equal(ids(b), before);
+});
+
+suite("open sort — the toggle");
+
+// sortState()/painted() cross the vm boundary and carry the CONTEXT's
+// prototype, so strict deepEqual fails on structurally identical values.
+// Compare what the values ARE, not which realm made them.
+const sortStr = () => { const s = sortState(); return s.key + ":" + s.dir; };
+
+test("a new column always opens best-first, and re-clicking reverses it", () => {
+  resetSort();
+  assert.equal(sortStr(), "opened:-1");
+  setOpenSort("r");
+  assert.equal(sortStr(), "r:-1", "a new column opens BEST-first");
+  setOpenSort("r");
+  assert.equal(sortStr(), "r:1", "re-clicking the live column reverses");
+  setOpenSort("usd");
+  assert.equal(sortStr(), "usd:-1", "switching columns resets to best-first");
+});
+
+test("an unknown key is ignored rather than sorting by undefined", () => {
+  resetSort(); setOpenSort("r");
+  setOpenSort("../../etc/passwd");
+  assert.equal(sortStr(), "r:-1");
+});
+
+test("one click repaints BOTH books and re-runs the live fill", () => {
+  // The Me side's R/$ cells are painted by refreshLive, not by openRows, so a
+  // re-render without it leaves them on placeholders.
+  resetSort(); setOpenSort("usd");
+  assert.equal(painted().join(","), "bot,me,refresh");
+});
+
+suite("open sort — pins on the shipped file");
+
+test("openRows sorts through sortedOpen, not an inline comparator", () => {
+  assert.ok(/const rows = sortedOpen\(list, side\)/.test(CODE),
+    "openRows has gone back to sorting inline, so the toggle no longer reaches it");
+});
+
+test("both affordances are the same attribute, so they cannot drift apart", () => {
+  // The section-title buttons and the clickable column headers are one control
+  // wearing two hats. Two attributes would be two code paths and one of them
+  // would rot.
+  assert.ok(/data-osort="\$\{k\}"/.test(CODE), "the section-title control lost data-osort");
+  assert.ok(/data-osort="\$\{key\}"/.test(CODE), "the column headers lost data-osort");
+  assert.ok(/closest\("\[data-osort\]"\)/.test(CODE), "nothing listens for data-osort any more");
+});
+
+test("the header cell is reachable by a screen reader as a sort control", () => {
+  assert.ok(/aria-sort=/.test(CODE), "the sortable headers no longer announce their state");
+});
+
+test("the sort is NOT persisted", () => {
+  // Deliberate. A sort is a question you are asking right now, not a setting;
+  // sticky "$ descending" would bury the newest position — the one most likely
+  // to still need a decision — under a choice made weeks ago and forgotten.
+  assert.ok(!/openSort[\s\S]{0,200}localStorage/.test(CODE),
+    "the open sort is being persisted — see the note on openSort for why it is not");
+  assert.ok(!/(jr_open_sort|open_sort|osort)["']\s*[,)]/.test(CODE.replace(/data-osort/g, "")),
+    "a storage key for the open sort has appeared");
+});
+
+test("the sort control survives a re-render", () => {
+  // openSort is module-scoped for exactly this reason: renderAll() re-enters
+  // openRows from scratch every 3 minutes and a local would be thrown away.
+  // Module scope inside the page's IIFE is exactly two spaces of indent;
+  // anything nested inside a function is four or more.
+  assert.ok(/\n  let openSort = /.test(CODE),
+    "openSort is no longer at module scope — a re-render will throw the choice away");
+  assert.ok(!/\n {4,}let openSort = /.test(CODE),
+    "openSort has been moved inside a function and will not survive a re-render");
+});
+
 // ── the version gate ─────────────────────────────────────────────────────────
 suite("cache-busting");
 
@@ -358,7 +593,36 @@ test("journal.html requests a journal.js at or past the version these fixes ship
   const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
   const m = html.match(/js\/journal\.js\?v=(\d+)/);
   assert.ok(m, "journal.html no longer version-stamps journal.js");
-  assert.ok(Number(m[1]) >= 63, `journal.js?v=${m[1]} predates the Tier 2 money fixes (need >= 63)`);
+  assert.ok(Number(m[1]) >= 66,
+    `journal.js?v=${m[1]} predates the Tier 2 money fixes and the open sort (need >= 66)`);
+});
+
+test("journal.html requests a journal.css new enough to style the sort control", () => {
+  // Without it the control renders as three unstyled words in the section
+  // title — still clickable, but it does not read as a control.
+  const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
+  const m = html.match(/css\/journal\.css\?v=(\d+)/);
+  assert.ok(m, "journal.html no longer version-stamps journal.css");
+  assert.ok(Number(m[1]) >= 33, `journal.css?v=${m[1]} predates the sort control (need >= 33)`);
+});
+
+test("the sort hosts exist in the markup the control paints into", () => {
+  const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
+  for (const side of ["bot", "me"]) {
+    assert.ok(html.includes(`id="${side}-open-sort"`),
+      `#${side}-open-sort is gone — paintOpen silently no-ops and the control never appears`);
+  }
+});
+
+test("the control is reachable on a phone, where the column headers are not", () => {
+  // .jr-cardable thead is clipped to 1px below 680px, so the headers are
+  // physically untappable there and this control is the ONLY way to sort.
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8");
+  const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(/\.jr-osort-b/.test(code), "the sort control has no styling at all");
+  const mobile = code.slice(code.indexOf("@media (max-width: 680px)"));
+  assert.ok(/\.jr-osort-b\s*\{[^}]*min-height/.test(mobile),
+    "the mobile tap target is back to its unpadded 23x21px, which is a miss waiting to happen");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
