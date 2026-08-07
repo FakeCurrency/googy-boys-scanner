@@ -12,13 +12,31 @@
    of 30 scarce slots for months with nothing on any page saying so. With the
    book at its global cap, every stalled row is a new A+ the bot must decline.
 
-   READ-ONLY BY CONSTRUCTION. This file fetches two published artifacts
-   (data/vivek_bot_book.json, data/bot_rules.json) and writes DOM. It defines
-   no thresholds of its own — a row is stalled if and only if the engine
-   stamped it — and it has no write path into the bot, the book, or any store:
-   no POST, no dispatch, no localStorage. Closing anything stays 100% manual
-   (close_position.yml, journal_type=bot). test/stalled.test.js pins all of
-   this against the shipped source. */
+   ONE WRITE PATH, AND IT IS THE OWNER'S FINGER (owner-ruled 2026-08-07).
+   This file shipped read-only by construction and no longer is: each row now
+   carries a Close button. What changed is the ERGONOMICS of a decision the
+   owner could already make — close_position.yml with journal_type=bot, by
+   hand, in the Actions tab — not who makes it. The distinction that must
+   survive every future edit:
+
+     * NOTHING HERE DECIDES. No threshold, no timer, no condition in this file
+       closes anything. It defines no thresholds at all — a row is stalled if
+       and only if the engine stamped it — and the button does nothing until a
+       human clicks it TWICE.
+     * The write is exactly one call, POST /api/close, with journal_type
+       hard-coded "bot". That endpoint is the pre-existing, validated,
+       rate-limited dispatcher (1 close per symbol per minute, 60/day); this
+       file adds a caller, not a capability.
+     * It books at the row's OWN last_mark — the same number the Open R beside
+       it is computed from, so what you read is what you book — and the
+       confirm step prints that price before it is sent. A row with no usable
+       mark cannot be closed from here at all (fail-closed: no honest price,
+       no button).
+     * Still no localStorage, no sessionStorage, no KV, no second endpoint.
+
+   The surface remains a place to SEE what is squatting capacity; it is now
+   also the shortest path from seeing it to acting on it. test/stalled.test.js
+   pins every clause above against the shipped source. */
 (() => {
   "use strict";
 
@@ -113,20 +131,120 @@
     return base + " (" + s.free + " free besides)";
   };
 
+  // The price a close from this strip books at. The row's OWN last_mark, which
+  // is the number `unreal_r` beside it was computed from — so the R you are
+  // looking at when you decide is the R you get. FAIL-CLOSED: no finite
+  // positive mark means no honest price, which means no button, not a guess.
+  const closePrice = (pos) => {
+    const v = pos && pos.last_mark;
+    return (typeof v === "number" && isFinite(v) && v > 0) ? v : null;
+  };
+  const fmtPx = (v) => "$" + v.toFixed(v < 1 ? 4 : 2);
+
+  const closeCell = (pos) => {
+    const px = closePrice(pos);
+    if (px == null) {
+      return `<span class="st-x st-x-off" title="This row carries no usable last mark, so there is no honest price to book a close at. Close it via the close_position workflow (journal_type=bot) instead.">no price</span>`;
+    }
+    const sym = String(pos.symbol || "").toUpperCase();
+    return `<button type="button" class="st-x" data-sym="${esc(sym)}"
+      data-mkt="${esc(String(pos.market || "").toLowerCase())}"
+      data-dir="${esc(pos.direction === "short" ? "short" : "long")}"
+      data-px="${esc(String(px))}"
+      title="Close ${esc(sym)} in the bot book at its last mark, ${esc(fmtPx(px))}. Click once to arm, again to send — nothing is sent on the first click.">Close</button>`;
+  };
+
   const rowHTML = (pos, day, maxHold) => {
     const held = daysBetween(pos.entry_date, day);
     const marked = daysBetween(pos.stale_pinged, day);
     const f = framing(pos, held, maxHold);
     const ur = (typeof pos.unreal_r === "number" && isFinite(pos.unreal_r)) ? pos.unreal_r : null;
+    const sym = String(pos.symbol || "?").toUpperCase();
+    // The ticker opens the chart, same convention as every other surface in the
+    // app (app.js, alerts.js): chart.html?m=<market>&s=<SYM>&mode=vivek.
+    const href = `chart.html?m=${encodeURIComponent(String(pos.market || ""))}&s=${encodeURIComponent(sym)}&mode=vivek`;
     return `<div class="st-row st-${f.kind}">
-      <span class="st-sym"><b>${esc(String(pos.symbol || "?").toUpperCase())}</b>
+      <span class="st-sym"><a class="st-chart" href="${esc(href)}" title="Open the ${esc(sym)} chart"><b>${esc(sym)}</b></a>
         <em>${esc(MKT[pos.market] || String(pos.market || "").toUpperCase())}</em></span>
       <span class="st-days" title="Held ${held == null ? "?" : held} days since entry on ${esc(pos.entry_date || "?")}; the stale probe last flagged it ${marked == null ? "?" : marked} day(s) ago (${esc(pos.stale_pinged)}).">
         ${held == null ? "—" : held + "d"} <em>held</em> · flagged ${marked == null ? "—" : marked + "d"} ago</span>
       <span class="st-r ${ur == null ? "" : ur >= 0 ? "st-up" : "st-down"}">${fmtR(ur)}</span>
       <span class="st-grade">${esc(pos.grade || "—")}</span>
       <span class="st-call" title="${esc(f.detail)}">${esc(f.label)}</span>
+      ${closeCell(pos)}
     </div>`;
+  };
+
+  // ── the close control ──────────────────────────────────────────────────────
+  // TWO CLICKS, ALWAYS. The first only arms the button and prints the price it
+  // would send; the second sends it. A single mis-click next to a "your call"
+  // chip must never be able to close a real position, and the armed state
+  // disarms itself after ARM_MS so a button left hot in a background tab goes
+  // cold on its own. Only one row can be armed at a time — two live confirms
+  // side by side is how the wrong one gets clicked.
+  const ARM_MS = 6000;
+  let armedBtn = null, armTimer = null;
+
+  const disarm = (btn) => {
+    if (!btn) return;
+    clearTimeout(armTimer);
+    if (armedBtn === btn) armedBtn = null;
+    btn.classList.remove("st-arm");
+    btn.textContent = "Close";
+  };
+
+  const arm = (btn) => {
+    disarm(armedBtn);
+    armedBtn = btn;
+    btn.classList.add("st-arm");
+    btn.textContent = "Confirm " + fmtPx(parseFloat(btn.dataset.px));
+    armTimer = setTimeout(() => disarm(btn), ARM_MS);
+  };
+
+  const send = (btn) => {
+    clearTimeout(armTimer);
+    armedBtn = null;
+    btn.classList.remove("st-arm");
+    btn.disabled = true;
+    btn.textContent = "sending…";
+    // journal_type is hard-coded "bot" and must stay that way: "swing"/"scalp"
+    // would write the legacy localStorage journals instead of the ONE track
+    // record, silently, and the row would still be sitting here afterwards.
+    fetch("/api/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol: btn.dataset.sym,
+        market: btn.dataset.mkt,
+        direction: btn.dataset.dir,
+        price: parseFloat(btn.dataset.px),
+        journal_type: "bot",
+      }),
+    })
+      .then((r) => r.json().catch(() => ({})).then((b) => ({ ok: r.ok, b })))
+      .then(({ ok, b }) => {
+        if (ok) {
+          btn.classList.add("st-sent");
+          btn.textContent = "queued ✓";
+          btn.title = (b && b.message) ||
+            "Close queued — the book updates in about a minute, then this row disappears.";
+        } else {
+          // Re-enable: a rejected close (rate limit, bad market, dispatch
+          // failure) is a thing to retry, not a dead row. The reason goes in
+          // the title rather than an alert — a modal dialog over a trading
+          // page is the last thing anyone needs.
+          btn.disabled = false;
+          btn.classList.add("st-fail");
+          btn.textContent = "failed — retry";
+          btn.title = (b && b.message) || "The close request was rejected.";
+        }
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.classList.add("st-fail");
+        btn.textContent = "failed — retry";
+        btn.title = "Could not reach /api/close. Check the connection and try again.";
+      });
   };
 
   function render(host, book, rules) {
@@ -149,12 +267,14 @@
           · ${slotsClause(s)}</span>
       </div>
       <div class="st-rows">
-        <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span></div>
+        <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span><span>Act</span></div>
         ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
       </div>
       <p class="st-foot">Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is
-        a decision too. Read-only: nothing here closes anything. Keep a name, let a pre-TP1 time-stop
-        take it, or free the slot yourself via <b>Close position</b> (journal_type=bot).</p>`;
+        a decision too. Tap a ticker for its chart. <b>Close</b> books that row in the bot book at its own
+        last mark (the price the Open R beside it uses) — one click arms it and shows the price, a second
+        sends it; the book updates in about a minute and the row drops off. Nothing here closes anything
+        on its own.</p>`;
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────
@@ -165,6 +285,23 @@
 
   const host = document.getElementById("stalled-strip");
   if (host) {
+    // Delegated, bound ONCE at mount rather than per render: render() replaces
+    // innerHTML wholesale, so per-button listeners would be re-attached (and
+    // leaked) on every repaint. Anything that is not a live Close button falls
+    // straight through — clicking the ticker link must never be intercepted.
+    host.addEventListener("click", (ev) => {
+      const btn = ev.target.closest && ev.target.closest("button.st-x");
+      if (!btn || btn.disabled || !host.contains(btn)) return;
+      if (btn.classList.contains("st-arm")) send(btn); else arm(btn);
+    });
+    // Clicking anywhere else, or pressing Escape, stands the button down. An
+    // armed control should never outlive the attention that armed it.
+    document.addEventListener("click", (ev) => {
+      if (armedBtn && !(ev.target.closest && ev.target.closest("button.st-x"))) disarm(armedBtn);
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && armedBtn) disarm(armedBtn);
+    });
     const get = (url) => ((window.PM && PM.fetchTimeout) ? PM.fetchTimeout : fetch)(url, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     Promise.all([
