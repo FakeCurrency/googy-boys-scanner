@@ -658,15 +658,138 @@
     return p.now + p.ur + p.ud;
   }
 
+  // ── sorting the open tables (owner-requested 2026-08-07) ──────────────────
+  // "I want to toggle by which one is currently in the BEST $ or R."
+  //
+  // Module-level so it survives a re-render, exactly like `wkOffset` below —
+  // `renderAll()` re-enters openRows from scratch every 3 minutes and would
+  // otherwise throw the choice away.
+  //
+  // DELIBERATELY NOT PERSISTED. A sort is a question you are asking right now
+  // ("what is my biggest winner?"), not a setting. Sticky "$ descending" would
+  // silently bury the thing the default order exists for — the position you
+  // opened most recently, which is the one most likely to still need a
+  // decision — under a sort you chose weeks ago and no longer remember.
+  //
+  // SHARED by both books on purpose. They are two halves of one comparison,
+  // rendered side by side; sorting Claude's book but not yours makes the
+  // comparison harder, which is the only reason the layout is side by side.
+  const OPEN_SORT_KEYS = ["opened", "r", "usd"];
+  const OPEN_SORT_LABELS = { opened: "Newest", r: "R", usd: "$" };
+  const OPEN_SORT_TIPS = {
+    opened: "Most recently opened first",
+    r: "Biggest unrealised R first",
+    usd: "Biggest unrealised $ first",
+  };
+  let openSort = { key: "opened", dir: -1 };   // dir -1 = best/newest at the top
+
+  // The two numbers a row can be sorted by, for EITHER book — ONE resolver, so
+  // the order can never disagree with the cells it is ordering.
+  //
+  // The asymmetry it exists to absorb: the BOT side is marked server-side and
+  // arrives with unreal_r / unreal_usd already on the object, while the ME side
+  // carries NEITHER at render time — refreshLive paints those cells afterwards,
+  // straight into the DOM. Sorting the Me table off its rendered cells would
+  // therefore sort the literal placeholder "—", so this re-derives from the
+  // same scan-price map refreshLive itself reads first.
+  //
+  // Returns null, never 0, when a value cannot be resolved. An unpriced row is
+  // UNKNOWN, not flat, and sorting it as flat drops it into the middle of the
+  // table where it reads as a real number someone might act on.
+  function openMetric(t, side) {
+    if (side === "bot") {
+      return {
+        r: typeof t.unreal_r === "number" ? t.unreal_r : null,
+        usd: typeof t.unreal_usd === "number" ? t.unreal_usd * fxOf(t) : null,
+      };
+    }
+    const price = scanPrice.get(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
+    const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
+    if (price == null || !(risk > 0) || t.entry == null) return { r: null, usd: null };
+    const r = rOf(price, t.entry, risk, t.direction !== "short");
+    if (!isFinite(r)) return { r: null, usd: null };
+    return { r, usd: t.risk_usd != null ? r * t.risk_usd * fxOf(t) : null };
+  }
+
+  const openSortValue = (t, side, key) =>
+    (key === "opened" ? openedMs(t) : openMetric(t, side)[key]);
+
+  // House rule (see byExit above): never sort the caller's array in place.
+  // `state.bot.open` / `state.me.open` are the live books, and reordering them
+  // would silently reorder every other surface that reads them.
+  function sortedOpen(list, side) {
+    const { key, dir } = openSort;
+    const newestFirst = (a, b) => (openedMs(b) || 0) - (openedMs(a) || 0);
+    return list.slice().sort((a, b) => {
+      const va = openSortValue(a, side, key), vb = openSortValue(b, side, key);
+      // Unresolvable values sink to the BOTTOM in both directions. Flipping the
+      // sort must never promote "we don't know" to the top of the table.
+      if (va == null && vb == null) return newestFirst(a, b);
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (va === vb) return newestFirst(a, b);
+      return (va - vb) * dir;
+    });
+  }
+
+  // The control lives in the SECTION-TITLE line, not in a row of its own.
+  // Two reasons, and the second is the load-bearing one:
+  //   1. that line already exists, so nothing below it moves;
+  //   2. `.jr-cardable thead` is clipped to 1px in card mode (journal.css), so
+  //      below 680px the clickable headers are physically unreachable. A
+  //      control that disappears on a phone is not a control.
+  function openSortControl() {
+    return `<span class="jr-osort">` + OPEN_SORT_KEYS.map((k) => {
+      const on = openSort.key === k;
+      const arrow = on ? (openSort.dir < 0 ? " ↓" : " ↑") : "";
+      return `<button type="button" class="jr-osort-b${on ? " on" : ""}" data-osort="${k}"` +
+        ` title="${esc(OPEN_SORT_TIPS[k])}${on ? " — click again to reverse" : ""}">` +
+        `${OPEN_SORT_LABELS[k]}${arrow}</button>`;
+    }).join("") + `</span>`;
+  }
+
+  function setOpenSort(key) {
+    if (!OPEN_SORT_KEYS.includes(key)) return;
+    // Re-clicking the live column reverses it; a NEW column always opens
+    // best-first, because "show me the best" is the question being asked.
+    if (openSort.key === key) openSort = { key, dir: -openSort.dir };
+    else openSort = { key, dir: -1 };
+    paintOpen("bot"); paintOpen("me");
+    // The Me side's R/$ cells are painted by refreshLive, not by openRows, so
+    // a re-render leaves them on placeholders until this runs. Cached scan
+    // prices resolve without a network round trip.
+    refreshLive();
+  }
+
+  // Just the open table + its control — NOT renderSide, which also redraws the
+  // equity SVG and the stat cards. A sort click changes neither.
+  function paintOpen(side) {
+    const host = $("#" + side + "-open");
+    if (host) host.innerHTML = openRows(state[side].open, side, Date.now());
+    // Guarded: journal.js can land one commit ahead of the journal.html that
+    // adds this host, and the page must stay whole in between.
+    const sortHost = $("#" + side + "-open-sort");
+    if (sortHost) sortHost.innerHTML = state[side].open.length ? openSortControl() : "";
+  }
+
   // Per-section (Claude / Me) tables sit in half-width side-by-side columns, so
   // they carry only the per-side essentials — the full-width combined tables in
   // the comparison overview above show entry/stop/targets/timestamps in full.
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
+    // Sortable columns carry data-osort and are picked up by the same delegated
+    // click handler the control uses. No caret is drawn here on purpose: the
+    // section-title control is the single place the active sort is shown, so
+    // there is one visual source of truth rather than two that can disagree.
+    const sortTh = (key, label) => {
+      const on = openSort.key === key;
+      return `<th class="num jr-sortable" data-osort="${key}"` +
+        ` aria-sort="${on ? (openSort.dir < 0 ? "descending" : "ascending") : "none"}"` +
+        ` title="${esc(OPEN_SORT_TIPS[key])}">${label}</th>`;
+    };
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
-      <th class="num">R</th><th class="num">$</th><th class="num">Opened</th>${side === "me" ? "<th></th>" : ""}</tr>`;
-    // Newest position at the top.
-    const rows = list.slice().sort((a, b) => (openedMs(b) || 0) - (openedMs(a) || 0)).map((t) => {
+      ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("opened", "Opened")}${side === "me" ? "<th></th>" : ""}</tr>`;
+    const rows = sortedOpen(list, side).map((t) => {
       const isLong = t.direction !== "short";
       const actions = side === "me"
         ? `<td class="num jr-actions"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
@@ -987,7 +1110,7 @@
     const s = stats(d.closed, d.open.length);
     statCards($("#" + pre + "-stats"), s);
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
-    $("#" + pre + "-open").innerHTML = openRows(d.open, side, Date.now());
+    paintOpen(side);
     $("#" + pre + "-closed").innerHTML = closedRows(d.closed, side);
     $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
     $("#" + pre + "-closed-n").textContent = d.closed.length ? `(${d.closed.length})` : "";
@@ -1969,6 +2092,10 @@
       if (noteBtn) { editNote(noteBtn.getAttribute("data-note")); return; }
       const card = e.target.closest("[data-card]");
       if (card) { downloadTradeCard(card.getAttribute("data-card")); return; }   // UX-20 #13
+      // Both affordances — the section-title buttons and the clickable column
+      // headers — are the same attribute, so they cannot drift apart.
+      const osort = e.target.closest("[data-osort]");
+      if (osort) { setOpenSort(osort.getAttribute("data-osort")); return; }
       const btn = e.target.closest("[data-close]");
       if (btn) openCloseModal(btn.getAttribute("data-close"));
     });
