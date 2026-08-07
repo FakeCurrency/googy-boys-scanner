@@ -7,6 +7,13 @@ import sys
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+# Snapshot of the live circuit-breaker state, taken at IMPORT — before any test
+# in this module has had a chance to write it. See the pin in TestHealthCheck.
+_LIVE_ALERT_STATE = ROOT / "journal" / "alert_state.json"
+_ALERT_STATE_AT_IMPORT = (
+    _LIVE_ALERT_STATE.read_bytes() if _LIVE_ALERT_STATE.exists() else None
+)
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
@@ -232,6 +239,37 @@ class TestBySessionHour:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestHealthCheck:
+    # THESE TWO USED TO WRITE THE LIVE STATE FILE (fixed 2026-08-07).
+    #
+    # `run_all_checks` → `_check_circuit_breakers` resolves the journal off
+    # health_check's OWN module-global ROOT (health_check.py:90), so an
+    # unpatched call read the real journal/scalp_journal.json, evaluated the
+    # breakers against the real trade history, and wrote the result straight
+    # through to journal/alert_state.json — flipping consecutive_losses and
+    # drawdown to true on every `pytest -q`. CLAUDE.md's "run
+    # `git checkout -- journal/alert_state.json`" rule exists because of this.
+    #
+    # Worse than the file churn: check_all runs with notify=True by default and
+    # these tests took no stub, so on any machine with DISCORD_WEBHOOK_URL
+    # exported the suite fired a real circuit-breaker alert into #alerts. Inert
+    # in CI only because CI has no credentials — which is luck, not isolation.
+    #
+    # test_circuit_breaker.py has had a correct `isolated_state` fixture all
+    # along; it is module-local to that file and these live in this one.
+    # test_overall_status_worst_wins below always patched ROOT and was clean,
+    # which is the proof these two simply forgot.
+    @pytest.fixture(autouse=True)
+    def _isolate_root(self, tmp_path, monkeypatch):
+        """Point health_check at an empty tree for every test in this class."""
+        import health_check
+        monkeypatch.setattr(health_check, "ROOT", tmp_path)
+        # Deliberately creates NOTHING. Several tests below build their own
+        # tree with a bare mkdir(), which raises if the fixture got there
+        # first — and health_check handles a missing tree by design (every
+        # _check_* returns early on a file that is not there), which is
+        # exactly the state these two want anyway.
+        return tmp_path
+
     def test_run_all_checks_returns_valid_structure(self):
         import health_check
         result = health_check.run_all_checks()
@@ -249,6 +287,63 @@ class TestHealthCheck:
                          "log_sizes", "fill_analysis"}
         assert expected_keys.issubset(result["checks"].keys())
 
+    def test_the_suite_does_not_write_the_live_alert_state(self):
+        """The regression pin — and it has to be ORDER-PROOF.
+
+        The obvious version (read the file, run, read it again) is worthless
+        here and I proved that by mutation: with the fixture disabled the leak
+        came straight back and this test still passed, because an earlier test
+        in the class had already flipped both breakers to true and a saturated
+        file does not change again. Comparing against a snapshot taken at
+        MODULE IMPORT, before any test in this file has run, catches a write by
+        any test rather than only the last one.
+
+        Watches the REAL path deliberately: the failure being pinned is that
+        the real file gets written, so a test watching tmp_path would pass
+        while the bug reoccurred.
+
+        Known limit, stated rather than hidden: if the file is already dirty
+        when pytest starts, this compares dirty-to-dirty and cannot fire. CI
+        always starts from a clean checkout, and the structural pin below does
+        not depend on file state at all.
+        """
+        import health_check
+        from scanner.broker import alert_router
+
+        assert alert_router.STATE_FILE == _LIVE_ALERT_STATE, (
+            "alert_router no longer writes journal/alert_state.json — this pin "
+            "is watching the wrong path and is now worthless"
+        )
+        health_check.run_all_checks()
+        now = _LIVE_ALERT_STATE.read_bytes() if _LIVE_ALERT_STATE.exists() else None
+        assert now == _ALERT_STATE_AT_IMPORT, (
+            "pytest has written journal/alert_state.json. A test run is mutating "
+            "live circuit-breaker state — and that path also calls alert_dispatch, "
+            "so on a machine with DISCORD_WEBHOOK_URL set it fires a real alert."
+        )
+
+    def test_health_check_isolation_is_autouse(self):
+        """Structural half of the pin — immune to ordering and to saturation.
+
+        This is the assertion the behavioural test above cannot make. Turning
+        the fixture off is the exact regression, and it is visible in the
+        fixture's own metadata without running anything.
+        """
+        fx = TestHealthCheck._isolate_root
+        # pytest 8 exposes the marker as `_fixture_function_marker` on a
+        # FixtureFunctionDefinition; older versions hung `_pytestfixturefunction`
+        # on the raw function. Accept either so a pytest bump does not silently
+        # turn this pin into a no-op.
+        mark = getattr(fx, "_fixture_function_marker", None) or \
+            getattr(fx, "_pytestfixturefunction", None)
+        assert mark is not None, (
+            "_isolate_root is no longer a fixture, or pytest moved the marker "
+            "again — this pin cannot see autouse and must be updated"
+        )
+        assert mark.autouse is True, (
+            "TestHealthCheck._isolate_root is no longer autouse — health_check "
+            "will resolve ROOT to the real repo and write journal/alert_state.json"
+        )
     def test_check_scan_freshness_missing_file(self, tmp_path, monkeypatch):
         import health_check
         # Point ROOT to a tmp dir with no health.json
