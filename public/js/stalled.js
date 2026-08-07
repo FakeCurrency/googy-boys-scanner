@@ -141,6 +141,9 @@
   };
   const fmtPx = (v) => "$" + v.toFixed(v < 1 ? 4 : 2);
 
+  const tipFor = (sym, px) => "Close " + sym + " in the bot book at its last mark, " +
+    fmtPx(px) + ". Click once to arm, again to send - nothing is sent on the first click.";
+
   const closeCell = (pos) => {
     const px = closePrice(pos);
     if (px == null) {
@@ -151,7 +154,7 @@
       data-mkt="${esc(String(pos.market || "").toLowerCase())}"
       data-dir="${esc(pos.direction === "short" ? "short" : "long")}"
       data-px="${esc(String(px))}"
-      title="Close ${esc(sym)} in the bot book at its last mark, ${esc(fmtPx(px))}. Click once to arm, again to send — nothing is sent on the first click.">Close</button>`;
+      title="${esc(tipFor(sym, px))}">Close</button>`;
   };
 
   const rowHTML = (pos, day, maxHold) => {
@@ -201,12 +204,91 @@
     armTimer = setTimeout(() => disarm(btn), ARM_MS);
   };
 
+  // ONE CLOSE AT A TIME, and this is not politeness — it is the only thing that
+  // makes a ROW of Close buttons safe. Learned the hard way on the first real
+  // use, 2026-08-07: seven rows were clicked in about ten seconds and exactly
+  // ONE landed. The close pipeline is serial in two independent ways and this
+  // surface was the first thing ever able to outrun it.
+  //
+  //   1. close_position.yml sits in the `scan` concurrency group, and GitHub
+  //      keeps only ONE pending run per group — a new arrival CANCELS the
+  //      previously-pending one. Five dispatches evicted each other in flight.
+  //   2. Even the runs that do execute rebase onto a book another close has
+  //      already rewritten, and two closes touch the same JSON arrays in the
+  //      same three files. Git cannot auto-merge that: the last one conflicted
+  //      on all five rebase attempts and refused to push, correctly, leaving
+  //      the position open rather than corrupting the book.
+  //
+  // Neither is new; nothing else could ever reach them, because closing used
+  // to mean dispatching a workflow by hand, minutes apart. The UI enforced the
+  // constraint through friction. This restores it deliberately: while a close
+  // is in flight every other button is held, and it is released only when the
+  // published book actually shows the position gone.
+  const WAIT_WHY = "One close at a time — the book is a single file, and two closes at " +
+    "once collide on the merge. This unlocks when the one in flight lands.";
+  let inFlight = null;
+
+  const otherBtns = (except) => Array.prototype.slice
+    .call(host.querySelectorAll("button.st-x")).filter((b) => b !== except);
+
+  const holdOthers = (except, on) => {
+    otherBtns(except).forEach((b) => {
+      if (on && !b.classList.contains("st-sent") && !b.classList.contains("st-wait")) {
+        b.disabled = true; b.classList.add("st-wait");
+        b.textContent = "waiting…"; b.title = WAIT_WHY;
+      } else if (!on && b.classList.contains("st-wait")) {
+        b.disabled = false; b.classList.remove("st-wait");
+        b.textContent = "Close";
+        b.title = tipFor(b.dataset.sym, parseFloat(b.dataset.px));
+      }
+    });
+  };
+
+  // Watch the PUBLISHED book rather than trusting the 202. A queued dispatch is
+  // not a landed close — that gap is exactly where the six went missing — so
+  // "closed" is only claimed once the artifact the whole page reads no longer
+  // carries the position.
+  const POLL_MS = 8000, POLL_TRIES = 24;   // ~3 min: dispatch + run + Pages deploy
+  const settle = (btn, landed) => {
+    inFlight = null;
+    btn.disabled = true;
+    btn.classList.remove("st-fail");
+    btn.classList.add(landed ? "st-sent" : "st-fail");
+    btn.textContent = landed ? "closed ✓" : "check the book";
+    btn.title = landed
+      ? btn.dataset.sym + " is closed in the bot book. It drops off this list on the next page load."
+      : "The close was accepted but has not appeared in the published book yet. Reload in a minute; " +
+        "if it is still listed, the run failed — check close_position in Actions.";
+    holdOthers(btn, false);
+  };
+
+  const watchLanding = (btn) => {
+    const sym = String(btn.dataset.sym || "").toUpperCase();
+    let tries = 0;
+    const tick = () => {
+      tries += 1;
+      fetch("data/vivek_bot_book.json?t=" + tries + "_" + sym, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((bk) => {
+          const stillOpen = !bk || ((bk.open || []).some((p) =>
+            p && p.status === "open" && String(p.symbol || "").toUpperCase() === sym));
+          if (bk && !stillOpen) return settle(btn, true);
+          if (tries >= POLL_TRIES) return settle(btn, false);
+          setTimeout(tick, POLL_MS);
+        })
+        .catch(() => { if (tries >= POLL_TRIES) settle(btn, false); else setTimeout(tick, POLL_MS); });
+    };
+    setTimeout(tick, POLL_MS);
+  };
+
   const send = (btn) => {
     clearTimeout(armTimer);
     armedBtn = null;
     btn.classList.remove("st-arm");
     btn.disabled = true;
     btn.textContent = "sending…";
+    inFlight = btn.dataset.sym;
+    holdOthers(btn, true);
     // journal_type is hard-coded "bot" and must stay that way: "swing"/"scalp"
     // would write the legacy localStorage journals instead of the ONE track
     // record, silently, and the row would still be sitting here afterwards.
@@ -224,15 +306,15 @@
       .then((r) => r.json().catch(() => ({})).then((b) => ({ ok: r.ok, b })))
       .then(({ ok, b }) => {
         if (ok) {
-          btn.classList.add("st-sent");
-          btn.textContent = "queued ✓";
-          btn.title = (b && b.message) ||
-            "Close queued — the book updates in about a minute, then this row disappears.";
+          btn.textContent = "queued…";
+          btn.title = (b && b.message) || "Close queued — waiting for it to appear in the book.";
+          watchLanding(btn);           // the others stay held until it lands
         } else {
           // Re-enable: a rejected close (rate limit, bad market, dispatch
           // failure) is a thing to retry, not a dead row. The reason goes in
           // the title rather than an alert — a modal dialog over a trading
           // page is the last thing anyone needs.
+          inFlight = null; holdOthers(btn, false);
           btn.disabled = false;
           btn.classList.add("st-fail");
           btn.textContent = "failed — retry";
@@ -240,6 +322,7 @@
         }
       })
       .catch(() => {
+        inFlight = null; holdOthers(btn, false);
         btn.disabled = false;
         btn.classList.add("st-fail");
         btn.textContent = "failed — retry";
@@ -273,7 +356,8 @@
       <p class="st-foot">Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is
         a decision too. Tap a ticker for its chart. <b>Close</b> books that row in the bot book at its own
         last mark (the price the Open R beside it uses) — one click arms it and shows the price, a second
-        sends it; the book updates in about a minute and the row drops off. Nothing here closes anything
+        sends it. Closes go ONE AT A TIME — the rest wait while one is in flight, and a button only reads
+        <b>closed \u2713</b> once the position is actually gone from the published book. Nothing here closes anything
         on its own.</p>`;
   }
 
@@ -292,6 +376,7 @@
     host.addEventListener("click", (ev) => {
       const btn = ev.target.closest && ev.target.closest("button.st-x");
       if (!btn || btn.disabled || !host.contains(btn)) return;
+      if (inFlight) return;            // belt and braces: the others are already disabled
       if (btn.classList.contains("st-arm")) send(btn); else arm(btn);
     });
     // Clicking anywhere else, or pressing Escape, stands the button down. An
