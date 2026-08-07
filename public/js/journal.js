@@ -216,14 +216,32 @@
     (SLIPPAGE_BPS[market]   ?? SLIPPAGE_BPS.default)   / 1e4,
     (COMMISSION_BPS[market] ?? COMMISSION_BPS.default) / 1e4,
   ];
-  // Round-trip cost in R: entry is a market fill; a stop/manual close pays
-  // slippage, a resting TP limit does not. Mirrors vivek_journal._cost_r.
+  // Round-trip cost in R: entry is a market fill; anything that is NOT a
+  // resting TP limit pays slippage. Mirrors vivek_journal._cost_r.
+  //
+  // INVERTED 2026-08-07 to match the Python, which was inverted by TOP100 #74
+  // and left this copy behind under a comment claiming they agreed. The old
+  // test was an ALLOW-list — `/^(stop|manual)/` — so it charged slippage only
+  // on the two reasons it had heard of. Two others exist in the tree and it
+  // charged neither: `time` (vivek_run.py) and `eod` (vivek_backtest.py).
+  //
+  // The direction of the error is the reason this matters. An allow-list fails
+  // toward the CHEAP side: an unrecognised reason silently pays no slippage,
+  // which under-reports cost and therefore OVER-reports realized R, win rate
+  // and expectancy — on the Me side of a Me-vs-Claude comparison. A deny-list
+  // fails toward the expensive side, which is visible and arguable rather than
+  // flattering and invisible. vivek_journal.py:83-88 makes the same argument.
+  //
+  // Latent when this landed: journal.js only ever writes tp1/tp2/tp3, stop and
+  // manual itself, and bot rows never reach here (splitBot returns the server's
+  // net numbers untouched). It goes live the first time a `time` or `eod` row
+  // arrives from a KV sync or a manual time-stop.
   function costR(t, slip, comm) {
     const entry = t.entry, risk = t.risk;
     if (!(risk > 0) || !entry) return 0;
     let cp = entry * (slip + comm);
     for (const ex of t.exits || []) {
-      const market = /^(stop|manual)/.test(ex.reason || "");
+      const market = !/^tp[123]/.test(ex.reason || "");
       cp += (ex.pct || 0) * (ex.price || entry) * (comm + (market ? slip : 0));
     }
     return cp / risk;
