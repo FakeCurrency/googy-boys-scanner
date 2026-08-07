@@ -127,3 +127,8 @@
   border-style: dashed; color: var(--muted-2); cursor: help;
   display: inline-block; padding: 5px 10px;
 }
+
+/* Held while another close is in flight (2026-08-07). Visually inert on
+   purpose — a disabled button that still looks pressable is how you get the
+   double-fire this state exists to prevent. */
+.st-x.st-wait { color: var(--muted-2); border-color: var(--line); background: transparent; opacity: .6; }
