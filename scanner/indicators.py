@@ -19,25 +19,6 @@ def sma(series: pd.Series, window: int) -> pd.Series:
     return series.rolling(window).mean()
 
 
-def weekly_ema_state(df: pd.DataFrame) -> tuple[float, float, float] | None:
-    """Weekly (W-FRI) higher-timeframe EMA stack: (last_close, fast_ema, slow_ema).
-
-    Returns None when the frame can't be resampled or has too little weekly
-    history for a stable stack. Shared by the bullish (signals.py) and bearish
-    (short.py) HTF-confirmation chips so the resample + EMA lives in one place;
-    each caller just compares the three values in its own direction.
-    """
-    try:
-        wk = df["Close"].resample("W-FRI").last().dropna()
-    except Exception:
-        return None
-    if len(wk) < config.WEEKLY_SLOW + 2:
-        return None
-    fast = float(ema(wk, config.WEEKLY_FAST).iloc[-1])
-    slow = float(ema(wk, config.WEEKLY_SLOW).iloc[-1])
-    return float(wk.iloc[-1]), fast, slow
-
-
 def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     """Wilder's RSI. NaN where RSI is genuinely undefined, rather than 100.
 
@@ -78,11 +59,6 @@ def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     rs = avg_gain / avg_loss.replace(0, float("nan"))
     out = 100 - 100 / (1 + rs)
     return out.mask((avg_loss == 0) & (avg_gain > 0), 100.0)
-
-
-def ema_ladder(df: pd.DataFrame) -> dict[int, pd.Series]:
-    """EMA series for every period in the Fibonacci ladder."""
-    return {p: ema(df["Close"], p) for p in config.EMA_PERIODS}
 
 
 def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
