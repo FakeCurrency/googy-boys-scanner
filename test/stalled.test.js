@@ -9,7 +9,8 @@
  *      open and carries the stamp. No threshold lives here.
  *   2. The numbers are honest: day arithmetic in the book's own calendar,
  *      summary R/dollars/slots from the rows and rules as published.
- *   3. It is read-only BY SOURCE: no POST, no dispatch, no store writes.
+ *   3. It has exactly ONE write path (POST /api/close, journal_type=bot),
+ *      it takes two clicks, and nothing in the file can trigger it alone.
  *
  * Runs the REAL functions, sliced out of the shipped file at load time rather
  * than re-typed here (house pattern — a mirrored copy drifts in step with the
@@ -56,11 +57,22 @@ function sliceConst(name) {
 // Same-realm sandbox (new Function, not vm) per the Tier 5 note: a vm context
 // is a separate realm and cross-realm deepStrictEqual fails on Array.prototype.
 const NAMES = ["esc", "stalledRows", "daysBetween", "bookDay", "framing",
-               "summarize", "fmtR", "slotsClause"];
+               "summarize", "fmtR", "slotsClause", "closePrice", "fmtPx"];
 const body = NAMES.map(sliceConst).join("\n") +
   `\nreturn { ${NAMES.join(", ")} };`;
-const { esc, stalledRows, daysBetween, bookDay, framing, summarize, fmtR, slotsClause } =
-  new Function(body)();
+const { esc, stalledRows, daysBetween, bookDay, framing, summarize, fmtR, slotsClause,
+        closePrice, fmtPx } = new Function(body)();
+
+// CODE-only view of the shipped file. Every ban below asks whether stalled.js
+// DOES something, and a plain substring cannot answer that here: the reasoning
+// for each ban is written into the source beside it, so the header's promise
+// "no localStorage" contains the string "localStorage", and the note explaining
+// why journal_type must never be "swing" contains "swing". A naive `includes`
+// reads the justification as the offence — the exact trap the workflow tests
+// hit (CLAUDE.md, Tier 3). Ask about code, read code.
+const CODE = SRC.split("\n")
+  .filter((l) => { const t = l.trim(); return t && !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*"); })
+  .join("\n");
 
 const row = (over) => Object.assign({
   symbol: "GLBE", market: "nasdaq", direction: "long", status: "open",
@@ -200,13 +212,91 @@ test("the framing never claims an action was or will be taken by this surface", 
   }
 });
 
-// ── 4. read-only by source ───────────────────────────────────────────────────
-suite("read-only — no write path exists in the shipped file");
+// ── 4. the ONE write path, and its guards ────────────────────────────────────
+// This surface shipped read-only and no longer is (owner-ruled 2026-08-07): a
+// Close button per row. What did NOT change is who decides — nothing in this
+// file closes anything on a condition, a timer or a threshold. These tests
+// pin that distinction, because it is the only thing standing between "a
+// button the owner presses" and "a surface that started trading".
+suite("write path — exactly one, owner-initiated, and nothing else");
 
-test("it fetches only the two published artifacts", () => {
+test("the only endpoint it writes to is /api/close, exactly once", () => {
+  const posts = [...SRC.matchAll(/fetch\(\s*"([^"]+)"[\s\S]{0,120}?method:\s*"POST"/g)]
+    .map((m) => m[1]);
+  assert.deepEqual(posts, ["/api/close"],
+    "a second write endpoint appeared, or the close moved: " + JSON.stringify(posts));
+  assert.equal((SRC.match(/method:\s*"POST"/g) || []).length, 1, "more than one POST in the file");
+});
+
+test("journal_type is hard-coded bot — swing and scalp never appear", () => {
+  assert.ok(/journal_type:\s*"bot"/.test(SRC), "the close must name journal_type bot explicitly");
+  // A wrong journal_type would silently write the RETIRED localStorage swing
+  // or scalp journals instead of the one track record, return a cheerful 202,
+  // and leave the row sitting here — the worst possible failure, because it
+  // looks like it worked.
+  for (const bad of ['"swing"', "'swing'", '"scalp"', "'scalp'"]) {
+    assert.ok(!CODE.includes(bad), `stalled.js sends ${bad} — the bot book is the only target`);
+  }
+});
+
+test("no store writes and no second transport were smuggled in", () => {
+  for (const bad of ["localStorage", "sessionStorage", "indexedDB", "XMLHttpRequest",
+                     "sendBeacon", "workflow_dispatch", "/api/scan", "/api/journal",
+                     "/api/tick", "/api/heartbeat"]) {
+    assert.ok(!CODE.includes(bad), `stalled.js contains "${bad}"`);
+  }
+});
+
+test("it still READS only the two published artifacts", () => {
   const urls = [...SRC.matchAll(/get\("([^"]+)"\)/g)].map((m) => m[1]);
-  assert.deepEqual(urls.sort(),
-    ["data/bot_rules.json", "data/vivek_bot_book.json"]);
+  assert.deepEqual(urls.sort(), ["data/bot_rules.json", "data/vivek_bot_book.json"]);
+});
+
+test("closing takes TWO clicks — the first only arms", () => {
+  // The handler must branch on the armed class before it can ever call send().
+  // A single mis-click beside a "time-stop due" chip must not be able to close
+  // a real position.
+  assert.ok(/classList\.contains\("st-arm"\)\s*\)\s*send\(btn\);\s*else\s+arm\(btn\)/.test(SRC),
+    "the arm-then-send branch is gone — a single click may now be closing positions");
+  assert.ok(/ARM_MS\s*=\s*\d+/.test(SRC), "the armed state must expire on its own");
+  assert.ok(/key === "Escape"/.test(SRC), "Escape must stand an armed button down");
+});
+
+test("the price is the row's own last_mark, and no mark means no close", () => {
+  assert.equal(closePrice({ last_mark: 19.335 }), 19.335);
+  // FAIL-CLOSED, every way a mark can be missing or nonsense. Guessing a price
+  // here writes a wrong number into the only track record the system has.
+  for (const bad of [undefined, null, 0, -1, NaN, Infinity, "19.33", {}]) {
+    assert.equal(closePrice({ last_mark: bad }), null, "accepted a bad mark: " + String(bad));
+  }
+  assert.equal(closePrice(null), null);
+  assert.equal(closePrice({}), null);
+});
+
+test("the confirm step prints the exact price it will send", () => {
+  // The owner must be able to read the number BEFORE the click that sends it;
+  // sub-dollar names need the extra places or a crypto close reads as $0.00.
+  assert.equal(fmtPx(19.335), "$19.34");
+  assert.equal(fmtPx(0.33367), "$0.3337");
+  assert.ok(/textContent\s*=\s*"Confirm " \+ fmtPx/.test(SRC),
+    "the armed label no longer shows the price it would book at");
+});
+
+test("nothing in this file decides to close anything", () => {
+  // The whole ruling in one assertion: send() may only be reached from a click
+  // handler. No timer, no threshold, no auto-retry may call it.
+  const autoSend = /set(Timeout|Interval)\([^)]*\bsend\(/.test(SRC);
+  assert.ok(!autoSend, "send() is reachable from a timer — this surface must never close on its own");
+  assert.ok(!/if\s*\([^)]*unreal_r[^)]*\)\s*send\(/.test(SRC), "a condition calls send()");
+});
+
+test("the ticker opens the chart with the house URL convention", () => {
+  assert.ok(/chart\.html\?m=\$\{encodeURIComponent/.test(SRC),
+    "the symbol link must follow chart.html?m=<market>&s=<SYM>&mode=vivek");
+  assert.ok(/mode=vivek/.test(SRC));
+  // Same escaping discipline as every other cell: the href is built from book
+  // data, so it is encoded going in and escaped going into the attribute.
+  assert.ok(/href="\$\{esc\(href\)\}"/.test(SRC), "the href must be attribute-escaped");
 });
 
 test("esc escapes all five breakout characters and is null-safe", () => {
