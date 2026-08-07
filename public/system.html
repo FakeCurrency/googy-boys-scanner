@@ -104,8 +104,7 @@
         <tr><td>Journal “Now” prices (manual side)</td><td>Scan price snapshot first (<code>prices</code> map in <code>&lt;market&gt;_vivek.json</code> — the whole universe, every scan), live quote only as fallback</td><td>Refreshed each scan</td></tr>
         <tr><td>Universes</td><td>ASX full list (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100 + extras; bundled CSVs in <code>data_universe/</code> as fallback</td><td>Rebuilt per scan</td></tr>
         <tr><td>Market caps / sectors</td><td>Yahoo fundamentals, persistent cache (<code>market_caps.json</code>)</td><td>Best-effort, fills over runs</td></tr>
-        <tr><td>News / feeds page</td><td>YouTube RSS + AI narrative</td><td>Every 6&nbsp;h</td></tr>
-      </table>
+          </table>
       <p class="sys-note">⚠ Honesty note: Yahoo throttles bursts, so scans keep a <em>last-good cache</em> per ticker —
         a name Yahoo drops in one run reuses its previous frame. Coverage % is stamped into every scan file and shown
         as the freshness badge on the dashboard. History is survivor-biased (today’s index members), which inflates
