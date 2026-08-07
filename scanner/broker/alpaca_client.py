@@ -59,21 +59,6 @@ def positions() -> list:
     return get("/positions")
 
 
-def open_orders() -> list:
-    return get("/orders", params={"status": "open", "limit": 100, "nested": "true"})
-
-
-def closed_orders(after: str | None = None) -> list:
-    params = {"status": "closed", "limit": 100, "nested": "true"}
-    if after:
-        params["after"] = after
-    return get("/orders", params=params)
-
-
-def get_order(order_id: str) -> dict:
-    return get(f"/orders/{order_id}")
-
-
 def cancel_all_orders() -> list:
     return delete("/orders")
 

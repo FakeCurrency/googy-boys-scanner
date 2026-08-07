@@ -166,26 +166,6 @@ def close_all_positions() -> list[dict]:
     return results
 
 
-# ── order status ─────────────────────────────────────────────────────────────
-
-def get_order_status(symbol: str, order_id: str) -> dict:
-    """Fetch current status of a specific order (open or historical)."""
-    sess = _session()
-
-    def _fetch():
-        resp = sess.get_open_orders(category="linear", symbol=symbol, orderId=order_id)
-        orders = resp["result"].get("list", [])
-        if orders:
-            return orders[0]
-        resp2 = sess.get_order_history(
-            category="linear", symbol=symbol, orderId=order_id, limit=1
-        )
-        hist = resp2["result"].get("list", [])
-        return hist[0] if hist else {}
-
-    return _retry(_fetch)
-
-
 def find_order_by_link_id(symbol: str, order_link_id: str) -> dict:
     """Look an order up by CLIENT id (orderLinkId) — open orders first, then
     history. Used to disambiguate a timeout-after-accept before re-submitting:

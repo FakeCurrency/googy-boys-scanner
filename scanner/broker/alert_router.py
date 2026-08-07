@@ -210,11 +210,6 @@ def mark_sent(event_type: str, when: dt.datetime | None = None) -> None:
     )
 
 
-def reset_rate_limit(event_type: str) -> None:
-    """Clear the rate-limit timestamp for an event type (e.g. in tests)."""
-    update_state(lambda st: st.get("last_sent", {}).pop(event_type, None))
-
-
 # ── acknowledgment ────────────────────────────────────────────────────────────
 
 def acknowledge(event_type: str, duration_h: float = 24.0) -> None:
@@ -236,12 +231,6 @@ def acknowledge(event_type: str, duration_h: float = 24.0) -> None:
         "alert acknowledged  event=%s  until=%s",
         event_type, ack_until.isoformat(timespec="seconds"),
     )
-
-
-def clear_acknowledgment(event_type: str) -> None:
-    """Re-enable a previously acknowledged alert type immediately."""
-    update_state(lambda st: st.get("acknowledged", {}).pop(event_type, None))
-    log.info("acknowledgment cleared  event=%s", event_type)
 
 
 def _is_acknowledged(event_type: str, state: dict) -> bool:
