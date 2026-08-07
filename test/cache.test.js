@@ -192,5 +192,67 @@ test("ageMs never goes negative when the clock steps backwards", () => {
   assert.strictEqual(C.ageMs("k"), 0);
 });
 
+// ── HTTP cache-busting: one asset, one version, across every page ───────────
+// Added 2026-08-07 after finding this live. index.html asked for
+// `js/horizon.js?v=6` while sectors.html still asked for `?v=5`, and the same
+// for regime.js (v3 / v2). `public/_headers` puts /js/* and /css/* on
+// `max-age=86400`, so sectors.html was pinning a 24-hour-stale body of two
+// shared scripts — the exact failure the ?v= scheme exists to prevent, caused
+// by the scheme itself being applied per-page.
+//
+// This lives in the cache suite because it IS a cache bug: nothing else in the
+// repo checks an asset's version across pages, only that a version exists. A
+// per-page check cannot see a skew by construction.
+{
+  const fs = require("fs");
+  const path = require("path");
+  const dir = path.resolve(__dirname, "../public");
+
+  const versions = new Map();   // "js/horizon.js" -> Map(version -> [pages])
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".html"))) {
+    const html = fs.readFileSync(path.join(dir, file), "utf8");
+    for (const m of html.matchAll(/(?:src|href)="((?:js|css)\/[A-Za-z0-9._-]+)\?v=(\d+)"/g)) {
+      if (!versions.has(m[1])) versions.set(m[1], new Map());
+      const byV = versions.get(m[1]);
+      if (!byV.has(m[2])) byV.set(m[2], []);
+      byV.get(m[2]).push(file);
+    }
+  }
+
+  test("no asset is requested at two different ?v= across pages", () => {
+    const skewed = [];
+    for (const [asset, byV] of versions) {
+      if (byV.size > 1) {
+        const detail = [...byV.entries()]
+          .sort((a, b) => Number(b[0]) - Number(a[0]))
+          .map(([v, pages]) => `v=${v} (${pages.join(", ")})`)
+          .join("  vs  ");
+        skewed.push(`${asset}: ${detail}`);
+      }
+    }
+    assert.strictEqual(skewed.length, 0,
+      "an asset is cache-busted to different versions on different pages, so the\n" +
+      "      lower page pins a stale copy for max-age (86400s on /js/* and /css/*):\n        " +
+      skewed.join("\n        "));
+  });
+
+  test("every versioned asset reference points at a file that exists", () => {
+    const missing = [];
+    for (const asset of versions.keys()) {
+      if (!fs.existsSync(path.join(dir, asset))) missing.push(asset);
+    }
+    assert.strictEqual(missing.length, 0,
+      "versioned reference(s) to files that do not exist: " + missing.join(", "));
+  });
+
+  test("the guard is actually looking at something", () => {
+    // A regex that quietly stops matching would make both tests above pass
+    // forever against any amount of skew.
+    assert.ok(versions.size >= 10,
+      `only ${versions.size} versioned assets found across public/*.html — the ` +
+      "scan regex has probably stopped matching");
+  });
+}
+
 Date.now = realNow;
 console.log(process.exitCode ? "\nSOME CACHE TESTS FAILED" : `\nALL ${passed} cache tests passed`);

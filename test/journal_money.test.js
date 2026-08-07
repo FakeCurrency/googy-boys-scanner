@@ -111,6 +111,7 @@ vm.runInContext(
   + "this.stats = stats; this.byExit = byExit; this.sizeOf = sizeOf;"
   + "this.bumpGen = () => { RULES_GEN++; }; this.gen = () => RULES_GEN;"
   + "this.setScale = (s) => { SCALE = s; };"
+  + "this.costR = costR;"
   + "this.openMetric = openMetric; this.sortedOpen = sortedOpen;"
   + "this.setOpenSort = setOpenSort; this.scanPrice = scanPrice;"
   + "this.sortState = () => ({ ...openSort });"
@@ -119,6 +120,7 @@ vm.runInContext(
   ctx);
 const { ensureInit, ensureClosedR, stats, byExit, sizeOf, bumpGen, gen, setScale } = ctx;
 const { openMetric, sortedOpen, setOpenSort, scanPrice, sortState, resetSort, painted } = ctx;
+const { costR } = ctx;
 
 // CODE-only view of the source. A substring ban that reads its own explanatory
 // comment as the offence passes forever against the bug it describes — this
@@ -372,6 +374,64 @@ test("journal.js adopts bot_rules.tp_scale and shouts when it differs", () => {
   assert.ok(/RULES_GEN\+\+/.test(SRC),
     "adopting live constants no longer invalidates the ensureInit cache, so the " +
     "loadMe() that follows re-derives nothing (TOP100 #26)");
+});
+
+// ── #74 — the cost model's exit test ───────────────────────────────────────
+// Inverted 2026-08-07. `vivek_journal._cost_r` was flipped to a deny-list by
+// TOP100 #74 and this JS copy was left on the old ALLOW-list, under a comment
+// asserting the two agreed. Four exit reasons exist in the tree; the allow-list
+// knew two.
+suite("#74 — every exit that is not a resting limit pays slippage");
+
+// entry 100, stop 90 → 1R = 10 points. slip/comm as round numbers so the
+// arithmetic is checkable by hand rather than by copying the implementation.
+const SLIP = 0.001, COMM = 0.0005;
+const withExit = (reason) => ({
+  entry: 100, risk: 10, exits: [{ reason, price: 100, pct: 1 }],
+});
+
+test("a resting TP limit pays commission only", () => {
+  // entry leg 100*(slip+comm) + exit leg 100*comm, over 1R = 10
+  const want = (100 * (SLIP + COMM) + 100 * COMM) / 10;
+  for (const r of ["tp1", "tp2", "tp3"]) {
+    assert.equal(costR(withExit(r), SLIP, COMM), want, `${r} should not pay slippage`);
+  }
+});
+
+test("stop and manual pay slippage — unchanged by the inversion", () => {
+  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
+  assert.equal(costR(withExit("stop"), SLIP, COMM), want);
+  assert.equal(costR(withExit("manual"), SLIP, COMM), want);
+});
+
+test("time and eod pay slippage too — the two the allow-list missed", () => {
+  // vivek_run.py writes `time`; vivek_backtest.py writes `eod`. The Python has
+  // charged both since #74. Before the inversion this JS charged neither, which
+  // UNDER-reports cost and therefore OVER-reports realized R, win rate and
+  // expectancy — on the Me side of a Me-vs-Claude comparison.
+  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
+  assert.equal(costR(withExit("time"), SLIP, COMM), want, "a time-stop is a market exit");
+  assert.equal(costR(withExit("eod"), SLIP, COMM), want, "an eod close is a market exit");
+});
+
+test("an unknown reason fails EXPENSIVE, not cheap", () => {
+  // The whole point of the deny-list shape. A reason nobody has thought of yet
+  // must not silently arrive free — that error flatters the record and is
+  // invisible downstream (vivek_journal.py:83-88 makes the same argument).
+  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
+  assert.equal(costR(withExit("some_future_reason"), SLIP, COMM), want);
+  assert.equal(costR(withExit(""), SLIP, COMM), want);
+  assert.equal(costR({ entry: 100, risk: 10, exits: [{ price: 100, pct: 1 }] }, SLIP, COMM), want);
+});
+
+test("the JS deny-list is spelled the same way as the Python's", () => {
+  // Python: _LIMIT_EXIT_REASONS = ("tp1","tp2","tp3"); is_market = not startswith(...)
+  // If either side is edited alone, this and the numbers above disagree.
+  const py = fs.readFileSync(path.resolve(__dirname, "../scanner/vivek_journal.py"), "utf8");
+  assert.ok(/_LIMIT_EXIT_REASONS\s*=\s*\(\s*"tp1",\s*"tp2",\s*"tp3"\s*\)/.test(py),
+    "the Python limit-reason tuple moved — the JS mirror below is now guessing");
+  assert.ok(/const market = !\/\^tp\[123\]\//.test(CODE),
+    "journal.js costR is back on an allow-list, or the test moved");
 });
 
 // ── the open-positions sort ──────────────────────────────────────────────────
