@@ -19,7 +19,7 @@
 
 .st-rows { margin-top: 10px; }
 .st-row {
-  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(150px, 1.4fr) 64px 44px minmax(120px, 1.2fr);
+  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(150px, 1.4fr) 64px 44px minmax(120px, 1.2fr) minmax(104px, auto);
   align-items: center; gap: 10px; padding: 6px 4px;
   border-bottom: 0.5px solid var(--border-soft);
   font: 500 12.5px/1.35 var(--sans); color: var(--text-2);
@@ -58,9 +58,72 @@
 .st-rows { overflow-x: auto; }
 
 @media (max-width: 640px) {
-  .st-row { grid-template-columns: minmax(60px, auto) minmax(0, 1fr) 52px minmax(84px, auto); gap: 6px; }
+  .st-row {
+    /* Five visible columns (grade is dropped below) will not fit 390px without
+       squeezing "29d held · flagged 3d ago" to nothing — which removes the one
+       fact the row exists to state. So the row keeps honest widths and .st-rows
+       scrolls, the pattern this file already uses for wide content: the PAGE
+       body must never scroll sideways, an inner container may. */
+    min-width: 528px;
+    grid-template-columns: minmax(56px, auto) minmax(140px, 1fr) 52px minmax(84px, auto) minmax(100px, auto);
+    gap: 8px;
+  }
   .st-grade { display: none; }
   .st-row.st-cols span:nth-child(4) { display: none; }
   .st-days { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .st-sym em { display: block; margin: 2px 0 0; }
+
+  /* The row scrolls, but the ACTION must never be the thing that scrolls out of
+     reach — a Close button you have to go looking for is a Close button that
+     does not get used on a phone. Pinned to the right edge of the scroller with
+     its own background so the columns pass underneath it cleanly. */
+  .st-row > .st-x, .st-row > .st-x-off,
+  .st-row.st-cols > span:last-child {
+    position: sticky; right: 0;
+    background: var(--card, #12151c);
+    padding-left: 10px; box-shadow: -10px 0 10px -6px rgba(0,0,0,.55);
+  }
+  .st-row > .st-x { background: var(--card, #12151c); }
+  .st-row > .st-x.st-arm { background: var(--red); }
+}
+
+/* The ticker is a link to its chart (2026-08-07). Deliberately inherits the
+   symbol's own weight and colour and only reveals itself on hover: this column
+   is scanned as data first, and a row of blue underlines would fight the two
+   things the strip exists to make loud — the stall and the call. */
+.st-chart { color: inherit; text-decoration: none; border-bottom: 1px solid transparent; }
+.st-chart:hover, .st-chart:focus-visible { border-bottom-color: currentColor; }
+.st-chart:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 3px; }
+
+/* CLOSE — the one write path on this surface, and it is styled to be found
+   deliberately rather than caught with a stray click: muted until hover, and
+   it never carries the red of the `time-stop due` chip beside it until it is
+   actually armed. Sized to hold "Confirm $123.45" without the grid reflowing
+   mid-decision, which would move the button under a finger already coming
+   down on it. */
+.st-x {
+  justify-self: start; min-width: 96px; text-align: center;
+  font: 700 10.5px/1 var(--sans); letter-spacing: 0.03em;
+  color: var(--fg); background: var(--surface-2, rgba(255,255,255,.04));
+  border: 1px solid var(--muted-2); border-radius: 999px;
+  padding: 5px 10px; cursor: pointer;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.st-x:hover:not(:disabled) { color: var(--fg); border-color: var(--muted); }
+.st-x:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* Armed: the only state that is red, because it is the only state where the
+   next click sends. */
+.st-x.st-arm {
+  color: #fff; background: var(--red); border-color: var(--red);
+}
+.st-x.st-sent { color: var(--green); border-color: var(--green); background: transparent; }
+.st-x.st-fail { color: var(--red); border-color: var(--red); background: transparent; }
+.st-x:disabled { cursor: default; opacity: .85; }
+
+/* No usable last mark -> no button at all. Fail-closed is a state worth
+   showing, not hiding: an empty cell reads as "forgot to render". */
+.st-x-off {
+  border-style: dashed; color: var(--muted-2); cursor: help;
+  display: inline-block; padding: 5px 10px;
 }
