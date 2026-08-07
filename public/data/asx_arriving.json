@@ -1,25 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-07T10:22:41+10:00",
+  "generated_at": "2026-08-07T10:32:05+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "SMM",
-      "name": "Somerset Minerals Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.014,
-      "turnover_avg20": 58224,
-      "turnover_today": 900954,
-      "rvol": 13.4,
-      "adv_usd": 58224.29,
-      "fund": false
-    },
     {
       "symbol": "ITM",
       "name": "iTech Minerals Ltd",
