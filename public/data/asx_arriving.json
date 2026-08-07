@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-08T07:02:05+10:00",
+  "generated_at": "2026-08-08T07:58:59+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "KZR",
+      "name": "Kalamazoo Resources Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.175,
+      "turnover_avg20": 86508,
+      "turnover_today": 522589,
+      "rvol": 4.9,
+      "adv_usd": 86508.62,
+      "fund": false
+    },
     {
       "symbol": "ITM",
       "name": "iTech Minerals Ltd",
@@ -18,66 +30,6 @@
       "turnover_today": 519517,
       "rvol": 16.6,
       "adv_usd": 30016.37,
-      "fund": false
-    },
-    {
-      "symbol": "NH3",
-      "name": "NH3 Clean Energy Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.089,
-      "turnover_avg20": 29686,
-      "turnover_today": 282705,
-      "rvol": 9.9,
-      "adv_usd": 29686.61,
-      "fund": false
-    },
-    {
-      "symbol": "CAF",
-      "name": "Centrepoint Alliance Limited",
-      "sector": "Financials",
-      "dir": "SHORT",
-      "price": 0.34,
-      "turnover_avg20": 61544,
-      "turnover_today": 226431,
-      "rvol": 3.9,
-      "adv_usd": 61544.45,
-      "fund": false
-    },
-    {
-      "symbol": "EMD",
-      "name": "Emyria Limited",
-      "sector": "Health Care",
-      "dir": "SHORT",
-      "price": 0.049,
-      "turnover_avg20": 51314,
-      "turnover_today": 224169,
-      "rvol": 4.2,
-      "adv_usd": 51314.31,
-      "fund": false
-    },
-    {
-      "symbol": "RKN",
-      "name": "Reckon Limited",
-      "sector": "Information Technology",
-      "dir": "SHORT",
-      "price": 0.48500001,
-      "turnover_avg20": 37311,
-      "turnover_today": 151282,
-      "rvol": 3.8,
-      "adv_usd": 37311.85,
-      "fund": false
-    },
-    {
-      "symbol": "TAM",
-      "name": "Tanami Gold NL",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.059,
-      "turnover_avg20": 26684,
-      "turnover_today": 132487,
-      "rvol": 4.8,
-      "adv_usd": 26684.54,
       "fund": false
     },
     {
@@ -93,15 +45,27 @@
       "fund": true
     },
     {
-      "symbol": "PPK",
-      "name": "PPK Group Limited",
+      "symbol": "CTP",
+      "name": "Central Petroleum Limited",
+      "sector": "Energy",
+      "dir": "SHORT",
+      "price": 0.061,
+      "turnover_avg20": 34383,
+      "turnover_today": 122101,
+      "rvol": 3.9,
+      "adv_usd": 34383.52,
+      "fund": false
+    },
+    {
+      "symbol": "LM8",
+      "name": "Lunnon Metals Limited",
       "sector": "Materials",
       "dir": "SHORT",
-      "price": 0.37,
-      "turnover_avg20": 12178,
-      "turnover_today": 109133,
-      "rvol": 8.6,
-      "adv_usd": 12178.11,
+      "price": 0.28999999,
+      "turnover_avg20": 22877,
+      "turnover_today": 120012,
+      "rvol": 5.3,
+      "adv_usd": 22877.11,
       "fund": false
     },
     {
