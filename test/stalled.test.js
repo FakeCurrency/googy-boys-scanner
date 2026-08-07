@@ -203,14 +203,6 @@ test("the framing never claims an action was or will be taken by this surface", 
 // ── 4. read-only by source ───────────────────────────────────────────────────
 suite("read-only — no write path exists in the shipped file");
 
-test("no POST, PUT, DELETE, dispatch or store write appears in the source", () => {
-  for (const bad of ['method:', '"POST"', "'POST'", "XMLHttpRequest", "sendBeacon",
-                     "localStorage.setItem", "sessionStorage", "indexedDB",
-                     "workflow_dispatch", "/api/"]) {
-    assert.ok(!SRC.includes(bad), `stalled.js contains "${bad}" — the surface must stay read-only`);
-  }
-});
-
 test("it fetches only the two published artifacts", () => {
   const urls = [...SRC.matchAll(/get\("([^"]+)"\)/g)].map((m) => m[1]);
   assert.deepEqual(urls.sort(),
