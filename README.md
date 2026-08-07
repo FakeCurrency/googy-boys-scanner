@@ -1,185 +1,129 @@
-# Vivek's Beta Scanner — ASX & NASDAQ
+# Vivek 5.0 — ASX · NASDAQ · Crypto swing scanner
 
-A daily **Fibonacci‑EMA setup scanner**, rebuilt from
-[asx-scanner-app.web.app](https://asx-scanner-app.web.app/) and extended with a second market.
-It reviews a universe of stocks each day, finds those in a healthy uptrend that have paused and
-pulled back to a key moving average, grades them **A+ / A / B / C**, computes **Entry / Stop /
-Target** and a **risk‑reward** read, and publishes everything to a dense iOS‑styled web page — a
-macro **PULSE** bar, full price columns, a watchlist, and an **ASX / NASDAQ / Crypto** market toggle.
+A three-lens **swing/position** scanner that reviews ~3,500 names a day, grades the
+setups it finds, and forward-tests its own A+ calls in a paper book that nobody is
+allowed to edit. It publishes to a static site on Cloudflare Pages and runs entirely
+on GitHub Actions.
 
-Markets: **ASX** (full live directory), **NASDAQ** (curated large caps), and **Crypto** (top 100 by
-market cap from CoinGecko, via Yahoo `BTC-USD`‑style data; stablecoins/wrapped tokens skipped).
+The point of the system is **an honest track record**, not a signal feed. Every
+design argument in this repo resolves the same way: a number that flatters the
+record is worse than no number.
 
-> General information only — not financial advice. Markets carry risk.
+> General information only — not financial advice. No orders are ever placed
+> automatically with real capital; live trading is double-gated and off.
 
-## How it works (the method)
+---
 
-- Seven EMAs on the Fibonacci ladder: **8 · 13 · 21 · 34 · 55 · 89 · 144** (daily close).
-- Six **signal chips**, each worth points (out of 13): full bullish alignment (3), core Fib
-  pullback (3), strong Fib confluence (3), EMA compression (2), weekly bullish (1), volume (1).
-- **Grade = the sum of those points** (A+ ≥ 10, A ≥ 8, B ≥ 5, C ≥ 3 — all tunable in `config.py`).
-- **Entry** = the pullback EMA, **Stop** = below the recent swing low, **Target** = nearest
-  resistance above (or a 2R fallback); **P2** = an ATR SuperTrend trailing stop. Poor reward‑to‑risk
-  is flagged **LOW R:R** rather than demoted.
-- **PULSE** bar: macro context (gold, silver, brent, WTI, nat‑gas, tech & biotech indices, 10Y
-  yields, AUD/USD) with 1‑day and 5‑day moves.
-- **Liquidity filter** removes thin names; the most liquid are tagged **LIQUID**.
-- **Watchlist** — star any setup (saved in your browser) and view it under the **Watch** tab.
+## The three lenses
 
-All weights and thresholds live in [`scanner/config.py`](scanner/config.py).
+| Lens | What it looks for | Grades | Cadence |
+|---|---|---|---|
+| **VIVEK** | Reaction at the 200-SMA, with Weekly / 3-day / Daily plans | A+ / A / B+ / WATCH | Hourly in each market window |
+| **PhaseMap** | Sweep → displacement zones (`docs/` spec is the source of truth) | zone quality | Nightly 08:30 UTC |
+| **Specs** | 3× volume-spike base breakouts | A+ / A / B / C | Nightly, discovery-only |
 
-## Two scanners
+Multi-lens agreement raises a **confluence** banner and a Discord ping. Specs is
+discovery-only by its own backtest — it is not traded.
 
-- **Pullbacks** (the Fib-EMA scan above) — continuation setups in an *existing* uptrend.
-- **Reversals** — a second scanner for the *start* of a new uptrend: a beaten-down/basing stock
-  reclaiming and crossing up through its short SMAs (9 over 26), coming off a base, with volume and
-  RSI turning up. Uses SMA 9/26/43/200 + RSI 14 + Vol 20; scored out of 14 (see `scanner/reversal.py`
-  and the `REV_*` settings in `config.py`). Switch with the **Pullbacks / Reversals** toggle in the
-  header. Both scans run from one daily download.
+All weights, thresholds and grade cut-offs live in
+[`scanner/config.py`](scanner/config.py). That file is the single source of truth;
+the front-end mirrors its constants and `test/risk_defaults.test.js` fails the build
+if the two drift.
 
-## On the website
+## The bot book — the only track record
 
-- **Click a row** to expand a detail dropdown — plain-English analysis, the swing/EMA level
-  breakdown, trailing stop, volume, EMA alignment ladder, and market structure (HH/HL).
-- **Click a ticker** to open a full **candlestick chart** (`chart.html`) with EMA 34/55/89, the
-  SuperTrend line, marked price levels (high / resistance / EMA-watch / stop / leg-low / low),
-  volume, and an *Open in TradingView* link.
-- **Journal** page (`journal.html`) — the forward-test track record: stats, equity curve, open
-  positions and closed trades.
+`journal/vivek_bot_book.json` is the record. It takes **A+ only**, at most 30 open
+across all markets combined, one position per symbol, three per sector, behind daily
+loss guards. It is marked to market server-side every scan.
 
-## Project layout
+It is deliberately boring to change. Trade-rule edits need explicit owner sign-off,
+and while a pre-registered cycle is running the rules are frozen — every mid-cycle
+tweak resets the sample and throws away the only evidence the system produces.
+[`RESEARCH-LEDGER.md`](RESEARCH-LEDGER.md) is the permanent record of what has been
+tested and what has been killed, so nothing gets re-litigated.
 
-```
-scanner/            Python engine
-  config.py         markets, thresholds, point weights, grade cut-offs  <- tune here
-  universe.py       loads the ticker lists
-  data.py           batched Yahoo Finance (yfinance) downloads
-  indicators.py     EMA / ATR / SuperTrend / pivots
-  signals.py        the 5 chips + scoring + grading
-  levels.py         entry / stop / target / R:R
-  scan.py           orchestration per market
-  output.py         writes public/data/<market>.json
-  run.py            CLI entry point
-data_universe/      asx_tickers.csv, nasdaq_tickers.csv (edit to grow/trim the universe)
-public/             the static site (this folder is what gets deployed)
-  index.html  about.html  css/  js/  data/<market>.json
-.github/workflows/  scan.yml — scheduled scan + publish
-```
-
-## Easiest: double-click
-
-Two batch files are included for non-technical use:
-
-- **`Start Fib Scanner.bat`** — serves the site and opens it at `http://localhost:8765`.
-- **`Refresh Data.bat`** — re-runs the scanner so the results are up to date.
-
-Both use the project's virtual environment at `.venv\` (created once with
-`python -m venv .venv` then `.venv\Scripts\python -m pip install -r requirements.txt`).
-
-### Automatic twice-daily scans (Windows)
-
-A Windows Task Scheduler task named **"Vivek's Beta Scanner"** runs `scan_scheduled.bat` at
-**6:30am and 4:30pm AEST** (local time, so it tracks AEDT in summer). It scans all three markets +
-both scanners and updates the journal, logging to `scan.log`. Manage it in **Task Scheduler**, or:
-
-```powershell
-Get-ScheduledTaskInfo "Vivek's Beta Scanner"     # next run / last result
-Start-ScheduledTask  "Vivek's Beta Scanner"       # run now
-Disable-ScheduledTask "Vivek's Beta Scanner"      # pause it
-```
-
-## Run it from a terminal
+## Running it
 
 ```bash
-# 1. install dependencies (Python 3.11+)
-pip install -r requirements.txt
+pip install -r requirements.txt          # Python 3.11+
 
-# 2. run the scan (writes public/data/asx.json and public/data/nasdaq.json)
-python -m scanner.run                 # both markets (full ASX directory + NASDAQ)
-python -m scanner.run --market asx    # one market
-python -m scanner.run --curated       # use the smaller bundled ASX list (much faster)
-python -m scanner.run --limit 40      # quick test on a small slice
+# scan (writes public/data/<market>_vivek.json and friends)
+python -m scanner.run                    # all markets
+python -m scanner.run --market asx       # one market (repeatable)
+python -m scanner.run --curated          # smaller bundled ASX list — much faster
+python -m scanner.run --limit 40         # quick slice for a smoke test
 
-# 3. serve the site (fetch() needs http://, not file://)
-python -m http.server 8765 --directory public
-# then open http://localhost:8765
+# the paper bot: open/manage A+ positions in the bot book
+python -m scanner.broker.vivek_run
+
+# backtests (survivor-biased — see the caveat below)
+python -m scanner.vivek_backtest --market all --limit 60 --period 5y
+python -m phasemap.backtest
+
+# serve the site locally (fetch() needs http://, not file://)
+python serve.py                          # then open http://localhost:8765
 ```
 
-> The default ASX scan covers the **entire ASX-listed directory (~2,000 names)** pulled live from
-> the ASX, so it takes a few minutes. NASDAQ uses a curated large-cap list. Use `--curated` (ASX
-> top names) or `--limit N` for a fast run.
+The default ASX scan covers the **full ASX-listed directory (~2,000 names)** pulled
+live, so it takes a few minutes. NASDAQ uses Global Select (~1,430); crypto is the
+top 100 by market cap plus pinned extras.
 
-## Backtest & paper-trade journal
+## Tests
 
 ```bash
-# Quick-sanity backtest — replays the same signals over history and reports
-# results in R multiples (win rate, expectancy, profit factor, drawdown) by grade.
-python -m scanner.backtest                # curated liquid names, both markets
-python -m scanner.backtest --market asx --limit 15
-
-# Bigger backtest — all curated liquid names, or the full ASX directory.
-python -m scanner.backtest --limit 200      # all liquid names, both markets
-python -m scanner.backtest --market asx --full --limit 150
-
-# Paper-trade journal (forward test) — opens a paper position for each new A+/A
-# setup and walks open positions forward (stop/target/trail) into a track record.
-python -m scanner.journal                  # update from the latest scans
-python -m scanner.run --journal            # scan AND update the journal in one go
-
-# Email alerts of new A+/A setups (writes a preview; emails only if SMTP is set).
-python -m scanner.alerts                    # new since last run  (--all for every current A+/A)
-python -m scanner.run --journal --alert     # scan, journal, and alert together
+python -m pytest -q                      # ~290 Python tests
+for f in test/*.test.js; do node "$f"; done   # 18 JS suites, no framework
 ```
 
-Set `GBS_SMTP_HOST`, `GBS_SMTP_PORT`, `GBS_SMTP_USER`, `GBS_SMTP_PASS` and `GBS_ALERT_TO` to enable
-email; otherwise the digest is written to `public/data/alert_preview.html` so you can preview it.
+Both run on every push (`.github/workflows/test.yml`), plus a Playwright e2e pass, a
+Lighthouse budget tripwire and a screenshot-diff gate at desktop and 390px.
 
-The journal is stored in `journal/journal.json` (full history) and mirrored to
-`public/data/journal.json`. It builds a **bias-free** record over time — the trustworthy
-counterpart to the backtest.
+Two house rules the suites enforce rather than document:
 
-> The backtest universe is *today's* listed names, so its numbers are **optimistic**
-> (survivorship bias). Use them to compare grades and tune `config.py`, not as a return
-> forecast. No orders are ever placed — execution stays manual.
+- **Tests read the shipped file.** They slice real functions out of `public/js/*.js`
+  and run them, because a re-typed fixture drifts in step with the bug.
+- **Any edit to a `public/js` or `public/css` asset bumps its `?v=` in every HTML
+  page that loads it.** `/js/*` and `/css/*` are served with `max-age=86400`, so a
+  missed bump means a day of stale code for anyone who already visited. A skew
+  across pages is a bug in its own right and `test/cache.test.js` fails on it.
 
-## Customising
+## Layout
 
-- **Universe** — the ASX scan uses the **full live ASX directory** by default; NASDAQ uses
-  `data_universe/nasdaq_tickers.csv`. Edit that CSV (`symbol,name`) to grow/trim NASDAQ, or edit
-  `data_universe/asx_tickers.csv` (used by `--curated`). The liquidity filter prunes thin names, so
-  a generous list is fine. To expand NASDAQ to its full directory too, switch its loader to
-  `_fetch_nasdaq_listed` in `scanner/universe.py`.
-- **Strictness / grades** — edit `POINTS`, `GRADE_CUTOFFS` and the signal thresholds in
-  `scanner/config.py`.
-- **Add another market** — add an entry to `MARKETS` in `config.py`, drop in a
-  `data_universe/<key>_tickers.csv`, and add a button to the `.market-switch` in
-  `public/index.html`.
-
-## Automate (GitHub Actions + GitHub Pages)
-
-1. Push this folder to a GitHub repo.
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. `.github/workflows/scan.yml` then runs after each market close, commits the fresh JSON, and
-   redeploys the site. You can also trigger it manually from the **Actions** tab
-   (Run workflow / `workflow_dispatch`).
-
-### Alternative: Firebase Hosting (like the original `.web.app`)
-
-A `firebase.json` is included (serves the `public/` folder). To deploy:
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase init hosting      # choose existing/new project; keep "public" as the public dir
-firebase deploy
+```
+scanner/              Python engine
+  config.py           markets, thresholds, weights, grade cut-offs  <- tune here
+  universe.py         ticker lists          data.py      batched yfinance downloads
+  indicators.py       EMA / RSI / ATR / SuperTrend / pivots
+  vivek.py            the VIVEK lens        reversal.py  the reversal lens
+  scan.py             per-market orchestration      run.py   CLI entry point
+  broker/             the paper bot, risk manager, circuit breakers, kill switch
+phasemap/             the PhaseMap lens (own runner, own tests)
+functions/api/        Cloudflare Pages Functions — health, heartbeat, scan, close, price
+public/               the deployed static site (this folder IS the deploy)
+journal/              the books — vivek_bot_book.json is the track record
+tests/ · test/        Python suites · JS suites
+.github/workflows/    17 workflows; OPERATIONS.md has the schedule
 ```
 
-Run the scanner (locally or in CI) before each deploy so `public/data/*.json` is current, or keep
-the GitHub Action as the scheduler and use Firebase only for hosting.
+## Operating it
 
-## Notes
+[`OPERATIONS.md`](OPERATIONS.md) is the runbook and [`HEALTHCHECK.md`](HEALTHCHECK.md)
+is the 60-second daily check. [`CLAUDE.md`](CLAUDE.md) carries the working rules for
+anyone — human or agent — changing this repo.
 
-- Data is from Yahoo Finance via `yfinance` (free, no API key). It's unofficial but reliable for a
-  once‑daily scan; failed/delisted tickers are skipped automatically.
-- This is a clean reimplementation of the original app's described methodology — not a copy of its
-  private source. Point weights and cut‑offs are a faithful reconstruction and easy to tune.
+Two endpoints exist because GitHub's cron is best-effort and every in-repo backstop
+is itself a cron, so a scheduler outage takes the backstops with it:
+
+- **`/api/health`** — the alarm. GitHub-independent; an external monitor watches it.
+- **`/api/heartbeat`** — the healer. Dispatches a scan when the book goes stale,
+  behind a shared cooldown and a daily cap.
+
+## Caveats, stated plainly
+
+- **Data is yfinance**: ~15 minutes delayed, no delisted history. Fine for operating,
+  not fine for publishable backtest numbers.
+- **Every backtest here is survivor-biased** — the universe is *today's* listed
+  names. Use the numbers to compare cohorts, never as a return forecast. The
+  Insights page carries this warning on every figure.
+- **The site is public.** The manual scan and close endpoints are rate-limited but
+  unauthenticated; Cloudflare Access is the real fix and is pending owner action.
