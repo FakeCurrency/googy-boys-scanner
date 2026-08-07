@@ -250,6 +250,31 @@ test("no store writes and no second transport were smuggled in", () => {
 test("it still READS only the two published artifacts", () => {
   const urls = [...SRC.matchAll(/get\("([^"]+)"\)/g)].map((m) => m[1]);
   assert.deepEqual(urls.sort(), ["data/bot_rules.json", "data/vivek_bot_book.json"]);
+  // The landing watcher re-reads the SAME book artifact and nothing else.
+  const polled = [...SRC.matchAll(/fetch\("(data\/[^"?]+)/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(polled)], ["data/vivek_bot_book.json"]);
+});
+
+test("closes are SERIALISED — one in flight holds every other button", () => {
+  // The gap that cost six closes on 2026-08-07: this surface can fire faster
+  // than close_position.yml can land, and the pipeline is serial twice over
+  // (the `scan` group cancels queued runs; concurrent closes conflict on the
+  // book rebase). Friction used to enforce it; now this does.
+  assert.ok(/let inFlight = null;/.test(SRC), "the in-flight lock is gone");
+  assert.ok(/if \(inFlight\) return;/.test(SRC), "the click handler no longer refuses while one is in flight");
+  assert.ok(/holdOthers\(btn, true\);/.test(SRC), "sending must hold the other buttons");
+  // Every terminal path must RELEASE, or one rejected close freezes the strip.
+  assert.equal((SRC.match(/holdOthers\(btn, false\)/g) || []).length, 3,
+    "release is missing from a failure path — a rejected close would lock the strip for good");
+});
+
+test("'closed' is only claimed once the BOOK says so, never off the 202", () => {
+  // A queued dispatch is not a landed close — that gap is exactly where the
+  // six went missing, each one reporting success it never achieved.
+  assert.ok(/watchLanding\(btn\)/.test(SRC));
+  assert.ok(/textContent = landed \? "closed ✓"/.test(SRC));
+  assert.ok(!/textContent = "closed/.test(SRC.replace(/landed \? "closed ✓"/, "")),
+    "something claims 'closed' without consulting the book");
 });
 
 test("closing takes TWO clicks — the first only arms", () => {
