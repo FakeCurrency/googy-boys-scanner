@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-08-07",
+  "run_date": "2026-08-08",
   "ruleset_version": "1.3.1",
   "universe_size": 2212,
   "narrations_file": "narrations.json",
@@ -576,7 +576,7 @@
       "metrics": {
         "retrace_pct": 0.2,
         "dist_to_yearly_open_pct": -0.186,
-        "avg_turnover_20d": 953,
+        "avg_turnover_20d": 880,
         "close": 0.035,
         "sweep_date": "2026-07-27",
         "sweep_depth_pct": 0.0313,
@@ -890,7 +890,7 @@
       "metrics": {
         "retrace_pct": 0.0108,
         "dist_to_yearly_open_pct": -0.7211,
-        "avg_turnover_20d": 11125,
+        "avg_turnover_20d": 9576,
         "close": 0.205,
         "sweep_date": "2026-06-15",
         "sweep_depth_pct": 0.035,
@@ -3204,7 +3204,7 @@
       "metrics": {
         "retrace_pct": 0.1359,
         "dist_to_yearly_open_pct": -0.0211,
-        "avg_turnover_20d": 618573,
+        "avg_turnover_20d": 624005,
         "close": 2.41,
         "sweep_date": "2026-06-02",
         "sweep_depth_pct": 0.0088,
@@ -3451,8 +3451,8 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.3822,
-          "high": 0.3872,
+          "low": 0.3825,
+          "high": 0.3875,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-08-04"
@@ -3460,8 +3460,8 @@
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.3955,
-          "high": 0.4056,
+          "low": 0.3958,
+          "high": 0.406,
           "status": "UNTESTED",
           "created_date": "2026-08-04"
         },
@@ -3516,7 +3516,7 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0288,
+        "retrace_pct": 0.0357,
         "dist_to_yearly_open_pct": -0.5359,
         "avg_turnover_20d": 914853,
         "close": 0.42,
@@ -3528,7 +3528,7 @@
       "route_to": null,
       "name": "Healius Limited",
       "sector": "Health Care",
-      "next": "pullbacks staying above 0.382–0.387; next objective the 0.410–0.443 zone (T1)"
+      "next": "pullbacks staying above 0.383–0.388; next objective the 0.410–0.443 zone (T1)"
     },
     {
       "ticker": "I88",
@@ -4621,7 +4621,7 @@
       "metrics": {
         "retrace_pct": 0.0588,
         "dist_to_yearly_open_pct": -0.3404,
-        "avg_turnover_20d": 2836,
+        "avg_turnover_20d": 2414,
         "close": 0.062,
         "sweep_date": "2026-07-21",
         "sweep_depth_pct": 0.0986,
@@ -4671,8 +4671,8 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 1.2775,
-          "high": 1.2825,
+          "low": 1.275,
+          "high": 1.2802,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-07-13"
@@ -4680,8 +4680,8 @@
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 1.2419,
-          "high": 1.2616,
+          "low": 1.238,
+          "high": 1.2585,
           "status": "UNTESTED",
           "created_date": "2026-07-13"
         },
@@ -4704,7 +4704,7 @@
           "type": "TARGET",
           "low": 1.21,
           "high": 1.2448,
-          "status": "RESPECTED",
+          "status": "CONSUMED",
           "confluence": 1,
           "sources": [
             "fib_ext_1618"
@@ -4739,10 +4739,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1111,
-        "dist_to_yearly_open_pct": 0.0686,
-        "avg_turnover_20d": 13956,
-        "close": 1.225,
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.0512,
+        "avg_turnover_20d": 14320,
+        "close": 1.205,
         "sweep_date": "2026-07-13",
         "sweep_depth_pct": 0.0347,
         "displacement_date": "2026-07-13"
@@ -4751,7 +4751,7 @@
       "route_to": null,
       "name": "Morphic Ethical Equities Fund",
       "sector": "Financials",
-      "next": "bounces staying below 1.278–1.282; next objective the 1.210–1.245 zone (T2)"
+      "next": "bounces staying below 1.275–1.280; next objective the 1.186–1.196 zone (T3)"
     },
     {
       "ticker": "NUGG",
@@ -5738,6 +5738,101 @@
       "next": "bounces staying below 0.0025–0.0035; next objective the 0.0010–0.0040 zone (T1)"
     },
     {
+      "ticker": "ULTB",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 88.3885,
+          "high": 90.2,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 90.2,
+          "high": 90.6396,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 87.275,
+          "high": 87.4892,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 85.7306,
+          "high": 86.5847,
+          "status": "UNTESTED",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 85.3802,
+          "high": 88.1198,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows",
+            "yearly_open",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 83.9797,
+          "high": 84.4193,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "box_low",
+            "prior_low"
+          ],
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2274,
+        "dist_to_yearly_open_pct": -0.0141,
+        "avg_turnover_20d": 19051,
+        "close": 85.68,
+        "sweep_date": "2026-07-01",
+        "sweep_depth_pct": 0.0205,
+        "displacement_date": "2026-07-01"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "iShares 20+ Year U.S. Treasury Bond (AUD Hedged) ETF",
+      "sector": "Unclassified",
+      "next": "bounces staying below 87.28–87.49; next objective the 83.98–84.42 zone (T2)"
+    },
+    {
       "ticker": "USD",
       "direction": "bearish",
       "state": "RUNNING",
@@ -5856,6 +5951,323 @@
       "next": "bounces staying below 15.16–15.19; next objective the 13.65–13.79 zone (T4)"
     },
     {
+      "ticker": "VBS",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.45,
+          "high": 0.455,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2025-11-12"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.455,
+          "high": 0.4754,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2025-11-12"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.2725,
+          "high": 0.2775,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2025-11-12"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1761,
+          "high": 0.2294,
+          "status": "UNTESTED",
+          "created_date": "2025-11-12"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.2095,
+          "high": 0.2802,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2025-11-12"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0396,
+          "high": 0.1659,
+          "status": "RESPECTED",
+          "confluence": 6,
+          "sources": [
+            "quarterly_open",
+            "box_low",
+            "prior_low",
+            "yearly_open",
+            "prior_yearly_close",
+            "fib_ext_1618"
+          ],
+          "created_date": "2025-11-12"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1918,
+        "dist_to_yearly_open_pct": -0.0588,
+        "avg_turnover_20d": 4157,
+        "close": 0.16,
+        "sweep_date": "2025-11-12",
+        "sweep_depth_pct": 0.0111,
+        "displacement_date": "2025-11-12"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vectus Biosystems Limited",
+      "sector": "Health Care",
+      "next": "bounces staying below 0.273–0.278; next objective the 0.0396–0.166 zone (T2)"
+    },
+    {
+      "ticker": "WEB",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.28,
+          "high": 2.32,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-21"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.2297,
+          "high": 2.28,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-21"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.8637,
+          "high": 2.9,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 3.0463,
+          "high": 3.2274,
+          "status": "UNTESTED",
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.7825,
+          "high": 3.045,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "quarterly_open",
+            "prior_high"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 3.0625,
+          "high": 3.3675,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "equal_highs",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 3.6325,
+          "high": 3.6875,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-27"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 3.7225,
+          "high": 3.7775,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-27"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0726,
+        "dist_to_yearly_open_pct": -0.2824,
+        "avg_turnover_20d": 8090496,
+        "close": 3.43,
+        "sweep_date": "2026-07-21",
+        "sweep_depth_pct": 0.0172,
+        "displacement_date": "2026-07-27"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WEB Travel Group Limited",
+      "sector": "Consumer Discretionary",
+      "next": "pullbacks staying above 2.86–2.90; next objective the 3.63–3.69 zone (T3)"
+    },
+    {
+      "ticker": "WGB",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.06,
+          "high": 2.08,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.038,
+          "high": 2.06,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-30"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.15,
+          "high": 2.16,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 2.1836,
+          "high": 2.2128,
+          "status": "UNTESTED",
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.1786,
+          "high": 2.2414,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 2.259,
+          "high": 2.3314,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "box_high",
+            "equal_highs"
+          ],
+          "created_date": "2026-07-02"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 2.3754,
+          "high": 2.429,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "equal_highs"
+          ],
+          "created_date": "2026-07-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.25,
+        "dist_to_yearly_open_pct": -0.0785,
+        "avg_turnover_20d": 559950,
+        "close": 2.21,
+        "sweep_date": "2026-06-30",
+        "sweep_depth_pct": 0.0096,
+        "displacement_date": "2026-07-02"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WAM Global Limited",
+      "sector": "Financials",
+      "next": "pullbacks staying above 2.15–2.16; next objective the 2.18–2.24 zone (T1)"
+    },
+    {
       "ticker": "WIA",
       "direction": "bearish",
       "state": "RUNNING",
@@ -5947,6 +6359,125 @@
       "name": "WIA Gold Limited",
       "sector": "Materials",
       "next": "bounces staying below 0.465–0.472; next objective the 0.394–0.476 zone (T1)"
+    },
+    {
+      "ticker": "WOR",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 13.15,
+          "high": 13.18,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 13.18,
+          "high": 13.3256,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-15"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 11.705,
+          "high": 11.7619,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-06-19"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 10.9262,
+          "high": 11.3569,
+          "status": "UNTESTED",
+          "created_date": "2026-06-19"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 11.7253,
+          "high": 12.3343,
+          "status": "CONSUMED",
+          "confluence": 5,
+          "sources": [
+            "prior_low",
+            "box_low",
+            "fib_ext_10",
+            "yearly_open",
+            "equal_lows"
+          ],
+          "created_date": "2026-06-19"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 11.1652,
+          "high": 11.6853,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "quarterly_open",
+            "prior_low"
+          ],
+          "created_date": "2026-06-19"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 10.7952,
+          "high": 11.0348,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-06-19"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 10.5307,
+          "high": 10.7247,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-06-19"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2203,
+        "dist_to_yearly_open_pct": -0.1071,
+        "avg_turnover_20d": 17203305,
+        "close": 10.88,
+        "sweep_date": "2026-06-15",
+        "sweep_depth_pct": 0.0023,
+        "displacement_date": "2026-06-19"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Worley Limited",
+      "sector": "Industrials",
+      "next": "bounces staying below 11.71–11.76; next objective the 10.53–10.72 zone (T4)"
     },
     {
       "ticker": "XMET",
@@ -6840,7 +7371,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.3333,
-        "avg_turnover_20d": 486,
+        "avg_turnover_20d": 502,
         "close": 0.002,
         "sweep_date": "2026-02-26",
         "sweep_depth_pct": 0.1429,
@@ -8052,7 +8583,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.25,
-        "avg_turnover_20d": 4128,
+        "avg_turnover_20d": 4124,
         "close": 0.024,
         "sweep_date": "2026-08-04",
         "sweep_depth_pct": 0.0385,
@@ -9256,7 +9787,7 @@
       "metrics": {
         "retrace_pct": 0.125,
         "dist_to_yearly_open_pct": -0.1304,
-        "avg_turnover_20d": 10866,
+        "avg_turnover_20d": 10841,
         "close": 0.02,
         "sweep_date": "2026-05-14",
         "sweep_depth_pct": 0.0385,
@@ -9558,6 +10089,99 @@
       "name": "Pacgold Limited",
       "sector": "Materials",
       "next": "bounces staying below 0.177–0.182; next objective the 0.0750–0.150 zone (T1)"
+    },
+    {
+      "ticker": "PKD",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.029,
+          "high": 0.0295,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.027,
+          "high": 0.029,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.03,
+          "high": 0.031,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0315,
+          "high": 0.0321,
+          "status": "UNTESTED",
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.032,
+          "high": 0.038,
+          "status": "TESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "prior_high",
+            "prior_yearly_close",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.038,
+          "high": 0.04,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_high",
+            "equal_highs"
+          ],
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.0312,
+        "avg_turnover_20d": 2238,
+        "close": 0.033,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0169,
+        "displacement_date": "2026-08-06"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Parkd Ltd",
+      "sector": "Industrials",
+      "next": "pullbacks staying above 0.0300–0.0310; next objective the 0.0320–0.0380 zone (T1)"
     },
     {
       "ticker": "PV1",
@@ -10328,6 +10952,497 @@
       "name": "Turaco Gold Limited",
       "sector": "Materials",
       "next": "pullbacks staying above 0.576–0.585; next objective the 0.673–0.692 zone (T3)"
+    },
+    {
+      "ticker": "TPC",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.92,
+          "high": 3.0,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.8978,
+          "high": 2.92,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 3.0476,
+          "high": 3.06,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 3.093,
+          "high": 3.1339,
+          "status": "UNTESTED",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 3.0389,
+          "high": 3.0965,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 3.1192,
+          "high": 3.1911,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 3.4778,
+          "high": 3.5222,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "quarterly_open",
+            "prior_high"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 3.5789,
+          "high": 3.6011,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "box_high"
+          ],
+          "created_date": "2026-07-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.4483,
+        "avg_turnover_20d": 2415,
+        "close": 3.2,
+        "sweep_date": "2026-07-29",
+        "sweep_depth_pct": 0.0267,
+        "displacement_date": "2026-07-29"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "TPC Consolidated Limited",
+      "sector": "Utilities",
+      "next": "pullbacks staying above 3.05–3.06; next objective the 3.48–3.52 zone (T3)"
+    },
+    {
+      "ticker": "VEU",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 115.75,
+          "high": 116.2551,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 114.965,
+          "high": 115.75,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 117.8184,
+          "high": 118.19,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-31"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 118.7658,
+          "high": 119.4783,
+          "status": "UNTESTED",
+          "created_date": "2026-07-31"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 118.7967,
+          "high": 120.5416,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-31"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 120.9288,
+          "high": 123.0532,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "equal_highs",
+            "quarterly_open"
+          ],
+          "created_date": "2026-07-31"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0676,
+        "dist_to_yearly_open_pct": 0.0954,
+        "avg_turnover_20d": 8505082,
+        "close": 120.3,
+        "sweep_date": "2026-07-29",
+        "sweep_depth_pct": 0.0043,
+        "displacement_date": "2026-07-31"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard All-World Ex-US Shares Index ETF",
+      "sector": "Unclassified",
+      "next": "pullbacks staying above 117.82–118.19; next objective the 120.93–123.05 zone (T2)"
+    },
+    {
+      "ticker": "VMM",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 3.06,
+          "high": 3.31,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-31"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.9322,
+          "high": 3.06,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-31"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 3.6447,
+          "high": 3.7125,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 3.8665,
+          "high": 4.057,
+          "status": "UNTESTED",
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 3.6969,
+          "high": 4.0531,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 4.1295,
+          "high": 4.5231,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0345,
+        "dist_to_yearly_open_pct": 2.4839,
+        "avg_turnover_20d": 3048373,
+        "close": 4.32,
+        "sweep_date": "2026-07-31",
+        "sweep_depth_pct": 0.0755,
+        "displacement_date": "2026-08-04"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Viridis Mining and Minerals Limited",
+      "sector": "Materials",
+      "next": "pullbacks staying above 3.64–3.71; next objective the 4.13–4.52 zone (T2)"
+    },
+    {
+      "ticker": "VR1",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.075,
+          "high": 0.08,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2025-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.08,
+          "high": 0.0829,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2025-10-03"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.049,
+          "high": 0.05,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2025-10-07"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0326,
+          "high": 0.0417,
+          "status": "UNTESTED",
+          "created_date": "2025-10-07"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0515,
+          "high": 0.0615,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_10"
+          ],
+          "created_date": "2025-10-07"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0269,
+          "high": 0.0492,
+          "status": "CONSUMED",
+          "confluence": 6,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "equal_lows",
+            "box_low",
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2025-10-07"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.016,
+          "high": 0.019,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2025-10-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0645,
+        "dist_to_yearly_open_pct": -0.3125,
+        "avg_turnover_20d": 57604,
+        "close": 0.022,
+        "sweep_date": "2025-10-03",
+        "sweep_depth_pct": 0.0667,
+        "displacement_date": "2025-10-07"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vection Technologies Ltd",
+      "sector": "Information Technology",
+      "next": "bounces staying below 0.0490–0.0500; next objective the 0.0160–0.0190 zone (T3)"
+    },
+    {
+      "ticker": "WAG",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.635,
+          "high": 0.66,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-05-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.66,
+          "high": 0.67,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-05-07"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.61,
+          "high": 0.615,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-05-07"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.5836,
+          "high": 0.5982,
+          "status": "UNTESTED",
+          "created_date": "2026-05-07"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.5787,
+          "high": 0.605,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_10",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-05-07"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.535,
+          "high": 0.5679,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "quarterly_open",
+            "box_low"
+          ],
+          "created_date": "2026-05-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.15,
+        "dist_to_yearly_open_pct": -0.0254,
+        "avg_turnover_20d": 104,
+        "close": 0.575,
+        "sweep_date": "2026-05-07",
+        "sweep_depth_pct": 0.0394,
+        "displacement_date": "2026-05-07"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "The Australian Wealth Advisors Group Limited",
+      "sector": "Financials",
+      "next": "bounces staying below 0.610–0.615; next objective the 0.535–0.568 zone (T2)"
     },
     {
       "ticker": "WEMG",
@@ -11444,10 +12559,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0571,
-        "dist_to_yearly_open_pct": -0.4857,
-        "avg_turnover_20d": 157077,
-        "close": 0.162,
+        "retrace_pct": 0.0714,
+        "dist_to_yearly_open_pct": -0.4841,
+        "avg_turnover_20d": 157098,
+        "close": 0.1625,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0541,
         "displacement_date": "2026-08-06"
@@ -11746,6 +12861,126 @@
       "next": "bounces staying below 0.0385–0.0395; next objective the 0.0300–0.0380 zone (T1)"
     },
     {
+      "ticker": "VNL",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.043,
+          "high": 0.0455,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.041,
+          "high": 0.043,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0475,
+          "high": 0.0485,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0498,
+          "high": 0.0514,
+          "status": "UNTESTED",
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.052,
+          "high": 0.064,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "fib_ext_10",
+            "quarterly_open",
+            "equal_highs",
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.066,
+          "high": 0.069,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_high",
+            "prior_high"
+          ],
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.079,
+          "high": 0.087,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "equal_highs",
+            "yearly_open",
+            "prior_high",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-07-30"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.088,
+          "high": 0.09,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3636,
+        "dist_to_yearly_open_pct": -0.3827,
+        "avg_turnover_20d": 9879,
+        "close": 0.05,
+        "sweep_date": "2026-07-30",
+        "sweep_depth_pct": 0.0549,
+        "displacement_date": "2026-07-30"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vinyl Group Ltd",
+      "sector": "Information Technology",
+      "next": "pullbacks staying above 0.0475–0.0485; next objective the 0.0520–0.0640 zone (T1)"
+    },
+    {
       "ticker": "28BB",
       "direction": "bearish",
       "state": "DISPLACED",
@@ -11929,7 +13164,7 @@
       "metrics": {
         "retrace_pct": 0.1053,
         "dist_to_yearly_open_pct": 0.0569,
-        "avg_turnover_20d": 13518972,
+        "avg_turnover_20d": 13531995,
         "close": 4.97,
         "sweep_date": "2026-08-07",
         "sweep_depth_pct": 0.0204,
@@ -12641,7 +13876,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 1.0281,
-          "high": 1.0567,
+          "high": 1.0522,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -12664,98 +13899,6 @@
       "name": "Pengana International Equities Limited",
       "sector": "Financials",
       "next": "shallow bounces holding below the 1.160–1.165 area, drawing toward the 1.121–1.148 zone (T1)"
-    },
-    {
-      "ticker": "PKD",
-      "direction": "bullish",
-      "state": "DISPLACED",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "EXPANSION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.029,
-          "high": 0.0295,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-06"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.027,
-          "high": 0.029,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-08-06"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.03,
-          "high": 0.031,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-08-06"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0315,
-          "high": 0.0321,
-          "status": "UNTESTED",
-          "created_date": "2026-08-06"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.032,
-          "high": 0.038,
-          "status": "UNTESTED",
-          "confluence": 4,
-          "sources": [
-            "fib_ext_10",
-            "prior_high",
-            "prior_yearly_close",
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-08-06"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.038,
-          "high": 0.04,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "box_high",
-            "equal_highs"
-          ],
-          "created_date": "2026-08-06"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.25,
-        "dist_to_yearly_open_pct": 0.0,
-        "avg_turnover_20d": 2205,
-        "close": 0.032,
-        "sweep_date": "2026-08-06",
-        "sweep_depth_pct": 0.0169,
-        "displacement_date": "2026-08-06"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Parkd Ltd",
-      "sector": "Industrials",
-      "next": "shallow pullbacks holding above the 0.0300–0.0310 area, drawing toward the 0.0320–0.0380 zone (T1)"
     },
     {
       "ticker": "RNV",
@@ -12905,7 +14048,7 @@
           "id": "supply",
           "type": "SUPPLY",
           "low": 0.15,
-          "high": 0.152,
+          "high": 0.1525,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -12916,8 +14059,8 @@
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.152,
-          "high": 0.162,
+          "low": 0.1525,
+          "high": 0.1625,
           "status": "UNTESTED",
           "rule": "close_above_high",
           "created_date": "2026-08-07"
@@ -12929,7 +14072,7 @@
         "avg_turnover_20d": 691163,
         "close": 0.145,
         "sweep_date": "2026-08-07",
-        "sweep_depth_pct": 0.0133,
+        "sweep_depth_pct": 0.0167,
         "bars_remaining": 4
       },
       "smt": null,
@@ -13887,17 +15030,17 @@
       "metrics": {
         "retrace_pct": 0.1463,
         "dist_to_yearly_open_pct": -0.4286,
-        "avg_turnover_20d": 6010193,
+        "avg_turnover_20d": 5663134,
         "close": 3.84,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0201,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Austal Limited",
       "sector": "Industrials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "ATEC",
@@ -14027,17 +15170,17 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": 0.1622,
-        "avg_turnover_20d": 246,
+        "avg_turnover_20d": 243,
         "close": 0.92,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0041,
-        "bars_remaining": 4
+        "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
       "name": "Aneka Tambang (Persero) Tbk",
       "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "AUC",
@@ -15095,7 +16238,7 @@
       "metrics": {
         "retrace_pct": 1.1429,
         "dist_to_yearly_open_pct": -0.346,
-        "avg_turnover_20d": 374656,
+        "avg_turnover_20d": 374658,
         "close": 0.775,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0233,
@@ -15877,7 +17020,7 @@
       "metrics": {
         "retrace_pct": 0.1714,
         "dist_to_yearly_open_pct": 0.2862,
-        "avg_turnover_20d": 48912979,
+        "avg_turnover_20d": 48913011,
         "close": 42.92,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0092,
@@ -16342,13 +17485,13 @@
         "close": 0.094,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0211,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Delorean Corporation Limited",
       "sector": "Utilities",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "DGGF",
@@ -16478,7 +17621,7 @@
       "metrics": {
         "retrace_pct": 0.6667,
         "dist_to_yearly_open_pct": 0.0062,
-        "avg_turnover_20d": 7431244,
+        "avg_turnover_20d": 7439092,
         "close": 7.84,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0153,
@@ -16657,10 +17800,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.9,
-        "dist_to_yearly_open_pct": 3.425,
-        "avg_turnover_20d": 629538,
-        "close": 0.177,
+        "retrace_pct": 0.9167,
+        "dist_to_yearly_open_pct": 3.4375,
+        "avg_turnover_20d": 629666,
+        "close": 0.1775,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0588,
         "bars_remaining": 2
@@ -16846,7 +17989,7 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0476,
+        "retrace_pct": 0.0588,
         "dist_to_yearly_open_pct": -0.1228,
         "avg_turnover_20d": 137805,
         "close": 0.25,
@@ -17078,17 +18221,17 @@
       "metrics": {
         "retrace_pct": 0.4,
         "dist_to_yearly_open_pct": -0.1429,
-        "avg_turnover_20d": 5278,
+        "avg_turnover_20d": 5131,
         "close": 0.15,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0357,
-        "bars_remaining": 4
+        "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
       "name": "Equatorial Resources Limited",
       "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "ESK",
@@ -17124,7 +18267,7 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.7674,
+        "retrace_pct": 0.7647,
         "dist_to_yearly_open_pct": -0.0364,
         "avg_turnover_20d": 19707,
         "close": 0.53,
@@ -17357,7 +18500,7 @@
       "metrics": {
         "retrace_pct": 0.6021,
         "dist_to_yearly_open_pct": -0.1562,
-        "avg_turnover_20d": 102406570,
+        "avg_turnover_20d": 102407603,
         "close": 18.02,
         "sweep_date": "2026-08-04",
         "sweep_depth_pct": 0.0028,
@@ -17458,53 +18601,6 @@
       "name": "FleetPartners Group Limited",
       "sector": "Financials",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "FRM",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.26,
-          "high": 0.28,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.28,
-          "high": 0.29,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-31"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": 0.2,
-        "avg_turnover_20d": 6686,
-        "close": 0.24,
-        "sweep_date": "2026-07-31",
-        "sweep_depth_pct": 0.0769,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Farm Pride Foods Ltd",
-      "sector": "Consumer Staples",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "FSA",
@@ -17687,13 +18783,13 @@
         "close": 0.007,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0769,
-        "bars_remaining": 4
+        "bars_remaining": 3
       },
       "smt": null,
       "route_to": null,
       "name": "Golden Mile Resources Limited",
       "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "GCAP",
@@ -17822,7 +18918,7 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1667,
+        "retrace_pct": 0.1429,
         "dist_to_yearly_open_pct": -0.7899,
         "avg_turnover_20d": 316139,
         "close": 0.145,
@@ -18333,7 +19429,7 @@
       "metrics": {
         "retrace_pct": 0.2222,
         "dist_to_yearly_open_pct": -0.0211,
-        "avg_turnover_20d": 618573,
+        "avg_turnover_20d": 624005,
         "close": 2.41,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0081,
@@ -19795,17 +20891,17 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.3846,
-        "avg_turnover_20d": 4943,
+        "avg_turnover_20d": 4157,
         "close": 0.024,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0435,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Kingsrose Mining",
       "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "LFG",
@@ -20492,7 +21588,7 @@
       "metrics": {
         "retrace_pct": 0.2105,
         "dist_to_yearly_open_pct": 0.4959,
-        "avg_turnover_20d": 3598473,
+        "avg_turnover_20d": 3598479,
         "close": 0.995,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0118,
@@ -20627,7 +21723,7 @@
       "metrics": {
         "retrace_pct": 0.4878,
         "dist_to_yearly_open_pct": 0.021,
-        "avg_turnover_20d": 9028163,
+        "avg_turnover_20d": 9029109,
         "close": 5.5,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0215,
@@ -21396,7 +22492,7 @@
       "metrics": {
         "retrace_pct": 0.3452,
         "dist_to_yearly_open_pct": -0.2567,
-        "avg_turnover_20d": 7192648,
+        "avg_turnover_20d": 7192682,
         "close": 17.11,
         "sweep_date": "2026-08-07",
         "sweep_depth_pct": 0.0538,
@@ -22133,7 +23229,7 @@
       "metrics": {
         "retrace_pct": 0.5814,
         "dist_to_yearly_open_pct": 0.054,
-        "avg_turnover_20d": 29785530,
+        "avg_turnover_20d": 29808563,
         "close": 10.15,
         "sweep_date": "2026-08-07",
         "sweep_depth_pct": 0.0098,
@@ -23391,53 +24487,6 @@
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
     },
     {
-      "ticker": "RTH",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.72,
-          "high": 0.73,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.73,
-          "high": 0.7408,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-31"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.7,
-        "dist_to_yearly_open_pct": -0.1026,
-        "avg_turnover_20d": 9913,
-        "close": 0.7,
-        "sweep_date": "2026-07-31",
-        "sweep_depth_pct": 0.0139,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "RAS Technology Holdings Limited",
-      "sector": "Industrials",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
-    },
-    {
       "ticker": "RWC",
       "direction": "bullish",
       "state": "SWEPT",
@@ -24296,7 +25345,7 @@
       "metrics": {
         "retrace_pct": 0.1429,
         "dist_to_yearly_open_pct": -0.0965,
-        "avg_turnover_20d": 238063,
+        "avg_turnover_20d": 238187,
         "close": 0.515,
         "sweep_date": "2026-08-04",
         "sweep_depth_pct": 0.0102,
@@ -24543,6 +25592,53 @@
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
+      "ticker": "THL",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.4,
+          "high": 2.43,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.43,
+          "high": 2.4603,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.0493,
+        "avg_turnover_20d": 30732,
+        "close": 2.37,
+        "sweep_date": "2026-08-07",
+        "sweep_depth_pct": 0.0125,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Tourism Holdings Rentals Limited",
+      "sector": "Industrials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
       "ticker": "TLC",
       "direction": "bullish",
       "state": "SWEPT",
@@ -24586,6 +25682,1014 @@
       "name": "The Lottery Corporation Limited",
       "sector": "Consumer Discretionary",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TNE",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 32.79,
+          "high": 33.05,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 33.05,
+          "high": 33.5565,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5238,
+        "dist_to_yearly_open_pct": 0.1915,
+        "avg_turnover_20d": 23998635,
+        "close": 32.75,
+        "sweep_date": "2026-08-07",
+        "sweep_depth_pct": 0.0079,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Technology One Limited",
+      "sector": "Information Technology",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TR2",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.325,
+          "high": 0.34,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.34,
+          "high": 0.35,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1429,
+        "dist_to_yearly_open_pct": -0.0312,
+        "avg_turnover_20d": 9585,
+        "close": 0.31,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0462,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Tali Resources Ltd",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TTM",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.52,
+          "high": 0.525,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.5037,
+          "high": 0.52,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1364,
+        "dist_to_yearly_open_pct": -0.2849,
+        "avg_turnover_20d": 121967,
+        "close": 0.615,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.0095,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Titan Minerals Limited",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TWE",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 5.35,
+          "high": 5.43,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 5.43,
+          "high": 5.5121,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": 0.0343,
+        "avg_turnover_20d": 15069122,
+        "close": 5.43,
+        "sweep_date": "2026-08-05",
+        "sweep_depth_pct": 0.015,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Treasury Wine Estates Limited",
+      "sector": "Consumer Staples",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TWR",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 1.58,
+          "high": 1.61,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.61,
+          "high": 1.6234,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2308,
+        "dist_to_yearly_open_pct": -0.0256,
+        "avg_turnover_20d": 16377,
+        "close": 1.56,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.019,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Tower Limited",
+      "sector": "Financials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "TYR",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.89,
+          "high": 0.9,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.9,
+          "high": 0.9158,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3333,
+        "dist_to_yearly_open_pct": -0.1471,
+        "avg_turnover_20d": 700456,
+        "close": 0.87,
+        "sweep_date": "2026-08-05",
+        "sweep_depth_pct": 0.0112,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Tyro Payments Limited",
+      "sector": "Financials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "UNI",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 7.27,
+          "high": 7.47,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 7.1496,
+          "high": 7.27,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2429,
+        "dist_to_yearly_open_pct": 0.0034,
+        "avg_turnover_20d": 1020716,
+        "close": 7.8,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0268,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Universal Store Holdings Limited",
+      "sector": "Consumer Discretionary",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "URNM",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 10.04,
+          "high": 10.1162,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 9.9026,
+          "high": 10.04,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.0165,
+        "avg_turnover_20d": 1608803,
+        "close": 10.19,
+        "sweep_date": "2026-08-07",
+        "sweep_depth_pct": 0.0075,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Betashares Global Uranium ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "UTIP",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 25.38,
+          "high": 25.39,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 25.2526,
+          "high": 25.38,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.55,
+        "dist_to_yearly_open_pct": 0.0052,
+        "avg_turnover_20d": 143278,
+        "close": 25.47,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0004,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Betashares Inflation-Protected U.S. Treasury Bond Currency Hedged ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "UWC",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.05,
+          "high": 0.051,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.048,
+          "high": 0.05,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.1148,
+        "avg_turnover_20d": 8019,
+        "close": 0.054,
+        "sweep_date": "2026-08-05",
+        "sweep_depth_pct": 0.0196,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Underwood Capital Limited",
+      "sector": "Financials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VACF",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 51.1606,
+          "high": 51.2,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 51.2,
+          "high": 51.4558,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.0189,
+        "avg_turnover_20d": 648324,
+        "close": 51.04,
+        "sweep_date": "2026-08-05",
+        "sweep_depth_pct": 0.0008,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Australian Corp Fixed Interest Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDAL",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 59.44,
+          "high": 59.66,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 59.66,
+          "high": 59.9565,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2857,
+        "dist_to_yearly_open_pct": 0.0845,
+        "avg_turnover_20d": 2089235,
+        "close": 59.31,
+        "sweep_date": "2026-08-07",
+        "sweep_depth_pct": 0.0037,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified All Growth Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDBA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 60.78,
+          "high": 60.79,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 60.79,
+          "high": 61.0933,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4839,
+        "dist_to_yearly_open_pct": 0.0422,
+        "avg_turnover_20d": 1392665,
+        "close": 60.63,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0002,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified Balanced Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDCO",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 55.42,
+          "high": 55.49,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-07"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 55.49,
+          "high": 55.766,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.0284,
+        "avg_turnover_20d": 395164,
+        "close": 55.2,
+        "sweep_date": "2026-08-07",
+        "sweep_depth_pct": 0.0013,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified Conservative Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDGR",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 69.29,
+          "high": 69.3,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 69.3,
+          "high": 69.646,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1936,
+        "dist_to_yearly_open_pct": 0.0574,
+        "avg_turnover_20d": 2264219,
+        "close": 69.05,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0001,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified Growth Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDHG",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 78.0,
+          "high": 78.06,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 78.06,
+          "high": 78.4495,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6061,
+        "dist_to_yearly_open_pct": 0.0723,
+        "avg_turnover_20d": 5744277,
+        "close": 77.93,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0008,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified High Growth Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VDIF",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 54.05,
+          "high": 54.09,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 54.09,
+          "high": 54.3601,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.421,
+        "dist_to_yearly_open_pct": 0.0709,
+        "avg_turnover_20d": 201679,
+        "close": 54.17,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0007,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Diversified Income ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VEQ",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 92.72,
+          "high": 92.85,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 92.85,
+          "high": 93.3125,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5,
+        "dist_to_yearly_open_pct": 0.0433,
+        "avg_turnover_20d": 972127,
+        "close": 92.59,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0014,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard FTSE Europe Shares ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VGN",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.9,
+          "high": 2.93,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.93,
+          "high": 2.9828,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4615,
+        "dist_to_yearly_open_pct": -0.1852,
+        "avg_turnover_20d": 2563444,
+        "close": 2.86,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0103,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Virgin Australia Holdings Limited",
+      "sector": "Industrials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VHL",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.01,
+          "high": 0.0105,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.008,
+          "high": 0.01,
+          "status": "TESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": -0.5652,
+        "avg_turnover_20d": 18790,
+        "close": 0.01,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0476,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vitasora Health Limited",
+      "sector": "Health Care",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VHM",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.215,
+          "high": 0.23,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.205,
+          "high": 0.215,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": -0.4125,
+        "avg_turnover_20d": 121600,
+        "close": 0.235,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0652,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "VHM Limited",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VLC",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 94.93,
+          "high": 95.35,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 95.35,
+          "high": 95.8477,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2835,
+        "dist_to_yearly_open_pct": 0.1235,
+        "avg_turnover_20d": 417119,
+        "close": 94.44,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0044,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard MSCI Australian Large Companies Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "VMT",
@@ -24635,6 +26739,187 @@
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
+      "ticker": "VSO",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 75.3261,
+          "high": 75.42,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 75.42,
+          "high": 75.9122,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7925,
+        "dist_to_yearly_open_pct": 0.0102,
+        "avg_turnover_20d": 3772478,
+        "close": 75.31,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.0012,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard MSCI Australian Small Companies Index ETF",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VVLU",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 82.72,
+          "high": 82.9,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 82.9,
+          "high": 83.3124,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1928,
+        "dist_to_yearly_open_pct": 0.1278,
+        "avg_turnover_20d": 4086206,
+        "close": 82.23,
+        "sweep_date": "2026-08-05",
+        "sweep_depth_pct": 0.0022,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vanguard Global Value Equity Active ETF (Managed Fund)",
+      "sector": "Unclassified",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "WA1",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 10.48,
+          "high": 10.99,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 10.1832,
+          "high": 10.48,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0414,
+        "dist_to_yearly_open_pct": -0.3599,
+        "avg_turnover_20d": 2235556,
+        "close": 12.45,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.0464,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WA1 Resources Ltd",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "WEB",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 3.515,
+          "high": 3.52,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3.52,
+          "high": 3.5932,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.55,
+        "dist_to_yearly_open_pct": -0.2824,
+        "avg_turnover_20d": 8090496,
+        "close": 3.43,
+        "sweep_date": "2026-08-04",
+        "sweep_depth_pct": 0.0014,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WEB Travel Group Limited",
+      "sector": "Consumer Discretionary",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
       "ticker": "WES",
       "direction": "bearish",
       "state": "SWEPT",
@@ -24667,7 +26952,7 @@
       "metrics": {
         "retrace_pct": 0.1144,
         "dist_to_yearly_open_pct": 0.1256,
-        "avg_turnover_20d": 126037988,
+        "avg_turnover_20d": 127636412,
         "close": 90.1,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.0042,
@@ -24678,6 +26963,52 @@
       "name": "Wesfarmers Limited",
       "sector": "Consumer Discretionary",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "WGN",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 3.85,
+          "high": 4.14,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3.755,
+          "high": 3.85,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2308,
+        "dist_to_yearly_open_pct": 0.2083,
+        "avg_turnover_20d": 1255061,
+        "close": 4.35,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.07,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Wagners Holding Company Limited",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "WHC",
@@ -24782,7 +27113,7 @@
         {
           "id": "demand",
           "type": "DEMAND",
-          "low": 0.417,
+          "low": 0.4175,
           "high": 0.42,
           "status": "UNTESTED",
           "confluence": 1,
@@ -24794,20 +27125,20 @@
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.4035,
-          "high": 0.417,
+          "low": 0.4041,
+          "high": 0.4175,
           "status": "UNTESTED",
           "rule": "close_below_low",
           "created_date": "2026-08-07"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5556,
+        "retrace_pct": 0.5714,
         "dist_to_yearly_open_pct": -0.1414,
         "avg_turnover_20d": 449564,
         "close": 0.425,
         "sweep_date": "2026-08-07",
-        "sweep_depth_pct": 0.0071,
+        "sweep_depth_pct": 0.006,
         "bars_remaining": 4
       },
       "smt": null,
@@ -24861,6 +27192,52 @@
       "name": "WAM Income Maximiser Limited",
       "sector": "Financials",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "WOR",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 10.45,
+          "high": 10.62,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 10.3344,
+          "high": 10.45,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2951,
+        "dist_to_yearly_open_pct": -0.1071,
+        "avg_turnover_20d": 17203305,
+        "close": 10.88,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.016,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Worley Limited",
+      "sector": "Industrials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "WXOZ",
@@ -25129,19 +27506,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1667,
-        "dist_to_yearly_open_pct": 0.0465,
-        "avg_turnover_20d": 205622,
-        "close": 0.09,
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.1163,
+        "avg_turnover_20d": 200658,
+        "close": 0.096,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.1139,
-        "bars_remaining": 1
+        "bars_remaining": 0
       },
       "smt": null,
       "route_to": null,
       "name": "Zenith Minerals Limited",
       "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
     },
     {
       "ticker": "ZYAU",
@@ -25201,9 +27578,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1852,
-        "avg_turnover_20d": 8263,
+        "avg_turnover_20d": 7996,
         "close": 0.011,
-        "bars_in_box": 10,
+        "bars_in_box": 11,
         "box_low": 0.01,
         "box_high": 0.014,
         "box_height_pct": 0.4,
@@ -25230,9 +27607,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1852,
-        "avg_turnover_20d": 8263,
+        "avg_turnover_20d": 7996,
         "close": 0.011,
-        "bars_in_box": 13,
+        "bars_in_box": 14,
         "box_low": 0.01,
         "box_high": 0.014,
         "box_height_pct": 0.4,
@@ -25526,34 +27903,6 @@
       "next": "a run of the 0.0210–0.0210 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "AJL",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2727,
-        "avg_turnover_20d": 3450,
-        "close": 0.008,
-        "bars_in_box": 10,
-        "box_low": 0.006,
-        "box_high": 0.01,
-        "box_height_pct": 0.6667,
-        "cluster_low": 0.006,
-        "cluster_high": 0.007
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "AJ Lucas Group",
-      "sector": "Industrials",
-      "next": "a run of the 0.0060–0.0070 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
       "ticker": "AJX",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -25568,7 +27917,7 @@
         "dist_to_yearly_open_pct": 0.0,
         "avg_turnover_20d": 288,
         "close": 0.007,
-        "bars_in_box": 8,
+        "bars_in_box": 9,
         "box_low": 0.006,
         "box_high": 0.008,
         "box_height_pct": 0.3333,
@@ -25624,7 +27973,7 @@
         "dist_to_yearly_open_pct": -0.42,
         "avg_turnover_20d": 81,
         "close": 0.087,
-        "bars_in_box": 17,
+        "bars_in_box": 18,
         "box_low": 0.085,
         "box_high": 0.11,
         "box_height_pct": 0.2941,
@@ -25678,9 +28027,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.0197,
-        "avg_turnover_20d": 1105,
+        "avg_turnover_20d": 1100,
         "close": 0.5,
-        "bars_in_box": 15,
+        "bars_in_box": 16,
         "box_low": 0.45,
         "box_high": 0.5,
         "box_height_pct": 0.1111,
@@ -25790,9 +28139,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.5,
-        "avg_turnover_20d": 15963,
+        "avg_turnover_20d": 14893,
         "close": 0.019,
-        "bars_in_box": 1,
+        "bars_in_box": 2,
         "box_low": 0.016,
         "box_high": 0.02,
         "box_height_pct": 0.25,
@@ -25982,9 +28331,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.2083,
-        "avg_turnover_20d": 2008,
+        "avg_turnover_20d": 1983,
         "close": 0.019,
-        "bars_in_box": 3,
+        "bars_in_box": 4,
         "box_low": 0.017,
         "box_high": 0.026,
         "box_height_pct": 0.5294,
@@ -26010,9 +28359,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.7211,
-        "avg_turnover_20d": 11125,
+        "avg_turnover_20d": 9576,
         "close": 0.205,
-        "bars_in_box": 5,
+        "bars_in_box": 6,
         "box_low": 0.2,
         "box_high": 0.665,
         "box_height_pct": 2.325,
@@ -26179,7 +28528,7 @@
         "dist_to_yearly_open_pct": -0.1379,
         "avg_turnover_20d": 1453,
         "close": 0.025,
-        "bars_in_box": 4,
+        "bars_in_box": 5,
         "box_low": 0.02,
         "box_high": 0.027,
         "box_height_pct": 0.35,
@@ -26259,9 +28608,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.04,
-        "avg_turnover_20d": 14416,
+        "avg_turnover_20d": 14266,
         "close": 0.026,
-        "bars_in_box": 8,
+        "bars_in_box": 9,
         "box_low": 0.025,
         "box_high": 0.032,
         "box_height_pct": 0.28,
@@ -26426,12 +28775,12 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.7568,
-        "avg_turnover_20d": 5295,
+        "avg_turnover_20d": 4339,
         "close": 0.018,
-        "bars_in_box": 11,
+        "bars_in_box": 12,
         "box_low": 0.016,
-        "box_high": 0.047,
-        "box_height_pct": 1.9375,
+        "box_high": 0.044,
+        "box_height_pct": 1.75,
         "cluster_low": 0.016,
         "cluster_high": 0.016
       },
@@ -26510,7 +28859,7 @@
         "dist_to_yearly_open_pct": -0.2593,
         "avg_turnover_20d": 1316,
         "close": 0.1,
-        "bars_in_box": 3,
+        "bars_in_box": 4,
         "box_low": 0.095,
         "box_high": 0.13,
         "box_height_pct": 0.3684,
@@ -26536,9 +28885,9 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2222,
-        "avg_turnover_20d": 5983,
-        "close": 0.007,
+        "dist_to_yearly_open_pct": -0.1667,
+        "avg_turnover_20d": 5991,
+        "close": 0.0075,
         "bars_in_box": 2,
         "box_low": 0.007,
         "box_high": 0.01,
@@ -26841,7 +29190,7 @@
         "dist_to_yearly_open_pct": 0.0284,
         "avg_turnover_20d": 2111633,
         "close": 24.96,
-        "bars_in_box": 26,
+        "bars_in_box": 25,
         "box_low": 24.751,
         "box_high": 24.96,
         "box_height_pct": 0.0084,
@@ -26925,10 +29274,10 @@
         "dist_to_yearly_open_pct": 0.0,
         "avg_turnover_20d": 2659,
         "close": 0.007,
-        "bars_in_box": 31,
-        "box_low": 0.0065,
+        "bars_in_box": 32,
+        "box_low": 0.006,
         "box_high": 0.009,
-        "box_height_pct": 0.3846,
+        "box_height_pct": 0.5,
         "cluster_low": 0.008,
         "cluster_high": 0.009
       },
@@ -26951,9 +29300,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.3261,
-        "avg_turnover_20d": 3329,
+        "avg_turnover_20d": 2524,
         "close": 0.061,
-        "bars_in_box": 7,
+        "bars_in_box": 8,
         "box_low": 0.06,
         "box_high": 0.079,
         "box_height_pct": 0.3167,
@@ -26965,6 +29314,62 @@
       "name": "Globe Metals & Mining Limited",
       "sector": "Materials",
       "next": "a run of the 0.0600–0.0610 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "GED",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3065,
+        "avg_turnover_20d": 5446,
+        "close": 0.043,
+        "bars_in_box": 1,
+        "box_low": 0.035,
+        "box_high": 0.047,
+        "box_height_pct": 0.3429,
+        "cluster_low": 0.045,
+        "cluster_high": 0.047
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Golden Deeps Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0450–0.0470 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "GED",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3065,
+        "avg_turnover_20d": 5446,
+        "close": 0.043,
+        "bars_in_box": 1,
+        "box_low": 0.035,
+        "box_high": 0.047,
+        "box_height_pct": 0.3429,
+        "cluster_low": 0.035,
+        "cluster_high": 0.036
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Golden Deeps Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0350–0.0360 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "GEN",
@@ -27036,9 +29441,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1831,
-        "avg_turnover_20d": 3833,
+        "avg_turnover_20d": 3603,
         "close": 2.9,
-        "bars_in_box": 8,
+        "bars_in_box": 9,
         "box_low": 2.76,
         "box_high": 3.01,
         "box_height_pct": 0.0906,
@@ -27189,32 +29594,6 @@
       "next": "a run of the 10.02–10.04 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "HBRD",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.028,
-        "avg_turnover_20d": 2327256,
-        "close": 10.07,
-        "bars_in_box": 65,
-        "box_low": 9.9626,
-        "box_high": 10.07,
-        "box_height_pct": 0.0108,
-        "cluster_low": 9.9725,
-        "cluster_high": 9.9923
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "BetaShares Active Australian Hybrids Fund (managed fund)",
-      "sector": "Unclassified",
-      "next": "a run of the 9.97–9.99 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
       "ticker": "HMC",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -27312,7 +29691,7 @@
         "dist_to_yearly_open_pct": 0.0449,
         "avg_turnover_20d": 8961,
         "close": 0.44,
-        "bars_in_box": 2,
+        "bars_in_box": 3,
         "box_low": 0.42,
         "box_high": 0.45,
         "box_height_pct": 0.0714,
@@ -27500,7 +29879,7 @@
         "dist_to_yearly_open_pct": -0.3919,
         "avg_turnover_20d": 866,
         "close": 0.045,
-        "bars_in_box": 10,
+        "bars_in_box": 11,
         "box_low": 0.037,
         "box_high": 0.045,
         "box_height_pct": 0.2162,
@@ -27526,12 +29905,12 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.0714,
-        "avg_turnover_20d": 317,
+        "avg_turnover_20d": 239,
         "close": 0.13,
-        "bars_in_box": 22,
+        "bars_in_box": 23,
         "box_low": 0.11,
-        "box_high": 0.145,
-        "box_height_pct": 0.3182,
+        "box_high": 0.14,
+        "box_height_pct": 0.2727,
         "cluster_low": 0.11,
         "cluster_high": 0.11
       },
@@ -27585,10 +29964,10 @@
         "dist_to_yearly_open_pct": -0.2353,
         "avg_turnover_20d": 125,
         "close": 0.026,
-        "bars_in_box": 11,
+        "bars_in_box": 12,
         "box_low": 0.021,
-        "box_high": 0.03,
-        "box_height_pct": 0.4286,
+        "box_high": 0.029,
+        "box_height_pct": 0.381,
         "cluster_low": 0.028,
         "cluster_high": 0.029
       },
@@ -27597,32 +29976,6 @@
       "name": "Juno Minerals Limited",
       "sector": "Materials",
       "next": "a run of the 0.0280–0.0290 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "KKC",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0216,
-        "avg_turnover_20d": 787536,
-        "close": 2.12,
-        "bars_in_box": 14,
-        "box_low": 1.9685,
-        "box_high": 2.13,
-        "box_height_pct": 0.0821,
-        "cluster_low": 1.9685,
-        "cluster_high": 1.9881
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "KKR Credit Income Fund",
-      "sector": "Financials",
-      "next": "a run of the 1.968–1.988 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "KNB",
@@ -27774,10 +30127,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.1212,
-        "avg_turnover_20d": 22982,
-        "close": 0.185,
-        "bars_in_box": 4,
+        "dist_to_yearly_open_pct": 0.1515,
+        "avg_turnover_20d": 23063,
+        "close": 0.19,
+        "bars_in_box": 5,
         "box_low": 0.17,
         "box_high": 0.23,
         "box_height_pct": 0.3529,
@@ -27805,7 +30158,7 @@
         "dist_to_yearly_open_pct": -0.2222,
         "avg_turnover_20d": 3263,
         "close": 0.014,
-        "bars_in_box": 17,
+        "bars_in_box": 18,
         "box_low": 0.012,
         "box_high": 0.015,
         "box_height_pct": 0.25,
@@ -27834,7 +30187,7 @@
         "dist_to_yearly_open_pct": -0.2222,
         "avg_turnover_20d": 3263,
         "close": 0.014,
-        "bars_in_box": 17,
+        "bars_in_box": 18,
         "box_low": 0.012,
         "box_high": 0.015,
         "box_height_pct": 0.25,
@@ -27889,9 +30242,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1304,
-        "avg_turnover_20d": 10866,
+        "avg_turnover_20d": 10841,
         "close": 0.02,
-        "bars_in_box": 29,
+        "bars_in_box": 30,
         "box_low": 0.019,
         "box_high": 0.0225,
         "box_height_pct": 0.1842,
@@ -27943,7 +30296,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.1796,
-        "avg_turnover_20d": 66856118,
+        "avg_turnover_20d": 67158958,
         "close": 64.17,
         "bars_in_box": 8,
         "box_low": 52.6,
@@ -27973,10 +30326,10 @@
         "dist_to_yearly_open_pct": -0.125,
         "avg_turnover_20d": 594,
         "close": 0.021,
-        "bars_in_box": 4,
+        "bars_in_box": 5,
         "box_low": 0.016,
-        "box_high": 0.025,
-        "box_height_pct": 0.5625,
+        "box_high": 0.024,
+        "box_height_pct": 0.5,
         "cluster_low": 0.016,
         "cluster_high": 0.017
       },
@@ -28191,7 +30544,7 @@
         "dist_to_yearly_open_pct": -0.32,
         "avg_turnover_20d": 12,
         "close": 0.085,
-        "bars_in_box": 14,
+        "bars_in_box": 15,
         "box_low": 0.068,
         "box_high": 0.12,
         "box_height_pct": 0.7647,
@@ -28457,17 +30810,16 @@
       "state": "TRAP_SET",
       "tier": "Watch",
       "tags": [
-        "ANCHOR_CAUTION",
         "ILLIQUID"
       ],
       "regime": "ROTATION",
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.4688,
-        "avg_turnover_20d": 11407,
-        "close": 0.235,
-        "bars_in_box": 7,
+        "dist_to_yearly_open_pct": 0.4375,
+        "avg_turnover_20d": 11433,
+        "close": 0.23,
+        "bars_in_box": 8,
         "box_low": 0.21,
         "box_high": 0.265,
         "box_height_pct": 0.2619,
@@ -28616,34 +30968,6 @@
       "name": "PPK Group Limited",
       "sector": "Materials",
       "next": "a run of the 0.325–0.325 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "PRX",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0345,
-        "avg_turnover_20d": 7101,
-        "close": 0.06,
-        "bars_in_box": 26,
-        "box_low": 0.063,
-        "box_high": 0.08,
-        "box_height_pct": 0.2698,
-        "cluster_low": 0.063,
-        "cluster_high": 0.064
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Prodigy Gold NL",
-      "sector": "Materials",
-      "next": "a run of the 0.0630–0.0640 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "PWN",
@@ -28949,6 +31273,34 @@
       "next": "a run of the 0.0220–0.0220 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "SFC",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.02,
+        "avg_turnover_20d": 16751,
+        "close": 19.4,
+        "bars_in_box": 30,
+        "box_low": 18.5,
+        "box_high": 19.61,
+        "box_height_pct": 0.06,
+        "cluster_low": 18.5,
+        "cluster_high": 18.52
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Schaffer Corporation Limited",
+      "sector": "Consumer Discretionary",
+      "next": "a run of the 18.50–18.52 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "SKK",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -29001,6 +31353,34 @@
       "name": "Synlait Milk Limited",
       "sector": "Consumer Staples",
       "next": "a run of the 0.285–0.290 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "SMX",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2727,
+        "avg_turnover_20d": 9343,
+        "close": 0.016,
+        "bars_in_box": 1,
+        "box_low": 0.014,
+        "box_high": 0.019,
+        "box_height_pct": 0.3571,
+        "cluster_low": 0.0185,
+        "cluster_high": 0.019
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Strata Minerals Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0185–0.0190 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "SNC",
@@ -29064,17 +31444,16 @@
       "state": "TRAP_SET",
       "tier": "Watch",
       "tags": [
-        "ANCHOR_CAUTION",
         "ILLIQUID"
       ],
       "regime": "ROTATION",
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3585,
-        "avg_turnover_20d": 8218,
-        "close": 0.034,
-        "bars_in_box": 25,
+        "dist_to_yearly_open_pct": -0.3208,
+        "avg_turnover_20d": 8282,
+        "close": 0.036,
+        "bars_in_box": 26,
         "box_low": 0.031,
         "box_high": 0.037,
         "box_height_pct": 0.1935,
@@ -29202,6 +31581,34 @@
       "next": "a run of the 0.0850–0.0850 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "SPQ",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4286,
+        "avg_turnover_20d": 5329,
+        "close": 0.004,
+        "bars_in_box": 1,
+        "box_low": 0.003,
+        "box_high": 0.005,
+        "box_height_pct": 0.6667,
+        "cluster_low": 0.003,
+        "cluster_high": 0.003
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Superior Resources Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0030–0.0030 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "SRR",
       "direction": "bullish",
       "state": "TRAP_SET",
@@ -29314,6 +31721,32 @@
       "next": "a run of the 2.37–2.39 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "TM1",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.6429,
+        "avg_turnover_20d": 310280,
+        "close": 0.23,
+        "bars_in_box": 3,
+        "box_low": 0.195,
+        "box_high": 0.31,
+        "box_height_pct": 0.5897,
+        "cluster_low": 0.195,
+        "cluster_high": 0.1975
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Terra Metals Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.195–0.198 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "TMK",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -29340,6 +31773,341 @@
       "name": "TMK Energy Limited",
       "sector": "Energy",
       "next": "a run of the 0.158–0.160 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "TON",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.7727,
+        "avg_turnover_20d": 1082,
+        "close": 0.0025,
+        "bars_in_box": 1,
+        "box_low": 0.002,
+        "box_high": 0.005,
+        "box_height_pct": 1.5,
+        "cluster_low": 0.004,
+        "cluster_high": 0.005
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Triton Minerals Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0040–0.0050 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "UBN",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0972,
+        "avg_turnover_20d": 1886,
+        "close": 0.65,
+        "bars_in_box": 22,
+        "box_low": 0.64,
+        "box_high": 0.6775,
+        "box_height_pct": 0.0586,
+        "cluster_low": 0.64,
+        "cluster_high": 0.64
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Urbanise.com Limited",
+      "sector": "Information Technology",
+      "next": "a run of the 0.640–0.640 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "UOS",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0592,
+        "avg_turnover_20d": 9195,
+        "close": 0.7,
+        "bars_in_box": 2,
+        "box_low": 0.645,
+        "box_high": 0.72,
+        "box_height_pct": 0.1163,
+        "cluster_low": 0.645,
+        "cluster_high": 0.65
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "United Overseas Australia Limited",
+      "sector": "Real Estate",
+      "next": "a run of the 0.645–0.650 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VEN",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.6,
+        "avg_turnover_20d": 5191,
+        "close": 0.002,
+        "bars_in_box": 22,
+        "box_low": 0.0015,
+        "box_high": 0.003,
+        "box_height_pct": 1.0,
+        "cluster_low": 0.0025,
+        "cluster_high": 0.003
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vintage Energy Ltd",
+      "sector": "Energy",
+      "next": "a run of the 0.0025–0.0030 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VEN",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.6,
+        "avg_turnover_20d": 5191,
+        "close": 0.002,
+        "bars_in_box": 22,
+        "box_low": 0.0015,
+        "box_high": 0.003,
+        "box_height_pct": 1.0,
+        "cluster_low": 0.0015,
+        "cluster_high": 0.0015
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vintage Energy Ltd",
+      "sector": "Energy",
+      "next": "a run of the 0.0015–0.0015 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VLS",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0062,
+        "avg_turnover_20d": 16149,
+        "close": 2.5,
+        "bars_in_box": 28,
+        "box_low": 2.4,
+        "box_high": 2.57,
+        "box_height_pct": 0.0708,
+        "cluster_low": 2.55,
+        "cluster_high": 2.55
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vita Life Sciences",
+      "sector": "Health Care",
+      "next": "a run of the 2.55–2.55 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VLS",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0062,
+        "avg_turnover_20d": 16149,
+        "close": 2.5,
+        "bars_in_box": 28,
+        "box_low": 2.4,
+        "box_high": 2.57,
+        "box_height_pct": 0.0708,
+        "cluster_low": 2.4,
+        "cluster_high": 2.42
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vita Life Sciences",
+      "sector": "Health Care",
+      "next": "a run of the 2.40–2.42 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VML",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4118,
+        "avg_turnover_20d": 3193,
+        "close": 0.1,
+        "bars_in_box": 6,
+        "box_low": 0.096,
+        "box_high": 0.115,
+        "box_height_pct": 0.1979,
+        "cluster_low": 0.115,
+        "cluster_high": 0.115
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vital Metals Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.115–0.115 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "VTM",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.4076,
+        "avg_turnover_20d": 162773,
+        "close": 1.675,
+        "bars_in_box": 12,
+        "box_low": 1.38,
+        "box_high": 1.8,
+        "box_height_pct": 0.3043,
+        "cluster_low": 1.78,
+        "cluster_high": 1.8
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Victory Metals Limited",
+      "sector": "Materials",
+      "next": "a run of the 1.780–1.800 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "WAK",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.7692,
+        "avg_turnover_20d": 994,
+        "close": 0.006,
+        "bars_in_box": 2,
+        "box_low": 0.004,
+        "box_high": 0.007,
+        "box_height_pct": 0.75,
+        "cluster_low": 0.004,
+        "cluster_high": 0.005
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WA Kaolin Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0040–0.0050 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "WIN",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3971,
+        "avg_turnover_20d": 9718,
+        "close": 0.0205,
+        "bars_in_box": 22,
+        "box_low": 0.016,
+        "box_high": 0.022,
+        "box_height_pct": 0.375,
+        "cluster_low": 0.016,
+        "cluster_high": 0.0175
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "WIN Metals Ltd",
+      "sector": "Materials",
+      "next": "a run of the 0.0160–0.0175 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "WWI",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4615,
+        "avg_turnover_20d": 265371,
+        "close": 0.42,
+        "bars_in_box": 1,
+        "box_low": 0.355,
+        "box_high": 0.56,
+        "box_height_pct": 0.5775,
+        "cluster_low": 0.355,
+        "cluster_high": 0.365
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "West Wits Mining Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.355–0.365 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "XPN",
@@ -30019,7 +32787,7 @@
           "confluence": 5,
           "sources": [
             "fib_ext_1618",
-            "equal_lows",
+            "prior_low",
             "prior_yearly_close",
             "yearly_open",
             "fib_ext_10"
@@ -31100,7 +33868,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.4,
-        "avg_turnover_20d": 1076,
+        "avg_turnover_20d": 1072,
         "close": 0.003,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0,
@@ -32902,7 +35670,7 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 1.464,
+          "low": 1.4642,
           "high": 1.5212,
           "status": "RESPECTED",
           "confluence": 3,
@@ -32917,11 +35685,11 @@
           "id": "t3",
           "type": "TARGET",
           "low": 1.4465,
-          "high": 1.4608,
+          "high": 1.4565,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
-            "equal_lows"
+            "prior_low"
           ],
           "created_date": "2026-06-29"
         },
@@ -34817,10 +37585,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.75,
-        "avg_turnover_20d": 5959,
-        "close": 0.001,
+        "retrace_pct": 0.5,
+        "dist_to_yearly_open_pct": -0.625,
+        "avg_turnover_20d": 5972,
+        "close": 0.0015,
         "sweep_date": "2026-07-16",
         "sweep_depth_pct": 0.0,
         "displacement_date": "2026-07-16"
@@ -35363,7 +38131,7 @@
       "metrics": {
         "retrace_pct": 0.3478,
         "dist_to_yearly_open_pct": -0.2222,
-        "avg_turnover_20d": 297678,
+        "avg_turnover_20d": 299516,
         "close": 0.07,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0234,
@@ -35521,7 +38289,7 @@
       "metrics": {
         "retrace_pct": 0.191,
         "dist_to_yearly_open_pct": -0.2989,
-        "avg_turnover_20d": 7963063,
+        "avg_turnover_20d": 7972094,
         "close": 4.12,
         "sweep_date": "2026-07-24",
         "sweep_depth_pct": 0.0568,
@@ -36830,7 +39598,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.1282,
-        "avg_turnover_20d": 15873,
+        "avg_turnover_20d": 15297,
         "close": 0.034,
         "sweep_date": "2026-07-30",
         "sweep_depth_pct": 0.0256,
@@ -37983,7 +40751,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.1111,
-        "avg_turnover_20d": 1741,
+        "avg_turnover_20d": 832,
         "close": 0.032,
         "sweep_date": "2026-07-22",
         "sweep_depth_pct": 0.0811,
@@ -39471,10 +42239,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.55,
-        "dist_to_yearly_open_pct": -0.4857,
-        "avg_turnover_20d": 157077,
-        "close": 0.162,
+        "retrace_pct": 0.5417,
+        "dist_to_yearly_open_pct": -0.4841,
+        "avg_turnover_20d": 157098,
+        "close": 0.1625,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0847,
         "displacement_date": "2026-08-03"
@@ -40082,7 +42850,7 @@
       "metrics": {
         "retrace_pct": 0.8333,
         "dist_to_yearly_open_pct": -0.1111,
-        "avg_turnover_20d": 498,
+        "avg_turnover_20d": 460,
         "close": 0.024,
         "sweep_date": "2026-07-03",
         "sweep_depth_pct": 0.0,
@@ -41151,7 +43919,7 @@
       "metrics": {
         "retrace_pct": 0.8696,
         "dist_to_yearly_open_pct": -0.1489,
-        "avg_turnover_20d": 5158,
+        "avg_turnover_20d": 5056,
         "close": 0.08,
         "sweep_date": "2026-07-22",
         "sweep_depth_pct": 0.0941,
@@ -42299,7 +45067,7 @@
       "metrics": {
         "retrace_pct": 0.1098,
         "dist_to_yearly_open_pct": 0.054,
-        "avg_turnover_20d": 29785530,
+        "avg_turnover_20d": 29808563,
         "close": 10.15,
         "sweep_date": "2026-07-22",
         "sweep_depth_pct": 0.0291,
@@ -42378,7 +45146,7 @@
       "metrics": {
         "retrace_pct": 0.8333,
         "dist_to_yearly_open_pct": -0.1333,
-        "avg_turnover_20d": 2022,
+        "avg_turnover_20d": 1962,
         "close": 0.026,
         "sweep_date": "2026-07-22",
         "sweep_depth_pct": 0.037,
@@ -43201,7 +45969,7 @@
       "metrics": {
         "retrace_pct": 1.0,
         "dist_to_yearly_open_pct": 0.1111,
-        "avg_turnover_20d": 8451,
+        "avg_turnover_20d": 8285,
         "close": 0.075,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0135,
@@ -43802,7 +46570,7 @@
       "metrics": {
         "retrace_pct": 0.3333,
         "dist_to_yearly_open_pct": -0.4,
-        "avg_turnover_20d": 8284,
+        "avg_turnover_20d": 7924,
         "close": 0.003,
         "sweep_date": "2026-07-10",
         "sweep_depth_pct": 0.1429,
@@ -44770,120 +47538,6 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
-      "ticker": "RWL",
-      "direction": "bullish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.055,
-          "high": 0.056,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-06-25"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.0528,
-          "high": 0.055,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-06-25"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0665,
-          "high": 0.0675,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-06-30"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0704,
-          "high": 0.0741,
-          "status": "UNTESTED",
-          "created_date": "2026-06-30"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.062,
-          "high": 0.0662,
-          "status": "CONSUMED",
-          "confluence": 1,
-          "sources": [
-            "fib_ext_10"
-          ],
-          "created_date": "2026-06-30"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.0669,
-          "high": 0.072,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_1618",
-            "prior_high"
-          ],
-          "created_date": "2026-06-30"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 0.104,
-          "high": 0.106,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_high"
-          ],
-          "created_date": "2026-06-30"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 0.119,
-          "high": 0.121,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_high"
-          ],
-          "created_date": "2026-06-30"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.4483,
-        "avg_turnover_20d": 4498,
-        "close": 0.08,
-        "sweep_date": "2026-06-25",
-        "sweep_depth_pct": 0.0179,
-        "displacement_date": "2026-06-30"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Rubicon Water Limited",
-      "sector": "Information Technology",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
       "ticker": "RZI",
       "direction": "bearish",
       "state": "STALLED",
@@ -45491,7 +48145,7 @@
       "metrics": {
         "retrace_pct": 0.2667,
         "dist_to_yearly_open_pct": -0.0137,
-        "avg_turnover_20d": 17066,
+        "avg_turnover_20d": 16384,
         "close": 0.755,
         "sweep_date": "2026-07-13",
         "sweep_depth_pct": 0.0071,
@@ -45688,7 +48342,7 @@
       "metrics": {
         "retrace_pct": 0.75,
         "dist_to_yearly_open_pct": 2.0,
-        "avg_turnover_20d": 320761,
+        "avg_turnover_20d": 303102,
         "close": 0.24,
         "sweep_date": "2026-07-07",
         "sweep_depth_pct": 0.0408,
@@ -46069,7 +48723,7 @@
       "metrics": {
         "retrace_pct": 0.2075,
         "dist_to_yearly_open_pct": -0.132,
-        "avg_turnover_20d": 4190333,
+        "avg_turnover_20d": 4190431,
         "close": 13.58,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0109,
@@ -46357,7 +49011,7 @@
       "metrics": {
         "retrace_pct": 0.434,
         "dist_to_yearly_open_pct": -0.0742,
-        "avg_turnover_20d": 4536490,
+        "avg_turnover_20d": 4536924,
         "close": 0.89,
         "sweep_date": "2026-05-04",
         "sweep_depth_pct": 0.0171,
@@ -46669,6 +49323,97 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
+      "ticker": "TLX",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 13.9,
+          "high": 14.1,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-06-17"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 13.5651,
+          "high": 13.9,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-17"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 15.6779,
+          "high": 15.83,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-24"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 16.2855,
+          "high": 16.849,
+          "status": "UNTESTED",
+          "created_date": "2026-06-24"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 15.5872,
+          "high": 16.8203,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "equal_highs",
+            "box_high",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-24"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 17.2221,
+          "high": 18.3928,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4067,
+        "dist_to_yearly_open_pct": 0.4391,
+        "avg_turnover_20d": 21620867,
+        "close": 16.19,
+        "sweep_date": "2026-06-17",
+        "sweep_depth_pct": 0.0142,
+        "displacement_date": "2026-06-24"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Telix Pharmaceuticals Limited",
+      "sector": "Health Care",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
       "ticker": "TOK",
       "direction": "bullish",
       "state": "STALLED",
@@ -46787,6 +49532,550 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
+      "ticker": "TOT",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.39,
+          "high": 0.4075,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.38,
+          "high": 0.39,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.3975,
+          "high": 0.4025,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.4054,
+          "high": 0.4091,
+          "status": "UNTESTED",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.4094,
+          "high": 0.445,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "equal_highs",
+            "fib_ext_10",
+            "box_high",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6,
+        "dist_to_yearly_open_pct": 0.0378,
+        "avg_turnover_20d": 11918,
+        "close": 0.4,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0431,
+        "displacement_date": "2026-07-06"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "360 Capital Total Return Fund",
+      "sector": "Real Estate",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TPC",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 3.59,
+          "high": 3.7,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3.7,
+          "high": 3.72,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 3.31,
+          "high": 3.3224,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 3.1041,
+          "high": 3.218,
+          "status": "UNTESTED",
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 3.372,
+          "high": 3.46,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 3.19,
+          "high": 3.3055,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 2.99,
+          "high": 3.01,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "box_low"
+          ],
+          "created_date": "2026-07-22"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 2.51,
+          "high": 2.53,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-07-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.359,
+        "dist_to_yearly_open_pct": -0.4483,
+        "avg_turnover_20d": 2415,
+        "close": 3.2,
+        "sweep_date": "2026-07-22",
+        "sweep_depth_pct": 0.0306,
+        "displacement_date": "2026-07-22"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "TPC Consolidated Limited",
+      "sector": "Utilities",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TRE",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.24,
+          "high": 0.245,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.23,
+          "high": 0.24,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.2525,
+          "high": 0.2575,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.2616,
+          "high": 0.2667,
+          "status": "UNTESTED",
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.255,
+          "high": 0.285,
+          "status": "TESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.38,
+          "high": 0.415,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "quarterly_open",
+            "yearly_open",
+            "prior_yearly_close",
+            "prior_high"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.42,
+          "high": 0.445,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_high",
+            "equal_highs"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.45,
+          "high": 0.46,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2857,
+        "dist_to_yearly_open_pct": -0.3375,
+        "avg_turnover_20d": 244700,
+        "close": 0.265,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.0204,
+        "displacement_date": "2026-08-06"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Toubani Resources Inc",
+      "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TRJ",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.19,
+          "high": 0.195,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1784,
+          "high": 0.19,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.2525,
+          "high": 0.2575,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-03"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.2734,
+          "high": 0.2931,
+          "status": "UNTESTED",
+          "created_date": "2026-07-03"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.2763,
+          "high": 0.3138,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-03"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.3188,
+          "high": 0.3312,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-03"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.3335,
+          "high": 0.3812,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-07-03"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.4088,
+          "high": 0.4262,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-07-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.963,
+        "dist_to_yearly_open_pct": -0.7194,
+        "avg_turnover_20d": 24296,
+        "close": 0.195,
+        "sweep_date": "2026-06-29",
+        "sweep_depth_pct": 0.0256,
+        "displacement_date": "2026-07-03"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Trajan Group Holdings Limited",
+      "sector": "Health Care",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TSO",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.835,
+          "high": 0.84,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-10"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.8152,
+          "high": 0.835,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-10"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.8611,
+          "high": 0.8725,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-16"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.8814,
+          "high": 0.8923,
+          "status": "UNTESTED",
+          "created_date": "2026-07-16"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.9012,
+          "high": 0.9938,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "quarterly_open",
+            "fib_ext_1618",
+            "equal_highs"
+          ],
+          "created_date": "2026-07-16"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 1.0312,
+          "high": 1.0488,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-16"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 1.0862,
+          "high": 1.1138,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-07-16"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 1.1512,
+          "high": 1.1688,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-16"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1333,
+        "dist_to_yearly_open_pct": -0.3182,
+        "avg_turnover_20d": 50925,
+        "close": 0.9,
+        "sweep_date": "2026-07-10",
+        "sweep_depth_pct": 0.006,
+        "displacement_date": "2026-07-16"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Tesoro Gold Limited",
+      "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
       "ticker": "TYX",
       "direction": "bullish",
       "state": "STALLED",
@@ -46856,7 +50145,7 @@
       "metrics": {
         "retrace_pct": 0.5,
         "dist_to_yearly_open_pct": -0.25,
-        "avg_turnover_20d": 6143,
+        "avg_turnover_20d": 5965,
         "close": 0.003,
         "sweep_date": "2026-07-14",
         "sweep_depth_pct": 0.0,
@@ -46866,6 +50155,699 @@
       "route_to": "fib_reversal",
       "name": "Tyranna Resources Limited",
       "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "USHY",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 9.3254,
+          "high": 9.3347,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-04-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 9.2545,
+          "high": 9.3254,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-04-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 9.6926,
+          "high": 9.7327,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-04-17"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 9.8288,
+          "high": 9.9478,
+          "status": "UNTESTED",
+          "created_date": "2026-04-17"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 9.9461,
+          "high": 10.209,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-04-17"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 10.3553,
+          "high": 10.691,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-04-17"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3069,
+        "dist_to_yearly_open_pct": 0.0151,
+        "avg_turnover_20d": 71346,
+        "close": 9.89,
+        "sweep_date": "2026-04-16",
+        "sweep_depth_pct": 0.001,
+        "displacement_date": "2026-04-17"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Global X USD High Yield Bond ETF (Currency Hedged)",
+      "sector": "Unclassified",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VBX",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.515,
+          "high": 0.5725,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.5725,
+          "high": 0.5931,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-24"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.4762,
+          "high": 0.4861,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-24"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.4254,
+          "high": 0.4535,
+          "status": "UNTESTED",
+          "created_date": "2026-07-24"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.4394,
+          "high": 0.4903,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "quarterly_open",
+            "box_low",
+            "equal_lows",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-24"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.3772,
+          "high": 0.4331,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-07-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6234,
+        "dist_to_yearly_open_pct": -0.0196,
+        "avg_turnover_20d": 50405,
+        "close": 0.5,
+        "sweep_date": "2026-07-24",
+        "sweep_depth_pct": 0.1117,
+        "displacement_date": "2026-07-24"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "VBX Limited",
+      "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VEE",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.525,
+          "high": 0.525,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.51,
+          "high": 0.525,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-14"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.5537,
+          "high": 0.5625,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-15"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.5714,
+          "high": 0.5823,
+          "status": "UNTESTED",
+          "created_date": "2026-07-15"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.5727,
+          "high": 0.6673,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "fib_ext_10",
+            "prior_high",
+            "equal_highs",
+            "fib_ext_1618",
+            "box_high"
+          ],
+          "created_date": "2026-07-15"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.6927,
+          "high": 0.7073,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-15"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.7504,
+          "high": 0.7796,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-07-15"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.1333,
+        "dist_to_yearly_open_pct": -0.3268,
+        "avg_turnover_20d": 29708,
+        "close": 0.515,
+        "sweep_date": "2026-07-14",
+        "sweep_depth_pct": 0.0,
+        "displacement_date": "2026-07-15"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Veem Limited",
+      "sector": "Industrials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VIF",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 35.2039,
+          "high": 35.3477,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 35.0265,
+          "high": 35.2039,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 35.6222,
+          "high": 35.7118,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 35.8316,
+          "high": 35.9799,
+          "status": "UNTESTED",
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 35.8519,
+          "high": 36.345,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "equal_highs",
+            "fib_ext_10",
+            "yearly_open"
+          ],
+          "created_date": "2026-06-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 36.3699,
+          "high": 36.846,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "box_high",
+            "prior_high"
+          ],
+          "created_date": "2026-06-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3639,
+        "dist_to_yearly_open_pct": -0.0066,
+        "avg_turnover_20d": 1604823,
+        "close": 35.85,
+        "sweep_date": "2026-06-22",
+        "sweep_depth_pct": 0.0041,
+        "displacement_date": "2026-06-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Vanguard International Fixed Interest Index (Hedged) ETF",
+      "sector": "Unclassified",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VLUE",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 37.7243,
+          "high": 38.5,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 38.5,
+          "high": 38.8146,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 37.285,
+          "high": 37.4365,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 36.6435,
+          "high": 36.9983,
+          "status": "UNTESTED",
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 35.5027,
+          "high": 37.3146,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows",
+            "fib_ext_10",
+            "quarterly_open"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 34.4184,
+          "high": 34.733,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 32.6277,
+          "high": 32.9423,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-07-06"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 29.2159,
+          "high": 29.8785,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-07-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7695,
+        "dist_to_yearly_open_pct": 0.3313,
+        "avg_turnover_20d": 4369880,
+        "close": 37.94,
+        "sweep_date": "2026-07-06",
+        "sweep_depth_pct": 0.0206,
+        "displacement_date": "2026-07-06"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "VanEck MSCI International Value ETF",
+      "sector": "Unclassified",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "VYS",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 1.11,
+          "high": 1.17,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.17,
+          "high": 1.1952,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 1.125,
+          "high": 1.1385,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 1.1012,
+          "high": 1.1144,
+          "status": "UNTESTED",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.9774,
+          "high": 1.0926,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "equal_lows",
+            "fib_ext_1618",
+            "quarterly_open",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.8724,
+          "high": 0.9276,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.7674,
+          "high": 0.8126,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "box_low"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.6324,
+          "high": 0.7626,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-07-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.8333,
+        "dist_to_yearly_open_pct": 0.6861,
+        "avg_turnover_20d": 1012166,
+        "close": 1.155,
+        "sweep_date": "2026-07-29",
+        "sweep_depth_pct": 0.0541,
+        "displacement_date": "2026-07-29"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Vysarn Limited",
+      "sector": "Materials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "WBND",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 49.8745,
+          "high": 49.934,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 49.934,
+          "high": 50.1832,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-06-26"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 49.542,
+          "high": 49.6655,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 49.335,
+          "high": 49.4495,
+          "status": "UNTESTED",
+          "created_date": "2026-07-01"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 48.6717,
+          "high": 49.7144,
+          "status": "RESPECTED",
+          "confluence": 6,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "yearly_open",
+            "fib_ext_1618",
+            "prior_yearly_close",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-01"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3444,
+        "dist_to_yearly_open_pct": 0.0027,
+        "avg_turnover_20d": 2122737,
+        "close": 49.42,
+        "sweep_date": "2026-06-26",
+        "sweep_depth_pct": 0.0012,
+        "displacement_date": "2026-07-01"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Betashares Global Aggregate Bond Currency Hedged ETF",
+      "sector": "Unclassified",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
@@ -46947,6 +50929,114 @@
       "route_to": "fib_reversal",
       "name": "WAM Alternative Assets Limited",
       "sector": "Financials",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "WMG",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.165,
+          "high": 0.175,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.155,
+          "high": 0.165,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.175,
+          "high": 0.18,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1835,
+          "high": 0.1879,
+          "status": "UNTESTED",
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.18,
+          "high": 0.22,
+          "status": "RESPECTED",
+          "confluence": 6,
+          "sources": [
+            "quarterly_open",
+            "prior_high",
+            "fib_ext_10",
+            "equal_highs",
+            "fib_ext_1618",
+            "box_high"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.23,
+          "high": 0.255,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "prior_high"
+          ],
+          "created_date": "2026-07-29"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.265,
+          "high": 0.275,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-07-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.8333,
+        "dist_to_yearly_open_pct": -0.2917,
+        "avg_turnover_20d": 10138,
+        "close": 0.17,
+        "sweep_date": "2026-07-29",
+        "sweep_depth_pct": 0.0571,
+        "displacement_date": "2026-07-29"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Western Mines Group Ltd",
+      "sector": "Materials",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
@@ -47109,7 +51199,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": -0.125,
-        "avg_turnover_20d": 1904,
+        "avg_turnover_20d": 1784,
         "close": 0.14,
         "sweep_date": "2026-07-30",
         "sweep_depth_pct": 0.0,
@@ -47874,52 +51964,6 @@
       "next": "a new trap to build — the swept high failed on a closing basis"
     },
     {
-      "ticker": "SPD",
-      "direction": "bearish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 1.61,
-          "high": 1.705,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.705,
-          "high": 1.7644,
-          "status": "VIOLATED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-31"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.3333,
-        "dist_to_yearly_open_pct": -0.2489,
-        "avg_turnover_20d": 166093,
-        "close": 1.765,
-        "sweep_date": "2026-07-31",
-        "sweep_depth_pct": 0.059
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Southern Palladium Limited",
-      "sector": "Materials",
-      "next": "a new trap to build — the swept high failed on a closing basis"
-    },
-    {
       "ticker": "SWTZ",
       "direction": "bearish",
       "state": "DEAD",
@@ -47999,6 +52043,94 @@
       "route_to": "fib_reversal",
       "name": "Switzer Dividend Growth Fund (Quoted Managed Fund)",
       "sector": "Unclassified",
+      "next": "a new trap to build — the swept high failed on a closing basis"
+    },
+    {
+      "ticker": "URNM",
+      "direction": "bearish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 9.97,
+          "high": 10.01,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 10.01,
+          "high": 10.1469,
+          "status": "VIOLATED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 2.6363,
+        "dist_to_yearly_open_pct": -0.0165,
+        "avg_turnover_20d": 1608803,
+        "close": 10.19,
+        "sweep_date": "2026-08-06",
+        "sweep_depth_pct": 0.004
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Betashares Global Uranium ETF",
+      "sector": "Unclassified",
+      "next": "a new trap to build — the swept high failed on a closing basis"
+    },
+    {
+      "ticker": "VFY",
+      "direction": "bearish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 3.87,
+          "high": 3.91,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3.91,
+          "high": 3.9898,
+          "status": "VIOLATED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.186,
+        "dist_to_yearly_open_pct": 2.1172,
+        "avg_turnover_20d": 294998,
+        "close": 3.99,
+        "sweep_date": "2026-08-03",
+        "sweep_depth_pct": 0.0103
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Vitrafy Life Sciences Limited",
+      "sector": "Health Care",
       "next": "a new trap to build — the swept high failed on a closing basis"
     }
   ]
