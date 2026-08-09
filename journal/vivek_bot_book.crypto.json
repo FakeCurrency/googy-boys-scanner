@@ -14,7 +14,7 @@
       "entry_type": "reclaim",
       "timeframe": "1D",
       "entry": 84.8174057,
-      "stop": 77.08521662,
+      "stop": 84.8174057,
       "tp1": 94.71102142,
       "tp2": 121.1207428,
       "tp3": 128.46834136,
@@ -29,18 +29,25 @@
       "entry_date": "2026-07-29",
       "opened_at": "2026-07-29T03:32:00+00:00",
       "status": "open",
-      "tp1_hit": false,
+      "tp1_hit": true,
       "tp2_hit": false,
       "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0154,
-      "gross_r": 0.0,
-      "cost_r": 0.0154,
-      "exits": [],
+      "booked_pct": 0.25,
+      "realized_r": 0.3027,
+      "gross_r": 0.3199,
+      "cost_r": 0.0172,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 94.71102142,
+          "pct": 0.25,
+          "date": "2026-08-09"
+        }
+      ],
       "mae": 83.978759765625,
-      "mfe": 94.49266815185547,
+      "mfe": 94.8779067993164,
       "mae_r": -0.108,
-      "mfe_r": 1.251,
+      "mfe_r": 1.301,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 58.37774954,
       "notional": 5000.0,
@@ -54,9 +61,8 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 93.71689606,
+      "last_mark": 94.8779068,
       "day_marks": {
-        "2026-07-31": 86.59627533,
         "2026-08-01": 86.10707855,
         "2026-08-02": 86.32176971,
         "2026-08-03": 86.17373657,
@@ -64,10 +70,11 @@
         "2026-08-05": 86.84693146,
         "2026-08-06": 85.96323395,
         "2026-08-07": 85.35427094,
-        "2026-08-08": 90.0173111
+        "2026-08-08": 90.0173111,
+        "2026-08-09": 93.71689606
       },
-      "unreal_r": 1.151,
-      "unreal_usd": 575.41,
+      "unreal_r": 0.976,
+      "unreal_usd": 487.86,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -122,7 +129,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 1.43400002,
+      "last_mark": 1.44599998,
       "day_marks": {
         "2026-08-01": 1.45299995,
         "2026-08-02": 1.40699995,
@@ -131,10 +138,11 @@
         "2026-08-05": 1.41400003,
         "2026-08-06": 1.40999997,
         "2026-08-07": 1.398,
-        "2026-08-08": 1.40600002
+        "2026-08-08": 1.40600002,
+        "2026-08-09": 1.43400002
       },
-      "unreal_r": -0.135,
-      "unreal_usd": -67.01,
+      "unreal_r": -0.05,
+      "unreal_usd": -24.69,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -200,13 +208,14 @@
       "level_tf": "weekly",
       "signal_entry": 64262.11328125,
       "fill_slip_bps": 2.4,
-      "last_mark": 64922.828125,
+      "last_mark": 64857.75,
       "day_marks": {
         "2026-08-07": 64277.66015625,
-        "2026-08-08": 64878.109375
+        "2026-08-08": 64878.109375,
+        "2026-08-09": 64922.828125
       },
-      "unreal_r": 0.052,
-      "unreal_usd": 50.14
+      "unreal_r": 0.047,
+      "unreal_usd": 45.08
     }
   ],
   "closed": [
@@ -498,32 +507,32 @@
   "guard": {
     "crypto": {
       "market": "crypto",
-      "day": "2026-08-08",
+      "day": "2026-08-09",
       "breached": false,
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 461.04,
+      "week_usd": 724.47,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 341.43,
-      "worst_week_usd": 461.04,
+      "worst_session_usd": 107.92,
+      "worst_week_usd": 724.47,
       "realised_usd": 0.0,
-      "open_realised_usd": 0.0,
-      "unrealised_usd": 341.43,
-      "session_usd": 341.43,
+      "open_realised_usd": 14.35,
+      "unrealised_usd": 93.57,
+      "session_usd": 107.92,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 536.73,
+      "open_total_usd": 645.48,
       "notified": ""
     }
   },
   "summary": {
     "open": 3,
-    "unreal_usd": 558.54,
-    "updated_day": "2026-08-08"
+    "unreal_usd": 508.25,
+    "updated_day": "2026-08-09"
   },
-  "updated_at": "2026-08-08T23:50:03+00:00"
+  "updated_at": "2026-08-09T01:26:09+00:00"
 }
