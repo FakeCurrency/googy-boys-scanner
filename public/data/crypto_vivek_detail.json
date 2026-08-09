@@ -1,7 +1,7 @@
 {
   "schema_version": 5,
   "market": "crypto",
-  "generated_at": "2026-08-09T08:59:37+00:00",
+  "generated_at": "2026-08-09T09:07:20+00:00",
   "rows": {
     "BTC": {
       "plans": {
@@ -155,6 +155,165 @@
             "label": "retest"
           }
         ]
+      }
+    },
+    "SUN": {
+      "plans": {
+        "1D": {
+          "entry": 0.0179045,
+          "stop": 0.01742744,
+          "tp1": 0.018315,
+          "tp2": 0.018842,
+          "tp3": 0.019659,
+          "risk": 0.00047706,
+          "rr": 1.97,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.018842,
+          "trail": 0.0179045,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 0.0179045,
+          "swing_high": 0.018063,
+          "swing_low": 0.017632,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": true,
+          "entry_trigger": "retest",
+          "trigger_bar": "2026-08-08",
+          "reaction_bar": "2026-08-08",
+          "bars": 1826
+        },
+        "3D": {
+          "entry": 0.018015,
+          "stop": 0.01706697,
+          "tp1": 0.019018,
+          "tp2": 0.019659,
+          "tp3": 0.020252,
+          "risk": 0.00094803,
+          "rr": 1.73,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.019659,
+          "trail": 0.018015,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "structural"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 3,
+          "level": 0.01954973,
+          "swing_high": 0.019018,
+          "swing_low": 0.017629,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": "2026-05-19",
+          "bars": 610
+        },
+        "1W": {
+          "entry": 0.018015,
+          "stop": 0.01306378,
+          "tp1": 0.025492,
+          "tp2": 0.041209,
+          "tp3": 0.04368461,
+          "risk": 0.00495122,
+          "rr": 4.68,
+          "direction": "long",
+          "scale": [
+            0.25,
+            0.5,
+            0.15
+          ],
+          "target": 0.041209,
+          "trail": 0.018015,
+          "tp_basis": [
+            "structural",
+            "structural",
+            "measured"
+          ],
+          "target_basis": "structural",
+          "structural_tps": 2,
+          "level": 0.01427119,
+          "swing_high": 0.02053,
+          "swing_low": 0.016156,
+          "sma_window": 200,
+          "sma_proxy": false,
+          "armed": false,
+          "entry_trigger": null,
+          "trigger_bar": null,
+          "reaction_bar": null,
+          "bars": 262
+        }
+      },
+      "detail": {
+        "setup_type": "vivek",
+        "level_tf": "h4",
+        "level": 0.0179045,
+        "weekly_sma200": 0.01427119,
+        "daily_sma200": 0.0179045,
+        "dist_pct": 0.61,
+        "at_level": true,
+        "reaction": "bounce",
+        "structure": 1.0,
+        "confluence": false,
+        "weekly_bars": 262,
+        "atr": 0.00020456,
+        "entry": 0.0179045,
+        "stop": 0.01742744,
+        "tp1": 0.018315,
+        "tp2": 0.018842,
+        "tp3": 0.019659,
+        "scale": [
+          0.25,
+          0.5,
+          0.15
+        ],
+        "risk": 0.00047706,
+        "tp_basis": [
+          "structural",
+          "structural",
+          "structural"
+        ],
+        "structural_tps": 3,
+        "rr": 1.97
+      },
+      "analysis": "SUN is bouncing off the H4 (daily proxy) 200 SMA ($0.0179), 0.6% away, with a clean structure. A long reaction setup: enter $0.0179, stop $0.0174 (beyond the reaction); targets set at prior resistance (3/3 from real structure). Scale 25% / 50% / 15% into TP1 $0.0183 / TP2 $0.0188 / TP3 $0.0197; move SL to break-even at TP1, then below new support at TP2. 2.0R to TP2.",
+      "markers": {
+        "1D": [
+          {
+            "date": "2026-08-08",
+            "kind": "reaction"
+          },
+          {
+            "date": "2026-08-08",
+            "kind": "trigger",
+            "label": "retest"
+          }
+        ],
+        "3D": [
+          {
+            "date": "2026-05-19",
+            "kind": "reaction"
+          }
+        ],
+        "1W": []
       }
     },
     "NEAR": {
