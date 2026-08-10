@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-11T00:03:36+10:00",
+  "generated_at": "2026-08-11T00:49:24+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
@@ -21,6 +21,18 @@
       "fund": true
     },
     {
+      "symbol": "BOND",
+      "name": "SPDR S&P/ASX Australian Bond Fund",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 25.27000046,
+      "turnover_avg20": 89477,
+      "turnover_today": 411218,
+      "rvol": 4.6,
+      "adv_usd": 89477.6,
+      "fund": true
+    },
+    {
       "symbol": "VKA",
       "name": "Viking Mines Limited",
       "sector": "Materials",
@@ -31,6 +43,18 @@
       "rvol": 3.5,
       "adv_usd": 61439.57,
       "fund": false
+    },
+    {
+      "symbol": "SSO",
+      "name": "SPDR S&P/ASX Small Ordinaries Fund",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 15.11999989,
+      "turnover_avg20": 54108,
+      "turnover_today": 223685,
+      "rvol": 3.9,
+      "adv_usd": 54108.06,
+      "fund": true
     },
     {
       "symbol": "COB",
@@ -79,18 +103,6 @@
       "rvol": 13.8,
       "adv_usd": 10099.8,
       "fund": false
-    },
-    {
-      "symbol": "CGUN",
-      "name": "Claremont Global Fund (Managed Fund)",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 1.45000005,
-      "turnover_avg20": 18831,
-      "turnover_today": 125578,
-      "rvol": 6.5,
-      "adv_usd": 18831.02,
-      "fund": true
     },
     {
       "symbol": "ARL",
