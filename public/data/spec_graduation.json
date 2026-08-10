@@ -1,15 +1,9 @@
 {
  "schema_version": 1,
- "updated_at": "2026-08-09T19:26:54+10:00",
+ "updated_at": "2026-08-10T20:07:33+10:00",
  "markets": {
   "asx": {
    "seen": {
-    "WZR": {
-     "first_seen": "2026-07-31",
-     "price": 0.031,
-     "name": "Wisr Limited",
-     "last_seen": "2026-08-01"
-    },
     "PWN": {
      "first_seen": "2026-07-31",
      "price": 0.012,
@@ -20,7 +14,7 @@
      "first_seen": "2026-07-31",
      "price": 0.093,
      "name": "Gale Pacific Limited",
-     "last_seen": "2026-08-09"
+     "last_seen": "2026-08-10"
     },
     "HMG": {
      "first_seen": "2026-07-31",
@@ -44,7 +38,7 @@
      "first_seen": "2026-07-31",
      "price": 0.002,
      "name": "Ausmon Resources",
-     "last_seen": "2026-08-09"
+     "last_seen": "2026-08-10"
     },
     "QML": {
      "first_seen": "2026-07-31",
@@ -352,12 +346,6 @@
      "name": "Zicom Group Limited",
      "last_seen": "2026-08-06"
     },
-    "KYP": {
-     "first_seen": "2026-08-06",
-     "price": 0.17,
-     "name": "Kinatico Limited",
-     "last_seen": "2026-08-06"
-    },
     "AU1": {
      "first_seen": "2026-08-07",
      "price": 0.034,
@@ -368,12 +356,6 @@
      "first_seen": "2026-08-07",
      "price": 0.023,
      "name": "Bio-Gene Technology Limited",
-     "last_seen": "2026-08-09"
-    },
-    "GHY": {
-     "first_seen": "2026-08-07",
-     "price": 0.465,
-     "name": "Gold Hydrogen Limited",
      "last_seen": "2026-08-09"
     },
     "KZR": {
@@ -464,7 +446,7 @@
      "first_seen": "2026-08-09",
      "price": 0.19,
      "name": "EPX Limited",
-     "last_seen": "2026-08-09"
+     "last_seen": "2026-08-10"
     },
     "E79": {
      "first_seen": "2026-08-09",
@@ -477,10 +459,59 @@
      "price": 0.46000001,
      "name": "True North Copper Limited",
      "last_seen": "2026-08-09"
+    },
+    "MM8": {
+     "first_seen": "2026-08-10",
+     "price": 0.49000001,
+     "name": "Medallion Metals Limited",
+     "last_seen": "2026-08-10"
+    },
+    "WNX": {
+     "first_seen": "2026-08-10",
+     "price": 0.105,
+     "name": "Wellnex Life Limited",
+     "last_seen": "2026-08-10"
+    },
+    "BBT": {
+     "first_seen": "2026-08-10",
+     "price": 0.205,
+     "name": "betr Entertainment Limited",
+     "last_seen": "2026-08-10"
     }
    },
-   "graduates": [],
-   "graduated_total": 0
+   "graduates": [
+    {
+     "symbol": "WZR",
+     "name": "Wisr Limited",
+     "first_seen": "2026-07-31",
+     "spec_price": 0.031,
+     "graduated": "2026-08-10",
+     "vivek_price": 0.029,
+     "grade": "B+",
+     "days": 10
+    },
+    {
+     "symbol": "KYP",
+     "name": "Kinatico Limited",
+     "first_seen": "2026-08-06",
+     "spec_price": 0.17,
+     "graduated": "2026-08-10",
+     "vivek_price": 0.15000001,
+     "grade": "A+",
+     "days": 4
+    },
+    {
+     "symbol": "GHY",
+     "name": "Gold Hydrogen Limited",
+     "first_seen": "2026-08-07",
+     "spec_price": 0.465,
+     "graduated": "2026-08-10",
+     "vivek_price": 0.47999999,
+     "grade": "B+",
+     "days": 3
+    }
+   ],
+   "graduated_total": 3
   },
   "nasdaq": {
    "seen": {},

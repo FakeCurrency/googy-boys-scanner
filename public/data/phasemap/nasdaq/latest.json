@@ -1,7 +1,7 @@
 {
-  "run_date": "2026-08-09",
+  "run_date": "2026-08-10",
   "ruleset_version": "1.3.1",
-  "universe_size": 1427,
+  "universe_size": 1426,
   "narrations_file": "narrations.json",
   "results": [
     {
@@ -11494,6 +11494,119 @@
       "name": "El Pollo Loco Holdings, Inc. - Common Stock",
       "sector": "",
       "next": "shallow bounces holding below the 16.08–16.21 area, drawing toward the 14.30–15.14 zone (T1)"
+    },
+    {
+      "ticker": "MNST",
+      "direction": "bearish",
+      "state": "DISPLACED",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 99.98,
+          "high": 100.34,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 100.34,
+          "high": 101.3806,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 98.455,
+          "high": 98.9753,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 97.4597,
+          "high": 98.0101,
+          "status": "UNTESTED",
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 92.2797,
+          "high": 98.1006,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows",
+            "fib_ext_10",
+            "quarterly_open"
+          ],
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 90.4397,
+          "high": 91.4803,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 86.7105,
+          "high": 88.4303,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 84.9527,
+          "high": 85.9933,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-07-17"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2467,
+        "dist_to_yearly_open_pct": 0.2717,
+        "avg_turnover_20d": 625958088,
+        "close": 97.5,
+        "sweep_date": "2026-07-17",
+        "sweep_depth_pct": 0.0036,
+        "displacement_date": "2026-07-17"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Monster Beverage Corporation - Common Stock",
+      "sector": "",
+      "next": "shallow bounces holding below the 98.45–98.98 area, drawing toward the 92.28–98.10 zone (T1)"
     },
     {
       "ticker": "NWE",
@@ -24349,51 +24462,6 @@
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
     },
     {
-      "ticker": "MNST",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 89.5,
-          "high": 90.09,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-07"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 88.3265,
-          "high": 89.5,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-08-07"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.8045,
-        "dist_to_yearly_open_pct": 0.1786,
-        "avg_turnover_20d": 563782638,
-        "close": 90.36,
-        "sweep_date": "2026-08-07",
-        "sweep_depth_pct": 0.0065,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Monster Beverage Corporation - Common Stock",
-      "sector": "",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
-    },
-    {
       "ticker": "MOLN",
       "direction": "bearish",
       "state": "SWEPT",
@@ -27713,39 +27781,84 @@
         {
           "id": "supply",
           "type": "SUPPLY",
-          "low": 83.5,
-          "high": 83.61,
+          "low": 79.88,
+          "high": 80.17,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
           ],
-          "created_date": "2026-08-05"
+          "created_date": "2026-07-17"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 83.61,
-          "high": 84.8648,
+          "low": 80.17,
+          "high": 81.364,
           "status": "UNTESTED",
           "rule": "close_above_high",
-          "created_date": "2026-08-05"
+          "created_date": "2026-07-17"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1494,
-        "dist_to_yearly_open_pct": 0.4861,
-        "avg_turnover_20d": 39824963,
-        "close": 80.08,
-        "sweep_date": "2026-08-05",
-        "sweep_depth_pct": 0.0013,
-        "bars_remaining": 2
+        "retrace_pct": 0.2166,
+        "dist_to_yearly_open_pct": 0.4263,
+        "avg_turnover_20d": 43774812,
+        "close": 76.86,
+        "sweep_date": "2026-07-17",
+        "sweep_depth_pct": 0.0036,
+        "bars_remaining": 4
       },
       "smt": null,
       "route_to": null,
       "name": "Rush Enterprises, Inc. - Class A Common Stock",
       "sector": "",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "RUSHB",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 78.3,
+          "high": 79.1,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-17"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 79.1,
+          "high": 80.3129,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-17"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1729,
+        "dist_to_yearly_open_pct": 0.3835,
+        "avg_turnover_20d": 7561871,
+        "close": 75.87,
+        "sweep_date": "2026-07-17",
+        "sweep_depth_pct": 0.0102,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Rush Enterprises, Inc. - Class B Common Stock",
+      "sector": "",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "RVMD",
@@ -29248,51 +29361,6 @@
       "name": "Star Equity Holdings, Inc. - 10% Series A Cumulative Perpetual Preferred Stock",
       "sector": "",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
-    },
-    {
-      "ticker": "STRS",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 18.75,
-          "high": 18.85,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-07"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 18.3175,
-          "high": 18.75,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-08-07"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.6503,
-        "dist_to_yearly_open_pct": -0.012,
-        "avg_turnover_20d": 2059714,
-        "close": 19.32,
-        "sweep_date": "2026-08-07",
-        "sweep_depth_pct": 0.0053,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Stratus Properties Inc. - Common Stock",
-      "sector": "",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "STX",
@@ -39526,8 +39594,8 @@
           "status": "UNTESTED",
           "confluence": 4,
           "sources": [
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "equal_lows",
             "fib_ext_1618"
           ],
@@ -41493,8 +41561,8 @@
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "prior_low"
           ],
           "created_date": "2026-07-29"
@@ -42742,8 +42810,8 @@
           "sources": [
             "fib_ext_1618",
             "equal_lows",
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "box_low",
             "fib_ext_10"
           ],
@@ -43374,7 +43442,7 @@
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 276.9016,
+          "low": 276.9015,
           "high": 281.5701,
           "status": "UNTESTED",
           "confluence": 1,
@@ -44111,119 +44179,6 @@
       "smt": null,
       "route_to": "fib_reversal",
       "name": "The Middleby Corporation - Common Stock",
-      "sector": "",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MNST",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 99.98,
-          "high": 100.34,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 100.34,
-          "high": 101.3805,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 94.92,
-          "high": 95.5067,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 92.0582,
-          "high": 93.6409,
-          "status": "UNTESTED",
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 92.2798,
-          "high": 98.1005,
-          "status": "CONSUMED",
-          "confluence": 4,
-          "sources": [
-            "fib_ext_1618",
-            "equal_lows",
-            "fib_ext_10",
-            "quarterly_open"
-          ],
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 90.4397,
-          "high": 91.4802,
-          "status": "CONSUMED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 86.7098,
-          "high": 88.4303,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-07-17"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 84.9498,
-          "high": 85.9903,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-07-17"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0793,
-        "dist_to_yearly_open_pct": 0.1786,
-        "avg_turnover_20d": 563782638,
-        "close": 90.36,
-        "sweep_date": "2026-07-17",
-        "sweep_depth_pct": 0.0036,
-        "displacement_date": "2026-07-17"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Monster Beverage Corporation - Common Stock",
       "sector": "",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
@@ -46534,7 +46489,7 @@
           "id": "t1",
           "type": "TARGET",
           "low": 184.939,
-          "high": 205.2331,
+          "high": 205.233,
           "status": "RESPECTED",
           "confluence": 7,
           "sources": [
@@ -48215,8 +48170,8 @@
           "status": "UNTESTED",
           "confluence": 2,
           "sources": [
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-07-27"
         }
@@ -49399,8 +49354,8 @@
           "confluence": 3,
           "sources": [
             "prior_high",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-06-26"
         },
