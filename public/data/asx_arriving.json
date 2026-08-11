@@ -1,25 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-11T16:07:29+10:00",
+  "generated_at": "2026-08-11T17:51:42+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "DLI",
-      "name": "Delta Lithium Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.19,
-      "turnover_avg20": 70573,
-      "turnover_today": 455152,
-      "rvol": 5.9,
-      "adv_usd": 70573.3,
-      "fund": false
-    },
     {
       "symbol": "INES",
       "name": "Intelligent Investor Ethical Share Fund (Managed Fund)",
@@ -33,27 +21,27 @@
       "fund": true
     },
     {
-      "symbol": "HWK",
-      "name": "Hawk Resources Limited",
+      "symbol": "AGY",
+      "name": "Argosy Minerals Limited",
       "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.034,
-      "turnover_avg20": 53028,
-      "turnover_today": 256754,
-      "rvol": 4.3,
-      "adv_usd": 53028.41,
+      "dir": "SHORT",
+      "price": 0.047,
+      "turnover_avg20": 74066,
+      "turnover_today": 241226,
+      "rvol": 3.0,
+      "adv_usd": 74066.67,
       "fund": false
     },
     {
       "symbol": "LNQ",
       "name": "Linq Minerals Limited",
       "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.345,
-      "turnover_avg20": 51764,
-      "turnover_today": 209088,
-      "rvol": 4.1,
-      "adv_usd": 51764.77,
+      "dir": "LONG",
+      "price": 0.34999999,
+      "turnover_avg20": 52301,
+      "turnover_today": 219818,
+      "rvol": 4.2,
+      "adv_usd": 52301.28,
       "fund": false
     },
     {
@@ -73,11 +61,11 @@
       "name": "iShares 20+ Year U.S. Treasury Bond (AUD Hedged) ETF",
       "sector": "Unclassified",
       "dir": "SHORT",
-      "price": 84.55000305,
-      "turnover_avg20": 27743,
-      "turnover_today": 177301,
-      "rvol": 6.4,
-      "adv_usd": 27743.56,
+      "price": 84.51999664,
+      "turnover_avg20": 27993,
+      "turnover_today": 182309,
+      "rvol": 6.5,
+      "adv_usd": 27993.98,
       "fund": true
     },
     {
@@ -105,27 +93,15 @@
       "fund": false
     },
     {
-      "symbol": "AKO",
-      "name": "Akora Resources Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.081,
-      "turnover_avg20": 10099,
-      "turnover_today": 138512,
-      "rvol": 13.8,
-      "adv_usd": 10099.8,
-      "fund": false
-    },
-    {
       "symbol": "TGM",
       "name": "Theta Gold Mines Limited",
       "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.182,
-      "turnover_avg20": 38201,
-      "turnover_today": 131658,
-      "rvol": 3.4,
-      "adv_usd": 38201.62,
+      "dir": "LONG",
+      "price": 0.185,
+      "turnover_avg20": 38506,
+      "turnover_today": 137750,
+      "rvol": 3.5,
+      "adv_usd": 38506.17,
       "fund": false
     },
     {
