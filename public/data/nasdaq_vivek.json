@@ -3,12 +3,12 @@
   "label": "NASDAQ",
   "setup_type": "vivek",
   "schema_version": 5,
-  "code_sha": "e2052d5",
+  "code_sha": "8cbd7a9",
   "currency": "USD",
   "currency_symbol": "$",
   "timezone": "America/New_York",
   "tz_label": "ET",
-  "generated_at": "2026-08-11T20:58:15-04:00",
+  "generated_at": "2026-08-11T22:37:32-04:00",
   "scanned": 1426,
   "downloaded": 1426,
   "from_cache": 0,
@@ -59,12 +59,6 @@
         "rvol": 2.8
       },
       {
-        "symbol": "EFSCP",
-        "dir": "LONG",
-        "turnover": 29639,
-        "rvol": 2.8
-      },
-      {
         "symbol": "ATLCP",
         "dir": "LONG",
         "turnover": 98832,
@@ -105,6 +99,12 @@
         "dir": "SHORT",
         "turnover": 33972,
         "rvol": 1.6
+      },
+      {
+        "symbol": "ADAMZ",
+        "dir": "LONG",
+        "turnover": 113572,
+        "rvol": 1.5
       }
     ],
     "arriving": 3
@@ -335,7 +335,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 15.26425863,
+      "level": 15.26425871,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -353,7 +353,7 @@
       "headline_tf": "1W",
       "entry": 15.42000008,
       "stop": 9.37128093,
-      "tp1": 21.02127947,
+      "tp1": 21.02127749,
       "tp2": 33.56615753,
       "tp3": 45.66359583,
       "scale": [
@@ -749,7 +749,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 96.26677359,
+      "level": 96.26677422,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -766,16 +766,16 @@
       "price": 96.29000092,
       "headline_tf": "1W",
       "entry": 96.29000092,
-      "stop": 78.61884503,
+      "stop": 78.61884506,
       "tp1": 116.01172708,
-      "tp2": 149.30346857,
-      "tp3": 184.64578035,
+      "tp2": 149.30346848,
+      "tp3": 184.64578019,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 17.67115589,
+      "risk": 17.67115585,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -1077,7 +1077,7 @@
       "headline_tf": "1W",
       "entry": 16.99770534,
       "stop": 18.68583691,
-      "tp1": 14.03202031,
+      "tp1": 14.03202125,
       "tp2": 12.89296269,
       "tp3": 10.49616375,
       "scale": [
@@ -1085,7 +1085,7 @@
         0.25,
         0.15
       ],
-      "risk": 1.68813158,
+      "risk": 1.68813157,
       "rr": 2.43,
       "rr_text": "2.4:1",
       "liquidity": "LIQUID",
@@ -1162,7 +1162,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 15.8662271,
+      "level": 15.86622719,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1178,17 +1178,17 @@
       "confluence": false,
       "price": 16.14999962,
       "headline_tf": "1W",
-      "entry": 15.8662271,
-      "stop": 15.42544226,
-      "tp1": 16.48240446,
+      "entry": 15.86622719,
+      "stop": 15.42544223,
+      "tp1": 16.48240253,
       "tp2": 16.86539554,
-      "tp3": 17.13269475,
+      "tp3": 17.13269669,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.44078485,
+      "risk": 0.44078496,
       "rr": 2.27,
       "rr_text": "2.3:1",
       "liquidity": "OK",
@@ -1265,7 +1265,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 31.93203942,
+      "level": 31.93203922,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -1282,7 +1282,7 @@
       "price": 31.92000008,
       "headline_tf": "1W",
       "entry": 31.92000008,
-      "stop": 35.42597541,
+      "stop": 35.4259754,
       "tp1": 28.87073976,
       "tp2": 24.54500008,
       "tp3": 21.89198317,
@@ -1368,7 +1368,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 9.8909988,
+      "level": 9.89099879,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -1384,7 +1384,7 @@
       "confluence": false,
       "price": 9.84000015,
       "headline_tf": "1W",
-      "entry": 9.8909988,
+      "entry": 9.89099879,
       "stop": 11.02272748,
       "tp1": 8.4723493,
       "tp2": 7.55268475,
@@ -1394,7 +1394,7 @@
         0.25,
         0.15
       ],
-      "risk": 1.13172868,
+      "risk": 1.13172869,
       "rr": 2.07,
       "rr_text": "2.1:1",
       "liquidity": "OK",
@@ -1576,7 +1576,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "3d",
-      "level": 50.30094002,
+      "level": 50.30093998,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -1592,17 +1592,17 @@
       "confluence": true,
       "price": 49.56000137,
       "headline_tf": "3D",
-      "entry": 50.30094002,
+      "entry": 50.30093998,
       "stop": 54.58266432,
-      "tp1": 45.1751758,
-      "tp2": 42.45463782,
-      "tp3": 39.32110671,
+      "tp1": 45.17517206,
+      "tp2": 42.45463406,
+      "tp3": 39.32111047,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 4.28172431,
+      "risk": 4.28172434,
       "rr": 1.83,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -1783,7 +1783,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 64.19850386,
+      "level": 64.19850443,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -1800,8 +1800,8 @@
       "price": 63.27000046,
       "headline_tf": "1W",
       "entry": 63.27000046,
-      "stop": 99.65311971,
-      "tp1": 30.45641212,
+      "stop": 99.65311975,
+      "tp1": 30.45641402,
       "tp2": 3.22677002,
       "tp3": 3.16350002,
       "scale": [
@@ -1809,7 +1809,7 @@
         0.25,
         0.15
       ],
-      "risk": 36.38311925,
+      "risk": 36.38311929,
       "rr": 1.65,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -1886,7 +1886,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 10.034156,
+      "level": 10.03415603,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -1902,8 +1902,8 @@
       "confluence": false,
       "price": 10.15999985,
       "headline_tf": "1D",
-      "entry": 10.034156,
-      "stop": 9.66207491,
+      "entry": 10.03415603,
+      "stop": 9.66207493,
       "tp1": 11.34000015,
       "tp2": 11.88790269,
       "tp3": 12.89000034,
@@ -1990,7 +1990,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "h4",
-      "level": 68.91401073,
+      "level": 68.91401096,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -2006,8 +2006,8 @@
       "confluence": true,
       "price": 68.18000031,
       "headline_tf": "1D",
-      "entry": 68.91401073,
-      "stop": 70.88363846,
+      "entry": 68.91401096,
+      "stop": 70.88363869,
       "tp1": 64.32923299,
       "tp2": 59.17499924,
       "tp3": 57.5,
@@ -2299,7 +2299,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 54.43930933,
+      "level": 54.43930927,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -2315,17 +2315,17 @@
       "confluence": false,
       "price": 54.29999924,
       "headline_tf": "1D",
-      "entry": 54.43930933,
+      "entry": 54.43930927,
       "stop": 70.17160461,
       "tp1": 40.64426798,
-      "tp2": 7.24242348,
-      "tp3": 2.72196547,
+      "tp2": 7.24242325,
+      "tp3": 2.72196546,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 15.73229528,
+      "risk": 15.73229534,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -2917,7 +2917,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 45.59418644,
+      "level": 45.5941864,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -2933,17 +2933,17 @@
       "confluence": false,
       "price": 44.86999893,
       "headline_tf": "1D",
-      "entry": 45.59418644,
+      "entry": 45.5941864,
       "stop": 49.52161736,
-      "tp1": 42.43417013,
-      "tp2": 33.81189368,
-      "tp3": 25.95703184,
+      "tp1": 42.43416634,
+      "tp2": 33.81189353,
+      "tp3": 25.95703161,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 3.92743092,
+      "risk": 3.92743096,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -3226,7 +3226,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 240.53674637,
+      "level": 240.53674652,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -3242,17 +3242,17 @@
       "confluence": false,
       "price": 236.38000488,
       "headline_tf": "1D",
-      "entry": 240.53674637,
+      "entry": 240.53674652,
       "stop": 288.82960495,
       "tp1": 187.07128426,
-      "tp2": 95.65817063,
-      "tp3": 12.02683732,
+      "tp2": 95.65817125,
+      "tp3": 12.02683733,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 48.29285858,
+      "risk": 48.29285843,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -3329,7 +3329,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 119.06444096,
+      "level": 119.06444176,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3345,17 +3345,17 @@
       "confluence": false,
       "price": 121.30000305,
       "headline_tf": "3D",
-      "entry": 119.06444096,
-      "stop": 97.81539602,
-      "tp1": 141.86177426,
-      "tp2": 182.81157576,
-      "tp3": 225.30966563,
+      "entry": 119.06444176,
+      "stop": 97.81539614,
+      "tp1": 141.86178971,
+      "tp2": 182.8115786,
+      "tp3": 225.30966983,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 21.24904494,
+      "risk": 21.24904561,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -3741,7 +3741,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 26.85668432,
+      "level": 26.85668449,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3757,17 +3757,17 @@
       "confluence": false,
       "price": 27.15999985,
       "headline_tf": "3D",
-      "entry": 26.85668432,
+      "entry": 26.85668449,
       "stop": 21.84651345,
-      "tp1": 31.48024085,
-      "tp2": 41.88719695,
-      "tp3": 51.90753871,
+      "tp1": 31.48024281,
+      "tp2": 41.88719764,
+      "tp3": 51.90753973,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 5.01017088,
+      "risk": 5.01017105,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -3844,7 +3844,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 78.27345879,
+      "level": 78.27345917,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -3860,17 +3860,17 @@
       "confluence": false,
       "price": 79.84999847,
       "headline_tf": "3D",
-      "entry": 78.27345879,
+      "entry": 78.27345917,
       "stop": 61.0611085,
-      "tp1": 104.09198422,
-      "tp2": 129.91050965,
-      "tp3": 164.33521023,
+      "tp1": 104.09198517,
+      "tp2": 129.91051118,
+      "tp3": 164.33521252,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 17.21235029,
+      "risk": 17.21235067,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -4050,7 +4050,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 78.04570313,
+      "level": 78.04570263,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -4066,17 +4066,17 @@
       "confluence": false,
       "price": 77.66000366,
       "headline_tf": "1D",
-      "entry": 78.04570313,
+      "entry": 78.04570263,
       "stop": 84.2775732,
       "tp1": 73.01555327,
-      "tp2": 59.35009289,
-      "tp3": 46.88635273,
+      "tp2": 59.3500909,
+      "tp3": 46.88634975,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 6.23187008,
+      "risk": 6.23187057,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -4256,7 +4256,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 98.49048157,
+      "level": 98.49048161,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -4272,7 +4272,7 @@
       "confluence": false,
       "price": 97.44999695,
       "headline_tf": "1D",
-      "entry": 98.49048157,
+      "entry": 98.49048161,
       "stop": 101.47153642,
       "tp1": 95.5,
       "tp2": 90.5882056,
@@ -4282,7 +4282,7 @@
         0.25,
         0.15
       ],
-      "risk": 2.98105485,
+      "risk": 2.98105481,
       "rr": 2.65,
       "rr_text": "2.6:1",
       "liquidity": "OK",
@@ -4565,7 +4565,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 92.04549763,
+      "level": 92.04549767,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4583,8 +4583,8 @@
       "headline_tf": "1D",
       "entry": 92.81999969,
       "stop": 81.96902322,
-      "tp1": 107.96729636,
-      "tp2": 117.06460167,
+      "tp1": 107.96730412,
+      "tp2": 117.06460954,
       "tp3": 147.07488208,
       "scale": [
         0.25,
@@ -4668,7 +4668,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 81.71994511,
+      "level": 81.71994503,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -4684,7 +4684,7 @@
       "confluence": false,
       "price": 82.55999756,
       "headline_tf": "1D",
-      "entry": 81.71994511,
+      "entry": 81.71994503,
       "stop": 78.50577743,
       "tp1": 84.59958328,
       "tp2": 88.57822643,
@@ -4694,7 +4694,7 @@
         0.5,
         0.15
       ],
-      "risk": 3.21416768,
+      "risk": 3.2141676,
       "rr": 2.13,
       "rr_text": "2.1:1",
       "liquidity": "LIQUID",
@@ -5389,7 +5389,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 262.2834584,
+      "level": 262.2834568,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -5406,16 +5406,16 @@
       "price": 259.32000732,
       "headline_tf": "3D",
       "entry": 259.32000732,
-      "stop": 280.43773583,
+      "stop": 280.43773589,
       "tp1": 238.13271447,
       "tp2": 218.30999756,
-      "tp3": 153.73136478,
+      "tp3": 153.7313645,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 21.11772851,
+      "risk": 21.11772857,
       "rr": 1.94,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -5595,7 +5595,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 351.8050145,
+      "level": 351.80501526,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -5611,7 +5611,7 @@
       "confluence": false,
       "price": 356.57998657,
       "headline_tf": "1D",
-      "entry": 351.8050145,
+      "entry": 351.80501526,
       "stop": 328.97764428,
       "tp1": 374.52338263,
       "tp2": 394.84514683,
@@ -5621,7 +5621,7 @@
         0.5,
         0.15
       ],
-      "risk": 22.82737021,
+      "risk": 22.82737098,
       "rr": 1.89,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -6110,7 +6110,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 182.40703171,
+      "level": 182.40703217,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6126,7 +6126,7 @@
       "confluence": false,
       "price": 184.55999756,
       "headline_tf": "3D",
-      "entry": 182.40703171,
+      "entry": 182.40703217,
       "stop": 162.84187203,
       "tp1": 198.96000671,
       "tp2": 216.20318481,
@@ -6136,7 +6136,7 @@
         0.5,
         0.15
       ],
-      "risk": 19.56515968,
+      "risk": 19.56516014,
       "rr": 1.73,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -6213,7 +6213,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 66.47447235,
+      "level": 66.47447247,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -6229,7 +6229,7 @@
       "confluence": false,
       "price": 65.66999817,
       "headline_tf": "1D",
-      "entry": 66.47447235,
+      "entry": 66.47447247,
       "stop": 68.14095636,
       "tp1": 64.91400473,
       "tp2": 63.68602922,
@@ -6239,7 +6239,7 @@
         0.25,
         0.15
       ],
-      "risk": 1.66648401,
+      "risk": 1.6664839,
       "rr": 1.67,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -6316,7 +6316,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 4.25799536,
+      "level": 4.25799535,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -6332,7 +6332,7 @@
       "confluence": false,
       "price": 4.17999983,
       "headline_tf": "1D",
-      "entry": 4.25799536,
+      "entry": 4.25799535,
       "stop": 4.83341081,
       "tp1": 3.74993238,
       "tp2": 3.3660812,
@@ -6342,7 +6342,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.57541545,
+      "risk": 0.57541546,
       "rr": 1.55,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -6419,7 +6419,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 103.51048607,
+      "level": 103.51048615,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6435,17 +6435,17 @@
       "confluence": false,
       "price": 104.83999634,
       "headline_tf": "1D",
-      "entry": 103.51048607,
+      "entry": 103.51048615,
       "stop": 85.17613182,
       "tp1": 120.45923195,
       "tp2": 131.85715136,
-      "tp3": 195.18225731,
+      "tp3": 195.18225777,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 18.33435425,
+      "risk": 18.33435432,
       "rr": 1.55,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -6830,7 +6830,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 41.7875399,
+      "level": 41.78753992,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -6847,16 +6847,16 @@
       "price": 41.79999924,
       "headline_tf": "3D",
       "entry": 41.79999924,
-      "stop": 38.42523578,
+      "stop": 38.42523576,
       "tp1": 44.83380731,
-      "tp2": 54.91243585,
-      "tp3": 57.60140023,
+      "tp2": 54.91243982,
+      "tp3": 57.60140806,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.37476346,
+      "risk": 3.37476347,
       "rr": 3.89,
       "rr_text": "3.9:1",
       "liquidity": "LIQUID",
@@ -7035,7 +7035,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 124.60206356,
+      "level": 124.60206352,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -7051,17 +7051,17 @@
       "confluence": false,
       "price": 123.58000183,
       "headline_tf": "1D",
-      "entry": 124.60206356,
+      "entry": 124.60206352,
       "stop": 137.76660446,
-      "tp1": 112.96673023,
-      "tp2": 85.10844087,
-      "tp3": 58.77935908,
+      "tp1": 112.96673779,
+      "tp2": 85.10844072,
+      "tp3": 58.77935885,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 13.1645409,
+      "risk": 13.16454093,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -7137,7 +7137,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 62.27372355,
+      "level": 62.27372353,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -7154,16 +7154,16 @@
       "price": 61.77999878,
       "headline_tf": "1W",
       "entry": 61.77999878,
-      "stop": 69.78216078,
+      "stop": 69.78216077,
       "tp1": 53.39624561,
-      "tp2": 37.77351278,
-      "tp3": 21.76918877,
+      "tp2": 37.77351281,
+      "tp3": 21.76918882,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 8.002162,
+      "risk": 8.00216199,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -7240,7 +7240,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 13.87779706,
+      "level": 13.87779684,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -7256,17 +7256,17 @@
       "confluence": false,
       "price": 13.67000008,
       "headline_tf": "3D",
-      "entry": 13.87779706,
+      "entry": 13.87779684,
       "stop": 17.21618808,
       "tp1": 11.10371465,
-      "tp2": 3.862624,
-      "tp3": 0.69388985,
+      "tp2": 3.86262313,
+      "tp3": 0.69388984,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 3.33839102,
+      "risk": 3.33839124,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -7855,7 +7855,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 42.24861511,
+      "level": 42.24861551,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -7871,9 +7871,9 @@
       "confluence": false,
       "price": 42.63999939,
       "headline_tf": "1W",
-      "entry": 42.24861511,
-      "stop": 40.30081721,
-      "tp1": 45.36851621,
+      "entry": 42.24861551,
+      "stop": 40.30081743,
+      "tp1": 45.36852005,
       "tp2": 46.58522898,
       "tp3": 47.7773263,
       "scale": [
@@ -7881,7 +7881,7 @@
         0.5,
         0.15
       ],
-      "risk": 1.9477979,
+      "risk": 1.94779808,
       "rr": 2.23,
       "rr_text": "2.2:1",
       "liquidity": "LIQUID",
@@ -8061,7 +8061,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 40.32736877,
+      "level": 40.32736868,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -8077,17 +8077,17 @@
       "confluence": false,
       "price": 39.61000061,
       "headline_tf": "1D",
-      "entry": 40.32736877,
+      "entry": 40.32736868,
       "stop": 42.80890967,
       "tp1": 37.37272215,
       "tp2": 35.33000183,
-      "tp3": 27.91966429,
+      "tp3": 27.91966372,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 2.4815409,
+      "risk": 2.48154099,
       "rr": 2.01,
       "rr_text": "2.0:1",
       "liquidity": "OK",
@@ -8164,7 +8164,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 14.80780833,
+      "level": 14.8078084,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -8180,17 +8180,17 @@
       "confluence": false,
       "price": 14.77000046,
       "headline_tf": "3D",
-      "entry": 14.80780833,
+      "entry": 14.8078084,
       "stop": 17.19608177,
       "tp1": 11.94084999,
-      "tp2": 10.10341507,
-      "tp3": 2.86644111,
+      "tp2": 10.10341414,
+      "tp3": 2.86644154,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 2.38827344,
+      "risk": 2.38827337,
       "rr": 1.97,
       "rr_text": "2.0:1",
       "liquidity": "LIQUID",
@@ -8267,7 +8267,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 74.38554977,
+      "level": 74.38554981,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -8283,8 +8283,8 @@
       "confluence": false,
       "price": 75.81999969,
       "headline_tf": "1D",
-      "entry": 74.38554977,
-      "stop": 72.89429386,
+      "entry": 74.38554981,
+      "stop": 72.8942939,
       "tp1": 75.92530963,
       "tp2": 77.27016723,
       "tp3": 78.38780941,
@@ -8471,7 +8471,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 772.01973282,
+      "level": 772.01973877,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -8487,17 +8487,17 @@
       "confluence": false,
       "price": 797.0,
       "headline_tf": "1W",
-      "entry": 772.01973282,
-      "stop": 544.63292675,
-      "tp1": 990.15193009,
-      "tp2": 1201.27826242,
-      "tp3": 1908.95376317,
+      "entry": 772.01973877,
+      "stop": 544.6329248,
+      "tp1": 990.15205349,
+      "tp2": 1201.27801636,
+      "tp3": 1908.95380862,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 227.38680607,
+      "risk": 227.38681397,
       "rr": 1.89,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -8573,7 +8573,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 63.40747633,
+      "level": 63.40747581,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -8589,17 +8589,17 @@
       "confluence": false,
       "price": 65.23999786,
       "headline_tf": "1W",
-      "entry": 63.40747633,
-      "stop": 49.29197118,
+      "entry": 63.40747581,
+      "stop": 49.29197152,
       "tp1": 77.10558025,
       "tp2": 89.88313789,
-      "tp3": 133.98500208,
+      "tp3": 133.98499729,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 14.11550515,
+      "risk": 14.11550429,
       "rr": 1.88,
       "rr_text": "1.9:1",
       "liquidity": "OK",
@@ -8778,7 +8778,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 12.13104937,
+      "level": 12.13104955,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -8795,8 +8795,8 @@
       "price": 11.80000019,
       "headline_tf": "1W",
       "entry": 11.80000019,
-      "stop": 17.747641,
-      "tp1": 7.03757211,
+      "stop": 17.74764098,
+      "tp1": 7.03757257,
       "tp2": 0.60180001,
       "tp3": 0.59000001,
       "scale": [
@@ -8804,7 +8804,7 @@
         0.25,
         0.15
       ],
-      "risk": 5.94764081,
+      "risk": 5.94764079,
       "rr": 1.88,
       "rr_text": "1.9:1",
       "liquidity": "OK",
@@ -8983,7 +8983,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 103.47057428,
+      "level": 103.47057409,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -9000,16 +9000,16 @@
       "price": 104.41999817,
       "headline_tf": "1W",
       "entry": 104.41999817,
-      "stop": 84.25941422,
+      "stop": 84.25941466,
       "tp1": 127.5116821,
-      "tp2": 140.79322145,
-      "tp3": 205.22291794,
+      "tp2": 140.79320557,
+      "tp3": 205.22291571,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 20.16058395,
+      "risk": 20.16058351,
       "rr": 1.8,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -9495,7 +9495,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 34.18727903,
+      "level": 34.18727855,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -9511,17 +9511,17 @@
       "confluence": false,
       "price": 35.38000107,
       "headline_tf": "1W",
-      "entry": 34.18727903,
-      "stop": 24.39759784,
-      "tp1": 42.48448215,
-      "tp2": 50.53921782,
-      "tp3": 83.13568499,
+      "entry": 34.18727855,
+      "stop": 24.39759788,
+      "tp1": 42.4844744,
+      "tp2": 50.53921365,
+      "tp3": 83.13568191,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 9.78968119,
+      "risk": 9.78968067,
       "rr": 1.67,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -9597,7 +9597,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 10.13330374,
+      "level": 10.13330373,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -9613,17 +9613,17 @@
       "confluence": false,
       "price": 9.94999981,
       "headline_tf": "1W",
-      "entry": 10.13330374,
+      "entry": 10.13330373,
       "stop": 11.64625893,
       "tp1": 8.89000034,
-      "tp2": 7.63506318,
+      "tp2": 7.63506271,
       "tp3": 6.49571512,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 1.51295518,
+      "risk": 1.5129552,
       "rr": 1.65,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -9699,7 +9699,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 13.00610792,
+      "level": 13.00610806,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -9715,7 +9715,7 @@
       "confluence": false,
       "price": 12.81000042,
       "headline_tf": "1W",
-      "entry": 13.00610792,
+      "entry": 13.00610806,
       "stop": 13.72235996,
       "tp1": 12.38203951,
       "tp2": 11.83205533,
@@ -9725,7 +9725,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.71625204,
+      "risk": 0.7162519,
       "rr": 1.64,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -9802,7 +9802,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 7.51653735,
+      "level": 7.51653734,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -10007,7 +10007,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 51.22203587,
+      "level": 51.22203588,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -10023,9 +10023,9 @@
       "confluence": false,
       "price": 50.59999847,
       "headline_tf": "3D",
-      "entry": 51.22203587,
-      "stop": 53.85770861,
-      "tp1": 44.0524285,
+      "entry": 51.22203588,
+      "stop": 53.85770859,
+      "tp1": 44.05242477,
       "tp2": 41.02032801,
       "tp3": 39.25,
       "scale": [
@@ -10033,7 +10033,7 @@
         0.25,
         0.15
       ],
-      "risk": 2.63567274,
+      "risk": 2.63567271,
       "rr": 3.87,
       "rr_text": "3.9:1",
       "liquidity": "LIQUID",
@@ -10313,7 +10313,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 72.90371492,
+      "level": 72.90371511,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -10432,8 +10432,8 @@
       "price": 2.27999997,
       "headline_tf": "1D",
       "entry": 2.36045448,
-      "stop": 2.42897668,
-      "tp1": 2.28163994,
+      "stop": 2.42897667,
+      "tp1": 2.2781306,
       "tp2": 2.15000701,
       "tp3": 2.1030086,
       "scale": [
@@ -10441,7 +10441,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.0685222,
+      "risk": 0.06852219,
       "rr": 3.07,
       "rr_text": "3.1:1",
       "liquidity": "OK",
@@ -10517,7 +10517,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 64.4773926,
+      "level": 64.47739254,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -10536,7 +10536,7 @@
       "entry": 64.09999847,
       "stop": 80.80625341,
       "tp1": 48.67601222,
-      "tp2": 13.98123367,
+      "tp2": 13.98123366,
       "tp3": 3.20499992,
       "scale": [
         0.5,
@@ -10619,7 +10619,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 13.64884409,
+      "level": 13.64884401,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -10635,17 +10635,17 @@
       "confluence": false,
       "price": 13.66499996,
       "headline_tf": "3D",
-      "entry": 13.64884409,
-      "stop": 12.3567687,
-      "tp1": 14.73030376,
-      "tp2": 17.52507026,
-      "tp3": 20.10922104,
+      "entry": 13.64884401,
+      "stop": 12.35676865,
+      "tp1": 14.73030472,
+      "tp2": 17.5250701,
+      "tp3": 20.10922082,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.29207539,
+      "risk": 1.29207536,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -10823,7 +10823,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 255.15061668,
+      "level": 255.1506176,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -10841,9 +10841,9 @@
       "headline_tf": "1D",
       "entry": 256.64001465,
       "stop": 213.49247107,
-      "tp1": 296.15929918,
+      "tp1": 296.15932984,
       "tp2": 386.08264538,
-      "tp3": 472.37773253,
+      "tp3": 472.37773254,
       "scale": [
         0.25,
         0.5,
@@ -11129,7 +11129,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 29.63259269,
+      "level": 29.63259258,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -11145,17 +11145,17 @@
       "confluence": false,
       "price": 29.18000031,
       "headline_tf": "3D",
-      "entry": 29.63259269,
+      "entry": 29.63259258,
       "stop": 34.48176788,
-      "tp1": 25.23353547,
-      "tp2": 15.08506712,
-      "tp3": 5.38671674,
+      "tp1": 25.23353735,
+      "tp2": 15.0850667,
+      "tp3": 5.38671612,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 4.84917519,
+      "risk": 4.84917529,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -11231,7 +11231,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 24.85679843,
+      "level": 24.85679853,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -11250,7 +11250,7 @@
       "entry": 24.64999962,
       "stop": 29.2023614,
       "tp1": 20.66054523,
-      "tp2": 10.99291428,
+      "tp2": 10.99291429,
       "tp3": 1.88819073,
       "scale": [
         0.5,
@@ -11639,7 +11639,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 24.21597302,
+      "level": 24.21597311,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -11741,7 +11741,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 81.31647488,
+      "level": 81.31647518,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -11758,16 +11758,16 @@
       "price": 79.98000336,
       "headline_tf": "1W",
       "entry": 79.98000336,
-      "stop": 95.98185978,
+      "stop": 95.98185942,
       "tp1": 59.46456575,
-      "tp2": 31.9744341,
+      "tp2": 31.97443518,
       "tp3": 3.99900017,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 16.00185642,
+      "risk": 16.00185606,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -11843,7 +11843,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 67.04763556,
+      "level": 67.04763548,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -11859,17 +11859,17 @@
       "confluence": false,
       "price": 68.33000183,
       "headline_tf": "3D",
-      "entry": 67.04763556,
+      "entry": 67.04763548,
       "stop": 50.77495811,
-      "tp1": 80.8973794,
-      "tp2": 115.8656679,
-      "tp3": 148.41102279,
+      "tp1": 80.89737156,
+      "tp2": 115.86566759,
+      "tp3": 148.41102233,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 16.27267745,
+      "risk": 16.27267737,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -13288,8 +13288,8 @@
       "price": 162.67999268,
       "headline_tf": "3D",
       "entry": 160.19032249,
-      "stop": 128.22453928,
-      "tp1": 202.84663065,
+      "stop": 128.22453927,
+      "tp1": 202.8466139,
       "tp2": 233.44000244,
       "tp3": 258.96354123,
       "scale": [
@@ -13297,7 +13297,7 @@
         0.5,
         0.15
       ],
-      "risk": 31.96578321,
+      "risk": 31.96578322,
       "rr": 2.29,
       "rr_text": "2.3:1",
       "liquidity": "LIQUID",
@@ -13373,7 +13373,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 182.64823792,
+      "level": 182.64823906,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -13475,7 +13475,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 69.61183193,
+      "level": 69.61183186,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -13491,17 +13491,17 @@
       "confluence": false,
       "price": 71.94000244,
       "headline_tf": "1W",
-      "entry": 69.61183193,
-      "stop": 58.94691974,
-      "tp1": 82.86620856,
+      "entry": 69.61183186,
+      "stop": 58.94691972,
+      "tp1": 82.86621626,
       "tp2": 93.34981783,
-      "tp3": 122.93639289,
+      "tp3": 122.93639252,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 10.66491219,
+      "risk": 10.66491213,
       "rr": 2.23,
       "rr_text": "2.2:1",
       "liquidity": "OK",
@@ -13883,7 +13883,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 32.09786487,
+      "level": 32.09786502,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -13900,8 +13900,8 @@
       "price": 31.38999939,
       "headline_tf": "1W",
       "entry": 31.38999939,
-      "stop": 45.40228821,
-      "tp1": 20.0303378,
+      "stop": 45.40228819,
+      "tp1": 20.03033595,
       "tp2": 1.60088997,
       "tp3": 1.56949997,
       "scale": [
@@ -13909,7 +13909,7 @@
         0.25,
         0.15
       ],
-      "risk": 14.01228882,
+      "risk": 14.0122888,
       "rr": 2.13,
       "rr_text": "2.1:1",
       "liquidity": "OK",
@@ -14105,7 +14105,7 @@
       "headline_tf": "1W",
       "entry": 12.6467359,
       "stop": 11.5080196,
-      "tp1": 14.15280332,
+      "tp1": 14.15280523,
       "tp2": 14.98575237,
       "tp3": 15.96746189,
       "scale": [
@@ -14699,7 +14699,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 33.4469542,
+      "level": 33.44695419,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -14715,17 +14715,17 @@
       "confluence": false,
       "price": 34.02000046,
       "headline_tf": "3D",
-      "entry": 33.4469542,
+      "entry": 33.44695419,
       "stop": 29.13778685,
       "tp1": 38.19415165,
-      "tp2": 41.31707638,
-      "tp3": 54.99279095,
+      "tp2": 41.31708037,
+      "tp3": 54.9927909,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 4.30916735,
+      "risk": 4.30916734,
       "rr": 1.83,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -15209,7 +15209,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 23.92898893,
+      "level": 23.92898892,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -15226,16 +15226,16 @@
       "price": 23.93000031,
       "headline_tf": "3D",
       "entry": 23.93000031,
-      "stop": 21.20287362,
+      "stop": 21.20287363,
       "tp1": 26.34782124,
-      "tp2": 28.7962678,
-      "tp3": 37.56563374,
+      "tp2": 28.79626973,
+      "tp3": 37.56563368,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 2.72712669,
+      "risk": 2.72712668,
       "rr": 1.78,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -15311,7 +15311,7 @@
         "W+H4 CONFLUENCE"
       ],
       "level_tf": "weekly",
-      "level": 44.76463455,
+      "level": 44.76463442,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -15327,7 +15327,7 @@
       "confluence": true,
       "price": 43.56000137,
       "headline_tf": "1W",
-      "entry": 44.76463455,
+      "entry": 44.76463442,
       "stop": 47.66459828,
       "tp1": 42.37895744,
       "tp2": 39.6444451,
@@ -15337,7 +15337,7 @@
         0.25,
         0.15
       ],
-      "risk": 2.89996373,
+      "risk": 2.89996386,
       "rr": 1.77,
       "rr_text": "1.8:1",
       "liquidity": "LIQUID",
@@ -15923,7 +15923,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 959.82891632,
+      "level": 959.82892029,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -15939,17 +15939,17 @@
       "confluence": false,
       "price": 944.32000732,
       "headline_tf": "3D",
-      "entry": 959.82891632,
-      "stop": 1015.78834859,
+      "entry": 959.82892029,
+      "stop": 1015.78834812,
       "tp1": 905.76990438,
-      "tp2": 870.12953381,
-      "tp3": 680.03175497,
+      "tp2": 870.1296536,
+      "tp3": 680.03178114,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 55.95943227,
+      "risk": 55.95942783,
       "rr": 1.6,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -16025,7 +16025,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 42.07569853,
+      "level": 42.0756986,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -16041,7 +16041,7 @@
       "confluence": false,
       "price": 42.88000107,
       "headline_tf": "1D",
-      "entry": 42.07569853,
+      "entry": 42.0756986,
       "stop": 39.57429392,
       "tp1": 44.13000107,
       "tp2": 46.0,
@@ -16051,7 +16051,7 @@
         0.5,
         0.15
       ],
-      "risk": 2.50140461,
+      "risk": 2.50140469,
       "rr": 1.57,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -16331,7 +16331,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 115.02599575,
+      "level": 115.02599621,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -16347,17 +16347,17 @@
       "confluence": false,
       "price": 113.58499908,
       "headline_tf": "3D",
-      "entry": 115.02599575,
+      "entry": 115.02599621,
       "stop": 124.59425874,
       "tp1": 106.43343489,
       "tp2": 100.57835117,
-      "tp3": 67.1846808,
+      "tp3": 67.18468354,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 9.56826299,
+      "risk": 9.56826253,
       "rr": 1.51,
       "rr_text": "1.5:1",
       "liquidity": "OK",
@@ -16432,7 +16432,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 57.59854992,
+      "level": 57.59854987,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -16449,16 +16449,16 @@
       "price": 56.02999878,
       "headline_tf": "1W",
       "entry": 56.02999878,
-      "stop": 64.40335417,
-      "tp1": 33.30914481,
+      "stop": 64.40335441,
+      "tp1": 33.30914845,
       "tp2": 26.00054121,
-      "tp3": 14.16322185,
+      "tp3": 14.16322064,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 8.37335539,
+      "risk": 8.37335563,
       "rr": 3.59,
       "rr_text": "3.6:1",
       "liquidity": "LIQUID",
@@ -16533,7 +16533,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 58.21674111,
+      "level": 58.21674147,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -16549,17 +16549,17 @@
       "confluence": false,
       "price": 57.02000046,
       "headline_tf": "1W",
-      "entry": 58.21674111,
-      "stop": 71.56801493,
-      "tp1": 34.76209699,
-      "tp2": 18.16291966,
-      "tp3": 2.91083706,
+      "entry": 58.21674147,
+      "stop": 71.56801473,
+      "tp1": 34.76210075,
+      "tp2": 18.16292168,
+      "tp3": 2.91083707,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 13.35127382,
+      "risk": 13.35127326,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -17141,7 +17141,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 182.4976852,
+      "level": 182.49768562,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -17157,17 +17157,17 @@
       "confluence": false,
       "price": 178.58000183,
       "headline_tf": "1W",
-      "entry": 182.4976852,
-      "stop": 211.59285165,
-      "tp1": 153.1686209,
-      "tp2": 125.7239675,
-      "tp3": 37.02185296,
+      "entry": 182.49768562,
+      "stop": 211.59285133,
+      "tp1": 153.16865108,
+      "tp2": 125.72395998,
+      "tp3": 37.02185711,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 29.09516645,
+      "risk": 29.0951657,
       "rr": 1.95,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -17243,7 +17243,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 125.3290366,
+      "level": 125.32903652,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17259,17 +17259,17 @@
       "confluence": false,
       "price": 127.88999939,
       "headline_tf": "1D",
-      "entry": 125.3290366,
+      "entry": 125.32903652,
       "stop": 118.46257204,
       "tp1": 133.44999695,
       "tp2": 138.6611364,
-      "tp3": 143.7813253,
+      "tp3": 143.78130986,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 6.86646456,
+      "risk": 6.86646449,
       "rr": 1.94,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -17549,7 +17549,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "3d",
-      "level": 102.64907322,
+      "level": 102.6490733,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17566,16 +17566,16 @@
       "price": 104.79000092,
       "headline_tf": "3D",
       "entry": 104.79000092,
-      "stop": 88.09321722,
+      "stop": 88.09321723,
       "tp1": 118.61900466,
       "tp2": 133.29047778,
-      "tp3": 188.2739194,
+      "tp3": 188.27391937,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 16.6967837,
+      "risk": 16.69678369,
       "rr": 1.71,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -17752,7 +17752,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 35.65430689,
+      "level": 35.65430733,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17768,17 +17768,17 @@
       "confluence": false,
       "price": 36.43000031,
       "headline_tf": "1W",
-      "entry": 35.65430689,
-      "stop": 32.28024509,
-      "tp1": 39.22012621,
-      "tp2": 41.32342314,
-      "tp3": 44.78358288,
+      "entry": 35.65430733,
+      "stop": 32.28024515,
+      "tp1": 39.22013387,
+      "tp2": 41.323427,
+      "tp3": 44.78357905,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.3740618,
+      "risk": 3.37406218,
       "rr": 1.68,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -17854,7 +17854,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 131.00564194,
+      "level": 131.00564224,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17870,7 +17870,7 @@
       "confluence": false,
       "price": 135.77000427,
       "headline_tf": "1D",
-      "entry": 131.00564194,
+      "entry": 131.00564224,
       "stop": 124.17507361,
       "tp1": 136.60222738,
       "tp2": 142.03652112,
@@ -17880,7 +17880,7 @@
         0.5,
         0.15
       ],
-      "risk": 6.83056833,
+      "risk": 6.83056863,
       "rr": 1.61,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -17955,7 +17955,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "weekly",
-      "level": 83.39746679,
+      "level": 83.39746695,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -17971,8 +17971,8 @@
       "confluence": false,
       "price": 85.77999878,
       "headline_tf": "1W",
-      "entry": 83.39746679,
-      "stop": 68.97372503,
+      "entry": 83.39746695,
+      "stop": 68.97372559,
       "tp1": 95.46534705,
       "tp2": 106.45410953,
       "tp3": 115.69033558,
@@ -17981,7 +17981,7 @@
         0.5,
         0.15
       ],
-      "risk": 14.42374176,
+      "risk": 14.42374136,
       "rr": 1.6,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -18684,7 +18684,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 227.39520218,
+      "level": 227.39520096,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -18703,16 +18703,16 @@
       "price": 230.11999512,
       "headline_tf": "1D",
       "entry": 230.11999512,
-      "stop": 219.65798171,
+      "stop": 219.65798049,
       "tp1": 246.14578247,
       "tp2": 254.93509673,
-      "tp3": 282.43006214,
+      "tp3": 282.43006824,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 10.4620134,
+      "risk": 10.46201462,
       "rr": 2.37,
       "rr_text": "2.4:1",
       "liquidity": "LIQUID",
@@ -18897,7 +18897,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 11.61678669,
+      "level": 11.61678671,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -18915,8 +18915,8 @@
       "price": 11.43999958,
       "headline_tf": "1D",
       "entry": 11.43999958,
-      "stop": 11.901891,
-      "tp1": 11.04495823,
+      "stop": 11.90189103,
+      "tp1": 11.04495914,
       "tp2": 10.69557217,
       "tp3": 10.40999985,
       "scale": [
@@ -18924,7 +18924,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.46189142,
+      "risk": 0.46189145,
       "rr": 1.61,
       "rr_text": "1.6:1",
       "liquidity": "OK",
@@ -19424,7 +19424,7 @@
         "LOW R:R (1.5)"
       ],
       "level_tf": "h4",
-      "level": 229.24275337,
+      "level": 229.2427523,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -19442,10 +19442,10 @@
       "price": 233.50999451,
       "headline_tf": "1D",
       "entry": 233.50999451,
-      "stop": 184.52952659,
+      "stop": 184.52952658,
       "tp1": 275.37044019,
       "tp2": 304.96928514,
-      "tp3": 478.41233411,
+      "tp3": 478.41233413,
       "scale": [
         0.25,
         0.5,
@@ -19528,7 +19528,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 4.91668141,
+      "level": 4.91668137,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -19545,7 +19545,7 @@
       "price": 4.88999987,
       "headline_tf": "1D",
       "entry": 4.88999987,
-      "stop": 5.08336564,
+      "stop": 5.08336561,
       "tp1": 4.4732348,
       "tp2": 4.23000002,
       "tp3": 4.08326997,
@@ -19554,7 +19554,7 @@
         0.25,
         0.15
       ],
-      "risk": 0.19336577,
+      "risk": 0.19336574,
       "rr": 3.41,
       "rr_text": "3.4:1",
       "liquidity": "OK",
@@ -19631,7 +19631,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 263.39655594,
+      "level": 263.39655609,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -19649,16 +19649,16 @@
       "price": 271.08999634,
       "headline_tf": "1D",
       "entry": 271.08999634,
-      "stop": 225.18426116,
-      "tp1": 339.94859911,
-      "tp2": 408.80720188,
-      "tp3": 500.61867223,
+      "stop": 225.18426139,
+      "tp1": 339.94859876,
+      "tp2": 408.80720119,
+      "tp3": 500.61867109,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 45.90573518,
+      "risk": 45.90573495,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -19735,7 +19735,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 69.28900455,
+      "level": 69.28900421,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -19753,7 +19753,7 @@
       "headline_tf": "1D",
       "entry": 68.58000183,
       "stop": 76.18318559,
-      "tp1": 62.40950097,
+      "tp1": 62.40949722,
       "tp2": 45.77045056,
       "tp3": 30.56408305,
       "scale": [
@@ -19838,7 +19838,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 156.40074467,
+      "level": 156.4007452,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -19943,7 +19943,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 141.94305645,
+      "level": 141.94305607,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -19960,16 +19960,16 @@
       "price": 138.41000366,
       "headline_tf": "1D",
       "entry": 138.41000366,
-      "stop": 150.17170789,
-      "tp1": 120.76744733,
-      "tp2": 103.12489099,
-      "tp3": 79.60148254,
+      "stop": 150.17170773,
+      "tp1": 120.76744755,
+      "tp2": 103.12489145,
+      "tp3": 79.6014833,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 11.76170422,
+      "risk": 11.76170407,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -20149,7 +20149,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 36.43307457,
+      "level": 36.43307451,
       "at_level": true,
       "reaction": "reject",
       "entry_types": [
@@ -20460,7 +20460,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 23.93314948,
+      "level": 23.9331495,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -20478,16 +20478,16 @@
       "price": 24.72999954,
       "headline_tf": "1D",
       "entry": 24.72999954,
-      "stop": 23.3860207,
+      "stop": 23.38602072,
       "tp1": 25.81346164,
       "tp2": 27.60024837,
-      "tp3": 31.44989376,
+      "tp3": 31.44989367,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.34397884,
+      "risk": 1.34397883,
       "rr": 2.14,
       "rr_text": "2.1:1",
       "liquidity": "OK",
@@ -20564,7 +20564,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 102.02972652,
+      "level": 102.02972649,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -20668,7 +20668,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 230.80665421,
+      "level": 230.80665398,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -21290,7 +21290,7 @@
         "LOW R:R (1.4)"
       ],
       "level_tf": "weekly",
-      "level": 81.09444876,
+      "level": 81.0944486,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -21306,17 +21306,17 @@
       "confluence": false,
       "price": 83.69000244,
       "headline_tf": "1W",
-      "entry": 81.09444876,
+      "entry": 81.0944486,
       "stop": 68.11563199,
       "tp1": 92.08000183,
-      "tp2": 99.87508706,
-      "tp3": 114.39450717,
+      "tp2": 99.87507143,
+      "tp3": 114.39451498,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 12.97881677,
+      "risk": 12.97881662,
       "rr": 1.45,
       "rr_text": "1.4:1",
       "liquidity": "OK",
@@ -21393,7 +21393,7 @@
         "LOW R:R (1.4)"
       ],
       "level_tf": "3d",
-      "level": 30.79799128,
+      "level": 30.79799112,
       "at_level": true,
       "reaction": "bounce",
       "entry_types": [
@@ -21409,17 +21409,17 @@
       "confluence": false,
       "price": 31.23999977,
       "headline_tf": "3D",
-      "entry": 30.79799128,
+      "entry": 30.79799112,
       "stop": 26.88063264,
-      "tp1": 33.94458188,
+      "tp1": 33.94457797,
       "tp2": 36.40059087,
-      "tp3": 50.38478447,
+      "tp3": 50.38478356,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 3.91735864,
+      "risk": 3.91735849,
       "rr": 1.43,
       "rr_text": "1.4:1",
       "liquidity": "LIQUID",
@@ -22232,16 +22232,16 @@
       "price": 61.86000061,
       "headline_tf": "1D",
       "entry": 61.86000061,
-      "stop": 57.29890626,
-      "tp1": 68.70164214,
-      "tp2": 75.54328367,
-      "tp3": 84.66547237,
+      "stop": 57.29890616,
+      "tp1": 68.70164228,
+      "tp2": 75.54328396,
+      "tp3": 84.66547285,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 4.56109435,
+      "risk": 4.56109445,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -22420,7 +22420,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "h4",
-      "level": 92.05644081,
+      "level": 92.05644066,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -22439,8 +22439,8 @@
       "entry": 95.31999969,
       "stop": 84.80673894,
       "tp1": 111.08989083,
-      "tp2": 126.85978196,
-      "tp3": 147.88630347,
+      "tp2": 126.85978197,
+      "tp3": 147.88630348,
       "scale": [
         0.25,
         0.5,
@@ -22625,7 +22625,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 11.57574547,
+      "level": 11.5757454,
       "at_level": false,
       "reaction": "fade",
       "entry_types": [
@@ -22727,7 +22727,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "weekly",
-      "level": 59.90251917,
+      "level": 59.90251923,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -22830,7 +22830,7 @@
         "WATCHING (no trigger)"
       ],
       "level_tf": "3d",
-      "level": 57.42080088,
+      "level": 57.42080065,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -23341,7 +23341,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 96.50483624,
+      "level": 96.50483635,
       "at_level": false,
       "reaction": "fade",
       "entry_types": [
@@ -23644,7 +23644,7 @@
         "OK STRUCTURE"
       ],
       "level_tf": "weekly",
-      "level": 113.8673695,
+      "level": 113.86736778,
       "at_level": false,
       "reaction": "fade",
       "entry_types": [
@@ -24048,7 +24048,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 131.49739426,
+      "level": 131.49739399,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -24149,7 +24149,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 58.22615097,
+      "level": 58.22615093,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -24165,17 +24165,17 @@
       "confluence": false,
       "price": 56.31999969,
       "headline_tf": "1D",
-      "entry": 58.22615097,
+      "entry": 58.22615093,
       "stop": 67.02192726,
-      "tp1": 45.03248653,
-      "tp2": 31.83882209,
-      "tp3": 14.2472695,
+      "tp1": 45.03248644,
+      "tp2": 31.83882194,
+      "tp3": 14.24726928,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 8.79577629,
+      "risk": 8.79577633,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -24755,7 +24755,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 24.20492928,
+      "level": 24.20492932,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -24772,16 +24772,16 @@
       "price": 23.5,
       "headline_tf": "1W",
       "entry": 24.33531819,
-      "stop": 30.87124103,
+      "stop": 30.87124102,
       "tp1": 17.37422551,
-      "tp2": 4.72754969,
+      "tp2": 4.72754973,
       "tp3": 1.21676591,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 6.53592283,
+      "risk": 6.53592282,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -24856,7 +24856,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 18.36212146,
+      "level": 18.36212151,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -24873,16 +24873,16 @@
       "price": 19.07999992,
       "headline_tf": "1D",
       "entry": 19.07999992,
-      "stop": 17.9323782,
+      "stop": 17.93237825,
       "tp1": 20.12062844,
-      "tp2": 22.5228651,
-      "tp3": 24.81810855,
+      "tp2": 22.52286496,
+      "tp3": 24.81810831,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.14762173,
+      "risk": 1.14762168,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "OK",
@@ -24957,7 +24957,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 18.29434474,
+      "level": 18.2943449,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -25563,7 +25563,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 19.33017828,
+      "level": 19.33017832,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -25580,16 +25580,16 @@
       "price": 19.85000038,
       "headline_tf": "1D",
       "entry": 19.85000038,
-      "stop": 18.72530245,
+      "stop": 18.72530249,
       "tp1": 20.7619803,
       "tp2": 22.77000046,
-      "tp3": 25.47349003,
+      "tp3": 25.47348984,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.12469793,
+      "risk": 1.12469789,
       "rr": 2.6,
       "rr_text": "2.6:1",
       "liquidity": "LIQUID",
@@ -26068,7 +26068,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 107.09128258,
+      "level": 107.09128326,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -26085,7 +26085,7 @@
       "price": 104.83999634,
       "headline_tf": "1D",
       "entry": 104.83999634,
-      "stop": 111.25784082,
+      "stop": 111.2578415,
       "tp1": 96.75753998,
       "tp2": 91.59384285,
       "tp3": 85.83758825,
@@ -26094,7 +26094,7 @@
         0.25,
         0.15
       ],
-      "risk": 6.41784448,
+      "risk": 6.41784517,
       "rr": 2.06,
       "rr_text": "2.1:1",
       "liquidity": "LIQUID",
@@ -26169,7 +26169,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "3d",
-      "level": 12.87423327,
+      "level": 12.87423329,
       "at_level": false,
       "reaction": "bounce",
       "entry_types": [
@@ -26185,17 +26185,17 @@
       "confluence": false,
       "price": 13.18000031,
       "headline_tf": "3D",
-      "entry": 12.87423327,
+      "entry": 12.87423329,
       "stop": 12.28521604,
       "tp1": 13.37801824,
       "tp2": 14.03955089,
-      "tp3": 15.81931944,
+      "tp3": 15.81931955,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 0.58901723,
+      "risk": 0.58901725,
       "rr": 1.98,
       "rr_text": "2.0:1",
       "liquidity": "OK",
@@ -26674,7 +26674,7 @@
         "CLEAN REACTION"
       ],
       "level_tf": "h4",
-      "level": 33.07045298,
+      "level": 33.0704529,
       "at_level": false,
       "reaction": "reject",
       "entry_types": [
@@ -27407,7 +27407,7 @@
         0.5,
         0.15
       ],
-      "risk": 21.58614918,
+      "risk": 21.58614919,
       "rr": 1.6,
       "rr_text": "1.6:1",
       "liquidity": "LIQUID",
@@ -27886,7 +27886,7 @@
         "STRONG STRUCTURE"
       ],
       "level_tf": "h4",
-      "level": 18.0407619,
+      "level": 18.04076183,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -27903,16 +27903,16 @@
       "price": 18.68000031,
       "headline_tf": "1D",
       "entry": 18.68000031,
-      "stop": 17.51792026,
-      "tp1": 19.67907402,
+      "stop": 17.51792019,
+      "tp1": 19.67907019,
       "tp2": 20.415826,
-      "tp3": 24.49040053,
+      "tp3": 24.49040086,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 1.16208004,
+      "risk": 1.16208011,
       "rr": 1.49,
       "rr_text": "1.5:1",
       "liquidity": "OK",
@@ -28187,7 +28187,7 @@
         "H4 200 SMA"
       ],
       "level_tf": "h4",
-      "level": 79.33575806,
+      "level": 79.33575813,
       "at_level": false,
       "reaction": "hold",
       "entry_types": [
@@ -28204,16 +28204,16 @@
       "price": 82.02999878,
       "headline_tf": "1D",
       "entry": 82.02999878,
-      "stop": 77.72954911,
+      "stop": 77.72954919,
       "tp1": 87.66000366,
-      "tp2": 94.93134778,
-      "tp3": 103.53224711,
+      "tp2": 94.93134755,
+      "tp3": 103.53224673,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 4.30044967,
+      "risk": 4.30044959,
       "rr": 3.0,
       "rr_text": "3.0:1",
       "liquidity": "LIQUID",
@@ -28387,7 +28387,7 @@
         "H4 200 SMA"
       ],
       "level_tf": "h4",
-      "level": 26.3131792,
+      "level": 26.31317924,
       "at_level": false,
       "reaction": "fade",
       "entry_types": [
@@ -28404,7 +28404,7 @@
       "price": 25.64999962,
       "headline_tf": "1D",
       "entry": 25.64999962,
-      "stop": 27.12988385,
+      "stop": 27.1298839,
       "tp1": 24.22986354,
       "tp2": 22.81908702,
       "tp3": 21.83252721,
@@ -28413,7 +28413,7 @@
         0.25,
         0.15
       ],
-      "risk": 1.47988423,
+      "risk": 1.47988428,
       "rr": 1.91,
       "rr_text": "1.9:1",
       "liquidity": "LIQUID",
@@ -28487,7 +28487,7 @@
         "3D 200 SMA"
       ],
       "level_tf": "3d",
-      "level": 101.46366596,
+      "level": 101.46366592,
       "at_level": false,
       "reaction": "fade",
       "entry_types": [
@@ -28504,16 +28504,16 @@
       "price": 98.23999786,
       "headline_tf": "1D",
       "entry": 98.23999786,
-      "stop": 104.17474511,
+      "stop": 104.17474507,
       "tp1": 93.18642311,
       "tp2": 88.09799957,
-      "tp3": 68.56626162,
+      "tp3": 68.56626181,
       "scale": [
         0.5,
         0.25,
         0.15
       ],
-      "risk": 5.93474725,
+      "risk": 5.93474721,
       "rr": 1.71,
       "rr_text": "1.7:1",
       "liquidity": "LIQUID",
@@ -28581,7 +28581,6 @@
     "AARD": 7.19000006,
     "ABCL": 9.76000023,
     "ABNB": 184.97999573,
-    "ABOS": 2.47000003,
     "ABSI": 9.40999985,
     "ABUS": 4.67000008,
     "ACAD": 29.40999985,
@@ -30000,17 +29999,11 @@
     "ZS": 178.55000305,
     "ZUMZ": 19.07999992,
     "ZVRA": 11.34000015,
-    "ZYME": 24.31999969
+    "ZYME": 24.31999969,
+    "ABOS": 2.47000003
   },
   "price_age": {
-    "CCNEP": 1,
-    "EFSCP": 1,
-    "GCLWW": 18,
-    "METCZ": 1,
-    "MOLN": 1,
-    "OFSSH": 1,
-    "OXLCO": 1,
-    "STRRP": 1
+    "GCLWW": 18
   },
   "errors": 0,
   "error_sample": [],
