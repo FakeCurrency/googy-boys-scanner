@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-12T18:10:14+10:00",
+  "generated_at": "2026-08-12T18:19:20+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "OD6",
+      "name": "OD6 Metals Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.13,
+      "turnover_avg20": 84664,
+      "turnover_today": 457286,
+      "rvol": 4.8,
+      "adv_usd": 84664.89,
+      "fund": false
+    },
     {
       "symbol": "TOT",
       "name": "360 Capital Total Return Fund",
@@ -33,27 +45,15 @@
       "fund": true
     },
     {
-      "symbol": "ULTB",
-      "name": "iShares 20+ Year U.S. Treasury Bond (AUD Hedged) ETF",
-      "sector": "Unclassified",
-      "dir": "SHORT",
-      "price": 84.51999664,
-      "turnover_avg20": 27993,
-      "turnover_today": 182309,
-      "rvol": 6.5,
-      "adv_usd": 27993.98,
-      "fund": true
-    },
-    {
       "symbol": "BUX",
       "name": "Buxton Resources Limited",
       "sector": "Materials",
       "dir": "LONG",
       "price": 0.04,
-      "turnover_avg20": 37706,
-      "turnover_today": 120460,
-      "rvol": 3.6,
-      "adv_usd": 37706.78,
+      "turnover_avg20": 38127,
+      "turnover_today": 128869,
+      "rvol": 3.8,
+      "adv_usd": 38127.26,
       "fund": false
     },
     {
