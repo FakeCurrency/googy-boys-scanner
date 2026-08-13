@@ -309,10 +309,27 @@ def test_an_exempt_writer_loses_its_exemption_if_it_stops_being_atomic(rel, fn):
 # ── the formatting guard ─────────────────────────────────────────────────────
 
 # (repo-relative path, dumps kwargs used by its call site, trailing newline)
+_COMPACT = {"indent": None, "separators": (",", ":")}
+
 _ARTEFACTS = [
-    ("public/data/asx_vivek.json",              {}, False),
-    ("public/data/nasdaq_vivek.json",           {}, False),
-    ("public/data/crypto_vivek.json",           {}, False),
+    # The vivek pair went COMPACT on 2026-08-13 (write_vivek_pair) — 39.6% of
+    # the deck's first paint was indentation. This table records the kwargs each
+    # call site actually passes, so it had to move with it.
+    #
+    # It went red LATE, and that is the part worth remembering: when the
+    # publisher changed, every committed *_vivek.json was still pretty-printed,
+    # so this gate stayed green through the landing. It only turned the moment a
+    # live scan rewrote them — and because test.yml's path filter excludes
+    # public/data/**, that scan commit ran no tests, so the red landed on the
+    # next unrelated CODE push instead. Same delayed-action shape as the
+    # Lighthouse budget (see CLAUDE.md). When a publisher's formatting changes,
+    # update this row in the SAME commit; do not wait to be told by a scan.
+    ("public/data/asx_vivek.json",              _COMPACT, False),
+    ("public/data/nasdaq_vivek.json",           _COMPACT, False),
+    ("public/data/crypto_vivek.json",           _COMPACT, False),
+    ("public/data/asx_vivek_detail.json",       _COMPACT, False),
+    ("public/data/nasdaq_vivek_detail.json",    _COMPACT, False),
+    ("public/data/crypto_vivek_detail.json",    _COMPACT, False),
     ("public/data/asx_prices.json",             {"indent": None, "separators": (",", ":")}, True),
     ("public/data/nasdaq_prices.json",          {"indent": None, "separators": (",", ":")}, True),
     ("public/data/crypto_prices.json",          {"indent": None, "separators": (",", ":")}, True),
