@@ -1981,6 +1981,12 @@ body { letter-spacing: -0.012em; }
 .fpill.top { color: var(--orange); }
 .fpill.is-active { outline: 2px solid currentColor; outline-offset: -1px; font-weight: 800; }
 .deck-npick { font: 600 11.5px/1 var(--sans); color: var(--muted-2); white-space: nowrap; }
+/* Products set aside from the A+/A counts (2026-08-13). Quieter than
+   .deck-npick on purpose: it explains a subtraction, it is not a target. */
+.deck-products {
+  font: 600 11.5px/1 var(--sans); color: var(--muted-2); white-space: nowrap;
+  opacity: .82; cursor: help;
+}
 
 /* bot chip lives inside the deck now */
 .deck-bot { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
