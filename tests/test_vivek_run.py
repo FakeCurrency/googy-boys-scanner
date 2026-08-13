@@ -6,6 +6,7 @@ intraday fills carrying the entry-type label, and mark-to-market resolution.
 """
 
 import datetime as dt
+import json
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -988,3 +989,75 @@ def test_day_ref_beats_mark_sanity_to_the_punch_in_run_market(tmp_path, monkeypa
     pos = bk["open"][0]
     assert pos["day_marks"]["2024-01-03"] == pytest.approx(101.0)
     assert pos["last_mark"] == pytest.approx(103.0)         # marked after
+
+
+# ── close_bot_batch (2026-08-13): N closes, one process, per-entry tolerance ──
+# Born from the stalled strip's real use: nine closes as nine workflow runs is
+# nine mutex round trips; as one batch it is one commit. The batch must be
+# tolerant per entry (a symbol whose time-stop landed first is skipped, not
+# fatal) and loud overall (nothing closed -> the CLI exits non-zero, so the
+# workflow never commits a no-op "success").
+
+def _batch_book(tmp_path, market="asx"):
+    _write_market_book(tmp_path, market, open_=[
+        dict(symbol="AAA", market=market, direction="long", status="open",
+             entry=10.0, stop=9.0, risk=1.0, risk_usd=100, booked_pct=0,
+             gross_r=0, exits=[], entry_date="2026-08-01"),
+        dict(symbol="BBB", market=market, direction="long", status="open",
+             entry=5.0, stop=4.5, risk=0.5, risk_usd=100, booked_pct=0,
+             gross_r=0, exits=[], entry_date="2026-08-01"),
+    ])
+
+
+class TestCloseBatch:
+    def test_batch_closes_every_valid_entry_in_one_call(self, tmp_path, monkeypatch):
+        _enable(monkeypatch, tmp_path)
+        _batch_book(tmp_path)
+        closed, failed = vr.close_bot_batch([
+            {"symbol": "AAA", "market": "asx", "price": 11.0},
+            {"symbol": "BBB", "market": "asx", "price": 4.75},
+        ])
+        assert [c["symbol"] for c in closed] == ["AAA", "BBB"]
+        assert failed == []
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert book["open"] == [] and len(book["closed"]) == 2
+
+    def test_one_bad_entry_does_not_kill_the_rest(self, tmp_path, monkeypatch):
+        # THE reason the batch is not a bash loop under `bash -e`: a symbol
+        # whose time-stop landed between the strip rendering and the batch
+        # arriving must be SKIPPED, not allowed to abort eight good closes.
+        _enable(monkeypatch, tmp_path)
+        _batch_book(tmp_path)
+        closed, failed = vr.close_bot_batch([
+            {"symbol": "GONE", "market": "asx", "price": 1.0},    # no match
+            {"symbol": "AAA", "market": "asx", "price": 11.0},    # fine
+            {"symbol": "BAD", "market": "nope", "price": 1.0},    # bad market
+            {"symbol": "NEG", "market": "asx", "price": -1},      # bad price
+        ])
+        assert [c["symbol"] for c in closed] == ["AAA"]
+        assert len(failed) == 3
+        assert all("why" in f for f in failed)
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert [p["symbol"] for p in book["open"]] == ["BBB"], \
+            "the batch closed something it was never asked to touch"
+
+    def test_batch_spans_markets(self, tmp_path, monkeypatch):
+        _enable(monkeypatch, tmp_path)
+        _batch_book(tmp_path, "asx")
+        _batch_book(tmp_path, "nasdaq")
+        closed, failed = vr.close_bot_batch([
+            {"symbol": "AAA", "market": "asx", "price": 11.0},
+            {"symbol": "AAA", "market": "nasdaq", "price": 11.0},
+        ])
+        assert len(closed) == 2 and failed == []
+        assert {c["market"] for c in closed} == {"asx", "nasdaq"}
+
+    def test_all_failed_batch_closes_nothing_and_reports_it(self, tmp_path, monkeypatch):
+        _enable(monkeypatch, tmp_path)
+        _batch_book(tmp_path)
+        closed, failed = vr.close_bot_batch([
+            {"symbol": "GONE", "market": "asx", "price": 1.0},
+        ])
+        assert closed == [] and len(failed) == 1
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert len(book["open"]) == 2, "an all-failed batch must leave the book untouched"
