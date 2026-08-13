@@ -31,6 +31,44 @@
   const GRADE_RANK = { "A+": 0, "A": 1, "B+": 2, "B": 2, "WATCH": 3, "C": 3 };
   const WATCH_KEY = "gbs:watch";
 
+  // ---- evidence that this browser has used the app before -----------------
+  // The first-visit tour used to be gated on ONE key, `gbs:onboarded`, which is
+  // the most fragile state on the page: a failed setItem (quota, private mode)
+  // is swallowed by design, and any browser that clears script storage takes it
+  // with everything else. Lose it and a person who has plainly used this app for
+  // weeks gets walled by a welcome tour on every single visit.
+  //
+  // So the gate now also asks a second question — has this browser done anything
+  // only a user can do? Every key below requires a deliberate act (star a name,
+  // log a trade, save a view, change a control). `gbs:visit:<market>` is
+  // DELIBERATELY ABSENT and must stay absent: it is written from the FIRST
+  // payload of the FIRST session, so counting it would suppress the tour for
+  // exactly the people it exists for.
+  //
+  // READ ONCE, HERE, AT BOOT — and the position in the file is the whole safety
+  // argument, not tidiness. This runs before loadPrefs(), before
+  // consumeViewApply(), before the `?m=` deep link calls savePrefs(), and long
+  // before any payload can land, so nothing THIS session writes can be mistaken
+  // for evidence of a previous one.
+  const PRIOR_USE_KEYS = [
+    "gbs:prefs",            // changed market / tab / sort
+    "gbs:watch",            // starred a name
+    "gbs:manual_journal",   // logged a trade
+    "gbs:presets",          // saved a view
+    "gbs:density",          // toggled row density
+    "gbs:wstrip",           // collapsed the watch strip
+    "gbs:sync_code",        // set up cross-device sync
+    "gbs:mysize-acct",      // used the size calculator
+    "gbs:notify",           // turned on alerts
+    "gbs:alerts-seen",      // read the alerts page
+    "gbs:a2hs",             // answered the add-to-home prompt
+    "gbs:reco:notes",       // wrote a note on a recommendation
+  ];
+  const USED_BEFORE = (() => {
+    try { return PRIOR_USE_KEYS.some((k) => localStorage.getItem(k) != null); }
+    catch (_) { return false; }
+  })();
+
   // ---- persistent preferences (survive page refresh) ----------------------
   function loadPrefs() {
     try {
@@ -310,8 +348,27 @@
   // built lazily after first paint so it never costs the load. Returning users
   // and the CI harnesses (which pre-seed the flag) never see it.
   function maybeOnboard() {
-    try { if (localStorage.getItem("gbs:onboarded")) return; } catch (_) { return; }
-    const done = () => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} scrim.remove(); };
+    try {
+      if (localStorage.getItem("gbs:onboarded")) return;
+      // A returning browser is never walled (2026-08-13). If the flag is gone
+      // but the evidence of prior use is not, treat the tour as taken and
+      // BACK-FILL the flag so the cheap check answers on every later load —
+      // self-healing rather than re-deciding this every visit.
+      // This branch can only ever SHOW THE TOUR LESS. It adds no path on which
+      // someone who would not have seen it now does.
+      if (USED_BEFORE) {
+        try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {}
+        return;
+      }
+    } catch (_) { return; }
+    const done = () => {
+      try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {}
+      document.removeEventListener("keydown", onKey);
+      scrim.remove();
+    };
+    // Escape closes it. A modal over the whole app with no keyboard exit is the
+    // shape of "blocking every session" even when it is only shown once.
+    const onKey = (e) => { if (e.key === "Escape") done(); };
     const STEPS = [
       ["🧭", "Three markets, one scanner", "ASX, NASDAQ and Crypto — switch up top. Every name is graded on how price is REACTING at its 200-SMA."],
       ["🎯", "A+ is the shortlist", "The A+ / A / WATCH tabs filter by setup grade. A+ means every gate passed — that's the tab worth checking daily. Pills under the title filter further (at-level, multi-lens…)."],
@@ -338,6 +395,7 @@
       scrim.querySelector(".ob-next").addEventListener("click", () => { if (++i < STEPS.length) paint(); else done(); });
     };
     scrim.addEventListener("click", (e) => { if (e.target === scrim) done(); });
+    document.addEventListener("keydown", onKey);
     paint();
     document.body.appendChild(scrim);
     scrim.querySelector(".ob-next").focus();
