@@ -212,5 +212,57 @@ test("the traded rows carry a unitStep; the futures rows deliberately do not", (
     "0.1-lot rounding path that 50+ tests in risk_manager.test.js still assert");
 });
 
+
+// ── bot.js DEFAULT_RULES — the THIRD copy, found unpinned and drifted ────────
+// This suite was written for risk_manager.js's PUBLISHED_DEFAULTS (TOP100 #34)
+// on the argument that "the mirror is what the page shows exactly when the
+// person reading it is least able to verify it". public/js/bot.js carries a
+// SECOND mirror of the same four numbers, and nothing read it: it shipped
+// risk 0.25% / 5 positions / min_rr 2 against an engine at 0.35 / 30 / 1.5.
+//
+// `rulesDefaults()` overlays the server values only when the bot_rules.json
+// fetch SUCCEEDS. `loadRules()` spreads DEFAULT_RULES unconditionally and is
+// what seeds RULES on every load — so the drift was live on precisely the
+// offline / first-paint / cached path the original finding was about.
+suite("bot.js DEFAULT_RULES mirrors the engine");
+
+const BOT_SRC = fs.readFileSync(path.join(ROOT, "public/js/bot.js"), "utf8");
+function botDefault(key) {
+  const block = BOT_SRC.slice(BOT_SRC.indexOf("const DEFAULT_RULES = {"));
+  const m = new RegExp(`\\b${key}\\s*:\\s*(-?[0-9.]+)`).exec(block.slice(0, block.indexOf("};")));
+  assert.ok(m, `bot.js DEFAULT_RULES no longer declares ${key}`);
+  return Number(m[1]);
+}
+
+test("risk_pct matches VIVEK_BOT_RISK_PCT", () => {
+  assert.equal(botDefault("risk_pct"), pyNumber("VIVEK_BOT_RISK_PCT"));
+});
+
+test("max_positions matches VIVEK_BOT_MAX_POSITIONS", () => {
+  // 5 vs 30 was the loudest of the three: the page's whole capacity story.
+  assert.equal(botDefault("max_positions"), pyNumber("VIVEK_BOT_MAX_POSITIONS"));
+});
+
+test("loss_limit matches CONSEC_LOSS_PAUSE", () => {
+  assert.equal(botDefault("loss_limit"), pyNumber("CONSEC_LOSS_PAUSE"));
+});
+
+test("min_rr matches what the scan actually publishes", () => {
+  // The one number with no config.py twin — it reaches the page through
+  // bot_rules.json, so the committed artefact is the source of truth.
+  const rules = JSON.parse(fs.readFileSync(path.join(ROOT, "public/data/bot_rules.json"), "utf8"));
+  assert.equal(typeof rules.min_rr, "number", "bot_rules.json stopped publishing min_rr");
+  assert.equal(botDefault("min_rr"), rules.min_rr);
+});
+
+test("and bot.js still OVERLAYS the server values when the fetch works", () => {
+  // The mirror is the fallback, not the source. If rulesDefaults stopped
+  // overlaying, a correct mirror today would silently become the value forever.
+  assert.ok(/const rulesDefaults = \(\) => \{[\s\S]{0,200}srvValue\(k\)/.test(BOT_SRC),
+    "rulesDefaults no longer overlays the published rules over DEFAULT_RULES");
+  assert.ok(/SRV_KEYS = \["risk_pct", "max_positions", "min_rr", "loss_limit"\]/.test(BOT_SRC),
+    "the four overlaid keys changed — check they still match the four pinned above");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
