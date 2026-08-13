@@ -1001,6 +1001,58 @@ def close_bot_position(symbol: str, market: str, price: float,
     return match
 
 
+def close_bot_batch(entries: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Close MANY bot-book positions in ONE process — one checkout, one commit.
+
+    WHY (2026-08-13, owner: "I want to close each one FAST"). The serial UI
+    was correct about the collision (two RUNS racing the same book files) and
+    wrong about the unit of work: nine closes as nine workflow runs is nine
+    dispatch->run->deploy round trips behind the `scan` mutex — ~half an hour
+    of babysitting to clear a stalled strip. The collision was never between
+    closes; it was between RUNS. N closes inside one run touch the book
+    sequentially in-process, commit once, deploy once, and take roughly the
+    wall-clock of one.
+
+    PER-ENTRY TOLERANCE, not all-or-nothing. `bash -e` semantics on a loop of
+    single `--close` calls would let one stale row (a symbol whose time-stop
+    landed between the strip rendering and the batch arriving) kill eight good
+    closes. Here each entry closes independently: a no-match is reported and
+    skipped, and the batch succeeds if ANY entry closed. The skipped symbol is
+    not lost either way — if it is already closed it leaves the open book, so
+    the UI's book-poll settles it as done; if it genuinely failed it stays
+    open and the UI times out to "check the book". Honest per-row outcomes.
+
+    Returns (closed, failed) — failed entries carry a "why". The CLI wrapper
+    exits 2 only when NOTHING closed, mirroring --close's loud-failure rule.
+    """
+    closed_all: list[dict] = []
+    failed: list[dict] = []
+    for e in entries:
+        sym = str(e.get("symbol") or "").upper()
+        market = str(e.get("market") or "").lower()
+        try:
+            price = float(e.get("price"))
+        except (TypeError, ValueError):
+            price = 0.0
+        if market not in config.MARKETS or not sym or price <= 0:
+            failed.append({**e, "why": "invalid entry (symbol/market/price)"})
+            continue
+        try:
+            row = close_bot_position(sym, market, price,
+                                     direction=e.get("direction") or None,
+                                     day=e.get("day") or None)
+        except Exception as exc:                       # noqa: BLE001 — one bad
+            # entry must not take down the rest; the book save for it never
+            # happened (close_bot_position persists only on success).
+            failed.append({**e, "why": f"{type(exc).__name__}: {exc}"})
+            continue
+        if row is None:
+            failed.append({**e, "why": "no matching open position (already closed?)"})
+        else:
+            closed_all.append(row)
+    return closed_all, failed
+
+
 def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
     """Symbols fully stopped out within VIVEK_BOT_REENTRY_COOLDOWN_DAYS of `day`."""
     days = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
@@ -1507,6 +1559,11 @@ def main() -> None:
     parser.add_argument("--direction", choices=["long", "short"],
                         help="disambiguate --close when both sides exist")
     parser.add_argument("--day", help="exit date YYYY-MM-DD for --close (default: today)")
+    parser.add_argument("--close-batch", action="store_true",
+                        help="close MANY positions in one process: reads a JSON "
+                             "array of {symbol, market, direction?, price, day?} "
+                             "from the VIVEK_CLOSE_BATCH env var. One checkout, "
+                             "one commit, one deploy for the lot.")
     parser.add_argument("--rebuild-combined", action="store_true",
                         help="regenerate the derived combined book from the "
                              "canonical per-market files and exit")
@@ -1533,6 +1590,32 @@ def main() -> None:
         _write_combined()
         v = _combined_view()
         print(f"combined view rebuilt: {len(v['open'])} open, {len(v['closed'])} closed")
+        return
+
+    if args.close_batch:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        raw = os.environ.get("VIVEK_CLOSE_BATCH", "")
+        try:
+            entries = json.loads(raw)
+            assert isinstance(entries, list) and entries
+        except (ValueError, AssertionError):
+            parser.error("--close-batch needs VIVEK_CLOSE_BATCH set to a "
+                         "non-empty JSON array")
+        # Same ceiling close.js enforces — belt and braces, since this env var
+        # arrives through a workflow input.
+        if len(entries) > 30:
+            parser.error(f"--close-batch capped at 30 entries, got {len(entries)}")
+        closed, failed = close_bot_batch(entries)
+        for row in closed:
+            print(f"closed {row['symbol']} {row['direction']} [{row['market']}] "
+                  f"@ {row['exit_price']} -> {row.get('realized_r', 0):+.2f}R (manual)")
+        for e in failed:
+            print(f"SKIPPED {e.get('symbol')} [{e.get('market')}]: {e.get('why')}")
+        print(f"batch: {len(closed)} closed, {len(failed)} skipped")
+        if not closed:
+            # Mirrors --close's loud-failure rule: a batch that changed nothing
+            # must not commit a no-op "success".
+            raise SystemExit(2)
         return
 
     if args.close:
