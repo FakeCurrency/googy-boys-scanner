@@ -6,8 +6,15 @@
  *
  * Requires the same GH_DISPATCH_TOKEN used by /api/scan (Actions: read+write).
  *
- * Request body (JSON):
- *   { symbol, direction, market, price, exit_date, journal_type }
+ * Request body (JSON) — two shapes:
+ *   { symbol, direction, market, price, exit_date, journal_type }     — one close
+ *   { journal_type: "bot", closes: [{symbol, market, direction, price}, ...] }
+ *
+ * The `closes` array (2026-08-13) is the BATCH shape: N bot-book closes in ONE
+ * workflow run. Born from the stalled strip's real use — nine closes as nine
+ * serial runs is ~half an hour behind the scan mutex; as one batch it is one
+ * dispatch, one commit, one deploy, ~2 minutes for the lot. Batch is bot-book
+ * only (the legacy swing/scalp journals have no batch path and never will).
  */
 export const onRequestPost = async ({ request, env }) => {
   const token = env.GH_DISPATCH_TOKEN;
@@ -34,6 +41,55 @@ export const onRequestPost = async ({ request, env }) => {
     return json(400, { ok: false, message: "Invalid JSON body." });
   }
 
+  // ---- BATCH shape -----------------------------------------------------------
+  // Validated entry-by-entry with the SAME rules as a single close, and then
+  // RE-SERIALISED from the validated fields only — the raw client JSON never
+  // reaches the workflow input, so nothing unvalidated can ride along in it.
+  if (Array.isArray(body?.closes)) {
+    if (body.journal_type !== "bot") {
+      return json(400, { ok: false, message: "Batch close is bot-book only." });
+    }
+    if (body.closes.length < 1 || body.closes.length > 30) {
+      return json(400, { ok: false, message: "Batch must contain 1-30 closes." });
+    }
+    const entries = [];
+    const seen = new Set();
+    for (const c of body.closes) {
+      const sym = String(c?.symbol || "").trim().toUpperCase();
+      const mkt = String(c?.market || "").trim().toLowerCase();
+      const px  = parseFloat(c?.price);
+      if (!/^[A-Z0-9.\-]{1,15}$/.test(sym) || !isFinite(px) || px <= 0) {
+        return json(400, { ok: false, message: `Batch entry ${sym || "?"}: symbol and a positive price are required.` });
+      }
+      if (!["asx", "nasdaq", "crypto"].includes(mkt)) {
+        return json(400, { ok: false, message: `Batch entry ${sym}: market must be asx|nasdaq|crypto.` });
+      }
+      const key = mkt + ":" + sym;
+      if (seen.has(key)) {
+        return json(400, { ok: false, message: `Batch lists ${sym} twice.` });
+      }
+      seen.add(key);
+      entries.push({
+        symbol: sym,
+        market: mkt,
+        direction: c?.direction === "short" ? "short" : "long",
+        price: String(px),
+      });
+    }
+    return dispatchClose(env, json, {
+      // The single-close inputs are required by the workflow and display-only
+      // here: the roster makes the Actions list legible at a glance.
+      symbol: entries[0].symbol + (entries.length > 1 ? `+${entries.length - 1}` : ""),
+      direction: "long",
+      market: entries[0].market,
+      price: entries[0].price,
+      exit_date: "",
+      journal_type: "bot",
+      batch: JSON.stringify(entries),
+    }, `ratelimit:close:batch`, entries.length);
+  }
+
+  // ---- single-close shape (unchanged) ---------------------------------------
   // Strict validation: these inputs reach a GitHub Actions workflow, so only
   // known-shape values may pass (defence in depth with the env-var quoting in
   // close_position.yml).
@@ -64,18 +120,28 @@ export const onRequestPost = async ({ request, env }) => {
     journal_type: journalType,
   };
 
-  // Abuse guard (2026-07-09): public endpoint, each call burns an Actions run.
-  // One close per symbol per minute + daily cap. No KV binding → no limiting.
-  // Written before the dispatch (closes the double-click race), REFUNDED if the
-  // dispatch fails (2026-07-29) — a failed dispatch used to leave a minute of
-  // "give it a minute to process" about a close that never existed, and burned
-  // a daily slot. Same non-atomicity as the increment; rare-path, accepted.
+  return dispatchClose(env, json, inputs, `ratelimit:close:${inputs.symbol}`, 1);
+};
+
+// One dispatch path for both shapes (the single/batch split above is pure
+// validation). Guard rules unchanged from the 2026-07-09/07-29 design:
+// cooldown written BEFORE the dispatch (closes the double-click race),
+// refunded if the dispatch fails, kept on a timeout (the dispatch MAY have
+// landed, and a duplicate close-run costs more than a one-minute wait).
+// A batch counts ONCE against the daily cap — the cap protects Actions runs,
+// and a batch is one run regardless of how many closes ride in it.
+async function dispatchClose(env, json, inputs, cdKey, nCloses) {
+  const token = env.GH_DISPATCH_TOKEN;
+  const repo  = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
+  const ref   = env.GH_REF  || "main";
+
   let refundGuard = null;
   if (env.JOURNAL_KV) {
     try {
-      const cdKey = `ratelimit:close:${inputs.symbol}`;
       if (await env.JOURNAL_KV.get(cdKey)) {
-        return json(429, { ok: false, message: "A close for this symbol was just requested — give it a minute to process." });
+        return json(429, { ok: false, message: nCloses > 1
+          ? "A batch close was just requested — give it a minute to process."
+          : "A close for this symbol was just requested — give it a minute to process." });
       }
       const dayKey = `ratelimit:close:day:${new Date().toISOString().slice(0, 10)}`;
       const used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
@@ -104,7 +170,7 @@ export const onRequestPost = async ({ request, env }) => {
         Authorization:          `Bearer ${token}`,
         Accept:                 "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent":           "vivek-beta-scanner",
+        "User-Agent":           "googy-boys-scanner",
         "Content-Type":         "application/json",
       },
       body: JSON.stringify({ ref, inputs }),
@@ -114,17 +180,28 @@ export const onRequestPost = async ({ request, env }) => {
     if (res.status === 204) {
       return json(202, {
         ok: true,
-        message: `${inputs.symbol} ${inputs.direction} close queued — journal updates in ~1 minute.`,
+        message: nCloses > 1
+          ? `${nCloses} closes queued as ONE run — the strip confirms each against the book.`
+          : `${inputs.symbol} ${inputs.direction} close queued — journal updates in ~1 minute.`,
       });
     }
 
-    // Never echo the upstream body — it can carry token/repo details.
+    // Never echo the upstream body — it can carry token/repo details. But DO
+    // say something actionable: this endpoint's input is a deliberate human
+    // act on the track record, and it used to give the least useful error of
+    // the three dispatch endpoints (flagged in the 2026-08-07 audit).
+    const friendly = {
+      401: "Dispatch token invalid or expired — regenerate GH_DISPATCH_TOKEN in Cloudflare.",
+      403: "Dispatch token lacks permission (needs Actions: Read and write), or GitHub is rate-limiting.",
+      404: "close_position.yml or the repo was not found — check GH_REPO.",
+      422: "GitHub could not dispatch on this ref — check the branch and workflow inputs.",
+      429: "GitHub is rate-limiting dispatches — wait a minute and retry.",
+    }[res.status] || `GitHub rejected the request (${res.status}).`;
+
     if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
-    return json(502, { ok: false, message: `GitHub rejected the request (${res.status}).` });
+    return json(502, { ok: false, message: friendly });
   } catch (err) {
     const aborted = err?.name === "AbortError";
-    // Timeout: the dispatch MAY have landed — keep the cooldown (a duplicate
-    // close-run costs more than a one-minute wait). Clean failure: refund.
     if (!aborted && refundGuard) await refundGuard();
     return json(aborted ? 504 : 502, {
       ok: false,
@@ -133,4 +210,4 @@ export const onRequestPost = async ({ request, env }) => {
   } finally {
     clearTimeout(timer);
   }
-};
+}
