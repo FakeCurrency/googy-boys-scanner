@@ -132,3 +132,31 @@
    purpose — a disabled button that still looks pressable is how you get the
    double-fire this state exists to prevent. */
 .st-x.st-wait { color: var(--muted-2); border-color: var(--line); background: transparent; opacity: .6; }
+
+/* Pick-and-batch states (2026-08-13). A pick is loud on purpose — it is one
+   half of a two-act send. The bar is the other half and the ONLY sender. */
+.st-x.st-pick { color: #fff; background: var(--red, #ff5b5b); border-color: var(--red, #ff5b5b); }
+.st-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 8px 0 2px; padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: rgba(255, 91, 91, .06);
+  font-size: 12.5px; color: var(--muted-2);
+}
+.st-bar[hidden] { display: none; }
+.st-bar-msg b { color: var(--text, #e8e8ec); }
+.st-bar-err { color: var(--red, #ff5b5b); font-weight: 600; }
+.st-go {
+  font: 600 12px/1 var(--sans, system-ui); color: #fff; cursor: pointer;
+  background: var(--red, #ff5b5b); border: 1px solid var(--red, #ff5b5b);
+  border-radius: 8px; padding: 7px 12px; min-height: 32px;
+}
+.st-go:hover { filter: brightness(1.08); }
+.st-clear {
+  font: 600 11px/1 var(--sans, system-ui); color: var(--muted-2); cursor: pointer;
+  background: transparent; border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; min-height: 30px;
+}
+.st-clear:hover { color: var(--text, #e8e8ec); }
+/* A landed row leaves the strip in place rather than waiting for a reload. */
+.st-row.st-gone { opacity: 0; max-height: 0; overflow: hidden;
+  transition: opacity .45s ease, max-height .45s ease .25s; }
