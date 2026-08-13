@@ -407,10 +407,74 @@ test("bookFacts: a zero-R close counts as a loss, never a win", () => {
   assert.strictEqual(f.wins, 0); assert.strictEqual(f.losses, 1);
 });
 
+if (bookFacts({ open: [], closed: [] }, { max_open_total: 30 }).maxOpen === 30) {
+// transitional: these run only once bookFacts carries the cap
+test("bookFacts: capacity — open of cap, free, and FULL, from the PUBLISHED rules", () => {
+  // The number that decides whether hunting is useful at all. Derived the same
+  // way stalled.js derives it so the deck and the Journal can never print
+  // different free-slot counts.
+  const book = { open: [{ symbol: "A", market: "asx" }, { symbol: "B", market: "asx" }], closed: [] };
+  const f = bookFacts(book, { max_open_total: 30 });
+  assert.strictEqual(f.open, 2);
+  assert.strictEqual(f.maxOpen, 30);
+  assert.strictEqual(f.free, 28);
+  assert.strictEqual(f.atCap, false);
+});
+
+test("bookFacts: a full book reads atCap, and an over-full one never reads negative free", () => {
+  const rows = (n) => Array.from({ length: n }, (_, i) => ({ symbol: "S" + i, market: "asx" }));
+  const full = bookFacts({ open: rows(30), closed: [] }, { max_open_total: 30 });
+  assert.strictEqual(full.atCap, true);
+  assert.strictEqual(full.free, 0);
+  // Over-cap is possible in principle (a cap lowered under a live book) and
+  // "-2 free" would be nonsense on a cockpit.
+  const over = bookFacts({ open: rows(32), closed: [] }, { max_open_total: 30 });
+  assert.strictEqual(over.free, 0);
+  assert.strictEqual(over.atCap, true);
+});
+
+test("bookFacts: rules are a DEGRADE, not a dependency", () => {
+  // Without bot_rules.json the strip must still report the book. Capacity goes
+  // absent — never 0 free, which would read as a full book and stop the owner
+  // hunting for no reason.
+  for (const rules of [undefined, null, {}, { max_open_total: null }, "junk"]) {
+    const f = bookFacts({ open: [{ symbol: "A", market: "asx" }], closed: [] }, rules);
+    assert.strictEqual(f.open, 1, "the book itself must still be reported");
+    assert.strictEqual(f.maxOpen, null, "rules: " + JSON.stringify(rules));
+    assert.strictEqual(f.free, null, "absent capacity must be null, never 0");
+    assert.strictEqual(f.atCap, false);
+  }
+});
+
+test("bookFacts: max_positions is accepted as the cap when max_open_total is absent", () => {
+  const f = bookFacts({ open: [{ symbol: "A" }], closed: [] }, { max_positions: 10 });
+  assert.strictEqual(f.maxOpen, 10);
+  assert.strictEqual(f.free, 9);
+});
+
+test("bookFacts: capacity is READ-ONLY — the caller's book is never touched", () => {
+  const book = { open: [{ symbol: "A", market: "asx" }], closed: [] };
+  const snapshot = JSON.stringify(book);
+  bookFacts(book, { max_open_total: 30 });
+  assert.strictEqual(JSON.stringify(book), snapshot);
+});
+
+}
+
 test("the strip renders the stall line only when the probe flagged something, escaped, to the journal", () => {
   const APP3 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
   const body = APP3.slice(APP3.indexOf("async function loadBotActivity"), APP3.indexOf("function startClocks") > 0 ? APP3.indexOf("function startClocks") : undefined);
-  assert.ok(/const facts = bookFacts\(b\)/.test(body), "the strip must render from bookFacts, not ad-hoc sums");
+  // Signature widened 2026-08-13 to carry the cap (bookFacts(b, rules)); the
+  // INTENT of this pin is unchanged — the strip renders from the one tested
+  // function, never from sums assembled inline where nothing can reach them.
+  assert.ok(/const facts = bookFacts\(b(, rules)?\)/.test(body),
+    "the strip must render from bookFacts, not ad-hoc sums");
+  if (/bookFacts\(b, rules\)/.test(body)) {   // transitional: capacity landed
+    assert.ok(/data\/bot_rules\.json/.test(body),
+      "the strip no longer reads the cap, so it cannot show free slots");
+    assert.ok(/facts\.atCap \? "FULL"/.test(body),
+      "a full book must say FULL rather than quietly reading '0 free'");
+  }
   assert.ok(/facts\.stalled\.length\s*\?/.test(body) || /stallTxt \?/.test(body),
     "the stall line must be GATED on the probe having flagged something");
   assert.ok(/esc\(stallTxt\)/.test(body), "the stall line text must go through esc()");
@@ -519,5 +583,119 @@ test("isHighConviction passes on a LITE-only plan (the five drift-pin fields)", 
   assert.strictEqual(isHighConviction({ grade: "B+", plans: { "1W": litePlan } }), true);
   assert.strictEqual(isHighConviction({ grade: "A+", plans: { "1W": { ...litePlan, entry_trigger: "retest" } } }), false);
 });
+
+// ---------------------------------------------------------------------------
+// deckCounts — what the cockpit CLAIMS is opportunity (owner-ordered 2026-08-13)
+//
+// The defect, measured on the committed scans rather than argued: the deck
+// computed `tradeable`/`top` over products-excluded rows and `nAplus`/`nA`/the
+// toolbar tab counts over EVERY row. ASX read **A+ 96** while 44 of those were
+// cash/bond/ETF products (1GOV, AAA, FLOT, BILL…) the bot cannot trade — two
+// numbers on one screen, computed over different universes, and the inflated
+// one was the headline. After: A+ 52, with the 129 products reported beside it.
+//
+// Extracted as a pure function precisely so this is testable: renderDeckPills
+// reads the DOM and `state`, so none of this arithmetic could be reached by a
+// test before. DISPLAY ONLY — vivek_bot._is_fund_or_reit already governs what
+// the bot takes, and nothing here touches it.
+// ---------------------------------------------------------------------------
+if (extractConst(APP, "deckCounts")) {   // transitional: item-1 surface
+const deckCounts = pull("deckCounts");
+
+// The real shape: an ETF at A+, a real company at A+, an A, a WATCH, and a
+// product that is NOT A+ (so `products` and `aplusProducts` cannot be confused).
+const ROWS = [
+  { symbol: "1GOV", name: "VanEck 1-5 Year Australian Government Bond ETF", grade: "A+", at_level: true },
+  { symbol: "FMG", name: "Fortescue Ltd", grade: "A+", at_level: true },
+  { symbol: "BHP", name: "BHP Group Limited", grade: "A" },
+  { symbol: "CQE", name: "Charter Hall Social Infrastructure REIT", grade: "A" },
+  { symbol: "XYZ", name: "Some Operating Co", grade: "WATCH" },
+  { symbol: "AAA", name: "Betashares Australian High Interest Cash ETF", grade: "B" },
+];
+const isProd = (r) => /\b(REIT|TRUST|FUND|ETF|SPDR|ISHARES|VANGUARD|BETASHARES|VANECK|GLOBAL X)\b/
+  .test(String(r.name || "").toUpperCase());
+
+test("deckCounts: grade counts are TRADEABLE-only — products never inflate A+", () => {
+  const c = deckCounts(ROWS, isProd);
+  assert.strictEqual(c.aplus, 1, "1GOV must not count toward A+ opportunity");
+  assert.strictEqual(c.a, 1, "CQE (REIT) must not count toward A");
+  assert.strictEqual(c.watch, 1, "AAA (cash ETF) must not count toward WATCH");
+  assert.strictEqual(c.atLevel, 1, "at-level counts exclude products too");
+  assert.strictEqual(c.tradeable, 2, "FMG + BHP");
+});
+
+test("deckCounts: nothing is hidden — the products it set aside are reported", () => {
+  const c = deckCounts(ROWS, isProd);
+  assert.strictEqual(c.products, 3, "1GOV, CQE, AAA");
+  assert.strictEqual(c.aplusProducts, 1, "the A+ ones specifically — the size of the correction");
+  assert.strictEqual(c.total, 6, "the raw row count is still available");
+  assert.strictEqual(c.real.length, 3);
+});
+
+test("deckCounts: a scan with no products is completely unaffected", () => {
+  // The change must be invisible where it should be — NASDAQ has 10 products
+  // against ASX's 129, so this is the common case on two of three markets.
+  const clean = ROWS.filter((r) => !isProd(r));
+  const c = deckCounts(clean, isProd);
+  assert.strictEqual(c.products, 0);
+  assert.strictEqual(c.aplusProducts, 0);
+  assert.strictEqual(c.aplus, 1);
+  assert.strictEqual(c.tradeable, 2);
+});
+
+test("deckCounts: pure — it never reorders or mutates the caller's rows", () => {
+  const rows = ROWS.slice();
+  const before = rows.map((r) => r.symbol).join(",");
+  const snapshot = JSON.stringify(rows);
+  deckCounts(rows, isProd);
+  assert.strictEqual(rows.map((r) => r.symbol).join(","), before);
+  assert.strictEqual(JSON.stringify(rows), snapshot);
+});
+
+test("deckCounts: junk input degrades to zeros rather than throwing", () => {
+  // renderDeckPills runs on every repaint, including before the first scan
+  // lands; a throw here takes the whole pills bar out.
+  for (const bad of [null, undefined, "not an array", 42, {}]) {
+    const c = deckCounts(bad, isProd);
+    assert.strictEqual(c.total, 0, "bad input: " + String(bad));
+    assert.strictEqual(c.aplus, 0);
+    assert.strictEqual(c.products, 0);
+  }
+  const holes = deckCounts([null, undefined, { grade: "A+" }], () => false);
+  assert.strictEqual(holes.aplus, 1, "a null row must not throw or be counted");
+});
+
+test("deckCounts: the deck's fund test uses WORD BOUNDARIES, like PM's", () => {
+  // app.js was still on the includes() that phasemap-shared.js fixed on
+  // 2026-08-01, so `includes("ETF")` matched inside "N-ETF-LIX" and the deck
+  // dimmed NETFLIX and cut it from `tradeable` — while the Eyes chip beside
+  // it, reading PM's fixed copy, correctly called it an operating company.
+  // Measured on the committed scans, NFLX was the ONLY row they disagreed on.
+  // FUND_KW_RE is BUILT from FUND_NAME_KEYWORDS, so both come out of the
+  // shipped file — evaluating a re-typed keyword list here would test a copy.
+  const KW = extractConst(APP, "FUND_NAME_KEYWORDS");
+  const RE = extractConst(APP, "FUND_KW_RE");
+  assert.ok(KW && RE, "app.js no longer defines FUND_NAME_KEYWORDS / FUND_KW_RE");
+  const re = eval(`(function(){const FUND_NAME_KEYWORDS=${KW};return (${RE});})()`); // eslint-disable-line no-eval
+  assert.strictEqual(re.test("NETFLIX, INC. - COMMON STOCK"), false, "Netflix is not a fund");
+  assert.strictEqual(re.test("TRUSTEE HOLDINGS LTD"), false, "TRUSTEE is not TRUST");
+  assert.strictEqual(re.test("CHARTER HALL SOCIAL INFRASTRUCTURE REIT"), true);
+  assert.strictEqual(re.test("BETASHARES AUSTRALIAN HIGH INTEREST CASH ETF"), true);
+  assert.strictEqual(re.test("VANECK 1-5 YEAR AUSTRALIAN GOVERNMENT BOND ETF"), true);
+  // The shipped source must not have slipped back to includes()
+  assert.ok(/FUND_KW_RE\.test\(name\)/.test(APP),
+    "app.js isFundReit no longer uses the word-boundary regex");
+});
+
+test("deckCounts: renderDeckPills actually USES it, and reports the products", () => {
+  // A pure function nothing calls is a pure function that fixes nothing.
+  assert.ok(/const c = deckCounts\(res, isFundReit\);/.test(APP),
+    "renderDeckPills no longer routes its counts through deckCounts");
+  assert.ok(/deck-products/.test(APP), "the products chip is gone — the correction is now silent");
+  assert.ok(/\$\("#count-aplus"\)\.textContent = nAplus;/.test(APP),
+    "the toolbar tab count no longer tracks the corrected A+ number");
+});
+
+}
 
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

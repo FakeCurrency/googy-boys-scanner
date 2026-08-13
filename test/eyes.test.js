@@ -262,6 +262,72 @@ test("renderEyes is hooked into BOTH the confluence load and the market-switch r
 });
 
 // ─────────────────────────────── summary ─────────────────────────────────────
+// ── product ranking penalty (owner-ordered 2026-08-13) ──────────────────────
+// The chip already SAID fund. A marker the eye skips is not a ranking, so a
+// bond ETF could still lead the strip that exists to answer "what needs my
+// eyes". Products now sort below operating companies at equal lens count.
+if (/prod\(a\) - prod\(b\)/.test(SRC)) {   // transitional: item-1 penalty
+suite("products rank below real companies");
+
+// Distinct from the file's `mk` above: this one carries name+sector, which is
+// what PM.isFundReit reads. Product-ness lives in the NAME, never the ticker.
+const mkp = (t, count, grade, name, sector) => ({
+  ticker: t, count, side: "long",
+  lenses: count >= 3 ? ["VIVEK", "PHASEMAP", "SPECS"] : ["VIVEK", "PHASEMAP"],
+  detail: { vivek: { grade, name: name || (t + " Holdings Ltd"), sector: sector || "Materials" } },
+});
+
+test("at equal lens count, a real company outranks a product", () => {
+  const out = eyesRank([
+    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
+    mkp("FMG", 2, "A+", "Fortescue Ltd"),
+  ]).map((x) => x.ticker);
+  assert.deepStrictEqual(out, ["FMG", "AAA"],
+    "a cash ETF is leading the strip over an operating company");
+});
+
+test("the penalty sits BELOW lens count — a triple product still beats a dual", () => {
+  // The strip's premise is agreement between detectors. A triple IS a triple,
+  // even when the name is a product; demoting it under count would make the
+  // headline number ("1 triple") disagree with the order beneath it.
+  const out = eyesRank([
+    mkp("FMG", 2, "A+", "Fortescue Ltd"),
+    mkp("VAS", 3, "A+", "Vanguard Australian Shares Index ETF", "Unclassified"),
+  ]).map((x) => x.ticker);
+  assert.deepStrictEqual(out, ["VAS", "FMG"]);
+});
+
+test("the penalty sits ABOVE grade — a real A outranks a product A+", () => {
+  const out = eyesRank([
+    mkp("GOVT", 2, "A+", "iShares Government Bond ETF", "Unclassified"),
+    mkp("BHP", 2, "A", "BHP Group Limited"),
+  ]).map((x) => x.ticker);
+  assert.deepStrictEqual(out, ["BHP", "GOVT"]);
+});
+
+test("the A+ summary counts TRADEABLE A+ only", () => {
+  const html = eyesHTML([
+    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
+    mkp("FMG", 2, "A+", "Fortescue Ltd"),
+  ], "asx");
+  assert.ok(/1 A\+/.test(html), "the headline still counts the bond ETF as A+ opportunity");
+  // …but BOTH chips still render — nothing is hidden, the product is marked.
+  assert.strictEqual((html.match(/ey-chip/g) || []).length, 2);
+  assert.ok(/ey-fund/.test(html), "the product lost its marker");
+});
+
+test("with no PM the penalty degrades to nothing, exactly like pmLegQuality", () => {
+  // Same contract as the 2026-08-01 quality key: a missing PM must not throw
+  // and must not silently reorder — it just stops penalising.
+  const out = bare.eyesRank([
+    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
+    mkp("FMG", 2, "A+", "Fortescue Ltd"),
+  ]).map((x) => x.ticker);
+  assert.deepStrictEqual(out, ["AAA", "FMG"], "alphabetical fallback, no throw");
+});
+
+}
+
 console.log(`\n${"─".repeat(48)}`);
 if (failed) {
   console.error(`FAILED  ${failed} test(s) failed, ${passed} passed`);
