@@ -184,8 +184,33 @@ def write_vivek_pair(vk: dict, out_dir: str | pathlib.Path, market: str) -> path
     pairing the scan.yml / crypto_bot.yml schema gates verify, so a run that
     pushes one file and loses the other fails loudly instead of shipping a
     deck whose expand can never load.
+
+    PUBLISHED COMPACT (2026-08-13), and the reason is a measurement, not taste.
+    The diet's ~0.4 MB summary target was being read against a PRETTY-PRINTED
+    file and judged missed: live ASX was 742.9 KB on disk against 448.5 KB of
+    actual content, i.e. **39.6% of the deck's first paint was indentation**.
+    The split had hit its number all along; the ruler had whitespace on it.
+
+    Nothing reads these files as text — every consumer in the tree parses them
+    (``JSON.parse`` in the browser, ``json.load`` in the schema gates and the
+    crypto freshness probe), so the only thing the newlines were buying was a
+    readable ``git diff`` on a file a machine rewrites ~20x a day. Measured
+    saving across the six published pair files: **3.0 MB on disk per scan
+    round, ~12% off the gzipped wire** (gzip already eats most of whitespace,
+    which is why this is a disk/parse win rather than a bandwidth one) — and
+    the disk half lands directly on the ~4 MB/day git-history growth that the
+    VPS decision is partly about.
+
+    ``indent=None, separators=(",", ":")`` is the house form already used by
+    ``regime.publish`` and ``sectorbreadth.update``; this brings the oldest and
+    largest publisher into line with the newest ones. ``ensure_ascii`` and the
+    trailing-newline behaviour are deliberately left alone so the diff is the
+    whitespace and nothing else.
     """
     summary, detail = split_vivek(vk)
-    p = write(summary, out_dir, name=f"{market}_vivek")
-    write(detail, out_dir, name=f"{market}_vivek_detail")
+    out = pathlib.Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    kw = {"indent": None, "separators": (",", ":")}
+    p = write_json(out / f"{market}_vivek.json", summary, **kw)
+    write_json(out / f"{market}_vivek_detail.json", detail, **kw)
     return p
