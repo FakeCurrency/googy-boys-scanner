@@ -13,30 +13,45 @@
    book at its global cap, every stalled row is a new A+ the bot must decline.
 
    ONE WRITE PATH, AND IT IS THE OWNER'S FINGER (owner-ruled 2026-08-07).
-   This file shipped read-only by construction and no longer is: each row now
-   carries a Close button. What changed is the ERGONOMICS of a decision the
-   owner could already make — close_position.yml with journal_type=bot, by
-   hand, in the Actions tab — not who makes it. The distinction that must
-   survive every future edit:
+   Nothing here decides. No threshold, no timer, no condition in this file
+   closes anything — a row is stalled if and only if the engine stamped it,
+   and nothing is sent until a human has done TWO deliberate things: picked
+   the row(s), then pressed the one confirm control that names exactly what
+   it is about to do.
 
-     * NOTHING HERE DECIDES. No threshold, no timer, no condition in this file
-       closes anything. It defines no thresholds at all — a row is stalled if
-       and only if the engine stamped it — and the button does nothing until a
-       human clicks it TWICE.
+   ONE RUN FOR THE LOT (2026-08-13, owner: "close each one FAST"). The first
+   version sent one workflow run per close and serialised them, which was
+   correct about the collision and wrong about the unit of work: the collision
+   was never between CLOSES, it was between concurrent RUNS racing the same
+   book files through the scan mutex. Nine closes as nine runs is nine
+   dispatch->run->deploy round trips (~half an hour of watching "waiting…");
+   nine closes as ONE batch run is one checkout, one commit, one deploy —
+   roughly the wall-clock of one. So the strip now collects picks and sends
+   them as a single POST, and the pipeline closes them sequentially
+   in-process where there is no race to lose.
+
+   The clauses every future edit must preserve:
+
+     * NOTHING HERE DECIDES — see above. Picking is a human act per row; the
+       confirm states the count and the prices come from the rows themselves.
      * The write is exactly one call, POST /api/close, with journal_type
-       hard-coded "bot". That endpoint is the pre-existing, validated,
-       rate-limited dispatcher (1 close per symbol per minute, 60/day); this
-       file adds a caller, not a capability.
-     * It books at the row's OWN last_mark — the same number the Open R beside
-       it is computed from, so what you read is what you book — and the
-       confirm step prints that price before it is sent. A row with no usable
-       mark cannot be closed from here at all (fail-closed: no honest price,
-       no button).
+       hard-coded "bot". One request regardless of how many rows are picked.
+       That endpoint is the pre-existing, validated, rate-limited dispatcher;
+       this file adds a caller, not a capability.
+     * Each row books at its OWN last_mark — the number the Open R beside it
+       is computed from, so what you read is what you book — and the confirm
+       bar totals are derived from those same marks. A row with no usable
+       mark cannot be picked at all (fail-closed: no honest price, no pick).
+     * "closed ✓" is only ever claimed once the symbol is actually gone from
+       the PUBLISHED book. A 202 is an accepted dispatch, not a landed close —
+       that gap is where six closes went missing on 2026-08-07 — so the strip
+       polls the same artifact the whole page reads and settles each row
+       individually. Entries the batch run skipped (say a time-stop beat us
+       to one) never leave the open book and honestly time out to
+       "check the book".
      * Still no localStorage, no sessionStorage, no KV, no second endpoint.
 
-   The surface remains a place to SEE what is squatting capacity; it is now
-   also the shortest path from seeing it to acting on it. test/stalled.test.js
-   pins every clause above against the shipped source. */
+   test/stalled.test.js pins every clause above against the shipped source. */
 (() => {
   "use strict";
 
@@ -116,7 +131,7 @@
     };
   };
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  // ── render helpers ─────────────────────────────────────────────────────────
   const fmtR = (v) => (typeof v === "number" && isFinite(v))
     ? (v >= 0 ? "+" : "") + v.toFixed(2) + "R" : "—";
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
@@ -134,15 +149,16 @@
   // The price a close from this strip books at. The row's OWN last_mark, which
   // is the number `unreal_r` beside it was computed from — so the R you are
   // looking at when you decide is the R you get. FAIL-CLOSED: no finite
-  // positive mark means no honest price, which means no button, not a guess.
+  // positive mark means no honest price, which means no pick, not a guess.
   const closePrice = (pos) => {
     const v = pos && pos.last_mark;
     return (typeof v === "number" && isFinite(v) && v > 0) ? v : null;
   };
   const fmtPx = (v) => "$" + v.toFixed(v < 1 ? 4 : 2);
 
-  const tipFor = (sym, px) => "Close " + sym + " in the bot book at its last mark, " +
-    fmtPx(px) + ". Click once to arm, again to send - nothing is sent on the first click.";
+  const tipFor = (sym, px) => "Pick " + sym + " to close in the bot book at its last mark, " +
+    fmtPx(px) + ". Nothing is sent by picking - only the Close bar's confirm sends, " +
+    "as ONE batch for everything picked.";
 
   const closeCell = (pos) => {
     const px = closePrice(pos);
@@ -166,7 +182,7 @@
     // The ticker opens the chart, same convention as every other surface in the
     // app (app.js, alerts.js): chart.html?m=<market>&s=<SYM>&mode=vivek.
     const href = `chart.html?m=${encodeURIComponent(String(pos.market || ""))}&s=${encodeURIComponent(sym)}&mode=vivek`;
-    return `<div class="st-row st-${f.kind}">
+    return `<div class="st-row st-${f.kind}" data-row="${esc(sym)}">
       <span class="st-sym"><a class="st-chart" href="${esc(href)}" title="Open the ${esc(sym)} chart"><b>${esc(sym)}</b></a>
         <em>${esc(MKT[pos.market] || String(pos.market || "").toUpperCase())}</em></span>
       <span class="st-days" title="Held ${held == null ? "?" : held} days since entry on ${esc(pos.entry_date || "?")}; the stale probe last flagged it ${marked == null ? "?" : marked} day(s) ago (${esc(pos.stale_pinged)}).">
@@ -178,155 +194,217 @@
     </div>`;
   };
 
-  // ── the close control ──────────────────────────────────────────────────────
-  // TWO CLICKS, ALWAYS. The first only arms the button and prints the price it
-  // would send; the second sends it. A single mis-click next to a "your call"
-  // chip must never be able to close a real position, and the armed state
-  // disarms itself after ARM_MS so a button left hot in a background tab goes
-  // cold on its own. Only one row can be armed at a time — two live confirms
-  // side by side is how the wrong one gets clicked.
-  const ARM_MS = 6000;
-  let armedBtn = null, armTimer = null;
+  // ── the close control: pick rows → ONE confirm → ONE request ───────────────
+  // Two deliberate acts before anything is sent, same safety property the old
+  // two-click design had, but the second act is now shared by the whole batch:
+  // picking arms a ROW (visibly, reversibly), and only the bar's confirm —
+  // which states the count — sends. A single mis-click can pick, never close.
+  const picked = new Map();            // "mkt:SYM" -> {sym, mkt, dir, px}
+  let inFlight = null;                 // null | { pending:Set<sym>, total, t0, timer }
 
-  const disarm = (btn) => {
-    if (!btn) return;
-    clearTimeout(armTimer);
-    if (armedBtn === btn) armedBtn = null;
-    btn.classList.remove("st-arm");
-    btn.textContent = "Close";
-  };
+  const keyOf = (btn) => btn.dataset.mkt + ":" + btn.dataset.sym;
 
-  const arm = (btn) => {
-    disarm(armedBtn);
-    armedBtn = btn;
-    btn.classList.add("st-arm");
-    btn.textContent = "Confirm " + fmtPx(parseFloat(btn.dataset.px));
-    armTimer = setTimeout(() => disarm(btn), ARM_MS);
-  };
-
-  // ONE CLOSE AT A TIME, and this is not politeness — it is the only thing that
-  // makes a ROW of Close buttons safe. Learned the hard way on the first real
-  // use, 2026-08-07: seven rows were clicked in about ten seconds and exactly
-  // ONE landed. The close pipeline is serial in two independent ways and this
-  // surface was the first thing ever able to outrun it.
-  //
-  //   1. close_position.yml sits in the `scan` concurrency group, and GitHub
-  //      keeps only ONE pending run per group — a new arrival CANCELS the
-  //      previously-pending one. Five dispatches evicted each other in flight.
-  //   2. Even the runs that do execute rebase onto a book another close has
-  //      already rewritten, and two closes touch the same JSON arrays in the
-  //      same three files. Git cannot auto-merge that: the last one conflicted
-  //      on all five rebase attempts and refused to push, correctly, leaving
-  //      the position open rather than corrupting the book.
-  //
-  // Neither is new; nothing else could ever reach them, because closing used
-  // to mean dispatching a workflow by hand, minutes apart. The UI enforced the
-  // constraint through friction. This restores it deliberately: while a close
-  // is in flight every other button is held, and it is released only when the
-  // published book actually shows the position gone.
-  const WAIT_WHY = "One close at a time — the book is a single file, and two closes at " +
-    "once collide on the merge. This unlocks when the one in flight lands.";
-  let inFlight = null;
-
-  const otherBtns = (except) => Array.prototype.slice
-    .call(host.querySelectorAll("button.st-x")).filter((b) => b !== except);
-
-  const holdOthers = (except, on) => {
-    otherBtns(except).forEach((b) => {
-      if (on && !b.classList.contains("st-sent") && !b.classList.contains("st-wait")) {
-        b.disabled = true; b.classList.add("st-wait");
-        b.textContent = "waiting…"; b.title = WAIT_WHY;
-      } else if (!on && b.classList.contains("st-wait")) {
-        b.disabled = false; b.classList.remove("st-wait");
-        b.textContent = "Close";
-        b.title = tipFor(b.dataset.sym, parseFloat(b.dataset.px));
-      }
+  const pickedR = (host) => {
+    // Combined OPEN R of the picked rows, read from the rendered cells so the
+    // bar can never disagree with the column beside it.
+    let sum = 0, any = false;
+    picked.forEach((p) => {
+      const row = host.querySelector('.st-row[data-row="' + p.sym + '"] .st-r');
+      const v = row ? parseFloat(String(row.textContent).replace(/[+R]/g, "")) : NaN;
+      if (isFinite(v)) { sum += v; any = true; }
     });
+    return any ? sum : null;
   };
 
-  // Watch the PUBLISHED book rather than trusting the 202. A queued dispatch is
-  // not a landed close — that gap is exactly where the six went missing — so
-  // "closed" is only claimed once the artifact the whole page reads no longer
-  // carries the position.
-  const POLL_MS = 8000, POLL_TRIES = 24;   // ~3 min: dispatch + run + Pages deploy
-  const settle = (btn, landed) => {
-    inFlight = null;
+  const barHTML = (host) => {
+    if (inFlight) {
+      const secs = Math.round((Date.now() - inFlight.t0) / 1000);
+      const mins = Math.floor(secs / 60);
+      const landed = inFlight.total - inFlight.pending.size;
+      return `<span class="st-bar-msg">landing… ${mins ? mins + "m " : ""}${secs % 60}s
+        — one run closes all ${inFlight.total}; each row confirms against the published book
+        (${landed}/${inFlight.total} landed). A run queued behind a scan can take ~15 min.</span>`;
+    }
+    const n = picked.size;
+    if (!n) return "";
+    const r = pickedR(host);
+    return `<span class="st-bar-msg"><b>${n}</b> picked${r == null ? "" : " · combined <b>" + fmtR(r) + "</b>"}
+        · books each at its own last mark</span>
+      <button type="button" class="st-go" data-go="1">Close ${n} now — one run</button>
+      <button type="button" class="st-clear" data-clear="1">clear</button>`;
+  };
+
+  const paintBar = (host) => {
+    const bar = host.querySelector(".st-bar");
+    if (!bar) return;
+    const inner = barHTML(host);
+    bar.innerHTML = inner;
+    bar.hidden = !inner;
+  };
+
+  const paintPicks = (host) => {
+    host.querySelectorAll("button.st-x").forEach((b) => {
+      if (b.classList.contains("st-sent") || b.classList.contains("st-wait")) return;
+      const on = picked.has(keyOf(b));
+      b.classList.toggle("st-pick", on);
+      b.textContent = on ? "✓ picked" : "Close";
+    });
+    paintBar(host);
+  };
+
+  const clearPicks = (host) => { picked.clear(); paintPicks(host); };
+
+  // ── landing watch: poll the PUBLISHED book, settle each row as it lands ────
+  // A 202 is an accepted dispatch, not a landed close. One fetch per tick
+  // covers every pending symbol. The window is sized for the WORST honest
+  // case, not the best: close_position holds the `scan` mutex and a scan run
+  // takes up to ~13 minutes, so a close legitimately queues that long before
+  // its own ~1-2 min of work — the old 3-minute window read that as failure
+  // and flipped healthy closes to "check the book" (2026-08-13, the lesson of
+  // the all-waiting screenshot).
+  const POLL_MS = 10000, POLL_TRIES = 96;   // 16 min
+
+  const settleRow = (host, sym, landed) => {
+    const btn = host.querySelector('button.st-x[data-sym="' + sym + '"]');
+    if (!btn) return;
     btn.disabled = true;
-    btn.classList.remove("st-fail");
+    btn.classList.remove("st-wait", "st-pick", "st-fail");
     btn.classList.add(landed ? "st-sent" : "st-fail");
     btn.textContent = landed ? "closed ✓" : "check the book";
     btn.title = landed
-      ? btn.dataset.sym + " is closed in the bot book. It drops off this list on the next page load."
-      : "The close was accepted but has not appeared in the published book yet. Reload in a minute; " +
-        "if it is still listed, the run failed — check close_position in Actions.";
-    holdOthers(btn, false);
+      ? sym + " is closed in the bot book. It drops off this list on the next page load."
+      : "The batch was accepted but " + sym + " is still in the published book. If the " +
+        "close_position run skipped it (already closed another way) this row resolves on " +
+        "reload; otherwise check the run in Actions.";
+    if (landed) {
+      const row = host.querySelector('.st-row[data-row="' + sym + '"]');
+      if (row) { row.classList.add("st-gone"); setTimeout(() => { row.remove(); }, 900); }
+    }
   };
 
-  const watchLanding = (btn) => {
-    const sym = String(btn.dataset.sym || "").toUpperCase();
+  const releaseHolds = (host) => {
+    host.querySelectorAll("button.st-x.st-wait").forEach((b) => {
+      b.disabled = false;
+      b.classList.remove("st-wait");
+      b.textContent = "Close";
+      b.title = tipFor(b.dataset.sym, parseFloat(b.dataset.px));
+    });
+  };
+
+  const finishFlight = (host) => {
+    const flight = inFlight;
+    inFlight = null;
+    // Anything still pending after the window is an honest unknown.
+    flight.pending.forEach((sym) => settleRow(host, sym, false));
+    releaseHolds(host);
+    paintBar(host);
+  };
+
+  const watchLanding = (host) => {
     let tries = 0;
     const tick = () => {
+      if (!inFlight) return;
       tries += 1;
-      fetch("data/vivek_bot_book.json?t=" + tries + "_" + sym, { cache: "no-store" })
+      fetch("data/vivek_bot_book.json?t=" + tries + "_" + inFlight.pending.size, { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((bk) => {
-          const stillOpen = !bk || ((bk.open || []).some((p) =>
-            p && p.status === "open" && String(p.symbol || "").toUpperCase() === sym));
-          if (bk && !stillOpen) return settle(btn, true);
-          if (tries >= POLL_TRIES) return settle(btn, false);
+          if (!inFlight) return;
+          if (bk) {
+            const open = new Set(((bk.open || []))
+              .filter((p) => p && p.status === "open")
+              .map((p) => String(p.symbol || "").toUpperCase()));
+            Array.from(inFlight.pending).forEach((sym) => {
+              if (!open.has(sym)) { inFlight.pending.delete(sym); settleRow(host, sym, true); }
+            });
+          }
+          if (inFlight.pending.size === 0) {
+            const total = inFlight.total;
+            inFlight = null;
+            releaseHolds(host);
+            const bar = host.querySelector(".st-bar");
+            if (bar) bar.innerHTML = `<span class="st-bar-msg">all <b>${total}</b> closed ✓ — slots freed.</span>`;
+            return;
+          }
+          paintBar(host);   // elapsed + landed count stay live
+          if (tries >= POLL_TRIES) return finishFlight(host);
           setTimeout(tick, POLL_MS);
         })
-        .catch(() => { if (tries >= POLL_TRIES) settle(btn, false); else setTimeout(tick, POLL_MS); });
+        .catch(() => {
+          if (!inFlight) return;
+          if (tries >= POLL_TRIES) return finishFlight(host);
+          setTimeout(tick, POLL_MS);
+        });
     };
     setTimeout(tick, POLL_MS);
   };
 
-  const send = (btn) => {
-    clearTimeout(armTimer);
-    armedBtn = null;
-    btn.classList.remove("st-arm");
-    btn.disabled = true;
-    btn.textContent = "sending…";
-    inFlight = btn.dataset.sym;
-    holdOthers(btn, true);
-    // journal_type is hard-coded "bot" and must stay that way: "swing"/"scalp"
-    // would write the legacy localStorage journals instead of the ONE track
-    // record, silently, and the row would still be sitting here afterwards.
+  const send = (host) => {
+    if (inFlight || !picked.size) return;
+    const entries = Array.from(picked.values());
+    inFlight = {
+      pending: new Set(entries.map((e) => e.sym)),
+      total: entries.length,
+      t0: Date.now(),
+    };
+    picked.clear();
+    entries.forEach((e) => {
+      const btn = host.querySelector('button.st-x[data-sym="' + e.sym + '"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.remove("st-pick");
+        btn.textContent = "queued…";
+        btn.title = "In the batch — waiting for it to leave the published book.";
+      }
+    });
+    // Every unpicked live button is held for the duration of the ONE flight —
+    // a second batch racing the first is exactly the two-runs collision the
+    // batch exists to remove.
+    host.querySelectorAll("button.st-x").forEach((b) => {
+      if (b.disabled || b.classList.contains("st-sent")) return;
+      b.disabled = true; b.classList.add("st-wait");
+      b.textContent = "waiting…";
+      b.title = "A batch is in flight. It unlocks when that run lands in the published book.";
+    });
+    paintBar(host);
+    // journal_type is hard-coded "bot" and must stay that way: this strip
+    // writes the ONE track record or nothing.
     fetch("/api/close", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        symbol: btn.dataset.sym,
-        market: btn.dataset.mkt,
-        direction: btn.dataset.dir,
-        price: parseFloat(btn.dataset.px),
         journal_type: "bot",
+        closes: entries.map((e) => ({ symbol: e.sym, market: e.mkt, direction: e.dir, price: e.px })),
       }),
     })
       .then((r) => r.json().catch(() => ({})).then((b) => ({ ok: r.ok, b })))
       .then(({ ok, b }) => {
-        if (ok) {
-          btn.textContent = "queued…";
-          btn.title = (b && b.message) || "Close queued — waiting for it to appear in the book.";
-          watchLanding(btn);           // the others stay held until it lands
-        } else {
-          // Re-enable: a rejected close (rate limit, bad market, dispatch
-          // failure) is a thing to retry, not a dead row. The reason goes in
-          // the title rather than an alert — a modal dialog over a trading
-          // page is the last thing anyone needs.
-          inFlight = null; holdOthers(btn, false);
-          btn.disabled = false;
-          btn.classList.add("st-fail");
-          btn.textContent = "failed — retry";
-          btn.title = (b && b.message) || "The close request was rejected.";
-        }
+        if (ok) { watchLanding(host); return; }
+        // Rejected batch: nothing was dispatched. Restore the picks so one fix
+        // (say, a rate-limit minute) doesn't cost the whole selection.
+        const flight = inFlight; inFlight = null;
+        entries.forEach((e) => picked.set(e.mkt + ":" + e.sym, e));
+        host.querySelectorAll("button.st-x").forEach((btn) => {
+          if (btn.classList.contains("st-sent")) return;
+          btn.disabled = false; btn.classList.remove("st-wait");
+        });
+        paintPicks(host);
+        const bar = host.querySelector(".st-bar");
+        if (bar) bar.insertAdjacentHTML("afterbegin",
+          `<span class="st-bar-err">${esc((b && b.message) || "The batch was rejected — try again.")}</span> `);
+        void flight;
       })
       .catch(() => {
-        inFlight = null; holdOthers(btn, false);
-        btn.disabled = false;
-        btn.classList.add("st-fail");
-        btn.textContent = "failed — retry";
-        btn.title = "Could not reach /api/close. Check the connection and try again.";
+        const flight = inFlight; inFlight = null;
+        entries.forEach((e) => picked.set(e.mkt + ":" + e.sym, e));
+        host.querySelectorAll("button.st-x").forEach((btn) => {
+          if (btn.classList.contains("st-sent")) return;
+          btn.disabled = false; btn.classList.remove("st-wait");
+        });
+        paintPicks(host);
+        const bar = host.querySelector(".st-bar");
+        if (bar) bar.insertAdjacentHTML("afterbegin",
+          `<span class="st-bar-err">Could not reach /api/close. Check the connection and try again.</span> `);
+        void flight;
       });
   };
 
@@ -349,16 +427,17 @@
           · <b>${money(s.riskUsd)}</b> at risk${s.riskPct != null ? " (" + s.riskPct.toFixed(1) + "% of equity)" : ""}
           · ${slotsClause(s)}</span>
       </div>
+      <div class="st-bar" hidden></div>
       <div class="st-rows">
         <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span><span>Act</span></div>
         ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
       </div>
       <p class="st-foot">Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is
-        a decision too. Tap a ticker for its chart. <b>Close</b> books that row in the bot book at its own
-        last mark (the price the Open R beside it uses) — one click arms it and shows the price, a second
-        sends it. Closes go ONE AT A TIME — the rest wait while one is in flight, and a button only reads
-        <b>closed \u2713</b> once the position is actually gone from the published book. Nothing here closes anything
-        on its own.</p>`;
+        a decision too. Tap a ticker for its chart. <b>Close</b> picks that row — pick as many as you
+        want out, then the bar's <b>Close N now</b> sends them as <b>ONE</b> run: one commit, one deploy,
+        every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking,
+        and a row only reads <b>closed ✓</b> once it is actually gone from the published book. Nothing
+        here closes anything on its own.</p>`;
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────
@@ -371,21 +450,32 @@
   if (host) {
     // Delegated, bound ONCE at mount rather than per render: render() replaces
     // innerHTML wholesale, so per-button listeners would be re-attached (and
-    // leaked) on every repaint. Anything that is not a live Close button falls
+    // leaked) on every repaint. Anything that is not a live control falls
     // straight through — clicking the ticker link must never be intercepted.
     host.addEventListener("click", (ev) => {
+      const go = ev.target.closest && ev.target.closest("button.st-go");
+      if (go && host.contains(go)) { send(host); return; }
+      const clr = ev.target.closest && ev.target.closest("button.st-clear");
+      if (clr && host.contains(clr)) { clearPicks(host); return; }
       const btn = ev.target.closest && ev.target.closest("button.st-x");
       if (!btn || btn.disabled || !host.contains(btn)) return;
-      if (inFlight) return;            // belt and braces: the others are already disabled
-      if (btn.classList.contains("st-arm")) send(btn); else arm(btn);
+      if (inFlight) return;            // belt and braces: they are already disabled
+      const k = keyOf(btn);
+      if (picked.has(k)) picked.delete(k);
+      else picked.set(k, {
+        sym: btn.dataset.sym,
+        mkt: btn.dataset.mkt,
+        dir: btn.dataset.dir,
+        px: parseFloat(btn.dataset.px),
+      });
+      paintPicks(host);
     });
-    // Clicking anywhere else, or pressing Escape, stands the button down. An
-    // armed control should never outlive the attention that armed it.
-    document.addEventListener("click", (ev) => {
-      if (armedBtn && !(ev.target.closest && ev.target.closest("button.st-x"))) disarm(armedBtn);
-    });
+    // Escape empties the basket (never mid-flight — that train has left).
+    // Deliberately NOT on outside-click: a multi-row selection is minutes of
+    // reading; losing it to a stray click elsewhere on the page would be the
+    // new way to hate this strip.
     document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && armedBtn) disarm(armedBtn);
+      if (ev.key === "Escape" && !inFlight && picked.size) clearPicks(host);
     });
     const get = (url) => ((window.PM && PM.fetchTimeout) ? PM.fetchTimeout : fetch)(url, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
