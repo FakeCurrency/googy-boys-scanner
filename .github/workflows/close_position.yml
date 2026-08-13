@@ -29,6 +29,14 @@ on:
         description: "INTERNAL — auto re-dispatch counter. Leave at 1."
         required: false
         default: "1"
+      batch:
+        description: >-
+          OPTIONAL — JSON array of {symbol, market, direction, price} to close
+          MANY bot-book positions in THIS ONE RUN (one checkout, one commit,
+          one deploy). When set, the single-close inputs above are display-only.
+          Sent by /api/close for the stalled strip's multi-select. Max 30.
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -86,8 +94,18 @@ jobs:
           PRICE: ${{ github.event.inputs.price }}
           EXIT_DATE: ${{ github.event.inputs.exit_date }}
           JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
+          BATCH: ${{ github.event.inputs.batch }}
         run: |
-          if [ "$JOURNAL_TYPE" = "bot" ]; then
+          if [ -n "$BATCH" ] && [ "$JOURNAL_TYPE" = "bot" ]; then
+            # BATCH close (2026-08-13, owner: "close each one FAST"): N
+            # positions in ONE run. The 2026-08-07 incident was never about
+            # multiple closes — it was multiple RUNS racing the book. One run
+            # closing N symbols sequentially in-process has no race to lose,
+            # one commit to push, one deploy to wait for. Per-entry tolerant
+            # (a symbol whose time-stop landed first is skipped, not fatal);
+            # exits non-zero only if NOTHING closed.
+            VIVEK_CLOSE_BATCH="$BATCH" python -m scanner.broker.vivek_run --close-batch
+          elif [ "$JOURNAL_TYPE" = "bot" ]; then
             # The REAL close (review C4): edits journal/vivek_bot_book.json —
             # the one-and-only track record. Exits non-zero if no open
             # position matches, so a typo'd symbol fails loudly instead of
@@ -122,6 +140,7 @@ jobs:
           DIRECTION: ${{ github.event.inputs.direction }}
           PRICE: ${{ github.event.inputs.price }}
           JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
+          BATCH: ${{ github.event.inputs.batch }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -172,7 +191,13 @@ jobs:
             echo "Nothing to commit (position not found or already closed)."
             exit 0
           fi
-          git commit -m "journal: manual close $SYMBOL $DIRECTION @ $PRICE"
+          if [ -n "$BATCH" ]; then
+            # Roster in the message so the record reads without opening the run.
+            ROSTER=$(BATCH="$BATCH" python -c 'import json,os; b=json.loads(os.environ["BATCH"]); syms=[str(e.get("symbol","?")).upper() for e in b]; print(f"x{len(syms)} - " + " ".join(syms[:10]) + (" ..." if len(syms) > 10 else ""))')
+            git commit -m "journal: manual close $ROSTER"
+          else
+            git commit -m "journal: manual close $SYMBOL $DIRECTION @ $PRICE"
+          fi
 
           # TOP100 #45 — this used to be `git pull --rebase origin main` then a
           # bare `git push`: ONE attempt, no retry, in the only workflow whose
@@ -277,6 +302,7 @@ jobs:
           PRICE: ${{ github.event.inputs.price }}
           EXIT_DATE: ${{ github.event.inputs.exit_date }}
           JOURNAL_TYPE: ${{ github.event.inputs.journal_type }}
+          BATCH: ${{ github.event.inputs.batch }}
         run: |
           set -u
           attempt="${ATTEMPT:-1}"
@@ -380,6 +406,7 @@ jobs:
             -f price="$PRICE" \
             -f exit_date="$EXIT_DATE" \
             -f journal_type="$JOURNAL_TYPE" \
+            -f batch="$BATCH" \
             -f attempt="$next"
           echo "Close $SYMBOL $DIRECTION @ $PRICE was evicted from the scan mutex and" \
             "re-dispatched automatically (attempt $next of 3)." >> "$GITHUB_STEP_SUMMARY"
