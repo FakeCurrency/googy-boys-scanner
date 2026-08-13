@@ -61,6 +61,19 @@ on:
       - "public/*.html"
       - "public/sw.js"
       - "public/version.json"
+      # journal/** and data/** added 2026-08-13 — the same rule, and the
+      # journal one is the sharpest hole this filter has had. THREE live tests
+      # read the track record out of the working tree:
+      #   tests/test_phase7.py:13                snapshots journal/alert_state.json
+      #   tests/test_resize_book_notional.py:308 globs journal/vivek_bot_book.*.json
+      #                                          and asserts every stop only ever
+      #                                          moved favourably — on the LIVE book
+      #   tests/test_backup_completeness.py:85   asserts 8 journal/* and 3 data/*
+      #                                          paths exist in the checkout
+      # journal/ is committed by six workflows and holds the only track record,
+      # so an edit or a loss there could ship with this entire gate skipped.
+      - "journal/**"
+      - "data/**"
       # ALL workflows, not just this one (2026-07-28): tests/test_workflow_mutex.py
       # asserts on the concurrency scoping and the close re-dispatch, so the very
       # edits it exists to catch — a `concurrency:` block moved back up to
