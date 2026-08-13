@@ -1774,8 +1774,16 @@ meant** — the failure mode that survives review because the value looks fine.
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
    commit: `git stash -q -u; git pull -q --rebase origin main; git stash pop -q`.
-   `journal/alert_state.json` gets polluted by local test runs —
-   `git checkout -- journal/alert_state.json`, never commit it.
+   - **RETIRED 2026-08-13 — do not reinstate.** This rule used to end
+     *"`journal/alert_state.json` gets polluted by local test runs —
+     `git checkout -- journal/alert_state.json`, never commit it."* That
+     stopped being true at `22ddb448c` (2026-08-07), which redirected pytest
+     off the live alert/circuit-breaker state entirely; a full pytest run now
+     leaves `journal/` byte-clean, verified by `git status` at head. The rule
+     is recorded rather than deleted because a habit of blind-checkout-ing a
+     state file is worth un-learning explicitly: with the write fixed, that
+     `git checkout` now only ever discards a REAL alert-state change written
+     by something that meant it.
 2. **Version bump:** every edit to ANY `public/js/*.js` or `public/css/*.css`
    bumps its `?v=` in every referencing HTML page. Don't record the numbers
    in docs — read them from the HTML.
