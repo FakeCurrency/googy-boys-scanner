@@ -7,6 +7,7 @@ intraday fills carrying the entry-type label, and mark-to-market resolution.
 
 import datetime as dt
 import json
+import sys
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -1061,3 +1062,70 @@ class TestCloseBatch:
         assert closed == [] and len(failed) == 1
         book = json.loads(_mfile(tmp_path, "asx").read_text())
         assert len(book["open"]) == 2, "an all-failed batch must leave the book untouched"
+
+
+class TestCloseBatchCLI:
+    """The CLI wrapper itself — because on 2026-08-13 it shipped broken while
+    every function-level test stayed green.
+
+    `main()`'s --close-batch branch reads os.environ, and `os` was never
+    imported in this module; the suite called close_bot_batch() directly, so
+    the NameError's first-ever execution was the owner's real close (run #22,
+    26 seconds, PRIORITY INTERRUPT). A CLI feature needs at least one test
+    that enters through the CLI. These do, so an unimported name in that
+    branch can never reach production again.
+
+    (The meta-cause is worth recording too: the import was "guarded" by
+    `grep ^import os file | head -1 || add-it` — and a pipeline's exit status
+    is the LAST command's, so `head` returned 0 on an empty match and the
+    fallback never ran. CLAUDE.md already documents that exact trap.)
+    """
+
+    def _cli(self, monkeypatch, tmp_path, batch_json, argv=("--close-batch",)):
+        _enable(monkeypatch, tmp_path)
+        monkeypatch.setattr(sys, "argv", ["vivek_run", *argv])
+        if batch_json is None:
+            monkeypatch.delenv("VIVEK_CLOSE_BATCH", raising=False)
+        else:
+            monkeypatch.setenv("VIVEK_CLOSE_BATCH", batch_json)
+        return vr.main
+
+    def test_cli_batch_closes_and_returns_zero(self, tmp_path, monkeypatch, capsys):
+        _batch_book(tmp_path)
+        main = self._cli(monkeypatch, tmp_path, json.dumps([
+            {"symbol": "AAA", "market": "asx", "price": 11.0},
+            {"symbol": "GONE", "market": "asx", "price": 1.0},
+        ]))
+        main()   # must not raise — one close landed
+        out = capsys.readouterr().out
+        assert "closed AAA" in out and "SKIPPED GONE" in out
+        assert "batch: 1 closed, 1 skipped" in out
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert [p["symbol"] for p in book["open"]] == ["BBB"]
+
+    def test_cli_nothing_closed_exits_2_and_leaves_the_book_alone(
+            self, tmp_path, monkeypatch):
+        _batch_book(tmp_path)
+        before = _mfile(tmp_path, "asx").read_text()
+        main = self._cli(monkeypatch, tmp_path, json.dumps(
+            [{"symbol": "GONE", "market": "asx", "price": 1.0}]))
+        with pytest.raises(SystemExit) as e:
+            main()
+        assert e.value.code == 2
+        assert _mfile(tmp_path, "asx").read_text() == before
+
+    def test_cli_missing_or_bad_env_is_a_usage_error(self, tmp_path, monkeypatch):
+        for raw in (None, "", "not json", "{}", "[]"):
+            main = self._cli(monkeypatch, tmp_path, raw)
+            with pytest.raises(SystemExit) as e:
+                main()
+            assert e.value.code == 2   # argparse usage error
+
+    def test_cli_caps_the_batch_at_30(self, tmp_path, monkeypatch):
+        _batch_book(tmp_path)
+        entries = [{"symbol": f"S{i}", "market": "asx", "price": 1.0} for i in range(31)]
+        main = self._cli(monkeypatch, tmp_path, json.dumps(entries))
+        with pytest.raises(SystemExit):
+            main()
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert len(book["open"]) == 2, "an over-cap batch must not touch the book"
