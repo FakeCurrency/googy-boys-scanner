@@ -255,6 +255,76 @@ const scanTests = async () => {
       assert.ok(kv.store.has("ratelimit:close:WES"), `cooldown must persist on ${status}`);
     }
   });
+
+  // ── the batch shape (2026-08-13): N closes, ONE dispatch, one Actions run ──
+  suite("close.js — batch: N closes ride ONE dispatch");
+
+  const callBatch = (S, env, closes, jt = "bot") => S.onRequestPost({
+    env, request: new Request("https://x/api/close", {
+      method: "POST",
+      body: JSON.stringify({ journal_type: jt, closes }),
+    }),
+  });
+  const good = (sym) => ({ symbol: sym, market: "asx", direction: "long", price: 4.2 });
+
+  await test("batch: one GitHub dispatch regardless of N, entries re-serialised clean", async () => {
+    const calls = [];
+    const S = loadC((url, opts) => { calls.push({ url, opts }); return Promise.resolve(new Response(null, { status: 204 })); });
+    // The first entry carries a hostile extra field ON PURPOSE: the mutation
+    // this pin exists to catch is `entries.push({ ...c, ... })` — forwarding
+    // the raw client object — and entries with only clean keys cannot see it.
+    const poisoned = { ...good("AAA"), exit_date: "2026-01-01; rm -rf /", extra: { nested: true } };
+    const r = await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, [poisoned, good("BBB"), good("CCC")]);
+    assert.equal(r.status, 202);
+    assert.equal(calls.length, 1, "a batch must cost exactly one Actions dispatch");
+    const sent = JSON.parse(calls[0].opts.body);
+    const batch = JSON.parse(sent.inputs.batch);
+    assert.equal(batch.length, 3);
+    // Only the four validated fields may ride — the raw client JSON never
+    // reaches the workflow input.
+    for (const e of batch) {
+      assert.deepEqual(Object.keys(e).sort(), ["direction", "market", "price", "symbol"]);
+    }
+    assert.equal(sent.inputs.journal_type, "bot");
+    assert.match(sent.inputs.symbol, /^AAA\+2$/, "the display symbol should read AAA+2");
+  });
+
+  await test("batch: bot-book only, and one bad entry rejects the WHOLE batch", async () => {
+    const S = loadC(ghFetchStub(204));
+    assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, [good("AAA")], "swing")).status, 400,
+      "a non-bot batch must be refused");
+    for (const bad of [
+      [good("AAA"), { ...good("BBB"), price: 0 }],
+      [good("AAA"), { ...good("BBB"), market: "scalp" }],
+      [good("AAA"), { ...good("BBB"), symbol: "b;rm -rf" }],
+      [good("AAA"), good("AAA")],                       // duplicate
+    ]) {
+      const r = await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, bad);
+      assert.equal(r.status, 400, "accepted: " + JSON.stringify(bad[1]));
+    }
+  });
+
+  await test("batch: capped at 30 and never empty", async () => {
+    const S = loadC(ghFetchStub(204));
+    const many = Array.from({ length: 31 }, (_, i) => good("S" + i));
+    assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, many)).status, 400);
+    assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, [])).status, 400);
+  });
+
+  await test("batch: counts ONCE against the daily cap, own cooldown key, refunded on failure", async () => {
+    const kv = fakeKV();
+    const S = loadC(ghFetchStub(204));
+    const r = await callBatch(S, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }, [good("AAA"), good("BBB"), good("CCC")]);
+    assert.equal(r.status, 202);
+    const dayKey = [...kv.store.keys()].find((k) => k.startsWith("ratelimit:close:day:"));
+    assert.equal(kv.store.get(dayKey), "1", "a 3-close batch is ONE Actions run and must cost one daily slot");
+    assert.ok(kv.store.has("ratelimit:close:batch"), "the batch cooldown key is missing");
+    // Failed dispatch refunds both, same contract as the single path.
+    const kv2 = fakeKV();
+    const S2 = loadC(ghFetchStub(500));
+    await callBatch(S2, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv2 }, [good("AAA")]);
+    assert.ok(!kv2.store.has("ratelimit:close:batch"), "failed dispatch must refund the batch cooldown");
+  });
 };
 
 // ══════════ 3. tick.js — the watcher prices the RIGHT instrument ═════════════

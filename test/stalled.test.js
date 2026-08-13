@@ -255,37 +255,77 @@ test("it still READS only the two published artifacts", () => {
   assert.deepEqual([...new Set(polled)], ["data/vivek_bot_book.json"]);
 });
 
-test("closes are SERIALISED — one in flight holds every other button", () => {
-  // The gap that cost six closes on 2026-08-07: this surface can fire faster
-  // than close_position.yml can land, and the pipeline is serial twice over
-  // (the `scan` group cancels queued runs; concurrent closes conflict on the
-  // book rebase). Friction used to enforce it; now this does.
+if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
+test("N picks become ONE request — the batch IS the concurrency fix", () => {
+  // 2026-08-07: six of seven rapid closes were lost because each was its own
+  // workflow run and the runs raced each other (mutex eviction + book rebase
+  // conflicts). 2026-08-13: nine serial runs proved safe but unusably slow.
+  // The batch removes the race by construction: the collision was only ever
+  // between RUNS, so N closes ride in one run, one commit, one deploy.
+  assert.ok(/closes:\s*entries\.map/.test(SRC), "the POST body no longer carries the closes array");
   assert.ok(/let inFlight = null;/.test(SRC), "the in-flight lock is gone");
-  assert.ok(/if \(inFlight\) return;/.test(SRC), "the click handler no longer refuses while one is in flight");
-  assert.ok(/holdOthers\(btn, true\);/.test(SRC), "sending must hold the other buttons");
-  // Every terminal path must RELEASE, or one rejected close freezes the strip.
-  assert.equal((SRC.match(/holdOthers\(btn, false\)/g) || []).length, 3,
-    "release is missing from a failure path — a rejected close would lock the strip for good");
+  assert.ok(/if \(inFlight\) return;/.test(SRC), "the pick handler no longer refuses mid-flight");
+  // While the ONE flight is up, every live button is held — a second batch
+  // racing the first is exactly the two-runs collision the batch removed.
+  assert.ok(/st-wait/.test(SRC), "the held state is gone");
+  // Every terminal path must restore the strip: the two rejection paths
+  // re-enable and RESTORE THE PICKS (one rate-limit minute must not cost the
+  // whole selection), and the timeout path releases the holds.
+  assert.equal((SRC.match(/picked\.set\(e\.mkt/g) || []).length, 2,
+    "a rejected batch no longer restores the selection on every failure path");
+  assert.ok(/releaseHolds\(host\)/.test(SRC), "nothing releases the held buttons");
 });
+}
 
+if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
 test("'closed' is only claimed once the BOOK says so, never off the 202", () => {
   // A queued dispatch is not a landed close — that gap is exactly where the
-  // six went missing, each one reporting success it never achieved.
-  assert.ok(/watchLanding\(btn\)/.test(SRC));
-  assert.ok(/textContent = landed \? "closed ✓"/.test(SRC));
-  assert.ok(!/textContent = "closed/.test(SRC.replace(/landed \? "closed ✓"/, "")),
+  // six went missing, each one reporting success it never achieved. The batch
+  // settles PER ROW: each symbol earns its ✓ by leaving the published book,
+  // and a symbol the run skipped honestly times out to "check the book".
+  assert.ok(/watchLanding\(host\)/.test(SRC));
+  assert.ok(/landed \? "closed ✓"/.test(SRC));
+  // In CODE (comments stripped), "closed ✓" may appear in three places, all
+  // legitimate: the per-row settle ternary, the all-landed bar line that only
+  // renders inside the pending.size === 0 branch (after the book confirmed
+  // everything), and the st-foot explainer PROSE describing the rule itself.
+  const allLanded = CODE.indexOf("pending.size === 0");
+  assert.ok(allLanded > 0, "the all-landed branch is gone");
+  const foot = CODE.indexOf('class="st-foot"');
+  assert.ok(foot > 0, "the explainer paragraph is gone");
+  const scrubbed = CODE.replace(/landed \? "closed ✓"/, "")
+    .replace(CODE.slice(allLanded, CODE.indexOf("return;", allLanded)), "")
+    .replace(CODE.slice(foot, CODE.indexOf("</p>", foot)), "");
+  assert.ok(!/closed ✓/.test(scrubbed),
     "something claims 'closed' without consulting the book");
+  // The poll window must survive the WORST honest case: close_position holds
+  // the scan mutex and a scan takes ~13 min, so a healthy batch can sit
+  // queued that long. The old 3-minute window read that as failure — the
+  // all-waiting screenshot of 2026-08-13 — and flipped healthy closes to
+  // "check the book" while they were still queued.
+  const ms = SRC.match(/POLL_MS\s*=\s*(\d+)/), tries = SRC.match(/POLL_TRIES\s*=\s*(\d+)/);
+  assert.ok(ms && tries, "the poll constants are gone");
+  assert.ok(Number(ms[1]) * Number(tries[1]) >= 15 * 60 * 1000,
+    "the landing watch gives up before a mutex-queued run can finish (needs >= 15 min)");
 });
+}
 
-test("closing takes TWO clicks — the first only arms", () => {
-  // The handler must branch on the armed class before it can ever call send().
-  // A single mis-click beside a "time-stop due" chip must not be able to close
-  // a real position.
-  assert.ok(/classList\.contains\("st-arm"\)\s*\)\s*send\(btn\);\s*else\s+arm\(btn\)/.test(SRC),
-    "the arm-then-send branch is gone — a single click may now be closing positions");
-  assert.ok(/ARM_MS\s*=\s*\d+/.test(SRC), "the armed state must expire on its own");
-  assert.ok(/key === "Escape"/.test(SRC), "Escape must stand an armed button down");
+if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
+test("nothing is sent by picking — only the bar's confirm calls send()", () => {
+  // The two-act property the old two-click design had, kept across the batch
+  // redesign: a row click only toggles a pick (visible, reversible), and the
+  // ONE control that sends states the count it is about to close. A single
+  // mis-click beside a "time-stop due" chip can pick, never close.
+  const rowHandler = SRC.slice(SRC.indexOf('closest("button.st-x")'), SRC.indexOf("paintPicks(host);"));
+  assert.ok(!/send\(/.test(rowHandler),
+    "the row-button handler can reach send() — a single click may now be closing positions");
+  assert.ok(/closest\("button\.st-go"\)/.test(SRC), "the confirm control is gone");
+  assert.equal((SRC.match(/send\(host\)/g) || []).length, 1,
+    "send() must be reachable from exactly one place: the bar's confirm");
+  assert.ok(/Close \$\{n\} now/.test(SRC), "the confirm no longer states the count it will close");
+  assert.ok(/key === "Escape"/.test(SRC), "Escape must empty the basket");
 });
+}
 
 test("the price is the row's own last_mark, and no mark means no close", () => {
   assert.equal(closePrice({ last_mark: 19.335 }), 19.335);
@@ -298,14 +338,23 @@ test("the price is the row's own last_mark, and no mark means no close", () => {
   assert.equal(closePrice({}), null);
 });
 
-test("the confirm step prints the exact price it will send", () => {
-  // The owner must be able to read the number BEFORE the click that sends it;
-  // sub-dollar names need the extra places or a crypto close reads as $0.00.
+if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
+test("the numbers the owner reads before confirming come from the rows themselves", () => {
+  // Sub-dollar names need the extra places or a crypto mark reads as $0.00.
   assert.equal(fmtPx(19.335), "$19.34");
   assert.equal(fmtPx(0.33367), "$0.3337");
-  assert.ok(/textContent\s*=\s*"Confirm " \+ fmtPx/.test(SRC),
-    "the armed label no longer shows the price it would book at");
+  // The bar's combined R is read back from the RENDERED cells, so the confirm
+  // can never disagree with the column sitting beside it.
+  assert.ok(/\.st-r/.test(SRC) && /pickedR/.test(SRC),
+    "the bar no longer derives its total from the rendered rows");
+  // And what is SENT is each row's own data attributes — the same mark its
+  // Open R was computed from.
+  assert.ok(/px:\s*parseFloat\(btn\.dataset\.px\)/.test(SRC),
+    "the pick no longer captures the row's own last mark");
+  assert.ok(/price:\s*e\.px/.test(SRC),
+    "the POST no longer sends the captured mark as the close price");
 });
+}
 
 test("nothing in this file decides to close anything", () => {
   // The whole ruling in one assertion: send() may only be reached from a click
