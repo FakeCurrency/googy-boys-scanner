@@ -395,9 +395,31 @@
   font: 700 10px/1 var(--sans); letter-spacing: .4px; text-transform: uppercase;
   padding: 3px 7px; border-radius: 5px; background: var(--fill); color: var(--muted);
 }
+/* WHO DECIDED THIS EXIT (2026-08-13). Four exit_reason values ship; only
+   three had a rule, so the bot's 28-day time-stop and the owner clicking Close
+   rendered as the SAME neutral grey chip. On the live book that is 11 machine
+   decisions and 21 human ones wearing one colour, inside the record that is
+   supposed to be evidence about the machine.
+   MECHANICAL (the frozen rules acted): target / trail / stop / time — tinted.
+   MANUAL (a human acted): outlined, not filled, so it reads as a different
+   KIND of event rather than a different flavour of the same one. */
 .jr-reason-target { background: rgba(45,208,127,.15); color: #2dd07f; }
 .jr-reason-trail  { background: rgba(91,156,255,.15); color: var(--bot); }
 .jr-reason-stop   { background: rgba(255,91,91,.15);  color: #ff5b5b; }
+.jr-reason-time   { background: rgba(167,139,250,.15); color: #a78bfa; }
+.jr-reason-manual {
+  background: transparent; color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* The split line above the closed table. Deliberately plain text, not a card:
+   it is a caveat on the table beneath it, not a headline of its own. */
+.jr-decider {
+  font: 600 11.5px/1.5 var(--sans); color: var(--muted);
+  padding: 2px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 14px;
+}
+.jr-decider b { color: var(--text); font-weight: 700; }
+.jr-decider .jr-dec-bot b   { color: var(--bot); }
+.jr-decider .jr-dec-own b   { color: var(--text); }
 
 /* dual-line equity tags under each curve — smaller + gentler */
 .jr-eqsvg { width: 100%; height: 110px; display: block; }

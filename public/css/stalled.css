@@ -85,6 +85,21 @@
   }
   .st-row > .st-x { background: var(--card, #12151c); }
   .st-row > .st-x.st-arm { background: var(--red); }
+
+  /* THE ONLY WRITE PATH IN THE APPLICATION, and it shipped at ~22px tall
+     (2026-08-13). journal.css already fixed this class of miss for the SORT
+     buttons one file over — "measured at 390px before this rule: 23x21px,
+     which is a miss waiting to happen" — and the button that books a real
+     position against the track record was left at that size. A mis-tap here
+     does not re-sort a table, it closes a position, and the row beside it is
+     another position. 44px is the floor, applied to the disabled twin too so
+     the grid does not resize when a row acquires a price. */
+  .st-x, .st-x-off {
+    min-height: 44px; padding-top: 0; padding-bottom: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* The bar's own controls sit under the same thumb. */
+  .st-go, .st-clear { min-height: 44px; }
 }
 
 /* The ticker is a link to its chart (2026-08-07). Deliberately inherits the

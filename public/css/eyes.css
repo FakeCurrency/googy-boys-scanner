@@ -71,3 +71,20 @@
   color: var(--orange); border-color: rgba(255,159,10,0.55);
   background: rgba(255,159,10,0.10);
 }
+
+/* MOBILE — this file shipped with no width breakpoint at all (2026-08-13).
+   styles.css gives #deck-pills .fpill a 38px floor and the toolbar controls
+   40px; the Eyes strip landed after that pass and was never included, so its
+   chips are ~27px and the "+N more" ~25px — on the strip that is deliberately
+   the FIRST thing on the deck. One change: a 40px tap-target floor on every
+   chip and on the more-link.
+   The chips stay WRAPPING rather than becoming a horizontal scroller: they are
+   already capped at 8 (app.js), the strip is the one list the owner asked never
+   to miss, and a name that scrolls out of view on the surface built so nothing
+   is missed would defeat the point. Height is the cost; being seen is the job. */
+@media (max-width: 680px) {
+  .ey-chip, .ey-more {
+    min-height: 40px; padding-top: 0; padding-bottom: 0;
+    display: inline-flex; align-items: center;
+  }
+}
