@@ -248,7 +248,19 @@ jobs:
           # split + unrealized R + closed record + the stall-probe line. The
           # diff was eyeballed before this bump: one new element, everything
           # below shifts one line, nothing else moved.
-          key: screenshot-baselines-v14-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          #
+          # v14 -> v15 (2026-08-13): INTENTIONAL, owner-ordered, and MEASURED
+          # rather than assumed — the baseline was cut from origin/main and the
+          # working tree diffed against it before this bump:
+          #   index-desktop 0.25%  ·  index-390 2.42%  ·  journal both 0.00%
+          # Only index-390 exceeds the 2% budget, and it is reflow, not
+          # breakage: the deck strip now leads with capacity ("24 of 30 slots ·
+          # 0 stalled · 6 free"), which wraps to a third line at 390px and
+          # pushes the pills row down. Verified alongside: zero horizontal
+          # overflow at 360/390/430, smoke green, no page errors. The A+ pill
+          # also renumbered (products no longer counted as opportunity), which
+          # changes glyph widths on both index shots.
+          key: screenshot-baselines-v15-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
