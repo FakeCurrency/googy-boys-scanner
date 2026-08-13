@@ -67,8 +67,23 @@
     markets: ["NAS100", "US30", "XAU", "CL"],
     strategies: ["trend_pullback"],
     bias_tf: "Weekly+3D", entry_tf: "H4",
-    min_rr: 2, bias: "weekly_3d",
-    risk_pct: 0.25, loss_limit: 3, max_positions: 5,
+    // ALIGNED TO THE ENGINE 2026-08-13, and pinned by test/risk_defaults.test.js.
+    // These four are MIRRORS of scanner/config.py — VIVEK_BOT_RISK_PCT 0.35,
+    // CONSEC_LOSS_PAUSE 3, VIVEK_BOT_MAX_POSITIONS 30, and bot_rules.json's
+    // min_rr 1.5. They shipped as 0.25 / 3 / 5 / 2, a 2025-era hardcode nothing
+    // compared against anything, and the comment below already knew.
+    //
+    // Being wrong here is not cosmetic and it is not rare. `rulesDefaults()`
+    // only overlays the server values when the bot_rules.json fetch SUCCEEDS,
+    // while `loadRules()` spreads DEFAULT_RULES unconditionally and is what
+    // seeds RULES on every load. So the offline / first-paint / cached-page
+    // path — exactly when nobody is in a position to check — showed 0.25% risk
+    // over 5 positions against a book that risks 0.35% over 30.
+    //
+    // This is the same defect risk_manager.js's PUBLISHED_DEFAULTS had (TOP100
+    // #34), in a second file, with no test. It has one now.
+    min_rr: 1.5, bias: "weekly_3d",
+    risk_pct: 0.35, loss_limit: 3, max_positions: 30,
     leverage: 2.5,
     use_scanner_targets: true, trail_supertrend: true,
     scale_out_tp1: true, be_after_tp1: true, multi_entry: true,
