@@ -245,6 +245,34 @@
   }
 
   // ── compact strip (index.html) ─────────────────────────────────────────────
+  // CAPACITY IS NOT THIS STRIP'S JOB — and saying it anyway made it wrong
+  // (2026-08-13). `data.book` is a SCAN-TIME SNAPSHOT: only an ASX/NASDAQ scan
+  // rewrites sector_breadth.json, so between a scan and the next one it holds
+  // whatever the book looked like hours ago. On 2026-08-13 that read
+  // "29/30 · 1 free · $5k to deploy" and a note saying "the book is nearly out
+  // of room", roughly 100px from #bot-activity, which had read the LIVE book
+  // and rules and said "20 of 30 slots · 0 stalled · 10 free". The owner had
+  // just closed nine positions; the loud number was the stale one, on the
+  // screen where the decision to stop hunting gets made.
+  //
+  // The fix is to stop competing rather than to sync: app.js's bookFacts()
+  // already reads vivek_bot_book.json + bot_rules.json live, and stalled.js
+  // derives the same three numbers the same way. Three surfaces, one rule. The
+  // compact strip drops the chip AND any capacity note; the FULL panel on
+  // sectors.html keeps both, where it is labelled as scan-time and sits beside
+  // the deployNote reconciliation it exists for.
+  const CAP_NOTE_RE = /\bslots?\b|\bout of room\b|\bat cap\b|\bcapacity\b/i;
+
+  function noteHTML(hz) {
+    const notes = (hz && hz.notes) || [];
+    // notes[0] is the sustained-run line by construction (sectorbreadth.py does
+    // notes.insert(0, ...) precisely so this strip shows it). Skip it only when
+    // it is a capacity claim — this strip no longer states capacity, so it must
+    // not state it in prose either.
+    const first = notes.find((n) => n && !CAP_NOTE_RE.test(String(n)));
+    return first ? `<div class="hz-strip-note">${esc(first)}</div>` : "";
+  }
+
   function renderStrip(host, data) {
     const market = activeMarket();
     const blk = (data.markets || {})[market];
@@ -270,11 +298,9 @@
               <em>${b.held ? b.held + " held" : "0 held"}${run > 1 ? ` · ${run} sessions` : ""}</em></a>`;
             }).join("")
           : `<span class="hz-lead flat">No sector is leading on breadth today.</span>`}</span>
-        ${bookHTML(data.book, true)}
         <a class="hz-strip-more" href="sectors.html#horizon-panel">Full board →</a>
       </div>
-      ${(hz.notes || []).length
-        ? `<div class="hz-strip-note">${esc(hz.notes[0])}</div>` : ""}`;
+      ${noteHTML(hz)}`;
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────

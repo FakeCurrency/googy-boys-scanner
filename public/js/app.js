@@ -3599,7 +3599,6 @@
   bind();
   loadCaps();
   loadSectors();   // Fix-10 #10
-  loadEntryQuality();
   loadBotActivity();
   if (!MEASURE) setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
   // Keep the relative "Last scanned" + freshness badge honest while the tab
@@ -3623,6 +3622,19 @@
     if (!MEASURE) whenIdle(prefetchMarkets);
     if (!MEASURE) whenIdle(renderSystemStatus);   // UX #2: status pill after first paint
     if (!MEASURE) whenIdle(maybeOnboard);         // UX #3: first-visit intro (once, ever)
+    // OFF THE BOOT PATH (2026-08-13). loadEntryQuality fetches
+    // vivek_backtest_longonly.json — 1,022 KB, the single largest item the
+    // deck requests, LARGER THAN THE SCAN PAYLOAD ITSELF — to read three
+    // numbers (~300 bytes) that tint three filter chips. It used to be called
+    // synchronously in the boot block above, so every first paint on every
+    // device paid a megabyte for a colour. It only ever re-tints chips that
+    // are already rendered and usable, so it is idle work by definition.
+    // Measured first-paint data before this move: 2.02 MB.
+    // It sits HERE, inside load().then(), and not fifteen lines earlier where
+    // it reads more naturally: `whenIdle` is a const, so calling it above its
+    // own declaration is a temporal-dead-zone ReferenceError at boot — which
+    // `node --check` passes cleanly, because it is not a syntax error.
+    if (!MEASURE) whenIdle(loadEntryQuality);
     // UX #10: coming BACK from a chart lands you where you left the list, not
     // at the top. Position saved per market+tab on leave; restored only when
     // the referrer is the chart page (bfcache does it natively when it can —

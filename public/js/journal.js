@@ -828,6 +828,52 @@
   // UX-20 #13: registry backing the per-row 📤 trade-card buttons — rebuilt on
   // every render so data-card="side:idx" always resolves to the row it sits on.
   const cardReg = { bot: [], me: [] };
+  // WHO DECIDED — the split the whole record turns on (2026-08-13).
+  //
+  // The bot book is meant to be evidence about the FROZEN RULES. It is not,
+  // and has not been for two weeks: on the live book 21 of 40 closes carry
+  // exit_reason "manual", i.e. the owner clicked Close. Every aggregate on this
+  // page — win rate, expectancy, the equity curve, max drawdown, the edge
+  // tracker, the deck's "record 14W-26L" line — sums all forty as one series.
+  // The two halves do not resemble each other: the rules produced -6.97R over
+  // 19 trades, the owner's closes +0.16R over 21. Read as one number they
+  // cancel into a shrug.
+  //
+  // This is REPORT-ONLY and deliberately so. It changes nothing about what the
+  // bot takes, nothing about the stats() series, and nothing about what any
+  // existing consumer reads — it states the composition of the row set the
+  // reader is about to look at, immediately above it. Splitting the equity
+  // curve itself is a bigger call and is the owner's.
+  const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
+
+  function deciderSplit(list) {
+    const rows = Array.isArray(list) ? list : [];
+    const closed = rows.filter((t) => t && t.status === "closed");
+    const r = (t) => (typeof t.realized_r === "number" ? t.realized_r : 0);
+    const bot = closed.filter((t) => MECHANICAL_EXITS.includes(String(t.exit_reason || "").toLowerCase()));
+    // Anything not mechanical is a human act. An ABSENT exit_reason counts as
+    // manual for the same reason closedRows renders it that way: a row with no
+    // recorded mechanism was not closed by one.
+    const own = closed.filter((t) => !MECHANICAL_EXITS.includes(String(t.exit_reason || "").toLowerCase()));
+    const sum = (a) => a.reduce((n, t) => n + r(t), 0);
+    return { n: closed.length, bot: bot.length, own: own.length,
+             botR: sum(bot), ownR: sum(own) };
+  }
+
+  function deciderHTML(list) {
+    const s = deciderSplit(list);
+    if (!s.n) return "";
+    const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
+    // Silent when there is nothing to disambiguate — a book closed entirely by
+    // the rules needs no caveat, and a line that always shows stops being read.
+    if (!s.own || !s.bot) return "";
+    return `<div class="jr-decider">` +
+      `<span class="jr-dec-bot">🤖 rules closed <b>${s.bot}</b> · <b>${fmt(s.botR)}</b></span>` +
+      `<span class="jr-dec-own">✋ you closed <b>${s.own}</b> · <b>${fmt(s.ownR)}</b></span>` +
+      `<span title="Every stat, curve and drawdown on this page pools both. They are different questions.">` +
+      `the stats below pool both</span></div>`;
+  }
+
   function closedRows(list, side) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">R</th><th class="num">$</th>
@@ -1129,7 +1175,7 @@
     statCards($("#" + pre + "-stats"), s);
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
     paintOpen(side);
-    $("#" + pre + "-closed").innerHTML = closedRows(d.closed, side);
+    $("#" + pre + "-closed").innerHTML = deciderHTML(d.closed) + closedRows(d.closed, side);
     $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
     $("#" + pre + "-closed-n").textContent = d.closed.length ? `(${d.closed.length})` : "";
     return s;

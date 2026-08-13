@@ -258,15 +258,26 @@
   }
   function decorateTabBadges() {
     const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    // SCAN: A+ count for the market the dashboard will open (saved pref).
-    let market = "asx";
-    try { market = JSON.parse(localStorage.getItem("gbs:prefs") || "{}").market || "asx"; } catch (_) {}
-    if (!["asx", "nasdaq", "crypto"].includes(market)) market = "asx";
-    grab(`data/${market}_prices.json`).then((d) => {
-      const rows = (d && d.rows) || {};
-      const aplus = Object.values(rows).filter((r) => r && r.grade === "A+").length;
-      setBadge("index", aplus);
-    });
+    // SCAN: RETIRED 2026-08-13, and the reason is worth keeping.
+    //
+    // This badge counted `r.grade === "A+"` straight out of <m>_prices.json and
+    // rendered it on the mobile tab bar — the first number a phone user sees.
+    // On the 2026-08-13 ASX scan it read 96 while the page it links to read 52,
+    // because 44 of those 96 are cash/bond/ETF products. The deck stopped
+    // counting products as opportunity that morning; this badge never heard.
+    //
+    // It cannot be corrected here at any sensible price. The fund test is a
+    // NAME regex (PM.isFundReit / FUND_KW_RE), <m>_prices.json ships no `name`
+    // at all — only grade, grade_raw, dir, headline_tf — and the file that does
+    // is 448 KB, which is not a badge's budget. The remaining options were a
+    // THIRD copy of the keyword list in a file loaded on every page (the exact
+    // drift hazard test/risk_defaults.test.js exists to punish) or leaving it
+    // wrong. A badge that overstates opportunity by 85% is worse than no badge:
+    // it is the app disagreeing with itself in the one place a glance lands.
+    //
+    // The real fix is server-side — publish a tradeable count in the sidecar,
+    // once the heuristic has ONE home instead of two. Until then this stays off
+    // and the deck's own pills are the only place the number is stated.
     // JOURNAL: bot open positions (the one track record).
     grab("data/vivek_bot_book.json").then((d) => {
       setBadge("journal", ((d && d.open) || []).length);
