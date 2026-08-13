@@ -255,7 +255,6 @@ test("it still READS only the two published artifacts", () => {
   assert.deepEqual([...new Set(polled)], ["data/vivek_bot_book.json"]);
 });
 
-if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
 test("N picks become ONE request — the batch IS the concurrency fix", () => {
   // 2026-08-07: six of seven rapid closes were lost because each was its own
   // workflow run and the runs raced each other (mutex eviction + book rebase
@@ -275,9 +274,7 @@ test("N picks become ONE request — the batch IS the concurrency fix", () => {
     "a rejected batch no longer restores the selection on every failure path");
   assert.ok(/releaseHolds\(host\)/.test(SRC), "nothing releases the held buttons");
 });
-}
 
-if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
 test("'closed' is only claimed once the BOOK says so, never off the 202", () => {
   // A queued dispatch is not a landed close — that gap is exactly where the
   // six went missing, each one reporting success it never achieved. The batch
@@ -308,9 +305,7 @@ test("'closed' is only claimed once the BOOK says so, never off the 202", () => 
   assert.ok(Number(ms[1]) * Number(tries[1]) >= 15 * 60 * 1000,
     "the landing watch gives up before a mutex-queued run can finish (needs >= 15 min)");
 });
-}
 
-if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
 test("nothing is sent by picking — only the bar's confirm calls send()", () => {
   // The two-act property the old two-click design had, kept across the batch
   // redesign: a row click only toggles a pick (visible, reversible), and the
@@ -325,7 +320,6 @@ test("nothing is sent by picking — only the bar's confirm calls send()", () =>
   assert.ok(/Close \$\{n\} now/.test(SRC), "the confirm no longer states the count it will close");
   assert.ok(/key === "Escape"/.test(SRC), "Escape must empty the basket");
 });
-}
 
 test("the price is the row's own last_mark, and no mark means no close", () => {
   assert.equal(closePrice({ last_mark: 19.335 }), 19.335);
@@ -338,7 +332,6 @@ test("the price is the row's own last_mark, and no mark means no close", () => {
   assert.equal(closePrice({}), null);
 });
 
-if (/st-go/.test(SRC)) {   // transitional: pre-batch source skips this pin
 test("the numbers the owner reads before confirming come from the rows themselves", () => {
   // Sub-dollar names need the extra places or a crypto mark reads as $0.00.
   assert.equal(fmtPx(19.335), "$19.34");
@@ -354,7 +347,6 @@ test("the numbers the owner reads before confirming come from the rows themselve
   assert.ok(/price:\s*e\.px/.test(SRC),
     "the POST no longer sends the captured mark as the close price");
 });
-}
 
 test("nothing in this file decides to close anything", () => {
   // The whole ruling in one assertion: send() may only be reached from a click
