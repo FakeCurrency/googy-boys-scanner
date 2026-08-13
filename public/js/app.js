@@ -551,8 +551,23 @@
     // a dual, this key is what stops the strip sorting by the alphabet.
     const pq = (x) => (typeof PM !== "undefined" && PM.pmLegQuality)
       ? PM.pmLegQuality(x.detail && x.detail.phasemap) : 0;
-    return (b.count - a.count) || (ap(b) - ap(a)) || (pq(b) - pq(a)) ||
-      a.ticker.localeCompare(b.ticker);
+    // Product penalty (2026-08-13, owner-ordered). A cash/bond ETF sitting on
+    // its 200-SMA in two lenses is a real agreement between two detectors and
+    // a non-event to trade — the chip already says FUND, but a marker the eye
+    // skips is not a ranking. Products now sort BELOW operating companies at
+    // equal lens count, so the default top set is names you could act on.
+    //
+    // Deliberately BELOW count and ABOVE grade: a triple-lens product is
+    // still a genuine triple and keeps its place ahead of duals (the strip's
+    // whole premise is agreement), but among equals the real company leads.
+    // Degrades to 0 — no penalty — when PM is absent, same as pq above.
+    const prod = (x) => {
+      const v = x.detail && x.detail.vivek;
+      return (typeof PM !== "undefined" && PM.isFundReit && v
+        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker })) ? 1 : 0;
+    };
+    return (b.count - a.count) || (prod(a) - prod(b)) || (ap(b) - ap(a)) ||
+      (pq(b) - pq(a)) || a.ticker.localeCompare(b.ticker);
   });
 
   const eyesHTML = (rows, market, cap) => {
@@ -561,7 +576,16 @@
     cap = cap || 8;
     const nTriple = ranked.filter((x) => x.count >= 3).length;
     const isAp = (x) => !!(x.detail && x.detail.vivek && x.detail.vivek.grade === "A+");
-    const nAp = ranked.filter(isAp).length;
+    const isProd = (x) => {
+      const v = x.detail && x.detail.vivek;
+      return !!(typeof PM !== "undefined" && PM.isFundReit && v
+        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker }));
+    };
+    // The "N A+" summary counts TRADEABLE A+ only (2026-08-13), for the same
+    // reason the deck pills do: a headline that includes bond ETFs overstates
+    // how much of this strip is actionable. The chips themselves still render
+    // every name, marked.
+    const nAp = ranked.filter((x) => isAp(x) && !isProd(x)).length;
     const chips = ranked.slice(0, cap).map((x) => {
       const ap = isAp(x);
       const arrow = x.side === "short" ? "▼" : "▲";
@@ -625,13 +649,10 @@
     const box = $("#deck-pills");
     if (!box) return;
     const res = (d && d.results) || [];
-    const real = res.filter((r) => !isFundReit(r));
-    const tradeable = real.filter((r) => r.grade === "A+" || r.grade === "A");
-    const top = real.slice()
+    const c = deckCounts(res, isFundReit);
+    const top = c.real.slice()
       .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
-    const nAplus = res.filter((r) => r.grade === "A+").length;
-    const nA = res.filter((r) => r.grade === "A").length;
-    const nAt = res.filter((r) => r.at_level).length;
+    const nAplus = c.aplus, nA = c.a, nAt = c.atLevel;
     const nConf = state.confl ? state.confl.all().length : null;
     // #93: every filter pill carries aria-pressed so its on/off state is exposed
     // to assistive tech, not just conveyed by the is-active colour.
@@ -647,7 +668,18 @@
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
       (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
         `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
-      `<span class="deck-npick" title="A+/A setups excluding funds/REITs — what's actually tradeable">${tradeable.length} tradeable</span>`;
+      `<span class="deck-npick" title="A+/A setups excluding funds/REITs — what's actually tradeable">${c.tradeable} tradeable</span>` +
+      // The counterweight to the corrected counts above: say out loud how many
+      // rows were set aside, so "96 A+" becoming "52 A+" reads as an
+      // explanation rather than as names going missing. Informational, not a
+      // filter — the rows are still in the list (dimmed by default via the
+      // existing FUNDS DIMMED toggle), and this only reports what the grade
+      // counts no longer include.
+      (c.products
+        ? `<span class="deck-products" title="${esc(c.products + " ETF / fund / REIT / LIC row(s) on this scan"
+            + (c.aplusProducts ? ", " + c.aplusProducts + " of them graded A+" : "")
+            + ". They hug the 200-SMA so they over-produce reactions, the bot does not trade them, and most CFD brokers do not list them — so they are not counted as A+/A opportunity above. They are still in the list below, dimmed.")}">⊘ ${c.products} products</span>`
+        : "");
     box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
       state.view = "results";
       state.tab = b.dataset.goto;
@@ -666,7 +698,7 @@
     // Grade-tab counts + watch count live in the toolbar as before
     $("#count-aplus").textContent = nAplus;
     $("#count-a").textContent = nA;
-    $("#count-watch").textContent = res.filter((r) => ["B", "C", "B+", "WATCH"].includes(r.grade)).length;
+    $("#count-watch").textContent = c.watch;
     $("#watch-count").textContent = res.filter((r) => isStarred(r.symbol)).length;
   }
 
@@ -683,13 +715,64 @@
     "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
   const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
   const NON_OPERATING_SECTORS = new Set(["not applicable", "not applic", "n/a"]);
+  // WORD-BOUNDARY matching, aligned with PM.isFundReit (2026-08-13). This copy
+  // was still on the old `includes()` that phasemap-shared.js fixed on
+  // 2026-08-01, so the two disagreed on live data: `includes("ETF")` matches
+  // INSIDE "Netflix, Inc. - Common Stock" ("N-ETF-LIX"), so the DECK dimmed
+  // NFLX and excluded it from `tradeable` while the Eyes chip beside it —
+  // reading PM's fixed copy — correctly called it an operating company. The
+  // keyword LIST is unchanged; only how it is matched. Measured on the
+  // committed scans: NFLX is the only row the two versions disagreed about.
+  const FUND_KW_RE = new RegExp("\\b(" + FUND_NAME_KEYWORDS
+    .map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b");
   function isFundReit(r) {
     const sector = String((r && r.sector) || "").trim().toLowerCase();
     if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
     if (NON_OPERATING_SECTORS.has(sector)) return true;
     const name = String((r && r.name) || "").toUpperCase();
-    return FUND_NAME_KEYWORDS.some((kw) => name.includes(kw));
+    return FUND_KW_RE.test(name);
   }
+
+  // ── what the deck COUNTS as opportunity (2026-08-13, owner-ordered) ────────
+  // Pure, and separated out precisely so it can be tested: renderDeckPills
+  // reads the DOM and `state`, so the arithmetic that decides what the cockpit
+  // claims was previously unreachable by any test.
+  //
+  // THE DEFECT THIS FIXES. `renderDeckPills` computed `tradeable` and `top`
+  // over products-excluded rows but `nAplus` / `nA` / the toolbar tab counts
+  // over EVERY row — so on the committed ASX scan the A+ pill read 96 while
+  // 44 of those (46%) were cash/bond/ETF products the bot cannot and does not
+  // trade (1GOV, AAA, FLOT, BILL, …). Two numbers, one screen, different
+  // universes, and the bigger one was the headline.
+  //
+  // The counts now answer the question the number is actually read as: how
+  // much TRADEABLE opportunity is on the tape. Nothing is hidden — the
+  // products total is returned beside it and rendered as its own chip, so the
+  // difference is visible rather than silently absorbed.
+  //
+  // DISPLAY ONLY. `scanner/broker/vivek_bot.py::_is_fund_or_reit` already
+  // excludes these from what the bot takes; this changes what the deck SAYS,
+  // never what the bot does.
+  const deckCounts = (rows, isProduct) => {
+    const res = Array.isArray(rows) ? rows : [];
+    const real = res.filter((r) => !isProduct(r));
+    const products = res.length - real.length;
+    const byGrade = (list, g) => list.filter((r) => r && r.grade === g).length;
+    return {
+      total: res.length,
+      real,
+      products,
+      // Grade counts are TRADEABLE-only — see above.
+      aplus: byGrade(real, "A+"),
+      a: byGrade(real, "A"),
+      // …and so is the count of products sitting at an A+ grade, which is the
+      // one number that says how big the correction actually was.
+      aplusProducts: byGrade(res, "A+") - byGrade(real, "A+"),
+      watch: real.filter((r) => r && ["B", "C", "B+", "WATCH"].includes(r.grade)).length,
+      atLevel: real.filter((r) => r && r.at_level).length,
+      tradeable: real.filter((r) => r && (r.grade === "A+" || r.grade === "A")).length,
+    };
+  };
 
   function scanDateMs() {
     const t = state.data && state.data.generated_at ? Date.parse(state.data.generated_at) : NaN;
@@ -2132,7 +2215,14 @@
         return `<div class="row-group row-group-sector" style="--grade-color:var(--blue)"><span>${esc(String(k).toUpperCase())}</span><span class="row-group-n">${inG.length}${ap ? ` · ${ap} A+` : ""}</span></div>`;
       }
       const count = list.reduce((n, r) => n + (r.grade === k ? 1 : 0), 0);
-      return `<div class="row-group" data-grade="${esc(k)}" style="--grade-color:${GRADE_VAR[k] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[k] || k)}</span><span class="row-group-n">${count}</span></div>`;
+      // Products are IN the list (dimmed) but are not opportunity, so a bare
+      // "67" under a pill that now reads "51 A+" is the same two-numbers-one-
+      // screen problem the pill fix exists to end. Says both, in the sector
+      // header's existing `count · qualifier` shape: the section is honest
+      // about what it contains AND about what is actually tradeable.
+      const realN = list.reduce((n, r) => n + ((r.grade === k && !isFundReit(r)) ? 1 : 0), 0);
+      const qual = (realN !== count) ? ` · ${realN} tradeable` : "";
+      return `<div class="row-group" data-grade="${esc(k)}" style="--grade-color:${GRADE_VAR[k] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[k] || k)}</span><span class="row-group-n">${count}${qual}</span></div>`;
     };
     const rowOrGroup = (r, idx) => (groupAt[idx] ? groupHdr(groupAt[idx]) : "") + rowHtml(r, idx);
 
@@ -2346,7 +2436,10 @@
   // with synthetic books. `stalled` comes from the probe's own `stale_pinged`
   // stamps in the committed book, so the deck re-types NO thresholds: it shows
   // exactly what the stall probe flagged, or nothing.
-  const bookFacts = (b) => {
+  // `rules` is OPTIONAL and a degrade, never a dependency (2026-08-13): without
+  // bot_rules.json the strip still reports open/stalled/record exactly as
+  // before, it simply cannot name the cap. Same posture stalled.js takes.
+  const bookFacts = (b, rules) => {
     const open = (b && Array.isArray(b.open)) ? b.open : [];
     const closed = (b && Array.isArray(b.closed)) ? b.closed : [];
     const mkts = { asx: 0, nasdaq: 0, crypto: 0 };
@@ -2362,8 +2455,26 @@
       const r = +((p && p.realized_r) ?? NaN);
       if (isFinite(r)) { realized += r; if (r > 0) wins++; else losses++; }
     }
+    // ── capacity (owner-ordered 2026-08-13) ────────────────────────────────
+    // The number that decides whether hunting is even useful, and until now it
+    // lived only on the Journal page. The cap is GLOBAL across markets, so a
+    // full book declines every new A+ before any quality check runs — meaning
+    // a deck full of fresh A+ names can be entirely un-actionable and nothing
+    // on the deck said so. Read-only: derived from the published book and the
+    // published rules, writes nothing, and no stall logic is re-implemented
+    // (the `stalled` list above is the engine's own stale_pinged stamps).
+    //
+    // Same derivation as stalled.js's `summarize`, deliberately, so the two
+    // surfaces cannot print different free-slot counts. (That one additionally
+    // filters `status === "open"`; the book's `open` array is by construction
+    // open-only — a close MOVES the row to `closed` — so they agree, and this
+    // copy stays permissive so status-less legacy rows still count.)
+    const fin = (v) => (typeof v === "number" && isFinite(v)) ? v : null;
+    const maxOpen = fin(rules && rules.max_open_total) || fin(rules && rules.max_positions);
+    const free = maxOpen != null ? Math.max(0, maxOpen - open.length) : null;
     return { open: open.length, mkts, unreal: urN ? ur : null,
-             wins, losses, realized: (wins + losses) ? realized : null, stalled };
+             wins, losses, realized: (wins + losses) ? realized : null, stalled,
+             maxOpen, free, atCap: maxOpen != null && open.length >= maxOpen };
   };
 
   async function loadBotActivity() {
@@ -2373,6 +2484,12 @@
       const res = await fetchT("data/vivek_bot_book.json", { cache: "no-cache" });
       if (!res.ok) return;
       const b = await res.json();
+      // The cap lives in bot_rules.json, not in the book. Fetched SECOND and
+      // separately so it can fail without costing the strip: a missing or
+      // unreadable rules file degrades capacity to "not shown", never to a
+      // wrong free-slot count and never to a blank scoreboard.
+      const rules = await fetchT("data/bot_rules.json", { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const evts = [];
       for (const p2 of b.open || []) {
         const t = Date.parse(p2.opened_at || "");
@@ -2397,10 +2514,23 @@
       // count with the market split, live unrealized R across the book, the
       // honest closed record, and — on its own line so it cannot be skimmed
       // past — the positions the stall probe has flagged as sitting still.
-      const facts = bookFacts(b);
+      const facts = bookFacts(b, rules);
       const fmtR = (r) => (r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(1)}R`);
+      // CAPACITY FIRST (owner-ordered 2026-08-13). The deck is where names get
+      // hunted, and until now the only place that said whether there was
+      // anywhere to put one was the Journal page. The cap is global, so a full
+      // book declines every new A+ before quality is even considered — "96 A+"
+      // and "0 free" is a different morning to "96 A+" and "8 free", and the
+      // deck could only ever tell you the first half. Journal's own wording
+      // ("N of 30 A+ slots", "FULL") is reused verbatim so the two surfaces
+      // read as one system.
+      const capTxt = facts.maxOpen == null
+        ? `${facts.open} open`
+        : `${facts.open} of ${facts.maxOpen} slots · ` +
+          `${facts.stalled.length} stalled · ` +
+          (facts.atCap ? "FULL" : `${facts.free} free`);
       const sumTxt =
-        `Paper book: ${facts.open} open (${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
+        `Paper book: ${capTxt} (${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
         `${facts.mkts.crypto} CRY) · unrealized ${fmtR(facts.unreal)} · ` +
         `record ${facts.wins}W–${facts.losses}L ${fmtR(facts.realized)}`;
       const shown = facts.stalled.slice(0, 6);
