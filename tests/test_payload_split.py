@@ -124,3 +124,59 @@ def test_every_fixture_summary_has_a_paired_detail_fixture():
             assert "analysis" not in r and "markers" not in r, m
             for p in (r.get("plans") or {}).values():
                 assert set(p) <= set(config.VIVEK_SUMMARY_PLAN_FIELDS), m
+
+
+# ── 5. the pair is published COMPACT (2026-08-13) ────────────────────────────
+# The diet's ~0.4 MB summary target had been read against a PRETTY-PRINTED file
+# and judged missed: live ASX measured 742.9 KB on disk against 448.5 KB of
+# actual content — 39.6% of the deck's first paint was indentation. The split
+# had hit its number all along. These pins hold the whitespace out.
+
+
+def test_the_published_pair_carries_no_pretty_printing(tmp_path):
+    output.write_vivek_pair(copy.deepcopy(VK), tmp_path, "asx")
+    for name in ("asx_vivek.json", "asx_vivek_detail.json"):
+        text = (tmp_path / name).read_text(encoding="utf-8")
+        assert "\n" not in text, f"{name} is pretty-printed again"
+        assert '", "' not in text and '": ' not in text, f"{name} carries padded separators"
+
+
+def test_compacting_changed_ONLY_whitespace(tmp_path):
+    """The load-bearing half: same bytes of meaning, fewer bytes of file.
+
+    A publisher that silently dropped or reordered a field would also be
+    smaller, so size alone proves nothing. This re-publishes the same payload
+    pretty and compact and asserts the PARSED results are equal.
+    """
+    pretty = tmp_path / "pretty"
+    compact = tmp_path / "compact"
+    pretty.mkdir()
+    summary, detail = output.split_vivek(copy.deepcopy(VK))
+    output.write_json(pretty / "asx_vivek.json", summary)               # indent=2 default
+    output.write_json(pretty / "asx_vivek_detail.json", detail)
+    output.write_vivek_pair(copy.deepcopy(VK), compact, "asx")
+    for name in ("asx_vivek.json", "asx_vivek_detail.json"):
+        a = json.loads((pretty / name).read_text(encoding="utf-8"))
+        b = json.loads((compact / name).read_text(encoding="utf-8"))
+        assert a == b, f"{name}: compacting changed the content, not just the layout"
+        assert (compact / name).stat().st_size < (pretty / name).stat().st_size
+
+
+def test_there_is_deliberately_NO_byte_BUDGET_on_the_live_payload():
+    """A size budget read off public/data/ would be a gate on the TAPE.
+
+    That is the Lighthouse-budget failure exactly (see CLAUDE.md, "The
+    Lighthouse budget was measuring the TAPE"): the file grows with how many
+    names set up that day, test.yml's path filter excludes public/data/**, and
+    the red lands on whoever next pushes CODE. The pins above are properties of
+    the WRITER and are size-independent on purpose. Do not "complete" them with
+    an assertion about the size of a live file.
+    """
+    src = (ROOT / "tests" / "test_payload_split.py").read_text(encoding="utf-8")
+    body = src.split("def test_there_is_deliberately")[0]
+    # Naming the path in a staging-list assertion is fine; OPENING it is not.
+    for reader in ('ROOT / "public"', '"public/data/' + '" +', "open(\"public/data"):
+        assert reader not in body, (
+            f"a test in this file now reads the live payload ({reader}) - "
+            "re-read this docstring before adding a size assertion"
+        )
