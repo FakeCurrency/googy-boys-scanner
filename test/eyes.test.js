@@ -266,7 +266,6 @@ test("renderEyes is hooked into BOTH the confluence load and the market-switch r
 // The chip already SAID fund. A marker the eye skips is not a ranking, so a
 // bond ETF could still lead the strip that exists to answer "what needs my
 // eyes". Products now sort below operating companies at equal lens count.
-if (/prod\(a\) - prod\(b\)/.test(SRC)) {   // transitional: item-1 penalty
 suite("products rank below real companies");
 
 // Distinct from the file's `mk` above: this one carries name+sector, which is
@@ -326,7 +325,6 @@ test("with no PM the penalty degrades to nothing, exactly like pmLegQuality", ()
   assert.deepStrictEqual(out, ["AAA", "FMG"], "alphabetical fallback, no throw");
 });
 
-}
 
 console.log(`\n${"─".repeat(48)}`);
 if (failed) {

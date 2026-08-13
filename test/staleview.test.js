@@ -407,8 +407,6 @@ test("bookFacts: a zero-R close counts as a loss, never a win", () => {
   assert.strictEqual(f.wins, 0); assert.strictEqual(f.losses, 1);
 });
 
-if (bookFacts({ open: [], closed: [] }, { max_open_total: 30 }).maxOpen === 30) {
-// transitional: these run only once bookFacts carries the cap
 test("bookFacts: capacity — open of cap, free, and FULL, from the PUBLISHED rules", () => {
   // The number that decides whether hunting is useful at all. Derived the same
   // way stalled.js derives it so the deck and the Journal can never print
@@ -459,22 +457,18 @@ test("bookFacts: capacity is READ-ONLY — the caller's book is never touched", 
   assert.strictEqual(JSON.stringify(book), snapshot);
 });
 
-}
-
 test("the strip renders the stall line only when the probe flagged something, escaped, to the journal", () => {
   const APP3 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
   const body = APP3.slice(APP3.indexOf("async function loadBotActivity"), APP3.indexOf("function startClocks") > 0 ? APP3.indexOf("function startClocks") : undefined);
   // Signature widened 2026-08-13 to carry the cap (bookFacts(b, rules)); the
   // INTENT of this pin is unchanged — the strip renders from the one tested
   // function, never from sums assembled inline where nothing can reach them.
-  assert.ok(/const facts = bookFacts\(b(, rules)?\)/.test(body),
+  assert.ok(/const facts = bookFacts\(b, rules\)/.test(body),
     "the strip must render from bookFacts, not ad-hoc sums");
-  if (/bookFacts\(b, rules\)/.test(body)) {   // transitional: capacity landed
-    assert.ok(/data\/bot_rules\.json/.test(body),
-      "the strip no longer reads the cap, so it cannot show free slots");
-    assert.ok(/facts\.atCap \? "FULL"/.test(body),
-      "a full book must say FULL rather than quietly reading '0 free'");
-  }
+  assert.ok(/data\/bot_rules\.json/.test(body),
+    "the strip no longer reads the cap, so it cannot show free slots");
+  assert.ok(/facts\.atCap \? "FULL"/.test(body),
+    "a full book must say FULL rather than quietly reading '0 free'");
   assert.ok(/facts\.stalled\.length\s*\?/.test(body) || /stallTxt \?/.test(body),
     "the stall line must be GATED on the probe having flagged something");
   assert.ok(/esc\(stallTxt\)/.test(body), "the stall line text must go through esc()");
@@ -599,7 +593,6 @@ test("isHighConviction passes on a LITE-only plan (the five drift-pin fields)", 
 // test before. DISPLAY ONLY — vivek_bot._is_fund_or_reit already governs what
 // the bot takes, and nothing here touches it.
 // ---------------------------------------------------------------------------
-if (extractConst(APP, "deckCounts")) {   // transitional: item-1 surface
 const deckCounts = pull("deckCounts");
 
 // The real shape: an ETF at A+, a real company at A+, an A, a WATCH, and a
@@ -695,7 +688,5 @@ test("deckCounts: renderDeckPills actually USES it, and reports the products", (
   assert.ok(/\$\("#count-aplus"\)\.textContent = nAplus;/.test(APP),
     "the toolbar tab count no longer tracks the corrected A+ number");
 });
-
-}
 
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
