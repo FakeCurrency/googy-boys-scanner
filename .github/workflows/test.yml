@@ -41,6 +41,17 @@ on:
       #                run when the edit was to the HTML. The e2e job serves
       #                public/ wholesale, so these pages are what it walks.
       #
+      #
+      # Two more added 2026-08-13, same rule, and the sw.js one was a hole
+      # before its test existed: `public/js/**` does NOT cover `public/sw.js`
+      # (it sits at the public/ root), so every edit to the SERVICE WORKER —
+      # the thing that decides what is cached, for how long, and whether a
+      # deploy is even visible to an open tab — shipped with this whole gate
+      # skipped.
+      #
+      #   public/sw.js        tests/test_version_stamp.py reads its CACHE name
+      #   public/version.json tests/test_version_stamp.py IS the stamp gate
+      #
       # public/data/** stays OUT deliberately: every scan commits it ~20x a day
       # and each run would pay a full Playwright install to re-test code that
       # did not change.
@@ -48,6 +59,8 @@ on:
       - "pytest.ini"
       - "public/css/**"
       - "public/*.html"
+      - "public/sw.js"
+      - "public/version.json"
       # ALL workflows, not just this one (2026-07-28): tests/test_workflow_mutex.py
       # asserts on the concurrency scoping and the close re-dispatch, so the very
       # edits it exists to catch — a `concurrency:` block moved back up to
