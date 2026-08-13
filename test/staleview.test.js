@@ -689,4 +689,202 @@ test("deckCounts: renderDeckPills actually USES it, and reports the products", (
     "the toolbar tab count no longer tracks the corrected A+ number");
 });
 
+// ---------------------------------------------------------------------------
+/* The welcome tour must never wall a returning browser (2026-08-13).
+ *
+ * THE DEFECT. `maybeOnboard()` was gated on ONE key, `gbs:onboarded`. That is
+ * the most fragile state on the page: the `setItem` that writes it is wrapped
+ * in a swallow-everything try/catch (correctly — a quota error must not take
+ * the deck down), and any browser that clears script-writable storage takes it
+ * with everything else. Lose it by any route and a person who has used this app
+ * for weeks is met by a three-card welcome tour, over the whole deck, on every
+ * visit — and the only thing that ends it is dismissing it again, into the same
+ * write that failed last time.
+ *
+ * THE FIX. The gate asks a second question: has this browser done anything only
+ * a user can do? If yes, treat the tour as taken and BACK-FILL the flag so the
+ * cheap check answers on every later load. The branch is monotone — it can only
+ * ever show the tour LESS.
+ *
+ * THE TRAP THIS SUITE EXISTS FOR. `gbs:visit:<market>` looks like the perfect
+ * evidence key and is the worst possible one: `updateVisitDiff` writes it from
+ * the FIRST payload of the FIRST session, so counting it suppresses the tour for
+ * exactly the people it exists for. It is deliberately absent from the list, and
+ * `test_the_first_visit_snapshot_key_is_not_evidence` fails if anyone adds it.
+ *
+ * The second half of the safety argument is ORDERING, not content: the evidence
+ * is read ONCE at boot, above loadPrefs() / consumeViewApply() / the `?m=` deep
+ * link's savePrefs(), so nothing this session writes can be mistaken for a
+ * previous one. That is asserted by file position, because it is the kind of
+ * line a later refactor moves without noticing.
+ *
+ * WHAT THIS CANNOT FIX, stated rather than implied: a browser that evicts ALL
+ * script storage (Safari's 7-day rule on an uninstalled site) loses the evidence
+ * along with the flag, and a second origin (a *.pages.dev preview beside the
+ * custom domain) has its own storage entirely. Those are storage-lifetime and
+ * origin problems, not gate problems.
+ */
+// ---- slicers (the house pattern: let the parser say where it ends) ---------
+function constSrc(name) {
+  const s = extractConst(APP, name);
+  assert.ok(s, `app.js no longer declares const ${name}`);
+  return s;
+}
+function fnSrc(name) {
+  const at = APP.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
+  assert.ok(at >= 0, `app.js no longer declares function ${name}()`);
+  for (let i = APP.indexOf("}", at); i > 0 && i - at < 12000; i = APP.indexOf("}", i + 1)) {
+    const cand = APP.slice(at, i + 1);
+    try { new Function(`return (${cand});`); return cand; } catch (_) { /* keep walking */ }
+  }
+  assert.fail(`could not slice ${name}() — has its brace shape changed?`);
+}
+
+const KEYS_SRC = constSrc("PRIOR_USE_KEYS");
+const USED_SRC = constSrc("USED_BEFORE");
+const KEYS = eval(`(${KEYS_SRC})`); // eslint-disable-line no-eval
+
+// ---- a Map-backed localStorage, optionally read-only ------------------------
+function store(seed, opts) {
+  const m = new Map(Object.entries(seed || {}));
+  const o = opts || {};
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => { if (o.readOnly) throw new Error("QuotaExceededError"); m.set(k, String(v)); },
+    removeItem: (k) => m.delete(k),
+    _map: m,
+  };
+}
+
+// Re-evaluate the SHIPPED boot snapshot against a given store. `new Function`
+// (not vm) keeps the same realm; the IIFE runs at call time, exactly as it does
+// on boot.
+function usedBefore(seed, opts) {
+  return new Function("localStorage", `const PRIOR_USE_KEYS = ${KEYS_SRC}; return (${USED_SRC});`)(store(seed, opts));
+}
+
+// ---- the evidence set --------------------------------------------------------
+test("a virgin browser is NOT treated as returning", () => {
+  assert.strictEqual(usedBefore({}), false);
+});
+
+test("every advertised key on its own counts as prior use", () => {
+  assert.ok(KEYS.length >= 8, `expected a real evidence set, saw ${KEYS.length} keys`);
+  for (const k of KEYS) {
+    assert.strictEqual(usedBefore({ [k]: "x" }), true, `${k} should count as prior use`);
+  }
+});
+
+test("an EMPTY-STRING value still counts — the key existing is the evidence", () => {
+  // gbs:density is written as "" to mean "comfortable". A truthiness check here
+  // would silently drop the person who toggled density off again.
+  assert.strictEqual(usedBefore({ "gbs:density": "" }), true);
+});
+
+test("the first-visit snapshot key is NOT evidence, and must never become it", () => {
+  // updateVisitDiff writes gbs:visit:<market> from the first payload of the
+  // FIRST session. Counting it would suppress the tour for every new user.
+  assert.ok(!KEYS.includes("gbs:visit"), "gbs:visit must not be in PRIOR_USE_KEYS");
+  assert.ok(!KEYS.some((k) => k.startsWith("gbs:visit")), "no gbs:visit:* key may be evidence");
+  assert.strictEqual(usedBefore({ "gbs:visit:asx": "{}" }), false);
+  assert.strictEqual(usedBefore({ "gbs:visit:asx": "{}", "gbs:visit:nasdaq": "{}" }), false);
+});
+
+test("the app's own maintenance keys are not evidence either", () => {
+  // Written by the app, not by a person: a one-shot purge marker and the alert
+  // dedupe map. Neither says anyone has USED anything.
+  for (const k of ["gbs:purged:v1", "gbs:notified", "gbs:cache:asx", "gbs:view-apply"]) {
+    assert.strictEqual(usedBefore({ [k]: "1" }), false, `${k} must not count as prior use`);
+  }
+});
+
+test("an unreadable localStorage degrades to 'not returning', never throws", () => {
+  const hostile = { getItem() { throw new Error("SecurityError"); } };
+  const fn = new Function("localStorage", `const PRIOR_USE_KEYS = ${KEYS_SRC}; return (${USED_SRC});`);
+  assert.strictEqual(fn(hostile), false);
+});
+
+// ---- the gate ----------------------------------------------------------------
+// maybeOnboard() touches exactly three things: localStorage, USED_BEFORE and
+// document. Run the SHIPPED function against stubs for all three.
+function runOnboard(seed, used, opts) {
+  const ls = store(seed, opts);
+  const events = [];
+  const built = [];
+  const el = () => {
+    const e = {
+      _kids: [], style: {}, className: "", innerHTML: "",
+      setAttribute() {}, addEventListener() {}, removeEventListener() {},
+      appendChild(c) { this._kids.push(c); }, remove() { this.removed = true; },
+      querySelector() { return { addEventListener() {}, focus() {} }; },
+      focus() {},
+    };
+    built.push(e);
+    return e;
+  };
+  const doc = {
+    createElement: () => el(),
+    body: { appendChild() {} },
+    addEventListener: (t) => events.push(t),
+    removeEventListener: (t) => events.push("-" + t),
+  };
+  new Function("localStorage", "USED_BEFORE", "document", fnSrc("maybeOnboard") + "; maybeOnboard();")(ls, used, doc);
+  return { ls, events, shown: built.length > 0 };
+}
+
+test("a virgin browser IS shown the tour", () => {
+  const r = runOnboard({}, false);
+  assert.strictEqual(r.shown, true, "the tour must still exist for a genuine first visit");
+});
+
+test("the flag alone still suppresses the tour", () => {
+  assert.strictEqual(runOnboard({ "gbs:onboarded": "1" }, false).shown, false);
+});
+
+test("evidence of prior use suppresses the tour even with the flag gone", () => {
+  assert.strictEqual(runOnboard({ "gbs:watch": '["BHP"]' }, true).shown, false);
+});
+
+test("and it BACK-FILLS the flag, so the cheap check answers next load", () => {
+  const r = runOnboard({ "gbs:watch": '["BHP"]' }, true);
+  assert.strictEqual(r.ls.getItem("gbs:onboarded"), "1");
+});
+
+test("a failed back-fill write does not throw — the deck still paints", () => {
+  const r = runOnboard({ "gbs:watch": '["BHP"]' }, true, { readOnly: true });
+  assert.strictEqual(r.shown, false, "still suppressed");
+  assert.strictEqual(r.ls.getItem("gbs:onboarded"), null, "and honestly still unwritten");
+});
+
+test("the tour binds a keydown listener so Escape can close it", () => {
+  assert.ok(runOnboard({}, false).events.includes("keydown"),
+    "a modal over the whole app with no keyboard exit is the shape of the bug");
+});
+
+test("the suppressed path binds NOTHING — no listener, no element, no leak", () => {
+  const r = runOnboard({ "gbs:watch": "x" }, true);
+  assert.deepStrictEqual(r.events, []);
+  assert.strictEqual(r.shown, false);
+});
+
+// ---- the ordering pin --------------------------------------------------------
+test("the evidence is read at BOOT, above every writer that could fake it", () => {
+  // This is the whole safety argument and it is positional, so it is asserted
+  // positionally. Move the snapshot below any of these and a first visit can
+  // write its own evidence before the snapshot reads it.
+  const snap = APP.indexOf("const USED_BEFORE");
+  assert.ok(snap > 0, "app.js no longer declares USED_BEFORE");
+  for (const later of ["loadPrefs();", "consumeViewApply();", "function maybeOnboard("]) {
+    const at = APP.indexOf(later);
+    assert.ok(at > 0, `app.js no longer contains ${later}`);
+    assert.ok(snap < at, `USED_BEFORE must be read before ${later} runs`);
+  }
+});
+
+test("the tour is still only built after first paint, off the critical path", () => {
+  assert.ok(/whenIdle\(maybeOnboard\)/.test(APP),
+    "maybeOnboard must stay behind whenIdle — it must never cost the load");
+});
+
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
