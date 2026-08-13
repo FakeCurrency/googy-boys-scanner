@@ -730,11 +730,15 @@ function constSrc(name) {
   assert.ok(s, `app.js no longer declares const ${name}`);
   return s;
 }
-function fnSrc(name) {
-  const at = APP.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
-  assert.ok(at >= 0, `app.js no longer declares function ${name}()`);
-  for (let i = APP.indexOf("}", at); i > 0 && i - at < 12000; i = APP.indexOf("}", i + 1)) {
-    const cand = APP.slice(at, i + 1);
+function fnSrc(srcOrName, maybeName) {
+  // Takes (src, name) or, for the app.js callers that predate the second
+  // argument, just (name).
+  const src = maybeName === undefined ? APP : srcOrName;
+  const name = maybeName === undefined ? srcOrName : maybeName;
+  const at = src.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
+  assert.ok(at >= 0, `no declaration of function ${name}()`);
+  for (let i = src.indexOf("}", at); i > 0 && i - at < 12000; i = src.indexOf("}", i + 1)) {
+    const cand = src.slice(at, i + 1);
     try { new Function(`return (${cand});`); return cand; } catch (_) { /* keep walking */ }
   }
   assert.fail(`could not slice ${name}() — has its brace shape changed?`);
@@ -886,5 +890,114 @@ test("the tour is still only built after first paint, off the critical path", ()
     "maybeOnboard must stay behind whenIdle — it must never cost the load");
 });
 
+
+// ---------------------------------------------------------------------------
+/* PART B UI CLEANUP — the three pins that the screenshot gate structurally
+   cannot provide (2026-08-13).
+   Measured before writing these: all four e2e shots drift 0.00% against a
+   baseline cut from origin/main, because the fixture set has no
+   sector_breadth.json, no <m>_prices.json, no phasemap/spec files and a closed
+   book that is 6/6 `stop`. So none of the changed surfaces RENDER under the
+   gate. The screenshots are not protection here; these assertions are. */
+// ---------------------------------------------------------------------------
+const HZ = fs.readFileSync(path.join(__dirname, "..", "public", "js", "horizon.js"), "utf8");
+const NAV = fs.readFileSync(path.join(__dirname, "..", "public", "js", "nav.js"), "utf8");
+// A CODE-ONLY view. The house rule: a ban on a construct must not be satisfied
+// or broken by prose. The comment that RECORDS why the badge was retired quotes
+// the very expression the ban is written against, so a raw-source grep would
+// fail on the explanation of the fix.
+const codeOnly = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const css = (f) => fs.readFileSync(path.join(__dirname, "..", "public", "css", f), "utf8");
+
+test("horizon's COMPACT strip no longer states capacity — one surface owns it", () => {
+  // data.book is a SCAN-TIME SNAPSHOT (only an ASX/NASDAQ scan rewrites
+  // sector_breadth.json). On 2026-08-13 it read "29/30 · 1 free" beside
+  // #bot-activity's live "20 of 30 slots · 10 free", and the stale one was the
+  // loud one, on the screen where you decide whether to stop hunting.
+  const strip = HZ.slice(HZ.indexOf("function renderStrip"), HZ.indexOf("// ── mount"));
+  assert.ok(strip.length > 100, "renderStrip could not be sliced");
+  assert.ok(!/bookHTML\(/.test(strip), "the compact strip is stating capacity again");
+  // The FULL panel must keep it — that is where it is labelled scan-time and
+  // sits beside the deployNote reconciliation it exists for.
+  assert.ok(/bookHTML\(/.test(HZ.slice(0, HZ.indexOf("function renderStrip"))) ||
+            /bookHTML\(data\.book\)/.test(HZ),
+    "the full board lost its capacity block too — that was not the fix");
+});
+
+test("and it does not state capacity in PROSE either", () => {
+  // notes[0] is the sustained-run line, but sectorbreadth also writes capacity
+  // notes into the same array. Dropping the chip while still printing "Only 1
+  // of 30 slots free" would have fixed nothing.
+  // Pinned by RUNNING the shipped noteHTML, not by grepping for the regex.
+  // A first pass asserted only that CAP_NOTE_RE existed and matched the right
+  // strings — and a mutation that replaced `notes.find(...)` with `notes[0]`,
+  // reinstating the exact bug, sailed through it. The constant was pinned; its
+  // USE was not.
+  const m = HZ.match(/const CAP_NOTE_RE = (\/.*\/[a-z]*);/);
+  assert.ok(m, "CAP_NOTE_RE is no longer a literal regex");
+  const noteHTML = new Function("esc", "CAP_NOTE_RE",
+    fnSrc(HZ, "noteHTML") + "; return noteHTML;")((x) => String(x), eval(m[1]));  // eslint-disable-line no-eval
+  const CAP = "Only 1 of 30 slots free - the book is nearly out of room.";
+  const RUN = "Consumer Discretionary has led on breadth for 19 sessions with nothing held.";
+  assert.equal(noteHTML({ notes: [CAP] }), "", "the strip is printing a capacity claim again");
+  assert.ok(noteHTML({ notes: [RUN] }).includes("19 sessions"),
+    "the filter is eating the sustained-run note, which is the strip's whole job");
+  assert.ok(noteHTML({ notes: [CAP, RUN] }).includes("19 sessions"),
+    "a capacity note must be SKIPPED, not make the whole line vanish");
+  assert.equal(noteHTML({}), "");
+});
+
+test("the mobile SCAN badge no longer publishes an uncorrected A+ count", () => {
+  // It read 96 off <m>_prices.json while the page it links to read 52: that
+  // sidecar ships no `name`, so the fund regex cannot run against it, and the
+  // file that does carry names is 448 KB. Removed rather than left wrong.
+  assert.ok(!/setBadge\("index"/.test(codeOnly(NAV)), "the SCAN badge is being set again");
+  // nav.js still reads the prices sidecars for the command palette's symbol
+  // index (legitimate — it needs tickers, not grades). What must not come back
+  // is COUNTING A GRADE out of a file that cannot answer the fund question.
+  assert.ok(!/grade\s*===\s*"A\+"/.test(codeOnly(NAV)),
+    "nav.js is counting A+ again out of a payload with no name to test");
+  // The JOURNAL badge is honest (open positions, straight off the book) and stays.
+  assert.ok(/setBadge\("journal"/.test(NAV), "the journal badge was removed by mistake");
+});
+
+test("the only write path in the app clears a 44px tap target on mobile", () => {
+  // .st-x books a real position against the track record and shipped at ~22px,
+  // one file over from journal.css's own "23x21px is a miss waiting to happen".
+  const st = css("stalled.css");
+  const mob = st.slice(st.indexOf("@media (max-width: 640px)"));
+  assert.ok(/\.st-x[^{]*\{[^}]*min-height:\s*44px/.test(mob), ".st-x has no 44px floor on mobile");
+  assert.ok(/\.st-go[^{]*\{[^}]*min-height:\s*44px/.test(mob), ".st-go has no 44px floor on mobile");
+});
+
+test("the eyes strip has a width breakpoint at all, with a 40px floor", () => {
+  // eyes.css shipped with zero @media width rules; its chips were ~27px on the
+  // strip that is deliberately the first thing on the deck.
+  const ey = css("eyes.css");
+  assert.ok(/@media\s*\(max-width:/.test(ey), "eyes.css still has no width breakpoint");
+  assert.ok(/min-height:\s*40px/.test(ey), "the chips have no tap-target floor");
+});
+
+test("the 1MB backtest fetch is idle work, and is called AFTER whenIdle exists", () => {
+  // vivek_backtest_longonly.json is 1,022 KB — larger than the scan payload —
+  // fetched on the boot path to read three numbers. Moving it is the easy half.
+  // The trap is that `whenIdle` is a const: calling it above its own
+  // declaration is a temporal-dead-zone ReferenceError at boot, which
+  // `node --check` passes cleanly because it is not a syntax error.
+  // "exactly once" is the load-bearing half. A first pass asserted only that a
+  // whenIdle(loadEntryQuality) call existed, and a mutation that ADDED a
+  // synchronous call back onto the boot path — the whole defect — passed it,
+  // because the idle call was still there beside it.
+  const calls = (codeOnly(APP).match(/(?<!function\s)\bloadEntryQuality\s*[(),]/g) || [])
+    .filter((c) => !c.startsWith("function"));
+  const idle = (codeOnly(APP).match(/whenIdle\(loadEntryQuality\)/g) || []).length;
+  assert.equal(idle, 1, "loadEntryQuality must be scheduled through whenIdle exactly once");
+  assert.equal(calls.length, 1,
+    `loadEntryQuality is referenced ${calls.length} times outside its declaration — a direct call is back on the boot path`);
+  const decl = APP.indexOf("const whenIdle =");
+  const call = APP.indexOf("whenIdle(loadEntryQuality)");
+  assert.ok(decl > 0 && call > decl,
+    "whenIdle(loadEntryQuality) is called before `const whenIdle` — that is a ReferenceError at boot");
+});
 
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

@@ -685,5 +685,105 @@ test("the control is reachable on a phone, where the column headers are not", ()
     "the mobile tap target is back to its unpadded 23x21px, which is a miss waiting to happen");
 });
 
+
+// ── WHO DECIDED THE EXIT (2026-08-13) ────────────────────────────────────────
+// The bot book is meant to be evidence about the FROZEN RULES. On the live book
+// 21 of 40 closes are `manual` — the owner clicking Close — and every aggregate
+// on the page pools them with the 19 the rules made. The two halves do not
+// resemble each other: rules -6.97R over 19, owner +0.16R over 21. Read as one
+// number they cancel into a shrug, and the strategy-review checkpoint has
+// already been declared satisfied on the blend.
+//
+// These pins are about a CAVEAT, not a calculation: nothing here changes what
+// stats() returns. What must not silently regress is the classification.
+suite("who decided the exit");
+
+const dctx = vm.createContext({ console });
+vm.runInContext(
+  "const esc = (s) => String(s);\n"
+  + slice("const MECHANICAL_EXITS =", "];\n") + "\n"
+  + slice("function deciderSplit(list) {", "\n  }") + "\n"
+  + slice("function deciderHTML(list) {", "\n  }") + "\n"
+  + "this.deciderSplit = deciderSplit; this.deciderHTML = deciderHTML;\n"
+  + "this.MECHANICAL_EXITS = MECHANICAL_EXITS;\n", dctx);
+const { deciderSplit, deciderHTML, MECHANICAL_EXITS } = dctx;
+
+const cl = (reason, r) => ({ status: "closed", exit_reason: reason, realized_r: r });
+
+test("the four mechanical reasons are exactly the four the engine writes", () => {
+  // stop / time / trail / target are the frozen rules acting. Adding "manual"
+  // to this list would erase the entire distinction in one edit, which is why
+  // it is asserted by value rather than by length.
+  assert.deepEqual([...MECHANICAL_EXITS].sort(), ["stop", "target", "time", "trail"]);
+});
+
+test("a stop-out is the rules, a manual close is not", () => {
+  const s = deciderSplit([cl("stop", -1), cl("manual", 0.1)]);
+  assert.equal(s.bot, 1); assert.equal(s.own, 1);
+  assert.equal(s.botR, -1); assert.ok(Math.abs(s.ownR - 0.1) < 1e-9);
+});
+
+test("the 28-day time-stop counts as the BOT — it is the rule firing, not a human", () => {
+  const s = deciderSplit([cl("time", 0.2)]);
+  assert.equal(s.bot, 1, "a time-stop is a mechanical exit");
+  assert.equal(s.own, 0);
+});
+
+test("an ABSENT exit_reason counts as manual, matching how the row renders", () => {
+  // closedRows falls back to "manual" for a missing value; the split must agree
+  // or the caveat would describe a different set than the table beneath it.
+  const s = deciderSplit([{ status: "closed", realized_r: 0.5 }]);
+  assert.equal(s.own, 1); assert.equal(s.bot, 0);
+});
+
+test("case and whitespace do not smuggle a manual close into the bot's evidence", () => {
+  assert.equal(deciderSplit([cl("STOP", -1)]).bot, 1);
+  assert.equal(deciderSplit([cl(" Time ", 1)]).bot, 0, "a padded value is not silently trusted");
+});
+
+test("open rows are never counted — this is a caveat on the CLOSED table", () => {
+  const s = deciderSplit([{ status: "open", exit_reason: "stop", realized_r: 9 }, cl("stop", -1)]);
+  assert.equal(s.n, 1); assert.equal(s.botR, -1);
+});
+
+test("a missing realized_r contributes 0 rather than NaN-ing the whole sum", () => {
+  // A NaN here would make every later comparison false and the caveat would
+  // read "+NaNR" — the same disarm-by-NaN failure the guards fixed in Tier 1.
+  const s = deciderSplit([cl("stop", undefined), cl("stop", -2)]);
+  assert.equal(s.botR, -2);
+});
+
+test("the line is SILENT when the book is one-sided", () => {
+  // A caveat that always shows stops being read. Nothing to disambiguate when
+  // every close came from the same decider.
+  assert.equal(deciderHTML([cl("stop", -1), cl("time", 1)]), "", "all-mechanical needs no caveat");
+  assert.equal(deciderHTML([cl("manual", 1)]), "", "all-manual needs no caveat");
+  assert.equal(deciderHTML([]), "");
+});
+
+test("and it SPEAKS, with both counts and both R totals, when they are mixed", () => {
+  const h = deciderHTML([cl("stop", -3), cl("stop", -1), cl("manual", 0.5)]);
+  assert.ok(h.includes("<b>2</b>") && h.includes("-4.00R"), `bot side missing: ${h}`);
+  assert.ok(h.includes("<b>1</b>") && h.includes("+0.50R"), `owner side missing: ${h}`);
+  assert.ok(/pool both/.test(h), "must say the stats below pool both");
+});
+
+test("renderSide actually prints it above the closed table", () => {
+  // A caveat computed and never rendered is not a caveat.
+  assert.ok(/deciderHTML\(d\.closed\) \+ closedRows\(d\.closed, side\)/.test(SRC),
+    "renderSide no longer prefixes the closed table with the decider split");
+});
+
+test("journal.css gives BOTH previously-unstyled reasons a rule", () => {
+  // Before this, .jr-reason-manual and .jr-reason-time did not exist, so the
+  // bot's time-stop and the owner's click rendered as the same grey chip.
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8");
+  assert.ok(/\.jr-reason-time\s*\{/.test(css), ".jr-reason-time has no rule");
+  assert.ok(/\.jr-reason-manual\s*\{/.test(css), ".jr-reason-manual has no rule");
+  for (const c of ["target", "trail", "stop"]) {
+    assert.ok(new RegExp(`\\.jr-reason-${c}\\s*\\{`).test(css), `.jr-reason-${c} was dropped`);
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
