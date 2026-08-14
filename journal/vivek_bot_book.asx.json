@@ -128,9 +128,9 @@
       "lens": "vivek",
       "signal_entry": 11.55000019,
       "fill_slip_bps": -476.2,
-      "last_mark": 12.5,
-      "unreal_r": 0.787,
-      "unreal_usd": 681.82,
+      "last_mark": 12.56999969,
+      "unreal_r": 0.824,
+      "unreal_usd": 713.63,
       "notional_before": 164.56,
       "units_before": 14.24803057,
       "risk_usd_before": 35.0,
@@ -204,9 +204,9 @@
       "lens": "vivek",
       "signal_entry": 2.74000001,
       "fill_slip_bps": -18.2,
-      "last_mark": 2.89499998,
-      "unreal_r": 0.697,
-      "unreal_usd": 219.38,
+      "last_mark": 2.94000006,
+      "unreal_r": 0.893,
+      "unreal_usd": 281.08,
       "notional_before": 541.04,
       "units_before": 197.46084535,
       "risk_usd_before": 35.0,
@@ -485,9 +485,9 @@
       "gross_r": 0.0,
       "cost_r": 0.005,
       "exits": [],
-      "mae": 7.170000076293945,
+      "mae": 7.184999942779541,
       "mfe": 7.46999979019165,
-      "mae_r": -0.117,
+      "mae_r": -0.102,
       "mfe_r": 0.176,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 690.60775675,
@@ -504,7 +504,7 @@
       "level_tf": "weekly",
       "signal_entry": 7.23999977,
       "fill_slip_bps": 69.1,
-      "last_mark": 7.17000008,
+      "last_mark": 7.19000006,
       "day_marks": {
         "2026-08-06": 7.46999979,
         "2026-08-07": 7.46000004,
@@ -516,8 +516,8 @@
         "2026-08-13": 7.23999977,
         "2026-08-14": 7.19999981
       },
-      "unreal_r": -0.117,
-      "unreal_usd": -78.83
+      "unreal_r": -0.098,
+      "unreal_usd": -65.69
     },
     {
       "id": "NEC:long:3D:2026-08-07",
@@ -629,9 +629,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0039,
       "exits": [],
-      "mae": 87.68000030517578,
+      "mae": 87.48999786376953,
       "mfe": 90.2699966430664,
-      "mae_r": -0.124,
+      "mae_r": -0.136,
       "mfe_r": 0.038,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 56.26195392,
@@ -657,7 +657,7 @@
       "level_tf": "3d",
       "signal_entry": 88.87000275,
       "fill_slip_bps": 88.9,
-      "last_mark": 87.83000183,
+      "last_mark": 87.48999786,
       "day_marks": {
         "2026-08-10": 89.66000366,
         "2026-08-11": 88.97000122,
@@ -665,8 +665,8 @@
         "2026-08-13": 88.93000031,
         "2026-08-14": 87.55000305
       },
-      "unreal_r": -0.115,
-      "unreal_usd": -97.87
+      "unreal_r": -0.136,
+      "unreal_usd": -116.05
     },
     {
       "id": "RHC:long:1W:2026-08-14",
@@ -678,21 +678,21 @@
       "grade": "A+",
       "entry_type": "break",
       "timeframe": "1W",
-      "entry": 44.78499985,
+      "entry": 44.74000168,
       "stop": 33.29365684,
       "tp1": 50.94877102,
-      "tp2": 65.92193422,
-      "tp3": 89.97172587,
+      "tp2": 65.92192648,
+      "tp3": 89.97172586,
       "scale": [
         0.25,
         0.5,
         0.15
       ],
-      "risk": 11.49134301,
-      "rr": 1.84,
+      "risk": 11.44634484,
+      "rr": 1.85,
       "trigger_bar": null,
       "entry_date": "2026-08-14",
-      "opened_at": "2026-08-14T00:51:23+00:00",
+      "opened_at": "2026-08-14T01:03:04+00:00",
       "status": "open",
       "tp1_hit": false,
       "tp2_hit": false,
@@ -702,8 +702,8 @@
       "gross_r": 0.0,
       "cost_r": 0.0,
       "exits": [],
-      "mae": 44.78499985,
-      "mfe": 44.78499985,
+      "mae": 44.74000168,
+      "mfe": 44.74000168,
       "mae_r": 0.0,
       "mfe_r": 0.0,
       "entry_type_label": "Break of small structure near the 200 SMA",
@@ -729,8 +729,8 @@
       "lens": "vivek",
       "level_tf": "weekly",
       "signal_entry": 42.74000168,
-      "fill_slip_bps": 478.5,
-      "last_mark": 44.78499985
+      "fill_slip_bps": 467.9,
+      "last_mark": 44.74000168
     }
   ],
   "closed": [
@@ -2061,27 +2061,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -132.32,
+      "week_usd": -43.84,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -209.02,
-      "worst_week_usd": -132.32,
+      "worst_session_usd": -120.55,
+      "worst_week_usd": -43.84,
       "realised_usd": 104.61,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -313.63,
-      "session_usd": -209.02,
+      "unrealised_usd": -225.16,
+      "session_usd": -120.55,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 9,
-      "open_total_usd": 2425.45,
+      "open_total_usd": 2513.92,
       "notified": ""
     }
   },
   "summary": {
     "open": 10,
-    "unreal_usd": 2297.59,
+    "unreal_usd": 2386.06,
     "updated_day": "2026-08-14"
   },
-  "updated_at": "2026-08-14T00:51:23+00:00"
+  "updated_at": "2026-08-14T01:03:04+00:00"
 }
