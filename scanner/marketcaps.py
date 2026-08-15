@@ -29,14 +29,14 @@ CACHE_FILE = ROOT / "data" / "market_caps.json"
 # cache stays in data/; this mirror is committed alongside the scan JSON.
 PUBLIC_FILE = ROOT / "public" / "data" / "market_caps.json"
 
-# Scan outputs we pull signal symbols from: (market_key, relative_path)
+# Scan outputs we pull signal symbols from: (market_key, relative_path).
+# Trimmed 2026-08-15: asx.json / nasdaq.json / *_reversal.json have not been
+# published since the reversal lens retired — four of eight entries were dead
+# stat() calls every refresh (REFINEMENTS #93 first flagged it). The two lens
+# files that actually exist stay.
 _SCAN_FILES = [
-    ("asx",    "public/data/asx.json"),
-    ("asx",    "public/data/asx_reversal.json"),
     ("asx",    "public/data/asx_spec.json"),
     ("asx",    "public/data/asx_vivek.json"),
-    ("nasdaq", "public/data/nasdaq.json"),
-    ("nasdaq", "public/data/nasdaq_reversal.json"),
     ("nasdaq", "public/data/nasdaq_spec.json"),
     ("nasdaq", "public/data/nasdaq_vivek.json"),
 ]
