@@ -1,4 +1,8 @@
-name: Tests
+# Display name says CI so a failure email ("Run failed: Code checks (CI)")
+# can never be misread as a scanner/pipeline outage — owner order 2026-08-15.
+# The scan pipeline is scan.yml / crypto_bot.yml / close_position.yml etc.;
+# this workflow only gates code pushes. File name stays test.yml.
+name: Code checks (CI)
 
 # The gate that was missing: the Python tests (risk rules, circuit breakers,
 # journal P&L, pre-trade gate) + PhaseMap tests + the JS risk-engine tests
