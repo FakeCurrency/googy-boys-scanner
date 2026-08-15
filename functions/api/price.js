@@ -10,7 +10,7 @@
  *   GET /api/price?symbol=BTC-USD&range=1y&interval=1d&type=crypto
  *     → { ok, price, symbol, source, delayed, bars, candles:[{time,open,high,low,close,volume}] }
  */
-import { livePrice, history } from "./_prices.js";
+import { livePrice, history, intervalDegraded } from "./_prices.js";
 import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
 
 // Successful responses edge-cache for ~20s via the Cache API (cachePut below —
@@ -74,6 +74,20 @@ export const onRequestGet = async (ctx) => {
       return json(502, { ok: false, error: "no price or history from any source", symbol });
     }
 
+    // DATA HONESTY (2026-08-15) — three facts the chart needs to stop
+    // presenting a series as something it is not:
+    //   basis    "adj" = bars share the scan's dividend/split-adjusted
+    //            arithmetic (levels line up); "raw" = unadjusted (intraday, or
+    //            Yahoo returned no adjclose).
+    //   flat     bars in the served window with open==high==low==close — on
+    //            thin ASX names Yahoo pads no-trade sessions with carried
+    //            closes (measured: RML 49% of its "5y"), and structure-TA on a
+    //            padded tape is fiction the chart must label.
+    //   degraded true when the bars came back COARSER than the requested
+    //            interval (Yahoo degrades deep ranges silently — max/1d has
+    //            been observed returning monthly bars).
+    const flat = hist.candles.reduce(
+      (n, b) => n + (b.open === b.high && b.high === b.low && b.low === b.close ? 1 : 0), 0);
     return cachePut(ctx, json(200, {
       ok: true,
       symbol,
@@ -82,8 +96,12 @@ export const onRequestGet = async (ctx) => {
       delayed: hist.delayed,
       bars: hist.candles.length,
       candles: hist.candles,
-      // dividend within ~45d → the adjusted series (and levels) differs from
-      // the raw prices a broker shows; the chart surfaces this as a chip
+      basis: hist.basis || "raw",
+      flat,
+      degraded: intervalDegraded(hist.candles, interval),
+      // dividend within ~45d → the adjustment is RECENT, so the gap between
+      // these (adjusted) bars and the raw prices a broker quotes is fresh and
+      // visible; the chart surfaces this as a chip
       recent_div: hist.recent_div || null,
     }));
   } catch (err) {
