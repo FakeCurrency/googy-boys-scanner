@@ -269,6 +269,13 @@ VIVEK_INCLUDE_3D_LEVEL = True      # 2026-07-02: also treat the 3-Day 200 SMA as
                                    # (the level the community was watching) but was -23% from
                                    # the Daily and +10% from the Weekly -> invisible to the scan
 VIVEK_DATA_PERIOD      = "5y"      # long history so a Weekly SMA200 is meaningful
+
+# $0 forward-only adjusted daily archive (owner order 2026-08-15) — STORAGE
+# ONLY; nothing in the scan/grade/bot path reads it. See scanner/history_archive.py.
+HISTORY_ARCHIVE_MARKETS = ("asx",)   # ASX first — the market whose free history is weakest
+HISTORY_ARCHIVE_MAX_BARS = 2600      # ~10y per symbol; oldest trimmed beyond this
+HISTORY_ARCHIVE_MAX_FILES = 1500     # cap on distinct archived names per market
+HISTORY_ARCHIVE_SPLICE_MAX_DRIFT = 0.25  # join-ratio drift beyond this flags splice_suspect
 VIVEK_MIN_WEEKLY_BARS  = 60        # need at least this many weekly bars to use Weekly SMA
 VIVEK_MIN_HISTORY      = 220       # min daily bars to compute a Daily SMA200 (~H4 proxy)
 VIVEK_ATR_STOP_MULT    = 1.0       # stop sits ATR×this beyond the reaction extreme

@@ -278,6 +278,20 @@ def main() -> None:
             # record now. vivek_journal.py stays: the backtester and the bot
             # runner import its trade-management primitives.
 
+            # $0 forward archive (owner order 2026-08-15): persist the day's
+            # result-row adjusted bars from the frames ALREADY downloaded.
+            # STORAGE ONLY — nothing downstream reads it — and fail-soft: an
+            # archive problem must never cost a scan.
+            try:
+                from . import history_archive
+                ha = history_archive.update(market_key, vk["results"], deep_frames)
+                if ha and ha.get("written"):
+                    print(f"  history archive: {ha['written']} file(s), "
+                          f"+{ha['new_bars']} bars ({ha['total_files']} names)", flush=True)
+            except Exception as e:
+                print(f"  WARNING: history archive skipped "
+                      f"({type(e).__name__}: {e})", flush=True)
+
             # VIVEK execution/runner layer (Phase 1–2: dry-run + paper book).
             # Gated by VIVEK_BOT_ENABLED — a no-op (and silent) until switched on.
             # It NEVER places a live order in this phase. Best-effort.
