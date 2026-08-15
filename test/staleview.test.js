@@ -1173,5 +1173,153 @@ test("no code path builds data/charts/ URLs any more (removed 2026-08-15)", () =
   assert.ok(!codeOnly(APP).includes("data/charts/"), "app.js prefetches data/charts/ again");
 });
 
+// ---------------------------------------------------------------------------
+/* DATA ACCURACY (2026-08-15, refine pass). The price proxy and the chart both
+   ship arithmetic that must match the ENGINE's, and each rule below was a
+   live defect the day it was written:
+     · the engine computes on dividend/split-ADJUSTED prices (yfinance
+       auto_adjust=True) while the proxy served RAW bars — RHC/AIA/SDF (all
+       A+ weekly-lens that day) each drew price on the WRONG SIDE of a
+       raw-basis weekly 200-SMA (drift +2.9–4.9%);
+     · targetBars capped 5y at 1000 bars, so the weekly resample had ~208
+       candles and the flagship Weekly SMA-200 had ~8 valid points (crypto:
+       could not be computed at all);
+     · Yahoo silently degrades deep ranges (CBA max/1d returned MONTHLY bars
+       from 1991) and pads thin ASX names with no-trade sessions (RML: 49%
+       of its window) — and nothing measured or labelled either.
+   The proxy is Workers-runtime ESM; stripping the export keywords lets the
+   REAL declarations run here (same realm, nothing re-typed). */
+const PRICES = fs.readFileSync(path.join(__dirname, "..", "functions", "api", "_prices.js"), "utf8");
+const bindPrices = (() => {
+  let cached = null;
+  return () => cached || (cached = new Function(`${PRICES.replace(/^export\s+/gm, "")}
+    return { targetBars, yahooCandles, isAdjusted, barSpacing, intervalDegraded, trimCandles };`)());
+})();
+
+test("targetBars serves full 5y/10y depth — the 1000-bar cap was the weekly-SMA200 ceiling", () => {
+  const { targetBars } = bindPrices();
+  assert.ok(targetBars("5y", "1d") >= 1827,
+    "5y must cover 5 years of 7-day crypto (1827 days) — at 1000 the weekly SMA200 was uncomputable");
+  assert.ok(targetBars("10y", "1d") >= 2500, "10y of equity sessions needs ~2600 bars");
+  assert.ok(targetBars("max", "1d") >= 2500, "max must not be shallower than 10y");
+  assert.strictEqual(targetBars("1y", "1d"), 260, "shorter ranges keep their sizes");
+  assert.ok(targetBars("6mo", "1h") >= 750, "intraday cap feeds the 4H view");
+});
+
+test("yahooCandles scales every bar by adjclose/close — chart bars share the scan's basis", () => {
+  const { yahooCandles } = bindPrices();
+  const result = {
+    timestamp: [100, 200],
+    indicators: {
+      quote: [{ open: [10, 20], high: [11, 22], low: [9, 19], close: [10, 20], volume: [5, 7] }],
+      adjclose: [{ adjclose: [5, 20] }],   // bar 1 back-adjusted to half; bar 2 is the latest (f=1)
+    },
+  };
+  const c = yahooCandles(result);
+  assert.strictEqual(c.length, 2);
+  assert.deepStrictEqual([c[0].open, c[0].high, c[0].low, c[0].close], [5, 5.5, 4.5, 5],
+    "historical bar must be scaled by adjclose/close (0.5)");
+  assert.deepStrictEqual([c[1].open, c[1].high, c[1].low, c[1].close], [20, 22, 19, 20],
+    "the latest bar's factor is 1 by construction — must be byte-exact raw");
+  assert.strictEqual(c[0].volume, 5, "volume is never scaled");
+});
+
+test("no adjclose (intraday) or an unusable factor → that bar stays RAW, never fabricated", () => {
+  const { yahooCandles, isAdjusted } = bindPrices();
+  const raw = { timestamp: [1], indicators: { quote: [{ open: [10], high: [11], low: [9], close: [10], volume: [1] }] } };
+  assert.strictEqual(yahooCandles(raw)[0].open, 10, "no adjclose → raw");
+  assert.strictEqual(isAdjusted(raw), false);
+  const broken = { timestamp: [1, 2], indicators: {
+    quote: [{ open: [10, 20], high: [11, 22], low: [9, 19], close: [0, 20], volume: [1, 1] }],
+    adjclose: [{ adjclose: [5, null] }] } };
+  const c = yahooCandles(broken);
+  assert.strictEqual(c[0].open, 10, "close=0 would make the factor infinite — bar must stay raw");
+  assert.strictEqual(c[1].open, 20, "a null adjclose entry must stay raw");
+  assert.strictEqual(isAdjusted({ indicators: { adjclose: [{ adjclose: [1] }] } }), true);
+});
+
+test("intervalDegraded catches Yahoo returning coarser bars than asked (max/1d → monthly)", () => {
+  const { intervalDegraded, barSpacing } = bindPrices();
+  const daily = [];   // Mon–Fri run with weekends: median gap stays 86400 — NOT degraded
+  let t = 1700000000;
+  for (let i = 0; i < 15; i++) { daily.push({ time: t }); t += (i % 5 === 4 ? 3 : 1) * 86400; }
+  assert.strictEqual(intervalDegraded(daily, "1d"), false, "weekend gaps must not trip the detector");
+  const monthly = Array.from({ length: 12 }, (_, i) => ({ time: 1700000000 + i * 2629800 }));
+  assert.strictEqual(intervalDegraded(monthly, "1d"), true, "monthly bars labelled daily is the measured lie");
+  assert.strictEqual(intervalDegraded(monthly, "1mo"), false, "monthly bars ASKED for as monthly are honest");
+  assert.strictEqual(barSpacing([{ time: 1 }, { time: 2 }]), null, "under 3 bars there is no evidence");
+  assert.strictEqual(intervalDegraded([{ time: 1 }], "1d"), false);
+});
+
+test("price.js publishes the three honesty fields (basis / flat / degraded)", () => {
+  const PRICE = fs.readFileSync(path.join(__dirname, "..", "functions", "api", "price.js"), "utf8");
+  const code = codeOnly(PRICE);
+  assert.ok(/basis:\s*hist\.basis\s*\|\|\s*"raw"/.test(code), "basis pass-through lost");
+  assert.ok(/\bflat\b/.test(code) && /b\.open === b\.high && b\.high === b\.low && b\.low === b\.close/.test(code),
+    "flat no-trade-session count lost");
+  assert.ok(/degraded:\s*intervalDegraded\(hist\.candles,\s*interval\)/.test(code), "degradation flag lost");
+});
+
+// ---- resampleWeekly: the chart must build the SAME weeks the engine grades --
+function bindWeekly() { return new Function(`${chartFnSrc("resampleWeekly")}; return resampleWeekly;`)(); }
+const DAY = 86400;
+// 2026-08-03 was a Monday. Build times from that anchor (UTC midnights).
+const MON = Date.UTC(2026, 7, 3) / 1000;
+
+test("equity weeks (Mon–Fri) keep their membership and stamp the FRIDAY, like the engine's W-FRI", () => {
+  const f = bindWeekly();
+  const bars = [0, 1, 2, 3, 4].map((d) => ({ time: MON + d * DAY, open: 1 + d, high: 2 + d, low: d, close: 1.5 + d, volume: 10 }));
+  const wk = f(bars);
+  assert.strictEqual(wk.length, 1, "five weekdays are one week");
+  assert.strictEqual(wk[0].time, MON + 4 * DAY, "a complete week's candle sits on its Friday, not its Monday");
+  assert.strictEqual(wk[0].open, 1); assert.strictEqual(wk[0].close, 5.5);
+  assert.strictEqual(wk[0].high, 6); assert.strictEqual(wk[0].low, 0);
+  assert.strictEqual(wk[0].volume, 50);
+});
+
+test("crypto weeks split Sat→Fri — the engine's weeks, not calendar Mon–Sun ones", () => {
+  const f = bindWeekly();
+  // 7-day tape Mon..Sun..next Fri. Engine (W-FRI) weeks: [Mon..Fri], [Sat, Sun, Mon..Fri].
+  const bars = Array.from({ length: 12 }, (_, d) => ({ time: MON + d * DAY, open: d, high: d, low: d, close: d, volume: 1 }));
+  const wk = f(bars);
+  assert.strictEqual(wk.length, 2, "a Saturday bar must OPEN the next week, not extend the old one");
+  assert.strictEqual(wk[0].close, 4, "week 1 ends on Friday");
+  assert.strictEqual(wk[1].open, 5, "week 2 opens on Saturday");
+  assert.strictEqual(wk[1].time, MON + 11 * DAY, "the running week is stamped at its latest bar");
+  // The Mon-bucket regression: old code put Sat+Sun INTO the Mon–Fri week.
+  assert.notStrictEqual(wk[0].close, 6, "Mon–Sun bucketing is the exact bug this pins");
+});
+
+// ---- the honesty chip: one label, worst finding wins ------------------------
+function honestyEl(meta) {
+  const el = { hidden: true, textContent: "", title: "" };
+  new Function("DATA_META", "$", `const THIN_TAPE_MIN_SHARE = ${chartConstSrc("THIN_TAPE_MIN_SHARE")};
+    ${chartFnSrc("renderDataHonesty")}; renderDataHonesty();`)(meta, () => el);
+  return el;
+}
+
+test("degraded interval outranks thin tape outranks raw basis — and a clean series shows nothing", () => {
+  const worst = honestyEl({ bars: 1000, flat: 494, basis: "raw", degraded: true });
+  assert.ok(!worst.hidden && /COARSE/.test(worst.textContent), "degraded must win the chip");
+  const thin = honestyEl({ bars: 1000, flat: 494, basis: "adj", degraded: false });
+  assert.ok(!thin.hidden && /THIN TAPE 49%/.test(thin.textContent), "RML's measured 49% must read as 49%");
+  const raw = honestyEl({ bars: 1000, flat: 0, basis: "raw", degraded: false });
+  assert.ok(!raw.hidden && /RAW BASIS/.test(raw.textContent), "raw basis is worth a quiet label");
+  const clean = honestyEl({ bars: 1000, flat: 50, basis: "adj", degraded: false });
+  assert.ok(clean.hidden, "5% flat on an adjusted series is normal thin-ASX life — no chip");
+});
+
+test("the daily pulls CAPTURE metadata and the chip renders before the chart does", () => {
+  const code = codeOnly(CHART);
+  const captures = (code.match(/"5y", "1d", true\)/g) || []).length;
+  assert.ok(captures >= 2, `both daily chart paths must capture honesty metadata (found ${captures})`);
+  assert.ok((code.match(/renderDataHonesty\(\);/g) || []).length >= 2,
+    "both render paths must paint the chip");
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "chart.html"), "utf8");
+  assert.ok(/id="ct-datawarn"/.test(html), "chart.html lost the ct-datawarn chip host");
+  const v = +(html.match(/js\/chart\.js\?v=(\d+)/) || [])[1];
+  assert.ok(v >= 93, `chart.html must request chart.js?v=93+ (rule 2), found v=${v}`);
+});
+
 
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
