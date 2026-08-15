@@ -482,8 +482,8 @@ def _side(direction) -> str | None:
 
     None is returned rather than a guess. The rest of the tree already
     disagrees with itself about what an unreadable direction means —
-    `vivek_bot._exit_hits` defaults it to LONG, `vivek_run._mark_position`
-    defaults it to SHORT — so inventing a side here would just add a third
+    `vivek_bot._direction` defaults it to LONG, `vivek_run`'s marking path
+    treats it as SHORT — so inventing a side here would just add a third
     opinion. The caller's job is to say so out loud and count the slot.
     """
     s = str(direction or "").strip().lower()
