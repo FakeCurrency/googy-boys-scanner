@@ -357,11 +357,21 @@
   // Pull OHLCV history from the Yahoo proxy for a non-crypto instrument. Used to
   // draw a real chart when the per-ticker scan JSON is missing or empty, instead
   // of dead-ending on "Chart unavailable".
-  function yahooBars(yfTicker, range, interval) {
+  // DATA HONESTY metadata from the DAILY pull (basis / flat padding / interval
+  // degradation) — captured only when the caller asks (capture=true on the
+  // series that drives the chart), rendered by renderDataHonesty() below.
+  let DATA_META = null;
+  function yahooBars(yfTicker, range, interval, capture) {
     return fetch(`/api/price?symbol=${encodeURIComponent(yfTicker)}&range=${range}&interval=${interval}`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
+      .then((j) => {
+        if (capture && j && j.ok) {
+          DATA_META = { bars: j.bars || 0, flat: j.flat || 0,
+                        basis: j.basis || null, degraded: !!j.degraded };
+        }
+        return (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+      });
   }
 
   // Build a daily timeframe block (candles + volume + EMA 34/55/89) from plain
@@ -407,17 +417,25 @@
     return out;
   }
 
-  // Daily → weekly OHLCV, bucketed by the Monday of each bar's week (UTC).
+  // Daily → weekly OHLCV, bucketed Saturday→Friday and stamped with the LAST
+  // bar's own time — the same weeks the ENGINE grades (vivek.py resamples
+  // W-FRI, i.e. weeks that END Friday). For Mon–Fri equities the membership is
+  // identical to the old Monday bucketing; for 7-day crypto the old Mon–Sun
+  // weeks genuinely disagreed with the engine's Sat–Fri ones, so the weekly
+  // candles (and the SMAs on them) were built from different weeks than the
+  // scan graded. Stamping the last bar also puts a completed week's candle on
+  // its Friday, matching the engine's W-FRI labels (2026-08-15).
   function resampleWeekly(bars) {
     const out = []; let cur = null, curKey = null;
     for (const b of bars) {
-      const dow = new Date(b.time * 1000).getUTCDay() || 7;   // 1=Mon … 7=Sun
-      const monday = b.time - (dow - 1) * 86400;
-      if (monday !== curKey) {
+      const dow = new Date(b.time * 1000).getUTCDay();      // 0=Sun … 6=Sat
+      const sat = b.time - ((dow + 1) % 7) * 86400;         // the Saturday opening this Sat→Fri week
+      if (sat !== curKey) {
         if (cur) out.push(cur);
-        cur = { time: monday, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
-        curKey = monday;
+        cur = { time: b.time, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = sat;
       } else {
+        cur.time = b.time;                                  // stamp = last bar in the week (Friday when complete)
         cur.high = Math.max(cur.high, b.high);
         cur.low = Math.min(cur.low, b.low);
         cur.close = b.close;
@@ -677,8 +695,8 @@
     // matches the SCAN's instrument/price exactly. A guessed Binance pair can be
     // the wrong token (or missing → a same-named stock), which throws the price
     // scale off and pushes the real levels off-screen.
-    const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d")
-                            : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d");
+    const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d", true)
+                            : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true);
     const intradayP = (isCrypto ? vivekCryptoBars(SYM, "2y", "1h")
                                 : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
@@ -711,6 +729,7 @@
         console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
                      `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
                      `plans=[${Object.keys(plans).join(", ")}]`);
+        renderDataHonesty();
         render(d);
       });
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
@@ -718,12 +737,18 @@
 
   // VIVEK crypto history, forced to the scan-consistent Yahoo <base>-USD series
   // via the proxy (src=yahoo) — never a guessed Binance pair.
-  function vivekCryptoBars(sym, range, interval) {
+  function vivekCryptoBars(sym, range, interval, capture) {
     const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
     return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=yahoo`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then((j) => (j && j.ok && Array.isArray(j.candles)) ? j.candles : []);
+      .then((j) => {
+        if (capture && j && j.ok) {
+          DATA_META = { bars: j.bars || 0, flat: j.flat || 0,
+                        basis: j.basis || null, degraded: !!j.degraded };
+        }
+        return (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+      });
   }
 
   // ── PhaseMap-only chart: the ticker has no live VIVEK plan but IS in the
@@ -793,8 +818,8 @@
       }
     }
     const liveDaily = () => (isCryptoMarket(assetType)
-      ? vivekCryptoBars(SYM, "5y", "1d")
-      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d"));
+      ? vivekCryptoBars(SYM, "5y", "1d", true)
+      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true));
     const intradayP = (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "2y", "1h")
       : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
@@ -816,6 +841,7 @@
             const h4 = bucketBars(intraday, 4 * 3600);
             if (h4.length >= 6) d.timeframes["4H"] = barsToVivekTF(h4);
           }
+          renderDataHonesty();
           render(d);
         });
       })
@@ -959,6 +985,44 @@
     if (NON_OP_SECTORS.has(sector)) return true;
     const name = String((d && (d.name || d.symbol)) || "").toUpperCase();
     return FUND_NAME_KW.some((kw) => name.includes(kw));
+  }
+
+  // DATA HONESTY chip (2026-08-15): label what this series cannot support
+  // instead of drawing it with full confidence. Thin ASX names arrive with up
+  // to HALF their sessions as flat no-trade padding (measured the day this
+  // shipped: RML 49% of its "5y" window), and Yahoo silently degrades deep
+  // ranges to coarser bars (max/1d observed returning monthly candles).
+  // Structure TA over either is fiction; one chip says so at the moment of
+  // reading. Severity order: degraded interval beats thin tape beats raw
+  // basis — one message, the worst one, never a chip pile-up.
+  const THIN_TAPE_MIN_SHARE = 0.10;   // >=10% flat sessions ⇒ the tape is unreliable
+  function renderDataHonesty() {
+    const el = $("#ct-datawarn");
+    if (!el || !DATA_META) return;
+    const m = DATA_META;
+    if (m.degraded) {
+      el.textContent = "⚠ COARSE BARS";
+      el.title = "The data source returned coarser candles than requested at this depth — each bar " +
+        "spans more time than the timeframe label claims, so SMA/structure readings are not comparable. " +
+        "Use a shorter range.";
+      el.hidden = false;
+      return;
+    }
+    const share = m.bars ? m.flat / m.bars : 0;
+    if (share >= THIN_TAPE_MIN_SHARE) {
+      el.textContent = `⚠ THIN TAPE ${Math.round(share * 100)}%`;
+      el.title = `${m.flat} of ${m.bars} sessions in this window printed no trade (flat, padded bars). ` +
+        "Bases, SMAs and reactions on a tape this thin are unreliable — treat structure TA here " +
+        "with suspicion and check the order book before believing a level.";
+      el.hidden = false;
+      return;
+    }
+    if (m.basis === "raw") {
+      el.textContent = "RAW BASIS";
+      el.title = "Adjusted history was unavailable for this series, so bars are raw while scan levels are " +
+        "dividend/split-adjusted — levels can sit visibly off these bars.";
+      el.hidden = false;
+    }
   }
 
   // Dividend honesty: scan levels come from a dividend-ADJUSTED series, so a
