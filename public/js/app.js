@@ -1129,6 +1129,16 @@
     });
   }
 
+
+  // The bot already holds this name in the CURRENT market. Chip, not filter:
+  // a held A+ is still information (the setup re-confirmed), it is just not an
+  // available slot — which is exactly what the hunt needs to know at a glance.
+  function heldChip(r) {
+    const set = state.heldSyms && state.heldSyms[state.market];
+    if (!set || !set.has(String(r.symbol).toUpperCase())) return "";
+    return `<span class="row-held" title="The paper bot already holds this position — it is not a free-slot candidate">HELD</span>`;
+  }
+
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
@@ -1180,7 +1190,7 @@
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
-          ${tfDots(r)}${changeMark(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
+          ${tfDots(r)}${changeMark(r)}${heldChip(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
           ${mcapBadge}
           ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
@@ -1228,13 +1238,9 @@
 
   // #52: warm the chart candle file for a symbol on hover so tapping through
   // to the chart paints instantly. Once per symbol per session; silent.
-  const _prefetched = new Set();
-  function prefetchChart(sym) {
-    if (!sym || _prefetched.has(sym)) return;
-    _prefetched.add(sym);
-    const modeDir = state.mode === "reversal" ? "_rev" : state.mode === "spec" ? "_spec" : state.mode === "short" ? "_short" : "";
-    fetchT(`data/charts/${state.market}${modeDir}/${encodeURIComponent(sym)}.json`, { cache: "force-cache" }).catch(() => {});
-  }
+  // REMOVED 2026-08-15: it prefetched data/charts/<market>/<SYM>.json, a
+  // directory that has never existed in the repo — one guaranteed 404 per
+  // hovered row, warming nothing. The chart page renders from live bars.
 
   // v5 payload split (owner-ruled payload diet, 2026-07-31): the four heavy
   // row groups (plans-full / detail / analysis / markers) live in
@@ -1865,8 +1871,14 @@
         const s = by[code];
         if (!s || typeof s.expectancy_r !== "number") continue;
         const e = s.expectancy_r;
+        // Thresholds rescaled 2026-08-15: the old green bar was e > 0.3
+        // against a file whose best-ever value is 0.178 — a three-state
+        // colour code with one unreachable state, so every chip rendered
+        // amber and the tint said nothing. Green now starts at +0.10R
+        // (the pre-registered w3-1 mid-band, a number this program already
+        // treats as "good"), amber is breakeven-to-good, red is negative.
         VK_ENTRY_Q[code] = {
-          tier: e > 0.3 ? "green" : e >= 0 ? "amber" : "red",
+          tier: e >= 0.10 ? "green" : e >= 0 ? "amber" : "red",
           note: `Backtest (long-only): ${e >= 0 ? "+" : ""}${e.toFixed(2)}R avg over ${s.n} trades` +
                 (s.win_rate != null ? ` · ${s.win_rate}% win` : "") +
                 (s.profit_factor != null ? ` · PF ${s.profit_factor}` : ""),
@@ -2542,6 +2554,25 @@
       const res = await fetchT("data/vivek_bot_book.json", { cache: "no-cache" });
       if (!res.ok) return;
       const b = await res.json();
+      // HELD marking (2026-08-15). The deck's job is picking the NEXT trade,
+      // and with the book near its cap most A+ rows are names the bot already
+      // holds — nothing on the row said so, and finding out cost a trip to the
+      // journal per symbol. The book is already in hand right here, every 3
+      // minutes; keep a market->symbols map and let the row template read it.
+      // Display-only: it marks rows, it filters nothing, the bot never sees it.
+      try {
+        const held = {};
+        for (const p of (b.open || [])) {
+          if (!p || !p.symbol) continue;
+          (held[p.market] = held[p.market] || new Set()).add(String(p.symbol).toUpperCase());
+        }
+        const before = state.heldSyms && state.heldSyms[state.market] ? state.heldSyms[state.market].size : -1;
+        state.heldSyms = held;
+        const after = held[state.market] ? held[state.market].size : 0;
+        // Rows may have painted before the book arrived (first load) — repaint
+        // once if the current market's held set actually changed size.
+        if (before !== after && state.data) renderRows();
+      } catch (_) { /* marking is best-effort; the strip below must not pay for it */ }
       // The cap lives in bot_rules.json, not in the book. Fetched SECOND and
       // separately so it can fail without costing the strip: a missing or
       // unreadable rules file degrades capacity to "not shown", never to a
@@ -3067,7 +3098,10 @@
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const [pm, sp] = await Promise.all([
         grab(`data/phasemap/${state.market}/latest.json`),
-        grab(`data/${state.market}_spec.json`),
+        // No crypto Specs file exists (the lens never ran there) — mynames.js
+        // has guarded this identical fetch since it was written; this call and
+        // phasemap-shared's were firing a live 404 on every CRYPTO visit.
+        state.market !== "crypto" ? grab(`data/${state.market}_spec.json`) : null,
       ]);
       lensIdx = { market: state.market,
                   phasemap: (pm && pm.results) || [],
@@ -3189,11 +3223,6 @@
     }, { passive: true });
     rowsHost.addEventListener("touchend", cancelLongPress, { passive: true });
     rowsHost.addEventListener("touchcancel", cancelLongPress, { passive: true });
-    // #52: prefetch chart data for the hovered row (desktop pointer only).
-    rowsHost.addEventListener("mouseover", (e) => {
-      const w = e.target.closest && e.target.closest(".row-wrap");
-      if (w && w.dataset.sym) prefetchChart(w.dataset.sym);
-    });
 
     // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {

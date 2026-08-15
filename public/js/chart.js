@@ -73,8 +73,14 @@
     if (back && el) { el.href = back[0]; el.textContent = back[1]; }
   }
   const isVivek = mode === "vivek";
-  const modeDir = mode === "reversal" ? "_rev" : mode === "spec" ? "_spec" : mode === "short" ? "_short" : "";
-  const chartFile = `data/charts/${market}${modeDir}/${encodeURIComponent(symbol)}.json`;
+  // `data/charts/<market>[<mode>]/<SYM>.json` — the per-ticker pre-rendered
+  // chart files — were REMOVED 2026-08-15. The directory has never existed in
+  // this repo (git ls-files: zero entries), so every fetch of it was a
+  // guaranteed 404 paid BEFORE the live fallback: a serial round-trip added to
+  // every scalp/spec chart open, plus one per hovered deck row (the prefetch,
+  // also removed). The fallbacks the 404 eventually reached are now called
+  // directly. If per-ticker chart JSON ever gets a producer, reintroduce the
+  // path THERE first.
 
   // #71: which lens's watchlist this chart's star belongs to — matches the
   // page the user arrived from (src=…) so a star set here shows up on that
@@ -3545,12 +3551,10 @@
         setInterval(stockTick, 15000);
       }
 
-      // Try to fetch the scan JSON for chart context; fall back to a minimal stub so
-      // the live position box and level lines still render when no scan JSON exists.
-      fetch(chartFile, { cache: "no-cache" })
-        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then((j) => { render(j); if (stockTick) stockTick(); })
-        .catch(() => {
+      // No per-ticker chart JSON exists (see the note at the top of the file),
+      // so build the minimal stub directly — the live position box and level
+      // lines render from it exactly as they did when this was the .catch arm.
+      {
           const ts  = Math.floor(Date.now() / 1000);
           const ep  = trade.entry;
           // Use exactly 1 minMove unit as the high/low spread so the stub is valid
@@ -3573,7 +3577,7 @@
           d.default_tf = "1D";
           render(d);
           if (stockTick) stockTick();
-        });
+      }
     }
   }
 
@@ -3842,21 +3846,9 @@
       });
       return;
     }
-    fetch(chartFile, { cache: "no-cache" })
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(render)
-      .catch(() => {
-        // For mode-specific subdirs, try the base pullback chart first.
-        if (modeDir) {
-          const baseFile = `data/charts/${market}/${encodeURIComponent(symbol)}.json`;
-          fetch(baseFile, { cache: "no-cache" })
-            .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(render)
-            .catch(fallbackFromLive);
-        } else {
-          fallbackFromLive();
-        }
-      });
+    // Non-VIVEK modes: straight to live bars. The static-chart fetch that used
+    // to sit here could only ever 404 (see the note at the top of the file).
+    fallbackFromLive();
   }
 
   // If cloud sync is on, pull the latest journal first so positions taken on

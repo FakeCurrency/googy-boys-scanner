@@ -1169,10 +1169,33 @@
     return { open, closed };
   }
 
+  // w3-1 PROGRESS (2026-08-15). The one number that decides everything —
+  // how far the pre-registered cycle is through its 30-close readout — lived
+  // only in raw book JSON. Now it is one quiet line above the bot stats:
+  // stamped-open count, gated closes out of 30, and the pre-registered band
+  // the readout will be judged against (pess +0.056 / mid +0.10 R/trade —
+  // fixed at sign-off 2026-08-02, so hard-coding them is recording the
+  // experiment, not inventing a number). Display-only; renders nothing when
+  // no row carries a cycle stamp (pre-cycle books, fixtures, the manual side).
+  function w3Line(d) {
+    const tag = (r) => String((r && r.cycle) || "");
+    const openN = d.open.filter((r) => tag(r) === "w3-1").length;
+    const closedN = d.closed.filter((r) => tag(r) === "w3-1").length;
+    if (!openN && !closedN) return "";
+    return `<div class="jr-w3" id="bot-w3" title="Pre-registered live cycle w3-1 (owner-signed 2026-08-02): rules frozen, readout at 30 gated closes against the pre-registered band. Every stat on this page still pools pre-cycle history — this line tracks the experiment only.">` +
+      `🔬 w3-1 · <b>${openN}</b> gated open · <b>${closedN}/30</b> closes` +
+      ` · band pess +0.056 / mid +0.10 R</div>`;
+  }
+
   function renderSide(side) {
     const d = state[side], pre = side;
     const s = stats(d.closed, d.open.length);
     statCards($("#" + pre + "-stats"), s);
+    if (side === "bot") {
+      const host = $("#bot-stats");
+      document.querySelectorAll("#bot-w3").forEach((el) => el.remove());
+      if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
+    }
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
     paintOpen(side);
     $("#" + pre + "-closed").innerHTML = deciderHTML(d.closed) + closedRows(d.closed, side);

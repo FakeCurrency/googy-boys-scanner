@@ -377,7 +377,8 @@ window.PM = (() => {
     const [vivek, pm, spec] = await Promise.all([
       vivekData ? Promise.resolve(vivekData) : grab(`data/${market}_vivek.json`),
       grab(`data/phasemap/${market}/latest.json`),
-      grab(`data/${market}_spec.json`),
+      // No crypto Specs file exists — same guard mynames.js has always used.
+      market !== "crypto" ? grab(`data/${market}_spec.json`) : null,
     ]);
     const map = {};
     const ent = (t) => (map[t] = map[t] || { long: [], short: [], detail: {} });
