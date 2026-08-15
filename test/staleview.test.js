@@ -1000,4 +1000,178 @@ test("the 1MB backtest fetch is idle work, and is called AFTER whenIdle exists",
     "whenIdle(loadEntryQuality) is called before `const whenIdle` — that is a ReferenceError at boot");
 });
 
+// ---------------------------------------------------------------------------
+// FINE-TUNE PASS pins (2026-08-15): HELD chips, tint thresholds, spec guard.
+// ---------------------------------------------------------------------------
+test("heldChip marks a row the bot holds in the CURRENT market only", () => {
+  const src = fnSrc(APP, "heldChip");
+  const run = (state, r) => new Function("state", src + "; return heldChip;")(state)(r);
+  const st = { market: "asx", heldSyms: { asx: new Set(["BHP"]), nasdaq: new Set(["ZUMZ"]) } };
+  assert.ok(/row-held/.test(run(st, { symbol: "BHP" })), "a held ASX name must chip");
+  assert.strictEqual(run(st, { symbol: "ZUMZ" }), "", "held in ANOTHER market is not held here");
+  assert.ok(/row-held/.test(run(st, { symbol: "bhp" })), "case must be normalised");
+  assert.strictEqual(run({ market: "asx" }, { symbol: "BHP" }), "", "no book yet = no chip, no throw");
+});
+
+test("the row template actually renders the chip, and the book load populates the set", () => {
+  assert.ok(/\$\{heldChip\(r\)\}/.test(APP), "the row template dropped heldChip(r)");
+  assert.ok(/state\.heldSyms = held/.test(APP), "loadBotActivity no longer populates heldSyms");
+  assert.ok(/if \(before !== after && state\.data\) renderRows\(\);/.test(APP),
+    "the first-load repaint hook is gone — rows painted before the book arrives never get marked");
+});
+
+test("every entry-tint tier is REACHABLE against the file the chips read", () => {
+  // The old green bar was e > 0.3 against a payload whose best value is 0.178:
+  // a three-state colour code with one reachable state, i.e. a tint that said
+  // nothing. Green now starts at +0.10 (the pre-registered w3-1 mid band).
+  const m = APP.match(/tier: e >= ([0-9.]+) \? "green" : e >= 0 \? "amber" : "red"/);
+  assert.ok(m, "the tint ladder changed shape — re-derive this pin");
+  const green = parseFloat(m[1]);
+  assert.ok(green <= 0.178, `green threshold ${green} is above the best observed value again (unreachable)`);
+  assert.ok(green > 0, "green must still mean better-than-breakeven");
+});
+
+test("the crypto Specs fetch is guarded in BOTH remaining call sites", () => {
+  // No crypto spec file exists; mynames.js always guarded it, these two fired
+  // a live 404 on every CRYPTO visit until 2026-08-15.
+  assert.ok(/state\.market !== "crypto" \? grab\(`data\/\$\{state\.market\}_spec\.json`\) : null/.test(APP),
+    "app.js lensIdx fetches crypto_spec.json unguarded again");
+  assert.ok(/market !== "crypto" \? grab\(`data\/\$\{market\}_spec\.json`\) : null/.test(SHARED),
+    "phasemap-shared loadConfluence fetches crypto_spec.json unguarded again");
+});
+
+// ---------------------------------------------------------------------------
+/* CHART SYMBOL ADAPTERS (2026-08-15, fine-tune pass). The chart renders from
+   three external symbol namespaces — Yahoo (candles), Binance (live crypto
+   klines), TradingView (deep-link) — and the adapters carried ZERO tests
+   despite each having a documented past failure (BDX-the-coin charting
+   Becton Dickinson, bare ASX tickers resolving to the US listing). Folded
+   into THIS suite rather than shipped standalone because a new test/*.js
+   file and its test.yml registration cannot land in one web-upload commit,
+   and the registration gate rightly rejects either half alone. */
+const CHART = fs.readFileSync(path.join(__dirname, "..", "public", "js", "chart.js"), "utf8");
+
+// ---- slicers (parser decides where a declaration ends) ----------------------
+function chartFnSrc(name) {
+  const at = CHART.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
+  assert.ok(at >= 0, `chart.js no longer declares function ${name}()`);
+  for (let i = CHART.indexOf("}", at); i > 0 && i - at < 4000; i = CHART.indexOf("}", i + 1)) {
+    const cand = CHART.slice(at, i + 1);
+    try { new Function(`return (${cand});`); return cand; } catch (_) { /* keep walking */ }
+  }
+  assert.fail(`could not slice ${name}()`);
+}
+function chartConstSrc(name) {
+  const at = CHART.search(new RegExp(`\\bconst\\s+${name}\\s*=`));
+  assert.ok(at >= 0, `chart.js no longer declares const ${name}`);
+  const start = CHART.indexOf("=", at) + 1;
+  for (let i = CHART.indexOf(";", start); i > 0 && i - start < 4000; i = CHART.indexOf(";", i + 1)) {
+    const cand = CHART.slice(start, i).trim();
+    try { new Function(`return (${cand});`); return cand; } catch (_) { /* keep walking */ }
+  }
+  assert.fail(`could not slice const ${name}`);
+}
+
+const YF_TICKER_SRC = chartConstSrc("YF_TICKER");
+
+// Bind an adapter with a given page-level `market`. isCryptoMarket is the tiny
+// helper tvSymbolFor closes over — sliced too, so its definition stays honest.
+function bindChart(name, market) {
+  const deps = `const market = ${JSON.stringify(market)};
+    const YF_TICKER = ${YF_TICKER_SRC};
+    ${/function isCryptoMarket/.test(CHART) ? chartFnSrc("isCryptoMarket") : "const isCryptoMarket = (t) => t === \"crypto\" || market === \"crypto\";"}
+    ${chartFnSrc(name)}; return ${name};`;
+  return new Function(deps)();
+}
+
+// ---- yfTickerFor: Yahoo candles -------------------------------------------
+test("ASX symbols get .AX — a bare CBA on Yahoo is not the bank you hold", () => {
+  const f = bindChart("yfTickerFor", "asx");
+  assert.strictEqual(f("CBA", "asx"), "CBA.AX");
+  assert.strictEqual(f("BHP", "asx"), "BHP.AX");
+  assert.strictEqual(f("cba", "asx"), "CBA.AX", "case must be normalised");
+});
+
+test("an ASX symbol that already carries a class suffix is not double-suffixed", () => {
+  const f = bindChart("yfTickerFor", "asx");
+  assert.strictEqual(f("GCQF.AX", "asx"), "GCQF.AX");
+});
+
+test("crypto is ALWAYS <base>-USD — the documented BDX-the-stock failure", () => {
+  const f = bindChart("yfTickerFor", "crypto");
+  assert.strictEqual(f("BTC", "crypto"), "BTC-USD");
+  assert.strictEqual(f("BDX", "crypto"), "BDX-USD", "bare BDX is Becton Dickinson on Yahoo");
+  assert.strictEqual(f("BTC-USD", "crypto"), "BTC-USD", "already-suffixed must not become BTC-USD-USD");
+});
+
+test("a crypto assetType wins from ANY page — the journal's cross-links rely on it", () => {
+  assert.strictEqual(bindChart("yfTickerFor", "asx")("SOL", "crypto"), "SOL-USD");
+  assert.strictEqual(bindChart("yfTickerFor", "nasdaq")("BTC", "crypto"), "BTC-USD");
+});
+
+test("on the crypto PAGE the market check dominates — pinned as shipped", () => {
+  // Shipped precedence: `assetType === "crypto" || market === "crypto"` is
+  // tested FIRST, so ?m=crypto&s=BHP charts BHP-USD, not BHP.AX. Reachable
+  // only by a hand-built URL — every generated link carries the row's own
+  // market, so assetType and page agree in practice. Pinned so a future
+  // "fix" of this precedence is a deliberate act, not a drive-by.
+  assert.strictEqual(bindChart("yfTickerFor", "crypto")("BHP", "asx"), "BHP-USD");
+});
+
+test("NASDAQ passes through bare — Yahoo already knows the symbol", () => {
+  const f = bindChart("yfTickerFor", "nasdaq");
+  assert.strictEqual(f("AAPL", "nasdaq"), "AAPL");
+  assert.strictEqual(f("ZUMZ", "nasdaq"), "ZUMZ");
+});
+
+test("index/commodity aliases resolve through YF_TICKER, not the suffix logic", () => {
+  const f = bindChart("yfTickerFor", "scalp");
+  assert.strictEqual(f("NAS100"), "^NDX");
+  assert.strictEqual(f("GOLD"), "GC=F");
+  assert.strictEqual(f("OIL"), "CL=F");
+});
+
+// ---- cryptoPair: Binance klines -------------------------------------------
+// A const arrow, not a function declaration — sliced with constSrc and bound
+// with its BINANCE_MAP override table (empty today; the fallback is the rule).
+function bindCryptoPair() {
+  return new Function(`const BINANCE_MAP = ${chartConstSrc("BINANCE_MAP")};
+    const cryptoPair = ${chartConstSrc("cryptoPair")}; return cryptoPair;`)();
+}
+
+test("cryptoPair builds <BASE>USDT and normalises case", () => {
+  const f = bindCryptoPair();
+  assert.strictEqual(f("BTC"), "BTCUSDT");
+  assert.strictEqual(f("btc"), "BTCUSDT");
+  assert.strictEqual(f("LINK"), "LINKUSDT");
+});
+
+test("cryptoPair expects the BASE dialect — the scan publishes bases, and this pin holds the contract", () => {
+  // The crypto scan's symbol column is bare bases (BTC, LINK, CAKE — verified
+  // against the live payload), and cryptoPair concatenates blindly: feed it
+  // the Yahoo "-USD" spelling and you get BTC-USDUSDT, a pair Binance
+  // rejects. That is correct TODAY because nothing upstream produces -USD
+  // here. If a caller ever starts passing Yahoo-dialect symbols, this test is
+  // the tripwire that says the strip must be added IN cryptoPair.
+  assert.strictEqual(bindCryptoPair()("BTC-USD"), "BTC-USDUSDT");
+});
+
+// ---- tvSymbolFor: the TradingView deep-link --------------------------------
+test("TradingView symbols per market: ASX: prefix, bare US, CRYPTO:<base>USD", () => {
+  assert.strictEqual(bindChart("tvSymbolFor", "asx")("CBA", "asx"), "ASX:CBA");
+  assert.strictEqual(bindChart("tvSymbolFor", "nasdaq")("AAPL", "nasdaq"), "AAPL");
+  assert.strictEqual(bindChart("tvSymbolFor", "crypto")("BTC", "crypto"), "CRYPTO:BTCUSD");
+});
+
+// ---- the dead static-chart path stays dead ---------------------------------
+test("no code path builds data/charts/ URLs any more (removed 2026-08-15)", () => {
+  // The directory has never existed in the repo; the fetches of it were a
+  // guaranteed-404 tax on every chart open and every hovered deck row. The
+  // string may survive in COMMENTS (the note explaining the removal) — strip
+  // them before grepping, per the house code-only rule.
+  assert.ok(!codeOnly(CHART).includes("data/charts/"), "chart.js builds a data/charts/ URL again");
+  assert.ok(!codeOnly(APP).includes("data/charts/"), "app.js prefetches data/charts/ again");
+});
+
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

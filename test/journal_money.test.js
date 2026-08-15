@@ -785,5 +785,42 @@ test("journal.css gives BOTH previously-unstyled reasons a rule", () => {
   }
 });
 
+
+// ── w3-1 progress line (2026-08-15) ─────────────────────────────────────────
+// The one number that decides everything — the pre-registered cycle's progress
+// to its 30-close readout — lived only in raw book JSON. One quiet line now
+// renders above the bot stats. These pins hold its honesty properties.
+suite("w3-1 progress line");
+
+const w3ctx = vm.createContext({ console });
+vm.runInContext(slice("function w3Line(d) {", "\n  }") + "\nthis.w3Line = w3Line;", w3ctx);
+const { w3Line } = w3ctx;
+const w3row = (cycle) => (cycle ? { cycle } : {});
+
+test("counts stamped open and stamped closes, and states the /30 target", () => {
+  const h = w3Line({ open: [w3row("w3-1"), w3row("w3-1"), w3row()], closed: [w3row("w3-1"), w3row()] });
+  assert.ok(h.includes("<b>2</b>"), "stamped-open count wrong");
+  assert.ok(h.includes("<b>1/30</b>"), "gated-close count must be stated against the 30-close readout");
+});
+
+test("SILENT when nothing carries the stamp — fixtures, pre-cycle books, the manual side", () => {
+  assert.equal(w3Line({ open: [w3row()], closed: [w3row()] }), "");
+  assert.equal(w3Line({ open: [], closed: [] }), "");
+});
+
+test("a different cycle tag is not counted as w3-1", () => {
+  // The audit-tag design (config: VIVEK_BOT_CYCLE_TAG) allows future cycles;
+  // a w4 row leaking into the w3 line would blur exactly the cohorts the
+  // stamp exists to keep apart.
+  assert.equal(w3Line({ open: [w3row("w4-1")], closed: [] }), "");
+});
+
+test("renderSide injects it above the bot stats, and re-render does not duplicate", () => {
+  assert.ok(/document\.querySelectorAll\("#bot-w3"\)\.forEach\(\(el\) => el\.remove\(\)\);/.test(SRC),
+    "the remove-before-insert guard is gone - every refresh would stack another line");
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", w3Line\(d\)\)/.test(SRC),
+    "renderSide no longer renders the w3 line");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
