@@ -320,8 +320,8 @@ def test_casing_and_whitespace_are_the_same_side_not_a_third_one():
 def test_an_unreadable_direction_is_counted_by_neither_side_cap():
     """A slot is a fact about the book; a SIDE is a claim about the trade. The
     tree already disagrees with itself about what a missing direction means
-    (vivek_bot._exit_hits defaults it long, vivek_run._mark_position defaults it
-    short), so guessing here would only add a third opinion."""
+    (vivek_bot._direction defaults it long, vivek_run's marking path treats it
+    as short), so guessing here would only add a third opinion."""
     d = vb.decide([], equity=10_000, market="asx", open_book=_odd(3, "flat"))
     s = d["summary"]
     assert s["total_open"] == 3
