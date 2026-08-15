@@ -470,7 +470,7 @@ jobs:
           # markets' columns, so an asx-only run must stage the whole file or
           # the crypto rows it just carried forward are dropped (same rule as
           # sector_breadth.json). Report-only; nothing reads it back.
-          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/sector_breadth.json data/sector_history.json data/scan_health.json public/data/regime.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json public/data/funnel_history.json"
+          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/sector_breadth.json data/sector_history.json data/scan_health.json public/data/regime.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json public/data/funnel_history.json data/history"
           if [ "$M" = "all" ]; then MK="asx nasdaq crypto"; else MK="$M"; fi
           PATHS="$SHARED"
           for m in $MK; do
