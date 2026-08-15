@@ -666,7 +666,13 @@ Nothing imports scanner.notify; its only invocation is commented out in scan.yml
 *Files: scanner/notify.py, .github/workflows/scan.yml*
 
 ## 93. Delete reversal.py + analysis.py pair; fix stale --legacy-scans references
-**Impact 2 · Effort S · code-quality**
+**RETRACTED 2026-08-15 — DO NOT ACTION THE DELETE.** The premise is false at
+head: `scanner/spec.py:16`, `scanner/spec_run.py:25` and
+`tests/test_engine_truth.py:18` all import `reversal` — deleting the pair
+breaks the Specs lens outright. The peripheral halves were done separately
+(backup entry removed 2026-07-x, marketcaps trimmed 2026-08-15). The module
+deletion itself must not happen while Specs imports it.
+**Impact 2 · Effort S · code-quality** *(original text below, kept for the record)*
 
 No file imports reversal; analysis.py is imported only by reversal.py (reversal.py:14), so both (274 lines) are unreachable. run.py:68-70 comments that retired scanners are 'opt-in (--legacy-scans)' but argparse defines no such flag, and scripts/backup_journal.py:37 still backs up public/data/asx_reversal.json, which no longer exists in public/data/. Delete both modules, the comment, and the stale backup entry.
 

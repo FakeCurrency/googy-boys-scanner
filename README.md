@@ -94,7 +94,7 @@ scanner/              Python engine
   config.py           markets, thresholds, weights, grade cut-offs  <- tune here
   universe.py         ticker lists          data.py      batched yfinance downloads
   indicators.py       EMA / RSI / ATR / SuperTrend / pivots
-  vivek.py            the VIVEK lens        reversal.py  the reversal lens
+  vivek.py            the VIVEK lens        reversal.py  retired lens (kept: spec.py imports its helpers)
   scan.py             per-market orchestration      run.py   CLI entry point
   broker/             the paper bot, risk manager, circuit breakers, kill switch
 phasemap/             the PhaseMap lens (own runner, own tests)
@@ -102,7 +102,7 @@ functions/api/        Cloudflare Pages Functions — health, heartbeat, scan, cl
 public/               the deployed static site (this folder IS the deploy)
 journal/              the books — vivek_bot_book.json is the track record
 tests/ · test/        Python suites · JS suites
-.github/workflows/    17 workflows; OPERATIONS.md has the schedule
+.github/workflows/    16 workflows; OPERATIONS.md has the schedule
 ```
 
 ## Operating it
