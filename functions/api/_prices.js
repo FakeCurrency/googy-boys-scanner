@@ -224,12 +224,58 @@ export async function livePrice(sym, assetType, prefer = null) {
   return { price: null, source: null, delayed: false };
 }
 
+/** EODHD symbol dialect: ASX is ".AU" (not Yahoo's ".AX"), bare US tickers get
+ *  ".US". Indices (^…), forex (=X) and anything already odd return null →
+ *  caller falls through to Yahoo. */
+export function eodhdSymbol(sym) {
+  const s = String(sym || "").toUpperCase();
+  if (!s || /[\^=]/.test(s)) return null;
+  if (/\.AX$/.test(s)) return s.replace(/\.AX$/, ".AU");
+  if (/\./.test(s)) return null;          // other exchange suffixes: not mapped yet
+  return s + ".US";
+}
+
+/** EODHD EOD candles on the SCAN's adjusted basis (o/h/l/c scaled by
+ *  adjusted_close/close, the same maths as the Yahoo adjclose path). EOD data
+ *  only — intraday intervals are not on this plan and return []. Any failure
+ *  returns [] so the caller falls through to Yahoo (soft fail, incl. no key). */
+export async function fetchEodhdCandles(sym, { range = "1y", interval = "1d", key = null, timeout = 9000 } = {}) {
+  if (!key || interval !== "1d") return [];
+  const es = eodhdSymbol(sym);
+  if (!es) return [];
+  const YEARS = { "1mo": 1, "3mo": 1, "6mo": 1, "1y": 1, "2y": 2, "5y": 5, "10y": 10, "max": 30 };
+  const yrs = YEARS[range] || 1;
+  const from = new Date(Date.now() - yrs * 365.25 * 86400 * 1000).toISOString().slice(0, 10);
+  try {
+    const url = `https://eodhd.com/api/eod/${encodeURIComponent(es)}?api_token=${encodeURIComponent(key)}` +
+      `&fmt=json&period=d&from=${from}`;
+    const r = await timedFetch(url, { headers: { "Accept": "application/json" } }, timeout);
+    if (!r.ok) return [];
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return [];
+    const out = [];
+    for (const k of rows) {
+      const { open: o, high: h, low: l, close: c, adjusted_close: a, volume: v, date } = k || {};
+      if (o == null || h == null || l == null || c == null || !date) continue;
+      let f = 1;
+      if (a != null && c > 0) { const r2 = a / c; if (Number.isFinite(r2) && r2 > 0) f = r2; }
+      out.push({ time: Math.floor(Date.parse(date + "T00:00:00Z") / 1000),
+                 open: +(o * f).toFixed(8), high: +(h * f).toFixed(8),
+                 low: +(l * f).toFixed(8), close: +(c * f).toFixed(8),
+                 volume: v == null ? 0 : Math.round(+v) });
+    }
+    return out;
+  } catch (_) { return []; }
+}
+
 /**
  * Resilient candle history, consistent-length across asset types.
- * Crypto → Binance klines (fallback Yahoo); others → Yahoo (dual host).
+ * Crypto → Binance klines (fallback Yahoo); stocks → EODHD when a key is
+ * configured (CHART/HISTORY PATH ONLY — the live scan engine has no access to
+ * this key by construction), falling back to Yahoo (dual host) on any failure.
  * @returns {{candles:Array, source:string|null, delayed:boolean}}
  */
-export async function history(sym, assetType, { range = "1y", interval = "1d", prefer = null } = {}) {
+export async function history(sym, assetType, { range = "1y", interval = "1d", prefer = null, eodKey = null } = {}) {
   const crypto = assetType ? assetType === "crypto" : isCryptoSymbol(sym);
   const want = targetBars(range, interval);
 
@@ -241,6 +287,14 @@ export async function history(sym, assetType, { range = "1y", interval = "1d", p
     // Binance is raw exchange data, but crypto has no dividends/splits — its
     // raw and adjusted bases are the same thing, so "adj" is honest here.
     if (c.length) return { candles: trimCandles(c, want), source: "binance", delayed: false, basis: "adj" };
+  }
+  // Stocks: EODHD first when the owner has installed a key (adjusted basis,
+  // 30y depth, official actions). [] on any failure/miss → Yahoo, unchanged.
+  if (!crypto && eodKey) {
+    const c = await fetchEodhdCandles(sym, { range, interval, key: eodKey });
+    if (c.length) {
+      return { candles: trimCandles(c, want), source: "eodhd", delayed: !crypto, basis: "adj" };
+    }
   }
   // Crypto on Yahoo MUST be "<base>-USD" (a bare base = a same-named equity).
   const ySym = crypto ? yahooCryptoSymbol(sym) : sym;

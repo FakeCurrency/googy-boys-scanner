@@ -65,7 +65,12 @@ export const onRequestGet = async (ctx) => {
       return cachePut(ctx, json(200, { ok: true, price: +live.price.toFixed(8), symbol, source: live.source }));
     }
 
-    const hist = await history(symbol, assetType, { range, interval, prefer });
+    // EODHD (owner-installed Cloudflare env var EODHD_API_TOKEN) feeds the
+    // CHART/HISTORY path only. The key exists solely in Cloudflare Pages, so
+    // the GitHub-Actions scan engine cannot read it even by accident — that
+    // is the live-grade-path fence, structural rather than promised.
+    const hist = await history(symbol, assetType,
+      { range, interval, prefer, eodKey: ctx.env && ctx.env.EODHD_API_TOKEN ? ctx.env.EODHD_API_TOKEN : null });
     // Prefer the live tick for `price`; fall back to the last candle close.
     const lastClose = hist.candles.length ? hist.candles[hist.candles.length - 1].close : null;
     const price = live.price != null ? +live.price : lastClose;
