@@ -286,7 +286,14 @@ jobs:
           # overflow at 360/390/430, smoke green, no page errors. The A+ pill
           # also renumbered (products no longer counted as opportunity), which
           # changes glyph widths on both index shots.
-          key: screenshot-baselines-v15-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+#
+          # v15 -> v16 (2026-08-15): INTENTIONAL and measured — the deck rows
+          # now carry a HELD chip for names the paper bot already holds, and
+          # the e2e fixture book overlaps the fixture scan heavily, so many
+          # rows reflow: index-desktop 2.22%, index-390 2.69% against the 2%
+          # budget; journal both 0.00% (the new w3-1 and decider lines stay
+          # silent on fixture data by design — no stamps, single-reason mix).
+          key: screenshot-baselines-v16-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
