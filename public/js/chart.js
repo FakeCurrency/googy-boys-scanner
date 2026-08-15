@@ -1602,7 +1602,8 @@
     const yf       = yfTickerFor(SYM, d.asset_type);
     // VIVEK crypto: force Yahoo <base>-USD so the header price matches the chart
     // (a guessed Binance pair could be a different/colliding token).
-    const srcParam = (d.asset_type === "crypto" || market === "crypto") ? "&src=yahoo" : "";
+    const isCryptoQuote = (d.asset_type === "crypto" || market === "crypto");
+    const srcParam = isCryptoQuote ? "&src=yahoo" : "";
     const priceEl  = $("#ct-price");
     const delayEl  = $("#ct-delayed");
     let lastPx = null;
@@ -1615,7 +1616,13 @@
         if (j == null || j.price == null) return;
         const px = +j.price;
         liveState.price = px;
-        if (delayEl) delayEl.hidden = false;
+        // The "~15m delayed" chip is an EQUITIES exchange-licensing fact
+        // (Yahoo delays ASX/NASDAQ quotes ~15-20m). Crypto quotes are
+        // real-time on Yahoo's 24/7 feed — the API layer says the same
+        // (livePrice: delayed = !crypto) — so unhiding the chip on a crypto
+        // chart was a FALSE label (owner-reported 2026-08-15). The header
+        // price still refreshes every 20s for both.
+        if (delayEl && !isCryptoQuote) delayEl.hidden = false;
         if (priceEl) {
           if (lastPx != null && px !== lastPx) {
             priceEl.classList.remove("tick-up", "tick-down");
