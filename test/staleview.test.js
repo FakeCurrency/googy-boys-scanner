@@ -1309,6 +1309,21 @@ test("degraded interval outranks thin tape outranks raw basis — and a clean se
   assert.ok(clean.hidden, "5% flat on an adjusted series is normal thin-ASX life — no chip");
 });
 
+test("the ~15m-delayed chip is EQUITIES-ONLY — crypto quotes are real-time and must not wear it", () => {
+  // Owner-reported 2026-08-15: a LINK chart carried "~15m delayed". The delay
+  // is an exchange-licensing fact about ASX/NASDAQ quotes; Yahoo's crypto feed
+  // is 24/7 real-time and the API layer already publishes delayed=!crypto.
+  // startStockLive serves BOTH asset types (crypto rides it for scan-parity
+  // pricing), so the unhide must be crypto-gated or the label lies.
+  const code = codeOnly(CHART);
+  assert.ok(/const isCryptoQuote = \(d\.asset_type === "crypto" \|\| market === "crypto"\)/.test(code),
+    "startStockLive lost its crypto discriminator");
+  assert.ok(/delayEl && !isCryptoQuote\) delayEl\.hidden = false/.test(code),
+    "the delayed-chip unhide is no longer crypto-gated — crypto charts will claim a 15m delay again");
+  assert.ok(!/if \(delayEl\) delayEl\.hidden = false/.test(code),
+    "an unconditional delayed-chip unhide is back");
+});
+
 test("the daily pulls CAPTURE metadata and the chip renders before the chart does", () => {
   const code = codeOnly(CHART);
   const captures = (code.match(/"5y", "1d", true\)/g) || []).length;
