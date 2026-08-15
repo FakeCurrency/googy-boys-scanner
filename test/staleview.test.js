@@ -1193,8 +1193,41 @@ const PRICES = fs.readFileSync(path.join(__dirname, "..", "functions", "api", "_
 const bindPrices = (() => {
   let cached = null;
   return () => cached || (cached = new Function(`${PRICES.replace(/^export\s+/gm, "")}
-    return { targetBars, yahooCandles, isAdjusted, barSpacing, intervalDegraded, trimCandles };`)());
+    return { targetBars, yahooCandles, isAdjusted, barSpacing, intervalDegraded, trimCandles,
+             eodhdSymbol, fetchEodhdCandles };`)());
 })();
+
+// ── EODHD (2026-08-15, charts/history ONLY — the live grade path is fenced) --
+test("eodhdSymbol speaks the vendor dialect: .AX→.AU, bare US→.US, oddities→null(Yahoo)", () => {
+  const { eodhdSymbol } = bindPrices();
+  assert.strictEqual(eodhdSymbol("CBA.AX"), "CBA.AU", "ASX is .AU at EODHD, not Yahoo's .AX");
+  assert.strictEqual(eodhdSymbol("AAPL"), "AAPL.US");
+  assert.strictEqual(eodhdSymbol("^AXJO"), null, "indices fall through to Yahoo");
+  assert.strictEqual(eodhdSymbol("AUDUSD=X"), null, "forex falls through to Yahoo");
+  assert.strictEqual(eodhdSymbol("GCQF.TO"), null, "unmapped exchange suffixes fall through");
+});
+
+test("no key / intraday / unmappable → fetchEodhdCandles resolves [] WITHOUT fetching", async () => {
+  // The sandbox has no fetch — an early return is the only way these resolve.
+  const { fetchEodhdCandles } = bindPrices();
+  assert.deepStrictEqual(await fetchEodhdCandles("CBA.AX", { range: "5y", interval: "1d", key: null }), []);
+  assert.deepStrictEqual(await fetchEodhdCandles("CBA.AX", { range: "2y", interval: "1h", key: "k" }), [],
+    "intraday is not on this plan — must not even try");
+  assert.deepStrictEqual(await fetchEodhdCandles("^AXJO", { range: "1y", interval: "1d", key: "k" }), []);
+});
+
+test("history() tries EODHD only for stocks-with-key, BEFORE Yahoo, never for crypto", () => {
+  const code = codeOnly(PRICES);
+  const eod = code.indexOf("if (!crypto && eodKey)");
+  // lastIndexOf: the ySym line exists in livePrice() too — history()'s copy is the LAST.
+  const yahoo = code.lastIndexOf("const ySym = crypto ? yahooCryptoSymbol(sym) : sym;");
+  assert.ok(eod >= 0, "the EODHD branch lost its stocks-with-key guard");
+  assert.ok(yahoo > eod, "EODHD must be tried before history()'s Yahoo fallback, not after");
+  assert.ok(/source: "eodhd", delayed: !crypto, basis: "adj"/.test(code), "EODHD series metadata lost");
+  const PRICE = fs.readFileSync(path.join(__dirname, "..", "functions", "api", "price.js"), "utf8");
+  assert.ok(/eodKey: ctx\.env && ctx\.env\.EODHD_API_TOKEN/.test(codeOnly(PRICE)),
+    "price.js no longer reads the key from Cloudflare env — the only place it may live");
+});
 
 test("targetBars serves full 5y/10y depth — the 1000-bar cap was the weekly-SMA200 ceiling", () => {
   const { targetBars } = bindPrices();
