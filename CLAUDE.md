@@ -1805,6 +1805,36 @@ meant** — the failure mode that survives review because the value looks fine.
 10. **CF Functions** are Workers runtime: no Node builtins; KV binding
     `JOURNAL_KV` backs sync + the scan/close rate limits.
 
+## CHART DATA PARITY (2026-08-15) — the proxy serves the ENGINE's arithmetic
+
+The scanner computes every level on dividend/split-ADJUSTED prices (yfinance
+`auto_adjust=True`); until 2026-08-15 `/api/price` served Yahoo's RAW quote
+arrays, so plan levels sat on different arithmetic than the bars under them —
+measured the day it shipped: RHC/AIA/SDF (all A+ weekly-lens) each drew price
+on the WRONG side of a raw-basis weekly 200-SMA (+2.9–4.9% drift). Four rules
+now hold, each pinned in `test/staleview.test.js` (90→99):
+
+- **`_prices.js` scales every Yahoo bar by adjclose/close** → chart bars share
+  the scan's basis. Verified live: RHC chart-side weekly SMA200 = 44.4957 =
+  the engine's published level, exact. Intraday has no adjclose and stays raw.
+- **`targetBars` serves real depth** (5y→1900, 10y/max→2600, intraday 750).
+  The old 1000-bar cap cut "5y" to ~4y (crypto: 2.7y), leaving the flagship
+  Weekly SMA-200 ~8 valid points on ASX and uncomputable on crypto.
+- **Honesty fields on every candle response:** `basis` ("adj"/"raw"), `flat`
+  (no-trade padded sessions in the window — RML measures 45%), `degraded`
+  (Yahoo silently returns COARSER bars than asked at deep ranges; max/1d has
+  returned monthly bars from 1991). `chart.js renderDataHonesty()` shows ONE
+  chip (`#ct-datawarn`), worst finding wins: COARSE BARS > THIN TAPE n% > RAW
+  BASIS. Silent when clean.
+- **`resampleWeekly` buckets Sat→Fri stamped at the last bar** — the engine's
+  W-FRI weeks. Identical membership for Mon–Fri equities; on 7-day crypto the
+  old Mon–Sun weeks genuinely disagreed with the weeks the scan grades.
+
+Remaining ceiling is the VENDOR, not the renderer: Yahoo micro-cap prints,
+survivorship, 15–20m delay. The costed fix (owner decision, NOT taken) is
+EODHD "All World" US$19.99/mo — see `reviews/2026-08-15-charts-data-recon.md`
+in the project docs for the full evidence pack.
+
 ## Frontend rules
 
 - iOS-style dark theme: tokens in `styles.css :root` (system-blue/green/red,
