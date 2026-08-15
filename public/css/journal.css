@@ -413,6 +413,14 @@
 }
 /* The split line above the closed table. Deliberately plain text, not a card:
    it is a caveat on the table beneath it, not a headline of its own. */
+/* w3-1 progress — quiet by design: it must be readable daily without shouting,
+   because the correct owner action for weeks is NOTHING. */
+.jr-w3 {
+  font: 600 11.5px/1.5 var(--sans); color: var(--muted);
+  padding: 0 0 8px; cursor: help;
+}
+.jr-w3 b { color: var(--bot); font-weight: 700; }
+
 .jr-decider {
   font: 600 11.5px/1.5 var(--sans); color: var(--muted);
   padding: 2px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 14px;

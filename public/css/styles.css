@@ -1841,6 +1841,10 @@ body { letter-spacing: -0.012em; }
   font: 700 12.5px/1 var(--sans); color: var(--text-2); text-align: left;
 }
 .ba-sum:hover { color: var(--text); }
+/* ~110 chars of capacity + stalled + free wraps to four lines at 390px, and
+   line-height 1 stacked those lines ascender-into-descender. 1.45 is the
+   same leading the row chips use; desktop (one line) is visually unchanged. */
+.ba-sum { line-height: 1.45; }
 .ba-chev { font-size: 10px; color: var(--muted-2); transition: transform .15s; }
 .ba-open .ba-chev { transform: rotate(180deg); }
 .ba-events {
@@ -2204,6 +2208,12 @@ body { letter-spacing: -0.012em; }
 .toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip { font-size: 11px; padding: 4px 8px; }
 .toolbar.is-slim .tb-watch { padding: 4px 10px; }
 .toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { font-size: 11px; padding: 4px 9px; }
+/* The slim (scrolled) state shrank the controls below the 40px tap floor the
+   full-size toolbar already guarantees — precisely when a phone user is
+   scrolling with a thumb over them. Floor them; the slim look keeps the
+   smaller type, the hit area does not shrink with it. */
+.toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip, .toolbar.is-slim .tb-watch,
+.toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { min-height: 40px; }
 @media (max-width: 680px) {
   /* Mobile keeps the ONE-LINE horizontally-scrolling strip (thumb design):
      nowrap + natural width so the strip scrolls instead of squashing. */
@@ -2820,6 +2830,14 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   display: inline-block; min-width: 15px; text-align: center; margin-left: 2px;
   padding: 2px 5px; border-radius: 999px; font: 700 9.5px/1 var(--mono);
   background: rgba(0,210,255,.18); color: #00d2ff;
+}
+/* HELD (2026-08-15) — the bot already holds this name in this market. Muted
+   blue outline, deliberately quieter than the grade block: it is a fact about
+   the BOOK, not about the setup. */
+.row-held {
+  font: 800 9px/1 var(--sans); letter-spacing: 0.06em; color: var(--bot, #5b9cff);
+  border: 1px solid color-mix(in srgb, var(--bot, #5b9cff) 55%, transparent);
+  border-radius: 5px; padding: 2px 5px; white-space: nowrap;
 }
 .row-alert { font-size: 11px; line-height: 1; opacity: .85; flex-shrink: 0; }
 
