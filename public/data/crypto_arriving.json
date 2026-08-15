@@ -1,11 +1,24 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-08-15T03:02:50+00:00",
+  "generated_at": "2026-08-15T08:44:08+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "LEO",
+      "name": "LEO Token",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 9.23235989,
+      "turnover_avg20": 345946,
+      "turnover_today": 9974198,
+      "rvol": 3.1,
+      "adv_usd": 345946.3,
+      "fund": false
+    }
+  ]
 }
