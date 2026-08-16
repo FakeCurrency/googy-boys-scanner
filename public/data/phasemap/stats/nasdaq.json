@@ -1,97 +1,97 @@
 {
  "market": "NASDAQ",
- "generated": "2026-08-09",
+ "generated": "2026-08-16",
  "ruleset_version": "1.3.1",
  "universe": 1427,
  "period": "5y",
  "survivorship_bias": true,
  "all": {
-  "n": 12657,
-  "fwd_5": 0.0139,
+  "n": 12660,
+  "fwd_5": 0.014,
   "fwd_10": 0.017,
   "fwd_20": 0.0218,
   "mae": -0.0864,
-  "t1_hit_pct": 41.0,
-  "avg_bars_to_t1": 9.6,
-  "stalled_pct": 89.9,
+  "t1_hit_pct": 40.9,
+  "avg_bars_to_t1": 9.5,
+  "stalled_pct": 90.0,
   "dead_pct": 34.6
  },
  "cohorts": {
   "tier A+": {
-   "n": 1520,
-   "fwd_5": 0.0142,
-   "fwd_10": 0.0136,
-   "fwd_20": 0.0142,
-   "mae": -0.0834,
-   "t1_hit_pct": 41.5,
+   "n": 1509,
+   "fwd_5": 0.0146,
+   "fwd_10": 0.0138,
+   "fwd_20": 0.015,
+   "mae": -0.0837,
+   "t1_hit_pct": 41.4,
    "avg_bars_to_t1": 9.4,
    "stalled_pct": 90.1,
-   "dead_pct": 36.1
+   "dead_pct": 36.2
   },
   "tier A": {
-   "n": 7017,
-   "fwd_5": 0.0135,
-   "fwd_10": 0.0183,
-   "fwd_20": 0.0212,
-   "mae": -0.088,
-   "t1_hit_pct": 40.4,
+   "n": 7008,
+   "fwd_5": 0.0136,
+   "fwd_10": 0.0184,
+   "fwd_20": 0.0213,
+   "mae": -0.0881,
+   "t1_hit_pct": 40.5,
    "avg_bars_to_t1": 9.8,
-   "stalled_pct": 89.6,
-   "dead_pct": 34.8
+   "stalled_pct": 89.8,
+   "dead_pct": 34.9
   },
   "long": {
-   "n": 5904,
-   "fwd_5": 0.0152,
-   "fwd_10": 0.0243,
-   "fwd_20": 0.038,
-   "mae": -0.0801,
+   "n": 5894,
+   "fwd_5": 0.0154,
+   "fwd_10": 0.0242,
+   "fwd_20": 0.0381,
+   "mae": -0.0804,
    "t1_hit_pct": 43.6,
    "avg_bars_to_t1": 9.2,
-   "stalled_pct": 90.1,
-   "dead_pct": 30.9
+   "stalled_pct": 90.2,
+   "dead_pct": 31.1
   },
   "short": {
-   "n": 6753,
-   "fwd_5": 0.0128,
-   "fwd_10": 0.0106,
-   "fwd_20": 0.0076,
-   "mae": -0.0918,
+   "n": 6766,
+   "fwd_5": 0.0127,
+   "fwd_10": 0.0107,
+   "fwd_20": 0.0077,
+   "mae": -0.0917,
    "t1_hit_pct": 38.6,
    "avg_bars_to_t1": 9.9,
-   "stalled_pct": 89.8,
-   "dead_pct": 37.8
+   "stalled_pct": 89.9,
+   "dead_pct": 37.7
   },
   "liquid": {
-   "n": 11669,
-   "fwd_5": 0.0143,
-   "fwd_10": 0.0179,
-   "fwd_20": 0.0226,
+   "n": 11676,
+   "fwd_5": 0.0144,
+   "fwd_10": 0.0178,
+   "fwd_20": 0.0227,
    "mae": -0.0866,
    "t1_hit_pct": 41.7,
    "avg_bars_to_t1": 9.6,
-   "stalled_pct": 89.9,
+   "stalled_pct": 90.0,
    "dead_pct": 34.5
   },
   "illiquid": {
-   "n": 988,
-   "fwd_5": 0.0086,
-   "fwd_10": 0.0062,
-   "fwd_20": 0.0126,
-   "mae": -0.0835,
-   "t1_hit_pct": 32.3,
-   "avg_bars_to_t1": 9.5,
-   "stalled_pct": 90.0,
-   "dead_pct": 36.5
+   "n": 984,
+   "fwd_5": 0.0088,
+   "fwd_10": 0.0067,
+   "fwd_20": 0.012,
+   "mae": -0.0846,
+   "t1_hit_pct": 32.0,
+   "avg_bars_to_t1": 9.2,
+   "stalled_pct": 89.8,
+   "dead_pct": 36.3
   },
   "price >= $1": {
-   "n": 12594,
+   "n": 12597,
    "fwd_5": 0.0138,
-   "fwd_10": 0.0172,
-   "fwd_20": 0.0216,
-   "mae": -0.0853,
+   "fwd_10": 0.0171,
+   "fwd_20": 0.0217,
+   "mae": -0.0854,
    "t1_hit_pct": 40.9,
    "avg_bars_to_t1": 9.6,
-   "stalled_pct": 89.9,
+   "stalled_pct": 90.0,
    "dead_pct": 34.6
   },
   "cents (<$1)": {
@@ -106,44 +106,44 @@
    "dead_pct": 42.9
   },
   "in-sample": {
-   "n": 9644,
+   "n": 9608,
    "fwd_5": 0.0144,
-   "fwd_10": 0.0191,
+   "fwd_10": 0.0192,
    "fwd_20": 0.0255,
-   "mae": -0.0837,
-   "t1_hit_pct": 41.9,
+   "mae": -0.0839,
+   "t1_hit_pct": 41.8,
    "avg_bars_to_t1": 9.7,
    "stalled_pct": 90.7,
    "dead_pct": 33.7
   },
   "out-of-sample": {
-   "n": 3013,
-   "fwd_5": 0.0123,
-   "fwd_10": 0.0098,
-   "fwd_20": 0.0091,
-   "mae": -0.095,
-   "t1_hit_pct": 38.1,
+   "n": 3052,
+   "fwd_5": 0.0126,
+   "fwd_10": 0.0096,
+   "fwd_20": 0.0096,
+   "mae": -0.0945,
+   "t1_hit_pct": 38.3,
    "avg_bars_to_t1": 9.1,
-   "stalled_pct": 87.5,
-   "dead_pct": 37.4
+   "stalled_pct": 88.0,
+   "dead_pct": 37.5
   }
  },
  "stall": {
-  "stalled": 11382,
-  "saved_capital": 3454,
-  "cut_winner": 4721,
-  "neither": 3207
+  "stalled": 11398,
+  "saved_capital": 3458,
+  "cut_winner": 4715,
+  "neither": 3225
  },
  "baselines": {
   "random": {
-   "n": 11704,
-   "fwd_5": 0.0051,
-   "fwd_10": 0.0092,
-   "fwd_20": 0.0196
+   "n": 11765,
+   "fwd_5": 0.0042,
+   "fwd_10": 0.0091,
+   "fwd_20": 0.02
   },
   "buy_hold": {
-   "n": 1330,
-   "total_return": 0.7757
+   "n": 1331,
+   "total_return": 0.7598
   }
  }
 }
