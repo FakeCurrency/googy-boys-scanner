@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-08-17T10:41:59-04:00",
+  "generated_at": "2026-08-17T11:37:33-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "NYAX",
+      "name": "Nayax Ltd. - Ordinary Shares",
+      "sector": "",
+      "dir": "LONG",
+      "price": 50.59999847,
+      "turnover_avg20": 788856,
+      "turnover_today": 3213099,
+      "rvol": 4.7,
+      "adv_usd": 788856.45,
+      "fund": false
+    },
     {
       "symbol": "KMDA",
       "name": "Kamada Ltd. - Ordinary Shares",
