@@ -792,10 +792,25 @@ test("journal.css gives BOTH previously-unstyled reasons a rule", () => {
 // renders above the bot stats. These pins hold its honesty properties.
 suite("w3-1 progress line");
 
+// Session B (2026-08-19): the line became a strip that names WHO took each
+// gated exit, so it now pulls in the shared exit-classifier, the tag/target
+// constants and the row builder. All four are sliced from the shipped file —
+// re-typing the classifier here is exactly the drift this suite exists to
+// catch, since a mirrored copy would agree with a broken original.
 const w3ctx = vm.createContext({ console });
-vm.runInContext(slice("function w3Line(d) {", "\n  }") + "\nthis.w3Line = w3Line;", w3ctx);
-const { w3Line } = w3ctx;
+vm.runInContext(
+  slice("const MECHANICAL_EXITS =", "];")
+  + "\n" + slice("const W3_TAG =", ";")
+  + "\n" + slice("const W3_TARGET =", ";")
+  + "\n" + slice("const esc =", "[c]));")
+  + "\n" + slice("function w3Rows(d) {", "\n  }")
+  + "\n" + slice("function w3Line(d) {", "\n  }")
+  + "\nthis.w3Line = w3Line; this.w3Rows = w3Rows;", w3ctx);
+const { w3Line, w3Rows } = w3ctx;
 const w3row = (cycle) => (cycle ? { cycle } : {});
+const w3close = (o) => Object.assign(
+  { cycle: "w3-1", symbol: "SGP", market: "asx", exit_reason: "manual",
+    realized_r: -0.077, hold_days: 15, exit_date: "2026-08-18" }, o || {});
 
 test("counts stamped open and stamped closes, and states the /30 target", () => {
   const h = w3Line({ open: [w3row("w3-1"), w3row("w3-1"), w3row()], closed: [w3row("w3-1"), w3row()] });
@@ -931,6 +946,103 @@ test("the stalled explainer moved to a tooltip — words kept, weight gone", () 
   assert.ok(/class="st-tag" title="/.test(st), "the explainer did not land in the tooltip");
   assert.ok(/stale probe/.test(st), "the words themselves must survive somewhere");
 });
+
+
+// ── w3-1 EXIT EVIDENCE (Session B, 2026-08-19) ──────────────────────────────
+// The cycle counts to 30 closes and the count implies the 30 will measure the
+// RULESET. At head every gated close is the owner's, so the number is measuring
+// hand-timing instead. These pins hold the three properties that make the strip
+// worth having: it states the split, it says the zero case in words, and it
+// stays inert — a surface that nudged more manual closes would manufacture the
+// very confound it exists to report.
+suite("w3-1 exit evidence");
+
+test("the headline states WHO closed, not just how many", () => {
+  const h = w3Line({
+    open: [w3row("w3-1"), w3row("w3-1")],
+    closed: [w3close({ symbol: "SGP" }), w3close({ symbol: "XYZ", exit_reason: "stop" })],
+  });
+  assert.ok(h.includes("<b>2</b> gated open"), "open count missing");
+  assert.ok(h.includes("<b>2/30</b>"), "close count missing");
+  assert.ok(/<b>1<\/b> by the rules/.test(h), "rules-side count missing");
+  assert.ok(/<b>1<\/b> by you/.test(h), "owner-side count missing");
+});
+
+test("no closes yet -> the split clause is OMITTED, not printed as two zeros", () => {
+  // "0 by the rules · 0 by you" before anything has closed is noise that
+  // teaches the eye to skip the line it will later need to read.
+  const h = w3Line({ open: [w3row("w3-1")], closed: [] });
+  assert.ok(h.includes("<b>0/30</b>"), "the progress must still show");
+  assert.ok(!/by the rules/.test(h), "the split clause must not render at zero closes");
+});
+
+test("ZERO RULES-SIDE CLOSES IS SAID IN WORDS — the whole reason this exists", () => {
+  const h = w3Line({ open: [], closed: [w3close(), w3close({ symbol: "AIA" })] });
+  assert.ok(/jr-w3-flag/.test(h), "the zero-rules callout is missing");
+  assert.ok(/measures your timing, not the ruleset/.test(h),
+    "the callout must name what the sample can and cannot support");
+});
+
+test("one rules-side close and the callout goes away", () => {
+  const h = w3Line({ open: [], closed: [w3close(), w3close({ exit_reason: "trail" })] });
+  assert.ok(!/jr-w3-flag/.test(h), "the callout must not survive a real rules exit");
+});
+
+test("an ABSENT exit_reason counts as yours, exactly as deciderSplit reads it", () => {
+  // Two readers of the same field must not disagree about a row: a close with
+  // no recorded mechanism was not closed by one.
+  const rows = w3Rows({ closed: [w3close({ exit_reason: undefined }), w3close({ exit_reason: "" })] });
+  assert.deepEqual(rows.map((r) => r.who), ["you", "you"]);
+  assert.deepEqual(rows.map((r) => r.path), ["unrecorded", "unrecorded"]);
+});
+
+test("only stamped CLOSED rows are listed — opens and other cycles are not exits", () => {
+  const rows = w3Rows({ closed: [
+    w3close({ symbol: "IN" }),
+    w3close({ symbol: "OUT", cycle: "w4-1" }),
+    w3close({ symbol: "NONE", cycle: undefined }),
+  ] });
+  assert.deepEqual(rows.map((r) => r.symbol), ["IN"]);
+});
+
+test("exits are listed newest first — the last thing that happened reads first", () => {
+  const rows = w3Rows({ closed: [
+    w3close({ symbol: "OLD", exit_date: "2026-08-01" }),
+    w3close({ symbol: "NEW", exit_date: "2026-08-18" }),
+    w3close({ symbol: "MID", exit_date: "2026-08-09" }),
+  ] });
+  assert.deepEqual(rows.map((r) => r.symbol), ["NEW", "MID", "OLD"]);
+});
+
+test("THE STRIP IS INERT — no control that could invite another manual close", () => {
+  const h = w3Line({ open: [w3row("w3-1")], closed: [w3close()] });
+  assert.ok(!/<button|<a\s|<form|onclick=/i.test(h),
+    "the evidence strip grew a control; it must never read as a call to act");
+  assert.ok(!/\bclose\s+(?:these|them|it|now)\b/i.test(h), "wording invites closing");
+  assert.ok(/<details class="jr-w3-fold">/.test(h) && !/<details[^>]*\bopen\b/.test(h),
+    "the exit list must be folded shut by default");
+});
+
+test("R renders signed, two-dp, and coloured by sign", () => {
+  const h = w3Line({ open: [], closed: [
+    w3close({ symbol: "WIN", realized_r: 0.367 }),
+    w3close({ symbol: "LOSS", realized_r: -0.077 }),
+  ] });
+  assert.ok(/<span class="w3-r pos">\+0\.37R<\/span>/.test(h), "winner not rendered as a positive");
+  assert.ok(/<span class="w3-r neg">-0\.08R<\/span>/.test(h), "loser not rendered as a negative");
+});
+
+test("a missing R is a dash, never a zero", () => {
+  const h = w3Line({ open: [], closed: [w3close({ realized_r: null })] });
+  assert.ok(/>—</.test(h), "an unpriced exit must not be drawn as breakeven");
+});
+
+test("symbol and exit path are escaped before they reach innerHTML", () => {
+  const h = w3Line({ open: [], closed: [w3close({ symbol: '<img src=x>', exit_reason: '"evil"' })] });
+  assert.ok(!/<img src=x>/.test(h), "symbol reached the DOM unescaped");
+  assert.ok(!/"evil"/.test(h) || /&quot;evil&quot;/.test(h), "exit path reached the DOM unescaped");
+});
+
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

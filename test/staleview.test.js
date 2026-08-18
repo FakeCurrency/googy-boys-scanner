@@ -1664,4 +1664,133 @@ test("the closed-preview control meets the standing 40px mobile tap floor", () =
     "revealed rows must return to table-row, not inline");
 });
 
+
+// ---------------------------------------------------------------------------
+// RULES vs OWNER ON THE DECK (Session B, 2026-08-19, owner-ordered).
+//
+// The strip used to print one `record 16W-29L -6.9R`. That is two systems'
+// results added together and labelled as the bot's: measured at head, 19 exits
+// the RULES took (5W-14L, -6.97R) and 26 the OWNER took by hand (11W-15L,
+// +0.09R). Pooling them on the DECK is the worst place to do it — the deck is
+// where the next trade gets picked, so a rules record flattered by hand-taken
+// exits changes what gets hunted.
+// ---------------------------------------------------------------------------
+const SB_BOOK = {
+  open: [{ symbol: "A", market: "asx", unreal_r: 1 }],
+  closed: [
+    { realized_r: 2.0, exit_reason: "target" },
+    { realized_r: -1.0, exit_reason: "stop" },
+    { realized_r: -1.5, exit_reason: "manual" },
+    { realized_r: 0.5, exit_reason: "" },
+  ],
+};
+
+test("bookFacts: the record splits by WHO closed it", () => {
+  const f = bookFacts(SB_BOOK);
+  assert.strictEqual(f.rules.n, 2); assert.strictEqual(f.owner.n, 2);
+  assert.strictEqual(f.rules.wins, 1); assert.strictEqual(f.rules.losses, 1);
+  assert.ok(Math.abs(f.rules.r - 1.0) < 1e-9);
+  assert.strictEqual(f.owner.wins, 1); assert.strictEqual(f.owner.losses, 1);
+  assert.ok(Math.abs(f.owner.r - -1.0) < 1e-9);
+});
+
+test("bookFacts: an ABSENT exit_reason is a human act, same rule journal.js applies", () => {
+  // The two surfaces read the same field; if they disagreed about a row the
+  // deck and the journal would print different splits for one book.
+  const f = bookFacts({ open: [], closed: [{ realized_r: 1, exit_reason: undefined }] });
+  assert.strictEqual(f.owner.n, 1);
+  assert.strictEqual(f.rules.n, 0);
+});
+
+test("bookFacts: the split SUMS to the blend — no trade lost, none double-counted", () => {
+  const f = bookFacts(SB_BOOK);
+  assert.strictEqual(f.rules.n + f.owner.n, SB_BOOK.closed.length);
+  assert.strictEqual(f.rules.wins + f.owner.wins, f.wins);
+  assert.strictEqual(f.rules.losses + f.owner.losses, f.losses);
+  assert.ok(Math.abs((f.rules.r + f.owner.r) - f.realized) < 1e-9);
+});
+
+test("bookFacts: the blended fields SURVIVE — the split is additive, not a replacement", () => {
+  // Other readers (and these tests' older pins) still ask for wins/losses/
+  // realized. Removing them to make a point would break the strip's degrade
+  // paths rather than improve honesty.
+  const f = bookFacts(SB_BOOK);
+  assert.strictEqual(f.wins, 2); assert.strictEqual(f.losses, 2);
+  assert.ok(Math.abs(f.realized - 0.0) < 1e-9);
+});
+
+test("bookFacts: an empty book yields empty tallies, never a throw", () => {
+  const f = bookFacts(null);
+  assert.strictEqual(f.rules.n, 0); assert.strictEqual(f.owner.n, 0);
+  assert.strictEqual(f.realized, null, "no closes = no record, not 0R");
+});
+
+test("the deck strip NAMES BOTH SIDES and no longer prints a blended record", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(/rules \$\{rec\(facts\.rules\)\} · you \$\{rec\(facts\.owner\)\}/.test(code),
+    "the strip no longer names the two sides");
+  assert.ok(!/record \$\{facts\.wins\}W/.test(code),
+    "the blended `record NW-NL` is still being printed on the deck");
+});
+
+test("one-sided books name the side rather than printing a hollow 0W-0L beside it", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(/facts\.rules\.n \? `rules \$\{rec\(facts\.rules\)\}` : `you \$\{rec\(facts\.owner\)\}`/.test(code),
+    "the one-sided degrade is gone — a book closed only by the rules would show an empty owner column");
+  assert.ok(/"record —"/.test(code), "a book with no closes must still say so");
+});
+
+test("THE DECK AND THE JOURNAL CANNOT DISAGREE ABOUT THE SPLIT", () => {
+  // Two surfaces now publish rules-vs-owner from the same book. Identical
+  // classifier lists (above) are necessary but not sufficient — the two could
+  // still tally differently. This drives BOTH shipped implementations with one
+  // book and asserts they land on the same counts and the same R, which is the
+  // property a reader actually relies on when they glance at the deck and then
+  // open the journal.
+  const jsrc = fs.readFileSync(path.join(__dirname, "..", "public", "js", "journal.js"), "utf8");
+  const a = jsrc.indexOf("const MECHANICAL_EXITS =");
+  const b = jsrc.indexOf("\n  }", jsrc.indexOf("function deciderSplit(list) {"));
+  assert.ok(a >= 0 && b > a, "journal.js no longer exposes MECHANICAL_EXITS + deciderSplit together");
+  const { deciderSplit } = new Function(
+    jsrc.slice(a, b + 4) + "\nreturn { deciderSplit };")();
+
+  const book = {
+    open: [],
+    closed: [
+      { status: "closed", realized_r: 2.0, exit_reason: "target" },
+      { status: "closed", realized_r: -1.0, exit_reason: "stop" },
+      { status: "closed", realized_r: -1.5, exit_reason: "manual" },
+      { status: "closed", realized_r: 0.5, exit_reason: "" },
+      { status: "closed", realized_r: -0.25, exit_reason: "TRAIL" },   // case
+    ],
+  };
+  const f = bookFacts(book);
+  const sp = deciderSplit(book.closed);
+  assert.strictEqual(f.rules.n, sp.bot, "deck and journal disagree on how many the rules closed");
+  assert.strictEqual(f.owner.n, sp.own, "deck and journal disagree on how many you closed");
+  assert.ok(Math.abs(f.rules.r - sp.botR) < 1e-9, "rules-side R differs between the two surfaces");
+  assert.ok(Math.abs(f.owner.r - sp.ownR) < 1e-9, "owner-side R differs between the two surfaces");
+});
+
+test("MECHANICAL_EXITS is IDENTICAL in app.js, journal.js and status.js", () => {
+  // Three surfaces now classify the same field. A list that drifts in one of
+  // them silently re-blends the split in exactly one place, which is worse
+  // than never having split it — the two surfaces would disagree and neither
+  // would say which was right. Same treatment risk_defaults.test.js gives the
+  // offline rules mirror.
+  const grab = (f) => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", f), "utf8");
+    const m = /MECHANICAL_EXITS\s*=\s*(\[[^\]]*\])/.exec(src);
+    assert.ok(m, `${f} no longer declares MECHANICAL_EXITS`);
+    return JSON.parse(m[1].replace(/'/g, '"'));
+  };
+  const a = grab("app.js"), j = grab("journal.js"), st = grab("status.js");
+  assert.deepStrictEqual(a, j, "app.js and journal.js disagree about mechanical exits");
+  assert.deepStrictEqual(a, st, "app.js and status.js disagree about mechanical exits");
+  assert.deepStrictEqual(a, ["stop", "time", "trail", "target"]);
+});
+
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
