@@ -148,10 +148,66 @@ jobs:
             exit 0
           fi
 
+          # UNREACHABLE (000): loud on the run page, SILENT in the inbox — and
+          # the reason is a vantage-point argument, not a softening.
+          #
+          # Every other branch here judges an answer the SERVER produced: 200,
+          # 401 and 503 are all statements by Cloudflare about its own state,
+          # and one runner can trust them. 000 is the absence of an answer, and
+          # from a single runner it cannot tell "the site is down" from "my
+          # egress hiccuped for two minutes" — which is what it has actually
+          # been every time. Run #776 (2026-08-18) reported DOWN on 3×000 while
+          # /api/tick was answering 401 normally throughout, and #277, #372 and
+          # #406 were the same family. Four false alarms out of four on a job
+          # that runs 288 times a day is how a channel gets muted, and a muted
+          # channel is the original blackout.
+          #
+          # The alarm is not dropped, it MOVES to the component that has a
+          # second vantage point and can retract: watchdog.probe_endpoints()
+          # (kill_switch.yml, half-hourly) probes the same URL from a different
+          # runner at a different time and raises `tick_unreachable` through the
+          # standard state machine — say it once, remind every
+          # WATCHDOG_RENOTIFY_HOURS, and ANNOUNCE RECOVERY, which a red run
+          # structurally cannot do. A blip that only this runner saw finds the
+          # watchdog answering 401 and stays silent, correctly. A real outage is
+          # seen by both and gets reported once with a recovery notice, instead
+          # of 288 emails a day with none.
+          #
+          # Cost, stated: detection of a genuine site outage moves from ~5 min
+          # to at most 30. That is the deliberate trade for an alarm that is
+          # believed when it fires. Everything the server answers stays fatal
+          # below — this branch narrows the fatal set to codes that ARE evidence.
+          if [ "$code" = "000" ]; then
+            echo "::warning::stop watcher UNREACHABLE — /api/tick gave no answer (000) on 3 attempts."
+            echo "The site could not be reached FROM THIS RUNNER. A single vantage point"
+            echo "cannot tell a site outage from a local network blip, so the watchdog"
+            echo "(kill_switch.yml, half-hourly, with recovery notices) owns this alarm."
+            {
+              echo "## Stop watcher UNREACHABLE (not necessarily down)"
+              echo ""
+              echo "\`${URL}\` gave **no answer at all (000)** on 3 consecutive attempts."
+              echo ""
+              echo "This job stays green on purpose. 000 is the absence of an answer, so"
+              echo "from one runner it cannot be told apart from a local network blip —"
+              echo "and every occurrence so far (#277, #372, #406, #776) was exactly that,"
+              echo "with the endpoint answering normally throughout."
+              echo ""
+              echo "\`watchdog.probe_endpoints()\` probes the same URL half-hourly from a"
+              echo "different runner and raises **tick_unreachable** once, reminds every"
+              echo "\`WATCHDOG_RENOTIFY_HOURS\`, and announces recovery. If the site is"
+              echo "really down, that is the alarm that will say so — and retract it."
+              echo ""
+              echo "**If you see this on run after run**, treat it as real and check"
+              echo "Cloudflare Pages: sustained 000 across runners IS an outage."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "watcher unreachable from this runner — watchdog owns the alarm"
+            exit 0
+          fi
+
           if [ "$code" != "200" ]; then
             echo "::error::stop watcher DOWN — /api/tick returned HTTP ${code} on 3 consecutive attempts."
             echo "Paper stops and targets are NOT being evaluated while this fails."
-            echo "401 = TICK_SECRET mismatched between Cloudflare and GitHub; 000 = unreachable."
+            echo "401 = TICK_SECRET mismatched between Cloudflare and GitHub (only this job can see that)."
             {
               echo "## Stop watcher DOWN"
               echo ""
@@ -159,7 +215,10 @@ jobs:
               echo ""
               echo "Paper stops/targets are not being evaluated. 401 means the watcher IS"
               echo "configured in Cloudflare but this job's \`TICK_SECRET\` does not match"
-              echo "it; 000 means the site could not be reached at all."
+              echo "it — and this job is the only caller that holds the secret, so it is the"
+              echo "only thing that can see a half-configured setup. A 5xx means the site"
+              echo "answered and is erroring. Both are evidence; 000 (no answer) is handled"
+              echo "above and is deliberately not fatal."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
