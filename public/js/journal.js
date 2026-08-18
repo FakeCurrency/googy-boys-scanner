@@ -43,7 +43,20 @@
   const pcls = (v) => (v >= 0 ? "r-pos" : "r-neg");
   const dfmt = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 }));
   const d2   = (v) => (v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2));
-  const px   = (v) => (v == null || isNaN(v) ? "—" : (+v).toLocaleString(undefined, { maximumFractionDigits: 6 }));
+  // PRICE FORMATTING (UI pass 2026-08-18). A flat `maximumFractionDigits: 6`
+  // let every float artefact the engine produces reach the screen: entries as
+  // 34.279999 / 182.589996, stops as 21.934136 / 108.716691. Six decimals on a
+  // stop reads as machine output, not a price, and it was the most visually
+  // damaging thing on the page. Precision now follows MAGNITUDE, which is what
+  // decides how many decimals carry information: a $182 stock quotes in cents,
+  // a $1.45 ASX name in tenths of a cent, a sub-cent micro-cap needs the tail.
+  // DISPLAY ONLY - no stored value, no R, no sizing, nothing the bot reads.
+  const px   = (v) => {
+    if (v == null || isNaN(v)) return "—";
+    const n = +v, a = Math.abs(n);
+    const dp = a >= 10 ? 2 : a >= 1 ? 3 : a >= 0.01 ? 4 : 6;
+    return n.toLocaleString(undefined, { maximumFractionDigits: dp });
+  };
   const round = (v, n) => +(+v).toFixed(n);
 
   // SYMBOL → { grade, entry_type } from the live scans, used only as a fallback
@@ -874,6 +887,15 @@
       `the stats below pool both</span></div>`;
   }
 
+  // CLOSED-TRADE PREVIEW (UI pass 2026-08-18). The closed table was the single
+  // largest object on the page - 1,884px for 45 rows, 36% of a 5,183px journal -
+  // and it grows for ever, so the page got worse every time a trade closed. The
+  // rows are NOT dropped: everything past the preview is rendered into the same
+  // DOM, in the same order, with the same indices, hidden by one class. That
+  // matters because `data-card="side:idx"` indexes into `cardReg[side]`, so
+  // slicing the array here would silently point every share-card button at the
+  // wrong trade. Toggling a class cannot.
+  const CLOSED_PREVIEW = 10;
   function closedRows(list, side) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">R</th><th class="num">$</th>
@@ -882,7 +904,7 @@
     if (side) cardReg[side] = sorted;
     const rows = sorted.map((t, i) => {
       const d = dollarsOf(t);
-      return `<tr>
+      return `<tr${i >= CLOSED_PREVIEW ? ' class="jr-row-more"' : ""}>
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
         <td class="num" data-label="R">${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
@@ -891,7 +913,14 @@
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
         <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
     }).join("");
-    return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    const hidden = Math.max(0, sorted.length - CLOSED_PREVIEW);
+    const more = hidden
+      ? `<button class="jr-more-btn" type="button" data-more aria-expanded="false">` +
+        `Show all ${sorted.length} closed trades <span class="jr-more-n">+${hidden}</span></button>`
+      : "";
+    return `<div class="jr-closed-wrap">` +
+      `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>` +
+      `${more}</div>`;
   }
 
   // UX-20 #13: render a closed trade as a 1000×525 dark PNG card (canvas —
@@ -1441,15 +1470,10 @@
     $("#jr-pnl-split").innerHTML =
       `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(botU)}">${d2(botU)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>` +
       (meN ? `<span class="jr-pnl-chip"><span class="ts-who">✏️ Me</span> <b class="${pcls(meU)}">${d2(meU)}</b> <span class="ts-who">· ${meN} open</span></span>` : "");
-    // #80: the bot book's realised equity curve alongside the headline.
-    const hasCurve = drawMiniEquity("jr-pnl-spark", series(state.bot.closed));
-    const track = $("#jr-pnl-track");
-    if (track) track.hidden = !hasCurve;
-    if (hasCurve) {
-      const bs = stats(state.bot.closed, botOpen.length);
-      const tv = $("#jr-pnl-track-val");
-      if (tv) { tv.textContent = `${dfmt(bs.totalD)} · ${rfmt(bs.totalR)}`; tv.className = "jr-pnl-track-val " + pcls(bs.totalD); }
-    }
+    // The realised mini-sparkline was retired from this header (UI pass
+    // 2026-08-18) - see journal.html. drawMiniEquity still drives the full
+    // per-book equity curves, so nothing else changes; this block simply stops
+    // re-stating a number that appears three more times below.
   }
 
   // UX-20 #11 (supersedes #84's rolling bot digest): WEEK REVIEW — calendar
@@ -2190,6 +2214,18 @@
       if (noteBtn) { editNote(noteBtn.getAttribute("data-note")); return; }
       const card = e.target.closest("[data-card]");
       if (card) { downloadTradeCard(card.getAttribute("data-card")); return; }   // UX-20 #13
+      // Closed-trade preview: reveal in place. Delegated because the table is
+      // re-rendered on every refresh, so a bound listener would die on the next
+      // paint; and it toggles rather than re-renders so an opened list stays
+      // open while the 3-minute refresh runs underneath it.
+      const more = e.target.closest("[data-more]");
+      if (more) {
+        const wrap = more.closest(".jr-closed-wrap");
+        const open = wrap.classList.toggle("is-open");
+        more.setAttribute("aria-expanded", open ? "true" : "false");
+        more.firstChild.nodeValue = open ? "Show fewer " : "Show all ";
+        return;
+      }
       // Both affordances — the section-title buttons and the clickable column
       // headers — are the same attribute, so they cannot drift apart.
       const osort = e.target.closest("[data-osort]");

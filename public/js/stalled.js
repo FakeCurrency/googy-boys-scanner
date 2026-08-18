@@ -421,7 +421,7 @@
     host.hidden = false;
     host.innerHTML = `
       <div class="st-head">
-        <span class="st-tag">⏳ STALLED</span>
+        <span class="st-tag" title="Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is a decision too. Tap a ticker for its chart. Close picks that row — pick as many as you want out, then the bar's Close N now sends them as ONE run: one commit, one deploy, every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking, and a row only reads closed ✓ once it is actually gone from the published book. Nothing here closes anything on its own.">⏳ STALLED</span>
         <span class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} stalled
           · <b>${fmtR(s.totalR)}</b> combined
           · <b>${money(s.riskUsd)}</b> at risk${s.riskPct != null ? " (" + s.riskPct.toFixed(1) + "% of equity)" : ""}
@@ -432,12 +432,11 @@
         <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span><span>Act</span></div>
         ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
       </div>
-      <p class="st-foot">Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is
-        a decision too. Tap a ticker for its chart. <b>Close</b> picks that row — pick as many as you
-        want out, then the bar's <b>Close N now</b> sends them as <b>ONE</b> run: one commit, one deploy,
-        every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking,
-        and a row only reads <b>closed ✓</b> once it is actually gone from the published book. Nothing
-        here closes anything on its own.</p>`;
+      <!-- The explainer moved into the strip's own tooltip (UI pass
+           2026-08-18): three permanent lines of teaching copy at full contrast,
+           read once and scrolled past every day since, sitting in the block
+           that most needs to read as an ACTION list. Words unchanged - hover
+           or long-press the STALLED tag. -->`;
   }
 
   // ── mount ──────────────────────────────────────────────────────────────────
