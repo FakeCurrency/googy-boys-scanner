@@ -160,9 +160,58 @@ def test_the_staging_lists_carry_the_artefact():
         "crypto_bot.yml writes the crypto rows and must stage the file"
 
 
-def test_the_deck_reads_it_lazily_and_only_the_deck():
-    app = (ROOT / "public" / "js" / "app.js").read_text(encoding="utf-8")
-    assert "data/funnel_history.json" in app
-    others = [p for p in sorted(ROOT.glob("public/js/*.js"))
-              if p.name != "app.js" and "funnel_history" in p.read_text(encoding="utf-8")]
-    assert others == [], f"only the deck's funnel disclosure renders the trend: {others}"
+# The reader list WIDENED 2026-08-19 (STATUS control, Session 1) from one file
+# to an explicit two, and the property being gated changed with it. The rule was
+# never "one reader" for its own sake — it is that this 33 KB artefact must not
+# ride every page load, and that two surfaces must not draw the same trend and
+# disagree. status.js reads a different COLUMN for a different question (`t` as
+# the ledger of successful scan publishes, for per-market age and the uptime
+# figure) and draws no trend at all, so the second concern does not arise; the
+# first is preserved by the laziness assertion below, which is now the load-
+# bearing half. A THIRD reader still fails this test: add one only with the same
+# argument written down, not by extending the list.
+#
+# Both tests below discover the readers ON DISK rather than asserting a fixed
+# set exists. That is deliberate and not laziness: the allowlist is what gates a
+# NEW reader, and the laziness rule should apply to whatever readers are
+# actually shipped. It also means neither test has an opinion about the ORDER
+# two commits land in — a directory-at-a-time landing route cannot co-commit a
+# public/js file with a tests/ file, and a pin that goes red in between is a
+# failure email about a state nobody chose.
+_FUNNEL_READERS = {"app.js", "status.js"}
+
+
+def _shipped_readers():
+    """Every public/js file that fetches the history, by filename."""
+    return sorted(p.name for p in ROOT.glob("public/js/*.js")
+                  if '"data/funnel_history.json"' in p.read_text(encoding="utf-8"))
+
+
+def test_only_the_named_surfaces_read_the_history():
+    others = [n for n in _shipped_readers() if n not in _FUNNEL_READERS]
+    assert others == [], f"a new reader of the funnel history appeared: {others}"
+
+
+def test_the_deck_is_still_one_of_them():
+    """Guards the guard: a regex that matched nothing would make both tests vacuous."""
+    assert "app.js" in _shipped_readers(), "the deck no longer fetches the history"
+
+
+def test_every_reader_fetches_it_lazily_never_at_page_load():
+    """The 33 KB must be paid for by a tap, not by opening a page.
+
+    Both readers gate the fetch behind a user action - the deck's funnel
+    disclosure opening, and the status sheet opening - so a phone loading the
+    dashboard downloads none of it. A reader that fetched at module scope
+    would put a third of a megabyte on every navigation across 14 pages.
+    """
+    for name in _shipped_readers():
+        src = (ROOT / "public" / "js" / name).read_text(encoding="utf-8")
+        # The QUOTED path - the fetch argument. Both files also NAME the file in
+        # prose (status.js cites it in its header as the uptime evidence), and
+        # locating the first bare mention would measure the comment, not the
+        # code: the Tier 3 "ask about code, read code" trap in miniature.
+        at = src.index('"data/funnel_history.json"')
+        head = src[:at]
+        assert head.count("function ") + head.count("=> {") > 0, (
+            f"{name} appears to fetch the history at module scope")
