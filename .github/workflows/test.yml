@@ -176,6 +176,15 @@ jobs:
       # prices crypto as <base>-USD (a bare base is a same-named EQUITY).
       - name: API guard rails (journal limiter / dispatch refunds / tick pricing, 17)
         run: node test/api_guards.test.js
+      # STATUS control (2026-08-19, Session 1). The lamp is the only surface
+      # that claims the system is healthy, so two of its promises are gated
+      # here rather than remembered: it issues GET requests to published files
+      # and /api/health ONLY (never the healer, which dispatches a scan when it
+      # is polled), and its uptime figure is clamped to the span of the ledger
+      # it is derived from instead of counting the dark before the ledger
+      # existed as healthy.
+      - name: Status control (read-only promise / uptime clamp / states matrix, 48)
+        run: node test/status.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
@@ -340,7 +349,25 @@ jobs:
           #
           # Sequencing per the v17 note: visual commits first, this bump last,
           # landed fast enough that concurrency cancels the intermediate runs.
-          key: screenshot-baselines-v18-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          #
+          # v19 (2026-08-19) — the STATUS lamp in the top bar. This one is a
+          # HEADROOM bump, not a rescue: measured against the v18 baselines the
+          # shipped control drifts index-desktop 0.03%, index-390 0.03%,
+          # journal-390 0.05% and journal-desktop 1.76% — all four inside the 2%
+          # budget, so the gate was green either way and no run had to be raced.
+          # The bump is for the last of those: leaving 1.76% of permanent,
+          # already-accepted drift baked into a 2% budget hands the next
+          # unrelated change 0.24% of room on that view, which is how a gate
+          # starts failing for reasons nobody can attribute. Re-baselining puts
+          # journal-desktop back at ~0%.
+          #
+          # The three small numbers are themselves the result of two rounds of
+          # measurement rather than luck: a 40px labelled chip wrapped
+          # journal.html's 390px header onto a second row (+54px of page shift,
+          # 6.20% drift) and a 34px one still grew it 3px (3.65%). At 30px on
+          # phones the header height is byte-for-byte what it was and the drift
+          # is 0.05%. Chrome that costs a page nothing is worth measuring for.
+          key: screenshot-baselines-v19-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
