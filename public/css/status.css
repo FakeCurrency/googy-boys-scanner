@@ -1,0 +1,130 @@
+/* STATUS control — the top-bar lamp and its tap sheet (2026-08-19).
+ *
+ * Mobile-first by construction: the sheet slides from the BOTTOM at every
+ * width, because the control exists to be read one-handed on a phone. On
+ * desktop it stays a bottom sheet rather than becoming a centred modal — one
+ * layout means one thing to test, and the owner reads this on a phone.
+ *
+ * The lamp lives in .deck-top-right (or, on the pages without one, at the end
+ * of the header). It is NOT inside .nav-pills: that strip is display:none
+ * under 680px, which is where this control matters most.
+ */
+
+/* ── the lamp ─────────────────────────────────────────────────────────────── */
+.sysdot {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 34px; min-width: 44px; padding: 5px 11px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--fill); color: var(--text-2);
+  font: 800 10px/1 var(--mono); letter-spacing: 0.08em;
+  cursor: pointer; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.sysdot:hover { border-color: var(--border-2); color: var(--text); }
+.sysdot:active { transform: scale(0.97); }
+.sysdot-solo { margin-left: auto; }
+.sysdot-lamp { font-size: 11px; line-height: 1; }
+.sysdot[data-level="green"] .sysdot-lamp { color: var(--green); }
+.sysdot[data-level="amber"] .sysdot-lamp { color: var(--orange); }
+.sysdot[data-level="red"]   .sysdot-lamp { color: var(--red); }
+.sysdot[data-level="amber"] { border-color: rgba(255,159,10,0.45); background: var(--orange-soft); color: var(--orange); }
+.sysdot[data-level="red"]   { border-color: rgba(255,69,58,0.5);  background: var(--red-soft);    color: var(--red); }
+/* RED pulses; amber does not. A pulse is a claim on attention and the loss
+   guard firing is the machine working — see the states matrix in status.js. */
+.sysdot[data-level="red"] .sysdot-lamp { animation: sysPulse 1.4s ease-in-out infinite; }
+@keyframes sysPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* Screen-reader sentence — the two-letter label alone is not a status. */
+.sysdot-sr { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; }
+/* PHONES GET THE DOT, NOT THE WORD, AT 30px — every number here was measured,
+   because chrome added to a phone header is paid for by every page below it.
+   .deck-top's brand and .deck-top-right are both flex-shrink:0, so the pill
+   strip is the only thing that gives; past that the header WRAPS.
+
+     66px labelled chip, 40px tall -> journal.html@390 wrapped to two header
+                                      rows, +54px of page shift, 6.20% drift
+     38px dot, 34px tall           -> single row, header 52px -> 55px, 3.65%
+     38px dot, 30px tall           -> header 52px -> 52px, 0.05% drift
+
+   30px matches the header's own row height, so the control costs the journal
+   page — the page whose last pass existed to remove 1,900px of height —
+   exactly nothing. The state still reads without the word: the chip is tinted
+   amber or red, the red one pulses, and the sentence is one tap away. The
+   target is 38x30 with the padding, the same size as the search and alert
+   buttons beside it, which is the honest comparison rather than 44x44. */
+@media (max-width: 560px) {
+  .sysdot-lbl { display: none; }
+  .sysdot { min-width: 38px; min-height: 30px; padding: 4px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sysdot[data-level="red"] .sysdot-lamp { animation: none; }
+  .sys-sheet { transition: none; }
+}
+
+/* ── the sheet ────────────────────────────────────────────────────────────── */
+.sys-scrim {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,0); transition: background 180ms ease;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sys-scrim[hidden] { display: none; }
+.sys-scrim.is-open { background: rgba(0,0,0,0.55); }
+.sys-sheet {
+  width: 100%; max-width: 560px; max-height: 86vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0; box-shadow: var(--shadow-open);
+  padding: 6px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%); transition: transform 200ms ease;
+  position: relative;
+}
+.sys-scrim.is-open .sys-sheet { transform: translateY(0); }
+.sys-grip { width: 38px; height: 4px; border-radius: 999px; background: var(--border-2); margin: 6px auto 8px; }
+.sys-x {
+  position: absolute; top: 10px; right: 10px; min-width: 40px; min-height: 40px;
+  border: 0; background: none; color: var(--muted); font-size: 17px; cursor: pointer;
+}
+.sys-x:hover { color: var(--text); }
+
+.sys-hd { display: flex; align-items: center; gap: 8px; padding: 2px 0 0; }
+.sys-hd-lamp { font-size: 15px; }
+.sys-hd-lamp[data-level="green"] { color: var(--green); }
+.sys-hd-lamp[data-level="amber"] { color: var(--orange); }
+.sys-hd-lamp[data-level="red"]   { color: var(--red); }
+.sys-hd-t { font: 800 17px/1 var(--sans); letter-spacing: -0.2px; color: var(--text); }
+.sys-why { font: 500 13px/1.5 var(--sans); color: var(--text-2); margin: 6px 0 2px; }
+
+.sys-h {
+  font: 800 10.5px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted); margin: 16px 0 2px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sys-row {
+  display: grid; grid-template-columns: 118px 1fr; gap: 2px 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border-soft);
+}
+.sys-k { font: 600 12px/1.35 var(--sans); color: var(--muted); }
+.sys-v { font: 500 13px/1.35 var(--sans); color: var(--text-2); }
+.sys-v b { color: var(--text); font-weight: 800; }
+.sys-n { grid-column: 2; font: 500 11px/1.45 var(--sans); color: var(--muted-2); }
+.sys-dim { color: var(--muted-2); font-size: 11.5px; }
+.sys-warn { color: var(--orange); font-weight: 700; font-size: 11.5px; }
+.sys-amber { color: var(--orange) !important; }
+
+.sys-note {
+  font: 500 11.5px/1.55 var(--sans); color: var(--muted);
+  background: var(--fill-2); border-radius: 10px; padding: 9px 12px; margin: 8px 0 0;
+}
+.sys-note b { color: var(--text-2); }
+.sys-flag {
+  font: 600 11.5px/1.5 var(--sans); color: var(--orange);
+  background: var(--orange-soft); border-radius: 10px; padding: 9px 12px; margin: 8px 0 0;
+}
+.sys-empty { font: 500 12.5px/1.5 var(--sans); color: var(--muted); padding: 18px 0; }
+.sys-acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.sys-act {
+  font: 700 11.5px/1 var(--sans); color: var(--blue); background: var(--blue-soft);
+  padding: 11px 13px; border-radius: 999px; text-decoration: none; min-height: 40px;
+  display: inline-flex; align-items: center;
+}
+.sys-act:active { opacity: 0.7; }
+.sys-foot { font: 500 10.5px/1.5 var(--sans); color: var(--muted-2); margin: 12px 0 0; }
