@@ -822,5 +822,28 @@ test("renderSide injects it above the bot stats, and re-render does not duplicat
     "renderSide no longer renders the w3 line");
 });
 
+// ---------------------------------------------------------------------------
+test("the fired review checkpoint states the BLEND, and reads as the owner's call", () => {
+  // Lane A (2026-08-16). It used to read "✅ Review checkpoint reached — time
+  // to review", which celebrates a threshold and invites reading ONE combined
+  // record. A 30+ close book is two records: measured at head, 19 closes by
+  // the rules at -6.97R against 23 owner closes at -0.15R. Judging the blend
+  // as if one system produced it is how a rules problem gets blamed on the
+  // market. Pre-30 wording is deliberately untouched — nothing is decided yet.
+  const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", "journal.js"), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(/const sp = deciderSplit\(state\.bot\.closed\)/.test(code),
+    "the checkpoint must derive the split from the SHIPPED deciderSplit, not recount");
+  assert.ok(/\$\{sp\.bot\} by the rules, \$\{sp\.own\} closed by you/.test(code),
+    "the fired line must name both records");
+  assert.ok(/your call, nothing is locked now/.test(code),
+    "it must hand the decision back rather than instruct");
+  assert.ok(!/✅ Review checkpoint reached/.test(code),
+    "the celebratory tick is back on the one line that needs careful reading");
+  assert.ok(/stay locked until then/.test(code),
+    "the PRE-30 wording must be untouched — the gate itself has not moved");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

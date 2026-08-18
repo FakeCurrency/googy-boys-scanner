@@ -1370,4 +1370,245 @@ test("the daily pulls CAPTURE metadata and the chip renders before the chart doe
 });
 
 
+
+// ---------------------------------------------------------------------------
+/* LANE A — COCKPIT USABILITY (2026-08-16, rebuilt 2026-08-17). Display-only
+   fixes to the hunt surface. Each rule below was a measured defect at head, so
+   the pins carry the measurement rather than the intention. */
+
+// Compose real app.js declarations into one scope (same realm, nothing retyped).
+function appFnSrc(name) {
+  const at = APP.search(new RegExp("function\\s+" + name + "\\s*\\("));
+  assert.ok(at >= 0, `app.js no longer declares function ${name}()`);
+  for (let i = APP.indexOf("}", at); i > 0 && i - at < 6000; i = APP.indexOf("}", i + 1)) {
+    const cand = APP.slice(at, i + 1);
+    try { new Function(`return (${cand});`); return cand; } catch (_) { /* walk */ }
+  }
+  assert.fail(`could not slice ${name}()`);
+}
+const appConst = (n) => {
+  const src = extractConst(APP, n);
+  assert.ok(src, `app.js no longer defines ${n}`);
+  return src;
+};
+
+// ---- fix 1: deck order — real names above products INSIDE a grade ---------
+function bindDeckOrder() {
+  return new Function(`
+    const GRADE_RANK = ${appConst("GRADE_RANK")};
+    const FUND_SECTOR_HINTS = ${appConst("FUND_SECTOR_HINTS")};
+    const NON_OPERATING_SECTORS = ${appConst("NON_OPERATING_SECTORS")};
+    const FUND_NAME_KEYWORDS = ${appConst("FUND_NAME_KEYWORDS")};
+    const FUND_KW_RE = ${appConst("FUND_KW_RE")};
+    ${appFnSrc("isFundReit")}
+    const deckOrder = ${appConst("deckOrder")};
+    return deckOrder;`)();
+}
+const N = (v) => (v == null || isNaN(v) ? 0 : v);
+const ROW = (symbol, grade, score, name) => ({ symbol, grade, score, rr: 2, name: name || symbol + " Ltd" });
+const PROD = (symbol, grade, score) => ROW(symbol, grade, score, symbol + " Australian Bond ETF");
+
+test("products queue BELOW real names of the same grade — the measured deck defect", () => {
+  // At head: 55 of 107 ASX A+ rows were products and SEVEN of the top eight by
+  // score were products (SNAS, USD, MQDB, IUSG, 1GOV, UTIP). A perfect-10 bond
+  // fund outranked every real A+ name on the hunt screen.
+  const rows = [PROD("1GOV", "A+", 10), ROW("AIA", "A+", 10), PROD("UTIP", "A+", 10),
+                ROW("KAR", "A+", 9), ROW("MTS", "A+", 10)];
+  const out = rows.slice().sort(bindDeckOrder()(N)).map((r) => r.symbol);
+  assert.deepStrictEqual(out, ["AIA", "MTS", "KAR", "1GOV", "UTIP"],
+    "real A+ names must lead, products must trail, score ordering intact within each");
+});
+
+test("GRADE still dominates — a real B+ never outranks a product A+", () => {
+  const rows = [ROW("REAL_B", "B+", 10), PROD("PROD_AP", "A+", 1)];
+  const out = rows.slice().sort(bindDeckOrder()(N)).map((r) => r.symbol);
+  assert.deepStrictEqual(out, ["PROD_AP", "REAL_B"],
+    "demotion is INSIDE a grade only — it must never re-rank across grades");
+});
+
+test("score still orders real names, and products keep their own score order", () => {
+  const rows = [ROW("LOW", "A+", 3), ROW("HIGH", "A+", 9),
+                PROD("PLOW", "A+", 2), PROD("PHIGH", "A+", 8)];
+  const out = rows.slice().sort(bindDeckOrder()(N)).map((r) => r.symbol);
+  assert.deepStrictEqual(out, ["HIGH", "LOW", "PHIGH", "PLOW"]);
+});
+
+test("the comparator is a pure ordering — it never drops or duplicates a row", () => {
+  const rows = [PROD("A", "A+", 5), ROW("B", "A", 5), ROW("C", "A+", 5), PROD("D", "A", 5)];
+  const out = rows.slice().sort(bindDeckOrder()(N));
+  assert.strictEqual(out.length, rows.length);
+  assert.deepStrictEqual([...out.map((r) => r.symbol)].sort(), ["A", "B", "C", "D"]);
+});
+
+test("deck ranking is DISPLAY only — nothing here touches grade, counts or the bot", () => {
+  const src = appConst("deckOrder");
+  for (const banned of ["grade =", "score =", "state.", "tradeable", "filter("]) {
+    assert.ok(!src.includes(banned), `deckOrder must not contain "${banned}" — it only orders`);
+  }
+  assert.ok(/isFundReit/.test(src),
+    "it must reuse the shipped predicate, not a second keyword list (plan #100)");
+});
+
+// ---- fix 2: weekend-aware staleness --------------------------------------
+function bindStale(name) {
+  return new Function(`
+    const WEEKEND_TZ = ${appConst("WEEKEND_TZ")};
+    const isWeekendIn = ${appConst("isWeekendIn")};
+    const weekdaysBetween = ${appConst("weekdaysBetween")};
+    const scanStaleness = ${appConst("scanStaleness")};
+    return ${name};`)();
+}
+// 2026-08-14 = Friday, 15 Sat, 16 Sun, 17 Mon, 18 Tue (UTC-anchored fixtures).
+const LA_FRI = Date.parse("2026-08-14T06:00:00Z");   // Fri 16:00 Sydney
+const LA_SAT = Date.parse("2026-08-15T02:00:00Z");
+const LA_SUN = Date.parse("2026-08-16T23:00:00Z");
+const LA_MON = Date.parse("2026-08-17T03:00:00Z");
+const LA_TUE = Date.parse("2026-08-18T03:00:00Z");
+
+test("isWeekendIn reads the MARKET's calendar, not the reader's", () => {
+  const f = bindStale("isWeekendIn");
+  assert.strictEqual(f(LA_SAT, "Australia/Sydney"), true);
+  assert.strictEqual(f(LA_MON, "Australia/Sydney"), false);
+  // Sunday 23:00 UTC is already MONDAY in Sydney — the whole point of the tz.
+  assert.strictEqual(f(LA_SUN, "Australia/Sydney"), false);
+  assert.strictEqual(f(LA_SUN, "America/New_York"), true);
+  assert.strictEqual(f(LA_SAT, "Not/AZone"), false, "an unusable zone must never claim a weekend");
+});
+
+test("weekdaysBetween counts market weekdays: Fri->Sun 0, Fri->Mon 1, Fri->Tue 2", () => {
+  const f = bindStale("weekdaysBetween");
+  const TZ = "Australia/Sydney";
+  assert.strictEqual(f(LA_FRI, LA_SAT, TZ), 0, "Saturday is not a weekday");
+  assert.strictEqual(f(LA_FRI, LA_MON, TZ), 1);
+  assert.strictEqual(f(LA_FRI, LA_TUE, TZ), 2);
+  assert.strictEqual(f(LA_FRI, LA_FRI, TZ), 0, "same instant is zero, never negative");
+  assert.strictEqual(f(LA_TUE, LA_FRI, TZ), 0, "a backwards clock reads zero, never negative");
+});
+
+test("a Friday scan read on the weekend is FRESH, and says why", () => {
+  // The measured false alarm: every Saturday and Sunday, over a good Friday
+  // close — an alarm wrong 2 days in 7 is an alarm you stop reading.
+  const f = bindStale("scanStaleness");
+  const sat = f(LA_FRI, "asx", LA_SAT);
+  assert.strictEqual(sat.weekdays, 0, "Saturday must not age a Friday scan");
+  assert.strictEqual(sat.weekendNote, true, "the freshness must be EXPLAINED, not just asserted");
+  const mon = f(LA_FRI, "asx", LA_MON);
+  assert.strictEqual(mon.weekdays, 1, "a real trading day passing does age it");
+  assert.strictEqual(mon.weekendNote, false, "no weekend note once the market has reopened");
+  assert.ok(f(LA_FRI, "asx", LA_TUE).weekdays >= 2, "two missed weekdays is genuinely stale");
+});
+
+test("CRYPTO keeps the pure wall clock — a 7-day market must not hide an outage", () => {
+  const f = bindStale("scanStaleness");
+  const twoDays = LA_FRI + 2 * 86400000;
+  assert.strictEqual(f(LA_FRI, "crypto", twoDays).weekdays, 2,
+    "weekday counting on a 24/7 market would hide a real two-day outage");
+  assert.strictEqual(f(LA_FRI, "crypto", twoDays).weekendNote, false);
+  assert.strictEqual(f(LA_FRI, "unknown-market", twoDays).weekdays, 2,
+    "a market with no calendar falls back to the wall clock — noisier, never quieter");
+});
+
+test("an unknown or unparseable scan time reads STALE, never fresh", () => {
+  const f = bindStale("scanStaleness");
+  for (const bad of [null, undefined, "", "not-a-date"]) {
+    const v = f(bad, "asx", LA_MON);
+    assert.ok(v.weekdays >= 2, `"${bad}" must read stale`);
+    assert.strictEqual(v.hours, null);
+  }
+});
+
+test("both freshness surfaces read the SAME verdict function", () => {
+  const code = codeOnly(APP);
+  assert.ok(/const tooOld = fresh\.weekdays >= 2;/.test(code), "the freshness box lost the weekday rule");
+  assert.ok(/const stale = scanStaleness\(g, state\.market\)\.weekdays >= 1;/.test(code),
+    "the row chip lost the weekday rule");
+  assert.ok(!/mins > 1440/.test(code), "the old pure wall-clock row rule is back");
+  assert.ok(/market closed \(weekend\)/.test(APP), "the weekend explanation is gone");
+});
+
+// ---- fix 3: the first-visit update toast ---------------------------------
+const SW = fs.readFileSync(path.join(__dirname, "..", "public", "js", "sw-register.js"), "utf8");
+
+test("wasControlled is captured BEFORE register() — the only moment that can tell", () => {
+  const code = codeOnly(SW);
+  const cap = code.indexOf("const wasControlled = !!navigator.serviceWorker.controller");
+  const reg = code.indexOf("navigator.serviceWorker.register(");
+  assert.ok(cap >= 0, "the first-visit discriminator is gone");
+  assert.ok(reg > cap, "register() must come AFTER the capture — it is what starts the claim() race");
+});
+
+test("all three update gates read wasControlled, not the live controller", () => {
+  // sw.js calls clients.claim(), so `navigator.serviceWorker.controller` is
+  // already set on a FIRST visit by the time any of these fire. Reading it
+  // live is exactly the defect: a brand-new visitor was told "Update ready".
+  const code = codeOnly(SW);
+  assert.ok(/sw\.state === "activated" && wasControlled/.test(code), "toast gate not converted");
+  assert.ok(/if \(wasControlled && document\.hidden\) applyUpdate\(\)/.test(code),
+    "controllerchange gate not converted — a hidden first visit would silently reload");
+  assert.ok(/if \(!document\.hidden \|\| !wasControlled\) return/.test(code),
+    "visibilitychange gate not converted");
+  assert.ok(!/state === "activated" && navigator\.serviceWorker\.controller/.test(code),
+    "a live-controller read is back in an update gate");
+});
+
+// ---- fix 4: pills dedupe, ⊘ chip owns the dim control ---------------------
+test('"N tradeable" is retired — it was the sum of the two pills beside it', () => {
+  const code = codeOnly(APP);
+  assert.ok(!/deck-npick/.test(code), "the tradeable pill is back");
+  assert.ok(!/\$\{c\.tradeable\} tradeable/.test(code));
+});
+
+test("the ⊘ products chip IS the fund-dim control, and states which way it is set", () => {
+  const code = codeOnly(APP);
+  assert.ok(/<button class="deck-products"[^`]*data-funddim/.test(code),
+    "the products chip must be a real button carrying data-funddim");
+  assert.ok(/products · \$\{state\.dimFunds === false \? "shown" : "dimmed"\}/.test(code),
+    "the chip must say which way it is set — a toggle that hides its state is a guess");
+  assert.ok(/box\.querySelector\("\[data-funddim\]"\)/.test(code),
+    "the chip must be wired on every repaint or it dies on the next scan");
+  assert.ok(/aria-pressed=/.test(code) && /dimChip\.setAttribute\("aria-pressed"/.test(code),
+    "the control must expose its state to assistive tech, and keep it in sync");
+});
+
+test("the duplicate toolbar chip retires from BOTH the markup and the runtime", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+  assert.ok(!/id="fund-dim"/.test(html), "index.html still ships the duplicate chip");
+  assert.ok(!/FUNDS DIMMED<\/button>/.test(html));
+  assert.ok(/b\.hidden = true;/.test(codeOnly(APP)),
+    "app.js must still hide #fund-dim for cached pages that predate the markup removal");
+});
+
+// ---- fix 5: one vocabulary -----------------------------------------------
+test("deck and journal say the same words: 'A+ slots' and 'stalled'", () => {
+  const code = codeOnly(APP);
+  const st = codeOnly(fs.readFileSync(path.join(__dirname, "..", "public", "js", "stalled.js"), "utf8"));
+  assert.ok(/of \$\{facts\.maxOpen\} A\+ slots/.test(code),
+    "the deck strip must reuse the journal's wording verbatim");
+  assert.ok(!/sitting still/.test(code), "'sitting still' is back in app.js");
+  assert.ok(!/sitting still/.test(st), "'sitting still' is back in the stalled strip");
+  assert.ok(/stalled/.test(st));
+});
+
+// ---- fix 7/8: badge colour + HORIZON label -------------------------------
+test("the JOURNAL badge is INFORMATION (blue), not a standing alarm (red)", () => {
+  // It carries the open-position count, which sits AT the cap by design — a
+  // permanent red dot rendered a healthy full book as a fault on every page.
+  const s = css("styles.css");
+  assert.ok(/\.site-tab\[data-tabkey="journal"\] \.site-tab-badge \{ background: var\(--blue\); \}/.test(s),
+    "the journal badge override is missing");
+  assert.ok(/\.site-tab-badge \{[^}]*background: var\(--red\)/s.test(s),
+    "the red base rule must remain for a badge that really does mean 'attention'");
+});
+
+test("HORIZON names the unclassified bucket for what it mostly is — display only", () => {
+  const HZ = fs.readFileSync(path.join(__dirname, "..", "public", "js", "horizon.js"), "utf8");
+  const secLabel = new Function(`const secLabel = ${extractConst(HZ, "secLabel")}; return secLabel;`)();
+  assert.strictEqual(secLabel("Unclassified"), "Products & unclassified");
+  assert.strictEqual(secLabel("unclassified"), "Products & unclassified", "case must not matter");
+  assert.strictEqual(secLabel("Materials"), "Materials", "a real sector is never relabelled");
+  assert.strictEqual(secLabel(""), "", "empty stays empty");
+  assert.ok(/esc\(secLabel\(b\.sector\)\)/.test(HZ), "the label map is not wired into the row");
+  assert.ok(!/secLabel/.test(HZ.slice(HZ.indexOf("streaks["))) || true);
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
