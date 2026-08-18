@@ -527,6 +527,60 @@ Both are pure surface: nothing in `broker/` reads them, no trade changes.
 
 ---
 
+## is_product — LIC / preferred honesty, display-only (2026-08-19, Session C)
+
+The fund keyword list structurally misses two listing classes, and both were
+dressing as A+ opportunities on the deck: **ASX LICs** whose names carry no
+FUND/TRUST/ETF word (AFI, BTI, HM1, RG8 — four A+ on the live scan), and
+**NASDAQ preferred lines** (STRF, STRD at A+; STRC, MCHPP at B+). The scanner
+now publishes `is_product` on every result row and the UI trusts it.
+
+- **`scan.py::_product_tag`** = the bot's fund WORD LIST under the front end's
+  WORD-BOUNDARY matching, plus `config.PRODUCT_NAME_PATTERNS` (preferred
+  stock/shares · "InvestmentS Limited/Ltd" PLURAL + "Investment Company/Co" ·
+  notes-due · debentures · warrants · rights-lines). Each pattern's rationale
+  and its measured near-miss live beside it in config.
+- **IT MUST NOT DELEGATE TO `_is_fund_or_reit`, and this was found by test.**
+  The bot's matcher is substring (`"ETF" in "NETFLIX"` is True) — the exact bug
+  the front end fixed with `\b` on 2026-08-13 while the bot's ringfenced copy
+  kept it. The first draft called `_fund_tag()` and the NFLX pin went red:
+  delegating republishes the bug as a server-side verdict the UI now trusts.
+  The lists are IMPORTED from vivek_bot (mirror rule); only the matching
+  discipline differs, deliberately.
+- **The LIC pattern is PLURAL-only ("InvestmentS Limited"), and that is the
+  false-positive fence**: "Australian Ethical Investment Ltd" is an operating
+  fund MANAGER and must not dim. Known accepted borderline: NGI (Navigator
+  Global Investments, B+ today). Bare "Depositary Shares" is deliberately NOT
+  a pattern — Sanofi/JD/Ryanair ADS are real companies; the preferred patterns
+  key on the word "Preferred", never the wrapper.
+- **THE FENCE, both directions, pinned in `tests/test_product_flag.py`**:
+  nothing under `scanner/broker/` may mention `is_product` or
+  `PRODUCT_NAME_PATTERNS` (display honesty must not become a mid-w3-1
+  eligibility change), AND the bot's substring matcher must stay byte-shaped
+  as it is (a "fix" there is a trade change). `VIVEK_BOT_EXCLUDE_FUNDS`,
+  `decide()`, w3-1 gates: untouched.
+- **UI contract, three readers, one rule**: `is_product === true` → product;
+  `=== false` → operating company (a verdict beats a guess — the keyword
+  fallback may NOT overrule it); ABSENT → keyword heuristic, so cached
+  payloads keep working. Honoured in `app.js::isFundReit` (deck counts,
+  dimming, ranking pick it up transitively), `PM.isFundReit`
+  (phasemap-shared), and the Eyes chips via `loadConfluence`'s detail.
+- **Eyes strip**: the marker tag now reads **PRODUCT** (STRF is not a "FUND"),
+  and leg-strength ranking is completed — the VIVEK leg's SCORE breaks the
+  last tie inside a grade band, strictly AFTER count → product penalty →
+  grade → PM leg quality. Missing score reads 0 (old payloads degrade to the
+  previous order).
+- **Measured effect at head**: ASX real A+ 41 → 37 (AFI, BTI, HM1, RG8 dimmed);
+  NASDAQ 103 → 101 (STRF, STRD). Screenshot drift 0.00% ×4 — the e2e fixtures
+  carry no flag, so the keyword fallback keeps the photographed pages
+  byte-identical; no baseline bump.
+- Tests: `tests/test_product_flag.py` (13, incl. both fence directions),
+  `test/eyes.test.js` 25 → 30, `test/staleview.test.js` 136 → 139.
+  12 mutations, every one caught (one survivor found and closed:
+  app.js's flag-honour lines had no pin until the mutation exposed it).
+
+---
+
 ## RULES vs OWNER — the split that was being pooled (2026-08-19, Session B)
 
 One book, two systems. Measured at head: the RULES took 19 exits (5W-14L,
