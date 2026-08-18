@@ -115,6 +115,16 @@
 
   // Why a row carries no rank. A blank rank with a long bar beside it is the
   // single most misleading thing this panel could show — NASDAQ Real Estate is
+  // DISPLAY MAP ONLY (Lane A, 2026-08-16). The engine's bucket for rows with
+  // no GICS sector is "Unclassified", which reads as a data gap the panel is
+  // apologising for. In practice it is mostly ETFs, funds, REITs and LICs —
+  // instruments that carry no sector because they ARE products, not because
+  // anything failed to classify them. Naming it says what the bucket is.
+  // The rank maths, the counts and the unranked rule are untouched: this
+  // renames a label on screen and nothing else.
+  const secLabel = (name) =>
+    (String(name || "").toLowerCase() === "unclassified" ? "Products & unclassified" : name);
+
   // 6 A+/A of the 7 names classified so far, which prints 85.7% and means
   // nothing. Each unranked row says which kind of nothing it is.
   function unrankedFlag(b, minNames) {
@@ -157,7 +167,7 @@
           : "";
         return `<div class="hz-row${lead ? " is-lead" : ""}${blind ? " is-blind" : ""}${flag ? " is-unranked" : ""}">
           <span class="hz-rank">${b.rank || "·"}</span>
-          <span class="hz-sec"><b>${esc(b.sector)}</b>${flag}${runTag}</span>
+          <span class="hz-sec"><b>${esc(secLabel(b.sector))}</b>${flag}${runTag}</span>
           <span class="hz-bar"><i style="width:${w.toFixed(1)}%"></i><b>${pct(b.rate)}</b></span>
           <span class="hz-ag">${b.ag}<em>/${b.names}</em></span>
           <span class="hz-held${blind ? " zero" : ""}">${b.held}</span>

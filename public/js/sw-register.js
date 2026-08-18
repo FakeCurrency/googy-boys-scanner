@@ -10,6 +10,19 @@
        page out from under an active user on a trading dashboard). */
 if ("serviceWorker" in navigator) {
   let refreshing = false;
+  // v4 (Lane A, 2026-08-16) — THE FIRST-VISIT TOAST. The guard below used to
+  // read `navigator.serviceWorker.controller` at the moment the new worker
+  // activated, on the reasoning that a first-ever install has no controller.
+  // sw.js calls `clients.claim()`, which TAKES CONTROL of this page during
+  // activation — so by the time `statechange` fires, `controller` is already
+  // set even on a first visit, and every new visitor was told "⬆ Update ready"
+  // about a page they had just opened for the first time. It also covered the
+  // paper-book strip at 390px, and it is burned into the pre-v17 screenshot
+  // baselines, which is how it survived so long.
+  //
+  // Captured BEFORE register() — the only moment that can still tell a first
+  // visit from a real deploy, because register() is what starts the race.
+  const wasControlled = !!navigator.serviceWorker.controller;
   const applyUpdate = () => {
     if (refreshing) return;
     refreshing = true;
@@ -24,8 +37,9 @@ if ("serviceWorker" in navigator) {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
-          // Only when an OLD worker was controlling — first-ever install is silent.
-          if (sw.state === "activated" && navigator.serviceWorker.controller) {
+          // Only when an OLD worker was controlling THIS page BEFORE we
+          // registered — a first-ever install is silent (see wasControlled).
+          if (sw.state === "activated" && wasControlled) {
             if (document.hidden) applyUpdate();   // background tab: self-heal silently
             else showUpdateToast();
           }
@@ -36,12 +50,14 @@ if ("serviceWorker" in navigator) {
     // If an update activates while this tab is hidden (e.g. overnight),
     // refresh the moment it happens rather than serving stale assets.
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (document.hidden) applyUpdate();
+      // Same gate: clients.claim() fires this on a FIRST visit too, and a
+      // hidden first-visit tab would silently reload itself for no reason.
+      if (wasControlled && document.hidden) applyUpdate();
     });
     // And when the user returns to a tab that has an update pending, apply it
     // before they read stale numbers.
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden || !navigator.serviceWorker.controller) return;
+      if (!document.hidden || !wasControlled) return;
       navigator.serviceWorker.getRegistration().then((reg) => {
         if (reg && reg.waiting) applyUpdate();
       }).catch(() => {});

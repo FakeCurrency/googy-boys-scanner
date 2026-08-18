@@ -422,7 +422,7 @@
     host.innerHTML = `
       <div class="st-head">
         <span class="st-tag">⏳ STALLED</span>
-        <span class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} sitting still
+        <span class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} stalled
           · <b>${fmtR(s.totalR)}</b> combined
           · <b>${money(s.riskUsd)}</b> at risk${s.riskPct != null ? " (" + s.riskPct.toFixed(1) + "% of equity)" : ""}
           · ${slotsClause(s)}</span>

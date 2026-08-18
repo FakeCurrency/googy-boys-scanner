@@ -1707,8 +1707,19 @@
     const chk = $("#review-checkpoint");
     if (chk) {
       const n = state.bot.closed.length;
+      // FIRED STATE (Lane A, 2026-08-16). It used to read as a celebration —
+      // a green tick and "time to review" — which is the wrong tone for the
+      // one moment the number needs reading carefully. A book of 30+ closes is
+      // a BLEND: some exits the rules took, some the owner took by hand, and
+      // those two have wildly different records (measured at head: 19 by the
+      // rules at -6.97R against 23 owner closes at -0.15R). Reviewing the
+      // combined figure as if one system produced it is how a rules problem
+      // gets attributed to the market. The line now states the split it is
+      // asking to be judged on, and says whose call it is.
+      const sp = deciderSplit(state.bot.closed);
       chk.textContent = n >= 30
-        ? `✅ Review checkpoint reached — ${n}/30 closed bot trades: time to review NASDAQ allocation & confluence priority.`
+        ? `Review checkpoint reached — ${n} closed: ${sp.bot} by the rules, ${sp.own} closed by you. ` +
+          `Read those two records separately before touching NASDAQ allocation or confluence priority — your call, nothing is locked now.`
         : `Strategy review checkpoint: ${n}/30 closed bot trades. NASDAQ allocation & confluence-priority decisions stay locked until then.`;
     }
   }

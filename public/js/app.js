@@ -124,6 +124,68 @@
   // #79 — may a background poller paint and announce? Only the newest poller,
   // and only while the market/mode it was launched against is still on screen.
   const pollMayApply = (token, current, key, liveKey) => token === current && key === liveKey;
+
+  // WEEKEND-AWARE STALENESS (Lane A, 2026-08-16). The old rule was pure wall
+  // clock: the freshness box warned at ">= 2 days" and every row chip reddened
+  // at ">24h". On an equity market that fires EVERY Saturday and Sunday over a
+  // perfectly good Friday close — the alarm was wrong two days in seven, which
+  // is how an alarm stops being read. Staleness is measured in MARKET WEEKDAYS
+  // now: a Friday scan read on Sunday is 0 weekdays old and reads fresh, and
+  // the box says "market closed (weekend)" so the freshness is EXPLAINED
+  // rather than merely asserted.
+  //
+  // Crypto deliberately keeps the pure wall clock. It trades 24/7, so counting
+  // its staleness in weekdays would hide a real two-day outage behind a
+  // weekend — the exact failure this must not introduce. A market with no
+  // entry in WEEKEND_TZ gets the wall clock, so a market added without a
+  // calendar is treated as always-open (noisier, never quieter).
+  const WEEKEND_TZ = { asx: "Australia/Sydney", nasdaq: "America/New_York" };
+  const isWeekendIn = (when, tz) => {
+    try {
+      const w = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" })
+        .format(new Date(when));
+      return w === "Sat" || w === "Sun";
+    } catch (_) { return false; }          // unusable zone: never claim a weekend
+  };
+  // Whole market weekdays that OPENED between two instants, in the market's own
+  // calendar. Fri 16:00 -> Sun 09:00 = 0. Fri -> Mon = 1. Fri -> Tue = 2.
+  const weekdaysBetween = (from, to, tz) => {
+    const dayKey = (d) => {
+      try {
+        return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric",
+          month: "2-digit", day: "2-digit" }).format(new Date(d));
+      } catch (_) { return null; }
+    };
+    const a = new Date(from).getTime(), b = new Date(to).getTime();
+    if (!isFinite(a) || !isFinite(b) || b <= a) return 0;
+    const end = dayKey(b);
+    if (end == null) return 0;
+    let n = 0;
+    // Capped at 400 iterations so a wild clock cannot spin the render thread.
+    for (let i = 1; i <= 400; i++) {
+      const probe = a + i * 86400000;
+      const k = dayKey(probe);
+      if (k == null || k > end) break;
+      if (!isWeekendIn(probe, tz)) n++;
+      if (k === end) break;
+    }
+    return n;
+  };
+  // The single staleness verdict both the freshness box and the row chips read,
+  // so the two surfaces can never disagree about the same scan. Callers pick
+  // their own threshold off `weekdays` (chips at 1, the box at 2).
+  const scanStaleness = (generatedAt, market, now) => {
+    const t = new Date(generatedAt).getTime();
+    const nowMs = now == null ? Date.now() : now;
+    if (!generatedAt || !isFinite(t)) {
+      return { hours: null, weekdays: 99, weekendNote: false };   // unknown reads as stale
+    }
+    const hours = Math.max(0, (nowMs - t) / 3600000);
+    const tz = WEEKEND_TZ[market];
+    if (!tz) return { hours, weekdays: Math.floor(hours / 24), weekendNote: false };
+    return { hours, weekdays: weekdaysBetween(t, nowMs, tz),
+             weekendNote: isWeekendIn(nowMs, tz) && weekdaysBetween(t, nowMs, tz) === 0 };
+  };
   const HEAD_PREFIX   = _cache.HEAD_PREFIX;
   const HEAD_ROWS     = _cache.HEAD_ROWS;
 
@@ -233,6 +295,11 @@
   function syncFundDim() {
     const b = document.getElementById("fund-dim");
     if (!b) return;
+    // Lane A 2026-08-16: the deck's ⊘ products chip is this control now, so the
+    // duplicate toolbar chip retires. HIDDEN here as well as removed from
+    // index.html in the same train, so a cached older page still finds the node
+    // its listener is bound to instead of throwing.
+    b.hidden = true;
     const on = state.dimFunds !== false;
     b.classList.toggle("is-active", on);
     b.setAttribute("aria-pressed", on ? "true" : "false");
@@ -726,7 +793,9 @@
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
       (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
         `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
-      `<span class="deck-npick" title="A+/A setups excluding funds/REITs — what's actually tradeable">${c.tradeable} tradeable</span>` +
+      // "N tradeable" retired (Lane A 2026-08-16): it was the arithmetic sum of
+      // the A+ and A pills sitting directly beside it, so it spent a slot in the
+      // busiest strip on the page restating two numbers already on screen.
       // The counterweight to the corrected counts above: say out loud how many
       // rows were set aside, so "96 A+" becoming "52 A+" reads as an
       // explanation rather than as names going missing. Informational, not a
@@ -734,10 +803,24 @@
       // existing FUNDS DIMMED toggle), and this only reports what the grade
       // counts no longer include.
       (c.products
-        ? `<span class="deck-products" title="${esc(c.products + " ETF / fund / REIT / LIC row(s) on this scan"
+        ? `<button class="deck-products" type="button" data-funddim aria-pressed="${state.dimFunds === false ? "false" : "true"}" title="${esc(c.products + " ETF / fund / REIT / LIC row(s) on this scan"
             + (c.aplusProducts ? ", " + c.aplusProducts + " of them graded A+" : "")
-            + ". They hug the 200-SMA so they over-produce reactions, the bot does not trade them, and most CFD brokers do not list them — so they are not counted as A+/A opportunity above. They are still in the list below, dimmed.")}">⊘ ${c.products} products</span>`
+            + ". They hug the 200-SMA so they over-produce reactions, the bot does not trade them, and most CFD brokers do not list them — so they are not counted as A+/A opportunity above, and they queue below real names of the same grade. Tap to dim or show them in the list.")}">⊘ ${c.products} products · ${state.dimFunds === false ? "shown" : "dimmed"}</button>`
         : "");
+    // The ⊘ chip IS the fund-dim control now — it names the count it dims,
+    // which the bare toolbar chip never did. Wired per repaint because this
+    // strip is re-rendered on every scan/market change; the label and
+    // aria-pressed are updated in place so the toggle needs no full re-render.
+    const dimChip = box.querySelector("[data-funddim]");
+    if (dimChip) dimChip.addEventListener("click", () => {
+      state.dimFunds = state.dimFunds === false;
+      savePrefs();
+      syncFundDim();
+      const on = state.dimFunds !== false;
+      dimChip.setAttribute("aria-pressed", on ? "true" : "false");
+      dimChip.textContent = dimChip.textContent.replace(/·\s*(dimmed|shown)$/, "· " + (on ? "dimmed" : "shown"));
+      renderRows();
+    });
     box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
       state.view = "results";
       state.tab = b.dataset.goto;
@@ -1232,7 +1315,9 @@
     const txt = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
     document.querySelectorAll(".detail-inner .vk-fresh").forEach((el) => {
       el.textContent = `⟳ scanned ${txt}`;
-      el.classList.toggle("stale", mins > 1440);
+      // Same weekday-aware rule as scanAge() — the re-stamp must not disagree
+      // with the chip it is re-stamping (Lane A, 2026-08-16).
+      el.classList.toggle("stale", scanStaleness(g, state.market).weekdays >= 1);
     });
   }
 
@@ -1439,7 +1524,8 @@
       if (!g) return "";
       const mins = Math.max(0, Math.round((Date.now() - new Date(g).getTime()) / 60000));
       const txt = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
-      const stale = mins > 1440;
+      // Weekday-aware (Lane A): >24h is a weekend on Sat/Sun, not a fault.
+      const stale = scanStaleness(g, state.market).weekdays >= 1;
       return `<span class="vk-fresh${stale ? " stale" : ""}" title="When this setup was last scanned">⟳ scanned ${txt}</span>`;
     };
 
@@ -1836,10 +1922,31 @@
     else if (s === "sector") list.sort((a, b) =>
       String(a.sector || "~").localeCompare(String(b.sector || "~")) ||
       (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)));
-    else list.sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr)));
+    else list.sort(deckOrder(n));
     if (sortDirOf() !== defaultDir(s)) list.reverse();
     return list;
   }
+
+  // DECK ORDER (Lane A, 2026-08-16). Grade first, then REAL NAMES ABOVE
+  // PRODUCTS inside that grade, then score. Measured at head the day this
+  // shipped: 55 of 107 ASX A+ rows were ETFs/funds/REITs, and SEVEN OF THE TOP
+  // EIGHT by score were products (SNAS, USD, MQDB, IUSG, 1GOV, UTIP) — so the
+  // first screenful of the hunt surface was almost entirely instruments the
+  // bot cannot trade and most CFD brokers do not list.
+  //
+  // DISPLAY ONLY, and the list of what does NOT move is the point: no grade,
+  // no score, no count, no pill, no filter, no dimming rule and nothing the
+  // bot reads changes. Products keep their grade and stay in the list; they
+  // queue below real names of the SAME grade. It reuses `isFundReit` — the
+  // predicate the counts already use — rather than adding a second heuristic
+  // that could drift away from it.
+  //
+  // Direction-flip reverses the whole order deliberately: "worst first" should
+  // put the worst REAL name first too, not resurface products at the top.
+  const deckOrder = (n) => (a, b) =>
+    (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) ||
+    ((isFundReit(a) ? 1 : 0) - (isFundReit(b) ? 1 : 0)) ||
+    (n(b.score) - n(a.score)) || (n(b.rr) - n(a.rr));
 
   // VIVEK entry-type filter chips (200 SMA interaction). Shows live counts so
   // the user can read market behaviour: how many setups are reclaiming /
@@ -1964,7 +2071,9 @@
     const cov = d.coverage_pct;
     const ver = d.schema_version;
     const behind = ver != null && ver < EXPECTED_SCHEMA;
-    const tooOld = /\dd ago/.test(age) && parseInt(age) >= 2;            // ≥2 days stale
+    // Weekday-aware (Lane A): a Friday scan is not stale on Sunday.
+    const fresh = scanStaleness(d.generated_at, state.market);
+    const tooOld = fresh.weekdays >= 2;
     const lowCov = typeof cov === "number" && cov < 80 && (d.universe_size || 0) > 50;
     const warn = behind || tooOld || lowCov;
     const bits = [];
@@ -1976,6 +2085,9 @@
                            : `${cov}% coverage`);
     }
     if (ver != null) bits.push(`schema v${ver}`);
+    // Said out loud rather than left as an unexplained silence: on a weekend an
+    // ASX/NASDAQ scan is SUPPOSED to be a day or two old.
+    if (fresh.weekendNote) bits.push("market closed (weekend)");
     if (behind) bits.push("rescan to enable latest features");
     box.hidden = false;
     box.className = `scan-fresh${warn ? " warn" : ""}`;
@@ -2615,7 +2727,7 @@
       // read as one system.
       const capTxt = facts.maxOpen == null
         ? `${facts.open} open`
-        : `${facts.open} of ${facts.maxOpen} slots · ` +
+        : `${facts.open} of ${facts.maxOpen} A+ slots · ` +
           `${facts.stalled.length} stalled · ` +
           (facts.atCap ? "FULL" : `${facts.free} free`);
       const sumTxt =
@@ -2624,7 +2736,7 @@
         `record ${facts.wins}W–${facts.losses}L ${fmtR(facts.realized)}`;
       const shown = facts.stalled.slice(0, 6);
       const stallTxt = facts.stalled.length
-        ? `⏳ ${facts.stalled.length} sitting still — probe-flagged: ${shown.join(", ")}` +
+        ? `⏳ ${facts.stalled.length} stalled — probe-flagged: ${shown.join(", ")}` +
           `${facts.stalled.length > shown.length ? ` +${facts.stalled.length - shown.length} more` : ""} · your call`
         : "";
       box.hidden = false;
