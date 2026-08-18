@@ -113,6 +113,16 @@ window.PM = (() => {
     .map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b");
 
   function isFundReit(rec) {
+    // Published flag first (2026-08-19): the scanner now ships `is_product` on
+    // every result row — server-side classification that also catches the
+    // LIC/preferred classes no keyword here matches (AFI-class names,
+    // "…% Preferred Stock" lines). The keyword heuristic below stays as the
+    // fallback for payloads that predate the field and for records (PhaseMap,
+    // Specs, chart) that never carry it. Honouring an explicit false is
+    // deliberate too: absent means "old payload, guess", false means "the
+    // classifier looked and says operating company".
+    if (rec && rec.is_product === true) return true;
+    if (rec && rec.is_product === false) return false;
     const sector = String(rec.sector || "").trim().toLowerCase();
     if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
     if (NON_OP_SECTORS.includes(sector)) return true;
@@ -386,9 +396,11 @@ window.PM = (() => {
       const e = ent(r.symbol);
       const side = String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long";
       if (!e[side].includes("VIVEK")) e[side].push("VIVEK");
-      // name + sector ride along for DISPLAY (fund badge on chips) — the
-      // qualification rule reads none of this.
-      e.detail.vivek = { grade: r.grade, side, name: r.name, sector: r.sector };
+      // name + sector + the published product flag + score ride along for
+      // DISPLAY (fund badge, product penalty, leg-strength tie-break on the
+      // Eyes strip) — the qualification rule reads none of this.
+      e.detail.vivek = { grade: r.grade, side, name: r.name, sector: r.sector,
+                         is_product: r.is_product, score: r.score };
     });
     ((pm && pm.results) || []).forEach((r) => {
       if (!PM_ACTIVE_STATES.includes(r.state)) return;

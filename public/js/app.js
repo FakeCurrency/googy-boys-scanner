@@ -689,10 +689,21 @@
     const prod = (x) => {
       const v = x.detail && x.detail.vivek;
       return (typeof PM !== "undefined" && PM.isFundReit && v
-        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker })) ? 1 : 0;
+        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
+                           is_product: v.is_product })) ? 1 : 0;
+    };
+    // Leg-strength completion (2026-08-19, Session C): the VIVEK leg's own
+    // SCORE breaks the last tie before the alphabet. The rank already reads
+    // the PM leg's quality (pq) and the VIVEK grade band (ap); score is the
+    // finer grain WITHIN a grade — a 10/10 A+ dual and a 9/10 A+ dual used to
+    // sort alphabetically. Missing score (old payloads) reads 0, so a mixed
+    // cache degrades to the previous ordering, never throws.
+    const vs = (x) => {
+      const v = x.detail && x.detail.vivek;
+      return (v && typeof v.score === "number" && isFinite(v.score)) ? v.score : 0;
     };
     return (b.count - a.count) || (prod(a) - prod(b)) || (ap(b) - ap(a)) ||
-      (pq(b) - pq(a)) || a.ticker.localeCompare(b.ticker);
+      (pq(b) - pq(a)) || (vs(b) - vs(a)) || a.ticker.localeCompare(b.ticker);
   });
 
   const eyesHTML = (rows, market, cap) => {
@@ -704,7 +715,8 @@
     const isProd = (x) => {
       const v = x.detail && x.detail.vivek;
       return !!(typeof PM !== "undefined" && PM.isFundReit && v
-        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker }));
+        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
+                           is_product: v.is_product }));
     };
     // The "N A+" summary counts TRADEABLE A+ only (2026-08-13), for the same
     // reason the deck pills do: a headline that includes bond ETFs overstates
@@ -720,7 +732,8 @@
       // FMG-type name. Display only; nothing reads the marker back.
       const v = x.detail && x.detail.vivek;
       const fund = !!(typeof PM !== "undefined" && PM.isFundReit && v &&
-        PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker }));
+        PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
+                        is_product: v.is_product }));
       const leg = x.detail && x.detail.phasemap;
       const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "") +
         (fund ? " ey-fund" : "");
@@ -730,13 +743,13 @@
       const title = `${x.lenses.join(" + ")} aligned ${x.side.toUpperCase()}` +
         (leg ? ` — PhaseMap ${leg.state}${leg.tier ? "/" + leg.tier : ""}` : "") +
         (ap ? " — and VIVEK grades it A+" : "") +
-        (fund ? " — FUND / REIT-type name" : "") +
+        (fund ? " — fund / LIC / preferred-type product, not an operating company" : "") +
         " — open the combined chart";
       return `<a class="${cls}" title="${esc(title)}" ` +
         `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
         `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
         `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
-        `${fund ? `<em class="ey-tag ey-fund-tag">FUND</em>` : ""}` +
+        `${fund ? `<em class="ey-tag ey-fund-tag">PRODUCT</em>` : ""}` +
         `<span class="ey-n">×${x.count}</span></a>`;
     }).join("");
     const more = ranked.length > cap
@@ -867,6 +880,11 @@
   const FUND_KW_RE = new RegExp("\\b(" + FUND_NAME_KEYWORDS
     .map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b");
   function isFundReit(r) {
+    // Published flag first (2026-08-19) — same contract as PM.isFundReit: the
+    // scanner's `is_product` wins in either direction when present; the
+    // keyword heuristic below only decides for payloads that predate it.
+    if (r && r.is_product === true) return true;
+    if (r && r.is_product === false) return false;
     const sector = String((r && r.sector) || "").trim().toLowerCase();
     if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
     if (NON_OPERATING_SECTORS.has(sector)) return true;
