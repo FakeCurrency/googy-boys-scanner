@@ -357,6 +357,42 @@ VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below thi
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
 # trading. Affects the bot's selection only; the scanner still displays them.
 VIVEK_BOT_EXCLUDE_FUNDS = True
+
+# ── PRODUCT flag — DISPLAY-ONLY, published as `is_product` (2026-08-19) ──────
+# Name patterns for the non-operating instrument classes the fund keyword list
+# (vivek_bot._FUND_NAME_KEYWORDS) structurally misses. Measured on the live
+# scans before writing: 4 ASX LICs graded A+ (AFI, BTI, HM1, RG8 — none carry
+# FUND/TRUST/ETF in the name) and 4 NASDAQ preferred lines (STRF, STRD, STRC,
+# MCHPP) were dressing as operating-company opportunities on the deck.
+#
+# THE FENCE, stated where the patterns live: scan.py publishes the flag for the
+# UI to dim/mark/rank with. NOTHING in scanner/broker/ may read `is_product` or
+# this constant — the bot's fund test is _is_fund_or_reit and it stays
+# byte-untouched, because changing what the bot may take mid-w3-1 is a rule
+# change by stealth. tests/test_product_flag.py greps the broker tree and goes
+# red on the first reference.
+#
+# Pattern notes, each learned from a live near-miss:
+#   * preferreds match on the WORDS "preferred stock/shares", which also nets
+#     depositary-preferred lines (HBANP-class); bare "Depositary Shares" is
+#     deliberately NOT a pattern — Sanofi/JD/Ryanair ADS are real companies.
+#   * the LIC form is "InvestmentS Limited/Ltd" (PLURAL only) plus
+#     "Investment Company/Co": the plural rule is what keeps Australian
+#     Ethical Investment Ltd — an operating fund MANAGER — off the list.
+#     Known borderline it does catch: NGI (Navigator Global Investments),
+#     an asset-management holding co. Accepted: display-only, B+ today.
+#   * notes-due / debentures / warrants / rights: zero hits on today's tape,
+#     kept because these listing classes appear on NASDAQ routinely and each
+#     would otherwise dress as a stock the moment one grades.
+PRODUCT_NAME_PATTERNS = (
+    r"\bPREFERRED (STOCK|STOCKS|SHARES)\b",
+    r"\bINVESTMENTS (LIMITED|LTD)\b",
+    r"\bINVESTMENT (COMPANY|CO)\b",
+    r"\bNOTES DUE\b",
+    r"\bDEBENTURES?\b",
+    r"\bWARRANTS?\b",
+    r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
+)
 # Favour the strongest trigger: the walk-forward backtest showed "retest" is
 # flat-to-negative while "reclaim" carries the edge, so the bot skips these
 # entry types. Selection-only; the scanner still shows them. Empty list = take all.

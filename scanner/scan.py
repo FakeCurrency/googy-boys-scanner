@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import subprocess
 from collections import Counter
 from zoneinfo import ZoneInfo
@@ -43,6 +44,65 @@ def _fund_tag(info: dict) -> bool:
         return bool(_is_fund_or_reit(info))
     except Exception:                                  # noqa: BLE001
         return False
+
+
+# Compiled once at import; a bad pattern in config fails HERE, at import time,
+# loudly — not silently per-row inside the scan loop.
+_PRODUCT_RES = tuple(re.compile(p)
+                     for p in getattr(config, "PRODUCT_NAME_PATTERNS", ()) or ())
+
+
+def _product_kw_re():
+    """The bot's fund KEYWORD LIST under WORD-BOUNDARY matching.
+
+    The lists are imported from vivek_bot (never re-typed — the mirror-drift
+    rule), but the MATCHING is deliberately the front end's, not the bot's:
+    `_is_fund_or_reit` tests `kw in name`, and `"ETF" in "NETFLIX"` is True —
+    the exact substring bug the deck fixed with `\b` on 2026-08-13 while the
+    bot's copy stayed as-is (it is ringfenced; changing what it excludes is a
+    trade change). Delegating this DISPLAY flag to the bot's matcher would
+    have re-dimmed NFLX and silently reverted that front-end fix, so the flag
+    borrows the bot's words and the front end's discipline. Found by test,
+    not by reading: the first draft called _fund_tag() and the NFLX case in
+    tests/test_product_flag.py went red."""
+    from .broker import vivek_bot as _vb
+    return re.compile(r"\b(" + "|".join(re.escape(k) for k in _vb._FUND_NAME_KEYWORDS) + r")\b")
+
+
+def _product_tag(info: dict) -> bool:
+    """DISPLAY-ONLY product flag (2026-08-19, owner-ordered).
+
+    True for every non-operating instrument the UI should dim/mark: the fund /
+    REIT / no-sector classes the bot's own test describes (matched with word
+    boundaries — see _product_kw_re), PLUS the listing classes its keyword list
+    structurally misses (LICs named "…Investments Limited", preferred lines,
+    baby bonds, warrants — see config.PRODUCT_NAME_PATTERNS for the measured
+    rationale per pattern). Published as `is_product` on every result row.
+
+    THE FENCE: nothing in scanner/broker/ reads this field or those patterns.
+    The bot's eligibility is _is_fund_or_reit, byte-untouched — display honesty
+    must not become a mid-cycle rule change. Pinned by tests/test_product_flag.py
+    in both directions. Fail-open to False for the same reason _fund_tag is:
+    a missed tag in a display field is a cosmetic miss, not a position."""
+    try:
+        from .broker import vivek_bot as _vb
+        name = str(info.get("name") or "").upper()
+        sector = str(info.get("sector") or "").strip().lower()
+        if any(h in sector for h in _vb._FUND_SECTOR_HINTS):
+            return True
+        if sector in _vb._NON_OPERATING_SECTORS:
+            return True
+        global _KW_RE_CACHE
+        if _KW_RE_CACHE is None:
+            _KW_RE_CACHE = _product_kw_re()
+        if _KW_RE_CACHE.search(name):
+            return True
+        return any(rx.search(name) for rx in _PRODUCT_RES)
+    except Exception:                                  # noqa: BLE001
+        return False
+
+
+_KW_RE_CACHE = None
 
 
 def _liquidity(df, market) -> float:
@@ -238,6 +298,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                             # no thin row anywhere lacks it.
                             "adv_usd": round(float(turnover), 2),
                             "fund": _fund_tag(info),
+                            "is_product": _product_tag(info),
                         })
                 except (KeyError, IndexError, TypeError, ValueError):
                     pass
@@ -300,6 +361,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "symbol": info.get("symbol", yf_ticker),
                 "name": info.get("name", yf_ticker),
                 "sector": info.get("sector", ""),
+                # DISPLAY-ONLY product flag — see _product_tag. The bot buys
+                # off grade_raw and its own fund test; it never reads this.
+                "is_product": _product_tag(info),
                 "dir": "LONG" if is_long else "SHORT",
                 "setup_type": "vivek",
                 "grade": grade,                    # displayed (hysteresis-held, gated)
