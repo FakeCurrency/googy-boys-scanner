@@ -1793,4 +1793,56 @@ test("MECHANICAL_EXITS is IDENTICAL in app.js, journal.js and status.js", () => 
 });
 
 
+
+// ---------------------------------------------------------------------------
+// THE PUBLISHED PRODUCT FLAG ON THE DECK (Session C, 2026-08-19).
+// The scanner ships `is_product` on every result row; the deck's local
+// isFundReit must honour it in BOTH directions before falling back to the
+// keyword heuristic, or the server-side classification (which catches the
+// AFI-class LICs and the preferred lines no keyword matches) never reaches
+// the dimming, the counts, or the ranking. Found by mutation: removing the
+// two honour lines left every suite green, which is exactly the state this
+// block closes.
+// ---------------------------------------------------------------------------
+// isFundReit closes over four module constants, so the bare pullFn slice
+// would throw ReferenceError the moment a rec reaches the keyword fallback.
+// Rebuild the closure from the SHIPPED constants (extractConst, same rule as
+// everywhere: never re-type what you can slice).
+function pullIsFundReit() {
+  const body =
+    "const FUND_NAME_KEYWORDS = " + extractConst(APP, "FUND_NAME_KEYWORDS") + ";\n" +
+    "const FUND_SECTOR_HINTS = " + extractConst(APP, "FUND_SECTOR_HINTS") + ";\n" +
+    "const NON_OPERATING_SECTORS = " + extractConst(APP, "NON_OPERATING_SECTORS") + ";\n" +
+    "const FUND_KW_RE = " + extractConst(APP, "FUND_KW_RE") + ";\n";
+  const at = APP.search(/function\s+isFundReit\s*\(/);
+  assert.ok(at >= 0, "app.js no longer defines isFundReit");
+  for (let i = APP.indexOf("}", at); i > 0 && i - at < 4000; i = APP.indexOf("}", i + 1)) {
+    const cand = APP.slice(at, i + 1);
+    try { new Function(cand); } catch (_) { continue; }
+    return new Function(body + cand + "\nreturn isFundReit;")();
+  }
+  assert.fail("could not slice isFundReit");
+}
+
+test("the deck's isFundReit honours a published is_product:true over a clean name", () => {
+  const isFundReit = pullIsFundReit();
+  assert.strictEqual(isFundReit({ name: "Australian Foundation Investment Company Limited",
+                                  sector: "Financials", is_product: true }), true,
+    "an AFI-class LIC with no fund keyword must dim once the scanner says so");
+});
+
+test("an explicit is_product:false overrules a fund-looking name — a verdict beats a guess", () => {
+  const isFundReit = pullIsFundReit();
+  assert.strictEqual(isFundReit({ name: "Extra Trust Holdings", sector: "Industrials",
+                                  is_product: false }), false);
+});
+
+test("an ABSENT flag degrades to the keyword heuristic — old payloads keep working", () => {
+  const isFundReit = pullIsFundReit();
+  assert.strictEqual(isFundReit({ name: "Charter Hall Retail REIT", sector: "Real Estate" }), true);
+  assert.strictEqual(isFundReit({ name: "Netflix, Inc. - Common Stock", sector: "" }), false,
+    "the word-boundary NFLX fix must survive the flag wiring");
+});
+
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

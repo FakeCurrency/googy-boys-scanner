@@ -210,14 +210,67 @@ test("the chip title states the PhaseMap leg it ranked on", () => {
   assert.ok(html.includes("PhaseMap RUNNING/A+"), html);
 });
 
+test("leg-strength: VIVEK score breaks the last tie inside a grade band", () => {
+  // Session C (2026-08-19): a 10/10 A+ dual and a 9/10 A+ dual with equal PM
+  // legs used to sort alphabetically. The score is the finest grain of the
+  // VIVEK leg the payload carries; it decides only after count, product,
+  // grade band and PM leg quality — the qualification rule reads none of it.
+  const rows = [
+    mkq("AAA", "A+", "SWEPT", "Watch", { score: 9 }),
+    mkq("ZZZ", "A+", "SWEPT", "Watch", { score: 10 }),
+  ];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["ZZZ", "AAA"]);
+});
+
+test("a missing score reads 0 and the old alphabetical order survives", () => {
+  // Old cached payloads carry no score in detail.vivek — the rank must
+  // degrade to exactly the previous behaviour, never throw or jump.
+  const rows = [mkq("BBB", "A+", "SWEPT", "Watch"), mkq("AAA", "A+", "SWEPT", "Watch")];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["AAA", "BBB"]);
+});
+
+test("score never outranks PM leg quality — it is the LAST quality key", () => {
+  // A RUNNING leg with a 9 must still beat a SWEPT leg with a 10: the order
+  // of keys is the design, and this is the mutation that would invert it.
+  const rows = [
+    mkq("SWP", "A+", "SWEPT", "Watch", { score: 10 }),
+    mkq("RUN", "A+", "RUNNING", "A+", { score: 9 }),
+  ];
+  assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["RUN", "SWP"]);
+});
+
 suite("fund markers");
 
 test("a fund-named chip carries the marker and the dimming class", () => {
   const html = eyesHTML([mkq("CQE", "A+", "SWEPT", "Watch",
     { name: "Charter Hall Social Infrastructure REIT", sector: "Real Estate" })], "asx");
   assert.ok(html.includes("ey-fund"), html);
-  assert.ok(html.includes(">FUND<"), html);
-  assert.ok(html.includes("FUND / REIT-type name"), html);
+  // Session C (2026-08-19): the tag reads PRODUCT, not FUND — the caught class
+  // widened to LICs and preferred lines, where "FUND" would be flatly wrong on
+  // the chip (STRF is not a fund; it is a preferred line). Same class, same
+  // penalty, honest word.
+  assert.ok(html.includes(">PRODUCT<"), html);
+  assert.ok(html.includes("preferred-type product"), html);
+});
+
+test("the PUBLISHED is_product flag marks a chip the keywords cannot catch", () => {
+  // AFI-class: nothing in the name matches the keyword list — before the flag
+  // this chip dressed exactly like an operating company. The scanner's
+  // server-side classification travels through loadConfluence's detail and
+  // must win here.
+  const html = eyesHTML([mkq("AFI", "A+", "SWEPT", "Watch",
+    { name: "Australian Foundation Investment Company Limited",
+      sector: "Financials", is_product: true })], "asx");
+  assert.ok(html.includes("ey-fund"), "the published flag did not reach the chip");
+  assert.ok(html.includes(">PRODUCT<"), html);
+});
+
+test("an explicit is_product:false wins over a fund-looking name", () => {
+  // The classifier looked and says operating company — the keyword fallback
+  // must not overrule it. (Absent stays a guess; false is a verdict.)
+  const html = eyesHTML([mkq("XTR", "A+", "SWEPT", "Watch",
+    { name: "Extra Trust Holdings", sector: "Industrials", is_product: false })], "asx");
+  assert.ok(!html.includes("ey-fund"), "explicit false was overruled by the keyword guess");
 });
 
 test("NETFLIX is clean — the ETF keyword no longer matches inside words", () => {
