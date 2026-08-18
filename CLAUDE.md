@@ -527,6 +527,59 @@ Both are pure surface: nothing in `broker/` reads them, no trade changes.
 
 ---
 
+## RULES vs OWNER — the split that was being pooled (2026-08-19, Session B)
+
+One book, two systems. Measured at head: the RULES took 19 exits (5W-14L,
+**-6.97R**); the OWNER took 26 by hand (11W-15L, **+0.09R**). Pooled that reads
+`16W-29L -6.88R` and attributes the rules' losses to a book the owner was half
+driving. Nothing about how closes happen changed — only what the surfaces admit.
+
+- **The deck strip no longer prints a blended record.** `bookFacts` in
+  `public/js/app.js` tallies `rules` and `owner` in the same loop it already
+  walked, and the strip reads `... unrealized +3.6R · rules 5W–14L -7.0R · you
+  11W–15L +0.1R`. Rules first, because "the bot's record" IS the rules' record.
+  The deck is where the next trade gets picked, which is the worst place to
+  hide that a record was half hand-driven. When only one side has closed
+  anything it names that side rather than printing a hollow `0W-0L` beside it;
+  with no closes it still says `record —`.
+- **The journal's w3-1 line became an EXIT EVIDENCE strip** (`w3Line` /
+  `w3Rows` in `public/js/journal.js`). A cycle counting to 30 closes implies
+  the 30 will measure the ruleset; at head **all 3 gated closes are the
+  owner's and 0 are the rules'**, so the number is measuring hand-timing. The
+  strip states `24 gated open · 3/30 closes · 0 by the rules · 3 by you`, lists
+  each gated exit (symbol · market · who + path · R · days held, newest first)
+  behind a fold, and says the zero case in words rather than leaving a `0`
+  nobody reads.
+- **THE STRIP IS INERT, and that is load-bearing.** No button, no link, no
+  wording that suggests closing anything, `<details>` shut by default. A
+  surface that nudged the owner into more manual closes would MANUFACTURE the
+  confound it exists to report. `test/journal_money.test.js` fails if a
+  control or a call-to-action verb appears in it.
+- **An ABSENT `exit_reason` is a human act**, in all three readers — a row with
+  no recorded mechanism was not closed by one. Same rule `deciderSplit` has
+  always applied.
+- **`MECHANICAL_EXITS` now lives in three files** (`app.js`, `journal.js`,
+  `status.js`) and is held together by a parity test in
+  `test/staleview.test.js`, plus a **numeric** cross-check that drives the
+  shipped `bookFacts` and the shipped `deciderSplit` with one book and asserts
+  they land on the same counts and the same R. Identical lists are necessary
+  but not sufficient: the failure that actually hurts is two surfaces printing
+  different splits for one book with nothing saying which is right.
+- **The e2e fixture book was stamped** (8 open + 2 closed rows carry
+  `cycle: "w3-1"`, and one closed row's `exit_reason` became `manual`). Before
+  this it was 6/6 `stop` with zero cycle stamps, so the screenshot gate
+  photographed only the deck's ONE-SIDED degrade and never saw the w3 strip at
+  all. The fixture hash is part of the baseline cache key, so editing it
+  re-cuts baselines by itself — **no manual key bump was needed** and v19
+  stands. Measured drift of the code change against the pre-change baselines:
+  index-desktop 0.22%, index-390 0.13%, journal 0.00% (the strip was invisible
+  in the old fixtures — which is precisely why they were stamped).
+- Tests: `test/journal_money.test.js` 73 → 84, `test/staleview.test.js`
+  127 → 136. 11 mutations applied one at a time, every one caught, all three
+  sources restored byte-identical.
+
+---
+
 ## STATUS — the lamp in the top bar (2026-08-19, owner-ruled Session 1)
 
 `public/js/status.js` + `public/css/status.css`, mounted by the file itself on
