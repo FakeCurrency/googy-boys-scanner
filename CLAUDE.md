@@ -527,6 +527,70 @@ Both are pure surface: nothing in `broker/` reads them, no trade changes.
 
 ---
 
+## STATUS — the lamp in the top bar (2026-08-19, owner-ruled Session 1)
+
+`public/js/status.js` + `public/css/status.css`, mounted by the file itself on
+every page that carries the shared nav. One lamp, one tap sheet, and the whole
+point is that "is the machine working?" stops being a question you answer by
+opening GitHub.
+
+- **READ-ONLY BY CONSTRUCTION, and it is gated.** GET only, to published assets
+  and `/api/health`. `test/status.test.js` extracts the actual fetch call sites
+  and asserts the set is exactly `["/api/health"]`; separate pins ban a `method:`
+  in any fetch init and any storage write at all — there is deliberately not
+  even a "last opened" flag, because a read-only promise with one exception is
+  one nobody can check at a glance.
+- **IT MUST NEVER CALL `/api/heartbeat`, and that is not a style rule.** The
+  heartbeat endpoint is the HEALER: it dispatches a scan when the book is
+  overdue and spends one of its 24/day heal budget doing it. A lamp that polled
+  it would fire workflows off page views and burn the budget that exists to
+  rescue a dropped cron. The healer's *condition* (book age vs the 90-minute
+  mark) is derived instead, and the sheet says it derived rather than probed.
+- **Every threshold is borrowed from the component that already acts on it,
+  and the borrowing is pinned.** 4h is `health.js`'s `max_h` default
+  (= `WATCHDOG_BOOK_MAX_AGE_H`) — the point the external monitor is told the
+  pipeline is down; 90m is `heartbeat.js`'s `DEFAULT_STALE_MIN`; the 30-position
+  cap is read from `bot_rules.json`. Tests parse those two Functions and fail if
+  either number moves without this one following.
+- **A LOSS-GUARD BREACH IS AMBER, NOT RED.** Red means "the evidence you trade
+  on is not arriving". A breach is the machine working correctly and refusing
+  new entries, and `heartbeat.js` already paid for the lesson that an alarm
+  which fires on successful self-protection is an alarm that gets muted. Pinned
+  by a named test; do not "fix" it to red without re-reading that argument.
+- **UPTIME IS MEASURED, NEVER ASSERTED.** It is the time-weighted share of the
+  window during which the newest scan was inside the 4h line, computed in the
+  BROWSER from `public/data/funnel_history.json` — the ledger `scanner/run.py`
+  appends to immediately after every successful publish. Three properties carry
+  it: the window is CLAMPED to the ledger's own span and labelled when clamped
+  (a 30d figure over 19d of history would count the dark before the ledger as
+  healthy); `Date.now()` closes the series so the CURRENT gap counts and a dead
+  pipeline erodes the number live rather than freezing at 100%; and a gap
+  straddling the window start is charged only for its in-window part. Computing
+  it server-side was rejected for the second reason — a figure written by the
+  scan can only be written while the scan is alive.
+- **The funnel ledger now has two readers and no more.** `app.js` (the deck's
+  funnel trend) and `status.js` (the `t` column, as the scan-publish ledger).
+  `tests/test_funnel_history.py` names both and fails on a third, and the
+  property it now gates is that BOTH fetch it lazily — 33 KB paid for by a tap,
+  never by a page load across 14 pages.
+- **What it does NOT claim to know is printed on the sheet, with the reason.**
+  The healer is not probeable read-only; the 5-minute stop-watcher commits
+  nothing a browser can read (making it visible needs a committed heartbeat or a
+  KV stamp — neither exists); CI failures live in GitHub's API, so "View latest
+  failure" is a deep link to the authoritative list rather than a count invented
+  here. Absent signals are named, not omitted.
+- **The lamp is NOT inside `.nav-pills`** — that strip is `display:none` under
+  680px, which is the device this control is for. It mounts into
+  `.deck-top-right`, falling back to the header. Sized by measurement: a 30px
+  dot on phones leaves the journal header byte-for-byte the height it was
+  (0.05% screenshot drift); a 40px labelled chip wrapped it onto a second row
+  and cost 54px of page height. See the block comment in `status.css`.
+- Tests: `test/status.test.js` (48, registered in test.yml), all logic
+  mutation-verified (9 mutations, every one caught, source restored
+  byte-identical). Screenshot baselines re-cut at `screenshot-baselines-v19`.
+
+---
+
 ## HORIZON — the rotation surface (2026-07-28)
 
 **Why it exists.** Owner post-mortem: ASX consumer discretionaries ran for four
