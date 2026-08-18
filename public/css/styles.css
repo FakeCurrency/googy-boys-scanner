@@ -1723,6 +1723,14 @@ body { letter-spacing: -0.012em; }
      count-less tabs (RECS/PHASEMAP/MY NAMES) don't show an empty dot. */
   .site-tab-badge[hidden] { display: none; }
   .site-tab[data-tabkey="index"] .site-tab-badge { background: var(--green); }
+  /* JOURNAL badge is INFORMATION, not an alarm (Lane A, 2026-08-16). It carries
+     the OPEN POSITION COUNT, which sits at or near the 30-slot cap by design —
+     so a permanent red dot rendered a healthy full book as a standing fault on
+     every page of the site, and a warning colour that is always on teaches you
+     to stop seeing warning colours. Blue matches the tab's own accent and the
+     bot-book chrome elsewhere. The red base rule stays for any future badge
+     that really does mean "something needs attention". */
+  .site-tab[data-tabkey="journal"] .site-tab-badge { background: var(--blue); }
   body.has-site-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0)); }
   /* the top pill nav is redundant on phones once the tab bar exists */
   .nav-pills { display: none; }
