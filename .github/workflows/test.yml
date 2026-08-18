@@ -323,7 +323,24 @@ jobs:
           # and the bump's own run is the one that re-cuts and goes green.
           # Expect the intermediate runs to fail on drift; that is the design,
           # not a regression, and the run AFTER this key moves is the proof.
-          key: screenshot-baselines-v17-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+#
+          # v17 -> v18 (2026-08-18, journal condensation pass): INTENTIONAL and
+          # measured against the pre-change baselines BEFORE this bump —
+          # journal-desktop 3.04%, journal-390 4.20% against the 2% budget;
+          # index-desktop 0.34% and index-390 0.80% stay inside it (the deck
+          # only gained group separators and two border-colour changes).
+          #
+          # The journal drift is the point of the pass: the four analytics
+          # panels (478px) moved into one fold, the closed table now previews
+          # 10 rows instead of rendering all 45 (1,884px -> ~450px), the
+          # duplicated realised sparkline row left the header, the stalled
+          # explainer became a tooltip, and the section headings gained a
+          # dividing rule. Measured: 5,183px -> ~2,900px, with every number
+          # still on the page.
+          #
+          # Sequencing per the v17 note: visual commits first, this bump last,
+          # landed fast enough that concurrency cancels the intermediate runs.
+          key: screenshot-baselines-v18-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
