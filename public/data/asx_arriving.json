@@ -1,13 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-19T06:44:53+10:00",
+  "generated_at": "2026-08-19T07:41:21+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "XALG",
+      "name": "Alphinity  Global  Equity  Fund  (Managed Fund)",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 10.31000042,
+      "turnover_avg20": 57596,
+      "turnover_today": 454165,
+      "rvol": 7.9,
+      "adv_usd": 57596.65,
+      "fund": true
+    },
     {
       "symbol": "IHEB",
       "name": "iShares JP Morgan USD Emerging Mkt Bnd AUD Hdg ETF",
@@ -91,18 +103,6 @@
       "rvol": 4.5,
       "adv_usd": 29965.47,
       "fund": false
-    },
-    {
-      "symbol": "XALG",
-      "name": "Alphinity  Global  Equity  Fund  (Managed Fund)",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 10.36999989,
-      "turnover_avg20": 36839,
-      "turnover_today": 144848,
-      "rvol": 3.9,
-      "adv_usd": 36839.45,
-      "fund": true
     },
     {
       "symbol": "BKY",
