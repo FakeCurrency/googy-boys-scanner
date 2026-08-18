@@ -181,7 +181,9 @@ assert_staged call and a WATCHDOG_RUNS entry.
 
 ### The tick endpoint — and why a 503 must NOT fail the job (2026-07-28)
 
-**`/api/tick` has never run in production.** `TICK_SECRET` is not set in the
+**`/api/tick` IS LIVE (corrected 2026-08-18).** The owner set `TICK_SECRET` in both halves at some point after this section was written, and the endpoint proves it: an unauthenticated probe now returns **401** (`tick.js` returns 503 only when the secret is unset), and stop_watcher.yml — the only caller that holds the secret — has been green for hundreds of consecutive runs, which a mismatch could not be. **The cloud stop/target watcher is armed; paper stops no longer depend on a chart page being open.** The paragraph below is kept as the historical record of the blackout and of why the 503 branch exists; its claim that the secret is unset is FALSE as of this correction.
+
+HISTORICAL: `TICK_SECRET` was not set in the
 Cloudflare Pages project, and `functions/api/tick.js` fails closed: no secret →
 **503**, configured-but-unauthenticated → **401**. An unauthenticated probe of
 the live URL returns 503, which is proof of the unset secret rather than an
@@ -198,6 +200,30 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   every five minutes, for ever, about a fact only the owner can change. An alarm
   that cannot stop ringing gets muted, and a muted channel is how the original
   blackout happened.
+- **000 (NO ANSWER) IS NO LONGER FATAL (2026-08-18, run #776).** The taxonomy
+  below drew its line in the wrong place: it treated "the server said 5xx" and
+  "nothing answered at all" as the same evidence, and they are not. Every other
+  code here is a statement Cloudflare made about its own state, which one runner
+  can trust; 000 is the ABSENCE of a statement, and from a single vantage point
+  it cannot distinguish a site outage from that runner's egress hiccuping for
+  two minutes. Empirically it has been the latter every single time — #277,
+  #372, #406 and #776, four for four, with the endpoint answering 401 normally
+  throughout #776. Four false "DOWN" alarms on a job that runs 288 times a day
+  is precisely how a channel gets muted, which is the blackout this whole
+  section exists to prevent. So 000 now behaves like 503: `::warning::` plus a
+  step summary, exit 0. **The alarm is not dropped, it moves to the component
+  with a SECOND VANTAGE POINT** — `watchdog.probe_endpoints()` in
+  kill_switch.yml probes the same URL half-hourly from a different runner and
+  raises `tick_unreachable` through the state machine that can say it once,
+  remind every `WATCHDOG_RENOTIFY_HOURS`, and **announce recovery** (a red run
+  structurally cannot). A blip only this runner saw finds the watchdog seeing
+  401 and stays correctly silent; a real outage is seen by both. Stated cost:
+  detection of a genuine outage moves from ~5 min to at most 30 — the deliberate
+  price of an alarm that is believed when it fires. 401 and 5xx stay fatal.
+  Pinned behaviourally in `tests/test_workflow_hardening.py` (000 → exit 0 and
+  names the watchdog; 401/500/502 → exit 1; 503 → exit 0; plus a pin that the
+  watchdog really does still raise `tick_unreachable`, because a handoff to a
+  receiver that stopped listening alerts nobody).
 - **The split is the fix: one icon was being asked two questions.** 503 means
   *never switched on* (a standing setup gap) — the job stays green and says so
   loudly on the run page via `::warning::` plus a step summary carrying the
@@ -1804,36 +1830,6 @@ meant** — the failure mode that survives review because the value looks fine.
    choke on arrows/em-dashes.
 10. **CF Functions** are Workers runtime: no Node builtins; KV binding
     `JOURNAL_KV` backs sync + the scan/close rate limits.
-
-## CHART DATA PARITY (2026-08-15) — the proxy serves the ENGINE's arithmetic
-
-The scanner computes every level on dividend/split-ADJUSTED prices (yfinance
-`auto_adjust=True`); until 2026-08-15 `/api/price` served Yahoo's RAW quote
-arrays, so plan levels sat on different arithmetic than the bars under them —
-measured the day it shipped: RHC/AIA/SDF (all A+ weekly-lens) each drew price
-on the WRONG side of a raw-basis weekly 200-SMA (+2.9–4.9% drift). Four rules
-now hold, each pinned in `test/staleview.test.js` (90→99):
-
-- **`_prices.js` scales every Yahoo bar by adjclose/close** → chart bars share
-  the scan's basis. Verified live: RHC chart-side weekly SMA200 = 44.4957 =
-  the engine's published level, exact. Intraday has no adjclose and stays raw.
-- **`targetBars` serves real depth** (5y→1900, 10y/max→2600, intraday 750).
-  The old 1000-bar cap cut "5y" to ~4y (crypto: 2.7y), leaving the flagship
-  Weekly SMA-200 ~8 valid points on ASX and uncomputable on crypto.
-- **Honesty fields on every candle response:** `basis` ("adj"/"raw"), `flat`
-  (no-trade padded sessions in the window — RML measures 45%), `degraded`
-  (Yahoo silently returns COARSER bars than asked at deep ranges; max/1d has
-  returned monthly bars from 1991). `chart.js renderDataHonesty()` shows ONE
-  chip (`#ct-datawarn`), worst finding wins: COARSE BARS > THIN TAPE n% > RAW
-  BASIS. Silent when clean.
-- **`resampleWeekly` buckets Sat→Fri stamped at the last bar** — the engine's
-  W-FRI weeks. Identical membership for Mon–Fri equities; on 7-day crypto the
-  old Mon–Sun weeks genuinely disagreed with the weeks the scan grades.
-
-Remaining ceiling is the VENDOR, not the renderer: Yahoo micro-cap prints,
-survivorship, 15–20m delay. The costed fix (owner decision, NOT taken) is
-EODHD "All World" US$19.99/mo — see `reviews/2026-08-15-charts-data-recon.md`
-in the project docs for the full evidence pack.
 
 ## Frontend rules
 
