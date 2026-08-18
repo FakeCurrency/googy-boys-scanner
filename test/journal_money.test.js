@@ -844,6 +844,94 @@ test("the fired review checkpoint states the BLEND, and reads as the owner's cal
     "the PRE-30 wording must be untouched — the gate itself has not moved");
 });
 
+
+// ── UI PASS 2026-08-18: condense the journal without losing a number ───────
+suite("UI pass — condensation");
+
+test("prices are formatted by MAGNITUDE, not at six decimals", () => {
+  // Measured on the live open table before this: ENTRY 34.279999 / 182.589996,
+  // STOP 21.934136 / 108.716691. Six decimals on a stop reads as machine
+  // output. Display only — nothing stored, no R, no sizing.
+  const px = new Function("return " + slice("const px   = (v) =>", "};").replace(/^const px\s*=\s*/, "") + ";")();
+  assert.strictEqual(px(34.279999), "34.28", "a $34 stock quotes in cents");
+  assert.strictEqual(px(182.589996), "182.59");
+  assert.strictEqual(px(21.934136), "21.93", "a stop is a price, not a float dump");
+  assert.strictEqual(px(1.455), "1.455", "a $1.45 ASX name keeps tenths of a cent");
+  assert.strictEqual(px(0.029), "0.029", "sub-dollar names keep their resolution");
+  assert.strictEqual(px(0.00001234), "0.000012", "a micro-cap still gets its tail");
+  assert.strictEqual(px(null), "—");
+  assert.strictEqual(px(NaN), "—");
+});
+
+test("the closed table previews 10 and keeps every row in the DOM", () => {
+  // 1,884px for 45 rows was 36% of the page and grows with every close. Rows
+  // past the preview are HIDDEN, never sliced: data-card="side:idx" indexes
+  // into cardReg[side], so dropping rows would silently point every share-card
+  // button at the wrong trade.
+  const src = SRC;
+  assert.ok(/const CLOSED_PREVIEW = 10;/.test(src), "the preview size is gone");
+  assert.ok(/i >= CLOSED_PREVIEW \? ' class="jr-row-more"' : ""/.test(src),
+    "rows past the preview must be marked, not removed");
+  assert.ok(/sorted\.map\(\(t, i\)/.test(src), "indices must still come from the FULL sorted list");
+  assert.ok(!/sorted\.slice\(0, CLOSED_PREVIEW\)/.test(src),
+    "slicing the array would desync every share-card button");
+  assert.ok(/jr-closed-wrap/.test(src) && /data-more/.test(src), "the reveal control is gone");
+  assert.ok(/Show all \$\{sorted\.length\} closed trades/.test(src),
+    "the button must say how many are behind it");
+});
+
+test("the reveal toggles in place and never re-renders the table", () => {
+  // A re-render would collapse the list under the 3-minute refresh while the
+  // owner is reading it.
+  const code = SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(/const wrap = more\.closest\("\.jr-closed-wrap"\)/.test(code));
+  assert.ok(/wrap\.classList\.toggle\("is-open"\)/.test(code), "must toggle, not re-render");
+  assert.ok(/more\.setAttribute\("aria-expanded"/.test(code), "state must reach assistive tech");
+});
+
+test("the realised figure is said ONCE — the header sparkline is retired", () => {
+  // -$1,358 / -6.88R appeared three times: this header row, the TOTAL $ and
+  // TOTAL R tiles, and the end labels of the full equity curve below.
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "journal.html"), "utf8");
+  assert.ok(!/id="jr-pnl-track"/.test(html), "the duplicate realised row is back");
+  assert.ok(!/jr-pnl-spark/.test(SRC), "journal.js still renders the retired sparkline");
+  assert.ok(/drawMiniEquity/.test(SRC), "the per-book equity curves must still be drawn");
+  assert.ok(/id="jr-pnl-total"/.test(html), "the UNREALISED headline must stay — it is this block's job");
+});
+
+test("the four analytics panels fold, and every one still exists", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "journal.html"), "utf8");
+  const fold = html.indexOf('id="jr-perf-fold"');
+  assert.ok(fold > 0, "the performance fold is gone");
+  const close = html.indexOf("</details>", fold);
+  const inside = html.slice(fold, close);
+  for (const id of ["jr-digest", "jr-rdist", "jr-xq", "jr-edge-card"]) {
+    assert.ok(inside.includes(`id="${id}"`), `${id} must still exist, inside the fold`);
+  }
+});
+
+test("what must stay visible WITHOUT a click stays visible", () => {
+  // The guardrails from the audit: condensing may fold or deduplicate, never
+  // hide the two numbers that answer "is the system working".
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "journal.html"), "utf8");
+  const fold = html.indexOf('id="jr-perf-fold"');
+  const close = html.indexOf("</details>", fold);
+  const inside = html.slice(fold, close);
+  assert.ok(!inside.includes('id="stalled-strip"'), "the stalled strip must not be folded away");
+  assert.ok(!inside.includes('id="jr-pnl"'), "the P&L headline must not be folded away");
+  assert.ok(/id="stalled-strip"/.test(html) && /id="jr-pnl"/.test(html));
+  // the w3-1 line and the decider split are rendered by journal.js, unfolded
+  assert.ok(/bot-w3/.test(SRC), "the w3-1 experiment line must still render");
+  assert.ok(/deciderSplit/.test(SRC), "the rules-vs-owner split must still render");
+});
+
+test("the stalled explainer moved to a tooltip — words kept, weight gone", () => {
+  const st = fs.readFileSync(path.join(__dirname, "..", "public", "js", "stalled.js"), "utf8");
+  assert.ok(!/class="st-foot"/.test(st), "the permanent paragraph is back");
+  assert.ok(/class="st-tag" title="/.test(st), "the explainer did not land in the tooltip");
+  assert.ok(/stale probe/.test(st), "the words themselves must survive somewhere");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
 

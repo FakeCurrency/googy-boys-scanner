@@ -1611,4 +1611,57 @@ test("HORIZON names the unclassified bucket for what it mostly is — display on
   assert.ok(!/secLabel/.test(HZ.slice(HZ.indexOf("streaks["))) || true);
 });
 
+
+// ── UI PASS 2026-08-18: deck clarity (context strip, colour, toolbar) ──────
+test("LOOK WIDER and NARROW read as ONE context card, not two competing ones", () => {
+  const hz = css("horizon.css"), rg = css("regime.css");
+  assert.ok(/\.hz-strip \{[^}]*border-radius: 14px 14px 0 0/s.test(hz),
+    "the horizon strip must form the TOP half of one card");
+  assert.ok(/\.hz-strip \{[^}]*border-bottom: none/s.test(hz));
+  assert.ok(/\.rg-strip \{[^}]*border-radius: 0 0 14px 14px/s.test(rg),
+    "the regime strip must form the BOTTOM half");
+});
+
+test("red means loss or danger — nothing else on the deck", () => {
+  // It was doing four jobs on one screen: losses, LOOK WIDER, NARROW and the
+  // stalled warning. A colour that means four things means none.
+  const hz = css("horizon.css"), rg = css("regime.css");
+  assert.ok(/\.hz-strip\.is-expand \{ border-left-color: var\(--blue\); \}/.test(hz),
+    "a sustained unheld run is information, not an alarm");
+  assert.ok(/\.rg-strip\.is-narrow \{ border-left-color: var\(--orange\); \}/.test(rg),
+    "a narrow tape is a market fact, not an alarm");
+  assert.ok(!/\.hz-strip\.is-expand \{ border-left-color: var\(--red\)/.test(hz));
+  assert.ok(!/\.rg-strip\.is-narrow \{ border-left-color: var\(--red\)/.test(rg));
+  // …and the states that DO mean trouble keep it
+  assert.ok(/is-warn \{ border-left-color: var\(--orange\); \}/.test(hz),
+    "the genuine warning state must keep its colour");
+});
+
+test("the 13-chip toolbar is grouped by question, with nothing moved or hidden", () => {
+  const st = css("styles.css");
+  assert.ok(/\.tb-line > \.tb-sort \{[^}]*padding-left: 12px/s.test(st), "the group separators are gone");
+  assert.ok(/\.tb-line > \.tb-chips:empty::before \{ display: none; \}/.test(st),
+    "an empty chip container must not leave an orphan divider");
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+  for (const id of ["tabs", "watch-toggle", "vk-filters", "sort-cycle"]) {
+    assert.ok(html.includes(`id="${id}"`), `${id} must still be in the toolbar — grouping moves nothing`);
+  }
+});
+
+test("journal section headings are real dividers the eye can jump between", () => {
+  const j = css("journal.css");
+  assert.ok(/\.jr-section-title \{[^}]*border-bottom: 1px solid var\(--line\)/s.test(j),
+    "the hairline that gives a 5,000px page its rhythm is gone");
+  assert.ok(/\.jr-section-title \{[^}]*color: var\(--text\)/s.test(j),
+    "13px in --text-2 was near-invisible; it must stay brightened");
+});
+
+test("the closed-preview control meets the standing 40px mobile tap floor", () => {
+  const j = css("journal.css");
+  assert.ok(/\.jr-more-btn \{[^}]*min-height: 40px/s.test(j));
+  assert.ok(/\.jr-row-more \{ display: none; \}/.test(j));
+  assert.ok(/\.jr-closed-wrap\.is-open \.jr-row-more \{ display: table-row; \}/.test(j),
+    "revealed rows must return to table-row, not inline");
+});
+
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);

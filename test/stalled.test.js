@@ -288,11 +288,18 @@ test("'closed' is only claimed once the BOOK says so, never off the 202", () => 
   // everything), and the st-foot explainer PROSE describing the rule itself.
   const allLanded = CODE.indexOf("pending.size === 0");
   assert.ok(allLanded > 0, "the all-landed branch is gone");
-  const foot = CODE.indexOf('class="st-foot"');
-  assert.ok(foot > 0, "the explainer paragraph is gone");
+  // The explainer MOVED into the strip's own tooltip (UI pass 2026-08-18): it
+  // was three permanent lines of teaching copy at full contrast in the block
+  // that most needs to read as an action list. The words are unchanged, so the
+  // phrase this test scrubs travelled with them - from the <p class="st-foot">
+  // to the title= on the STALLED tag. The PROPERTY being tested is untouched:
+  // nothing may claim "closed" without the book saying so.
+  const foot = CODE.indexOf('class="st-tag" title="');
+  assert.ok(foot > 0, "the explainer moved out of the tooltip too - where did it go?");
+  const footEnd = CODE.indexOf('">', foot);
   const scrubbed = CODE.replace(/landed \? "closed ✓"/, "")
     .replace(CODE.slice(allLanded, CODE.indexOf("return;", allLanded)), "")
-    .replace(CODE.slice(foot, CODE.indexOf("</p>", foot)), "");
+    .replace(CODE.slice(foot, footEnd), "");
   assert.ok(!/closed ✓/.test(scrubbed),
     "something claims 'closed' without consulting the book");
   // The poll window must survive the WORST honest case: close_position holds
