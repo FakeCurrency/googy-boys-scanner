@@ -1,4 +1,4 @@
 {
-  "version": "2026.08.15-aa7df8a9",
+  "version": "2026.08.18-95c55597",
   "note": "Deploy stamp for skew detection. telemetry.js reads it at page load and re-checks on focus; a changed value means a new bundle landed while the tab sat open, and it offers a refresh. The trailing hex is a digest of every versioned asset reference across public/*.html plus sw.js's CACHE name, enforced by tests/test_version_stamp.py — change an asset and the gate goes red until this moves, which is the only reason it stays honest. CORRECTED 2026-08-13: the previous note claimed the service-worker controllerchange event 'catches every deploy regardless'. It does not. A new worker only installs when sw.js itself changes bytes, so on an ordinary deploy this stamp is the ONLY skew signal there is. That false backstop is why nobody noticed it had been frozen at 2026.07.29-1 for a fortnight."
 }
