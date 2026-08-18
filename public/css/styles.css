@@ -2854,3 +2854,29 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 
 /* #4: copy-plan button in the row detail */
 .vk-copy-btn { cursor: pointer; background: none; }
+
+
+/* ── TOOLBAR GROUPING (UI pass 2026-08-18) ────────────────────────────────
+   The filter row is thirteen chips in one undifferentiated line - grades,
+   watchlist, products, entry types, conviction, direction, sort - so finding
+   the one you want is a scan of the whole row every time. They are already
+   four distinct QUESTIONS; a hairline between the groups lets the eye jump
+   straight to the right one. Pure separator: no chip moves, none is renamed,
+   nothing is hidden, and every existing handler is untouched. */
+.tb-line > .tb-watch:first-of-type,
+.tb-line > .tb-chips,
+.tb-line > .tb-sort {
+  position: relative;
+  margin-left: 12px;
+  padding-left: 12px;
+}
+.tb-line > .tb-watch:first-of-type::before,
+.tb-line > .tb-chips::before,
+.tb-line > .tb-sort::before {
+  content: ""; position: absolute; left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 1px; height: 20px; background: var(--line);
+}
+/* An empty chip container must not leave an orphan divider floating. */
+.tb-line > .tb-chips:empty { margin-left: 0; padding-left: 0; }
+.tb-line > .tb-chips:empty::before { display: none; }

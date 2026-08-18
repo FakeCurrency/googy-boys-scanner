@@ -104,7 +104,18 @@
   padding: 10px 14px; margin: 0 0 14px; border-left: 4px solid var(--blue);
 }
 .hz-strip.is-warn { border-left-color: var(--orange); }
-.hz-strip.is-expand { border-left-color: var(--red); }
+/* COLOUR DISCIPLINE (UI pass 2026-08-18). Red was doing four jobs on one
+   screen - losses, this strip, the regime strip, and the stalled warning - and
+   a colour that means four things means none. Red is reserved for loss and
+   danger now; a sustained unheld run is INFORMATION and wears the accent. */
+.hz-strip.is-expand { border-left-color: var(--blue); }
+
+/* ONE CONTEXT STRIP (UI pass 2026-08-18). LOOK WIDER and NARROW are two halves
+   of the same question - what is the market doing around this deck - and they
+   rendered as two separate bordered cards with a gap between them, competing
+   for the same attention. Joined into a single card; regime.css owns the
+   bottom half. */
+.hz-strip { border-radius: 14px 14px 0 0; margin-bottom: 0; border-bottom: none; }
 .hz-strip-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hz-strip-tag {
   font: 800 9.5px/1 var(--sans); letter-spacing: 0.1em; color: var(--blue);

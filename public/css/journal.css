@@ -29,7 +29,16 @@
 .jr-hidden { display: none !important; }
 
 /* ── section titles ── */
-.jr-section-title { font: 700 13px/1 var(--sans); letter-spacing: 0.4px; color: var(--text-2); margin: 26px 0 12px; }
+/* SECTION DIVIDERS (UI pass 2026-08-18). At 13px in --text-2 these headings
+   were near-invisible, so a 5,000px page gave the eye nothing to jump between
+   and every block read as one undifferentiated wall. Now a real rule: brighter,
+   slightly larger, with a hairline that gives the scroll a rhythm. */
+.jr-section-title {
+  font: 800 14px/1.2 var(--sans); letter-spacing: 0.6px; color: var(--text);
+  margin: 26px 0 12px; padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
 .jr-section-title .muted { font-weight: 500; }
 
 /* ── equity curve ── */
@@ -857,3 +866,28 @@ details.jr-fold.jr-fold-quiet > summary {
     min-width: 40px; min-height: 36px;   /* "$" is one glyph — pad it, don't trust it */
   }
 }
+
+
+/* ── CLOSED-TRADE PREVIEW (UI pass 2026-08-18) ────────────────────────────
+   The closed table was 1,884px of a 5,183px page and grows with every trade.
+   Rows past the preview stay in the DOM (indices must not move - the
+   share-card buttons index into them) and are hidden until asked for. */
+.jr-row-more { display: none; }
+.jr-closed-wrap.is-open .jr-row-more { display: table-row; }
+.jr-more-btn {
+  display: block; width: 100%; margin: 10px 0 0; padding: 10px 12px;
+  min-height: 40px;                      /* the standing mobile tap floor */
+  font: 700 12.5px/1 var(--sans); letter-spacing: .3px;
+  color: var(--text-2); background: rgba(255,255,255,.03);
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer;
+}
+.jr-more-btn:hover { color: var(--text); border-color: var(--blue); }
+.jr-more-n { color: var(--text-2); font-weight: 600; opacity: .8; }
+
+/* The interpretation lines under R-distribution and exit quality are worth
+   keeping - they say what the numbers MEAN - but they were rendered at body
+   weight and competed with the figures above them. Quieter, not gone. */
+.jr-rdist-note { font-size: 11.5px; line-height: 1.5; color: var(--text-2); opacity: .85; }
+
+/* The performance fold gets a little air from the strips above it. */
+.jr-fold-perf { margin-top: 4px; }

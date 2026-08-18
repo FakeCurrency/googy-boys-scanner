@@ -134,7 +134,11 @@
   background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
   padding: 10px 14px; margin: 0 0 14px; border-left: 4px solid var(--teal, var(--blue));
 }
-.rg-strip.is-narrow { border-left-color: var(--red); }
+/* See horizon.css: red is reserved for loss and danger. A narrow tape is a
+   market FACT the deck should state calmly, not an alarm. */
+.rg-strip.is-narrow { border-left-color: var(--orange); }
+/* Bottom half of the single context card. */
+.rg-strip { border-radius: 0 0 14px 14px; margin-top: 0; }
 .rg-strip.is-broad { border-left-color: var(--green); }
 .rg-strip-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .rg-strip-part { font: 600 11.5px/1 var(--sans); color: var(--muted); white-space: nowrap; }
