@@ -1198,22 +1198,97 @@
     return { open, closed };
   }
 
-  // w3-1 PROGRESS (2026-08-15). The one number that decides everything —
-  // how far the pre-registered cycle is through its 30-close readout — lived
-  // only in raw book JSON. Now it is one quiet line above the bot stats:
-  // stamped-open count, gated closes out of 30, and the pre-registered band
-  // the readout will be judged against (pess +0.056 / mid +0.10 R/trade —
-  // fixed at sign-off 2026-08-02, so hard-coding them is recording the
-  // experiment, not inventing a number). Display-only; renders nothing when
-  // no row carries a cycle stamp (pre-cycle books, fixtures, the manual side).
+  // w3-1 PROGRESS (2026-08-15) → w3-1 EXIT EVIDENCE (Session B, 2026-08-19).
+  //
+  // The line used to say how far the pre-registered cycle had travelled —
+  // stamped-open count, gated closes out of 30, and the band the readout will
+  // be judged against (pess +0.056 / mid +0.10 R/trade, fixed at sign-off
+  // 2026-08-02, so hard-coding them records the experiment rather than
+  // inventing a number). What it did NOT say is WHO took each of those closes,
+  // and at head every single one is the owner's: 3 of 3 manual, 0 by the rules.
+  //
+  // THAT IS THE WHOLE POINT OF THIS SURFACE. A cycle counting to 30 closes
+  // implies the 30 will measure the ruleset. If the exits are hand-taken the
+  // number measures the owner's timing instead, and reading it as a verdict on
+  // the rules is how a rules problem gets attributed to the market — or, worse,
+  // how a rules SUCCESS gets attributed to a ruleset that never took an exit.
+  // The split is therefore stated on the face of the strip, not derived by
+  // anyone later, and the zero case is called out in words rather than left as
+  // a "0" nobody reads.
+  //
+  // DISPLAY-ONLY, and deliberately inert: no button, no link, no wording that
+  // suggests closing anything. It is a `<details>` closed by default, muted,
+  // below the fold of its own strip. The one thing it must never become is a
+  // nudge to cut more positions by hand — that would make the surface CAUSE
+  // the confound it exists to report. Renders nothing when no row carries a
+  // cycle stamp (pre-cycle books, fixtures, the manual side).
+  const W3_TAG = "w3-1";
+  const W3_TARGET = 30;
+
+  // Who took the exit. MECHANICAL_EXITS is the same list deciderSplit uses one
+  // screen down, so the strip and the closed-table caption can never disagree
+  // about a row; an ABSENT exit_reason counts as a human act for the reason
+  // stated there — a row with no recorded mechanism was not closed by one.
+  function w3Rows(d) {
+    const rows = (d.closed || []).filter((r) => r && String(r.cycle || "") === W3_TAG);
+    return rows.map((r) => {
+      const reason = String(r.exit_reason || "").toLowerCase();
+      const mech = MECHANICAL_EXITS.includes(reason);
+      return {
+        symbol: String(r.symbol || "?"),
+        market: String(r.market || ""),
+        who: mech ? "rules" : "you",
+        path: reason || "unrecorded",
+        r: typeof r.realized_r === "number" ? r.realized_r : null,
+        held: typeof r.hold_days === "number" ? r.hold_days : null,
+        exit: String(r.exit_date || ""),
+      };
+    }).sort((a, b) => String(b.exit).localeCompare(String(a.exit)));
+  }
+
   function w3Line(d) {
     const tag = (r) => String((r && r.cycle) || "");
-    const openN = d.open.filter((r) => tag(r) === "w3-1").length;
-    const closedN = d.closed.filter((r) => tag(r) === "w3-1").length;
+    const openN = d.open.filter((r) => tag(r) === W3_TAG).length;
+    const rows = w3Rows(d);
+    const closedN = rows.length;
     if (!openN && !closedN) return "";
-    return `<div class="jr-w3" id="bot-w3" title="Pre-registered live cycle w3-1 (owner-signed 2026-08-02): rules frozen, readout at 30 gated closes against the pre-registered band. Every stat on this page still pools pre-cycle history — this line tracks the experiment only.">` +
-      `🔬 w3-1 · <b>${openN}</b> gated open · <b>${closedN}/30</b> closes` +
-      ` · band pess +0.056 / mid +0.10 R</div>`;
+    const byRules = rows.filter((x) => x.who === "rules").length;
+    const byOwner = closedN - byRules;
+
+    // The counts clause is omitted at zero closes: "0 by the rules · 0 by you"
+    // is noise before the cycle has produced anything to attribute.
+    const split = closedN
+      ? ` · <b>${byRules}</b> by the rules · <b>${byOwner}</b> by you` : "";
+
+    // The plain-words zero case. Only when closes EXIST and none are the
+    // rules' — a cycle with no closes yet has nothing to disclaim.
+    const flag = (closedN && !byRules)
+      ? `<p class="jr-w3-flag">Every gated close so far is one you took by hand — ` +
+        `<b>${byOwner}</b> of ${byOwner}. Until the rules take an exit of their own, ` +
+        `this sample measures your timing, not the ruleset's.</p>`
+      : "";
+
+    const fmt = (x) => (x == null ? "—" : `${x >= 0 ? "+" : ""}${x.toFixed(2)}R`);
+    const list = closedN
+      ? `<details class="jr-w3-fold"><summary>The ${closedN} gated exit${closedN === 1 ? "" : "s"}</summary>` +
+        `<ul class="jr-w3-list">` +
+        rows.map((x) =>
+          `<li>` +
+          `<span class="w3-sym">${esc(x.symbol)}</span>` +
+          `<span class="w3-mkt">${esc(x.market.toUpperCase())}</span>` +
+          `<span class="w3-who w3-who-${x.who === "rules" ? "bot" : "own"}">` +
+            `${x.who === "rules" ? "🤖 rules" : "✋ you"} · ${esc(x.path)}</span>` +
+          `<span class="w3-r ${x.r != null && x.r >= 0 ? "pos" : "neg"}">${fmt(x.r)}</span>` +
+          `<span class="w3-held">${x.held == null ? "" : x.held + "d"}</span>` +
+          `</li>`).join("") +
+        `</ul></details>`
+      : "";
+
+    return `<div class="jr-w3" id="bot-w3">` +
+      `<div class="jr-w3-hd" title="Pre-registered live cycle w3-1 (owner-signed 2026-08-02): rules frozen, readout at ${W3_TARGET} gated closes against the pre-registered band. Every stat on this page still pools pre-cycle history — this strip tracks the experiment only.">` +
+        `🔬 w3-1 · <b>${openN}</b> gated open · <b>${closedN}/${W3_TARGET}</b> closes${split}</div>` +
+      flag + list +
+      `<div class="jr-w3-band">band pess +0.056 / mid +0.10 R</div></div>`;
   }
 
   function renderSide(side) {

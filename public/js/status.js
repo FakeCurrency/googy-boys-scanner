@@ -372,7 +372,11 @@
     h += row("Closes", `<b>${ch.closed}</b> of ${CYCLE_TARGET}`,
       ch.closed ? `${ch.byRules} by the rules · ${ch.byOwner} by you` : "readout at the pre-registered count");
     if (ch.closed && !ch.byRules) {
-      h += `<p class="sys-flag">Every close in the cohort so far is a manual one. The sample measures your exits, not the rules'.</p>`;
+      // Same sentence the journal's w3-1 strip uses, deliberately: two
+      // surfaces describing one cohort in two vocabularies reads as two
+      // findings. The journal is where the exits are listed; this is the
+      // one-line version of the same fact.
+      h += `<p class="sys-flag">Every gated close so far is one you took by hand. Until the rules take an exit of their own, this sample measures your timing, not the ruleset's.</p>`;
     }
 
     h += `<h3 class="sys-h">Not visible from here</h3>`;

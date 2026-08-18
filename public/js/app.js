@@ -2633,9 +2633,32 @@
       if (p && p.stale_pinged) stalled.push(String(p.symbol || "?"));
     }
     let wins = 0, losses = 0, realized = 0;
+    // WHO CLOSED IT (Session B, 2026-08-19). The blended record was one number
+    // covering two systems. Measured at head: 19 exits the RULES took, 5W-14L
+    // at -6.97R; 26 the OWNER took by hand, 11W-15L at +0.09R. Pooled, that
+    // reads 16W-29L -6.88R and attributes the rules' losses to a book the
+    // owner was half-driving — on the deck, which is where the next trade gets
+    // picked. Two tallies, same loop, no new source of truth.
+    //
+    // MECHANICAL_EXITS mirrors journal.js and status.js; the three copies are
+    // held together by a parity test (test/staleview.test.js) rather than by
+    // hope, because a list that drifts here silently re-blends the split.
+    const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
+    // NB: the parameter above is already named `rules` (the published rulebook)
+    // — these are exit-side tallies, hence the by* names.
+    const zero = () => ({ n: 0, wins: 0, losses: 0, r: 0 });
+    const byRules = zero(), byOwner = zero();
     for (const p of closed) {
       const r = +((p && p.realized_r) ?? NaN);
-      if (isFinite(r)) { realized += r; if (r > 0) wins++; else losses++; }
+      // An ABSENT exit_reason is a human act, same rule journal.js applies: a
+      // row with no recorded mechanism was not closed by one.
+      const side = MECHANICAL_EXITS.includes(String((p && p.exit_reason) || "").toLowerCase())
+        ? byRules : byOwner;
+      side.n++;
+      if (isFinite(r)) {
+        realized += r; if (r > 0) wins++; else losses++;
+        side.r += r; if (r > 0) side.wins++; else side.losses++;
+      }
     }
     // ── capacity (owner-ordered 2026-08-13) ────────────────────────────────
     // The number that decides whether hunting is even useful, and until now it
@@ -2656,6 +2679,7 @@
     const free = maxOpen != null ? Math.max(0, maxOpen - open.length) : null;
     return { open: open.length, mkts, unreal: urN ? ur : null,
              wins, losses, realized: (wins + losses) ? realized : null, stalled,
+             rules: byRules, owner: byOwner,
              maxOpen, free, atCap: maxOpen != null && open.length >= maxOpen };
   };
 
@@ -2730,10 +2754,25 @@
         : `${facts.open} of ${facts.maxOpen} A+ slots · ` +
           `${facts.stalled.length} stalled · ` +
           (facts.atCap ? "FULL" : `${facts.free} free`);
+      // THE RECORD, UNBLENDED (Session B, 2026-08-19, owner-ordered). This
+      // used to print one `record 16W-29L -6.9R`, which is two different
+      // systems' results added together and labelled as the bot's. The rules
+      // and the owner have wildly different records in the same book, and the
+      // deck is the worst place to hide that: it is where the next trade gets
+      // chosen, so a rules record flattered by hand-taken exits (or a good
+      // ruleset buried under them) changes what gets hunted.
+      //
+      // Rules first, because "the bot's record" IS the rules' record. When
+      // only one side has closed anything the blend is not a blend, so it
+      // names that side rather than printing a hollow `0W-0L` beside it.
+      const rec = (st) => `${st.wins}W–${st.losses}L ${fmtR(st.r)}`;
+      const recTxt = !(facts.wins + facts.losses) ? "record —"
+        : (facts.rules.n && facts.owner.n)
+          ? `rules ${rec(facts.rules)} · you ${rec(facts.owner)}`
+          : facts.rules.n ? `rules ${rec(facts.rules)}` : `you ${rec(facts.owner)}`;
       const sumTxt =
         `Paper book: ${capTxt} (${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
-        `${facts.mkts.crypto} CRY) · unrealized ${fmtR(facts.unreal)} · ` +
-        `record ${facts.wins}W–${facts.losses}L ${fmtR(facts.realized)}`;
+        `${facts.mkts.crypto} CRY) · unrealized ${fmtR(facts.unreal)} · ${recTxt}`;
       const shown = facts.stalled.slice(0, 6);
       const stallTxt = facts.stalled.length
         ? `⏳ ${facts.stalled.length} stalled — probe-flagged: ${shown.join(", ")}` +
@@ -2742,7 +2781,7 @@
       box.hidden = false;
       box.innerHTML =
         `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" ` +
-          `title="The paper bot book — click for the recent events">🤖 ${esc(sumTxt)}` +
+          `title="The paper bot book — click for the recent events. The record is split by WHO closed the trade: the rules (stop / target / trail / time stop) and you (manual). They are different systems and pooling them hides both.">🤖 ${esc(sumTxt)}` +
           `<span class="ba-chev" aria-hidden="true">▾</span></button>` +
         `<a class="ba-more" href="journal.html">Journal →</a>` +
         (stallTxt ? `<a class="ba-stall" href="journal.html" ` +
