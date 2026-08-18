@@ -747,12 +747,75 @@ def test_a_curl_failure_cannot_kill_the_step_before_it_retries(tmp_path):
     assert p.returncode != 28, (
         "the step died with CURL's exit code - `bash -e` aborted the "
         "`code=$(curl ...)` assignment, so the retry loop never ran")
-    assert p.returncode == 1, (
-        f"a sustained outage must reach the job's own exit 1, got "
-        f"{p.returncode}: {p.stdout[-300:]}{p.stderr[-300:]}")
     assert "attempt 3: HTTP 000" in p.stdout, (
-        "all three attempts must actually run before the job calls it down")
+        "all three attempts must actually run before the job reaches a verdict")
+    # 2026-08-18: the VERDICT for 000 changed, the property this test exists for
+    # did not. Reaching the job's own branch (rather than dying on curl's 28) is
+    # still the thing being proven; what that branch now says is "unreachable
+    # from this runner", not "DOWN". See the next test for why, and for the
+    # codes that DO stay fatal.
+    assert p.returncode == 0, (
+        f"000 is the absence of an answer and must not be fatal from one "
+        f"vantage point, got {p.returncode}: {p.stdout[-300:]}{p.stderr[-300:]}")
+    assert "UNREACHABLE" in p.stdout and "watchdog" in p.stdout, (
+        "the run page must still say it loudly, and name who owns the alarm")
+    assert "stop watcher DOWN" not in p.stdout, (
+        "000 must no longer claim the site is down - it cannot know that")
+
+
+@pytest.mark.parametrize("code,name", [("401", "secret mismatch"), ("500", "server erroring"),
+                                       ("502", "edge erroring")])
+def test_a_code_the_SERVER_answered_is_still_fatal(tmp_path, code, name):
+    """The 000 carve-out must not widen into 'nothing fails any more'.
+
+    Every code here is a statement Cloudflare made about its own state, so one
+    runner can trust it: 401 means TICK_SECRET is mismatched and this job is the
+    ONLY caller holding the secret (nothing else can see a half-configured
+    setup), and 5xx means the site answered and is broken. Those still email."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(f'#!/bin/sh\nprintf {code}\nexit 0\n')
+    (bin_dir / "sleep").write_text('#!/bin/sh\nexit 0\n')
+    for f in ("curl", "sleep"):
+        (bin_dir / f).chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_tick_run_block())
+    p = subprocess.run(
+        ["bash", "-e", str(script)], capture_output=True, text=True, timeout=60,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp_path),
+             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md")})
+    assert p.returncode == 1, (
+        f"HTTP {code} ({name}) is evidence FROM the server and must stay fatal, "
+        f"got {p.returncode}")
     assert "stop watcher DOWN" in p.stdout
+
+
+def test_503_is_still_green_and_still_says_so(tmp_path):
+    """The precedent this 000 branch was modelled on must not regress."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text('#!/bin/sh\nprintf 503\nexit 0\n')
+    (bin_dir / "sleep").write_text('#!/bin/sh\nexit 0\n')
+    for f in ("curl", "sleep"):
+        (bin_dir / f).chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_tick_run_block())
+    p = subprocess.run(
+        ["bash", "-e", str(script)], capture_output=True, text=True, timeout=60,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp_path),
+             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md")})
+    assert p.returncode == 0
+    assert "NOT CONFIGURED" in p.stdout
+
+
+def test_the_watchdog_really_does_own_the_unreachable_alarm():
+    """The 000 branch hands its alarm to watchdog.probe_endpoints(). If that
+    handoff is fiction the alarm is simply gone, so pin the receiving end."""
+    src = (ROOT / "scanner" / "watchdog.py").read_text(encoding="utf-8")
+    assert "tick_unreachable" in src, (
+        "stop_watcher now defers the unreachable alarm to the watchdog, and the "
+        "watchdog no longer raises it - that combination alerts nobody")
+    assert "is unreachable" in src
 
 
 def test_the_curl_status_guard_and_its_reason_both_survive():
