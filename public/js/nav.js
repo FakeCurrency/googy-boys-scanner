@@ -4,9 +4,11 @@
  * the dashboard) with a different link set on every page. This renders ONE
  * consistent nav into the `#site-nav` mount on each page:
  *
- *   • Desktop: pill row — SCAN · PHASEMAP · SPECS · JOURNAL · AI BOT · MORE ▾
- *     (NEWS / TRACK / HOW IT WORKS live in the MORE menu; DEBUG appears there
- *     only when debug mode is on — localStorage gbs:debug or ?debug).
+ *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ · ★ MY NAMES ·
+ *     ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS / AI BOT / SYSTEM /
+ *     HOW IT WORKS — see the MORE list below; TRACK and DEBUG are retired).
+ *     (Comment refreshed 2026-08-20 — it described the pre-2026-07 nav and
+ *     named two retired pages; the LISTS below are the truth, this is a map.)
  *   • Mobile (≤680px): the pill row hides and a fixed bottom TAB BAR appears
  *     with the five primary destinations — one-thumb navigation.
  *
