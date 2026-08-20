@@ -44,6 +44,9 @@
     <span class="ct-hiconv" id="ct-hiconv" hidden title="Weekly reclaim that's A/A+ or has strong structure — the best-performing setup in the backtest">🎯 HIGH CONVICTION</span>
     <span class="ct-fundwarn" id="ct-fundwarn" hidden title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>
     <span class="ct-divadj" id="ct-divadj" hidden></span>
+    <!-- DATA HONESTY (2026-08-15): one chip, worst finding wins — degraded
+         interval / thin padded tape / raw-basis series. Reuses the fundwarn
+         look on purpose: it is the same class of "don't trust this blindly". -->
     <span class="ct-fundwarn" id="ct-datawarn" hidden></span>
     <span class="ct-chips" id="ct-chips"></span>
   </header>
@@ -55,6 +58,9 @@
   <div class="tf-toggle" id="tf-toggle" role="tablist" aria-label="Timeframe"></div>
 
   <main class="chart-main">
+    <!-- #77: app-style loading skeleton — a shimmering placeholder that fills
+         the canvas area until the first paint (or the error state) replaces it,
+         so the page never flashes empty while live/static data loads. -->
     <div class="chart-skeleton" id="chart-skeleton" aria-hidden="true">
       <div class="sk-bars">
         <span></span><span></span><span></span><span></span><span></span>
@@ -63,6 +69,7 @@
       <div class="sk-msg">Loading chart…</div>
     </div>
     <div class="chart-legend" id="chart-legend"></div>
+    <!-- drawing tools (persisted per market:symbol:timeframe in localStorage) -->
     <div class="draw-tools" id="draw-tools" hidden>
       <button class="draw-btn is-active" data-tool="cursor" type="button" title="Cursor / pan (Esc)">▱</button>
       <button class="draw-btn" data-tool="trend" type="button" title="Trendline">╱</button>
@@ -96,6 +103,6 @@
 
   <script src="js/gbs-sync.js?v=10"></script>
   <script src="js/phasemap-shared.js?v=16"></script>
-  <script src="js/chart.js?v=95"></script>
+  <script src="js/chart.js?v=94"></script>
 </body>
 </html>
