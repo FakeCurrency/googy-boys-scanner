@@ -139,6 +139,29 @@ def ledger_report(entries):
             print("    by sector (dedup, buckets >= %d only):" % MIN_N)
             for k, v in sorted(named, key=lambda kv: -len(kv[1])):
                 print(fmt(cohort_stats(v), f"      {k[:22]:22}"))
+        # batch-100 item 11: the enrichment stamps, once present, buy two more
+        # honest cuts — operating companies vs products, and the breadth
+        # regime the alert fired into (stretched vs ordinary tape).
+        prod = [signed(e["fwd"][h], e["side"]) for e in first if e.get("is_product") is True]
+        real = [signed(e["fwd"][h], e["side"]) for e in first if e.get("is_product") is False]
+        if len(prod) + len(real) >= MIN_N:
+            print(fmt(cohort_stats(real), "    dedup operating cos    "))
+            print(fmt(cohort_stats(prod), "    dedup products         "))
+        with_b = [(e.get("breadth200"), signed(e["fwd"][h], e["side"]))
+                  for e in first if isinstance(e.get("breadth200"), (int, float))]
+        if len(with_b) >= MIN_N * 2:
+            bs = sorted(b for b, _ in with_b)
+            cut = bs[len(bs) // 2]                      # median split, sample-defined
+            print(f"    by breadth on base_day (median split at {cut:.3f}):")
+            print(fmt(cohort_stats([v for b, v in with_b if b < cut]), "      calmer half         "))
+            print(fmt(cohort_stats([v for b, v in with_b if b >= cut]), "      stretched half      "))
+        # batch-100 item 12: day-clustered SEs — one observation per base day,
+        # the honest control for the serial correlation re-fires create.
+        byday = collections.defaultdict(list)
+        for e in rows:
+            byday[e.get("base_day")].append(signed(e["fwd"][h], e["side"]))
+        daymeans = [st.mean(v) for v in byday.values() if len(v) >= 3]
+        print(fmt(cohort_stats(daymeans), "    day-clustered means    "))
 
 
 # ── baseline mode (git snapshots) ────────────────────────────────────────────
@@ -234,6 +257,35 @@ def baseline_report(entries, h=5):
     print(f"  (right-censored aligned observations skipped: {censored})")
 
 
+ROSTERS = os.path.join(ROOT, "data", "edge_rosters.json")
+
+
+def roster_report(entries, rosters):
+    """Aligned vs plain-A+ on the SAME Yahoo plumbing (batch-100 WS-B item
+    20) — the comparison that used to need git archaeology, now read straight
+    off the two ledgers. Roster rows that were themselves aligned that day are
+    excluded from the baseline so the cohorts stay disjoint."""
+    print("\n" + "=" * 72)
+    print("ROSTER BASELINE (both cohorts on Yahoo closes, from the two ledgers)")
+    print("=" * 72)
+    aligned_days = {(e["market"], e["base_day"], e["ticker"]) for e in entries}
+    for h in HORIZONS:
+        al = dedup_first([e for e in entries if e["fwd"].get(h) is not None])
+        ap = dedup_first([e for e in rosters
+                          if e["fwd"].get(h) is not None
+                          and (e["market"], e["base_day"], e["ticker"]) not in aligned_days])
+        if not al and not ap:
+            continue
+        print(f"\n-- {h}-session --")
+        print(fmt(cohort_stats([signed(e["fwd"][h], e["side"]) for e in al]), "  aligned dedup          "))
+        print(fmt(cohort_stats([signed(e["fwd"][h], e["side"]) for e in ap]), "  roster A+ dedup        "))
+        for s in ("long", "short"):
+            print(fmt(cohort_stats([signed(e["fwd"][h], e["side"]) for e in al if e["side"] == s]),
+                      f"    aligned {s:5}         "))
+            print(fmt(cohort_stats([signed(e["fwd"][h], e["side"]) for e in ap if e["side"] == s]),
+                      f"    roster  {s:5}         "))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Confluence alert edge report")
     p.add_argument("--baseline", action="store_true",
@@ -245,6 +297,15 @@ def main(argv=None):
         print(f"ledger unreadable: {e.__class__.__name__}: {e}")
         return 2
     ledger_report(entries)
+    try:
+        rosters = json.load(open(ROSTERS, encoding="utf-8"))["entries"]
+    except (OSError, ValueError, KeyError):
+        rosters = []
+    if rosters:
+        roster_report(entries, rosters)
+    else:
+        print("\n(no roster ledger yet - the Yahoo-plumbing A+ baseline starts"
+              " accruing with the next daily run; --baseline uses git snapshots)")
     if args.baseline:
         baseline_report(entries)
     return 0

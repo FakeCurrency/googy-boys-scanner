@@ -69,6 +69,37 @@ def test_too_thin_buckets_are_labelled_not_reported_as_findings():
     assert "TOO THIN" not in line
 
 
+def test_roster_baseline_keeps_the_cohorts_disjoint(capsys):
+    # A name that aligned on a day must not also count as that day's plain-A+
+    # baseline — double-counting one bet on both sides of the comparison.
+    entries = [{"market": "asx", "base_day": "2026-08-01", "ticker": "BHP",
+                "side": "long", "fwd": {"5": 0.05}}]
+    rosters = [{"market": "asx", "base_day": "2026-08-01", "ticker": "BHP",
+                "side": "long", "fwd": {"5": 0.99}},
+               {"market": "asx", "base_day": "2026-08-01", "ticker": "CBA",
+                "side": "long", "fwd": {"5": 0.02}}]
+    aer.roster_report(entries, rosters)
+    out = capsys.readouterr().out
+    roster_line = next(l for l in out.splitlines() if "roster A+ dedup" in l)
+    assert "n=   1" in roster_line, f"BHP must be excluded from the baseline: {roster_line}"
+    assert "+2.00%" in roster_line, "only CBA's return may enter"
+
+
+def test_day_clustered_view_prints_in_the_ledger_report(capsys, monkeypatch):
+    entries = []
+    for day in ("2026-08-01", "2026-08-02"):
+        for i in range(3):
+            entries.append({"market": "asx", "base_day": day, "ticker": f"T{day}{i}",
+                            "side": "long", "count": 2, "lenses": ["PHASEMAP", "VIVEK"],
+                            "fwd": {"5": 0.01 * (i + 1), "10": None, "20": None, "1": None}})
+    monkeypatch.setattr(aer, "load_sectors", lambda: {})
+    aer.ledger_report(entries)
+    out = capsys.readouterr().out
+    assert "day-clustered means" in out
+    line = next(l for l in out.splitlines() if "day-clustered means" in l and "n=" in l)
+    assert "n=   2" in line, f"two base days -> two clustered observations: {line}"
+
+
 def test_the_script_is_read_only_research():
     src = (ROOT / "scripts" / "alert_edge_report.py").read_text(encoding="utf-8")
     for verb in ("write_json", "os.replace", 'open(', ):

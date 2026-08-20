@@ -54,27 +54,55 @@ jobs:
           set -o pipefail
           python scripts/alert_returns.py 2>&1 | tee /tmp/alert_returns_out.txt
 
-      - name: Commit & push (surgical — the ledger only)
+      # The single-lens BASELINE cohort (batch-100 WS-B): today's A+ rosters,
+      # stamped by the same imported machinery on the same Yahoo plumbing —
+      # so "does alignment beat plain A+" keeps answering itself.
+      - name: Build the A+ roster baseline
         run: |
-          if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt; then
-            echo "No new alignments and nothing matured - nothing to commit."
+          set -o pipefail
+          python scripts/edge_rosters.py 2>&1 | tee /tmp/edge_rosters_out.txt
+
+      # The daily research digest (batch-100 WS-J): the edge report's ledger
+      # view lands on the run page every day, no local checkout needed.
+      - name: Edge report to step summary
+        run: |
+          set -o pipefail
+          python scripts/alert_edge_report.py 2>&1 | tee /tmp/edge_report_out.txt
+          {
+            echo '```'
+            cat /tmp/edge_report_out.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit & push (surgical — the two ledgers only)
+        run: |
+          if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt \
+             && grep -q EDGE_ROSTERS_UNCHANGED /tmp/edge_rosters_out.txt; then
+            echo "Nothing new in either ledger - nothing to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -- data/alert_forward_returns.json
-          # Must-change gate: reaching here means the script CLAIMED a change,
-          # so staging nothing is always a bug.
-          bash scripts/assert_staged.sh "alert returns ledger" data/alert_forward_returns.json
-          git commit -m "data: confluence forward returns $(date -u +'%Y-%m-%d')"
+          # || true pairing (allowed because assert_staged gates below): on a
+          # run where the roster script had nothing to write the file may not
+          # exist yet, and a missing pathspec exits 128 under bash -e.
+          git add -- data/edge_rosters.json 2>/dev/null || true
+          # Must-change gate (ANY-OF across the two ledgers): reaching here
+          # means at least one script CLAIMED a change, so staging nothing is
+          # always a bug.
+          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json
+          git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
           SHA=$(git rev-parse HEAD)
           for i in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
             git checkout "$SHA" -- data/alert_forward_returns.json
+            git checkout "$SHA" -- data/edge_rosters.json 2>/dev/null || true
             git add -- data/alert_forward_returns.json
+            git add -- data/edge_rosters.json 2>/dev/null || true
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
-            git commit -m "data: confluence forward returns $(date -u +'%Y-%m-%d')"
+            git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
             if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
             echo "Push race - retry $i"; sleep $((i * 3))
           done

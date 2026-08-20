@@ -1058,11 +1058,21 @@ WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
 # the ledger (data/alert_forward_returns.json) is durable precisely because the
 # public alert_history.json is a rolling 800-cap window that evicts entries at
 # ~14 days on current volume - a 20-session return can never mature there.
-ALERT_RETURNS_HORIZONS = (5, 10, 20)
+ALERT_RETURNS_HORIZONS = (1, 5, 10, 20)   # 1-session added 2026-08-20: the
+# fast-maturing curve — with a 14-day eviction upstream and 20-session answers
+# a month out, the 1-session point is what makes the maturity curve readable
+# while the batch's edge questions are still warm. Legacy rows' fwd dicts are
+# padded (missing horizon = unstamped, filled on the next run), never wiped.
 # Ledger cap: only FULLY-stamped entries are ever trimmed (dropping a waiting
 # entry would silently un-measure the feature). ~57 alignments/day today, so
 # 20,000 is roughly a year of memory.
 ALERT_RETURNS_CAP = 20000
+# Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
+# single-lens BASELINE cohort, stamped with the same forward returns on the
+# same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
+# answering itself without git archaeology. ~160 A+ rows/day -> 20k is ~4
+# months of memory; trim only ever drops fully-stamped rows.
+ALERT_ROSTER_CAP = 20000
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the

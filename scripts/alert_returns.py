@@ -39,8 +39,16 @@ Prints ALERT_RETURNS_UNCHANGED when the run changed nothing, so the workflow
 skips its commit - the reco_note pattern; a quiet day is a legitimate no-op,
 which is exactly where a must-change gate would be the wrong tool.
 
+CONTEXT ENRICHMENT (2026-08-20, batch-100): entries additionally carry, when
+derivable, `sector` (day-independent; backfilled), `breadth200` (the market's
+above-200-day share ON base_day, exact from the committed regime series), and
+- same-day scans only, because a later day's grade stamped backwards would be
+look-ahead - the VIVEK leg's `grade_raw`, `score`, `is_product`. All stamps
+are BLANK-ONLY and frozen once written, exactly like the returns.
+
 ASCII-only prints; atomic write via scanner.output.write_json.
 """
+import csv
 import datetime as dt
 import json
 import os
@@ -55,8 +63,12 @@ from scanner import config, output                                  # noqa: E402
 HISTORY = os.path.join(ROOT, "public", "data", "phasemap", "alert_history.json")
 LEDGER = os.path.join(ROOT, "data", "alert_forward_returns.json")
 
-HORIZONS = tuple(getattr(config, "ALERT_RETURNS_HORIZONS", (5, 10, 20)))
+HORIZONS = tuple(getattr(config, "ALERT_RETURNS_HORIZONS", (1, 5, 10, 20)))
 CAP = int(getattr(config, "ALERT_RETURNS_CAP", 20000))
+# An entry whose horizons still have holes this long after base_day is almost
+# certainly a delisting/suspension — count it out loud (survivorship is a bias
+# only when it is silent), keep retrying anyway (retries are cheap).
+STALE_UNMATURED_DAYS = 40
 
 
 def _market_day(iso: str, market: str) -> str:
@@ -124,6 +136,92 @@ def ingest(ledger: dict, history_entries: list[dict]) -> int:
     return added
 
 
+def _load_sectors() -> dict:
+    """(market, sym) -> sector, from the ASX universe (full GICS coverage) and
+    the NASDAQ sector cache. Day-independent, so safe to backfill any entry."""
+    sec = {}
+    try:
+        with open(os.path.join(ROOT, "data_universe", "asx_tickers.csv"), encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if r.get("symbol") and (r.get("sector") or "").strip():
+                    sec[("asx", r["symbol"])] = r["sector"].strip()
+    except OSError:
+        pass
+    try:
+        with open(os.path.join(ROOT, "data", "sector_map.json"), encoding="utf-8") as fh:
+            for k, v in json.load(fh).items():
+                mkt, sym = k.split(":", 1)
+                s = (v.get("sector") or "").strip()
+                if s:
+                    sec.setdefault((mkt, sym), s)
+    except (OSError, ValueError):
+        pass
+    return sec
+
+
+def _scan_day_rows() -> dict:
+    """{(market, session_day): {sym: scan row}} for the CURRENT committed scans.
+    The grade/score join is only honest when the scan's own session day matches
+    the entry's base_day — a Tuesday grade stamped onto a Monday alert would be
+    look-ahead — so the day travels with the rows and enrich() checks it."""
+    out = {}
+    for m in ("asx", "nasdaq", "crypto"):
+        try:
+            with open(os.path.join(ROOT, "public", "data", f"{m}_vivek.json"), encoding="utf-8") as fh:
+                d = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        day = _market_day(d.get("generated_at", ""), m)
+        out[(m, day)] = {r.get("symbol"): r for r in d.get("results", []) if r.get("symbol")}
+    return out
+
+
+def _breadth_series() -> dict:
+    """{market: {day: above200 share}} from the committed regime series —
+    day-indexed, so breadth CAN be backfilled exactly for any base_day."""
+    out = {}
+    try:
+        with open(os.path.join(ROOT, "public", "data", "regime.json"), encoding="utf-8") as fh:
+            mkts = json.load(fh).get("markets") or {}
+        for m, blk in mkts.items():
+            days, a200 = blk.get("days") or [], blk.get("above200") or []
+            out[m] = dict(zip(days, a200))
+    except (OSError, ValueError):
+        pass
+    return out
+
+
+def enrich(ledger: dict) -> int:
+    """Research-context stamps (2026-08-20, batch-100 WS-A): sector, the
+    market's breadth on base_day, and — same-day scans only — the VIVEK leg's
+    grade_raw / score / is_product. BLANK-ONLY: a stamp is written once and
+    never overwritten, the same freeze rule the returns follow. Returns the
+    number of fields written."""
+    sectors = _load_sectors()
+    scans = _scan_day_rows()
+    breadth = _breadth_series()
+    n = 0
+    for e in ledger["entries"]:
+        m, sym, day = e.get("market"), e.get("ticker"), e.get("base_day")
+        if e.get("sector") is None:
+            s = sectors.get((m, sym))
+            if s:
+                e["sector"] = s
+                n += 1
+        if e.get("breadth200") is None:
+            b = breadth.get(m, {}).get(day)
+            if b is not None:
+                e["breadth200"] = round(float(b), 4)
+                n += 1
+        row = (scans.get((m, day)) or {}).get(sym)
+        if row:
+            for k in ("grade_raw", "score", "is_product"):
+                if e.get(k) is None and row.get(k) is not None:
+                    e[k] = row[k]
+                    n += 1
+    return n
+
+
 def _yahoo(ticker: str, market: str) -> str:
     sfx = config.MARKETS[market].suffix if market in config.MARKETS else ""
     return f"{ticker}{sfx}"
@@ -182,14 +280,17 @@ def stamp(ledger: dict, frames: dict, want: dict) -> int:
     return stamped
 
 
-def trim(ledger: dict) -> int:
-    """Drop the OLDEST fully-stamped entries past CAP - never an entry still
-    waiting on a horizon (dropping those silently un-measures the feature)."""
+def trim(ledger: dict, cap: int | None = None) -> int:
+    """Drop the OLDEST fully-stamped entries past the cap - never an entry
+    still waiting on a horizon (dropping those silently un-measures the
+    feature). `cap` defaults to the ledger's own; edge_rosters.py reuses this
+    with its roster cap."""
+    cap = CAP if cap is None else cap
     entries = ledger["entries"]
-    if len(entries) <= CAP:
+    if len(entries) <= cap:
         return 0
     done = [e for e in entries if all(e["fwd"].get(str(h)) is not None for h in HORIZONS)]
-    excess = len(entries) - CAP
+    excess = len(entries) - cap
     drop = {id(e) for e in sorted(done, key=lambda e: e.get("base_day", ""))[:excess]}
     ledger["entries"] = [e for e in entries if id(e) not in drop]
     return len(drop)
@@ -208,6 +309,7 @@ def main(argv=None) -> int:
 
     ledger = load_ledger()
     added = ingest(ledger, hist)
+    enriched = enrich(ledger)
 
     today = dt.datetime.now(dt.timezone.utc).date()
     want = wanting_prices(ledger, today)
@@ -218,13 +320,34 @@ def main(argv=None) -> int:
         stamped = stamp(ledger, frames, want)
     dropped = trim(ledger)
 
-    n = len(ledger["entries"])
-    matured = sum(1 for e in ledger["entries"]
+    entries = ledger["entries"]
+    n = len(entries)
+    matured = sum(1 for e in entries
                   if all(e["fwd"].get(str(h)) is not None for h in HORIZONS))
-    print(f"alert returns: +{added} ingested, +{stamped} stamps, -{dropped} trimmed; "
-          f"{n} tracked, {matured} fully matured")
+    print(f"alert returns: +{added} ingested, +{enriched} context stamps, "
+          f"+{stamped} return stamps, -{dropped} trimmed; {n} tracked, {matured} fully matured")
 
-    if not (added or stamped or dropped):
+    # Maturity curve + survivorship visibility (batch-100 items 9/93/96/97):
+    # per-horizon counts, entries stuck unmatured long past any trading-halt
+    # excuse (delistings — a bias only when silent), and the triple-lens cohort
+    # everyone is waiting on.
+    per_h = " · ".join(f"{h}s {sum(1 for e in entries if e['fwd'].get(str(h)) is not None)}/{n}"
+                       for h in HORIZONS)
+    def _age(e):
+        try:
+            return (today - dt.date.fromisoformat(str(e.get("base_day", ""))[:10])).days
+        except ValueError:
+            return 0
+    stale = sum(1 for e in entries
+                if any(e["fwd"].get(str(h)) is None for h in HORIZONS)
+                and _age(e) >= STALE_UNMATURED_DAYS)
+    triples = [e for e in entries if (e.get("count") or 0) >= 3]
+    trip_m = sum(1 for e in triples if e["fwd"].get("5") is not None)
+    print(f"maturity: {per_h}")
+    print(f"stale-unmatured (>{STALE_UNMATURED_DAYS}d, likely delisted - retried anyway): {stale}")
+    print(f"triple-lens cohort: {len(triples)} tracked, {trip_m} matured at 5s")
+
+    if not (added or enriched or stamped or dropped):
         print("ALERT_RETURNS_UNCHANGED")
         return 0
     if dry:
