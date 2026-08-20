@@ -2058,7 +2058,7 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 107.37541962,
+      "last_mark": 106.9597168,
       "day_marks": {
         "2026-08-12": 94.93520355,
         "2026-08-13": 98.26560211,
@@ -2070,8 +2070,8 @@
         "2026-08-19": 101.12966156,
         "2026-08-20": 103.09355164
       },
-      "unreal_r": 2.188,
-      "unreal_usd": 1093.9,
+      "unreal_r": 2.148,
+      "unreal_usd": 1073.74,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2086,7 +2086,7 @@
       "entry_type": "reclaim",
       "timeframe": "1D",
       "entry": 1.45299995,
-      "stop": 1.31219937,
+      "stop": 1.45299995,
       "tp1": 1.64444602,
       "tp2": 1.8910019,
       "tp3": 2.18040317,
@@ -2101,18 +2101,25 @@
       "entry_date": "2026-08-01",
       "opened_at": "2026-08-01T07:54:11+00:00",
       "status": "open",
-      "tp1_hit": false,
+      "tp1_hit": true,
       "tp2_hit": false,
       "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0144,
-      "gross_r": 0.0,
-      "cost_r": 0.0144,
-      "exits": [],
+      "booked_pct": 0.25,
+      "realized_r": 0.3237,
+      "gross_r": 0.3399,
+      "cost_r": 0.0162,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 1.64444602,
+          "pct": 0.25,
+          "date": "2026-08-20"
+        }
+      ],
       "mae": 1.3860000371932983,
-      "mfe": 1.6430000066757202,
+      "mfe": 1.6510000228881836,
       "mae_r": -0.476,
-      "mfe_r": 1.349,
+      "mfe_r": 1.406,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 3431.94453978,
       "notional": 5000.0,
@@ -2126,7 +2133,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 1.64100003,
+      "last_mark": 1.65100002,
       "day_marks": {
         "2026-08-12": 1.45099998,
         "2026-08-13": 1.43799996,
@@ -2138,8 +2145,8 @@
         "2026-08-19": 1.51900005,
         "2026-08-20": 1.62
       },
-      "unreal_r": 1.335,
-      "unreal_usd": 663.07,
+      "unreal_r": 1.055,
+      "unreal_usd": 523.76,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2178,9 +2185,9 @@
       "cost_r": 0.0072,
       "exits": [],
       "mae": 62580.1015625,
-      "mfe": 72801.59375,
+      "mfe": 73090.3671875,
       "mae_r": -0.137,
-      "mfe_r": 0.686,
+      "mfe_r": 0.709,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 0.07780634,
       "notional": 5000.0,
@@ -2205,7 +2212,7 @@
       "level_tf": "weekly",
       "signal_entry": 64262.11328125,
       "fill_slip_bps": 2.4,
-      "last_mark": 72704.15625,
+      "last_mark": 73090.3671875,
       "day_marks": {
         "2026-08-12": 63512.921875,
         "2026-08-13": 63326.80859375,
@@ -2217,8 +2224,8 @@
         "2026-08-19": 64716.0,
         "2026-08-20": 69298.2265625
       },
-      "unreal_r": 0.678,
-      "unreal_usd": 654.81
+      "unreal_r": 0.709,
+      "unreal_usd": 684.83
     }
   ],
   "closed": [
@@ -5744,27 +5751,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 1886.44,
+      "week_usd": 1924.17,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 546.38,
-      "worst_week_usd": 1886.44,
+      "worst_session_usd": 584.11,
+      "worst_week_usd": 1924.17,
       "realised_usd": 0.0,
-      "open_realised_usd": 0.0,
-      "unrealised_usd": 546.38,
-      "session_usd": 546.38,
+      "open_realised_usd": 19.95,
+      "unrealised_usd": 564.17,
+      "session_usd": 584.11,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 2549.01,
+      "open_total_usd": 2587.45,
       "notified": ""
     }
   },
   "summary": {
     "open": 30,
-    "unreal_usd": 4043.14,
+    "unreal_usd": 3913.69,
     "updated_day": "2026-08-20"
   },
-  "updated_at": "2026-08-20T22:50:12+00:00"
+  "updated_at": "2026-08-20T23:45:38+00:00"
 }
