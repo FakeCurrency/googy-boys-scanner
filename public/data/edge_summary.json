@@ -1,0 +1,99 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-08-20T12:56:19+00:00",
+ "note": "Signed 5/10/20-session forward returns, deduped to first alignment per name+side. aligned = multi-lens ledger; baseline = plain grade_raw A+ rosters minus that day's aligned names. Same Yahoo plumbing both sides.",
+ "aligned": {
+  "5": {
+   "dedup": {
+    "n": 244,
+    "mean": 0.0013370532786885249,
+    "se": 0.003893520691211079,
+    "median": 0.0038865,
+    "win": 0.5327868852459017
+   },
+   "long": {
+    "n": 89,
+    "mean": 0.004997224719101124,
+    "se": 0.005847169935140505,
+    "median": 0.0,
+    "win": 0.48314606741573035
+   },
+   "short": {
+    "n": 155,
+    "mean": -0.0007645935483870965,
+    "se": 0.0051201791824110575,
+    "median": 0.006423,
+    "win": 0.5612903225806452
+   }
+  },
+  "10": {
+   "dedup": {
+    "n": 3,
+    "mean": -0.033096,
+    "se": 0.02226643258858999,
+    "median": -0.044891,
+    "win": 0.3333333333333333
+   },
+   "long": {
+    "n": 2,
+    "mean": -0.0129865,
+    "se": 0.022559888300366204,
+    "median": -0.0129865,
+    "win": 0.5
+   },
+   "short": {
+    "n": 1,
+    "mean": -0.073315,
+    "se": null,
+    "median": -0.073315,
+    "win": 0.0
+   }
+  },
+  "20": {
+   "dedup": {
+    "n": 0
+   },
+   "long": {
+    "n": 0
+   },
+   "short": {
+    "n": 0
+   }
+  }
+ },
+ "baseline_aplus": {
+  "5": {
+   "dedup": {
+    "n": 0
+   },
+   "long": {
+    "n": 0
+   },
+   "short": {
+    "n": 0
+   }
+  },
+  "10": {
+   "dedup": {
+    "n": 0
+   },
+   "long": {
+    "n": 0
+   },
+   "short": {
+    "n": 0
+   }
+  },
+  "20": {
+   "dedup": {
+    "n": 0
+   },
+   "long": {
+    "n": 0
+   },
+   "short": {
+    "n": 0
+   }
+  }
+ }
+}
