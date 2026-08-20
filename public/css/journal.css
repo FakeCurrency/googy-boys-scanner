@@ -486,6 +486,17 @@
   padding: 2px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 14px;
 }
 .jr-decider b { color: var(--text); font-weight: 700; }
+/* tide line (batch-100 WS-D) — same restraint family as .jr-w3: one quiet
+   sentence, no control, no pulse. It reports how much of the paper profit a
+   plain pullback takes back; a louder treatment would read as advice. */
+.jr-tide {
+  margin: 4px 0 8px; font-size: 11.5px; color: var(--text-dim);
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline;
+  cursor: help;
+}
+.jr-tide b { color: var(--text); font-weight: 600; }
+.jr-tide-label { text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
+.jr-tide-warn { color: var(--warn, #e8b04b); }
 /* rules-by-exit shape (2026-08-20) — deliberately one notch quieter than
    .jr-decider: it qualifies the split above it, it is not a second headline. */
 .jr-mech {
@@ -494,6 +505,14 @@
 }
 .jr-mech b { color: var(--text); font-weight: 600; }
 .jr-mech-label { text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
+/* wrong-from-entry dagger + entry-pattern tag (batch-100 WS-C): the quietest
+   marks on the closed table — one glyph, one lowercase word, hover for why. */
+.jr-wfe { color: var(--muted-2); cursor: help; font-size: 11px; }
+.jr-pat {
+  font: 500 10px/1 var(--mono, monospace); color: var(--muted-2);
+  border: 1px solid var(--line, #2a2e39); border-radius: 4px;
+  padding: 1px 4px; white-space: nowrap; cursor: default;
+}
 .jr-decider .jr-dec-bot b   { color: var(--bot); }
 .jr-decider .jr-dec-own b   { color: var(--text); }
 

@@ -1073,6 +1073,11 @@ ALERT_RETURNS_CAP = 20000
 # answering itself without git archaeology. ~160 A+ rows/day -> 20k is ~4
 # months of memory; trim only ever drops fully-stamped rows.
 ALERT_ROSTER_CAP = 20000
+# Book tide-stress shocks (scripts/book_stress.py, batch-100 WS-D): uniform
+# beta-1 mark drawdowns tested against every long's REAL stop. -3% is roughly
+# a reversion of breadth to its 6-month mean as measured 2026-08-20; -10% is
+# the February trough revisited.
+BOOK_STRESS_SHOCKS = (0.03, 0.05, 0.08, 0.10)
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the

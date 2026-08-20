@@ -706,10 +706,23 @@ vm.runInContext(
   + slice("function deciderHTML(list) {", "\n  }") + "\n"
   + slice("function exitMechSplit(list) {", "\n  }") + "\n"
   + slice("function exitMechHTML(list) {", "\n  }") + "\n"
+  + slice("function tfSplit(list) {", "\n  }") + "\n"
+  + slice("function tfLineHTML(list) {", "\n  }") + "\n"
+  + slice("const excursionTip = (t)", "\n  };") + "\n"
+  + slice("const wrongFromEntry = (t)", ";\n") + "\n"
+  + slice("const wfeMark = (t)", ";\n") + "\n"
+  + slice("const REASON_TIP = {", "};\n") + "\n"
+  + slice("const reasonTip = (r)", ";\n") + "\n"
+  + slice("let TIDE = null", ";\n") + "\n"
+  + slice("function tideHTML(t, open) {", "\n  }") + "\n"
   + "this.deciderSplit = deciderSplit; this.deciderHTML = deciderHTML;\n"
   + "this.exitMechSplit = exitMechSplit; this.exitMechHTML = exitMechHTML;\n"
+  + "this.tfSplit = tfSplit; this.tfLineHTML = tfLineHTML;\n"
+  + "this.wrongFromEntry = wrongFromEntry; this.excursionTip = excursionTip;\n"
+  + "this.reasonTip = reasonTip; this.tideHTML = tideHTML;\n"
   + "this.MECHANICAL_EXITS = MECHANICAL_EXITS;\n", dctx);
 const { deciderSplit, deciderHTML, exitMechSplit, exitMechHTML, MECHANICAL_EXITS } = dctx;
+const { tfSplit, tfLineHTML, wrongFromEntry, excursionTip, reasonTip, tideHTML } = dctx;
 
 const cl = (reason, r) => ({ status: "closed", exit_reason: reason, realized_r: r });
 
@@ -822,6 +835,96 @@ test("with two or more mechanisms every bucket is printed with its count, W-L an
   assert.ok(h.includes("stop <b>2</b> (0W–2L)") && h.includes("-4.00R"), `stop bucket: ${h}`);
   assert.ok(h.includes("time <b>1</b> (1W–0L)") && h.includes("+0.50R"), `time bucket: ${h}`);
   assert.ok(h.includes("target <b>1</b>") && h.includes("+2.00R"), `target bucket: ${h}`);
+});
+
+// ── batch-100 WS-C/WS-D: excursions, timeframe line, tide line ──────────────
+suite("excursion honesty + timeframe split + tide line");
+
+test("wrong-from-entry fires ONLY on a stop whose MFE never cleared the noise floor", () => {
+  assert.equal(wrongFromEntry({ exit_reason: "stop", mfe_r: 0.0 }), true);
+  assert.equal(wrongFromEntry({ exit_reason: "stop", mfe_r: 0.009 }), true);
+  assert.equal(wrongFromEntry({ exit_reason: "stop", mfe_r: 0.3 }), false, "gave-back is a different lesson");
+  assert.equal(wrongFromEntry({ exit_reason: "time", mfe_r: 0.0 }), false, "only full stops carry the dagger");
+  assert.equal(wrongFromEntry({ exit_reason: "stop" }), false, "no MFE recorded -> no claim made");
+});
+
+test("the excursion tooltip carries high-water and worst, and vanishes without data", () => {
+  const tip = excursionTip({ mfe_r: 0.683, mae_r: -0.21 });
+  assert.ok(tip.includes("+0.68R") && tip.includes("-0.21R"));
+  assert.equal(excursionTip({}), "");
+});
+
+test("every mechanism chip has a static definition and none names a live number", () => {
+  for (const r of [...MECHANICAL_EXITS, "manual"]) {
+    const tip = reasonTip(r);
+    assert.ok(tip.length > 10, `${r} needs a definition`);
+    assert.ok(!/\d+\.\d+R|[+-]\d+R/.test(tip), `${r} tip must not embed a live figure that can stale: ${tip}`);
+  }
+});
+
+test("tfSplit conserves R — the timeframe buckets sum to the book's own total", () => {
+  // Numeric parity (batch-100 item 77) against the REAL e2e fixture book.
+  const book = JSON.parse(fs.readFileSync(
+    path.resolve(__dirname, "e2e/fixtures/data/vivek_bot_book.json"), "utf8"));
+  const by = tfSplit(book.closed);
+  const sumTf = Object.values(by).reduce((n, b) => n + b.r, 0);
+  const direct = book.closed.reduce((n, t) => n + (typeof t.realized_r === "number" ? t.realized_r : 0), 0);
+  assert.ok(Math.abs(sumTf - direct) < 1e-9, `tf buckets ${sumTf} != book total ${direct}`);
+  const nTf = Object.values(by).reduce((n, b) => n + b.n, 0);
+  assert.equal(nTf, book.closed.length, "every closed row lands in exactly one bucket");
+});
+
+test("the timeframe line is silent below two timeframes and speaks above", () => {
+  assert.equal(tfLineHTML([cl("stop", -1)]), "", "one unknown-tf bucket is not a split");
+  const rows = [
+    { status: "closed", timeframe: "1D", realized_r: -1, exit_reason: "stop" },
+    { status: "closed", timeframe: "1W", realized_r: 0.5, exit_reason: "time" },
+  ];
+  const h = tfLineHTML(rows);
+  assert.ok(h.includes("by timeframe:"), h);
+  assert.ok(h.includes("1W") && h.includes("1D"));
+  assert.ok(h.indexOf("1W") < h.indexOf("1D"), "canonical 1W/3D/1D order");
+  assert.ok(h.includes("-1.00R") && h.includes("+0.50R"));
+});
+
+test("the mech line now carries the median hold in days", () => {
+  const rows = [
+    { status: "closed", exit_reason: "stop", realized_r: -1, hold_days: 9 },
+    { status: "closed", exit_reason: "stop", realized_r: -1.2, hold_days: 22 },
+    { status: "closed", exit_reason: "time", realized_r: 0.2, hold_days: 29 },
+  ];
+  const h = dctx.exitMechHTML(rows);
+  assert.ok(h.includes("~22d") || h.includes("~9d"), `stop bucket median hold missing: ${h}`);
+  assert.ok(h.includes("~29d"), `time bucket hold missing: ${h}`);
+});
+
+const TIDE_FIXTURE = {
+  n_long: 30, n_short_untouched: 0, n_skipped_unpriced: 2, base_unreal_r: 8.65,
+  method: "uniform beta-1 shock",
+  shocks: [
+    { shock_pct: 3.0, stopped: 0, unreal_r: 3.7, given_back_r: 5.0 },
+    { shock_pct: 5.0, stopped: 2, unreal_r: -0.9, given_back_r: 9.5 },
+    { shock_pct: 8.0, stopped: 3, unreal_r: -7.2, given_back_r: 15.8 },
+  ],
+};
+
+test("the tide line states base, W/L split, the first two shocks, and unpriced rows", () => {
+  const open = [{ unreal_r: 1 }, { unreal_r: -0.2 }, { unreal_r: 0.4 }];
+  const h = tideHTML(TIDE_FIXTURE, open);
+  assert.ok(h.includes("tide check:"), h);
+  assert.ok(h.includes("+8.7R") && h.includes("30 longs"));
+  assert.ok(h.includes("(2W/1L)"), "the winners/losers split of the same total");
+  assert.ok(h.includes("+3.7R") && h.includes("(0 stops)"));
+  assert.ok(h.includes("−0.9R") || h.includes("-0.9R"));
+  assert.ok(h.includes("2 unpriced rows uncounted"), "skipped rows are named, never hidden");
+  assert.ok(h.includes("-8%:"), "the full table rides the tooltip");
+});
+
+test("the tide line is INERT and hides without the artefact", () => {
+  const h = tideHTML(TIDE_FIXTURE, []);
+  assert.ok(!/<button|<a |href=/.test(h), "no control, no link - reporting, not advice");
+  assert.equal(tideHTML(null, []), "");
+  assert.equal(tideHTML({ shocks: [], n_long: 0 }, []), "");
 });
 
 test("the mixed-book decider line carries the shape BESIDE the split, not instead of it", () => {

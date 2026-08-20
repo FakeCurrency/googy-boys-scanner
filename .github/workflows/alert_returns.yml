@@ -62,6 +62,14 @@ jobs:
           set -o pipefail
           python scripts/edge_rosters.py 2>&1 | tee /tmp/edge_rosters_out.txt
 
+      # Tide transparency (batch-100 WS-D): how much of the open book's
+      # unrealized R survives a uniform pullback, against the REAL stops.
+      # Published for the journal's quiet tide line.
+      - name: Book stress report
+        run: |
+          set -o pipefail
+          python scripts/book_stress.py 2>&1 | tee /tmp/book_stress_out.txt
+
       # The daily research digest (batch-100 WS-J): the edge report's ledger
       # view lands on the run page every day, no local checkout needed.
       - name: Edge report to step summary
@@ -77,8 +85,9 @@ jobs:
       - name: Commit & push (surgical — the two ledgers only)
         run: |
           if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt \
-             && grep -q EDGE_ROSTERS_UNCHANGED /tmp/edge_rosters_out.txt; then
-            echo "Nothing new in either ledger - nothing to commit."
+             && grep -q EDGE_ROSTERS_UNCHANGED /tmp/edge_rosters_out.txt \
+             && grep -q BOOK_STRESS_UNCHANGED /tmp/book_stress_out.txt; then
+            echo "Nothing new in any artefact - nothing to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -88,10 +97,11 @@ jobs:
           # run where the roster script had nothing to write the file may not
           # exist yet, and a missing pathspec exits 128 under bash -e.
           git add -- data/edge_rosters.json 2>/dev/null || true
+          git add -- public/data/book_stress.json 2>/dev/null || true
           # Must-change gate (ANY-OF across the two ledgers): reaching here
           # means at least one script CLAIMED a change, so staging nothing is
           # always a bug.
-          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json
+          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json public/data/book_stress.json
           git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
           SHA=$(git rev-parse HEAD)
           for i in 1 2 3 4 5; do
@@ -99,8 +109,10 @@ jobs:
             git reset --hard origin/main
             git checkout "$SHA" -- data/alert_forward_returns.json
             git checkout "$SHA" -- data/edge_rosters.json 2>/dev/null || true
+            git checkout "$SHA" -- public/data/book_stress.json 2>/dev/null || true
             git add -- data/alert_forward_returns.json
             git add -- data/edge_rosters.json 2>/dev/null || true
+            git add -- public/data/book_stress.json 2>/dev/null || true
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
             git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
             if git push origin HEAD:main; then echo "Pushed."; exit 0; fi

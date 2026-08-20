@@ -689,13 +689,25 @@
       // markStale because this branch returns HTML, not a live cell.
       const d = ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
       const cls = "num jr-now" + (d > 0 ? " jr-stale" : "");
+      // batch-100 item 24: distance to the REAL stop rides the Now cell —
+      // "how much tide can this survive" per row (the -3% stress line above
+      // is the book-level twin). Wins the title only when the cell is not
+      // already explaining a stale mark; stale beats distance.
+      const mark = t.last_mark != null ? t.last_mark : now;
+      const dist = (mark != null && t.stop != null && mark > 0)
+        ? (isLong ? (mark - t.stop) / mark : (t.stop - mark) / mark) : null;
       const tip = d > 0
         ? ` title="Marked off a ${staleWord(d)}-old close - this name was missing`
           + ` from the latest scan and is being filled from the last-good cache."`
-        : "";
+        : (dist != null && isFinite(dist)
+          ? ` title="Stop ${(dist * 100).toFixed(1)}% away from the last mark"` : "");
+      // batch-100 item 25: the open trade's high-water (MFE) on the R cell —
+      // an open +0.1R that has already been +1.2R is a different position.
+      const hw = typeof t.mfe_r === "number"
+        ? ` title="High-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R (best unrealized so far)"` : "";
       return {
         now: `<td class="${cls}" data-label="Now"${tip}>${now != null ? px(now) : "—"}</td>`,
-        ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R">${ur != null ? rfmt(ur) : "—"}</td>`,
+        ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R"${hw}>${ur != null ? rfmt(ur) : "—"}</td>`,
         ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}${legacyCell(t, side).cls}" data-label="$"${legacyCell(t, side).tip}>${ud != null ? d2(ud) : "—"}</td>`,
       };
     }
@@ -920,12 +932,12 @@
     const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
     // Silent when there is nothing to disambiguate — a book closed entirely by
     // the rules needs no caveat, and a line that always shows stops being read.
-    if (!s.own || !s.bot) return exitMechHTML(list);
+    if (!s.own || !s.bot) return exitMechHTML(list) + tfLineHTML(list);
     return `<div class="jr-decider">` +
       `<span class="jr-dec-bot">🤖 rules closed <b>${s.bot}</b> · <b>${fmt(s.botR)}</b></span>` +
       `<span class="jr-dec-own">✋ you closed <b>${s.own}</b> · <b>${fmt(s.ownR)}</b></span>` +
       `<span title="Every stat, curve and drawdown on this page pools both. They are different questions.">` +
-      `the stats below pool both</span></div>` + exitMechHTML(list);
+      `the stats below pool both</span></div>` + exitMechHTML(list) + tfLineHTML(list);
   }
 
   // EXIT MECHANISM SHAPE (2026-08-20). deciderSplit answers WHO closed; this
@@ -943,14 +955,44 @@
     const r = (t) => (typeof t.realized_r === "number" ? t.realized_r : 0);
     return MECHANICAL_EXITS.map((reason) => {
       const of = closed.filter((t) => String(t.exit_reason || "").toLowerCase() === reason);
+      // batch-100 item 30: median hold — a stop at day 9 and a stop at day 26
+      // are different failures, and the mechanism line is where that reads.
+      const holds = of.map((t) => t.hold_days).filter((h) => typeof h === "number").sort((a, b) => a - b);
       return {
         reason,
         n: of.length,
         wins: of.filter((t) => r(t) > 0).length,
         losses: of.filter((t) => r(t) < 0).length,
         r: of.reduce((n, t) => n + r(t), 0),
+        med_hold: holds.length ? holds[Math.floor(holds.length / 2)] : null,
       };
     }).filter((b) => b.n > 0);
+  }
+
+  // By ENTRY TIMEFRAME (batch-100 item 23) — the live evidence has the whole
+  // realized bleed in 1D entries while 1W sits near breakeven; this keeps
+  // that split visible as it evolves. Same restraint as the mech line: all
+  // closed rows, counts + R, silent below two timeframes.
+  function tfSplit(list) {
+    const rows = (Array.isArray(list) ? list : []).filter((t) => t && t.status === "closed");
+    const by = {};
+    for (const t of rows) {
+      const tf = t.timeframe || "?";
+      const r = typeof t.realized_r === "number" ? t.realized_r : 0;
+      const b = by[tf] = by[tf] || { n: 0, w: 0, l: 0, r: 0 };
+      b.n++; if (r > 0) b.w++; else if (r < 0) b.l++; b.r += r;
+    }
+    return by;
+  }
+  function tfLineHTML(list) {
+    const by = tfSplit(list);
+    const keys = ["1W", "3D", "1D"].filter((k) => by[k]);
+    if (keys.length < 2) return "";
+    const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
+    const cells = keys.map((k) =>
+      `<span class="jr-mech-cell">${esc(k)} <b>${by[k].n}</b> (${by[k].w}W–${by[k].l}L) · <b>${fmt(by[k].r)}</b></span>`);
+    return `<div class="jr-mech" title="All closed trades by ENTRY timeframe — where the R was made and lost, by the level the trade was taken on.">` +
+      `<span class="jr-mech-label">by timeframe:</span> ${cells.join(" ")}</div>`;
   }
 
   function exitMechHTML(list) {
@@ -959,7 +1001,7 @@
     if (mechs.length < 2) return "";
     const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
     const cells = mechs.map((b) =>
-      `<span class="jr-mech-cell">${esc(b.reason)} <b>${b.n}</b> (${b.wins}W–${b.losses}L) · <b>${fmt(b.r)}</b></span>`);
+      `<span class="jr-mech-cell">${esc(b.reason)} <b>${b.n}</b> (${b.wins}W–${b.losses}L) · <b>${fmt(b.r)}</b>${b.med_hold != null ? ` · ~${b.med_hold}d` : ""}</span>`);
     return `<div class="jr-mech" title="How the RULES side closed — same rows the split above counts, broken down by exit mechanism.">` +
       `<span class="jr-mech-label">rules by exit:</span> ${cells.join(" ")}</div>`;
   }
@@ -972,6 +1014,36 @@
   // matters because `data-card="side:idx"` indexes into `cardReg[side]`, so
   // slicing the array here would silently point every share-card button at the
   // wrong trade. Toggling a class cannot.
+  // Excursion honesty on closed rows (batch-100 WS-C). The R a trade ENDED at
+  // hides the shape of its life: a -1R that peaked at +0.9R and a -1R that
+  // never ticked positive are different lessons. MFE/MAE ride the R cell's
+  // tooltip, and a full stop whose MFE never cleared 0.01R gets the quiet
+  // dagger — the live book's whole rules-side bleed had exactly that shape
+  // (wrong from entry), and it is the distinction that decides whether a loss
+  // asks for ENTRY tuning or EXIT tuning.
+  const excursionTip = (t) => {
+    const bits = [];
+    if (typeof t.mfe_r === "number") bits.push(`high-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R`);
+    if (typeof t.mae_r === "number") bits.push(`worst ${t.mae_r.toFixed(2)}R`);
+    return bits.length ? ` title="${esc(bits.join(" · "))}"` : "";
+  };
+  const wrongFromEntry = (t) =>
+    String(t.exit_reason || "").toLowerCase() === "stop"
+    && typeof t.mfe_r === "number" && t.mfe_r <= 0.01;
+  const wfeMark = (t) => wrongFromEntry(t)
+    ? ` <span class="jr-wfe" title="Never ticked positive before the stop — wrong from entry, not a winner given back. Entry-quality evidence, not exit-tuning evidence.">†</span>`
+    : "";
+  // Static mechanism definitions (batch-100 item 29) — what each exit chip
+  // MEANS, deliberately free of any live numbers that could go stale.
+  const REASON_TIP = {
+    stop: "Full stop-out - the plan's stop was hit (a rules exit)",
+    time: "28-day time-stop - the rules closed it for sitting still (a rules exit)",
+    trail: "Trailing stop after TP1 - the rules protected a partial winner",
+    target: "Final target hit - the rules banked the full ladder",
+    manual: "Closed by hand - a human decision, not a rules exit",
+  };
+  const reasonTip = (r) => REASON_TIP[String(r || "manual").toLowerCase()] || "";
+
   const CLOSED_PREVIEW = 10;
   function closedRows(list, side) {
     if (!list.length) return `<div class="jr-empty">No closed trades yet.</div>`;
@@ -985,11 +1057,11 @@
       return `<tr${i >= CLOSED_PREVIEW ? ' class="jr-row-more"' : ""}>
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
-        <td class="num" data-label="R">${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
+        <td class="num" data-label="R"${excursionTip(t)}>${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}${lg.cls}" data-label="$"${lg.tip}>${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
-        <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
+        <td data-label="Reason">${t.entry_type ? `<span class="jr-pat" title="Entry pattern">${esc(t.entry_type)}</span> ` : ""}<span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}" title="${esc(reasonTip(t.exit_reason))}">${esc(t.exit_reason || "manual")}</span>${wfeMark(t)}${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
     }).join("");
     const hidden = Math.max(0, sorted.length - CLOSED_PREVIEW);
     const more = hidden
@@ -1324,6 +1396,46 @@
     }).sort((a, b) => String(b.exit).localeCompare(String(a.exit)));
   }
 
+  // TIDE LINE (batch-100 WS-D, 2026-08-20). The 2026-08-20 edge research
+  // measured that a mere reversion of breadth to its 6-month mean (~a -3%
+  // tape) erases over half the book's unrealized R without firing one stop —
+  // and the only place that fact lived was a chat log. The daily
+  // book_stress.json publishes the stress table; this renders its first two
+  // shocks as ONE quiet line so "how much of this profit is tide" is on the
+  // page the profit is on. INERT like the w3 strip: no control, no verb, and
+  // hidden entirely until the artefact exists. Unpriced rows are named (the
+  // report skips-and-counts them; hiding that count would overstate safety).
+  let TIDE = null, TIDE_REQ = false;
+  function tideHTML(t, open) {
+    if (!t || !Array.isArray(t.shocks) || !t.shocks.length || !t.n_long) return "";
+    const fmtR = (x) => `${x >= 0 ? "+" : ""}${(+x).toFixed(1)}R`;
+    // batch-100 item 26: the winners/losers split of the SAME unrealized total
+    // (17 winners can hide 13 losers behind one green number).
+    const rs = (open || []).map((p) => p && p.unreal_r).filter((r) => typeof r === "number" && isFinite(r));
+    const wl = rs.length ? ` (${rs.filter((r) => r > 0).length}W/${rs.filter((r) => r <= 0).length}L)` : "";
+    const cells = t.shocks.slice(0, 2).map((s) =>
+      `−${s.shock_pct}% tape ⇒ <b>${fmtR(s.unreal_r)}</b> (${s.stopped} stop${s.stopped === 1 ? "" : "s"})`);
+    const skipped = t.n_skipped_unpriced
+      ? ` · <span class="jr-tide-warn">${t.n_skipped_unpriced} unpriced row${t.n_skipped_unpriced === 1 ? "" : "s"} uncounted</span>` : "";
+    const full = (t.shocks || []).map((s) =>
+      `-${s.shock_pct}%: ${fmtR(s.unreal_r)} unrealized, ${s.stopped} stopped, gives back ${fmtR(s.given_back_r)}`).join("; ");
+    return `<div class="jr-tide" id="bot-tide" title="Uniform pullback applied to every long's mark against its REAL stop (${esc(t.method || "")}). Full table: ${esc(full)}.">` +
+      `<span class="jr-tide-label">tide check:</span> base <b>${fmtR(t.base_unreal_r)}</b> unrealized over ${t.n_long} longs${wl} · ` +
+      cells.join(" · ") + skipped + `</div>`;
+  }
+  function renderTide() {
+    document.querySelectorAll("#bot-tide").forEach((el) => el.remove());
+    const host = $("#bot-stats");
+    if (!host) return;
+    if (TIDE) { host.insertAdjacentHTML("beforebegin", tideHTML(TIDE, (state.bot || {}).open)); return; }
+    if (TIDE_REQ) return;
+    TIDE_REQ = true;
+    fetch("data/book_stress.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j) { TIDE = j; renderTide(); } })
+      .catch(() => {});         // absent artefact -> no line, never an error
+  }
+
   function w3Line(d) {
     const tag = (r) => String((r && r.cycle) || "");
     const openN = d.open.filter((r) => tag(r) === W3_TAG).length;
@@ -1377,6 +1489,7 @@
       const host = $("#bot-stats");
       document.querySelectorAll("#bot-w3").forEach((el) => el.remove());
       if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
+      renderTide();
     }
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
     paintOpen(side);
