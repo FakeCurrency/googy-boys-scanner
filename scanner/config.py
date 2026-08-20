@@ -1051,6 +1051,18 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 # and would then take three days to notice anything. 40 weekday-hours lets one
 # fully missed session pass in silence and fires on the second.
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
+
+# ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
+# Research artefact only: measures whether multi-lens alignment predicts
+# anything. Horizons are TRADING SESSIONS after the alert's own session close;
+# the ledger (data/alert_forward_returns.json) is durable precisely because the
+# public alert_history.json is a rolling 800-cap window that evicts entries at
+# ~14 days on current volume - a 20-session return can never mature there.
+ALERT_RETURNS_HORIZONS = (5, 10, 20)
+# Ledger cap: only FULLY-stamped entries are ever trimmed (dropping a waiting
+# entry would silently un-measure the feature). ~57 alignments/day today, so
+# 20,000 is roughly a year of memory.
+ALERT_RETURNS_CAP = 20000
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
@@ -1064,6 +1076,7 @@ WATCHDOG_RUNS = {
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
+    "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
     # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
     # It commits nothing, which is exactly why it needs an entry here: every
     # other watchdog target is caught by its output going stale, and this one

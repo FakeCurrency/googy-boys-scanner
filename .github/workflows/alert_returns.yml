@@ -1,0 +1,81 @@
+# Confluence forward returns (2026-08-20) — the measurement the headline
+# feature never had.
+#
+# Runs scripts/alert_returns.py daily: ingests new multi-lens alignments from
+# the ALERTS log into the durable ledger data/alert_forward_returns.json and
+# stamps 5/10/20-session forward returns as each horizon matures. Research
+# only — nothing reads the ledger back into any signal path (pinned by
+# tests/test_alert_returns.py), and this job never writes alert_history.json
+# (that file belongs to the scan mutex; see the script's header for why the
+# ledger is a separate file at all).
+#
+# NOT in the `scan` concurrency group: it writes ONLY its own ledger, which no
+# other workflow touches, and queueing a daily job in the one-pending-slot
+# scan group is how the :47 backstop got evicted (2026-07-28). The commit step
+# is the reco_note.yml pattern verbatim: skip when the script printed
+# ALERT_RETURNS_UNCHANGED (a quiet day is a legitimate no-op — exactly where
+# a must-change gate would be wrong), surgical single-path staging with
+# assert_staged when a change WAS claimed, and the reset-and-retry push loop
+# that folds in anything main grew mid-run.
+#
+# 22:20 UTC: after NASDAQ close data (21:07 scan) and clear of the 21:00
+# evidence brief and 21:35 backup crons. Watchdogged at 26h like the other
+# daily writers (config.WATCHDOG_RUNS).
+
+name: Alert forward returns
+
+on:
+  schedule:
+    - cron: "20 22 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  returns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Needs the pinned yfinance stack — the script prices through
+      # scanner.data.download, the same access the scanner itself uses.
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Ingest + stamp forward returns
+        run: |
+          set -o pipefail
+          python scripts/alert_returns.py 2>&1 | tee /tmp/alert_returns_out.txt
+
+      - name: Commit & push (surgical — the ledger only)
+        run: |
+          if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt; then
+            echo "No new alignments and nothing matured - nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- data/alert_forward_returns.json
+          # Must-change gate: reaching here means the script CLAIMED a change,
+          # so staging nothing is always a bug.
+          bash scripts/assert_staged.sh "alert returns ledger" data/alert_forward_returns.json
+          git commit -m "data: confluence forward returns $(date -u +'%Y-%m-%d')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git checkout "$SHA" -- data/alert_forward_returns.json
+            git add -- data/alert_forward_returns.json
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: confluence forward returns $(date -u +'%Y-%m-%d')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race - retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
