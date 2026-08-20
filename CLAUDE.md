@@ -109,6 +109,8 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary + Discord (owner-ruled 2026-08-01). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
+| commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + Discord WARNING (evidence_brief pattern), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
+| alert_returns.yml | daily 22:20 UTC | stamps 5/10/20-SESSION forward returns on confluence alignments (`scripts/alert_returns.py`) into `data/alert_forward_returns.json`. A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the script READS the history, never writes it (test-pinned). Idempotent; returns FROZEN at first measurement; skip-commit on ALERT_RETURNS_UNCHANGED (reco_note pattern); WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -1966,6 +1968,35 @@ meant** — the failure mode that survives review because the value looks fine.
   drift on four images.
 
 ---
+
+## 2026-08-20 batch — three facts the next session must not re-derive
+
+1. **The three dispatch/sync endpoints are access-logged** (`functions/api/
+   _access_log.js`, `alog:*` keys in JOURNAL_KV, 4-day TTL). Best-effort by
+   construction — a KV failure can never block a close/scan/journal action —
+   and NO request bodies ever. Successful journal GETs COALESCE to one
+   `alog:seen:` marker per IP per UTC day: the page polls GET every 60s and
+   KV writes are the scarce quota (journal.js's own limiter comments), so
+   per-request success logging would burn the budget sync itself needs. The
+   api_guards "hit-GET writes" pin was updated to exactly this bound — do not
+   "fix" it back to zero, and do not log per-request there either.
+2. **Auth on /api/close, /api/scan, /api/journal is a Cloudflare Access
+   decision, not a secret** — all three are called from BROWSER JS (app.js
+   SCAN button, stalled.js batch close, gbs-sync), so a tick.js-style shared
+   secret would ship in page source and protect nothing. /api/journal also
+   has one CI-side reader (`confluence_alert.py` with GBS_SYNC_CODE) that an
+   Access policy would break without a service token. The Access write-up
+   went to the owner in the 2026-08-20 batch summary; until he configures
+   it, the access log above is the compensating control.
+3. **`backups/` in-tree commits are LOAD-BEARING — do not drop the commit
+   step without rewiring the watchdog.** `watchdog.py` probes the committed
+   `backups/` dir's newest snapshot age (`backup_stale`, CRITICAL, 26h) from
+   kill_switch.yml/crypto_bot.yml CHECKOUTS; stop committing and that alarm
+   rings forever. The commit step's assert_staged is also in the pinned
+   caller set. The batch's Task 8 was stopped-and-flagged on exactly this;
+   the safe path (drop the dir probe, lean on WATCHDOG_RUNS's run-history
+   probe — which deliberately goes SILENT on a failed latest run, a real
+   trade-off on a CRITICAL alarm) needs the owner's sign-off.
 
 ## Development rules
 
