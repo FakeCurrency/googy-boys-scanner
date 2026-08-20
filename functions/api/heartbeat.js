@@ -72,6 +72,13 @@ const HEAL_DAILY_CAP = 24;
 
 const BOOK = "/data/vivek_bot_book.json";
 
+// Per-market freshness sidecars — same fix as health.js shipped 2026-07-28 for
+// the identical bug class: crypto's hourly commits keep the COMBINED book's
+// updated_at perpetually fresh, so a healer that only ever reads BOOK can
+// never see an ASX- or NASDAQ-only staleness gap. market="all" still reads
+// the combined book, unchanged; a specific market reads its own sidecar.
+const marketPath = (mkt) => `/data/${mkt}_prices.json`;
+
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
@@ -90,21 +97,30 @@ export async function onRequestGet(context) {
   const m = String(params.get("market") || "all").toLowerCase();
   const market = ["asx", "nasdaq", "crypto", "all"].includes(m) ? m : "all";
 
-  // ---- how stale is the book? ----------------------------------------------
+  // ---- how stale is the relevant freshness source? --------------------------
+  // "all" -> combined book (updated_at), unchanged. A specific market -> its
+  // own /data/<market>_prices.json sidecar (generated_at), so the healer can
+  // actually detect a market-scoped gap instead of always answering for
+  // whichever market last committed to the combined book. `market` is already
+  // constrained to the asx/nasdaq/crypto/all allowlist above, so marketPath()
+  // is never called with untrusted input.
+  const assetPath = market === "all" ? BOOK : marketPath(market);
+  const stampKey = market === "all" ? "updated_at" : "generated_at";
+
   let ageMin, stamp;
   try {
-    const assetURL = new URL(BOOK, request.url);
+    const assetURL = new URL(assetPath, request.url);
     const res = await env.ASSETS.fetch(new Request(assetURL));
-    if (!res.ok) return json(503, { ok: false, error: `asset ${BOOK} HTTP ${res.status}` });
+    if (!res.ok) return json(503, { ok: false, error: `asset ${assetPath} HTTP ${res.status}` });
     const doc = await res.json();
-    stamp = doc.updated_at || "";
+    stamp = doc[stampKey] || "";
     const updated = Date.parse(stamp);
     // FAIL LOUD, NOT OPEN. An unreadable stamp must not be treated as "stale,
     // heal it" — that would dispatch a scan every probe, for ever, off a
     // corrupt file. It also must not read as fresh. It is the healer being
     // unable to answer its own question, which is the 503 class.
     if (!Number.isFinite(updated)) {
-      return json(503, { ok: false, error: `${BOOK} has no parseable updated_at` });
+      return json(503, { ok: false, error: `${assetPath} has no parseable ${stampKey}` });
     }
     ageMin = (Date.now() - updated) / 6e4;
   } catch (e) {
