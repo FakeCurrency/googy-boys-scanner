@@ -901,12 +901,48 @@
     const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
     // Silent when there is nothing to disambiguate — a book closed entirely by
     // the rules needs no caveat, and a line that always shows stops being read.
-    if (!s.own || !s.bot) return "";
+    if (!s.own || !s.bot) return exitMechHTML(list);
     return `<div class="jr-decider">` +
       `<span class="jr-dec-bot">🤖 rules closed <b>${s.bot}</b> · <b>${fmt(s.botR)}</b></span>` +
       `<span class="jr-dec-own">✋ you closed <b>${s.own}</b> · <b>${fmt(s.ownR)}</b></span>` +
       `<span title="Every stat, curve and drawdown on this page pools both. They are different questions.">` +
-      `the stats below pool both</span></div>`;
+      `the stats below pool both</span></div>` + exitMechHTML(list);
+  }
+
+  // EXIT MECHANISM SHAPE (2026-08-20). deciderSplit answers WHO closed; this
+  // answers HOW the rules side closed — the rules' one aggregate R was hiding
+  // whether the loss is concentrated in stops, time-stops, trails or targets,
+  // which is exactly the question the Sep-4+ wave of mechanical exits makes
+  // answerable. DISPLAY-ONLY like everything around it: it changes nothing
+  // about how exit_reason is set, nothing in stats(), nothing any consumer
+  // reads — it walks the same closed rows and prints their composition.
+  // Reasons render in MECHANICAL_EXITS order so the line reads the same way
+  // every day; a mechanism with no closes is omitted, not shown as zero.
+  function exitMechSplit(list) {
+    const rows = Array.isArray(list) ? list : [];
+    const closed = rows.filter((t) => t && t.status === "closed");
+    const r = (t) => (typeof t.realized_r === "number" ? t.realized_r : 0);
+    return MECHANICAL_EXITS.map((reason) => {
+      const of = closed.filter((t) => String(t.exit_reason || "").toLowerCase() === reason);
+      return {
+        reason,
+        n: of.length,
+        wins: of.filter((t) => r(t) > 0).length,
+        losses: of.filter((t) => r(t) < 0).length,
+        r: of.reduce((n, t) => n + r(t), 0),
+      };
+    }).filter((b) => b.n > 0);
+  }
+
+  function exitMechHTML(list) {
+    const mechs = exitMechSplit(list);
+    // One mechanism is not a shape — the aggregate already says everything.
+    if (mechs.length < 2) return "";
+    const fmt = (x) => (x >= 0 ? "+" : "") + x.toFixed(2) + "R";
+    const cells = mechs.map((b) =>
+      `<span class="jr-mech-cell">${esc(b.reason)} <b>${b.n}</b> (${b.wins}W–${b.losses}L) · <b>${fmt(b.r)}</b></span>`);
+    return `<div class="jr-mech" title="How the RULES side closed — same rows the split above counts, broken down by exit mechanism.">` +
+      `<span class="jr-mech-label">rules by exit:</span> ${cells.join(" ")}</div>`;
   }
 
   // CLOSED-TRADE PREVIEW (UI pass 2026-08-18). The closed table was the single

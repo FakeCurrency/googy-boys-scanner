@@ -704,9 +704,12 @@ vm.runInContext(
   + slice("const MECHANICAL_EXITS =", "];\n") + "\n"
   + slice("function deciderSplit(list) {", "\n  }") + "\n"
   + slice("function deciderHTML(list) {", "\n  }") + "\n"
+  + slice("function exitMechSplit(list) {", "\n  }") + "\n"
+  + slice("function exitMechHTML(list) {", "\n  }") + "\n"
   + "this.deciderSplit = deciderSplit; this.deciderHTML = deciderHTML;\n"
+  + "this.exitMechSplit = exitMechSplit; this.exitMechHTML = exitMechHTML;\n"
   + "this.MECHANICAL_EXITS = MECHANICAL_EXITS;\n", dctx);
-const { deciderSplit, deciderHTML, MECHANICAL_EXITS } = dctx;
+const { deciderSplit, deciderHTML, exitMechSplit, exitMechHTML, MECHANICAL_EXITS } = dctx;
 
 const cl = (reason, r) => ({ status: "closed", exit_reason: reason, realized_r: r });
 
@@ -753,11 +756,15 @@ test("a missing realized_r contributes 0 rather than NaN-ing the whole sum", () 
   assert.equal(s.botR, -2);
 });
 
-test("the line is SILENT when the book is one-sided", () => {
+test("the CAVEAT is silent when the book is one-sided (the mech shape may still show)", () => {
   // A caveat that always shows stops being read. Nothing to disambiguate when
-  // every close came from the same decider.
-  assert.equal(deciderHTML([cl("stop", -1), cl("time", 1)]), "", "all-mechanical needs no caveat");
-  assert.equal(deciderHTML([cl("manual", 1)]), "", "all-manual needs no caveat");
+  // every close came from the same decider — but an all-mechanical book is
+  // exactly where the by-exit shape matters (the Sep-4+ world), so the
+  // jr-decider line disappearing must not take jr-mech with it.
+  const allMech = deciderHTML([cl("stop", -1), cl("time", 1)]);
+  assert.ok(!allMech.includes("jr-decider"), "all-mechanical needs no who-closed caveat");
+  assert.ok(allMech.includes("jr-mech"), "the by-exit shape still renders for an all-rules book");
+  assert.equal(deciderHTML([cl("manual", 1)]), "", "all-manual needs neither line");
   assert.equal(deciderHTML([]), "");
 });
 
@@ -772,6 +779,56 @@ test("renderSide actually prints it above the closed table", () => {
   // A caveat computed and never rendered is not a caveat.
   assert.ok(/deciderHTML\(d\.closed\) \+ closedRows\(d\.closed, side\)/.test(SRC),
     "renderSide no longer prefixes the closed table with the decider split");
+});
+
+// ── the rules-by-exit shape (2026-08-20) ─────────────────────────────────────
+// deciderSplit says WHO closed; exitMechSplit says HOW the rules side closed.
+// Display-only: same rows, broken down by exit_reason so the rules' one
+// aggregate R stops hiding whether the loss lives in stops or time-stops.
+suite("rules by exit mechanism");
+
+test("mechanisms come back in MECHANICAL_EXITS order with W-L and R each", () => {
+  const s = exitMechSplit([cl("time", -0.5), cl("stop", -1), cl("stop", 2), cl("trail", 1.2)]);
+  assert.equal(s.map((b) => b.reason).join(","), "stop,time,trail", "canonical order, zeros omitted");
+  const stop = s[0];
+  assert.equal(stop.n, 2); assert.equal(stop.wins, 1); assert.equal(stop.losses, 1);
+  assert.ok(Math.abs(stop.r - 1) < 1e-9);
+});
+
+test("manual and ABSENT-reason closes never enter the shape — it is the RULES' shape", () => {
+  const s = exitMechSplit([cl("manual", 5), { status: "closed", realized_r: 3 }, cl("stop", -1)]);
+  assert.equal(s.map((b) => b.reason).join(","), "stop");
+  assert.equal(s[0].r, -1, "the manual +5R and undated +3R must not leak in");
+});
+
+test("open rows and missing realized_r follow the decider's own rules", () => {
+  const s = exitMechSplit([{ status: "open", exit_reason: "stop", realized_r: 9 },
+                           cl("stop", undefined), cl("stop", -2)]);
+  assert.equal(s[0].n, 2, "the open row is not counted");
+  assert.equal(s[0].r, -2, "a missing realized_r contributes 0, never NaN");
+  assert.equal(s[0].losses, 1, "an unpriced close is neither a win nor a loss");
+});
+
+test("one mechanism is not a shape — the line stays silent below two", () => {
+  assert.equal(exitMechHTML([cl("stop", -1), cl("stop", -2)]), "",
+    "a single mechanism repeats the aggregate; say nothing");
+  assert.equal(exitMechHTML([cl("manual", 1)]), "");
+  assert.equal(exitMechHTML([]), "");
+});
+
+test("with two or more mechanisms every bucket is printed with its count, W-L and R", () => {
+  const h = exitMechHTML([cl("stop", -1), cl("stop", -3), cl("time", 0.5), cl("target", 2)]);
+  assert.ok(h.includes("jr-mech"), h);
+  assert.ok(h.includes("stop <b>2</b> (0W–2L)") && h.includes("-4.00R"), `stop bucket: ${h}`);
+  assert.ok(h.includes("time <b>1</b> (1W–0L)") && h.includes("+0.50R"), `time bucket: ${h}`);
+  assert.ok(h.includes("target <b>1</b>") && h.includes("+2.00R"), `target bucket: ${h}`);
+});
+
+test("the mixed-book decider line carries the shape BESIDE the split, not instead of it", () => {
+  const h = deciderHTML([cl("stop", -1), cl("time", 1), cl("manual", 0.5)]);
+  assert.ok(h.includes("jr-decider"), "the who-closed split stays intact");
+  assert.ok(h.includes("jr-mech"), "the by-exit shape renders alongside it");
+  assert.ok(h.indexOf("jr-decider") < h.indexOf("jr-mech"), "who first, how second");
 });
 
 test("journal.css gives BOTH previously-unstyled reasons a rule", () => {
