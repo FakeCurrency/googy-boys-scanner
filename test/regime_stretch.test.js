@@ -33,9 +33,11 @@ const ctx = vm.createContext({ console });
 vm.runInContext(
   "const esc = (s) => String(s);\n"
   + "const pct = (v) => v == null ? \"—\" : Math.round(100 * v) + \"%\";\n"
+  + "const sgn = (v) => v == null ? \"—\" : (v >= 0 ? \"+\" : \"\") + (100 * v).toFixed(1) + \"%\";\n"
   + slice("function stretchHTML(blk) {", "\n  }") + "\n"
-  + "this.stretchHTML = stretchHTML;\n", ctx);
-const { stretchHTML } = ctx;
+  + slice("function hlLine(blk) {", "\n  }") + "\n"
+  + "this.stretchHTML = stretchHTML; this.hlLine = hlLine;\n", ctx);
+const { stretchHTML, hlLine } = ctx;
 
 // A 100-session series: 90 sessions at 0.50, 10 at 0.70; latest 0.70.
 // mean = 0.52. MIDRANK percentile (ties count half): 0.70 -> (90+5)/100 = p95;
@@ -73,6 +75,23 @@ test("NaN/garbage sessions are filtered before any arithmetic", () => {
   const dirty = series.concat([NaN, null, "x"]);
   const h = stretchHTML(blk(0.7, dirty));
   assert.ok(h.includes("95th"), "the three junk values must not enter the percentile");
+});
+
+test("net highs−lows joins the line, against its own series mean", () => {
+  // 100 sessions at +0.01, latest +0.05: "+5.0% vs +1.0% mean".
+  const b = blk(0.7);
+  b.net_hl = Array(100).fill(0.01);
+  b.latest.net_hl = 0.05;
+  const h = stretchHTML(b);
+  assert.ok(h.includes("+5.0%") && h.includes("+1.0%"), h);
+});
+
+test("the highs−lows clause is silent on thin or absent series — never invented", () => {
+  assert.equal(hlLine({ net_hl: Array(30).fill(0.01), latest: { net_hl: 0.05 } }), "");
+  assert.equal(hlLine({ latest: { net_hl: 0.05 } }), "");
+  assert.equal(hlLine({ net_hl: Array(100).fill(0.01), latest: {} }), "");
+  // And the stretch line itself still renders without it.
+  assert.ok(stretchHTML(blk(0.7)).includes("95th"));
 });
 
 test("the panel and the strip both consume it", () => {

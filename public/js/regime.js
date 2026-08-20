@@ -115,7 +115,18 @@
     return `<div class="rg-stretch${pctl >= 90 ? " is-hot" : ""}" ` +
       `title="Share of names above their 200-day, ranked inside this panel's own ${s.length}-session history. High percentile = most names already repaired = less fuel and more tide under the open book; the reversion-to-mean cost is what the journal's tide line prices.">` +
       `breadth stretch: <b>${pct(cur)}</b> now vs <b>${pct(mean)}</b> ${s.length}-session mean · ` +
-      `<b>${pctl}th</b> percentile — ${word}</div>`;
+      `<b>${pctl}th</b> percentile — ${word}${hlLine(blk)}</div>`;
+  }
+
+  // Net new-highs-minus-lows against its own series mean, appended to the
+  // stretch line when the history is deep enough to have a mean worth naming.
+  // Same silence rule as the stretch itself: no series, no sentence.
+  function hlLine(blk) {
+    const s = (blk.net_hl || []).filter((v) => typeof v === "number" && isFinite(v));
+    const cur = (blk.latest || {}).net_hl;
+    if (s.length < 40 || typeof cur !== "number" || !isFinite(cur)) return "";
+    const mean = s.reduce((a, b) => a + b, 0) / s.length;
+    return ` · highs−lows <b>${sgn(cur)}</b> vs ${sgn(mean)} mean`;
   }
 
   function metersHTML(blk) {

@@ -110,7 +110,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary + Discord (owner-ruled 2026-08-01). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + Discord WARNING (evidence_brief pattern), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
-| alert_returns.yml | daily 22:20 UTC | stamps 5/10/20-SESSION forward returns on confluence alignments (`scripts/alert_returns.py`) into `data/alert_forward_returns.json`. A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the script READS the history, never writes it (test-pinned). Idempotent; returns FROZEN at first measurement; skip-commit on ALERT_RETURNS_UNCHANGED (reco_note pattern); WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py` |
+| alert_returns.yml | daily 22:20 UTC | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) → a SUNDAY-ONLY Discord digest of the report head (BOM-trim + named UA per 2026-08-01; missing webhook degrades, never reds). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -1998,7 +1998,45 @@ meant** — the failure mode that survives review because the value looks fine.
    probe — which deliberately goes SILENT on a failed latest run, a real
    trade-off on a CRITICAL alarm) needs the owner's sign-off.
 
-## Development rules
+## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
+
+100 items chasing profitability/transparency/edge, ALL measurement and
+display — the w3-1 freeze (live until the first mechanical exits, week of
+Sep 4 2026) forbids touching signals, sizing, grading, eligibility or any
+`cycle: w3-1` row, so anything trade-affecting stopped at a proposal.
+Ledger with per-item statuses: `BATCH100_2026-08-20.md` (83 shipped, 16
+proposal-only, 1 verified-no-change). Evidence base: `EDGE_RESEARCH_2026-08-20.md`.
+The facts a later session must not re-derive:
+
+1. **The daily edge pipeline lives in alert_returns.yml** (see its table row
+   for the five scripts and the sentinel/staging discipline). The design rule
+   that holds it together: `edge_rosters.py` and `edge_summary.py` IMPORT
+   `alert_returns.py` / `alert_edge_report.py` machinery via importlib —
+   re-typing a stat or a stamp is mirror-drift, and tests pin the imports.
+   `alert_edge_report.py` stays READ-ONLY (pinned); the committed summary
+   artefact exists precisely so the report never needs a write path.
+2. **PROPOSALS_2026-09-04.md is the freeze-blocked half** — P1..P15 for the
+   Sep 4 checkpoint (tint repoint, the 1D entry-quality decision, short-side
+   display honesty, High-conviction demotion, FX sizing boundary, risk_manager
+   arming matrix, time-stop DEFENSE, checkpoints Sep 9/Sep 23, full-universe
+   backtest calibration, breadth throttle). None deployed; each cites its
+   numbers. If a future session is asked to "just do" one of these, the
+   evidence and the recommended shape are already written — start there, and
+   note P11/P12 exist to PREVENT changes, not make them.
+3. **Ledger enrichment writes into BLANK fields only and freezes them**
+   (sector / grade_raw / score / is_product / breadth at ingest-day values,
+   same-day joins only — no look-ahead). `data/sector_map.json` is still a
+   signal path; the ledger copies FROM it and never writes it.
+4. **The backtest's new evidence blocks are ADDITIVE** (`by_entry_type_long`,
+   `by_direction_entry_type`, `by_timeframe_long`, `mfe_zero_rate`) — schema
+   pins assert no existing key moved, and `loadEntryQuality()` still reads
+   the longonly file untouched (the repoint is proposal P1, owner's call).
+5. **New surfaces are deliberately INERT**: the journal tide line
+   (book_stress.json), the deck's held-grade `°` ring (grade vs grade_raw —
+   the bot buys grade_raw), the regime stretch/percentile/highs−lows line,
+   the status sheet's trigger-mix row (from funnel_history's `trigger`
+   column; null until a market's block carries the column — never invent
+   "all cron"). No controls, no calls-to-action, engine fences test-pinned.
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
    commit: `git stash -q -u; git pull -q --rebase origin main; git stash pop -q`.
