@@ -980,6 +980,68 @@
     if (btn) btn.addEventListener("click", () => location.reload());
   }
 
+  // Empty state (2026-08-20, Task 11). chart.html with no s= used to dead-end
+  // on fail("No ticker specified.") — a Retry button that reloads into the
+  // same dead end. A missing symbol is not an ERROR, it is an empty state:
+  // give it a symbol search scoped to a market, fed by the SAME published
+  // scan file the deck reads (symbols + names into a datalist). Degrades to a
+  // plain input when the fetch fails — typing an exact ticker still
+  // navigates. Options are built via DOM nodes, never innerHTML, so scan-fed
+  // names cannot inject markup.
+  function emptyState() {
+    hideSkeleton();
+    const h = document.createElement("header");
+    h.className = "chart-top";
+    h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
+    const d = document.createElement("div");
+    d.className = "chart-error chart-empty";
+    d.innerHTML = `<h2>Pick a ticker</h2>
+      <p>This page charts one symbol. Search one here, or open any row from the dashboard.</p>
+      <form id="ce-form" autocomplete="off">
+        <select id="ce-mkt" aria-label="Market">
+          <option value="asx">ASX</option>
+          <option value="nasdaq">NASDAQ</option>
+          <option value="crypto">CRYPTO</option>
+        </select>
+        <input id="ce-sym" list="ce-list" placeholder="Symbol — e.g. BHP"
+               aria-label="Ticker symbol" maxlength="15" spellcheck="false" />
+        <datalist id="ce-list"></datalist>
+        <button class="tv-btn" type="submit">Open chart →</button>
+      </form>
+      <p class="ce-hint" id="ce-hint"></p>`;
+    document.body.replaceChildren(h, d);
+    const mktSel = document.getElementById("ce-mkt");
+    const inp = document.getElementById("ce-sym");
+    const list = document.getElementById("ce-list");
+    const hint = document.getElementById("ce-hint");
+    mktSel.value = ["asx", "nasdaq", "crypto"].includes(market) ? market : "asx";
+    const fill = async () => {
+      list.replaceChildren();
+      hint.textContent = "";
+      try {
+        const r = await fetch(`data/${mktSel.value}_vivek.json`, { cache: "no-cache" });
+        if (!r.ok) return;
+        const rows = (await r.json()).results || [];
+        for (const row of rows.slice(0, 400)) {
+          const o = document.createElement("option");
+          o.value = String(row.symbol || "").toUpperCase();
+          if (row.name) o.label = String(row.name);
+          list.append(o);
+        }
+        if (rows.length) hint.textContent = `${rows.length} names on the latest ${mktSel.value.toUpperCase()} scan — start typing to match.`;
+      } catch (_) { /* plain input still navigates */ }
+    };
+    mktSel.addEventListener("change", fill);
+    fill();
+    document.getElementById("ce-form").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const s = inp.value.trim().toUpperCase();
+      if (!/^[A-Z0-9.\-]{1,15}$/.test(s)) { inp.focus(); return; }
+      location.href = `chart.html?m=${encodeURIComponent(mktSel.value)}&s=${encodeURIComponent(s)}`;
+    });
+    inp.focus();
+  }
+
   // #78: offline banner — reflects connectivity live. The chart still shows the
   // last loaded data (SW-cached); this just tells the user why live prices and
   // the "next setup" arrows may be quiet.
@@ -3996,7 +4058,7 @@
     initMobileSheet();
     wireShare();
     if (posId) { renderPosition(posId); return; }
-    if (!symbol) { fail("No ticker specified."); return; }
+    if (!symbol) { emptyState(); return; }
     wireScanNav();
     wireBotPosBanner();
     // A real journal position (he=/hs= on the link) always wins over whatever
