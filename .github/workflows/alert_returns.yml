@@ -82,11 +82,54 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Commit & push (surgical — the two ledgers only)
+      # Machine-readable headline (batch-100 WS-J): the dedup aligned-vs-A+
+      # numbers as a small committed artefact, built from the report's OWN
+      # stat functions — diffable day over day in git.
+      - name: Edge summary artefact
+        run: |
+          set -o pipefail
+          python scripts/edge_summary.py 2>&1 | tee /tmp/edge_summary_out.txt
+
+      # Sunday digest (batch-100 WS-J): once a week the edge report's head
+      # goes to Discord, the channel the owner actually reads. Sundays only —
+      # a daily research ping is ambience, and ambience gets muted (the
+      # stop_watcher lesson). Missing webhook degrades to the step summary
+      # (the report already landed there); never a red run.
+      - name: Sunday Discord digest
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ "$(date -u +%u)" != "7" ]; then
+            echo "Not Sunday - digest skipped."
+            exit 0
+          fi
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL not set - digest in step summary only"
+            exit 0
+          fi
+          python - <<'EOF'
+          import json, os, urllib.request
+          # Same trim as scanner.config.clean_secret (inlined — the workflow
+          # must not depend on repo imports): the live webhook secret was
+          # pasted with a leading U+FEFF once already. Ends only.
+          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
+              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+          body = open("/tmp/edge_report_out.txt", encoding="utf-8").read()[:1800]
+          req = urllib.request.Request(
+              url,
+              data=json.dumps({"content": "**Weekly edge digest**\n```\n"
+                               + body + "\n```"}).encode(),
+              headers={"Content-Type": "application/json",
+                       "User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
+          urllib.request.urlopen(req, timeout=30)
+          EOF
+
+      - name: Commit & push (surgical — the edge artefacts only)
         run: |
           if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt \
              && grep -q EDGE_ROSTERS_UNCHANGED /tmp/edge_rosters_out.txt \
-             && grep -q BOOK_STRESS_UNCHANGED /tmp/book_stress_out.txt; then
+             && grep -q BOOK_STRESS_UNCHANGED /tmp/book_stress_out.txt \
+             && grep -q EDGE_SUMMARY_UNCHANGED /tmp/edge_summary_out.txt; then
             echo "Nothing new in any artefact - nothing to commit."
             exit 0
           fi
@@ -98,10 +141,11 @@ jobs:
           # exist yet, and a missing pathspec exits 128 under bash -e.
           git add -- data/edge_rosters.json 2>/dev/null || true
           git add -- public/data/book_stress.json 2>/dev/null || true
-          # Must-change gate (ANY-OF across the two ledgers): reaching here
+          git add -- public/data/edge_summary.json 2>/dev/null || true
+          # Must-change gate (ANY-OF across the artefacts): reaching here
           # means at least one script CLAIMED a change, so staging nothing is
           # always a bug.
-          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json public/data/book_stress.json
+          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json public/data/book_stress.json public/data/edge_summary.json
           git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
           SHA=$(git rev-parse HEAD)
           for i in 1 2 3 4 5; do
@@ -110,9 +154,11 @@ jobs:
             git checkout "$SHA" -- data/alert_forward_returns.json
             git checkout "$SHA" -- data/edge_rosters.json 2>/dev/null || true
             git checkout "$SHA" -- public/data/book_stress.json 2>/dev/null || true
+            git checkout "$SHA" -- public/data/edge_summary.json 2>/dev/null || true
             git add -- data/alert_forward_returns.json
             git add -- data/edge_rosters.json 2>/dev/null || true
             git add -- public/data/book_stress.json 2>/dev/null || true
+            git add -- public/data/edge_summary.json 2>/dev/null || true
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
             git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
             if git push origin HEAD:main; then echo "Pushed."; exit 0; fi

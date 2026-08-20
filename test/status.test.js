@@ -54,11 +54,11 @@ function sliceConst(name) {
 
 const NAMES = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "MECHANICAL_EXITS",
                "esc", "agoText", "bookState", "cohort", "mergeStamps", "marketAges",
-               "uptime", "overall"];
+               "uptime", "overall", "triggerMix"];
 const body = NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`;
 const { HEALTH_MAX_H, HEAL_STALE_MIN, FALLBACK_CAP, MECHANICAL_EXITS,
         esc, agoText, bookState, cohort, mergeStamps, marketAges,
-        uptime, overall } = new Function(body)();
+        uptime, overall, triggerMix } = new Function(body)();
 
 // CODE-only view: every ban below asks whether status.js DOES something, and
 // the reasoning for each ban is written into the source beside it — the header
@@ -441,6 +441,62 @@ test("every page carrying the shared nav also loads status.js and status.css", (
 test("the lamp is not mounted inside .nav-pills — that strip is hidden on phones", () => {
   assert.ok(/deck-top-right/.test(CODE), "status.js no longer prefers the breakpoint-surviving host");
   assert.ok(!/appendChild\(btn\)[\s\S]{0,40}site-nav/.test(CODE));
+});
+
+
+// ── trigger mix (batch-100 WS-J) ────────────────────────────────────────────
+suite("trigger mix — what started the scans, from the funnel ledger");
+
+const tmFunnel = (blocks) => ({ markets: blocks });
+const NOW_TM = Date.parse("2026-08-20T00:00:00Z");
+const dAgo = (d) => new Date(NOW_TM - d * 864e5).toISOString();
+
+test("no market carries the trigger column yet -> null, not an invented all-cron", () => {
+  const f = tmFunnel({ asx: { t: [dAgo(1), dAgo(0.5)] } });
+  assert.equal(triggerMix(f, NOW_TM, 7), null);
+});
+
+test("counts the window only, by category, '' as unstamped", () => {
+  const f = tmFunnel({
+    crypto: { t: [dAgo(9), dAgo(3), dAgo(2), dAgo(1)],
+              trigger: ["cron", "cron", "heartbeat", ""] },
+  });
+  const m = triggerMix(f, NOW_TM, 7);
+  assert.deepEqual(m, { cron: 1, manual: 0, heartbeat: 1, unknown: 1, total: 3 },
+    "the 9-day-old row is outside the 7d window");
+});
+
+test("a pre-migration market is silent, not a pile of unknowns", () => {
+  const f = tmFunnel({
+    asx: { t: [dAgo(1)] },                                   // no trigger column
+    crypto: { t: [dAgo(1)], trigger: ["cron"] },
+  });
+  const m = triggerMix(f, NOW_TM, 7);
+  assert.equal(m.total, 1, "only the stamped market counts");
+  assert.equal(m.unknown, 0);
+});
+
+test("mismatched lengths align from the END, where the fresh stamps are", () => {
+  // Three timestamps, two trigger entries, and the OLDEST timestamp is
+  // outside the window — chosen so front-alignment and end-alignment give
+  // DIFFERENT counts (a symmetric fixture let a front-aligned mutant pass).
+  // End-aligned: dAgo(2)->manual, dAgo(1)->heartbeat. Front-aligned would
+  // read dAgo(2)->heartbeat, dAgo(1)->unstamped.
+  const f = tmFunnel({
+    crypto: { t: [dAgo(9), dAgo(2), dAgo(1)], trigger: ["manual", "heartbeat"] },
+  });
+  const m = triggerMix(f, NOW_TM, 7);
+  assert.deepEqual(m, { cron: 0, manual: 1, heartbeat: 1, unknown: 0, total: 2 });
+});
+
+test("an all-outside-window ledger reads null — a mix of nothing is not a mix", () => {
+  const f = tmFunnel({ crypto: { t: [dAgo(30)], trigger: ["cron"] } });
+  assert.equal(triggerMix(f, NOW_TM, 7), null);
+});
+
+test("the sheet names what a self-heal IS when one shows up", () => {
+  assert.ok(SRC.includes("self-heal = the cron missed"),
+    "the heartbeat count must carry its meaning — a bare number reads as noise");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -154,6 +154,41 @@
     });
   };
 
+  // What started the scans (batch-100 WS-J): counts of the last-N-days
+  // publishes by trigger source, from the funnel ledger's `trigger` column
+  // (funnelhistory.py stamps cron / manual / heartbeat; "" = stamped before
+  // the column existed, or a local run). Returns null when NO market carries
+  // the column yet — a mix invented from absent data would read as "everything
+  // is cron", which is an answer, not an absence. Heartbeat matters most: each
+  // one is a self-heal dispatch spending the healer's 24/day budget, and a
+  // rising count is a dying cron wearing a green lamp.
+  const triggerMix = (funnel, nowMs, windowDays) => {
+    const mk = (funnel && funnel.markets) || {};
+    const start = nowMs - windowDays * 864e5;
+    const mix = { cron: 0, manual: 0, heartbeat: 0, unknown: 0, total: 0 };
+    let sawColumn = false;
+    Object.keys(mk).forEach((m) => {
+      const blk = mk[m] || {};
+      const ts = Array.isArray(blk.t) ? blk.t : [];
+      const tr = Array.isArray(blk.trigger) ? blk.trigger : null;
+      if (!tr) return;                 // pre-migration block: silent, not "unknown"
+      sawColumn = true;
+      // The migration pads the FRONT, so equal lengths align by index; if they
+      // ever differ, align from the END — the newest rows are the ones a
+      // 7-day window reads, and the tail is where fresh stamps land.
+      const off = ts.length - tr.length;
+      for (let i = 0; i < ts.length; i++) {
+        const v = Date.parse(ts[i]);
+        if (!isFinite(v) || v <= start || v > nowMs) continue;
+        const t = i - off >= 0 ? String(tr[i - off] || "") : "";
+        mix.total += 1;
+        if (t === "cron" || t === "manual" || t === "heartbeat") mix[t] += 1;
+        else mix.unknown += 1;
+      }
+    });
+    return sawColumn && mix.total ? mix : null;
+  };
+
   // TIME-WEIGHTED uptime: the share of the window during which the newest scan
   // was no older than `thrH`. Three properties make it honest rather than
   // decorative:
@@ -345,6 +380,19 @@
     h += row("Uptime · 7d", upVal(u7), upNote(u7, `measured on committed scans`));
     h += row("Uptime · 30d", upVal(u30),
       upNote(u30, u30 && u30.clamped && ledgerFrom ? `the ledger starts ${ledgerFrom}` : ""));
+    // Trigger mix (7d): hidden until the trigger column exists on some market
+    // — an invented "all cron" is worse than silence. Heartbeat count is the
+    // one to watch: every heal is a cron that failed to fire on its own.
+    const tm = triggerMix(STATE.funnel, now, 7);
+    if (tm) {
+      const bits = [`<b>${tm.cron} cron</b>`];
+      if (tm.manual) bits.push(`${tm.manual} manual`);
+      if (tm.heartbeat) bits.push(`<span class="sys-amber">${tm.heartbeat} self-heal</span>`);
+      if (tm.unknown) bits.push(`${tm.unknown} unstamped`);
+      h += row("Scan triggers · 7d", bits.join(" · "),
+        tm.heartbeat ? "self-heal = the cron missed and /api/heartbeat re-dispatched it"
+                     : "no self-heal dispatches — the crons are firing on their own");
+    }
 
     h += `<h3 class="sys-h">Scans by market</h3>`;
     if (!ages.length) {
@@ -468,5 +516,5 @@
 
   // Test hook only — the suite slices these out of the file and runs them.
   // Nothing on the page reads window.GBSStatus.
-  window.GBSStatus = { overall, uptime, bookState, cohort, mergeStamps, marketAges, agoText };
+  window.GBSStatus = { overall, uptime, bookState, cohort, mergeStamps, marketAges, triggerMix, agoText };
 })();
