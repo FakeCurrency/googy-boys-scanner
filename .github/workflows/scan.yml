@@ -72,6 +72,14 @@ on:
         description: "Extra args for scanner.run (e.g. --limit 12 for a quick test)"
         default: ""
         required: false
+      # Who dispatched this run (2026-08-20) — the heartbeat healer passes
+      # "heartbeat"; humans and the SCAN button leave the default. Stamped
+      # into funnel_history rows as `trigger` so scheduler-throttling and
+      # heal frequency become visible continuously instead of by audit.
+      reason:
+        description: "What dispatched this run (heartbeat healer passes 'heartbeat'; leave default)"
+        default: "manual"
+        required: false
 
 permissions:
   contents: write
@@ -325,6 +333,9 @@ jobs:
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
           # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
           ARGS: ${{ github.event.inputs.args }}
+          # What started this run — cron fire, heartbeat heal, or a human
+          # dispatch. funnelhistory.trigger_from_env() stamps it on the row.
+          SCAN_TRIGGER: ${{ github.event_name == 'schedule' && 'cron' || (github.event.inputs.reason == 'heartbeat' && 'heartbeat' || 'manual') }}
         run: |
           set +e
           MARKET="${{ github.event.inputs.market }}"

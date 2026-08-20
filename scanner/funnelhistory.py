@@ -31,11 +31,27 @@ sector-history backfill, which reconstructs — this file only ever RECORDS).
 """
 from __future__ import annotations
 
+import os
 import pathlib
 
 from . import config, output
 
-_COLS = ("scanned", "with_data", "published", "floor_killed", "arriving")
+_COLS = ("scanned", "with_data", "published", "floor_killed", "arriving", "trigger")
+
+# What started the scan (2026-08-20). Three values, matching how a run can
+# actually begin: a scheduled cron, a human/manual workflow_dispatch (the SCAN
+# button included), or the heartbeat healer's rescue dispatch. Anything else —
+# including a local `python -m scanner.run` with no env set — records "" (an
+# honest absence, never a guess).
+_TRIGGERS = ("cron", "manual", "heartbeat")
+
+
+def trigger_from_env() -> str:
+    """The SCAN_TRIGGER env var, validated. scan.yml/crypto_bot.yml derive it
+    from ``github.event_name`` (schedule -> cron, workflow_dispatch -> manual)
+    and heartbeat.js marks its own dispatches via the ``reason`` input."""
+    t = str(os.environ.get("SCAN_TRIGGER") or "").strip().lower()
+    return t if t in _TRIGGERS else ""
 
 
 def path_for(out_root: str | pathlib.Path) -> pathlib.Path:
@@ -43,8 +59,9 @@ def path_for(out_root: str | pathlib.Path) -> pathlib.Path:
         config, "SCAN_FUNNEL_HISTORY_FILE", "funnel_history.json")
 
 
-def row_from(vk: dict) -> dict:
-    """The five owner-named counts, derived from the published payload.
+def row_from(vk: dict, trigger: str | None = None) -> dict:
+    """The five owner-named counts, derived from the published payload, plus
+    what TRIGGERED the run (cron / manual / heartbeat, "" when unknown).
 
     Reads the SAME numbers the deck's funnel summary shows — ``scanned`` from
     the payload top level, the rest from ``vk["funnel"]`` — so the history can
@@ -57,6 +74,7 @@ def row_from(vk: dict) -> dict:
     def n(x):
         return int(x) if isinstance(x, (int, float)) and x == x else 0
 
+    t = str(trigger or "").strip().lower()
     return {
         "t": str((vk or {}).get("generated_at") or ""),
         "scanned": n((vk or {}).get("scanned")),
@@ -64,6 +82,7 @@ def row_from(vk: dict) -> dict:
         "published": n(f.get("setups")),
         "floor_killed": n(f.get("illiquid_setup")),
         "arriving": n(f.get("arriving")),
+        "trigger": t if t in _TRIGGERS else "",
     }
 
 
@@ -94,13 +113,27 @@ def load(out_root: str | pathlib.Path) -> dict:
     return d
 
 
-def append(market: str, vk: dict, out_root: str | pathlib.Path) -> pathlib.Path:
+def append(market: str, vk: dict, out_root: str | pathlib.Path,
+           trigger: str | None = None) -> pathlib.Path:
     """Append this publish's row for ``market`` and write atomically."""
     hist = load(out_root)
-    row = row_from(vk)
+    row = row_from(vk, trigger)
     blk = hist["markets"].setdefault(market, {})
     cap = int(getattr(config, "SCAN_FUNNEL_HISTORY_MAX", 2000) or 0)
     cols = ("t",) + _COLS
+    # SCHEMA MIGRATION, not corruption: a file written before the `trigger`
+    # column existed (2026-08-20) has full-length numeric columns and NO
+    # trigger array. Without this pad the truncate-to-shortest guard below
+    # would read the new 1-long column as "the shortest" and WIPE the entire
+    # history on the first post-upgrade scan. Pre-2026-08-20 rows get "" —
+    # trigger unknown — which is also what a local run records.
+    n_have = len(blk["t"]) if isinstance(blk.get("t"), list) else 0
+    tcol = blk.get("trigger")
+    if not isinstance(tcol, list):
+        tcol = []
+    if n_have and len(tcol) < n_have:
+        tcol = [""] * (n_have - len(tcol)) + tcol
+    blk["trigger"] = tcol
     for c in cols:
         seq = blk.get(c)
         if not isinstance(seq, list):

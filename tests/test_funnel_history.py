@@ -35,17 +35,84 @@ def _vk(scanned=2212, with_data=2120, setups=328, illiquid=299, arriving=9,
 
 # ── the row derives from the payload ─────────────────────────────────────────
 
-def test_the_row_is_exactly_the_five_owner_named_counts():
+def test_the_row_is_the_five_owner_named_counts_plus_the_trigger():
     row = fh.row_from(_vk())
     assert row == {"t": "2026-07-30T12:40:24+10:00", "scanned": 2212,
                    "with_data": 2120, "published": 328, "floor_killed": 299,
-                   "arriving": 9}
+                   "arriving": 9, "trigger": ""}
 
 
 def test_missing_and_non_numeric_fields_read_zero_not_crash():
     row = fh.row_from({"scanned": None, "funnel": {"setups": "x"}})
     assert (row["scanned"], row["published"], row["arriving"]) == (0, 0, 0)
     assert fh.row_from({})["with_data"] == 0
+
+
+# ── the trigger stamp (2026-08-20) ───────────────────────────────────────────
+
+def test_the_trigger_is_recorded_and_junk_is_an_honest_blank():
+    assert fh.row_from(_vk(), "cron")["trigger"] == "cron"
+    assert fh.row_from(_vk(), "manual")["trigger"] == "manual"
+    assert fh.row_from(_vk(), "heartbeat")["trigger"] == "heartbeat"
+    assert fh.row_from(_vk(), " CRON ")["trigger"] == "cron"       # workflow-side whitespace/case
+    assert fh.row_from(_vk(), "push")["trigger"] == ""              # never a guess
+    assert fh.row_from(_vk(), None)["trigger"] == ""
+
+
+def test_trigger_from_env_reads_and_validates_SCAN_TRIGGER(monkeypatch):
+    for val, want in (("cron", "cron"), ("manual", "manual"),
+                      ("heartbeat", "heartbeat"), ("Heartbeat", "heartbeat"),
+                      ("bogus", ""), ("", "")):
+        monkeypatch.setenv("SCAN_TRIGGER", val)
+        assert fh.trigger_from_env() == want, val
+    monkeypatch.delenv("SCAN_TRIGGER")
+    assert fh.trigger_from_env() == ""      # a local run records unknown, not a guess
+
+
+def test_the_trigger_round_trips_through_append_for_cron_and_manual(tmp_path):
+    fh.append("asx", _vk(ts="2026-08-20T01:00:00+00:00"), tmp_path, trigger="cron")
+    fh.append("asx", _vk(ts="2026-08-20T02:00:00+00:00"), tmp_path, trigger="manual")
+    fh.append("asx", _vk(ts="2026-08-20T03:00:00+00:00"), tmp_path, trigger="heartbeat")
+    d = json.loads((tmp_path / "funnel_history.json").read_text())
+    assert d["markets"]["asx"]["trigger"] == ["cron", "manual", "heartbeat"]
+
+
+def test_a_pre_trigger_file_is_PADDED_not_wiped(tmp_path):
+    # THE MIGRATION CASE, and the reason it is tested first against the shipped
+    # append(): a legacy file has full-length numeric columns and NO trigger
+    # array. The truncate-to-shortest corruption guard would read the new
+    # 1-long trigger column as "the shortest" and silently WIPE hundreds of
+    # rows of history on the first post-upgrade scan.
+    for ts in ("T01", "T02", "T03"):
+        fh.append("asx", _vk(ts=f"2026-08-19{ts}:00:00+00:00"), tmp_path, trigger="cron")
+    p = tmp_path / "funnel_history.json"
+    d = json.loads(p.read_text())
+    del d["markets"]["asx"]["trigger"]                 # simulate the pre-2026-08-20 file
+    p.write_text(json.dumps(d), encoding="utf-8")
+
+    fh.append("asx", _vk(ts="2026-08-20T01:00:00+00:00"), tmp_path, trigger="manual")
+    d = json.loads(p.read_text())
+    a = d["markets"]["asx"]
+    assert len(a["t"]) == 4, "history must survive the schema migration intact"
+    assert a["trigger"] == ["", "", "", "manual"], "old rows read unknown, never a guess"
+
+
+def test_run_py_passes_the_env_derived_trigger():
+    src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
+    assert "trigger=funnelhistory.trigger_from_env()" in src
+
+
+def test_the_workflows_set_SCAN_TRIGGER_and_scan_yml_declares_reason():
+    scan = (ROOT / ".github" / "workflows" / "scan.yml").read_text(encoding="utf-8")
+    crypto = (ROOT / ".github" / "workflows" / "crypto_bot.yml").read_text(encoding="utf-8")
+    hb = (ROOT / "functions" / "api" / "heartbeat.js").read_text(encoding="utf-8")
+    # scan.yml: cron for schedule fires, heartbeat when the healer said so,
+    # manual otherwise — and the `reason` input must be DECLARED or GitHub
+    # rejects the healer's dispatch outright (422), breaking the heal path.
+    assert "SCAN_TRIGGER:" in scan and "'cron'" in scan and "'heartbeat'" in scan
+    assert "reason:" in scan
+    assert "SCAN_TRIGGER:" in crypto
+    assert 'reason: "heartbeat"' in hb
 
 
 # ── append mechanics ─────────────────────────────────────────────────────────
@@ -139,7 +206,7 @@ def test_fence_2_nothing_in_scanner_or_broker_reads_the_file_back():
 def test_fence_3_run_py_appends_after_the_publish_not_before():
     src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
     publish = src.index("output.write_vivek_pair(vk, args.out, market_key)")
-    call = src.index("funnelhistory.append(market_key, vk, args.out)")
+    call = src.index("funnelhistory.append(market_key, vk, args.out,")
     assert call > publish, (
         "the history must record what was PUBLISHED - append after the publish")
 

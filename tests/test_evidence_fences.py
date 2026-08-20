@@ -116,7 +116,11 @@ def test_the_only_cross_module_calls_are_the_two_publish_hooks():
         text = p.read_text(encoding="utf-8")
         for mod in uses:
             uses[mod] |= set(re.findall(rf"\b{mod}\.(?!py\b)(\w+)", text))
-    assert uses["funnelhistory"] <= {"append"}, uses["funnelhistory"]
+    # trigger_from_env (2026-08-20) is allowed beside append because it is a
+    # WRITE-side stamp — it reads the SCAN_TRIGGER env var, never the artefact —
+    # so the property this fence defends (no helper reads the file back into a
+    # decision path) is untouched by it.
+    assert uses["funnelhistory"] <= {"append", "trigger_from_env"}, uses["funnelhistory"]
     assert uses["specgrad"] <= {"update"}, uses["specgrad"]
 
 

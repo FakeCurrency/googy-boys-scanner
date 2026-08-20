@@ -202,7 +202,9 @@ export async function onRequestGet(context) {
         "User-Agent": "googy-boys-scanner",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ref, inputs: { market } }),
+      // `reason` marks the row this dispatch produces as a HEAL in
+      // funnel_history (scan.yml declares the input; default "manual").
+      body: JSON.stringify({ ref, inputs: { market, reason: "heartbeat" } }),
       signal: ctrl.signal,
     });
 

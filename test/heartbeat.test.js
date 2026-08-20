@@ -140,6 +140,8 @@ const cases = [
     assert.equal(body.action, "dispatched");
     assert.equal(body.market, "asx");
     assert.equal(seenBody.inputs.market, "asx", "the dispatch is scoped to the stale market");
+    assert.equal(seenBody.inputs.reason, "heartbeat",
+      "the heal marks itself so funnel_history rows carry trigger=heartbeat");
   }],
 
   ["an invalid market silently falls back to all (unlike health.js's 400)", async () => {

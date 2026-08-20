@@ -222,7 +222,8 @@ def main() -> None:
             # failure is named and the scan walks on.
             try:
                 from . import funnelhistory
-                funnelhistory.append(market_key, vk, args.out)
+                funnelhistory.append(market_key, vk, args.out,
+                                     trigger=funnelhistory.trigger_from_env())
             except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
                 print(f"  WARNING funnel history append failed: {e.__class__.__name__}: {e}")
             if market_key in breadth_inputs:

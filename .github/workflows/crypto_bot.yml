@@ -189,6 +189,10 @@ jobs:
           GBS_SMTP_USER:       ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS:       ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO:        ${{ secrets.GBS_ALERT_TO }}
+          # What started this run (2026-08-20) — stamped into funnel_history
+          # rows as `trigger`. The heartbeat healer dispatches scan.yml, not
+          # this file, so here it is only ever cron or manual.
+          SCAN_TRIGGER: ${{ github.event_name == 'schedule' && 'cron' || 'manual' }}
         run: python -m scanner.run --market crypto $ARGS
 
       - name: Verify VIVEK data schema (crypto)
