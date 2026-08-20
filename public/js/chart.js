@@ -224,6 +224,22 @@
 
   const posId = params.get("pos");   // open-position id passed from the journal
 
+  // Held-plan passthrough (2026-08-20): he/hs/hd(+ht1/ht2/ht3) carry a real
+  // journal position's own entry/stop/direction/targets, set by journal.js's
+  // symCell/jr-new-row links. When present they override whatever the live
+  // scan or PhaseMap would otherwise guess for this ticker — see
+  // heldPlanFallback() below. Entry+stop are the minimum bar for "usable".
+  const heldPlan = (() => {
+    const n = (v) => { const x = parseFloat(v); return isFinite(x) ? x : null; };
+    const he = n(params.get("he")), hs = n(params.get("hs"));
+    if (he == null || hs == null) return null;
+    return {
+      entry: he, stop: hs,
+      tp1: n(params.get("ht1")), tp2: n(params.get("ht2")), tp3: n(params.get("ht3")),
+      dir: (params.get("hd") || "long").toLowerCase() === "short" ? "SHORT" : "LONG",
+    };
+  })();
+
   // Yahoo Finance tickers for scalp index/commodity instruments — the scanner's
   // internal symbol (NAS100, GOLD…) isn't what Yahoo uses. Shared shape with the
   // journal's map so live (~15-min delayed) quotes resolve consistently.
@@ -836,6 +852,72 @@
         // 4H parity with VIVEK charts (2026-07-03) — real 4H candles/SMAs
         // bucketed from live hourly history; silently absent when the live
         // feed can't serve hourly data.
+        return intradayP.then((intraday) => {
+          if (intraday && intraday.length >= 24) {
+            const h4 = bucketBars(intraday, 4 * 3600);
+            if (h4.length >= 6) d.timeframes["4H"] = barsToVivekTF(h4);
+          }
+          renderDataHonesty();
+          render(d);
+        });
+      })
+      .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
+  }
+
+  // ── Held-plan chart: a REAL journal position, not a live scan guess ────────
+  // Reached when the link carries he=/hs= (see `heldPlan` above, set by
+  // journal.js's chart links). Same real D/3D/W/4H history build as
+  // pmOnlyFallback, but the levels are the TRADE's own entry/stop/targets —
+  // never the live scan's current read on the ticker, which can be a
+  // different setup entirely (different entry, different direction, weeks
+  // apart) from the position actually sitting in the journal.
+  function heldPlanFallback(SYM, plan) {
+    const assetType = market === "crypto" ? "crypto" : null;
+    const isLong = plan.dir !== "SHORT";
+    // Headline single target for the footer's "Target" metric — TP2 when a
+    // ladder exists (same convention the live VIVEK chart uses), else
+    // whichever TP is actually on the trade.
+    const target = plan.tp1 != null || plan.tp2 != null || plan.tp3 != null
+      ? (plan.tp2 ?? plan.tp1 ?? plan.tp3) : null;
+    const risk = Math.abs(plan.entry - plan.stop);
+    const rr = (risk > 0 && target != null)
+      ? Math.round((Math.abs(target - plan.entry) / risk) * 100) / 100 : 0;
+    const d = {
+      symbol: String(SYM).toUpperCase(), name: SYM, asset_type: assetType,
+      price: null, grade: "", score: 0, score_max: 0, chips: [], sector: "",
+      currency_symbol: market === "asx" ? "A$" : "$",
+      tv_symbol: SYM, dir: isLong ? "LONG" : "SHORT",
+      entry: plan.entry, stop: plan.stop, target,
+      tp1: plan.tp1, tp2: plan.tp2, tp3: plan.tp3,
+      rr, low_rr: rr > 0 && rr < 1.5,
+      analysis: "Your position, as taken — entry/stop/target(s) from the journal, not a live scan read.",
+      default_tf: "1D", level_lines: [], timeframes: {},
+      _fallback: true, _vivek: false, _pm: false, _heldPlan: true,
+    };
+    // Level lines: SL red, ENTRY white, TPs green — same palette as the live
+    // VIVEK ladder. A single-target trade (no tp2/tp3) labels its one TP line
+    // "TARGET" rather than "TP1" so it doesn't imply a ladder that isn't there.
+    if (d.stop  != null) d.level_lines.push({ price: d.stop,  color: "#ff5b5b", title: "STOP" });
+    if (d.entry != null) d.level_lines.push({ price: d.entry, color: "#e5e9f0", title: "ENTRY" });
+    if (d.tp1   != null) d.level_lines.push({ price: d.tp1, color: "#2fd07f", title: (d.tp2 != null || d.tp3 != null) ? "TP1" : "TARGET" });
+    if (d.tp2   != null) d.level_lines.push({ price: d.tp2, color: "#2fd07f", title: "TP2" });
+    if (d.tp3   != null) d.level_lines.push({ price: d.tp3, color: "#2fd07f", title: "TP3" });
+
+    const liveDaily = () => (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "5y", "1d", true)
+      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true));
+    const intradayP = (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "2y", "1h")
+      : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
+    liveDaily()
+      .then((daily) => {
+        if (!daily || daily.length < 6) throw new Error("thin");
+        d.timeframes["1D"] = barsToVivekTF(daily);
+        const d3 = bucketBars(daily, 3 * 86400);
+        if (d3.length >= 6) d.timeframes["3D"] = barsToVivekTF(d3);
+        const wk = resampleWeekly(daily);
+        if (wk.length >= 6) d.timeframes["1W"] = barsToVivekTF(wk);
+        if (d.price == null) d.price = daily[daily.length - 1].close;
         return intradayP.then((intraday) => {
           if (intraday && intraday.length >= 24) {
             const h4 = bucketBars(intraday, 4 * 3600);
@@ -1746,11 +1828,22 @@
     }
     // Surface that this is a live-built chart rather than the saved scan view.
     // (VIVEK is always rendered live by design, so it doesn't get the badge.)
-    if (d._fallback && !d._vivek && !d._pm) {
+    // A held position gets its own badge below instead — "no saved scan chart"
+    // would be misleading here, since the reason has nothing to do with a
+    // missing scan.
+    if (d._fallback && !d._vivek && !d._pm && !d._heldPlan) {
       const note = document.createElement("span");
       note.className = "ct-fallback-note";
       note.textContent = "live fallback";
       note.title = "No saved scan chart for this ticker — showing recent history pulled live.";
+      const priceEl = $("#ct-price");
+      if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
+    }
+    if (d._heldPlan) {
+      const note = document.createElement("span");
+      note.className = "ct-fallback-note";
+      note.textContent = "your position";
+      note.title = "Entry/stop/target(s) shown are this trade's own numbers from the journal, not a live scan read.";
       const priceEl = $("#ct-price");
       if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
     }
@@ -2300,7 +2393,12 @@
     // stocks in the scalp universe stay on static scan data. VIVEK is a daily-200
     // SMA swing view, so it never switches into the intraday scalp stream (which
     // would recompute the BB/KC/EMA9/21 overlays we deliberately don't want here).
-    const pair = (!d._vivek && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
+    // Same carve-out for a held journal position (_heldPlan) and a PhaseMap-only
+    // chart (_pm): both already fetched real Daily/3D/Weekly/4H history above
+    // (pmOnlyFallback / heldPlanFallback) specifically so it could be shown —
+    // forcing the 15M/30M/1H live stream here discarded all of it and was the
+    // reason a crypto position's chart never opened on Daily (2026-08-20).
+    const pair = (!d._vivek && !d._heldPlan && !d._pm && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
     const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch, shadeSeries };
     wirePng(chart, d, () => curTF);   // #76: PNG export needs the live chart handle
 
@@ -3901,6 +3999,11 @@
     if (!symbol) { fail("No ticker specified."); return; }
     wireScanNav();
     wireBotPosBanner();
+    // A real journal position (he=/hs= on the link) always wins over whatever
+    // the live scan or PhaseMap would guess for this ticker — see heldPlan /
+    // heldPlanFallback above. Checked before the VIVEK/PhaseMap/live-fallback
+    // ladder below so a held trade never gets shown someone else's setup.
+    if (heldPlan) { heldPlanFallback(baseSymbol, heldPlan); return; }
     // VIVEK has no per-ticker static chart files — render the 200 SMA reaction
     // live (with the full 5.0 level ladder). Three-tier fallback so a ticker
     // link NEVER dead-ends (owner rule 2026-07-02 after a journal name whose

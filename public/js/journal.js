@@ -636,9 +636,31 @@
     const m = marketOf(t);
     return `<span class="jr-mkt jr-mkt-${m}" title="Market">${MKT_LABEL[m] || up(m)}</span>`;
   }
+  // Held-plan passthrough (2026-08-20): the chart never recomputes a trade's
+  // levels — it reads them from whatever it's given. Left to a bare s=/m=
+  // link it falls back to the LIVE scan's current guess for that ticker,
+  // which can be a totally different setup (different entry, different
+  // direction, weeks apart) from the position actually sitting in this
+  // journal. Pass the trade's own real entry/stop/targets/direction on the
+  // link so the chart it opens shows what was actually taken, not a fresh
+  // guess. Both bot and manual rows carry entry/stop/tp1-3 (chart.js's own
+  // Buy/Sell simulator writes tp1-3 on every "Me" row too), so one helper
+  // covers both sides.
+  function heldPlanQS(t) {
+    const n = (v) => (typeof v === "number" && isFinite(v)) ? v : null;
+    const he = n(t.entry), hs = n(t.stop);
+    if (he == null || hs == null) return "";
+    const ht1 = n(t.tp1), ht2 = n(t.tp2), ht3 = n(t.tp3);
+    const hd = String(t.direction || "long").toLowerCase() === "short" ? "short" : "long";
+    let qs = `&he=${he}&hs=${hs}&hd=${hd}`;
+    if (ht1 != null) qs += `&ht1=${ht1}`;
+    if (ht2 != null) qs += `&ht2=${ht2}`;
+    if (ht3 != null) qs += `&ht3=${ht3}`;
+    return qs;
+  }
   // Symbol cell links to the chart for that ticker, with market + setup chips after it.
   const symCell = (t) =>
-    `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal" title="Open ${up(t.symbol)} chart">` +
+    `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal${heldPlanQS(t)}" title="Open ${up(t.symbol)} chart">` +
     `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${reviewChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened / closed).
   function stamp(ms) {
@@ -1482,7 +1504,7 @@
         .sort((a, b) => b.ms - a.ms)
         .slice(0, 6);
       const rows = recent.map(({ t, ms }) =>
-        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&src=journal">
+        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&src=journal${heldPlanQS(t)}">
           ${dirChip(t.direction)}
           <b class="jr-new-sym">${esc(t.symbol)}</b>
           <span class="jr-new-entry">@ ${px(t.entry)}</span>
