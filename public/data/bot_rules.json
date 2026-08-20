@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-20T09:54:47Z",
+  "generated_at": "2026-08-20T10:53:09Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "min_grade": "A+",
   "min_rr": 1.5,
@@ -30,6 +30,10 @@
   "max_stop_pct": 25.0,
   "min_stop_pct": 1.0,
   "max_per_sector": 3,
+  "crypto_majors": [
+    "BTC",
+    "ETH"
+  ],
   "min_adv": {
     "asx": 250000,
     "nasdaq": 2000000,
