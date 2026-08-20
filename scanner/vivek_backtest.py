@@ -442,7 +442,7 @@ def _metrics(trades: list[dict]) -> dict:
     if not n:
         return {"n": 0, "win_rate": 0.0, "avg_r": 0.0, "expectancy_r": 0.0,
                 "profit_factor": None, "total_r": 0.0, "total_usd": 0.0,
-                "max_dd_usd": 0.0, "max_dd_open_usd": 0.0}
+                "max_dd_usd": 0.0, "max_dd_open_usd": 0.0, "mfe_zero_rate": 0.0}
     rs = [t.get("realized_r") or 0.0 for t in trades]
     ds = [_dollars(t) for t in trades]
     wins = [r for r in rs if r > 0]
@@ -476,6 +476,14 @@ def _metrics(trades: list[dict]) -> dict:
         peak = max(peak, cum)
         dd = min(dd, cum - peak)
         dd_open = min(dd_open, cum - peak)
+    # batch-100 item 49: the WRONG-FROM-ENTRY rate. The live book's whole
+    # rules-side bleed turned out to be stops whose MFE never cleared ~0 (the
+    # trade was never right, so no exit tuning could have saved it) - this
+    # publishes the same lens per bucket, so "is a pattern's loss an entry
+    # problem or an exit problem" is answerable from the evidence file.
+    # <= 0.01R: an excursion under a hundredth of a risk unit is noise, not
+    # a favourable move.
+    mfe_zero = sum(1 for t in trades if (t.get("mfe_r") or 0.0) <= 0.01)
     return {
         "n": n,
         "win_rate": round(100 * len(wins) / n, 1),
@@ -488,6 +496,7 @@ def _metrics(trades: list[dict]) -> dict:
         "total_usd": round(sum(ds), 2),
         "max_dd_usd": round(dd, 2),
         "max_dd_open_usd": round(dd_open, 2),
+        "mfe_zero_rate": round(mfe_zero / n, 3),
     }
 
 
@@ -497,10 +506,26 @@ def _split(trades: list[dict], key, values=None) -> dict:
 
 
 def aggregate(trades: list[dict]) -> dict:
+    # batch-100 items 47/48/50 (2026-08-20, ADDITIVE ONLY - nothing renamed or
+    # removed, no consumer changes): the blended per-pattern numbers answer a
+    # question nobody trades (the bot and the owner are long-only,
+    # allow_shorts: false), while the long-only FILE answers it on a different
+    # window. These blocks put long-only per-pattern/per-timeframe evidence
+    # INSIDE the canonical weekly file, so the tint decision (edge-research
+    # doc S5) can be made without choosing between two wrong files. The deck
+    # still reads what it always read; pointing it here is Vivek's call.
+    longs = [t for t in trades if t.get("direction") == "long"]
+    shorts = [t for t in trades if t.get("direction") == "short"]
     return {
         "overall": _metrics(trades),
         "by_entry_type": _split(trades, "entry_type", config.VIVEK_TRIGGER_PRIORITY),
+        "by_entry_type_long": _split(longs, "entry_type", config.VIVEK_TRIGGER_PRIORITY),
+        "by_direction_entry_type": {
+            "long": _split(longs, "entry_type", config.VIVEK_TRIGGER_PRIORITY),
+            "short": _split(shorts, "entry_type", config.VIVEK_TRIGGER_PRIORITY),
+        },
         "by_timeframe": _split(trades, "timeframe", list(TIMEFRAMES)),
+        "by_timeframe_long": _split(longs, "timeframe", list(TIMEFRAMES)),
         "by_market": _split(trades, "market"),
         "by_grade": _split(trades, "grade", ["A+", "A"]),
         "by_direction": _split(trades, "direction", ["long", "short"]),

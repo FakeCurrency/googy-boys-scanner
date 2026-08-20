@@ -483,3 +483,51 @@ def test_no_page_renders_a_dollar_figure_off_a_BACKTEST_artefact():
           "all, so they cannot be scaled to the real account by any factor. "
           "Render total_r / expectancy_r instead -- ratios carry across both "
           "sizing models, which is why every existing consumer uses them.")
+
+
+# ── batch-100 WS-F: the long-only evidence blocks (additive) ─────────────────
+
+def test_long_only_blocks_split_by_direction_correctly():
+    trades = [
+        _trade(direction="long", entry_type="reclaim", realized_r=1.0),
+        _trade(direction="long", entry_type="reclaim", realized_r=-0.5),
+        _trade(direction="short", entry_type="reclaim", realized_r=-2.0),
+        _trade(direction="long", entry_type="break", realized_r=0.3, timeframe="1W"),
+    ]
+    agg = bt.aggregate(trades)
+    lo = agg["by_entry_type_long"]
+    assert lo["reclaim"]["n"] == 2, "the short reclaim must not pollute the long block"
+    assert abs(lo["reclaim"]["expectancy_r"] - 0.25) < 1e-9
+    assert lo["break"]["n"] == 1
+    xt = agg["by_direction_entry_type"]
+    assert xt["long"]["reclaim"]["n"] == 2 and xt["short"]["reclaim"]["n"] == 1
+    assert abs(xt["short"]["reclaim"]["expectancy_r"] - (-2.0)) < 1e-9
+    assert agg["by_timeframe_long"]["1W"]["n"] == 1
+    assert agg["by_timeframe_long"]["1D"]["n"] == 2, "shorts excluded from the long TF block too"
+
+
+def test_the_new_blocks_are_ADDITIVE_nothing_renamed_or_removed():
+    # loadEntryQuality reads results.by_entry_type; every pre-existing block
+    # must survive byte-named so no consumer anywhere changes behaviour.
+    agg = bt.aggregate([_trade()])
+    for key in ("overall", "by_entry_type", "by_timeframe", "by_market",
+                "by_grade", "by_direction", "by_level_tf"):
+        assert key in agg, f"pre-existing block {key} vanished"
+    for key in ("by_entry_type_long", "by_direction_entry_type", "by_timeframe_long"):
+        assert key in agg, f"new evidence block {key} missing"
+
+
+def test_mfe_zero_rate_counts_wrong_from_entry_trades():
+    # The live-book lesson: a stop whose MFE never cleared ~0 was never right,
+    # so its loss is an ENTRY problem no exit tuning can fix. 0.01R is noise.
+    trades = [
+        _trade(realized_r=-1.0, mfe_r=0.0),      # straight to the stop
+        _trade(realized_r=-1.0, mfe_r=0.009),    # under the noise floor
+        _trade(realized_r=-1.0, mfe_r=0.3),      # was right, gave it back
+        _trade(realized_r=2.0, mfe_r=2.1),       # winner
+    ]
+    m = bt._metrics(trades)
+    assert abs(m["mfe_zero_rate"] - 0.5) < 1e-9
+    assert bt._metrics([])["mfe_zero_rate"] == 0.0
+    missing = bt._metrics([_trade(realized_r=1.0)])   # no mfe_r field at all
+    assert missing["mfe_zero_rate"] == 1.0, "an absent MFE reads 0.0 - counted, not skipped"
