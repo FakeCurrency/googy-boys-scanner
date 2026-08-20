@@ -1,0 +1,103 @@
+# Commit sentinel (2026-08-20) — the DETECTION half of branch protection.
+#
+# The 2026-08-20 incident (an integration wiping 6,662 lines on main) was
+# caught by luck: the commit happened to delete whole files, which happened to
+# fail CI loudly. A quieter edit — a few numbers changed in the bot book —
+# would have passed CI clean and nothing would have said a word. This tripwire
+# checks every push to main against the identities that legitimately write
+# here (the authenticated pusher AND each commit's author/committer email —
+# see scripts/commit_sentinel.py for the observed allowlist and its honest
+# limits) and alerts through the EXISTING Discord path on any mismatch.
+#
+# DETECTION ONLY, by owner-reviewed design: it never blocks, reverts or
+# otherwise acts on a commit. An anomaly is script exit 1 — that is CONTENT,
+# not a crash, so the run stays GREEN and the finding travels via Discord +
+# step summary (the evidence_brief.yml pattern: a red run about a fact the
+# run cannot change is the unactionable-alarm shape this repo mutes). Any
+# other exit code is a real crash and stays fatal.
+#
+# NOT in the `scan` concurrency group: that group serializes BOOK WRITERS and
+# keeps only one pending run — queueing every push here would evict real
+# scans (the exact 2026-07-28 eviction failure). This job writes nothing.
+# No assert_staged (commits nothing — same pinned family as confluence/
+# backfill/evidence_brief absences) and no WATCHDOG_RUNS entry (that rule
+# binds workflows that COMMIT data).
+#
+# No path filter, deliberately: the quiet-edit scenario this exists for IS a
+# data-file edit, so the ~20 daily scan-data pushes are checked like any
+# other. The job is checkout + one stdlib script — seconds per push.
+
+name: Commit sentinel
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sentinel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # stdlib-only by design — no pip install, nothing to cache.
+      - name: Inspect the push
+        id: inspect
+        run: |
+          set +e
+          python scripts/commit_sentinel.py "$GITHUB_EVENT_PATH" > sentinel.txt 2> sentinel.err
+          rc=$?
+          set -e
+          cat sentinel.txt
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+            echo "::error::commit_sentinel.py crashed (rc=$rc)"
+            cat sentinel.err
+            exit "$rc"
+          fi
+          if [ "$rc" -eq 1 ]; then
+            echo "anomaly=1" >> "$GITHUB_OUTPUT"
+            {
+              echo '```'
+              cat sentinel.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::unrecognized commit identity on main - see the step summary and Discord"
+          fi
+
+      # Same delivery as evidence_brief.yml — the one Discord path that is
+      # known to work (BOM-trimmed URL + named UA; see CLAUDE.md "ALERT
+      # DELIVERY"). A missing webhook degrades to the step summary rather
+      # than failing: the finding was still produced and recorded.
+      - name: Alert Discord
+        if: steps.inspect.outputs.anomaly == '1'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL not set - sentinel finding delivered to step summary only"
+            exit 0
+          fi
+          python - <<'EOF'
+          import json, os, urllib.request
+          # Same trim as scanner.config.clean_secret (inlined - the workflow
+          # must not depend on repo imports): the live webhook secret was
+          # pasted with a leading U+FEFF, which urllib rejects as an unknown
+          # url type. Ends only; interior bytes untouched.
+          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
+              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+          body = open("sentinel.txt", encoding="utf-8").read()[:1700]
+          msg = "WARNING commit sentinel - unrecognized identity pushed to main\n```\n" + body + "\n```"
+          req = urllib.request.Request(
+              url,
+              data=json.dumps({"content": msg}).encode(),
+              headers={"Content-Type": "application/json",
+                       "User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
+          urllib.request.urlopen(req, timeout=30)
+          EOF
