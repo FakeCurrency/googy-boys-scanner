@@ -42,8 +42,19 @@ const suite = (name) => console.log(`\n── ${name} ──`);
 
 const SRC = (f) => fs.readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8");
 
+// The three dispatch/sync endpoints import the REAL access-log helper
+// (2026-08-20). Its source is prepended, exports stripped, so the wrapped
+// handlers run with the shipped logging code rather than a stub — the
+// logging path is part of what these guards now exercise.
+const ACCESS_LOG_HELPER = SRC("_access_log.js")
+  .replace(/export\s+async\s+function/g, "async function")
+  .replace(/export\s+function/g, "function")
+  .replace(/export\s+const/g, "const");
+
 function loadModule(file, { strip = [], sandboxExtra = {} } = {}) {
   let source = SRC(file);
+  source = source.replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_access_log\.js";\s*$/m, "");
+  source = ACCESS_LOG_HELPER + "\n" + source;
   for (const [re, sub] of strip) source = source.replace(re, sub);
   const sandbox = {
     Response, Request, URL, TextEncoder, JSON, Math, Date, String, Number,
@@ -111,13 +122,21 @@ const jTests = async () => {
     }
   });
 
-  await test("a hit-GET writes NOTHING to KV — counting was burning the write quota", async () => {
+  await test("hit-GETs cost at most ONE KV write per IP per day — counting was burning the write quota", async () => {
+    // Was "zero writes" until 2026-08-20: the access log now writes a single
+    // coalesced `alog:seen:` marker per IP per UTC day (incident diagnosis —
+    // see _access_log.js). The property this test defends is unchanged:
+    // per-REQUEST counting on the poll path must never come back.
     const kv = fakeKV();
     const env = { JOURNAL_KV: kv };
     await jPut(env, H, { trades: [] });
     const before = kv.writes();
+    const alogBefore = kv.writes("alog:");
     for (let i = 0; i < 10; i++) await jGet(env, H);
-    assert.equal(kv.writes(), before, "10 successful GETs must cost zero KV writes");
+    assert.equal(kv.writes("alog:"), alogBefore + 1,
+      "10 successful GETs coalesce to exactly ONE alog:seen marker");
+    assert.equal(kv.writes() - kv.writes("alog:"), before - alogBefore,
+      "outside the access log, 10 successful GETs must cost zero KV writes");
   });
 
   await test("PUTs are still capped per hour", async () => {

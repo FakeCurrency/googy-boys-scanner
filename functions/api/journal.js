@@ -14,7 +14,14 @@
  *        Add binding:  Variable name = JOURNAL_KV  →  select the namespace.
  *   3. Redeploy. Until this binding exists, the app reports "sync not set up"
  *      and the Backup/Restore buttons still work as a manual fallback.
+ *
+ * Access-logged (2026-08-20) via _access_log.js — best-effort, never blocks
+ * sync. Successful GETs are COALESCED to one marker per IP per day because
+ * the page polls every 60s and per-request logging would burn the KV write
+ * quota this endpoint's own limiter comments document as scarce; PUTs,
+ * errors, misses and rate-limits are logged individually.
  */
+import { withAccessLog } from "./_access_log.js";
 
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
@@ -102,7 +109,7 @@ async function countMiss(env, request) {
   } catch (_) { /* fail-open */ }
 }
 
-export const onRequestGet = async ({ env, request }) => {
+export const onRequestGet = withAccessLog("/api/journal", async ({ env, request }) => {
   if (!env.JOURNAL_KV) {
     return json(503, { ok: false, configured: false,
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare (see functions/api/journal.js)." });
@@ -121,9 +128,9 @@ export const onRequestGet = async ({ env, request }) => {
   if (raw) { try { data = JSON.parse(raw); } catch (_) { data = null; } }
   else await countMiss(env, request);   // unknown code — brute-force signal
   return json(200, { ok: true, configured: true, data });
-};
+}, { coalesceOk: true });
 
-export const onRequestPut = async ({ env, request }) => {
+export const onRequestPut = withAccessLog("/api/journal", async ({ env, request }) => {
   if (!env.JOURNAL_KV) {
     return json(503, { ok: false, configured: false,
       message: "Cloud sync not set up — add a JOURNAL_KV namespace in Cloudflare." });
@@ -150,4 +157,4 @@ export const onRequestPut = async ({ env, request }) => {
 
   await env.JOURNAL_KV.put(await keyFor(code), serialized);
   return json(200, { ok: true, configured: true });
-};
+});

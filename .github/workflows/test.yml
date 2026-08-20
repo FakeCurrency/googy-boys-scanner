@@ -178,6 +178,12 @@ jobs:
       # prices crypto as <base>-USD (a bare base is a same-named EQUITY).
       - name: API guard rails (journal limiter / dispatch refunds / tick pricing, 17)
         run: node test/api_guards.test.js
+      # Endpoint access log (2026-08-20): the three unauthenticated endpoints
+      # write who-called-me envelopes to KV for incident diagnosis. Two pinned
+      # properties: a call gets logged, and a KV failure never blocks the
+      # underlying close/scan/journal action.
+      - name: Access log (logged calls / best-effort / coalesced polling, 13)
+        run: node test/access_log.test.js
       # STATUS control (2026-08-19, Session 1). The lamp is the only surface
       # that claims the system is healthy, so two of its promises are gated
       # here rather than remembered: it issues GET requests to published files

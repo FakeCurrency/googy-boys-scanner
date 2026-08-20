@@ -15,8 +15,12 @@
  * serial runs is ~half an hour behind the scan mutex; as one batch it is one
  * dispatch, one commit, one deploy, ~2 minutes for the lot. Batch is bot-book
  * only (the legacy swing/scalp journals have no batch path and never will).
+ *
+ * Access-logged (2026-08-20): every call's envelope goes to KV via
+ * _access_log.js — best-effort, never blocks the close. See that file.
  */
-export const onRequestPost = async ({ request, env }) => {
+import { withAccessLog } from "./_access_log.js";
+export const onRequestPost = withAccessLog("/api/close", async ({ request, env }) => {
   const token = env.GH_DISPATCH_TOKEN;
   const repo  = env.GH_REPO     || "FakeCurrency/googy-boys-scanner";
   const ref   = env.GH_REF      || "main";
@@ -121,7 +125,7 @@ export const onRequestPost = async ({ request, env }) => {
   };
 
   return dispatchClose(env, json, inputs, `ratelimit:close:${inputs.symbol}`, 1);
-};
+});
 
 // One dispatch path for both shapes (the single/batch split above is pure
 // validation). Guard rules unchanged from the 2026-07-09/07-29 design:

@@ -17,8 +17,13 @@
  *        GH_DISPATCH_TOKEN = <the token>
  *      (optionally GH_REPO and GH_WORKFLOW to override the defaults below).
  *   3. Redeploy. The SCAN button now kicks off a fresh scan.
+ *
+ * Access-logged (2026-08-20): every call's envelope goes to KV via
+ * _access_log.js — best-effort, never blocks the dispatch. See that file.
  */
-export const onRequestPost = async ({ env, request }) => {
+import { withAccessLog } from "./_access_log.js";
+
+export const onRequestPost = withAccessLog("/api/scan", async ({ env, request }) => {
   const token = env.GH_DISPATCH_TOKEN;
   const repo = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const workflow = env.GH_WORKFLOW || "scan.yml";
@@ -149,4 +154,4 @@ export const onRequestPost = async ({ env, request }) => {
   } finally {
     clearTimeout(timer);
   }
-};
+});
