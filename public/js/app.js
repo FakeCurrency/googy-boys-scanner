@@ -1240,6 +1240,39 @@
     return `<span class="row-held" title="The paper bot already holds this position — it is not a free-slot candidate">HELD</span>`;
   }
 
+  // SECTOR-CAP marking (2026-08-20, Task 10). bot_rules publishes
+  // max_per_sector (3) and decide() blocks entries once a market's open book
+  // holds that many of a sector — likely the single most common reason a
+  // specific A+ cannot be taken today, with nothing on the hunt screen saying
+  // so. sectorKeyOf mirrors vivek_bot._sector_key EXACTLY (lower-cased sector;
+  // crypto gets synthetic major/alt buckets off the published crypto_majors
+  // list; sector-less rows are EXEMPT from the cap and therefore never marked)
+  // so the display cannot disagree with what actually blocks the trade.
+  // Display-only, same posture as HELD: it marks rows, filters nothing, and
+  // the bot never sees it. A held row is skipped — it IS one of the counted
+  // positions, and HELD already says everything.
+  const sectorKeyOf = (symbol, sector, market, majors) => {
+    const s = String(sector || "").trim().toLowerCase();
+    if (s) return s;
+    if (market === "crypto") {
+      return majors && majors.has(String(symbol || "").toUpperCase())
+        ? "crypto-major" : "crypto-alt";
+    }
+    return "";
+  };
+  function sectorCapChip(r) {
+    const cap = state.sectorCap;
+    const load = state.sectorLoad && state.sectorLoad[state.market];
+    if (!cap || !load) return "";
+    const held = state.heldSyms && state.heldSyms[state.market];
+    if (held && held.has(String(r.symbol).toUpperCase())) return "";
+    const k = sectorKeyOf(r.symbol, r.sector, state.market, state.cryptoMajors);
+    const n = k ? (load[k] || 0) : 0;
+    if (!k || n < cap) return "";
+    return `<span class="row-secfull" title="The paper book already holds ${n} of ${cap} allowed positions in this sector (${esc(k)}) for ${state.market.toUpperCase()} — the bot would skip this entry with 'sector_cap' until one closes">SECTOR ${n}/${cap}</span>`;
+  }
+  const sectorCapped = (r) => sectorCapChip(r) !== "";
+
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
@@ -1284,14 +1317,17 @@
     // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
     // they crowd the A+ list. Toggled by the FUNDS DIMMED chip; hover/open restores.
     const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
-    return `<div class="row-wrap${dimCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
+    // Sector-at-cap rows dim GENTLY (their own class, not the funds toggle —
+    // a capped A+ is still a real setup, just not an available slot today).
+    const capCls = sectorCapped(r) ? " row-capdim" : "";
+    return `<div class="row-wrap${dimCls}${capCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}</div>
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
-          ${tfDots(r)}${changeMark(r)}${heldChip(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
+          ${tfDots(r)}${changeMark(r)}${heldChip(r)}${sectorCapChip(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
           ${mcapBadge}
           ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
@@ -2733,6 +2769,28 @@
       // wrong free-slot count and never to a blank scoreboard.
       const rules = await fetchT("data/bot_rules.json", { cache: "no-cache" })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      // SECTOR-CAP load (2026-08-20): per-market {bucket: open count} from the
+      // SAME book, bucketed the way decide() buckets (sectorKeyOf mirrors
+      // _sector_key; crypto majors come from the published rules). Missing
+      // rules degrade to "no marking", never to a wrong cap — the bookFacts
+      // posture. Repaints once if the load actually changed shape.
+      try {
+        const majors = new Set(((rules && rules.crypto_majors) || []).map((s) => String(s).toUpperCase()));
+        const cap = rules ? (+rules.max_per_sector || 0) : 0;
+        const load = {};
+        for (const p of (b.open || [])) {
+          if (!p || !p.market) continue;
+          const k = sectorKeyOf(p.symbol, p.sector, p.market, majors);
+          if (!k) continue;
+          (load[p.market] = load[p.market] || {})[k] = (load[p.market][k] || 0) + 1;
+        }
+        const changed = cap !== state.sectorCap
+          || JSON.stringify(load) !== JSON.stringify(state.sectorLoad || {});
+        state.cryptoMajors = majors;
+        state.sectorCap = cap;
+        state.sectorLoad = load;
+        if (changed && state.data) renderRows();
+      } catch (_) { /* marking is best-effort, same as HELD above */ }
       const evts = [];
       for (const p2 of b.open || []) {
         const t = Date.parse(p2.opened_at || "");

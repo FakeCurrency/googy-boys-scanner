@@ -2848,6 +2848,18 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   border-radius: 5px; padding: 2px 5px; white-space: nowrap;
 }
 .row-alert { font-size: 11px; line-height: 1; opacity: .85; flex-shrink: 0; }
+/* sector at cap (2026-08-20) — amber-bordered like a caution, quieter than a
+   warn chip: a capped A+ is a real setup, just not an available slot today. */
+.row-secfull {
+  font: 800 9px/1 var(--sans); letter-spacing: 0.06em;
+  color: var(--warn, #e8b04b);
+  border: 1px solid color-mix(in srgb, var(--warn, #e8b04b) 45%, transparent);
+  border-radius: 5px; padding: 2px 5px; white-space: nowrap; cursor: help;
+}
+/* gentler than .row-dim (its own class so the FUNDS DIMMED toggle can never
+   hide or restore it) — hover/open restores full strength like row-dim does */
+.row-capdim { opacity: .72; }
+.row-capdim:hover, .row-capdim:focus-within, .row-capdim[aria-expanded="true"] { opacity: 1; }
 
 /* #3: palette personal rows */
 .cp-ico.cp-mine { color: var(--amber, #ffb020); }

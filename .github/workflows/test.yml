@@ -184,6 +184,11 @@ jobs:
       # underlying close/scan/journal action.
       - name: Access log (logged calls / best-effort / coalesced polling, 13)
         run: node test/access_log.test.js
+      # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
+      # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
+      # so the display can never disagree with what actually blocks a trade.
+      - name: Sector-cap marking (bucket parity / chip rules / wiring, 14)
+        run: node test/sector_cap.test.js
       # STATUS control (2026-08-19, Session 1). The lamp is the only surface
       # that claims the system is healthy, so two of its promises are gated
       # here rather than remembered: it issues GET requests to published files

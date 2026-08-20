@@ -423,6 +423,11 @@ def main() -> None:
         "max_stop_pct": config.VIVEK_BOT_MAX_STOP_PCT,
         "min_stop_pct": config.VIVEK_BOT_MIN_STOP_PCT,
         "max_per_sector": config.VIVEK_BOT_MAX_PER_SECTOR,
+        # The synthetic crypto buckets _sector_key builds at decide time
+        # (majors -> "crypto-major", the rest -> "crypto-alt"). Published
+        # (2026-08-20) so the deck's sector-cap badge can reproduce the SAME
+        # bucketing the bot blocks on, instead of guessing at it.
+        "crypto_majors": list(config.VIVEK_BOT_CRYPTO_MAJORS),
         "min_adv": dict(config.VIVEK_BOT_MIN_ADV),
         "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
         "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
