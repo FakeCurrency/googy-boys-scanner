@@ -144,6 +144,8 @@ jobs:
         run: node test/contrast.test.js
       - name: Freshness-probe tests (/api/health per-market mode)
         run: node test/health.test.js
+      - name: Self-heal tests (/api/heartbeat per-market mode)
+        run: node test/heartbeat.test.js
       - name: Journal review-chip tests (heavy-position flag)
         run: node test/journal_review.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
