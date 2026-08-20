@@ -414,7 +414,14 @@ def _write_step_summary(result: dict, dry_run: bool) -> None:
         log.warning("kill-switch: could not write step summary: %s", e)
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
+    """The CLI kill_switch.yml runs. Extracted from the bare ``__main__``
+    block 2026-08-20 so the entrypoint the workflow actually invokes can be
+    driven by tests (the vivek_run.main / watchdog.main pattern) — the body
+    is the old block verbatim, plus an explicit ``return 0``: the run stays
+    GREEN even when the switch fires, per _write_step_summary's doctrine
+    (firing is the safety net WORKING; the summary + ::error:: annotation
+    are the signal, never a red job)."""
     import argparse
     logging.basicConfig(
         level=logging.INFO,
@@ -423,7 +430,7 @@ if __name__ == "__main__":
     )
     p = argparse.ArgumentParser(description="Run the daily-loss kill-switch check")
     p.add_argument("--dry-run", action="store_true", help="Log only, don't flatten")
-    args = p.parse_args()
+    args = p.parse_args(argv)
     _result = run_standalone(dry_run=args.dry_run)
     _write_step_summary(_result, args.dry_run)
     if _result.get("triggered"):
@@ -431,3 +438,8 @@ if __name__ == "__main__":
         # the job stays green. See _write_step_summary for why it stays green.
         print("::error::KILL SWITCH TRIGGERED for: "
               + ", ".join(_result["triggered"]))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
