@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Chart — Vivek 5.0</title>
+  <meta name="theme-color" content="#10141b" />
+  <script src="js/telemetry.js?v=1"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vivek 5.0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="favicon-32.png" />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-600.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-800.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=107" />
+  <link rel="stylesheet" href="css/chart.css?v=38" />
+  <script src="vendor/lightweight-charts-4.1.3.js"></script>
+  <script src="js/sw-register.js?v=4" defer></script>
+</head>
+<body class="chart-body">
+  <header class="chart-top">
+    <a class="back-link" href="index.html">← Dashboard</a>
+    <span class="ct-nav" id="ct-nav" hidden>
+      <button class="ct-nav-btn" id="ct-prev" type="button" title="Previous setup (←)" aria-label="Previous setup">‹</button>
+      <span class="ct-nav-pos" id="ct-nav-pos"></span>
+      <button class="ct-nav-btn" id="ct-next" type="button" title="Next setup (→)" aria-label="Next setup">›</button>
+    </span>
+    <span class="ct-sym" id="ct-sym">—</span>
+    <button class="ct-star" id="ct-star" type="button" hidden aria-pressed="false"
+      title="Add to watchlist — starred names stay monitored even after the setup ends" aria-label="Toggle watchlist">☆</button>
+    <span class="ct-market" id="ct-market" hidden title="Market this instrument is scanned in"></span>
+    <span class="badge sector" id="ct-sector" hidden></span>
+    <span class="ct-price" id="ct-price">—</span>
+    <span class="ct-live" id="ct-live" hidden>● LIVE</span>
+    <span class="ct-delayed" id="ct-delayed" hidden title="Yahoo Finance quotes are delayed ~15 minutes">~15m delayed</span>
+    <span class="ct-grade" id="ct-grade"></span>
+    <span class="badge dir" id="ct-dir" hidden>LONG</span>
+    <span class="ct-hiconv" id="ct-hiconv" hidden title="Weekly reclaim that's A/A+ or has strong structure — the best-performing setup in the backtest">🎯 HIGH CONVICTION</span>
+    <span class="ct-fundwarn" id="ct-fundwarn" hidden title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>
+    <span class="ct-divadj" id="ct-divadj" hidden></span>
+    <span class="ct-fundwarn" id="ct-datawarn" hidden></span>
+    <span class="ct-chips" id="ct-chips"></span>
+  </header>
+
+  <div class="offline-banner" id="offline-banner" hidden role="status">
+    <span class="ob-dot" aria-hidden="true"></span> Offline — showing the last loaded chart. Live prices and fresh scans pause until you reconnect.
+  </div>
+
+  <div class="tf-toggle" id="tf-toggle" role="tablist" aria-label="Timeframe"></div>
+
+  <main class="chart-main">
+    <div class="chart-skeleton" id="chart-skeleton" aria-hidden="true">
+      <div class="sk-bars">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="sk-msg">Loading chart…</div>
+    </div>
+    <div class="chart-legend" id="chart-legend"></div>
+    <div class="draw-tools" id="draw-tools" hidden>
+      <button class="draw-btn is-active" data-tool="cursor" type="button" title="Cursor / pan (Esc)">▱</button>
+      <button class="draw-btn" data-tool="trend" type="button" title="Trendline">╱</button>
+      <button class="draw-btn" data-tool="hline" type="button" title="Horizontal line">─</button>
+      <button class="draw-btn draw-alert" data-tool="alert" type="button" title="Price alert — tap a price to be notified when it's crossed; tap an existing alert line to remove it">🔔</button>
+      <button class="draw-btn draw-measure" data-tool="measure" type="button" title="Measure — drag between two points for % move &amp; time">📏</button>
+      <button class="draw-btn draw-erase" data-tool="erase" type="button" title="Eraser — click a drawing to delete it">⌫</button>
+      <button class="draw-btn draw-clear" id="draw-clear" type="button" title="Clear all drawings">✕</button>
+    </div>
+    <div class="chart-canvas" id="chart"></div>
+  </main>
+
+  <footer class="chart-foot">
+    <div class="cf-metrics" id="cf-metrics"></div>
+    <p class="cf-analysis" id="cf-analysis"></p>
+    <div class="cf-actions">
+      <span id="cf-lowrr"></span>
+      <button class="sim-btn sim-buy"  id="cf-sim-buy"  type="button">▲ Simulate Buy</button>
+      <button class="sim-btn sim-sell" id="cf-sim-sell" type="button" disabled>▼ Simulate Sell</button>
+      <span class="sim-status" id="cf-sim-status"></span>
+      <button class="tv-btn" id="cf-plan" type="button" title="Copy this timeframe's plan as one line of text — entry, SL, TPs, R:R">⧉ Plan</button>
+      <button class="tv-btn" id="cf-share" type="button" title="Copy a shareable link to this chart">⤴ Share</button>
+      <button class="tv-btn" id="cf-png" type="button" title="Download this chart as a PNG image">⭳ PNG</button>
+      <a class="tv-btn" id="cf-tv" target="_blank" rel="noopener">Open in TradingView ↗</a>
+    </div>
+    <div class="cf-mysize" id="cf-mysize" hidden></div>
+    <a class="sim-journal-link" id="cf-sim-journal" href="journal.html">View in My Trades journal →</a>
+    <p class="cf-tvnote" id="cf-tvnote" hidden></p>
+    <p class="cf-disclaimer">General information only — not financial advice.</p>
+  </footer>
+
+  <script src="js/gbs-sync.js?v=10"></script>
+  <script src="js/phasemap-shared.js?v=16"></script>
+  <script src="js/chart.js?v=95"></script>
+</body>
+</html>
