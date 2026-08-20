@@ -660,6 +660,14 @@
    quietest mark on the page — quieter than .jr-review (a decision to make) and
    far quieter than .jr-flip (the chart turned against a live position). The
    full explanation lives in the cell's title. */
+/* legacy-sized row's $ cell (2026-08-20) — deliberately the same volume as
+   .jr-stale: the dollars are still the truest record of what was held, they
+   are just a different scale from post-resize rows. Tooltip carries the why. */
+.jr-oldsize {
+  text-decoration: underline dotted var(--muted-2);
+  text-underline-offset: 3px;
+  cursor: help;
+}
 .jr-stale {
   color: var(--muted-2);
   text-decoration: underline dotted currentColor;

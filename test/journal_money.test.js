@@ -831,6 +831,59 @@ test("the mixed-book decider line carries the shape BESIDE the split, not instea
   assert.ok(h.indexOf("jr-decider") < h.indexOf("jr-mech"), "who first, how second");
 });
 
+// ── legacy-sizing marker (2026-08-20) ────────────────────────────────────────
+// The 2026-07-28 resize left CLOSED rows at their real historical size (~$256
+// avg notional) while everything current is $5,000 — the marker is the only
+// on-page admission that those dollars are a different scale. R is comparable;
+// dollars are not.
+suite("legacy sizing marker");
+
+const lctx = vm.createContext({ console });
+vm.runInContext(
+  "const esc = (s) => String(s);\n"
+  + slice("const legacySized = (t, side)", ";\n") + "\n"
+  + slice("const LEGACY_TIP =", ";\n") + "\n"
+  + slice("const legacyCell = (t, side)", ";\n") + "\n"
+  + "this.legacySized = legacySized; this.legacyCell = legacyCell; this.LEGACY_TIP = LEGACY_TIP;\n",
+  lctx);
+
+test("risk_pct and ABSENT sizing_mode both mark a BOT row; fixed_notional never does", () => {
+  assert.equal(lctx.legacySized({ sizing_mode: "risk_pct" }, "bot"), true);
+  assert.equal(lctx.legacySized({}, "bot"), true,
+    "absent = written before the field existed = the same pre-resize cohort");
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional" }, "bot"), false);
+});
+
+test("manual ('me') rows are hand-sized and NEVER marked", () => {
+  assert.equal(lctx.legacySized({ sizing_mode: "risk_pct" }, "me"), false);
+  assert.equal(lctx.legacySized({}, "me"), false);
+});
+
+test("the marked cell carries the class and the why, an unmarked cell carries neither", () => {
+  const m = lctx.legacyCell({ sizing_mode: "risk_pct" }, "bot");
+  assert.ok(m.cls.includes("jr-oldsize"));
+  assert.ok(m.tip.includes("not") && m.tip.includes("like-for-like"));
+  assert.ok(m.tip.includes("Compare R"), "the tip must say what IS comparable");
+  const clean = lctx.legacyCell({ sizing_mode: "fixed_notional" }, "bot");
+  assert.equal(clean.cls, ""); assert.equal(clean.tip, "");
+});
+
+test("both dollar cells consult it and the CSS class exists", () => {
+  // closed table + live open cells — a marker rendered in one table and not
+  // the other would read as two different claims about the same row.
+  const cells = (SRC.match(/legacyCell\(t, side\)/g) || []).length;
+  assert.ok(cells >= 3, `expected the closed $ cell and both open $ branches to consult it, saw ${cells}`);
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8");
+  assert.ok(/\.jr-oldsize\s*\{/.test(css), ".jr-oldsize has no CSS rule");
+});
+
+test("the marker is quiet by construction - no pulse, no colour override in its rule", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8");
+  const rule = css.match(/\.jr-oldsize\s*\{[^}]*\}/)[0];
+  assert.ok(!/animation|color\s*:/.test(rule),
+    "a legibility fix, not a warning - match the .jr-stale restraint");
+});
+
 test("journal.css gives BOTH previously-unstyled reasons a rule", () => {
   // Before this, .jr-reason-manual and .jr-reason-time did not exist, so the
   // bot's time-stop and the owner's click rendered as the same grey chip.

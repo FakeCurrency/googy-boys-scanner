@@ -696,13 +696,13 @@
       return {
         now: `<td class="${cls}" data-label="Now"${tip}>${now != null ? px(now) : "—"}</td>`,
         ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R">${ur != null ? rfmt(ur) : "—"}</td>`,
-        ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}" data-label="$">${ud != null ? d2(ud) : "—"}</td>`,
+        ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}${legacyCell(t, side).cls}" data-label="$"${legacyCell(t, side).tip}>${ud != null ? d2(ud) : "—"}</td>`,
       };
     }
     return {
       now: `<td class="num jr-now" data-label="Now" data-entry="${numAttr(t.entry)}" data-stop="${numAttr(t.stop)}" data-long="${esc(isLong)}" data-ru="${numAttr(t.risk_usd)}">…</td>`,
       ur: `<td class="num jr-ur" data-label="R">—</td>`,
-      ud: `<td class="num jr-ud" data-label="$">—</td>`,
+      ud: `<td class="num jr-ud${legacyCell(t, side).cls}" data-label="$"${legacyCell(t, side).tip}>—</td>`,
     };
   }
   // Now+R+$ as three adjacent cells (for the per-section tables).
@@ -860,6 +860,25 @@
     return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
+  // LEGACY SIZING marker (2026-08-20). The 2026-07-28 resize restated the OPEN
+  // book to fixed $5,000 notional but deliberately never touched CLOSED rows —
+  // they are the clean dollar record of what was really held (CLAUDE.md,
+  // RESIZE). Their dollars are therefore a different SCALE (~$256 average
+  // notional vs $5,000): the resize moved total open P&L by ~$800 while R did
+  // not move at all. R is comparable across the boundary; dollars are not.
+  // Bot-book rows only — `sizing_mode` is "fixed_notional" on every
+  // post-resize row, "risk_pct" on legacy-sized ones, and ABSENT on rows
+  // written before the field existed, which on the bot book is the same
+  // pre-resize cohort. Manual ("Me") rows are hand-sized; no marker.
+  // Deliberately the same volume as .jr-stale: a dotted underline + tooltip
+  // on the $ cell, no colour, no icon — a legibility fix, not a warning.
+  const legacySized = (t, side) => side === "bot" && t.sizing_mode !== "fixed_notional";
+  const LEGACY_TIP = "Sized under the pre-2026-07-28 rules (risk-% of the old equity, ~$250 notional)"
+    + " - this row's dollars are a different scale from current $5,000 rows and are not"
+    + " like-for-like. Compare R, not dollars.";
+  const legacyCell = (t, side) =>
+    legacySized(t, side) ? { cls: " jr-oldsize", tip: ` title="${esc(LEGACY_TIP)}"` } : { cls: "", tip: "" };
+
   // UX-20 #13: registry backing the per-row 📤 trade-card buttons — rebuilt on
   // every render so data-card="side:idx" always resolves to the row it sits on.
   const cardReg = { bot: [], me: [] };
@@ -962,11 +981,12 @@
     if (side) cardReg[side] = sorted;
     const rows = sorted.map((t, i) => {
       const d = dollarsOf(t);
+      const lg = legacyCell(t, side);
       return `<tr${i >= CLOSED_PREVIEW ? ' class="jr-row-more"' : ""}>
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
         <td class="num" data-label="R">${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
-        <td class="num ${d == null ? "" : pcls(d)}" data-label="$">${d == null ? "—" : d2(d)}</td>
+        <td class="num ${d == null ? "" : pcls(d)}${lg.cls}" data-label="$"${lg.tip}>${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
         <td data-label="Reason"><span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}">${esc(t.exit_reason || "manual")}</span>${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
