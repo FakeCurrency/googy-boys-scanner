@@ -189,6 +189,10 @@ jobs:
       # so the display can never disagree with what actually blocks a trade.
       - name: Sector-cap marking (bucket parity / chip rules / wiring, 14)
         run: node test/sector_cap.test.js
+      # Breadth stretch (batch-100 WS-E): the percentile the regime surfaces
+      # print is midrank-exact — a `<=` rank painted a flat tape STRETCHED.
+      - name: Regime breadth-stretch (midrank percentile / silence rules, 6)
+        run: node test/regime_stretch.test.js
       # STATUS control (2026-08-19, Session 1). The lamp is the only surface
       # that claims the system is healthy, so two of its promises are gated
       # here rather than remembered: it issues GET requests to published files

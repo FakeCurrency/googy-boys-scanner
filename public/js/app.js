@@ -1322,7 +1322,7 @@
     const capCls = sectorCapped(r) ? " row-capdim" : "";
     return `<div class="row-wrap${dimCls}${capCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
      <div class="row">
-      <div class="row-grade">${esc(r.grade)}</div>
+      <div class="row-grade">${esc(r.grade)}${r.grade_raw && r.grade !== r.grade_raw ? `<span class="rg-held" title="Displayed grade is HELD by hysteresis (smoothing) — the grade this scan actually earned is ${esc(r.grade_raw)}, and the bot buys grade_raw, not the badge.">°</span>` : ""}</div>
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>

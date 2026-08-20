@@ -92,6 +92,32 @@
   }
 
   // ── participation meters ───────────────────────────────────────────────────
+  // Breadth STRETCH (batch-100 WS-E). "67% above the 200-day" reads as a
+  // fact; against its own published history it reads as a position: the
+  // 2026-08-20 tide analysis measured that a plain reversion of breadth to
+  // its mean takes back over half the open book's unrealized R without one
+  // stop firing — so how stretched the tape is belongs beside the meter.
+  // Computed client-side from the SAME series the panel already ships;
+  // silent below 40 sessions (a percentile over a fortnight is a guess).
+  function stretchHTML(blk) {
+    const s = (blk.above200 || []).filter((v) => typeof v === "number" && isFinite(v));
+    const cur = (blk.latest || {}).above200;
+    if (s.length < 40 || typeof cur !== "number") return "";
+    const mean = s.reduce((a, b) => a + b, 0) / s.length;
+    // Midrank percentile: ties count half. A `<=` rank reads a FLAT series as
+    // being at its own 90th+ percentile, which is how a calm tape would get
+    // painted STRETCHED — found by test, not by reading.
+    const below = s.filter((v) => v < cur).length;
+    const equal = s.filter((v) => v === cur).length;
+    const pctl = Math.round(100 * (below + 0.5 * equal) / s.length);
+    const word = pctl >= 90 ? "STRETCHED" : pctl >= 70 ? "elevated"
+      : pctl <= 10 ? "washed out" : pctl <= 30 ? "soft" : "ordinary";
+    return `<div class="rg-stretch${pctl >= 90 ? " is-hot" : ""}" ` +
+      `title="Share of names above their 200-day, ranked inside this panel's own ${s.length}-session history. High percentile = most names already repaired = less fuel and more tide under the open book; the reversion-to-mean cost is what the journal's tide line prices.">` +
+      `breadth stretch: <b>${pct(cur)}</b> now vs <b>${pct(mean)}</b> ${s.length}-session mean · ` +
+      `<b>${pctl}th</b> percentile — ${word}</div>`;
+  }
+
   function metersHTML(blk) {
     const lat = blk.latest || {};
     const w = blk.windows || {};
@@ -183,6 +209,7 @@
           </div>
           ${divergenceHTML(blk)}
           ${metersHTML(blk)}
+          ${stretchHTML(blk)}
           ${rowsHTML(blk)}
           ${notesHTML(blk)}
           <p class="rg-src">${blk.covered} of ${blk.universe_size} names priced ·
@@ -213,7 +240,15 @@
       <div class="rg-strip-line">
         <span class="rg-strip-tag rg-${String(lat.state || "unknown").toLowerCase()}">${esc(st.tag)}</span>
         <span class="rg-strip-part"><b>${pct(lat.above200)}</b> above the
-          ${(blk.windows || {}).sma_slow || 200}-day</span>
+          ${(blk.windows || {}).sma_slow || 200}-day${(() => {
+            // the strip gets the percentile only — one number, hover for words
+            const s = (blk.above200 || []).filter((v) => typeof v === "number" && isFinite(v));
+            if (s.length < 40 || typeof lat.above200 !== "number") return "";
+            // midrank, same as stretchHTML — ties count half
+            const p = Math.round(100 * (s.filter((v) => v < lat.above200).length
+              + 0.5 * s.filter((v) => v === lat.above200).length) / s.length);
+            return ` <i class="rg-strip-pctl${p >= 90 ? " is-hot" : ""}" title="Percentile of today's breadth inside this panel's own ${s.length}-session history — high means stretched, and stretched is what the journal's tide line prices.">p${p}</i>`;
+          })()}</span>
         ${wide ? `<span class="rg-strip-div ${cls(lat.divergence)}"
           title="The median name against ${esc(blk.bench || "the index")} over the last month">
           median name <b>${sgn(lat.median_ret21)}</b> vs ${esc(blk.bench || "index")}

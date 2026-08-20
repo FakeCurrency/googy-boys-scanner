@@ -2864,6 +2864,10 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   border: 1px solid color-mix(in srgb, var(--warn, #e8b04b) 45%, transparent);
   border-radius: 5px; padding: 2px 5px; white-space: nowrap; cursor: help;
 }
+/* held-grade ring (batch-100 WS-G): the displayed grade is hysteresis-held,
+   not earned this scan — the bot buys grade_raw. A degree glyph, the softest
+   possible correction to a badge that is one notch generous. */
+.rg-held { font-size: 10px; vertical-align: super; opacity: .7; cursor: help; margin-left: 1px; }
 /* gentler than .row-dim (its own class so the FUNDS DIMMED toggle can never
    hide or restore it) — hover/open restores full strength like row-dim does */
 .row-capdim { opacity: .72; }

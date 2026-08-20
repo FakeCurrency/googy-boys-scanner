@@ -169,3 +169,18 @@
   .rg-panel { padding: 16px 14px; }
   .rg-strip-div { display: none; }
 }
+
+/* breadth stretch (batch-100 WS-E) — one quiet line under the meters, and a
+   tiny percentile chip on the strip. is-hot only at the 90th percentile:
+   the one state worth colour is "most names already repaired". */
+.rg-stretch {
+  margin: 6px 0 2px; font-size: 11.5px; color: var(--muted-2, var(--muted));
+  cursor: help;
+}
+.rg-stretch b { color: var(--text); font-weight: 600; }
+.rg-stretch.is-hot b { color: var(--warn, #e8b04b); }
+.rg-strip-pctl {
+  font: 600 10px/1 var(--mono, monospace); font-style: normal;
+  color: var(--muted-2, var(--muted)); cursor: help;
+}
+.rg-strip-pctl.is-hot { color: var(--warn, #e8b04b); }

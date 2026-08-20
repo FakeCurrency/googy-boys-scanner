@@ -147,5 +147,27 @@ test("run.py publishes crypto_majors from config — the deck never re-types the
   assert.ok(RUNPY.includes('"crypto_majors": list(config.VIVEK_BOT_CRYPTO_MAJORS)'));
 });
 
+console.log("\n── held-grade honesty (batch-100 WS-G) ──");
+
+test("a hysteresis-held grade carries the ring, an earned grade does not", () => {
+  const m = SRC.match(/\$\{r\.grade_raw && r\.grade !== r\.grade_raw \? `([^`]*)` : ""\}/);
+  assert.ok(m, "the row-grade cell must gate the ring on grade !== grade_raw");
+  assert.ok(m[1].includes("rg-held"));
+});
+
+test("the ring's tooltip says who buys what and embeds no live number", () => {
+  const at = SRC.indexOf("rg-held");
+  const tip = SRC.slice(at, at + 300);
+  assert.ok(/HELD by hysteresis/.test(tip), "must name the mechanism");
+  assert.ok(/bot buys grade_raw/.test(tip), "must say the bot ignores the badge");
+  assert.ok(!/\b\d{2,} (ASX|NASDAQ|rows)/.test(tip), "no live counts in a static tooltip");
+});
+
+test("the ring has a CSS rule and stays quiet (no animation, no colour claim)", () => {
+  const rule = CSS.match(/\.rg-held\s*\{[^}]*\}/);
+  assert.ok(rule, ".rg-held has no rule in styles.css");
+  assert.ok(!/animation|color\s*:/.test(rule[0]), "the softest possible correction - keep it that way");
+});
+
 console.log(`\nsector_cap.test.js: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
