@@ -502,7 +502,38 @@
     if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === "k") { e.preventDefault(); cpEl && !cpEl.hidden ? cpClose() : cpOpen(); }
   });
 
-  function init() { render(); renderFooter(); }
+  // Visible deploy stamp (2026-08-20, Task 14). version.json has carried a
+  // real deploy/schema stamp since 2026-08-13 and nothing on the live pages
+  // surfaced it — "which build am I looking at" needed devtools. One lazy
+  // fetch (cache: no-store, the same discipline telemetry.js is test-pinned
+  // to — a cached stamp is a stamp that cannot change), rendered small and
+  // dim in three quiet places: the bottom of the desktop MORE menu, the
+  // bottom of the mobile MORE sheet, and appended to the shared footer's
+  // credit line. Fails silent — no stamp is better than a wrong one.
+  function stampVersion() {
+    fetch("version.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => {
+        const ver = v && typeof v.version === "string" ? v.version : "";
+        if (!ver) return;
+        const mk = (cls) => {
+          const el = document.createElement("span");
+          el.className = cls;
+          el.textContent = `build ${ver}`;
+          el.title = "Deployed build (public/version.json — the skew stamp telemetry checks on focus)";
+          return el;
+        };
+        const menu = document.querySelector(".nav-more-menu");
+        if (menu) menu.appendChild(mk("nav-version"));
+        const sheet = document.querySelector(".more-sheet-list");
+        if (sheet) sheet.appendChild(mk("more-sheet-version"));
+        const foot = document.querySelector("footer.site-footer .credit");
+        if (foot) foot.append(` · ${ver}`);
+      })
+      .catch(() => {});
+  }
+
+  function init() { render(); renderFooter(); stampVersion(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();

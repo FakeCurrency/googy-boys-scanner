@@ -1684,6 +1684,14 @@ body { letter-spacing: -0.012em; }
 }
 .nav-more-item:hover { background: var(--fill); color: var(--text); }
 .nav-more-item.is-here { color: var(--blue); }
+/* deploy stamp (2026-08-20) — the quietest row in the menu/sheet: not a link,
+   not a control, just which build this tab is looking at. */
+.nav-version, .more-sheet-version {
+  padding: 8px 12px 4px; font: 500 10.5px/1 var(--mono, monospace);
+  color: var(--muted-2, var(--muted)); border-top: 1px solid var(--border);
+  margin-top: 4px; white-space: nowrap; cursor: default;
+}
+.more-sheet-version { text-align: center; padding: 12px 0 4px; }
 
 /* Bottom tab bar — the one-thumb mobile nav. Hidden on desktop. */
 .site-tabs { display: none; }

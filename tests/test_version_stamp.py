@@ -84,6 +84,22 @@ def stamp():
 # ---- shape ------------------------------------------------------------------
 
 
+def test_the_stamp_is_SURFACED_on_the_pages(stamp):
+    """Task 14 (2026-08-20): nav.js renders the stamp into the MORE menu, the
+    mobile MORE sheet and the shared footer. Two pinned properties: it reads
+    version.json with cache no-store (a cached stamp is a stamp that cannot
+    change inside a session - the same discipline telemetry.js is pinned to
+    below), and it renders textContent, never innerHTML (the stamp is data)."""
+    nav = (PUB / "js" / "nav.js").read_text(encoding="utf-8")
+    at = nav.index('fetch("version.json"')
+    window = nav[at:at + 200]
+    assert '"no-store"' in window, "the stamp fetch must bypass the HTTP cache"
+    fn = nav[nav.index("function stampVersion"):nav.index("function init()")]
+    assert "textContent" in fn and "innerHTML" not in fn
+    for cls in ("nav-version", "more-sheet-version"):
+        assert cls in fn, f"the {cls} surface disappeared"
+
+
 def test_version_json_is_valid_json_with_a_string_version(stamp):
     assert isinstance(stamp.get("version"), str)
 
