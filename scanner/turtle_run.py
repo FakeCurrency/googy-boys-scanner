@@ -23,7 +23,7 @@ import os
 import sys
 import zoneinfo
 
-from . import config, data, output, scanerrors, turtle, universe
+from . import config, data, output, scanerrors, turtle, turtle_book, universe
 
 MARKETS = ("asx", "nasdaq", "crypto")
 PERIOD = "5y"
@@ -123,10 +123,18 @@ def scan_market(market_key: str, limit: int | None = None,
 
     rows: list[dict] = []
     errors = scanerrors.ErrorLog(f"turtle [{market_key}]")
-    skipped_short = skipped_illiquid = 0
-    for yf_sym, df in frames.items():
-        info = yf_map.get(yf_sym)
-        if info is None or df is None or df.empty:
+    skipped_short = skipped_illiquid = skipped_no_data = 0
+    # ITERATE THE UNIVERSE, NOT THE DOWNLOAD (2026-08-21 incident). Walking
+    # `frames` made every name Yahoo failed to return INVISIBLE BY
+    # CONSTRUCTION: it was never in the dict, so the loop never saw it, no
+    # counter moved and no error was recorded. On 2026-08-21 a scheduled run
+    # got 5 of 101 crypto names back, evaluated ONE of them, and published
+    # `errors: 0`. Walking yf_map means a name that did not come back is
+    # counted rather than absent.
+    for yf_sym, info in yf_map.items():
+        df = frames.get(yf_sym)
+        if df is None or df.empty:
+            skipped_no_data += 1
             continue
         if len(df) < config.TURTLE_MIN_BARS:
             skipped_short += 1
@@ -148,7 +156,25 @@ def scan_market(market_key: str, limit: int | None = None,
 
     rows.sort(key=turtle.rank_key)
     published = rows[:config.TURTLE_MAX_ROWS]
-    errors.report(len(frames))
+    # Report against the UNIVERSE. Reporting against len(frames) meant a run
+    # that got 5 names back and threw on none of them printed a flawless 0/5.
+    errors.report(len(yf_map))
+
+    # THE COVERAGE FLOOR. A fresh file holding one name is indistinguishable
+    # from a fresh file holding forty-seven to anything that only checks age,
+    # which is every watchdog this repo has. So the run refuses to publish
+    # over a good file with a gutted one: same discipline as assert_staged.sh,
+    # applied to content instead of to staging.
+    covered = len(yf_map) - skipped_no_data
+    cover_pct = 100.0 * covered / len(yf_map) if yf_map else 0.0
+    if yf_map and cover_pct < config.TURTLE_MIN_COVERAGE_PCT:
+        raise RuntimeError(
+            f"[{market_key}] turtle: data coverage {cover_pct:.1f}% "
+            f"({covered} of {len(yf_map)} names returned usable bars) is below "
+            f"the {config.TURTLE_MIN_COVERAGE_PCT}% floor - REFUSING to publish. "
+            f"Yesterday's file is better than a gutted one. This is almost "
+            f"always upstream throttling; re-run rather than lowering the floor."
+        )
 
     tz = zoneinfo.ZoneInfo("Australia/Melbourne")
     payload = {
@@ -158,6 +184,8 @@ def scan_market(market_key: str, limit: int | None = None,
         "currency_symbol": cur,
         "universe_size": len(items),
         "evaluated": len(rows),
+        "skipped_no_data": skipped_no_data,
+        "data_coverage_pct": round(cover_pct, 1),
         "skipped_short_history": skipped_short,
         "skipped_illiquid": skipped_illiquid,
         "truncated": max(0, len(rows) - len(published)),
@@ -169,6 +197,8 @@ def scan_market(market_key: str, limit: int | None = None,
     path = os.path.join(OUT_DIR, f"{market_key}_turtle.json")
     output.write_json(path, payload, indent=1, ensure_ascii=False, newline=True)
     agg = payload["aggregate"]
+    print(f"[{market_key}] turtle: coverage {cover_pct:.1f}% "
+          f"({covered}/{len(yf_map)} priced, {skipped_no_data} no data)")
     print(f"[{market_key}] turtle: {len(rows)} names "
           f"({agg['long']}L/{agg['short']}S/{agg['flat']}F, "
           f"{agg['fired_today']} fired, {agg['approaching']} approaching) "
@@ -176,6 +206,21 @@ def scan_market(market_key: str, limit: int | None = None,
     print(f"[{market_key}] turtle record (in-sample, {period}): "
           f"{agg['trades']} trades, {agg['win_pct']}% win, "
           f"{agg['total_r']}R total, {agg['avg_r']}R average")
+
+    # THE FORWARD BOOK. Advanced from the rows we just published, on the same
+    # download, because the honest test of this thesis is the one that starts
+    # today and cannot have chosen its universe on outcomes it does not know.
+    # It never blocks the publish: a book failure must not cost the scan.
+    try:
+        b = turtle_book.update(market_key, rows)
+        bs = b["summary"]
+        print(f"[{market_key}] turtle BOOK (forward, since {bs['started']}): "
+              f"{bs['open_positions']} open / {bs['open_units']} units, "
+              f"{bs['closed']} closed, {bs['total_r']}R, "
+              f"equity {bs['equity']} of {bs['equity_start']}")
+    except Exception as e:                                       # noqa: BLE001
+        print(f"[{market_key}] WARNING turtle book update failed: "
+              f"{e.__class__.__name__}: {e}")
     return payload
 
 
@@ -203,6 +248,12 @@ def main(argv=None) -> int:
             # night with no ASX breakouts.
             failed.append(m)
             print(f"[{m}] turtle scan FAILED: {e.__class__.__name__}: {e}")
+    # The derived combined book, regenerated from whatever per-market files
+    # exist. Report-only, and it must never take the scan down with it.
+    try:
+        turtle_book.write_combined()
+    except Exception as e:                                       # noqa: BLE001
+        print(f"turtle: WARNING combined book failed: {e.__class__.__name__}: {e}")
     if failed:
         print(f"turtle: {len(failed)} market(s) failed: {', '.join(failed)}")
         return 1

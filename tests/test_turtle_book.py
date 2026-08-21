@@ -1,0 +1,273 @@
+"""TURTLE forward paper book (scanner/turtle_book.py), added 2026-08-21.
+
+The five-year replay cannot answer "does this work" -- its universe is today's
+listed names, so it was selected on outcomes the system could not have known.
+This book is the honest test: it starts flat, takes only what fires from the
+day it starts, and pays costs. These tests exist because a forward record that
+is quietly wrong is worse than no forward record at all -- it looks like
+evidence.
+"""
+from __future__ import annotations
+
+import json
+import pathlib
+
+import pytest
+
+from scanner import config, turtle_book as tb
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _isolated_book(tmp_path, monkeypatch):
+    """Never touch the real journal/ from a test run."""
+    monkeypatch.setattr(tb, "BOOK_DIR", str(tmp_path))
+    yield
+
+
+def row(sym, price, n, signal="", sector="Materials", o=None, h=None, l=None,
+        x1lo=None, x2lo=None, x1hi=1e9, x2hi=1e9, dvol=1e7):
+    o = price if o is None else o
+    h = price if h is None else h
+    l = price if l is None else l
+    return {"symbol": sym, "name": sym, "sector": sector, "price": price,
+            "n": n, "dvol": dvol, "signal": signal, "state": "flat",
+            "bar": {"o": o, "h": h, "l": l, "c": price},
+            "exits": {"x1_lo": x1lo if x1lo is not None else price * 0.5,
+                      "x2_lo": x2lo if x2lo is not None else price * 0.5,
+                      "x1_hi": x1hi, "x2_hi": x2hi}}
+
+
+# ---------------------------------------------------------------------------
+# it only ever takes what fires FROM NOW
+# ---------------------------------------------------------------------------
+
+def test_it_starts_flat_and_takes_only_what_fires():
+    """The whole point. A book that inherited the replay's open positions
+    would inherit the replay's survivorship with them."""
+    b = tb.update("asx", [row("AAA", 100.0, 2.0),           # no signal
+                          row("BBB", 50.0, 1.0, "s2_long")], day="2026-08-21")
+    assert [p["symbol"] for p in b["open"]] == ["BBB"]
+    assert b["started"] == "2026-08-21"
+
+
+def test_a_unit_is_one_percent_of_equity_per_N():
+    b = tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    pos = b["open"][0]
+    # 1% of $5,000 = $50 of risk per N; N = 2.0 -> 25 units
+    assert pos["units"] == pytest.approx(25.0)
+    assert pos["stop"] == pytest.approx(100.0 - config.TURTLE_STOP_N * 2.0)
+
+
+def test_the_entry_is_charged_a_fee_immediately():
+    b = tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    pos = b["open"][0]
+    assert pos["fees"] > 0, "a forward record without costs is a slower backtest"
+
+
+# ---------------------------------------------------------------------------
+# exits
+# ---------------------------------------------------------------------------
+
+def test_a_stop_is_taken_and_booked_net_of_fees():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 95.0, 2.0, o=98.0, h=99.0, l=95.0,
+                              x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    assert not b["open"] and len(b["closed"]) == 1
+    t = b["closed"][0]
+    assert t["reason"] == tb.STOP
+    assert t["exit"] == pytest.approx(96.0), "filled at the stop, not the close"
+    assert t["pnl"] < t["gross"], "fees always make the net worse"
+    assert t["r"] < t["gross_r"]
+
+
+def test_the_entering_system_owns_the_exit_channel():
+    """A System 2 position must not leave on the 10-day channel just because
+    that level arrives first."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    # 10-day low is 99 (would exit an S1 book); 20-day low is 90 (does not)
+    b = tb.update("asx", [row("AAA", 98.0, 2.0, h=100.0, l=98.0,
+                              x1lo=99.0, x2lo=90.0)], day="2026-08-22")
+    assert b["open"], "an S2 position must ignore the 10-day channel"
+    assert not b["closed"]
+
+
+def test_a_gap_through_the_stop_books_the_gap():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 80.0, 2.0, o=80.0, h=81.0, l=79.0,
+                              x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    assert b["closed"][0]["exit"] == pytest.approx(80.0), \
+        "you are filled at the gap, not at the stop you wanted"
+
+
+# ---------------------------------------------------------------------------
+# pyramiding
+# ---------------------------------------------------------------------------
+
+def test_adds_walk_the_shared_stop_up_under_the_whole_position():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 101.5, 2.0, o=100.5, h=101.9, l=100.0)],
+                  day="2026-08-22")
+    pos = b["open"][0]
+    assert len(pos["fills"]) == 2, "one rung reached at +1/2N = 101"
+    assert pos["stop"] == pytest.approx(pos["last_fill"] - config.TURTLE_STOP_N * 2.0)
+    assert pos["stop"] > 96.0, "the add dragged the first unit's stop up"
+
+
+def test_the_stop_an_add_raised_is_tested_on_the_same_bar():
+    """The engine bug this book must not inherit: a bar that adds a unit,
+    raising the shared stop, and then trades through that new stop."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 97.0, 2.0, o=101.0, h=104.0, l=97.0,
+                              x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    assert b["closed"], "the raised stop must be honoured on its own bar"
+    assert b["closed"][0]["reason"] == tb.STOP
+
+
+def test_a_position_never_exceeds_the_four_unit_ceiling():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 130.0, 2.0, o=100.5, h=130.0, l=100.0)],
+                  day="2026-08-22")
+    assert len(b["open"][0]["fills"]) <= config.TURTLE_MAX_UNITS
+
+
+# ---------------------------------------------------------------------------
+# the constraints the replay does not have
+# ---------------------------------------------------------------------------
+
+def test_the_book_CANNOT_SPEND_MORE_CASH_THAN_IT_HAS():
+    """The replay has no cash constraint and that is a real gap in it: crypto's
+    median unit is ~30% of a $5,000 account, so a four-unit position is ~119%
+    of the book. Impossible without margin, and the replay records it anyway.
+
+    This is also the finding a reader should take from the book: at 1% risk
+    per N, one unit routinely consumes a quarter to a half of a small cash
+    account, which is precisely the leverage the Turtles got from futures
+    margin and an equity account does not have.
+    """
+    rows = [row(f"S{i}", 10.0, 0.2, "s2_long") for i in range(12)]
+    b = tb.update("asx", rows, day="2026-08-21")
+    spent = sum(p["cost_basis"] for p in b["open"])
+    cap = config.TURTLE_BOOK_EQUITY * config.TURTLE_BOOK_MAX_NOTIONAL_PCT / 100.0
+    assert spent <= cap + 1e-6, f"spent {spent} against a {cap} account"
+    assert any("no cash" in e for e in b["events"]), "and it says why it stopped"
+
+
+def test_the_correlated_bucket_cap_is_ENFORCED_not_merely_displayed():
+    # tiny N relative to price -> small notional, so cash does not bind first
+    rows = [row(f"S{i}", 1.0, 0.5, "s2_long", sector="Materials") for i in range(10)]
+    b = tb.update("asx", rows, day="2026-08-21")
+    assert len(b["open"]) <= config.TURTLE_MAX_UNITS_CLOSE_CORR
+    assert any("correlated cap" in e for e in b["events"])
+
+
+def test_crypto_is_ONE_correlated_bucket_because_it_behaves_like_one_market():
+    rows = [row(f"C{i}", 1.0, 0.5, "s2_long", sector="") for i in range(10)]
+    b = tb.update("crypto", rows, day="2026-08-21")
+    assert len(b["open"]) <= config.TURTLE_MAX_UNITS_CLOSE_CORR, \
+        "pretending coins are uncorrelated is how a book holds one bet twelve times"
+
+
+def test_the_drawdown_rule_compounds_and_shrinks_the_next_unit():
+    b = tb.empty_book("asx")
+    b["closed"] = [{"pnl": -1000.0, "r": -1.0}]          # 20% down on 5,000
+    assert tb.realized_equity(b) == pytest.approx(4000.0)
+    assert tb.sizing_equity(b) == pytest.approx(4000.0 * 0.64), "two 10% steps"
+
+
+# ---------------------------------------------------------------------------
+# persistence
+# ---------------------------------------------------------------------------
+
+def test_the_book_survives_a_round_trip_and_keeps_accumulating():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    # 100.5 is below the +1/2N rung at 101, so AAA does not pyramid and eat
+    # the cash BBB needs -- the add path has its own tests.
+    tb.update("asx", [row("AAA", 100.5, 2.0), row("BBB", 20.0, 0.4, "s2_long")],
+              day="2026-08-22")
+    b = tb.load_book("asx")
+    assert {p["symbol"] for p in b["open"]} == {"AAA", "BBB"}
+    assert b["started"] == "2026-08-21", "the start date is never rewritten"
+
+
+def test_a_name_missing_from_todays_scan_is_carried_and_counted_unpriced():
+    """It must not be silently closed. A name that drops out of the scan is
+    unpriced, not exited -- inventing an exit price would fabricate a result."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [], day="2026-08-22")
+    assert len(b["open"]) == 1
+    assert b["open"][0]["unpriced_runs"] == 1
+    assert not b["closed"]
+
+
+def test_the_published_file_is_strictly_finite():
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    text = pathlib.Path(tb.book_path("asx")).read_text(encoding="utf-8")
+    assert "NaN" not in text and "Infinity" not in text
+    json.loads(text)
+
+
+def test_the_combined_view_is_derived_from_the_per_market_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(tb, "ROOT", str(tmp_path))
+    (tmp_path / "public" / "data").mkdir(parents=True)
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    tb.update("crypto", [row("BTC", 100.0, 2.0, "s2_long", sector="")], day="2026-08-21")
+    tb.write_combined()
+    c = json.loads(pathlib.Path(tb.BOOK_DIR, "turtle_book.json").read_text(encoding="utf-8"))
+    assert {p["symbol"] for p in c["open"]} == {"AAA", "BTC"}
+    assert set(c["by_market"]) == {"asx", "crypto"}
+    assert c["equity_start"] == pytest.approx(2 * config.TURTLE_BOOK_EQUITY)
+
+
+# ---------------------------------------------------------------------------
+# fences
+# ---------------------------------------------------------------------------
+
+def test_the_book_never_imports_the_paper_bot():
+    """The owner's standing requirement: Turtle stays completely separate --
+    own file, own slot pool, own equity, own sizing."""
+    src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
+    for line in src.splitlines():
+        if line.strip().startswith(("import ", "from ")):
+            assert "broker" not in line, f"imports the bot: {line}"
+            assert "vivek" not in line.lower(), f"imports VIVEK: {line}"
+
+
+def test_nothing_under_broker_knows_this_book_exists():
+    for p in (ROOT / "scanner" / "broker").rglob("*.py"):
+        assert "turtle" not in p.read_text(encoding="utf-8").lower(), \
+            f"the Turtle book must not reach the bot: {p}"
+
+
+def test_it_writes_only_its_own_files():
+    """Asked of the CODE, not of the file's text -- the module docstring
+    explains that it borrows the bot book's SHAPE, and a substring ban reads
+    that justification as the offence (the Tier 3 trap)."""
+    src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
+    code = [ln for ln in src.splitlines()
+            if ln.strip() and not ln.strip().startswith("#")]
+    # drop docstrings: everything between a line opening ''' and the next one
+    body, inside = [], False
+    for ln in code:
+        ticks = ln.count('"""')
+        if inside:
+            if ticks:
+                inside = False
+            continue
+        if ticks == 1:
+            inside = True
+            continue
+        if ticks >= 2:
+            continue
+        body.append(ln)
+    joined = "\n".join(body)
+    for forbidden in ("vivek_bot_book", "bot_rules", "sector_map",
+                      "alert_history", "scalp", "swing"):
+        assert forbidden not in joined, f"the Turtle book touches {forbidden}"
+
+
+def test_writes_are_atomic():
+    src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
+    assert "atomic_write" in src
+    assert "open(path, \"w\")" not in src, "project rule 7: temp + os.replace"

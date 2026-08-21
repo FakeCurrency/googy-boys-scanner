@@ -211,11 +211,11 @@ def test_a_breakout_that_never_moved_2N_against_is_a_WINNER_even_at_a_loss():
     sh = turtle._Shadow()
     # enter long: high 102 clears a 20-day high of 101, N = 2 -> stop 97
     sh.step(o=101.0, h=102.0, l=100.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
-            x1_lo=99.0, x1_hi=999.0, allow_shorts=True)
+            x1_lo=99.0, x1_hi=999.0)
     assert sh.active and sh.entry == 101.0 and sh.stop == pytest.approx(97.0)
     # leave via the 10-day channel at 99 -- a $2 LOSS that never touched 97
     sh.step(o=100.0, h=100.5, l=98.5, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
-            x1_lo=99.0, x1_hi=999.0, allow_shorts=True)
+            x1_lo=99.0, x1_hi=999.0)
     assert sh.active is False
     assert sh.last_was_winner is True, "no 2N adverse move == winner, by the rule"
 
@@ -223,21 +223,30 @@ def test_a_breakout_that_never_moved_2N_against_is_a_WINNER_even_at_a_loss():
 def test_a_breakout_stopped_at_2N_is_a_LOSER_and_reopens_system_one():
     sh = turtle._Shadow()
     sh.step(o=101.0, h=102.0, l=100.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
-            x1_lo=95.0, x1_hi=999.0, allow_shorts=True)
+            x1_lo=95.0, x1_hi=999.0)
     assert sh.stop == pytest.approx(97.0)
     sh.step(o=100.0, h=100.0, l=96.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
-            x1_lo=95.0, x1_hi=999.0, allow_shorts=True)
+            x1_lo=95.0, x1_hi=999.0)
     assert sh.last_was_winner is False
 
 
-def test_the_shadow_watches_both_directions_because_the_rule_says_the_market():
+def test_the_shadow_watches_both_directions_EVEN_IN_A_LONG_ONLY_RUN():
     """'the last breakout in that particular market, regardless of whether it
     was actually taken' -- so a DOWNSIDE breakout is still the last breakout
-    even for a book that only ever goes long."""
+    even for a book that only ever goes long.
+
+    Until 2026-08-21 the shadow took an allow_shorts flag and skipped short
+    breakouts when it was False, which quietly gave a long-only run a
+    DIFFERENT filter chain than the rules describe. The flag is gone: the
+    shadow is a property of the market, not of what you happen to trade.
+    """
     sh = turtle._Shadow()
     sh.step(o=99.0, h=100.0, l=98.0, n_prev=2.0, s1_hi=110.0, s1_lo=99.0,
-            x1_lo=0.0, x1_hi=999.0, allow_shorts=True)
+            x1_lo=0.0, x1_hi=999.0)
     assert sh.active and sh.dir == -1
+    import inspect
+    assert "allow_shorts" not in inspect.signature(turtle._Shadow.step).parameters, \
+        "the filter chain must not depend on which side you trade"
 
 
 def test_a_winning_prior_breakout_BLOCKS_the_next_system_one_entry():
@@ -252,8 +261,17 @@ def test_a_winning_prior_breakout_BLOCKS_the_next_system_one_entry():
     rep = turtle.replay(band(mids), allow_shorts=False)
     assert rep["s1_filter_known"] is True
     assert rep["s1_blocked"] is True, "the prior 20-day breakout was a filter-winner"
-    assert all(t["system"] != 1 for t in rep["trades"]), \
-        "no System 1 trade may be taken while the filter blocks"
+    # BOTH the closed trades AND the open position. Until 2026-08-21 this
+    # asserted over rep["trades"] only, so deleting the filter from the S1
+    # branch left the illicit entry sitting in rep["position"] and the test
+    # green -- the single most important rule in the system, guarded by
+    # nothing but a regex over source text.
+    entered = [t["system"] for t in rep["trades"]]
+    if rep["position"]:
+        entered.append(rep["position"]["system"])
+    assert entered, "the fixture must actually produce an entry to be meaningful"
+    assert 1 not in entered, \
+        "no System 1 entry may be taken while the filter blocks -- closed OR open"
 
 
 def test_the_55_day_FAILSAFE_takes_the_trade_system_one_was_not_allowed_to():
@@ -655,6 +673,45 @@ def test_crypto_is_in_the_runner_markets_unlike_specs():
     assert "crypto" in turtle_run.MARKETS
 
 
+def test_the_replay_starts_where_the_name_became_TRADEABLE():
+    """4.7: the gate was a TODAY gate on a FIVE-YEAR record.
+
+    Here a name is illiquid for its first 300 bars and liquid for the last
+    200. The old code replayed all 500 on the strength of this month's volume
+    -- which on a "today's top 100" universe means the biggest contributors
+    are exactly the names that grew into it. Only the liquid tail may count.
+    """
+    mids = [100.0] * 300 + list(ramp(101, 200)) + [200.0] * 100
+    df = band(mids)
+    df.iloc[:300, df.columns.get_loc("Volume")] = 1.0        # $100/day: unfillable
+    first, share = turtle.tradeable_from(df, "nasdaq")
+    assert first >= 300, "the illiquid head must not be tradeable"
+    assert 0.3 < share < 0.5, f"about 40% of the window was liquid, got {share}"
+
+    full = turtle.replay(df, allow_shorts=False)
+    gated = turtle.replay(df, allow_shorts=False, start_i=first)
+    assert len(gated["trades"]) <= len(full["trades"]), \
+        "gating can only ever remove trades from the record"
+    assert all(t["entry_date"] >= str(df.index[first])[:10] for t in gated["trades"])
+
+
+def test_build_row_publishes_how_much_of_the_window_was_fillable():
+    df = band([100.0] * 260 + ramp(101, 140) + [140.0] * 5)
+    row = turtle.build_row("T", {"name": "T"}, df, "nasdaq")
+    assert row is not None
+    assert row["liquid_share"] == pytest.approx(1.0), "a fully liquid name reads 1.0"
+
+
+def test_the_published_unit_numbers_do_not_understate_a_stop_out():
+    """A field called `unit_risk` that published HALF what a stop-out costs is
+    a trap. Two fields now: per-N, and the actual 2N loss."""
+    df = band([100.0] * 260 + ramp(101, 140) + [140.0] * 5)
+    row = turtle.build_row("T", {"name": "T"}, df, "nasdaq", equity=5000.0)
+    assert row["unit_risk_per_n"] == pytest.approx(50.0)
+    assert row["unit_stop_loss"] == pytest.approx(100.0)
+    assert "unit_risk" not in row, "the ambiguous name must be gone, not aliased"
+
+
 # ---------------------------------------------------------------------------
 # the whole publish path, end to end
 # ---------------------------------------------------------------------------
@@ -707,6 +764,59 @@ def test_scan_market_publishes_a_complete_payload(tmp_path, monkeypatch):
     text = out.read_text(encoding="utf-8")
     assert "NaN" not in text and "Infinity" not in text
     assert text.endswith("\n")
+
+
+def test_a_name_yahoo_never_returned_is_COUNTED_not_invisible(tmp_path, monkeypatch):
+    """The 2026-08-21 incident, pinned.
+
+    A scheduled run got 5 of 101 crypto names back from Yahoo, evaluated ONE,
+    and published `errors: 0`. The loop walked `frames`, so the 96 names that
+    never came back were invisible BY CONSTRUCTION -- not in the dict, never
+    iterated, no counter moved. Walking the universe instead is the fix.
+    """
+    universe = [{"symbol": f"T{i}", "name": f"T{i}", "sector": "", "yf": f"T{i}.AX"}
+                for i in range(10)]
+    # only 8 of 10 come back -- 80%, above the floor
+    frames = {f"T{i}.AX": band([100.0] * 260 + ramp(101, 130)) for i in range(8)}
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    payload = turtle_run.scan_market("asx")
+    assert payload["skipped_no_data"] == 2, "the two absent names must be counted"
+    assert payload["data_coverage_pct"] == pytest.approx(80.0)
+    assert payload["universe_size"] == 10
+
+
+def test_a_gutted_download_REFUSES_to_publish_over_a_good_file(tmp_path, monkeypatch):
+    """The coverage floor. Every watchdog here checks file AGE, so a fresh
+    file holding one name is indistinguishable from a healthy one -- which is
+    exactly how the incident went unreported. The run must raise instead."""
+    universe = [{"symbol": f"T{i}", "name": f"T{i}", "sector": "", "yf": f"T{i}.AX"}
+                for i in range(100)]
+    frames = {"T0.AX": band([100.0] * 260 + ramp(101, 130))}      # 1 of 100
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    with pytest.raises(RuntimeError, match="coverage"):
+        turtle_run.scan_market("crypto")
+    assert not (tmp_path / "crypto_turtle.json").exists(), \
+        "yesterday's file is better than a gutted one"
+
+
+def test_the_error_rate_is_reported_against_the_UNIVERSE(tmp_path, monkeypatch, capsys):
+    """`errors.report(len(frames))` meant a run that got 5 names back and threw
+    on none of them printed a flawless 0/5."""
+    universe = [{"symbol": f"T{i}", "name": f"T{i}", "sector": "", "yf": f"T{i}.AX"}
+                for i in range(10)]
+    frames = {f"T{i}.AX": band([100.0] * 260 + ramp(101, 130)) for i in range(8)}
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+    turtle_run.scan_market("asx")
+    out = capsys.readouterr().out
+    assert "coverage 80.0%" in out and "2 no data" in out
 
 
 def test_a_market_that_throws_is_reported_not_swallowed(monkeypatch, capsys):

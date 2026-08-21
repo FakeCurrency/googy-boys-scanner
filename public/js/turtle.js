@@ -53,6 +53,7 @@
   let EQUITY = FALLBACK.account_equity;
   let OPEN = null;               // expanded row symbol
   let TOUCHED = false;           // has the reader picked a view themselves?
+  let BOOK = null;               // the forward paper book, all markets
 
   // ── formatting ─────────────────────────────────────────────────────────────
   const num = (v, d) => (v == null || !isFinite(v) ? "—" : Number(v).toFixed(d == null ? 2 : d));
@@ -100,7 +101,15 @@
   const yearsTo = (mult, r) => (r <= 0 ? Infinity : Math.log(mult) / Math.log(1 + r));
 
   // ── data ───────────────────────────────────────────────────────────────────
+  function loadBook() {
+    return fetch("data/turtle_book.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((j) => { BOOK = j && j.summary ? j : null; return BOOK; });
+  }
+
   function load() {
+    loadBook();
     return fetch("data/" + MARKET + "_turtle.json", { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
@@ -560,6 +569,103 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       </section>`;
   }
 
+  // ── view: THE BOOK ─────────────────────────────────────────────────────────
+  // The forward record. This is the ONLY number on the page that will ever
+  // mean what it appears to mean: the five-year replay's universe is today's
+  // listed names, so it was selected on outcomes the system could not have
+  // known, and no amount of waiting fixes that. This book started flat, takes
+  // only what fires from the day it started, and pays costs.
+  function bookHTML() {
+    if (!BOOK) {
+      return '<p class="tt-empty">The forward book has not been written yet. ' +
+        "It is created by the first scan that runs after this feature shipped, " +
+        "and it accumulates from there.</p>";
+    }
+    const s = BOOK.summary || {};
+    const days = s.started ? Math.max(1, Math.round(
+      (Date.now() - Date.parse(s.started)) / 864e5)) : 0;
+    const mk = Object.keys(BOOK.by_market || {});
+    const open = (BOOK.open || []).slice().sort(
+      (a, b) => (b.fills || []).length - (a.fills || []).length);
+
+    const posRow = (p) => {
+      const sign = p.side === "short" ? -1 : 1;
+      const avg = p.units ? p.cost_basis / p.units : 0;
+      const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
+        (P.stop_n * p.n * p.units) : null;
+      return "<tr><td class=\"mono\">" + esc(p.symbol) + "</td><td>" +
+        esc((p.market || "").toUpperCase()) + "</td><td>" + esc(p.side) +
+        " S" + esc(String(p.system)) + '</td><td class="mono">' +
+        (p.fills || []).length + "u</td><td class=\"mono\">" + num(avg, 4) +
+        '</td><td class="mono">' + num(p.stop, 4) + '</td><td class="mono ' +
+        cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
+    };
+
+    let h = `
+      <section class="tt-card">
+        <h3>The forward book — the only honest number here</h3>
+        <div class="tt-detail-grid">
+          ${kv("Running since", esc(s.started || "—") + (days ? " (" + days + "d)" : ""))}
+          ${kv("Equity", money(s.equity) + " of " + money(s.equity_start))}
+          ${kv("Return", (s.return_pct == null ? "—" :
+            '<span class="' + cls(s.return_pct) + '">' + pct(s.return_pct, 2) + "</span>"))}
+          ${kv("Open", big(s.open_positions) + " positions / " + big(s.open_units) + " units")}
+          ${kv("Closed", big(s.closed) + (s.win_pct == null ? "" : " · " + pct(s.win_pct) + " won"))}
+          ${kv("Total", '<span class="' + cls(s.total_r) + '">' + sgnR(s.total_r) + "</span>")}
+          ${kv("Average trade", sgnR(s.avg_r))}
+          ${kv("Median trade", sgnR(s.median_r))}
+          ${kv("Fees paid", money(s.fees_paid))}
+          ${kv("Sizing off", money(s.sizing_equity))}
+        </div>
+        <p class="tt-note">${s.closed
+          ? "Small samples say very little. A trend system's result is carried by a handful of trades, so read the MEDIAN beside the average and treat anything under a few dozen closes as noise."
+          : "Nothing has closed yet, so there is no result to read. That is the honest state of a forward test on day " + days + " — it cannot be hurried, and it is the reason the five-year replay exists as context rather than as evidence."}</p>
+      </section>`;
+
+    if (mk.length) {
+      h += `<section class="tt-card"><h3>By market</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Market</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
+        <tbody>${mk.map((m) => {
+          const b = BOOK.by_market[m] || {};
+          return "<tr><td>" + esc(m.toUpperCase()) + '</td><td class="mono">' +
+            money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
+            '</td><td class="mono">' + big(b.closed) + '</td><td class="mono ' +
+            cls(b.total_r) + '">' + sgnR(b.total_r) + "</td></tr>";
+        }).join("")}</tbody></table></div></section>`;
+    }
+
+    if (open.length) {
+      h += `<section class="tt-card"><h3>Open positions</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
+        <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
+        <tbody>${open.map(posRow).join("")}</tbody></table></div>
+        <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
+        recent unit. The book cannot spend more cash than it has — which on a
+        ${money(s.equity_start, 0)} account binds fast, because at ${(P.risk_pct * 100).toFixed(0)}%
+        risk per N a single unit routinely costs a quarter to a half of the
+        account. That is exactly the leverage the Turtles had from futures margin
+        and a cash equity account does not.</p></section>`;
+    }
+
+    const closed = (BOOK.closed || []).slice(-25).reverse();
+    if (closed.length) {
+      h += `<section class="tt-card"><h3>Closed, most recent first</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Side</th><th>Reason</th><th>R</th>
+        <th>P&amp;L</th><th>Fees</th><th>Opened</th><th>Closed</th></tr></thead>
+        <tbody>${closed.map((t) => "<tr><td class=\"mono\">" + esc(t.symbol) +
+          "</td><td>" + esc(t.side) + "</td><td>" + esc(t.reason) +
+          '</td><td class="mono ' + cls(t.r) + '">' + sgnR(t.r) +
+          '</td><td class="mono ' + cls(t.pnl) + '">' + money(t.pnl) +
+          '</td><td class="mono">' + money(t.fees) + "</td><td>" + esc(t.opened) +
+          "</td><td>" + esc(t.closed) + "</td></tr>").join("")}
+        </tbody></table></div></section>`;
+    }
+    return h;
+  }
+
   // ── view 4: EVIDENCE ───────────────────────────────────────────────────────
   function evidenceHTML() {
     const start = EQUITY, target = 10e6;
@@ -663,7 +769,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
 
   // ── shell ──────────────────────────────────────────────────────────────────
   const VIEWS = [
-    ["rules", "THE RULES"], ["signals", "SIGNALS"],
+    ["signals", "SIGNALS"], ["book", "BOOK"], ["rules", "THE RULES"],
     ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
   ];
 
@@ -693,6 +799,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!body) return;
     body.innerHTML = VIEW === "rules" ? rulesHTML()
       : VIEW === "signals" ? signalsHTML()
+      : VIEW === "book" ? bookHTML()
       : VIEW === "sizing" ? sizingHTML()
       : evidenceHTML();
     const eq = document.getElementById("tt-equity");

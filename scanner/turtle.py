@@ -181,6 +181,13 @@ class _Shadow:
     the only thing it publishes is whether the last resolved breakout was a
     winner.
 
+    IT WATCHES BOTH DIRECTIONS EVEN IN A LONG-ONLY RUN. The rule is a property
+    of the MARKET -- "the last breakout in that particular market, regardless
+    of whether it was actually taken" -- so a downside breakout is still the
+    last breakout for a book that never shorts. Gating this on allow_shorts
+    (as it was until 2026-08-21) quietly made a long-only run use a different
+    filter chain than the rules describe.
+
     "Loser" means the 2N stop was hit, exactly as the rules define it, NOT
     "exited below entry". A breakout that drifts sideways and leaves at the
     10-day channel a few cents down is a WINNER for filter purposes and
@@ -197,7 +204,7 @@ class _Shadow:
         self.dir = 0
         self.last_was_winner: bool | None = None
 
-    def step(self, o, h, l, n_prev, s1_hi, s1_lo, x1_lo, x1_hi, allow_shorts):
+    def step(self, o, h, l, n_prev, s1_hi, s1_lo, x1_lo, x1_hi):
         if self.active:
             if self.dir > 0:
                 if _finite(self.stop) and l <= self.stop:
@@ -215,7 +222,7 @@ class _Shadow:
             self.entry = max(s1_hi, o)
             self.stop = self.entry - config.TURTLE_STOP_N * n_prev
             self.dir, self.active = 1, True
-        elif allow_shorts and _finite(s1_lo) and l < s1_lo:
+        elif _finite(s1_lo) and l < s1_lo:
             self.entry = min(s1_lo, o)
             self.stop = self.entry + config.TURTLE_STOP_N * n_prev
             self.dir, self.active = -1, True
@@ -258,7 +265,8 @@ def _book(pos: dict, exit_px: float, reason: str, i: int, dates: list) -> dict:
     }
 
 
-def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None:
+def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None,
+           start_i: int | None = None) -> dict | None:
     """Walk the frame bar by bar under the full rule set.
 
     Returns the closed trades, the open position if any, the filter state, and
@@ -307,7 +315,14 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
     shadow = _Shadow()
     trades: list[dict] = []
     pos: dict | None = None
+    # `start_i` is the first bar the name was actually TRADEABLE (see
+    # liquidity()). Without it the replay credits a name with five years of
+    # history on the strength of this month's volume -- which on a market
+    # whose universe is "today's top 100" means the biggest contributors are
+    # precisely the names that grew INTO it.
     start = max(config.TURTLE_S2_ENTRY, config.TURTLE_N_PERIOD) + 1
+    if start_i is not None:
+        start = max(start, int(start_i))
     signal_today = ""
     added_today = 0
 
@@ -319,7 +334,7 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
 
         # ---- the filter's shadow, always, independent of the real book ----
         shadow.step(o[i], h[i], lo[i], n_prev, s1_hi[i], s1_lo[i],
-                    x1_lo[i], x1_hi[i], allow_shorts)
+                    x1_lo[i], x1_hi[i])
 
         if pos is None:
             if not (_finite(n_prev) and n_prev > 0):
@@ -432,11 +447,23 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
     # ---- what the next bar can do -------------------------------------
     i = len(df) - 1
     n_now = float(nn[i]) if _finite(nn[i]) else float("nan")
+    # Today's bar and the CURRENT exit channels, published on every row
+    # whatever the replay's own state is. The forward paper book keeps its own
+    # positions with its own fills and stops, so it needs the raw bar and the
+    # levels -- not the replay's opinion about a position it did not take.
     out = {
         "bars": len(df),
         "close": float(cl[i]),
         "date": dates[i],
         "n": n_now,
+        "bar": {"o": float(o[i]), "h": float(h[i]),
+                "l": float(lo[i]), "c": float(cl[i])},
+        "exits": {
+            "x1_lo": float(df["Low"].iloc[-config.TURTLE_S1_EXIT:].min()),
+            "x1_hi": float(df["High"].iloc[-config.TURTLE_S1_EXIT:].max()),
+            "x2_lo": float(df["Low"].iloc[-config.TURTLE_S2_EXIT:].min()),
+            "x2_hi": float(df["High"].iloc[-config.TURTLE_S2_EXIT:].max()),
+        },
         "trades": trades,
         "s1_blocked": shadow.last_was_winner is True,
         "s1_filter_known": shadow.last_was_winner is not None,
@@ -584,17 +611,45 @@ def liquidity(df: pd.DataFrame, market: str) -> tuple[float, bool]:
     if not np.isfinite(dvol):
         dvol = 0.0
     floor_dv = config.TURTLE_MIN_DVOL.get(market, 0.0)
-    return dvol, bool(np.isfinite(px) and px >= floor_px and dvol >= floor_dv)
+    ok = bool(np.isfinite(px) and px >= floor_px and dvol >= floor_dv)
+    return dvol, ok
+
+
+def tradeable_from(df: pd.DataFrame, market: str) -> tuple[int, float]:
+    """(first bar the name met the liquidity floor, share of bars that did).
+
+    The gate used to be a TODAY gate on a FIVE-YEAR record: it correctly kept
+    unfillable names off the published list, and then let their entire
+    history into the backtest anyway. A coin that was untradeable for four of
+    its five years contributed all five on the strength of this month's
+    volume, and on a "today's top 100" universe those are exactly the names
+    that grew into it.
+
+    Returns the index of the first bar whose trailing dollar volume cleared
+    the floor -- the replay starts there -- and the share of bars that did,
+    which is published so a name carried by a short liquid window is visible
+    rather than merely excluded.
+    """
+    floor_dv = config.TURTLE_MIN_DVOL.get(market, 0.0)
+    if floor_dv <= 0 or "Volume" not in df.columns:
+        return 0, 1.0
+    look = config.TURTLE_DVOL_LOOKBACK
+    dv = (df["Close"] * df["Volume"]).rolling(look, min_periods=1).mean()
+    liquid = (dv >= floor_dv).to_numpy()
+    share = float(liquid.mean()) if len(liquid) else 0.0
+    idx = int(np.argmax(liquid)) if liquid.any() else len(df)
+    return idx, share
 
 
 def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
               equity: float | None = None) -> dict | None:
     """One published row: state, the exact numbers to act on, and the record."""
-    rep = replay(df)
-    if rep is None:
-        return None
     dvol, liquid = liquidity(df, market)
     if not liquid:
+        return None
+    first_liquid, liquid_share = tradeable_from(df, market)
+    rep = replay(df, start_i=first_liquid)
+    if rep is None:
         return None
     n = rep["n"]
     if not (np.isfinite(n) and n > 0):
@@ -611,8 +666,13 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
         "n": round(n, 8),
         "n_pct": round(100.0 * n / price, 2) if price > 0 else None,
         "dvol": round(dvol, 0),
+        # What share of the window this name was actually fillable in. A
+        # record built on a short liquid tail is visible rather than implied.
+        "liquid_share": round(liquid_share, 3),
         "state": rep["state"],
         "signal": rep["signal"],
+        "bar": rep["bar"],
+        "exits": rep["exits"],
         "added_today": rep["added_today"],
         "s1_blocked": rep["s1_blocked"],
         "s1_filter_known": rep["s1_filter_known"],
@@ -623,7 +683,11 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
         # and not a claim about anybody's book.
         "unit_shares": round(shares, 6),
         "unit_notional": round(shares * price, 2),
-        "unit_risk": round(config.TURTLE_RISK_PCT * equity, 2),
+        # Two numbers, because one called "risk" that was half the loss is a
+        # trap: 1% of equity is what one unit risks per 1N, and a unit taken
+        # out at its own 2N stop costs twice that.
+        "unit_risk_per_n": round(config.TURTLE_RISK_PCT * equity, 2),
+        "unit_stop_loss": round(config.TURTLE_RISK_PCT * config.TURTLE_STOP_N * equity, 2),
         "record": rep["record"],
         "position": rep["position"],
         "triggers": rep["triggers"],

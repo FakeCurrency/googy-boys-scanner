@@ -1628,6 +1628,33 @@ TURTLE_APPROACH_PCT = 3.0
 # Set to 0 to reproduce a frictionless replay.
 TURTLE_COST_BPS = 15.0
 
+# THE FORWARD PAPER BOOK (turtle_book.py). Completely separate from the
+# VIVEK paper bot: own file, own equity, own slot pool, own sizing. The
+# five-year replay cannot answer "does this work" -- its universe is today's
+# listed names, so it was selected on outcomes the system could not have
+# known -- and waiting will not make it answerable. A forward book starts
+# flat, takes only what fires from the day it starts, and pays costs.
+TURTLE_BOOK_EQUITY = 5_000.0
+
+# Cash constraint, as a percentage of realised equity. 100 = no leverage.
+# The replay has NO equivalent and that is a real gap in it: crypto's median
+# unit is ~30% of a $5,000 account, so a four-unit position is ~119% of the
+# book -- impossible without margin, and the replay records it anyway. A
+# forward book without this would inherit the flaw it exists to escape.
+TURTLE_BOOK_MAX_NOTIONAL_PCT = 100.0
+
+# Minimum share of a market's universe that must come back with usable bars
+# before the scan is allowed to publish. Below this the run RAISES and leaves
+# the previous file in place.
+#
+# The 2026-08-21 incident is why: a scheduled run got 5 of 101 crypto names
+# back from Yahoo, evaluated one, and published `errors: 0`. Every watchdog in
+# this repo checks file AGE, so a fresh file holding one name looked exactly
+# like a healthy one. 60% is deliberately loose - Yahoo routinely drops a few
+# percent and the recovery sweep usually reclaims them - so anything that
+# trips this is a real outage, not a bad afternoon.
+TURTLE_MIN_COVERAGE_PCT = 60.0
+
 # Rows published per market. The full ASX universe throws off far more
 # breakouts than a page can show; ranking is by proximity to the level and
 # then by liquidity, and the payload states how many were dropped.

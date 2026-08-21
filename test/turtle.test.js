@@ -249,6 +249,8 @@ test("fetches published data files and nothing else", () => {
   const built = [...CODE.matchAll(/fetch\(\s*"([^"]*)"\s*\+/g)].map((m) => m[1]);
   const all = urls.concat(built);
   assert.ok(all.length > 0, "no fetch call sites found — did the extractor break?");
+  assert.ok(all.some((u) => u.indexOf("turtle_book") >= 0),
+    "the forward book must be fetched -- it is the only honest number here");
   all.forEach((u) => {
     assert.ok(u.startsWith("data/"), `turtle.js fetches ${u}`);
     assert.ok(!u.includes("/api/"), `turtle.js reaches an endpoint: ${u}`);

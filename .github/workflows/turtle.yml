@@ -121,7 +121,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          PATHS="public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json"
+          # The forward book is committed too -- it is the ONLY artefact here
+          # that accumulates. Lose it and the honest test restarts from zero.
+          PATHS="public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json public/data/turtle_book.json journal/turtle_book.asx.json journal/turtle_book.nasdaq.json journal/turtle_book.crypto.json journal/turtle_book.json"
           # One pathspec per git add: `git add a b` is ALL-OR-NOTHING and exits
           # 128 staging NEITHER when one path is missing (Tier 3). A
           # single-market dispatch legitimately leaves two of the three absent.
@@ -140,7 +142,7 @@ jobs:
           # per-market crons legitimately leave two of the three files
           # untouched, so asserting all three would turn a correct run red.
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "$SCHEDULE" = "30 9 * * *" ]; then
-            bash scripts/assert_staged.sh "turtle" $PATHS
+            bash scripts/assert_staged.sh "turtle" public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json
           fi
           if git diff --cached --quiet; then
             echo "No turtle changes to commit."
