@@ -14,7 +14,8 @@ Australia). Brand name everywhere: **Vivek 5.0** — never "Googy Boys
 Scanner", never "Vivek's Beta Scanner" as the primary name ("BETA SCANNER"
 as a subtitle under the wordmark is fine).
 
-**The three lenses** (see ROADMAP.md for the honest project state):
+**The lenses** (see ROADMAP.md for the honest project state). Three feed the
+confluence machinery; the fourth, TURTLE, is deliberately outside it:
 
 1. **VIVEK** (`scanner/vivek.py` + `scan.py`) — the core lens. Price
    *reacting* at its 200-SMA on Weekly / 3-Day / Daily(H4-proxy) levels.
@@ -29,6 +30,11 @@ as a subtitle under the wordmark is fine).
 3. **Specs** (`scanner/spec.py` via `spec_run.py`) — the discovery lens.
    Sub-$0.50 names breaking out of a base on a ≥3× volume spike. Its own
    backtest says it's a shortlist generator, NOT an entry system.
+4. **TURTLE** (`scanner/turtle.py` via `turtle_run.py`) — the reference lens,
+   added 2026-08-21. The 1983 Dennis/Eckhardt breakout system implemented from
+   the Original Turtle Trading Rules. **NOT a confluence lens and not in any
+   signal path** — it has its own tab, its own nightly workflow and no reader
+   anywhere else in the tree. See the TURTLE section below.
 
 **Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
 agreements get banners everywhere, Discord pings (`scanner/confluence_alert.py`,
@@ -110,6 +116,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary + Discord (owner-ruled 2026-08-01). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + Discord WARNING (evidence_brief pattern), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
+| turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. Pins: `tests/test_turtle.py` |
 | alert_returns.yml | daily 22:20 UTC | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) → a SUNDAY-ONLY Discord digest of the report head (BOM-trim + named UA per 2026-08-01; missing webhook degrades, never reds). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
@@ -1997,6 +2004,108 @@ meant** — the failure mode that survives review because the value looks fine.
    the safe path (drop the dir probe, lean on WATCHDOG_RUNS's run-history
    probe — which deliberately goes SILENT on a failed latest run, a real
    trade-off on a CRITICAL alarm) needs the owner's sign-off.
+
+## TURTLE — the fourth lens (2026-08-21)
+
+The 1983 Dennis/Eckhardt breakout system, on its own tab at `/turtle.html`.
+Owner asked for "a separate set of RULES on a separate TAB", and *separate* is
+the load-bearing word: this lens is outside the confluence machinery, outside
+the paper book, and outside every signal path in the repo. `scanner/turtle.py`
+(engine) + `turtle_run.py` (runner) + `turtle.yml` (nightly) +
+`public/{turtle.html,js/turtle.js,css/turtle.css}`.
+
+1. **IT IS BUILT FROM THE ORIGINAL RULES, NOT THE POPULAR SHORT VERSION, AND
+   THE DIFFERENCE IS TWO RULES.** (a) **The System 1 filter**: a 20-day
+   breakout is SKIPPED when the previous breakout in that market would have
+   been a winner — where "loser" means *price moved 2N against it before a
+   profitable 10-day exit*, so a trade that drifted out slightly below entry
+   without ever going 2N offside counts as a WINNER and blocks the next entry.
+   It counts every breakout the market printed, taken or skipped, and it is
+   **direction-agnostic** (a losing short enables the next long): one
+   chronological chain per market. (b) **The 55-day failsafe**: System 2 is
+   never filtered, so a blocked System 1 signal is picked up at 55 days.
+   Both are pinned by named tests. Dropping (a) turns System 1 into a plain
+   Donchian channel that takes every whipsaw in a range.
+2. **The engine is a deterministic REPLAY, and it has to be.** The filter is a
+   function of the market's own breakout history, so "is today's 20-day
+   breakout takeable" cannot be answered without walking the bars that precede
+   it. A `_Shadow` runs beside the real position taking every 20-day breakout
+   to keep that memory. Having paid for the walk, the replay also yields each
+   name's own record under these rules, which is what the SIGNALS rows show.
+3. **`indicators.atr(df, 20)` IS N.** The rules' `N = (19*PDN + TR)/20` is
+   Wilder smoothing at period 20, which is exactly what that function computes,
+   so `compute_n` calls it rather than re-typing the recurrence. Do not "fix"
+   it to a rolling mean: N sets the size, the stop AND the pyramid spacing, so
+   the two smoothings diverge three times over. (Also 20 periods, not 14.)
+4. **A full four-unit position risks 5% of the account, not 2%, 4% or 8%** —
+   entries at 0/+½N/+1N/+3⁄2N, one shared stop ½N BELOW the breakout, so the
+   units lose ½N+1N+1½N+2N = 5N. Left on their own 2N stops it would be 8N.
+   That halving is the entire purpose of the ½N stop raise. Pinned in BOTH
+   `tests/test_turtle.py` and `test/turtle.test.js` because the page PRINTS
+   the figure, and 2% and 4% are both plausible-looking wrong answers (a
+   research pass produced the 4% one).
+5. **Channels are `.shift(1)`.** A 20-day high that includes today's own high
+   can never be exceeded by it. Entry tests are strictly `>`, so a flat band
+   never breaks out; `>=` would fire every day in a dead range. Both pinned.
+6. **Fences, test-enforced**: nothing under `scanner/broker/` may mention
+   turtle; `turtle_run` has exactly one `write_json` and may not name the book,
+   the bot rules, `sector_map` or `journal/`; no TURTLE_ constant may reach
+   `bot_rules.json`; `turtle.js` fetches `data/` only, writes no storage, and
+   reads no other lens's file. The freeze is untouched by construction.
+7. **The page is four views and THREE OF THEM NEED NO DATA** — RULES, SIZING
+   and EVIDENCE render from constants and from what you type, because a rules
+   reference that goes blank on a failed fetch is not a reference. Only
+   SIGNALS needs the scan file and it says so when absent.
+8. **`turtle.js` carries a hand-typed mirror of the config constants** as its
+   offline fallback — the risk_manager.js `PUBLISHED_DEFAULTS` shape that
+   drifted for months (TOP100 #34). `test/turtle.test.js` parses the real
+   `config.py` and fails on any mismatch, plus asserts every `P.<key>` the
+   renderers read exists in the mirror. A published `params` block always wins
+   over it, key by key.
+9. **The EVIDENCE view exists because the ask was "5k to 10M".** It states the
+   arithmetic (2,000x = 7.60 natural logs; ~12.9 years at the Turtles' reported
+   80%, ~29 at a very good 30%) and the part usually left out: Dennis was down
+   ~55% by April 1988 and shut the program; 30-50% drawdowns were routine;
+   blended S1+S2 testing showed a worst case nearer -80% than -50%; the ~80%
+   average is survivorship-biased. And the structural gap — **the Turtles
+   traded ~20 uncorrelated futures with margin, this scans equities and
+   crypto**. Diversification is the mechanism that makes the expectancy
+   positive, not a garnish, so a Turtle system on correlated single names is a
+   materially different and worse strategy. Say this; do not soften it.
+10. **The correlation limits (4/6/10/12) are STATED, NOT ENFORCED.** There is
+    no correlation matrix in this repo and sector is a poor proxy. Enforcing
+    them would be inventing a rule the data cannot support.
+11. **Ranking never sorts on the record** — signal today, then open position,
+    then proximity, then liquidity. Sorting a scanner by its own backtest is
+    how a page becomes a curve fit; `rank_key` is pinned against it.
+12. **`#tt-views` scrolls its own overflow.** The shared `.view-tabs` has no
+    overflow rule and four labels measure 383px, which pushed the whole page
+    sideways at 320px — found by RENDERING it, not by reading it. Scoped by
+    id so the fix cannot touch another page. `turtle.html` is now in
+    `smoke.e2e.js`'s 320px list.
+13. **Both suites are mutation-verified: 15 mutations, 15 caught** (47 pytest,
+    53 JS). Two SURVIVED on the first pass and the fixes are worth knowing,
+    because both gaps are the kind that re-open easily. (a) *The pyramid used
+    entry-N* — every fixture in the file pins N at exactly 2.0, so entry-N and
+    current-N are the same number there and the mutation was invisible; the
+    test now uses a frame where N DECAYS after entry (2.0 -> 1.38) and asserts
+    on the REALIZED second fill. A first attempt asserted on `next_add`, which
+    is computed in the output block from `pos["n"]` and is therefore untouched
+    by a mutation to the add loop — assert on a fill, not on a projection.
+    (b) *`esc()` was tested but never asserted to be CALLED*, so deleting it
+    from the row name left everything green while `name` is the one field a
+    third-party listings directory controls. There is now a test that walks
+    every untrusted field to its render site.
+14. **Two defects were found by RENDERING, not by reading**, both in code that
+    read fine: a click anywhere inside an expanded row collapsed it (so you
+    could not select a number out of the pyramid table, and the `is-open`
+    cursor was already promising otherwise), and the keyboard handler built a
+    `querySelector` out of `row.dataset.sym` — which is the DECODED symbol, so
+    a name carrying a quote made the selector invalid and threw. Real tickers
+    never contain one; a hostile fixture does. Rows now carry
+    `tabindex`/`role`/`aria-expanded` like the main deck's, and the
+    replacement node is found by comparing dataset rather than by building a
+    selector.
 
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 

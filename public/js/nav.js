@@ -32,6 +32,7 @@
   // mobile (RECS took a slot, owner 2026-07-22).
   const TABS = PRIMARY.filter((x) => x.key !== "specs" && x.key !== "alerts");
   const MORE = [
+    { href: "turtle.html",  label: "TURTLE 🐢",    key: "turtle", tab: "🐢" },
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
     { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true, tab: "🤖" },
     { href: "system.html",  label: "SYSTEM",       key: "system", tab: "⚙️" },

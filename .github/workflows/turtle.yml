@@ -1,0 +1,150 @@
+name: Turtle nightly scan
+
+# The fourth lens (scanner/turtle.py): the 1983 Dennis/Eckhardt breakout
+# system, implemented from the Original Turtle Trading Rules. Publishes one
+# file per market:
+#   public/data/<market>_turtle.json
+#
+# REPORT-ONLY. Nothing under scanner/broker/ reads these files (pinned by
+# tests/test_turtle.py), so a night this job misses costs a day of breakout
+# signals on a display surface and nothing else. That is why the watchdog
+# entry is WARNING and not CRITICAL.
+#
+# NOT in the `scan` concurrency group. That group serialises writers of the
+# paper BOOK; this job writes only its own three files and reads nothing the
+# scan writes, so joining it would just put a nightly in the one-pending-slot
+# queue that evicted the :47 ASX backstop in 2026-07. Its own group instead,
+# so two Turtle runs can never overlap on the same files.
+#
+# 09:30 UTC is deliberately clear of the whole nightly cluster — phasemap
+# 08:30, confluence 08:45, reco_note 08:52 — so the two full-universe Yahoo
+# walks are an hour apart rather than concurrent. Crypto trades every day, so
+# this runs every day rather than on weekdays.
+
+on:
+  schedule:
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market to scan"
+        default: "all"
+        required: false
+        type: choice
+        options: ["all", "asx", "nasdaq", "crypto"]
+      limit:
+        description: "Cap names per market (e.g. 50 for a quick smoke run)"
+        default: ""
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: turtle
+  cancel-in-progress: false
+
+jobs:
+  turtle:
+    runs-on: ubuntu-latest
+    # The full ASX directory (~2,000 names) at 5 years of daily bars, plus
+    # NASDAQ and crypto, plus a bar-by-bar replay per name. Same budget as
+    # the other jobs that walk the whole ASX directory.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Free-text inputs travel through env, never through ${{ }} inside a
+      # run: block — the runner does not shell-interpolate env values, so a
+      # crafted input cannot inject commands (2026-07-20 security pass).
+      - name: Run the Turtle scan
+        id: turtle
+        env:
+          MARKET: ${{ github.event.inputs.market }}
+          LIMIT: ${{ github.event.inputs.limit }}
+        run: |
+          set -o pipefail
+          ARGS="--market ${MARKET:-all}"
+          if [ -n "$LIMIT" ]; then ARGS="$ARGS --limit $LIMIT"; fi
+          echo "turtle args: $ARGS"
+          python -m scanner.turtle_run $ARGS 2>&1 | tee /tmp/turtle_out.txt
+
+      # The scan's own headline into the run page, so a night's breakout count
+      # is readable without a checkout. Read-only: it reformats the log the
+      # step above already printed and computes nothing of its own.
+      - name: Scan summary
+        if: always()
+        run: |
+          {
+            echo '### Turtle nightly'
+            echo '```'
+            grep -E '^\[(asx|nasdaq|crypto)\] turtle' /tmp/turtle_out.txt || \
+              echo '(no per-market lines - the scan did not reach a market)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit & push (surgical — the turtle files only)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          PATHS="public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json"
+          # One pathspec per git add: `git add a b` is ALL-OR-NOTHING and exits
+          # 128 staging NEITHER when one path is missing (Tier 3). A
+          # single-market dispatch legitimately leaves two of the three absent.
+          for p in $PATHS; do
+            if [ -e "$p" ]; then
+              git add -- "$p"
+            else
+              echo "::warning::$p is not present - nothing to stage for it"
+            fi
+          done
+          # Must-change gate, ANY-OF: a successful scan always rewrites
+          # generated_at and os.replace()s the file, so a scheduled run that
+          # staged nothing lost its output and must say so out loud rather
+          # than finishing green on an empty index.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            bash scripts/assert_staged.sh "turtle" $PATHS
+          fi
+          if git diff --cached --quiet; then
+            echo "No turtle changes to commit."
+            exit 0
+          fi
+          git commit -m "data: turtle $(date -u +'%Y-%m-%d')"
+          SHA=$(git rev-parse HEAD)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              # Only ever re-apply a path THIS run generated (Tier 3 #42): a
+              # path present on main but absent from $SHA is a sibling's newer
+              # copy, not something to delete.
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git checkout "$SHA" -- "$p"
+                git add -- "$p"
+              fi
+            done
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: turtle $(date -u +'%Y-%m-%d')"
+            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            echo "Push race - retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
+
+      - name: Alert on failure (Discord)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            -A 'vivek5-alerts/1.0 (+github-actions)' \
+            -d "{\"content\":\"WARNING: **${{ github.workflow }}** run FAILED - the Turtle lens data is going stale. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL" || true

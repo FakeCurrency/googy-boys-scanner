@@ -199,7 +199,7 @@ const check = (ok, label) => {
     await page.context().close();
 
     // ── 320px (narrowest phone) zero-overflow guard across pages (#38) ───────
-    for (const path of ["index.html", "recommendations.html", "phasemap.html", "specs.html", "journal.html"]) {
+    for (const path of ["index.html", "recommendations.html", "phasemap.html", "specs.html", "journal.html", "turtle.html"]) {
       const pg = await newPage({ width: 320, height: 720 });
       await pg.goto(`${BASE}/${path}`, { waitUntil: "domcontentloaded", timeout: 30000 });
       await pg.waitForTimeout(1200);   // let the app paint

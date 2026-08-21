@@ -1,0 +1,683 @@
+"""TURTLE lens (scanner/turtle.py + turtle_run.py), added 2026-08-21.
+
+This lens states a 40-year-old published rule set exactly, so the tests are
+about FIDELITY rather than about taste: every number here is hand-computed
+from the Original Turtle Trading Rules, and the two rules the popular short
+version drops (the System 1 filter and the 55-day failsafe) get their own
+named pins so a later reader cannot simplify them away without going red.
+
+The fixtures use a deliberate construction: a bar whose high is mid+1, low
+mid-1 and close mid has True Range EXACTLY 2 as long as consecutive mids move
+by at most 1 -- max(H-L, |H-PDC|, |L-PDC|) = max(2, |d+1|, |d-1|) = 2 for
+|d| <= 1. So N is exactly 2.0 everywhere in these frames and every stop,
+add level and R below is arithmetic a reader can check by hand.
+"""
+from __future__ import annotations
+
+import json
+import pathlib
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from scanner import config, turtle, turtle_run
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+# ---------------------------------------------------------------------------
+# fixtures
+# ---------------------------------------------------------------------------
+
+def band(mids, opens=None) -> pd.DataFrame:
+    """A frame whose True Range is exactly 2 on every bar (see module docstring).
+
+    `opens` defaults to the mid, so an entry that fills at max(level, open)
+    fills at the level rather than at a gap -- gap behaviour is tested
+    separately and on purpose.
+    """
+    mids = np.asarray(mids, dtype="float64")
+    ops = mids if opens is None else np.asarray(opens, dtype="float64")
+    return pd.DataFrame(
+        {"Open": ops, "High": mids + 1.0, "Low": mids - 1.0, "Close": mids,
+         "Volume": np.full(len(mids), 5e7)},
+        index=pd.bdate_range("2015-01-01", periods=len(mids)),
+    )
+
+
+def ramp(start, end, hold=0):
+    """Mids stepping by at most 1 from start to end, then held."""
+    step = 1 if end >= start else -1
+    out = list(range(int(start), int(end) + step, step))
+    return out + [end] * hold
+
+
+FLAT = [100.0] * 260
+
+
+# ---------------------------------------------------------------------------
+# N
+# ---------------------------------------------------------------------------
+
+def test_n_is_the_rules_recurrence_not_a_simple_mean():
+    """N = (19 * PDN + TR) / 20 over max(H-L, H-PDC, PDC-L).
+
+    Driven against a frame with VARYING true range, because on the constant-TR
+    fixtures every smoothing scheme agrees and the test would be vacuous.
+    """
+    rs = np.random.RandomState(7)
+    mids = 100 + np.cumsum(rs.normal(0, 1.5, 400))
+    widths = 1.0 + rs.rand(400) * 3.0
+    df = pd.DataFrame(
+        {"Open": mids, "High": mids + widths, "Low": mids - widths, "Close": mids,
+         "Volume": np.full(400, 1e7)},
+        index=pd.bdate_range("2015-01-01", periods=400))
+    got = turtle.compute_n(df)
+
+    high, low, close = df["High"], df["Low"], df["Close"]
+    pdc = close.shift(1)
+    tr = pd.concat([high - low, (high - pdc).abs(), (low - pdc).abs()], axis=1).max(axis=1)
+    # the literal recurrence, seeded the way pandas seeds it
+    want = [float(tr.iloc[0])]
+    for t in tr.iloc[1:]:
+        want.append((19.0 * want[-1] + float(t)) / 20.0)
+    assert np.allclose(got.to_numpy(), np.array(want), rtol=0, atol=1e-9)
+
+
+def test_a_simple_20_day_mean_would_be_a_different_number():
+    """Guards the choice above: if someone swaps atr() for a rolling mean the
+    test suite must not stay green just because both are 'a 20-day ATR'."""
+    rs = np.random.RandomState(3)
+    mids = 100 + np.cumsum(rs.normal(0, 2.0, 400))
+    w = 1.0 + rs.rand(400) * 4.0
+    df = pd.DataFrame({"Open": mids, "High": mids + w, "Low": mids - w, "Close": mids,
+                       "Volume": np.full(400, 1e7)},
+                      index=pd.bdate_range("2015-01-01", periods=400))
+    wilder = float(turtle.compute_n(df).iloc[-1])
+    pdc = df["Close"].shift(1)
+    tr = pd.concat([df["High"] - df["Low"], (df["High"] - pdc).abs(),
+                    (df["Low"] - pdc).abs()], axis=1).max(axis=1)
+    simple = float(tr.rolling(20).mean().iloc[-1])
+    assert abs(wilder - simple) > 1e-6, "the two smoothings must be distinguishable"
+
+
+def test_the_fixture_really_does_have_n_exactly_two():
+    df = band(FLAT + ramp(100, 110) + [110.0] * 30)
+    assert float(turtle.compute_n(df).iloc[-1]) == pytest.approx(2.0, abs=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# channels: the look-ahead that would make every number here a lie
+# ---------------------------------------------------------------------------
+
+def test_entry_channels_exclude_the_signal_bar():
+    df = band(FLAT + ramp(100, 130))
+    ch = turtle.channels(df)
+    i = len(df) - 1
+    assert float(ch["s1_hi"].iloc[i]) == pytest.approx(
+        float(df["High"].iloc[i - config.TURTLE_S1_ENTRY:i].max()))
+    assert float(ch["s2_hi"].iloc[i]) == pytest.approx(
+        float(df["High"].iloc[i - config.TURTLE_S2_ENTRY:i].max()))
+    assert float(ch["s1_hi"].iloc[i]) < float(df["High"].iloc[i]), \
+        "a channel that contains its own bar can never be broken by it"
+
+
+def test_a_flat_band_never_breaks_out_because_the_test_is_strictly_greater():
+    """The high EQUALS the channel on every bar of a flat band. Turning `>`
+    into `>=` here would fire a breakout every single day in a dead range."""
+    rep = turtle.replay(band([100.0] * 300))
+    assert rep["trades"] == []
+    assert rep["state"] == "flat"
+
+
+# ---------------------------------------------------------------------------
+# sizing
+# ---------------------------------------------------------------------------
+
+def test_unit_size_is_one_percent_over_n():
+    # $5,000 account, N = 2.50 -> risk $50 -> 20 shares, and 20 shares moving
+    # 2N ($5) is exactly the $100 a full 2N stop-out costs at one unit.
+    assert turtle.unit_size(5000.0, 2.50) == pytest.approx(20.0)
+    assert turtle.unit_size(5000.0, 2.50) * 2 * 2.50 == pytest.approx(100.0)
+
+
+def test_unit_size_refuses_an_unpriceable_n_instead_of_exploding():
+    for bad in (0.0, -1.0, float("nan"), float("inf")):
+        assert turtle.unit_size(5000.0, bad) == 0.0
+
+
+def test_the_drawdown_rule_compounds():
+    # 20% down = two 10% steps = 0.8 * 0.8, NOT 1 - 2*0.2.
+    assert turtle.drawdown_equity(8000.0, 10000.0) == pytest.approx(8000.0 * 0.64)
+    assert turtle.drawdown_equity(8000.0, 10000.0) != pytest.approx(8000.0 * 0.60)
+    # at a new peak it is a no-op, and a fractional step does not round up
+    assert turtle.drawdown_equity(10000.0, 10000.0) == 10000.0
+    assert turtle.drawdown_equity(9500.0, 10000.0) == pytest.approx(9500.0)
+
+
+def test_a_full_four_unit_position_risks_five_percent_not_eight():
+    """The number the 1/2 N stop-raise exists to produce, computed end to end.
+
+    Entries sit at 0, +1/2N, +1N, +3/2N above the breakout; the single shared
+    stop lands 2N under the last of them, i.e. 1/2N BELOW the breakout. The
+    four units lose 1/2N + 1N + 3/2N + 2N = 5N = 5% of the account, against
+    8N = 8% if each unit kept the stop it was issued.
+
+    Worth a named test because the arithmetic is easy to get wrong in either
+    direction -- 2% (forgetting the units are stacked) and 4% (dropping a
+    unit) are both plausible-looking wrong answers.
+    """
+    equity, n = 100_000.0, 2.0
+    lad = turtle.pyramid_ladder(100.0, n, "long")
+    shares = turtle.unit_size(equity, n)
+    shared_stop = lad[-1]["stop"]
+    risked = sum(shares * (u["price"] - shared_stop) for u in lad)
+    assert risked == pytest.approx(0.05 * equity)
+    unstepped = sum(shares * (u["price"] - u["stop"]) for u in lad)
+    assert unstepped == pytest.approx(0.08 * equity)
+
+
+def test_one_unit_moving_one_N_is_exactly_one_percent_of_the_account():
+    """The link that lets every other Turtle number be read in equity terms."""
+    for equity in (5_000.0, 137_500.0):
+        for n in (0.37, 2.0, 88.125):
+            assert turtle.unit_size(equity, n) * n == pytest.approx(0.01 * equity)
+
+
+def test_the_pyramid_ladder_walks_the_stop_up_under_every_earlier_unit():
+    lad = turtle.pyramid_ladder(100.0, 2.0, "long")
+    assert [u["price"] for u in lad] == [100.0, 101.0, 102.0, 103.0]
+    assert [u["stop"] for u in lad] == [96.0, 97.0, 98.0, 99.0]
+    assert lad[0]["add_at"] is None and lad[3]["add_at"] == 103.0
+    short = turtle.pyramid_ladder(100.0, 2.0, "short")
+    assert [u["price"] for u in short] == [100.0, 99.0, 98.0, 97.0]
+    assert [u["stop"] for u in short] == [104.0, 103.0, 102.0, 101.0]
+
+
+# ---------------------------------------------------------------------------
+# THE SYSTEM 1 FILTER — the rule the short version drops
+# ---------------------------------------------------------------------------
+
+def test_a_breakout_that_never_moved_2N_against_is_a_WINNER_even_at_a_loss():
+    """The counterintuitive pin, and it is the rule as written.
+
+    'A breakout is a LOSING breakout if the price moved 2N against the
+    position before a profitable 10-day exit.' So a trade that drifts out at
+    the 10-day channel a little below entry never moved 2N against, counts as
+    a winner, and BLOCKS the next System 1 entry. Do not 'fix' this to mean
+    'exited below entry' -- that is a different system.
+    """
+    sh = turtle._Shadow()
+    # enter long: high 102 clears a 20-day high of 101, N = 2 -> stop 97
+    sh.step(o=101.0, h=102.0, l=100.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
+            x1_lo=99.0, x1_hi=999.0, allow_shorts=True)
+    assert sh.active and sh.entry == 101.0 and sh.stop == pytest.approx(97.0)
+    # leave via the 10-day channel at 99 -- a $2 LOSS that never touched 97
+    sh.step(o=100.0, h=100.5, l=98.5, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
+            x1_lo=99.0, x1_hi=999.0, allow_shorts=True)
+    assert sh.active is False
+    assert sh.last_was_winner is True, "no 2N adverse move == winner, by the rule"
+
+
+def test_a_breakout_stopped_at_2N_is_a_LOSER_and_reopens_system_one():
+    sh = turtle._Shadow()
+    sh.step(o=101.0, h=102.0, l=100.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
+            x1_lo=95.0, x1_hi=999.0, allow_shorts=True)
+    assert sh.stop == pytest.approx(97.0)
+    sh.step(o=100.0, h=100.0, l=96.0, n_prev=2.0, s1_hi=101.0, s1_lo=90.0,
+            x1_lo=95.0, x1_hi=999.0, allow_shorts=True)
+    assert sh.last_was_winner is False
+
+
+def test_the_shadow_watches_both_directions_because_the_rule_says_the_market():
+    """'the last breakout in that particular market, regardless of whether it
+    was actually taken' -- so a DOWNSIDE breakout is still the last breakout
+    even for a book that only ever goes long."""
+    sh = turtle._Shadow()
+    sh.step(o=99.0, h=100.0, l=98.0, n_prev=2.0, s1_hi=110.0, s1_lo=99.0,
+            x1_lo=0.0, x1_hi=999.0, allow_shorts=True)
+    assert sh.active and sh.dir == -1
+
+
+def test_a_winning_prior_breakout_BLOCKS_the_next_system_one_entry():
+    """End to end on a constructed frame, not on the shadow in isolation.
+
+    Bars 220-227 ramp up to mid 104 and back: that prints a 20-day breakout
+    which leaves at the 10-day channel without ever moving 2N against, i.e. a
+    winner. The later 20-day breakout at bar ~251 must therefore be skipped.
+    """
+    mids = ([100.0] * 260 + ramp(101, 104) + ramp(103, 100)
+            + [100.0] * 23 + ramp(101, 103) + [103.0] * 5)
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["s1_filter_known"] is True
+    assert rep["s1_blocked"] is True, "the prior 20-day breakout was a filter-winner"
+    assert all(t["system"] != 1 for t in rep["trades"]), \
+        "no System 1 trade may be taken while the filter blocks"
+
+
+def test_the_55_day_FAILSAFE_takes_the_trade_system_one_was_not_allowed_to():
+    """The other dropped rule. Same blocked filter state as above, but the
+    move continues past the 55-day level -- System 2 must pick it up."""
+    mids = ([100.0] * 260 + ramp(101, 104) + ramp(103, 100)
+            + [100.0] * 23 + ramp(101, 120) + [120.0] * 5)
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["s1_blocked"] is True
+    entered = [t["system"] for t in rep["trades"]] + (
+        [rep["position"]["system"]] if rep["position"] else [])
+    assert 2 in entered, "a blocked System 1 must still be rescued at 55 days"
+
+
+def test_system_two_is_never_filtered():
+    """System 2 has no equivalent of the System 1 filter, and the failsafe
+    depends on that. Pinned structurally: the System 1 entry branch must
+    consult the filter and the System 2 branch must not."""
+    import re
+    src = (ROOT / "scanner" / "turtle.py").read_text(encoding="utf-8")
+    entry = src[src.index("side = sysno = None"):src.index("if side is None")]
+    # Branches, not physical lines: a wrapped condition puts the channel and
+    # the filter on different lines and a line-wise test reads that as absent.
+    flat = " ".join(entry.split())
+    branches = [b for b in re.split(r"\belif\b|\bif\b", flat) if b.strip()]
+    s1 = [b for b in branches if "s1_hi[i]" in b or "s1_lo[i]" in b]
+    s2 = [b for b in branches if "s2_hi[i]" in b or "s2_lo[i]" in b]
+    assert len(s1) == 2 and len(s2) == 2, "one long and one short branch each"
+    assert all("last_was_winner" in b for b in s1), "System 1 must consult the filter"
+    assert not any("last_was_winner" in b for b in s2), \
+        "filtering System 2 would destroy the failsafe"
+    # and the ordering that MAKES it a failsafe: System 2 is tested first
+    assert flat.index("s2_hi[i]") < flat.index("s1_hi[i]")
+
+
+# ---------------------------------------------------------------------------
+# entries, adds, exits
+# ---------------------------------------------------------------------------
+
+def test_a_position_is_entered_at_the_level_and_stopped_2N_below_it():
+    mids = [100.0] * 260 + ramp(101, 103) + [103.0] * 3
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    pos = rep["position"]
+    assert pos is not None and pos["side"] == "long"
+    # 20-day high is 101 and N is 2 -> fill 101, first stop 97
+    assert pos["entry"] == pytest.approx(101.0)
+    assert pos["n"] == pytest.approx(2.0)
+
+
+def test_units_are_added_every_half_N_and_the_whole_position_moves_its_stop():
+    """N = 2 so a half-N step is 1.00. Entry 101 -> adds at 102, 103, 104;
+    after the fourth unit the single shared stop is 104 - 2N = 100, which is
+    ABOVE where the first unit's stop started (97)."""
+    mids = [100.0] * 260 + ramp(101, 112) + [112.0] * 3
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    pos = rep["position"]
+    assert pos is not None
+    assert pos["units"] == config.TURTLE_MAX_UNITS == 4
+    assert pos["entry"] == pytest.approx(101.0)
+    assert pos["avg"] == pytest.approx((101.0 + 102.0 + 103.0 + 104.0) / 4)
+    assert pos["stop"] == pytest.approx(100.0)
+    assert pos["next_add"] is None, "the fourth unit is the last one"
+
+
+def test_the_pyramid_spaces_off_the_ENTRY_N_not_todays_N():
+    """The rules fix N at entry and use it for the whole position -- the add
+    spacing, the stop distance and the size all come from one number. Re-reading
+    N each bar would move the rungs under a live position.
+
+    Found by mutation, twice over. Every other fixture here holds N at exactly
+    2.0, so entry-N and current-N are identical and the mutation was invisible;
+    and a first attempt at this test asserted on `next_add`, which is computed
+    in the OUTPUT block from pos["n"] and so is not touched by a mutation to the
+    add loop. It has to assert on a REALIZED fill.
+
+    The frame: 260 flat bars set N to exactly 2.0, a narrow breakout bar enters
+    one unit at 101 without adding, fifteen quiet bars decay N to about 1.38,
+    then one wider bar reaches up past the add level. The add must fill at
+    101 + 1/2 x 2.0 = 102.00 (entry-N) and NOT at 101 + 1/2 x 1.38 = 101.69.
+    """
+    mids = [100.0] * 260 + [101.0] + [101.0] * 15 + [101.2]
+    hws = [1.0] * 260 + [0.6] + [0.4] * 15 + [1.0]
+    m, hw = np.asarray(mids), np.asarray(hws)
+    df = pd.DataFrame(
+        {"Open": m, "High": m + hw, "Low": m - hw, "Close": m,
+         "Volume": np.full(len(m), 5e7)},
+        index=pd.bdate_range("2015-01-01", periods=len(m)))
+
+    rep = turtle.replay(df, allow_shorts=False)
+    pos = rep["position"]
+    assert pos is not None and pos["units"] == 2
+    assert pos["n"] == pytest.approx(2.0), "N is frozen at the entry bar"
+    assert rep["n"] < 1.5, "and today's N really has drifted away from it"
+
+    entry = pos["entry"]
+    step = config.TURTLE_PYRAMID_STEP_N
+    assert entry == pytest.approx(101.0)
+    # the realized second fill, recovered from the average
+    second = 2 * pos["avg"] - entry
+    assert second == pytest.approx(entry + step * pos["n"]), \
+        "the rung is half of the ENTRY N above the first fill"
+    assert second != pytest.approx(entry + step * rep["n"]), \
+        "today's N would have put the rung somewhere else"
+    # and the shared stop hangs off that same fill
+    assert pos["stop"] == pytest.approx(second - config.TURTLE_STOP_N * pos["n"])
+
+
+def test_the_unit_ceiling_actually_binds():
+    mids = [100.0] * 260 + ramp(101, 200)
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["position"]["units"] == config.TURTLE_MAX_UNITS
+
+
+def test_the_entering_system_owns_the_exit():
+    """A System 2 position uses the 20-day exit. If it borrowed System 1's
+    10-day exit it would leave every trend a fortnight early -- which is the
+    behaviour the popular indicator explicitly codes around."""
+    mids = [100.0] * 260 + ramp(101, 160) + [160.0] * 3
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["position"]["system"] == 2
+    assert rep["position"]["exit_channel"] == config.TURTLE_S2_EXIT == 20
+
+
+def test_an_exit_beats_an_add_inside_the_same_bar():
+    """Stated in the docstring and pinned here: a daily bar cannot say which
+    came first, so the conservative reading is booked. The pin is that the
+    exit branch runs before the add loop in the source."""
+    src = (ROOT / "scanner" / "turtle.py").read_text(encoding="utf-8")
+    exit_at = src.index("# ---- exits first")
+    add_at = src.index("# ---- adds ---")
+    assert exit_at < add_at
+
+
+def test_a_gap_through_the_stop_books_the_gap_not_the_stop():
+    """Entry 101, N 2, stop 97. The frame then opens at 90 -- an honest replay
+    fills at 90, a dishonest one fills at 97 and flatters every result."""
+    mids = [100.0] * 260 + [101.0, 102.0] + [90.0] + [90.0] * 5
+    opens = list(mids)
+    opens[222] = 90.0
+    rep = turtle.replay(band(mids, opens), allow_shorts=False)
+    stops = [t for t in rep["trades"] if t["reason"] == turtle.STOP]
+    assert stops, "the gap must stop the position out"
+    assert stops[0]["exit"] == pytest.approx(90.0)
+    assert stops[0]["r"] < -1.0, "a gapped stop costs MORE than 1R, and says so"
+
+
+def test_a_gap_above_the_trigger_fills_at_the_open_not_at_the_trigger():
+    mids = [100.0] * 260 + [130.0] + [130.0] * 5
+    opens = list(mids)
+    rep = turtle.replay(band(mids, opens), allow_shorts=False)
+    assert rep["position"] is not None
+    assert rep["position"]["entry"] == pytest.approx(130.0), \
+        "you cannot buy a gap at yesterday's channel"
+
+
+def test_shorts_mirror_every_rule():
+    mids = [100.0] * 260 + ramp(99, 88) + [88.0] * 3
+    rep = turtle.replay(band(mids), allow_shorts=True)
+    pos = rep["position"]
+    assert pos is not None and pos["side"] == "short"
+    assert pos["entry"] == pytest.approx(99.0)
+    assert pos["units"] == 4
+    assert pos["stop"] == pytest.approx(96.0 + 4.0)   # last fill 96, +2N
+
+
+def test_allow_shorts_false_really_takes_no_shorts():
+    mids = [100.0] * 260 + ramp(99, 80) + [80.0] * 3
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["state"] == "flat"
+    assert all(t["side"] == "long" for t in rep["trades"])
+
+
+def test_a_frame_shorter_than_the_minimum_is_refused_not_guessed():
+    assert turtle.replay(band([100.0] * (config.TURTLE_MIN_BARS - 1))) is None
+    assert turtle.replay(None) is None
+    assert turtle.replay(band([100.0] * 300).drop(columns=["High"])) is None
+
+
+# ---------------------------------------------------------------------------
+# the record
+# ---------------------------------------------------------------------------
+
+def test_R_is_measured_against_the_original_2N_risk():
+    """One unit that moves exactly 2N in favour is +1R, whatever N is worth in
+    dollars. Anchoring R to the position's own initial risk is what lets the
+    per-name records be compared at all."""
+    rec = turtle.summarize([{"r": 1.0, "system": 1, "reason": turtle.CHANNEL},
+                            {"r": -1.0, "system": 2, "reason": turtle.STOP}])
+    assert rec["n"] == 2 and rec["wins"] == 1 and rec["win_pct"] == 50.0
+    assert rec["total_r"] == 0.0 and rec["avg_r"] == 0.0
+    assert rec["by_system"]["1"]["n"] == 1 and rec["by_reason"]["stop"]["n"] == 1
+
+
+def test_max_drawdown_is_peak_to_trough_on_the_closed_curve():
+    # +5, -3, -1, +2  ->  curve 5, 2, 1, 3  ->  peak 5, trough 1  ->  -4
+    rec = turtle.summarize([{"r": r, "system": 1, "reason": turtle.CHANNEL}
+                            for r in (5.0, -3.0, -1.0, 2.0)])
+    assert rec["total_r"] == 3.0
+    assert rec["max_dd_r"] == -4.0
+
+
+def test_an_empty_record_is_zero_and_None_not_a_fabricated_average():
+    rec = turtle.summarize([])
+    assert rec["n"] == 0 and rec["total_r"] == 0.0
+    assert rec["win_pct"] is None and rec["avg_r"] is None
+
+
+def test_every_published_number_is_finite_and_json_clean():
+    from scanner import output
+    df = band([100.0] * 260 + ramp(101, 140) + [140.0] * 5)
+    row = turtle.build_row("TEST", {"name": "Test", "sector": "Materials"},
+                           df, "nasdaq")
+    assert row is not None
+    text = output.dumps(row)
+    assert "NaN" not in text and "Infinity" not in text
+
+
+def test_ranking_puts_todays_signal_first_and_never_sorts_on_the_record():
+    """A flattering replay must not float a name to the top: this page is a
+    scanner, and letting the backtest column drive the order turns it into a
+    curve-fit leaderboard."""
+    fired = {"signal": "s2_long", "state": "flat", "dvol": 1.0,
+             "nearest": {"distance_pct": 9.0}, "record": {"total_r": -50.0}}
+    great = {"signal": "", "state": "flat", "dvol": 1e9,
+             "nearest": {"distance_pct": 0.1}, "record": {"total_r": 900.0}}
+    assert turtle.rank_key(fired) < turtle.rank_key(great)
+    held = {"signal": "", "state": "long", "dvol": 1.0, "nearest": None, "record": {}}
+    assert turtle.rank_key(held) < turtle.rank_key(great)
+
+
+# ---------------------------------------------------------------------------
+# liquidity
+# ---------------------------------------------------------------------------
+
+def test_the_liquidity_floor_removes_unfillable_breakouts():
+    df = band([100.0] * 300)
+    df["Volume"] = 100.0                       # $10k a day
+    dvol, ok = turtle.liquidity(df, "nasdaq")
+    assert dvol == pytest.approx(10_000.0) and ok is False
+    df["Volume"] = 1e6                          # $100m a day
+    assert turtle.liquidity(df, "nasdaq")[1] is True
+
+
+def test_a_sub_floor_price_is_refused_on_the_market_that_sets_a_floor():
+    df = band([0.5] * 300)
+    df["Volume"] = 1e9
+    assert turtle.liquidity(df, "nasdaq")[1] is False, "NASDAQ floor is $1.00"
+    assert turtle.liquidity(df, "asx")[1] is True, "ASX floor is 10c"
+
+
+# ---------------------------------------------------------------------------
+# the runner
+# ---------------------------------------------------------------------------
+
+def test_the_params_block_echoes_the_real_constants():
+    """The page renders rule numbers from THIS block rather than from its own
+    prose, so a constant change cannot leave the page describing the old
+    system. That property only holds if the block really reads config."""
+    p = turtle_run.params_block()
+    assert p["s1_entry"] == config.TURTLE_S1_ENTRY
+    assert p["s2_entry"] == config.TURTLE_S2_ENTRY
+    assert p["s1_exit"] == config.TURTLE_S1_EXIT
+    assert p["s2_exit"] == config.TURTLE_S2_EXIT
+    assert p["stop_n"] == config.TURTLE_STOP_N
+    assert p["max_units"] == config.TURTLE_MAX_UNITS
+    assert p["risk_pct"] == config.TURTLE_RISK_PCT
+
+
+def test_the_original_parameters_are_the_shipped_parameters():
+    """Not a tautology: it pins the NUMBERS. Retuning any of these makes the
+    lens something other than the Turtle system, which is the one thing it
+    exists to state exactly, so the change should have to be deliberate."""
+    assert (config.TURTLE_S1_ENTRY, config.TURTLE_S1_EXIT) == (20, 10)
+    assert (config.TURTLE_S2_ENTRY, config.TURTLE_S2_EXIT) == (55, 20)
+    assert config.TURTLE_N_PERIOD == 20
+    assert config.TURTLE_STOP_N == 2.0
+    assert config.TURTLE_PYRAMID_STEP_N == 0.5
+    assert config.TURTLE_MAX_UNITS == 4
+    assert config.TURTLE_RISK_PCT == 0.01
+    assert (config.TURTLE_MAX_UNITS_CLOSE_CORR,
+            config.TURTLE_MAX_UNITS_LOOSE_CORR,
+            config.TURTLE_MAX_UNITS_DIRECTION) == (6, 10, 12)
+    assert (config.TURTLE_DRAWDOWN_STEP_PCT, config.TURTLE_DRAWDOWN_CUT_PCT) == (10.0, 20.0)
+
+
+def test_the_aggregate_survives_an_empty_market():
+    agg = turtle_run.aggregate([])
+    assert agg["trades"] == 0 and agg["win_pct"] is None and agg["total_r"] == 0.0
+
+
+def test_crypto_is_in_the_runner_markets_unlike_specs():
+    """Specs excludes crypto because its price filter is a cents filter. Every
+    Turtle parameter is expressed in N and is unit-free, so the same exclusion
+    would be cargo-culting."""
+    assert "crypto" in turtle_run.MARKETS
+
+
+# ---------------------------------------------------------------------------
+# the whole publish path, end to end
+# ---------------------------------------------------------------------------
+
+def test_scan_market_publishes_a_complete_payload(tmp_path, monkeypatch):
+    """Drives universe -> download -> build_row -> write_json with synthetic
+    frames. Yahoo is unreachable from a sandbox, so this is the only place the
+    runner's actual wiring gets exercised before it runs in CI -- and wiring is
+    exactly where a lens that works in isolation falls over (a renamed key, a
+    frame handed over with the wrong index, a sort on a field the row lacks).
+    """
+    frames = {
+        "FIRE.AX": band([100.0] * 260 + ramp(101, 120)[:1]),
+        "HELD.AX": band([100.0] * 260 + ramp(101, 140)),
+        "NEAR.AX": band([100.0] * 260 + ramp(99, 100)),
+        "THIN.AX": band([100.0] * 300),          # dropped by the liquidity gate
+        "SHRT.AX": band([100.0] * 260 + ramp(99, 86)),
+        "SHORTHIST.AX": band([100.0] * 50),      # dropped for too little history
+    }
+    frames["THIN.AX"]["Volume"] = 10.0
+    items = [{"symbol": k.split(".")[0], "name": k + " Ltd", "sector": "Materials", "yf": k}
+             for k in frames]
+
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: items)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    payload = turtle_run.scan_market("asx")
+    out = tmp_path / "asx_turtle.json"
+    assert out.exists(), "the runner must publish where it says it does"
+    on_disk = json.loads(out.read_text(encoding="utf-8"))
+
+    # the file and the return value are the same object, not two renderings
+    assert on_disk == payload
+
+    assert payload["market"] == "asx" and payload["lens"] == "turtle"
+    assert payload["universe_size"] == 6
+    assert payload["skipped_short_history"] == 1, "SHORTHIST is under TURTLE_MIN_BARS"
+    assert payload["skipped_illiquid"] == 1, "THIN trades $1,000 a day"
+    syms = [r["symbol"] for r in payload["results"]]
+    assert set(syms) == {"FIRE", "HELD", "NEAR", "SHRT"}
+    assert syms[0] == "FIRE", "a signal that fired today outranks everything"
+
+    agg = payload["aggregate"]
+    assert agg["names"] == 4 and agg["fired_today"] == 1
+    assert agg["long"] + agg["short"] + agg["flat"] == 4
+    assert payload["params"]["s2_entry"] == config.TURTLE_S2_ENTRY
+
+    # publishable: strictly finite, and no numpy types survived the trip
+    text = out.read_text(encoding="utf-8")
+    assert "NaN" not in text and "Infinity" not in text
+    assert text.endswith("\n")
+
+
+def test_a_market_that_throws_is_reported_not_swallowed(monkeypatch, capsys):
+    """TOP100 #67: a market that failed ENTIRELY used to print one line and
+    exit 0, so a night with no ASX file looked like a night with no breakouts."""
+    def boom(*a, **kw):
+        raise RuntimeError("yahoo said no")
+    monkeypatch.setattr(turtle_run, "scan_market", boom)
+    rc = turtle_run.main(["--market", "asx"])
+    assert rc == 1
+    assert "FAILED" in capsys.readouterr().out
+
+
+def test_one_bad_frame_never_kills_the_scan(tmp_path, monkeypatch):
+    frames = {"GOOD.AX": band([100.0] * 260 + ramp(101, 130)),
+              "BAD.AX": band([100.0] * 300)}
+    frames["BAD.AX"]["High"] = "not a number"      # forces build_row to throw
+    items = [{"symbol": k.split(".")[0], "name": k, "sector": "", "yf": k} for k in frames]
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: items)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+    payload = turtle_run.scan_market("asx")
+    assert [r["symbol"] for r in payload["results"]] == ["GOOD"]
+    assert payload["errors"] >= 1, "the throw is COUNTED, not silent"
+
+
+# ---------------------------------------------------------------------------
+# fences — the freeze, and the report-only promise
+# ---------------------------------------------------------------------------
+
+def test_nothing_in_the_broker_reads_the_turtle_lens():
+    for p in (ROOT / "scanner" / "broker").rglob("*.py"):
+        assert "turtle" not in p.read_text(encoding="utf-8").lower(), \
+            f"the Turtle lens is report-only and must not reach the bot: {p}"
+
+
+def test_no_turtle_constant_leaks_into_the_bots_published_rules():
+    """bot_rules.json is the BOT's rule set and the dashboard warns on drift
+    against it. A fourth lens's constants in there would be describing a
+    system the bot does not run."""
+    src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
+    assert "TURTLE_" not in src
+    rules = ROOT / "public" / "data" / "bot_rules.json"
+    if rules.exists():
+        assert "turtle" not in rules.read_text(encoding="utf-8").lower()
+
+
+def test_the_lens_never_writes_anything_but_its_own_files():
+    src = (ROOT / "scanner" / "turtle_run.py").read_text(encoding="utf-8")
+    assert src.count("output.write_json(") == 1
+    assert "_turtle.json" in src
+    for forbidden in ("vivek_bot_book", "alert_history", "sector_map",
+                      "journal/", "bot_rules"):
+        assert forbidden not in src, f"the Turtle runner touches {forbidden}"
+
+
+def test_the_engine_does_not_import_the_bot():
+    """Asked of the IMPORTS, not of the file's text.
+
+    A substring ban would fail on this module's own docstring, which explains
+    at length why scanner/broker is never imported -- the Tier 3 trap where
+    the justification reads as the offence.
+    """
+    for name in ("turtle.py", "turtle_run.py"):
+        src = (ROOT / "scanner" / name).read_text(encoding="utf-8")
+        imports = [ln.strip() for ln in src.splitlines()
+                   if ln.strip().startswith(("import ", "from "))]
+        for ln in imports:
+            assert "broker" not in ln, f"{name} imports the bot: {ln}"
+            assert "vivek" not in ln.lower(), f"{name} imports VIVEK: {ln}"
+
+
+def test_prints_are_ascii_only():
+    """Project rule 9 -- Windows consoles are cp1252 and choke on arrows."""
+    for name in ("turtle.py", "turtle_run.py"):
+        for i, line in enumerate((ROOT / "scanner" / name).read_text(encoding="utf-8").splitlines(), 1):
+            if "print(" in line or 'f"[' in line:
+                assert line.isascii(), f"{name}:{i} non-ascii in a print: {line!r}"

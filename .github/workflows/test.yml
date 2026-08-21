@@ -202,6 +202,14 @@ jobs:
       # existed as healthy.
       - name: Status control (read-only promise / uptime clamp / states matrix, 48)
         run: node test/status.test.js
+      # TURTLE, the fourth lens (2026-08-21). Two properties are gated rather
+      # than remembered: the page's offline parameter mirror must still equal
+      # scanner/config.py (the drift PUBLISHED_DEFAULTS lived with for months),
+      # and the full four-unit position risk it PRINTS must be the 5% the
+      # half-N stop raise actually produces, not the 2% or 4% that both look
+      # plausible.
+      - name: Turtle lens (config mirror / pyramid risk / read-only fence, 53)
+        run: node test/turtle.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort

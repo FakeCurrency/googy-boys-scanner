@@ -1092,6 +1092,11 @@ WATCHDOG_RUNS = {
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
+    # The Turtle lens (2026-08-21). WARNING rather than CRITICAL on purpose:
+    # a stale Turtle file costs a day of breakout signals on a REPORT-ONLY
+    # surface, and the page shows its own generated_at, so a missed night is
+    # visible to the reader without an alarm ringing about it.
+    "turtle.yml":      {"max_age_h": 26.0, "severity": "WARNING"},
     # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
     # It commits nothing, which is exactly why it needs an entry here: every
     # other watchdog target is caught by its output going stale, and this one
@@ -1501,3 +1506,118 @@ X_ACCOUNTS = [
     {"handle": "wolfgangkasper",  "name": "Wolf Capital"},
     {"handle": "Guv999",          "name": "Guv"},
 ]
+
+# ---------------------------------------------------------------------------
+# TURTLE — the fourth lens (turtle.py / turtle_run.py), added 2026-08-21
+# ---------------------------------------------------------------------------
+# The Richard Dennis / William Eckhardt 1983 breakout system, implemented from
+# the Original Turtle Trading Rules rather than from the popular simplification
+# (see the TURTLE section in CLAUDE.md for the two rules the short version
+# drops and why they matter). REPORT-ONLY: nothing under scanner/broker/ may
+# import this lens, and a test fails the push if it ever does. The numbers
+# below are the ORIGINAL ones — they are not tuned, and retuning them makes
+# this something other than the Turtle system, which is the one thing this
+# lens exists to state exactly.
+
+# N — the Turtles' volatility unit. The original rules define
+#   True Range = max(H-L, H-PDC, PDC-L)
+#   N = (19 * PDN + TR) / 20
+# which is Wilder smoothing at period 20, i.e. exactly indicators.atr(df, 20).
+# The lens CALLS that function rather than re-deriving the recurrence, so the
+# repo has one true-range implementation and cannot drift into two.
+TURTLE_N_PERIOD = 20
+
+# Entry channels (Donchian breakouts), measured on the bars STRICTLY BEFORE
+# the signal bar — a channel that includes today's own high can never be
+# broken by today's own high, which is the classic look-ahead in this system.
+TURTLE_S1_ENTRY = 20      # System 1: the 20-day breakout (filtered, see below)
+TURTLE_S2_ENTRY = 55      # System 2: the 55-day breakout (never filtered)
+
+# Exit channels. A System 1 position exits on the 10-day low, a System 2
+# position on the 20-day low (mirrored for shorts). The system that ENTERED
+# owns the exit — a position opened on the 55-day breakout does not exit on
+# the 10-day low just because that level arrives first.
+TURTLE_S1_EXIT = 10
+TURTLE_S2_EXIT = 20
+
+# The stop: 2N from the entry of the MOST RECENT unit, applied to the whole
+# position. Adding a unit therefore tightens the stop on every unit already
+# held (see TURTLE_PYRAMID_STEP_N).
+TURTLE_STOP_N = 2.0
+
+# Pyramiding: add one unit for every 1/2 N the price moves in your favour,
+# measured from the last unit's fill, to a maximum of TURTLE_MAX_UNITS total
+# (i.e. the initial unit plus three adds).
+TURTLE_PYRAMID_STEP_N = 0.5
+TURTLE_MAX_UNITS = 4
+
+# Unit size: Unit = (TURTLE_RISK_PCT * Account) / (N * DollarsPerPoint).
+# For a share, DollarsPerPoint is 1 by construction (a $1 move on one share is
+# $1), so a unit is (1% of account) / N shares. One unit moving 1N is
+# therefore exactly 1% of the account, which is the link that makes every
+# other number here express itself in equity terms.
+#
+# What a FULL four-unit position actually risks, computed rather than
+# asserted (tests/test_turtle.py pins it): entries sit at 0, +1/2N, +1N,
+# +3/2N above the breakout and the single shared stop ends 2N under the last
+# one, i.e. 1/2N BELOW the breakout. The four units lose 1/2N, 1N, 3/2N and
+# 2N = 5N total = 5% of the account. Left on their own 2N stops they would
+# lose 8N = 8%. Halving that is the entire purpose of the 1/2N stop raise,
+# and it is the rule retail implementations most often drop.
+TURTLE_RISK_PCT = 0.01
+
+# The correlation ceilings, in units. The Turtles traded a diversified futures
+# portfolio and these limits are what kept 4-unit positions from becoming one
+# giant bet on a single theme. This repo has no correlation matrix, so the
+# lens reports them against SECTOR as a stated approximation — see the page.
+TURTLE_MAX_UNITS_CLOSE_CORR = 6     # closely correlated markets
+TURTLE_MAX_UNITS_LOOSE_CORR = 10    # loosely correlated markets
+TURTLE_MAX_UNITS_DIRECTION = 12     # total units long, or total short
+
+# The drawdown rule, and it compounds: for every TURTLE_DRAWDOWN_STEP_PCT the
+# account is down from its peak, cut the equity you SIZE FROM by
+# TURTLE_DRAWDOWN_CUT_PCT. A 20% drawdown therefore sizes off 0.8 * 0.8 = 64%
+# of the real account, not 60%.
+TURTLE_DRAWDOWN_STEP_PCT = 10.0
+TURTLE_DRAWDOWN_CUT_PCT = 20.0
+
+# The documented alternative stop ("Whipsaw"): a quarter of the risk at a
+# quarter of the distance. Reported by the lens for comparison; it is not the
+# default, because 2N is what the rules specify.
+TURTLE_WHIPSAW_RISK_PCT = 0.005
+TURTLE_WHIPSAW_STOP_N = 0.5
+
+# The account the published unit sizes are computed against. Display only —
+# the page lets you type your own and recomputes in the browser. It is
+# deliberately NOT VIVEK_BOT_ACCOUNT_EQUITY: the Turtle lens must never read
+# or imply anything about the live paper book.
+TURTLE_ACCOUNT_EQUITY = 5_000.0
+
+# Shorts are part of the original system (every rule mirrors). The lens
+# COMPUTES both sides and publishes them; whether the deck displays shorts
+# prominently is a display question the edge research already has opinions
+# about (EDGE_RESEARCH_2026-08-20 section 7).
+TURTLE_ALLOW_SHORTS = True
+
+# Minimum daily bars before a name is evaluated at all. The 55-day channel
+# plus a 20-period Wilder N plus enough history for the System 1 filter to
+# have seen a prior breakout: 250 sessions is about a year and is the point
+# below which the filter state is guesswork rather than history.
+TURTLE_MIN_BARS = 250
+
+# Liquidity floors, per market key. A Donchian breakout on a name that trades
+# $12,000 a day is a real breakout and an unfillable one; the lens would be
+# lying by omission if it listed those without a gate.
+TURTLE_MIN_PRICE = {"asx": 0.10, "nasdaq": 1.00, "crypto": 0.0}
+TURTLE_MIN_DVOL = {"asx": 250_000.0, "nasdaq": 1_000_000.0, "crypto": 1_000_000.0}
+TURTLE_DVOL_LOOKBACK = 20
+
+# How close to a breakout level a flat name must be to be published as
+# "approaching" rather than dropped. The scan is a daily file; a name 0.4%
+# under its 55-day high today is the one you want to have seen yesterday.
+TURTLE_APPROACH_PCT = 3.0
+
+# Rows published per market. The full ASX universe throws off far more
+# breakouts than a page can show; ranking is by proximity to the level and
+# then by liquidity, and the payload states how many were dropped.
+TURTLE_MAX_ROWS = 400
