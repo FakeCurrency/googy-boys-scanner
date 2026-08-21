@@ -669,6 +669,48 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         and a cash equity account does not.</p></section>`;
     }
 
+    // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
+    // identical to one that had no signals, and which ceiling is binding is
+    // the whole story -- especially at $5,000, where cash binds long before
+    // any Turtle rule does.
+    const skips = BOOK.skips || [];
+    if (skips.length) {
+      const WHY = {
+        direction_cap: "12-unit one-way ceiling",
+        close_corr_cap: "6-unit correlated-group ceiling",
+        loose_corr_cap: "10-unit loose-correlation ceiling",
+        per_market_cap: "4-unit per-name ceiling",
+        cash: "no cash — a unit would exceed the account",
+        unit_lt_one: "a unit is less than one contract",
+        same_bar_reentry: "exited this session — waiting for a NEW break",
+        s1_skip_after_win: "System 1 filter: the last breakout won",
+      };
+      const counts = BOOK.skip_counts || {};
+      const byReason = Object.keys(counts).filter((k) => k !== "total")
+        .sort((a, b) => counts[b] - counts[a]);
+      h += `<section class="tt-card"><h3>Not taken, and why</h3>
+        <div class="tt-detail-grid">${byReason.map((r) =>
+          kv(esc(WHY[r] || r), big(counts[r]))).join("")}</div>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Market</th><th>Action</th><th>Reason</th><th>Detail</th></tr></thead>
+        <tbody>${skips.slice(0, 40).map((k) => {
+          const d = [];
+          if (k.units_on_book != null) d.push(k.units_on_book + " on book vs cap " + k.cap);
+          if (k.units_held != null && k.units_on_book == null) d.push(k.units_held + " units held");
+          if (k.want_notional != null) d.push("wanted " + money(k.want_notional, 0));
+          if (k.one_contract_risk_pct != null) d.push("one contract = " + pct(k.one_contract_risk_pct) + " of the account");
+          if (k.bucket) d.push(esc(k.bucket));
+          return "<tr><td class=\"mono\">" + esc(k.symbol) + "</td><td>" +
+            esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
+            "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
+            esc(d.join(" · ")) + "</td></tr>";
+        }).join("")}</tbody></table></div>
+        <p class="tt-note">These are decisions, not failures. A cap that binds is
+        the system working; cash binding at ${money(s.equity_start, 0)} is the
+        futures-margin gap this account does not have, and it is the finding
+        rather than something to tune away.</p></section>`;
+    }
+
     const closed = (BOOK.closed || []).slice(-25).reverse();
     if (closed.length) {
       h += `<section class="tt-card"><h3>Closed, most recent first</h3>

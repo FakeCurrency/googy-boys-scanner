@@ -151,7 +151,8 @@ def test_the_book_CANNOT_SPEND_MORE_CASH_THAN_IT_HAS():
     spent = sum(p["cost_basis"] for p in b["open"])
     cap = config.TURTLE_BOOK_EQUITY * config.TURTLE_BOOK_MAX_NOTIONAL_PCT / 100.0
     assert spent <= cap + 1e-6, f"spent {spent} against a {cap} account"
-    assert any("no cash" in e for e in b["events"]), "and it says why it stopped"
+    assert any(k["reason"] == tb.SKIP_CASH for k in b["skips"]), \
+        "and it records WHY it stopped, from the closed enum"
 
 
 def test_the_correlated_bucket_cap_is_ENFORCED_not_merely_displayed():
@@ -159,7 +160,7 @@ def test_the_correlated_bucket_cap_is_ENFORCED_not_merely_displayed():
     rows = [row(f"S{i}", 1.0, 0.5, "s2_long", sector="Materials") for i in range(10)]
     b = tb.update("asx", rows, day="2026-08-21")
     assert len(b["open"]) <= config.TURTLE_MAX_UNITS_CLOSE_CORR
-    assert any("correlated cap" in e for e in b["events"])
+    assert any(k["reason"] == tb.SKIP_CLOSE_CORR_CAP for k in b["skips"])
 
 
 def test_crypto_is_ONE_correlated_bucket_because_it_behaves_like_one_market():
@@ -200,8 +201,11 @@ def test_PYRAMIDS_COUNT_AGAINST_THE_DIRECTION_CAP():
     total_units = sum(len(p["fills"]) for p in b["open"])
     assert total_units <= config.TURTLE_MAX_UNITS_DIRECTION, \
         f"{total_units} units one way against a {config.TURTLE_MAX_UNITS_DIRECTION}-unit cap"
-    assert any("SKIP-ADD" in e and "cap" in e for e in b["events"]), \
-        "and it must say which ceiling stopped it"
+    capped = [k for k in b["skips"] if k["action"] == "add"
+              and k["reason"] in (tb.SKIP_DIRECTION_CAP, tb.SKIP_CLOSE_CORR_CAP)]
+    assert capped, "and it must record which ceiling stopped the pyramid"
+    assert capped[0]["cap"] and capped[0]["units_on_book"] is not None, \
+        "with enough detail to reproduce the decision"
 
 
 def test_the_bucket_cap_also_binds_on_a_pyramid_rung():
@@ -225,8 +229,8 @@ def test_a_name_stopped_out_TODAY_cannot_be_refilled_TODAY():
                               l=89.0, x1lo=50.0, x2lo=50.0)], day="2026-08-22")
     assert len(b["closed"]) == 1, "it must stop out"
     assert not b["open"], "and it must NOT be refilled the same session"
-    assert any("exited today" in e for e in b["events"])
-    assert b["skips"]["reentry"] == 1
+    assert any(k["reason"] == tb.SKIP_SAME_BAR_REENTRY for k in b["skips"])
+    assert b["skip_counts"].get(tb.SKIP_SAME_BAR_REENTRY) == 1
 
 
 def test_the_next_session_may_re_enter_normally():
@@ -244,9 +248,78 @@ def test_skips_are_counted_not_merely_logged():
     that had no signals. Which ceiling is binding is the whole story."""
     rows = [row(f"S{i}", 10.0, 0.2, "s2_long") for i in range(12)]
     b = tb.update("asx", rows, day="2026-08-21")
-    assert b["skips"]["total"] > 0
-    assert b["skips"]["cash"] > 0
-    assert set(b["skips"]) == {"cash", "caps", "reentry", "total"}
+    assert b["skip_counts"]["total"] > 0
+    assert b["skip_counts"].get(tb.SKIP_CASH, 0) > 0
+    # every recorded reason is from the closed enum -- an unknown one is a bug
+    for k in b["skips"]:
+        assert k["reason"] in tb.SKIP_REASONS, k["reason"]
+        for field in ("as_of", "market", "symbol", "action", "reason"):
+            assert k.get(field), f"skip record missing {field}: {k}"
+        assert k["action"] in ("entry", "add")
+
+
+def test_the_per_name_ceiling_records_itself_when_it_bites():
+    """A position at 4 units that WANTS a fifth must say so. Silently not
+    adding is indistinguishable from the price never reaching the rung."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    tb.update("asx", [row("AAA", 130.0, 2.0, o=100.5, h=130.0, l=100.0,
+                          x1lo=1.0, x2lo=1.0)], day="2026-08-22")
+    b = tb.update("asx", [row("AAA", 200.0, 2.0, o=140.0, h=200.0, l=139.0,
+                              x1lo=1.0, x2lo=1.0)], day="2026-08-23")
+    assert len(b["open"][0]["fills"]) == config.TURTLE_MAX_UNITS
+    assert any(k["reason"] == tb.SKIP_PER_MARKET_CAP for k in b["skips"]), \
+        "the 4-unit ceiling must record itself"
+
+
+def test_a_futures_unit_under_one_contract_is_REFUSED_not_rounded():
+    """Rounding 0.025 contracts up to 1 is roughly 40x the intended size and
+    is the commonest way a small account destroys itself while believing it is
+    following rules. The refusal is the honest output."""
+    r = row("CL", 70.0, 2.0, "s2_long", sector="")
+    r["contracts"] = {"dpp": 1000, "micro": "MCL", "micro_dpp": 100,
+                      "full_contracts": 0.025, "micro_contracts": 0.25,
+                      "unit_fits": False, "one_contract_risk_pct": 8.0}
+    b = tb.update("futures", [r], day="2026-08-21")
+    assert not b["open"], "a fraction of a contract cannot be bought"
+    sk = [k for k in b["skips"] if k["reason"] == tb.SKIP_UNIT_LT_ONE]
+    assert sk and sk[0]["one_contract_risk_pct"] == 8.0, \
+        "and it records what taking one anyway would really risk"
+
+
+def test_a_futures_unit_that_DOES_fit_is_taken_normally():
+    # $50 of risk (1% of 5,000); N = 5.00 at $5 a point -> exactly 2 contracts.
+    r = row("MES", 5000.0, 5.0, "s2_long", sector="")
+    r["contracts"] = {"dpp": 50, "micro": "MES", "micro_dpp": 5,
+                      "full_contracts": 0.2, "micro_contracts": 2.0,
+                      "unit_fits": True, "one_contract_risk_pct": 1.0}
+    b = tb.update("futures", [r], day="2026-08-21")
+    assert [p["symbol"] for p in b["open"]] == ["MES"]
+    pos = b["open"][0]
+    assert pos["contracts"] == 2 and pos["contract"] == "MES", \
+        "1% of 5,000 = $50 of risk; N=20 at $5/pt -> 0.5 -> 2 micro contracts"
+    assert pos["units"] == pytest.approx(pos["contracts"] * 5), \
+        "units carries contracts x dpp so P&L arithmetic stays correct"
+
+
+def test_every_skip_reason_the_module_can_emit_is_in_the_closed_enum():
+    """An unknown reason must be a bug, not a shrug. _skip() asserts on the
+    way in; this pins that the enum is actually closed at the source."""
+    src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
+    assert "assert reason in SKIP_REASONS" in src
+    import re
+    emitted = set(re.findall(r"_skip\([^)]*?(SKIP_[A-Z_]+)", src, re.S))
+    assert emitted, "no skip reasons emitted?"
+    for e in emitted:
+        assert getattr(tb, e) in tb.SKIP_REASONS
+
+
+def test_the_two_unemitted_enum_values_are_documented_as_such():
+    """loose_corr_cap and s1_skip_after_win are never emitted here. An enum
+    with unexplained dead entries invites someone to wire them wrongly."""
+    src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
+    assert "never emitted" in src
+    assert "Loosely correlated" in src and "taxonomy this repo" in src, \
+        "the loose-correlation taxonomy gap must be stated"
 
 
 # ---------------------------------------------------------------------------

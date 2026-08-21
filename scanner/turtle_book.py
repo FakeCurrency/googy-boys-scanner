@@ -49,6 +49,37 @@ SCHEMA = 1
 STOP = "stop"
 CHANNEL = "channel"
 
+# THE SKIP ENUM IS CLOSED, and that is the point. Silent drops are how a scan
+# lost 95% of its universe and reported `errors: 0`; a book that quietly
+# declines half its signals looks identical to one that had no signals. Every
+# refusal names itself from this list, so "why is the book only three
+# positions" always has an answer, and an unknown reason is a bug rather than
+# a shrug.
+SKIP_DIRECTION_CAP = "direction_cap"      # the 12-unit one-way ceiling
+SKIP_CLOSE_CORR_CAP = "close_corr_cap"    # the 6-unit correlated-group ceiling
+SKIP_LOOSE_CORR_CAP = "loose_corr_cap"    # declared, see the note below
+SKIP_PER_MARKET_CAP = "per_market_cap"    # the 4-unit per-name ceiling
+SKIP_CASH = "cash"                        # no room on a cash account
+SKIP_UNIT_LT_ONE = "unit_lt_one"          # futures: a unit is under one contract
+SKIP_SAME_BAR_REENTRY = "same_bar_reentry"
+SKIP_S1_FILTER = "s1_skip_after_win"      # never emitted here, see the note
+SKIP_REASONS = (
+    SKIP_DIRECTION_CAP, SKIP_CLOSE_CORR_CAP, SKIP_LOOSE_CORR_CAP,
+    SKIP_PER_MARKET_CAP, SKIP_CASH, SKIP_UNIT_LT_ONE,
+    SKIP_SAME_BAR_REENTRY, SKIP_S1_FILTER,
+)
+# Two of these are deliberately never emitted BY THIS MODULE, and saying so
+# beats an enum with unexplained dead entries:
+#   loose_corr_cap  -- the 10-unit loosely-correlated ceiling is not wired on
+#     EITHER path. "Loosely correlated" needs a taxonomy this repo does not
+#     have; sector is already spent on the close-correlated bucket and reusing
+#     it would just be the same cap twice under two names. Declared, displayed,
+#     honestly not enforced.
+#   s1_skip_after_win -- the System 1 filter runs in the ENGINE, before a
+#     signal is ever published, so the book never sees a filtered breakout to
+#     decline. The value exists so the enum matches the rules rather than the
+#     plumbing.
+
 
 # ---------------------------------------------------------------------------
 # storage
@@ -137,6 +168,16 @@ def _cost(price: float, units: float) -> float:
     return abs(price * units) * (config.TURTLE_COST_BPS / 10_000.0)
 
 
+def _skip(day: str, market: str, symbol: str, action: str, reason: str,
+          detail: dict | None = None) -> dict:
+    """A refusal, recorded so it can be reproduced rather than guessed at."""
+    assert reason in SKIP_REASONS, f"unknown skip reason {reason!r}"
+    rec = {"as_of": day, "market": market, "symbol": symbol,
+           "action": action, "reason": reason}
+    rec.update(detail or {})
+    return rec
+
+
 def _bucket(row: dict, market: str) -> str:
     """The correlation bucket a name counts against.
 
@@ -203,6 +244,7 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
     stop_n = config.TURTLE_STOP_N
     step_n = config.TURTLE_PYRAMID_STEP_N
     events: list[str] = []
+    skips: list[dict] = []
 
     still_open: list[dict] = []
     open_list = list(book.get("open", []))
@@ -256,6 +298,15 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
 
         # ---- add ------------------------------------------------------------
         eq = sizing_equity(book)
+        if pos["units"] > 0 and len(pos["fills"]) >= config.TURTLE_MAX_UNITS:
+            wants = (sign > 0 and hi >= pos["last_fill"] + step_n * pos["n"]) or \
+                    (sign < 0 and lo <= pos["last_fill"] - step_n * pos["n"])
+            if wants:
+                skips.append(_skip(day, market, pos["symbol"], "add",
+                                   SKIP_PER_MARKET_CAP,
+                                   {"units_held": len(pos["fills"]),
+                                    "cap": config.TURTLE_MAX_UNITS,
+                                    "system": pos.get("system")}))
         while pos["units"] > 0 and len(pos["fills"]) < config.TURTLE_MAX_UNITS:
             level = pos["last_fill"] + sign * step_n * pos["n"]
             if (sign > 0 and hi < level) or (sign < 0 and lo > level):
@@ -263,7 +314,10 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
             fill = max(level, op) if sign > 0 else min(level, op)
             add_units = unit_units(eq, pos["n"])
             if add_units <= 0 or not _room_for(book, still_open, fill * add_units):
-                events.append(f"SKIP-ADD {pos['symbol']} no cash for another unit")
+                skips.append(_skip(day, market, pos["symbol"], "add", SKIP_CASH,
+                                   {"units_held": len(pos["fills"]),
+                                    "want_notional": round(fill * add_units, 2),
+                                    "equity": round(realized_equity(book), 2)}))
                 break
             # The ceilings count UNITS, so a pyramid rung is checked exactly
             # as a new name is. Without this, twelve names each adding to four
@@ -274,10 +328,12 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
             # 12-unit cap still admitted 21. The tail may exit later in this
             # same session and free units, but that is not knowable here, and
             # declining to add is the conservative side of the ambiguity.
-            ok, why = _caps_allow(book, still_open + open_list[idx + 1:],
-                                  pos, market, pos["side"], extra=pos)
+            ok, why, detail = _caps_allow(book, still_open + open_list[idx + 1:],
+                                          pos, market, pos["side"], extra=pos)
             if not ok:
-                events.append(f"SKIP-ADD {pos['symbol']} {why}")
+                skips.append(_skip(day, market, pos["symbol"], "add", why,
+                                   dict(detail, units_held=len(pos["fills"]),
+                                        system=pos.get("system"))))
                 break
             pos["fills"].append(round(fill, 8))
             pos["cost_basis"] = round(pos["cost_basis"] + fill * add_units, 6)
@@ -308,7 +364,8 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
              and r["symbol"] not in held and r["symbol"] not in exited_today]
     for r in rows:
         if r.get("signal") and r["symbol"] in exited_today:
-            events.append(f"SKIP {r['symbol']} exited today - waiting for a new break")
+            skips.append(_skip(day, market, r["symbol"], "entry",
+                               SKIP_SAME_BAR_REENTRY, {"signal": r["signal"]}))
     fired.sort(key=lambda r: -(_f(r.get("dvol")) or 0.0))
     for row in fired:
         sig = row["signal"]
@@ -321,13 +378,58 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
         px = _f(bar.get("c")) or _f(row.get("price"))
         if not n or n <= 0 or not px or px <= 0:
             continue
-        ok, why = _caps_allow(book, still_open, row, market, side)
+        ok, why, detail = _caps_allow(book, still_open, row, market, side)
         if not ok:
-            events.append(f"SKIP {row['symbol']} {why}")
+            skips.append(_skip(day, market, row["symbol"], "entry", why,
+                               dict(detail, system=system)))
             continue
+        # FUTURES: a unit under one contract cannot be taken. Rounding 0.025
+        # contracts up to 1 is roughly 40x the intended size, which is the
+        # commonest way a small account destroys itself while believing it is
+        # following rules. The refusal is the honest output.
+        contracts = row.get("contracts")
+        if contracts and not contracts.get("unit_fits"):
+            skips.append(_skip(day, market, row["symbol"], "entry",
+                               SKIP_UNIT_LT_ONE,
+                               {"full_contracts": contracts.get("full_contracts"),
+                                "micro_contracts": contracts.get("micro_contracts"),
+                                "one_contract_risk_pct": contracts.get("one_contract_risk_pct"),
+                                "equity": round(realized_equity(book), 2)}))
+            continue
+        # FUTURES SIZE IN CONTRACTS, NOT SHARES. `units` is carried as the
+        # dollar-per-point multiplier (contracts x dpp) so every downstream
+        # calculation -- P&L, risk, R -- stays correct arithmetic without
+        # special-casing. A whole number of contracts, never a fraction.
+        if contracts:
+            dpp = contracts.get("micro_dpp") or contracts.get("dpp") or 0
+            kind = contracts.get("micro") or "full"
+            whole = int((config.TURTLE_RISK_PCT * sizing_equity(book)) / (n * dpp)) \
+                if (dpp and n > 0) else 0
+            if whole < 1:
+                skips.append(_skip(day, market, row["symbol"], "entry",
+                                   SKIP_UNIT_LT_ONE, {"contracts": whole}))
+                continue
+            units = whole * dpp
+            # NO CASH CHECK HERE, deliberately. A futures position consumes
+            # MARGIN, not notional, and this repo has no margin data; testing
+            # notional against equity would refuse every legitimate contract
+            # and call it prudence. The real constraint for a small account is
+            # the one above -- whether a unit is a whole contract at all.
+            pos = _open_position(row, market, side, system, px, units, n, day)
+            pos["contracts"] = whole
+            pos["contract"] = kind
+            pos["dpp"] = dpp
+            still_open.append(pos)
+            events.append(f"ENTER {row['symbol']} S{system} {side} "
+                          f"{whole}x{kind} @ {px:.6g}")
+            continue
+
         units = unit_units(sizing_equity(book), n)
         if units <= 0 or not _room_for(book, still_open, px * units):
-            events.append(f"SKIP {row['symbol']} no cash for a unit")
+            skips.append(_skip(day, market, row["symbol"], "entry", SKIP_CASH,
+                               {"want_notional": round(px * units, 2),
+                                "equity": round(realized_equity(book), 2),
+                                "system": system}))
             continue
         pos = _open_position(row, market, side, system, px, units, n, day)
         still_open.append(pos)
@@ -337,16 +439,14 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
     book["generated_at"] = datetime.datetime.now(
         datetime.timezone.utc).isoformat(timespec="seconds")
     book["events"] = events[-200:]
-    # Skips are COUNTED, not just logged. A book that quietly declines half
-    # its signals looks identical to one that had no signals, and the reason
-    # it declined is the whole story about whether the caps or the cash are
-    # what is actually binding.
-    book["skips"] = {
-        "cash": sum(1 for e in events if "no cash" in e),
-        "caps": sum(1 for e in events if "cap" in e),
-        "reentry": sum(1 for e in events if "exited today" in e),
-        "total": sum(1 for e in events if e.startswith("SKIP")),
-    }
+    book["skips"] = skips
+    # Counted by reason as well as listed, so "why is the book small" is one
+    # glance rather than a scroll.
+    counts = {r: 0 for r in SKIP_REASONS}
+    for sk in skips:
+        counts[sk["reason"]] = counts.get(sk["reason"], 0) + 1
+    book["skip_counts"] = {k: v for k, v in counts.items() if v}
+    book["skip_counts"]["total"] = len(skips)
     book["summary"] = summarize_book(book)
     save_book(book)
     return book
@@ -364,7 +464,7 @@ def _room_for(book: dict, open_rows: list[dict], notional: float) -> bool:
 
 
 def _caps_allow(book: dict, open_rows: list[dict], row: dict, market: str,
-                side: str, extra: dict | None = None) -> tuple[bool, str]:
+                side: str, extra: dict | None = None) -> tuple[bool, str, dict]:
     """The Turtles' unit ceilings, counted over EVERY unit including pyramids.
 
     THE CEILINGS ARE ON TOTAL UNITS, NOT ON POSITIONS. Checking them only when
@@ -381,13 +481,17 @@ def _caps_allow(book: dict, open_rows: list[dict], row: dict, market: str,
     same_side = [p for p in rows if p["side"] == side]
     units_side = sum(len(p.get("fills", [])) for p in same_side)
     if units_side + 1 > config.TURTLE_MAX_UNITS_DIRECTION:
-        return False, f"{config.TURTLE_MAX_UNITS_DIRECTION}-unit {side} cap"
+        return False, SKIP_DIRECTION_CAP, {
+            "units_on_book": units_side, "cap": config.TURTLE_MAX_UNITS_DIRECTION,
+            "side": side}
     bucket = _bucket(row, market)
     units_bucket = sum(len(p.get("fills", [])) for p in same_side
                        if _bucket(p, market) == bucket)
     if units_bucket + 1 > config.TURTLE_MAX_UNITS_CLOSE_CORR:
-        return False, f"{config.TURTLE_MAX_UNITS_CLOSE_CORR}-unit correlated cap ({bucket})"
-    return True, ""
+        return False, SKIP_CLOSE_CORR_CAP, {
+            "units_on_book": units_bucket, "cap": config.TURTLE_MAX_UNITS_CLOSE_CORR,
+            "bucket": bucket, "side": side}
+    return True, "", {}
 
 
 def write_combined(markets=("asx", "nasdaq", "crypto")) -> str:
@@ -407,9 +511,16 @@ def write_combined(markets=("asx", "nasdaq", "crypto")) -> str:
         combined["closed"].extend(b.get("closed", []))
         combined["equity_start"] += float(b.get("equity_start") or 0.0)
         combined["by_market"][m] = b.get("summary", {})
+        for sk in b.get("skips", []):
+            combined.setdefault("skips", []).append(sk)
         if b.get("started"):
             started.append(b["started"])
     combined["started"] = min(started) if started else ""
+    counts = {}
+    for sk in combined.get("skips", []):
+        counts[sk["reason"]] = counts.get(sk["reason"], 0) + 1
+    counts["total"] = len(combined.get("skips", []))
+    combined["skip_counts"] = counts
     combined["summary"] = summarize_book(combined)
     path = pathlib.Path(os.path.join(BOOK_DIR, "turtle_book.json"))
     os.makedirs(BOOK_DIR, exist_ok=True)

@@ -440,6 +440,27 @@ def test_an_exit_beats_an_add_inside_the_same_bar():
     assert exit_at < add_at
 
 
+def test_the_REPLAY_also_forbids_a_same_bar_re_entry():
+    """Replay and forward book must agree, so the book's rule is not a
+    behaviour the backtest lacks.
+
+    Here one bar stops the position out AND prints far through the 20-day
+    high. The replay moves to the next bar after an exit, so a refill on the
+    same bar is structurally impossible -- but it is pinned rather than left
+    to the shape of a loop, because rearranging that loop is exactly how it
+    would quietly become possible.
+    """
+    rows = _BASE + [
+        (101.0, 102.0, 100.5, 101.5, 5e7),      # enter at 101
+        (101.0, 140.0, 95.0, 96.0, 5e7),        # stops out, and breaks out again
+        (96.0, 97.0, 95.0, 96.0, 5e7),
+    ]
+    rep = turtle.replay(_bars(rows), allow_shorts=False)
+    assert len(rep["trades"]) == 1 and rep["trades"][0]["reason"] == turtle.STOP
+    assert rep["state"] == "flat", \
+        "the bar that stopped it out must not also refill it"
+
+
 def test_a_gap_through_the_stop_books_the_gap_not_the_stop():
     """Entry 101, N 2, stop 97. The frame then opens at 90 -- an honest replay
     fills at 90, a dishonest one fills at 97 and flatters every result."""
