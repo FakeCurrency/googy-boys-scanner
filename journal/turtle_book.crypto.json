@@ -1,33 +1,10 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-08-21T16:45:08+00:00",
+ "generated_at": "2026-08-21T20:34:58+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
-  {
-   "symbol": "ADA",
-   "market": "crypto",
-   "name": "Cardano",
-   "sector": "",
-   "side": "long",
-   "system": 2,
-   "n": 0.00947723,
-   "units": 4783.49021813,
-   "fills": [
-    0.21506
-   ],
-   "cost_basis": 1028.737386,
-   "stop": 0.19610554,
-   "last_fill": 0.21506,
-   "opened": "2026-08-21",
-   "last_mark": 0.21857999,
-   "mark_date": "2026-08-21",
-   "fees": 1.543106,
-   "mfe_r": 0.2487,
-   "mae_r": -0.8504,
-   "unpriced_runs": 0
-  },
   {
    "symbol": "DOGE",
    "market": "crypto",
@@ -45,12 +22,34 @@
    "stop": 0.07983811,
    "last_fill": 0.08505397,
    "opened": "2026-08-21",
-   "last_mark": 0.08435,
+   "last_mark": 0.0864,
    "mark_date": "2026-08-21",
    "fees": 3.883933,
    "mfe_r": 0.3273,
-   "mae_r": -0.6358,
+   "mae_r": -0.7443,
    "unpriced_runs": 0
+  },
+  {
+   "symbol": "GT",
+   "market": "crypto",
+   "name": "Gate",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.16691739,
+   "units": 200.63107385,
+   "fills": [
+    7.34742689
+   ],
+   "cost_basis": 1474.122147,
+   "stop": 7.01359211,
+   "last_fill": 7.34742689,
+   "opened": "2026-08-21",
+   "last_mark": 7.34742689,
+   "mark_date": "2026-08-21",
+   "fees": 2.211183,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
   }
  ],
  "closed": [
@@ -154,29 +153,55 @@
     7.37300014,
     7.49097657
    ]
+  },
+  {
+   "symbol": "ADA",
+   "market": "crypto",
+   "name": "Cardano",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.00947723,
+   "units": 8450.56475362,
+   "opened": "2026-08-21",
+   "closed": "2026-08-21",
+   "exit": 0.19903032,
+   "reason": "stop",
+   "entry_avg": 0.21711629,
+   "gross": -152.8366,
+   "fees": 5.275,
+   "pnl": -158.1117,
+   "r": -0.9871,
+   "gross_r": -0.9542,
+   "mfe_r": 0.2958,
+   "mae_r": -0.8504,
+   "fills": [
+    0.21506,
+    0.21979862
+   ]
   }
  ],
  "summary": {
   "started": "2026-08-21",
   "equity_start": 5000.0,
-  "equity": 4344.21,
-  "return_pct": -13.116,
+  "equity": 4186.1,
+  "return_pct": -16.278,
   "open_positions": 2,
   "open_units": 3,
-  "closed": 4,
+  "closed": 5,
   "wins": 0,
   "win_pct": 0.0,
-  "total_r": -5.709,
-  "avg_r": -1.4273,
-  "median_r": -1.2602,
-  "realized_pnl": -655.79,
-  "fees_paid": 19.8,
-  "sizing_equity": 3475.37
+  "total_r": -6.696,
+  "avg_r": -1.3393,
+  "median_r": -1.1429,
+  "realized_pnl": -813.9,
+  "fees_paid": 25.07,
+  "sizing_equity": 3348.88
  },
  "events": [
-  "ADD ETC u2 @ 7.49098",
-  "EXIT ETC stop-after-add -1.0434R",
-  "ADD DOGE u2 @ 0.085054"
+  "ADD ADA u2 @ 0.219799",
+  "EXIT ADA stop-after-add -0.9871R",
+  "ENTER GT S2 long @ 7.34743"
  ],
  "skips": [
   {
@@ -206,6 +231,14 @@
   {
    "as_of": "2026-08-21",
    "market": "crypto",
+   "symbol": "ADA",
+   "action": "entry",
+   "reason": "same_bar_reentry",
+   "signal": "s2_long"
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
    "symbol": "BCH",
    "action": "entry",
    "reason": "same_bar_reentry",
@@ -214,21 +247,11 @@
   {
    "as_of": "2026-08-21",
    "market": "crypto",
-   "symbol": "GT",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1521.87,
-   "equity": 4344.21,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-21",
-   "market": "crypto",
    "symbol": "NEXO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 902.44,
-   "equity": 4344.21,
+   "want_notional": 870.52,
+   "equity": 4186.1,
    "system": 2
   },
   {
@@ -237,14 +260,14 @@
    "symbol": "ALGO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 886.02,
-   "equity": 4344.21,
+   "want_notional": 860.9,
+   "equity": 4186.1,
    "system": 2
   }
  ],
  "skip_counts": {
-  "cash": 3,
-  "same_bar_reentry": 4,
+  "cash": 2,
+  "same_bar_reentry": 5,
   "total": 7
  }
 }
