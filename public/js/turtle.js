@@ -407,6 +407,24 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
            c.micro_contracts == null ? "—" : num(c.micro_contracts, 4) + " contracts") +
         kv("Unit fits at " + money(EQUITY, 0), c.unit_fits ? "yes" : "<b>NO</b>") +
         "</div>";
+      const rl = r.rolls;
+      if (rl && rl.bars) {
+        detail += '<p class="tt-note"><b>Back-adjusted tape.</b> ' + big(rl.bars) +
+          " bar" + (rl.bars === 1 ? "" : "s") + " (" + pct(100 * rl.share, 1) +
+          ") carry an overnight gap too large to be a real overnight move — " +
+          "contract rolls, which a continuous <code>=F</code> series folds into " +
+          "the price history. Nobody traded those steps, but true range counts " +
+          "them, and the bar after a roll runs an N about 13–22% too high — a " +
+          "stop that much too wide and a unit that much too small." +
+          (rl.in_n_window
+            ? " <b>One sits inside the current 20-bar N window, so today's N on " +
+              "this market is affected.</b>"
+            : " None is inside the current N window, so today's N is clean.") +
+          (rl.last ? " Most recent: " + esc(rl.last) + "." : "") +
+          " Detected, not corrected: the true-range formula is frozen and " +
+          "quietly trimming it would be the exact dishonesty this lens refuses." +
+          "</p>";
+      }
       if (!c.unit_fits) {
         detail += '<p class="tt-note">At ' + money(EQUITY, 0) +
           " one unit is a fraction of a contract. Taking one anyway risks <b>" +
@@ -656,17 +674,29 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     }
 
     if (open.length) {
+      const anyFutures = open.some((p) => p.market === "futures");
       h += `<section class="tt-card"><h3>Open positions</h3>
         <div class="tt-tablewrap"><table class="tt-table">
         <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
         <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
         <tbody>${open.map(posRow).join("")}</tbody></table></div>
         <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
-        recent unit. The book cannot spend more cash than it has — which on a
-        ${money(s.equity_start, 0)} account binds fast, because at ${(P.risk_pct * 100).toFixed(0)}%
-        risk per N a single unit routinely costs a quarter to a half of the
-        account. That is exactly the leverage the Turtles had from futures margin
-        and a cash equity account does not.</p></section>`;
+        recent unit. On the equity and crypto books the cash constraint binds
+        fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
+        routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
+        That is exactly the leverage the Turtles had from futures margin and a
+        cash account does not.</p>
+        ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
+        NOT constrained by cash.</b> A futures position consumes margin, not
+        notional, and this repo has no margin data — so the only ceilings on the
+        futures book are the unit caps (${P.max_units} per market,
+        ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
+        direction) and the refusal to hold less than one contract. Do not read a
+        futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
+        would fit: the notional behind those contracts is many multiples of the
+        account, and the leverage was never priced. It is disclosed rather than
+        modelled because a fabricated margin number would be worse than an
+        absent one.</p>` : ""}</section>`;
     }
 
     // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks

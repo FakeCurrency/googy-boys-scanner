@@ -1709,6 +1709,30 @@ TURTLE_FUTURES = [
      "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
 ]
 
+# ROLL-GAP DETECTION for the futures sleeve. Continuous front-month "=F"
+# series are BACK-ADJUSTED, so the roll from one contract month to the next
+# lands inside the price history as a step that looks like a real overnight
+# move. It is not one -- nobody could have traded it -- and Wilder's true
+# range counts it in full.
+#
+# Measured on a simulated quarterly-rolling tape: a roll inflates N by
+# 13-22% ON THE BAR AFTER IT, which is precisely the bar a position opened
+# that day is sized and stopped from. A 22% inflated N means a stop 22% too
+# wide and a unit 22% too small. Diluted across the 20-bar window the
+# steady-state distortion is around 1%, so this is a spike problem, not a
+# level problem.
+#
+# A bar is FLAGGED when its overnight gap exceeds this multiple of its own
+# range. On the simulated tape that separated cleanly: 3.78x at roll bars
+# against 0.28x typical, catching 7 of 7 rolls and nothing else.
+#
+# DETECTION AND DISCLOSURE ONLY. The true-range formula is NOT touched --
+# that is frozen detection law, and silently winsorising TR to make a number
+# look better is exactly the move this lens exists to refuse. The proper fix
+# is real roll dates, which this repo does not have; until then the page says
+# which rows are affected.
+TURTLE_ROLL_GAP_RATIO = 3.0
+
 # THE FORWARD PAPER BOOK (turtle_book.py). Completely separate from the
 # VIVEK paper bot: own file, own equity, own slot pool, own sizing. The
 # five-year replay cannot answer "does this work" -- its universe is today's

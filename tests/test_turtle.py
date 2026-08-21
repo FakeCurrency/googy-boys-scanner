@@ -999,6 +999,80 @@ def test_futures_is_a_declared_list_so_the_sleeve_has_no_survivorship():
     assert "futures" in turtle_run.MARKETS
 
 
+def _rolling_tape(rolls=7, step=4.0, seed=3, n=500):
+    """A back-adjusted continuous series: a quiet tape with quarterly contract
+    rolls folded in as price steps, which is what a "=F" series really is."""
+    rs = np.random.RandomState(seed)
+    mid = 100 + np.cumsum(rs.normal(0, 0.4, n))
+    for k, r in enumerate(range(63, n, 63)):
+        if k >= rolls:
+            break
+        mid[r:] += (1 if k % 2 else -1) * step
+    return pd.DataFrame(
+        {"Open": mid, "High": mid + 0.5, "Low": mid - 0.5, "Close": mid,
+         "Volume": np.full(n, 1e6)},
+        index=pd.bdate_range("2015-01-01", periods=n))
+
+
+def test_contract_rolls_are_detected_in_a_back_adjusted_series():
+    """A roll is not a tradeable overnight move, but true range counts it in
+    full. Measured: N runs 13-22% high on the bar AFTER a roll -- the bar a
+    position opened that day is sized and stopped from."""
+    r = turtle.roll_suspects(_rolling_tape(rolls=7))
+    assert r["bars"] == 7, f"7 rolls simulated, {r['bars']} found"
+    assert 0 < r["share"] < 0.05
+    assert r["last"]
+
+
+def test_an_ordinary_tape_flags_nothing():
+    """The detector must not fire on stocks or crypto, which have no rolls --
+    a false positive here would put a scary caveat on a clean market."""
+    assert turtle.roll_suspects(band([100.0] * 300))["bars"] == 0
+    assert turtle.roll_suspects(band(list(range(100, 400))))["bars"] == 0
+
+
+def test_it_says_whether_TODAYS_N_is_affected():
+    """The only part that changes a decision being made now: is a roll inside
+    the current 20-bar N window?"""
+    tape = _rolling_tape(rolls=7)
+    assert turtle.roll_suspects(tape)["in_n_window"] is False
+    # put a roll two bars from the end
+    late = tape.copy()
+    late.iloc[-2:, :] += 6.0
+    assert turtle.roll_suspects(late)["in_n_window"] is True
+
+
+def test_roll_detection_does_NOT_touch_the_true_range_formula():
+    """Detection and disclosure only. Quietly winsorising TR to make a futures
+    number look better is the exact dishonesty this lens exists to refuse, and
+    the true-range formula is frozen detection law."""
+    tape = _rolling_tape(rolls=7)
+    before = float(turtle.compute_n(tape).iloc[-1])
+    turtle.roll_suspects(tape)
+    assert float(turtle.compute_n(tape).iloc[-1]) == before
+    # Asked of the CODE, not the prose: the docstring explains at length why
+    # winsorising TR would be dishonest, and a substring ban reads that
+    # justification as the offence.
+    src = (ROOT / "scanner" / "turtle.py").read_text(encoding="utf-8")
+    fn = src[src.index("def roll_suspects"):src.index("def liquidity")]
+    body = fn.split('"""')[-1]                      # everything after the docstring
+    for banned in ("clip(", "winsor", "atr(", "compute_n("):
+        assert banned not in body, f"roll_suspects must not modify N ({banned})"
+    assert "return" in body and "df[" in body, "the slice must be the real body"
+
+
+def test_only_futures_rows_carry_the_roll_block():
+    """Stocks have no rolls; publishing an empty block on 2,212 ASX rows would
+    be noise in every payload."""
+    df = band([100.0] * 260 + ramp(101, 140) + [140.0] * 5)
+    stock = turtle.build_row("T", {"name": "T"}, df, "nasdaq")
+    assert "rolls" not in stock
+    fut = turtle.build_row("CL", {"name": "Crude", "dpp": 1000, "micro": "MCL",
+                                  "micro_dpp": 100, "group": "energy"},
+                           df, "futures")
+    assert fut is not None and "rolls" in fut
+
+
 # ---------------------------------------------------------------------------
 # fences — the freeze, and the report-only promise
 # ---------------------------------------------------------------------------

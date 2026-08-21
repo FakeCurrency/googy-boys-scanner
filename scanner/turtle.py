@@ -592,6 +592,42 @@ def summarize(trades: list[dict]) -> dict:
 # the published row
 # ---------------------------------------------------------------------------
 
+def roll_suspects(df: pd.DataFrame, ratio: float | None = None) -> dict:
+    """Bars whose overnight gap is too large to be a real overnight move.
+
+    On a back-adjusted continuous futures series the contract roll appears as
+    a step in the price history. Nobody traded that step, but Wilder's true
+    range counts it in full, and the bar AFTER a roll is the one a position
+    opened that day is sized and stopped from -- measured at 13-22% of N.
+
+    Returns the count, the share of bars affected, and whether a suspect bar
+    sits inside the current N window (i.e. whether TODAY's N is contaminated,
+    which is the only part that changes a decision being made now).
+
+    This DETECTS. It does not correct: the true-range formula is frozen
+    detection law and quietly winsorising it is the move this lens exists to
+    refuse. The real fix is roll dates the repo does not have.
+    """
+    ratio = config.TURTLE_ROLL_GAP_RATIO if ratio is None else ratio
+    if df is None or len(df) < 3 or ratio <= 0:
+        return {"bars": 0, "share": 0.0, "in_n_window": False, "last": None}
+    gap = (df["Open"] - df["Close"].shift(1)).abs()
+    rng = (df["High"] - df["Low"]).replace(0, np.nan)
+    flag = (gap / rng) > ratio
+    flag = flag.fillna(False).to_numpy()
+    n_bars = int(flag.sum())
+    window = flag[-config.TURTLE_N_PERIOD:] if len(flag) >= config.TURTLE_N_PERIOD else flag
+    idx = np.flatnonzero(flag)
+    last = None
+    if idx.size:
+        src = df["Date"] if "Date" in df.columns else df.index
+        last = str(src[int(idx[-1])])[:10]
+    return {"bars": n_bars,
+            "share": round(float(flag.mean()), 4),
+            "in_n_window": bool(window.any()),
+            "last": last}
+
+
 def liquidity(df: pd.DataFrame, market: str) -> tuple[float, bool]:
     """(average daily dollar volume, passes the market's floors).
 
@@ -730,6 +766,10 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
     if info.get("dpp"):
         row["contracts"] = contract_sizing(equity, n, info)
         row["group"] = info.get("group", "")
+        # Back-adjusted continuous series carry their contract rolls as price
+        # steps. Published so a futures number is never read as if the tape
+        # were tradeable end to end.
+        row["rolls"] = roll_suspects(df)
 
     # Proximity: how far the nearest actionable level is, as a percentage.
     # For a flat name that is the nearest untaken breakout; for a held one it

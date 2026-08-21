@@ -290,3 +290,13 @@
   .tt-table { font-size: 12px; }
   .tt-table th, .tt-table td { padding-right: 8px; }
 }
+
+/* The one note on this page that is a warning rather than context: the
+ * futures book has no cash ceiling, so a sleeve that "fits" is implying
+ * leverage nothing priced. Amber, not red -- it is a disclosure about a
+ * modelling gap, not a fault. */
+.tt-note.tt-warn-note {
+  border-left-color: var(--orange);
+  background: var(--orange-soft);
+  color: var(--text-2) !important;
+}
