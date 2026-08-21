@@ -30,11 +30,22 @@ canonical: break > reclaim > retest). Decomposed, the window/vintage gap
 (+0.138R) drives more of the disagreement than the shorts-blending (+0.080R):
 the tint's edge substantially lives in 2016–2021.
 
-**What already shipped (data only, batch-100 WS-F)**: the canonical weekly
-replay now publishes `by_entry_type_long`, `by_direction_entry_type` and
-`by_timeframe_long` blocks — long-only numbers from the RIGHT window, in the
-file `lens_backtest.yml` refreshes weekly. The evidence the tint should read
-now exists on every run. What was deliberately NOT touched (per the standing
+**CORRECTION, 2026-08-21 — verified, and it changes what to do first.** The
+CODE that emits `by_entry_type_long`, `by_direction_entry_type` and
+`by_timeframe_long` shipped on 2026-08-20 (`23b581484`). The published
+`public/data/vivek_backtest.json` was generated **2026-08-16T08:44Z** — four
+days OLDER than the code — and `grep -c by_entry_type_long` over it returns
+**0**. `lens_backtest.yml` runs Sundays at 08:00 UTC, so the blocks do not
+exist in the live file yet.
+
+**Repointing `loadEntryQuality()` today would read `undefined` and kill the
+entry-quality chips entirely — worse than the wrong tint it replaces.** Do
+this instead, in order: dispatch `lens_backtest.yml`, confirm the three blocks
+are present in the published file, and only then repoint. After that it is
+exactly the one-liner below.
+
+The earlier version of this proposal said "the data already ships". That was
+written from the code and never checked against the artefact. What was deliberately NOT touched (per the standing
 instruction): `loadEntryQuality()` still reads the longonly file.
 
 **The change**: one edit — point `loadEntryQuality()` at
@@ -68,12 +79,26 @@ the H4-proxy level, not exit tuning — no stop width rescues an MFE-zero trade.
 | **2b** | tighten the 1D grade floor | bot takes 1D entries only at a score above the A+ cutoff (e.g. ≥9) | cheap; keyed to existing machinery | §6 says score digits are noise at 5s — the floor may select nothing real |
 | **2c** | drop 1D from bot eligibility | `VIVEK_BOT_LEVEL_TF_ALLOW` excludes the 1D/H4 proxy | removes the entire measured bleed (−9.05R of stops) | halves the entry surface; 1D is also where 3 of the time-stop's +2.14R harvest came from; one regime of evidence |
 
-**Recommendation**: 2c is what the current numbers support, but on 7 stops
-from one regime it is aggressive. A defensible middle: run **2a** live from
-Sep 4 while the w3-2 cycle accumulates a second regime of 1D evidence, with 2c
-pre-registered as the action if the 1D cohort is still net-negative at the
-next 30-close readout. **Do not** loosen stops or shorten the time-stop in
-response to this cell (see P11) — the evidence points away from both.
+**CORRECTION, 2026-08-21 — verified, and it reframes the whole item.**
+`scanner/config.py:411` already reads `VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly",
+"3d")`. **1D is already excluded from bot eligibility, and the book confirms
+it took**: across 31 `cycle: w3-1` positions the traded timeframes are 3D×17
+and 1W×14 — **zero 1D**. And all 7 stop-outs carrying the −9.05R are
+`cycle: None`, i.e. pre-freeze, taken before the exclusion existed.
+
+So variant 2c is not a decision to make; it is the status quo. **The real
+question is the opposite one: keep the exclusion, or relax it?**
+
+And that question already has better evidence than this proposal asked for:
+pre-freeze WITH 1D produced 7 stops and −9.05R; w3-1 WITHOUT it has 31
+positions and **zero stops**. Different tape and a small sample, but it points
+one way, and it does not need another cycle to read.
+
+**Recommendation: keep the exclusion.** Revisit only if the w3-1 cohort's
+mechanical exits come in flat or negative, in which case the 1D question was
+never the live one. Variants 2a and 2b remain available if you later want 1D
+back on a confirmation requirement rather than all-or-nothing. **Do not**
+loosen stops or shorten the time-stop in response to this cell (see P11).
 
 **Effort**: 2b/2c are config-level; 2a needs a small state file (same shape as
 grade hysteresis). All three touch ringfenced `broker/` files → owner-present

@@ -26,6 +26,41 @@ from scanner import config, turtle, turtle_run
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def _never_write_the_real_journal(tmp_path, monkeypatch):
+    """scan_market advances the FORWARD BOOK, which writes journal/ and
+    public/data/. Without this the integration tests below -- which feed it
+    synthetic frames called FIRE, HELD, NEAR and SHRT -- write a real paper
+    book full of invented positions, and `git add -A` ships it.
+
+    That is not hypothetical: it happened on 2026-08-21 and a book holding a
+    fixture symbol reached main before being removed. Fabricated rows in an
+    artefact that is supposed to BE the honest record is the worst possible
+    failure for this feature, so the isolation is autouse and repo-wide rather
+    than remembered per test.
+    """
+    from scanner import turtle_book
+    monkeypatch.setattr(turtle_book, "BOOK_DIR", str(tmp_path / "journal"))
+    monkeypatch.setattr(turtle_book, "ROOT", str(tmp_path))
+    (tmp_path / "public" / "data").mkdir(parents=True, exist_ok=True)
+    yield
+
+
+def test_no_test_run_may_leave_a_paper_book_behind():
+    """The guard for the guard: after any test run the real book must contain
+    only symbols a real scan could have produced. Fixture names are banned."""
+    real = ROOT / "journal"
+    for f in list(real.glob("turtle_book*.json")) + \
+            [ROOT / "public" / "data" / "turtle_book.json"]:
+        if not f.exists():
+            continue
+        text = f.read_text(encoding="utf-8")
+        for fixture in ('"FIRE"', '"HELD"', '"NEAR"', '"SHRT"', '"NOTRIG"',
+                        '"NULLS"', '"AAA"', '"BBB"', '"T0"', '"S0"'):
+            assert fixture not in text, \
+                f"{f.name} contains the fixture symbol {fixture} - a test wrote it"
+
+
 # ---------------------------------------------------------------------------
 # fixtures
 # ---------------------------------------------------------------------------
