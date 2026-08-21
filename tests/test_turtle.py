@@ -701,6 +701,30 @@ def test_the_aggregate_survives_an_empty_market():
     assert agg["trades"] == 0 and agg["win_pct"] is None and agg["total_r"] == 0.0
 
 
+def test_a_single_market_failure_must_not_discard_the_others():
+    """turtle_run isolates per-market failures and still returns 1 if any
+    failed. A step failure skips later steps by default, so without an
+    explicit guard one flaky crypto fetch discards ASX's and NASDAQ's output
+    AND -- the part that cannot be undone -- punches a permanent hole in the
+    forward book, which has no backfill.
+
+    The job must still go red. Only the discarding stops.
+    """
+    wf = (ROOT / ".github" / "workflows" / "turtle.yml").read_text(encoding="utf-8")
+    commit = wf[wf.index("name: Commit & push"):]
+    guard = commit[:commit.index("run: |")]
+    assert "if: success() || failure()" in guard, \
+        "the commit must survive a partial-failure scan"
+    # and the alarm must be untouched
+    assert "if: failure()" in wf, "a failed market must still alert"
+
+
+def test_the_must_change_gate_is_ANY_OF_so_a_partial_run_still_commits():
+    wf = (ROOT / ".github" / "workflows" / "turtle.yml").read_text(encoding="utf-8")
+    line = [l for l in wf.splitlines() if "assert_staged.sh" in l][0]
+    assert line.count("public/data/") == 3, "all three markets listed, ANY-OF"
+
+
 def test_crypto_is_in_the_runner_markets_unlike_specs():
     """Specs excludes crypto because its price filter is a cents filter. Every
     Turtle parameter is expressed in N and is unit-free, so the same exclusion

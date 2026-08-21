@@ -115,7 +115,25 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # RUNS ON A PARTIAL FAILURE, DELIBERATELY. turtle_run isolates per-market
+      # failures and keeps going, then returns 1 if ANY market failed -- which
+      # without this guard fails the step, and a step failure skips the commit
+      # by default. One flaky crypto fetch would therefore discard ASX's and
+      # NASDAQ's perfectly good output.
+      #
+      # And the half that actually costs something: THE FORWARD BOOK CANNOT BE
+      # BACKFILLED. Its whole value is an unbroken daily record, so a skipped
+      # commit does not merely delay a scan -- it punches a permanent hole in
+      # the equities' forward history because crypto could not fetch. Crypto's
+      # fetch failed three times on 2026-08-21 alone.
+      #
+      # The job still goes RED (the scan step's failure stands, and the Discord
+      # alert below is on failure()), so the alarm is unchanged. Only the
+      # discarding stops. The staging below is already surgical and per-market,
+      # and assert_staged is ANY-OF, so a market that failed the coverage floor
+      # simply has no file to stage and the ones that worked still land.
       - name: Commit & push (surgical — the turtle files only)
+        if: success() || failure()
         env:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
