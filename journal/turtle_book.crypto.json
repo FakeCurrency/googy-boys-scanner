@@ -1,0 +1,103 @@
+{
+ "schema_version": 1,
+ "market": "crypto",
+ "generated_at": "2026-08-21T10:33:50+00:00",
+ "started": "2026-08-21",
+ "equity_start": 5000.0,
+ "open": [
+  {
+   "symbol": "BCH",
+   "market": "crypto",
+   "name": "Bitcoin Cash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 9.52246076,
+   "units": 5.25074361,
+   "fills": [
+    263.11999512
+   ],
+   "cost_basis": 1381.575633,
+   "stop": 244.0750736,
+   "last_fill": 263.11999512,
+   "opened": "2026-08-21",
+   "last_mark": 263.11999512,
+   "mark_date": "2026-08-21",
+   "fees": 2.072363,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  },
+  {
+   "symbol": "AAVE",
+   "market": "crypto",
+   "name": "Aave",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 4.42179633,
+   "units": 11.30762167,
+   "fills": [
+    111.04000092
+   ],
+   "cost_basis": 1255.598321,
+   "stop": 102.19640826,
+   "last_fill": 111.04000092,
+   "opened": "2026-08-21",
+   "last_mark": 111.04000092,
+   "mark_date": "2026-08-21",
+   "fees": 1.883397,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  },
+  {
+   "symbol": "XRP",
+   "market": "crypto",
+   "name": "XRP",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.04827978,
+   "units": 1035.63023692,
+   "fills": [
+    1.37469995
+   ],
+   "cost_basis": 1423.680835,
+   "stop": 1.27814039,
+   "last_fill": 1.37469995,
+   "opened": "2026-08-21",
+   "last_mark": 1.37469995,
+   "mark_date": "2026-08-21",
+   "fees": 2.135521,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  }
+ ],
+ "closed": [],
+ "summary": {
+  "started": "2026-08-21",
+  "equity_start": 5000.0,
+  "equity": 5000.0,
+  "return_pct": 0.0,
+  "open_positions": 3,
+  "open_units": 3,
+  "closed": 0,
+  "wins": 0,
+  "win_pct": null,
+  "total_r": 0.0,
+  "avg_r": null,
+  "median_r": null,
+  "realized_pnl": 0,
+  "fees_paid": 0,
+  "sizing_equity": 5000.0
+ },
+ "events": [
+  "ENTER BCH S2 long @ 263.12",
+  "ENTER AAVE S2 long @ 111.04",
+  "ENTER XRP S2 long @ 1.3747",
+  "SKIP ETC no cash for a unit",
+  "SKIP ADA no cash for a unit",
+  "SKIP DOGE no cash for a unit",
+  "SKIP GT no cash for a unit",
+  "SKIP NEXO no cash for a unit"
+ ]
+}
