@@ -176,6 +176,79 @@ def test_the_drawdown_rule_compounds_and_shrinks_the_next_unit():
     assert tb.sizing_equity(b) == pytest.approx(4000.0 * 0.64), "two 10% steps"
 
 
+def test_PYRAMIDS_COUNT_AGAINST_THE_DIRECTION_CAP():
+    """The largest silent way this stops being the Turtle system.
+
+    The ceilings are on TOTAL UNITS, not on positions. Checking them only when
+    a new NAME opens lets twelve names each pyramid to four and hold 48 units
+    one way against a 12-unit cap -- the book would look diversified and be
+    four times the intended size in one direction.
+    """
+    # 6 names, small N so cash does not bind, all one sector -> 6-unit bucket cap
+    day1 = [row(f"S{i}", 1.0, 0.5, "s2_long", sector="Materials") for i in range(8)]
+    b = tb.update("asx", day1, day="2026-08-21")
+    opened = len(b["open"])
+    assert opened == config.TURTLE_MAX_UNITS_CLOSE_CORR, \
+        f"the bucket cap should bind at {config.TURTLE_MAX_UNITS_CLOSE_CORR}, got {opened}"
+
+    # now let every one of them run far enough to want three more units each.
+    # x2lo well below the bar keeps the 20-day channel out of the way -- this
+    # test is about the ceilings, not about exits.
+    day2 = [row(f"S{i}", 3.0, 0.5, o=1.1, h=3.0, l=1.05, x1lo=0.1, x2lo=0.1)
+            for i in range(8)]
+    b = tb.update("asx", day2, day="2026-08-22")
+    total_units = sum(len(p["fills"]) for p in b["open"])
+    assert total_units <= config.TURTLE_MAX_UNITS_DIRECTION, \
+        f"{total_units} units one way against a {config.TURTLE_MAX_UNITS_DIRECTION}-unit cap"
+    assert any("SKIP-ADD" in e and "cap" in e for e in b["events"]), \
+        "and it must say which ceiling stopped it"
+
+
+def test_the_bucket_cap_also_binds_on_a_pyramid_rung():
+    day1 = [row(f"S{i}", 1.0, 0.5, "s2_long", sector="Materials") for i in range(3)]
+    tb.update("asx", day1, day="2026-08-21")
+    day2 = [row(f"S{i}", 3.0, 0.5, o=1.1, h=3.0, l=1.05, x1lo=0.1, x2lo=0.1)
+            for i in range(3)]
+    b = tb.update("asx", day2, day="2026-08-22")
+    bucket_units = sum(len(p["fills"]) for p in b["open"]
+                       if (p.get("sector") or "").lower() == "materials")
+    assert bucket_units <= config.TURTLE_MAX_UNITS_CLOSE_CORR
+
+
+def test_a_name_stopped_out_TODAY_cannot_be_refilled_TODAY():
+    """The manage loop can flatten a name and the entry loop would then see it
+    flat and refill the very breakout that just stopped out. The rules wait for
+    a NEW channel break, not the same one still standing."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    # gaps down through the stop AND still prints a fresh breakout signal
+    b = tb.update("asx", [row("AAA", 90.0, 2.0, "s2_long", o=90.0, h=120.0,
+                              l=89.0, x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    assert len(b["closed"]) == 1, "it must stop out"
+    assert not b["open"], "and it must NOT be refilled the same session"
+    assert any("exited today" in e for e in b["events"])
+    assert b["skips"]["reentry"] == 1
+
+
+def test_the_next_session_may_re_enter_normally():
+    """The block is same-session only -- a genuinely new break the next day is
+    a legitimate Turtle entry and must not be suppressed."""
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    tb.update("asx", [row("AAA", 90.0, 2.0, "s2_long", o=90.0, h=120.0, l=89.0,
+                          x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    b = tb.update("asx", [row("AAA", 95.0, 2.0, "s2_long")], day="2026-08-23")
+    assert b["open"] and b["open"][0]["symbol"] == "AAA"
+
+
+def test_skips_are_counted_not_merely_logged():
+    """A book that quietly declines half its signals looks identical to one
+    that had no signals. Which ceiling is binding is the whole story."""
+    rows = [row(f"S{i}", 10.0, 0.2, "s2_long") for i in range(12)]
+    b = tb.update("asx", rows, day="2026-08-21")
+    assert b["skips"]["total"] > 0
+    assert b["skips"]["cash"] > 0
+    assert set(b["skips"]) == {"cash", "caps", "reentry", "total"}
+
+
 # ---------------------------------------------------------------------------
 # persistence
 # ---------------------------------------------------------------------------

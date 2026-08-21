@@ -1628,6 +1628,87 @@ TURTLE_APPROACH_PCT = 3.0
 # Set to 0 to reproduce a frictionless replay.
 TURTLE_COST_BPS = 15.0
 
+# THE FUTURES SLEEVE -- the vehicle the system was actually designed for.
+#
+# The Turtles traded roughly twenty LIQUID, UNCORRELATED futures across
+# currencies, rates, metals, energy, softs and indices, and diversification
+# across genuinely different markets is the MECHANISM that makes the
+# expectancy positive, not a garnish on top of it. A hundred NASDAQ names is
+# one tech factor wearing a hundred tickers; a 2,212-name ASX list is one
+# resources-and-banks tape. Running this lens on equities and calling the
+# result "Turtle" tests something the system never claimed.
+#
+# So the lens gets a fourth market. Same frozen rules, same engine, no tuning
+# -- the only thing that changes is what it is pointed at.
+#
+# `dpp` is DOLLARS PER POINT for the full-size contract and it is the single
+# most important number here: unit size is (1% x equity) / (N x dpp), so
+# getting it wrong misprices every position. `micro` names the CME micro where
+# one exists, with `micro_dpp` its multiplier -- that is what decides whether
+# a small account can hold one unit at all, and the honest answer for most of
+# these at $5,000 is that it cannot.
+#
+# Data comes from the continuous front-month series (yfinance "=F"). Those are
+# back-adjusted rolls, not a tradeable instrument: good enough for channel and
+# N arithmetic, wrong for exact fills. Said on the page rather than hidden.
+# The grains and meats the Turtles deliberately EXCLUDED are excluded here
+# too -- Dennis was at exchange position limits in grains for his own account.
+TURTLE_FUTURES = [
+    # --- currencies (the Turtles' biggest 1980s winners) ---
+    {"symbol": "6E", "yf": "6E=F", "name": "Euro FX", "group": "currency",
+     "dpp": 125_000, "micro": "M6E", "micro_dpp": 12_500},
+    {"symbol": "6J", "yf": "6J=F", "name": "Japanese Yen", "group": "currency",
+     "dpp": 12_500_000, "micro": "", "micro_dpp": 0},
+    {"symbol": "6B", "yf": "6B=F", "name": "British Pound", "group": "currency",
+     "dpp": 62_500, "micro": "M6B", "micro_dpp": 6_250},
+    {"symbol": "6A", "yf": "6A=F", "name": "Australian Dollar", "group": "currency",
+     "dpp": 100_000, "micro": "M6A", "micro_dpp": 10_000},
+    {"symbol": "6C", "yf": "6C=F", "name": "Canadian Dollar", "group": "currency",
+     "dpp": 100_000, "micro": "", "micro_dpp": 0},
+    {"symbol": "6S", "yf": "6S=F", "name": "Swiss Franc", "group": "currency",
+     "dpp": 125_000, "micro": "", "micro_dpp": 0},
+    # --- rates ---
+    {"symbol": "ZB", "yf": "ZB=F", "name": "30-Year T-Bond", "group": "rates",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # NO MICRO. CME's "Micro 10-Year Yield" is not a fraction of ZN -- it is a
+    # different instrument that trades YIELD at $10 a basis point, so listing
+    # it here would misprice every rates unit. An honest empty field beats a
+    # plausible wrong one.
+    {"symbol": "ZN", "yf": "ZN=F", "name": "10-Year T-Note", "group": "rates",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # --- metals ---
+    {"symbol": "GC", "yf": "GC=F", "name": "Gold", "group": "metals",
+     "dpp": 100, "micro": "MGC", "micro_dpp": 10},
+    {"symbol": "SI", "yf": "SI=F", "name": "Silver", "group": "metals",
+     "dpp": 5_000, "micro": "SIL", "micro_dpp": 1_000},
+    {"symbol": "HG", "yf": "HG=F", "name": "Copper", "group": "metals",
+     "dpp": 25_000, "micro": "MHG", "micro_dpp": 2_500},
+    # --- energy ---
+    {"symbol": "CL", "yf": "CL=F", "name": "Crude Oil (WTI)", "group": "energy",
+     "dpp": 1_000, "micro": "MCL", "micro_dpp": 100},
+    {"symbol": "HO", "yf": "HO=F", "name": "Heating Oil", "group": "energy",
+     "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    {"symbol": "RB", "yf": "RB=F", "name": "RBOB Gasoline", "group": "energy",
+     "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    {"symbol": "NG", "yf": "NG=F", "name": "Natural Gas", "group": "energy",
+     "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
+    # --- softs (the Turtles traded these; grains and meats they did NOT) ---
+    {"symbol": "KC", "yf": "KC=F", "name": "Coffee", "group": "softs",
+     "dpp": 37_500, "micro": "", "micro_dpp": 0},
+    {"symbol": "CC", "yf": "CC=F", "name": "Cocoa", "group": "softs",
+     "dpp": 10, "micro": "", "micro_dpp": 0},
+    {"symbol": "SB", "yf": "SB=F", "name": "Sugar No. 11", "group": "softs",
+     "dpp": 1_120, "micro": "", "micro_dpp": 0},
+    {"symbol": "CT", "yf": "CT=F", "name": "Cotton", "group": "softs",
+     "dpp": 500, "micro": "", "micro_dpp": 0},
+    # --- indices (not a 1983 Turtle market at this size, but it is the one
+    #     a small account can actually reach, so it is carried and labelled) ---
+    {"symbol": "ES", "yf": "ES=F", "name": "S&P 500", "group": "index",
+     "dpp": 50, "micro": "MES", "micro_dpp": 5},
+    {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
+     "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
+]
+
 # THE FORWARD PAPER BOOK (turtle_book.py). Completely separate from the
 # VIVEK paper bot: own file, own equity, own slot pool, own sizing. The
 # five-year replay cannot answer "does this work" -- its universe is today's

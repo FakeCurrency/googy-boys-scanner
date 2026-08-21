@@ -40,8 +40,8 @@
     min_bars: 250, approach_pct: 3.0, period: "5y",
   };
 
-  const MARKETS = ["asx", "nasdaq", "crypto"];
-  const CUR = { asx: "A$", nasdaq: "$", crypto: "$" };
+  const MARKETS = ["asx", "nasdaq", "crypto", "futures"];
+  const CUR = { asx: "A$", nasdaq: "$", crypto: "$", futures: "$" };
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -398,6 +398,26 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!open) return '<article class="tt-row"' + attrs + ">" + head + "</article>";
 
     let detail = "";
+    if (r.contracts) {
+      const c = r.contracts;
+      detail += '<div class="tt-detail-grid">' +
+        kv("Dollars per point", money(c.dpp, 0)) +
+        kv("One unit (full)", c.full_contracts == null ? "—" : num(c.full_contracts, 4) + " contracts") +
+        kv("One unit (" + (c.micro || "no micro") + ")",
+           c.micro_contracts == null ? "—" : num(c.micro_contracts, 4) + " contracts") +
+        kv("Unit fits at " + money(EQUITY, 0), c.unit_fits ? "yes" : "<b>NO</b>") +
+        "</div>";
+      if (!c.unit_fits) {
+        detail += '<p class="tt-note">At ' + money(EQUITY, 0) +
+          " one unit is a fraction of a contract. Taking one anyway risks <b>" +
+          pct(c.one_contract_risk_pct) + "</b> of the account on a " + P.stop_n +
+          "N stop, against the " + (P.risk_pct * P.stop_n * 100).toFixed(0) +
+          "% the rules intend. That is not this system run small — it is a " +
+          "different and much more dangerous one. Raise the account or trade " +
+          "a market whose unit fits.</p>";
+      }
+    }
+
     if (r.state === "flat" && r.triggers) {
       const t = r.triggers;
       detail += '<div class="tt-detail-grid">' +

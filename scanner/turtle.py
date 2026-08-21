@@ -641,6 +641,39 @@ def tradeable_from(df: pd.DataFrame, market: str) -> tuple[int, float]:
     return idx, share
 
 
+def contract_sizing(equity: float, n: float, info: dict) -> dict:
+    """What one unit costs, in contracts, for a futures market.
+
+    THE ANSWER IS USUALLY "YOU CANNOT HOLD ONE". Unit = (1% x equity) /
+    (N x dollars-per-point), and on a $5,000 account with crude's N around
+    $2.00 and $1,000 a point, that is 0.025 contracts. Taking one anyway is
+    not the Turtle system at 2% risk -- it is roughly 40x the intended size,
+    which is the single most common way a small account destroys itself while
+    believing it is following rules.
+
+    So the sizing is published WITH the verdict rather than rounded into
+    something that looks tradeable.
+    """
+    out = {"dpp": info.get("dpp") or 0, "micro": info.get("micro") or "",
+           "micro_dpp": info.get("micro_dpp") or 0}
+    risk = config.TURTLE_RISK_PCT * equity
+    for key, dpp in (("full", out["dpp"]), ("micro", out["micro_dpp"])):
+        if not (dpp and n and n > 0):
+            out[key + "_contracts"] = None
+            continue
+        out[key + "_contracts"] = round(risk / (n * dpp), 4)
+    out["unit_fits"] = bool(
+        (out.get("micro_contracts") or 0) >= 1.0
+        or (out.get("full_contracts") or 0) >= 1.0)
+    # What ONE contract of the smallest available size actually risks, as a
+    # share of the account, if you take it anyway against a 2N stop.
+    small = out["micro_dpp"] or out["dpp"]
+    out["one_contract_risk_pct"] = (
+        round(100.0 * config.TURTLE_STOP_N * n * small / equity, 2)
+        if (small and n and equity > 0) else None)
+    return out
+
+
 def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
               equity: float | None = None) -> dict | None:
     """One published row: state, the exact numbers to act on, and the record."""
@@ -656,7 +689,8 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
         return None
     price = rep["close"]
     equity = config.TURTLE_ACCOUNT_EQUITY if equity is None else equity
-    shares = unit_size(equity, n)
+    dpp = float(info.get("dpp") or 1.0)
+    shares = unit_size(equity, n, dollars_per_point=dpp)
 
     row = {
         "symbol": symbol,
@@ -692,6 +726,10 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
         "position": rep["position"],
         "triggers": rep["triggers"],
     }
+
+    if info.get("dpp"):
+        row["contracts"] = contract_sizing(equity, n, info)
+        row["group"] = info.get("group", "")
 
     # Proximity: how far the nearest actionable level is, as a percentage.
     # For a flat name that is the nearest untaken breakout; for a held one it

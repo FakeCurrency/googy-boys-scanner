@@ -903,6 +903,82 @@ def test_one_bad_frame_never_kills_the_scan(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# the futures sleeve — the vehicle the system was designed for
+# ---------------------------------------------------------------------------
+
+def test_the_sleeve_is_diversified_across_real_market_groups():
+    """One hundred NASDAQ names is one tech factor wearing a hundred tickers.
+    Diversification across genuinely different markets is the MECHANISM that
+    makes the Turtle expectancy positive, so the sleeve has to actually span
+    them or it is testing something the system never claimed."""
+    import collections
+    groups = collections.Counter(f["group"] for f in config.TURTLE_FUTURES)
+    assert len(config.TURTLE_FUTURES) >= 18, "the Turtles ran about twenty markets"
+    for need in ("currency", "rates", "metals", "energy", "softs"):
+        assert groups[need] >= 2, f"only {groups[need]} {need} market(s)"
+
+
+def test_grains_and_meats_are_excluded_exactly_as_they_were():
+    """Dennis excluded grains because he was already at exchange position
+    limits in them for his own account, and meats over a pit corruption
+    problem. Adding them because a data feed offers them would be a different
+    portfolio wearing the same name."""
+    syms = {f["symbol"] for f in config.TURTLE_FUTURES}
+    for banned in ("ZC", "ZS", "ZW", "LE", "HE", "GF"):
+        assert banned not in syms, f"{banned} was not a Turtle market"
+
+
+def test_every_market_carries_a_dollars_per_point():
+    """The single most important number in the sleeve: unit size is
+    (1% x equity) / (N x dpp), so a wrong dpp misprices every position in
+    that market and nothing downstream can detect it."""
+    for f in config.TURTLE_FUTURES:
+        assert f.get("dpp", 0) > 0, f"{f['symbol']} has no dollars-per-point"
+        assert f["yf"].endswith("=F"), f"{f['symbol']} is not a futures series"
+        if f.get("micro"):
+            assert 0 < f["micro_dpp"] < f["dpp"], \
+                f"{f['symbol']}'s micro must be smaller than its full contract"
+
+
+def test_contract_sizing_says_a_unit_DOES_NOT_FIT_rather_than_rounding():
+    """A $5,000 account cannot hold one crude contract at 1% risk. The honest
+    output is a refusal plus the real cost of taking one anyway -- rounding
+    0.025 contracts up to 1 is roughly 40x the intended size, and is the
+    commonest way a small account destroys itself while believing it is
+    following rules."""
+    cl = next(f for f in config.TURTLE_FUTURES if f["symbol"] == "CL")
+    c = turtle.contract_sizing(5000.0, 2.0, cl)
+    assert c["full_contracts"] == pytest.approx(0.025)
+    assert c["unit_fits"] is False
+    assert c["one_contract_risk_pct"] > 2.0, \
+        "and it must state what taking one anyway really risks"
+
+
+def test_a_big_enough_account_makes_the_unit_fit():
+    cl = next(f for f in config.TURTLE_FUTURES if f["symbol"] == "CL")
+    assert turtle.contract_sizing(500_000.0, 2.0, cl)["unit_fits"] is True
+
+
+def test_sizing_scales_with_dollars_per_point_not_with_price():
+    """Two markets at the same price and the same N size completely
+    differently, because the contract multiplier is what converts a point into
+    money. Ignoring dpp is the bug that would make a futures sleeve read like
+    a stock sleeve."""
+    a = turtle.unit_size(100_000.0, 2.0, dollars_per_point=1_000)
+    b = turtle.unit_size(100_000.0, 2.0, dollars_per_point=50)
+    assert b == pytest.approx(a * 20)
+
+
+def test_futures_is_a_declared_list_so_the_sleeve_has_no_survivorship():
+    """Every other market here is 'whatever is listed today', which selects on
+    outcomes. The sleeve is fixed and chosen on 1983 grounds, so nothing in it
+    was picked because it went up."""
+    src = (ROOT / "scanner" / "turtle_run.py").read_text(encoding="utf-8")
+    assert "config.TURTLE_FUTURES" in src
+    assert "futures" in turtle_run.MARKETS
+
+
+# ---------------------------------------------------------------------------
 # fences — the freeze, and the report-only promise
 # ---------------------------------------------------------------------------
 

@@ -205,7 +205,8 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
     events: list[str] = []
 
     still_open: list[dict] = []
-    for pos in book.get("open", []):
+    open_list = list(book.get("open", []))
+    for idx, pos in enumerate(open_list):
         row = by_sym.get(pos["symbol"])
         if row is None:                       # not in today's scan: carry, unpriced
             pos["unpriced_runs"] = int(pos.get("unpriced_runs", 0)) + 1
@@ -262,6 +263,21 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
             fill = max(level, op) if sign > 0 else min(level, op)
             add_units = unit_units(eq, pos["n"])
             if add_units <= 0 or not _room_for(book, still_open, fill * add_units):
+                events.append(f"SKIP-ADD {pos['symbol']} no cash for another unit")
+                break
+            # The ceilings count UNITS, so a pyramid rung is checked exactly
+            # as a new name is. Without this, twelve names each adding to four
+            # hold 48 units against a 12-unit cap.
+            # Count EVERY open unit, not just the positions already managed
+            # this session. Counting only `still_open` let each position see
+            # the ones processed before it and none of the ones after, so a
+            # 12-unit cap still admitted 21. The tail may exit later in this
+            # same session and free units, but that is not knowable here, and
+            # declining to add is the conservative side of the ambiguity.
+            ok, why = _caps_allow(book, still_open + open_list[idx + 1:],
+                                  pos, market, pos["side"], extra=pos)
+            if not ok:
+                events.append(f"SKIP-ADD {pos['symbol']} {why}")
                 break
             pos["fills"].append(round(fill, 8))
             pos["cost_basis"] = round(pos["cost_basis"] + fill * add_units, 6)
@@ -282,7 +298,17 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
 
     # ---- enter, last, so a slot freed today is usable today -----------------
     held = {p["symbol"] for p in still_open}
-    fired = [r for r in rows if r.get("signal") and r["symbol"] not in held]
+    # A name this session already EXITED cannot be re-entered this session.
+    # The manage loop can flatten a name and the entry loop would then see it
+    # flat and refill the very breakout that just stopped out -- the rules
+    # wait for a NEW channel break, not the same one still standing.
+    exited_today = {t["symbol"] for t in book.get("closed", [])
+                    if t.get("closed") == day}
+    fired = [r for r in rows if r.get("signal")
+             and r["symbol"] not in held and r["symbol"] not in exited_today]
+    for r in rows:
+        if r.get("signal") and r["symbol"] in exited_today:
+            events.append(f"SKIP {r['symbol']} exited today - waiting for a new break")
     fired.sort(key=lambda r: -(_f(r.get("dvol")) or 0.0))
     for row in fired:
         sig = row["signal"]
@@ -311,6 +337,16 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
     book["generated_at"] = datetime.datetime.now(
         datetime.timezone.utc).isoformat(timespec="seconds")
     book["events"] = events[-200:]
+    # Skips are COUNTED, not just logged. A book that quietly declines half
+    # its signals looks identical to one that had no signals, and the reason
+    # it declined is the whole story about whether the caps or the cash are
+    # what is actually binding.
+    book["skips"] = {
+        "cash": sum(1 for e in events if "no cash" in e),
+        "caps": sum(1 for e in events if "cap" in e),
+        "reentry": sum(1 for e in events if "exited today" in e),
+        "total": sum(1 for e in events if e.startswith("SKIP")),
+    }
     book["summary"] = summarize_book(book)
     save_book(book)
     return book
@@ -327,10 +363,22 @@ def _room_for(book: dict, open_rows: list[dict], notional: float) -> bool:
     return (used + abs(notional)) <= cap
 
 
-def _caps_allow(book: dict, open_rows: list[dict], row: dict,
-                market: str, side: str) -> tuple[bool, str]:
-    """The Turtles' unit ceilings, enforced rather than merely displayed."""
-    same_side = [p for p in open_rows if p["side"] == side]
+def _caps_allow(book: dict, open_rows: list[dict], row: dict, market: str,
+                side: str, extra: dict | None = None) -> tuple[bool, str]:
+    """The Turtles' unit ceilings, counted over EVERY unit including pyramids.
+
+    THE CEILINGS ARE ON TOTAL UNITS, NOT ON POSITIONS. Checking them only when
+    a new NAME is opened -- which is what this did until 2026-08-21 -- lets
+    twelve names each pyramid to four and hold 48 units one way against a
+    12-unit cap. That is the largest silent way this book could stop being the
+    Turtle system while still looking like it, so the add path calls the same
+    counter the entry path does.
+
+    `extra` is the position being added to, which during the manage loop has
+    not yet been returned to `open_rows` and so must be counted explicitly.
+    """
+    rows = list(open_rows) + ([extra] if extra is not None else [])
+    same_side = [p for p in rows if p["side"] == side]
     units_side = sum(len(p.get("fills", [])) for p in same_side)
     if units_side + 1 > config.TURTLE_MAX_UNITS_DIRECTION:
         return False, f"{config.TURTLE_MAX_UNITS_DIRECTION}-unit {side} cap"

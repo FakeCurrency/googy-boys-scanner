@@ -25,7 +25,7 @@ import zoneinfo
 
 from . import config, data, output, scanerrors, turtle, turtle_book, universe
 
-MARKETS = ("asx", "nasdaq", "crypto")
+MARKETS = ("asx", "nasdaq", "crypto", "futures")
 PERIOD = "5y"
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "public", "data")
@@ -113,9 +113,17 @@ def aggregate(rows: list[dict]) -> dict:
 
 def scan_market(market_key: str, limit: int | None = None,
                 period: str = PERIOD, equity: float | None = None) -> dict:
-    mk = config.MARKETS[market_key]
-    cur = getattr(mk, "currency_symbol", "$")
-    items = universe.load_universe(market_key, full=True)
+    if market_key == "futures":
+        # The sleeve is a declared list, not a directory fetch: these are the
+        # markets the Turtles actually traded, and the point of the sleeve is
+        # that it is FIXED and uncorrelated rather than whatever a screen
+        # returns today. No survivorship, because nothing was selected.
+        cur = "$"
+        items = [dict(f) for f in config.TURTLE_FUTURES]
+    else:
+        mk = config.MARKETS[market_key]
+        cur = getattr(mk, "currency_symbol", "$")
+        items = universe.load_universe(market_key, full=True)
     if limit:
         items = items[:limit]
     yf_map = {it["yf"]: it for it in items}
