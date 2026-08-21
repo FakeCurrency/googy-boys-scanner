@@ -417,3 +417,73 @@ def test_writes_are_atomic():
     src = (ROOT / "scanner" / "turtle_book.py").read_text(encoding="utf-8")
     assert "atomic_write" in src
     assert "open(path, \"w\")" not in src, "project rule 7: temp + os.replace"
+
+
+# ---------------------------------------------------------------------------
+# futures write isolation -- asked of the WRITES, not of the code's shape
+# ---------------------------------------------------------------------------
+# The futures sleeve became a fourth market on 2026-08-21. Everything below
+# exists because "a market's run can only write its own file" was, until now,
+# a property of how book_path() HAPPENS to be spelled -- which is how an
+# invariant quietly stops being true. These tests observe the filesystem:
+# mispoint the futures write path at an equity journal and they die.
+
+def _futures_row(sym="MES", price=5000.0, n=5.0):
+    r = row(sym, price, n, "s2_long", sector="")
+    r["contracts"] = {"dpp": 50, "micro": "MES", "micro_dpp": 5,
+                      "full_contracts": 0.2, "micro_contracts": 2.0,
+                      "unit_fits": True, "one_contract_risk_pct": 1.0}
+    return r
+
+
+def test_a_futures_run_writes_ONLY_the_futures_file():
+    """The whole isolation claim, as an observation: after a futures session
+    that OPENED a position -- so the write path definitely ran -- the book
+    directory contains exactly one file, and it is the futures one. A write
+    path pointed at turtle_book.asx.json (or any equity journal) fails this
+    on both sides: the wrong file exists and the right one does not."""
+    b = tb.update("futures", [_futures_row()], day="2026-08-21")
+    assert b["open"], "the entry must actually have been taken and persisted"
+    written = sorted(p.name for p in pathlib.Path(tb.BOOK_DIR).iterdir())
+    assert written == ["turtle_book.futures.json"], \
+        f"a futures run wrote {written}"
+
+
+def test_a_futures_run_cannot_alter_a_live_equity_book(tmp_path, monkeypatch):
+    """The live equity books are append-only forward records that cannot be
+    backfilled. Seed all three, run a futures session that opens AND the
+    combined regeneration after it, and require every equity book back
+    BYTE-identical -- not merely 'same symbols', because a rewrite that
+    reorders keys or restamps generated_at is still a foreign write."""
+    monkeypatch.setattr(tb, "ROOT", str(tmp_path))
+    (tmp_path / "public" / "data").mkdir(parents=True, exist_ok=True)
+    for m in ("asx", "nasdaq", "crypto"):
+        tb.update(m, [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-20")
+    before = {m: pathlib.Path(tb.book_path(m)).read_bytes()
+              for m in ("asx", "nasdaq", "crypto")}
+    tb.update("futures", [_futures_row()], day="2026-08-21")
+    tb.write_combined()
+    for m, blob in before.items():
+        assert pathlib.Path(tb.book_path(m)).read_bytes() == blob, \
+            f"the futures run altered the {m} book"
+
+
+def test_the_combined_view_INCLUDES_the_futures_book(tmp_path, monkeypatch):
+    """The page's BOOK view reads ONLY the combined file (turtle.js fetches
+    data/turtle_book.json and nothing per-market), so a futures book absent
+    from write_combined's default is a futures book that exists on disk and
+    renders NOWHERE -- including the cash-unconstrained disclosure the page
+    keys off open futures positions. Reverting the default to the equity
+    trio turns this red."""
+    monkeypatch.setattr(tb, "ROOT", str(tmp_path))
+    (tmp_path / "public" / "data").mkdir(parents=True, exist_ok=True)
+    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
+    tb.update("futures", [_futures_row()], day="2026-08-21")
+    tb.write_combined()
+    c = json.loads(pathlib.Path(tb.BOOK_DIR, "turtle_book.json")
+                   .read_text(encoding="utf-8"))
+    assert "futures" in c["by_market"], "the by_market table must carry it"
+    assert any(p.get("market") == "futures" for p in c["open"]), \
+        "the open futures position must reach the page"
+    assert any(p.get("market") == "asx" for p in c["open"]), \
+        "and the equity books must still be there beside it"

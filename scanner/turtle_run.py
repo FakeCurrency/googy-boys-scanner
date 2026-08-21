@@ -72,6 +72,9 @@ def params_block() -> dict:
         "allow_shorts": c.TURTLE_ALLOW_SHORTS,
         "min_bars": c.TURTLE_MIN_BARS,
         "approach_pct": c.TURTLE_APPROACH_PCT,
+        "min_coverage_pct": c.TURTLE_MIN_COVERAGE_PCT,
+        "small_universe_max": c.TURTLE_SMALL_UNIVERSE_MAX,
+        "small_universe_max_missing": c.TURTLE_SMALL_UNIVERSE_MAX_MISSING,
         "period": PERIOD,
     }
 
@@ -132,6 +135,7 @@ def scan_market(market_key: str, limit: int | None = None,
     rows: list[dict] = []
     errors = scanerrors.ErrorLog(f"turtle [{market_key}]")
     skipped_short = skipped_illiquid = skipped_no_data = 0
+    no_data_syms: list[str] = []
     # ITERATE THE UNIVERSE, NOT THE DOWNLOAD (2026-08-21 incident). Walking
     # `frames` made every name Yahoo failed to return INVISIBLE BY
     # CONSTRUCTION: it was never in the dict, so the loop never saw it, no
@@ -143,6 +147,7 @@ def scan_market(market_key: str, limit: int | None = None,
         df = frames.get(yf_sym)
         if df is None or df.empty:
             skipped_no_data += 1
+            no_data_syms.append(info.get("symbol", yf_sym))
             continue
         if len(df) < config.TURTLE_MIN_BARS:
             skipped_short += 1
@@ -175,6 +180,22 @@ def scan_market(market_key: str, limit: int | None = None,
     # applied to content instead of to staging.
     covered = len(yf_map) - skipped_no_data
     cover_pct = 100.0 * covered / len(yf_map) if yf_map else 0.0
+    # A SMALL universe (the 21-contract futures sleeve) gets an ABSOLUTE
+    # ceiling on missing names, because a 60% share was chosen for 2,000-name
+    # directories and passes 13-of-21 (62%) — a sleeve missing whole asset
+    # groups published as if it were whole. The share floor still applies
+    # underneath; the tighter rule wins. Missing names are NAMED, not merely
+    # counted: on a fixed table each absence is a market group.
+    small = 0 < len(yf_map) <= config.TURTLE_SMALL_UNIVERSE_MAX
+    if small and skipped_no_data > config.TURTLE_SMALL_UNIVERSE_MAX_MISSING:
+        raise RuntimeError(
+            f"[{market_key}] turtle: {skipped_no_data} of {len(yf_map)} names "
+            f"returned no usable bars ({', '.join(sorted(no_data_syms))}) - a "
+            f"universe this small allows at most "
+            f"{config.TURTLE_SMALL_UNIVERSE_MAX_MISSING} missing, REFUSING to "
+            f"publish. Yesterday's file is better than a gutted one; re-run "
+            f"rather than lowering the floor."
+        )
     if yf_map and cover_pct < config.TURTLE_MIN_COVERAGE_PCT:
         raise RuntimeError(
             f"[{market_key}] turtle: data coverage {cover_pct:.1f}% "
@@ -193,6 +214,10 @@ def scan_market(market_key: str, limit: int | None = None,
         "universe_size": len(items),
         "evaluated": len(rows),
         "skipped_no_data": skipped_no_data,
+        # Named only for small universes: on the 21-contract sleeve each
+        # missing name is an asset group; on a 2,000-name directory the list
+        # would be hundreds of lines of Yahoo throttle noise.
+        "skipped_no_data_symbols": sorted(no_data_syms) if small else [],
         "data_coverage_pct": round(cover_pct, 1),
         "skipped_short_history": skipped_short,
         "skipped_illiquid": skipped_illiquid,
@@ -207,6 +232,9 @@ def scan_market(market_key: str, limit: int | None = None,
     agg = payload["aggregate"]
     print(f"[{market_key}] turtle: coverage {cover_pct:.1f}% "
           f"({covered}/{len(yf_map)} priced, {skipped_no_data} no data)")
+    if small and no_data_syms:
+        print(f"[{market_key}] turtle: unpriced this run: "
+              f"{', '.join(sorted(no_data_syms))}")
     print(f"[{market_key}] turtle: {len(rows)} names "
           f"({agg['long']}L/{agg['short']}S/{agg['flat']}F, "
           f"{agg['fired_today']} fired, {agg['approaching']} approaching) "

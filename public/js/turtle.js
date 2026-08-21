@@ -37,7 +37,10 @@
     drawdown_step_pct: 10.0, drawdown_cut_pct: 20.0,
     whipsaw_risk_pct: 0.005, whipsaw_stop_n: 0.5,
     account_equity: 5000.0, allow_shorts: true,
-    min_bars: 250, approach_pct: 3.0, period: "5y",
+    min_bars: 250, approach_pct: 3.0,
+    min_coverage_pct: 60.0,
+    small_universe_max: 30, small_universe_max_missing: 2,
+    period: "5y",
   };
 
   const MARKETS = ["asx", "nasdaq", "crypto", "futures"];
@@ -826,7 +829,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
               <td class="tt-part">stated, not enforced — there is no correlation matrix here</td></tr>
           <tr><td>The market portfolio</td>
               <td class="tt-no">the Turtles traded ~20 liquid futures across currencies, rates,
-              metals, energy and softs. This scans ASX and NASDAQ equities and crypto.</td></tr>
+              metals, energy and softs. This scans ASX and NASDAQ equities and crypto —
+              plus a fixed futures sleeve on continuous <code>=F</code> series
+              (its caveats are the card below).</td></tr>
           <tr><td>Leverage</td>
               <td class="tt-no">futures margin is what made 1% risk per unit across 12 units
               possible on a cash account. Equities do not offer it on the same terms.</td></tr>
@@ -840,6 +845,34 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         markets is the mechanism that makes the expectancy positive, not a garnish on top of it.
         A Turtle system run on one instrument, or on a set of names that all move with the same
         index, is a materially different and worse strategy — whatever the rules on the page say.</p>
+      </section>
+
+      <section class="tt-card">
+        <h3>The futures sleeve, plainly</h3>
+        <ul class="tt-facts">
+          <li><b>The scan's stamp is one session, not seven.</b> The futures job
+          runs at 23:00 UTC on weekdays — after the 17:00 ET CME Globex daily
+          break that ends the <b>equity-index</b> session. FX and metals trade
+          nearly 24 hours and WTI crude settles at 14:30 ET, so "after the
+          close" is literally true only for the index group: every contract's
+          daily bar is the feed's calendar-day bar for the full electronic
+          session, read as of that one stamp, not each market's own settlement
+          window.</li>
+          <li><b>The publish gate on this sleeve is absolute, not a share.</b>
+          The equity markets refuse to publish below ${pct(P.min_coverage_pct, 0)}
+          of their universe — a rule sized for a 2,000-name directory that would
+          pass this fixed table with a third of its contracts missing. So a
+          universe of ${P.small_universe_max} names or fewer refuses to publish
+          when more than ${P.small_universe_max_missing} contracts return no
+          usable bars: yesterday's file stands, and every missing contract is
+          named in the payload rather than counted, because each absence here is
+          an asset group. The equity markets keep their own
+          ${pct(P.min_coverage_pct, 0)} floor unchanged.</li>
+          <li><b>The price series is a continuous, back-adjusted
+          <code>=F</code> chain</b> — sound for channel and N arithmetic, not a
+          tradeable instrument. The roll caveat on each SIGNALS row is the
+          per-name disclosure; nothing here re-derives it.</li>
+        </ul>
       </section>
 
       <section class="tt-card">

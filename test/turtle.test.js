@@ -218,6 +218,9 @@ const MIRROR = [
   ["allow_shorts", "TURTLE_ALLOW_SHORTS"],
   ["min_bars", "TURTLE_MIN_BARS"],
   ["approach_pct", "TURTLE_APPROACH_PCT"],
+  ["min_coverage_pct", "TURTLE_MIN_COVERAGE_PCT"],
+  ["small_universe_max", "TURTLE_SMALL_UNIVERSE_MAX"],
+  ["small_universe_max_missing", "TURTLE_SMALL_UNIVERSE_MAX_MISSING"],
 ];
 
 MIRROR.forEach(([jsKey, pyName]) => {
@@ -238,6 +241,32 @@ test("the mirror covers every key the renderers read", () => {
 });
 
 // ── 8. read-only ────────────────────────────────────────────────────────────
+suite("the futures sleeve's honesty sentences are ON THE PAGE (2026-08-21)");
+
+test("the coverage rule renders from live params, not from a docstring", () => {
+  // The rule lives in turtle_run.py; a rule stated only in Python is
+  // invisible to the person reading the sleeve. The EVIDENCE card must
+  // carry it, and must build it from P.* so the sentence cannot drift from
+  // the constants the way a hand-typed number would.
+  assert.ok(/The publish gate on this sleeve is absolute, not a share/.test(SRC),
+    "the small-universe floor sentence is missing from the page");
+  assert.ok(/P\.small_universe_max_missing/.test(SRC),
+    "the ceiling must be rendered from params, not hardcoded prose");
+  assert.ok(/named in the payload/.test(SRC),
+    "the page must say the missing contracts are NAMED, because they are");
+});
+
+test("the session sentence states which close 23:00 UTC actually is", () => {
+  // One cron cannot be 'after the close' for seven contract groups: FX and
+  // metals trade nearly 24h and CL settles 14:30 ET. The page says which
+  // session the stamp means rather than implying all of them.
+  assert.ok(/one session, not seven/.test(SRC));
+  assert.ok(/23:00 UTC/.test(SRC), "the actual stamp must be stated");
+  assert.ok(/14:30 ET/.test(SRC),
+    "the CL counter-example is what makes the sentence honest");
+});
+
+
 suite("read-only — a rules page must not move anything");
 
 const CODE = SRC.split("\n")

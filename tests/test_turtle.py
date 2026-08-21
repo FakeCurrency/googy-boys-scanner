@@ -1125,3 +1125,115 @@ def test_prints_are_ascii_only():
         for i, line in enumerate((ROOT / "scanner" / name).read_text(encoding="utf-8").splitlines(), 1):
             if "print(" in line or 'f"[' in line:
                 assert line.isascii(), f"{name}:{i} non-ascii in a print: {line!r}"
+
+
+# ---------------------------------------------------------------------------
+# the futures sleeve's blast radius and its coverage floor (2026-08-21)
+# ---------------------------------------------------------------------------
+
+def test_a_futures_fetch_failure_never_costs_an_equity_publish(tmp_path, monkeypatch):
+    """`=F` symbols have never been through data.download in this repo, so the
+    first futures night is the night MOST likely to fail -- and a failure
+    there must cost the futures file only. Futures is deliberately FIRST in
+    the market list here, which is the stronger ordering claim: even a
+    failure that precedes the equity scans must leave them publishing. The
+    run still returns 1, so the alarm is unchanged; only the discarding
+    stops."""
+    eq_frames = {"GOOD.AX": band([100.0] * 260 + ramp(101, 130))}
+    items = [{"symbol": "GOOD", "name": "GOOD", "sector": "", "yf": "GOOD.AX"}]
+
+    def fake_download(tickers, **kw):
+        if any(str(t).endswith("=F") for t in tickers):
+            return {}                     # the whole =F download dies
+        return eq_frames
+
+    monkeypatch.setattr(turtle_run.universe, "load_universe",
+                        lambda m, full=True: items)
+    monkeypatch.setattr(turtle_run.data, "download", fake_download)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    rc = turtle_run.main(["--market", "futures,asx"])
+    assert rc == 1, "a failed market is still a red run"
+    assert (tmp_path / "asx_turtle.json").exists(), \
+        "the equity publish must survive the futures failure"
+    assert not (tmp_path / "futures_turtle.json").exists(), \
+        "and nothing may be published for the market that failed"
+
+
+def test_THIRTEEN_of_twentyone_futures_priced_refuses_to_publish(tmp_path, monkeypatch):
+    """The arithmetic the shared floor got wrong: 13 of 21 is 61.9%, ABOVE
+    the 60% share floor, so the old rule published a sleeve missing eight
+    contracts -- whole asset groups absent -- as if it were whole. The
+    absolute ceiling for small universes must catch it, and the refusal must
+    NAME every missing contract, because on a fixed 21-row table each absence
+    is a market group rather than throttle noise."""
+    sleeve = config.TURTLE_FUTURES
+    assert len(sleeve) == 21, "the sleeve arithmetic below assumes 21 rows"
+    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:13]}
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    with pytest.raises(RuntimeError) as e:
+        turtle_run.scan_market("futures")
+    msg = str(e.value)
+    for f in sleeve[13:]:
+        assert f["symbol"] in msg, f"the refusal must name {f['symbol']}"
+    assert not (tmp_path / "futures_turtle.json").exists(), \
+        "yesterday's file is better than a gutted one"
+
+
+def test_nineteen_of_twentyone_still_publishes_and_NAMES_the_missing(tmp_path, monkeypatch):
+    """The other side of the ceiling: one or two individually broken Yahoo
+    symbols must not hold the whole sleeve hostage forever. Two missing
+    publishes -- with both absentees named in the payload, not merely
+    counted."""
+    sleeve = config.TURTLE_FUTURES
+    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:19]}
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    payload = turtle_run.scan_market("futures")
+    assert (tmp_path / "futures_turtle.json").exists()
+    assert payload["skipped_no_data"] == 2
+    assert payload["skipped_no_data_symbols"] == \
+        sorted(f["symbol"] for f in sleeve[19:]), \
+        "each absence on a small sleeve is an asset group and must be named"
+
+
+def test_equity_universes_KEEP_the_share_floor_not_the_absolute_one(tmp_path, monkeypatch):
+    """The sleeve rule must not silently tighten ASX/NASDAQ/crypto: 62 of 100
+    priced is dozens of names missing -- far beyond the absolute ceiling --
+    but 62% is above the 60% share floor a directory-scale universe is judged
+    by, so the market still publishes. And at that scale the missing are NOT
+    named: the list would be hundreds of lines of throttle noise."""
+    universe = [{"symbol": f"T{i}", "name": f"T{i}", "sector": "", "yf": f"T{i}.AX"}
+                for i in range(100)]
+    frames = {f"T{i}.AX": band([100.0] * 260 + ramp(101, 130)) for i in range(62)}
+    monkeypatch.setattr(turtle_run.universe, "load_universe",
+                        lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    payload = turtle_run.scan_market("asx")
+    assert (tmp_path / "asx_turtle.json").exists()
+    assert payload["data_coverage_pct"] == pytest.approx(62.0)
+    assert payload["skipped_no_data_symbols"] == []
+
+
+def test_the_small_universe_ceiling_actually_covers_the_sleeve():
+    """Dead-code insurance: grow the sleeve past TURTLE_SMALL_UNIVERSE_MAX and
+    the absolute rule silently stops applying to the very universe it was
+    built for -- this fails instead. And the ceiling must be a real gate:
+    more permissive than the sleeve size and it never fires."""
+    assert 0 < len(config.TURTLE_FUTURES) <= config.TURTLE_SMALL_UNIVERSE_MAX
+    assert 0 < config.TURTLE_SMALL_UNIVERSE_MAX_MISSING < len(config.TURTLE_FUTURES)
+
+
+def test_the_coverage_rule_is_PUBLISHED_beside_the_results():
+    """The page states the floor from params rather than hardcoding it, per
+    the mirror rule -- so the params block must actually carry all three
+    numbers the sentence is built from."""
+    p = turtle_run.params_block()
+    assert p["min_coverage_pct"] == config.TURTLE_MIN_COVERAGE_PCT
+    assert p["small_universe_max"] == config.TURTLE_SMALL_UNIVERSE_MAX
+    assert p["small_universe_max_missing"] == config.TURTLE_SMALL_UNIVERSE_MAX_MISSING

@@ -494,10 +494,17 @@ def _caps_allow(book: dict, open_rows: list[dict], row: dict, market: str,
     return True, "", {}
 
 
-def write_combined(markets=("asx", "nasdaq", "crypto")) -> str:
+def write_combined(markets=("asx", "nasdaq", "crypto", "futures")) -> str:
     """The DERIVED all-markets view. Per-market files stay canonical -- a
     market's run can only ever write its own, so a cross-market clobber is
-    impossible by construction -- and this is regenerated from them."""
+    impossible by construction -- and this is regenerated from them.
+
+    FUTURES IS IN THE DEFAULT, and it matters: the page's BOOK view reads
+    ONLY this combined file, so a futures book missing here is a futures book
+    that exists on disk and renders nowhere -- including the cash-unconstrained
+    disclosure turtle.js keys off open futures positions. A market with no
+    file yet contributes nothing (the loop skips absent paths), so the default
+    is safe before the first futures run ever lands."""
     combined = {"schema_version": SCHEMA, "market": "all",
                 "generated_at": datetime.datetime.now(
                     datetime.timezone.utc).isoformat(timespec="seconds"),

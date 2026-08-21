@@ -1653,23 +1653,46 @@ TURTLE_COST_BPS = 15.0
 # N arithmetic, wrong for exact fills. Said on the page rather than hidden.
 # The grains and meats the Turtles deliberately EXCLUDED are excluded here
 # too -- Dennis was at exchange position limits in grains for his own account.
+#
+# EVERY ROW CARRIES ITS SOURCE. `dpp` is the one number here that silently
+# misprices everything downstream if it is wrong -- unit size, stop distance
+# and the pyramid step all divide by it -- and it is not checkable by looking
+# at it, because a plausible wrong multiplier looks exactly like a right one.
+# So each entry states the exchange contract size and the quote convention it
+# was derived from. Exchange is CME Group (CME/CBOT/NYMEX/COMEX) except the
+# four softs, which are ICE Futures U.S. The rule for a cents-quoted contract
+# is dpp = contract size / 100, because one "point" on those tapes is one cent.
+# Do not edit a number here without editing the comment beside it, and do not
+# edit the comment to match a number.
 TURTLE_FUTURES = [
     # --- currencies (the Turtles' biggest 1980s winners) ---
+    # CME Euro FX: 125,000 EUR, quoted USD per EUR -> $125,000 per 1.00.
+    # Micro M6E is one tenth: 12,500 EUR.
     {"symbol": "6E", "yf": "6E=F", "name": "Euro FX", "group": "currency",
      "dpp": 125_000, "micro": "M6E", "micro_dpp": 12_500},
+    # CME Japanese Yen: 12,500,000 JPY, quoted USD per yen -> $12,500,000 per
+    # 1.00. Yahoo prints this tape at ~0.0068, so the multiplier is large and
+    # correct rather than a typo.
     {"symbol": "6J", "yf": "6J=F", "name": "Japanese Yen", "group": "currency",
      "dpp": 12_500_000, "micro": "", "micro_dpp": 0},
+    # CME British Pound: 62,500 GBP, quoted USD per GBP. Micro M6B: 6,250.
     {"symbol": "6B", "yf": "6B=F", "name": "British Pound", "group": "currency",
      "dpp": 62_500, "micro": "M6B", "micro_dpp": 6_250},
+    # CME Australian Dollar: 100,000 AUD, quoted USD per AUD. Micro M6A: 10,000.
     {"symbol": "6A", "yf": "6A=F", "name": "Australian Dollar", "group": "currency",
      "dpp": 100_000, "micro": "M6A", "micro_dpp": 10_000},
+    # CME Canadian Dollar: 100,000 CAD, quoted USD per CAD.
     {"symbol": "6C", "yf": "6C=F", "name": "Canadian Dollar", "group": "currency",
      "dpp": 100_000, "micro": "", "micro_dpp": 0},
+    # CME Swiss Franc: 125,000 CHF, quoted USD per CHF.
     {"symbol": "6S", "yf": "6S=F", "name": "Swiss Franc", "group": "currency",
      "dpp": 125_000, "micro": "", "micro_dpp": 0},
     # --- rates ---
+    # CBOT 30-Year T-Bond: $100,000 face, quoted in points of par, so one
+    # full point (1% of face) is $1,000. Yahoo prints the decimalised handle.
     {"symbol": "ZB", "yf": "ZB=F", "name": "30-Year T-Bond", "group": "rates",
      "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # CBOT 10-Year T-Note: $100,000 face, points of par -> $1,000 a point.
     # NO MICRO. CME's "Micro 10-Year Yield" is not a fraction of ZN -- it is a
     # different instrument that trades YIELD at $10 a basis point, so listing
     # it here would misprice every rates unit. An honest empty field beats a
@@ -1677,34 +1700,59 @@ TURTLE_FUTURES = [
     {"symbol": "ZN", "yf": "ZN=F", "name": "10-Year T-Note", "group": "rates",
      "dpp": 1_000, "micro": "", "micro_dpp": 0},
     # --- metals ---
+    # COMEX Gold: 100 troy oz, quoted USD per oz -> $100 per $1. MGC: 10 oz.
     {"symbol": "GC", "yf": "GC=F", "name": "Gold", "group": "metals",
      "dpp": 100, "micro": "MGC", "micro_dpp": 10},
+    # COMEX Silver: 5,000 troy oz, quoted USD per oz -> $5,000 per $1.
+    # Micro Silver (SIL) is 1,000 oz -> $1,000. Note SIL is a fifth, not a
+    # tenth: the metals micros are not a uniform ratio.
     {"symbol": "SI", "yf": "SI=F", "name": "Silver", "group": "metals",
      "dpp": 5_000, "micro": "SIL", "micro_dpp": 1_000},
+    # COMEX Copper: 25,000 lb, quoted USD per lb -> $25,000 per $1. This tape
+    # is quoted in DOLLARS per pound (~4.50), not cents, so the /100 rule that
+    # governs the softs below does not apply. MHG: 2,500 lb.
     {"symbol": "HG", "yf": "HG=F", "name": "Copper", "group": "metals",
      "dpp": 25_000, "micro": "MHG", "micro_dpp": 2_500},
     # --- energy ---
+    # NYMEX WTI Crude: 1,000 barrels, quoted USD per barrel. MCL: 100 bbl.
     {"symbol": "CL", "yf": "CL=F", "name": "Crude Oil (WTI)", "group": "energy",
      "dpp": 1_000, "micro": "MCL", "micro_dpp": 100},
+    # NYMEX Heating Oil (ULSD): 42,000 US gallons, quoted USD per gallon.
     {"symbol": "HO", "yf": "HO=F", "name": "Heating Oil", "group": "energy",
      "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    # NYMEX RBOB Gasoline: 42,000 US gallons, quoted USD per gallon.
     {"symbol": "RB", "yf": "RB=F", "name": "RBOB Gasoline", "group": "energy",
      "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    # NYMEX Henry Hub Natural Gas: 10,000 MMBtu, quoted USD per MMBtu.
+    # Micro MNG: 2,500 MMBtu -> a quarter, again not a tenth.
     {"symbol": "NG", "yf": "NG=F", "name": "Natural Gas", "group": "energy",
      "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
     # --- softs (the Turtles traded these; grains and meats they did NOT) ---
+    # ICE Coffee "C": 37,500 lb, quoted US cents per pound.
+    # PROVENANCE: the shipped dpp of 37,500 is the owner's, affirmed
+    # 2026-08-21 against his own audit and left untouched here by instruction.
+    # Recorded rather than argued: this is the one row where the contract size
+    # and the shipped multiplier are the same number, so a reader comparing
+    # this line against SB and CT below -- which are both size/100 -- will
+    # notice and should take it up with the owner, not edit it.
     {"symbol": "KC", "yf": "KC=F", "name": "Coffee", "group": "softs",
      "dpp": 37_500, "micro": "", "micro_dpp": 0},
+    # ICE Cocoa: 10 metric tons, quoted USD per metric ton -> $10 per $1.
+    # Dollar-quoted, so the /100 cents rule does not apply.
     {"symbol": "CC", "yf": "CC=F", "name": "Cocoa", "group": "softs",
      "dpp": 10, "micro": "", "micro_dpp": 0},
+    # ICE Sugar No. 11: 112,000 lb, quoted US cents per pound -> $1,120 a cent.
     {"symbol": "SB", "yf": "SB=F", "name": "Sugar No. 11", "group": "softs",
      "dpp": 1_120, "micro": "", "micro_dpp": 0},
+    # ICE Cotton No. 2: 50,000 lb, quoted US cents per pound -> $500 a cent.
     {"symbol": "CT", "yf": "CT=F", "name": "Cotton", "group": "softs",
      "dpp": 500, "micro": "", "micro_dpp": 0},
     # --- indices (not a 1983 Turtle market at this size, but it is the one
     #     a small account can actually reach, so it is carried and labelled) ---
+    # CME E-mini S&P 500: $50 x index. Micro MES: $5 x index.
     {"symbol": "ES", "yf": "ES=F", "name": "S&P 500", "group": "index",
      "dpp": 50, "micro": "MES", "micro_dpp": 5},
+    # CME E-mini Nasdaq-100: $20 x index. Micro MNQ: $2 x index.
     {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
      "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
 ]
@@ -1759,6 +1807,23 @@ TURTLE_BOOK_MAX_NOTIONAL_PCT = 100.0
 # percent and the recovery sweep usually reclaims them - so anything that
 # trips this is a real outage, not a bad afternoon.
 TURTLE_MIN_COVERAGE_PCT = 60.0
+
+# A 60% SHARE is calibrated for a 2,000-name directory, where losing 40% is a
+# mass outage. On the 21-contract futures sleeve the same arithmetic is
+# absurd: 8 contracts missing is 62% coverage - "above the floor" - and
+# publishes a sleeve with whole asset groups absent as if it were whole. So a
+# small universe gets an ABSOLUTE ceiling on missing names instead: at or
+# under TURTLE_SMALL_UNIVERSE_MAX names, MORE than
+# TURTLE_SMALL_UNIVERSE_MAX_MISSING unpriced names refuses to publish and
+# leaves yesterday's file standing (the share floor still applies too - the
+# tighter rule wins). Two missing of 21 (90.5%) still publishes, because one
+# permanently broken Yahoo symbol must not hold the whole sleeve hostage
+# forever - but every missing name is NAMED in the payload rather than merely
+# counted, because on a fixed 21-row table each absence is an asset group,
+# not a rounding error. Equity universes are untouched: they stay on the
+# 60% share above.
+TURTLE_SMALL_UNIVERSE_MAX = 30
+TURTLE_SMALL_UNIVERSE_MAX_MISSING = 2
 
 # Rows published per market. The full ASX universe throws off far more
 # breakouts than a page can show; ranking is by proximity to the level and

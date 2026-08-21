@@ -115,7 +115,7 @@ jobs:
           {
             echo '### Turtle nightly'
             echo '```'
-            grep -E '^\[(asx|nasdaq|crypto)\] turtle' /tmp/turtle_out.txt || \
+            grep -E '^\[(asx|nasdaq|crypto|futures)\] turtle' /tmp/turtle_out.txt || \
               echo '(no per-market lines - the scan did not reach a market)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
