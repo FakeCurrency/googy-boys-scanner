@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-08-21T20:34:58+00:00",
+ "generated_at": "2026-08-21T21:53:54+00:00",
  "equity_start": 15000.0,
  "open": [
   {
@@ -108,11 +108,12 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 109.58999634,
+   "last_mark": 111.04000092,
    "mark_date": "2026-08-21",
    "fees": 2.105294,
    "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mae_r": -0.3317,
+   "unpriced_runs": 0
   },
   {
    "symbol": "UAL",
@@ -130,11 +131,12 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 111.70999908,
+   "last_mark": 113.16999817,
    "mark_date": "2026-08-21",
    "fees": 1.891801,
    "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mae_r": -0.315,
+   "unpriced_runs": 0
   },
   {
    "symbol": "TEM",
@@ -144,19 +146,23 @@
    "side": "long",
    "system": 2,
    "n": 3.98531552,
-   "units": 12.54605808,
+   "units": 50.18423232,
    "fills": [
-    66.65000153
+    66.65000153,
+    68.64265929,
+    70.63531705,
+    72.62797481
    ],
-   "cost_basis": 836.19479,
-   "stop": 58.67937049,
-   "last_fill": 66.65000153,
+   "cost_basis": 3494.779163,
+   "stop": 64.65734377,
+   "last_fill": 72.62797481,
    "opened": "2026-08-21",
-   "last_mark": 66.65000153,
+   "last_mark": 72.69000244,
    "mark_date": "2026-08-21",
-   "fees": 1.254292,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "fees": 5.242168,
+   "mfe_r": 0.7917,
+   "mae_r": -0.1756,
+   "unpriced_runs": 0
   },
   {
    "symbol": "TLN",
@@ -174,11 +180,12 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 316.98999023,
+   "last_mark": 314.45999146,
    "mark_date": "2026-08-21",
    "fees": 1.205845,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.1448,
+   "mae_r": -0.0946,
+   "unpriced_runs": 0
   },
   {
    "symbol": "CORZ",
@@ -196,11 +203,12 @@
    "stop": 21.73721117,
    "last_fill": 18.38999939,
    "opened": "2026-08-21",
-   "last_mark": 18.38999939,
+   "last_mark": 17.80999947,
    "mark_date": "2026-08-21",
    "fees": 0.824119,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.2032,
+   "mae_r": -0.2599,
+   "unpriced_runs": 0
   },
   {
    "symbol": "DOGE",
@@ -402,7 +410,7 @@
    "equity": 5000.0,
    "return_pct": 0.0,
    "open_positions": 5,
-   "open_units": 5,
+   "open_units": 8,
    "closed": 0,
    "wins": 0,
    "win_pct": null,
@@ -432,6 +440,276 @@
   }
  },
  "skips": [
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "WMT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1777.48,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "TXN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1185.55,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "COIN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 930.77,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "MELI",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1468.39,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "CME",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2085.93,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "AEP",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2305.75,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "CHRW",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1168.71,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "EXC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2284.91,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "MANH",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1260.61,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "BNTX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1459.46,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "MEDP",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1498.12,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "COLB",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2365.02,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "VLY",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2363.57,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "DOX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1697.07,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "OSIS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1156.08,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "TMC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 720.73,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "SLDE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1492.01,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "HWKN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1116.52,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "WAFD",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2770.22,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "CASH",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1948.5,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "ABUS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1184.41,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "FSBC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1875.42,
+   "equity": 5000.0,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "CTNM",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 792.31,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "STRF",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 3503.75,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "CRNC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 670.23,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "VEON",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1764.03,
+   "equity": 5000.0,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "nasdaq",
+   "symbol": "BDTX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 938.23,
+   "equity": 5000.0,
+   "system": 2
+  },
   {
    "as_of": "2026-08-21",
    "market": "crypto",
@@ -495,9 +773,9 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
+  "cash": 29,
   "same_bar_reentry": 5,
-  "cash": 2,
-  "total": 7
+  "total": 34
  },
  "summary": {
   "started": "2026-08-21",
@@ -505,7 +783,7 @@
   "equity": 14186.1,
   "return_pct": -5.426,
   "open_positions": 11,
-  "open_units": 12,
+  "open_units": 15,
   "closed": 5,
   "wins": 0,
   "win_pct": 0.0,
