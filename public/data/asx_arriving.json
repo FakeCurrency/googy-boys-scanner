@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-21T17:34:26+10:00",
+  "generated_at": "2026-08-22T00:19:40+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
@@ -22,6 +22,32 @@
       "is_product": true
     },
     {
+      "symbol": "US10",
+      "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 49.54000092,
+      "turnover_avg20": 74210,
+      "turnover_today": 485095,
+      "rvol": 6.5,
+      "adv_usd": 74210.46,
+      "fund": true,
+      "is_product": true
+    },
+    {
+      "symbol": "MOGL",
+      "name": "Montaka Global Long Only Equites Fund (Managed Fund)",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 4.28000021,
+      "turnover_avg20": 78432,
+      "turnover_today": 397817,
+      "rvol": 4.9,
+      "adv_usd": 78432.19,
+      "fund": true,
+      "is_product": true
+    },
+    {
       "symbol": "DSK",
       "name": "Dusk Group Limited",
       "sector": "Consumer Discretionary",
@@ -35,15 +61,15 @@
       "is_product": false
     },
     {
-      "symbol": "DBBF",
-      "name": "BetaShares Ethical Diversified Balanced ETF",
+      "symbol": "DRIV",
+      "name": "BetaShares Electric Vehicles and Future Mobility ETF",
       "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 26.07999992,
-      "turnover_avg20": 75407,
-      "turnover_today": 262390,
-      "rvol": 3.5,
-      "adv_usd": 75407.22,
+      "dir": "SHORT",
+      "price": 10.64999962,
+      "turnover_avg20": 36708,
+      "turnover_today": 222393,
+      "rvol": 6.1,
+      "adv_usd": 36708.32,
       "fund": true,
       "is_product": true
     },
@@ -59,6 +85,19 @@
       "adv_usd": 22482.51,
       "fund": false,
       "is_product": false
+    },
+    {
+      "symbol": "SWTZ",
+      "name": "Switzer Dividend Growth Fund (Quoted Managed Fund)",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 2.3900001,
+      "turnover_avg20": 47674,
+      "turnover_today": 197241,
+      "rvol": 4.2,
+      "adv_usd": 47674.95,
+      "fund": true,
+      "is_product": true
     },
     {
       "symbol": "PL3",
@@ -87,6 +126,19 @@
       "is_product": false
     },
     {
+      "symbol": "CIVH",
+      "name": "ClearBridge Global Infrastructure Value Fund (Hedged) Active ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 1.11000001,
+      "turnover_avg20": 49701,
+      "turnover_today": 170492,
+      "rvol": 3.5,
+      "adv_usd": 49701.99,
+      "fund": true,
+      "is_product": true
+    },
+    {
       "symbol": "EG1",
       "name": "Evergreen Lithium Limited",
       "sector": "Materials",
@@ -111,45 +163,6 @@
       "adv_usd": 39227.12,
       "fund": false,
       "is_product": false
-    },
-    {
-      "symbol": "PAT",
-      "name": "Patriot Resources Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.055,
-      "turnover_avg20": 28760,
-      "turnover_today": 126124,
-      "rvol": 4.8,
-      "adv_usd": 28760.03,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "SMS",
-      "name": "Star Minerals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.05,
-      "turnover_avg20": 14790,
-      "turnover_today": 112526,
-      "rvol": 7.2,
-      "adv_usd": 14790.06,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "ALPH",
-      "name": "Schroder Global Equity Alpha Fund",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 11.51000023,
-      "turnover_avg20": 29944,
-      "turnover_today": 103072,
-      "rvol": 3.4,
-      "adv_usd": 29944.55,
-      "fund": true,
-      "is_product": true
     }
   ]
 }
