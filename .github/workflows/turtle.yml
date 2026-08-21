@@ -23,6 +23,18 @@ name: Turtle nightly scan
 
 on:
   schedule:
+    # CRYPTO EVERY FOUR HOURS, because crypto trades every four hours. The
+    # Turtles entered intraday on the tick; a daily-only scan on a 24/7 market
+    # means a breakout can run for most of a day before this page admits it.
+    - cron: "5 */4 * * *"
+    # ASX, after the close. 16:00 AEST = 06:00 UTC and 16:00 AEDT = 05:00 UTC,
+    # so 06:30 is past the close in both halves of the year -- the DST
+    # superset trick this repo uses on every market-hours cron.
+    - cron: "30 6 * * 1-5"
+    # NASDAQ, after the close: 16:00 EST = 21:00 UTC, 16:00 EDT = 20:00 UTC.
+    - cron: "30 21 * * 1-5"
+    # The nightly full pass over all three, clear of the 08:30/08:45/08:52
+    # cluster so the two full-universe Yahoo walks stay an hour apart.
     - cron: "30 9 * * *"
   workflow_dispatch:
     inputs:
@@ -70,8 +82,20 @@ jobs:
         env:
           MARKET: ${{ github.event.inputs.market }}
           LIMIT: ${{ github.event.inputs.limit }}
+          # Which cron fired. GitHub sets this only on a schedule event, so a
+          # manual dispatch leaves it empty and falls through to the input.
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -o pipefail
+          # One workflow, four crons, three scopes. Branching on the cron
+          # expression keeps a single job definition rather than three
+          # near-identical files that drift apart.
+          case "$SCHEDULE" in
+            "5 */4 * * *")   MARKET="crypto" ;;
+            "30 6 * * 1-5")  MARKET="asx" ;;
+            "30 21 * * 1-5") MARKET="nasdaq" ;;
+            "30 9 * * *")    MARKET="all" ;;
+          esac
           ARGS="--market ${MARKET:-all}"
           if [ -n "$LIMIT" ]; then ARGS="$ARGS --limit $LIMIT"; fi
           echo "turtle args: $ARGS"
@@ -92,6 +116,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit & push (surgical — the turtle files only)
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -110,7 +136,10 @@ jobs:
           # generated_at and os.replace()s the file, so a scheduled run that
           # staged nothing lost its output and must say so out loud rather
           # than finishing green on an empty index.
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+          # ANY-OF, and only on the nightly all-markets cron: the crypto and
+          # per-market crons legitimately leave two of the three files
+          # untouched, so asserting all three would turn a correct run red.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "$SCHEDULE" = "30 9 * * *" ]; then
             bash scripts/assert_staged.sh "turtle" $PATHS
           fi
           if git diff --cached --quiet; then

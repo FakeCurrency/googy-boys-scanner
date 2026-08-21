@@ -2078,12 +2078,45 @@ the paper book, and outside every signal path in the repo. `scanner/turtle.py`
 11. **Ranking never sorts on the record** — signal today, then open position,
     then proximity, then liquidity. Sorting a scanner by its own backtest is
     how a page becomes a curve fit; `rank_key` is pinned against it.
-12. **`#tt-views` scrolls its own overflow.** The shared `.view-tabs` has no
+12. **THREE ENGINE BUGS WERE FOUND BY AN EXTERNAL AUDIT ON 2026-08-21 AND ARE
+    FIXED — all three flattered the result.** (a) The ENTRY BAR never checked
+    its own stop: a bar that broke out at 101 with a 97 stop and then traded to
+    95 booked no trade at all, so the loss was invisible. (b) An add walks the
+    shared stop up, and the bar that did the adding was never re-tested against
+    the stop it had just created. (c) `pyramid_ladder`'s docstring claimed a
+    full position risks "about 2% and not 4%" — both wrong, it is 5% vs 8%, and
+    they are the exact plausible-looking wrong answers the tests exist to
+    catch. Booking the stop on an ambiguous bar is the conservative reading and
+    the direction of the error is the point: these can only ever ADD a loss the
+    old code missed, never remove one, which is what made them shippable
+    without re-litigating every published number. All three pinned.
+13. **Costs are charged and the gross is published beside the net**
+    (`TURTLE_COST_BPS`, 15 bps a side). A trend system takes many small losses,
+    so cost is a material part of the result rather than a rounding error.
+    `summarize()` also publishes `median_r` and `top10_share`, because a trend
+    system's MEAN is carried by a handful of trades and publishing only the
+    mean is how a fat tail reads as an edge. On crypto the mean is +1.41R while
+    the median trade is about -1.2R and the top twenty trades hold ~84% of all
+    profit — the same engine loses on ASX (2,212 names) and NASDAQ (1,428),
+    and the only positive market is the one whose universe is today's
+    top-100 coin list. That contrast IS the finding; it is not "crypto works".
+14. **The page LANDS ON SIGNALS, not on the rulebook.** It shipped defaulting
+    to RULES and a tab carrying 400 live rows read as empty to anyone who did
+    not think to click through. `load()` picks the view (`signals` when a scan
+    exists, `rules` when none does) and a `TOUCHED` flag stops it overriding a
+    view the reader chose.
+15. **Cadence is four crons, one job** (`github.event.schedule` selects the
+    market): crypto every 4 hours because crypto trades every 4 hours, ASX at
+    06:30 UTC and NASDAQ at 21:30 UTC (both past their closes in either half of
+    the DST year), and the full three-market pass at 09:30 UTC. The
+    must-change gate fires only on the nightly all-markets cron — the
+    per-market crons legitimately leave two of the three files untouched.
+16. **`#tt-views` scrolls its own overflow.** The shared `.view-tabs` has no
     overflow rule and four labels measure 383px, which pushed the whole page
     sideways at 320px — found by RENDERING it, not by reading it. Scoped by
     id so the fix cannot touch another page. `turtle.html` is now in
     `smoke.e2e.js`'s 320px list.
-13. **Both suites are mutation-verified: 15 mutations, 15 caught** (47 pytest,
+17. **Both suites are mutation-verified: 15 mutations, 15 caught** (47 pytest,
     53 JS). Two SURVIVED on the first pass and the fixes are worth knowing,
     because both gaps are the kind that re-open easily. (a) *The pyramid used
     entry-N* — every fixture in the file pins N at exactly 2.0, so entry-N and
@@ -2096,7 +2129,7 @@ the paper book, and outside every signal path in the repo. `scanner/turtle.py`
     from the row name left everything green while `name` is the one field a
     third-party listings directory controls. There is now a test that walks
     every untrusted field to its render site.
-14. **Two defects were found by RENDERING, not by reading**, both in code that
+18. **Two defects were found by RENDERING, not by reading**, both in code that
     read fine: a click anywhere inside an expanded row collapsed it (so you
     could not select a number out of the pyramid table, and the `is-open`
     cursor was already promising otherwise), and the keyboard handler built a

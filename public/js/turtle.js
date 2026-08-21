@@ -47,11 +47,12 @@
   let P = FALLBACK;              // params in force (payload's, else the mirror)
   let PARAMS_ARE_LIVE = false;
   let MARKET = "asx";
-  let VIEW = "rules";
+  let VIEW = "signals";           // set to "rules" by load() when no scan exists
   let FILTER = "all";
   let QUERY = "";
   let EQUITY = FALLBACK.account_equity;
   let OPEN = null;               // expanded row symbol
+  let TOUCHED = false;           // has the reader picked a view themselves?
 
   // ── formatting ─────────────────────────────────────────────────────────────
   const num = (v, d) => (v == null || !isFinite(v) ? "—" : Number(v).toFixed(d == null ? 2 : d));
@@ -109,6 +110,12 @@
         // engine actually ran with tonight.
         PARAMS_ARE_LIVE = !!(DATA && DATA.params);
         P = PARAMS_ARE_LIVE ? Object.assign({}, FALLBACK, DATA.params) : FALLBACK;
+        // THE LANDING VIEW IS THE SCAN. This page is a scanner first and a
+        // reference second: opening on the rulebook made a tab carrying 400
+        // live rows look empty to anyone who did not think to click through.
+        // Only fall back to RULES when there is genuinely nothing to scan --
+        // and never override a view the reader has already chosen.
+        if (!TOUCHED) VIEW = DATA ? "signals" : "rules";
         return DATA;
       });
   }
@@ -411,8 +418,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (rec.n) {
       detail += '<p class="tt-note">Under these rules over the last ' + esc(P.period) +
         ": <b>" + rec.n + "</b> closed trades, " + pct(rec.win_pct) + " won, <b class=\"" +
-        cls(rec.total_r) + '">' + sgnR(rec.total_r) + "</b> total, worst drawdown " +
-        sgnR(rec.max_dd_r) + ". In-sample and survivor-biased — see EVIDENCE.</p>";
+        cls(rec.total_r) + '">' + sgnR(rec.total_r) + "</b> total net of costs" +
+        (rec.gross_r == null ? "" : " (" + sgnR(rec.gross_r) + " gross, " +
+          sgnR(-Math.abs(rec.cost_r || 0)) + " cost)") +
+        ", median trade " + sgnR(rec.median_r) +
+        ", worst drawdown " + sgnR(rec.max_dd_r) +
+        ". In-sample, survivor-biased, single-instrument — see EVIDENCE.</p>";
     } else {
       detail += '<p class="tt-note">No closed trades in the last ' + esc(P.period) + ".</p>";
     }
@@ -525,6 +536,30 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       </section>`;
   }
 
+  // What these rules actually did on THIS market, put first on the EVIDENCE
+  // view because it is the only number on the page derived from real bars
+  // rather than from the historical record of somebody else's program.
+  function marketRecordHTML() {
+    if (!DATA || !DATA.aggregate || !DATA.aggregate.trades) return "";
+    const a = DATA.aggregate;
+    const good = a.total_r > 0;
+    return `
+      <section class="tt-card">
+        <h3>What these rules did on ${esc(MARKET.toUpperCase())} over ${esc(P.period)}</h3>
+        <div class="tt-detail-grid">
+          ${kv("Closed trades", big(a.trades))}
+          ${kv("Win rate", pct(a.win_pct))}
+          ${kv("Total, net of costs", '<span class="' + cls(a.total_r) + '">' + sgnR(a.total_r) + "</span>")}
+          ${kv("Average trade", '<span class="' + cls(a.avg_r) + '">' + sgnR(a.avg_r) + "</span>")}
+          ${kv("Gross, before costs", sgnR(a.avg_gross_r) + " avg")}
+          ${kv("Names with a trade", big(a.names_with_trades) + " of " + big(a.names))}
+        </div>
+        <p class="tt-note">${good
+          ? "Positive here does NOT mean positive as a strategy. Each name is replayed alone, with no position limits, no shared capital and no correlation, so summing the winners is not a book you could have run. And the universe is TODAY's listed names, so anything delisted over the window is missing — which on a fast-moving market selects hard for survivors."
+          : "Negative, and worth sitting with rather than explaining away: it is thousands of trades of the real rules on real bars, after costs. It is also the honest reading of the structural point below — the Turtles ran ~20 uncorrelated futures with margin, and diversification is the mechanism that makes the expectancy positive, not a garnish on top of it."}</p>
+      </section>`;
+  }
+
   // ── view 4: EVIDENCE ───────────────────────────────────────────────────────
   function evidenceHTML() {
     const start = EQUITY, target = 10e6;
@@ -537,7 +572,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           r >= 0.3 ? "an exceptional professional record" : "a very good one") + "</td></tr>";
     }).join("");
 
-    return `
+    return marketRecordHTML() + `
       <section class="tt-card">
         <h3>The headline number, as arithmetic</h3>
         <p>Turning ${money(start, 0)} into ${money(target, 0)} is a
@@ -681,9 +716,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   function mount() {
     document.addEventListener("click", (e) => {
       const v = e.target.closest("[data-view]");
-      if (v) { VIEW = v.dataset.view; OPEN = null; render(); return; }
+      if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; render(); return; }
       const g = e.target.closest("[data-goto]");
-      if (g) { e.preventDefault(); VIEW = g.dataset.goto; render(); return; }
+      if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; render(); return; }
       const f = e.target.closest("[data-filter]");
       if (f) { FILTER = f.dataset.filter; render(); return; }
       const m = e.target.closest("#tt-market [data-market]");

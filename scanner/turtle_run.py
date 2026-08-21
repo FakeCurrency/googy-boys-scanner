@@ -86,6 +86,8 @@ def aggregate(rows: list[dict]) -> dict:
     """
     trades = sum((r["record"]["n"] for r in rows), 0)
     total_r = sum((r["record"]["total_r"] for r in rows), 0.0)
+    gross_r = sum((r["record"].get("gross_r", 0.0) for r in rows), 0.0)
+    cost_r = sum((r["record"].get("cost_r", 0.0) for r in rows), 0.0)
     wins = sum((r["record"]["wins"] for r in rows), 0)
     with_trades = [r for r in rows if r["record"]["n"]]
     return {
@@ -95,7 +97,10 @@ def aggregate(rows: list[dict]) -> dict:
         "wins": wins,
         "win_pct": round(100.0 * wins / trades, 1) if trades else None,
         "total_r": round(total_r, 2),
+        "gross_r": round(gross_r, 2),
+        "cost_r": round(cost_r, 2),
         "avg_r": round(total_r / trades, 4) if trades else None,
+        "avg_gross_r": round(gross_r / trades, 4) if trades else None,
         "long": sum(1 for r in rows if r["state"] == "long"),
         "short": sum(1 for r in rows if r["state"] == "short"),
         "flat": sum(1 for r in rows if r["state"] == "flat"),

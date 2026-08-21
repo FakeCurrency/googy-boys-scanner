@@ -409,6 +409,110 @@ def test_a_gap_above_the_trigger_fills_at_the_open_not_at_the_trigger():
         "you cannot buy a gap at yesterday's channel"
 
 
+def _bars(rows):
+    o, h, l, c, v = zip(*rows)
+    return pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c, "Volume": v},
+                        index=pd.bdate_range("2015-01-01", periods=len(rows)))
+
+
+# 260 bars of a 99-101 band: N is exactly 2.0 and both entry channels sit at 101.
+_BASE = [(100.0, 101.0, 99.0, 100.0, 5e7)] * 260
+
+
+def test_the_ENTRY_BAR_checks_its_own_stop():
+    """Until 2026-08-21 it did not, and the loss was simply invisible.
+
+    A bar that breaks out at 101 (stop 97) and then trades to 95 booked NO
+    trade at all -- the position was opened and the replay moved on, so the
+    record never saw it. Every such bar flattered the result.
+
+    A daily bar cannot say whether the low came before or after the breakout
+    tick. Booking the stop is the conservative reading, and the DIRECTION of
+    the error is the point: it can only ever make the record worse.
+    """
+    rep = turtle.replay(_bars(_BASE + [(101.0, 102.0, 95.0, 96.0, 5e7)]
+                              + [(96.0, 97.0, 95.0, 96.0, 5e7)] * 3),
+                        allow_shorts=False)
+    stops = [t for t in rep["trades"] if t["reason"] == turtle.STOP]
+    assert len(stops) == 1, "the entry bar's own stop must be booked"
+    assert stops[0]["entry_date"] == stops[0]["exit_date"], "opened and closed same bar"
+    assert stops[0]["r"] < 0
+
+
+def test_an_ADD_RAISES_the_stop_and_the_same_bar_is_re_tested_against_it():
+    """The companion hole: an add walks the stop up under the whole position,
+    and the bar that did the adding was never re-checked against the stop it
+    had just created.
+
+    Here the fourth unit fills at 104, which moves the shared stop to 100, and
+    that same bar's low is 99.5 -- half a point through it. Before the fix the
+    replay recorded nothing at all for that bar.
+    """
+    rows = _BASE + [
+        (101.0, 102.0, 100.5, 101.5, 5e7),   # enter 101, add 102 -> stop 98
+        (102.0, 103.0, 101.5, 102.5, 5e7),   # add 103 -> stop 99
+        (103.0, 104.0, 99.5, 100.0, 5e7),    # add 104 -> stop 100, low 99.5 breaks it
+        (100.0, 101.0, 99.5, 100.0, 5e7),
+    ]
+    rep = turtle.replay(_bars(rows), allow_shorts=False)
+    stops = [t for t in rep["trades"] if t["reason"] == turtle.STOP]
+    assert len(stops) == 1, "the raised stop must be tested on its own bar"
+    assert stops[0]["units"] == config.TURTLE_MAX_UNITS
+    assert stops[0]["exit"] == pytest.approx(100.0), "filled at the raised stop"
+    assert stops[0]["gross_r"] == pytest.approx(-2.5)
+
+
+def test_both_intrabar_checks_only_ever_ADD_losses_never_remove_them():
+    """The safety property that makes these two fixes shippable without
+    re-litigating every published number: they can only book a trade the old
+    code missed, never delete or improve one it recorded."""
+    rows = _BASE + [(101.0, 102.0, 95.0, 96.0, 5e7)] + [(96.0, 97.0, 95.0, 96.0, 5e7)] * 3
+    rep = turtle.replay(_bars(rows), allow_shorts=False)
+    assert all(t["gross_r"] <= 0 for t in rep["trades"] if t["reason"] == turtle.STOP)
+
+
+# ---------------------------------------------------------------------------
+# costs, and the numbers that stop a fat tail reading as an edge
+# ---------------------------------------------------------------------------
+
+def test_every_trade_is_charged_a_round_trip_cost_and_shows_the_gross():
+    rows = _BASE + [(101.0, 102.0, 100.5, 101.5, 5e7)] + [(101.0, 102.0, 95.0, 96.0, 5e7)] * 4
+    rep = turtle.replay(_bars(rows), allow_shorts=False)
+    assert rep["trades"], "fixture must produce a trade"
+    for t in rep["trades"]:
+        assert t["cost_r"] > 0, "a frictionless replay is not a real one"
+        assert t["r"] == pytest.approx(t["gross_r"] - t["cost_r"], abs=1e-4)
+        assert t["r"] < t["gross_r"], "cost always makes the net worse"
+
+
+def test_zero_bps_reproduces_the_frictionless_replay(monkeypatch):
+    monkeypatch.setattr(config, "TURTLE_COST_BPS", 0.0)
+    rows = _BASE + [(101.0, 102.0, 100.5, 101.5, 5e7)] + [(101.0, 102.0, 95.0, 96.0, 5e7)] * 4
+    rep = turtle.replay(_bars(rows), allow_shorts=False)
+    for t in rep["trades"]:
+        assert t["cost_r"] == 0.0 and t["r"] == pytest.approx(t["gross_r"])
+
+
+def test_the_record_publishes_the_median_and_the_tail_concentration():
+    """A trend system's mean is carried by a handful of trades. Publishing only
+    the mean is how a fat tail gets read as an edge, so the median trade and
+    the share held by the top ten travel with it."""
+    trades = [{"r": -1.0, "gross_r": -1.0, "cost_r": 0.0, "system": 1,
+               "reason": turtle.STOP} for _ in range(20)]
+    trades.append({"r": 100.0, "gross_r": 100.0, "cost_r": 0.0, "system": 2,
+                   "reason": turtle.CHANNEL})
+    rec = turtle.summarize(trades)
+    assert rec["avg_r"] > 0, "the mean says this system works"
+    assert rec["median_r"] == -1.0, "the median says twenty of twenty-one lost"
+    assert rec["top10_share"] > 0.99, "and one trade holds essentially all of it"
+
+
+def test_top10_share_is_None_rather_than_a_share_of_a_loss():
+    rec = turtle.summarize([{"r": -1.0, "gross_r": -1.0, "cost_r": 0.0,
+                             "system": 1, "reason": turtle.STOP}])
+    assert rec["top10_share"] is None
+
+
 def test_shorts_mirror_every_rule():
     mids = [100.0] * 260 + ramp(99, 88) + [88.0] * 3
     rep = turtle.replay(band(mids), allow_shorts=True)

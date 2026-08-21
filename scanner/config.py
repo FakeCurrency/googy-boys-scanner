@@ -1617,6 +1617,17 @@ TURTLE_DVOL_LOOKBACK = 20
 # under its 55-day high today is the one you want to have seen yesterday.
 TURTLE_APPROACH_PCT = 3.0
 
+# Round-trip trading cost charged to every replayed trade, in basis points
+# PER SIDE of notional. A trend-following system takes a great many small
+# losses, so cost is not a rounding error on the result -- it is a material
+# part of it, and a backtest that omits it is quoting a number nobody could
+# have earned. 15 bps a side covers retail brokerage plus roughly half a
+# spread on a liquid name; it is deliberately not tuned to make any market
+# look good. Every trade publishes `gross_r` beside the net `r` and
+# `cost_r`, so the size of the haircut is always visible rather than baked in.
+# Set to 0 to reproduce a frictionless replay.
+TURTLE_COST_BPS = 15.0
+
 # Rows published per market. The full ASX universe throws off far more
 # breakouts than a page can show; ranking is by proximity to the level and
 # then by liquidity, and the payload states how many were dropped.

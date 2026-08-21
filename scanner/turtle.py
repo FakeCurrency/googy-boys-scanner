@@ -138,7 +138,12 @@ def pyramid_ladder(entry: float, n: float, direction: str = "long",
     leave the earlier units on their original stop. The whole position runs
     one stop, 2N below the MOST RECENT fill, so the fourth unit's entry drags
     the first unit's stop up by 1.5N from where it started. That is why a full
-    four-unit position risks about 2% of the account and not 4%.
+    four-unit position risks 1/2N + 1N + 1.5N + 2N = 5N -- 5% of the account
+    at 1% per N -- against 8N if every unit kept the stop it was issued.
+    (This said "about 2% and not 4%" until 2026-08-21. Both were wrong, and
+    both are the plausible-looking wrong answers tests/test_turtle.py exists
+    to catch -- which is exactly how a correct implementation gets "fixed"
+    into a broken one by someone trusting a comment over the code.)
     """
     max_units = config.TURTLE_MAX_UNITS if max_units is None else max_units
     step_n = config.TURTLE_PYRAMID_STEP_N if step_n is None else step_n
@@ -214,6 +219,43 @@ class _Shadow:
             self.entry = min(s1_lo, o)
             self.stop = self.entry + config.TURTLE_STOP_N * n_prev
             self.dir, self.active = -1, True
+
+
+def _book(pos: dict, exit_px: float, reason: str, i: int, dates: list) -> dict:
+    """Turn an open position into a closed trade.
+
+    One function, THREE call sites -- the ordinary exit, the entry bar's own
+    stop, and the stop a pyramid add just raised into the same bar's low.
+    Three hand-written copies of this arithmetic is how two of them quietly
+    stop agreeing.
+
+    R is per unit of the ORIGINAL 2N risk: the denominator the sizing was done
+    against, so R and dollars stay proportional however many units the
+    position ended up holding. `cost_r` is charged separately (see
+    config.TURTLE_COST_BPS) and `r` is NET of it, with `gross_r` kept beside
+    it -- a backtest that quotes only the gross quotes a number nobody could
+    have earned.
+    """
+    stop_n = config.TURTLE_STOP_N
+    sign = 1.0 if pos["side"] == "long" else -1.0
+    n_pos = pos["n"]
+    avg = pos["cost"] / pos["units"]
+    denom = stop_n * n_pos
+    gross_r = pos["units"] * sign * (exit_px - avg) / denom if denom > 0 else 0.0
+    bps = config.TURTLE_COST_BPS / 10_000.0
+    cost_r = pos["units"] * bps * (abs(avg) + abs(exit_px)) / denom if denom > 0 else 0.0
+    return {
+        "side": pos["side"], "system": pos["system"],
+        "entry_date": pos["entry_date"], "exit_date": dates[i],
+        "entry": round(avg, 8), "exit": round(float(exit_px), 8),
+        "units": pos["units"], "n": round(n_pos, 8),
+        "reason": reason,
+        "r": round(gross_r - cost_r, 4),
+        "gross_r": round(gross_r, 4),
+        "cost_r": round(cost_r, 4),
+        "bars": i - pos["entry_i"],
+        "mfe_r": round(pos["mfe"], 4), "mae_r": round(pos["mae"], 4),
+    }
 
 
 def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None:
@@ -309,6 +351,20 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
             }
             if last_bar:
                 signal_today = f"s{sysno}_{side}"
+            # THE ENTRY BAR CAN ALSO TAKE YOU OUT, and until 2026-08-21 this
+            # never checked -- a bar that broke out at 101.20 and then traded
+            # to 95.00 against a 97.20 stop booked NO trade at all, so the
+            # replay simply did not see the loss. A daily bar cannot say
+            # whether the low came before or after the breakout tick; booking
+            # the stop is the conservative reading, and the direction of the
+            # error matters: it can only ever make the record WORSE, never
+            # flatter it.
+            if ((side == "long" and lo[i] <= pos["stop"])
+                    or (side == "short" and h[i] >= pos["stop"])):
+                px = (min(pos["stop"], o[i]) if side == "long"
+                      else max(pos["stop"], o[i]))
+                trades.append(_book(pos, float(px), STOP, i, dates))
+                pos = None
             continue
 
         sign = 1.0 if pos["side"] == "long" else -1.0
@@ -338,21 +394,7 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
                 exit_px, reason = max(x_hi, o[i]), CHANNEL
 
         if exit_px is not None:
-            avg = pos["cost"] / pos["units"]
-            per_unit = sign * (exit_px - avg)
-            trades.append({
-                "side": pos["side"], "system": pos["system"],
-                "entry_date": pos["entry_date"], "exit_date": dates[i],
-                "entry": round(avg, 8), "exit": round(float(exit_px), 8),
-                "units": pos["units"], "n": round(n_pos, 8),
-                "reason": reason,
-                # R is per unit of the ORIGINAL 2N risk — the denominator the
-                # sizing was done against, so R and dollars stay proportional
-                # however many units the position ended up holding.
-                "r": round(pos["units"] * per_unit / (stop_n * n_pos), 4),
-                "bars": i - pos["entry_i"],
-                "mfe_r": round(pos["mfe"], 4), "mae_r": round(pos["mae"], 4),
-            })
+            trades.append(_book(pos, float(exit_px), reason, i, dates))
             pos = None
             continue
 
@@ -373,6 +415,19 @@ def replay(df: pd.DataFrame, *, allow_shorts: bool | None = None) -> dict | None
             pos["stop"] = float(fill - sign * stop_n * n_pos)
             if last_bar:
                 added_today += 1
+
+        # An add walks the stop UP under the whole position, and until
+        # 2026-08-21 the bar that did the adding was never re-tested against
+        # the stop it had just created. A bar that added at 102.20 (raising
+        # the stop to 100.20) and then traded to 99.50 recorded nothing.
+        # Same conservative reading as the entry bar, same direction of error.
+        if pos is not None and pos["units"] > 1:
+            if ((pos["side"] == "long" and lo[i] <= pos["stop"])
+                    or (pos["side"] == "short" and h[i] >= pos["stop"])):
+                px = (min(pos["stop"], o[i]) if pos["side"] == "long"
+                      else max(pos["stop"], o[i]))
+                trades.append(_book(pos, float(px), STOP, i, dates))
+                pos = None
 
     # ---- what the next bar can do -------------------------------------
     i = len(df) - 1
@@ -478,11 +533,30 @@ def summarize(trades: list[dict]) -> dict:
         if sel:
             by_reason[reason] = {"n": len(sel), "total_r": round(sum(sel), 3),
                                  "avg_r": round(sum(sel) / len(sel), 4)}
+    # THE MEAN IS NOT THE STORY IN A TREND SYSTEM, and publishing only the mean
+    # is how a fat tail gets read as an edge. A handful of enormous winners pay
+    # for everything, so the MEDIAN trade and the share of the total carried by
+    # the top ten are published beside the average -- if the median is deeply
+    # negative and ten trades hold most of the profit, the average is a
+    # statement about those ten names and not about the rules.
+    srt = sorted(rs)
+    mid = len(srt) // 2
+    median_r = srt[mid] if len(srt) % 2 else 0.5 * (srt[mid - 1] + srt[mid])
+    top = sorted(rs, reverse=True)[:10]
+    total = sum(rs)
+    gross = sum(t.get("gross_r", t.get("r", 0.0)) or 0.0 for t in trades)
+    cost = sum(t.get("cost_r", 0.0) or 0.0 for t in trades)
     return {
         "n": n, "wins": wins, "win_pct": round(100.0 * wins / n, 1),
-        "total_r": round(sum(rs), 3), "avg_r": round(sum(rs) / n, 4),
+        "total_r": round(total, 3), "avg_r": round(total / n, 4),
+        "median_r": round(median_r, 4),
+        "gross_r": round(gross, 3), "cost_r": round(cost, 3),
+        # share of the total carried by the ten best trades; None when the
+        # total is not positive, because a "share of a loss" is not a number
+        # anyone can read.
+        "top10_share": (round(sum(top) / total, 3) if total > 0 else None),
         "max_dd_r": round(dd, 3),
-        "expectancy_r": round(sum(rs) / n, 4),
+        "expectancy_r": round(total / n, 4),
         "by_system": by_system, "by_reason": by_reason,
     }
 
