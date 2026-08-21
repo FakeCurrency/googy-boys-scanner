@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-22T00:19:40+10:00",
+  "generated_at": "2026-08-22T00:57:57+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "30BB",
-      "name": "Betashares 2030 Fixed Term Corporate Bond Active ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 24.62999916,
-      "turnover_avg20": 33788,
-      "turnover_today": 492599,
-      "rvol": 14.6,
-      "adv_usd": 33788.14,
-      "fund": true,
-      "is_product": true
-    },
     {
       "symbol": "US10",
       "name": "Betashares U.S. Treasury Bond 7-10 Year Currency Hedged ETF",
@@ -161,6 +148,19 @@
       "turnover_today": 128326,
       "rvol": 3.4,
       "adv_usd": 39227.12,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "PAT",
+      "name": "Patriot Resources Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.055,
+      "turnover_avg20": 28760,
+      "turnover_today": 126124,
+      "rvol": 4.8,
+      "adv_usd": 28760.03,
       "fund": false,
       "is_product": false
     }
