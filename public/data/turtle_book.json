@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-08-21T10:33:50+00:00",
+ "generated_at": "2026-08-21T13:04:13+00:00",
  "equity_start": 15000.0,
  "open": [
   {
@@ -203,6 +203,74 @@
    "mae_r": 0.0
   },
   {
+   "symbol": "ETC",
+   "market": "crypto",
+   "name": "Ethereum Classic",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.23595286,
+   "units": 192.13260225,
+   "fills": [
+    7.37300014
+   ],
+   "cost_basis": 1416.593704,
+   "stop": 6.90109442,
+   "last_fill": 7.37300014,
+   "opened": "2026-08-21",
+   "last_mark": 7.37300014,
+   "mark_date": "2026-08-21",
+   "fees": 2.124891,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  },
+  {
+   "symbol": "ADA",
+   "market": "crypto",
+   "name": "Cardano",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.00947723,
+   "units": 4783.49021813,
+   "fills": [
+    0.21506
+   ],
+   "cost_basis": 1028.737386,
+   "stop": 0.19610554,
+   "last_fill": 0.21506,
+   "opened": "2026-08-21",
+   "last_mark": 0.21506,
+   "mark_date": "2026-08-21",
+   "fees": 1.543106,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  },
+  {
+   "symbol": "DOGE",
+   "market": "crypto",
+   "name": "Dogecoin",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.00260793,
+   "units": 17383.22616021,
+   "fills": [
+    0.08375
+   ],
+   "cost_basis": 1455.845227,
+   "stop": 0.07853414,
+   "last_fill": 0.08375,
+   "opened": "2026-08-21",
+   "last_mark": 0.08375,
+   "mark_date": "2026-08-21",
+   "fees": 2.183768,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
+  }
+ ],
+ "closed": [
+  {
    "symbol": "BCH",
    "market": "crypto",
    "name": "Bitcoin Cash",
@@ -211,18 +279,21 @@
    "system": 2,
    "n": 9.52246076,
    "units": 5.25074361,
+   "opened": "2026-08-21",
+   "closed": "2026-08-21",
+   "exit": 222.99072266,
+   "reason": "stop",
+   "entry_avg": 263.11999511,
+   "gross": -210.7085,
+   "fees": 3.8287,
+   "pnl": -214.5372,
+   "r": -2.1454,
+   "gross_r": -2.1071,
+   "mfe_r": 0.2879,
+   "mae_r": -2.1071,
    "fills": [
     263.11999512
-   ],
-   "cost_basis": 1381.575633,
-   "stop": 244.0750736,
-   "last_fill": 263.11999512,
-   "opened": "2026-08-21",
-   "last_mark": 263.11999512,
-   "mark_date": "2026-08-21",
-   "fees": 2.072363,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   ]
   },
   {
    "symbol": "AAVE",
@@ -233,18 +304,21 @@
    "system": 2,
    "n": 4.42179633,
    "units": 11.30762167,
+   "opened": "2026-08-21",
+   "closed": "2026-08-21",
+   "exit": 99.17318726,
+   "reason": "stop",
+   "entry_avg": 111.04000095,
+   "gross": -134.1854,
+   "fees": 3.5655,
+   "pnl": -137.751,
+   "r": -1.3775,
+   "gross_r": -1.3419,
+   "mfe_r": 0.2366,
+   "mae_r": -1.3863,
    "fills": [
     111.04000092
-   ],
-   "cost_basis": 1255.598321,
-   "stop": 102.19640826,
-   "last_fill": 111.04000092,
-   "opened": "2026-08-21",
-   "last_mark": 111.04000092,
-   "mark_date": "2026-08-21",
-   "fees": 1.883397,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   ]
   },
   {
    "symbol": "XRP",
@@ -255,21 +329,23 @@
    "system": 2,
    "n": 0.04827978,
    "units": 1035.63023692,
+   "opened": "2026-08-21",
+   "closed": "2026-08-21",
+   "exit": 1.2683084,
+   "reason": "stop",
+   "entry_avg": 1.37469995,
+   "gross": -110.1823,
+   "fees": 4.1058,
+   "pnl": -114.2881,
+   "r": -1.1429,
+   "gross_r": -1.1018,
+   "mfe_r": 0.4973,
+   "mae_r": -1.1678,
    "fills": [
     1.37469995
-   ],
-   "cost_basis": 1423.680835,
-   "stop": 1.27814039,
-   "last_fill": 1.37469995,
-   "opened": "2026-08-21",
-   "last_mark": 1.37469995,
-   "mark_date": "2026-08-21",
-   "fees": 2.135521,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   ]
   }
  ],
- "closed": [],
  "by_market": {
   "asx": {
    "started": "2026-08-21",
@@ -308,37 +384,98 @@
   "crypto": {
    "started": "2026-08-21",
    "equity_start": 5000.0,
-   "equity": 5000.0,
-   "return_pct": 0.0,
+   "equity": 4533.42,
+   "return_pct": -9.332,
    "open_positions": 3,
    "open_units": 3,
-   "closed": 0,
+   "closed": 3,
    "wins": 0,
-   "win_pct": null,
-   "total_r": 0.0,
-   "avg_r": null,
-   "median_r": null,
-   "realized_pnl": 0,
-   "fees_paid": 0,
-   "sizing_equity": 5000.0
+   "win_pct": 0.0,
+   "total_r": -4.666,
+   "avg_r": -1.5553,
+   "median_r": -1.3775,
+   "realized_pnl": -466.58,
+   "fees_paid": 11.5,
+   "sizing_equity": 4533.42
   }
  },
+ "skips": [
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "AAVE",
+   "action": "entry",
+   "reason": "same_bar_reentry",
+   "signal": "s2_long"
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "XRP",
+   "action": "entry",
+   "reason": "same_bar_reentry",
+   "signal": "s2_long"
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "BCH",
+   "action": "entry",
+   "reason": "same_bar_reentry",
+   "signal": "s2_long"
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "GT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1980.95,
+   "equity": 4533.42,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "NEXO",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1187.36,
+   "equity": 4533.42,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-21",
+   "market": "crypto",
+   "symbol": "ALGO",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1169.77,
+   "equity": 4533.42,
+   "system": 2
+  }
+ ],
  "started": "2026-08-21",
+ "skip_counts": {
+  "same_bar_reentry": 3,
+  "cash": 3,
+  "total": 6
+ },
  "summary": {
   "started": "2026-08-21",
   "equity_start": 15000.0,
-  "equity": 15000.0,
-  "return_pct": 0.0,
+  "equity": 14533.42,
+  "return_pct": -3.111,
   "open_positions": 12,
   "open_units": 12,
-  "closed": 0,
+  "closed": 3,
   "wins": 0,
-  "win_pct": null,
-  "total_r": 0.0,
-  "avg_r": null,
-  "median_r": null,
-  "realized_pnl": 0,
-  "fees_paid": 0,
-  "sizing_equity": 15000.0
+  "win_pct": 0.0,
+  "total_r": -4.666,
+  "avg_r": -1.5553,
+  "median_r": -1.3775,
+  "realized_pnl": -466.58,
+  "fees_paid": 11.5,
+  "sizing_equity": 14533.42
  }
 }
