@@ -439,6 +439,13 @@ test("the first-print rule and the face-value warning are on the BOOK view", () 
     "the 4h cron vs daily bars distinction must be stated");
 });
 
+test("the combined book states its sleeve count, not one pooled account", () => {
+  assert.ok(/\$\{mk\.length\}\s*separate sleeve/.test(SRC),
+    "the count must be read live from by_market, not hardcoded");
+  assert.ok(/not one account/.test(SRC),
+    "four (or five, once crypto5x exists) $5k books must never read as one");
+});
+
 test("the portfolio card renders the payload's own caveat, lazily fetched", () => {
   assert.ok(/data\/turtle_portfolio\.json/.test(SRC),
     "the portfolio surface must be fetched from data/");
