@@ -684,11 +684,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         anything until it holds at least 30 closed trades AND 20 trading days.
         Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
         <p class="tt-note">Equity here is <b>realised only</b> — open positions are
-        not marked into the headline — and the combined figures add A$ and US$
-        <b>at face value</b> (no FX conversion): read the per-market rows for
-        anything you would act on. The crypto books run every four hours, but the
-        BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
-      </section>`;
+        not marked into the headline. This is <b>${mk.length} separate sleeve${mk.length === 1 ? "" : "s"}, not one account</b>
+        — one book per market, own equity, own slot pool — and the combined
+        figures add A$ and US$ <b>at face value</b> (no FX conversion): read
+        the per-market rows for anything you would act on. The crypto books run
+        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
+</section>`;
 
     if (mk.length) {
       // A levered sleeve travels with its own params (turtle_book stamps

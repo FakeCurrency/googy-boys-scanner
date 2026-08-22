@@ -1728,8 +1728,7 @@ TURTLE_FUTURES = [
     {"symbol": "NG", "yf": "NG=F", "name": "Natural Gas", "group": "energy",
      "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
     # --- softs (the Turtles traded these; grains and meats they did NOT) ---
-    # ICE Coffee "C": 37,500 lb, quoted US cents per pound.
-    # ICE Coffee C: 37,500 lb per contract, quoted in CENTS per lb on KC=F --
+        # ICE Coffee C: 37,500 lb per contract, quoted in CENTS per lb on KC=F --
     # so one "point" on the tape is one cent, and dpp = 37,500 / 100 = 375,
     # the same size/100 rule as SB and CT below. (Corrected 2026-08-22. The
     # prior 37,500 traced to a 2026-08-21 audit whose reference table did not
