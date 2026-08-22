@@ -1005,5 +1005,113 @@ test("hostile row symbols still cannot break the keyboard focus-restore selector
   assert.ok(/rows\[i\]\.dataset\.sym === row\.dataset\.sym/.test(CODE));
 });
 
+// ── 13. BOOK is the money surface (Phase 7) ─────────────────────────────────
+// Open positions and closed trades are facts and now lead the view; by-market
+// and skips are still fact, one level more aggregated; the headline essay and
+// the portfolio replay are context FOR those facts and now read last. A
+// symbol in either the open-positions or the skip-reason table is now a real
+// click/keyboard target (jumpToBookSymbol) that jumps to that symbol's market
+// on SIGNALS with the row expanded -- reverting to the prior view if the
+// symbol turns out not to be in that market's scan, rather than landing on
+// an empty expansion. Like Phase 5/6, document.getElementById returns null
+// and document.addEventListener("click", ...) is a no-op in this harness, so
+// the dynamic jump/revert behaviour was traced with a throwaway script
+// against the real fetch path (pasted into the Phase 7 handoff) rather than
+// folded in here -- this suite locks the shape of the code that trace
+// exercised.
+suite("BOOK is the money surface (Phase 7) — order, clickable symbols, portfolio card last");
+
+test("bookHTML puts open positions and closed trades before by-market, skips, the essay and the portfolio card", () => {
+  const body = SRC.slice(SRC.indexOf("function bookHTML("), SRC.indexOf("function portfolioCardHTML("));
+  const iOpen = body.indexOf("<h3>Open positions</h3>");
+  const iClosed = body.indexOf("<h3>Closed, most recent first</h3>");
+  const iByMarket = body.indexOf("<h3>By market</h3>");
+  const iSkips = body.indexOf('id="tt-skips"');
+  const iEssay = body.indexOf("the only honest number here");
+  const iPortfolioCall = body.indexOf("portfolioCardHTML()");
+  assert.ok([iOpen, iClosed, iByMarket, iSkips, iEssay, iPortfolioCall].every((i) => i !== -1),
+    "all six sections must still be present");
+  assert.ok(iOpen < iClosed && iClosed < iByMarket && iByMarket < iSkips &&
+    iSkips < iEssay && iEssay < iPortfolioCall,
+    "order must be: open, closed, by-market, skips, essay, portfolio card");
+});
+
+test("BOOK now calls portfolioCardHTML() too, without duplicating EVIDENCE's existing call site", () => {
+  const bookCalls = SRC.match(/h \+= portfolioCardHTML\(\);/g) || [];
+  const evidenceCalls = SRC.match(/\$\{portfolioCardHTML\(\)\}/g) || [];
+  assert.equal(bookCalls.length, 1, "BOOK must call portfolioCardHTML() exactly once");
+  assert.equal(evidenceCalls.length, 1, "EVIDENCE's pre-existing call site must be untouched, not duplicated");
+});
+
+test("scanMarketFor strips a leverage suffix generically and falls back to the real market list", () => {
+  assert.ok(/function scanMarketFor\(market\) \{/.test(SRC));
+  const body = SRC.slice(SRC.indexOf("function scanMarketFor("), SRC.indexOf("function scanMarketFor(") + 400);
+  assert.ok(/\.replace\(\/\\d\+x\$\/i, ""\)/.test(body),
+    "must strip a trailing <digits>x suffix generically, never name a sleeve");
+  assert.ok(/MARKETS\.indexOf\(base\) !== -1 \? base : market/.test(body),
+    "an unrecognised key must fall back to itself, never be guessed at");
+});
+
+test("open-position and skip-row symbols are real click/keyboard targets, not plain text", () => {
+  assert.ok(/openSymbolHTML\(p\.symbol, p\.market\)/.test(SRC),
+    "posRow must route the symbol cell through openSymbolHTML");
+  assert.ok(/openSymbolHTML\(k\.symbol, k\.market\)/.test(SRC),
+    "the skip table's symbol cell must route through openSymbolHTML too");
+  const body = SRC.slice(SRC.indexOf("const openSymbolHTML"), SRC.indexOf("const posRow"));
+  assert.ok(/data-open-symbol="/.test(body) && /data-open-market="/.test(body),
+    "both attributes the click/keydown delegate reads must be emitted");
+  assert.ok(/scanMarketFor\(market\)/.test(body),
+    "the market attribute must be normalised, never a raw BOOK sleeve key");
+  assert.ok(/tabindex="0"/.test(body) && /role="button"/.test(body),
+    "a <span> click target must be keyboard-reachable and announce itself");
+});
+
+test("jumpToBookSymbol forces SIGNALS + FILTER=all and marks TOUCHED before pushing", () => {
+  const body = SRC.slice(SRC.indexOf("function jumpToBookSymbol("), SRC.indexOf("function jumpToBookSymbol(") + 1400);
+  assert.ok(/VIEW = "signals"; FILTER = "all"; OPEN = sym; TOUCHED = true;/.test(body),
+    "FILTER must be forced to all -- a narrower filter could hide the very row being jumped to");
+  assert.ok(/pushURLState\(\);[\s\S]{0,20}load\(\)\.then/.test(body),
+    "state must be pushed before the fetch, matching every other handler in this file");
+});
+
+test("a symbol not found in the destination market's scan reverts the jump instead of stranding the reader", () => {
+  const body = SRC.slice(SRC.indexOf("function jumpToBookSymbol("), SRC.indexOf("function jumpToBookSymbol(") + 1400);
+  assert.ok(/DATA\.results\.some\(\(r\) => r\.symbol === sym\)/.test(body),
+    "membership must be checked against the freshly loaded scan, not assumed");
+  assert.ok(/VIEW = prevView; MARKET = prevMarket; FILTER = prevFilter; OPEN = prevOpen;/.test(body),
+    "an unfound symbol must restore the exact prior view/market/filter/open state");
+});
+
+test("the click delegate and the keydown handler both wire [data-open-symbol] to jumpToBookSymbol, exactly once each", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
+  const kwIdx = mountBody.indexOf('addEventListener("keydown"');
+  const clickBranch = mountBody.slice(0, kwIdx);
+  const keydownBranch = mountBody.slice(kwIdx);
+  assert.ok(/e\.target\.closest\("\[data-open-symbol\]"\)/.test(clickBranch), "click delegate missing the selector");
+  assert.ok(/e\.target\.closest && e\.target\.closest\("\[data-open-symbol\]"\)/.test(keydownBranch),
+    "keydown handler missing the selector");
+  const clickCalls = clickBranch.match(/jumpToBookSymbol\(os\.dataset\.openSymbol, os\.dataset\.openMarket\)/g) || [];
+  const keydownCalls = keydownBranch.match(/jumpToBookSymbol\(os\.dataset\.openSymbol, os\.dataset\.openMarket\)/g) || [];
+  assert.equal(clickCalls.length, 1, "click delegate must call jumpToBookSymbol exactly once");
+  assert.equal(keydownCalls.length, 1, "keydown handler must call jumpToBookSymbol exactly once");
+});
+
+test("N is still read live from by_market and the futures warning is still conditional", () => {
+  assert.ok(/const mk = Object\.keys\(BOOK\.by_market \|\| \{\}\);/.test(SRC));
+  assert.ok(/\$\{mk\.length\} separate sleeve/.test(SRC));
+  assert.ok(/const anyFutures = open\.some\(\(p\) => p\.market === "futures"\);/.test(SRC));
+});
+
+test("the levered sleeve is never spelled out literally and never gets its own market button", () => {
+  assert.ok(!/crypto5x/i.test(SRC), "turtle.js must never spell the levered sleeve's key literally");
+  assert.ok(!/data-market="[^"]*5x/.test(SRC), "no market button may target a levered sleeve directly");
+});
+
+test("the portfolio card still avoids grading language from its new BOOK call site", () => {
+  const body = SRC.slice(SRC.indexOf("function portfolioCardHTML("), SRC.indexOf("function evidenceHTML("));
+  assert.ok(!/expectancy/i.test(body), 'the portfolio card must not claim to answer "does this work"');
+  assert.ok(!/does this work/i.test(body));
+});
+
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

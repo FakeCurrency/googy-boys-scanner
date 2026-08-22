@@ -96,6 +96,10 @@
 
 .tt-link { color: var(--blue); text-decoration: none; font-weight: 600; }
 .tt-link:hover { text-decoration: underline; }
+/* Phase 7: .tt-link now also renders on <span data-open-symbol> — a real
+ * click target that is not an <a>, so it needs the pointer cursor an
+ * anchor gets for free. */
+.tt-link[role="button"] { cursor: pointer; }
 
 /* ── formulas ───────────────────────────────────────────────────────────── */
 .tt-math {

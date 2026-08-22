@@ -506,6 +506,16 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     return params && params.leverage > 1 ? params.leverage : null;
   }
 
+  // A BOOK sleeve key is not always a market this page can load a scan for:
+  // a levered sleeve is priced from the very same scan as its cash sibling,
+  // just filed under its own by_market key with a leverage suffix. Strip
+  // that suffix and confirm the result is one of the four real markets;
+  // anything unrecognised is returned unchanged rather than guessed at.
+  function scanMarketFor(market) {
+    const base = (market || "").replace(/\d+x$/i, "");
+    return MARKETS.indexOf(base) !== -1 ? base : market;
+  }
+
   // Vehicle badge: rendered from params.leverage, never a hardcoded
   // multiplier -- and only for a symbol actually open in a levered sleeve,
   // so a market that merely HAS a levered sleeve elsewhere never badges
@@ -849,12 +859,22 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     const open = (BOOK.open || []).slice().sort(
       (a, b) => (b.fills || []).length - (a.fills || []).length);
 
+    // A symbol here is a BOOK fact, not a scan row -- clicking or Enter/
+    // Space on it jumps to that symbol's market on SIGNALS with the row
+    // expanded (jumpToBookSymbol, wired in mount()). scanMarketFor() maps a
+    // levered sleeve key back to the scan that actually prices it, so this
+    // never tries to load a BOOK-only key as a market.
+    const openSymbolHTML = (symbol, market) =>
+      '<span class="tt-link" tabindex="0" role="button" data-open-symbol="' +
+      esc(symbol) + '" data-open-market="' + esc(scanMarketFor(market)) + '">' +
+      esc(symbol) + "</span>";
+
     const posRow = (p) => {
       const sign = p.side === "short" ? -1 : 1;
       const avg = p.units ? p.cost_basis / p.units : 0;
       const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
         (P.stop_n * p.n * p.units) : null;
-      return "<tr><td class=\"mono\">" + esc(p.symbol) + "</td><td>" +
+      return "<tr><td class=\"mono\">" + openSymbolHTML(p.symbol, p.market) + "</td><td>" +
         esc((p.market || "").toUpperCase()) + "</td><td>" + esc(p.side) +
         " S" + esc(String(p.system)) + '</td><td class="mono">' +
         (p.fills || []).length + "u</td><td class=\"mono\">" + num(avg, 4) +
@@ -862,35 +882,53 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
     };
 
-    let h = `
-      <section class="tt-card">
-        <h3>The forward book — the only honest number here</h3>
-        <div class="tt-detail-grid">
-          ${kv("Running since", esc(s.started || "—") + (days ? " (" + days + "d)" : ""))}
-          ${kv("Equity", money(s.equity) + " of " + money(s.equity_start))}
-          ${kv("Return", (s.return_pct == null ? "—" :
-            '<span class="' + cls(s.return_pct) + '">' + pct(s.return_pct, 2) + "</span>"))}
-          ${kv("Open", big(s.open_positions) + " positions / " + big(s.open_units) + " units")}
-          ${kv("Closed", big(s.closed) + (s.win_pct == null ? "" : " · " + pct(s.win_pct) + " won"))}
-          ${kv("Total", '<span class="' + cls(s.total_r) + '">' + sgnR(s.total_r) + "</span>")}
-          ${kv("Average trade", sgnR(s.avg_r))}
-          ${kv("Median trade", sgnR(s.median_r))}
-          ${kv("Fees paid", money(s.fees_paid))}
-          ${kv("Sizing off", money(s.sizing_equity))}
-        </div>
-        <p class="tt-note">${s.closed
-          ? "Small samples say very little. A trend system's result is carried by a handful of trades, so read the MEDIAN beside the average and treat anything under a few dozen closes as noise."
-          : "Nothing has closed yet, so there is no result to read. That is the honest state of a forward test on day " + days + " — it cannot be hurried, and it is the reason the five-year replay exists as context rather than as evidence."}
-        <b>A first print is a print, not evidence</b>: no sleeve's record means
-        anything until it holds at least 30 closed trades AND 20 trading days.
-        Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
-        <p class="tt-note">Equity here is <b>realised only</b> — open positions are
-        not marked into the headline. This is <b>${mk.length} separate sleeve${mk.length === 1 ? "" : "s"}, not one account</b>
-        — one book per market, own equity, own slot pool — and the combined
-        figures add A$ and US$ <b>at face value</b> (no FX conversion): read
-        the per-market rows for anything you would act on. The crypto books run
-        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
-</section>`;
+    // BOOK IS THE MONEY SURFACE (Phase 7): what is open and what just closed
+    // are facts, and lead. By-market and skips are still fact, one level
+    // more aggregated. The headline essay and the portfolio replay are
+    // context FOR reading those facts, not the facts themselves, so both
+    // now read last rather than first.
+    let h = "";
+
+    if (open.length) {
+      const anyFutures = open.some((p) => p.market === "futures");
+      h += `<section class="tt-card"><h3>Open positions</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
+        <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
+        <tbody>${open.map(posRow).join("")}</tbody></table></div>
+        <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
+        recent unit. On the equity and crypto books the cash constraint binds
+        fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
+        routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
+        That is exactly the leverage the Turtles had from futures margin and a
+        cash account does not.</p>
+        ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
+        NOT constrained by cash.</b> A futures position consumes margin, not
+        notional, and this repo has no margin data — so the only ceilings on the
+        futures book are the unit caps (${P.max_units} per market,
+        ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
+        direction) and the refusal to hold less than one contract. Do not read a
+        futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
+        would fit: the notional behind those contracts is many multiples of the
+        account, and the leverage was never priced. It is disclosed rather than
+        modelled because a fabricated margin number would be worse than an
+        absent one.</p>` : ""}</section>`;
+    }
+
+    const closed = (BOOK.closed || []).slice(-25).reverse();
+    if (closed.length) {
+      h += `<section class="tt-card"><h3>Closed, most recent first</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Side</th><th>Reason</th><th>R</th>
+        <th>P&amp;L</th><th>Fees</th><th>Opened</th><th>Closed</th></tr></thead>
+        <tbody>${closed.map((t) => "<tr><td class=\"mono\">" + esc(t.symbol) +
+          "</td><td>" + esc(t.side) + "</td><td>" + esc(t.reason) +
+          '</td><td class="mono ' + cls(t.r) + '">' + sgnR(t.r) +
+          '</td><td class="mono ' + cls(t.pnl) + '">' + money(t.pnl) +
+          '</td><td class="mono">' + money(t.fees) + "</td><td>" + esc(t.opened) +
+          "</td><td>" + esc(t.closed) + "</td></tr>").join("")}
+        </tbody></table></div></section>`;
+    }
 
     if (mk.length) {
       // A levered sleeve travels with its own params (turtle_book stamps
@@ -920,32 +958,6 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         <b>liquidation</b>, at the liquidation price — isolated margin cannot
         lose more than it posted. It is a NEW series beside the cash crypto
         book, never a restatement of it.</p>` : ""}</section>`;
-    }
-
-    if (open.length) {
-      const anyFutures = open.some((p) => p.market === "futures");
-      h += `<section class="tt-card"><h3>Open positions</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
-        <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
-        <tbody>${open.map(posRow).join("")}</tbody></table></div>
-        <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
-        recent unit. On the equity and crypto books the cash constraint binds
-        fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
-        routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
-        That is exactly the leverage the Turtles had from futures margin and a
-        cash account does not.</p>
-        ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
-        NOT constrained by cash.</b> A futures position consumes margin, not
-        notional, and this repo has no margin data — so the only ceilings on the
-        futures book are the unit caps (${P.max_units} per market,
-        ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
-        direction) and the refusal to hold less than one contract. Do not read a
-        futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
-        would fit: the notional behind those contracts is many multiples of the
-        account, and the leverage was never priced. It is disclosed rather than
-        modelled because a fabricated margin number would be worse than an
-        absent one.</p>` : ""}</section>`;
     }
 
     // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
@@ -985,7 +997,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           if (k.one_contract_risk_pct != null) d.push("one contract = " + pct(k.one_contract_risk_pct) + " of the account");
           if (k.bucket) d.push(esc(k.bucket));
           if (k.bar) d.push("bar " + esc(k.bar));
-          return "<tr><td class=\"mono\">" + esc(k.symbol) + "</td><td>" +
+          return "<tr><td class=\"mono\">" + openSymbolHTML(k.symbol, k.market) + "</td><td>" +
             esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
             "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
             esc(d.join(" · ")) + "</td></tr>";
@@ -996,20 +1008,42 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         rather than something to tune away.</p></section>`;
     }
 
-    const closed = (BOOK.closed || []).slice(-25).reverse();
-    if (closed.length) {
-      h += `<section class="tt-card"><h3>Closed, most recent first</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Side</th><th>Reason</th><th>R</th>
-        <th>P&amp;L</th><th>Fees</th><th>Opened</th><th>Closed</th></tr></thead>
-        <tbody>${closed.map((t) => "<tr><td class=\"mono\">" + esc(t.symbol) +
-          "</td><td>" + esc(t.side) + "</td><td>" + esc(t.reason) +
-          '</td><td class="mono ' + cls(t.r) + '">' + sgnR(t.r) +
-          '</td><td class="mono ' + cls(t.pnl) + '">' + money(t.pnl) +
-          '</td><td class="mono">' + money(t.fees) + "</td><td>" + esc(t.opened) +
-          "</td><td>" + esc(t.closed) + "</td></tr>").join("")}
-        </tbody></table></div></section>`;
-    }
+    h += `
+      <section class="tt-card">
+        <h3>The forward book — the only honest number here</h3>
+        <div class="tt-detail-grid">
+          ${kv("Running since", esc(s.started || "—") + (days ? " (" + days + "d)" : ""))}
+          ${kv("Equity", money(s.equity) + " of " + money(s.equity_start))}
+          ${kv("Return", (s.return_pct == null ? "—" :
+            '<span class="' + cls(s.return_pct) + '">' + pct(s.return_pct, 2) + "</span>"))}
+          ${kv("Open", big(s.open_positions) + " positions / " + big(s.open_units) + " units")}
+          ${kv("Closed", big(s.closed) + (s.win_pct == null ? "" : " · " + pct(s.win_pct) + " won"))}
+          ${kv("Total", '<span class="' + cls(s.total_r) + '">' + sgnR(s.total_r) + "</span>")}
+          ${kv("Average trade", sgnR(s.avg_r))}
+          ${kv("Median trade", sgnR(s.median_r))}
+          ${kv("Fees paid", money(s.fees_paid))}
+          ${kv("Sizing off", money(s.sizing_equity))}
+        </div>
+        <p class="tt-note">${s.closed
+          ? "Small samples say very little. A trend system's result is carried by a handful of trades, so read the MEDIAN beside the average and treat anything under a few dozen closes as noise."
+          : "Nothing has closed yet, so there is no result to read. That is the honest state of a forward test on day " + days + " — it cannot be hurried, and it is the reason the five-year replay exists as context rather than as evidence."}
+        <b>A first print is a print, not evidence</b>: no sleeve's record means
+        anything until it holds at least 30 closed trades AND 20 trading days.
+        Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
+        <p class="tt-note">Equity here is <b>realised only</b> — open positions are
+        not marked into the headline. This is <b>${mk.length} separate sleeve${mk.length === 1 ? "" : "s"}, not one account</b>
+        — one book per market, own equity, own slot pool — and the combined
+        figures add A$ and US$ <b>at face value</b> (no FX conversion): read
+        the per-market rows for anything you would act on. The crypto books run
+        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
+</section>`;
+
+    // The five-year portfolio replay, LAST: context for reading the facts
+    // above, not a verdict on them -- portfolioCardHTML() itself already
+    // avoids "does this work" framing. Same unmodified function EVIDENCE
+    // has always called; BOOK gets a second call site, not a copy.
+    h += portfolioCardHTML();
+
     return h;
   }
 
@@ -1385,6 +1419,31 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     });
   }
 
+  // Open-position / skip-row symbol click (Phase 7): jump to that symbol's
+  // market on SIGNALS with the row expanded. Shared by the click delegate
+  // and the keydown handler below so the fetch-then-verify logic exists
+  // exactly once. mkt is already normalised to a real scan market (see
+  // scanMarketFor) -- this never tries to load a BOOK-only sleeve key.
+  // FILTER is forced to "all" because the destination row's signal state is
+  // unknown until the fetch resolves, and a narrower filter could hide it
+  // even when it IS there. If the symbol is not in that market's scan, the
+  // navigation is undone -- back to wherever the click came from, where the
+  // reason is already on screen -- rather than a SIGNALS view with nothing
+  // to expand.
+  function jumpToBookSymbol(sym, mkt) {
+    const prevView = VIEW, prevMarket = MARKET, prevFilter = FILTER, prevOpen = OPEN;
+    if (mkt) { MARKET = mkt; syncMarketButtons(); }
+    VIEW = "signals"; FILTER = "all"; OPEN = sym; TOUCHED = true;
+    pushURLState();
+    load().then(() => {
+      if (DATA && DATA.results.some((r) => r.symbol === sym)) { render(); return; }
+      VIEW = prevView; MARKET = prevMarket; FILTER = prevFilter; OPEN = prevOpen;
+      syncMarketButtons();
+      pushURLState();
+      render();
+    });
+  }
+
   function mount() {
     applyState(parseTurtleURL(window.location.search));
     replaceURLState();
@@ -1446,6 +1505,14 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         load().then(render);
         return;
       }
+      // A symbol inside the BOOK view (Phase 7): an open position or a skip
+      // row, never a scan row -- those already toggle via .tt-row below.
+      const os = e.target.closest("[data-open-symbol]");
+      if (os) {
+        e.preventDefault();
+        jumpToBookSymbol(os.dataset.openSymbol, os.dataset.openMarket);
+        return;
+      }
       // The HEAD toggles; a click inside the expanded detail does not. Without
       // the second test you cannot select a number out of the pyramid table or
       // scroll it sideways without the row shutting under you — and the
@@ -1461,6 +1528,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     // history included.
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
+      const os = e.target.closest && e.target.closest("[data-open-symbol]");
+      if (os) {
+        e.preventDefault();
+        jumpToBookSymbol(os.dataset.openSymbol, os.dataset.openMarket);
+        return;
+      }
       const row = e.target.closest && e.target.closest(".tt-row");
       if (!row) return;
       e.preventDefault();
