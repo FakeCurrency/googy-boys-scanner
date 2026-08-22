@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-08-21",
+  "run_date": "2026-08-22",
   "ruleset_version": "1.3.1",
   "universe_size": 2212,
   "narrations_file": "narrations.json",
@@ -385,10 +385,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0619,
-        "dist_to_yearly_open_pct": -0.465,
-        "avg_turnover_20d": 30205,
-        "close": 0.107,
+        "retrace_pct": 0.0635,
+        "dist_to_yearly_open_pct": -0.4625,
+        "avg_turnover_20d": 30206,
+        "close": 0.1075,
         "sweep_date": "2025-10-15",
         "sweep_depth_pct": 0.1233,
         "displacement_date": "2025-10-21"
@@ -963,7 +963,7 @@
       "metrics": {
         "retrace_pct": 0.2019,
         "dist_to_yearly_open_pct": 0.3836,
-        "avg_turnover_20d": 1608632,
+        "avg_turnover_20d": 1614010,
         "close": 3.1,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.015,
@@ -1811,7 +1811,7 @@
       "metrics": {
         "retrace_pct": 0.2415,
         "dist_to_yearly_open_pct": 0.1166,
-        "avg_turnover_20d": 2099723,
+        "avg_turnover_20d": 2100376,
         "close": 14.08,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0451,
@@ -2108,7 +2108,7 @@
       "metrics": {
         "retrace_pct": 0.2353,
         "dist_to_yearly_open_pct": 0.0641,
-        "avg_turnover_20d": 3092524,
+        "avg_turnover_20d": 3094034,
         "close": 3.32,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0,
@@ -2486,10 +2486,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.5,
-        "avg_turnover_20d": 376,
-        "close": 0.001,
+        "retrace_pct": 0.1667,
+        "dist_to_yearly_open_pct": -0.25,
+        "avg_turnover_20d": 391,
+        "close": 0.0015,
         "sweep_date": "2026-05-06",
         "sweep_depth_pct": 0.1429,
         "displacement_date": "2026-05-13"
@@ -2605,7 +2605,7 @@
       "metrics": {
         "retrace_pct": 0.0459,
         "dist_to_yearly_open_pct": 0.286,
-        "avg_turnover_20d": 19254255,
+        "avg_turnover_20d": 19317017,
         "close": 13.49,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0051,
@@ -3215,8 +3215,8 @@
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "equal_lows"
           ],
           "created_date": "2026-08-17"
@@ -4102,8 +4102,8 @@
           "confluence": 5,
           "sources": [
             "equal_lows",
-            "yearly_open",
             "prior_yearly_close",
+            "yearly_open",
             "quarterly_open",
             "fib_ext_1618"
           ],
@@ -4410,7 +4410,7 @@
       "metrics": {
         "retrace_pct": 0.3494,
         "dist_to_yearly_open_pct": -0.3092,
-        "avg_turnover_20d": 6482517,
+        "avg_turnover_20d": 6484029,
         "close": 1.485,
         "sweep_date": "2026-04-08",
         "sweep_depth_pct": 0.0038,
@@ -5162,7 +5162,7 @@
       "metrics": {
         "retrace_pct": 0.1613,
         "dist_to_yearly_open_pct": -0.0219,
-        "avg_turnover_20d": 5030159,
+        "avg_turnover_20d": 5032341,
         "close": 2.26,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0,
@@ -5253,7 +5253,7 @@
       "metrics": {
         "retrace_pct": 0.1728,
         "dist_to_yearly_open_pct": -0.3938,
-        "avg_turnover_20d": 4535779,
+        "avg_turnover_20d": 4536909,
         "close": 5.11,
         "sweep_date": "2026-01-05",
         "sweep_depth_pct": 0.01,
@@ -5785,125 +5785,6 @@
       "next": "pullbacks staying above 2.91–2.95; next objective the 3.63–3.69 zone (T3)"
     },
     {
-      "ticker": "WOR",
-      "direction": "bearish",
-      "state": "RUNNING",
-      "tier": "A+",
-      "tags": [
-        "FAST_FLIP",
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 13.15,
-          "high": 13.18,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-06-15"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 13.18,
-          "high": 13.3256,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-06-15"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 11.705,
-          "high": 11.7547,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-06-19"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 10.9262,
-          "high": 11.3569,
-          "status": "UNTESTED",
-          "created_date": "2026-06-19"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 11.7253,
-          "high": 12.3343,
-          "status": "CONSUMED",
-          "confluence": 5,
-          "sources": [
-            "prior_low",
-            "box_low",
-            "fib_ext_10",
-            "yearly_open",
-            "equal_lows"
-          ],
-          "created_date": "2026-06-19"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 11.1652,
-          "high": 11.6853,
-          "status": "CONSUMED",
-          "confluence": 3,
-          "sources": [
-            "fib_ext_1618",
-            "quarterly_open",
-            "prior_low"
-          ],
-          "created_date": "2026-06-19"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 10.7952,
-          "high": 11.0348,
-          "status": "CONSUMED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-06-19"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 10.5307,
-          "high": 10.7247,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-06-19"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.2271,
-        "dist_to_yearly_open_pct": -0.1054,
-        "avg_turnover_20d": 16703005,
-        "close": 10.9,
-        "sweep_date": "2026-06-15",
-        "sweep_depth_pct": 0.0023,
-        "displacement_date": "2026-06-19"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Worley Limited",
-      "sector": "Industrials",
-      "next": "bounces staying below 11.71–11.75; next objective the 10.53–10.72 zone (T4)"
-    },
-    {
       "ticker": "XMET",
       "direction": "bullish",
       "state": "RUNNING",
@@ -6123,7 +6004,7 @@
       "metrics": {
         "retrace_pct": 0.3211,
         "dist_to_yearly_open_pct": -0.2191,
-        "avg_turnover_20d": 17473876,
+        "avg_turnover_20d": 17477234,
         "close": 6.84,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0504,
@@ -6907,10 +6788,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4467,
-        "dist_to_yearly_open_pct": 0.0119,
+        "retrace_pct": 0.45,
+        "dist_to_yearly_open_pct": 0.0123,
         "avg_turnover_20d": 29680,
-        "close": 1.387,
+        "close": 1.3875,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.028,
         "displacement_date": "2026-08-18"
@@ -8392,7 +8273,7 @@
       "metrics": {
         "retrace_pct": 0.1525,
         "dist_to_yearly_open_pct": -0.2313,
-        "avg_turnover_20d": 10195992,
+        "avg_turnover_20d": 10197124,
         "close": 6.33,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.0237,
@@ -8820,7 +8701,7 @@
       "metrics": {
         "retrace_pct": 0.3152,
         "dist_to_yearly_open_pct": -0.44,
-        "avg_turnover_20d": 7096836,
+        "avg_turnover_20d": 7098377,
         "close": 2.77,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0324,
@@ -9319,7 +9200,7 @@
       "metrics": {
         "retrace_pct": 0.0998,
         "dist_to_yearly_open_pct": 0.509,
-        "avg_turnover_20d": 33944858,
+        "avg_turnover_20d": 33948372,
         "close": 18.38,
         "sweep_date": "2026-08-13",
         "sweep_depth_pct": 0.0342,
@@ -9892,7 +9773,7 @@
       "metrics": {
         "retrace_pct": 0.2159,
         "dist_to_yearly_open_pct": -0.0496,
-        "avg_turnover_20d": 47905514,
+        "avg_turnover_20d": 48124340,
         "close": 21.08,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0724,
@@ -12355,7 +12236,7 @@
       "metrics": {
         "retrace_pct": 0.2035,
         "dist_to_yearly_open_pct": 0.39,
-        "avg_turnover_20d": 85232483,
+        "avg_turnover_20d": 85479218,
         "close": 8.41,
         "sweep_date": "2026-08-06",
         "sweep_depth_pct": 0.004,
@@ -13035,7 +12916,7 @@
       "metrics": {
         "retrace_pct": 0.1579,
         "dist_to_yearly_open_pct": 0.0938,
-        "avg_turnover_20d": 4822580,
+        "avg_turnover_20d": 4824337,
         "close": 6.49,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0314,
@@ -13732,7 +13613,7 @@
       "metrics": {
         "retrace_pct": 0.0455,
         "dist_to_yearly_open_pct": -0.1467,
-        "avg_turnover_20d": 6712651,
+        "avg_turnover_20d": 6714736,
         "close": 13.35,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0312,
@@ -13846,7 +13727,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": 0.3884,
-        "avg_turnover_20d": 28753972,
+        "avg_turnover_20d": 28757586,
         "close": 15.62,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0208,
@@ -13891,7 +13772,7 @@
       "metrics": {
         "retrace_pct": 0.7333,
         "dist_to_yearly_open_pct": -0.3579,
-        "avg_turnover_20d": 43553681,
+        "avg_turnover_20d": 43556569,
         "close": 20.69,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0216,
@@ -13983,7 +13864,7 @@
       "metrics": {
         "retrace_pct": 0.3333,
         "dist_to_yearly_open_pct": -0.2191,
-        "avg_turnover_20d": 17473876,
+        "avg_turnover_20d": 17477234,
         "close": 6.84,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0042,
@@ -14118,7 +13999,7 @@
       "metrics": {
         "retrace_pct": 0.3333,
         "dist_to_yearly_open_pct": 0.0069,
-        "avg_turnover_20d": 3214863,
+        "avg_turnover_20d": 3215606,
         "close": 5.05,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0039,
@@ -14349,7 +14230,7 @@
       "metrics": {
         "retrace_pct": 0.2857,
         "dist_to_yearly_open_pct": -0.0245,
-        "avg_turnover_20d": 35632707,
+        "avg_turnover_20d": 35636863,
         "close": 8.88,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0022,
@@ -14535,7 +14416,7 @@
       "metrics": {
         "retrace_pct": 0.7895,
         "dist_to_yearly_open_pct": -0.0032,
-        "avg_turnover_20d": 3563790,
+        "avg_turnover_20d": 3566308,
         "close": 7.2,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0042,
@@ -14762,7 +14643,7 @@
       "metrics": {
         "retrace_pct": 0.2171,
         "dist_to_yearly_open_pct": 0.1007,
-        "avg_turnover_20d": 40582207,
+        "avg_turnover_20d": 40589011,
         "close": 66.81,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0101,
@@ -14946,7 +14827,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": 0.0031,
-        "avg_turnover_20d": 12455242,
+        "avg_turnover_20d": 12485688,
         "close": 34.9,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0022,
@@ -14991,7 +14872,7 @@
       "metrics": {
         "retrace_pct": 0.2032,
         "dist_to_yearly_open_pct": 0.0422,
-        "avg_turnover_20d": 172714906,
+        "avg_turnover_20d": 172724200,
         "close": 37.13,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0171,
@@ -15036,7 +14917,7 @@
       "metrics": {
         "retrace_pct": 0.2131,
         "dist_to_yearly_open_pct": 0.203,
-        "avg_turnover_20d": 20997237,
+        "avg_turnover_20d": 21007957,
         "close": 10.52,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0069,
@@ -15216,7 +15097,7 @@
       "metrics": {
         "retrace_pct": 0.1893,
         "dist_to_yearly_open_pct": 0.1341,
-        "avg_turnover_20d": 53162657,
+        "avg_turnover_20d": 53171386,
         "close": 56.28,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0264,
@@ -15630,7 +15511,7 @@
       "metrics": {
         "retrace_pct": 0.5632,
         "dist_to_yearly_open_pct": 0.0172,
-        "avg_turnover_20d": 18672905,
+        "avg_turnover_20d": 18678005,
         "close": 10.49,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0146,
@@ -15722,7 +15603,7 @@
       "metrics": {
         "retrace_pct": 0.3298,
         "dist_to_yearly_open_pct": 0.4583,
-        "avg_turnover_20d": 427880421,
+        "avg_turnover_20d": 437445408,
         "close": 65.16,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0006,
@@ -16041,7 +15922,7 @@
       "metrics": {
         "retrace_pct": 0.4437,
         "dist_to_yearly_open_pct": 0.0979,
-        "avg_turnover_20d": 12355787,
+        "avg_turnover_20d": 12358741,
         "close": 32.19,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0213,
@@ -16319,7 +16200,7 @@
       "metrics": {
         "retrace_pct": 0.2,
         "dist_to_yearly_open_pct": -0.037,
-        "avg_turnover_20d": 4184841,
+        "avg_turnover_20d": 4200754,
         "close": 3.7,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0095,
@@ -16411,7 +16292,7 @@
       "metrics": {
         "retrace_pct": 0.2633,
         "dist_to_yearly_open_pct": 0.0137,
-        "avg_turnover_20d": 353165114,
+        "avg_turnover_20d": 353693006,
         "close": 157.99,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0146,
@@ -16456,7 +16337,7 @@
       "metrics": {
         "retrace_pct": 0.518,
         "dist_to_yearly_open_pct": 0.0137,
-        "avg_turnover_20d": 353165114,
+        "avg_turnover_20d": 353693006,
         "close": 157.99,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0007,
@@ -16501,7 +16382,7 @@
       "metrics": {
         "retrace_pct": 0.1455,
         "dist_to_yearly_open_pct": 0.7346,
-        "avg_turnover_20d": 23730741,
+        "avg_turnover_20d": 23911985,
         "close": 49.02,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0131,
@@ -16594,7 +16475,7 @@
       "metrics": {
         "retrace_pct": 0.1667,
         "dist_to_yearly_open_pct": -0.1436,
-        "avg_turnover_20d": 24483722,
+        "avg_turnover_20d": 24504753,
         "close": 20.71,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0139,
@@ -16639,7 +16520,7 @@
       "metrics": {
         "retrace_pct": 0.3684,
         "dist_to_yearly_open_pct": -0.4161,
-        "avg_turnover_20d": 10856862,
+        "avg_turnover_20d": 10858114,
         "close": 3.52,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0254,
@@ -16776,7 +16657,7 @@
       "metrics": {
         "retrace_pct": 0.6,
         "dist_to_yearly_open_pct": -0.1002,
-        "avg_turnover_20d": 6477771,
+        "avg_turnover_20d": 6479949,
         "close": 3.56,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0028,
@@ -16821,7 +16702,7 @@
       "metrics": {
         "retrace_pct": 0.3019,
         "dist_to_yearly_open_pct": 0.2553,
-        "avg_turnover_20d": 31662548,
+        "avg_turnover_20d": 31668421,
         "close": 17.5,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0022,
@@ -16913,7 +16794,7 @@
       "metrics": {
         "retrace_pct": 0.14,
         "dist_to_yearly_open_pct": -0.4744,
-        "avg_turnover_20d": 52972069,
+        "avg_turnover_20d": 53317814,
         "close": 135.48,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0228,
@@ -16969,53 +16850,6 @@
       "name": "Charter Hall Social Infrastructure REIT",
       "sector": "Real Estate",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
-    },
-    {
-      "ticker": "CRR",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.005,
-          "high": 0.0055,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.003,
-          "high": 0.005,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-08-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.125,
-        "avg_turnover_20d": 9301,
-        "close": 0.007,
-        "sweep_date": "2026-08-21",
-        "sweep_depth_pct": 0.0909,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Critical Resources Limited",
-      "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "CTM",
@@ -17325,7 +17159,7 @@
       "metrics": {
         "retrace_pct": 0.6818,
         "dist_to_yearly_open_pct": -0.0786,
-        "avg_turnover_20d": 9651044,
+        "avg_turnover_20d": 9652430,
         "close": 6.8,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0358,
@@ -17415,7 +17249,7 @@
       "metrics": {
         "retrace_pct": 0.0196,
         "dist_to_yearly_open_pct": 0.2563,
-        "avg_turnover_20d": 5503466,
+        "avg_turnover_20d": 5507881,
         "close": 12.5,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0187,
@@ -17441,7 +17275,7 @@
           "id": "supply",
           "type": "SUPPLY",
           "low": 0.099,
-          "high": 0.101,
+          "high": 0.1015,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -17452,8 +17286,8 @@
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.101,
-          "high": 0.1033,
+          "low": 0.1015,
+          "high": 0.1038,
           "status": "UNTESTED",
           "rule": "close_above_high",
           "created_date": "2026-08-21"
@@ -17465,7 +17299,7 @@
         "avg_turnover_20d": 19519,
         "close": 0.098,
         "sweep_date": "2026-08-21",
-        "sweep_depth_pct": 0.0202,
+        "sweep_depth_pct": 0.0253,
         "bars_remaining": 4
       },
       "smt": null,
@@ -17687,7 +17521,7 @@
       "metrics": {
         "retrace_pct": 0.5,
         "dist_to_yearly_open_pct": 0.097,
-        "avg_turnover_20d": 6397567,
+        "avg_turnover_20d": 6481243,
         "close": 4.37,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0071,
@@ -17732,7 +17566,7 @@
       "metrics": {
         "retrace_pct": 0.413,
         "dist_to_yearly_open_pct": 0.0695,
-        "avg_turnover_20d": 3909203,
+        "avg_turnover_20d": 3910636,
         "close": 9.41,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0011,
@@ -17775,7 +17609,7 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1304,
+        "retrace_pct": 0.1111,
         "dist_to_yearly_open_pct": -0.4364,
         "avg_turnover_20d": 407718,
         "close": 0.31,
@@ -17822,7 +17656,7 @@
       "metrics": {
         "retrace_pct": 0.4,
         "dist_to_yearly_open_pct": -0.1766,
-        "avg_turnover_20d": 7545832,
+        "avg_turnover_20d": 7547078,
         "close": 1.515,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0129,
@@ -18196,7 +18030,7 @@
       "metrics": {
         "retrace_pct": 0.2,
         "dist_to_yearly_open_pct": -0.1382,
-        "avg_turnover_20d": 3852983,
+        "avg_turnover_20d": 3854153,
         "close": 5.73,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0155,
@@ -18241,7 +18075,7 @@
       "metrics": {
         "retrace_pct": 0.6842,
         "dist_to_yearly_open_pct": 0.121,
-        "avg_turnover_20d": 7606781,
+        "avg_turnover_20d": 7610009,
         "close": 7.04,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0014,
@@ -18746,7 +18580,7 @@
       "metrics": {
         "retrace_pct": 0.0968,
         "dist_to_yearly_open_pct": -0.1563,
-        "avg_turnover_20d": 15624134,
+        "avg_turnover_20d": 15626107,
         "close": 12.51,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0103,
@@ -18791,7 +18625,7 @@
       "metrics": {
         "retrace_pct": 1.4182,
         "dist_to_yearly_open_pct": 0.1098,
-        "avg_turnover_20d": 10230773,
+        "avg_turnover_20d": 10275950,
         "close": 36.31,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0045,
@@ -19113,7 +18947,7 @@
       "metrics": {
         "retrace_pct": 0.1616,
         "dist_to_yearly_open_pct": 0.4071,
-        "avg_turnover_20d": 6518427,
+        "avg_turnover_20d": 6556516,
         "close": 8.91,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0258,
@@ -19248,7 +19082,7 @@
       "metrics": {
         "retrace_pct": 0.2222,
         "dist_to_yearly_open_pct": -0.106,
-        "avg_turnover_20d": 29225200,
+        "avg_turnover_20d": 29232082,
         "close": 4.73,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0064,
@@ -19891,7 +19725,7 @@
       "metrics": {
         "retrace_pct": 0.7143,
         "dist_to_yearly_open_pct": -0.3304,
-        "avg_turnover_20d": 9895562,
+        "avg_turnover_20d": 9904494,
         "close": 4.53,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.024,
@@ -20167,7 +20001,7 @@
       "metrics": {
         "retrace_pct": 1.1373,
         "dist_to_yearly_open_pct": 0.0208,
-        "avg_turnover_20d": 22435460,
+        "avg_turnover_20d": 22456832,
         "close": 8.36,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0147,
@@ -20304,7 +20138,7 @@
       "metrics": {
         "retrace_pct": 0.0,
         "dist_to_yearly_open_pct": 0.2164,
-        "avg_turnover_20d": 14678204,
+        "avg_turnover_20d": 14680687,
         "close": 7.01,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0245,
@@ -20349,7 +20183,7 @@
       "metrics": {
         "retrace_pct": 0.8553,
         "dist_to_yearly_open_pct": 0.0509,
-        "avg_turnover_20d": 6887829,
+        "avg_turnover_20d": 6893329,
         "close": 3.59,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0197,
@@ -20439,7 +20273,7 @@
       "metrics": {
         "retrace_pct": 0.5238,
         "dist_to_yearly_open_pct": -0.4755,
-        "avg_turnover_20d": 7028109,
+        "avg_turnover_20d": 7028893,
         "close": 2.89,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0036,
@@ -21086,7 +20920,7 @@
       "metrics": {
         "retrace_pct": 0.9048,
         "dist_to_yearly_open_pct": 0.2023,
-        "avg_turnover_20d": 10052990,
+        "avg_turnover_20d": 10054074,
         "close": 1.82,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0055,
@@ -21110,7 +20944,7 @@
           "id": "supply",
           "type": "SUPPLY",
           "low": 0.2425,
-          "high": 0.247,
+          "high": 0.2475,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -21121,20 +20955,20 @@
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.247,
-          "high": 0.257,
+          "low": 0.2475,
+          "high": 0.2575,
           "status": "UNTESTED",
           "rule": "close_above_high",
           "created_date": "2026-08-21"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4167,
+        "retrace_pct": 0.4,
         "dist_to_yearly_open_pct": -0.1724,
         "avg_turnover_20d": 382307,
         "close": 0.24,
         "sweep_date": "2026-08-21",
-        "sweep_depth_pct": 0.0186,
+        "sweep_depth_pct": 0.0206,
         "bars_remaining": 4
       },
       "smt": null,
@@ -21407,7 +21241,7 @@
       "metrics": {
         "retrace_pct": 0.3415,
         "dist_to_yearly_open_pct": -0.44,
-        "avg_turnover_20d": 7096836,
+        "avg_turnover_20d": 7098377,
         "close": 2.77,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0216,
@@ -21642,7 +21476,7 @@
       "metrics": {
         "retrace_pct": 0.3,
         "dist_to_yearly_open_pct": 0.3062,
-        "avg_turnover_20d": 59346249,
+        "avg_turnover_20d": 59357788,
         "close": 16.21,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.023,
@@ -21730,10 +21564,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2333,
-        "dist_to_yearly_open_pct": 0.0434,
-        "avg_turnover_20d": 857172,
-        "close": 1.987,
+        "retrace_pct": 0.25,
+        "dist_to_yearly_open_pct": 0.0437,
+        "avg_turnover_20d": 857184,
+        "close": 1.9875,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.005,
         "bars_remaining": 2
@@ -22150,7 +21984,7 @@
       "metrics": {
         "retrace_pct": 0.7692,
         "dist_to_yearly_open_pct": 1.0595,
-        "avg_turnover_20d": 8285649,
+        "avg_turnover_20d": 8306461,
         "close": 0.865,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0057,
@@ -22186,14 +22020,14 @@
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
           "low": 1.37,
-          "high": 1.404,
+          "high": 1.4039,
           "status": "UNTESTED",
           "rule": "close_above_high",
           "created_date": "2026-08-21"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3836,
+        "retrace_pct": 0.3793,
         "dist_to_yearly_open_pct": 1.2269,
         "avg_turnover_20d": 1053284,
         "close": 1.325,
@@ -22240,7 +22074,7 @@
       "metrics": {
         "retrace_pct": 0.6552,
         "dist_to_yearly_open_pct": 0.2361,
-        "avg_turnover_20d": 5606909,
+        "avg_turnover_20d": 5609649,
         "close": 32.19,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0015,
@@ -22330,7 +22164,7 @@
       "metrics": {
         "retrace_pct": 1.055,
         "dist_to_yearly_open_pct": 0.509,
-        "avg_turnover_20d": 33944858,
+        "avg_turnover_20d": 33948372,
         "close": 18.38,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0338,
@@ -22560,9 +22394,9 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
+        "retrace_pct": 0.0732,
         "dist_to_yearly_open_pct": -0.0682,
-        "avg_turnover_20d": 287859,
+        "avg_turnover_20d": 290925,
         "close": 1.805,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0291,
@@ -22930,7 +22764,7 @@
       "metrics": {
         "retrace_pct": 1.0,
         "dist_to_yearly_open_pct": 0.4603,
-        "avg_turnover_20d": 13156867,
+        "avg_turnover_20d": 13180380,
         "close": 5.76,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0026,
@@ -23113,7 +22947,7 @@
       "metrics": {
         "retrace_pct": 0.1322,
         "dist_to_yearly_open_pct": 0.666,
-        "avg_turnover_20d": 8739278,
+        "avg_turnover_20d": 8742550,
         "close": 8.2,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0551,
@@ -23343,7 +23177,7 @@
       "metrics": {
         "retrace_pct": 0.04,
         "dist_to_yearly_open_pct": 0.0601,
-        "avg_turnover_20d": 49685033,
+        "avg_turnover_20d": 49700856,
         "close": 11.89,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0025,
@@ -23470,16 +23304,16 @@
           "type": "INVALIDATION_HARD",
           "low": 1.105,
           "high": 1.115,
-          "status": "RESPECTED",
+          "status": "TESTED",
           "rule": "close_above_high",
           "created_date": "2026-08-17"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5,
-        "dist_to_yearly_open_pct": 0.0297,
-        "avg_turnover_20d": 973382,
-        "close": 1.1,
+        "retrace_pct": 1.5,
+        "dist_to_yearly_open_pct": 0.039,
+        "avg_turnover_20d": 967358,
+        "close": 1.11,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0057,
         "bars_remaining": 1
@@ -23521,9 +23355,9 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2453,
+        "retrace_pct": 0.2381,
         "dist_to_yearly_open_pct": 0.2192,
-        "avg_turnover_20d": 9632354,
+        "avg_turnover_20d": 9635479,
         "close": 0.89,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0081,
@@ -23706,10 +23540,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.8,
-        "dist_to_yearly_open_pct": -0.0349,
+        "retrace_pct": 0.8333,
+        "dist_to_yearly_open_pct": -0.0317,
         "avg_turnover_20d": 28098,
-        "close": 0.152,
+        "close": 0.1525,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0333,
         "bars_remaining": 3
@@ -23753,7 +23587,7 @@
       "metrics": {
         "retrace_pct": 0.1818,
         "dist_to_yearly_open_pct": 0.0726,
-        "avg_turnover_20d": 18759628,
+        "avg_turnover_20d": 18762538,
         "close": 17.95,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0155,
@@ -23799,7 +23633,7 @@
       "metrics": {
         "retrace_pct": 0.027,
         "dist_to_yearly_open_pct": -0.4531,
-        "avg_turnover_20d": 7901141,
+        "avg_turnover_20d": 7830545,
         "close": 2.68,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0293,
@@ -23845,7 +23679,7 @@
       "metrics": {
         "retrace_pct": 0.1765,
         "dist_to_yearly_open_pct": -0.0337,
-        "avg_turnover_20d": 1246191,
+        "avg_turnover_20d": 1248001,
         "close": 1.81,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0162,
@@ -23890,7 +23724,7 @@
       "metrics": {
         "retrace_pct": 0.3077,
         "dist_to_yearly_open_pct": -0.1099,
-        "avg_turnover_20d": 3561987,
+        "avg_turnover_20d": 3563685,
         "close": 2.44,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0061,
@@ -24213,7 +24047,7 @@
       "metrics": {
         "retrace_pct": 0.0952,
         "dist_to_yearly_open_pct": -0.0422,
-        "avg_turnover_20d": 49534822,
+        "avg_turnover_20d": 49541363,
         "close": 176.07,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0014,
@@ -24224,6 +24058,51 @@
       "name": "REA Group Ltd",
       "sector": "Communication Services",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "RF1",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 3.77,
+          "high": 3.8,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-20"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 3.8,
+          "high": 3.8374,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-20"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4545,
+        "dist_to_yearly_open_pct": 0.0904,
+        "avg_turnover_20d": 575506,
+        "close": 3.74,
+        "sweep_date": "2026-08-20",
+        "sweep_depth_pct": 0.008,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Regal Investment Fund",
+      "sector": "Financials",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "RGN",
@@ -24258,7 +24137,7 @@
       "metrics": {
         "retrace_pct": 0.5833,
         "dist_to_yearly_open_pct": -0.0219,
-        "avg_turnover_20d": 5030159,
+        "avg_turnover_20d": 5032341,
         "close": 2.26,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0067,
@@ -24303,7 +24182,7 @@
       "metrics": {
         "retrace_pct": 0.4918,
         "dist_to_yearly_open_pct": 0.3196,
-        "avg_turnover_20d": 34226625,
+        "avg_turnover_20d": 34233450,
         "close": 45.0,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0029,
@@ -24348,7 +24227,7 @@
       "metrics": {
         "retrace_pct": 0.1605,
         "dist_to_yearly_open_pct": 0.046,
-        "avg_turnover_20d": 1963691,
+        "avg_turnover_20d": 1963727,
         "close": 2.72,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0149,
@@ -24393,7 +24272,7 @@
       "metrics": {
         "retrace_pct": 1.1301,
         "dist_to_yearly_open_pct": -0.11,
-        "avg_turnover_20d": 66179323,
+        "avg_turnover_20d": 66193508,
         "close": 31.94,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0038,
@@ -24669,7 +24548,7 @@
       "metrics": {
         "retrace_pct": 0.6579,
         "dist_to_yearly_open_pct": 0.2055,
-        "avg_turnover_20d": 30357127,
+        "avg_turnover_20d": 30378087,
         "close": 21.65,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0087,
@@ -24714,7 +24593,7 @@
       "metrics": {
         "retrace_pct": 0.7615,
         "dist_to_yearly_open_pct": -0.1196,
-        "avg_turnover_20d": 34077872,
+        "avg_turnover_20d": 34094141,
         "close": 40.41,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0022,
@@ -24851,7 +24730,7 @@
       "metrics": {
         "retrace_pct": 0.236,
         "dist_to_yearly_open_pct": -0.0496,
-        "avg_turnover_20d": 47905514,
+        "avg_turnover_20d": 48124340,
         "close": 21.08,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.015,
@@ -25171,7 +25050,7 @@
       "metrics": {
         "retrace_pct": 1.3168,
         "dist_to_yearly_open_pct": 0.2064,
-        "avg_turnover_20d": 20003186,
+        "avg_turnover_20d": 20015572,
         "close": 44.38,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.01,
@@ -25584,7 +25463,7 @@
       "metrics": {
         "retrace_pct": 0.1481,
         "dist_to_yearly_open_pct": 0.39,
-        "avg_turnover_20d": 85232483,
+        "avg_turnover_20d": 85479218,
         "close": 8.41,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0189,
@@ -25629,7 +25508,7 @@
       "metrics": {
         "retrace_pct": 0.5,
         "dist_to_yearly_open_pct": 0.0,
-        "avg_turnover_20d": 294355,
+        "avg_turnover_20d": 294358,
         "close": 0.105,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0233,
@@ -25954,7 +25833,7 @@
       "metrics": {
         "retrace_pct": 0.814,
         "dist_to_yearly_open_pct": 0.0024,
-        "avg_turnover_20d": 64200828,
+        "avg_turnover_20d": 64234377,
         "close": 13.95,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0064,
@@ -25999,7 +25878,7 @@
       "metrics": {
         "retrace_pct": 0.3867,
         "dist_to_yearly_open_pct": 1.2636,
-        "avg_turnover_20d": 4195579,
+        "avg_turnover_20d": 4195581,
         "close": 9.3,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0167,
@@ -26184,7 +26063,7 @@
       "metrics": {
         "retrace_pct": 0.3333,
         "dist_to_yearly_open_pct": 0.0248,
-        "avg_turnover_20d": 23919945,
+        "avg_turnover_20d": 23929089,
         "close": 5.2,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0077,
@@ -26367,7 +26246,7 @@
       "metrics": {
         "retrace_pct": 0.6316,
         "dist_to_yearly_open_pct": 0.0489,
-        "avg_turnover_20d": 22623115,
+        "avg_turnover_20d": 22631138,
         "close": 2.62,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0113,
@@ -26595,7 +26474,7 @@
       "metrics": {
         "retrace_pct": 0.7692,
         "dist_to_yearly_open_pct": -0.048,
-        "avg_turnover_20d": 10612982,
+        "avg_turnover_20d": 10629612,
         "close": 5.57,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0036,
@@ -26747,96 +26626,6 @@
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
     },
     {
-      "ticker": "WBC",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 34.15,
-          "high": 34.3,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-19"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 33.7551,
-          "high": 34.15,
-          "status": "TESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-08-19"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.5079,
-        "dist_to_yearly_open_pct": -0.1038,
-        "avg_turnover_20d": 171055340,
-        "close": 33.83,
-        "sweep_date": "2026-08-19",
-        "sweep_depth_pct": 0.0044,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Westpac Banking Corp",
-      "sector": "Financials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "WDS",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 33.79,
-          "high": 34.36,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 34.36,
-          "high": 34.7484,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": 0.4632,
-        "avg_turnover_20d": 142105247,
-        "close": 33.78,
-        "sweep_date": "2026-08-21",
-        "sweep_depth_pct": 0.0169,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Woodside Energy Group Ltd",
-      "sector": "Energy",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
-    },
-    {
       "ticker": "WEB",
       "direction": "bearish",
       "state": "SWEPT",
@@ -26961,7 +26750,7 @@
       "metrics": {
         "retrace_pct": 1.5093,
         "dist_to_yearly_open_pct": 0.029,
-        "avg_turnover_20d": 120172468,
+        "avg_turnover_20d": 120277589,
         "close": 82.37,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0035,
@@ -27004,10 +26793,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1596,
-        "dist_to_yearly_open_pct": 0.0829,
-        "avg_turnover_20d": 914301,
-        "close": 1.69,
+        "retrace_pct": 0.4789,
+        "dist_to_yearly_open_pct": 0.0765,
+        "avg_turnover_20d": 930959,
+        "close": 1.68,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.0052,
         "bars_remaining": 0
@@ -27051,7 +26840,7 @@
       "metrics": {
         "retrace_pct": 0.1139,
         "dist_to_yearly_open_pct": 0.3399,
-        "avg_turnover_20d": 79957215,
+        "avg_turnover_20d": 80003202,
         "close": 38.86,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0009,
@@ -27096,7 +26885,7 @@
       "metrics": {
         "retrace_pct": 0.5385,
         "dist_to_yearly_open_pct": -0.029,
-        "avg_turnover_20d": 3506804,
+        "avg_turnover_20d": 3508108,
         "close": 2.4,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0021,
@@ -27141,7 +26930,7 @@
       "metrics": {
         "retrace_pct": 0.774,
         "dist_to_yearly_open_pct": -0.3807,
-        "avg_turnover_20d": 74934501,
+        "avg_turnover_20d": 74941310,
         "close": 42.33,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.003,
@@ -27152,51 +26941,6 @@
       "name": "WiseTech Global Limited",
       "sector": "Information Technology",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
-    },
-    {
-      "ticker": "WWI",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.465,
-          "high": 0.5,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.5,
-          "high": 0.5128,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-20"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.6667,
-        "dist_to_yearly_open_pct": -0.3782,
-        "avg_turnover_20d": 302962,
-        "close": 0.485,
-        "sweep_date": "2026-08-20",
-        "sweep_depth_pct": 0.0753,
-        "bars_remaining": 3
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "West Wits Mining Limited",
-      "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
     },
     {
       "ticker": "XARO",
@@ -27279,7 +27023,7 @@
       "metrics": {
         "retrace_pct": 0.1016,
         "dist_to_yearly_open_pct": -0.2537,
-        "avg_turnover_20d": 59721568,
+        "avg_turnover_20d": 59732775,
         "close": 85.0,
         "sweep_date": "2026-08-21",
         "sweep_depth_pct": 0.0097,
@@ -27438,7 +27182,7 @@
         "dist_to_yearly_open_pct": 0.0173,
         "avg_turnover_20d": 117270,
         "close": 51.34,
-        "bars_in_box": 42,
+        "bars_in_box": 43,
         "box_low": 51.0555,
         "box_high": 51.4147,
         "box_height_pct": 0.007,
@@ -27467,7 +27211,7 @@
         "dist_to_yearly_open_pct": 0.0173,
         "avg_turnover_20d": 117270,
         "close": 51.34,
-        "bars_in_box": 42,
+        "bars_in_box": 43,
         "box_low": 51.0555,
         "box_high": 51.4147,
         "box_height_pct": 0.007,
@@ -27522,20 +27266,20 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.0205,
-        "avg_turnover_20d": 424,
+        "avg_turnover_20d": 421,
         "close": 24.7,
-        "bars_in_box": 6,
+        "bars_in_box": 7,
         "box_low": 24.5147,
         "box_high": 24.7,
         "box_height_pct": 0.0076,
-        "cluster_low": 24.6186,
+        "cluster_low": 24.6286,
         "cluster_high": 24.6443
       },
       "smt": null,
       "route_to": null,
       "name": "Betashares 2029 Fixed Term Corporate Bond Active ETF",
       "sector": "Unclassified",
-      "next": "a run of the 24.62–24.64 highs that closes back below them, then a displacement candle within 5 sessions"
+      "next": "a run of the 24.63–24.64 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "29BB",
@@ -27550,9 +27294,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.0205,
-        "avg_turnover_20d": 424,
+        "avg_turnover_20d": 421,
         "close": 24.7,
-        "bars_in_box": 6,
+        "bars_in_box": 7,
         "box_low": 24.5147,
         "box_high": 24.7,
         "box_height_pct": 0.0076,
@@ -28441,9 +28185,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.1052,
-        "avg_turnover_20d": 8954,
+        "avg_turnover_20d": 744,
         "close": 20.85,
-        "bars_in_box": 3,
+        "bars_in_box": 4,
         "box_low": 19.4195,
         "box_high": 20.97,
         "box_height_pct": 0.0798,
@@ -28874,7 +28618,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.027,
-        "avg_turnover_20d": 15275608,
+        "avg_turnover_20d": 15277903,
         "close": 15.57,
         "bars_in_box": 2,
         "box_low": 12.08,
@@ -29264,7 +29008,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1766,
-        "avg_turnover_20d": 7545832,
+        "avg_turnover_20d": 7547078,
         "close": 1.515,
         "bars_in_box": 2,
         "box_low": 1.215,
@@ -29702,7 +29446,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1688,
-        "avg_turnover_20d": 121657233,
+        "avg_turnover_20d": 121680439,
         "close": 17.75,
         "bars_in_box": 4,
         "box_low": 17.435,
@@ -29837,7 +29581,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.3516,
-        "avg_turnover_20d": 6620804,
+        "avg_turnover_20d": 6628482,
         "close": 3.81,
         "bars_in_box": 1,
         "box_low": 3.29,
@@ -30021,7 +29765,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.1348,
-        "avg_turnover_20d": 2960373,
+        "avg_turnover_20d": 2961382,
         "close": 1.425,
         "bars_in_box": 6,
         "box_low": 1.335,
@@ -30411,7 +30155,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.3158,
-        "avg_turnover_20d": 3464955,
+        "avg_turnover_20d": 3466647,
         "close": 12.51,
         "bars_in_box": 7,
         "box_low": 12.24,
@@ -30600,7 +30344,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.3137,
-        "avg_turnover_20d": 939282,
+        "avg_turnover_20d": 956649,
         "close": 2.01,
         "bars_in_box": 2,
         "box_low": 1.585,
@@ -30842,9 +30586,9 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3725,
-        "avg_turnover_20d": 37280,
-        "close": 0.342,
+        "dist_to_yearly_open_pct": -0.3716,
+        "avg_turnover_20d": 37282,
+        "close": 0.3425,
         "bars_in_box": 20,
         "box_low": 0.31,
         "box_high": 0.38,
@@ -31546,7 +31290,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2186,
-        "avg_turnover_20d": 65161066,
+        "avg_turnover_20d": 65319446,
         "close": 66.29,
         "bars_in_box": 18,
         "box_low": 52.6,
@@ -31572,7 +31316,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2186,
-        "avg_turnover_20d": 65161066,
+        "avg_turnover_20d": 65319446,
         "close": 66.29,
         "bars_in_box": 18,
         "box_low": 52.6,
@@ -31788,7 +31532,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2453,
-        "avg_turnover_20d": 153587989,
+        "avg_turnover_20d": 153722887,
         "close": 248.43,
         "bars_in_box": 3,
         "box_low": 245.75,
@@ -31814,7 +31558,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2453,
-        "avg_turnover_20d": 153587989,
+        "avg_turnover_20d": 153722887,
         "close": 248.43,
         "bars_in_box": 3,
         "box_low": 245.75,
@@ -32447,6 +32191,32 @@
       "next": "a run of the 0.600–0.610 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
+      "ticker": "PDI",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.2192,
+        "avg_turnover_20d": 9635479,
+        "close": 0.89,
+        "bars_in_box": 3,
+        "box_low": 0.605,
+        "box_high": 0.9225,
+        "box_height_pct": 0.5248,
+        "cluster_low": 0.61,
+        "cluster_high": 0.6175
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Predictive Discovery Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.610–0.618 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
       "ticker": "PDN",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -32457,7 +32227,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.0987,
-        "avg_turnover_20d": 24163455,
+        "avg_turnover_20d": 24167346,
         "close": 10.58,
         "bars_in_box": 2,
         "box_low": 8.35,
@@ -32569,7 +32339,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2071,
-        "avg_turnover_20d": 105823751,
+        "avg_turnover_20d": 105836183,
         "close": 5.07,
         "bars_in_box": 2,
         "box_low": 3.97,
@@ -33067,7 +32837,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.3196,
-        "avg_turnover_20d": 34226625,
+        "avg_turnover_20d": 34233450,
         "close": 45.0,
         "bars_in_box": 5,
         "box_low": 41.6,
@@ -33081,34 +32851,6 @@
       "name": "Ramsay Health Care Limited",
       "sector": "Health Care",
       "next": "a run of the 41.60–41.95 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "RKT",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.125,
-        "avg_turnover_20d": 25313,
-        "close": 0.021,
-        "bars_in_box": 2,
-        "box_low": 0.02,
-        "box_high": 0.025,
-        "box_height_pct": 0.25,
-        "cluster_low": 0.0245,
-        "cluster_high": 0.025
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "RocketDNA Limited",
-      "sector": "Information Technology",
-      "next": "a run of the 0.0245–0.0250 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "RML",
@@ -33537,7 +33279,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.0,
-        "avg_turnover_20d": 294355,
+        "avg_turnover_20d": 294358,
         "close": 0.105,
         "bars_in_box": 8,
         "box_low": 0.093,
@@ -33883,6 +33625,34 @@
       "name": "Tyranna Resources Limited",
       "sector": "Materials",
       "next": "a run of the 0.0025–0.0025 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "URF",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0685,
+        "avg_turnover_20d": 41456,
+        "close": 0.1225,
+        "bars_in_box": 14,
+        "box_low": 0.1136,
+        "box_high": 0.13,
+        "box_height_pct": 0.144,
+        "cluster_low": 0.1174,
+        "cluster_high": 0.1212
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "US Masters Residential Property Fund",
+      "sector": "Real Estate",
+      "next": "a run of the 0.117–0.121 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "URNM",
@@ -34328,7 +34098,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.3741,
-        "avg_turnover_20d": 5508335,
+        "avg_turnover_20d": 5508863,
         "close": 2.76,
         "bars_in_box": 2,
         "box_low": 2.43,
@@ -34380,7 +34150,7 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.2727,
-        "avg_turnover_20d": 13952724,
+        "avg_turnover_20d": 14342162,
         "close": 3.78,
         "bars_in_box": 1,
         "box_low": 2.63,
@@ -34450,32 +34220,6 @@
       "name": "SPDR S&P Emerging Markets Carbon Control Fund",
       "sector": "Unclassified",
       "next": "a run of the 29.30–29.33 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "WHI",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0545,
-        "avg_turnover_20d": 379146,
-        "close": 1.285,
-        "bars_in_box": 43,
-        "box_low": 1.2736,
-        "box_high": 1.3589,
-        "box_height_pct": 0.067,
-        "cluster_low": 1.2736,
-        "cluster_high": 1.2792
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Whitefield Income Limited",
-      "sector": "Unclassified",
-      "next": "a run of the 1.274–1.279 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "WIA",
@@ -34595,10 +34339,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0472,
-        "avg_turnover_20d": 45540,
-        "close": 23.94,
-        "bars_in_box": 6,
+        "dist_to_yearly_open_pct": 0.0486,
+        "avg_turnover_20d": 43699,
+        "close": 23.97,
+        "bars_in_box": 7,
         "box_low": 23.25,
         "box_high": 24.32,
         "box_height_pct": 0.046,
@@ -34636,32 +34380,6 @@
       "name": "iShares Edge MSCI World Minimum Volatility ETF",
       "sector": "Unclassified",
       "next": "a run of the 44.74–44.89 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "WWI",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3782,
-        "avg_turnover_20d": 302962,
-        "close": 0.485,
-        "bars_in_box": 11,
-        "box_low": 0.355,
-        "box_high": 0.5,
-        "box_height_pct": 0.4085,
-        "cluster_low": 0.355,
-        "cluster_high": 0.365
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "West Wits Mining Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.355–0.365 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "WZR",
@@ -35707,7 +35425,7 @@
       "metrics": {
         "retrace_pct": 0.9231,
         "dist_to_yearly_open_pct": 0.025,
-        "avg_turnover_20d": 8361794,
+        "avg_turnover_20d": 8364716,
         "close": 4.82,
         "sweep_date": "2026-08-07",
         "sweep_depth_pct": 0.0204,
@@ -36515,7 +36233,7 @@
       "metrics": {
         "retrace_pct": 0.1711,
         "dist_to_yearly_open_pct": -0.3839,
-        "avg_turnover_20d": 11154768,
+        "avg_turnover_20d": 11155768,
         "close": 4.14,
         "sweep_date": "2026-08-12",
         "sweep_depth_pct": 0.0325,
@@ -36630,7 +36348,7 @@
       "metrics": {
         "retrace_pct": 0.5701,
         "dist_to_yearly_open_pct": -0.3839,
-        "avg_turnover_20d": 11154768,
+        "avg_turnover_20d": 11155768,
         "close": 4.14,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0201,
@@ -36978,8 +36696,8 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0028,
-          "high": 0.0038,
+          "low": 0.003,
+          "high": 0.004,
           "status": "VIOLATED",
           "rule": "touch",
           "created_date": "2026-07-08"
@@ -36987,8 +36705,8 @@
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.0024,
-          "high": 0.0026,
+          "low": 0.0027,
+          "high": 0.0029,
           "status": "UNTESTED",
           "created_date": "2026-07-08"
         },
@@ -37010,9 +36728,9 @@
       ],
       "metrics": {
         "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.6,
-        "avg_turnover_20d": 2955,
-        "close": 0.002,
+        "dist_to_yearly_open_pct": -0.5,
+        "avg_turnover_20d": 2961,
+        "close": 0.0025,
         "sweep_date": "2026-07-08",
         "sweep_depth_pct": 0.0,
         "displacement_date": "2026-07-08"
@@ -38618,7 +38336,7 @@
       "metrics": {
         "retrace_pct": 0.2491,
         "dist_to_yearly_open_pct": -0.0497,
-        "avg_turnover_20d": 49673246,
+        "avg_turnover_20d": 49681813,
         "close": 28.74,
         "sweep_date": "2026-07-28",
         "sweep_depth_pct": 0.0559,
@@ -39285,7 +39003,7 @@
       "metrics": {
         "retrace_pct": 0.179,
         "dist_to_yearly_open_pct": 0.7346,
-        "avg_turnover_20d": 23730741,
+        "avg_turnover_20d": 23911985,
         "close": 49.02,
         "sweep_date": "2026-08-12",
         "sweep_depth_pct": 0.0508,
@@ -39517,7 +39235,7 @@
       "metrics": {
         "retrace_pct": 0.2537,
         "dist_to_yearly_open_pct": 0.0574,
-        "avg_turnover_20d": 20559097,
+        "avg_turnover_20d": 20563366,
         "close": 9.69,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0139,
@@ -39621,7 +39339,7 @@
       "metrics": {
         "retrace_pct": 0.6667,
         "dist_to_yearly_open_pct": 0.0574,
-        "avg_turnover_20d": 20559097,
+        "avg_turnover_20d": 20563366,
         "close": 9.69,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0375,
@@ -39697,7 +39415,7 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 1.464,
+          "low": 1.4642,
           "high": 1.5212,
           "status": "RESPECTED",
           "confluence": 3,
@@ -39712,11 +39430,11 @@
           "id": "t3",
           "type": "TARGET",
           "low": 1.4465,
-          "high": 1.4608,
+          "high": 1.4565,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
-            "equal_lows"
+            "prior_low"
           ],
           "created_date": "2026-06-29"
         },
@@ -39901,7 +39619,7 @@
       "metrics": {
         "retrace_pct": 0.0417,
         "dist_to_yearly_open_pct": -0.297,
-        "avg_turnover_20d": 4731754,
+        "avg_turnover_20d": 4759996,
         "close": 1.37,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.0631,
@@ -40193,7 +39911,7 @@
       "metrics": {
         "retrace_pct": 0.782,
         "dist_to_yearly_open_pct": -0.0157,
-        "avg_turnover_20d": 17016,
+        "avg_turnover_20d": 16903,
         "close": 1.305,
         "sweep_date": "2026-05-25",
         "sweep_depth_pct": 0.0071,
@@ -40725,7 +40443,7 @@
       "metrics": {
         "retrace_pct": 0.1,
         "dist_to_yearly_open_pct": 0.1703,
-        "avg_turnover_20d": 12431812,
+        "avg_turnover_20d": 12436942,
         "close": 3.7,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.0265,
@@ -40844,7 +40562,7 @@
       "metrics": {
         "retrace_pct": 0.7391,
         "dist_to_yearly_open_pct": -0.4058,
-        "avg_turnover_20d": 32184486,
+        "avg_turnover_20d": 32185857,
         "close": 1.83,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0237,
@@ -42906,7 +42624,7 @@
       "metrics": {
         "retrace_pct": 0.0721,
         "dist_to_yearly_open_pct": -0.3516,
-        "avg_turnover_20d": 6620804,
+        "avg_turnover_20d": 6628482,
         "close": 3.81,
         "sweep_date": "2026-07-24",
         "sweep_depth_pct": 0.0568,
@@ -43126,7 +42844,7 @@
       "metrics": {
         "retrace_pct": 0.0226,
         "dist_to_yearly_open_pct": -0.1162,
-        "avg_turnover_20d": 94672721,
+        "avg_turnover_20d": 95437866,
         "close": 27.27,
         "sweep_date": "2026-08-14",
         "sweep_depth_pct": 0.0284,
@@ -44680,7 +44398,7 @@
       "metrics": {
         "retrace_pct": 0.3137,
         "dist_to_yearly_open_pct": 0.0074,
-        "avg_turnover_20d": 46804670,
+        "avg_turnover_20d": 46819081,
         "close": 7.87,
         "sweep_date": "2026-08-11",
         "sweep_depth_pct": 0.009,
@@ -45319,7 +45037,7 @@
       "metrics": {
         "retrace_pct": 0.4421,
         "dist_to_yearly_open_pct": 0.2164,
-        "avg_turnover_20d": 14678204,
+        "avg_turnover_20d": 14680687,
         "close": 7.01,
         "sweep_date": "2026-06-23",
         "sweep_depth_pct": 0.0591,
@@ -45399,7 +45117,7 @@
       "metrics": {
         "retrace_pct": 0.1905,
         "dist_to_yearly_open_pct": 0.3137,
-        "avg_turnover_20d": 939282,
+        "avg_turnover_20d": 956649,
         "close": 2.01,
         "sweep_date": "2026-07-16",
         "sweep_depth_pct": 0.0094,
@@ -45761,7 +45479,7 @@
         {
           "id": "supply",
           "type": "SUPPLY",
-          "low": 56.357,
+          "low": 56.3571,
           "high": 59.3582,
           "status": "RESPECTED",
           "confluence": 1,
@@ -46546,7 +46264,7 @@
       "metrics": {
         "retrace_pct": 0.6678,
         "dist_to_yearly_open_pct": -0.1923,
-        "avg_turnover_20d": 8396413,
+        "avg_turnover_20d": 8397862,
         "close": 23.1,
         "sweep_date": "2026-07-21",
         "sweep_depth_pct": 0.0427,
@@ -46996,10 +46714,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.3333,
-        "avg_turnover_20d": 12740,
-        "close": 0.002,
+        "retrace_pct": 0.5,
+        "dist_to_yearly_open_pct": -0.1667,
+        "avg_turnover_20d": 12752,
+        "close": 0.0025,
         "sweep_date": "2026-08-10",
         "sweep_depth_pct": 0.0,
         "displacement_date": "2026-08-10"
@@ -48002,7 +47720,7 @@
       "metrics": {
         "retrace_pct": 0.1154,
         "dist_to_yearly_open_pct": 0.0875,
-        "avg_turnover_20d": 26191255,
+        "avg_turnover_20d": 26199652,
         "close": 13.67,
         "sweep_date": "2026-08-19",
         "sweep_depth_pct": 0.0421,
@@ -48449,7 +48167,7 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 2.018,
+          "low": 2.0178,
           "high": 2.0235,
           "status": "VIOLATED",
           "rule": "touch",
@@ -48491,7 +48209,7 @@
       "metrics": {
         "retrace_pct": 0.9146,
         "dist_to_yearly_open_pct": 0.0136,
-        "avg_turnover_20d": 276163,
+        "avg_turnover_20d": 283675,
         "close": 1.985,
         "sweep_date": "2026-07-29",
         "sweep_depth_pct": 0.005,
@@ -48607,7 +48325,7 @@
       "metrics": {
         "retrace_pct": 0.1957,
         "dist_to_yearly_open_pct": 0.0987,
-        "avg_turnover_20d": 24163455,
+        "avg_turnover_20d": 24167346,
         "close": 10.58,
         "sweep_date": "2026-07-22",
         "sweep_depth_pct": 0.0291,
@@ -48724,99 +48442,6 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
-      "ticker": "PGO",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "FAST_FLIP"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.2,
-          "high": 0.21,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-27"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.21,
-          "high": 0.22,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-27"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.1775,
-          "high": 0.1825,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.1603,
-          "high": 0.1698,
-          "status": "UNTESTED",
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.075,
-          "high": 0.15,
-          "status": "RESPECTED",
-          "confluence": 6,
-          "sources": [
-            "fib_ext_1618",
-            "prior_yearly_close",
-            "yearly_open",
-            "equal_lows",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-07-31"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.055,
-          "high": 0.065,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "box_low"
-          ],
-          "created_date": "2026-07-31"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.7692,
-        "dist_to_yearly_open_pct": 1.2414,
-        "avg_turnover_20d": 282175,
-        "close": 0.195,
-        "sweep_date": "2026-07-27",
-        "sweep_depth_pct": 0.05,
-        "displacement_date": "2026-07-31"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Pacgold Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
       "ticker": "PIA",
       "direction": "bearish",
       "state": "STALLED",
@@ -48898,7 +48523,7 @@
           "id": "t3",
           "type": "TARGET",
           "low": 1.0281,
-          "high": 1.0567,
+          "high": 1.0522,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
@@ -49173,7 +48798,7 @@
       "metrics": {
         "retrace_pct": 0.4782,
         "dist_to_yearly_open_pct": 0.0726,
-        "avg_turnover_20d": 18759628,
+        "avg_turnover_20d": 18762538,
         "close": 17.95,
         "sweep_date": "2026-08-03",
         "sweep_depth_pct": 0.0503,
@@ -51015,7 +50640,7 @@
       "metrics": {
         "retrace_pct": 0.0942,
         "dist_to_yearly_open_pct": -0.1196,
-        "avg_turnover_20d": 34077872,
+        "avg_turnover_20d": 34094141,
         "close": 40.41,
         "sweep_date": "2026-06-30",
         "sweep_depth_pct": 0.0082,
@@ -52598,7 +52223,7 @@
       "metrics": {
         "retrace_pct": 0.4434,
         "dist_to_yearly_open_pct": -0.069,
-        "avg_turnover_20d": 3668672,
+        "avg_turnover_20d": 3670433,
         "close": 0.895,
         "sweep_date": "2026-05-04",
         "sweep_depth_pct": 0.0171,
@@ -52909,10 +52534,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.5382,
-        "dist_to_yearly_open_pct": -0.0657,
-        "avg_turnover_20d": 117677,
-        "close": 1.252,
+        "retrace_pct": 0.5364,
+        "dist_to_yearly_open_pct": -0.0653,
+        "avg_turnover_20d": 117681,
+        "close": 1.2525,
         "sweep_date": "2026-07-24",
         "sweep_depth_pct": 0.0625,
         "displacement_date": "2026-07-29"
@@ -53221,10 +52846,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4,
-        "dist_to_yearly_open_pct": 0.0641,
-        "avg_turnover_20d": 41455,
-        "close": 0.122,
+        "retrace_pct": 0.5,
+        "dist_to_yearly_open_pct": 0.0685,
+        "avg_turnover_20d": 41456,
+        "close": 0.1225,
         "sweep_date": "2026-08-13",
         "sweep_depth_pct": 0.0,
         "displacement_date": "2026-08-17"
@@ -53301,7 +52926,7 @@
       "metrics": {
         "retrace_pct": 0.1724,
         "dist_to_yearly_open_pct": 0.0489,
-        "avg_turnover_20d": 22623115,
+        "avg_turnover_20d": 22631138,
         "close": 2.62,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0347,
@@ -54026,87 +53651,6 @@
       "route_to": "fib_reversal",
       "name": "Vysarn Limited",
       "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "WBND",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 49.8745,
-          "high": 49.934,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-06-26"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 49.934,
-          "high": 50.1832,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-06-26"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 49.542,
-          "high": 49.6653,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-07-01"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 49.335,
-          "high": 49.4495,
-          "status": "UNTESTED",
-          "created_date": "2026-07-01"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 48.6717,
-          "high": 49.7144,
-          "status": "RESPECTED",
-          "confluence": 6,
-          "sources": [
-            "equal_lows",
-            "box_low",
-            "yearly_open",
-            "fib_ext_1618",
-            "prior_yearly_close",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-07-01"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.2424,
-        "dist_to_yearly_open_pct": 0.0011,
-        "avg_turnover_20d": 2003505,
-        "close": 49.34,
-        "sweep_date": "2026-06-26",
-        "sweep_depth_pct": 0.0012,
-        "displacement_date": "2026-07-01"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Betashares Global Aggregate Bond Currency Hedged ETF",
-      "sector": "Unclassified",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
@@ -55337,7 +54881,7 @@
       "metrics": {
         "retrace_pct": 1.9613,
         "dist_to_yearly_open_pct": -0.1436,
-        "avg_turnover_20d": 24483722,
+        "avg_turnover_20d": 24504753,
         "close": 20.71,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0049
@@ -55425,7 +54969,7 @@
       "metrics": {
         "retrace_pct": 1.4762,
         "dist_to_yearly_open_pct": -0.1162,
-        "avg_turnover_20d": 94672721,
+        "avg_turnover_20d": 95437866,
         "close": 27.27,
         "sweep_date": "2026-08-20",
         "sweep_depth_pct": 0.0185
@@ -55939,7 +55483,7 @@
       "metrics": {
         "retrace_pct": 1.7558,
         "dist_to_yearly_open_pct": 0.666,
-        "avg_turnover_20d": 8739278,
+        "avg_turnover_20d": 8742550,
         "close": 8.2,
         "sweep_date": "2026-08-17",
         "sweep_depth_pct": 0.0342
@@ -56040,88 +55584,6 @@
       "route_to": null,
       "name": "Peako Limited",
       "sector": "Materials",
-      "next": "a new trap to build — the swept high failed on a closing basis"
-    },
-    {
-      "ticker": "RMBS",
-      "direction": "bearish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 24.8851,
-          "high": 24.895,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-07-22"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 24.895,
-          "high": 25.0194,
-          "status": "VIOLATED",
-          "rule": "close_above_high",
-          "created_date": "2026-07-22"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 24.8801,
-          "high": 24.9427,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-07-29"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 24.8722,
-          "high": 24.8766,
-          "status": "UNTESTED",
-          "created_date": "2026-07-29"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 24.2096,
-          "high": 24.9599,
-          "status": "RESPECTED",
-          "confluence": 7,
-          "sources": [
-            "prior_yearly_close",
-            "yearly_open",
-            "box_low",
-            "equal_lows",
-            "quarterly_open",
-            "fib_ext_1618",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-07-29"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 5.1827,
-        "dist_to_yearly_open_pct": 0.0278,
-        "avg_turnover_20d": 50115,
-        "close": 25.02,
-        "sweep_date": "2026-07-22",
-        "sweep_depth_pct": 0.0004,
-        "displacement_date": "2026-07-29"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "VanEck Australian RMBS ETF",
-      "sector": "Unclassified",
       "next": "a new trap to build — the swept high failed on a closing basis"
     },
     {
