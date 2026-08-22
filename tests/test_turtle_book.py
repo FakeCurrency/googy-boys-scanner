@@ -21,22 +21,46 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 @pytest.fixture(autouse=True)
 def _isolated_book(tmp_path, monkeypatch):
-    """Never touch the real journal/ from a test run."""
-    monkeypatch.setattr(tb, "BOOK_DIR", str(tmp_path))
+    """Never touch the real journal/ (or the real data/) from a test run.
+
+    ROOT is patched too because the futures margin-file gate reads
+    ROOT/data/futures_margins.json -- a test must see the tmp sandbox's file
+    (or its absence), never whatever the repo checkout happens to hold.
+    """
+    monkeypatch.setattr(tb, "BOOK_DIR", str(tmp_path / "journal"))
+    monkeypatch.setattr(tb, "ROOT", str(tmp_path))
     yield
 
 
+def write_margin_file(root, initial_mes=500.0):
+    """A real-SCHEMA margin file for tests that need the futures gate open.
+
+    Fixture data for a sandbox, not production values: the live file must
+    come from the owner's broker/exchange numbers and deliberately does not
+    exist -- while it is absent every new futures open is refused."""
+    p = pathlib.Path(root) / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    (p / "futures_margins.json").write_text(json.dumps({
+        "as_of": "2026-08-22", "source": "test-fixture",
+        "contracts": {"MES": {"initial": initial_mes, "maintenance": 450.0},
+                      "CL": {"initial": 3000.0, "maintenance": 2700.0}}}),
+        encoding="utf-8")
+
+
 def row(sym, price, n, signal="", sector="Materials", o=None, h=None, l=None,
-        x1lo=None, x2lo=None, x1hi=1e9, x2hi=1e9, dvol=1e7):
+        x1lo=None, x2lo=None, x1hi=1e9, x2hi=1e9, dvol=1e7, date=None):
     o = price if o is None else o
     h = price if h is None else h
     l = price if l is None else l
-    return {"symbol": sym, "name": sym, "sector": sector, "price": price,
-            "n": n, "dvol": dvol, "signal": signal, "state": "flat",
-            "bar": {"o": o, "h": h, "l": l, "c": price},
-            "exits": {"x1_lo": x1lo if x1lo is not None else price * 0.5,
-                      "x2_lo": x2lo if x2lo is not None else price * 0.5,
-                      "x1_hi": x1hi, "x2_hi": x2hi}}
+    out = {"symbol": sym, "name": sym, "sector": sector, "price": price,
+           "n": n, "dvol": dvol, "signal": signal, "state": "flat",
+           "bar": {"o": o, "h": h, "l": l, "c": price},
+           "exits": {"x1_lo": x1lo if x1lo is not None else price * 0.5,
+                     "x2_lo": x2lo if x2lo is not None else price * 0.5,
+                     "x1_hi": x1hi, "x2_hi": x2hi}}
+    if date is not None:
+        out["date"] = date          # build_row always publishes the bar date
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -106,21 +130,28 @@ def test_a_gap_through_the_stop_books_the_gap():
 # ---------------------------------------------------------------------------
 
 def test_adds_walk_the_shared_stop_up_under_the_whole_position():
-    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
-    b = tb.update("asx", [row("AAA", 101.5, 2.0, o=100.5, h=101.9, l=100.0)],
+    # Price 20 at N=2 -> a $500 unit, so four units fit the $5,000 cash cap
+    # and the CASH check cannot be what stops the pyramid. (The original
+    # fixture used price 100 -- a $2,500 unit whose first add only ever
+    # cleared the cash check through the pre-2026-08-22 undercount.)
+    tb.update("asx", [row("AAA", 20.0, 2.0, "s2_long")], day="2026-08-21")
+    b = tb.update("asx", [row("AAA", 21.5, 2.0, o=20.5, h=21.9, l=20.0)],
                   day="2026-08-22")
     pos = b["open"][0]
-    assert len(pos["fills"]) == 2, "one rung reached at +1/2N = 101"
+    assert len(pos["fills"]) == 2, "one rung reached at +1/2N = 21"
     assert pos["stop"] == pytest.approx(pos["last_fill"] - config.TURTLE_STOP_N * 2.0)
-    assert pos["stop"] > 96.0, "the add dragged the first unit's stop up"
+    assert pos["stop"] > 16.0, "the add dragged the first unit's stop up"
 
 
 def test_the_stop_an_add_raised_is_tested_on_the_same_bar():
     """The engine bug this book must not inherit: a bar that adds a unit,
     raising the shared stop, and then trades through that new stop."""
-    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
-    b = tb.update("asx", [row("AAA", 97.0, 2.0, o=101.0, h=104.0, l=97.0,
-                              x1lo=50.0, x2lo=50.0)], day="2026-08-22")
+    tb.update("asx", [row("AAA", 20.0, 2.0, "s2_long")], day="2026-08-21")
+    # Entry stop is 16; the bar's low (17) does NOT hit it. The add at the
+    # 21 rung raises the stop to 17 -- and the same bar's 17 low must then
+    # take the position out.
+    b = tb.update("asx", [row("AAA", 17.0, 2.0, o=21.0, h=21.9, l=17.0,
+                              x1lo=5.0, x2lo=5.0)], day="2026-08-22")
     assert b["closed"], "the raised stop must be honoured on its own bar"
     assert b["closed"][0]["reason"] == tb.STOP
 
@@ -243,6 +274,78 @@ def test_the_next_session_may_re_enter_normally():
     assert b["open"] and b["open"][0]["symbol"] == "AAA"
 
 
+def test_a_stop_cannot_refill_off_the_SAME_BAR_at_a_later_runs_new_date():
+    """The re-entry guard keys on the BAR, not on the calendar.
+
+    This book runs many times per bar: crypto every four hours, and the daily
+    09:30 all-markets pass re-reads Friday's NASDAQ bar on Saturday and
+    Sunday. Keyed on the run date (as it was until 2026-08-22), a name stopped
+    at Friday's 21:30 run refilled at Saturday's 09:30 run off the SAME Friday
+    bar, because the calendar had moved while the tape had not. The row's own
+    `date` is the bar's identity; the run date is not."""
+    tb.update("nasdaq", [row("AAA", 100.0, 2.0, "s2_long",
+                             date="2026-08-21")], day="2026-08-21")
+    # Friday's own later run stops it out, on Friday's bar.
+    tb.update("nasdaq", [row("AAA", 90.0, 2.0, "s2_long", o=90.0, h=120.0,
+                             l=89.0, x1lo=50.0, x2lo=50.0,
+                             date="2026-08-21")], day="2026-08-21")
+    # Saturday's all-markets pass re-reads the SAME Friday bar, signal and
+    # all. The calendar moved; the tape did not. It must NOT refill.
+    b = tb.update("nasdaq", [row("AAA", 90.0, 2.0, "s2_long", o=90.0, h=120.0,
+                                 l=89.0, x1lo=50.0, x2lo=50.0,
+                                 date="2026-08-21")], day="2026-08-22")
+    assert not b["open"], "a Saturday run refilled Friday's stopped-out bar"
+    sk = [k for k in b["skips"] if k["reason"] == tb.SKIP_SAME_BAR_REENTRY]
+    assert sk and sk[0]["bar"] == "2026-08-21", \
+        "and the refusal names the bar it refused"
+
+
+def test_a_genuinely_NEW_bar_on_the_next_run_is_not_blocked():
+    """The bar-keyed guard must not over-block: a fresh break on a fresh bar
+    is a legitimate Turtle entry even one run after a stop."""
+    tb.update("crypto", [row("BTC", 100.0, 2.0, "s2_long", sector="",
+                             date="2026-08-21")], day="2026-08-21")
+    tb.update("crypto", [row("BTC", 90.0, 2.0, "s2_long", sector="", o=90.0,
+                             h=120.0, l=89.0, x1lo=50.0, x2lo=50.0,
+                             date="2026-08-21")], day="2026-08-21")
+    b = tb.update("crypto", [row("BTC", 95.0, 2.0, "s2_long", sector="",
+                                 date="2026-08-22")], day="2026-08-22")
+    assert b["open"] and b["open"][0]["symbol"] == "BTC"
+
+
+def test_the_add_cash_check_counts_the_position_itself_and_the_tail():
+    """The DOGE u3 bug (2026-08-22, live): `_room_for` at the add site was
+    handed only `still_open`, which excludes the position BEING ADDED TO and
+    every unmanaged position after it -- so an add was cash-checked against a
+    nearly empty book while the real book was nearly full, and the crypto
+    book ended the run at $5,239 of basis on a $4,186 cap. The check must
+    count every open dollar, exactly as `_caps_allow` counts every open unit."""
+    # Two positions that together exactly fill the $5,000 cap: AAA is 250
+    # units at $12 = $3,000 (1% * 5000 / N=0.2 = 250 units), BBB 250 units at
+    # $8 = $2,000. AAA's add rung is reached; the add itself (~$3,000) cannot
+    # fit once AAA's and BBB's own basis are counted.
+    tb.update("asx", [row("AAA", 12.0, 0.2, "s2_long", x1lo=1.0, x2lo=1.0),
+                      row("BBB", 8.0, 0.2, "s2_long", x1lo=1.0, x2lo=1.0)],
+              day="2026-08-21")
+    b = tb.load_book("asx")
+    basis = sum(p["cost_basis"] for p in b["open"])
+    assert basis > 4000, f"fixture must nearly fill the cap, got {basis}"
+    # AAA reaches its +1/2N rung (12.1) -- the add would cost another ~$3,000
+    # and MUST be refused for cash, because the book's real basis leaves no
+    # room. Exits stay far away; this is about the cash check.
+    b = tb.update("asx", [row("AAA", 12.12, 0.2, o=12.0, h=12.15, l=11.9,
+                              x1lo=1.0, x2lo=1.0),
+                          row("BBB", 8.0, 0.2, x1lo=1.0, x2lo=1.0)],
+                  day="2026-08-22")
+    spent = sum(p["cost_basis"] for p in b["open"])
+    cap = config.TURTLE_BOOK_EQUITY * config.TURTLE_BOOK_MAX_NOTIONAL_PCT / 100.0
+    assert spent <= cap + 1e-6, \
+        f"the add pushed the book to {spent} against a {cap} cash cap"
+    adds = [k for k in b["skips"] if k["action"] == "add"
+            and k["reason"] == tb.SKIP_CASH]
+    assert adds, "and the refusal is recorded as an add-path cash skip"
+
+
 def test_skips_are_counted_not_merely_logged():
     """A book that quietly declines half its signals looks identical to one
     that had no signals. Which ceiling is binding is the whole story."""
@@ -261,10 +364,10 @@ def test_skips_are_counted_not_merely_logged():
 def test_the_per_name_ceiling_records_itself_when_it_bites():
     """A position at 4 units that WANTS a fifth must say so. Silently not
     adding is indistinguishable from the price never reaching the rung."""
-    tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
-    tb.update("asx", [row("AAA", 130.0, 2.0, o=100.5, h=130.0, l=100.0,
+    tb.update("asx", [row("AAA", 20.0, 2.0, "s2_long")], day="2026-08-21")
+    tb.update("asx", [row("AAA", 26.0, 2.0, o=20.5, h=26.0, l=20.0,
                           x1lo=1.0, x2lo=1.0)], day="2026-08-22")
-    b = tb.update("asx", [row("AAA", 200.0, 2.0, o=140.0, h=200.0, l=139.0,
+    b = tb.update("asx", [row("AAA", 40.0, 2.0, o=28.0, h=40.0, l=27.0,
                               x1lo=1.0, x2lo=1.0)], day="2026-08-23")
     assert len(b["open"][0]["fills"]) == config.TURTLE_MAX_UNITS
     assert any(k["reason"] == tb.SKIP_PER_MARKET_CAP for k in b["skips"]), \
@@ -288,6 +391,10 @@ def test_a_futures_unit_under_one_contract_is_REFUSED_not_rounded():
 
 def test_a_futures_unit_that_DOES_fit_is_taken_normally():
     # $50 of risk (1% of 5,000); N = 5.00 at $5 a point -> exactly 2 contracts.
+    # A real-schema margin file must exist for ANY futures open (the
+    # 2026-08-22 gate); with one present and IM within free equity, the
+    # entry proceeds exactly as before.
+    write_margin_file(tb.ROOT)
     r = row("MES", 5000.0, 5.0, "s2_long", sector="")
     r["contracts"] = {"dpp": 50, "micro": "MES", "micro_dpp": 5,
                       "full_contracts": 0.2, "micro_contracts": 2.0,
@@ -299,6 +406,8 @@ def test_a_futures_unit_that_DOES_fit_is_taken_normally():
         "1% of 5,000 = $50 of risk; N=20 at $5/pt -> 0.5 -> 2 micro contracts"
     assert pos["units"] == pytest.approx(pos["contracts"] * 5), \
         "units carries contracts x dpp so P&L arithmetic stays correct"
+    assert pos["im"] == pytest.approx(2 * 500.0), \
+        "and the position carries the initial margin it consumed"
 
 
 def test_every_skip_reason_the_module_can_emit_is_in_the_closed_enum():
@@ -442,6 +551,7 @@ def test_a_futures_run_writes_ONLY_the_futures_file():
     directory contains exactly one file, and it is the futures one. A write
     path pointed at turtle_book.asx.json (or any equity journal) fails this
     on both sides: the wrong file exists and the right one does not."""
+    write_margin_file(tb.ROOT)
     b = tb.update("futures", [_futures_row()], day="2026-08-21")
     assert b["open"], "the entry must actually have been taken and persisted"
     written = sorted(p.name for p in pathlib.Path(tb.BOOK_DIR).iterdir())
@@ -457,15 +567,57 @@ def test_a_futures_run_cannot_alter_a_live_equity_book(tmp_path, monkeypatch):
     reorders keys or restamps generated_at is still a foreign write."""
     monkeypatch.setattr(tb, "ROOT", str(tmp_path))
     (tmp_path / "public" / "data").mkdir(parents=True, exist_ok=True)
+    write_margin_file(tmp_path)
     for m in ("asx", "nasdaq", "crypto"):
         tb.update(m, [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-20")
     before = {m: pathlib.Path(tb.book_path(m)).read_bytes()
               for m in ("asx", "nasdaq", "crypto")}
-    tb.update("futures", [_futures_row()], day="2026-08-21")
+    b = tb.update("futures", [_futures_row()], day="2026-08-21")
+    assert b["open"], "the futures entry must really open for the pin to bite"
     tb.write_combined()
     for m, blob in before.items():
         assert pathlib.Path(tb.book_path(m)).read_bytes() == blob, \
             f"the futures run altered the {m} book"
+
+
+def test_NO_margin_file_means_NO_new_futures_open():
+    """The 2026-08-22 hard gate. The repo has no real margin numbers and
+    inventing them is on the kill list, so while data/futures_margins.json is
+    absent every futures entry -- including one whose unit FITS -- is refused
+    with `no_margin_file`. The sleeve stays 0/0 and says why, which is the
+    honest state for a book that cannot know what a position would lock up."""
+    b = tb.update("futures", [_futures_row()], day="2026-08-21")
+    assert not b["open"], "no margin file, no open -- ever"
+    sk = [k for k in b["skips"] if k["reason"] == tb.SKIP_NO_MARGIN_FILE]
+    assert sk and sk[0]["margin_file"] == config.TURTLE_FUTURES_MARGIN_FILE, \
+        "the refusal names the file that would open the gate"
+
+
+def test_a_roll_suspect_inside_the_N_window_blocks_a_new_open():
+    """A back-adjusted roll step inflates N 13-22% on the bars after it, and
+    N sets the size, the stop and the pyramid spacing at once. The tape is
+    refused, never winsorised -- the true-range formula is frozen law."""
+    write_margin_file(tb.ROOT)
+    r = _futures_row()
+    r["rolls"] = {"bars": 3, "share": 0.01, "in_n_window": True,
+                  "last": "2026-08-18"}
+    b = tb.update("futures", [r], day="2026-08-21")
+    assert not b["open"]
+    sk = [k for k in b["skips"] if k["reason"] == tb.SKIP_ROLL_WINDOW]
+    assert sk and sk[0]["last_roll"] == "2026-08-18"
+
+
+def test_with_a_real_margin_file_the_IM_room_is_counted_like_cash():
+    """When a real file exists, initial margin is checked against free equity
+    over every open futures position's own IM -- the same every-open-dollar
+    discipline as the cash and 5x room checks. A file with a huge IM must
+    refuse with `no_margin`, not open on a margin the account cannot post."""
+    write_margin_file(tb.ROOT, initial_mes=4_000.0)   # 2 contracts want 8,000
+    b = tb.update("futures", [_futures_row()], day="2026-08-21")
+    assert not b["open"]
+    sk = [k for k in b["skips"] if k["reason"] == tb.SKIP_NO_MARGIN]
+    assert sk and sk[0]["need_im"] == pytest.approx(8_000.0)
+    assert sk[0]["free"] == pytest.approx(5_000.0)
 
 
 def test_the_combined_view_INCLUDES_the_futures_book(tmp_path, monkeypatch):
@@ -477,6 +629,7 @@ def test_the_combined_view_INCLUDES_the_futures_book(tmp_path, monkeypatch):
     trio turns this red."""
     monkeypatch.setattr(tb, "ROOT", str(tmp_path))
     (tmp_path / "public" / "data").mkdir(parents=True, exist_ok=True)
+    write_margin_file(tmp_path)
     tb.update("asx", [row("AAA", 100.0, 2.0, "s2_long")], day="2026-08-21")
     tb.update("futures", [_futures_row()], day="2026-08-21")
     tb.write_combined()

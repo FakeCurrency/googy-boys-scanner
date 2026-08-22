@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 def _never_write_the_real_journal(tmp_path, monkeypatch):
     """scan_market advances the FORWARD BOOK, which writes journal/ and
     public/data/. Without this the integration tests below -- which feed it
-    synthetic frames called FIRE, HELD, NEAR and SHRT -- write a real paper
+    synthetic frames called FIRE, HELD, NRBY and SHRT -- write a real paper
     book full of invented positions, and `git add -A` ships it.
 
     That is not hypothetical: it happened on 2026-08-21 and a book holding a
@@ -55,8 +55,9 @@ def test_no_test_run_may_leave_a_paper_book_behind():
         if not f.exists():
             continue
         text = f.read_text(encoding="utf-8")
-        for fixture in ('"FIRE"', '"HELD"', '"NEAR"', '"SHRT"', '"NOTRIG"',
-                        '"NULLS"', '"AAA"', '"BBB"', '"T0"', '"S0"'):
+        for fixture in ('"FIRE"', '"HELD"', '"NRBY"', '"SHRT"', '"NOTRIG"',
+                        '"NULLS"', '"AAA"', '"BBB"', '"T0"', '"S0"',
+                        '"C5X0"', '"BIG0"', '"FAT"', '"XXL"', '"NEXT"'):
             assert fixture not in text, \
                 f"{f.name} contains the fixture symbol {fixture} - a test wrote it"
 
@@ -319,6 +320,22 @@ def test_the_55_day_FAILSAFE_takes_the_trade_system_one_was_not_allowed_to():
     entered = [t["system"] for t in rep["trades"]] + (
         [rep["position"]["system"]] if rep["position"] else [])
     assert 2 in entered, "a blocked System 1 must still be rescued at 55 days"
+
+
+def test_when_BOTH_channels_break_on_one_bar_the_entry_is_tagged_system_TWO():
+    """Failsafe first. A fresh 55-day high necessarily clears the 20-day high
+    too, so on the bar that breaks both -- with System 1 UNBLOCKED -- the
+    engine must tag the entry System 2, not System 1. The tag is a money
+    difference, not a label: the entering system owns the exit, so S2 rides
+    the patient 20-day channel where S1 would leave at the 10-day. The ledger
+    stated the two systems and omitted this tie-break entirely."""
+    mids = [100.0] * 260 + [103.0]     # one bar breaks 101 on BOTH channels
+    rep = turtle.replay(band(mids), allow_shorts=False)
+    assert rep["s1_blocked"] is False, \
+        "fixture must leave System 1 eligible, or the pin proves nothing"
+    assert rep["signal"] == "s2_long"
+    assert rep["position"] and rep["position"]["system"] == 2
+    assert rep["position"]["exit_channel"] == config.TURTLE_S2_EXIT
 
 
 def test_system_two_is_never_filtered():
@@ -806,7 +823,7 @@ def test_scan_market_publishes_a_complete_payload(tmp_path, monkeypatch):
     frames = {
         "FIRE.AX": band([100.0] * 260 + ramp(101, 120)[:1]),
         "HELD.AX": band([100.0] * 260 + ramp(101, 140)),
-        "NEAR.AX": band([100.0] * 260 + ramp(99, 100)),
+        "NRBY.AX": band([100.0] * 260 + ramp(99, 100)),
         "THIN.AX": band([100.0] * 300),          # dropped by the liquidity gate
         "SHRT.AX": band([100.0] * 260 + ramp(99, 86)),
         "SHORTHIST.AX": band([100.0] * 50),      # dropped for too little history
@@ -832,7 +849,7 @@ def test_scan_market_publishes_a_complete_payload(tmp_path, monkeypatch):
     assert payload["skipped_short_history"] == 1, "SHORTHIST is under TURTLE_MIN_BARS"
     assert payload["skipped_illiquid"] == 1, "THIN trades $1,000 a day"
     syms = [r["symbol"] for r in payload["results"]]
-    assert set(syms) == {"FIRE", "HELD", "NEAR", "SHRT"}
+    assert set(syms) == {"FIRE", "HELD", "NRBY", "SHRT"}
     assert syms[0] == "FIRE", "a signal that fired today outranks everything"
 
     agg = payload["aggregate"]
@@ -1014,6 +1031,50 @@ def _rolling_tape(rolls=7, step=4.0, seed=3, n=500):
         index=pd.bdate_range("2015-01-01", periods=n))
 
 
+def test_KC_dpp_is_the_cents_rule_like_every_other_ICE_soft():
+    """ICE Coffee C: 37,500 lb, quoted CENTS per lb on KC=F, so dpp is
+    size/100 = 375 -- the same rule the table itself states for SB and CT.
+    The prior 37,500 traced to a 2026-08-21 audit whose reference table did
+    not contain KC (a vacuous affirmation) and overstated dpp 100x, sizing
+    KC units 100x too small. Conservative both ways at $5k -- coffee never
+    fits -- but a wrong multiplier in a sizing table is never left standing."""
+    kc = next(f for f in config.TURTLE_FUTURES if f["symbol"] == "KC")
+    assert kc["dpp"] == 375, "37,500 lb quoted in cents -> 37,500/100 = 375"
+
+
+def test_the_fit_table_leads_with_what_fits_and_never_rounds_up():
+    """The payload table that answers 'what can $5,000 actually hold'.
+    Fits first; a fractional contract is a refusal wearing its number, and
+    the 2N dollar risk of the smallest available contract explains why."""
+    def frow(sym, n, dpp, micro, micro_dpp, fits, fullc, microc,
+             roll=False, group="x"):
+        return {"symbol": sym, "name": sym, "group": group, "n": n,
+                "contracts": {"dpp": dpp, "micro": micro,
+                              "micro_dpp": micro_dpp,
+                              "full_contracts": fullc,
+                              "micro_contracts": microc,
+                              "unit_fits": fits,
+                              "one_contract_risk_pct": 1.0},
+                "rolls": {"in_n_window": roll}}
+    rows = [
+        frow("CL", 2.0, 1000, "MCL", 100, False, 0.025, 0.25),
+        frow("MESROW", 5.0, 50, "MES", 5, True, 0.2, 2.0),
+        frow("GC", 20.0, 100, "MGC", 10, False, 0.025, 0.25, roll=True),
+    ]
+    t = turtle_run.fit_table(rows)
+    assert [r["symbol"] for r in t] == ["MESROW", "CL", "GC"], \
+        "fits lead; the rest follow"
+    mes = t[0]
+    assert mes["unit_fits"] is True
+    assert mes["two_n_risk_smallest"] == 50.0, "2 * N(5) * micro_dpp(5)"
+    assert mes["equity"] == config.TURTLE_ACCOUNT_EQUITY
+    cl = t[1]
+    assert cl["unit_fits"] is False and cl["micro_contracts"] == 0.25, \
+        "0.25 of a contract stays 0.25 -- nothing rounds up"
+    assert t[2]["roll_in_n_window"] is True, \
+        "a contaminated N travels with the row it contaminates"
+
+
 def test_contract_rolls_are_detected_in_a_back_adjusted_series():
     """A roll is not a tradeable overnight move, but true range counts it in
     full. Measured: N runs 13-22% high on the bar AFTER a roll -- the bar a
@@ -1110,7 +1171,7 @@ def test_the_engine_does_not_import_the_bot():
     at length why scanner/broker is never imported -- the Tier 3 trap where
     the justification reads as the offence.
     """
-    for name in ("turtle.py", "turtle_run.py"):
+    for name in ("turtle.py", "turtle_run.py", "turtle_portfolio.py"):
         src = (ROOT / "scanner" / name).read_text(encoding="utf-8")
         imports = [ln.strip() for ln in src.splitlines()
                    if ln.strip().startswith(("import ", "from "))]
@@ -1121,7 +1182,7 @@ def test_the_engine_does_not_import_the_bot():
 
 def test_prints_are_ascii_only():
     """Project rule 9 -- Windows consoles are cp1252 and choke on arrows."""
-    for name in ("turtle.py", "turtle_run.py"):
+    for name in ("turtle.py", "turtle_run.py", "turtle_portfolio.py"):
         for i, line in enumerate((ROOT / "scanner" / name).read_text(encoding="utf-8").splitlines(), 1):
             if "print(" in line or 'f"[' in line:
                 assert line.isascii(), f"{name}:{i} non-ascii in a print: {line!r}"
