@@ -2140,6 +2140,52 @@ the paper book, and outside every signal path in the repo. `scanner/turtle.py`
     replacement node is found by comparing dataset rather than by building a
     selector.
 
+### TURTLE 2026-08-22 — the 5x sleeve, the gates, and the portfolio replay
+
+Facts a later session must not re-derive (ledger of record:
+`TURTLE_LEDGER_2026-08-22.md`; all items mutation-tested):
+
+1. **The re-entry guard keys on the BAR, not the calendar.** Closes stamp
+   `closed_bar` (the row's own `date`); entry is refused while that bar is
+   still the signal bar, across any number of cron runs. Legacy closed rows
+   fall back to their run date. The old run-date key would have let a Friday
+   NASDAQ stop refill at Saturday's 09:30 pass off the same Friday bar.
+2. **The add-path room check counts every open dollar** (self + unmanaged
+   tail), exactly as `_caps_allow` counts units. The pre-fix undercount let
+   DOGE pyramid to u3/u4 past the cash cap; those rows stand (append-only).
+3. **`crypto5x` is a REAL fifth book** (`journal/turtle_book.crypto5x.json`,
+   started 2026-08-22): posted margin = notional/5, isolated, liquidation AT
+   the liq price (capped loss — isolated margin cannot lose more than
+   posted; stops keep gap semantics), refuse `no_margin` when posted > free.
+   Unit formula unchanged (1%/N, fractional). Crypto = ONE close bucket on
+   BOTH crypto books. Same `update()` law as cash — no forked loop. Config:
+   `TURTLE_5X` + `TURTLE_5X_YF_OVERRIDES` (APT/ARB/SUI/UNI/TON → real Yahoo
+   ids, 5x sleeve ONLY — the cash universe is a running experiment, do not
+   "fix" it mid-flight). The page renders the 5x disclosure FROM the book's
+   own `params`; `turtle.js` must never hardcode the sleeve name (pinned).
+4. **Futures opens are triple-gated**: unit >= 1 whole contract AND no roll
+   suspect in the current 20-bar N window AND a REAL margin file at
+   `data/futures_margins.json` (`TURTLE_FUTURES_MARGIN_FILE`). The file does
+   not exist and must never be invented — while absent the sleeve is 0/0 by
+   construction (`no_margin_file`). `fit_table` on the futures payload. KC
+   dpp corrected 37,500 → 375 (ICE cents rule; the "owner-affirmed" 37,500
+   traced to an audit whose table did not contain KC).
+5. **`scanner/turtle_portfolio.py`** — shared-equity replay per sleeve, on
+   the 09:30 cron only (`--portfolio`), publishing
+   `public/data/turtle_portfolio.json` (merge-per-sleeve, sector_breadth
+   pattern). Deterministic entry order (bar dollar volume desc, symbol) in
+   the payload; carries its own NOT-walk-forward caveat. Writes ONLY its own
+   file; central broker/ascii fences extended to it.
+6. **Engine pin added, engine unchanged**: a bar breaking BOTH channels with
+   S1 unblocked tags System 2 (failsafe first — S2 owns the 20-day exit).
+7. **Fixture rename**: engine fixture NEAR → NRBY. NEAR is a real coin; the
+   guard against fixture symbols in real books false-positived when the
+   04:42 cron legitimately cash-skipped NEAR Protocol.
+8. **Reading rules now on the BOOK view**: equity headlines are realized-
+   only; the combined figure adds A$+US$ at face value; a first print is not
+   evidence until >= 30 closes AND >= 20 trading days; the 4h crypto cron is
+   a scan cadence, not a 4-hour Donchian (daily bars are the clock).
+
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 
 100 items chasing profitability/transparency/edge, ALL measurement and
