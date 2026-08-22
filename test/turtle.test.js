@@ -35,21 +35,67 @@ function suite(name) { console.log(`\n${name}`); }
 // and render() to run to completion. getElementById returning null is the
 // interesting case: every renderer must survive a missing host, which is also
 // what happens on a page that ships only some of the sections.
-function boot() {
-  const win = {};
+//
+// Phase 3 adds history.pushState/replaceState/popstate, so the stub window
+// now needs a working location.search, a history with a real length, and an
+// addEventListener that actually stores the popstate listener turtle.js
+// registers in mount() -- mount() calls all of these unconditionally and
+// synchronously, so every boot(), including the module-level one below, goes
+// through this path whether or not a given test cares about history.
+//
+// initialSearch seeds window.location.search before mount() runs, so a test
+// can boot as if the page had been loaded from a particular URL. __goto
+// simulates a browser Back/Forward: it sets location.search to the target
+// entry and fires the popstate listener(s) turtle.js registered, exactly
+// what a real back-navigation does from the app code's point of view (it is
+// never told "this is a back" -- it just sees location change and popstate
+// fire). fetchCalls records every URL fetched, in call order, so a test can
+// assert a market change fetched exactly the right file without waiting on
+// the stubbed promise to settle.
+function boot(initialSearch) {
+  const fetchCalls = [];
+  const win = {
+    location: { search: initialSearch || "" },
+    history: {
+      length: 1,
+      pushState(state, title, url) {
+        win.history.length++;
+        if (typeof url === "string") win.location.search = url;
+      },
+      replaceState(state, title, url) {
+        if (typeof url === "string") win.location.search = url;
+      },
+    },
+    _popstateListeners: [],
+    addEventListener(type, fn) {
+      if (type === "popstate") win._popstateListeners.push(fn);
+    },
+    removeEventListener(type, fn) {
+      if (type !== "popstate") return;
+      const i = win._popstateListeners.indexOf(fn);
+      if (i !== -1) win._popstateListeners.splice(i, 1);
+    },
+    __goto(search) {
+      win.location.search = search;
+      win._popstateListeners.forEach((fn) => fn({}));
+    },
+  };
   const doc = {
     readyState: "complete",
     addEventListener() {},
     getElementById() { return null; },
     querySelectorAll() { return []; },
   };
-  const fetchStub = () => Promise.resolve({ ok: false, json: () => Promise.resolve(null) });
+  const fetchStub = (url) => {
+    fetchCalls.push(url);
+    return Promise.resolve({ ok: false, json: () => Promise.resolve(null) });
+  };
   new Function("window", "document", "fetch", SRC)(win, doc, fetchStub);
   assert.ok(win.GBSTurtle, "turtle.js did not export GBSTurtle — was the IIFE renamed?");
-  return win.GBSTurtle;
+  return { T: win.GBSTurtle, win, fetchCalls };
 }
 
-const T = boot();
+const { T, win: BOOT_WIN } = boot();
 
 // ── 1. escaping ─────────────────────────────────────────────────────────────
 suite("esc — the page renders symbols and names it did not write");
@@ -552,12 +598,16 @@ test("extra query keys are read from but never appear on the parsed result", () 
   assert.ok(!qs.includes("debug") && !qs.includes("foo") && !qs.includes("lite"), qs);
 });
 
-test("the helpers touch no DOM, no history API, and no journal — pure functions only", () => {
-  // Phase 2 is explicit: no popstate, no pushState, no mount() wiring yet.
+test("parseTurtleURL/serialiseTurtleURL touch no DOM, no history API, and no journal", () => {
+  // A permanent invariant, not a Phase-2-only one: these two stay pure even
+  // after Phase 3 adds real history wiring right below them. Scoped to just
+  // these two functions (not the whole file up to mount()) precisely
+  // because Phase 3's getTurtleState/applyState/pushURLState/onPopState
+  // legitimately live in that later span and legitimately touch history.
   const fnBody = SRC.slice(SRC.indexOf("function parseTurtleURL"),
-                            SRC.indexOf("function mount("));
+                            SRC.indexOf("function getTurtleState"));
   assert.ok(!/pushState|popstate|history\.(back|forward|go)/.test(fnBody),
-    "Phase 2 must not wire history yet — that is Phase 3");
+    "parseTurtleURL/serialiseTurtleURL must never touch history");
   assert.ok(!/innerHTML|getElementById|querySelector/.test(fnBody),
     "parseTurtleURL/serialiseTurtleURL must not touch the DOM");
   assert.ok(!/journal\//.test(fnBody), "the URL helpers must not reference journal/");
@@ -566,6 +616,151 @@ test("the helpers touch no DOM, no history API, and no journal — pure function
 test("both helpers are exported on window.GBSTurtle", () => {
   assert.equal(typeof T.parseTurtleURL, "function");
   assert.equal(typeof T.serialiseTurtleURL, "function");
+});
+
+// ── 11. history wiring (Phase 3) ────────────────────────────────────────────
+suite("applyState — the URL becomes live app state");
+
+test("applyState sets MARKET/VIEW/FILTER/OPEN/SORT from a parsed URL", () => {
+  T.applyState({ m: "nasdaq", v: "book", f: "held", s: "AAPL", sort: "n" });
+  assert.deepEqual(T.getTurtleState(),
+    { m: "nasdaq", v: "book", f: "held", s: "AAPL", sort: "n", touched: true });
+});
+
+test("an all-default parsed URL leaves TOUCHED false, and f is fired not all", () => {
+  T.applyState(T.parseTurtleURL(""));
+  const st = T.getTurtleState();
+  assert.equal(st.touched, false);
+  assert.equal(st.f, "fired", "the URL contract's default replaces the old live FILTER=all");
+});
+
+test("any single non-default field marks TOUCHED true, not just v", () => {
+  T.applyState({ m: "asx", v: "book", f: "fired", s: "", sort: "fired" });
+  assert.equal(T.getTurtleState().touched, true, "v alone must touch");
+  T.applyState({ m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" });
+  assert.equal(T.getTurtleState().touched, true, "m alone must touch");
+  T.applyState({ m: "asx", v: "signals", f: "fired", s: "JBH", sort: "fired" });
+  assert.equal(T.getTurtleState().touched, true, "s alone must touch");
+});
+
+test("an empty s applies to OPEN=null, and getTurtleState reports it back as ''", () => {
+  T.applyState({ m: "asx", v: "signals", f: "fired", s: "", sort: "fired" });
+  assert.equal(T.getTurtleState().s, "");
+});
+
+test("a garbage m applies to asx without throwing (applyState trusts parseTurtleURL's output)", () => {
+  assert.doesNotThrow(() => T.applyState(T.parseTurtleURL("?m=foo")));
+  assert.equal(T.getTurtleState().m, "asx");
+});
+
+test("a futures+rules deep link is TOUCHED, so load()'s no-data fallback cannot override it", () => {
+  T.applyState(T.parseTurtleURL("?m=futures&v=rules"));
+  const st = T.getTurtleState();
+  assert.equal(st.m, "futures");
+  assert.equal(st.v, "rules");
+  assert.equal(st.touched, true);
+});
+
+test("load()'s no-data fallback is still gated on TOUCHED, unmodified by Phase 3", () => {
+  assert.ok(/if \(!TOUCHED\) VIEW = DATA \? "signals" : "rules";/.test(SRC),
+    "the pre-existing no-scan-yet fallback must still exist and still be TOUCHED-gated " +
+    "-- that gate, not new logic in load(), is what keeps a deep-linked VIEW from being stomped");
+});
+
+suite("popstate — Back/Forward replay the URL, and only the URL");
+
+test("first paint applies location.search before the first fetch, and replaceState's, not pushState's", () => {
+  const { T: T2, win } = boot("");
+  assert.deepEqual(T2.getTurtleState(),
+    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
+  assert.equal(win.history.length, 1, "first paint must replaceState, not pushState");
+  assert.equal(win.location.search, "?m=asx&v=signals&f=fired&sort=fired",
+    "first paint must normalise the address bar to the resolved defaults");
+});
+
+test("popstate to a different market re-applies state and fetches that market once, without pushing", () => {
+  const { win, fetchCalls } = boot("?m=asx&v=signals&f=fired&sort=fired");
+  const lenAfterBoot = win.history.length;
+  const callsBefore = fetchCalls.length;
+  win.__goto("?m=nasdaq&v=signals&f=fired&sort=fired");
+  const newCalls = fetchCalls.slice(callsBefore);
+  assert.equal(newCalls.filter((u) => u === "data/nasdaq_turtle.json").length, 1,
+    "a market-changing popstate must fetch the new market exactly once");
+  assert.equal(win.history.length, lenAfterBoot, "popstate must not grow history.length");
+});
+
+test("popstate to the same market with a different view does not touch the network", () => {
+  const { win, fetchCalls } = boot("?m=asx&v=signals&f=fired&sort=fired");
+  const callsBefore = fetchCalls.length;
+  win.__goto("?m=asx&v=book&f=fired&sort=fired");
+  assert.equal(fetchCalls.length, callsBefore, "view-only popstate must not re-fetch");
+  assert.equal(win.history.length, 1, "popstate must not grow history.length");
+});
+
+test("popstate restores market, view, filter and row together (a simulated Back to baseline)", () => {
+  const { T: T2, win } = boot("?m=nasdaq&v=book&f=held&s=AAPL&sort=n");
+  assert.equal(T2.getTurtleState().m, "nasdaq");
+  win.__goto("?m=asx&v=signals&f=fired&sort=fired");
+  assert.deepEqual(T2.getTurtleState(),
+    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
+});
+
+test("popstate on a hostile s does not throw and restores it exactly", () => {
+  const { T: T2, win } = boot("");
+  const hostile = 'AAA"><';
+  assert.doesNotThrow(() => win.__goto("?m=asx&v=signals&f=fired&s=" +
+    encodeURIComponent(hostile) + "&sort=fired"));
+  assert.equal(T2.getTurtleState().s, hostile);
+});
+
+test("popstate never calls pushState or replaceState itself", () => {
+  const body = SRC.slice(SRC.indexOf("function onPopState"), SRC.indexOf("function syncMarketButtons"));
+  assert.ok(!/pushState|replaceState/.test(body),
+    "the popstate handler must only applyState/load/render — writing history from inside " +
+    "a popstate handler is how Back and Forward stop working");
+});
+
+suite("the click handlers push exactly one history entry each, in state -> push -> render order");
+
+test("the view-tab delegate is scoped to #tt-views, not document-wide", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  assert.ok(!/closest\("\[data-view\]"\)/.test(mountBody),
+    "a document-wide [data-view] delegate would let a future deck pill steal the view-tab handler");
+  assert.ok(/closest\("#tt-views \[data-view\]"\)/.test(mountBody),
+    "the view-tab delegate must be scoped under #tt-views");
+});
+
+test("market, view, filter, goto and row handlers each call pushURLState", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  assert.ok(/VIEW = v\.dataset\.view;[\s\S]{0,80}pushURLState\(\)/.test(mountBody),
+    "the view-tab handler must push before it renders");
+  assert.ok(/VIEW = g\.dataset\.goto;[\s\S]{0,80}pushURLState\(\)/.test(mountBody),
+    "the data-goto handler must push before it renders");
+  assert.ok(/FILTER = f\.dataset\.filter;[\s\S]{0,60}pushURLState\(\)/.test(mountBody),
+    "the filter-seg handler must push before it renders");
+  assert.ok(/MARKET = m\.dataset\.market;[\s\S]{0,300}pushURLState\(\)/.test(mountBody),
+    "the market handler must push before it fetches");
+  assert.ok(/OPEN = OPEN === row\.dataset\.sym[\s\S]{0,60}pushURLState\(\)/.test(mountBody),
+    "the row-head click handler must push before it renders");
+});
+
+test("Enter/Space on a row head pushes too, the same as a click on it", () => {
+  const keydownBody = SRC.slice(SRC.indexOf('addEventListener("keydown"'), SRC.indexOf("function mount(") + 4500);
+  assert.ok(/OPEN = OPEN === row\.dataset\.sym[\s\S]{0,60}pushURLState\(\)/.test(keydownBody),
+    "keyboard row-toggle must push history exactly like the click handler does");
+});
+
+test("hostile row symbols still cannot break the keyboard focus-restore selector", () => {
+  // Unchanged since Phase 0 -- re-asserted here because Phase 3 is the first
+  // phase where OPEN can arrive already set (from a URL) before any keydown
+  // fires, so this guarantee now matters on more paths than it used to.
+  assert.ok(!/querySelector\([^)]*\+\s*row\.dataset/.test(CODE));
+  assert.ok(/rows\[i\]\.dataset\.sym === row\.dataset\.sym/.test(CODE));
+});
+
+test("the Phase 3 code stays out of the shared site nav entirely", () => {
+  const phase3 = SRC.slice(SRC.indexOf("function getTurtleState"), SRC.length);
+  assert.ok(!/nav\.js/.test(phase3), "history wiring is scoped to turtle.js and its own test file");
 });
 
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);

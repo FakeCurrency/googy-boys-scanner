@@ -55,6 +55,7 @@
   let QUERY = "";
   let EQUITY = FALLBACK.account_equity;
   let OPEN = null;               // expanded row symbol
+  let SORT = "fired";            // URL-only so far (Phase 3): no sort control exists yet
   let TOUCHED = false;           // has the reader picked a view themselves?
   let BOOK = null;               // the forward paper book, all markets
   let PORTFOLIO = null;          // the shared-equity portfolio replay, per sleeve
@@ -985,6 +986,13 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   ];
 
   function render() {
+    // The market switcher is static markup in turtle.html (ASX hardcoded
+    // is-active) and, unlike the deck/tabs/controls below, is never rebuilt
+    // from scratch -- only imperatively toggled. Before Phase 3 that was
+    // harmless because MARKET could only ever change via the button that
+    // owns this exact toggle. A deep link or a popstate can now set MARKET
+    // to anything before this first runs, so render() has to own it too.
+    syncMarketButtons();
     const deck = document.getElementById("tt-deck");
     if (deck) deck.innerHTML = deckHTML();
     const tabs = document.getElementById("tt-views");
@@ -1106,22 +1114,88 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     }
   }
 
+  // ── URL state wiring (Phase 3) ──────────────────────────────────────────
+  // window.history / window.location are used explicitly below, never the
+  // bare globals -- this file runs both in a real browser and inside
+  // test/turtle.test.js's synthetic window, and only the injected `window`
+  // parameter exists in the latter.
+
+  // The live app state, shaped like the URL contract plus one field the URL
+  // itself never carries (touched). Not itself the {m,v,f,s,sort} contract
+  // parseTurtleURL/serialiseTurtleURL exchange -- read this, then pass it
+  // through serialiseTurtleURL, when you need the URL string.
+  function getTurtleState() {
+    return { m: MARKET, v: VIEW, f: FILTER, s: OPEN || "", sort: SORT, touched: TOUCHED };
+  }
+
+  // parsed: parseTurtleURL's own output shape. Sets every piece of state the
+  // URL is allowed to carry. TOUCHED is set whenever any field differs from
+  // the URL contract's own defaults -- a deep link is reader-directed
+  // exactly like a click, so load()'s "no scan yet -> RULES" fallback above
+  // must not paper over a view the URL already chose.
+  function applyState(parsed) {
+    MARKET = parsed.m;
+    VIEW = parsed.v;
+    FILTER = parsed.f;
+    OPEN = parsed.s ? parsed.s : null;
+    SORT = parsed.sort;
+    TOUCHED = parsed.m !== URL_DEFAULTS.m || parsed.v !== URL_DEFAULTS.v ||
+      parsed.f !== URL_DEFAULTS.f || parsed.s !== URL_DEFAULTS.s ||
+      parsed.sort !== URL_DEFAULTS.sort;
+  }
+
+  function pushURLState() {
+    window.history.pushState(null, "", serialiseTurtleURL(getTurtleState()));
+  }
+
+  function replaceURLState() {
+    window.history.replaceState(null, "", serialiseTurtleURL(getTurtleState()));
+  }
+
+  // Never pushes or replaces -- back/forward must not grow or rewrite the
+  // history it is navigating. Re-parses window.location.search rather than
+  // trusting the popstate event's own .state, so the URL string alone stays
+  // the single source of truth on every path (first paint, click, and back).
+  function onPopState() {
+    const prevMarket = MARKET;
+    applyState(parseTurtleURL(window.location.search));
+    if (MARKET !== prevMarket) load().then(render);
+    else render();
+  }
+
+  // The market switcher is static markup (turtle.html hardcodes ASX
+  // is-active) that render() cannot rebuild wholesale the way it rebuilds
+  // #tt-views/#tt-controls, so MARKET's current value has to be synced onto
+  // it imperatively. Called from render() (deep link / popstate / first
+  // paint) and, for the instant feedback a fetch-then-render would delay,
+  // from the market click handler directly.
+  function syncMarketButtons() {
+    document.querySelectorAll("#tt-market .market-btn").forEach((b) => {
+      const on = b.dataset.market === MARKET;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
+
   function mount() {
+    applyState(parseTurtleURL(window.location.search));
+    replaceURLState();
+    window.addEventListener("popstate", onPopState);
     document.addEventListener("click", (e) => {
-      const v = e.target.closest("[data-view]");
-      if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; render(); return; }
+      // Scoped to #tt-views on purpose: an unscoped closest() on this same
+      // attribute would also catch any future match outside the tab strip
+      // (Phase 5's deck pills are exactly that risk) and steal this handler.
+      const v = e.target.closest("#tt-views [data-view]");
+      if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; pushURLState(); render(); return; }
       const g = e.target.closest("[data-goto]");
-      if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; render(); return; }
+      if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; pushURLState(); render(); return; }
       const f = e.target.closest("[data-filter]");
-      if (f) { FILTER = f.dataset.filter; render(); return; }
+      if (f) { FILTER = f.dataset.filter; pushURLState(); render(); return; }
       const m = e.target.closest("#tt-market [data-market]");
       if (m) {
         MARKET = m.dataset.market;
-        document.querySelectorAll("#tt-market .market-btn").forEach((b) => {
-          const on = b.dataset.market === MARKET;
-          b.classList.toggle("is-active", on);
-          b.setAttribute("aria-selected", on ? "true" : "false");
-        });
+        syncMarketButtons();
+        pushURLState();
         load().then(render);
         return;
       }
@@ -1132,16 +1206,19 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const row = e.target.closest(".tt-row");
       if (row && !e.target.closest(".tt-detail")) {
         OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
+        pushURLState();
         renderBody();
       }
     });
-    // Enter and Space on a focused row do what a click on its head does.
+    // Enter and Space on a focused row do what a click on its head does,
+    // history included.
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
       const row = e.target.closest && e.target.closest(".tt-row");
       if (!row) return;
       e.preventDefault();
       OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
+      pushURLState();
       renderBody();
       // Find the replacement node by COMPARING dataset, never by building a
       // selector out of it: dataset.sym is the DECODED symbol, so a name
@@ -1166,7 +1243,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // than a re-typed copy of them.
   window.GBSTurtle = {
     esc, unitShares, ladder, ddEquity, yearsTo, FALLBACK,
-    parseTurtleURL, serialiseTurtleURL,
+    parseTurtleURL, serialiseTurtleURL, applyState, getTurtleState,
     setParams: (p) => { P = Object.assign({}, FALLBACK, p || {}); },
   };
 })();
