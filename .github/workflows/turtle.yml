@@ -23,9 +23,13 @@ name: Turtle nightly scan
 
 on:
   schedule:
-    # CRYPTO EVERY FOUR HOURS, because crypto trades every four hours. The
-    # Turtles entered intraday on the tick; a daily-only scan on a 24/7 market
-    # means a breakout can run for most of a day before this page admits it.
+    # CRYPTO REFRESHES EVERY FOUR HOURS -- a scan cadence, not a 4-hour
+    # Donchian. The channel and every stop/add level are still read off the
+    # DAILY bar, same as every other market. Crypto trades 24/7 with no
+    # close, so a once-a-day-only scan can let a breakout run for most of a
+    # day before this page admits it; the refresh exists to catch it sooner,
+    # not to trade a faster channel. The Turtles entered intraday on the
+    # tick -- this is the nearest honest equivalent on daily bars.
     - cron: "5 */4 * * *"
     # ASX, after the close. 16:00 AEST = 06:00 UTC and 16:00 AEDT = 05:00 UTC,
     # so 06:30 is past the close in both halves of the year -- the DST
