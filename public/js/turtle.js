@@ -531,6 +531,29 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     return "";
   }
 
+  // A name skipped from a levered sleeve for the correlated-group cap is a
+  // fact this row can carry without a click-through to BOOK. Symmetric to
+  // vehicleBadgeHTML: rendered from the skip's own leverage params, never
+  // a hardcoded multiplier or sleeve name, and matched via scanMarketFor
+  // (the same generic suffix-strip Phase 7 uses for the open-position
+  // jump) rather than any literal sleeve key. Scoped to close_corr_cap
+  // only, per spec -- not a general skip-reason display.
+  function capSkipBadgeHTML(symbol) {
+    if (!BOOK || !BOOK.skips) return "";
+    let last = null;
+    for (let i = 0; i < BOOK.skips.length; i++) {
+      const k = BOOK.skips[i];
+      if (k.symbol === symbol && k.reason === "close_corr_cap" &&
+          k.market !== MARKET && scanMarketFor(k.market) === MARKET) last = k;
+    }
+    if (!last) return "";
+    const lev = leverageOf(last.market);
+    const label = lev ? big(lev) + "&times; cap" : "cap";
+    return '<span class="tt-chip is-blocked" title="Skipped on the ' +
+      esc((last.market || "").toUpperCase()) + ' sleeve: ' + big(last.units_on_book || 0) +
+      ' of ' + big(last.cap || 0) + ' correlated units already held">' + label + '</span>';
+  }
+
   function bookOpenHTML(symbol) {
     const positions = bookOpenPositions(symbol);
     if (!positions.length) return "";
@@ -607,6 +630,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
             P.s1_entry + '-day breakout in this name was a filter-winner, so System 1 is ' +
             'skipped until one fails. The ' + P.s2_entry + '-day failsafe still applies.">S1 filtered</span>' : "") +
           vehicleBadgeHTML(r.symbol) +
+          capSkipBadgeHTML(r.symbol) +
         "</div>" +
         '<div class="tt-nums"><span class="mono">' + money(r.price) + "</span>" +
           '<span class="mono tt-dim">N ' + num(r.n) + " (" + pct(r.n_pct) + ")</span>" +
@@ -858,6 +882,19 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     const mk = Object.keys(BOOK.by_market || {});
     const open = (BOOK.open || []).slice().sort(
       (a, b) => (b.fills || []).length - (a.fills || []).length);
+    // If only SOME sleeves have a closed trade, the combined Total above is
+    // numerically that sleeve's own number wearing a five-sleeve label --
+    // exactly the "crypto cash -6.696R is one sleeve, not the combined
+    // story" risk. Named generically from whichever sleeves actually have
+    // closes, never hardcoded to crypto, so this stays true whichever
+    // sleeve gets there first on a future night.
+    const closedSleeves = mk.filter((m) => (BOOK.by_market[m] || {}).closed > 0);
+    const singleSleeveNote = (closedSleeves.length && closedSleeves.length < mk.length)
+      ? ` The combined Total above is carried entirely by
+        <b>${closedSleeves.map((m) => esc(m.toUpperCase())).join(", ")}</b> — every other
+        sleeve is still at zero closes, so one sleeve's record is not yet the combined
+        book's record.`
+      : "";
 
     // A symbol here is a BOOK fact, not a scan row -- clicking or Enter/
     // Space on it jumps to that symbol's market on SIGNALS with the row
@@ -869,17 +906,36 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       esc(symbol) + '" data-open-market="' + esc(scanMarketFor(market)) + '">' +
       esc(symbol) + "</span>";
 
-    const posRow = (p) => {
+    // Coin/contract QUANTITY (p.units, e.g. UNI 213.66) and Turtle UNIT
+    // COUNT (p.fills.length, always 1-4) are different numbers that happen
+    // to share a field name upstream. Phase A traced every renderer of a
+    // BOOK position and found both existing ones (this row, and
+    // bookOpenHTML's detail grid) already used fills.length for "u" --
+    // correct, not a bug. What was missing is qty itself: it was nowhere
+    // visible on this table at all, only recoverable by dividing
+    // cost_basis by an unlabelled number in a different view. qtyStr keeps
+    // more precision under 10 (a ZEC position is 1.2655, not "1"), because
+    // the whole point of this column is to show the real number precisely.
+    const qtyStr = (u) => (u == null ? "—" : u < 10 ? num(u, 4) : num(u, 2));
+
+    const posRow = (p, levered) => {
       const sign = p.side === "short" ? -1 : 1;
       const avg = p.units ? p.cost_basis / p.units : 0;
       const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
         (P.stop_n * p.n * p.units) : null;
-      return "<tr><td class=\"mono\">" + openSymbolHTML(p.symbol, p.market) + "</td><td>" +
+      let row = "<tr><td class=\"mono\">" + openSymbolHTML(p.symbol, p.market) + "</td><td>" +
         esc((p.market || "").toUpperCase()) + "</td><td>" + esc(p.side) +
         " S" + esc(String(p.system)) + '</td><td class="mono">' +
-        (p.fills || []).length + "u</td><td class=\"mono\">" + num(avg, 4) +
-        '</td><td class="mono">' + num(p.stop, 4) + '</td><td class="mono ' +
-        cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
+        (p.fills || []).length + "u</td><td class=\"mono\">" + qtyStr(p.units) +
+        "</td><td class=\"mono\">" + num(avg, 4) +
+        '</td><td class="mono">' + num(p.stop, 4) + "</td>";
+      if (levered) {
+        const distR = liqDistanceR(p);
+        row += '<td class="mono">' + (p.posted != null ? money(p.posted) : "—") +
+          '</td><td class="mono">' + (distR != null ? num(distR, 2) + "R" : "—") + "</td>";
+      }
+      row += '<td class="mono ' + cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
+      return row;
     };
 
     // BOOK IS THE MONEY SURFACE (Phase 7): what is open and what just closed
@@ -890,29 +946,54 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     let h = "";
 
     if (open.length) {
+      // Two table SHAPES, not one table with blank columns (Phase C): a
+      // cash row drawn with empty Posted/Liq cells reads as "almost
+      // levered", which is the exact confusion this split avoids. Split is
+      // by leverageOf(p.market), read from params -- never a market-name
+      // check -- so this holds however many levered sleeves ever exist.
+      const openCash = open.filter((p) => !leverageOf(p.market));
+      const openLevered = open.filter((p) => leverageOf(p.market));
       const anyFutures = open.some((p) => p.market === "futures");
-      h += `<section class="tt-card"><h3>Open positions</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
-        <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
-        <tbody>${open.map(posRow).join("")}</tbody></table></div>
-        <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
-        recent unit. On the equity and crypto books the cash constraint binds
-        fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
-        routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
-        That is exactly the leverage the Turtles had from futures margin and a
-        cash account does not.</p>
-        ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
-        NOT constrained by cash.</b> A futures position consumes margin, not
-        notional, and this repo has no margin data — so the only ceilings on the
-        futures book are the unit caps (${P.max_units} per market,
-        ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
-        direction) and the refusal to hold less than one contract. Do not read a
-        futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
-        would fit: the notional behind those contracts is many multiples of the
-        account, and the leverage was never priced. It is disclosed rather than
-        modelled because a fabricated margin number would be worse than an
-        absent one.</p>` : ""}</section>`;
+      if (openCash.length) {
+        h += `<section class="tt-card"><h3>Open positions</h3>
+          <div class="tt-tablewrap"><table class="tt-table">
+          <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
+          <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
+          <tbody>${openCash.map((p) => posRow(p, false)).join("")}</tbody></table></div>
+          <p class="tt-note">"Units" is the Turtle pyramid count (1-4, one add per
+          ${P.pyramid_step_n}N); "Qty" is the actual coin or share count that count
+          was built from. One shared stop per position, ${P.stop_n}N under the most
+          recent unit. On the equity and crypto books the cash constraint binds
+          fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
+          routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
+          That is exactly the leverage the Turtles had from futures margin and a
+          cash account does not.</p>
+          ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
+          NOT constrained by cash.</b> A futures position consumes margin, not
+          notional, and this repo has no margin data — so the only ceilings on the
+          futures book are the unit caps (${P.max_units} per market,
+          ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
+          direction) and the refusal to hold less than one contract. Do not read a
+          futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
+          would fit: the notional behind those contracts is many multiples of the
+          account, and the leverage was never priced. It is disclosed rather than
+          modelled because a fabricated margin number would be worse than an
+          absent one.</p>` : ""}</section>`;
+      }
+      if (openLevered.length) {
+        h += `<section class="tt-card"><h3>Open positions — levered sleeve</h3>
+          <div class="tt-tablewrap"><table class="tt-table">
+          <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
+          <th>Avg fill</th><th>Stop</th><th>Posted</th><th>Liq dist.</th>
+          <th>Open R</th><th>Since</th></tr></thead>
+          <tbody>${openLevered.map((p) => posRow(p, true)).join("")}</tbody></table></div>
+          <p class="tt-note">Posted is the margin actually at risk on this position
+          (notional/leverage, isolated). Liq dist. is how far price sits from the
+          line where posted margin runs out, in the same ${P.stop_n}N unit the stop
+          uses — a stop and a liquidation are different exits, and whichever is
+          nearer fires first. A blank cell here means a required field is missing
+          on that row, never a guessed number.</p></section>`;
+      }
     }
 
     const closed = (BOOK.closed || []).slice(-25).reverse();
@@ -936,13 +1017,31 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       // page cannot describe a 5x book the engine is not running.
       const lev5 = mk.map((m) => [m, (BOOK.by_market[m] || {}).params])
         .find(([, p]) => p && p.leverage > 1);
+      // The correlated-group cap number in the note below is READ from the
+      // skip rows' own units_on_book/cap (Phase C) -- never the literal 6 --
+      // and only appears at all if a close_corr_cap skip against this
+      // sleeve actually exists to derive it from.
+      const capBind = (() => {
+        if (!lev5) return null;
+        const hits = (BOOK.skips || []).filter((k) =>
+          k.reason === "close_corr_cap" && k.market === lev5[0]);
+        if (!hits.length) return null;
+        const worst = hits.reduce((a, b) =>
+          (b.units_on_book || 0) > (a.units_on_book || 0) ? b : a, hits[0]);
+        return (worst.units_on_book == null || worst.cap == null) ? null :
+          { on: worst.units_on_book, cap: worst.cap, n: hits.length };
+      })();
       h += `<section class="tt-card"><h3>By market</h3>
         <div class="tt-tablewrap"><table class="tt-table">
         <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
         <tbody>${mk.map((m) => {
           const b = BOOK.by_market[m] || {};
+          const margins = b.params && b.params.leverage > 1 &&
+            b.posted_margin != null && b.free_margin != null
+            ? " (" + money(b.posted_margin, 0) + " posted, " + money(b.free_margin, 0) + " free)"
+            : "";
           const veh = b.params && b.params.leverage > 1
-            ? big(b.params.leverage) + "&times; margin" : "cash";
+            ? big(b.params.leverage) + "&times; margin" + margins : "cash";
           return "<tr><td>" + esc(m.toUpperCase()) + "</td><td>" + veh +
             '</td><td class="mono">' +
             money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
@@ -957,7 +1056,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         adverse move consumes its posted margin is closed as
         <b>liquidation</b>, at the liquidation price — isolated margin cannot
         lose more than it posted. It is a NEW series beside the cash crypto
-        book, never a restatement of it.</p>` : ""}</section>`;
+        book, never a restatement of it.${capBind ? ` The correlated-group cap is
+        <b>binding, not the margin</b>: <b>${big(capBind.on)}/${big(capBind.cap)}</b>
+        crypto units already held is why further adds and new names are being
+        declined tonight (see Not taken, and why, below) while margin itself
+        still has room. Filling the cap on day one is the system saying "this
+        is one correlated bet", not a shortage of money.` : ""}</p>` : ""}</section>`;
     }
 
     // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
@@ -979,15 +1083,48 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         same_bar_reentry: "exited on this bar — waiting for a NEW break",
         s1_skip_after_win: "System 1 filter: the last breakout won",
       };
+      // Short forms for the one-line summary (Phase C) -- same reasons,
+      // compact enough for a sentence rather than a detail grid.
+      const SHORT_WHY = {
+        direction_cap: "direction (cap binding)", close_corr_cap: "close-corr (cap binding)",
+        loose_corr_cap: "loose-corr (cap binding)", per_market_cap: "per-name (cap binding)",
+        cash: "cash", no_margin: "no margin", unit_lt_one: "unit < 1 contract",
+        no_margin_file: "no margin file", roll_window: "roll suspect",
+        same_bar_reentry: "same-bar re-entry", s1_skip_after_win: "S1 filtered",
+      };
       const counts = BOOK.skip_counts || {};
       const byReason = Object.keys(counts).filter((k) => k !== "total")
         .sort((a, b) => counts[b] - counts[a]);
+      const summaryLine = big(counts.total || 0) + " skips: " +
+        byReason.map((r) => big(counts[r]) + " " + esc(SHORT_WHY[r] || r)).join(" · ");
+      // Dedup by symbol x reason x action, with a count (Phase C): a name
+      // skipped for the same reason across the crypto book's 4-hourly
+      // reruns should read as one row with a count, not N near-identical
+      // ones. Zero duplicates exist as of tonight's single run -- this is
+      // for the night that does accumulate them, not a fix for tonight.
+      const dedup = new Map();
+      skips.forEach((k) => {
+        const key = (k.symbol || "") + "|" + (k.reason || "") + "|" + (k.action || "");
+        const existing = dedup.get(key);
+        if (existing) existing.n += 1; else dedup.set(key, Object.assign({ n: 1 }, k));
+      });
+      // Tonight's actual readability problem was never duplication -- it
+      // was ORDER. The scan writes skips market-by-market (asx first), so
+      // the old raw slice(0,40) showed 40 ASX cash rows and never reached
+      // the 12 close_corr_cap ones at all. Sort by how RARE the reason is
+      // (ascending count) so the structural, diagnostic reasons surface
+      // before the numerous cash ones, which the sentence above already
+      // summarises on their own.
+      const rows = Array.from(dedup.values()).sort((a, b) =>
+        (counts[a.reason] || 0) - (counts[b.reason] || 0) ||
+        (a.symbol || "").localeCompare(b.symbol || ""));
       h += `<section class="tt-card" id="tt-skips"><h3>Not taken, and why</h3>
+        <p class="tt-note">${esc(summaryLine)}</p>
         <div class="tt-detail-grid">${byReason.map((r) =>
           kv(esc(WHY[r] || r), big(counts[r]))).join("")}</div>
         <div class="tt-tablewrap"><table class="tt-table">
         <thead><tr><th>Symbol</th><th>Market</th><th>Action</th><th>Reason</th><th>Detail</th></tr></thead>
-        <tbody>${skips.slice(0, 40).map((k) => {
+        <tbody>${rows.slice(0, 40).map((k) => {
           const d = [];
           if (k.units_on_book != null) d.push(k.units_on_book + " on book vs cap " + k.cap);
           if (k.units_held != null && k.units_on_book == null) d.push(k.units_held + " units held");
@@ -999,13 +1136,20 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           if (k.bar) d.push("bar " + esc(k.bar));
           return "<tr><td class=\"mono\">" + openSymbolHTML(k.symbol, k.market) + "</td><td>" +
             esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
+            (k.n > 1 ? " &times;" + big(k.n) : "") +
             "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
             esc(d.join(" · ")) + "</td></tr>";
         }).join("")}</tbody></table></div>
-        <p class="tt-note">These are decisions, not failures. A cap that binds is
-        the system working; cash binding at ${money(s.equity_start, 0)} is the
-        futures-margin gap this account does not have, and it is the finding
-        rather than something to tune away.</p></section>`;
+        <p class="tt-note">These are decisions, not failures, and not one story.
+        ${counts.cash ? `The <b>${big(counts.cash)} cash</b> skips are the CASH
+        books refusing a unit that would exceed their account — see Equity in
+        By market, above; that is the futures-margin gap those sleeves do not
+        have.` : ""}
+        ${counts.close_corr_cap ? `The <b>${big(counts.close_corr_cap)}
+        close-corr</b> skips are a DIFFERENT sleeve hitting its own
+        correlated-unit cap with margin still free — a structural limit doing
+        its job, not a shortage of money. Reading the two as one story
+        misreads both.` : ""}</p></section>`;
     }
 
     h += `
@@ -1032,10 +1176,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
         <p class="tt-note">Equity here is <b>realised only</b> — open positions are
         not marked into the headline. This is <b>${mk.length} separate sleeve${mk.length === 1 ? "" : "s"}, not one account</b>
-        — one book per market, own equity, own slot pool — and the combined
+        — one book per market, own equity, own slot pool.${mk.length > 1 ? ` ${money(s.equity_start, 0)}
+        start is ${mk.length} sleeves of about ${money(s.equity_start / mk.length, 0)} each, not
+        one bigger bet.` : ""} The combined
         figures add A$ and US$ <b>at face value</b> (no FX conversion): read
         the per-market rows for anything you would act on. The crypto books run
-        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
+        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.${singleSleeveNote}</p>
 </section>`;
 
     // The five-year portfolio replay, LAST: context for reading the facts

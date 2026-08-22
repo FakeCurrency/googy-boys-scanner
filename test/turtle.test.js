@@ -1142,6 +1142,122 @@ test("the portfolio card still avoids grading language from its new BOOK call si
   assert.ok(!/does this work/i.test(body));
 });
 
+// ── the 5x print on the book (Phase C, 2026-08-23) ──────────────────────────
+// Structural, same convention as suite 13 above: posRow/capSkipBadgeHTML/the
+// skip-board dedup are not on the exported GBSTurtle surface, so this pins
+// the SOURCE shape rather than executing them against fixture data. The
+// concrete numbers (a real crypto5x row showing "1u" beside its real coin
+// quantity, the skip summary actually reading "N skips: 70 cash · 12
+// close-corr...") were traced live against tonight's real journal data with
+// a throwaway Playwright script, per the same Phase 7 precedent -- not
+// folded in here.
+suite("the 5x print on the book (Phase C) — qty vs units, two table shapes, cap badge, skip summary, single-sleeve caveat");
+
+test("posRow renders the Turtle-unit count and the coin/share quantity as two adjacent, distinct cells", () => {
+  const body = SRC.slice(SRC.indexOf("const qtyStr ="), SRC.indexOf("const posRow =") + 1400);
+  assert.ok(/const qtyStr = \(u\) => \(u == null \? "—" : u < 10 \? num\(u, 4\) : num\(u, 2\)\);/.test(body),
+    "qtyStr must format the real quantity at 4dp under 10 and 2dp at/above -- a ZEC-sized 1.2655 and a UNI-sized 213.65 both need real precision, never rounded to an integer");
+  const fillsIdx = body.indexOf('(p.fills || []).length + "u');
+  const qtyIdx = body.indexOf("qtyStr(p.units)");
+  assert.ok(fillsIdx !== -1,
+    "the Units cell must come from fills.length (the Turtle pyramid count, 1-4) -- p.units is coin/contract quantity, so a UNI-shaped {units: 213.65, fills: [4.14]} position must render 1u, never 214u");
+  assert.ok(qtyIdx !== -1, "the Qty cell must come from qtyStr(p.units), as a column of its own");
+  assert.ok(fillsIdx !== -1 && qtyIdx !== -1 && qtyIdx > fillsIdx && qtyIdx - fillsIdx < 60,
+    "Units and Qty must be two adjacent cells in the same row, in that order, not merged or separated by unrelated markup");
+});
+
+test("open positions split into two table shapes by leverage, never one table with blank Posted/Liq cells", () => {
+  assert.ok(/const posRow = \(p, levered\) => \{/.test(SRC),
+    "posRow must take a levered flag so cash/levered rendering diverges from one function, not two copies");
+  const body = SRC.slice(SRC.indexOf("if (open.length) {"), SRC.indexOf("const closed = (BOOK.closed"));
+  assert.ok(/const openCash = open\.filter\(\(p\) => !leverageOf\(p\.market\)\);/.test(body),
+    "cash rows must be filtered by leverageOf(p.market), never a market-name check");
+  assert.ok(/const openLevered = open\.filter\(\(p\) => leverageOf\(p\.market\)\);/.test(body),
+    "levered rows must be filtered by leverageOf(p.market), never a market-name check");
+  assert.ok(/<h3>Open positions<\/h3>/.test(body) && /<h3>Open positions — levered sleeve<\/h3>/.test(body),
+    "both section headings must be present");
+  const cashSection = body.slice(body.indexOf("if (openCash.length)"), body.indexOf("if (openLevered.length)"));
+  const leveredSection = body.slice(body.indexOf("if (openLevered.length)"));
+  assert.ok(!/<th>Posted<\/th>/.test(cashSection) && !/<th>Liq dist\.<\/th>/.test(cashSection),
+    "the cash table's <thead> must not carry Posted/Liq columns at all -- a blank cell reads as almost-levered");
+  assert.ok(/<th>Posted<\/th>/.test(leveredSection) && /<th>Liq dist\.<\/th>/.test(leveredSection),
+    "the levered table's <thead> must carry Posted/Liq columns");
+  assert.ok(/openCash\.map\(\(p\) => posRow\(p, false\)\)/.test(cashSection),
+    "cash rows must call posRow with levered=false");
+  assert.ok(/openLevered\.map\(\(p\) => posRow\(p, true\)\)/.test(leveredSection),
+    "levered rows must call posRow with levered=true");
+});
+
+test("capSkipBadgeHTML is scoped to close_corr_cap, derived from the matched skip row, and never names a sleeve or multiplier literally", () => {
+  const body = SRC.slice(SRC.indexOf("function capSkipBadgeHTML("), SRC.indexOf("function bookOpenHTML("));
+  assert.ok(/k\.reason === "close_corr_cap"/.test(body),
+    "must scope to close_corr_cap skips only, not a general skip-reason display");
+  assert.ok(/scanMarketFor\(k\.market\) === MARKET/.test(body),
+    "must cross-reference the skip's market to this row's market via scanMarketFor -- the same generic suffix-strip Phase 7 uses for the open-position jump -- never a hardcoded sleeve key");
+  assert.ok(/big\(last\.units_on_book \|\| 0\)/.test(body) && /big\(last\.cap \|\| 0\)/.test(body),
+    "the badge's title must be derived from the matched skip row's own units_on_book/cap, never a hardcoded number");
+  assert.ok(/leverageOf\(last\.market\)/.test(body),
+    "the badge's multiplier label must come from the matched skip's own leverage, never a literal '5x'/'5×'");
+  assert.ok(!/["']5[x×]["']/i.test(body), "must never hardcode a '5x'/'5×' string literal");
+});
+
+test("capSkipBadgeHTML is wired into the row head, right after the vehicle badge", () => {
+  const body = SRC.slice(SRC.indexOf("function rowHTML("), SRC.indexOf("function rowHTML(") + 2000);
+  assert.ok(/vehicleBadgeHTML\(r\.symbol\)\s*\+\s*capSkipBadgeHTML\(r\.symbol\)/.test(body),
+    "capSkipBadgeHTML must be called immediately after vehicleBadgeHTML in the row head");
+});
+
+test("the skip board deduplicates by symbol×reason×action with a count, and sorts by reason rarity so structural caps surface before the numerous cash rows", () => {
+  const body = SRC.slice(SRC.indexOf("const skips = BOOK.skips || [];"),
+    SRC.indexOf("<h3>The forward book — the only honest number here</h3>"));
+  assert.ok(/const dedup = new Map\(\);/.test(body), "must dedup via a Map");
+  assert.ok(/\(k\.symbol \|\| ""\) \+ "\|" \+ \(k\.reason \|\| ""\) \+ "\|" \+ \(k\.action \|\| ""\)/.test(body),
+    "dedup key must be symbol|reason|action, matching the spec's symbol×reason×action");
+  assert.ok(/existing\.n \+= 1/.test(body), "a repeat must increment a count, not be dropped or duplicated");
+  assert.ok(/rows\.slice\(0, 40\)/.test(body) && !/skips\.slice\(0, 40\)/.test(body),
+    "the table must iterate the deduped, sorted rows -- not the raw skips array, which buries the 12 close_corr_cap rows under 40 consecutive ASX cash rows");
+  assert.ok(/\(counts\[a\.reason\] \|\| 0\) - \(counts\[b\.reason\] \|\| 0\)/.test(body),
+    "rows must sort by ascending reason frequency so the rarer, structural reasons surface first");
+  assert.ok(/k\.n > 1 \? " &times;" \+ big\(k\.n\)/.test(body),
+    "a deduped row's count must render in the Action cell when it collapsed more than one skip");
+});
+
+test("the skip board has a one-line summary sentence built live from skip_counts, and its closing note distinguishes cash skips from close-corr skips", () => {
+  const body = SRC.slice(SRC.indexOf("const skips = BOOK.skips || [];"),
+    SRC.indexOf("<h3>The forward book — the only honest number here</h3>"));
+  assert.ok(/const summaryLine = big\(counts\.total \|\| 0\) \+ " skips: "/.test(body),
+    "the summary must be built from skip_counts.total, never a hardcoded '83'");
+  assert.ok(/\$\{esc\(summaryLine\)\}/.test(body), "the summary sentence must actually render into the section, not just be computed");
+  assert.ok(/counts\.cash \? `The <b>\$\{big\(counts\.cash\)\} cash<\/b>/.test(body),
+    "the closing note must call out cash skips by their own live count, as its own sentence");
+  assert.ok(/counts\.close_corr_cap \? `The <b>\$\{big\(counts\.close_corr_cap\)\}/.test(body),
+    "the closing note must call out close-corr skips by their own live count, as a SEPARATE sentence from the cash one -- the two must never be read as one story");
+  assert.ok(!/the book is broke/i.test(body), 'the copy must never say "the book is broke"');
+});
+
+test("the combined headline flags when only some sleeves have closed a trade, derived from by_market rather than a named sleeve", () => {
+  const body = SRC.slice(SRC.indexOf("const mk = Object.keys"), SRC.indexOf("const openSymbolHTML ="));
+  assert.ok(/const closedSleeves = mk\.filter\(\(m\) => \(BOOK\.by_market\[m\] \|\| \{\}\)\.closed > 0\);/.test(body),
+    "closedSleeves must be derived from by_market's own closed counts, never a hardcoded sleeve name");
+  assert.ok(/closedSleeves\.length && closedSleeves\.length < mk\.length/.test(body),
+    "the caveat must only fire when SOME but not all sleeves have closed a trade");
+  assert.ok(/closedSleeves\.map\(\(m\) => esc\(m\.toUpperCase\(\)\)\)\.join\(", "\)/.test(body),
+    "the caveat must name whichever sleeve(s) actually carry the total, read from the data, not written in prose");
+});
+
+test("the face-value sentence divides equity_start by the real sleeve count, and the single-sleeve caveat actually renders", () => {
+  const start = SRC.indexOf('<p class="tt-note">Equity here is');
+  assert.ok(start !== -1, "the realised-only paragraph must still exist");
+  const body = SRC.slice(start, SRC.indexOf("</section>", start) + 10);
+  assert.ok(/Equity here is <b>realised only<\/b>/.test(body), "the realised-only rule itself must stay untouched");
+  assert.ok(/mk\.length > 1 \?/.test(body),
+    "the sleeve-count sentence must be conditioned on the real mk.length, not assumed always-plural");
+  assert.ok(/money\(s\.equity_start \/ mk\.length, 0\)/.test(body),
+    "must divide the real equity_start by the real sleeve count, never a hardcoded $5,000 or fixed divisor");
+  assert.ok(/\$\{singleSleeveNote\}/.test(body),
+    "the single-sleeve caveat computed above must actually be appended to this paragraph, not just computed and discarded");
+});
+
 // ── 14. mobile 320px (Phase 8) ───────────────────────────────────────────────
 // This suite is structural (CSS text), same reasoning as the JS structural
 // tests above: it locks the RULE being present, not the rendered pixel
