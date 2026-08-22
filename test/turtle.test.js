@@ -723,7 +723,12 @@ test("popstate never calls pushState or replaceState itself", () => {
 suite("the click handlers push exactly one history entry each, in state -> push -> render order");
 
 test("the view-tab delegate is scoped to #tt-views, not document-wide", () => {
-  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  // mount() is the last function before the window.GBSTurtle export, so
+  // slicing to that export is the whole function body -- robust to mount()
+  // growing in later phases, unlike a fixed character count that a later
+  // phase's own new click branch can silently push past (Phase 6 did,
+  // fixing what used to be a hardcoded +3500 here).
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(!/closest\("\[data-view\]"\)/.test(mountBody),
     "a document-wide [data-view] delegate would let a future deck pill steal the view-tab handler");
   assert.ok(/closest\("#tt-views \[data-view\]"\)/.test(mountBody),
@@ -731,7 +736,12 @@ test("the view-tab delegate is scoped to #tt-views, not document-wide", () => {
 });
 
 test("market, view, filter, goto and row handlers each call pushURLState", () => {
-  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  // mount() is the last function before the window.GBSTurtle export, so
+  // slicing to that export is the whole function body -- robust to mount()
+  // growing in later phases, unlike a fixed character count that a later
+  // phase's own new click branch can silently push past (Phase 6 did,
+  // fixing what used to be a hardcoded +3500 here).
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(/VIEW = v\.dataset\.view;[\s\S]{0,80}pushURLState\(\)/.test(mountBody),
     "the view-tab handler must push before it renders");
   assert.ok(/VIEW = g\.dataset\.goto;[\s\S]{0,80}pushURLState\(\)/.test(mountBody),
@@ -745,7 +755,7 @@ test("market, view, filter, goto and row handlers each call pushURLState", () =>
 });
 
 test("Enter/Space on a row head pushes too, the same as a click on it", () => {
-  const keydownBody = SRC.slice(SRC.indexOf('addEventListener("keydown"'), SRC.indexOf("function mount(") + 4500);
+  const keydownBody = SRC.slice(SRC.indexOf('addEventListener("keydown"'), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(/OPEN = OPEN === row\.dataset\.sym[\s\S]{0,60}pushURLState\(\)/.test(keydownBody),
     "keyboard row-toggle must push history exactly like the click handler does");
 });
@@ -823,13 +833,23 @@ test("the deck renders unconditionally — pills are not gated to the SIGNALS vi
 });
 
 test("a pill click switches VIEW to signals as well as FILTER, so a pill works from any view", () => {
-  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  // mount() is the last function before the window.GBSTurtle export, so
+  // slicing to that export is the whole function body -- robust to mount()
+  // growing in later phases, unlike a fixed character count that a later
+  // phase's own new click branch can silently push past (Phase 6 did,
+  // fixing what used to be a hardcoded +3500 here).
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(/FILTER = f\.dataset\.filter; VIEW = "signals";/.test(mountBody),
     "clicking a deck pill from RULES/SIZING/EVIDENCE must land on SIGNALS with that filter live");
 });
 
 test("SKIPS is its own attribute — not a sixth view, not a FILTER value", () => {
-  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  // mount() is the last function before the window.GBSTurtle export, so
+  // slicing to that export is the whole function body -- robust to mount()
+  // growing in later phases, unlike a fixed character count that a later
+  // phase's own new click branch can silently push past (Phase 6 did,
+  // fixing what used to be a hardcoded +3500 here).
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(/closest\("\[data-skips\]"\)/.test(mountBody));
   assert.ok(/VIEW = "book";[\s\S]{0,40}pushURLState\(\)/.test(mountBody),
     "SKIPS must push the existing book view onto the URL like any other view change");
@@ -859,6 +879,130 @@ test("the default FILTER falls fired -> held -> all, gated on TOUCHED so a URL o
   assert.ok(/if \(!a\.fired_today\)/.test(loadBody), "only falls through when FIRED TODAY is truly empty");
   assert.ok(/FILTER = \(a\.long \|\| a\.short\) \? "held" : "all"/.test(loadBody),
     "held next, then all — never straight to all while any position is open");
+});
+
+// ── 13. rows, chart links and book facts (Phase 6) ──────────────────────────
+// chartHref is pure and now exported, so it gets real functional tests, the
+// same as parseTurtleURL/serialiseTurtleURL. Everything that needs BOOK/DATA
+// state (the vehicle badge, the sort cycle actually reordering rows, the
+// book-open/skip panels) is asserted structurally for the same reason as the
+// Phase 5 suite above: this harness cannot simulate a real click or read
+// rendered HTML. The dynamic proof (real fetch fixtures, real clicks, real
+// innerHTML) went through a throwaway script — deleted after its output was
+// pasted into the phase report — covering: an ASX/CRYPTO row's chart <a>,
+// a FUTURES row's honest no-link text, the vehicle badge appearing only on
+// a symbol actually open in a levered sleeve (never on a cash-only open
+// position or a name that isn't open anywhere), all four sort stops
+// actually reordering a populated fixture, the book-open detail panel
+// (units/avg/stop/open R, plus posted margin + a re-derived liquidation
+// distance on a levered sleeve), the skip line showing the raw reason code,
+// and a hostile symbol breaking neither the href nor the row toggle.
+suite("chartHref — asx/nasdaq/crypto get a real link, futures never gets a dead one");
+
+test("chartHref builds chart.html?m=<market>&s=<sym>&src=turtle for a cash market", () => {
+  assert.equal(T.chartHref("asx", "TLC"), "chart.html?m=asx&s=TLC&src=turtle");
+  assert.equal(T.chartHref("nasdaq", "AAPL"), "chart.html?m=nasdaq&s=AAPL&src=turtle");
+  assert.equal(T.chartHref("crypto", "BTC"), "chart.html?m=crypto&s=BTC&src=turtle");
+});
+
+test("chartHref returns null for futures — chart.html cannot take a continuous contract symbol", () => {
+  assert.equal(T.chartHref("futures", "6E"), null);
+  assert.equal(T.chartHref("futures", "=F"), null);
+});
+
+test("chartHref encodes a hostile symbol rather than splicing it into the query string raw", () => {
+  const href = T.chartHref("asx", 'A"><script>alert(1)</script>');
+  assert.ok(!href.includes("<script>") && !href.includes('"') && !href.includes("<"));
+});
+
+suite("row head + detail — stop figure, vehicle badge, chart link, book facts, sort cycle");
+
+test("the row head shows a stop figure from the published unit_stop_loss, guarded on its presence", () => {
+  const body = SRC.slice(SRC.indexOf("function rowHTML("), SRC.indexOf("const kv ="));
+  assert.ok(/r\.unit_stop_loss != null/.test(body), "must not render a stop line the payload never sent");
+});
+
+test("the vehicle badge is derived from params.leverage, never a hardcoded multiplier", () => {
+  const body = SRC.slice(SRC.indexOf("function vehicleBadgeHTML("), SRC.indexOf("function bookOpenHTML("));
+  assert.ok(/leverageOf\(positions\[i\]\.market\)/.test(body),
+    "must look up the sleeve's own params, not assume which market is levered");
+  assert.ok(/big\(lev\)/.test(body), "the displayed multiplier must come from the params value");
+});
+
+test("the vehicle badge only matches a symbol actually open in a levered sleeve", () => {
+  const body = SRC.slice(SRC.indexOf("function bookOpenPositions("), SRC.indexOf("function leverageOf("));
+  assert.ok(/BOOK\.open\.filter\(\(p\) => p\.symbol === symbol\)/.test(body),
+    "must filter BOOK.open by this exact symbol, not assume a match");
+});
+
+test("the detail panel links to a real chart for asx/nasdaq/crypto and never a dead futures link", () => {
+  const body = SRC.slice(SRC.indexOf("function rowHTML("), SRC.indexOf("const kv ="));
+  assert.ok(/const href = chartHref\(MARKET, r\.symbol\)/.test(body));
+  assert.ok(/no chart for this contract\./.test(body), "the futures fallback text, verbatim");
+  assert.ok(!/<a[^>]*href="[^"]*"[^>]*>\s*<\/a>|href=""/.test(body), "never an empty or dead <a>");
+});
+
+test("book-open facts (units/avg/stop/open R) never invent a missing field", () => {
+  const openRBody = SRC.slice(SRC.indexOf("function openR("), SRC.indexOf("function liqDistanceR("));
+  assert.ok(/if \(!p \|\| !p\.n \|\| !p\.units \|\| p\.last_mark == null \|\| p\.cost_basis == null\) return null;/
+    .test(openRBody), "openR must return null, not a guess, when a required field is missing");
+  const bookOpenBody = SRC.slice(SRC.indexOf("function bookOpenHTML("), SRC.indexOf("function bookSkipHTML("));
+  assert.ok(/avg != null \? kv\("Avg fill"/.test(bookOpenBody));
+  assert.ok(/p\.stop != null \? kv\("Stop"/.test(bookOpenBody));
+  assert.ok(/r != null \? kv\("Open R"/.test(bookOpenBody));
+});
+
+test("posted margin and liquidation distance only render on a levered sleeve, liq distance re-derived from published fields only", () => {
+  const liqBody = SRC.slice(SRC.indexOf("function liqDistanceR("), SRC.indexOf("function bookOpenPositions("));
+  assert.ok(/if \(!p \|\| !p\.posted \|\| !p\.units \|\| p\.cost_basis == null \|\| p\.last_mark == null \|\| !p\.n\) return null;/
+    .test(liqBody), "must omit rather than fabricate when posted/units/cost_basis/last_mark/n is missing");
+  assert.ok(!/pos\[["']liq/i.test(liqBody) && !/\.liq_price|\.liquidation_price/.test(liqBody),
+    "the payload never publishes a liq price field — must be computed, not read from a field that doesn't exist");
+  const bookOpenBody = SRC.slice(SRC.indexOf("function bookOpenHTML("), SRC.indexOf("function bookSkipHTML("));
+  assert.ok(/if \(lev\) \{/.test(bookOpenBody), "posted/liq lines must be gated on the sleeve actually being levered");
+});
+
+test("the skip line shows the book's raw reason code, verbatim, not a translated phrase", () => {
+  const body = SRC.slice(SRC.indexOf("function bookSkipHTML("), SRC.indexOf("const SORT_CYCLE"));
+  assert.ok(/<code>" \+ esc\(last\.reason \|\| ""\) \+ "<\/code>/.test(body));
+});
+
+test("the sort cycle is FIRED -> DISTANCE -> N -> SYMBOL, default FIRED, persisted via the sort URL key", () => {
+  assert.deepEqual(T.parseTurtleURL("").sort, "fired");
+  const body = SRC.slice(SRC.indexOf("const SORT_CYCLE"), SRC.indexOf("function distanceOf("));
+  assert.ok(/const SORT_CYCLE = \["fired", "distance", "n", "symbol"\];/.test(body));
+});
+
+test("the sort-cycle button advances SORT and repaints its own label (render, not renderBody)", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
+  assert.ok(/closest\("\[data-sort-cycle\]"\)/.test(mountBody));
+  assert.ok(/SORT = SORT_CYCLE\[\(SORT_CYCLE\.indexOf\(SORT\) \+ 1\) % SORT_CYCLE\.length\];[\s\S]{0,40}pushURLState\(\);[\s\S]{0,20}render\(\);/
+    .test(mountBody), "must call the full render(), or the button's own displayed sort name never updates");
+});
+
+test("distance-sort never invents a value: fired is 0, otherwise the payload's own nearest/stop distance, else last", () => {
+  const body = SRC.slice(SRC.indexOf("function distanceOf("), SRC.indexOf("function sortRows("));
+  assert.ok(/if \(r\.signal\) return 0;/.test(body));
+  assert.ok(/r\.nearest\.distance_pct/.test(body));
+  assert.ok(/r\.stop_distance_pct/.test(body));
+  assert.ok(/return Infinity;/.test(body), "unsortable rows must sort last, not be given a fake distance");
+});
+
+test("rowsFor copies before it sorts — DATA.results itself is never mutated", () => {
+  const rowsForBody = SRC.slice(SRC.indexOf("function rowsFor("), SRC.indexOf("function stateChip("));
+  assert.ok(/let rows = DATA\.results\.slice\(\);/.test(rowsForBody), "must copy before any filtering or sorting");
+  assert.ok(/return sortRows\(rows\);/.test(rowsForBody), "must sort the local copy, never DATA.results directly");
+  const sortBody = SRC.slice(SRC.indexOf("function sortRows("), SRC.indexOf("function rowHTML("));
+  assert.ok(!/DATA\.results/.test(sortBody), "sortRows must not reach back into DATA.results at all");
+});
+
+test("hostile row symbols still cannot break the keyboard focus-restore selector (Phase 6 unchanged)", () => {
+  // Re-asserted here because Phase 6 is the first phase where a row's own
+  // detail can throw on missing fields if openR/liqDistanceR/bookOpenHTML
+  // aren't careful -- this guards the OLDER, unrelated selector-safety
+  // guarantee stays intact alongside the new code, not the new code itself.
+  assert.ok(!/querySelector\([^)]*\+\s*row\.dataset/.test(CODE));
+  assert.ok(/rows\[i\]\.dataset\.sym === row\.dataset\.sym/.test(CODE));
 });
 
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);

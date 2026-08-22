@@ -434,7 +434,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       rows = rows.filter((r) => (r.symbol || "").toUpperCase().indexOf(q) >= 0 ||
         (r.name || "").toUpperCase().indexOf(q) >= 0);
     }
-    return rows;
+    return sortRows(rows);
   }
 
   function stateChip(r) {
@@ -460,6 +460,130 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     s1_short: "the " + P.s1_entry + "-day low", s2_short: "the " + P.s2_entry + "-day low",
   }[k] || k);
 
+  // ── chart links + book facts on a row (Phase 6) ─────────────────────────────
+  // chart.html has no page for a continuous futures contract (=F / 6E-style
+  // symbols); a link it cannot resolve is worse than no link, so futures
+  // gets a short honest sentence instead of a 404 <a>.
+  function chartHref(market, sym) {
+    if (market === "futures") return null;
+    return "chart.html?m=" + encodeURIComponent(market) + "&s=" + encodeURIComponent(sym) + "&src=turtle";
+  }
+
+  // One R formula, shared with bookHTML()'s own open-positions table, so a
+  // position can never show two different R's depending on which part of
+  // the page you're reading. Any required field missing -> null, so the
+  // caller omits the line rather than showing a guess.
+  function openR(p) {
+    if (!p || !p.n || !p.units || p.last_mark == null || p.cost_basis == null) return null;
+    const sign = p.side === "short" ? -1 : 1;
+    const avg = p.cost_basis / p.units;
+    return sign * (p.last_mark - avg) * p.units / (P.stop_n * p.n * p.units);
+  }
+
+  // Isolated margin's liquidation line -- the same formula
+  // scanner/turtle_book.py uses internally to decide whether the stop or
+  // the liquidation price binds first. It is never published as its own
+  // field, so it is re-derived here from fields that ARE published
+  // (cost_basis, units, posted, side, last_mark); any of them missing
+  // returns null rather than a fabricated distance.
+  function liqDistanceR(p) {
+    if (!p || !p.posted || !p.units || p.cost_basis == null || p.last_mark == null || !p.n) return null;
+    const avg = p.cost_basis / p.units;
+    const liq = p.side === "short" ? avg + p.posted / p.units : avg - p.posted / p.units;
+    return Math.abs(p.last_mark - liq) / (P.stop_n * p.n);
+  }
+
+  // A symbol can be open in more than one sleeve at once (a cash position
+  // and a levered one are separate books) -- every match is returned, not
+  // just the first.
+  function bookOpenPositions(symbol) {
+    if (!BOOK || !BOOK.open) return [];
+    return BOOK.open.filter((p) => p.symbol === symbol);
+  }
+
+  function leverageOf(market) {
+    const params = BOOK && BOOK.by_market && BOOK.by_market[market] && BOOK.by_market[market].params;
+    return params && params.leverage > 1 ? params.leverage : null;
+  }
+
+  // Vehicle badge: rendered from params.leverage, never a hardcoded
+  // multiplier -- and only for a symbol actually open in a levered sleeve,
+  // so a market that merely HAS a levered sleeve elsewhere never badges
+  // every row in it.
+  function vehicleBadgeHTML(symbol) {
+    const positions = bookOpenPositions(symbol);
+    for (let i = 0; i < positions.length; i++) {
+      const lev = leverageOf(positions[i].market);
+      if (lev) return '<span class="tt-chip" title="Open in a ' + big(lev) +
+        '&times; sleeve — a perp analogue, not futures margin, sized from posted ' +
+        'margin rather than notional">' + big(lev) + "&times; margin</span>";
+    }
+    return "";
+  }
+
+  function bookOpenHTML(symbol) {
+    const positions = bookOpenPositions(symbol);
+    if (!positions.length) return "";
+    return positions.map((p) => {
+      const avg = p.units ? p.cost_basis / p.units : null;
+      const r = openR(p);
+      const lev = leverageOf(p.market);
+      let g = '<div class="tt-detail-grid">' +
+        kv("In the book (" + esc((p.market || "").toUpperCase()) + ")",
+          esc(p.side || "") + " S" + esc(String(p.system || "?"))) +
+        kv("Units", (p.fills || []).length) +
+        (avg != null ? kv("Avg fill", money(avg)) : "") +
+        (p.stop != null ? kv("Stop", money(p.stop)) : "") +
+        (r != null ? kv("Open R", sgnR(r)) : "");
+      if (lev) {
+        if (p.posted != null) g += kv(big(lev) + "&times; posted margin", money(p.posted));
+        const distR = liqDistanceR(p);
+        if (distR != null) g += kv("Liquidation distance", num(distR, 2) + "R");
+      }
+      return g + "</div>";
+    }).join("");
+  }
+
+  // "verbatim" per the phase spec: the raw reason code as the book wrote
+  // it, not translated through bookHTML()'s own WHY table -- this is a
+  // fact about what the book did, not a second copy of that prose to keep
+  // in sync with the first.
+  function bookSkipHTML(symbol) {
+    if (!BOOK || !BOOK.skips) return "";
+    let last = null;
+    for (let i = 0; i < BOOK.skips.length; i++) if (BOOK.skips[i].symbol === symbol) last = BOOK.skips[i];
+    if (!last) return "";
+    return '<p class="tt-note">The book skipped this on ' + esc(last.as_of || last.bar || "the last bar") +
+      ": " + esc(last.action || "an action") + " &mdash; <code>" + esc(last.reason || "") + "</code></p>";
+  }
+
+  // ── sort (Phase 6) ───────────────────────────────────────────────────────
+  const SORT_CYCLE = ["fired", "distance", "n", "symbol"];
+  const SORT_LABELS = { fired: "FIRED", distance: "DISTANCE", n: "N", symbol: "SYMBOL" };
+
+  // 0 for a name that already fired (nothing is closer than today), then
+  // whatever the payload says is the nearest real distance -- to a trigger
+  // level for a flat/approaching name, to the stop for a held one. Anything
+  // with neither sorts last, never invented as some fake "far" number.
+  function distanceOf(r) {
+    if (r.signal) return 0;
+    if (r.nearest && r.nearest.distance_pct != null) return r.nearest.distance_pct;
+    if (r.stop_distance_pct != null) return r.stop_distance_pct;
+    return Infinity;
+  }
+
+  // rows arrives already a fresh array (rowsFor()'s own .slice()/.filter()
+  // chain, never DATA.results itself), so sorting it in place cannot reach
+  // the published payload -- copy-then-sort happens before this is called,
+  // not inside it.
+  function sortRows(rows) {
+    const bySymbol = (a, b) => (a.symbol || "").localeCompare(b.symbol || "");
+    if (SORT === "distance") return rows.sort((a, b) => distanceOf(a) - distanceOf(b) || bySymbol(a, b));
+    if (SORT === "n") return rows.sort((a, b) => (b.n || 0) - (a.n || 0) || bySymbol(a, b));
+    if (SORT === "symbol") return rows.sort(bySymbol);
+    return rows; // "fired" (default): the scan's own fired -> held -> proximity order, untouched
+  }
+
   function rowHTML(r) {
     const shares = unitShares(EQUITY, r.n);
     const open = OPEN === r.symbol;
@@ -472,9 +596,13 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           (r.s1_blocked ? '<span class="tt-chip is-blocked" title="The previous ' +
             P.s1_entry + '-day breakout in this name was a filter-winner, so System 1 is ' +
             'skipped until one fails. The ' + P.s2_entry + '-day failsafe still applies.">S1 filtered</span>' : "") +
+          vehicleBadgeHTML(r.symbol) +
         "</div>" +
         '<div class="tt-nums"><span class="mono">' + money(r.price) + "</span>" +
-          '<span class="mono tt-dim">N ' + num(r.n) + " (" + pct(r.n_pct) + ")</span></div>" +
+          '<span class="mono tt-dim">N ' + num(r.n) + " (" + pct(r.n_pct) + ")</span>" +
+          (r.unit_stop_loss != null ? '<span class="mono tt-dim">stop ' +
+            money(r.unit_stop_loss, 0) + "</span>" : "") +
+        "</div>" +
         '<div class="tt-nums"><span class="mono">' + num(shares, shares < 10 ? 4 : 0) + " units</span>" +
           '<span class="mono tt-dim">' + money(shares * r.price, 0) + "</span></div>" +
       "</div>";
@@ -487,6 +615,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!open) return '<article class="tt-row"' + attrs + ">" + head + "</article>";
 
     let detail = "";
+    const href = chartHref(MARKET, r.symbol);
+    detail += href
+      ? '<p class="tt-note"><a class="tt-link" href="' + esc(href) + '">Chart &rarr;</a></p>'
+      : '<p class="tt-note">no chart for this contract.</p>';
+    detail += bookOpenHTML(r.symbol);
+    detail += bookSkipHTML(r.symbol);
     if (r.contracts) {
       const c = r.contracts;
       detail += '<div class="tt-detail-grid">' +
@@ -1081,6 +1215,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
               '" data-filter="' + k + '">' + l + ' <span class="seg-count">' + big(counts[k]) +
               "</span></button>").join("") +
           "</div></div>" +
+          '<div class="control-group"><button type="button" class="seg-btn" data-sort-cycle="1" ' +
+          'title="Cycle sort: FIRED, DISTANCE, N, SYMBOL">SORT ' + SORT_LABELS[SORT] +
+          "</button></div>" +
           '<input class="pm-search" id="tt-search" type="search" placeholder="Ticker…" ' +
           'autocomplete="off" spellcheck="false" value="' + esc(QUERY) + '" />';
       }
@@ -1291,6 +1428,16 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       // for them and the whole reason a deck pill on RULES/SIZING/EVIDENCE
       // does anything at all.
       if (f) { FILTER = f.dataset.filter; VIEW = "signals"; TOUCHED = true; pushURLState(); render(); return; }
+      // Sort cycle (Phase 6): one button, four stops, FIRED -> DISTANCE ->
+      // N -> SYMBOL -> FIRED. render(), not renderBody(), because the
+      // button's own label has to repaint with the new sort name too.
+      const sc = e.target.closest("[data-sort-cycle]");
+      if (sc) {
+        SORT = SORT_CYCLE[(SORT_CYCLE.indexOf(SORT) + 1) % SORT_CYCLE.length];
+        pushURLState();
+        render();
+        return;
+      }
       const m = e.target.closest("#tt-market [data-market]");
       if (m) {
         MARKET = m.dataset.market;
@@ -1343,7 +1490,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // than a re-typed copy of them.
   window.GBSTurtle = {
     esc, unitShares, ladder, ddEquity, yearsTo, FALLBACK,
-    parseTurtleURL, serialiseTurtleURL, applyState, getTurtleState,
+    parseTurtleURL, serialiseTurtleURL, applyState, getTurtleState, chartHref,
     setParams: (p) => { P = Object.assign({}, FALLBACK, p || {}); },
   };
 })();
