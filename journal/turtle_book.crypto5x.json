@@ -1,0 +1,260 @@
+{
+ "schema_version": 1,
+ "market": "crypto5x",
+ "generated_at": "2026-08-22T08:41:01+00:00",
+ "started": "2026-08-22",
+ "equity_start": 5000.0,
+ "open": [
+  {
+   "symbol": "ZEC",
+   "market": "crypto5x",
+   "name": "Zcash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 39.51107459,
+   "units": 1.26546799,
+   "fills": [
+    787.80999756
+   ],
+   "cost_basis": 996.948331,
+   "stop": 708.78784838,
+   "last_fill": 787.80999756,
+   "opened": "2026-08-22",
+   "last_mark": 787.80999756,
+   "mark_date": "2026-08-22",
+   "fees": 1.495422,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 199.389666
+  },
+  {
+   "symbol": "BCH",
+   "market": "crypto5x",
+   "name": "Bitcoin Cash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 11.72143107,
+   "units": 4.26569074,
+   "fills": [
+    277.13000488
+   ],
+   "cost_basis": 1182.150896,
+   "stop": 253.68714274,
+   "last_fill": 277.13000488,
+   "opened": "2026-08-22",
+   "last_mark": 277.13000488,
+   "mark_date": "2026-08-22",
+   "fees": 1.773226,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 236.430179
+  },
+  {
+   "symbol": "DASH",
+   "market": "crypto5x",
+   "name": "Dash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 1.89371884,
+   "units": 26.4030747,
+   "fills": [
+    40.38999939
+   ],
+   "cost_basis": 1066.420171,
+   "stop": 36.60256171,
+   "last_fill": 40.38999939,
+   "opened": "2026-08-22",
+   "last_mark": 40.38999939,
+   "mark_date": "2026-08-22",
+   "fees": 1.59963,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 213.284034
+  },
+  {
+   "symbol": "UNI",
+   "market": "crypto5x",
+   "name": "Uniswap",
+   "sector": "",
+   "side": "long",
+   "system": 1,
+   "n": 0.2340208,
+   "units": 213.65622201,
+   "fills": [
+    4.13999987
+   ],
+   "cost_basis": 884.536731,
+   "stop": 3.67195827,
+   "last_fill": 4.13999987,
+   "opened": "2026-08-22",
+   "last_mark": 4.13999987,
+   "mark_date": "2026-08-22",
+   "fees": 1.326805,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 176.907346
+  },
+  {
+   "symbol": "NEAR",
+   "market": "crypto5x",
+   "name": "NEAR Protocol",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.10171845,
+   "units": 491.55290903,
+   "fills": [
+    1.9289
+   ],
+   "cost_basis": 948.156408,
+   "stop": 1.7254631,
+   "last_fill": 1.9289,
+   "opened": "2026-08-22",
+   "last_mark": 1.9289,
+   "mark_date": "2026-08-22",
+   "fees": 1.422235,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 189.631282
+  },
+  {
+   "symbol": "WLD",
+   "market": "crypto5x",
+   "name": "Worldcoin",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 0.02814291,
+   "units": 1776.64640934,
+   "fills": [
+    0.40560001
+   ],
+   "cost_basis": 720.607804,
+   "stop": 0.34931419,
+   "last_fill": 0.40560001,
+   "opened": "2026-08-22",
+   "last_mark": 0.40560001,
+   "mark_date": "2026-08-22",
+   "fees": 1.080912,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 144.121561
+  }
+ ],
+ "closed": [],
+ "summary": {
+  "started": "2026-08-22",
+  "equity_start": 5000.0,
+  "equity": 5000.0,
+  "return_pct": 0.0,
+  "open_positions": 6,
+  "open_units": 6,
+  "closed": 0,
+  "wins": 0,
+  "win_pct": null,
+  "total_r": 0.0,
+  "avg_r": null,
+  "median_r": null,
+  "realized_pnl": 0,
+  "fees_paid": 0,
+  "sizing_equity": 5000.0,
+  "leverage": 5.0,
+  "posted_margin": 1159.76,
+  "free_margin": 3840.24
+ },
+ "params": {
+  "leverage": 5.0,
+  "fractional": true,
+  "cost_bps": 15.0,
+  "margin_mode": "isolated"
+ },
+ "events": [
+  "ENTER ZEC S2 long @ 787.81",
+  "ENTER BCH S2 long @ 277.13",
+  "ENTER DASH S2 long @ 40.39",
+  "ENTER UNI S1 long @ 4.14",
+  "ENTER NEAR S2 long @ 1.9289",
+  "ENTER WLD S2 long @ 0.4056"
+ ],
+ "skips": [
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "DOT",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "FIL",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "ATOM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "ONDO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "XLM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto5x",
+   "symbol": "APT",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  }
+ ],
+ "skip_counts": {
+  "close_corr_cap": 6,
+  "total": 6
+ }
+}
