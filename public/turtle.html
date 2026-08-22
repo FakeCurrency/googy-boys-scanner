@@ -41,7 +41,12 @@
     </div>
     <div class="nav-pills" id="site-nav"></div>
     <div class="deck-top-right">
-      <a class="howto-link" href="about.html">HOW IT WORKS</a>
+      <!-- The header link to the explainer page was removed here (turtle
+           UI pass, Phase 4): it already lives in the shared MORE ▾ menu;
+           this page was the only one duplicating it as a second link. -->
+      <button class="search-trigger" id="search-trigger" title="Search or run a command (&#8984;K)" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
     </div>
   </header>
 

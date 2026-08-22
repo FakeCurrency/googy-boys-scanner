@@ -1181,6 +1181,17 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     applyState(parseTurtleURL(window.location.search));
     replaceURLState();
     window.addEventListener("popstate", onPopState);
+    // #search-trigger (Phase 4): reuse the one command palette the shared
+    // nav already exposes on every page (window.GBSPalette, opened by
+    // ⌘K/Ctrl-K) rather than building a second search surface. Static
+    // markup, wired once here -- never inside render(), which would stack a
+    // duplicate listener on this same persistent button every re-render.
+    const searchTrigger = document.getElementById("search-trigger");
+    if (searchTrigger) {
+      searchTrigger.addEventListener("click", () => {
+        window.GBSPalette && window.GBSPalette.open();
+      });
+    }
     document.addEventListener("click", (e) => {
       // Scoped to #tt-views on purpose: an unscoped closest() on this same
       // attribute would also catch any future match outside the tab strip

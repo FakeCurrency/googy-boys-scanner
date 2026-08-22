@@ -31,6 +31,22 @@
 #tt-views::-webkit-scrollbar { display: none; }
 #tt-views .view-tab { flex: 0 0 auto; }
 
+/* ── the market switch ──────────────────────────────────────────────────── */
+/* Same fix, same reason, scoped the same way: .market-switch is shared chrome
+ * with no overflow rule, fine for the two-market strips it was built for, but
+ * Turtle's four buttons (ASX/NASDAQ/CRYPTO/FUTURES) are the widest instance
+ * of it in the app and are the one that risks pushing the page sideways at
+ * 320-375px. Scoped to #tt-market so no other page's market switch changes. */
+#tt-market {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#tt-market::-webkit-scrollbar { display: none; }
+#tt-market .market-btn { flex: 0 0 auto; }
+
 /* ── the reading column ─────────────────────────────────────────────────── */
 .tt-body { display: flex; flex-direction: column; gap: 14px; }
 
