@@ -48,6 +48,7 @@ SCHEMA = 1
 
 STOP = "stop"
 CHANNEL = "channel"
+LIQUIDATION = "liquidation"     # a levered position's posted margin ran out
 
 # THE SKIP ENUM IS CLOSED, and that is the point. Silent drops are how a scan
 # lost 95% of its universe and reported `errors: 0`; a book that quietly
@@ -60,12 +61,16 @@ SKIP_CLOSE_CORR_CAP = "close_corr_cap"    # the 6-unit correlated-group ceiling
 SKIP_LOOSE_CORR_CAP = "loose_corr_cap"    # declared, see the note below
 SKIP_PER_MARKET_CAP = "per_market_cap"    # the 4-unit per-name ceiling
 SKIP_CASH = "cash"                        # no room on a cash account
+SKIP_NO_MARGIN = "no_margin"              # levered book: posted would exceed free
 SKIP_UNIT_LT_ONE = "unit_lt_one"          # futures: a unit is under one contract
+SKIP_NO_MARGIN_FILE = "no_margin_file"    # futures: no real margin data exists
+SKIP_ROLL_WINDOW = "roll_window"          # futures: a roll suspect sits in N's window
 SKIP_SAME_BAR_REENTRY = "same_bar_reentry"
 SKIP_S1_FILTER = "s1_skip_after_win"      # never emitted here, see the note
 SKIP_REASONS = (
     SKIP_DIRECTION_CAP, SKIP_CLOSE_CORR_CAP, SKIP_LOOSE_CORR_CAP,
-    SKIP_PER_MARKET_CAP, SKIP_CASH, SKIP_UNIT_LT_ONE,
+    SKIP_PER_MARKET_CAP, SKIP_CASH, SKIP_NO_MARGIN, SKIP_UNIT_LT_ONE,
+    SKIP_NO_MARGIN_FILE, SKIP_ROLL_WINDOW,
     SKIP_SAME_BAR_REENTRY, SKIP_S1_FILTER,
 )
 # Two of these are deliberately never emitted BY THIS MODULE, and saying so
@@ -186,16 +191,118 @@ def _bucket(row: dict, market: str) -> str:
     Sector is a poor proxy -- two ASX miners are far more correlated than the
     label admits -- and for crypto it is barely a proxy at all, which is why
     crypto collapses to ONE bucket: it behaves like one market, and pretending
-    otherwise is how a book ends up holding twelve units of the same bet.
+    otherwise is how a book ends up holding twelve units of the same bet. The
+    5x sleeve is the same tape at different margin, so it is the same bucket.
     """
-    if market == "crypto":
+    if market in ("crypto", "crypto5x"):
         return "crypto"
     return (row.get("sector") or "").strip().lower() or "unclassified"
+
+
+def _lev_cfg(market: str) -> dict | None:
+    """The leverage config for a levered book, None for every cash book.
+
+    Exactly one levered market exists (crypto5x) and the lookup is keyed on
+    the config's own `market` field so a second sleeve cannot be added by
+    editing this function -- it is added by declaring it in config, where the
+    disclosure lives beside the numbers.
+    """
+    cfg = getattr(config, "TURTLE_5X", None)
+    if cfg and market == cfg.get("market"):
+        return cfg
+    return None
+
+
+def _exit_trigger(pos: dict) -> tuple[float, str]:
+    """(price that takes the position out first, reason).
+
+    For a cash position that is simply the 2N stop. For a levered position
+    the ISOLATED-MARGIN liquidation line -- the price at which adverse MTM
+    equals the posted margin -- competes with it, and whichever sits CLOSER
+    to the market is hit first: max(stop, liq) for a long, min for a short.
+    On a continuous 24/7 tape price passes the nearer line before the farther
+    one, so the nearer line names the exit. With crypto's typical N a 2N stop
+    sits well inside the 20% liquidation line and the stop fires first; the
+    liquidation line binds when N is fat enough that 2N > posted/notional --
+    which is exactly the position a levered account most needs to be honest
+    about.
+    """
+    stop = float(pos["stop"])
+    posted = _f(pos.get("posted"))
+    units = _f(pos.get("units")) or 0.0
+    if not posted or units <= 0:
+        return stop, STOP
+    avg = pos["cost_basis"] / units
+    if pos["side"] == "long":
+        liq = avg - posted / units
+        return (liq, LIQUIDATION) if liq > stop else (stop, STOP)
+    liq = avg + posted / units
+    return (liq, LIQUIDATION) if liq < stop else (stop, STOP)
 
 
 # ---------------------------------------------------------------------------
 # the run
 # ---------------------------------------------------------------------------
+
+def _margin_room(book: dict, open_rows: list[dict], posted_new: float) -> bool:
+    """The levered book's room check: posted margin, not notional.
+
+    free = realised equity - every open position's posted margin. The same
+    every-open-dollar discipline as the cash `_room_for` -- the caller hands
+    it the SAME extended row list (managed + tail + self) so the two checks
+    cannot drift apart in what they count.
+    """
+    free = realized_equity(book) - sum(_f(p.get("posted")) or 0.0
+                                       for p in open_rows)
+    return posted_new <= free + 1e-9
+
+
+def _load_margin_file() -> dict | None:
+    """The futures margin data, or None -- and None means NO NEW OPENS.
+
+    The repo has no margin numbers and inventing them is on the kill list.
+    Until a real file exists at config.TURTLE_FUTURES_MARGIN_FILE (schema:
+    {"as_of": ..., "source": ..., "contracts": {"MES": {"initial": ...,
+    "maintenance": ...}}}), every futures entry is refused with
+    `no_margin_file` -- the sleeve stays 0/0 and says why.
+    """
+    path = os.path.join(ROOT, config.TURTLE_FUTURES_MARGIN_FILE)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            d = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(d, dict) or not isinstance(d.get("contracts"), dict):
+        return None
+    return d
+
+
+def _futures_gates(row: dict, margins: dict | None) -> tuple[bool, str, dict]:
+    """The three hard gates on a NEW futures open (2026-08-22). Opens only --
+    an already-held position keeps managing its exits; refusing to EXIT over
+    a roll suspect would be backwards.
+
+    (1) No roll suspect inside the current 20-bar N window: a back-adjusted
+        roll step inflates today's N 13-22%, and N sets the size, the stop
+        and the pyramid spacing all at once. The tape is refused, never
+        winsorised -- the true-range formula is frozen law.
+    (2) A REAL margin file must exist and carry this contract. No file, no
+        open. Inventing initial margin is on the kill list.
+    (unit >= 1 contract is gate three, checked where it always was.)
+    """
+    rolls = row.get("rolls") or {}
+    if rolls.get("in_n_window"):
+        return False, SKIP_ROLL_WINDOW, {
+            "last_roll": rolls.get("last"),
+            "note": "a roll suspect sits inside the current N window; "
+                    "today's N is contaminated"}
+    m = (margins or {}).get("contracts", {}).get(row["symbol"])
+    if not m or not _f(m.get("initial")):
+        return False, SKIP_NO_MARGIN_FILE, {
+            "margin_file": config.TURTLE_FUTURES_MARGIN_FILE,
+            "file_present": bool(margins)}
+    return True, "", {"initial_margin": float(m["initial"])}
+
 
 def _open_position(row: dict, market: str, side: str, system: int,
                    fill: float, units: float, n: float, day: str) -> dict:
@@ -214,7 +321,8 @@ def _open_position(row: dict, market: str, side: str, system: int,
     }
 
 
-def _close_position(pos: dict, price: float, reason: str, day: str) -> dict:
+def _close_position(pos: dict, price: float, reason: str, day: str,
+                    bar_date: str | None = None) -> dict:
     sign = 1.0 if pos["side"] == "long" else -1.0
     units = pos["units"]
     gross = sign * (price - pos["cost_basis"] / units) * units if units else 0.0
@@ -224,13 +332,16 @@ def _close_position(pos: dict, price: float, reason: str, day: str) -> dict:
     return {
         **{k: pos[k] for k in ("symbol", "market", "name", "sector", "side",
                                "system", "n", "units", "opened")},
-        "closed": day, "exit": round(price, 8), "reason": reason,
+        "closed": day, "closed_bar": bar_date or day,
+        "exit": round(price, 8), "reason": reason,
         "entry_avg": round(pos["cost_basis"] / units, 8) if units else None,
         "gross": round(gross, 4), "fees": round(fees, 4), "pnl": round(pnl, 4),
         "r": round(pnl / risk, 4) if risk > 0 else None,
         "gross_r": round(gross / risk, 4) if risk > 0 else None,
         "mfe_r": pos.get("mfe_r", 0.0), "mae_r": pos.get("mae_r", 0.0),
         "fills": pos.get("fills", []),
+        # audit fields for the levered book; absent on cash rows
+        **({"posted": pos["posted"]} if pos.get("posted") else {}),
     }
 
 
@@ -240,6 +351,13 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
     book = load_book(market)
     if not book.get("started"):
         book["started"] = day
+    lev = _lev_cfg(market)
+    if lev:
+        # The disclosure travels WITH the data: the page renders these
+        # numbers from the payload, so the sentence about what 5x means can
+        # never describe a book running something else.
+        book["params"] = {k: v for k, v in lev.items() if k != "market"}
+    margins = _load_margin_file() if market == "futures" else None
     by_sym = {r["symbol"]: r for r in rows}
     stop_n = config.TURTLE_STOP_N
     step_n = config.TURTLE_PYRAMID_STEP_N
@@ -279,19 +397,32 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
             if pos["side"] == "long" else \
             (ex.get("x1_hi") if pos["system"] == 1 else ex.get("x2_hi"))
         chan = _f(chan)
+        # For a cash position the trigger IS the 2N stop. For a levered one
+        # the isolated-margin liquidation line competes with it and the
+        # nearer line names the exit -- see _exit_trigger.
+        trigger, trig_reason = _exit_trigger(pos)
         exit_px = reason = None
         if pos["side"] == "long":
-            if lo <= pos["stop"]:
-                exit_px, reason = min(pos["stop"], op), STOP
+            if lo <= trigger:
+                exit_px, reason = min(trigger, op), trig_reason
             elif chan is not None and lo <= chan:
                 exit_px, reason = min(chan, op), CHANNEL
         else:
-            if hi >= pos["stop"]:
-                exit_px, reason = max(pos["stop"], op), STOP
+            if hi >= trigger:
+                exit_px, reason = max(trigger, op), trig_reason
             elif chan is not None and hi >= chan:
                 exit_px, reason = max(chan, op), CHANNEL
+        # A LIQUIDATION FILLS AT THE LIQUIDATION PRICE, never at a gap.
+        # Isolated margin cannot lose more than it posted -- the exchange
+        # takes the position at the bankruptcy price -- and crypto trades
+        # continuously, so a daily-bar "gap" through the liq line is a
+        # sampling artefact, not an untradeable jump. Stops keep the gap
+        # convention (an equity genuinely can gap through a resting stop).
+        if reason == LIQUIDATION:
+            exit_px = trigger
         if exit_px is not None:
-            t = _close_position(pos, float(exit_px), reason, day)
+            t = _close_position(pos, float(exit_px), reason, day,
+                                bar_date=row.get("date"))
             book.setdefault("closed", []).append(t)
             events.append(f"EXIT {pos['symbol']} {reason} {t['r']}R")
             continue
@@ -313,11 +444,34 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
                 break
             fill = max(level, op) if sign > 0 else min(level, op)
             add_units = unit_units(eq, pos["n"])
-            if add_units <= 0 or not _room_for(book, still_open, fill * add_units):
-                skips.append(_skip(day, market, pos["symbol"], "add", SKIP_CASH,
-                                   {"units_held": len(pos["fills"]),
-                                    "want_notional": round(fill * add_units, 2),
-                                    "equity": round(realized_equity(book), 2)}))
+            # THE ROOM CHECK MUST COUNT EVERY OPEN DOLLAR, exactly as the unit
+            # ceilings below count every open unit. Handing it only
+            # `still_open` excluded the position BEING ADDED TO and the
+            # unmanaged tail -- so DOGE's third unit on 2026-08-22 passed a
+            # check that ignored DOGE's own ~$2.5k of basis plus GT's $1.5k,
+            # and the crypto book ended the run holding $5,239 of basis on a
+            # $4,186 cap. Same conservative reading as `_caps_allow`: the tail
+            # may exit later this session and free cash, but that is not
+            # knowable here, and declining the add is the safe side. The
+            # levered book runs the same discipline over POSTED MARGIN.
+            all_open = still_open + open_list[idx + 1:] + [pos]
+            if lev:
+                posted_add = abs(fill * add_units) / float(lev["leverage"])
+                room = add_units > 0 and _margin_room(book, all_open, posted_add)
+                room_skip = _skip(day, market, pos["symbol"], "add",
+                                  SKIP_NO_MARGIN,
+                                  {"units_held": len(pos["fills"]),
+                                   "posted_want": round(posted_add, 2),
+                                   "equity": round(realized_equity(book), 2)})
+            else:
+                room = add_units > 0 and _room_for(book, all_open,
+                                                   fill * add_units)
+                room_skip = _skip(day, market, pos["symbol"], "add", SKIP_CASH,
+                                  {"units_held": len(pos["fills"]),
+                                   "want_notional": round(fill * add_units, 2),
+                                   "equity": round(realized_equity(book), 2)})
+            if not room:
+                skips.append(room_skip)
                 break
             # The ceilings count UNITS, so a pyramid rung is checked exactly
             # as a new name is. Without this, twelve names each adding to four
@@ -341,31 +495,57 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
             pos["last_fill"] = round(fill, 8)
             pos["stop"] = round(fill - sign * stop_n * pos["n"], 8)
             pos["fees"] = round((_f(pos.get("fees")) or 0.0) + _cost(fill, add_units), 6)
+            if lev:
+                pos["posted"] = round((_f(pos.get("posted")) or 0.0)
+                                      + abs(fill * add_units)
+                                      / float(lev["leverage"]), 6)
             events.append(f"ADD {pos['symbol']} u{len(pos['fills'])} @ {fill:.6g}")
 
         # ---- the stop an add just raised, on the same bar -------------------
-        if (sign > 0 and lo <= pos["stop"]) or (sign < 0 and hi >= pos["stop"]):
-            px = min(pos["stop"], op) if sign > 0 else max(pos["stop"], op)
-            t = _close_position(pos, float(px), STOP, day)
+        # (or, on the levered book, the liquidation line the add just moved)
+        trigger, trig_reason = _exit_trigger(pos)
+        if (sign > 0 and lo <= trigger) or (sign < 0 and hi >= trigger):
+            px = min(trigger, op) if sign > 0 else max(trigger, op)
+            if trig_reason == LIQUIDATION:
+                px = trigger        # isolated margin caps the loss (above)
+            t = _close_position(pos, float(px), trig_reason, day,
+                                bar_date=row.get("date"))
             book.setdefault("closed", []).append(t)
-            events.append(f"EXIT {pos['symbol']} stop-after-add {t['r']}R")
+            events.append(f"EXIT {pos['symbol']} {t['reason']}-after-add {t['r']}R")
             continue
         still_open.append(pos)
 
     # ---- enter, last, so a slot freed today is usable today -----------------
     held = {p["symbol"] for p in still_open}
-    # A name this session already EXITED cannot be re-entered this session.
-    # The manage loop can flatten a name and the entry loop would then see it
-    # flat and refill the very breakout that just stopped out -- the rules
-    # wait for a NEW channel break, not the same one still standing.
-    exited_today = {t["symbol"] for t in book.get("closed", [])
-                    if t.get("closed") == day}
+    # A name that exited on a bar cannot be re-entered WHILE THAT BAR IS STILL
+    # THE SIGNAL BAR. The manage loop can flatten a name and the entry loop
+    # would then see it flat and refill the very breakout that just stopped
+    # out -- the rules wait for a NEW channel break, not the same one still
+    # standing. The identity of "the same bar" is the row's OWN bar date, not
+    # the run date: this book runs many times per bar (crypto every four
+    # hours; the daily all-markets pass re-reads Friday's NASDAQ bar on
+    # Saturday and Sunday), and keying on the run date let a Friday stop
+    # refill off the SAME Friday bar at Saturday's run because the calendar
+    # had moved while the tape had not. Closed rows written before this fix
+    # carry no `closed_bar`; they fall back to the run date they were closed
+    # on, which is exactly the old rule's behaviour for them.
+    closed_bars: dict[str, set] = {}
+    for t in book.get("closed", []):
+        if t.get("symbol"):        # a malformed row can refuse nothing
+            closed_bars.setdefault(t["symbol"], set()).add(
+                t.get("closed_bar") or t.get("closed"))
+
+    def _same_bar_blocked(r: dict) -> bool:
+        return (r.get("date") or day) in closed_bars.get(r["symbol"], ())
+
     fired = [r for r in rows if r.get("signal")
-             and r["symbol"] not in held and r["symbol"] not in exited_today]
+             and r["symbol"] not in held and not _same_bar_blocked(r)]
     for r in rows:
-        if r.get("signal") and r["symbol"] in exited_today:
+        if r.get("signal") and r["symbol"] not in held and _same_bar_blocked(r):
             skips.append(_skip(day, market, r["symbol"], "entry",
-                               SKIP_SAME_BAR_REENTRY, {"signal": r["signal"]}))
+                               SKIP_SAME_BAR_REENTRY,
+                               {"signal": r["signal"],
+                                "bar": r.get("date") or day}))
     fired.sort(key=lambda r: -(_f(r.get("dvol")) or 0.0))
     for row in fired:
         sig = row["signal"]
@@ -409,29 +589,66 @@ def update(market: str, rows: list[dict], day: str | None = None) -> dict:
                 skips.append(_skip(day, market, row["symbol"], "entry",
                                    SKIP_UNIT_LT_ONE, {"contracts": whole}))
                 continue
+            # FUTURES HARD GATES (2026-08-22), after the sizing honesty above:
+            # no roll suspect inside the current N window, and a REAL margin
+            # file -- no file, no open. The sleeve stays 0/0 and says why.
+            gate_ok, gate_why, gate_detail = _futures_gates(row, margins)
+            if not gate_ok:
+                skips.append(_skip(day, market, row["symbol"], "entry",
+                                   gate_why, dict(gate_detail, system=system)))
+                continue
             units = whole * dpp
-            # NO CASH CHECK HERE, deliberately. A futures position consumes
-            # MARGIN, not notional, and this repo has no margin data; testing
-            # notional against equity would refuse every legitimate contract
-            # and call it prudence. The real constraint for a small account is
-            # the one above -- whether a unit is a whole contract at all.
+            # A futures position consumes MARGIN, not notional. With no
+            # margin file the gates above already refused; when a real file
+            # exists, the initial margin it states must fit the free equity
+            # -- counted over every open futures position's own posted IM,
+            # same discipline as the cash and 5x room checks.
+            need_im = whole * float(gate_detail.get("initial_margin") or 0.0)
+            held_im = sum(_f(p.get("im")) or 0.0 for p in still_open)
+            if need_im > 0 and need_im > realized_equity(book) - held_im:
+                skips.append(_skip(day, market, row["symbol"], "entry",
+                                   SKIP_NO_MARGIN,
+                                   {"need_im": round(need_im, 2),
+                                    "free": round(realized_equity(book)
+                                                  - held_im, 2),
+                                    "system": system}))
+                continue
             pos = _open_position(row, market, side, system, px, units, n, day)
             pos["contracts"] = whole
             pos["contract"] = kind
             pos["dpp"] = dpp
+            if need_im > 0:
+                pos["im"] = round(need_im, 2)
             still_open.append(pos)
             events.append(f"ENTER {row['symbol']} S{system} {side} "
                           f"{whole}x{kind} @ {px:.6g}")
             continue
 
         units = unit_units(sizing_equity(book), n)
-        if units <= 0 or not _room_for(book, still_open, px * units):
+        if lev:
+            # THE UNIT FORMULA DOES NOT MOVE -- 1% of equity per N, fractional
+            # coins. What leverage changes is only what the unit COSTS to
+            # hold: posted margin of notional/leverage instead of the full
+            # notional in cash. That is the entire vehicle difference, and it
+            # is why the cash book saturated at 3 units while this one runs
+            # into the Turtle ceilings instead.
+            posted_new = abs(px * units) / float(lev["leverage"])
+            if units <= 0 or not _margin_room(book, still_open, posted_new):
+                skips.append(_skip(day, market, row["symbol"], "entry",
+                                   SKIP_NO_MARGIN,
+                                   {"posted_want": round(posted_new, 2),
+                                    "equity": round(realized_equity(book), 2),
+                                    "system": system}))
+                continue
+        elif units <= 0 or not _room_for(book, still_open, px * units):
             skips.append(_skip(day, market, row["symbol"], "entry", SKIP_CASH,
                                {"want_notional": round(px * units, 2),
                                 "equity": round(realized_equity(book), 2),
                                 "system": system}))
             continue
         pos = _open_position(row, market, side, system, px, units, n, day)
+        if lev:
+            pos["posted"] = round(abs(px * units) / float(lev["leverage"]), 6)
         still_open.append(pos)
         events.append(f"ENTER {row['symbol']} S{system} {side} @ {px:.6g}")
 
@@ -494,7 +711,8 @@ def _caps_allow(book: dict, open_rows: list[dict], row: dict, market: str,
     return True, "", {}
 
 
-def write_combined(markets=("asx", "nasdaq", "crypto", "futures")) -> str:
+def write_combined(markets=("asx", "nasdaq", "crypto", "crypto5x",
+                            "futures")) -> str:
     """The DERIVED all-markets view. Per-market files stay canonical -- a
     market's run can only ever write its own, so a cross-market clobber is
     impossible by construction -- and this is regenerated from them.
@@ -517,7 +735,13 @@ def write_combined(markets=("asx", "nasdaq", "crypto", "futures")) -> str:
         combined["open"].extend(b.get("open", []))
         combined["closed"].extend(b.get("closed", []))
         combined["equity_start"] += float(b.get("equity_start") or 0.0)
-        combined["by_market"][m] = b.get("summary", {})
+        # A levered sleeve travels WITH its disclosure: the page renders the
+        # leverage sentence from these params, so the combined view can never
+        # present the 5x series as one more cash book.
+        summ = b.get("summary", {})
+        if b.get("params"):
+            summ = {**summ, "params": b["params"]}
+        combined["by_market"][m] = summ
         for sk in b.get("skips", []):
             combined.setdefault("skips", []).append(sk)
         if b.get("started"):
@@ -555,7 +779,7 @@ def summarize_book(book: dict) -> dict:
     if srt:
         m = len(srt) // 2
         med = srt[m] if len(srt) % 2 else 0.5 * (srt[m - 1] + srt[m])
-    return {
+    out = {
         "started": book.get("started", ""),
         "equity_start": round(start, 2),
         "equity": round(eq, 2),
@@ -572,3 +796,13 @@ def summarize_book(book: dict) -> dict:
         "fees_paid": round(fees, 2),
         "sizing_equity": round(sizing_equity(book), 2),
     }
+    # Margin visibility, ONLY on a book that declares leverage in its own
+    # params -- the combined view's open list mixes cash and levered rows, and
+    # a "free margin" figure computed against a pooled face-value equity would
+    # be exactly the kind of number this repo exists to refuse.
+    if (book.get("params") or {}).get("leverage"):
+        posted = sum(_f(p.get("posted")) or 0.0 for p in book.get("open", []))
+        out["leverage"] = book["params"]["leverage"]
+        out["posted_margin"] = round(posted, 2)
+        out["free_margin"] = round(eq - posted, 2)
+    return out

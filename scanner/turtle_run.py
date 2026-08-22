@@ -23,7 +23,8 @@ import os
 import sys
 import zoneinfo
 
-from . import config, data, output, scanerrors, turtle, turtle_book, universe
+from . import (config, data, output, scanerrors, turtle, turtle_book,
+               turtle_portfolio, universe)
 
 MARKETS = ("asx", "nasdaq", "crypto", "futures")
 PERIOD = "5y"
@@ -79,6 +80,106 @@ def params_block() -> dict:
     }
 
 
+def override_frames(items: list[dict], period: str = PERIOD) -> dict:
+    """Frames for the collision-corrected crypto names, keyed by the PLAIN
+    symbol. One small fetch (five tickers at most); a failure returns {} and
+    is logged rather than raised -- the 5x surfaces degrade to the corrected
+    names being absent, never to a dead run."""
+    over = config.TURTLE_5X_YF_OVERRIDES
+    in_univ = {it["symbol"]: it for it in items if it["symbol"] in over}
+    if not in_univ:
+        return {}
+    fetch = {over[sym]: info for sym, info in in_univ.items()}
+    try:
+        frames = data.download(list(fetch), period=period, interval="1d")
+    except Exception as e:                                       # noqa: BLE001
+        print(f"[crypto5x] WARNING override fetch failed: "
+              f"{e.__class__.__name__}: {e}")
+        return {}
+    out = {}
+    for yf_sym, info in fetch.items():
+        df = frames.get(yf_sym)
+        if df is None or df.empty or len(df) < config.TURTLE_MIN_BARS:
+            continue
+        out[info["symbol"]] = _with_date_column(df)
+    return out
+
+
+def five_x_rows(rows: list[dict], items: list[dict],
+                period: str = PERIOD, ov_frames: dict | None = None
+                ) -> list[dict]:
+    """The crypto 5x sleeve's rows: the SAME universe, Yahoo collisions
+    corrected, junk prices rejected.
+
+    config.TURTLE_5X_YF_OVERRIDES names the CoinGecko tickers whose naive
+    "<SYM>-USD" mapping lands on a DIFFERENT, dead Yahoo token (bare APT-USD
+    is Apricot, not Aptos). Those names are dropped from the cash scan's rows
+    and re-fetched under their real Yahoo ids; the row still displays the
+    plain symbol. THE CASH UNIVERSE IS DELIBERATELY UNTOUCHED -- the cash
+    crypto book is a running experiment and editing its universe mid-flight
+    changes which trades it takes. Any row whose last close is not a positive
+    number is rejected outright.
+    """
+    over = config.TURTLE_5X_YF_OVERRIDES
+    out = [r for r in rows
+           if r["symbol"] not in over and (r.get("price") or 0) > 0]
+    if ov_frames is None:
+        ov_frames = override_frames(items, period=period)
+    infos = {it["symbol"]: it for it in items}
+    for sym, df in ov_frames.items():
+        info = infos.get(sym, {"symbol": sym, "name": sym, "sector": ""})
+        try:
+            r = turtle.build_row(sym, dict(info, yf=over.get(sym, "")),
+                                 df, "crypto")
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[crypto5x] WARNING {sym}: {e.__class__.__name__}: {e}")
+            continue
+        if r is not None and (r.get("price") or 0) > 0:
+            out.append(r)
+    return out
+
+
+def fit_table(rows: list[dict], equity: float | None = None) -> list[dict]:
+    """The futures sleeve's sizing verdicts, one row per contract, at the
+    book's own equity -- the table that answers "what can $5,000 actually
+    hold" without anyone doing the division by hand.
+
+    Fits-first ordering so the tradeable micros (MES/MNQ-class) lead and the
+    full-size contracts that CANNOT fit a $5k unit sit below them wearing
+    their refusal. Nothing here rounds up: 0.4 of a contract is a refusal,
+    not "1". `two_n_risk_smallest` is what one contract of the smallest
+    available size loses at its own 2N stop, in dollars -- the number that
+    explains WHY the refusal protects the account.
+    """
+    # TURTLE_ACCOUNT_EQUITY because that is the equity contract_sizing()
+    # computed the per-row verdicts against -- the stamped equity must name
+    # the number the verdicts actually used, not a sibling constant.
+    eq = config.TURTLE_ACCOUNT_EQUITY if equity is None else equity
+    out = []
+    for r in rows:
+        c = r.get("contracts") or {}
+        n = r.get("n")
+        small_dpp = c.get("micro_dpp") or c.get("dpp") or 0
+        out.append({
+            "symbol": r["symbol"], "name": r.get("name", ""),
+            "group": r.get("group", ""),
+            "n": n,
+            "dpp": c.get("dpp"),
+            "micro": c.get("micro") or "",
+            "micro_dpp": c.get("micro_dpp") or 0,
+            "full_contracts": c.get("full_contracts"),
+            "micro_contracts": c.get("micro_contracts"),
+            "unit_fits": bool(c.get("unit_fits")),
+            "two_n_risk_smallest": (round(2.0 * n * small_dpp, 2)
+                                    if (n and small_dpp) else None),
+            "one_contract_risk_pct": c.get("one_contract_risk_pct"),
+            "roll_in_n_window": bool((r.get("rolls") or {}).get("in_n_window")),
+            "equity": eq,
+        })
+    out.sort(key=lambda x: (not x["unit_fits"], not x["micro"], x["symbol"]))
+    return out
+
+
 def aggregate(rows: list[dict]) -> dict:
     """What the whole market did under these rules, and the cohort counts.
 
@@ -115,7 +216,8 @@ def aggregate(rows: list[dict]) -> dict:
 
 
 def scan_market(market_key: str, limit: int | None = None,
-                period: str = PERIOD, equity: float | None = None) -> dict:
+                period: str = PERIOD, equity: float | None = None,
+                portfolio: bool = False) -> dict:
     if market_key == "futures":
         # The sleeve is a declared list, not a directory fetch: these are the
         # markets the Turtles actually traded, and the point of the sleeve is
@@ -227,6 +329,11 @@ def scan_market(market_key: str, limit: int | None = None,
         "results": published,
         **errors.payload(),
     }
+    if market_key == "futures":
+        # The sizing verdicts as one table, so "what can $5k actually hold"
+        # is a payload fact rather than a hand computation. The page renders
+        # THIS -- fits first, refusals wearing their reasons.
+        payload["fit_table"] = fit_table(rows, equity=equity)
     path = os.path.join(OUT_DIR, f"{market_key}_turtle.json")
     output.write_json(path, payload, indent=1, ensure_ascii=False, newline=True)
     agg = payload["aggregate"]
@@ -257,6 +364,84 @@ def scan_market(market_key: str, limit: int | None = None,
     except Exception as e:                                       # noqa: BLE001
         print(f"[{market_key}] WARNING turtle book update failed: "
               f"{e.__class__.__name__}: {e}")
+
+    # THE 5x SLEEVE rides the crypto scan: same universe with the Yahoo
+    # collisions corrected, same frozen rules, posted margin instead of full
+    # cash. A NEW series beside the cash book, never a restatement of it --
+    # and its failure must not cost the cash publish, same as above.
+    ov = override_frames(items, period=period) if market_key == "crypto" else {}
+    if market_key == "crypto":
+        try:
+            rows5x = five_x_rows(rows, items, period=period, ov_frames=ov)
+            b5 = turtle_book.update(config.TURTLE_5X["market"], rows5x)
+            bs5 = b5["summary"]
+            print(f"[crypto5x] turtle BOOK (forward 5x, since "
+                  f"{bs5['started']}): {bs5['open_positions']} open / "
+                  f"{bs5['open_units']} units, {bs5['closed']} closed, "
+                  f"{bs5['total_r']}R, equity {bs5['equity']} of "
+                  f"{bs5['equity_start']}, posted {bs5.get('posted_margin')} "
+                  f"free {bs5.get('free_margin')}")
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[crypto5x] WARNING turtle 5x book update failed: "
+                  f"{e.__class__.__name__}: {e}")
+
+    # THE PORTFOLIO REPLAY -- the shared-equity context surface, computed on
+    # the nightly all-markets pass only (--portfolio) because it is a full
+    # second walk of every frame. Report-only, merge-per-sleeve, and a
+    # failure must never cost the scan or the books.
+    if portfolio:
+        try:
+            sym_frames = {}
+            for yf_sym2, info2 in yf_map.items():
+                df2 = frames.get(yf_sym2)
+                if df2 is not None and not df2.empty \
+                        and len(df2) >= config.TURTLE_MIN_BARS:
+                    sym_frames[info2.get("symbol", yf_sym2)] = \
+                        _with_date_column(df2)
+            sleeves: dict[str, dict] = {}
+            if market_key == "asx":
+                # The control that should bleed: one factor, cash, $5k.
+                sleeves["asx_5k_cash"] = turtle_portfolio.replay_sleeve(
+                    sym_frames, market="asx", equity_start=5000.0)
+            elif market_key == "nasdaq":
+                # NDX proxy, DECLARED as such: top 100 by trailing 20-day
+                # dollar volume as of this run -- survivor-selected like
+                # everything Yahoo ships. Two equities, one truth: $5k
+                # cash-skips its way through what $100k can actually hold.
+                def _dv(df3):
+                    s = (df3["Close"] * df3["Volume"]).iloc[-20:]
+                    return float(s.mean()) if len(s) else 0.0
+                top = dict(sorted(sym_frames.items(),
+                                  key=lambda kv: -_dv(kv[1]))[:100])
+                sleeves["nasdaq100_5k_cash"] = turtle_portfolio.replay_sleeve(
+                    top, market="nasdaq", equity_start=5000.0)
+                sleeves["nasdaq100_100k_cash"] = \
+                    turtle_portfolio.replay_sleeve(
+                        top, market="nasdaq", equity_start=100_000.0)
+            elif market_key == "crypto":
+                c5 = {s: f for s, f in sym_frames.items()
+                      if s not in config.TURTLE_5X_YF_OVERRIDES}
+                c5.update(ov)
+                sleeves["crypto_5x_5k"] = turtle_portfolio.replay_sleeve(
+                    c5, market="crypto", equity_start=5000.0,
+                    leverage=float(config.TURTLE_5X["leverage"]))
+            elif market_key == "futures":
+                contracts = {f["symbol"]: f for f in config.TURTLE_FUTURES}
+                sleeves["futures21_5k"] = turtle_portfolio.replay_sleeve(
+                    sym_frames, market="futures", equity_start=5000.0,
+                    contracts=contracts,
+                    margins=turtle_book._load_margin_file())
+            if sleeves:
+                turtle_portfolio.write_sleeves(sleeves)
+                for k, v in sleeves.items():
+                    print(f"[{k}] portfolio: {v['trades']} trades, "
+                          f"marked {v['equity_marked']} "
+                          f"({v['return_pct_marked']}%), "
+                          f"maxDD {v['max_dd_pct_marked']}%, "
+                          f"refused {v['refused_units']}")
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[{market_key}] WARNING portfolio replay failed: "
+                  f"{e.__class__.__name__}: {e}")
     return payload
 
 
@@ -268,6 +453,9 @@ def main(argv=None) -> int:
     ap.add_argument("--equity", type=float,
                     help="account size the published unit sizes are computed "
                          "against (default config.TURTLE_ACCOUNT_EQUITY)")
+    ap.add_argument("--portfolio", action="store_true",
+                    help="also run the shared-equity portfolio replay per "
+                         "sleeve (the nightly all-markets pass sets this)")
     args = ap.parse_args(argv)
     markets = MARKETS if args.market == "all" else tuple(args.market.split(","))
     for m in markets:
@@ -277,7 +465,8 @@ def main(argv=None) -> int:
     failed = []
     for m in markets:
         try:
-            scan_market(m, limit=args.limit, period=args.period, equity=args.equity)
+            scan_market(m, limit=args.limit, period=args.period,
+                        equity=args.equity, portfolio=args.portfolio)
         except Exception as e:                                   # noqa: BLE001
             # TOP100 #67: a market that fails ENTIRELY used to print one line
             # and exit 0, so a night with no ASX file at all looked like a

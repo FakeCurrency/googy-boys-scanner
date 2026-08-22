@@ -1729,14 +1729,17 @@ TURTLE_FUTURES = [
      "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
     # --- softs (the Turtles traded these; grains and meats they did NOT) ---
     # ICE Coffee "C": 37,500 lb, quoted US cents per pound.
-    # PROVENANCE: the shipped dpp of 37,500 is the owner's, affirmed
-    # 2026-08-21 against his own audit and left untouched here by instruction.
-    # Recorded rather than argued: this is the one row where the contract size
-    # and the shipped multiplier are the same number, so a reader comparing
-    # this line against SB and CT below -- which are both size/100 -- will
-    # notice and should take it up with the owner, not edit it.
+    # ICE Coffee C: 37,500 lb per contract, quoted in CENTS per lb on KC=F --
+    # so one "point" on the tape is one cent, and dpp = 37,500 / 100 = 375,
+    # the same size/100 rule as SB and CT below. (Corrected 2026-08-22. The
+    # prior 37,500 traced to a 2026-08-21 audit whose reference table did not
+    # contain KC at all -- the "affirmation" was vacuous -- and it overstated
+    # dpp 100x, so KC units computed 100x too SMALL and coffee could never
+    # trade; the page printed one_contract_risk_pct at 100x as the visible
+    # artefact. Conservative in both states: at $5,000 a single KC contract
+    # does not fit either way.)
     {"symbol": "KC", "yf": "KC=F", "name": "Coffee", "group": "softs",
-     "dpp": 37_500, "micro": "", "micro_dpp": 0},
+     "dpp": 375, "micro": "", "micro_dpp": 0},
     # ICE Cocoa: 10 metric tons, quoted USD per metric ton -> $10 per $1.
     # Dollar-quoted, so the /100 cents rule does not apply.
     {"symbol": "CC", "yf": "CC=F", "name": "Cocoa", "group": "softs",
@@ -1795,6 +1798,63 @@ TURTLE_BOOK_EQUITY = 5_000.0
 # book -- impossible without margin, and the replay records it anyway. A
 # forward book without this would inherit the flaw it exists to escape.
 TURTLE_BOOK_MAX_NOTIONAL_PCT = 100.0
+
+# THE CRYPTO 5x SLEEVE (2026-08-22, owner-ordered) -- the only vehicle a
+# $5,000 account can run the UNCHANGED 1%/N Turtle unit in without rounding
+# up into extra risk. Day one of the cash book proved the constraint: a
+# crypto unit costs 25-31% of the sleeve in CASH, so the book saturated at
+# 3-4 units and 37 signals died as `cash` skips -- a binding constraint the
+# original rules never had, because the Turtles' leverage came from futures
+# margin. This sleeve is the perp analogue of that margin, stated as such:
+#
+#   posted margin  = notional / leverage         (NOT Dennis's futures IM)
+#   unit           = (1% x equity) / N           (the formula does not move)
+#   refuse         if posted > equity - sum(posted of opens)   -> no_margin
+#   liquidate      if adverse MTM <= -posted                   -> liquidation
+#   margin_mode    isolated: each position's posted stands alone
+#
+# It is a NEW forward series (journal/turtle_book.crypto5x.json) beside the
+# cash crypto book, never a restatement of it -- cash's -16% day one is
+# evidence about the cash vehicle and stays exactly as recorded. Same frozen
+# law throughout: daily bars (the 4-hour cron is a SCAN CADENCE, not a
+# 4-hour Donchian), 15 bps a side, crypto = ONE correlated bucket, 4/6/12
+# unit ceilings, compounding drawdown step-down. ASX and NASDAQ stay cash at
+# leverage 1: nothing here touches them.
+TURTLE_5X = {
+    "market": "crypto5x",
+    "leverage": 5.0,
+    "fractional": True,          # coins split; futures contracts do not
+    "cost_bps": TURTLE_COST_BPS, # deliberately the same 15 bps -- a cheaper
+                                 # cost model for the levered book would make
+                                 # the two series incomparable
+    "margin_mode": "isolated",
+}
+
+# Yahoo symbol collisions in the crypto universe. universe._fetch_crypto maps
+# CoinGecko tickers naively to "<SYM>-USD", and on Yahoo several of those
+# tickers belong to DIFFERENT, dead tokens -- so the scan has been reading
+# Apricot where it meant Aptos. The real coins live under Yahoo's suffixed
+# ids. THE CASH UNIVERSE IS DELIBERATELY NOT CHANGED by this map: the cash
+# crypto book is a running experiment and editing its universe mid-flight
+# changes which trades it takes. The 5x sleeve (and only it) applies these
+# overrides, displays the plain symbol, and rejects any row whose last close
+# is not a positive number.
+TURTLE_5X_YF_OVERRIDES = {
+    "APT": "APT21794-USD",   # Aptos      -- bare APT-USD is Apricot
+    "ARB": "ARB11841-USD",   # Arbitrum   -- bare ARB-USD is ARbit
+    "SUI": "SUI20947-USD",   # Sui        -- bare SUI-USD is Salmonation
+    "UNI": "UNI7083-USD",    # Uniswap    -- bare UNI-USD is UNICORN
+    "TON": "TON11419-USD",   # Toncoin    -- bare TON-USD is TON-Token
+}
+
+# Where REAL futures margin data would live, if and when the owner supplies
+# it: {"as_of": ..., "source": ..., "contracts": {"MES": {"initial": ...,
+# "maintenance": ...}, ...}}. THE FILE DOES NOT EXIST AND MUST NOT BE
+# INVENTED -- margin requirements are exchange facts, not estimates. While it
+# is absent the forward book refuses every new futures open with
+# `no_margin_file` (turtle_book._futures_gates), which is the honest state:
+# a futures book with made-up margin is a backtest wearing a book's clothes.
+TURTLE_FUTURES_MARGIN_FILE = "data/futures_margins.json"
 
 # Minimum share of a market's universe that must come back with usable bars
 # before the scan is allowed to publish. Below this the run RAISES and leaves
