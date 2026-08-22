@@ -96,12 +96,15 @@ jobs:
             "5 */4 * * *")   MARKET="crypto" ;;
             "30 6 * * 1-5")  MARKET="asx" ;;
             "30 21 * * 1-5") MARKET="nasdaq" ;;
-            "30 9 * * *")    MARKET="all" ;;
+            # The nightly all-markets pass also runs the shared-equity
+            # portfolio replay (a full second walk of every frame) -- once a
+            # day is its cadence, the 4h/market crons stay cheap.
+            "30 9 * * *")    MARKET="all"; PORTFOLIO="--portfolio" ;;
             # The futures sleeve, after the CME close (17:00 ET = 22:00 UTC
             # EST / 21:00 EDT) and before the Asian reopen.
             "0 23 * * 1-5")  MARKET="futures" ;;
           esac
-          ARGS="--market ${MARKET:-all}"
+          ARGS="--market ${MARKET:-all} ${PORTFOLIO:-}"
           if [ -n "$LIMIT" ]; then ARGS="$ARGS --limit $LIMIT"; fi
           echo "turtle args: $ARGS"
           python -m scanner.turtle_run $ARGS 2>&1 | tee /tmp/turtle_out.txt
@@ -146,7 +149,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # The forward book is committed too -- it is the ONLY artefact here
           # that accumulates. Lose it and the honest test restarts from zero.
-          PATHS="public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json public/data/futures_turtle.json public/data/turtle_book.json journal/turtle_book.futures.json journal/turtle_book.asx.json journal/turtle_book.nasdaq.json journal/turtle_book.crypto.json journal/turtle_book.json"
+          PATHS="public/data/asx_turtle.json public/data/nasdaq_turtle.json public/data/crypto_turtle.json public/data/futures_turtle.json public/data/turtle_book.json public/data/turtle_portfolio.json journal/turtle_book.futures.json journal/turtle_book.asx.json journal/turtle_book.nasdaq.json journal/turtle_book.crypto.json journal/turtle_book.crypto5x.json journal/turtle_book.json"
           # One pathspec per git add: `git add a b` is ALL-OR-NOTHING and exits
           # 128 staging NEITHER when one path is missing (Tier 3). A
           # single-market dispatch legitimately leaves two of the three absent.
