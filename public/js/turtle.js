@@ -55,6 +55,7 @@
   let QUERY = "";
   let EQUITY = FALLBACK.account_equity;
   let OPEN = null;               // expanded row symbol
+  let SORT = "fired";            // URL-only so far (Phase 3): no sort control exists yet
   let TOUCHED = false;           // has the reader picked a view themselves?
   let BOOK = null;               // the forward paper book, all markets
   let PORTFOLIO = null;          // the shared-equity portfolio replay, per sleeve
@@ -137,31 +138,96 @@
         // Only fall back to RULES when there is genuinely nothing to scan --
         // and never override a view the reader has already chosen.
         if (!TOUCHED) VIEW = DATA ? "signals" : "rules";
+        // Same reasoning, one field over: FILTER's default is "fired" (the
+        // URL contract, Phase 2), but a fired-today count of zero is a real
+        // possibility on a quiet day, and an empty SIGNALS list on first
+        // paint reads as broken rather than as "nothing fired." Fall
+        // through to the next non-empty bucket -- never past ALL, which is
+        // never empty when DATA exists. A URL or a click that already
+        // chose a filter (TOUCHED) is left exactly as chosen.
+        if (!TOUCHED && DATA && FILTER === "fired") {
+          const a = DATA.aggregate || {};
+          if (!a.fired_today) FILTER = (a.long || a.short) ? "held" : "all";
+        }
         return DATA;
       });
   }
 
   // ── deck ───────────────────────────────────────────────────────────────────
+  // The five FILTER buckets, computed once from the aggregate so the deck
+  // pills and the SIGNALS segs below can never show two different numbers
+  // for the same word. "held" is aggregate.long + aggregate.short, not a
+  // filter over DATA.results -- the results array is truncated (large
+  // markets ship ~400 of a few thousand names) and keeps every long/short
+  // row but only a sample of flat ones, so counting the array under-counts
+  // "in a position" the moment a market is big enough to truncate at all.
+  function filterCounts() {
+    if (!DATA) return null;
+    const a = DATA.aggregate || {};
+    return {
+      all: a.names || 0,
+      fired: a.fired_today || 0,
+      held: (a.long || 0) + (a.short || 0),
+      near: a.approaching || 0,
+      blocked: a.s1_blocked || 0,
+    };
+  }
+
+  // The scan's own schedule (.github/workflows/turtle.yml), restated as a
+  // fixed per-market sentence rather than a computed "next in Xm" -- a
+  // countdown this page cannot keep honest across a DST change or a missed
+  // run is worse than no countdown. Keep this in step with turtle.yml if
+  // that file's cron lines ever move.
+  const NEXT_CRON = {
+    asx: "next scan ~06:30 UTC weekdays",
+    nasdaq: "next scan ~21:30 UTC weekdays",
+    crypto: "next scan every 4h (:05 past the hour)",
+    futures: "next scan ~23:00 UTC weekdays",
+  };
+
+  // Buttons, not badges: role=group, one FILTER value per pill, shared with
+  // the SIGNALS segs in render() below. SKIPS is not a filter value -- it
+  // is a jump to the BOOK view's skip-reason table -- so it carries
+  // data-skips instead of data-filter and is handled by its own branch in
+  // mount()'s click delegate.
+  function deckPillsHTML(counts) {
+    const DEFS = [
+      ["fired", "FIRED TODAY", counts.fired > 0],
+      ["held", "IN A POSITION", false],
+      ["near", "APPROACHING", false],
+      ["blocked", "S1 BLOCKED", false],
+      ["all", "ALL", false],
+    ];
+    let html = '<div class="deck-pills" role="group" aria-label="Turtle filter">' +
+      DEFS.map(([k, label, hot]) => {
+        const active = FILTER === k;
+        return '<button type="button" class="fpill' + (hot ? " g" : "") +
+          (active ? " is-active" : "") + '" data-filter="' + k + '" aria-pressed="' +
+          (active ? "true" : "false") + '">' + label + ' <span class="seg-count">' +
+          big(counts[k]) + "</span></button>";
+      }).join("");
+    const skipTotal = BOOK && BOOK.skip_counts ? (BOOK.skip_counts.total || 0) : 0;
+    if (skipTotal) {
+      html += '<button type="button" class="fpill" data-skips="1">SKIPS ' +
+        '<span class="seg-count">' + big(skipTotal) + "</span></button>";
+    }
+    return html + "</div>";
+  }
+
   function deckHTML() {
     if (!DATA) {
       return '<div class="deck-status"><span class="deck-dot" data-state="idle"></span>' +
-        '<span class="deck-title">Turtle rules</span></div>' +
+        '<span class="deck-title">TURTLE &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
         '<p class="deck-sub">No scan file for ' + esc(MARKET.toUpperCase()) +
         ' yet — the rules, the calculator and the evidence below work without one.</p>';
     }
-    const a = DATA.aggregate || {};
-    const bits = [
-      '<span class="tt-pill' + (a.fired_today ? " is-hot" : "") + '">' +
-        big(a.fired_today) + " fired today</span>",
-      '<span class="tt-pill">' + big(a.long) + " long &middot; " + big(a.short) + " short</span>",
-      '<span class="tt-pill">' + big(a.approaching) + " approaching</span>",
-      '<span class="tt-pill">' + big(a.s1_blocked) + " S1 blocked</span>",
-    ];
+    const counts = filterCounts();
+    const cron = NEXT_CRON[MARKET] || "";
     return '<div class="deck-status"><span class="deck-dot" data-state="ok"></span>' +
-      '<span class="deck-title">Turtle &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
-      '<p class="deck-sub">' + big(a.names) + " names evaluated of " + big(DATA.universe_size) +
+      '<span class="deck-title">TURTLE &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
+      '<p class="deck-sub">' + big(DATA.evaluated) + " names evaluated of " + big(DATA.universe_size) +
       " in the universe &middot; scanned " + esc(String(DATA.generated_at || "").slice(0, 16).replace("T", " ")) +
-      "</p>" + '<div class="deck-pills">' + bits.join("") + "</div>";
+      (cron ? " &middot; " + esc(cron) : "") + "</p>" + deckPillsHTML(counts);
   }
 
   // ── view 1: THE RULES ──────────────────────────────────────────────────────
@@ -362,12 +428,13 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (FILTER === "fired") rows = rows.filter((r) => r.signal);
     else if (FILTER === "held") rows = rows.filter((r) => r.state !== "flat");
     else if (FILTER === "near") rows = rows.filter((r) => r.approaching);
+    else if (FILTER === "blocked") rows = rows.filter((r) => r.s1_blocked);
     if (QUERY) {
       const q = QUERY.toUpperCase();
       rows = rows.filter((r) => (r.symbol || "").toUpperCase().indexOf(q) >= 0 ||
         (r.name || "").toUpperCase().indexOf(q) >= 0);
     }
-    return rows;
+    return sortRows(rows);
   }
 
   function stateChip(r) {
@@ -393,6 +460,181 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     s1_short: "the " + P.s1_entry + "-day low", s2_short: "the " + P.s2_entry + "-day low",
   }[k] || k);
 
+  // ── chart links + book facts on a row (Phase 6) ─────────────────────────────
+  // chart.html has no page for a continuous futures contract (=F / 6E-style
+  // symbols); a link it cannot resolve is worse than no link, so futures
+  // gets a short honest sentence instead of a 404 <a>.
+  function chartHref(market, sym) {
+    if (market === "futures") return null;
+    return "chart.html?m=" + encodeURIComponent(market) + "&s=" + encodeURIComponent(sym) + "&src=turtle";
+  }
+
+  // One R formula, shared with bookHTML()'s own open-positions table, so a
+  // position can never show two different R's depending on which part of
+  // the page you're reading. Any required field missing -> null, so the
+  // caller omits the line rather than showing a guess.
+  function openR(p) {
+    if (!p || !p.n || !p.units || p.last_mark == null || p.cost_basis == null) return null;
+    const sign = p.side === "short" ? -1 : 1;
+    const avg = p.cost_basis / p.units;
+    return sign * (p.last_mark - avg) * p.units / (P.stop_n * p.n * p.units);
+  }
+
+  // Isolated margin's liquidation line -- the same formula
+  // scanner/turtle_book.py uses internally to decide whether the stop or
+  // the liquidation price binds first. It is never published as its own
+  // field, so it is re-derived here from fields that ARE published
+  // (cost_basis, units, posted, side, last_mark); any of them missing
+  // returns null rather than a fabricated distance.
+  function liqDistanceR(p) {
+    if (!p || !p.posted || !p.units || p.cost_basis == null || p.last_mark == null || !p.n) return null;
+    const avg = p.cost_basis / p.units;
+    const liq = p.side === "short" ? avg + p.posted / p.units : avg - p.posted / p.units;
+    return Math.abs(p.last_mark - liq) / (P.stop_n * p.n);
+  }
+
+  // Next add (Phase D): Turtle's own rule -- one add per pyramid_step_n*N,
+  // max_units total -- computed ONLY from fields the BOOK payload already
+  // carries (last_fill, n, side, fills.length). Never a call into
+  // turtle_book.py's own math, which this page cannot see and must not
+  // guess at: a wrong next-add is worse than none. "max units" once
+  // fills.length reaches P.max_units; "—" only when a required field is
+  // genuinely missing. Top-level like liqDistanceR above, so posRow (BOOK)
+  // and bookOpenHTML (a SIGNALS row's expanded detail) share one formula
+  // and can never quote two different numbers for the same position.
+  function nextAddStr(p) {
+    if (!p || (p.fills || []).length >= P.max_units) return "max units";
+    if (p.last_fill == null || p.n == null) return "—";
+    const sign = p.side === "short" ? -1 : 1;
+    return num(p.last_fill + sign * P.pyramid_step_n * p.n, 4);
+  }
+
+  // A symbol can be open in more than one sleeve at once (a cash position
+  // and a levered one are separate books) -- every match is returned, not
+  // just the first.
+  function bookOpenPositions(symbol) {
+    if (!BOOK || !BOOK.open) return [];
+    return BOOK.open.filter((p) => p.symbol === symbol);
+  }
+
+  function leverageOf(market) {
+    const params = BOOK && BOOK.by_market && BOOK.by_market[market] && BOOK.by_market[market].params;
+    return params && params.leverage > 1 ? params.leverage : null;
+  }
+
+  // A BOOK sleeve key is not always a market this page can load a scan for:
+  // a levered sleeve is priced from the very same scan as its cash sibling,
+  // just filed under its own by_market key with a leverage suffix. Strip
+  // that suffix and confirm the result is one of the four real markets;
+  // anything unrecognised is returned unchanged rather than guessed at.
+  function scanMarketFor(market) {
+    const base = (market || "").replace(/\d+x$/i, "");
+    return MARKETS.indexOf(base) !== -1 ? base : market;
+  }
+
+  // Vehicle badge: rendered from params.leverage, never a hardcoded
+  // multiplier -- and only for a symbol actually open in a levered sleeve,
+  // so a market that merely HAS a levered sleeve elsewhere never badges
+  // every row in it.
+  function vehicleBadgeHTML(symbol) {
+    const positions = bookOpenPositions(symbol);
+    for (let i = 0; i < positions.length; i++) {
+      const lev = leverageOf(positions[i].market);
+      if (lev) return '<span class="tt-chip" title="Open in a ' + big(lev) +
+        '&times; sleeve — a perp analogue, not futures margin, sized from posted ' +
+        'margin rather than notional">' + big(lev) + "&times; margin</span>";
+    }
+    return "";
+  }
+
+  // A name skipped from a levered sleeve for the correlated-group cap is a
+  // fact this row can carry without a click-through to BOOK. Symmetric to
+  // vehicleBadgeHTML: rendered from the skip's own leverage params, never
+  // a hardcoded multiplier or sleeve name, and matched via scanMarketFor
+  // (the same generic suffix-strip Phase 7 uses for the open-position
+  // jump) rather than any literal sleeve key. Scoped to close_corr_cap
+  // only, per spec -- not a general skip-reason display.
+  function capSkipBadgeHTML(symbol) {
+    if (!BOOK || !BOOK.skips) return "";
+    let last = null;
+    for (let i = 0; i < BOOK.skips.length; i++) {
+      const k = BOOK.skips[i];
+      if (k.symbol === symbol && k.reason === "close_corr_cap" &&
+          k.market !== MARKET && scanMarketFor(k.market) === MARKET) last = k;
+    }
+    if (!last) return "";
+    const lev = leverageOf(last.market);
+    const label = lev ? big(lev) + "&times; cap" : "cap";
+    return '<span class="tt-chip is-blocked" title="Skipped on the ' +
+      esc((last.market || "").toUpperCase()) + ' sleeve: ' + big(last.units_on_book || 0) +
+      ' of ' + big(last.cap || 0) + ' correlated units already held">' + label + '</span>';
+  }
+
+  function bookOpenHTML(symbol) {
+    const positions = bookOpenPositions(symbol);
+    if (!positions.length) return "";
+    return positions.map((p) => {
+      const avg = p.units ? p.cost_basis / p.units : null;
+      const r = openR(p);
+      const lev = leverageOf(p.market);
+      const nextAdd = nextAddStr(p);
+      let g = '<div class="tt-detail-grid">' +
+        kv("In the book (" + esc((p.market || "").toUpperCase()) + ")",
+          esc(p.side || "") + " S" + esc(String(p.system || "?"))) +
+        kv("Units", (p.fills || []).length) +
+        (avg != null ? kv("Avg fill", money(avg)) : "") +
+        (p.stop != null ? kv("Stop", money(p.stop)) : "") +
+        (nextAdd !== "—" ? kv("Next add", nextAdd) : "") +
+        (r != null ? kv("Open R", sgnR(r)) : "");
+      if (lev) {
+        if (p.posted != null) g += kv(big(lev) + "&times; posted margin", money(p.posted));
+        const distR = liqDistanceR(p);
+        if (distR != null) g += kv("Liquidation distance", num(distR, 2) + "R");
+      }
+      return g + "</div>";
+    }).join("");
+  }
+
+  // "verbatim" per the phase spec: the raw reason code as the book wrote
+  // it, not translated through bookHTML()'s own WHY table -- this is a
+  // fact about what the book did, not a second copy of that prose to keep
+  // in sync with the first.
+  function bookSkipHTML(symbol) {
+    if (!BOOK || !BOOK.skips) return "";
+    let last = null;
+    for (let i = 0; i < BOOK.skips.length; i++) if (BOOK.skips[i].symbol === symbol) last = BOOK.skips[i];
+    if (!last) return "";
+    return '<p class="tt-note">The book skipped this on ' + esc(last.as_of || last.bar || "the last bar") +
+      ": " + esc(last.action || "an action") + " &mdash; <code>" + esc(last.reason || "") + "</code></p>";
+  }
+
+  // ── sort (Phase 6) ───────────────────────────────────────────────────────
+  const SORT_CYCLE = ["fired", "distance", "n", "symbol"];
+  const SORT_LABELS = { fired: "FIRED", distance: "DISTANCE", n: "N", symbol: "SYMBOL" };
+
+  // 0 for a name that already fired (nothing is closer than today), then
+  // whatever the payload says is the nearest real distance -- to a trigger
+  // level for a flat/approaching name, to the stop for a held one. Anything
+  // with neither sorts last, never invented as some fake "far" number.
+  function distanceOf(r) {
+    if (r.signal) return 0;
+    if (r.nearest && r.nearest.distance_pct != null) return r.nearest.distance_pct;
+    if (r.stop_distance_pct != null) return r.stop_distance_pct;
+    return Infinity;
+  }
+
+  // rows arrives already a fresh array (rowsFor()'s own .slice()/.filter()
+  // chain, never DATA.results itself), so sorting it in place cannot reach
+  // the published payload -- copy-then-sort happens before this is called,
+  // not inside it.
+  function sortRows(rows) {
+    const bySymbol = (a, b) => (a.symbol || "").localeCompare(b.symbol || "");
+    if (SORT === "distance") return rows.sort((a, b) => distanceOf(a) - distanceOf(b) || bySymbol(a, b));
+    if (SORT === "n") return rows.sort((a, b) => (b.n || 0) - (a.n || 0) || bySymbol(a, b));
+    if (SORT === "symbol") return rows.sort(bySymbol);
+    return rows; // "fired" (default): the scan's own fired -> held -> proximity order, untouched
+  }
+
   function rowHTML(r) {
     const shares = unitShares(EQUITY, r.n);
     const open = OPEN === r.symbol;
@@ -405,9 +647,14 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           (r.s1_blocked ? '<span class="tt-chip is-blocked" title="The previous ' +
             P.s1_entry + '-day breakout in this name was a filter-winner, so System 1 is ' +
             'skipped until one fails. The ' + P.s2_entry + '-day failsafe still applies.">S1 filtered</span>' : "") +
+          vehicleBadgeHTML(r.symbol) +
+          capSkipBadgeHTML(r.symbol) +
         "</div>" +
         '<div class="tt-nums"><span class="mono">' + money(r.price) + "</span>" +
-          '<span class="mono tt-dim">N ' + num(r.n) + " (" + pct(r.n_pct) + ")</span></div>" +
+          '<span class="mono tt-dim">N ' + num(r.n) + " (" + pct(r.n_pct) + ")</span>" +
+          (r.unit_stop_loss != null ? '<span class="mono tt-dim">stop ' +
+            money(r.unit_stop_loss, 0) + "</span>" : "") +
+        "</div>" +
         '<div class="tt-nums"><span class="mono">' + num(shares, shares < 10 ? 4 : 0) + " units</span>" +
           '<span class="mono tt-dim">' + money(shares * r.price, 0) + "</span></div>" +
       "</div>";
@@ -420,6 +667,12 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!open) return '<article class="tt-row"' + attrs + ">" + head + "</article>";
 
     let detail = "";
+    const href = chartHref(MARKET, r.symbol);
+    detail += href
+      ? '<p class="tt-note"><a class="tt-link" href="' + esc(href) + '">Chart &rarr;</a></p>'
+      : '<p class="tt-note">no chart for this contract.</p>';
+    detail += bookOpenHTML(r.symbol);
+    detail += bookSkipHTML(r.symbol);
     if (r.contracts) {
       const c = r.contracts;
       detail += '<div class="tt-detail-grid">' +
@@ -647,21 +900,326 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     const mk = Object.keys(BOOK.by_market || {});
     const open = (BOOK.open || []).slice().sort(
       (a, b) => (b.fills || []).length - (a.fills || []).length);
+    // If only SOME sleeves have a closed trade, the combined Total above is
+    // numerically that sleeve's own number wearing a five-sleeve label --
+    // exactly the "crypto cash -6.696R is one sleeve, not the combined
+    // story" risk. Named generically from whichever sleeves actually have
+    // closes, never hardcoded to crypto, so this stays true whichever
+    // sleeve gets there first on a future night.
+    const closedSleeves = mk.filter((m) => (BOOK.by_market[m] || {}).closed > 0);
+    const singleSleeveNote = (closedSleeves.length && closedSleeves.length < mk.length)
+      ? ` The combined Total above is carried entirely by
+        <b>${closedSleeves.map((m) => esc(m.toUpperCase())).join(", ")}</b> — every other
+        sleeve is still at zero closes, so one sleeve's record is not yet the combined
+        book's record.`
+      : "";
 
-    const posRow = (p) => {
+    // A symbol here is a BOOK fact, not a scan row -- clicking or Enter/
+    // Space on it jumps to that symbol's market on SIGNALS with the row
+    // expanded (jumpToBookSymbol, wired in mount()). scanMarketFor() maps a
+    // levered sleeve key back to the scan that actually prices it, so this
+    // never tries to load a BOOK-only key as a market.
+    const openSymbolHTML = (symbol, market) =>
+      '<span class="tt-link" tabindex="0" role="button" data-open-symbol="' +
+      esc(symbol) + '" data-open-market="' + esc(scanMarketFor(market)) + '">' +
+      esc(symbol) + "</span>";
+
+    // Coin/contract QUANTITY (p.units, e.g. UNI 213.66) and Turtle UNIT
+    // COUNT (p.fills.length, always 1-4) are different numbers that happen
+    // to share a field name upstream. Phase A traced every renderer of a
+    // BOOK position and found both existing ones (this row, and
+    // bookOpenHTML's detail grid) already used fills.length for "u" --
+    // correct, not a bug. What was missing is qty itself: it was nowhere
+    // visible on this table at all, only recoverable by dividing
+    // cost_basis by an unlabelled number in a different view. qtyStr keeps
+    // more precision under 10 (a ZEC position is 1.2655, not "1"), because
+    // the whole point of this column is to show the real number precisely.
+    const qtyStr = (u) => (u == null ? "—" : u < 10 ? num(u, 4) : num(u, 2));
+
+    const posRow = (p, levered) => {
       const sign = p.side === "short" ? -1 : 1;
       const avg = p.units ? p.cost_basis / p.units : 0;
       const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
         (P.stop_n * p.n * p.units) : null;
-      return "<tr><td class=\"mono\">" + esc(p.symbol) + "</td><td>" +
+      let row = "<tr><td class=\"mono\">" + openSymbolHTML(p.symbol, p.market) + "</td><td>" +
         esc((p.market || "").toUpperCase()) + "</td><td>" + esc(p.side) +
         " S" + esc(String(p.system)) + '</td><td class="mono">' +
-        (p.fills || []).length + "u</td><td class=\"mono\">" + num(avg, 4) +
-        '</td><td class="mono">' + num(p.stop, 4) + '</td><td class="mono ' +
-        cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
+        (p.fills || []).length + "u</td><td class=\"mono\">" + qtyStr(p.units) +
+        "</td><td class=\"mono\">" + num(avg, 4) +
+        '</td><td class="mono">' + num(p.stop, 4) +
+        '</td><td class="mono">' + nextAddStr(p) + "</td>";
+      if (levered) {
+        const distR = liqDistanceR(p);
+        row += '<td class="mono">' + (p.posted != null ? money(p.posted) : "—") +
+          '</td><td class="mono">' + (distR != null ? num(distR, 2) + "R" : "—") + "</td>";
+      }
+      row += '<td class="mono ' + cls(r) + '">' + sgnR(r) + "</td><td>" + esc(p.opened) + "</td></tr>";
+      return row;
     };
 
-    let h = `
+    // BOOK IS THE MONEY SURFACE (Phase 7): what is open and what just closed
+    // are facts, and lead. By-market and skips are still fact, one level
+    // more aggregated. The headline essay and the portfolio replay are
+    // context FOR reading those facts, not the facts themselves, so both
+    // now read last rather than first.
+    let h = "";
+
+    if (open.length) {
+      // Two table SHAPES, not one table with blank columns (Phase C): a
+      // cash row drawn with empty Posted/Liq cells reads as "almost
+      // levered", which is the exact confusion this split avoids. Split is
+      // by leverageOf(p.market), read from params -- never a market-name
+      // check -- so this holds however many levered sleeves ever exist.
+      const openCash = open.filter((p) => !leverageOf(p.market));
+      const openLevered = open.filter((p) => leverageOf(p.market));
+      const anyFutures = open.some((p) => p.market === "futures");
+      if (openCash.length) {
+        h += `<section class="tt-card"><h3>Open positions</h3>
+          <div class="tt-tablewrap"><table class="tt-table">
+          <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
+          <th>Avg fill</th><th>Stop</th><th>Next add</th><th>Open R</th><th>Since</th></tr></thead>
+          <tbody>${openCash.map((p) => posRow(p, false)).join("")}</tbody></table></div>
+          <p class="tt-note">"Units" is the Turtle pyramid count (1-4, one add per
+          ${P.pyramid_step_n}N); "Qty" is the actual coin or share count that count
+          was built from. One shared stop per position, ${P.stop_n}N under the most
+          recent unit. "Next add" is the next ${P.pyramid_step_n}N pyramid level from
+          the last fill -- not a fill that has happened, and not a call into the
+          book's own math -- reading "max units" once all ${P.max_units} fills are
+          already in. On the equity and crypto books the cash constraint binds
+          fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
+          routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
+          That is exactly the leverage the Turtles had from futures margin and a
+          cash account does not.</p>
+          ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
+          NOT constrained by cash.</b> A futures position consumes margin, not
+          notional, and this repo has no margin data — so the only ceilings on the
+          futures book are the unit caps (${P.max_units} per market,
+          ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
+          direction) and the refusal to hold less than one contract. Do not read a
+          futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
+          would fit: the notional behind those contracts is many multiples of the
+          account, and the leverage was never priced. It is disclosed rather than
+          modelled because a fabricated margin number would be worse than an
+          absent one.</p>` : ""}</section>`;
+      }
+      if (openLevered.length) {
+        h += `<section class="tt-card"><h3>Open positions — levered sleeve</h3>
+          <div class="tt-tablewrap"><table class="tt-table">
+          <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
+          <th>Avg fill</th><th>Stop</th><th>Next add</th><th>Posted</th><th>Liq dist.</th>
+          <th>Open R</th><th>Since</th></tr></thead>
+          <tbody>${openLevered.map((p) => posRow(p, true)).join("")}</tbody></table></div>
+          <p class="tt-note">Posted is the margin actually at risk on this position
+          (notional/leverage, isolated). Liq dist. is how far price sits from the
+          line where posted margin runs out, in the same ${P.stop_n}N unit the stop
+          uses — a stop and a liquidation are different exits, and whichever is
+          nearer fires first. A blank cell here means a required field is missing
+          on that row, never a guessed number.</p></section>`;
+      }
+    }
+
+    const closed = (BOOK.closed || []).slice(-25).reverse();
+    if (closed.length) {
+      h += `<section class="tt-card"><h3>Closed, most recent first</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Side</th><th>Reason</th><th>R</th>
+        <th>P&amp;L</th><th>Fees</th><th>Opened</th><th>Closed</th></tr></thead>
+        <tbody>${closed.map((t) => "<tr><td class=\"mono\">" + esc(t.symbol) +
+          "</td><td>" + esc(t.side) + "</td><td>" + esc(t.reason) +
+          '</td><td class="mono ' + cls(t.r) + '">' + sgnR(t.r) +
+          '</td><td class="mono ' + cls(t.pnl) + '">' + money(t.pnl) +
+          '</td><td class="mono">' + money(t.fees) + "</td><td>" + esc(t.opened) +
+          "</td><td>" + esc(t.closed) + "</td></tr>").join("")}
+        </tbody></table></div></section>`;
+    }
+
+    if (mk.length) {
+      // A levered sleeve travels with its own params (turtle_book stamps
+      // them), and the disclosure below renders FROM those params -- this
+      // page cannot describe a 5x book the engine is not running.
+      const lev5 = mk.map((m) => [m, (BOOK.by_market[m] || {}).params])
+        .find(([, p]) => p && p.leverage > 1);
+      // The correlated-group cap number in the note below is READ from the
+      // skip rows' own units_on_book/cap (Phase C) -- never the literal 6 --
+      // and only appears at all if a close_corr_cap skip against this
+      // sleeve actually exists to derive it from.
+      const capBind = (() => {
+        if (!lev5) return null;
+        const hits = (BOOK.skips || []).filter((k) =>
+          k.reason === "close_corr_cap" && k.market === lev5[0]);
+        if (!hits.length) return null;
+        const worst = hits.reduce((a, b) =>
+          (b.units_on_book || 0) > (a.units_on_book || 0) ? b : a, hits[0]);
+        return (worst.units_on_book == null || worst.cap == null) ? null :
+          { on: worst.units_on_book, cap: worst.cap, n: hits.length };
+      })();
+      h += `<section class="tt-card"><h3>By market</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
+        <tbody>${mk.map((m) => {
+          const b = BOOK.by_market[m] || {};
+          const margins = b.params && b.params.leverage > 1 &&
+            b.posted_margin != null && b.free_margin != null
+            ? " (" + money(b.posted_margin, 0) + " posted, " + money(b.free_margin, 0) + " free)"
+            : "";
+          const veh = b.params && b.params.leverage > 1
+            ? big(b.params.leverage) + "&times; margin" + margins : "cash";
+          return "<tr><td>" + esc(m.toUpperCase()) + "</td><td>" + veh +
+            '</td><td class="mono">' +
+            money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
+            '</td><td class="mono">' + big(b.closed) + '</td><td class="mono ' +
+            cls(b.total_r) + '">' + sgnR(b.total_r) + "</td></tr>";
+        }).join("")}</tbody></table></div>
+        ${lev5 ? `<p class="tt-note"><b>${esc(lev5[0].toUpperCase())} is
+        ${big(lev5[1].leverage)}&times; posted margin</b> (notional/${big(lev5[1].leverage)},
+        ${esc(lev5[1].margin_mode || "isolated")}) — a perp analogue, <b>not</b> Dennis's
+        futures IM. The unit is still ${(P.risk_pct * 100).toFixed(0)}% of equity
+        per N; what changes is only what a unit COSTS to hold. A position whose
+        adverse move consumes its posted margin is closed as
+        <b>liquidation</b>, at the liquidation price — isolated margin cannot
+        lose more than it posted. It is a NEW series beside the cash crypto
+        book, never a restatement of it.${capBind ? ` The correlated-group cap is
+        <b>binding, not the margin</b>: <b>${big(capBind.on)}/${big(capBind.cap)}</b>
+        crypto units already held is why further adds and new names are being
+        declined tonight (see Not taken, and why, below) while margin itself
+        still has room. Filling the cap on day one is the system saying "this
+        is one correlated bet", not a shortage of money.` : ""}</p>` : ""}</section>`;
+    }
+
+    // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
+    // identical to one that had no signals, and which ceiling is binding is
+    // the whole story -- especially at $5,000, where cash binds long before
+    // any Turtle rule does.
+    const skips = BOOK.skips || [];
+    // Cash-skip dollars, latest bar only (Phase D): computed here, ahead of
+    // the skip board itself, so the SAME sentence can also reach the
+    // combined card below rather than being recomputed (and risking
+    // drifting) a second time. Restricted to the latest as_of so a re-run
+    // mid-session can never double count across bars. want_notional is
+    // summed only where the row actually carries it -- partial-data
+    // honesty: a skip missing the field is counted into "N skips" but never
+    // guessed into the dollar total, and the gap is stated rather than
+    // hidden.
+    const latestAsOf = skips.reduce((mx, k) => (k.as_of && (!mx || k.as_of > mx) ? k.as_of : mx), null);
+    const cashToday = skips.filter((k) => k.reason === "cash" && k.as_of === latestAsOf);
+    const cashTodayPriced = cashToday.filter((k) => k.want_notional != null);
+    const cashMarkets = new Set(cashToday.map((k) => k.market));
+    const cashSkipSentence = cashToday.length
+      ? big(cashToday.length) + " cash skip" + (cashToday.length === 1 ? "" : "s") +
+        " on " + esc(latestAsOf) + " across " + big(cashMarkets.size) +
+        " book" + (cashMarkets.size === 1 ? "" : "s") + ": " +
+        money(cashTodayPriced.reduce((sum, k) => sum + k.want_notional, 0), 0) +
+        " notional the cash book" + (cashMarkets.size === 1 ? "" : "s") + " refused" +
+        (cashTodayPriced.length < cashToday.length
+          ? " (" + big(cashToday.length - cashTodayPriced.length) + " more without a notional figure on the row)"
+          : "") + "."
+      : "";
+    if (skips.length) {
+      const WHY = {
+        direction_cap: "12-unit one-way ceiling",
+        close_corr_cap: "6-unit correlated-group ceiling",
+        loose_corr_cap: "10-unit loose-correlation ceiling",
+        per_market_cap: "4-unit per-name ceiling",
+        cash: "no cash — a unit would exceed the account",
+        no_margin: "no free margin for the posted amount",
+        unit_lt_one: "a unit is less than one contract",
+        no_margin_file: "no real margin data — futures opens are OFF",
+        roll_window: "a roll suspect sits in today's N window",
+        same_bar_reentry: "exited on this bar — waiting for a NEW break",
+        s1_skip_after_win: "System 1 filter: the last breakout won",
+      };
+      // Short forms for the one-line summary (Phase C) -- same reasons,
+      // compact enough for a sentence rather than a detail grid.
+      const SHORT_WHY = {
+        direction_cap: "direction (cap binding)", close_corr_cap: "close-corr (cap binding)",
+        loose_corr_cap: "loose-corr (cap binding)", per_market_cap: "per-name (cap binding)",
+        cash: "cash", no_margin: "no margin", unit_lt_one: "unit < 1 contract",
+        no_margin_file: "no margin file", roll_window: "roll suspect",
+        same_bar_reentry: "same-bar re-entry", s1_skip_after_win: "S1 filtered",
+      };
+      const counts = BOOK.skip_counts || {};
+      const byReason = Object.keys(counts).filter((k) => k !== "total")
+        .sort((a, b) => counts[b] - counts[a]);
+      const summaryLine = big(counts.total || 0) + " skips: " +
+        byReason.map((r) => big(counts[r]) + " " + esc(SHORT_WHY[r] || r)).join(" · ");
+      // Dedup by symbol x reason x action, with a count (Phase C): a name
+      // skipped for the same reason across the crypto book's 4-hourly
+      // reruns should read as one row with a count, not N near-identical
+      // ones. Zero duplicates exist as of tonight's single run -- this is
+      // for the night that does accumulate them, not a fix for tonight.
+      const dedup = new Map();
+      skips.forEach((k) => {
+        const key = (k.symbol || "") + "|" + (k.reason || "") + "|" + (k.action || "");
+        const existing = dedup.get(key);
+        if (existing) existing.n += 1; else dedup.set(key, Object.assign({ n: 1 }, k));
+      });
+      // Tonight's actual readability problem was never duplication -- it
+      // was ORDER. The scan writes skips market-by-market (asx first), so
+      // the old raw slice(0,40) showed 40 ASX cash rows and never reached
+      // the 12 close_corr_cap ones at all. Sort by how RARE the reason is
+      // (ascending count) so the structural, diagnostic reasons surface
+      // before the numerous cash ones, which the sentence above already
+      // summarises on their own.
+      const rows = Array.from(dedup.values()).sort((a, b) =>
+        (counts[a.reason] || 0) - (counts[b.reason] || 0) ||
+        (a.symbol || "").localeCompare(b.symbol || ""));
+      // "Would this fit on the levered sleeve" (Phase D): a display
+      // comparison only, never an order and never a hint to retune
+      // anything. Renders ONLY where the skip is a cash skip carrying
+      // want_notional AND a levered sibling of its market actually exists
+      // in by_market -- found via scanMarketFor's own suffix rule, in
+      // reverse, so no sleeve key is ever spelled out literally here, and
+      // this simply produces nothing for a market with no levered sibling.
+      const fitsOnLeveredHTML = (k) => {
+        if (k.reason !== "cash" || k.want_notional == null) return "";
+        const levMarket = mk.find((m) => m !== k.market && scanMarketFor(m) === k.market &&
+          ((BOOK.by_market[m] || {}).params || {}).leverage > 1);
+        if (!levMarket) return "";
+        const b = BOOK.by_market[levMarket];
+        const lev = b.params.leverage;
+        if (b.free_margin == null) return "";
+        const posted = k.want_notional / lev;
+        const fits = posted <= b.free_margin;
+        return ' <span class="tt-chip' + (fits ? "" : " is-blocked") + '" title="' +
+          big(lev) + '&times; posted would be ' + money(posted, 0) + ' vs ' +
+          money(b.free_margin, 0) + ' free on ' + esc(levMarket.toUpperCase()) + '">' +
+          (fits ? "fits on " : "would not fit on ") + big(lev) + '&times;</span>';
+      };
+      h += `<section class="tt-card" id="tt-skips"><h3>Not taken, and why</h3>
+        <p class="tt-note">${esc(summaryLine)}</p>
+        <div class="tt-detail-grid">${byReason.map((r) =>
+          kv(esc(WHY[r] || r), big(counts[r]))).join("")}</div>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Symbol</th><th>Market</th><th>Action</th><th>Reason</th><th>Detail</th></tr></thead>
+        <tbody>${rows.slice(0, 40).map((k) => {
+          const d = [];
+          if (k.units_on_book != null) d.push(k.units_on_book + " on book vs cap " + k.cap);
+          if (k.units_held != null && k.units_on_book == null) d.push(k.units_held + " units held");
+          if (k.want_notional != null) d.push("wanted " + money(k.want_notional, 0));
+          if (k.posted_want != null) d.push("posted " + money(k.posted_want, 0) + " wanted");
+          if (k.need_im != null) d.push("IM " + money(k.need_im, 0) + " vs free " + money(k.free, 0));
+          if (k.one_contract_risk_pct != null) d.push("one contract = " + pct(k.one_contract_risk_pct) + " of the account");
+          if (k.bucket) d.push(esc(k.bucket));
+          if (k.bar) d.push("bar " + esc(k.bar));
+          return "<tr><td class=\"mono\">" + openSymbolHTML(k.symbol, k.market) + "</td><td>" +
+            esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
+            (k.n > 1 ? " &times;" + big(k.n) : "") +
+            "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
+            esc(d.join(" · ")) + fitsOnLeveredHTML(k) + "</td></tr>";
+        }).join("")}</tbody></table></div>
+        <p class="tt-note">These are decisions, not failures, and not one story.
+        ${counts.cash ? `The <b>${big(counts.cash)} cash</b> skips are the CASH
+        books refusing a unit that would exceed their account — see Equity in
+        By market, above; that is the futures-margin gap those sleeves do not
+        have.` : ""}
+        ${counts.close_corr_cap ? `The <b>${big(counts.close_corr_cap)}
+        close-corr</b> skips are a DIFFERENT sleeve hitting its own
+        correlated-unit cap with margin still free — a structural limit doing
+        its job, not a shortage of money. Reading the two as one story
+        misreads both.` : ""}</p></section>`;
+    }
+
+    h += `
       <section class="tt-card">
         <h3>The forward book — the only honest number here</h3>
         <div class="tt-detail-grid">
@@ -685,130 +1243,23 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
         <p class="tt-note">Equity here is <b>realised only</b> — open positions are
         not marked into the headline. This is <b>${mk.length} separate sleeve${mk.length === 1 ? "" : "s"}, not one account</b>
-        — one book per market, own equity, own slot pool — and the combined
+        — one book per market, own equity, own slot pool.${mk.length > 1 ? ` ${money(s.equity_start, 0)}
+        start is ${mk.length} sleeves of about ${money(s.equity_start / mk.length, 0)} each, not
+        one bigger bet.` : ""} The combined
         figures add A$ and US$ <b>at face value</b> (no FX conversion): read
         the per-market rows for anything you would act on. The crypto books run
-        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
+        every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.${singleSleeveNote}</p>
+        ${cashSkipSentence ? `<p class="tt-note">${esc(cashSkipSentence)} That is universe the
+        cash books can SEE but not size at their own equity -- see Not taken, and
+        why, below for which of it would fit a levered sleeve instead.</p>` : ""}
 </section>`;
 
-    if (mk.length) {
-      // A levered sleeve travels with its own params (turtle_book stamps
-      // them), and the disclosure below renders FROM those params -- this
-      // page cannot describe a 5x book the engine is not running.
-      const lev5 = mk.map((m) => [m, (BOOK.by_market[m] || {}).params])
-        .find(([, p]) => p && p.leverage > 1);
-      h += `<section class="tt-card"><h3>By market</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
-        <tbody>${mk.map((m) => {
-          const b = BOOK.by_market[m] || {};
-          const veh = b.params && b.params.leverage > 1
-            ? big(b.params.leverage) + "&times; margin" : "cash";
-          return "<tr><td>" + esc(m.toUpperCase()) + "</td><td>" + veh +
-            '</td><td class="mono">' +
-            money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
-            '</td><td class="mono">' + big(b.closed) + '</td><td class="mono ' +
-            cls(b.total_r) + '">' + sgnR(b.total_r) + "</td></tr>";
-        }).join("")}</tbody></table></div>
-        ${lev5 ? `<p class="tt-note"><b>${esc(lev5[0].toUpperCase())} is
-        ${big(lev5[1].leverage)}&times; posted margin</b> (notional/${big(lev5[1].leverage)},
-        ${esc(lev5[1].margin_mode || "isolated")}) — a perp analogue, <b>not</b> Dennis's
-        futures IM. The unit is still ${(P.risk_pct * 100).toFixed(0)}% of equity
-        per N; what changes is only what a unit COSTS to hold. A position whose
-        adverse move consumes its posted margin is closed as
-        <b>liquidation</b>, at the liquidation price — isolated margin cannot
-        lose more than it posted. It is a NEW series beside the cash crypto
-        book, never a restatement of it.</p>` : ""}</section>`;
-    }
+    // The five-year portfolio replay, LAST: context for reading the facts
+    // above, not a verdict on them -- portfolioCardHTML() itself already
+    // avoids "does this work" framing. Same unmodified function EVIDENCE
+    // has always called; BOOK gets a second call site, not a copy.
+    h += portfolioCardHTML();
 
-    if (open.length) {
-      const anyFutures = open.some((p) => p.market === "futures");
-      h += `<section class="tt-card"><h3>Open positions</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th>
-        <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
-        <tbody>${open.map(posRow).join("")}</tbody></table></div>
-        <p class="tt-note">One shared stop per position, ${P.stop_n}N under the most
-        recent unit. On the equity and crypto books the cash constraint binds
-        fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
-        routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
-        That is exactly the leverage the Turtles had from futures margin and a
-        cash account does not.</p>
-        ${anyFutures ? `<p class="tt-note tt-warn-note"><b>Futures positions here are
-        NOT constrained by cash.</b> A futures position consumes margin, not
-        notional, and this repo has no margin data — so the only ceilings on the
-        futures book are the unit caps (${P.max_units} per market,
-        ${P.max_units_close_corr} correlated, ${P.max_units_direction} per
-        direction) and the refusal to hold less than one contract. Do not read a
-        futures sleeve that "fits" in ${money(s.equity_start, 0)} as evidence it
-        would fit: the notional behind those contracts is many multiples of the
-        account, and the leverage was never priced. It is disclosed rather than
-        modelled because a fabricated margin number would be worse than an
-        absent one.</p>` : ""}</section>`;
-    }
-
-    // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
-    // identical to one that had no signals, and which ceiling is binding is
-    // the whole story -- especially at $5,000, where cash binds long before
-    // any Turtle rule does.
-    const skips = BOOK.skips || [];
-    if (skips.length) {
-      const WHY = {
-        direction_cap: "12-unit one-way ceiling",
-        close_corr_cap: "6-unit correlated-group ceiling",
-        loose_corr_cap: "10-unit loose-correlation ceiling",
-        per_market_cap: "4-unit per-name ceiling",
-        cash: "no cash — a unit would exceed the account",
-        no_margin: "no free margin for the posted amount",
-        unit_lt_one: "a unit is less than one contract",
-        no_margin_file: "no real margin data — futures opens are OFF",
-        roll_window: "a roll suspect sits in today's N window",
-        same_bar_reentry: "exited on this bar — waiting for a NEW break",
-        s1_skip_after_win: "System 1 filter: the last breakout won",
-      };
-      const counts = BOOK.skip_counts || {};
-      const byReason = Object.keys(counts).filter((k) => k !== "total")
-        .sort((a, b) => counts[b] - counts[a]);
-      h += `<section class="tt-card"><h3>Not taken, and why</h3>
-        <div class="tt-detail-grid">${byReason.map((r) =>
-          kv(esc(WHY[r] || r), big(counts[r]))).join("")}</div>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Market</th><th>Action</th><th>Reason</th><th>Detail</th></tr></thead>
-        <tbody>${skips.slice(0, 40).map((k) => {
-          const d = [];
-          if (k.units_on_book != null) d.push(k.units_on_book + " on book vs cap " + k.cap);
-          if (k.units_held != null && k.units_on_book == null) d.push(k.units_held + " units held");
-          if (k.want_notional != null) d.push("wanted " + money(k.want_notional, 0));
-          if (k.posted_want != null) d.push("posted " + money(k.posted_want, 0) + " wanted");
-          if (k.need_im != null) d.push("IM " + money(k.need_im, 0) + " vs free " + money(k.free, 0));
-          if (k.one_contract_risk_pct != null) d.push("one contract = " + pct(k.one_contract_risk_pct) + " of the account");
-          if (k.bucket) d.push(esc(k.bucket));
-          if (k.bar) d.push("bar " + esc(k.bar));
-          return "<tr><td class=\"mono\">" + esc(k.symbol) + "</td><td>" +
-            esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
-            "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
-            esc(d.join(" · ")) + "</td></tr>";
-        }).join("")}</tbody></table></div>
-        <p class="tt-note">These are decisions, not failures. A cap that binds is
-        the system working; cash binding at ${money(s.equity_start, 0)} is the
-        futures-margin gap this account does not have, and it is the finding
-        rather than something to tune away.</p></section>`;
-    }
-
-    const closed = (BOOK.closed || []).slice(-25).reverse();
-    if (closed.length) {
-      h += `<section class="tt-card"><h3>Closed, most recent first</h3>
-        <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Symbol</th><th>Side</th><th>Reason</th><th>R</th>
-        <th>P&amp;L</th><th>Fees</th><th>Opened</th><th>Closed</th></tr></thead>
-        <tbody>${closed.map((t) => "<tr><td class=\"mono\">" + esc(t.symbol) +
-          "</td><td>" + esc(t.side) + "</td><td>" + esc(t.reason) +
-          '</td><td class="mono ' + cls(t.r) + '">' + sgnR(t.r) +
-          '</td><td class="mono ' + cls(t.pnl) + '">' + money(t.pnl) +
-          '</td><td class="mono">' + money(t.fees) + "</td><td>" + esc(t.opened) +
-          "</td><td>" + esc(t.closed) + "</td></tr>").join("")}
-        </tbody></table></div></section>`;
-    }
     return h;
   }
 
@@ -985,6 +1436,13 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   ];
 
   function render() {
+    // The market switcher is static markup in turtle.html (ASX hardcoded
+    // is-active) and, unlike the deck/tabs/controls below, is never rebuilt
+    // from scratch -- only imperatively toggled. Before Phase 3 that was
+    // harmless because MARKET could only ever change via the button that
+    // owns this exact toggle. A deep link or a popstate can now set MARKET
+    // to anything before this first runs, so render() has to own it too.
+    syncMarketButtons();
     const deck = document.getElementById("tt-deck");
     if (deck) deck.innerHTML = deckHTML();
     const tabs = document.getElementById("tt-views");
@@ -997,11 +1455,19 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (ctl) {
       ctl.hidden = VIEW !== "signals";
       if (VIEW === "signals") {
+        // Same five buckets, same order as deckPillsHTML() above -- "Active
+        // pill === active seg" is a promise about POSITION as well as state.
+        const counts = filterCounts() || { fired: 0, held: 0, near: 0, blocked: 0, all: 0 };
         ctl.innerHTML = '<div class="control-group"><div class="seg" role="group" aria-label="Filter">' +
-          [["all", "ALL"], ["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"]]
+          [["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"],
+            ["blocked", "S1 BLOCKED"], ["all", "ALL"]]
             .map(([k, l]) => '<button class="seg-btn' + (FILTER === k ? " is-active" : "") +
-              '" data-filter="' + k + '">' + l + "</button>").join("") +
+              '" data-filter="' + k + '">' + l + ' <span class="seg-count">' + big(counts[k]) +
+              "</span></button>").join("") +
           "</div></div>" +
+          '<div class="control-group"><button type="button" class="seg-btn" data-sort-cycle="1" ' +
+          'title="Cycle sort: FIRED, DISTANCE, N, SYMBOL">SORT ' + SORT_LABELS[SORT] +
+          "</button></div>" +
           '<input class="pm-search" id="tt-search" type="search" placeholder="Ticker…" ' +
           'autocomplete="off" spellcheck="false" value="' + esc(QUERY) + '" />';
       }
@@ -1031,23 +1497,236 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (body && VIEW === "signals") body.innerHTML = signalsHTML();
   }
 
+  // ── URL state (Phase 2 of the UI runbook — helpers only) ───────────────────
+  // Back/forward is a data contract, so it is written and tested before any
+  // click is wired to it — wire the clicks first and you "test" by eye and
+  // miss the hostile symbol. Nothing below reads or writes the DOM, touches
+  // history.pushState/popstate, or is called from mount() yet; that wiring is
+  // Phase 3. Both functions are pure and MUST NEVER THROW: unknown, missing,
+  // or malformed input always resolves to the defaults below, and a caller
+  // can never push an invalid value into the address bar.
+  const URL_MARKETS = ["asx", "nasdaq", "crypto", "futures"];
+  const URL_VIEWS = ["signals", "book", "rules", "sizing", "evidence"];
+  const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
+  const URL_SORTS = ["fired", "distance", "n", "symbol"];
+  const URL_DEFAULTS = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
+
+  // search: a location.search-shaped string ("?m=nasdaq&v=book", the same
+  // without the leading "?", "", null, undefined, or garbage of any type).
+  // Returns a plain {m,v,f,s,sort} object. s is free text (an expanded
+  // symbol, or "" if none) — URLSearchParams decodes it for us, so any
+  // decoded value, including one carrying a quote, a bracket, or an
+  // ampersand, is accepted as-is; every other field is checked against its
+  // allowed list above and falls back to the default if it is missing,
+  // misspelled, or hostile. Extra query keys (?debug=1 etc.) are read from
+  // and never copied onto the result, so a parse -> serialise round trip
+  // always drops them rather than resurrecting them inconsistently.
+  function parseTurtleURL(search) {
+    const out = Object.assign({}, URL_DEFAULTS);
+    try {
+      const params = new URLSearchParams(search || "");
+      const m = params.get("m");
+      const v = params.get("v");
+      const f = params.get("f");
+      const sort = params.get("sort");
+      const s = params.get("s");
+      if (URL_MARKETS.indexOf(m) !== -1) out.m = m;
+      if (URL_VIEWS.indexOf(v) !== -1) out.v = v;
+      if (URL_FILTERS.indexOf(f) !== -1) out.f = f;
+      if (URL_SORTS.indexOf(sort) !== -1) out.sort = sort;
+      if (s != null) out.s = s;
+      return out;
+    } catch (_) {
+      // A hostile or exotic `search` (e.g. a bare Symbol, which throws on
+      // implicit ToString) must default cleanly rather than crash the page.
+      return Object.assign({}, URL_DEFAULTS);
+    }
+  }
+
+  // state: a {m,v,f,s,sort} object — typically parseTurtleURL's own output,
+  // or a UI-derived equivalent once Phase 3 wires this up. Same allowed
+  // lists and the same never-throw, garbage-defaults contract as the parser,
+  // applied independently per field. Hostile s is escaped with
+  // encodeURIComponent so it round-trips through URLSearchParams' decoding
+  // on the way back in; an empty s is omitted entirely rather than
+  // serialised as a bare "&s=".
+  function serialiseTurtleURL(state) {
+    try {
+      const st = state || {};
+      const m = URL_MARKETS.indexOf(st.m) !== -1 ? st.m : URL_DEFAULTS.m;
+      const v = URL_VIEWS.indexOf(st.v) !== -1 ? st.v : URL_DEFAULTS.v;
+      const f = URL_FILTERS.indexOf(st.f) !== -1 ? st.f : URL_DEFAULTS.f;
+      const sort = URL_SORTS.indexOf(st.sort) !== -1 ? st.sort : URL_DEFAULTS.sort;
+      const s = st.s == null ? "" : String(st.s);
+      const parts = [
+        "m=" + encodeURIComponent(m),
+        "v=" + encodeURIComponent(v),
+        "f=" + encodeURIComponent(f),
+      ];
+      if (s !== "") parts.push("s=" + encodeURIComponent(s));
+      parts.push("sort=" + encodeURIComponent(sort));
+      return "?" + parts.join("&");
+    } catch (_) {
+      return "?m=" + URL_DEFAULTS.m + "&v=" + URL_DEFAULTS.v + "&f=" + URL_DEFAULTS.f +
+        "&sort=" + URL_DEFAULTS.sort;
+    }
+  }
+
+  // ── URL state wiring (Phase 3) ──────────────────────────────────────────
+  // window.history / window.location are used explicitly below, never the
+  // bare globals -- this file runs both in a real browser and inside
+  // test/turtle.test.js's synthetic window, and only the injected `window`
+  // parameter exists in the latter.
+
+  // The live app state, shaped like the URL contract plus one field the URL
+  // itself never carries (touched). Not itself the {m,v,f,s,sort} contract
+  // parseTurtleURL/serialiseTurtleURL exchange -- read this, then pass it
+  // through serialiseTurtleURL, when you need the URL string.
+  function getTurtleState() {
+    return { m: MARKET, v: VIEW, f: FILTER, s: OPEN || "", sort: SORT, touched: TOUCHED };
+  }
+
+  // parsed: parseTurtleURL's own output shape. Sets every piece of state the
+  // URL is allowed to carry. TOUCHED is set whenever any field differs from
+  // the URL contract's own defaults -- a deep link is reader-directed
+  // exactly like a click, so load()'s "no scan yet -> RULES" fallback above
+  // must not paper over a view the URL already chose.
+  function applyState(parsed) {
+    MARKET = parsed.m;
+    VIEW = parsed.v;
+    FILTER = parsed.f;
+    OPEN = parsed.s ? parsed.s : null;
+    SORT = parsed.sort;
+    TOUCHED = parsed.m !== URL_DEFAULTS.m || parsed.v !== URL_DEFAULTS.v ||
+      parsed.f !== URL_DEFAULTS.f || parsed.s !== URL_DEFAULTS.s ||
+      parsed.sort !== URL_DEFAULTS.sort;
+  }
+
+  function pushURLState() {
+    window.history.pushState(null, "", serialiseTurtleURL(getTurtleState()));
+  }
+
+  function replaceURLState() {
+    window.history.replaceState(null, "", serialiseTurtleURL(getTurtleState()));
+  }
+
+  // Never pushes or replaces -- back/forward must not grow or rewrite the
+  // history it is navigating. Re-parses window.location.search rather than
+  // trusting the popstate event's own .state, so the URL string alone stays
+  // the single source of truth on every path (first paint, click, and back).
+  function onPopState() {
+    const prevMarket = MARKET;
+    applyState(parseTurtleURL(window.location.search));
+    if (MARKET !== prevMarket) load().then(render);
+    else render();
+  }
+
+  // The market switcher is static markup (turtle.html hardcodes ASX
+  // is-active) that render() cannot rebuild wholesale the way it rebuilds
+  // #tt-views/#tt-controls, so MARKET's current value has to be synced onto
+  // it imperatively. Called from render() (deep link / popstate / first
+  // paint) and, for the instant feedback a fetch-then-render would delay,
+  // from the market click handler directly.
+  function syncMarketButtons() {
+    document.querySelectorAll("#tt-market .market-btn").forEach((b) => {
+      const on = b.dataset.market === MARKET;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
+
+  // Open-position / skip-row symbol click (Phase 7): jump to that symbol's
+  // market on SIGNALS with the row expanded. Shared by the click delegate
+  // and the keydown handler below so the fetch-then-verify logic exists
+  // exactly once. mkt is already normalised to a real scan market (see
+  // scanMarketFor) -- this never tries to load a BOOK-only sleeve key.
+  // FILTER is forced to "all" because the destination row's signal state is
+  // unknown until the fetch resolves, and a narrower filter could hide it
+  // even when it IS there. If the symbol is not in that market's scan, the
+  // navigation is undone -- back to wherever the click came from, where the
+  // reason is already on screen -- rather than a SIGNALS view with nothing
+  // to expand.
+  function jumpToBookSymbol(sym, mkt) {
+    const prevView = VIEW, prevMarket = MARKET, prevFilter = FILTER, prevOpen = OPEN;
+    if (mkt) { MARKET = mkt; syncMarketButtons(); }
+    VIEW = "signals"; FILTER = "all"; OPEN = sym; TOUCHED = true;
+    pushURLState();
+    load().then(() => {
+      if (DATA && DATA.results.some((r) => r.symbol === sym)) { render(); return; }
+      VIEW = prevView; MARKET = prevMarket; FILTER = prevFilter; OPEN = prevOpen;
+      syncMarketButtons();
+      pushURLState();
+      render();
+    });
+  }
+
   function mount() {
+    applyState(parseTurtleURL(window.location.search));
+    replaceURLState();
+    window.addEventListener("popstate", onPopState);
+    // #search-trigger (Phase 4): reuse the one command palette the shared
+    // nav already exposes on every page (window.GBSPalette, opened by
+    // ⌘K/Ctrl-K) rather than building a second search surface. Static
+    // markup, wired once here -- never inside render(), which would stack a
+    // duplicate listener on this same persistent button every re-render.
+    const searchTrigger = document.getElementById("search-trigger");
+    if (searchTrigger) {
+      searchTrigger.addEventListener("click", () => {
+        window.GBSPalette && window.GBSPalette.open();
+      });
+    }
     document.addEventListener("click", (e) => {
-      const v = e.target.closest("[data-view]");
-      if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; render(); return; }
+      // Scoped to #tt-views on purpose: an unscoped closest() on this same
+      // attribute would also catch any future match outside the tab strip
+      // (Phase 5's deck pills are exactly that risk) and steal this handler.
+      const v = e.target.closest("#tt-views [data-view]");
+      if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; pushURLState(); render(); return; }
       const g = e.target.closest("[data-goto]");
-      if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; render(); return; }
+      if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; pushURLState(); render(); return; }
+      // The deck's SKIPS pill (Phase 5): jumps to BOOK and scrolls its
+      // skip-reason table into view. Not a FILTER value and not a 6th
+      // view -- its own attribute (data-skips) so it can never collide
+      // with the filter delegate or the scoped view-tab delegate above.
+      const sk = e.target.closest("[data-skips]");
+      if (sk) {
+        e.preventDefault();
+        VIEW = "book"; TOUCHED = true; pushURLState(); render();
+        const skipsEl = document.getElementById("tt-skips");
+        if (skipsEl && skipsEl.scrollIntoView) skipsEl.scrollIntoView({ block: "start" });
+        return;
+      }
       const f = e.target.closest("[data-filter]");
-      if (f) { FILTER = f.dataset.filter; render(); return; }
+      // Phase 5: this one attribute now drives two surfaces (the deck pills,
+      // visible on every view, and the SIGNALS segs, visible only there), so
+      // the handler also has to own switching TO signals -- the segs are
+      // already only clickable when VIEW is "signals", so this is a no-op
+      // for them and the whole reason a deck pill on RULES/SIZING/EVIDENCE
+      // does anything at all.
+      if (f) { FILTER = f.dataset.filter; VIEW = "signals"; TOUCHED = true; pushURLState(); render(); return; }
+      // Sort cycle (Phase 6): one button, four stops, FIRED -> DISTANCE ->
+      // N -> SYMBOL -> FIRED. render(), not renderBody(), because the
+      // button's own label has to repaint with the new sort name too.
+      const sc = e.target.closest("[data-sort-cycle]");
+      if (sc) {
+        SORT = SORT_CYCLE[(SORT_CYCLE.indexOf(SORT) + 1) % SORT_CYCLE.length];
+        pushURLState();
+        render();
+        return;
+      }
       const m = e.target.closest("#tt-market [data-market]");
       if (m) {
         MARKET = m.dataset.market;
-        document.querySelectorAll("#tt-market .market-btn").forEach((b) => {
-          const on = b.dataset.market === MARKET;
-          b.classList.toggle("is-active", on);
-          b.setAttribute("aria-selected", on ? "true" : "false");
-        });
+        syncMarketButtons();
+        pushURLState();
         load().then(render);
+        return;
+      }
+      // A symbol inside the BOOK view (Phase 7): an open position or a skip
+      // row, never a scan row -- those already toggle via .tt-row below.
+      const os = e.target.closest("[data-open-symbol]");
+      if (os) {
+        e.preventDefault();
+        jumpToBookSymbol(os.dataset.openSymbol, os.dataset.openMarket);
         return;
       }
       // The HEAD toggles; a click inside the expanded detail does not. Without
@@ -1057,16 +1736,25 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const row = e.target.closest(".tt-row");
       if (row && !e.target.closest(".tt-detail")) {
         OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
+        pushURLState();
         renderBody();
       }
     });
-    // Enter and Space on a focused row do what a click on its head does.
+    // Enter and Space on a focused row do what a click on its head does,
+    // history included.
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
+      const os = e.target.closest && e.target.closest("[data-open-symbol]");
+      if (os) {
+        e.preventDefault();
+        jumpToBookSymbol(os.dataset.openSymbol, os.dataset.openMarket);
+        return;
+      }
       const row = e.target.closest && e.target.closest(".tt-row");
       if (!row) return;
       e.preventDefault();
       OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
+      pushURLState();
       renderBody();
       // Find the replacement node by COMPARING dataset, never by building a
       // selector out of it: dataset.sym is the DECODED symbol, so a name
@@ -1091,6 +1779,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // than a re-typed copy of them.
   window.GBSTurtle = {
     esc, unitShares, ladder, ddEquity, yearsTo, FALLBACK,
+    parseTurtleURL, serialiseTurtleURL, applyState, getTurtleState, chartHref,
     setParams: (p) => { P = Object.assign({}, FALLBACK, p || {}); },
   };
 })();

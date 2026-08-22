@@ -31,6 +31,22 @@
 #tt-views::-webkit-scrollbar { display: none; }
 #tt-views .view-tab { flex: 0 0 auto; }
 
+/* ── the market switch ──────────────────────────────────────────────────── */
+/* Same fix, same reason, scoped the same way: .market-switch is shared chrome
+ * with no overflow rule, fine for the two-market strips it was built for, but
+ * Turtle's four buttons (ASX/NASDAQ/CRYPTO/FUTURES) are the widest instance
+ * of it in the app and are the one that risks pushing the page sideways at
+ * 320-375px. Scoped to #tt-market so no other page's market switch changes. */
+#tt-market {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#tt-market::-webkit-scrollbar { display: none; }
+#tt-market .market-btn { flex: 0 0 auto; }
+
 /* ── the reading column ─────────────────────────────────────────────────── */
 .tt-body { display: flex; flex-direction: column; gap: 14px; }
 
@@ -80,6 +96,10 @@
 
 .tt-link { color: var(--blue); text-decoration: none; font-weight: 600; }
 .tt-link:hover { text-decoration: underline; }
+/* Phase 7: .tt-link now also renders on <span data-open-symbol> — a real
+ * click target that is not an <a>, so it needs the pointer cursor an
+ * anchor gets for free. */
+.tt-link[role="button"] { cursor: pointer; }
 
 /* ── formulas ───────────────────────────────────────────────────────────── */
 .tt-math {
@@ -151,23 +171,13 @@
 }
 
 /* ── deck pills ─────────────────────────────────────────────────────────── */
-.tt-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--fill);
-  border: 1px solid var(--border-soft);
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  font-family: var(--mono);
-}
-.tt-pill.is-hot {
-  background: var(--green-soft);
-  border-color: var(--green);
-  color: var(--green);
-}
+/* Turtle UI pass, Phase 5: the deck badges became real filter buttons and
+ * moved onto styles.css's own .deck-pills/.fpill/.seg-count — the exact
+ * classes the rest of the app already uses for a clickable pill row (see
+ * app.js's #deck-pills), so nothing turtle-specific is invented here. The
+ * .tt-pill span it replaces had no other caller (checked) and is removed
+ * rather than left as dead CSS.
+ */
 
 /* ── signal rows ────────────────────────────────────────────────────────── */
 .tt-row {
@@ -284,6 +294,27 @@
   .tt-nums { text-align: right; }
   .tt-nums:last-child { grid-column: 2; }
   .tt-calc { grid-template-columns: 1fr; }
+  /* Turtle UI pass, Phase 8: 44px is a touch-target floor, not a mouse one,
+   * so these three are scoped to the same mobile breakpoint the shared
+   * .fpill rule (styles.css) already uses for its own 38px bump, and go no
+   * further than that shared rule's 6px shortfall for Turtle's own pills.
+   * .market-btn / .view-tab are shared chrome sized at 27px / 32px tall on
+   * every page that uses them; raised here, scoped to Turtle's own
+   * instances, rather than in the shared rule, which every other page
+   * using the market switch or a view-tab strip was sized against. */
+  #tt-market .market-btn,
+  #tt-views .view-tab,
+  #tt-deck .fpill { min-height: 44px; }
+  /* The chart link is the row detail's own standalone paragraph -- never
+   * inline mid-sentence -- so it can become a real tap target without
+   * touching .tt-link's other use (the plain-text "Work it out for your
+   * account" link, which is not inside a .tt-note and so is untouched by
+   * this selector). */
+  .tt-note > .tt-link:only-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 @media (max-width: 480px) {
   .tt-card p, .tt-card li { font-size: 13px; }
