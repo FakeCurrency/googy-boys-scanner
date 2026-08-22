@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-08-21T23:16:18+00:00",
+ "generated_at": "2026-08-22T01:44:43+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -218,19 +218,20 @@
    "side": "long",
    "system": 2,
    "n": 0.00260793,
-   "units": 30709.39243001,
+   "units": 43550.54046696,
    "fills": [
     0.08375,
-    0.08505397
+    0.08505397,
+    0.09158937
    ],
-   "cost_basis": 2589.288506,
-   "stop": 0.07983811,
-   "last_fill": 0.08505397,
+   "cost_basis": 3765.40115,
+   "stop": 0.08637351,
+   "last_fill": 0.09158937,
    "opened": "2026-08-21",
-   "last_mark": 0.0864,
-   "mark_date": "2026-08-21",
-   "fees": 3.883933,
-   "mfe_r": 0.3273,
+   "last_mark": 0.09178,
+   "mark_date": "2026-08-22",
+   "fees": 5.648102,
+   "mfe_r": 1.5017,
    "mae_r": -0.7443,
    "unpriced_runs": 0
   },
@@ -250,11 +251,12 @@
    "stop": 7.01359211,
    "last_fill": 7.34742689,
    "opened": "2026-08-21",
-   "last_mark": 7.34742689,
-   "mark_date": "2026-08-21",
+   "last_mark": 7.46760893,
+   "mark_date": "2026-08-22",
    "fees": 2.211183,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.5135,
+   "mae_r": 0.0,
+   "unpriced_runs": 0
   }
  ],
  "closed": [
@@ -427,7 +429,7 @@
    "equity": 4186.1,
    "return_pct": -16.278,
    "open_positions": 2,
-   "open_units": 3,
+   "open_units": 4,
    "closed": 5,
    "wins": 0,
    "win_pct": 0.0,
@@ -728,71 +730,110 @@
    "system": 2
   },
   {
-   "as_of": "2026-08-21",
+   "as_of": "2026-08-22",
    "market": "crypto",
-   "symbol": "AAVE",
-   "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long"
+   "symbol": "GT",
+   "action": "add",
+   "reason": "cash",
+   "units_held": 1,
+   "want_notional": 1502.75,
+   "equity": 4186.1
   },
   {
-   "as_of": "2026-08-21",
-   "market": "crypto",
-   "symbol": "XRP",
-   "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long"
-  },
-  {
-   "as_of": "2026-08-21",
-   "market": "crypto",
-   "symbol": "ETC",
-   "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long"
-  },
-  {
-   "as_of": "2026-08-21",
-   "market": "crypto",
-   "symbol": "ADA",
-   "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long"
-  },
-  {
-   "as_of": "2026-08-21",
+   "as_of": "2026-08-22",
    "market": "crypto",
    "symbol": "BCH",
    "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long"
-  },
-  {
-   "as_of": "2026-08-21",
-   "market": "crypto",
-   "symbol": "NEXO",
-   "action": "entry",
    "reason": "cash",
-   "want_notional": 870.52,
+   "want_notional": 897.48,
    "equity": 4186.1,
    "system": 2
   },
   {
-   "as_of": "2026-08-21",
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "AAVE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 817.25,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "XRP",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 973.81,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "DASH",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 836.72,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "ETC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 971.89,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "ADA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 759.64,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "FIL",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 693.17,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
+   "market": "crypto",
+   "symbol": "NEXO",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 945.32,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-22",
    "market": "crypto",
    "symbol": "ALGO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 860.9,
+   "want_notional": 857.4,
    "equity": 4186.1,
    "system": 2
   }
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 29,
-  "same_bar_reentry": 5,
-  "total": 34
+  "cash": 37,
+  "total": 37
  },
  "summary": {
   "started": "2026-08-21",
@@ -800,7 +841,7 @@
   "equity": 19186.1,
   "return_pct": -4.069,
   "open_positions": 11,
-  "open_units": 15,
+  "open_units": 16,
   "closed": 5,
   "wins": 0,
   "win_pct": 0.0,
