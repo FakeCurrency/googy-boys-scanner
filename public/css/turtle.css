@@ -294,6 +294,27 @@
   .tt-nums { text-align: right; }
   .tt-nums:last-child { grid-column: 2; }
   .tt-calc { grid-template-columns: 1fr; }
+  /* Turtle UI pass, Phase 8: 44px is a touch-target floor, not a mouse one,
+   * so these three are scoped to the same mobile breakpoint the shared
+   * .fpill rule (styles.css) already uses for its own 38px bump, and go no
+   * further than that shared rule's 6px shortfall for Turtle's own pills.
+   * .market-btn / .view-tab are shared chrome sized at 27px / 32px tall on
+   * every page that uses them; raised here, scoped to Turtle's own
+   * instances, rather than in the shared rule, which every other page
+   * using the market switch or a view-tab strip was sized against. */
+  #tt-market .market-btn,
+  #tt-views .view-tab,
+  #tt-deck .fpill { min-height: 44px; }
+  /* The chart link is the row detail's own standalone paragraph -- never
+   * inline mid-sentence -- so it can become a real tap target without
+   * touching .tt-link's other use (the plain-text "Work it out for your
+   * account" link, which is not inside a .tt-note and so is untouched by
+   * this selector). */
+  .tt-note > .tt-link:only-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 @media (max-width: 480px) {
   .tt-card p, .tt-card li { font-size: 13px; }

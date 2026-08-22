@@ -1113,5 +1113,51 @@ test("the portfolio card still avoids grading language from its new BOOK call si
   assert.ok(!/does this work/i.test(body));
 });
 
+// ── 14. mobile 320px (Phase 8) ───────────────────────────────────────────────
+// This suite is structural (CSS text), same reasoning as the JS structural
+// tests above: it locks the RULE being present, not the rendered pixel
+// value -- that was measured live with a real Chromium/Playwright audit
+// (real turtle.html, real committed data, four viewports, an actually
+// expanded row) and pasted into the Phase 8 commit/handoff, then deleted.
+// test/e2e/smoke.e2e.js already asserts turtle.html has zero page-level
+// horizontal overflow at 320px across its own run (its own #38 loop) --
+// deliberately not duplicated or extended here, per the phase spec's own
+// instruction to use the existing 320px check rather than invent a new one.
+suite("mobile 320px (Phase 8) — 44px tap targets, scoped to touch widths only");
+
+test("market buttons, view tabs and deck pills get a 44px floor, scoped to the same mobile breakpoint the shared .fpill rule already uses", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/turtle.css"), "utf8");
+  const start = css.indexOf("@media (max-width: 680px)");
+  const end = css.indexOf("@media (max-width: 480px)");
+  assert.ok(start !== -1 && end !== -1 && start < end, "the existing 680px responsive block must still exist");
+  const block = css.slice(start, end);
+  assert.ok(/#tt-market \.market-btn,[\s\S]{0,40}#tt-views \.view-tab,[\s\S]{0,40}#tt-deck \.fpill \{ min-height: 44px; \}/.test(block),
+    "market/view/pill must share one 44px min-height rule, scoped to Turtle's own instances");
+  // Scoped, not leaked onto the shared component's OTHER pages: nothing
+  // before this media block may set a 44px floor unconditionally.
+  assert.ok(!/min-height: 44px/.test(css.slice(0, start)),
+    "a 44px min-height outside the mobile block would apply to Turtle at every width");
+});
+
+test("the chart link becomes a real tap target only where it is its own paragraph, never touching the unrelated sizing-calculator link", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/turtle.css"), "utf8");
+  const block = css.slice(css.indexOf("@media (max-width: 680px)"), css.indexOf("@media (max-width: 480px)"));
+  assert.ok(/\.tt-note > \.tt-link:only-child \{/.test(block),
+    "must be scoped to a .tt-link that is the ONLY child of a .tt-note -- the chart link's exact shape");
+  assert.ok(/display: inline-flex;[\s\S]{0,20}align-items: center;[\s\S]{0,20}min-height: 44px;/.test(block),
+    "min-height alone does nothing on an inline <a> -- display must change too, or the rule is a no-op");
+  // The "Work it out for your account" link (rowsFor/sizing goto) sits in a
+  // bare <p>, not a .tt-note, so :only-child under .tt-note must never
+  // reach it -- checked directly against the real markup, not assumed.
+  assert.ok(/<p><a class="tt-link" href="#" data-goto="sizing">/.test(SRC),
+    "the sizing-calculator link's markup shape must stay a bare <p>, or the CSS scoping assumption above is wrong");
+});
+
+test("the ladder/skip/closed tables keep their own horizontal scrollbox, unchanged", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/turtle.css"), "utf8");
+  assert.ok(/\.tt-tablewrap \{ overflow-x: auto;/.test(css),
+    "a wide table (e.g. the pyramid ladder) must scroll inside its own box, never the page");
+});
+
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
