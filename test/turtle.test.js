@@ -763,5 +763,103 @@ test("the Phase 3 code stays out of the shared site nav entirely", () => {
   assert.ok(!/nav\.js/.test(phase3), "history wiring is scoped to turtle.js and its own test file");
 });
 
+// ── 12. deck pills + default FIRED (Phase 5) ────────────────────────────────
+// The click-handler suite above already proved every state -> push -> render
+// wire is in the right order; this suite is about the two NEW surfaces built
+// on top of that wiring (the deck pills, and the fired -> held -> all default)
+// rather than the wiring itself. document.getElementById returns null and
+// document.addEventListener("click", ...) is a no-op in this harness (see the
+// harness comment at the top of the file), so — exactly like the Phase 3
+// scoping/nav checks above — anything that would need a real click or a real
+// rendered DOM is asserted structurally against the shipped source instead of
+// simulated. The async fired/held/all fallback itself (load() resolving a
+// real payload) was traced with a throwaway script against the real fetch
+// path, pasted into the Phase 5 handoff, rather than folded in here — this
+// suite's job is to lock the shape of the code that trace exercised.
+suite("deck pills — one FILTER, two surfaces, plus the fired -> held -> all default");
+
+test("rowsFor gained a blocked branch — S1 BLOCKED was reachable in the URL since Phase 2 but never wired to a filter", () => {
+  const body = SRC.slice(SRC.indexOf("function rowsFor("), SRC.indexOf("function stateChip("));
+  assert.ok(/FILTER === "blocked"[\s\S]{0,40}r\.s1_blocked/.test(body),
+    "must filter on the same s1_blocked boolean the scan publishes per row");
+});
+
+test("blocked round-trips through applyState/getTurtleState now that a control actually sets it", () => {
+  T.applyState(T.parseTurtleURL("?f=blocked"));
+  assert.equal(T.getTurtleState().f, "blocked");
+  assert.ok(T.serialiseTurtleURL(T.getTurtleState()).includes("f=blocked"));
+});
+
+test("the deck pills and the SIGNALS segs list the same five FILTER values, in the same order", () => {
+  const pillsBody = SRC.slice(SRC.indexOf("function deckPillsHTML("), SRC.indexOf("function deckHTML("));
+  const segsBody = SRC.slice(SRC.indexOf("function render("), SRC.indexOf("function renderBody("));
+  const order = ["fired", "held", "near", "blocked", "all"];
+  const pillKeys = [...pillsBody.matchAll(/\["(\w+)", "[^"]+", /g)].map((m) => m[1]);
+  const segKeys = [...segsBody.matchAll(/\["(\w+)", "[^"]+"\]/g)].map((m) => m[1]);
+  assert.deepEqual(pillKeys, order, "deck pill order must be FIRED TODAY / IN A POSITION / APPROACHING / S1 BLOCKED / ALL");
+  assert.deepEqual(segKeys, order, "\"Active pill === active seg\" only holds if position matches too");
+  assert.deepEqual(pillKeys.slice().sort(), ["all", "blocked", "fired", "held", "near"],
+    "must be exactly the URL contract's five URL_FILTERS values, no more, no fewer");
+});
+
+test("both surfaces derive is-active/aria-pressed from the same FILTER comparison", () => {
+  const pillsBody = SRC.slice(SRC.indexOf("function deckPillsHTML("), SRC.indexOf("function deckHTML("));
+  assert.ok(/const active = FILTER === k/.test(pillsBody));
+  assert.ok(/aria-pressed/.test(pillsBody), "pills are buttons with real pressed state, not styled links");
+});
+
+test("IN A POSITION is aggregate.long + aggregate.short, never a filter over the truncated results array", () => {
+  const body = SRC.slice(SRC.indexOf("function filterCounts("), SRC.indexOf("const NEXT_CRON"));
+  assert.ok(/held:\s*\(a\.long \|\| 0\) \+ \(a\.short \|\| 0\)/.test(body),
+    "DATA.results is truncated on large markets and keeps only a sample of the flat rows, so " +
+    "counting the array under-counts held positions the moment a market is big enough to truncate");
+});
+
+test("the deck renders unconditionally — pills are not gated to the SIGNALS view", () => {
+  const body = SRC.slice(SRC.indexOf("function render("), SRC.indexOf("function renderBody("));
+  const deckLine = body.slice(body.indexOf("const deck ="), body.indexOf("const tabs ="));
+  assert.ok(!/VIEW ===/.test(deckLine),
+    "pills must be visible on RULES/SIZING/EVIDENCE too, per the phase spec");
+});
+
+test("a pill click switches VIEW to signals as well as FILTER, so a pill works from any view", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  assert.ok(/FILTER = f\.dataset\.filter; VIEW = "signals";/.test(mountBody),
+    "clicking a deck pill from RULES/SIZING/EVIDENCE must land on SIGNALS with that filter live");
+});
+
+test("SKIPS is its own attribute — not a sixth view, not a FILTER value", () => {
+  const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("function mount(") + 3500);
+  assert.ok(/closest\("\[data-skips\]"\)/.test(mountBody));
+  assert.ok(/VIEW = "book";[\s\S]{0,40}pushURLState\(\)/.test(mountBody),
+    "SKIPS must push the existing book view onto the URL like any other view change");
+  assert.ok(/getElementById\("tt-skips"\)/.test(mountBody), "must scroll the skip table into view");
+  const start = SRC.indexOf("const VIEWS = [");
+  const viewsBody = SRC.slice(start, SRC.indexOf("];", start) + 2);
+  assert.ok(!/skips/i.test(viewsBody), "VIEWS must not gain a sixth tab for this");
+  const tabCount = (viewsBody.match(/\["\w+",/g) || []).length;
+  assert.equal(tabCount, 5, "still exactly signals/book/rules/sizing/evidence");
+});
+
+test("#tt-skips exists on the skip-reason section so the SKIPS pill has something to scroll to", () => {
+  const bookBody = SRC.slice(SRC.indexOf("function bookHTML("), SRC.indexOf("function portfolioCardHTML("));
+  assert.ok(/id="tt-skips"[\s\S]{0,40}Not taken, and why/.test(bookBody),
+    "the id must land on the skip-reason card specifically, not somewhere unrelated");
+});
+
+test("no grade language reached the deck — Turtle has no A+", () => {
+  const body = SRC.slice(SRC.indexOf("function filterCounts("), SRC.indexOf("function rulesHTML("));
+  assert.ok(!/\bgrade\b|A\+|fpill top/i.test(body));
+});
+
+test("the default FILTER falls fired -> held -> all, gated on TOUCHED so a URL or click always wins", () => {
+  const loadBody = SRC.slice(SRC.indexOf("function load("), SRC.indexOf("function deckHTML("));
+  assert.ok(/if \(!TOUCHED && DATA && FILTER === "fired"\)/.test(loadBody),
+    "must never override a filter the URL or a click already chose");
+  assert.ok(/if \(!a\.fired_today\)/.test(loadBody), "only falls through when FIRED TODAY is truly empty");
+  assert.ok(/FILTER = \(a\.long \|\| a\.short\) \? "held" : "all"/.test(loadBody),
+    "held next, then all — never straight to all while any position is open");
+});
+
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

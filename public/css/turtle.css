@@ -167,23 +167,13 @@
 }
 
 /* ── deck pills ─────────────────────────────────────────────────────────── */
-.tt-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--fill);
-  border: 1px solid var(--border-soft);
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  font-family: var(--mono);
-}
-.tt-pill.is-hot {
-  background: var(--green-soft);
-  border-color: var(--green);
-  color: var(--green);
-}
+/* Turtle UI pass, Phase 5: the deck badges became real filter buttons and
+ * moved onto styles.css's own .deck-pills/.fpill/.seg-count — the exact
+ * classes the rest of the app already uses for a clickable pill row (see
+ * app.js's #deck-pills), so nothing turtle-specific is invented here. The
+ * .tt-pill span it replaces had no other caller (checked) and is removed
+ * rather than left as dead CSS.
+ */
 
 /* ── signal rows ────────────────────────────────────────────────────────── */
 .tt-row {

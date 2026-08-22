@@ -138,31 +138,96 @@
         // Only fall back to RULES when there is genuinely nothing to scan --
         // and never override a view the reader has already chosen.
         if (!TOUCHED) VIEW = DATA ? "signals" : "rules";
+        // Same reasoning, one field over: FILTER's default is "fired" (the
+        // URL contract, Phase 2), but a fired-today count of zero is a real
+        // possibility on a quiet day, and an empty SIGNALS list on first
+        // paint reads as broken rather than as "nothing fired." Fall
+        // through to the next non-empty bucket -- never past ALL, which is
+        // never empty when DATA exists. A URL or a click that already
+        // chose a filter (TOUCHED) is left exactly as chosen.
+        if (!TOUCHED && DATA && FILTER === "fired") {
+          const a = DATA.aggregate || {};
+          if (!a.fired_today) FILTER = (a.long || a.short) ? "held" : "all";
+        }
         return DATA;
       });
   }
 
   // ── deck ───────────────────────────────────────────────────────────────────
+  // The five FILTER buckets, computed once from the aggregate so the deck
+  // pills and the SIGNALS segs below can never show two different numbers
+  // for the same word. "held" is aggregate.long + aggregate.short, not a
+  // filter over DATA.results -- the results array is truncated (large
+  // markets ship ~400 of a few thousand names) and keeps every long/short
+  // row but only a sample of flat ones, so counting the array under-counts
+  // "in a position" the moment a market is big enough to truncate at all.
+  function filterCounts() {
+    if (!DATA) return null;
+    const a = DATA.aggregate || {};
+    return {
+      all: a.names || 0,
+      fired: a.fired_today || 0,
+      held: (a.long || 0) + (a.short || 0),
+      near: a.approaching || 0,
+      blocked: a.s1_blocked || 0,
+    };
+  }
+
+  // The scan's own schedule (.github/workflows/turtle.yml), restated as a
+  // fixed per-market sentence rather than a computed "next in Xm" -- a
+  // countdown this page cannot keep honest across a DST change or a missed
+  // run is worse than no countdown. Keep this in step with turtle.yml if
+  // that file's cron lines ever move.
+  const NEXT_CRON = {
+    asx: "next scan ~06:30 UTC weekdays",
+    nasdaq: "next scan ~21:30 UTC weekdays",
+    crypto: "next scan every 4h (:05 past the hour)",
+    futures: "next scan ~23:00 UTC weekdays",
+  };
+
+  // Buttons, not badges: role=group, one FILTER value per pill, shared with
+  // the SIGNALS segs in render() below. SKIPS is not a filter value -- it
+  // is a jump to the BOOK view's skip-reason table -- so it carries
+  // data-skips instead of data-filter and is handled by its own branch in
+  // mount()'s click delegate.
+  function deckPillsHTML(counts) {
+    const DEFS = [
+      ["fired", "FIRED TODAY", counts.fired > 0],
+      ["held", "IN A POSITION", false],
+      ["near", "APPROACHING", false],
+      ["blocked", "S1 BLOCKED", false],
+      ["all", "ALL", false],
+    ];
+    let html = '<div class="deck-pills" role="group" aria-label="Turtle filter">' +
+      DEFS.map(([k, label, hot]) => {
+        const active = FILTER === k;
+        return '<button type="button" class="fpill' + (hot ? " g" : "") +
+          (active ? " is-active" : "") + '" data-filter="' + k + '" aria-pressed="' +
+          (active ? "true" : "false") + '">' + label + ' <span class="seg-count">' +
+          big(counts[k]) + "</span></button>";
+      }).join("");
+    const skipTotal = BOOK && BOOK.skip_counts ? (BOOK.skip_counts.total || 0) : 0;
+    if (skipTotal) {
+      html += '<button type="button" class="fpill" data-skips="1">SKIPS ' +
+        '<span class="seg-count">' + big(skipTotal) + "</span></button>";
+    }
+    return html + "</div>";
+  }
+
   function deckHTML() {
     if (!DATA) {
       return '<div class="deck-status"><span class="deck-dot" data-state="idle"></span>' +
-        '<span class="deck-title">Turtle rules</span></div>' +
+        '<span class="deck-title">TURTLE &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
         '<p class="deck-sub">No scan file for ' + esc(MARKET.toUpperCase()) +
         ' yet — the rules, the calculator and the evidence below work without one.</p>';
     }
-    const a = DATA.aggregate || {};
-    const bits = [
-      '<span class="tt-pill' + (a.fired_today ? " is-hot" : "") + '">' +
-        big(a.fired_today) + " fired today</span>",
-      '<span class="tt-pill">' + big(a.long) + " long &middot; " + big(a.short) + " short</span>",
-      '<span class="tt-pill">' + big(a.approaching) + " approaching</span>",
-      '<span class="tt-pill">' + big(a.s1_blocked) + " S1 blocked</span>",
-    ];
+    const counts = filterCounts();
+    const cron = NEXT_CRON[MARKET] || "";
     return '<div class="deck-status"><span class="deck-dot" data-state="ok"></span>' +
-      '<span class="deck-title">Turtle &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
-      '<p class="deck-sub">' + big(a.names) + " names evaluated of " + big(DATA.universe_size) +
+      '<span class="deck-title">TURTLE &mdash; ' + esc(MARKET.toUpperCase()) + "</span></div>" +
+      '<p class="deck-sub">' + big(DATA.evaluated) + " names evaluated of " + big(DATA.universe_size) +
       " in the universe &middot; scanned " + esc(String(DATA.generated_at || "").slice(0, 16).replace("T", " ")) +
-      "</p>" + '<div class="deck-pills">' + bits.join("") + "</div>";
+      (cron ? " &middot; " + esc(cron) : "") + "</p>" + deckPillsHTML(counts);
   }
 
   // ── view 1: THE RULES ──────────────────────────────────────────────────────
@@ -363,6 +428,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (FILTER === "fired") rows = rows.filter((r) => r.signal);
     else if (FILTER === "held") rows = rows.filter((r) => r.state !== "flat");
     else if (FILTER === "near") rows = rows.filter((r) => r.approaching);
+    else if (FILTER === "blocked") rows = rows.filter((r) => r.s1_blocked);
     if (QUERY) {
       const q = QUERY.toUpperCase();
       rows = rows.filter((r) => (r.symbol || "").toUpperCase().indexOf(q) >= 0 ||
@@ -770,7 +836,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const counts = BOOK.skip_counts || {};
       const byReason = Object.keys(counts).filter((k) => k !== "total")
         .sort((a, b) => counts[b] - counts[a]);
-      h += `<section class="tt-card"><h3>Not taken, and why</h3>
+      h += `<section class="tt-card" id="tt-skips"><h3>Not taken, and why</h3>
         <div class="tt-detail-grid">${byReason.map((r) =>
           kv(esc(WHY[r] || r), big(counts[r]))).join("")}</div>
         <div class="tt-tablewrap"><table class="tt-table">
@@ -1005,10 +1071,15 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (ctl) {
       ctl.hidden = VIEW !== "signals";
       if (VIEW === "signals") {
+        // Same five buckets, same order as deckPillsHTML() above -- "Active
+        // pill === active seg" is a promise about POSITION as well as state.
+        const counts = filterCounts() || { fired: 0, held: 0, near: 0, blocked: 0, all: 0 };
         ctl.innerHTML = '<div class="control-group"><div class="seg" role="group" aria-label="Filter">' +
-          [["all", "ALL"], ["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"]]
+          [["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"],
+            ["blocked", "S1 BLOCKED"], ["all", "ALL"]]
             .map(([k, l]) => '<button class="seg-btn' + (FILTER === k ? " is-active" : "") +
-              '" data-filter="' + k + '">' + l + "</button>").join("") +
+              '" data-filter="' + k + '">' + l + ' <span class="seg-count">' + big(counts[k]) +
+              "</span></button>").join("") +
           "</div></div>" +
           '<input class="pm-search" id="tt-search" type="search" placeholder="Ticker…" ' +
           'autocomplete="off" spellcheck="false" value="' + esc(QUERY) + '" />';
@@ -1200,8 +1271,26 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       if (v) { VIEW = v.dataset.view; TOUCHED = true; OPEN = null; pushURLState(); render(); return; }
       const g = e.target.closest("[data-goto]");
       if (g) { e.preventDefault(); VIEW = g.dataset.goto; TOUCHED = true; pushURLState(); render(); return; }
+      // The deck's SKIPS pill (Phase 5): jumps to BOOK and scrolls its
+      // skip-reason table into view. Not a FILTER value and not a 6th
+      // view -- its own attribute (data-skips) so it can never collide
+      // with the filter delegate or the scoped view-tab delegate above.
+      const sk = e.target.closest("[data-skips]");
+      if (sk) {
+        e.preventDefault();
+        VIEW = "book"; TOUCHED = true; pushURLState(); render();
+        const skipsEl = document.getElementById("tt-skips");
+        if (skipsEl && skipsEl.scrollIntoView) skipsEl.scrollIntoView({ block: "start" });
+        return;
+      }
       const f = e.target.closest("[data-filter]");
-      if (f) { FILTER = f.dataset.filter; pushURLState(); render(); return; }
+      // Phase 5: this one attribute now drives two surfaces (the deck pills,
+      // visible on every view, and the SIGNALS segs, visible only there), so
+      // the handler also has to own switching TO signals -- the segs are
+      // already only clickable when VIEW is "signals", so this is a no-op
+      // for them and the whole reason a deck pill on RULES/SIZING/EVIDENCE
+      // does anything at all.
+      if (f) { FILTER = f.dataset.filter; VIEW = "signals"; TOUCHED = true; pushURLState(); render(); return; }
       const m = e.target.closest("#tt-market [data-market]");
       if (m) {
         MARKET = m.dataset.market;
