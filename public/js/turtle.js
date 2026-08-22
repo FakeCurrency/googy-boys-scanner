@@ -57,6 +57,7 @@
   let OPEN = null;               // expanded row symbol
   let TOUCHED = false;           // has the reader picked a view themselves?
   let BOOK = null;               // the forward paper book, all markets
+  let PORTFOLIO = null;          // the shared-equity portfolio replay, per sleeve
 
   // ── formatting ─────────────────────────────────────────────────────────────
   const num = (v, d) => (v == null || !isFinite(v) ? "—" : Number(v).toFixed(d == null ? 2 : d));
@@ -111,8 +112,16 @@
       .then((j) => { BOOK = j && j.summary ? j : null; return BOOK; });
   }
 
+  function loadPortfolio() {
+    return fetch("data/turtle_portfolio.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((j) => { PORTFOLIO = j && j.sleeves ? j : null; return PORTFOLIO; });
+  }
+
   function load() {
     loadBook();
+    loadPortfolio();
     return fetch("data/" + MARKET + "_turtle.json", { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
@@ -192,7 +201,12 @@ N = ( ${P.n_period - 1} &times; PDN + TR ) / ${P.n_period}</pre>
         </tbody></table>
         <p>The breakout level is built from the bars <em>before</em> the signal bar, and the
         trigger is one tick beyond it. The Turtles entered <b>intraday, on the tick</b>, with a
-        resting stop order placed in advance — not on the close and not on the next open.</p>`,
+        resting stop order placed in advance — not on the close and not on the next open.</p>
+        <p><b>When one bar breaks both channels, the entry is tagged System 2 —
+        the failsafe is tested first.</b> That tag is a money difference, not a
+        label: the entering system owns the exit, so the position rides the
+        patient ${P.s2_exit}-day channel instead of leaving at the
+        ${P.s1_exit}-day.</p>`,
         "Entering on the close instead is the most common silent modification. It filters " +
         "out intraday false breaks, and it pays for that with worse fills on exactly the " +
         "trades that gap and run — which are the ones that pay for the year.") +
@@ -270,9 +284,14 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         </tbody></table>
         <p>The last three are per direction, so the theoretical maximum book is
         ${P.max_units_direction} long plus ${P.max_units_direction} short.</p>`,
-        "This scanner has no correlation matrix and therefore does NOT enforce these — it " +
-        "states them. Sector is the closest thing the repo has to a correlation group and " +
-        "it is a poor one: two ASX miners are far more correlated than the label suggests.") +
+        "The SCAN states these; the FORWARD BOOK enforces three of them — " +
+        P.max_units + " per name, " + P.max_units_close_corr + " per correlated " +
+        "bucket (crypto counts as ONE bucket, deliberately) and " +
+        P.max_units_direction + " per direction, counted over every unit " +
+        "including pyramid adds. The loose-correlation " + P.max_units_loose_corr +
+        " stays declared and honestly unenforced: no taxonomy for 'loosely " +
+        "correlated' exists in this repo, and sector is already spent on the " +
+        "close bucket — faking a second grouping would be worse than saying so.") +
 
       card("10 &middot; The drawdown rule — and it compounds", `
         <p>Cut the equity you <em>size from</em> by <b>${P.drawdown_cut_pct}%</b> for every
@@ -660,20 +679,45 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         </div>
         <p class="tt-note">${s.closed
           ? "Small samples say very little. A trend system's result is carried by a handful of trades, so read the MEDIAN beside the average and treat anything under a few dozen closes as noise."
-          : "Nothing has closed yet, so there is no result to read. That is the honest state of a forward test on day " + days + " — it cannot be hurried, and it is the reason the five-year replay exists as context rather than as evidence."}</p>
+          : "Nothing has closed yet, so there is no result to read. That is the honest state of a forward test on day " + days + " — it cannot be hurried, and it is the reason the five-year replay exists as context rather than as evidence."}
+        <b>A first print is a print, not evidence</b>: no sleeve's record means
+        anything until it holds at least 30 closed trades AND 20 trading days.
+        Five same-day stops are a verdict on the VEHICLE, not on expectancy.</p>
+        <p class="tt-note">Equity here is <b>realised only</b> — open positions are
+        not marked into the headline — and the combined figures add A$ and US$
+        <b>at face value</b> (no FX conversion): read the per-market rows for
+        anything you would act on. The crypto books run every four hours, but the
+        BARS are daily — the cron is a scan cadence, not a four-hour Donchian.</p>
       </section>`;
 
     if (mk.length) {
+      // A levered sleeve travels with its own params (turtle_book stamps
+      // them), and the disclosure below renders FROM those params -- this
+      // page cannot describe a 5x book the engine is not running.
+      const lev5 = mk.map((m) => [m, (BOOK.by_market[m] || {}).params])
+        .find(([, p]) => p && p.leverage > 1);
       h += `<section class="tt-card"><h3>By market</h3>
         <div class="tt-tablewrap"><table class="tt-table">
-        <thead><tr><th>Market</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
+        <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
         <tbody>${mk.map((m) => {
           const b = BOOK.by_market[m] || {};
-          return "<tr><td>" + esc(m.toUpperCase()) + '</td><td class="mono">' +
+          const veh = b.params && b.params.leverage > 1
+            ? big(b.params.leverage) + "&times; margin" : "cash";
+          return "<tr><td>" + esc(m.toUpperCase()) + "</td><td>" + veh +
+            '</td><td class="mono">' +
             money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
             '</td><td class="mono">' + big(b.closed) + '</td><td class="mono ' +
             cls(b.total_r) + '">' + sgnR(b.total_r) + "</td></tr>";
-        }).join("")}</tbody></table></div></section>`;
+        }).join("")}</tbody></table></div>
+        ${lev5 ? `<p class="tt-note"><b>${esc(lev5[0].toUpperCase())} is
+        ${big(lev5[1].leverage)}&times; posted margin</b> (notional/${big(lev5[1].leverage)},
+        ${esc(lev5[1].margin_mode || "isolated")}) — a perp analogue, <b>not</b> Dennis's
+        futures IM. The unit is still ${(P.risk_pct * 100).toFixed(0)}% of equity
+        per N; what changes is only what a unit COSTS to hold. A position whose
+        adverse move consumes its posted margin is closed as
+        <b>liquidation</b>, at the liquidation price — isolated margin cannot
+        lose more than it posted. It is a NEW series beside the cash crypto
+        book, never a restatement of it.</p>` : ""}</section>`;
     }
 
     if (open.length) {
@@ -714,8 +758,11 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         loose_corr_cap: "10-unit loose-correlation ceiling",
         per_market_cap: "4-unit per-name ceiling",
         cash: "no cash — a unit would exceed the account",
+        no_margin: "no free margin for the posted amount",
         unit_lt_one: "a unit is less than one contract",
-        same_bar_reentry: "exited this session — waiting for a NEW break",
+        no_margin_file: "no real margin data — futures opens are OFF",
+        roll_window: "a roll suspect sits in today's N window",
+        same_bar_reentry: "exited on this bar — waiting for a NEW break",
         s1_skip_after_win: "System 1 filter: the last breakout won",
       };
       const counts = BOOK.skip_counts || {};
@@ -731,8 +778,11 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           if (k.units_on_book != null) d.push(k.units_on_book + " on book vs cap " + k.cap);
           if (k.units_held != null && k.units_on_book == null) d.push(k.units_held + " units held");
           if (k.want_notional != null) d.push("wanted " + money(k.want_notional, 0));
+          if (k.posted_want != null) d.push("posted " + money(k.posted_want, 0) + " wanted");
+          if (k.need_im != null) d.push("IM " + money(k.need_im, 0) + " vs free " + money(k.free, 0));
           if (k.one_contract_risk_pct != null) d.push("one contract = " + pct(k.one_contract_risk_pct) + " of the account");
           if (k.bucket) d.push(esc(k.bucket));
+          if (k.bar) d.push("bar " + esc(k.bar));
           return "<tr><td class=\"mono\">" + esc(k.symbol) + "</td><td>" +
             esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
             "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
@@ -762,6 +812,39 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   }
 
   // ── view 4: EVIDENCE ───────────────────────────────────────────────────────
+  // The shared-equity portfolio replay: the per-name records above replay
+  // every name with its own private equity, so they cannot answer "would
+  // $5,000 have made money". This card renders the one surface that can ask
+  // that question honestly -- and it renders the payload's OWN caveat, so
+  // the page cannot oversell what the file itself refuses to claim.
+  function portfolioCardHTML() {
+    if (!PORTFOLIO || !PORTFOLIO.sleeves) return "";
+    const names = Object.keys(PORTFOLIO.sleeves).sort();
+    if (!names.length) return "";
+    const rows = names.map((k) => {
+      const v = PORTFOLIO.sleeves[k] || {};
+      const ref = v.refused_units || {};
+      const refTop = Object.keys(ref).sort((a, b) => ref[b] - ref[a])
+        .slice(0, 2).map((r) => esc(r) + " " + big(ref[r])).join(" · ");
+      return "<tr><td class=\"mono\">" + esc(k) + '</td><td class="mono">' +
+        money(v.equity_start, 0) + (v.leverage > 1 ? " @" + big(v.leverage) + "&times;" : "") +
+        '</td><td class="mono">' + big(v.trades) + '</td><td class="mono ' +
+        cls(v.return_pct_marked) + '">' + pct(v.return_pct_marked) +
+        '</td><td class="mono">' + pct(v.max_dd_pct_marked) +
+        '</td><td class="mono">' + sgnR(v.median_r) + "</td><td>" +
+        (refTop || "—") + "</td></tr>";
+    }).join("");
+    return `<section class="tt-card">
+      <h3>The portfolio replay — one shared equity per sleeve</h3>
+      <div class="tt-tablewrap"><table class="tt-table">
+      <thead><tr><th>Sleeve</th><th>Start</th><th>Trades</th><th>Return</th>
+      <th>Max DD</th><th>Median R</th><th>Top refusals</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p class="tt-note">${esc(PORTFOLIO.caveat || "")} Ordering:
+      ${esc(PORTFOLIO.ordering || "")}.</p>
+    </section>`;
+  }
+
   function evidenceHTML() {
     const start = EQUITY, target = 10e6;
     const mult = target / start;
@@ -874,6 +957,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           per-name disclosure; nothing here re-derives it.</li>
         </ul>
       </section>
+
+      ${portfolioCardHTML()}
 
       <section class="tt-card">
         <h3>How to read the per-name records on the SIGNALS view</h3>
