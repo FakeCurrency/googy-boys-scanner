@@ -1,25 +1,11 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-08-22T03:06:22+00:00",
+  "generated_at": "2026-08-22T08:45:41+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "GT",
-      "name": "Gate",
-      "sector": "",
-      "dir": "LONG",
-      "price": 7.1441412,
-      "turnover_avg20": 1655162,
-      "turnover_today": 43194406,
-      "rvol": 3.7,
-      "adv_usd": 1655162.0,
-      "fund": false,
-      "is_product": false
-    }
-  ]
+  "results": []
 }
