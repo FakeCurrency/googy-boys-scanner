@@ -1166,6 +1166,32 @@ test("posRow renders the Turtle-unit count and the coin/share quantity as two ad
     "Units and Qty must be two adjacent cells in the same row, in that order, not merged or separated by unrelated markup");
 });
 
+// Pre-upload gate fixture (2026-08-23): the previous test pins the SHAPE of
+// the qtyStr/fills.length split; this one actually RUNS the real posRow (not
+// a retyped copy) against the literal UNI-shaped position the gate names --
+// units:213.65, a single fill -- and reads back the rendered cells.
+test("posRow fixture: {units:213.65, fills:[4.14]} renders 1u and 213.65, never 214u", () => {
+  const grab = (a, b) => SRC.slice(SRC.indexOf(a), SRC.indexOf(b));
+  const numSrc = grab("const num = (v, d) =>", "const money = (v, d) =>");
+  const sgnRSrc = grab("const sgnR = (v) =>", "const cls = (v) =>");
+  const clsSrc = grab("const cls = (v) =>", "const big = (v) =>");
+  const scanMarketForSrc = grab("function scanMarketFor(", "function vehicleBadgeHTML(");
+  const openSymbolHTMLSrc = grab("const openSymbolHTML = (symbol, market) =>", "const qtyStr =");
+  const qtyStrSrc = grab("const qtyStr =", "const posRow =");
+  const posRowSrc = grab("const posRow = (p, levered) => {", "// BOOK IS THE MONEY SURFACE");
+  const nextAddStrSrc = grab("function nextAddStr(p) {", "// A symbol can be open in more than one sleeve");
+
+  const rig = new Function("MARKETS", "esc", "P",
+    `${scanMarketForSrc}\n${numSrc}\n${sgnRSrc}\n${clsSrc}\n${openSymbolHTMLSrc}\n${qtyStrSrc}\n${nextAddStrSrc}\n${posRowSrc}
+     return (p) => posRow(p, false);`
+  )(["asx", "nasdaq", "crypto", "futures"], T.esc, T.FALLBACK);
+
+  const rowHTML = rig({ units: 213.65, fills: [4.14] });
+  assert.ok(/<td class="mono">1u<\/td>/.test(rowHTML), "the real posRow must render 1u for a single-fill UNI-shaped position");
+  assert.ok(!/214u/.test(rowHTML), "must never render fills-count as if it were the coin quantity");
+  assert.ok(/<td class="mono">213\.65<\/td>/.test(rowHTML), "the qty cell must show the real 213.65 quantity, 2dp at/above 10");
+});
+
 test("open positions split into two table shapes by leverage, never one table with blank Posted/Liq cells", () => {
   assert.ok(/const posRow = \(p, levered\) => \{/.test(SRC),
     "posRow must take a levered flag so cash/levered rendering diverges from one function, not two copies");
@@ -1332,6 +1358,38 @@ test("fitsOnLeveredHTML only renders for a cash skip with want_notional and an a
     "the chip's own code and labels must read as a display comparison, never as an instruction to act");
   assert.ok(/esc\(d\.join\(" · "\)\) \+ fitsOnLeveredHTML\(k\) \+ "<\/td><\/tr>";/.test(SRC),
     "the chip must be appended after the escaped detail text in the skip table's Detail cell");
+});
+
+// fitsOnLeveredHTML is a closure over mk/BOOK, not a top-level export, so this
+// pulls its REAL source text (plus the real money/big/scanMarketFor it calls)
+// out of the shipped file and wires them together with new Function -- same
+// "run the real file" principle as boot() above, just at closure grain
+// instead of whole-IIFE grain. This is the fixture pair from the pre-upload
+// gate: posted = want_notional/leverage must be what's compared to
+// free_margin, never want_notional itself, or the first case below would
+// wrongly fit (25000 vs 3840 is a false fit; 5000 vs 3840 correctly is not).
+test("fitsOnLeveredHTML fixture: 25000/5x/3840-free does not fit, 10000/5x/3840-free does", () => {
+  const grab = (a, b) => SRC.slice(SRC.indexOf(a), SRC.indexOf(b));
+  const moneySrc = grab("const money = (v, d) =>", "const pct = (v, d) =>");
+  const bigSrc = grab("const big = (v) =>", "// ── the arithmetic");
+  const scanMarketForSrc = grab("function scanMarketFor(", "function vehicleBadgeHTML(");
+  const fitsSrc = grab("const fitsOnLeveredHTML =", 'h += `<section class="tt-card" id="tt-skips">');
+
+  const rig = new Function("MARKETS", "CUR", "MARKET", "esc",
+    `${moneySrc}\n${bigSrc}\n${scanMarketForSrc}\nlet mk, BOOK;\n${fitsSrc}
+     return (m, b, k) => { mk = m; BOOK = b; return fitsOnLeveredHTML(k); };`
+  )(["asx", "nasdaq", "crypto", "futures"], { asx: "A$", nasdaq: "$", crypto: "$", futures: "$" }, "crypto", T.esc);
+
+  const mk = ["crypto", "crypto5x"];
+  const byMarket = { crypto: { params: {} }, crypto5x: { params: { leverage: 5 }, free_margin: 3840 } };
+
+  const tooBig = rig(mk, { by_market: byMarket }, { reason: "cash", market: "crypto", want_notional: 25000 });
+  assert.ok(/is-blocked/.test(tooBig) && /would not fit on 5&times;/.test(tooBig),
+    "want_notional=25000, lev=5 -> posted=$5,000 > $3,840 free -> must NOT fit");
+
+  const fits = rig(mk, { by_market: byMarket }, { reason: "cash", market: "crypto", want_notional: 10000 });
+  assert.ok(!/is-blocked/.test(fits) && /fits on 5&times;/.test(fits),
+    "want_notional=10000, lev=5 -> posted=$2,000 <= $3,840 free -> must fit");
 });
 
 // ── 14. mobile 320px (Phase 8) ───────────────────────────────────────────────
