@@ -344,6 +344,21 @@ test("writes no browser storage — the account size is not persisted", () => {
     "and the page must say so where the number is typed");
 });
 
+test("never reaches the shared watchlist / MY NAMES store", () => {
+  // Every other lens (mynames.js, phasemap.js, specs.js, recs.js) stars a
+  // name through window.PM.watch, which writes localStorage's
+  // gbs:manual_journal .watchlists under the hood. The test above bans the
+  // storage primitive directly; it would NOT catch a future star button
+  // wired to PM.watch instead, since that call never types the word
+  // "localStorage" in this file at all. Ban the API and the key, not just
+  // the primitive one happens to sit on -- this is the fence a "star this
+  // into MY NAMES" regression would actually have to cross.
+  assert.ok(!/PM\.watch|window\.PM\b/.test(CODE),
+    "turtle.js must never call the shared watchlist API");
+  assert.ok(!/mynames|watchlist|gbs:manual_journal/i.test(CODE),
+    "turtle.js must never reference MY NAMES or its storage key");
+});
+
 // ── 8b. keyboard + injection ────────────────────────────────────────────────
 suite("rows are real controls, and hostile data cannot reach a selector");
 
@@ -439,6 +454,20 @@ test("nav.js lists it, so the tab is reachable", () => {
   const nav = fs.readFileSync(path.resolve(__dirname, "../public/js/nav.js"), "utf8");
   assert.ok(/href:\s*"turtle\.html"/.test(nav));
   assert.ok(/key:\s*"turtle"/.test(nav));
+});
+
+test("a chart opened from Turtle says so on the way back (Phase B)", () => {
+  // Regression for the residual Phase 10 found and deliberately left alone:
+  // SRC_BACK had no turtle entry, so a Turtle-sourced chart silently showed
+  // the generic dashboard back-link. Fixed in chart.js, pinned here.
+  const chart = fs.readFileSync(path.resolve(__dirname, "../public/js/chart.js"), "utf8");
+  assert.ok(/turtle:\s*\[/.test(chart),
+    "chart.js's SRC_BACK is missing a turtle entry");
+  assert.ok(/"turtle\.html\?m="\s*\+\s*encodeURIComponent\(market\)/.test(chart),
+    "the turtle back-link must be built from the validated market, not a literal string");
+  assert.ok(/\+\s*symbol\s*\)/.test(chart) || /symbol\s*\?/.test(chart),
+    "the turtle back-link must carry the symbol through, not just the market");
+  assert.ok(/"←\s*Turtle"/.test(chart), "the back-link label must say Turtle");
 });
 
 // ── the 5x sleeve, the gates, and the portfolio surface (2026-08-22) ───────

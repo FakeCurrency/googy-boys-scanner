@@ -57,9 +57,18 @@
   const mode = market === "scalp" ? (urlMode || "scalp")
     : urlMode === "spec" ? "spec" : "vivek";
   // Back-link context: return to wherever the user actually came from
-  // (journal / phasemap / specs / mynames / alerts pass src=...) instead of
-  // always dumping them on the dashboard. src already drives prev/next lists.
+  // (journal / phasemap / specs / mynames / alerts / turtle pass src=...)
+  // instead of always dumping them on the dashboard. src already drives
+  // prev/next lists.
   {
+    // turtle's entry is built, not literal: it carries m=/s= back onto
+    // turtle.html's OWN deep-link contract (parseTurtleURL/applyState
+    // already parse these on load, turtle.js:1308/1378) so Back lands on
+    // the same market with the same row expanded, not a reset page. This
+    // is not a new router -- it's turtle.html's existing URL contract,
+    // read from a different page. v=signals is fixed rather than read
+    // from anywhere because chart.html is only ever reached from a
+    // SIGNALS row (chartHref, turtle.js:467, has no other call site).
     const SRC_BACK = {
       journal:  ["journal.html",  "← Journal"],
       phasemap: ["phasemap.html", "← Phase Map"],
@@ -67,6 +76,9 @@
       mynames:  ["mynames.html",  "← My Names"],
       alerts:   ["alerts.html",   "← Alerts"],
       sectors:  ["sectors.html",  "← News"],
+      turtle:   ["turtle.html?m=" + encodeURIComponent(market) + "&v=signals" +
+                 (symbol ? "&s=" + encodeURIComponent(symbol) : ""),
+                 "← Turtle"],
     };
     const back = SRC_BACK[(params.get("src") || "").toLowerCase()];
     const el = document.querySelector(".back-link");
