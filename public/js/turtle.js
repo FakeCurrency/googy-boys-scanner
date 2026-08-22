@@ -493,6 +493,22 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     return Math.abs(p.last_mark - liq) / (P.stop_n * p.n);
   }
 
+  // Next add (Phase D): Turtle's own rule -- one add per pyramid_step_n*N,
+  // max_units total -- computed ONLY from fields the BOOK payload already
+  // carries (last_fill, n, side, fills.length). Never a call into
+  // turtle_book.py's own math, which this page cannot see and must not
+  // guess at: a wrong next-add is worse than none. "max units" once
+  // fills.length reaches P.max_units; "—" only when a required field is
+  // genuinely missing. Top-level like liqDistanceR above, so posRow (BOOK)
+  // and bookOpenHTML (a SIGNALS row's expanded detail) share one formula
+  // and can never quote two different numbers for the same position.
+  function nextAddStr(p) {
+    if (!p || (p.fills || []).length >= P.max_units) return "max units";
+    if (p.last_fill == null || p.n == null) return "—";
+    const sign = p.side === "short" ? -1 : 1;
+    return num(p.last_fill + sign * P.pyramid_step_n * p.n, 4);
+  }
+
   // A symbol can be open in more than one sleeve at once (a cash position
   // and a levered one are separate books) -- every match is returned, not
   // just the first.
@@ -561,12 +577,14 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const avg = p.units ? p.cost_basis / p.units : null;
       const r = openR(p);
       const lev = leverageOf(p.market);
+      const nextAdd = nextAddStr(p);
       let g = '<div class="tt-detail-grid">' +
         kv("In the book (" + esc((p.market || "").toUpperCase()) + ")",
           esc(p.side || "") + " S" + esc(String(p.system || "?"))) +
         kv("Units", (p.fills || []).length) +
         (avg != null ? kv("Avg fill", money(avg)) : "") +
         (p.stop != null ? kv("Stop", money(p.stop)) : "") +
+        (nextAdd !== "—" ? kv("Next add", nextAdd) : "") +
         (r != null ? kv("Open R", sgnR(r)) : "");
       if (lev) {
         if (p.posted != null) g += kv(big(lev) + "&times; posted margin", money(p.posted));
@@ -928,7 +946,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         " S" + esc(String(p.system)) + '</td><td class="mono">' +
         (p.fills || []).length + "u</td><td class=\"mono\">" + qtyStr(p.units) +
         "</td><td class=\"mono\">" + num(avg, 4) +
-        '</td><td class="mono">' + num(p.stop, 4) + "</td>";
+        '</td><td class="mono">' + num(p.stop, 4) +
+        '</td><td class="mono">' + nextAddStr(p) + "</td>";
       if (levered) {
         const distR = liqDistanceR(p);
         row += '<td class="mono">' + (p.posted != null ? money(p.posted) : "—") +
@@ -958,12 +977,15 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         h += `<section class="tt-card"><h3>Open positions</h3>
           <div class="tt-tablewrap"><table class="tt-table">
           <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
-          <th>Avg fill</th><th>Stop</th><th>Open R</th><th>Since</th></tr></thead>
+          <th>Avg fill</th><th>Stop</th><th>Next add</th><th>Open R</th><th>Since</th></tr></thead>
           <tbody>${openCash.map((p) => posRow(p, false)).join("")}</tbody></table></div>
           <p class="tt-note">"Units" is the Turtle pyramid count (1-4, one add per
           ${P.pyramid_step_n}N); "Qty" is the actual coin or share count that count
           was built from. One shared stop per position, ${P.stop_n}N under the most
-          recent unit. On the equity and crypto books the cash constraint binds
+          recent unit. "Next add" is the next ${P.pyramid_step_n}N pyramid level from
+          the last fill -- not a fill that has happened, and not a call into the
+          book's own math -- reading "max units" once all ${P.max_units} fills are
+          already in. On the equity and crypto books the cash constraint binds
           fast, because at ${(P.risk_pct * 100).toFixed(0)}% risk per N a single unit
           routinely costs a quarter to a half of a ${money(s.equity_start, 0)} account.
           That is exactly the leverage the Turtles had from futures margin and a
@@ -984,7 +1006,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         h += `<section class="tt-card"><h3>Open positions — levered sleeve</h3>
           <div class="tt-tablewrap"><table class="tt-table">
           <thead><tr><th>Symbol</th><th>Market</th><th>Side</th><th>Units</th><th>Qty</th>
-          <th>Avg fill</th><th>Stop</th><th>Posted</th><th>Liq dist.</th>
+          <th>Avg fill</th><th>Stop</th><th>Next add</th><th>Posted</th><th>Liq dist.</th>
           <th>Open R</th><th>Since</th></tr></thead>
           <tbody>${openLevered.map((p) => posRow(p, true)).join("")}</tbody></table></div>
           <p class="tt-note">Posted is the margin actually at risk on this position
@@ -1069,6 +1091,29 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     // the whole story -- especially at $5,000, where cash binds long before
     // any Turtle rule does.
     const skips = BOOK.skips || [];
+    // Cash-skip dollars, latest bar only (Phase D): computed here, ahead of
+    // the skip board itself, so the SAME sentence can also reach the
+    // combined card below rather than being recomputed (and risking
+    // drifting) a second time. Restricted to the latest as_of so a re-run
+    // mid-session can never double count across bars. want_notional is
+    // summed only where the row actually carries it -- partial-data
+    // honesty: a skip missing the field is counted into "N skips" but never
+    // guessed into the dollar total, and the gap is stated rather than
+    // hidden.
+    const latestAsOf = skips.reduce((mx, k) => (k.as_of && (!mx || k.as_of > mx) ? k.as_of : mx), null);
+    const cashToday = skips.filter((k) => k.reason === "cash" && k.as_of === latestAsOf);
+    const cashTodayPriced = cashToday.filter((k) => k.want_notional != null);
+    const cashMarkets = new Set(cashToday.map((k) => k.market));
+    const cashSkipSentence = cashToday.length
+      ? big(cashToday.length) + " cash skip" + (cashToday.length === 1 ? "" : "s") +
+        " on " + esc(latestAsOf) + " across " + big(cashMarkets.size) +
+        " book" + (cashMarkets.size === 1 ? "" : "s") + ": " +
+        money(cashTodayPriced.reduce((sum, k) => sum + k.want_notional, 0), 0) +
+        " notional the cash book" + (cashMarkets.size === 1 ? "" : "s") + " refused" +
+        (cashTodayPriced.length < cashToday.length
+          ? " (" + big(cashToday.length - cashTodayPriced.length) + " more without a notional figure on the row)"
+          : "") + "."
+      : "";
     if (skips.length) {
       const WHY = {
         direction_cap: "12-unit one-way ceiling",
@@ -1118,6 +1163,28 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const rows = Array.from(dedup.values()).sort((a, b) =>
         (counts[a.reason] || 0) - (counts[b.reason] || 0) ||
         (a.symbol || "").localeCompare(b.symbol || ""));
+      // "Would this fit on the levered sleeve" (Phase D): a display
+      // comparison only, never an order and never a hint to retune
+      // anything. Renders ONLY where the skip is a cash skip carrying
+      // want_notional AND a levered sibling of its market actually exists
+      // in by_market -- found via scanMarketFor's own suffix rule, in
+      // reverse, so no sleeve key is ever spelled out literally here, and
+      // this simply produces nothing for a market with no levered sibling.
+      const fitsOnLeveredHTML = (k) => {
+        if (k.reason !== "cash" || k.want_notional == null) return "";
+        const levMarket = mk.find((m) => m !== k.market && scanMarketFor(m) === k.market &&
+          ((BOOK.by_market[m] || {}).params || {}).leverage > 1);
+        if (!levMarket) return "";
+        const b = BOOK.by_market[levMarket];
+        const lev = b.params.leverage;
+        if (b.free_margin == null) return "";
+        const posted = k.want_notional / lev;
+        const fits = posted <= b.free_margin;
+        return ' <span class="tt-chip' + (fits ? "" : " is-blocked") + '" title="' +
+          big(lev) + '&times; posted would be ' + money(posted, 0) + ' vs ' +
+          money(b.free_margin, 0) + ' free on ' + esc(levMarket.toUpperCase()) + '">' +
+          (fits ? "fits on " : "would not fit on ") + big(lev) + '&times;</span>';
+      };
       h += `<section class="tt-card" id="tt-skips"><h3>Not taken, and why</h3>
         <p class="tt-note">${esc(summaryLine)}</p>
         <div class="tt-detail-grid">${byReason.map((r) =>
@@ -1138,7 +1205,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
             esc((k.market || "").toUpperCase()) + "</td><td>" + esc(k.action) +
             (k.n > 1 ? " &times;" + big(k.n) : "") +
             "</td><td>" + esc(WHY[k.reason] || k.reason) + '</td><td class="mono">' +
-            esc(d.join(" · ")) + "</td></tr>";
+            esc(d.join(" · ")) + fitsOnLeveredHTML(k) + "</td></tr>";
         }).join("")}</tbody></table></div>
         <p class="tt-note">These are decisions, not failures, and not one story.
         ${counts.cash ? `The <b>${big(counts.cash)} cash</b> skips are the CASH
@@ -1182,6 +1249,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         figures add A$ and US$ <b>at face value</b> (no FX conversion): read
         the per-market rows for anything you would act on. The crypto books run
         every four hours, but the BARS are daily — the cron is a scan cadence, not a four-hour Donchian.${singleSleeveNote}</p>
+        ${cashSkipSentence ? `<p class="tt-note">${esc(cashSkipSentence)} That is universe the
+        cash books can SEE but not size at their own equity -- see Not taken, and
+        why, below for which of it would fit a levered sleeve instead.</p>` : ""}
 </section>`;
 
     // The five-year portfolio replay, LAST: context for reading the facts

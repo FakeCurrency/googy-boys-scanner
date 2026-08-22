@@ -1258,6 +1258,82 @@ test("the face-value sentence divides equity_start by the real sleeve count, and
     "the single-sleeve caveat computed above must actually be appended to this paragraph, not just computed and discarded");
 });
 
+// ── cash-skip dollars + next-stop from payload (Phase D, 2026-08-23) ────────
+// Same structural convention as Phase C above: nextAddStr/fitsOnLeveredHTML
+// are not on the exported GBSTurtle surface, so this pins source shape. The
+// concrete numbers (today's real cash-skip total, a real crypto5x row's
+// Next add figure, a real "fits on Nx" chip) were traced live against
+// tonight's actual journal data with a throwaway Playwright script, per the
+// same Phase 7/C precedent -- not folded in here.
+suite("cash-skip dollars + next-stop from payload (Phase D) — partial-data honesty, shared next-add, never an order");
+
+test("nextAddStr computes the next 0.5N pyramid level from published fields only, shared by BOOK and the SIGNALS detail", () => {
+  const body = SRC.slice(SRC.indexOf("function nextAddStr("), SRC.indexOf("function nextAddStr(") + 600);
+  assert.ok(/if \(!p \|\| \(p\.fills \|\| \[\]\)\.length >= P\.max_units\) return "max units";/.test(body),
+    "must read 'max units' once fills.length reaches P.max_units, never a hardcoded 4");
+  assert.ok(/if \(p\.last_fill == null \|\| p\.n == null\) return "—";/.test(body),
+    "must omit rather than guess when last_fill or n is missing");
+  assert.ok(/num\(p\.last_fill \+ sign \* P\.pyramid_step_n \* p\.n, 4\)/.test(body),
+    "must compute last_fill + sign*pyramid_step_n*n -- Turtle's own 0.5N pyramid rule -- never call into turtle_book.py's math");
+  assert.ok(/p\.side === "short" \? -1 : 1/.test(body), "the add direction must flip sign for a short");
+  const defCount = (SRC.match(/function nextAddStr\(/g) || []).length;
+  assert.equal(defCount, 1, "nextAddStr must be defined once and shared, never a second copy for posRow vs bookOpenHTML");
+  assert.ok(/'<\/td><td class="mono">' \+ nextAddStr\(p\) \+ "<\/td>";/.test(SRC),
+    "posRow must render its Next add cell through the shared helper");
+  assert.ok(/const nextAdd = nextAddStr\(p\);/.test(SRC) && /nextAdd !== "—" \? kv\("Next add", nextAdd\) : ""/.test(SRC),
+    "bookOpenHTML must call the same shared helper and omit the row entirely when there is nothing to say, never show a bare dash");
+});
+
+test("both open-position tables gained a Next add column, in the same place relative to Stop", () => {
+  const body = SRC.slice(SRC.indexOf("if (open.length) {"), SRC.indexOf("const closed = (BOOK.closed"));
+  const cashSection = body.slice(body.indexOf("if (openCash.length)"), body.indexOf("if (openLevered.length)"));
+  const leveredSection = body.slice(body.indexOf("if (openLevered.length)"));
+  assert.ok(/<th>Stop<\/th><th>Next add<\/th><th>Open R<\/th>/.test(cashSection),
+    "the cash table's Next add column must sit between Stop and Open R");
+  assert.ok(/<th>Stop<\/th><th>Next add<\/th><th>Posted<\/th>/.test(leveredSection),
+    "the levered table's Next add column must sit between Stop and Posted");
+});
+
+test("the cash-skip dollar sentence sums want_notional on the latest bar only, honest about rows missing the field", () => {
+  const body = SRC.slice(SRC.indexOf("const latestAsOf ="), SRC.indexOf("if (skips.length) {"));
+  assert.ok(/const latestAsOf = skips\.reduce\(\(mx, k\) => \(k\.as_of && \(!mx \|\| k\.as_of > mx\) \? k\.as_of : mx\), null\);/.test(body),
+    "latestAsOf must be derived from the real skip rows, never today's wall-clock date");
+  assert.ok(/const cashToday = skips\.filter\(\(k\) => k\.reason === "cash" && k\.as_of === latestAsOf\);/.test(body),
+    "must restrict to cash-reason skips on the latest bar, so a mid-session re-run cannot double count");
+  assert.ok(/const cashTodayPriced = cashToday\.filter\(\(k\) => k\.want_notional != null\);/.test(body),
+    "must split out rows that actually carry want_notional before summing");
+  assert.ok(/money\(cashTodayPriced\.reduce\(\(sum, k\) => sum \+ k\.want_notional, 0\), 0\)/.test(body),
+    "the dollar total must be summed live from want_notional, never a hardcoded figure");
+  assert.ok(/cashTodayPriced\.length < cashToday\.length[\s\S]{0,120}without a notional figure on the row/.test(body),
+    "a cash skip missing want_notional must be disclosed, never silently dropped from the count or folded into the total");
+});
+
+test("the cash-skip sentence reaches the combined card, gated on there being anything to say", () => {
+  const start = SRC.indexOf('<p class="tt-note">Equity here is');
+  const body = SRC.slice(start, SRC.indexOf("</section>", start) + 10);
+  assert.ok(/cashSkipSentence \? `<p class="tt-note">\$\{esc\(cashSkipSentence\)\}/.test(body),
+    "the combined card must render the cash-skip sentence through esc(), and only when cashSkipSentence is non-empty");
+});
+
+test("fitsOnLeveredHTML only renders for a cash skip with want_notional and an actual levered sibling, comparing against real free_margin", () => {
+  const body = SRC.slice(SRC.indexOf("const fitsOnLeveredHTML ="),
+    SRC.indexOf('h += `<section class="tt-card" id="tt-skips">'));
+  assert.ok(/if \(k\.reason !== "cash" \|\| k\.want_notional == null\) return "";/.test(body),
+    "must require both a cash reason and a real want_notional before attempting anything");
+  assert.ok(/scanMarketFor\(m\) === k\.market/.test(body),
+    "the levered sibling must be found via scanMarketFor's own suffix rule -- never a hardcoded sleeve key");
+  assert.ok(/\.params \|\| \{\}\)\.leverage > 1/.test(body),
+    "the candidate sibling must actually carry leverage > 1, not just a different key");
+  assert.ok(/if \(b\.free_margin == null\) return "";/.test(body),
+    "must omit rather than guess when the sibling sleeve has no free_margin published");
+  assert.ok(/const posted = k\.want_notional \/ lev;/.test(body) && /const fits = posted <= b\.free_margin;/.test(body),
+    "the comparison must be want_notional/leverage against the sibling's real free_margin");
+  assert.ok(!/\bbuy\b|\border\b|\bplace\b/i.test(body),
+    "the chip's own code and labels must read as a display comparison, never as an instruction to act");
+  assert.ok(/esc\(d\.join\(" · "\)\) \+ fitsOnLeveredHTML\(k\) \+ "<\/td><\/tr>";/.test(SRC),
+    "the chip must be appended after the escaped detail text in the skip table's Detail cell");
+});
+
 // ── 14. mobile 320px (Phase 8) ───────────────────────────────────────────────
 // This suite is structural (CSS text), same reasoning as the JS structural
 // tests above: it locks the RULE being present, not the rendered pixel
