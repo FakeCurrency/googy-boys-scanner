@@ -395,5 +395,64 @@ test("nav.js lists it, so the tab is reachable", () => {
   assert.ok(/key:\s*"turtle"/.test(nav));
 });
 
+// ── the 5x sleeve, the gates, and the portfolio surface (2026-08-22) ───────
+suite("5x / gates / portfolio surfaces");
+
+test("the WHY map covers every skip reason the book can emit", () => {
+  // Parity with the Python enum, parsed from the real source: a new skip
+  // reason that renders as its raw slug is a refusal nobody can read.
+  const tbSrc = fs.readFileSync(
+    path.resolve(__dirname, "../scanner/turtle_book.py"), "utf8");
+  const reasons = [...tbSrc.matchAll(/^SKIP_[A-Z_]+ = "([a-z_]+)"/gm)]
+    .map((m) => m[1]);
+  assert.ok(reasons.length >= 10, "enum extraction broke");
+  const whyBlock = SRC.slice(SRC.indexOf("const WHY = {"),
+                             SRC.indexOf("};", SRC.indexOf("const WHY = {")));
+  for (const r of reasons) {
+    assert.ok(whyBlock.includes(r + ":"),
+      `the WHY map is missing "${r}" — it would render as a raw slug`);
+  }
+});
+
+test("the 5x disclosure renders FROM params, with no hardcoded sleeve name", () => {
+  assert.ok(/b\.params\s*&&\s*b\.params\.leverage\s*>\s*1/.test(SRC),
+    "the by-market table must discover a levered sleeve from its params");
+  assert.ok(/not<\/b>\s*Dennis's\s*futures\s*IM/.test(SRC),
+    "the perp-analogue sentence must be on the page");
+  assert.ok(/posted margin/.test(SRC));
+  assert.ok(!/crypto5x/i.test(SRC),
+    "turtle.js must not hardcode the sleeve name — params are the contract");
+});
+
+test("liquidation and the margin refusals reach the reader in words", () => {
+  assert.ok(/liquidation/.test(SRC));
+  assert.ok(/no free margin for the posted amount/.test(SRC));
+  assert.ok(/no real margin data — futures opens are OFF/.test(SRC));
+  assert.ok(/roll suspect sits in today's N window/.test(SRC));
+});
+
+test("the first-print rule and the face-value warning are on the BOOK view", () => {
+  assert.ok(/A first print is a print, not evidence/.test(SRC));
+  assert.ok(/30 closed trades AND 20 trading days/.test(SRC));
+  assert.ok(/at face value/.test(SRC), "the A$+US$ mix must be admitted");
+  assert.ok(/scan cadence, not a four-hour Donchian/.test(SRC),
+    "the 4h cron vs daily bars distinction must be stated");
+});
+
+test("the portfolio card renders the payload's own caveat, lazily fetched", () => {
+  assert.ok(/data\/turtle_portfolio\.json/.test(SRC),
+    "the portfolio surface must be fetched from data/");
+  assert.ok(/PORTFOLIO\.caveat/.test(SRC),
+    "the caveat must come from the payload, not from page copy that can " +
+    "drift from what the file itself claims");
+  assert.ok(/PORTFOLIO\.ordering/.test(SRC),
+    "the declared entry ordering must reach the reader");
+});
+
+test("S2-first when both channels break is stated in the rules copy", () => {
+  assert.ok(/tagged System 2/.test(SRC));
+  assert.ok(/failsafe is tested first/.test(SRC));
+});
+
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
