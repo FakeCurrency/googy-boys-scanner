@@ -1031,6 +1031,81 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (body && VIEW === "signals") body.innerHTML = signalsHTML();
   }
 
+  // ── URL state (Phase 2 of the UI runbook — helpers only) ───────────────────
+  // Back/forward is a data contract, so it is written and tested before any
+  // click is wired to it — wire the clicks first and you "test" by eye and
+  // miss the hostile symbol. Nothing below reads or writes the DOM, touches
+  // history.pushState/popstate, or is called from mount() yet; that wiring is
+  // Phase 3. Both functions are pure and MUST NEVER THROW: unknown, missing,
+  // or malformed input always resolves to the defaults below, and a caller
+  // can never push an invalid value into the address bar.
+  const URL_MARKETS = ["asx", "nasdaq", "crypto", "futures"];
+  const URL_VIEWS = ["signals", "book", "rules", "sizing", "evidence"];
+  const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
+  const URL_SORTS = ["fired", "distance", "n", "symbol"];
+  const URL_DEFAULTS = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
+
+  // search: a location.search-shaped string ("?m=nasdaq&v=book", the same
+  // without the leading "?", "", null, undefined, or garbage of any type).
+  // Returns a plain {m,v,f,s,sort} object. s is free text (an expanded
+  // symbol, or "" if none) — URLSearchParams decodes it for us, so any
+  // decoded value, including one carrying a quote, a bracket, or an
+  // ampersand, is accepted as-is; every other field is checked against its
+  // allowed list above and falls back to the default if it is missing,
+  // misspelled, or hostile. Extra query keys (?debug=1 etc.) are read from
+  // and never copied onto the result, so a parse -> serialise round trip
+  // always drops them rather than resurrecting them inconsistently.
+  function parseTurtleURL(search) {
+    const out = Object.assign({}, URL_DEFAULTS);
+    try {
+      const params = new URLSearchParams(search || "");
+      const m = params.get("m");
+      const v = params.get("v");
+      const f = params.get("f");
+      const sort = params.get("sort");
+      const s = params.get("s");
+      if (URL_MARKETS.indexOf(m) !== -1) out.m = m;
+      if (URL_VIEWS.indexOf(v) !== -1) out.v = v;
+      if (URL_FILTERS.indexOf(f) !== -1) out.f = f;
+      if (URL_SORTS.indexOf(sort) !== -1) out.sort = sort;
+      if (s != null) out.s = s;
+      return out;
+    } catch (_) {
+      // A hostile or exotic `search` (e.g. a bare Symbol, which throws on
+      // implicit ToString) must default cleanly rather than crash the page.
+      return Object.assign({}, URL_DEFAULTS);
+    }
+  }
+
+  // state: a {m,v,f,s,sort} object — typically parseTurtleURL's own output,
+  // or a UI-derived equivalent once Phase 3 wires this up. Same allowed
+  // lists and the same never-throw, garbage-defaults contract as the parser,
+  // applied independently per field. Hostile s is escaped with
+  // encodeURIComponent so it round-trips through URLSearchParams' decoding
+  // on the way back in; an empty s is omitted entirely rather than
+  // serialised as a bare "&s=".
+  function serialiseTurtleURL(state) {
+    try {
+      const st = state || {};
+      const m = URL_MARKETS.indexOf(st.m) !== -1 ? st.m : URL_DEFAULTS.m;
+      const v = URL_VIEWS.indexOf(st.v) !== -1 ? st.v : URL_DEFAULTS.v;
+      const f = URL_FILTERS.indexOf(st.f) !== -1 ? st.f : URL_DEFAULTS.f;
+      const sort = URL_SORTS.indexOf(st.sort) !== -1 ? st.sort : URL_DEFAULTS.sort;
+      const s = st.s == null ? "" : String(st.s);
+      const parts = [
+        "m=" + encodeURIComponent(m),
+        "v=" + encodeURIComponent(v),
+        "f=" + encodeURIComponent(f),
+      ];
+      if (s !== "") parts.push("s=" + encodeURIComponent(s));
+      parts.push("sort=" + encodeURIComponent(sort));
+      return "?" + parts.join("&");
+    } catch (_) {
+      return "?m=" + URL_DEFAULTS.m + "&v=" + URL_DEFAULTS.v + "&f=" + URL_DEFAULTS.f +
+        "&sort=" + URL_DEFAULTS.sort;
+    }
+  }
+
   function mount() {
     document.addEventListener("click", (e) => {
       const v = e.target.closest("[data-view]");
@@ -1091,6 +1166,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // than a re-typed copy of them.
   window.GBSTurtle = {
     esc, unitShares, ladder, ddEquity, yearsTo, FALLBACK,
+    parseTurtleURL, serialiseTurtleURL,
     setParams: (p) => { P = Object.assign({}, FALLBACK, p || {}); },
   };
 })();

@@ -461,5 +461,112 @@ test("S2-first when both channels break is stated in the rules copy", () => {
   assert.ok(/failsafe is tested first/.test(SRC));
 });
 
+// ── 10. URL state (Phase 2) ─────────────────────────────────────────────────
+suite("URL state — back/forward is a data contract, written before any click uses it");
+
+const LEGAL_COMBOS = [
+  { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" },
+  { m: "nasdaq", v: "book", f: "held", s: "AAPL", sort: "n" },
+  { m: "crypto", v: "rules", f: "near", s: "DOGE", sort: "distance" },
+  { m: "futures", v: "sizing", f: "blocked", s: "CL", sort: "symbol" },
+  { m: "asx", v: "evidence", f: "all", s: "", sort: "fired" },
+];
+
+test("round-trips every legal combo, serialise then parse", () => {
+  LEGAL_COMBOS.forEach((combo) => {
+    const qs = T.serialiseTurtleURL(combo);
+    const back = T.parseTurtleURL(qs);
+    assert.deepEqual(back, combo,
+      `combo ${JSON.stringify(combo)} -> ${qs} -> ${JSON.stringify(back)}`);
+  });
+});
+
+test("a bare query string (no leading '?') parses identically to one with it", () => {
+  const withQ = T.parseTurtleURL("?m=nasdaq&v=book&f=held&sort=n");
+  const bare = T.parseTurtleURL("m=nasdaq&v=book&f=held&sort=n");
+  assert.deepEqual(withQ, bare);
+});
+
+test("garbage m/v/f/sort fall back to their defaults, one field at a time", () => {
+  const defaults = T.parseTurtleURL("");
+  assert.deepEqual(T.parseTurtleURL("?m=bogus"), defaults);
+  assert.deepEqual(T.parseTurtleURL("?v=xyz"), defaults);
+  assert.deepEqual(T.parseTurtleURL("?f=whatever"), defaults);
+  assert.deepEqual(T.parseTurtleURL("?sort=nope"), defaults);
+  // all four wrong at once must not throw, and must still be all-defaults
+  assert.deepEqual(T.parseTurtleURL("?m=x&v=y&f=z&sort=w"), defaults);
+});
+
+test("default f is fired, not all — SIGNALS/ALL is 400 names, not a filtered view", () => {
+  assert.equal(T.parseTurtleURL("").f, "fired");
+  assert.notEqual(T.parseTurtleURL("").f, "all");
+});
+
+test("empty, missing, and garbage-typed search all default cleanly, never throwing", () => {
+  const defaults = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
+  assert.deepEqual(T.parseTurtleURL(""), defaults);
+  assert.deepEqual(T.parseTurtleURL(undefined), defaults);
+  assert.deepEqual(T.parseTurtleURL(null), defaults);
+  assert.deepEqual(T.parseTurtleURL(42), defaults, "a number must not throw");
+  assert.deepEqual(T.parseTurtleURL(Symbol("x")), defaults, "a Symbol must not throw");
+});
+
+test("hostile s (quote, brackets) round-trips through encodeURIComponent", () => {
+  const hostile = 'AAA"><';
+  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: hostile, sort: "fired" });
+  assert.ok(!qs.includes('"') && !qs.includes("<") && !qs.includes(">"),
+    `raw hostile characters leaked into the query string: ${qs}`);
+  assert.equal(T.parseTurtleURL(qs).s, hostile);
+});
+
+test("hostile s (ampersand, quote — the classic query-string breakers)", () => {
+  const hostile = 'A&B"C';
+  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: hostile, sort: "fired" });
+  assert.equal(T.parseTurtleURL(qs).s, hostile);
+});
+
+test("serialise omits an empty s instead of writing a bare '&s='", () => {
+  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: "", sort: "fired" });
+  assert.ok(!qs.includes("s="), qs);
+  const qsDefault = T.serialiseTurtleURL({});
+  assert.ok(!qsDefault.includes("s="), qsDefault);
+});
+
+test("serialise never throws and defaults an invalid state object, field by field", () => {
+  assert.doesNotThrow(() => T.serialiseTurtleURL(null));
+  assert.doesNotThrow(() => T.serialiseTurtleURL(undefined));
+  assert.doesNotThrow(() => T.serialiseTurtleURL({ m: "bogus", v: 123, f: [], sort: {} }));
+  const qs = T.serialiseTurtleURL({ m: "bogus", v: 123, f: [], sort: {} });
+  assert.deepEqual(T.parseTurtleURL(qs),
+    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" },
+    "every invalid field must fall back independently, not abort the whole call");
+});
+
+test("extra query keys are read from but never appear on the parsed result", () => {
+  const out = T.parseTurtleURL("?m=nasdaq&debug=1&foo=bar&lite=true");
+  assert.deepEqual(Object.keys(out).sort(), ["f", "m", "s", "sort", "v"]);
+  assert.equal(out.m, "nasdaq");
+  // the drop is consistent on the way back out too: re-serialising never
+  // resurrects a key that was never part of the {m,v,f,s,sort} contract
+  const qs = T.serialiseTurtleURL(out);
+  assert.ok(!qs.includes("debug") && !qs.includes("foo") && !qs.includes("lite"), qs);
+});
+
+test("the helpers touch no DOM, no history API, and no journal — pure functions only", () => {
+  // Phase 2 is explicit: no popstate, no pushState, no mount() wiring yet.
+  const fnBody = SRC.slice(SRC.indexOf("function parseTurtleURL"),
+                            SRC.indexOf("function mount("));
+  assert.ok(!/pushState|popstate|history\.(back|forward|go)/.test(fnBody),
+    "Phase 2 must not wire history yet — that is Phase 3");
+  assert.ok(!/innerHTML|getElementById|querySelector/.test(fnBody),
+    "parseTurtleURL/serialiseTurtleURL must not touch the DOM");
+  assert.ok(!/journal\//.test(fnBody), "the URL helpers must not reference journal/");
+});
+
+test("both helpers are exported on window.GBSTurtle", () => {
+  assert.equal(typeof T.parseTurtleURL, "function");
+  assert.equal(typeof T.serialiseTurtleURL, "function");
+});
+
 console.log(`\nturtle.test.js: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
