@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V3";
+  const BUILD = "V4";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -62,6 +62,7 @@
   let EQUITY = FALLBACK.account_equity;
   let OPEN = null;               // expanded row symbol
   let SORT = "fired";            // URL-only so far (Phase 3): no sort control exists yet
+  let PSORT = "risk";            // PORTFOLIO view sort (V4): risk = nearest stop first
   let TOUCHED = false;           // has the reader picked a view themselves?
   let BOOK = null;               // the forward paper book, all markets
   let PORTFOLIO = null;          // the shared-equity portfolio replay, per sleeve
@@ -951,66 +952,123 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
 
   function heldPositionsHTML() {
     if (!BOOK || !BOOK.open || !BOOK.open.length) {
-      return '<p class="tt-empty">No open positions currently held.</p>';
+      return '<p class="tt-empty">No open positions yet — when the Turtle rules put one on it shows here with live P&amp;L, risk and its distance to the stop.</p>';
     }
 
-    // filter to current market only, exclude ASX
-    const open = (BOOK.open || []).filter((p) =>
-      p.market === MARKET && p.market !== "asx"
-    ).sort((a, b) => (b.fills || []).length - (a.fills || []).length);
-
-    if (!open.length) {
-      return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) + '.</p>';
+    // Current market only (levered sleeves carry their own market id and live on
+    // the BOOK view); the retired ASX rows are excluded.
+    const rows = (BOOK.open || []).filter((p) => p.market === MARKET && p.market !== "asx");
+    if (!rows.length) {
+      return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) +
+        ' — watch the SIGNALS tab for the next breakout.</p>';
     }
 
-    let html = '<div class="tt-held-rows">';
-
-    open.forEach((p, idx) => {
+    // One view-model per position, computed once so the header totals, the sort
+    // and the cards can never disagree about the same book.
+    const vms = rows.map((p) => {
       const sign = p.side === "short" ? -1 : 1;
       const avg = p.units ? p.cost_basis / p.units : 0;
-      const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
-        (P.stop_n * p.n * p.units) : null;
+      const oneR = (p.n && p.units) ? P.stop_n * p.n * p.units : 0;   // 1R in dollars
       const pnl = p.units ? sign * (p.last_mark - avg) * p.units : 0;
-      const days = p.opened ? Math.max(1, Math.round(
-        (Date.now() - Date.parse(p.opened)) / 864e5)) : 0;
+      const r = oneR ? pnl / oneR : null;
+      const days = p.opened ? Math.max(1, Math.round((Date.now() - Date.parse(p.opened)) / 864e5)) : 0;
+      const lev = leverageOf(p.market) || 1;
+      const marginNotional = lev > 1 ? (p.cost_basis / lev) : p.cost_basis;
+      // distance from the current mark down to the shared stop
+      const distToStop = (p.stop != null) ? sign * (p.last_mark - p.stop) : null;    // price, >0 = above stop
+      const riskDist = p.n ? P.stop_n * p.n : null;                                  // the 2N stop distance
+      const stopRatio = (distToStop != null && riskDist) ? distToStop / riskDist : null; // ~1 at entry, 0 at stop
+      const stopPct = (p.stop != null && p.last_mark) ? sign * (p.last_mark - p.stop) / p.last_mark * 100 : null;
+      const riskToStop = (distToStop != null && p.units) ? Math.max(0, distToStop) * p.units : 0; // $ given back if stopped now
+      const atRisk = stopRatio != null && stopRatio < 0.4;
+      return { p, pnl, r, days, lev, marginNotional, stopRatio, stopPct, riskToStop, atRisk };
+    });
 
-      const leverageVal = leverageOf(p.market) || 1;
-      const posted = p.posted || (p.cost_basis / leverageVal);
-      const marginNotional = leverageVal > 1 ? (p.cost_basis / leverageVal) : p.cost_basis;
+    // Sort. Default RISK = nearest its stop first, so what needs your eyes is on
+    // top (Q21). Rows with no measurable stop sort last, never a faked value.
+    const PSORTS = {
+      risk: (a, b) => {
+        if (a.stopRatio == null && b.stopRatio == null) return 0;
+        if (a.stopRatio == null) return 1;
+        if (b.stopRatio == null) return -1;
+        return a.stopRatio - b.stopRatio;
+      },
+      pnl: (a, b) => b.pnl - a.pnl,
+      r: (a, b) => (b.r || 0) - (a.r || 0),
+      age: (a, b) => b.days - a.days,
+      symbol: (a, b) => esc(a.p.symbol).localeCompare(esc(b.p.symbol)),
+    };
+    vms.sort(PSORTS[PSORT] || PSORTS.risk);
 
-      const rowId = "tt-held-" + idx;
+    // Portfolio header (Q20): the money numbers, up top, always visible.
+    const totPnl = vms.reduce((s, v) => s + v.pnl, 0);
+    const totR = vms.reduce((s, v) => s + (v.r || 0), 0);
+    const totRisk = vms.reduce((s, v) => s + v.riskToStop, 0);
+    const totMargin = vms.reduce((s, v) => s + v.marginNotional, 0);
+    const tile = (label, val, tone, sub) =>
+      '<div class="tt-pf-tile"><span class="tt-pf-label">' + label + '</span>' +
+      '<b class="tt-pf-val mono ' + (tone || "") + '">' + val + '</b>' +
+      (sub ? '<span class="tt-pf-sub">' + sub + '</span>' : '') + '</div>';
+    let html = '<div class="tt-pf-header">' +
+      tile("Unrealized P&L", money(totPnl), cls(totPnl), sgnR(totR)) +
+      tile("Risk to stops", money(totRisk, 0), "", "if all stop now") +
+      tile("Capital used", money(totMargin, 0), "", "margin / notional") +
+      tile("Positions", String(vms.length), "", esc(MARKET.toUpperCase())) +
+      '</div>';
+
+    // Sort control (Q18). data-psort, deliberately NOT the closed-trades
+    // .tt-sort-btn, so the two sorts never share state.
+    const PSORT_OPTS = [["risk", "RISK"], ["pnl", "P&L"], ["r", "R"], ["age", "AGE"], ["symbol", "SYM"]];
+    html += '<div class="tt-psort" role="group" aria-label="Sort positions"><span class="tt-psort-label">SORT</span>' +
+      PSORT_OPTS.map(([k, l]) => '<button type="button" class="tt-psort-btn' + (PSORT === k ? " is-active" : "") +
+        '" data-psort="' + k + '">' + l + "</button>").join("") + "</div>";
+
+    html += '<div class="tt-held-rows">';
+
+    vms.forEach((v, idx) => {
+      const p = v.p;
       const isExpanded = OPEN === p.symbol;
+      const rowId = "tt-held-" + idx;
 
-      html += '<article class="tt-held-card' + (isExpanded ? ' is-open' : '') + '" ' +
-        'data-sym="' + esc(p.symbol) + '" ' +
-        'data-market="' + esc(p.market) + '" ' +
-        'tabindex="0" role="button" aria-expanded="' + (isExpanded ? 'true' : 'false') + '" ' +
-        'id="' + rowId + '">' +
+      // distance-to-stop bar (Q19): full = far from the stop, empty = at it.
+      let bar = "";
+      if (v.stopRatio != null) {
+        const w = Math.max(2, Math.min(100, v.stopRatio * 100));
+        const tone = v.stopRatio < 0.25 ? "tt-danger" : v.stopRatio < 0.5 ? "tt-warn" : "tt-safe";
+        const lbl = v.stopPct == null ? "" : (v.stopPct >= 0 ? num(v.stopPct, 1) + "% above stop" : "below stop");
+        bar = '<div class="tt-stopbar" title="How far the current mark sits above the stop">' +
+          '<div class="tt-stopbar-track"><div class="tt-stopbar-fill ' + tone + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+          '<span class="tt-stopbar-lbl ' + tone + '">' + lbl + "</span></div>";
+      }
 
-        // header: symbol, market, days, leverage badge
+      html += '<article class="tt-held-card' + (isExpanded ? " is-open" : "") + (v.atRisk ? " tt-atrisk" : "") + '" ' +
+        'data-sym="' + esc(p.symbol) + '" data-market="' + esc(p.market) + '" ' +
+        'tabindex="0" role="button" aria-expanded="' + (isExpanded ? "true" : "false") + '" id="' + rowId + '">' +
+
+        // header: symbol, market, days, near-stop flag, and the $ headline (Q15)
         '<div class="tt-held-header">' +
-          '<b class="mono">' + esc(p.symbol) + '</b>' +
+          '<b class="mono tt-held-sym">' + esc(p.symbol) + '</b>' +
           '<span class="tt-chip is-held">' + esc(p.market.toUpperCase()) + '</span>' +
-          '<span class="tt-chip is-fired">' + days + 'd</span>' +
-          '<span class="tt-lev-badge">' + money(marginNotional, 0) + ' margin / ' +
-            money(p.cost_basis, 0) + ' position' + (leverageVal > 1 ? ' / ' + leverageVal + 'X' : '') +
-          '</span>' +
+          '<span class="tt-chip is-fired">' + v.days + 'd</span>' +
+          (v.atRisk ? '<span class="tt-chip tt-chip-danger">NEAR STOP</span>' : '') +
+          '<b class="tt-held-pnl mono ' + cls(v.pnl) + '">' + money(v.pnl) +
+            ' <span class="tt-held-pnl-r">' + sgnR(v.r) + '</span></b>' +
         '</div>' +
 
+        // the margin / position / leverage badge, kept from V2
+        '<div class="tt-lev-badge">' + money(v.marginNotional, 0) + ' margin / ' +
+          money(p.cost_basis, 0) + ' position' + (v.lev > 1 ? ' / ' + v.lev + 'X' : '') + '</div>' +
+        bar +
+
         // always-visible fields
-        '<div class="tt-held-body">' +
-          '<div class="tt-held-cols">' +
-            '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' +
-              num(p.entry, 4) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Mark</span><b class="mono">' +
-              num(p.last_mark, 4) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">P&L</span>' +
-              '<b class="mono ' + cls(pnl) + '">' + money(pnl) + ' / ' + sgnR(r) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">System</span><b>S' + esc(String(p.system)) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Side</span><b>' + esc(p.side) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Opened</span><b>' + esc(p.opened || "—") + '</b></div>' +
-          '</div>' +
-        '</div>';
+        '<div class="tt-held-body"><div class="tt-held-cols">' +
+          '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' + num(p.entry, 4) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Mark</span><b class="mono">' + num(p.last_mark, 4) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Stop</span><b class="mono">' + num(p.stop, 4) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Units</span><b class="mono">' + esc(String(p.units)) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">System</span><b>S' + esc(String(p.system)) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Side</span><b>' + esc(p.side) + '</b></div>' +
+        '</div></div>';
 
       // expandable details
       if (isExpanded) {
@@ -2156,6 +2214,10 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         pushURLState();
         renderBody();
       }
+      // PORTFOLIO sort control (V4): its own attribute, never .tt-sort-btn, so
+      // the portfolio sort and the closed-trades sort never share state.
+      const ps = e.target.closest("[data-psort]");
+      if (ps) { PSORT = ps.dataset.psort; render(); return; }
       // Held position cards: toggle expand/collapse on click (except on
       // interactive elements like links). Same rule as .tt-row — a click
       // inside the expanded details should not close the card.

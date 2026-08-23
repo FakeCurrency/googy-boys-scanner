@@ -437,6 +437,64 @@
   font-family: var(--mono);
 }
 
+/* ── PORTFOLIO money screen (V4) ─────────────────────────────────────────── */
+/* Header tiles: the book's money numbers, always visible above the cards. */
+.tt-pf-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.tt-pf-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2, var(--fill));
+  border: 1px solid var(--border);
+}
+.tt-pf-label { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.tt-pf-val { font-size: 20px; font-weight: 800; color: var(--text); }
+.tt-pf-val.pos { color: var(--green); }
+.tt-pf-val.neg { color: var(--red); }
+.tt-pf-sub { font: 600 10px/1 var(--mono); color: var(--muted); }
+
+/* Sort control — data-psort, distinct from the closed-trades sort buttons. */
+.tt-psort { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+.tt-psort-label { font: 600 10px/1 var(--mono); letter-spacing: .06em; color: var(--muted); margin-right: 4px; }
+.tt-psort-btn {
+  appearance: none; cursor: pointer;
+  font: 700 11px/1 var(--mono); letter-spacing: .03em;
+  padding: 6px 10px; border-radius: 999px;
+  color: var(--muted); background: var(--fill-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border);
+}
+.tt-psort-btn:hover { color: var(--text-2); }
+.tt-psort-btn.is-active { color: #fff; background: var(--accent, #2f81f7); border-color: var(--accent, #2f81f7); }
+
+/* The $ P&L headline on each card, pushed to the right of the header row. */
+.tt-held-pnl { margin-left: auto; font-size: 15px; font-weight: 800; }
+.tt-held-pnl.pos { color: var(--green); }
+.tt-held-pnl.neg { color: var(--red); }
+.tt-held-pnl-r { font-size: 11px; font-weight: 700; opacity: .8; }
+
+/* At-risk cards + the NEAR STOP chip (Q21). */
+.tt-chip-danger { background: var(--red-soft, rgba(255, 69, 58, 0.15)); border-color: var(--red, #ff453a); color: var(--red, #ff453a); }
+.tt-held-card.tt-atrisk { border-color: var(--red, #ff453a); box-shadow: inset 3px 0 0 var(--red, #ff453a); }
+
+/* Distance-to-stop bar (Q19): full = far from the stop, empty = at it. */
+.tt-stopbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
+.tt-stopbar-track { flex: 1; height: 6px; border-radius: 999px; background: var(--fill-2, rgba(255, 255, 255, 0.06)); overflow: hidden; }
+.tt-stopbar-fill { height: 100%; border-radius: 999px; }
+.tt-stopbar-fill.tt-safe { background: var(--green, #30d15f); }
+.tt-stopbar-fill.tt-warn { background: var(--orange, #ff9f0a); }
+.tt-stopbar-fill.tt-danger { background: var(--red, #ff453a); }
+.tt-stopbar-lbl { font: 600 10px/1 var(--mono); white-space: nowrap; }
+.tt-stopbar-lbl.tt-safe { color: var(--green, #30d15f); }
+.tt-stopbar-lbl.tt-warn { color: var(--orange, #ff9f0a); }
+.tt-stopbar-lbl.tt-danger { color: var(--red, #ff453a); }
+
 /* Body: grid of always-visible fields */
 .tt-held-body, .tt-closed-body {
   margin-bottom: 12px;
