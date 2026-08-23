@@ -43,13 +43,13 @@
     period: "5y",
   };
 
-  const MARKETS = ["asx", "nasdaq", "crypto", "futures"];
-  const CUR = { asx: "A$", nasdaq: "$", crypto: "$", futures: "$" };
+  const MARKETS = ["nasdaq", "crypto", "futures"];
+  const CUR = { nasdaq: "$", crypto: "$", futures: "$" };
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
   let PARAMS_ARE_LIVE = false;
-  let MARKET = "asx";
+  let MARKET = "nasdaq";
   let VIEW = "signals";           // set to "rules" by load() when no scan exists
   let FILTER = "all";
   let QUERY = "";
@@ -187,7 +187,6 @@
   // run is worse than no countdown. Keep this in step with turtle.yml if
   // that file's cron lines ever move.
   const NEXT_CRON = {
-    asx: "next scan ~06:30 UTC weekdays",
     nasdaq: "next scan ~21:30 UTC weekdays",
     crypto: "next scan every 4h (:05 past the hour)",
     futures: "next scan ~23:00 UTC weekdays",
@@ -1433,8 +1432,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
               <td class="tt-part">stated, not enforced — there is no correlation matrix here</td></tr>
           <tr><td>The market portfolio</td>
               <td class="tt-no">the Turtles traded ~20 liquid futures across currencies, rates,
-              metals, energy and softs. This scans ASX and NASDAQ equities and crypto —
-              plus a fixed futures sleeve on continuous <code>=F</code> series
+              metals, energy and softs. This scans NASDAQ equities, crypto, and a fixed
+              futures sleeve on continuous <code>=F</code> series
               (its caveats are the card below).</td></tr>
           <tr><td>Leverage</td>
               <td class="tt-no">futures margin is what made 1% risk per unit across 12 units
@@ -1637,7 +1636,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   ];
 
   function render() {
-    // The market switcher is static markup in turtle.html (ASX hardcoded
+    // The market switcher is static markup in turtle.html (NASDAQ hardcoded
     // is-active) and, unlike the deck/tabs/controls below, is never rebuilt
     // from scratch -- only imperatively toggled. Before Phase 3 that was
     // harmless because MARKET could only ever change via the button that
@@ -1709,11 +1708,11 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // Phase 3. Both functions are pure and MUST NEVER THROW: unknown, missing,
   // or malformed input always resolves to the defaults below, and a caller
   // can never push an invalid value into the address bar.
-  const URL_MARKETS = ["asx", "nasdaq", "crypto", "futures"];
+  const URL_MARKETS = ["nasdaq", "crypto", "futures"];
   const URL_VIEWS = ["signals", "held", "closed", "summary", "book", "rules", "sizing", "evidence"];
   const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
   const URL_SORTS = ["fired", "distance", "n", "symbol"];
-  const URL_DEFAULTS = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
+  const URL_DEFAULTS = { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" };
 
   // search: a location.search-shaped string ("?m=nasdaq&v=book", the same
   // without the leading "?", "", null, undefined, or garbage of any type).
@@ -1825,7 +1824,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     else render();
   }
 
-  // The market switcher is static markup (turtle.html hardcodes ASX
+  // The market switcher is static markup (turtle.html hardcodes NASDAQ
   // is-active) that render() cannot rebuild wholesale the way it rebuilds
   // #tt-views/#tt-controls, so MARKET's current value has to be synced onto
   // it imperatively. Called from render() (deep link / popstate / first
