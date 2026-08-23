@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V11";
+  const BUILD = "V12";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -1285,8 +1285,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     const s = BOOK.summary || {};
     const days = s.started ? Math.max(1, Math.round(
       (Date.now() - Date.parse(s.started)) / 864e5)) : 0;
+    const mk = Object.keys(BOOK.by_market || {});
 
-    return '<div class="tt-summary-cards">' +
+    let html = '<div class="tt-summary-cards">' +
       '<section class="tt-summary-card">' +
         '<h3>Account Performance</h3>' +
         '<div class="tt-detail-grid">' +
@@ -1310,6 +1311,127 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         '</div>' +
       '</section>' +
     '</div>';
+
+    // The old BOOK view folded in here (owner V12): its unique parts — the
+    // by-market exposure and the position ceilings — plus the honesty prose.
+    // Open/closed/skip detail live on their own tabs; the forward-book grid was
+    // the same BOOK.summary the cards above already show, so it is not repeated.
+    html += exposureHTML();
+    html += '<section class="tt-card"><p class="tt-note">' +
+      (s.closed
+        ? "Small samples say very little. A trend system's result is carried by a handful of trades, so read the MEDIAN beside the average and treat anything under a few dozen closes as noise."
+        : "Nothing has closed yet, so there is no result to read — the honest state of a forward test on day " + days + ".") +
+      " <b>A first print is a print, not evidence</b>: no sleeve's record means anything until it holds at least 30 closed trades AND 20 trading days.</p>" +
+      '<p class="tt-note">Equity is <b>realised only</b> — open positions are not marked into the headline. This is <b>' +
+      mk.length + " separate sleeve" + (mk.length === 1 ? "" : "s") + ", not one account</b>" +
+      (mk.length > 1 ? " — one book per market, own equity, own slot pool" : "") +
+      ". The combined figures add A$ and US$ <b>at face value</b> (no FX conversion): read the per-market rows above for anything you would act on.</p></section>";
+    return html;
+  }
+
+  // By-market exposure + position ceilings — the unique parts of the retired
+  // BOOK view, now shown under SUMMARY (owner V12). Self-contained: recomputes
+  // its own lev-sleeve detection and cap board; reads BOOK.by_market / BOOK.skips
+  // directly, exactly as the old BOOK view did.
+  function exposureHTML() {
+    if (!BOOK || !BOOK.by_market) return "";
+    const mk = Object.keys(BOOK.by_market);
+    if (!mk.length) return "";
+    let h = "";
+    const lev5 = mk.map((m) => [m, (BOOK.by_market[m] || {}).params])
+      .find(([, p]) => p && p.leverage > 1);
+    const capBind = (() => {
+      if (!lev5) return null;
+      const hits = (BOOK.skips || []).filter((k) =>
+        k.reason === "close_corr_cap" && k.market === lev5[0]);
+      if (!hits.length) return null;
+      const worst = hits.reduce((a, b) =>
+        (b.units_on_book || 0) > (a.units_on_book || 0) ? b : a, hits[0]);
+      return (worst.units_on_book == null || worst.cap == null) ? null :
+        { on: worst.units_on_book, cap: worst.cap, n: hits.length };
+    })();
+    const capReasons = ["per_market_cap", "close_corr_cap", "loose_corr_cap", "direction_cap"];
+    const capLabels = { per_market_cap: "Per-name", close_corr_cap: "Close-corr", loose_corr_cap: "Loose-corr", direction_cap: "One-way" };
+    const capBoardHTML = (() => {
+      if (!BOOK.skips || !BOOK.skips.length) return "";
+      const byMarket = {};
+      mk.forEach((m) => { byMarket[m] = {}; });
+      capReasons.forEach((reason) => {
+        BOOK.skips.filter((k) => k.reason === reason).forEach((skip) => {
+          const m = skip.market;
+          if (!byMarket[m]) byMarket[m] = {};
+          if (skip.units_on_book != null && skip.cap != null) {
+            if (!byMarket[m][reason] || skip.units_on_book > byMarket[m][reason].units_on_book) {
+              byMarket[m][reason] = { units_on_book: skip.units_on_book, cap: skip.cap };
+            }
+          }
+        });
+      });
+      const rows = [];
+      mk.forEach((m) => {
+        capReasons.forEach((reason) => {
+          const data = byMarket[m][reason];
+          if (data) {
+            const binding = data.units_on_book >= data.cap ? "binding" : "";
+            rows.push(`<tr><td>${esc(m.toUpperCase())}</td><td>${esc(capLabels[reason])}</td>` +
+              `<td class="mono">${big(data.units_on_book)}</td><td class="mono">${big(data.cap)}</td>` +
+              `<td>${binding}</td></tr>`);
+          }
+        });
+      });
+      if (!rows.length) return "";
+      return `<section class="tt-card"><h3>Position ceilings</h3>
+        <div class="tt-tablewrap"><table class="tt-table">
+        <thead><tr><th>Market</th><th>Ceiling</th><th>On book</th><th>Cap</th><th>Status</th></tr></thead>
+        <tbody>${rows.join("")}</tbody></table></div></section>`;
+    })();
+    const headroomHTML = (() => {
+      if (!lev5) return "";
+      const levMarket = lev5[0];
+      const levBook = BOOK.by_market[levMarket] || {};
+      if (levBook.free_margin == null || !levBook.open_positions) return "";
+      const opensOnSleeve = (BOOK.open || []).filter((p) => p.market === levMarket && p.posted != null);
+      if (!opensOnSleeve.length) return "";
+      const postedValues = opensOnSleeve.map((p) => p.posted).sort((a, b) => a - b);
+      const medianPosted = opensOnSleeve.length % 2 === 0
+        ? (postedValues[Math.floor(opensOnSleeve.length / 2) - 1] + postedValues[Math.floor(opensOnSleeve.length / 2)]) / 2
+        : postedValues[Math.floor(opensOnSleeve.length / 2)];
+      const roomForUnits = Math.floor(levBook.free_margin / medianPosted);
+      return `Free margin ${money(levBook.free_margin, 0)}. Next typical unit would post ~${money(medianPosted, 0)}. Room for ${roomForUnits} more unit(s).`;
+    })();
+    h += `<section class="tt-card"><h3>By market</h3>
+      <div class="tt-tablewrap"><table class="tt-table">
+      <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
+      <tbody>${mk.map((m) => {
+        const b = BOOK.by_market[m] || {};
+        const margins = b.params && b.params.leverage > 1 &&
+          b.posted_margin != null && b.free_margin != null
+          ? " (" + money(b.posted_margin, 0) + " posted, " + money(b.free_margin, 0) + " free)"
+          : "";
+        const veh = b.params && b.params.leverage > 1
+          ? big(b.params.leverage) + "&times; margin" + margins : "cash";
+        return "<tr><td>" + esc(m.toUpperCase()) + "</td><td>" + veh +
+          '</td><td class="mono">' +
+          money(b.equity) + '</td><td class="mono">' + big(b.open_positions) +
+          '</td><td class="mono">' + big(b.closed) + '</td><td class="mono ' +
+          cls(b.total_r) + '">' + sgnR(b.total_r) + "</td></tr>";
+      }).join("")}</tbody></table></div>
+      ${lev5 ? `<p class="tt-note"><b>${esc(lev5[0].toUpperCase())} is
+      ${big(lev5[1].leverage)}&times; posted margin</b> (notional/${big(lev5[1].leverage)},
+      ${esc(lev5[1].margin_mode || "isolated")}) — a perp analogue, <b>not</b> Dennis's
+      futures IM. The unit is still ${(P.risk_pct * 100).toFixed(0)}% of equity
+      per N; what changes is only what a unit COSTS to hold. A position whose
+      adverse move consumes its posted margin is closed as
+      <b>liquidation</b>, at the liquidation price — isolated margin cannot
+      lose more than it posted. It is a NEW series beside the cash crypto
+      book, never a restatement of it.${capBind ? ` The correlated-group cap is
+      <b>binding, not the margin</b>: <b>${big(capBind.on)}/${big(capBind.cap)}</b>
+      crypto units already held is why further adds and new names are being
+      declined (see the SKIPS tab) while margin itself
+      still has room. Filling the cap on day one is the system saying "this
+      is one correlated bet", not a shortage of money.` : ""}${headroomHTML ? `<br/><br/>${headroomHTML}` : ""}</p>` : ""}</section>`;
+    h += capBoardHTML;
+    return h;
   }
 
   // Cash-skip capacity hint (Q34): the cheapest name we passed for lack of room,
@@ -2036,9 +2158,13 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // (rules/sizing/evidence) trails after a divider. HELD POSITIONS is now
   // PORTFOLIO so the tab matches the deck pill. Reordering only moves the tab
   // strip — URL_VIEWS still validates the same eight keys, so deep links hold.
+  // BOOK retired (owner V12): merged into SUMMARY, which now shows the account
+  // scorecard PLUS the by-market exposure and position ceilings that used to be
+  // BOOK-only. Its open/closed/skip detail already live on PORTFOLIO / CLOSED
+  // TRADES / SKIPS. (bookHTML is kept, unrouted, pending a test-scoped cleanup.)
   const VIEWS = [
     ["signals", "SIGNALS"], ["held", "PORTFOLIO"], ["summary", "SUMMARY"],
-    ["book", "BOOK"], ["skips", "SKIPS"], ["rules", "THE RULES"],
+    ["skips", "SKIPS"], ["rules", "THE RULES"],
     ["sizing", "SIZING"], ["evidence", "EVIDENCE"], ["closed", "CLOSED TRADES"],
   ];
   // The reference cluster — a divider is drawn in the strip before the first
@@ -2114,7 +2240,6 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       : VIEW === "held" ? heldPositionsHTML()
       : VIEW === "closed" ? closedTradesHTML()
       : VIEW === "summary" ? summaryHTML()
-      : VIEW === "book" ? bookHTML()
       : VIEW === "skips" ? skipsHTML()
       : VIEW === "sizing" ? sizingHTML()
       : evidenceHTML();
@@ -2145,7 +2270,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // or malformed input always resolves to the defaults below, and a caller
   // can never push an invalid value into the address bar.
   const URL_MARKETS = ["nasdaq", "crypto", "futures"];
-  const URL_VIEWS = ["signals", "held", "closed", "summary", "book", "skips", "rules", "sizing", "evidence"];
+  const URL_VIEWS = ["signals", "held", "closed", "summary", "skips", "rules", "sizing", "evidence"];
   const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
   const URL_SORTS = ["fired", "distance", "n", "symbol"];
   const URL_DEFAULTS = { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" };

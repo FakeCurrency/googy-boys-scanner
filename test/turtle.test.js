@@ -541,7 +541,7 @@ suite("URL state — back/forward is a data contract, written before any click u
 
 const LEGAL_COMBOS = [
   { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" },
-  { m: "nasdaq", v: "book", f: "held", s: "AAPL", sort: "n" },
+  { m: "nasdaq", v: "summary", f: "held", s: "AAPL", sort: "n" },
   { m: "crypto", v: "rules", f: "near", s: "DOGE", sort: "distance" },
   { m: "futures", v: "sizing", f: "blocked", s: "CL", sort: "symbol" },
   { m: "crypto", v: "evidence", f: "all", s: "", sort: "fired" },
@@ -884,7 +884,7 @@ test("SKIPS is now its own VIEW (V7) and the deck pill switches to it", () => {
   const viewsBody = SRC.slice(start, SRC.indexOf("];", start) + 2);
   assert.ok(/\["skips",/.test(viewsBody), "VIEWS must include the skips tab");
   const tabCount = (viewsBody.match(/\["\w+",/g) || []).length;
-  assert.equal(tabCount, 9, "signals/held/summary/book/skips/closed/rules/sizing/evidence");
+  assert.equal(tabCount, 8, "signals/held/summary/skips/rules/sizing/evidence/closed (BOOK retired into SUMMARY, V12)");
   assert.ok(/"skips"/.test(SRC.slice(SRC.indexOf("const URL_VIEWS = ["), SRC.indexOf("const URL_VIEWS = [") + 200)),
     "skips must be a valid URL view so the tab is deep-linkable");
 });
