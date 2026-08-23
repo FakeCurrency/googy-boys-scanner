@@ -1053,6 +1053,66 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         return (worst.units_on_book == null || worst.cap == null) ? null :
           { on: worst.units_on_book, cap: worst.cap, n: hits.length };
       })();
+
+      // Phase 2: Cap board -- show which caps are binding on each sleeve
+      const capReasons = ["per_market_cap", "close_corr_cap", "loose_corr_cap", "direction_cap"];
+      const capLabels = {
+        per_market_cap: "Per-name",
+        close_corr_cap: "Close-corr",
+        loose_corr_cap: "Loose-corr",
+        direction_cap: "One-way"
+      };
+      const capBoardHTML = (() => {
+        if (!BOOK.skips || !BOOK.skips.length) return "";
+        const byMarket = {};
+        mk.forEach((m) => { byMarket[m] = {}; });
+        // Extract cap skips, keep only the worst (closest to cap) per market x reason
+        capReasons.forEach((reason) => {
+          BOOK.skips.filter((k) => k.reason === reason).forEach((skip) => {
+            const m = skip.market;
+            if (!byMarket[m]) byMarket[m] = {};
+            if (skip.units_on_book != null && skip.cap != null) {
+              if (!byMarket[m][reason] || skip.units_on_book > byMarket[m][reason].units_on_book) {
+                byMarket[m][reason] = { units_on_book: skip.units_on_book, cap: skip.cap };
+              }
+            }
+          });
+        });
+        // Build cap board rows
+        const rows = [];
+        mk.forEach((m) => {
+          capReasons.forEach((reason) => {
+            const data = byMarket[m][reason];
+            if (data) {
+              const binding = data.units_on_book >= data.cap ? "binding" : "";
+              rows.push(`<tr><td>${esc(m.toUpperCase())}</td><td>${esc(capLabels[reason])}</td>` +
+                `<td class="mono">${big(data.units_on_book)}</td><td class="mono">${big(data.cap)}</td>` +
+                `<td>${binding}</td></tr>`);
+            }
+          });
+        });
+        if (!rows.length) return "";
+        return `<section class="tt-card"><h3>Position ceilings</h3>
+          <div class="tt-tablewrap"><table class="tt-table">
+          <thead><tr><th>Market</th><th>Ceiling</th><th>On book</th><th>Cap</th><th>Status</th></tr></thead>
+          <tbody>${rows.join("")}</tbody></table></div></section>`;
+      })();
+      // Phase 1: Headroom sentence for levered sleeves -- compute room for next unit
+      const headroomHTML = (() => {
+        if (!lev5) return "";
+        const levMarket = lev5[0];
+        const levBook = BOOK.by_market[levMarket] || {};
+        if (levBook.free_margin == null || !levBook.open_positions) return "";
+        const opensOnSleeve = (BOOK.open || []).filter((p) => p.market === levMarket && p.posted != null);
+        if (!opensOnSleeve.length) return "";
+        const postedValues = opensOnSleeve.map((p) => p.posted).sort((a, b) => a - b);
+        const medianPosted = opensOnSleeve.length % 2 === 0
+          ? (postedValues[Math.floor(opensOnSleeve.length / 2) - 1] + postedValues[Math.floor(opensOnSleeve.length / 2)]) / 2
+          : postedValues[Math.floor(opensOnSleeve.length / 2)];
+        const roomForUnits = Math.floor(levBook.free_margin / medianPosted);
+        return `Free margin ${money(levBook.free_margin, 0)}. Next typical unit would post ~${money(medianPosted, 0)}. Room for ${roomForUnits} more unit(s).`;
+      })();
+
       h += `<section class="tt-card"><h3>By market</h3>
         <div class="tt-tablewrap"><table class="tt-table">
         <thead><tr><th>Market</th><th>Vehicle</th><th>Equity</th><th>Open</th><th>Closed</th><th>Total R</th></tr></thead>
@@ -1083,7 +1143,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         crypto units already held is why further adds and new names are being
         declined tonight (see Not taken, and why, below) while margin itself
         still has room. Filling the cap on day one is the system saying "this
-        is one correlated bet", not a shortage of money.` : ""}</p>` : ""}</section>`;
+        is one correlated bet", not a shortage of money.` : ""}${headroomHTML ? `<br/><br/>${headroomHTML}` : ""}</p>` : ""}</section>`;
+      h += capBoardHTML;
     }
 
     // NOT TAKEN, AND WHY. A book that quietly declines half its signals looks
