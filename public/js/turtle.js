@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V10";
+  const BUILD = "V11";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -1818,11 +1818,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         why, below for which of it would fit a levered sleeve instead.</p>` : ""}
 </section>`;
 
-    // The five-year portfolio replay, LAST: context for reading the facts
-    // above, not a verdict on them -- portfolioCardHTML() itself already
-    // avoids "does this work" framing. Same unmodified function EVIDENCE
-    // has always called; BOOK gets a second call site, not a copy.
-    h += portfolioCardHTML();
+    // The portfolio replay lives on EVIDENCE only (owner, 2026-08-23): it is an
+    // in-sample BACKTEST, not the live book, so it does not belong under the
+    // real positions here. EVIDENCE keeps the one call site it always had.
 
     return h;
   }
@@ -1835,7 +1833,11 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // the page cannot oversell what the file itself refuses to claim.
   function portfolioCardHTML() {
     if (!PORTFOLIO || !PORTFOLIO.sleeves) return "";
-    const names = Object.keys(PORTFOLIO.sleeves).sort();
+    // ASX is retired from TURTLE (owner, 2026-08-23): drop its replay sleeve
+    // even if a cached payload still carries it. Defensive — the engine and the
+    // published data no longer generate it either.
+    const names = Object.keys(PORTFOLIO.sleeves)
+      .filter((k) => (PORTFOLIO.sleeves[k] || {}).market !== "asx").sort();
     if (!names.length) return "";
     const rows = names.map((k) => {
       const v = PORTFOLIO.sleeves[k] || {};

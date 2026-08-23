@@ -399,11 +399,12 @@ def scan_market(market_key: str, limit: int | None = None,
                     sym_frames[info2.get("symbol", yf_sym2)] = \
                         _with_date_column(df2)
             sleeves: dict[str, dict] = {}
-            if market_key == "asx":
-                # The control that should bleed: one factor, cash, $5k.
-                sleeves["asx_5k_cash"] = turtle_portfolio.replay_sleeve(
-                    sym_frames, market="asx", equity_start=5000.0)
-            elif market_key == "nasdaq":
+            # ASX retired from the TURTLE replay (owner, 2026-08-23): it was the
+            # single-factor control sleeve, dropped along with ASX everywhere in
+            # this lens. The stale asx_5k_cash was also removed from the published
+            # payload by hand (write_sleeves merges and never drops a sibling on
+            # its own, so stopping generation here is not enough on its own).
+            if market_key == "nasdaq":
                 # NDX proxy, DECLARED as such: top 100 by trailing 20-day
                 # dollar volume as of this run -- survivor-selected like
                 # everything Yahoo ships. Two equities, one truth: $5k

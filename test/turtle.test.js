@@ -1049,26 +1049,30 @@ test("hostile row symbols still cannot break the keyboard focus-restore selector
 // exercised.
 suite("BOOK is the money surface (Phase 7) — order, clickable symbols, portfolio card last");
 
-test("bookHTML puts open positions and closed trades before by-market, skips, the essay and the portfolio card", () => {
+test("bookHTML puts open positions and closed trades before by-market, skips and the essay", () => {
   const body = SRC.slice(SRC.indexOf("function bookHTML("), SRC.indexOf("function portfolioCardHTML("));
   const iOpen = body.indexOf("<h3>Open positions</h3>");
   const iClosed = body.indexOf("<h3>Closed, most recent first</h3>");
   const iByMarket = body.indexOf("<h3>By market</h3>");
   const iSkips = body.indexOf('id="tt-skips"');
   const iEssay = body.indexOf("the only honest number here");
-  const iPortfolioCall = body.indexOf("portfolioCardHTML()");
-  assert.ok([iOpen, iClosed, iByMarket, iSkips, iEssay, iPortfolioCall].every((i) => i !== -1),
-    "all six sections must still be present");
-  assert.ok(iOpen < iClosed && iClosed < iByMarket && iByMarket < iSkips &&
-    iSkips < iEssay && iEssay < iPortfolioCall,
-    "order must be: open, closed, by-market, skips, essay, portfolio card");
+  assert.ok([iOpen, iClosed, iByMarket, iSkips, iEssay].every((i) => i !== -1),
+    "all five sections must still be present");
+  assert.ok(iOpen < iClosed && iClosed < iByMarket && iByMarket < iSkips && iSkips < iEssay,
+    "order must be: open, closed, by-market, skips, essay");
 });
 
-test("BOOK now calls portfolioCardHTML() too, without duplicating EVIDENCE's existing call site", () => {
+test("the portfolio replay (a backtest) lives on EVIDENCE only, not in BOOK (owner V11)", () => {
   const bookCalls = SRC.match(/h \+= portfolioCardHTML\(\);/g) || [];
   const evidenceCalls = SRC.match(/\$\{portfolioCardHTML\(\)\}/g) || [];
-  assert.equal(bookCalls.length, 1, "BOOK must call portfolioCardHTML() exactly once");
-  assert.equal(evidenceCalls.length, 1, "EVIDENCE's pre-existing call site must be untouched, not duplicated");
+  assert.equal(bookCalls.length, 0, "BOOK must NOT call portfolioCardHTML() — the replay is an in-sample backtest, not the live book");
+  assert.equal(evidenceCalls.length, 1, "EVIDENCE keeps the single call site it always had");
+});
+
+test("the portfolio replay drops the retired ASX sleeve (owner V11)", () => {
+  const body = SRC.slice(SRC.indexOf("function portfolioCardHTML("), SRC.indexOf("function evidenceHTML("));
+  assert.ok(/\.filter\(\(k\) => \(PORTFOLIO\.sleeves\[k\] \|\| \{\}\)\.market !== "asx"\)/.test(body),
+    "ASX sleeves must be filtered out of the replay card, defensively, even from a cached payload");
 });
 
 test("scanMarketFor strips a leverage suffix generically and falls back to the real market list", () => {
