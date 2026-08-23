@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-08-23T12:56:53+00:00",
+ "generated_at": "2026-08-23T16:36:12+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -24,7 +24,7 @@
    "stop": 0.08767748,
    "last_fill": 0.09289334,
    "opened": "2026-08-21",
-   "last_mark": 0.0923,
+   "last_mark": 0.09265,
    "mark_date": "2026-08-23",
    "fees": 7.437388,
    "mfe_r": 2.2686,
@@ -47,7 +47,7 @@
    "stop": 7.01359211,
    "last_fill": 7.34742689,
    "opened": "2026-08-21",
-   "last_mark": 7.68734169,
+   "last_mark": 7.76300097,
    "mark_date": "2026-08-23",
    "fees": 2.211183,
    "mfe_r": 2.1647,
@@ -206,6 +206,16 @@
   {
    "as_of": "2026-08-23",
    "market": "crypto",
+   "symbol": "DOGE",
+   "action": "add",
+   "reason": "per_market_cap",
+   "units_held": 4,
+   "cap": 4,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-23",
+   "market": "crypto",
    "symbol": "GT",
    "action": "add",
    "reason": "cash",
@@ -219,13 +229,14 @@
    "symbol": "AAVE",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 794.82,
+   "want_notional": 780.11,
    "equity": 4186.1,
    "system": 2
   }
  ],
  "skip_counts": {
+  "per_market_cap": 1,
   "cash": 2,
-  "total": 2
+  "total": 3
  }
 }
