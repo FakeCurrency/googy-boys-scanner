@@ -1,0 +1,568 @@
+/* TURTLE lens (2026-08-21) — public/turtle.html only.
+ *
+ * Every colour, radius and shadow is a token from styles.css. Nothing here
+ * invents a palette: this page sits inside the same iOS-style dark theme as
+ * the rest of the app and should be indistinguishable from it in chrome, and
+ * distinguishable only in content.
+ *
+ * The page is mostly PROSE AND TABLES, which the rest of the app has little
+ * of, so the rules below are largely about making a long reference document
+ * readable on a phone: a measure that caps at ~68 characters, tables that
+ * scroll inside their own box rather than pushing the page sideways, and a
+ * type scale that stays legible at 320px.
+ */
+
+/* ── the view strip ─────────────────────────────────────────────────────── */
+/* The shared .view-tabs is an inline-flex pill group with no overflow rule —
+ * correct for the two- and three-tab strips it was built for, and 383px wide
+ * with these four labels, which pushed the whole PAGE sideways at 320px
+ * (found by rendering it, not by reading it). Scoped to this page's strip so
+ * the fix cannot change any other page: scroll the strip itself, and keep the
+ * tabs from being squeezed into unreadable slivers on the way. The scrollbar
+ * is hidden because the strip is short enough to swipe and a visible bar
+ * under it reads as a broken layout. */
+#tt-views {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#tt-views::-webkit-scrollbar { display: none; }
+#tt-views .view-tab { flex: 0 0 auto; }
+
+/* ── the market switch ──────────────────────────────────────────────────── */
+/* Same fix, same reason, scoped the same way: .market-switch is shared chrome
+ * with no overflow rule, fine for the two-market strips it was built for, but
+ * Turtle's four buttons (ASX/NASDAQ/CRYPTO/FUTURES) are the widest instance
+ * of it in the app and are the one that risks pushing the page sideways at
+ * 320-375px. Scoped to #tt-market so no other page's market switch changes. */
+#tt-market {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#tt-market::-webkit-scrollbar { display: none; }
+#tt-market .market-btn { flex: 0 0 auto; }
+
+/* ── the reading column ─────────────────────────────────────────────────── */
+.tt-body { display: flex; flex-direction: column; gap: 14px; }
+
+.tt-lede {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 68ch;
+}
+
+.tt-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+}
+.tt-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+.tt-card p,
+.tt-card li { font-size: 13.5px; line-height: 1.62; color: var(--text-2); max-width: 68ch; }
+.tt-card p { margin: 0 0 10px; }
+.tt-card p:last-child { margin-bottom: 0; }
+.tt-card ul { margin: 0 0 10px; padding-left: 20px; }
+.tt-card li { margin-bottom: 7px; }
+.tt-card b { color: var(--text); font-weight: 700; }
+.tt-card em { color: var(--text); font-style: italic; }
+
+/* The aside that carries the "why", the caveat, or the thing the number does
+ * not say. Deliberately quieter than the body — it is context, not a warning. */
+.tt-note {
+  margin: 12px 0 0 !important;
+  padding: 10px 12px;
+  border-left: 2px solid var(--border-2);
+  background: var(--fill);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--muted) !important;
+  font-size: 12.5px !important;
+  line-height: 1.55 !important;
+}
+
+.tt-link { color: var(--blue); text-decoration: none; font-weight: 600; }
+.tt-link:hover { text-decoration: underline; }
+/* Phase 7: .tt-link now also renders on <span data-open-symbol> — a real
+ * click target that is not an <a>, so it needs the pointer cursor an
+ * anchor gets for free. */
+.tt-link[role="button"] { cursor: pointer; }
+
+/* ── formulas ───────────────────────────────────────────────────────────── */
+.tt-math {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* ── tables ─────────────────────────────────────────────────────────────── */
+/* A wide table must scroll inside its own box. The page body never scrolls
+ * sideways — that is the 320px rule the e2e smoke test enforces. */
+.tt-tablewrap { overflow-x: auto; margin: 0 0 10px; -webkit-overflow-scrolling: touch; }
+.tt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tt-table caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 0 0 8px;
+}
+.tt-table th,
+.tt-table td {
+  padding: 7px 10px 7px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--separator);
+  vertical-align: top;
+}
+.tt-table th {
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tt-table td { color: var(--text-2); }
+.tt-table tbody tr:last-child td { border-bottom: 0; }
+.tt-table .mono { font-family: var(--mono); color: var(--text); white-space: nowrap; }
+.tt-table .pos { color: var(--green); }
+.tt-table .neg { color: var(--red); }
+.tt-ladder td:first-child { font-family: var(--mono); color: var(--muted); }
+
+.tt-yes { color: var(--green); }
+.tt-part { color: var(--orange); }
+.tt-no { color: var(--red); }
+
+.tt-warn { color: var(--orange); font-weight: 700; }
+
+.tt-facts { list-style: none; padding-left: 0; }
+.tt-facts li {
+  padding-left: 14px;
+  position: relative;
+}
+.tt-facts li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 9px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border-2);
+}
+
+/* ── deck pills ─────────────────────────────────────────────────────────── */
+/* Turtle UI pass, Phase 5: the deck badges became real filter buttons and
+ * moved onto styles.css's own .deck-pills/.fpill/.seg-count — the exact
+ * classes the rest of the app already uses for a clickable pill row (see
+ * app.js's #deck-pills), so nothing turtle-specific is invented here. The
+ * .tt-pill span it replaces had no other caller (checked) and is removed
+ * rather than left as dead CSS.
+ */
+
+/* ── signal rows ────────────────────────────────────────────────────────── */
+.tt-row {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.tt-row + .tt-row { margin-top: 8px; }
+.tt-row:hover { border-color: var(--border-2); box-shadow: var(--shadow-hover); }
+.tt-row:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tt-row.is-open { border-color: var(--blue); box-shadow: var(--shadow-open); }
+/* the head stays the toggle; the detail is content, not a button */
+.tt-row.is-open .tt-detail { cursor: default; }
+
+.tt-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.6fr) auto auto;
+  gap: 10px 14px;
+  align-items: center;
+}
+.tt-sym { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tt-sym b { font-size: 14px; color: var(--text); }
+.tt-name {
+  font-size: 11.5px;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tt-state { display: flex; flex-wrap: wrap; gap: 5px; }
+.tt-nums { display: flex; flex-direction: column; gap: 2px; text-align: right; }
+.tt-nums span { font-size: 12.5px; color: var(--text); }
+.tt-nums .tt-dim { font-size: 11px; color: var(--muted-2); }
+
+.tt-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  border: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.tt-chip.is-fired { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.tt-chip.is-held { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.tt-chip.is-near { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
+.tt-chip.is-blocked { border-style: dashed; cursor: help; }
+
+.tt-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--separator); }
+.tt-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.tt-kv { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.tt-kv span { font-size: 11.5px; color: var(--muted-2); }
+.tt-kv b { font-size: 12.5px; color: var(--text); white-space: nowrap; }
+
+/* ── held positions & closed trades views ───────────────────────────────── */
+.tt-held-rows, .tt-closed-rows { display: flex; flex-direction: column; gap: 12px; }
+
+/* Sortable header row for closed trades */
+.tt-closed-header-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tt-sort-btn {
+  padding: 8px 12px;
+  background: var(--fill);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.tt-sort-btn:hover {
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-hover);
+}
+.tt-sort-btn.is-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--text);
+}
+.tt-sort-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.tt-held-card, .tt-closed-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.tt-held-card:hover, .tt-closed-card:hover {
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-hover);
+}
+.tt-held-card.is-open {
+  border-color: var(--blue);
+  box-shadow: var(--shadow-open);
+}
+.tt-held-card.is-open .tt-held-expand { cursor: default; }
+.tt-held-card:focus-visible, .tt-closed-card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Header: symbol, market badge, days badge, leverage badge */
+.tt-held-header, .tt-closed-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tt-held-header b.mono, .tt-closed-header b.mono {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Leverage badge: prominent "1k margin / 5k position (×5X)" format */
+.tt-lev-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  border: 1.5px solid var(--border-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+
+/* Body: grid of always-visible fields */
+.tt-held-body, .tt-closed-body {
+  margin-bottom: 12px;
+}
+.tt-held-cols, .tt-closed-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px 16px;
+}
+.tt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tt-col .tt-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.tt-col b {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 700;
+}
+.tt-col .mono {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/* Expandable details */
+.tt-held-expand {
+  display: none;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--separator);
+}
+.tt-held-card.is-open .tt-held-expand {
+  display: block;
+  animation: slideDown .2s ease;
+}
+
+/* Pyramid diagram */
+.tt-pyramid-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--separator);
+}
+.tt-pyramid {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  margin-bottom: 10px;
+}
+.tt-pyramid .tt-pyr-fill {
+  fill: var(--blue);
+  opacity: 0.8;
+}
+.tt-pyramid .tt-pyr-entry { stroke: var(--blue); }
+.tt-pyramid .tt-pyr-stop { stroke: var(--red); }
+.tt-pyramid .tt-pyr-label {
+  fill: var(--text);
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.tt-fills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.tt-fills b {
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.tt-fill-item {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  border: 1px solid var(--border-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+/* Expand grid (targets, N value, MAE/MFE, etc.) */
+.tt-expand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+}
+
+/* Closed trades card */
+.tt-closed-card {
+  padding: 14px 16px;
+}
+.tt-closed-header b.mono {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* Summary cards */
+.tt-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.tt-summary-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+.tt-summary-card h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+.tt-summary-card .tt-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.tt-empty {
+  padding: 24px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--panel);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius);
+}
+.tt-empty code { font-family: var(--mono); color: var(--text-2); }
+
+/* ── the calculator ─────────────────────────────────────────────────────── */
+.tt-calc {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 14px 22px;
+  align-items: start;
+}
+.tt-calc label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.tt-calc input {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px; /* 16px stops iOS zooming the page on focus */
+  font-weight: 700;
+  width: 100%;
+}
+.tt-calc input:focus { outline: none; border-color: var(--blue); }
+.tt-calc-out { display: grid; gap: 8px; align-content: center; }
+
+/* ── responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .tt-card { padding: 14px; border-radius: var(--radius-md); }
+  .tt-row-main { grid-template-columns: minmax(0, 1fr) auto; }
+  .tt-state { grid-column: 1 / -1; }
+  .tt-nums { text-align: right; }
+  .tt-nums:last-child { grid-column: 2; }
+  .tt-calc { grid-template-columns: 1fr; }
+  /* Turtle UI pass, Phase 8: 44px is a touch-target floor, not a mouse one,
+   * so these three are scoped to the same mobile breakpoint the shared
+   * .fpill rule (styles.css) already uses for its own 38px bump, and go no
+   * further than that shared rule's 6px shortfall for Turtle's own pills.
+   * .market-btn / .view-tab are shared chrome sized at 27px / 32px tall on
+   * every page that uses them; raised here, scoped to Turtle's own
+   * instances, rather than in the shared rule, which every other page
+   * using the market switch or a view-tab strip was sized against. */
+  #tt-market .market-btn,
+  #tt-views .view-tab,
+  #tt-deck .fpill { min-height: 44px; }
+  /* The chart link is the row detail's own standalone paragraph -- never
+   * inline mid-sentence -- so it can become a real tap target without
+   * touching .tt-link's other use (the plain-text "Work it out for your
+   * account" link, which is not inside a .tt-note and so is untouched by
+   * this selector). */
+  .tt-note > .tt-link:only-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+@media (max-width: 480px) {
+  .tt-card p, .tt-card li { font-size: 13px; }
+  .tt-table { font-size: 12px; }
+  .tt-table th, .tt-table td { padding-right: 8px; }
+}
+
+/* The one note on this page that is a warning rather than context: the
+ * futures book has no cash ceiling, so a sleeve that "fits" is implying
+ * leverage nothing priced. Amber, not red -- it is a disclosure about a
+ * modelling gap, not a fault. */
+.tt-note.tt-warn-note {
+  border-left-color: var(--orange);
+  background: var(--orange-soft);
+  color: var(--text-2) !important;
+}

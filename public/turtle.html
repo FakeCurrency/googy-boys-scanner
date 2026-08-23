@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>TURTLE — Vivek 5.0</title>
+  <meta name="theme-color" content="#10141b" />
+  <script src="js/telemetry.js?v=1"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vivek 5.0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="favicon-32.png" />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-600.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-800.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=110" />
+  <link rel="stylesheet" href="css/status.css?v=1" />
+  <link rel="stylesheet" href="css/turtle.css?v=7" />
+  <script src="js/nav.js?v=20"></script>
+  <script src="js/status.js?v=3"></script>
+  <script src="js/sw-register.js?v=4" defer></script>
+</head>
+<body>
+  <header class="topbar deck-top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">TURTLE 🐢</span></div>
+    </div>
+    <div class="market-switch" id="tt-market" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="nasdaq" role="tab" aria-selected="true">NASDAQ</button>
+      <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+      <button class="market-btn" data-market="futures" role="tab" aria-selected="false">FUTURES</button>
+    </div>
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
+      <!-- The header link to the explainer page was removed here (turtle
+           UI pass, Phase 4): it already lives in the shared MORE ▾ menu;
+           this page was the only one duplicating it as a second link. -->
+      <button class="search-trigger" id="search-trigger" title="Search or run a command (&#8984;K)" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="deck" id="tt-deck"></section>
+
+    <nav class="view-tabs" id="tt-views" aria-label="View"></nav>
+
+    <section class="controls" id="tt-controls" hidden></section>
+
+    <section class="tt-body" id="tt-body" aria-live="polite"></section>
+
+    <p class="pm-disclaimer">The Turtle system is a published, forty-year-old trend-following
+      rule set, implemented here from the Original Turtle Trading Rules rather than from the
+      popular short version — the System 1 filter and the 55-day failsafe are both included, and
+      both change results. It is a SEPARATE lens: nothing on this page feeds the paper book, the
+      confluence alerts or any other signal in the app, and nothing here is enforced on your
+      behalf. The per-name records are in-sample, survivor-biased single-instrument replays, not
+      a portfolio you could have traded — read the EVIDENCE view before drawing a conclusion from
+      them. Analysis only — not financial advice.</p>
+  </main>
+
+  <script src="js/turtle.js?v=19"></script>
+</body>
+</html>
