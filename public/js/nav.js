@@ -89,7 +89,7 @@
 
     if (mount) {
       const pill = (it) => {
-        const label = it.key === "index" && here === "turtle" ? "HOME" : it.label;
+        const label = it.key === "index" ? "VIVEK 5.0" : it.label;
         return `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
           `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${label}` +
           `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
@@ -156,7 +156,7 @@
         `<span class="site-tab-ico" aria-hidden="true">⋯</span>` +
         `<span class="site-tab-lbl">MORE</span></button>`;
       const tabHTML = TABS.map((it) => {
-        const tabLabel = it.key === "index" && here === "turtle" ? "HOME" : it.label;
+        const tabLabel = it.key === "index" ? "VIVEK 5.0" : it.label;
         return `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
           `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
           `<span class="site-tab-lbl">${tabLabel.replace(" ⚡", "").replace("AI ", "")}</span></a>`;
