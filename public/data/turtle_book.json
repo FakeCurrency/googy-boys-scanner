@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-08-23T09:58:24+00:00",
+ "generated_at": "2026-08-23T12:56:53+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -233,7 +233,7 @@
    "stop": 0.08767748,
    "last_fill": 0.09289334,
    "opened": "2026-08-21",
-   "last_mark": 0.09124,
+   "last_mark": 0.0923,
    "mark_date": "2026-08-23",
    "fees": 7.437388,
    "mfe_r": 2.2686,
@@ -256,7 +256,7 @@
    "stop": 7.01359211,
    "last_fill": 7.34742689,
    "opened": "2026-08-21",
-   "last_mark": 7.5906806,
+   "last_mark": 7.68734169,
    "mark_date": "2026-08-23",
    "fees": 2.211183,
    "mfe_r": 2.1647,
@@ -279,7 +279,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 803.69000244,
+   "last_mark": 814.19000244,
    "mark_date": "2026-08-23",
    "fees": 1.495422,
    "mfe_r": 0.8091,
@@ -303,7 +303,7 @@
    "stop": 253.68714274,
    "last_fill": 277.13000488,
    "opened": "2026-08-22",
-   "last_mark": 271.48001099,
+   "last_mark": 274.45999146,
    "mark_date": "2026-08-23",
    "fees": 1.773226,
    "mfe_r": 1.0346,
@@ -327,7 +327,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 40.06000137,
+   "last_mark": 40.99000168,
    "mark_date": "2026-08-23",
    "fees": 1.59963,
    "mfe_r": 1.7244,
@@ -351,7 +351,7 @@
    "stop": 3.67195827,
    "last_fill": 4.13999987,
    "opened": "2026-08-22",
-   "last_mark": 4.20620012,
+   "last_mark": 4.36549997,
    "mark_date": "2026-08-23",
    "fees": 1.326805,
    "mfe_r": 0.623,
@@ -375,7 +375,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 1.903,
+   "last_mark": 1.94260001,
    "mark_date": "2026-08-23",
    "fees": 1.422235,
    "mfe_r": 1.0261,
@@ -399,7 +399,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.37990001,
+   "last_mark": 0.39449999,
    "mark_date": "2026-08-23",
    "fees": 1.080912,
    "mfe_r": 0.9577,
@@ -1236,6 +1236,16 @@
   },
   {
    "as_of": "2026-08-23",
+   "market": "crypto",
+   "symbol": "AAVE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 794.82,
+   "equity": 4186.1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-23",
    "market": "crypto5x",
    "symbol": "ZEC",
    "action": "add",
@@ -1272,13 +1282,25 @@
    "side": "long",
    "units_held": 1,
    "system": 1
+  },
+  {
+   "as_of": "2026-08-23",
+   "market": "crypto5x",
+   "symbol": "AAVE",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
   }
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 60,
-  "close_corr_cap": 3,
-  "total": 63
+  "cash": 61,
+  "close_corr_cap": 4,
+  "total": 65
  },
  "summary": {
   "started": "2026-08-21",
