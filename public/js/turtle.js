@@ -895,6 +895,266 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // listed names, so it was selected on outcomes the system could not have
   // known, and no amount of waiting fixes that. This book started flat, takes
   // only what fires from the day it started, and pays costs.
+  // ─ held positions view (open positions as VIVEK-style cards with expandable details
+  function pyramidDiagram(fills, entry, stop, n) {
+    if (!fills || !fills.length) return "";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 200 120");
+    svg.setAttribute("class", "tt-pyramid");
+
+    const topY = 10, bottomY = 100, entryY = 50, stopY = 80;
+
+    // pyramid levels
+    fills.forEach((f, i) => {
+      const unitY = topY + (i * 15);
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", String(50 + i * 30));
+      circle.setAttribute("cy", String(unitY));
+      circle.setAttribute("r", "5");
+      circle.setAttribute("class", "tt-pyr-fill");
+      svg.appendChild(circle);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", String(55 + i * 30));
+      text.setAttribute("y", String(unitY + 3));
+      text.setAttribute("class", "tt-pyr-label");
+      text.setAttribute("font-size", "10");
+      text.textContent = "u" + (i + 1);
+      svg.appendChild(text);
+    });
+
+    // entry and stop lines
+    const entryLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    entryLine.setAttribute("x1", "20"); entryLine.setAttribute("y1", String(entryY));
+    entryLine.setAttribute("x2", "180"); entryLine.setAttribute("y2", String(entryY));
+    entryLine.setAttribute("class", "tt-pyr-entry");
+    entryLine.setAttribute("stroke", "var(--blue)");
+    entryLine.setAttribute("stroke-width", "1.5");
+    svg.appendChild(entryLine);
+
+    const stopLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    stopLine.setAttribute("x1", "20"); stopLine.setAttribute("y1", String(stopY));
+    stopLine.setAttribute("x2", "180"); stopLine.setAttribute("y2", String(stopY));
+    stopLine.setAttribute("class", "tt-pyr-stop");
+    stopLine.setAttribute("stroke", "var(--red)");
+    stopLine.setAttribute("stroke-width", "1.5");
+    svg.appendChild(stopLine);
+
+    return svg.outerHTML;
+  }
+
+  function heldPositionsHTML() {
+    if (!BOOK || !BOOK.open || !BOOK.open.length) {
+      return '<p class="tt-empty">No open positions currently held.</p>';
+    }
+
+    // filter to current market only, exclude ASX
+    const open = (BOOK.open || []).filter((p) =>
+      p.market === MARKET && p.market !== "asx"
+    ).sort((a, b) => (b.fills || []).length - (a.fills || []).length);
+
+    if (!open.length) {
+      return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) + '.</p>';
+    }
+
+    let html = '<div class="tt-held-rows">';
+
+    open.forEach((p, idx) => {
+      const sign = p.side === "short" ? -1 : 1;
+      const avg = p.units ? p.cost_basis / p.units : 0;
+      const r = (p.n && p.units) ? sign * (p.last_mark - avg) * p.units /
+        (P.stop_n * p.n * p.units) : null;
+      const pnl = p.units ? sign * (p.last_mark - avg) * p.units : 0;
+      const days = p.opened ? Math.max(1, Math.round(
+        (Date.now() - Date.parse(p.opened)) / 864e5)) : 0;
+
+      const leverageVal = leverageOf(p.market) || 1;
+      const posted = p.posted || (p.cost_basis / leverageVal);
+      const marginNotional = leverageVal > 1 ? (p.cost_basis / leverageVal) : p.cost_basis;
+
+      const rowId = "tt-held-" + idx;
+      const isExpanded = OPEN === p.symbol;
+
+      html += '<article class="tt-held-card' + (isExpanded ? ' is-open' : '') + '" ' +
+        'data-sym="' + esc(p.symbol) + '" ' +
+        'data-market="' + esc(p.market) + '" ' +
+        'tabindex="0" role="button" aria-expanded="' + (isExpanded ? 'true' : 'false') + '" ' +
+        'id="' + rowId + '">' +
+
+        // header: symbol, market, days, leverage badge
+        '<div class="tt-held-header">' +
+          '<b class="mono">' + esc(p.symbol) + '</b>' +
+          '<span class="tt-chip is-held">' + esc(p.market.toUpperCase()) + '</span>' +
+          '<span class="tt-chip is-fired">' + days + 'd</span>' +
+          '<span class="tt-lev-badge">' + money(marginNotional, 0) + ' margin / ' +
+            money(p.cost_basis, 0) + ' position' + (leverageVal > 1 ? ' / ' + leverageVal + 'X' : '') +
+          '</span>' +
+        '</div>' +
+
+        // always-visible fields
+        '<div class="tt-held-body">' +
+          '<div class="tt-held-cols">' +
+            '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' +
+              num(p.entry, 4) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Mark</span><b class="mono">' +
+              num(p.last_mark, 4) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">P&L</span>' +
+              '<b class="mono ' + cls(pnl) + '">' + money(pnl) + ' / ' + sgnR(r) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">System</span><b>S' + esc(String(p.system)) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Side</span><b>' + esc(p.side) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Opened</span><b>' + esc(p.opened || "—") + '</b></div>' +
+          '</div>' +
+        '</div>';
+
+      // expandable details
+      if (isExpanded) {
+        html += '<div class="tt-held-expand">' +
+
+          // pyramid diagram
+          '<div class="tt-pyramid-section">' +
+            pyramidDiagram(p.fills, p.entry, p.stop, p.n) +
+            '<div class="tt-fills">' +
+              '<b>Fills:</b> ' +
+              (p.fills || []).map((f, i) =>
+                '<span class="tt-fill-item">u' + (i + 1) + ' @ ' + num(f.price, 4) + '</span>'
+              ).join(', ') +
+            '</div>' +
+          '</div>' +
+
+          // details grid
+          '<div class="tt-expand-grid">' +
+            '<div class="tt-kv"><span>Stop (all units)</span><b class="mono">' + num(p.stop, 4) + '</b></div>' +
+            '<div class="tt-kv"><span>TP1</span><b class="mono">' + num(p.tp1 || 0, 4) + '</b></div>' +
+            '<div class="tt-kv"><span>TP2</span><b class="mono">' + num(p.tp2 || 0, 4) + '</b></div>' +
+            '<div class="tt-kv"><span>TP3</span><b class="mono">' + num(p.tp3 || 0, 4) + '</b></div>' +
+            '<div class="tt-kv"><span>N value</span><b class="mono">' + num(p.n, 2) + '</b></div>' +
+            '<div class="tt-kv"><span>Units filled</span><b class="mono">' + (p.fills || []).length + '</b></div>' +
+            '<div class="tt-kv"><span>Total units</span><b class="mono">' + p.units + '</b></div>' +
+            '<div class="tt-kv"><span>MAE</span><b class="mono ' + (p.mae <= 0 ? '' : 'neg') + '">' +
+              num(Math.abs(p.mae || 0), 2) + 'R</b></div>' +
+            '<div class="tt-kv"><span>MFE</span><b class="mono ' + (p.mfe >= 0 ? 'pos' : '') + '">' +
+              num(Math.abs(p.mfe || 0), 2) + 'R</b></div>' +
+            '<div class="tt-kv"><span>Exit channel</span><b>' + (p.exit_channel || '—') + '-day</b></div>' +
+            '<div class="tt-kv"><span>Exit level</span><b class="mono">' + num(p.exit_level || 0, 4) + '</b></div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      html += '</article>';
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  // ─ closed trades view (sortable, VIVEK-style cards)
+  function closedTradesHTML() {
+    if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
+      return '<p class="tt-empty">No closed trades yet.</p>';
+    }
+
+    // Render sortable header row if there are closed trades
+    const sortFields = [
+      { key: "symbol", label: "Symbol" },
+      { key: "system", label: "System" },
+      { key: "days", label: "Days" },
+      { key: "r", label: "R" },
+      { key: "pnl", label: "P&L" },
+    ];
+
+    let html = '<div class="tt-closed-header-row">';
+    sortFields.forEach((f) => {
+      const isActive = SORT === f.key;
+      html += '<button class="tt-sort-btn' + (isActive ? ' is-active' : '') + '" ' +
+        'data-sort="' + f.key + '" title="Sort by ' + f.label + '">' +
+        f.label + (isActive ? ' ▼' : '') + '</button>';
+    });
+    html += '</div>';
+
+    const trades = (BOOK.closed || []).slice().reverse();
+    const sortedClosed = trades.sort((a, b) => {
+      if (SORT === "symbol") return esc(a.symbol).localeCompare(esc(b.symbol));
+      if (SORT === "system") return (a.system || 0) - (b.system || 0);
+      if (SORT === "days") {
+        const daysA = a.opened && a.closed ? Math.round((Date.parse(a.closed) - Date.parse(a.opened)) / 864e5) : 0;
+        const daysB = b.opened && b.closed ? Math.round((Date.parse(b.closed) - Date.parse(b.opened)) / 864e5) : 0;
+        return daysB - daysA;
+      }
+      if (SORT === "r") return (b.r || 0) - (a.r || 0);
+      if (SORT === "pnl") return (b.pnl || 0) - (a.pnl || 0);
+      return 0;
+    });
+
+    html += '<div class="tt-closed-rows">';
+
+    sortedClosed.forEach((t, idx) => {
+      const daysHeld = t.opened && t.closed ? Math.round((Date.parse(t.closed) - Date.parse(t.opened)) / 864e5) : 0;
+
+      html += '<article class="tt-closed-card">' +
+        '<div class="tt-closed-header">' +
+          '<b class="mono">' + esc(t.symbol) + '</b>' +
+          '<span class="tt-chip">' + esc(t.reason || '—') + '</span>' +
+          '<span class="tt-chip is-fired">' + daysHeld + 'd</span>' +
+        '</div>' +
+        '<div class="tt-closed-body">' +
+          '<div class="tt-closed-cols">' +
+            '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' +
+              num(t.entry, 4) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Exit</span><b class="mono">' +
+              num(t.exit, 4) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Units</span><b class="mono">' +
+              esc(t.units || '—') + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">R</span><b class="mono ' + cls(t.r) + '">' +
+              sgnR(t.r) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">P&L</span><b class="mono ' + cls(t.pnl) + '">' +
+              money(t.pnl) + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Opened</span><b>' + esc(t.opened || "—") + '</b></div>' +
+            '<div class="tt-col"><span class="tt-label">Closed</span><b>' + esc(t.closed || "—") + '</b></div>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  // ─ summary view (stats cards matching VIVEK design)
+  function summaryHTML() {
+    if (!BOOK || !BOOK.summary) {
+      return '<p class="tt-empty">No summary data yet.</p>';
+    }
+
+    const s = BOOK.summary || {};
+    const days = s.started ? Math.max(1, Math.round(
+      (Date.now() - Date.parse(s.started)) / 864e5)) : 0;
+
+    return '<div class="tt-summary-cards">' +
+      '<section class="tt-summary-card">' +
+        '<h3>Account Performance</h3>' +
+        '<div class="tt-detail-grid">' +
+          kv("Running since", esc(s.started || "—") + (days ? " (" + days + "d)" : "")) +
+          kv("Equity", money(s.equity) + " of " + money(s.equity_start)) +
+          kv("Return", (s.return_pct == null ? "—" :
+            '<span class="' + cls(s.return_pct) + '">' + pct(s.return_pct, 2) + "</span>")) +
+          kv("Open positions", big(s.open_positions) + " · " + big(s.open_units) + " units") +
+          kv("Closed trades", big(s.closed) + (s.win_pct == null ? "" : " · " + pct(s.win_pct) + " won")) +
+        '</div>' +
+      '</section>' +
+
+      '<section class="tt-summary-card">' +
+        '<h3>Trade Statistics</h3>' +
+        '<div class="tt-detail-grid">' +
+          kv("Total R", '<span class="' + cls(s.total_r) + '">' + sgnR(s.total_r) + "</span>") +
+          kv("Average trade", sgnR(s.avg_r)) +
+          kv("Median trade", sgnR(s.median_r)) +
+          kv("Fees paid", money(s.fees_paid)) +
+          kv("Sizing equity", money(s.sizing_equity)) +
+        '</div>' +
+      '</section>' +
+    '</div>';
+  }
+
   function bookHTML() {
     if (!BOOK) {
       return '<p class="tt-empty">The forward book has not been written yet. ' +
@@ -1498,134 +1758,38 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   }
 
   // ── new views: HELD, CLOSED, SUMMARY ──────────────────────────────────────
-  function heldPositionsHTML() {
-    if (!BOOK || !BOOK.open || !BOOK.open.length) {
-      return '<p class="tt-empty">No open positions in the turtle book.</p>';
-    }
-    const byMarket = BOOK.open.filter(p => scanMarketFor(p.market) === MARKET);
-    if (!byMarket.length) {
-      return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) + '.</p>';
-    }
-    let html = '';
-    byMarket.forEach(p => {
-      const lev = leverageOf(p.market);
-      const marginNotional = lev ? (p.cost_basis / lev) : p.cost_basis;
-      const unr = p.last_mark != null && p.units != null ? (p.last_mark - p.entry_avg) * p.units : null;
-      const unrealR = p.n != null && unr != null ? unr / (P.risk_pct * EQUITY * P.stop_n) : null;
-      const daysHeld = p.opened && BOOK.generated_at
-        ? Math.floor((new Date(BOOK.generated_at) - new Date(p.opened)) / 86400000)
-        : null;
-      html += '<div class="tt-held-card"><div class="tt-held-header">' +
-        '<b class="mono">' + esc(p.symbol) + '</b> ' +
-        '<span class="tt-name">' + esc(p.name || '') + '</span>' +
-        '<span class="tt-chip">' + big(lev || 1) + 'x</span>' +
-        '<span class="tt-chip">' + money(marginNotional, 0) + ' / ' + money(p.cost_basis, 0) + '</span>' +
-        '</div>';
-      html += '<div class="tt-detail-grid">' +
-        kv('System', 'S' + p.system) +
-        kv('Side', (p.side || '').toUpperCase()) +
-        kv('Entry price', money(p.entry_avg)) +
-        kv('Current mark', money(p.last_mark)) +
-        kv('Units filled', (p.fills || []).length + ' of ' + P.max_units) +
-        kv('Total units', num(p.units, 4)) +
-        kv('Stop loss', money(p.stop)) +
-        kv('N value', num(p.n, 4)) +
-        kv('Days held', daysHeld != null ? daysHeld : '—') +
-        kv('Unrealized P&L', unr != null ? money(unr, 2) : '—') +
-        kv('Unrealized R', unrealR != null ? sgnR(unrealR) : '—') +
-        kv('MAE', p.mae_r != null ? num(p.mae_r, 2) + 'R' : '—') +
-        kv('MFE', p.mfe_r != null ? num(p.mfe_r, 2) + 'R' : '—') +
-        '</div>';
-      if (p.fills && p.fills.length) {
-        html += '<div class="tt-fills"><b>Pyramid fills:</b> ' +
-          p.fills.map((f, i) => 'u' + (i + 1) + ' @ ' + num(f, 4)).join(' · ') +
-          '</div>';
-      }
-      html += '</div>';
-    });
-    return html;
-  }
+  function pyramidDiagram(fills, entry, stop, n) {
+    if (!fills || !fills.length) return '';
+    const side = entry > stop ? 'long' : 'short';
+    const width = 200;
+    const height = 120;
+    const margin = 10;
+    const levels = [0, 0.5, 1, 1.5].slice(0, fills.length);
+    const minPrice = Math.min(entry, stop, ...fills);
+    const maxPrice = Math.max(entry, stop, ...fills);
+    const range = maxPrice - minPrice || 1;
 
-  function closedTradesHTML() {
-    if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
-      return '<p class="tt-empty">No closed trades in the turtle book.</p>';
-    }
-    const byMarket = BOOK.closed.filter(p => scanMarketFor(p.market) === MARKET);
-    if (!byMarket.length) {
-      return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + '.</p>';
-    }
-    let html = '<div class="tt-closed-table-wrap"><table class="tt-table"><thead><tr>' +
-      '<th>Symbol</th><th>Side</th><th>System</th><th>Opened</th><th>Closed</th><th>Days</th>' +
-      '<th>Entry</th><th>Exit</th><th>Units</th><th>Fills</th><th>Reason</th>' +
-      '<th>Gross P&L</th><th>Fees</th><th>Net P&L</th><th>R</th><th>MAE</th><th>MFE</th>' +
-      '</tr></thead><tbody>';
-    byMarket.forEach(p => {
-      const daysHeld = p.opened && p.closed
-        ? Math.floor((new Date(p.closed) - new Date(p.opened)) / 86400000)
-        : null;
-      html += '<tr>' +
-        '<td><b class="mono">' + esc(p.symbol) + '</b></td>' +
-        '<td>' + (p.side || '').toUpperCase() + '</td>' +
-        '<td>S' + p.system + '</td>' +
-        '<td class="tt-dim">' + esc(String(p.opened || '').slice(0, 10)) + '</td>' +
-        '<td class="tt-dim">' + esc(String(p.closed || '').slice(0, 10)) + '</td>' +
-        '<td class="tt-dim">' + (daysHeld != null ? daysHeld : '—') + '</td>' +
-        '<td class="mono">' + money(p.entry_avg) + '</td>' +
-        '<td class="mono">' + money(p.exit) + '</td>' +
-        '<td class="mono">' + num(p.units, 4) + '</td>' +
-        '<td class="mono">' + (p.fills ? p.fills.length : '—') + '</td>' +
-        '<td><code>' + esc(p.reason || '') + '</code></td>' +
-        '<td class="mono ' + cls(p.gross) + '">' + money(p.gross, 2) + '</td>' +
-        '<td class="mono">' + money(-(p.fees || 0), 2) + '</td>' +
-        '<td class="mono ' + cls(p.pnl) + '"><b>' + money(p.pnl, 2) + '</b></td>' +
-        '<td class="mono ' + cls(p.r) + '"><b>' + sgnR(p.r) + '</b></td>' +
-        '<td class="mono">' + num(p.mae_r, 2) + 'R</td>' +
-        '<td class="mono">' + num(p.mfe_r, 2) + 'R</td>' +
-        '</tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  }
+    let svg = '<svg class="tt-pyramid" viewBox="0 0 ' + width + ' ' + height + '">';
+    svg += '<defs><style>.tt-pyr-fill{fill:var(--accent);opacity:0.8}.tt-pyr-stop{stroke:var(--neg);stroke-width:2;fill:none}.tt-pyr-entry{stroke:var(--pos);stroke-width:2;fill:none}</style></defs>';
 
-  function summaryHTML() {
-    if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
-      return '<p class="tt-empty">No closed trades to summarize yet.</p>';
-    }
-    const closed = BOOK.closed.filter(p => scanMarketFor(p.market) === MARKET);
-    if (!closed.length) {
-      return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + '.</p>';
-    }
-    const n = closed.length;
-    const wins = closed.filter(p => p.r && p.r > 0).length;
-    const losses = closed.filter(p => p.r && p.r < 0).length;
-    const totalR = closed.reduce((sum, p) => sum + (p.r || 0), 0);
-    const totalPnL = closed.reduce((sum, p) => sum + (p.pnl || 0), 0);
-    const totalFees = closed.reduce((sum, p) => sum + (p.fees || 0), 0);
-    const avgR = n > 0 ? totalR / n : 0;
-    const medianR = n > 0 ? closed.slice().sort((a, b) => (a.r || 0) - (b.r || 0))[Math.floor(n / 2)].r : 0;
-    const maxDD = Math.min(...closed.map(p => p.r || 0));
-    const topTrades = closed.slice().sort((a, b) => (b.r || 0) - (a.r || 0)).slice(0, 5);
-    const topShare = n > 0 ? topTrades.reduce((sum, p) => sum + (p.r || 0), 0) / totalR * 100 : 0;
-    return '<section class="tt-card"><h3>Closed Trades Summary</h3>' +
-      '<div class="tt-detail-grid">' +
-      kv('Total trades', big(n)) +
-      kv('Wins', big(wins) + ' (' + pct(100 * wins / n) + ')') +
-      kv('Losses', big(losses) + ' (' + pct(100 * losses / n) + ')') +
-      kv('Total R (net)', sgnR(totalR)) +
-      kv('Average R', sgnR(avgR)) +
-      kv('Median R', sgnR(medianR)) +
-      kv('Worst drawdown', sgnR(maxDD)) +
-      kv('Total P&L (gross)', money(totalPnL + totalFees, 2)) +
-      kv('Total fees', money(totalFees, 2)) +
-      kv('Total P&L (net)', money(totalPnL, 2)) +
-      kv('Top 5 trades share', pct(topShare)) +
-      '</div></section>' +
-      '<section class="tt-card"><h3>Top 5 Trades</h3>' +
-      '<div class="tt-top-trades">' +
-      topTrades.map(p => '<div class="tt-trade-chip">' +
-        esc(p.symbol) + ' S' + p.system + ' ' + (p.side || '').toUpperCase() + ' ' +
-        sgnR(p.r) + ' · ' + money(p.pnl, 0) + '</div>').join('') +
-      '</div></section>';
+    const getY = (price) => margin + (maxPrice - price) / range * (height - 2 * margin);
+    const stopY = getY(stop);
+    const entryY = getY(entry);
+
+    fills.forEach((f, i) => {
+      const y = getY(f);
+      const x = 30 + i * 40;
+      const color = i % 2 === 0 ? 'var(--accent-b)' : 'var(--accent-c)';
+      svg += '<circle cx="' + x + '" cy="' + y + '" r="6" fill="' + color + '"/>';
+      svg += '<text x="' + x + '" y="' + (y + 20) + '" class="tt-pyr-label">u' + (i + 1) + '</text>';
+    });
+
+    svg += '<line class="tt-pyr-stop" x1="10" y1="' + stopY + '" x2="' + (width - 10) + '" y2="' + stopY + '"/>';
+    svg += '<line class="tt-pyr-entry" x1="10" y1="' + entryY + '" x2="' + (width - 10) + '" y2="' + entryY + '"/>';
+    svg += '<text class="tt-pyr-label" x="5" y="' + (stopY - 5) + '" text-anchor="end" font-size="10">SL</text>';
+    svg += '<text class="tt-pyr-label" x="5" y="' + (entryY - 5) + '" text-anchor="end" font-size="10">Entry</text>';
+    svg += '</svg>';
+    return svg;
   }
 
   // ── shell ──────────────────────────────────────────────────────────────────
@@ -1942,6 +2106,26 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         pushURLState();
         renderBody();
       }
+      // Held position cards: toggle expand/collapse on click (except on
+      // interactive elements like links). Same rule as .tt-row — a click
+      // inside the expanded details should not close the card.
+      const heldCard = e.target.closest(".tt-held-card");
+      if (heldCard && !e.target.closest(".tt-held-expand")) {
+        const sym = heldCard.dataset.sym;
+        OPEN = OPEN === sym ? null : sym;
+        pushURLState();
+        render();
+      }
+      // Sortable headers for closed trades view: click to sort by that column
+      const sortBtn = e.target.closest(".tt-sort-btn");
+      if (sortBtn) {
+        const newSort = sortBtn.dataset.sort;
+        if (newSort) {
+          SORT = newSort;
+          pushURLState();
+          render();
+        }
+      }
     });
     // Enter and Space on a focused row do what a click on its head does,
     // history included.
@@ -1954,19 +2138,35 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         return;
       }
       const row = e.target.closest && e.target.closest(".tt-row");
-      if (!row) return;
-      e.preventDefault();
-      OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
-      pushURLState();
-      renderBody();
-      // Find the replacement node by COMPARING dataset, never by building a
-      // selector out of it: dataset.sym is the DECODED symbol, so a name
-      // carrying a quote or a bracket makes the selector invalid and
-      // querySelector throws. Caught by rendering a hostile fixture, which is
-      // the only way this surfaces -- real tickers never contain one.
-      const rows = document.querySelectorAll(".tt-row");
-      for (let i = 0; i < rows.length; i++) {
-        if (rows[i].dataset.sym === row.dataset.sym) { rows[i].focus(); break; }
+      if (row) {
+        e.preventDefault();
+        OPEN = OPEN === row.dataset.sym ? null : row.dataset.sym;
+        pushURLState();
+        renderBody();
+        // Find the replacement node by COMPARING dataset, never by building a
+        // selector out of it: dataset.sym is the DECODED symbol, so a name
+        // carrying a quote or a bracket makes the selector invalid and
+        // querySelector throws. Caught by rendering a hostile fixture, which is
+        // the only way this surfaces -- real tickers never contain one.
+        const rows = document.querySelectorAll(".tt-row");
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].dataset.sym === row.dataset.sym) { rows[i].focus(); break; }
+        }
+        return;
+      }
+      // Held position cards: Enter/Space toggles expand/collapse same as click.
+      const heldCard = e.target.closest && e.target.closest(".tt-held-card");
+      if (heldCard) {
+        e.preventDefault();
+        const sym = heldCard.dataset.sym;
+        OPEN = OPEN === sym ? null : sym;
+        pushURLState();
+        render();
+        // Refocus the card after re-render
+        const cards = document.querySelectorAll(".tt-held-card");
+        for (let i = 0; i < cards.length; i++) {
+          if (cards[i].dataset.sym === sym) { cards[i].focus(); break; }
+        }
       }
     });
     load().then(render);

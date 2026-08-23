@@ -245,64 +245,239 @@
 .tt-kv b { font-size: 12.5px; color: var(--text); white-space: nowrap; }
 
 /* ── held positions & closed trades views ───────────────────────────────── */
-.tt-held-card {
+.tt-held-rows, .tt-closed-rows { display: flex; flex-direction: column; gap: 12px; }
+
+/* Sortable header row for closed trades */
+.tt-closed-header-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tt-sort-btn {
+  padding: 8px 12px;
+  background: var(--fill);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.tt-sort-btn:hover {
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-hover);
+}
+.tt-sort-btn.is-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--text);
+}
+.tt-sort-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.tt-held-card, .tt-closed-card {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 14px 16px;
-  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.tt-held-header {
+.tt-held-card:hover, .tt-closed-card:hover {
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-hover);
+}
+.tt-held-card.is-open {
+  border-color: var(--blue);
+  box-shadow: var(--shadow-open);
+}
+.tt-held-card.is-open .tt-held-expand { cursor: default; }
+.tt-held-card:focus-visible, .tt-closed-card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Header: symbol, market badge, days badge, leverage badge */
+.tt-held-header, .tt-closed-header {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
-.tt-held-header b.mono { font-size: 14px; color: var(--text); }
-.tt-held-header .tt-name {
-  flex: 1;
-  min-width: 120px;
-  font-size: 12px;
+.tt-held-header b.mono, .tt-closed-header b.mono {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Leverage badge: prominent "1k margin / 5k position (×5X)" format */
+.tt-lev-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  border: 1.5px solid var(--border-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+
+/* Body: grid of always-visible fields */
+.tt-held-body, .tt-closed-body {
+  margin-bottom: 12px;
+}
+.tt-held-cols, .tt-closed-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px 16px;
+}
+.tt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tt-col .tt-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: var(--muted-2);
 }
-.tt-held-header .tt-chip { flex: 0 0 auto; }
+.tt-col b {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 700;
+}
+.tt-col .mono {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/* Expandable details */
+.tt-held-expand {
+  display: none;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--separator);
+}
+.tt-held-card.is-open .tt-held-expand {
+  display: block;
+  animation: slideDown .2s ease;
+}
+
+/* Pyramid diagram */
+.tt-pyramid-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--separator);
+}
+.tt-pyramid {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  margin-bottom: 10px;
+}
+.tt-pyramid .tt-pyr-fill {
+  fill: var(--blue);
+  opacity: 0.8;
+}
+.tt-pyramid .tt-pyr-entry { stroke: var(--blue); }
+.tt-pyramid .tt-pyr-stop { stroke: var(--red); }
+.tt-pyramid .tt-pyr-label {
+  fill: var(--text);
+  font-weight: 700;
+  font-size: 10px;
+}
 
 .tt-fills {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--separator);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   font-size: 12px;
   color: var(--text-2);
 }
-.tt-fills b { color: var(--text); font-size: 11px; letter-spacing: .02em; text-transform: uppercase; }
-
-.tt-closed-table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: 12px;
+.tt-fills b {
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
-.tt-closed-table-wrap .tt-table .tt-dim { color: var(--muted-2); font-size: 11px; }
-
-.tt-top-trades {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.tt-trade-chip {
+.tt-fill-item {
   display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   background: var(--fill);
   border: 1px solid var(--border-soft);
-  color: var(--text-2);
-  font-size: 12px;
   font-family: var(--mono);
-  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text);
 }
-.tt-trade-chip .mono { color: var(--text); font-weight: 600; }
+
+/* Expand grid (targets, N value, MAE/MFE, etc.) */
+.tt-expand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+}
+
+/* Closed trades card */
+.tt-closed-card {
+  padding: 14px 16px;
+}
+.tt-closed-header b.mono {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* Summary cards */
+.tt-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.tt-summary-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+.tt-summary-card h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+.tt-summary-card .tt-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
 
 .tt-empty {
   padding: 24px 18px;

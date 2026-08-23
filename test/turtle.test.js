@@ -540,11 +540,11 @@ test("S2-first when both channels break is stated in the rules copy", () => {
 suite("URL state — back/forward is a data contract, written before any click uses it");
 
 const LEGAL_COMBOS = [
-  { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" },
+  { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" },
   { m: "nasdaq", v: "book", f: "held", s: "AAPL", sort: "n" },
   { m: "crypto", v: "rules", f: "near", s: "DOGE", sort: "distance" },
   { m: "futures", v: "sizing", f: "blocked", s: "CL", sort: "symbol" },
-  { m: "asx", v: "evidence", f: "all", s: "", sort: "fired" },
+  { m: "crypto", v: "evidence", f: "all", s: "", sort: "fired" },
 ];
 
 test("round-trips every legal combo, serialise then parse", () => {
@@ -578,7 +578,7 @@ test("default f is fired, not all — SIGNALS/ALL is 400 names, not a filtered v
 });
 
 test("empty, missing, and garbage-typed search all default cleanly, never throwing", () => {
-  const defaults = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
+  const defaults = { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" };
   assert.deepEqual(T.parseTurtleURL(""), defaults);
   assert.deepEqual(T.parseTurtleURL(undefined), defaults);
   assert.deepEqual(T.parseTurtleURL(null), defaults);
@@ -588,7 +588,7 @@ test("empty, missing, and garbage-typed search all default cleanly, never throwi
 
 test("hostile s (quote, brackets) round-trips through encodeURIComponent", () => {
   const hostile = 'AAA"><';
-  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: hostile, sort: "fired" });
+  const qs = T.serialiseTurtleURL({ m: "nasdaq", v: "signals", f: "fired", s: hostile, sort: "fired" });
   assert.ok(!qs.includes('"') && !qs.includes("<") && !qs.includes(">"),
     `raw hostile characters leaked into the query string: ${qs}`);
   assert.equal(T.parseTurtleURL(qs).s, hostile);
@@ -596,12 +596,12 @@ test("hostile s (quote, brackets) round-trips through encodeURIComponent", () =>
 
 test("hostile s (ampersand, quote — the classic query-string breakers)", () => {
   const hostile = 'A&B"C';
-  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: hostile, sort: "fired" });
+  const qs = T.serialiseTurtleURL({ m: "nasdaq", v: "signals", f: "fired", s: hostile, sort: "fired" });
   assert.equal(T.parseTurtleURL(qs).s, hostile);
 });
 
 test("serialise omits an empty s instead of writing a bare '&s='", () => {
-  const qs = T.serialiseTurtleURL({ m: "asx", v: "signals", f: "fired", s: "", sort: "fired" });
+  const qs = T.serialiseTurtleURL({ m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" });
   assert.ok(!qs.includes("s="), qs);
   const qsDefault = T.serialiseTurtleURL({});
   assert.ok(!qsDefault.includes("s="), qsDefault);
@@ -613,7 +613,7 @@ test("serialise never throws and defaults an invalid state object, field by fiel
   assert.doesNotThrow(() => T.serialiseTurtleURL({ m: "bogus", v: 123, f: [], sort: {} }));
   const qs = T.serialiseTurtleURL({ m: "bogus", v: 123, f: [], sort: {} });
   assert.deepEqual(T.parseTurtleURL(qs),
-    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" },
+    { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" },
     "every invalid field must fall back independently, not abort the whole call");
 });
 
@@ -664,22 +664,22 @@ test("an all-default parsed URL leaves TOUCHED false, and f is fired not all", (
 });
 
 test("any single non-default field marks TOUCHED true, not just v", () => {
-  T.applyState({ m: "asx", v: "book", f: "fired", s: "", sort: "fired" });
+  T.applyState({ m: "nasdaq", v: "book", f: "fired", s: "", sort: "fired" });
   assert.equal(T.getTurtleState().touched, true, "v alone must touch");
-  T.applyState({ m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" });
+  T.applyState({ m: "crypto", v: "signals", f: "fired", s: "", sort: "fired" });
   assert.equal(T.getTurtleState().touched, true, "m alone must touch");
-  T.applyState({ m: "asx", v: "signals", f: "fired", s: "JBH", sort: "fired" });
+  T.applyState({ m: "nasdaq", v: "signals", f: "fired", s: "JBH", sort: "fired" });
   assert.equal(T.getTurtleState().touched, true, "s alone must touch");
 });
 
 test("an empty s applies to OPEN=null, and getTurtleState reports it back as ''", () => {
-  T.applyState({ m: "asx", v: "signals", f: "fired", s: "", sort: "fired" });
+  T.applyState({ m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" });
   assert.equal(T.getTurtleState().s, "");
 });
 
-test("a garbage m applies to asx without throwing (applyState trusts parseTurtleURL's output)", () => {
+test("a garbage m applies to nasdaq without throwing (applyState trusts parseTurtleURL's output)", () => {
   assert.doesNotThrow(() => T.applyState(T.parseTurtleURL("?m=foo")));
-  assert.equal(T.getTurtleState().m, "asx");
+  assert.equal(T.getTurtleState().m, "nasdaq");
 });
 
 test("a futures+rules deep link is TOUCHED, so load()'s no-data fallback cannot override it", () => {
@@ -701,14 +701,14 @@ suite("popstate — Back/Forward replay the URL, and only the URL");
 test("first paint applies location.search before the first fetch, and replaceState's, not pushState's", () => {
   const { T: T2, win } = boot("");
   assert.deepEqual(T2.getTurtleState(),
-    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
+    { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
   assert.equal(win.history.length, 1, "first paint must replaceState, not pushState");
-  assert.equal(win.location.search, "?m=asx&v=signals&f=fired&sort=fired",
+  assert.equal(win.location.search, "?m=nasdaq&v=signals&f=fired&sort=fired",
     "first paint must normalise the address bar to the resolved defaults");
 });
 
 test("popstate to a different market re-applies state and fetches that market once, without pushing", () => {
-  const { win, fetchCalls } = boot("?m=asx&v=signals&f=fired&sort=fired");
+  const { win, fetchCalls } = boot("?m=crypto&v=signals&f=fired&sort=fired");
   const lenAfterBoot = win.history.length;
   const callsBefore = fetchCalls.length;
   win.__goto("?m=nasdaq&v=signals&f=fired&sort=fired");
@@ -719,9 +719,9 @@ test("popstate to a different market re-applies state and fetches that market on
 });
 
 test("popstate to the same market with a different view does not touch the network", () => {
-  const { win, fetchCalls } = boot("?m=asx&v=signals&f=fired&sort=fired");
+  const { win, fetchCalls } = boot("?m=nasdaq&v=signals&f=fired&sort=fired");
   const callsBefore = fetchCalls.length;
-  win.__goto("?m=asx&v=book&f=fired&sort=fired");
+  win.__goto("?m=nasdaq&v=book&f=fired&sort=fired");
   assert.equal(fetchCalls.length, callsBefore, "view-only popstate must not re-fetch");
   assert.equal(win.history.length, 1, "popstate must not grow history.length");
 });
@@ -729,15 +729,15 @@ test("popstate to the same market with a different view does not touch the netwo
 test("popstate restores market, view, filter and row together (a simulated Back to baseline)", () => {
   const { T: T2, win } = boot("?m=nasdaq&v=book&f=held&s=AAPL&sort=n");
   assert.equal(T2.getTurtleState().m, "nasdaq");
-  win.__goto("?m=asx&v=signals&f=fired&sort=fired");
+  win.__goto("?m=nasdaq&v=signals&f=fired&sort=fired");
   assert.deepEqual(T2.getTurtleState(),
-    { m: "asx", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
+    { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired", touched: false });
 });
 
 test("popstate on a hostile s does not throw and restores it exactly", () => {
   const { T: T2, win } = boot("");
   const hostile = 'AAA"><';
-  assert.doesNotThrow(() => win.__goto("?m=asx&v=signals&f=fired&s=" +
+  assert.doesNotThrow(() => win.__goto("?m=nasdaq&v=signals&f=fired&s=" +
     encodeURIComponent(hostile) + "&sort=fired"));
   assert.equal(T2.getTurtleState().s, hostile);
 });
