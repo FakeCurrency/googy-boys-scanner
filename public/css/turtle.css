@@ -495,6 +495,32 @@
 .tt-stopbar-lbl.tt-warn { color: var(--orange, #ff9f0a); }
 .tt-stopbar-lbl.tt-danger { color: var(--red, #ff453a); }
 
+/* ── CLOSED TRADES money screen (V5) ─────────────────────────────────────── */
+/* Equity curve (Q22): one series, zero baseline, non-scaling 2px stroke. */
+.tt-eqcurve-wrap { margin-bottom: 16px; }
+.tt-eqcurve-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.tt-eqcurve-head b { font-size: 15px; font-weight: 800; }
+.tt-eqcurve-head b.pos { color: var(--green); }
+.tt-eqcurve-head b.neg { color: var(--red); }
+.tt-eqcurve { width: 100%; height: auto; display: block; }
+.tt-eq-zero { stroke: var(--border-2, rgba(255, 255, 255, 0.14)); stroke-width: 1; stroke-dasharray: 3 3; }
+.tt-eq-line { fill: none; stroke-width: 2; }
+.tt-eq-line.tt-up { stroke: var(--green, #30d15f); }
+.tt-eq-line.tt-down { stroke: var(--red, #ff453a); }
+.tt-eq-area { stroke: none; opacity: 0.12; }
+.tt-eq-area.tt-up { fill: var(--green, #30d15f); }
+.tt-eq-area.tt-down { fill: var(--red, #ff453a); }
+
+/* Win/loss rail (Q24) + the expandable P&L breakdown (Q26). */
+.tt-closed-card.tt-win { box-shadow: inset 3px 0 0 var(--green, #30d15f); }
+.tt-closed-card.tt-loss { box-shadow: inset 3px 0 0 var(--red, #ff453a); }
+.tt-closed-expand {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  animation: slideDown .18s ease;
+}
+
 /* Body: grid of always-visible fields */
 .tt-held-body, .tt-closed-body {
   margin-bottom: 12px;

@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V4";
+  const BUILD = "V5";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -60,7 +60,8 @@
   let FILTER = "all";
   let QUERY = "";
   let EQUITY = FALLBACK.account_equity;
-  let OPEN = null;               // expanded row symbol
+  let OPEN = null;               // expanded row symbol (signals + portfolio)
+  let OPENC = null;              // expanded CLOSED trade key (V5; not URL-backed)
   let SORT = "fired";            // URL-only so far (Phase 3): no sort control exists yet
   let PSORT = "risk";            // PORTFOLIO view sort (V4): risk = nearest stop first
   let TOUCHED = false;           // has the reader picked a view themselves?
@@ -1111,75 +1112,147 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     return html;
   }
 
-  // ─ closed trades view (sortable, VIVEK-style cards)
+  // Calendar days a closed trade was held.
+  function daysHeld(t) {
+    return (t.opened && t.closed)
+      ? Math.max(0, Math.round((Date.parse(t.closed) - Date.parse(t.opened)) / 864e5)) : 0;
+  }
+
+  // Equity curve (Q22): cumulative NET dollars in close-date order. One series,
+  // so no legend — the heading names it; a zero baseline; the sign is carried by
+  // the value label too, never colour alone; the stroke does not scale so it
+  // stays 2px at any width (dataviz mark spec).
+  function equityCurveHTML(trades, finalNet) {
+    const seq = trades.slice().sort((a, b) => String(a.closed || "").localeCompare(String(b.closed || "")));
+    const pts = [0];
+    let cum = 0;
+    seq.forEach((t) => { cum += (t.pnl || 0); pts.push(cum); });
+    const W = 600, H = 120, pad = 10;
+    const minY = Math.min(0, ...pts), maxY = Math.max(0, ...pts);
+    const rng = (maxY - minY) || 1;
+    const n = (pts.length - 1) || 1;
+    const sx = (i) => pad + (i / n) * (W - 2 * pad);
+    const sy = (y) => (H - pad) - ((y - minY) / rng) * (H - 2 * pad);
+    const zeroY = sy(0);
+    const up = (finalNet || 0) >= 0;
+    const line = pts.map((y, i) => (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(y).toFixed(1)).join(" ");
+    const area = "M" + sx(0).toFixed(1) + " " + zeroY.toFixed(1) + " " +
+      pts.map((y, i) => "L" + sx(i).toFixed(1) + " " + sy(y).toFixed(1)).join(" ") +
+      " L" + sx(n).toFixed(1) + " " + zeroY.toFixed(1) + " Z";
+    return '<div class="tt-eqcurve-wrap">' +
+      '<div class="tt-eqcurve-head"><span class="tt-pf-label">Equity curve — cumulative net P&L</span>' +
+        '<b class="mono ' + cls(finalNet) + '">' + money(finalNet) + '</b></div>' +
+      '<svg class="tt-eqcurve" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
+        'aria-label="Cumulative net profit and loss across ' + n + ' closed trades, ending ' + money(finalNet) + '">' +
+        '<line class="tt-eq-zero" x1="' + pad + '" y1="' + zeroY.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + zeroY.toFixed(1) + '"/>' +
+        '<path class="tt-eq-area ' + (up ? "tt-up" : "tt-down") + '" d="' + area + '"/>' +
+        '<path class="tt-eq-line ' + (up ? "tt-up" : "tt-down") + '" d="' + line + '" vector-effect="non-scaling-stroke"/>' +
+      '</svg></div>';
+  }
+
+  // ─ closed trades view: running stats, equity curve, sortable expandable cards
   function closedTradesHTML() {
     if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
-      return '<p class="tt-empty">No closed trades yet.</p>';
+      return '<p class="tt-empty">No closed trades yet — this fills in as the Turtle rules take you out of positions.</p>';
+    }
+    // Current market only, so the curve and stats never mix currencies (an
+    // A$ + US$ equity line is the face-value trap CLAUDE.md warns about).
+    const all = (BOOK.closed || []).filter((t) => t.market === MARKET);
+    if (!all.length) {
+      return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + ' yet.</p>';
     }
 
-    // Render sortable header row if there are closed trades
-    const sortFields = [
-      { key: "symbol", label: "Symbol" },
-      { key: "system", label: "System" },
-      { key: "days", label: "Days" },
-      { key: "r", label: "R" },
-      { key: "pnl", label: "P&L" },
-    ];
+    // Running stats (Q25). R is the like-for-like edge; dollars lead per Q15.
+    const wins = all.filter((t) => (t.r || 0) > 0);
+    const losses = all.filter((t) => (t.r || 0) < 0);
+    const winRate = all.length ? wins.length / all.length * 100 : 0;
+    const avgWinR = wins.length ? wins.reduce((s, t) => s + t.r, 0) / wins.length : 0;
+    const avgLossR = losses.length ? losses.reduce((s, t) => s + t.r, 0) / losses.length : 0;
+    const expR = all.reduce((s, t) => s + (t.r || 0), 0) / all.length;
+    const totNet = all.reduce((s, t) => s + (t.pnl || 0), 0);
+    const totR = all.reduce((s, t) => s + (t.r || 0), 0);
+    const totFees = all.reduce((s, t) => s + (t.fees || 0), 0);
+    const tile = (label, val, tone, sub) =>
+      '<div class="tt-pf-tile"><span class="tt-pf-label">' + label + '</span>' +
+      '<b class="tt-pf-val mono ' + (tone || "") + '">' + val + '</b>' +
+      (sub ? '<span class="tt-pf-sub">' + sub + '</span>' : '') + '</div>';
+    let html = '<div class="tt-pf-header">' +
+      tile("Net P&L", money(totNet), cls(totNet), sgnR(totR) + " total") +
+      tile("Win rate", num(winRate, 0) + "%", "", wins.length + "W / " + losses.length + "L") +
+      tile("Expectancy", sgnR(expR), cls(expR), "per trade") +
+      tile("Avg win / loss", sgnR(avgWinR) + " / " + sgnR(avgLossR), "", "reward vs risk") +
+      tile("Trades", String(all.length), "", "fees " + money(totFees, 0)) +
+      '</div>';
 
-    let html = '<div class="tt-closed-header-row">';
+    html += equityCurveHTML(all, totNet);
+
+    // Sortable header (unchanged contract).
+    const sortFields = [
+      { key: "symbol", label: "Symbol" }, { key: "system", label: "System" },
+      { key: "days", label: "Days" }, { key: "r", label: "R" }, { key: "pnl", label: "P&L" },
+    ];
+    html += '<div class="tt-closed-header-row">';
     sortFields.forEach((f) => {
       const isActive = SORT === f.key;
-      html += '<button class="tt-sort-btn' + (isActive ? ' is-active' : '') + '" ' +
-        'data-sort="' + f.key + '" title="Sort by ' + f.label + '">' +
-        f.label + (isActive ? ' ▼' : '') + '</button>';
+      html += '<button class="tt-sort-btn' + (isActive ? " is-active" : "") + '" data-sort="' + f.key +
+        '" title="Sort by ' + f.label + '">' + f.label + (isActive ? " ▼" : "") + "</button>";
     });
-    html += '</div>';
+    html += "</div>";
 
-    const trades = (BOOK.closed || []).slice().reverse();
-    const sortedClosed = trades.sort((a, b) => {
+    const sorted = all.slice().reverse().sort((a, b) => {
       if (SORT === "symbol") return esc(a.symbol).localeCompare(esc(b.symbol));
       if (SORT === "system") return (a.system || 0) - (b.system || 0);
-      if (SORT === "days") {
-        const daysA = a.opened && a.closed ? Math.round((Date.parse(a.closed) - Date.parse(a.opened)) / 864e5) : 0;
-        const daysB = b.opened && b.closed ? Math.round((Date.parse(b.closed) - Date.parse(b.opened)) / 864e5) : 0;
-        return daysB - daysA;
-      }
+      if (SORT === "days") return daysHeld(b) - daysHeld(a);
       if (SORT === "r") return (b.r || 0) - (a.r || 0);
       if (SORT === "pnl") return (b.pnl || 0) - (a.pnl || 0);
       return 0;
     });
 
     html += '<div class="tt-closed-rows">';
-
-    sortedClosed.forEach((t, idx) => {
-      const daysHeld = t.opened && t.closed ? Math.round((Date.parse(t.closed) - Date.parse(t.opened)) / 864e5) : 0;
-
-      html += '<article class="tt-closed-card">' +
+    sorted.forEach((t) => {
+      const win = (t.pnl || 0) >= 0;
+      const key = t.symbol + "|" + (t.opened || "") + "|" + (t.closed || "");
+      const isExpanded = OPENC === key;
+      const d = daysHeld(t);
+      html += '<article class="tt-closed-card ' + (win ? "tt-win" : "tt-loss") + (isExpanded ? " is-open" : "") + '" ' +
+        'data-key="' + esc(key) + '" tabindex="0" role="button" aria-expanded="' + (isExpanded ? "true" : "false") + '">' +
         '<div class="tt-closed-header">' +
-          '<b class="mono">' + esc(t.symbol) + '</b>' +
-          '<span class="tt-chip">' + esc(t.reason || '—') + '</span>' +
-          '<span class="tt-chip is-fired">' + daysHeld + 'd</span>' +
+          '<b class="mono tt-held-sym">' + esc(t.symbol) + '</b>' +
+          '<span class="tt-chip">' + esc(t.reason || "—") + '</span>' +
+          '<span class="tt-chip is-fired">' + d + 'd</span>' +
+          '<span class="tt-chip">S' + esc(String(t.system)) + '</span>' +
+          '<b class="tt-held-pnl mono ' + cls(t.pnl) + '">' + money(t.pnl) +
+            ' <span class="tt-held-pnl-r">' + sgnR(t.r) + '</span></b>' +
         '</div>' +
-        '<div class="tt-closed-body">' +
-          '<div class="tt-closed-cols">' +
-            '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' +
-              num(t.entry, 4) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Exit</span><b class="mono">' +
-              num(t.exit, 4) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Units</span><b class="mono">' +
-              esc(t.units || '—') + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">R</span><b class="mono ' + cls(t.r) + '">' +
-              sgnR(t.r) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">P&L</span><b class="mono ' + cls(t.pnl) + '">' +
-              money(t.pnl) + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Opened</span><b>' + esc(t.opened || "—") + '</b></div>' +
-            '<div class="tt-col"><span class="tt-label">Closed</span><b>' + esc(t.closed || "—") + '</b></div>' +
-          '</div>' +
+        '<div class="tt-closed-body"><div class="tt-held-cols">' +
+          '<div class="tt-col"><span class="tt-label">Entry</span><b class="mono">' + num(t.entry_avg, 4) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Exit</span><b class="mono">' + num(t.exit, 4) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Units</span><b class="mono">' + esc(String(t.units || "—")) + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Opened</span><b>' + esc(t.opened || "—") + '</b></div>' +
+          '<div class="tt-col"><span class="tt-label">Closed</span><b>' + esc(t.closed || "—") + '</b></div>' +
+        '</div></div>';
+      if (isExpanded) {
+        html += '<div class="tt-closed-expand"><div class="tt-expand-grid">' +
+          '<div class="tt-kv"><span>Gross P&L</span><b class="mono ' + cls(t.gross) + '">' + money(t.gross) + '</b></div>' +
+          '<div class="tt-kv"><span>Fees</span><b class="mono neg">' + money(-Math.abs(t.fees || 0)) + '</b></div>' +
+          '<div class="tt-kv"><span>Net P&L</span><b class="mono ' + cls(t.pnl) + '">' + money(t.pnl) + '</b></div>' +
+          '<div class="tt-kv"><span>R (net)</span><b class="mono ' + cls(t.r) + '">' + sgnR(t.r) + '</b></div>' +
+          '<div class="tt-kv"><span>R (gross)</span><b class="mono ' + cls(t.gross_r) + '">' + sgnR(t.gross_r) + '</b></div>' +
+          '<div class="tt-kv"><span>MAE</span><b class="mono">' + num(Math.abs(t.mae_r || 0), 2) + 'R</b></div>' +
+          '<div class="tt-kv"><span>MFE</span><b class="mono">' + num(Math.abs(t.mfe_r || 0), 2) + 'R</b></div>' +
+          '<div class="tt-kv"><span>N at entry</span><b class="mono">' + num(t.n, 4) + '</b></div>' +
+          '<div class="tt-kv"><span>Side</span><b>' + esc(t.side || "—") + '</b></div>' +
+          '<div class="tt-kv"><span>System</span><b>S' + esc(String(t.system)) + ' breakout</b></div>' +
         '</div>' +
-      '</article>';
+        '<div class="tt-fills"><b>Pyramid fills:</b> ' +
+          ((t.fills || []).length
+            ? (t.fills || []).map((f, i) => '<span class="tt-fill-item">u' + (i + 1) + ' @ ' + num(f.price, 4) + '</span>').join(", ")
+            : "single unit") +
+        '</div></div>';
+      }
+      html += "</article>";
     });
-
-    html += '</div>';
+    html += "</div>";
     return html;
   }
 
@@ -2228,6 +2301,15 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         pushURLState();
         render();
       }
+      // Closed trade cards (V5): toggle the P&L-breakdown detail. OPENC is not
+      // URL-backed (a re-entry gives two trades the same symbol), so this uses
+      // render(), not pushURLState.
+      const closedCard = e.target.closest(".tt-closed-card");
+      if (closedCard && !e.target.closest(".tt-closed-expand")) {
+        const key = closedCard.dataset.key;
+        OPENC = OPENC === key ? null : key;
+        render();
+      }
       // Sortable headers for closed trades view: click to sort by that column
       const sortBtn = e.target.closest(".tt-sort-btn");
       if (sortBtn) {
@@ -2278,6 +2360,21 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         const cards = document.querySelectorAll(".tt-held-card");
         for (let i = 0; i < cards.length; i++) {
           if (cards[i].dataset.sym === sym) { cards[i].focus(); break; }
+        }
+        return;
+      }
+      // Closed trade cards (V5): Enter/Space toggles the breakdown, refocusing
+      // by COMPARING dataset (never a selector built from it — same hostile
+      // symbol rule as the scan rows).
+      const closedCard = e.target.closest && e.target.closest(".tt-closed-card");
+      if (closedCard) {
+        e.preventDefault();
+        const key = closedCard.dataset.key;
+        OPENC = OPENC === key ? null : key;
+        render();
+        const cards = document.querySelectorAll(".tt-closed-card");
+        for (let i = 0; i < cards.length; i++) {
+          if (cards[i].dataset.key === key) { cards[i].focus(); break; }
         }
       }
     });
