@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V2";
+  const BUILD = "V3";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -1799,16 +1799,29 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   }
 
   // ── shell ──────────────────────────────────────────────────────────────────
-  // CLOSED TRADES sits LAST on purpose (owner, 2026-08-23): the live-facing
-  // views (signals, portfolio, summary, book) lead; the historical record and
-  // the reference material (rules/sizing/evidence) trail; closed trades are
-  // the tail of the tail. Reordering here only moves the tab strip — URL_VIEWS
-  // still validates the same eight keys, so deep links are unaffected.
+  // Two clusters split by a divider (owner, 2026-08-23): the LIVE/trading views
+  // (signals, portfolio, summary, book, closed) lead; the REFERENCE material
+  // (rules/sizing/evidence) trails after a divider. HELD POSITIONS is now
+  // PORTFOLIO so the tab matches the deck pill. Reordering only moves the tab
+  // strip — URL_VIEWS still validates the same eight keys, so deep links hold.
   const VIEWS = [
-    ["signals", "SIGNALS"], ["held", "HELD POSITIONS"], ["summary", "SUMMARY"],
-    ["book", "BOOK"], ["rules", "THE RULES"], ["sizing", "SIZING"],
-    ["evidence", "EVIDENCE"], ["closed", "CLOSED TRADES"],
+    ["signals", "SIGNALS"], ["held", "PORTFOLIO"], ["summary", "SUMMARY"],
+    ["book", "BOOK"], ["closed", "CLOSED TRADES"], ["rules", "THE RULES"],
+    ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
   ];
+  // The reference cluster — a divider is drawn in the strip before the first
+  // of these, separating it from the live/trading views ahead of it.
+  const TAB_REFERENCE = { rules: 1, sizing: 1, evidence: 1 };
+
+  // Persistent count on the PORTFOLIO and CLOSED tabs so the size of the book
+  // is legible without opening either. 0 is shown (you hold nothing / nothing
+  // closed yet); null hides the badge (no scan/book loaded, so it is unknown).
+  function tabCountFor(k) {
+    if (!BOOK) return null;
+    if (k === "held") return (BOOK.open || []).length;
+    if (k === "closed") return (BOOK.closed || []).length;
+    return null;
+  }
 
   function render() {
     // The market switcher is static markup in turtle.html (NASDAQ hardcoded
@@ -1822,9 +1835,20 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (deck) deck.innerHTML = deckHTML();
     const tabs = document.getElementById("tt-views");
     if (tabs) {
-      tabs.innerHTML = VIEWS.map(([k, label]) =>
-        '<button class="view-tab' + (VIEW === k ? " is-active" : "") + '" data-view="' +
-        k + '">' + label + "</button>").join("");
+      let out = "";
+      let dividerDrawn = false;
+      VIEWS.forEach(([k, label]) => {
+        if (!dividerDrawn && TAB_REFERENCE[k]) {
+          out += '<span class="tt-tab-divider" aria-hidden="true"></span>';
+          dividerDrawn = true;
+        }
+        const c = tabCountFor(k);
+        const badge = c == null ? "" :
+          ' <span class="tt-tab-count">' + big(c) + "</span>";
+        out += '<button class="view-tab' + (VIEW === k ? " is-active" : "") +
+          '" data-view="' + k + '">' + label + badge + "</button>";
+      });
+      tabs.innerHTML = out;
     }
     const ctl = document.getElementById("tt-controls");
     if (ctl) {

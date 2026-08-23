@@ -97,6 +97,41 @@
   background: rgba(47, 129, 247, 0.18);
   border-color: rgba(47, 129, 247, 0.5);
 }
+
+/* Persistent count on the PORTFOLIO / CLOSED tabs, and the live|reference
+ * divider that splits the trading views from the reference material. */
+#tt-views .tt-tab-count {
+  font: 700 10px/1 var(--mono, ui-monospace, monospace);
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-left: 3px;
+  color: var(--muted, #8a94a6);
+  background: var(--fill, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+}
+#tt-views .view-tab.is-active .tt-tab-count {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+#tt-views .tt-tab-divider {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--border-2, rgba(255, 255, 255, 0.14));
+}
+
+/* Market switcher: selection is the same filled accent as the view-tab pills,
+ * so the whole page reads one "selected = filled accent" language. Scoped to
+ * this page — the main scanner's green active market button is untouched. */
+#tt-market .market-btn { border-radius: 999px; }
+#tt-market .market-btn.is-active {
+  color: #fff;
+  background: var(--accent, #2f81f7);
+  box-shadow: inset 0 0 0 1px var(--accent, #2f81f7);
+}
 #tt-views .view-tab { flex: 0 0 auto; }
 
 /* ── the market switch ──────────────────────────────────────────────────── */
