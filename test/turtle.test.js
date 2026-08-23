@@ -872,7 +872,7 @@ test("a pill click switches VIEW to signals as well as FILTER, so a pill works f
     "clicking a deck pill from RULES/SIZING/EVIDENCE must land on SIGNALS with that filter live");
 });
 
-test("SKIPS is its own attribute — not a sixth view, not a FILTER value", () => {
+test("SKIPS is its own attribute — not a ninth view, not a FILTER value", () => {
   // mount() is the last function before the window.GBSTurtle export, so
   // slicing to that export is the whole function body -- robust to mount()
   // growing in later phases, unlike a fixed character count that a later
@@ -885,9 +885,9 @@ test("SKIPS is its own attribute — not a sixth view, not a FILTER value", () =
   assert.ok(/getElementById\("tt-skips"\)/.test(mountBody), "must scroll the skip table into view");
   const start = SRC.indexOf("const VIEWS = [");
   const viewsBody = SRC.slice(start, SRC.indexOf("];", start) + 2);
-  assert.ok(!/skips/i.test(viewsBody), "VIEWS must not gain a sixth tab for this");
+  assert.ok(!/skips/i.test(viewsBody), "VIEWS must not gain a ninth tab for this");
   const tabCount = (viewsBody.match(/\["\w+",/g) || []).length;
-  assert.equal(tabCount, 5, "still exactly signals/book/rules/sizing/evidence");
+  assert.equal(tabCount, 8, "signals/held/closed/summary/book/rules/sizing/evidence");
 });
 
 test("#tt-skips exists on the skip-reason section so the SKIPS pill has something to scroll to", () => {

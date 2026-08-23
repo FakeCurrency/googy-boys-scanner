@@ -120,9 +120,17 @@
       .then((j) => { PORTFOLIO = j && j.sleeves ? j : null; return PORTFOLIO; });
   }
 
+  function loadTurtleBook() {
+    return fetch("data/turtle_book.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((j) => { BOOK = j && j.open ? j : null; return BOOK; });
+  }
+
   function load() {
     loadBook();
     loadPortfolio();
+    loadTurtleBook();
     return fetch("data/" + MARKET + "_turtle.json", { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
@@ -1490,9 +1498,141 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       </section>`;
   }
 
+  // ── new views: HELD, CLOSED, SUMMARY ──────────────────────────────────────
+  function heldPositionsHTML() {
+    if (!BOOK || !BOOK.open || !BOOK.open.length) {
+      return '<p class="tt-empty">No open positions in the turtle book.</p>';
+    }
+    const byMarket = BOOK.open.filter(p => scanMarketFor(p.market) === MARKET);
+    if (!byMarket.length) {
+      return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) + '.</p>';
+    }
+    let html = '';
+    byMarket.forEach(p => {
+      const lev = leverageOf(p.market);
+      const marginNotional = lev ? (p.cost_basis / lev) : p.cost_basis;
+      const unr = p.last_mark != null && p.units != null ? (p.last_mark - p.entry_avg) * p.units : null;
+      const unrealR = p.n != null && unr != null ? unr / (P.risk_pct * EQUITY * P.stop_n) : null;
+      const daysHeld = p.opened && BOOK.generated_at
+        ? Math.floor((new Date(BOOK.generated_at) - new Date(p.opened)) / 86400000)
+        : null;
+      html += '<div class="tt-held-card"><div class="tt-held-header">' +
+        '<b class="mono">' + esc(p.symbol) + '</b> ' +
+        '<span class="tt-name">' + esc(p.name || '') + '</span>' +
+        '<span class="tt-chip">' + big(lev || 1) + 'x</span>' +
+        '<span class="tt-chip">' + money(marginNotional, 0) + ' / ' + money(p.cost_basis, 0) + '</span>' +
+        '</div>';
+      html += '<div class="tt-detail-grid">' +
+        kv('System', 'S' + p.system) +
+        kv('Side', (p.side || '').toUpperCase()) +
+        kv('Entry price', money(p.entry_avg)) +
+        kv('Current mark', money(p.last_mark)) +
+        kv('Units filled', (p.fills || []).length + ' of ' + P.max_units) +
+        kv('Total units', num(p.units, 4)) +
+        kv('Stop loss', money(p.stop)) +
+        kv('N value', num(p.n, 4)) +
+        kv('Days held', daysHeld != null ? daysHeld : '—') +
+        kv('Unrealized P&L', unr != null ? money(unr, 2) : '—') +
+        kv('Unrealized R', unrealR != null ? sgnR(unrealR) : '—') +
+        kv('MAE', p.mae_r != null ? num(p.mae_r, 2) + 'R' : '—') +
+        kv('MFE', p.mfe_r != null ? num(p.mfe_r, 2) + 'R' : '—') +
+        '</div>';
+      if (p.fills && p.fills.length) {
+        html += '<div class="tt-fills"><b>Pyramid fills:</b> ' +
+          p.fills.map((f, i) => 'u' + (i + 1) + ' @ ' + num(f, 4)).join(' · ') +
+          '</div>';
+      }
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function closedTradesHTML() {
+    if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
+      return '<p class="tt-empty">No closed trades in the turtle book.</p>';
+    }
+    const byMarket = BOOK.closed.filter(p => scanMarketFor(p.market) === MARKET);
+    if (!byMarket.length) {
+      return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + '.</p>';
+    }
+    let html = '<div class="tt-closed-table-wrap"><table class="tt-table"><thead><tr>' +
+      '<th>Symbol</th><th>Side</th><th>System</th><th>Opened</th><th>Closed</th><th>Days</th>' +
+      '<th>Entry</th><th>Exit</th><th>Units</th><th>Fills</th><th>Reason</th>' +
+      '<th>Gross P&L</th><th>Fees</th><th>Net P&L</th><th>R</th><th>MAE</th><th>MFE</th>' +
+      '</tr></thead><tbody>';
+    byMarket.forEach(p => {
+      const daysHeld = p.opened && p.closed
+        ? Math.floor((new Date(p.closed) - new Date(p.opened)) / 86400000)
+        : null;
+      html += '<tr>' +
+        '<td><b class="mono">' + esc(p.symbol) + '</b></td>' +
+        '<td>' + (p.side || '').toUpperCase() + '</td>' +
+        '<td>S' + p.system + '</td>' +
+        '<td class="tt-dim">' + esc(String(p.opened || '').slice(0, 10)) + '</td>' +
+        '<td class="tt-dim">' + esc(String(p.closed || '').slice(0, 10)) + '</td>' +
+        '<td class="tt-dim">' + (daysHeld != null ? daysHeld : '—') + '</td>' +
+        '<td class="mono">' + money(p.entry_avg) + '</td>' +
+        '<td class="mono">' + money(p.exit) + '</td>' +
+        '<td class="mono">' + num(p.units, 4) + '</td>' +
+        '<td class="mono">' + (p.fills ? p.fills.length : '—') + '</td>' +
+        '<td><code>' + esc(p.reason || '') + '</code></td>' +
+        '<td class="mono ' + cls(p.gross) + '">' + money(p.gross, 2) + '</td>' +
+        '<td class="mono">' + money(-(p.fees || 0), 2) + '</td>' +
+        '<td class="mono ' + cls(p.pnl) + '"><b>' + money(p.pnl, 2) + '</b></td>' +
+        '<td class="mono ' + cls(p.r) + '"><b>' + sgnR(p.r) + '</b></td>' +
+        '<td class="mono">' + num(p.mae_r, 2) + 'R</td>' +
+        '<td class="mono">' + num(p.mfe_r, 2) + 'R</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function summaryHTML() {
+    if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
+      return '<p class="tt-empty">No closed trades to summarize yet.</p>';
+    }
+    const closed = BOOK.closed.filter(p => scanMarketFor(p.market) === MARKET);
+    if (!closed.length) {
+      return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + '.</p>';
+    }
+    const n = closed.length;
+    const wins = closed.filter(p => p.r && p.r > 0).length;
+    const losses = closed.filter(p => p.r && p.r < 0).length;
+    const totalR = closed.reduce((sum, p) => sum + (p.r || 0), 0);
+    const totalPnL = closed.reduce((sum, p) => sum + (p.pnl || 0), 0);
+    const totalFees = closed.reduce((sum, p) => sum + (p.fees || 0), 0);
+    const avgR = n > 0 ? totalR / n : 0;
+    const medianR = n > 0 ? closed.slice().sort((a, b) => (a.r || 0) - (b.r || 0))[Math.floor(n / 2)].r : 0;
+    const maxDD = Math.min(...closed.map(p => p.r || 0));
+    const topTrades = closed.slice().sort((a, b) => (b.r || 0) - (a.r || 0)).slice(0, 5);
+    const topShare = n > 0 ? topTrades.reduce((sum, p) => sum + (p.r || 0), 0) / totalR * 100 : 0;
+    return '<section class="tt-card"><h3>Closed Trades Summary</h3>' +
+      '<div class="tt-detail-grid">' +
+      kv('Total trades', big(n)) +
+      kv('Wins', big(wins) + ' (' + pct(100 * wins / n) + ')') +
+      kv('Losses', big(losses) + ' (' + pct(100 * losses / n) + ')') +
+      kv('Total R (net)', sgnR(totalR)) +
+      kv('Average R', sgnR(avgR)) +
+      kv('Median R', sgnR(medianR)) +
+      kv('Worst drawdown', sgnR(maxDD)) +
+      kv('Total P&L (gross)', money(totalPnL + totalFees, 2)) +
+      kv('Total fees', money(totalFees, 2)) +
+      kv('Total P&L (net)', money(totalPnL, 2)) +
+      kv('Top 5 trades share', pct(topShare)) +
+      '</div></section>' +
+      '<section class="tt-card"><h3>Top 5 Trades</h3>' +
+      '<div class="tt-top-trades">' +
+      topTrades.map(p => '<div class="tt-trade-chip">' +
+        esc(p.symbol) + ' S' + p.system + ' ' + (p.side || '').toUpperCase() + ' ' +
+        sgnR(p.r) + ' · ' + money(p.pnl, 0) + '</div>').join('') +
+      '</div></section>';
+  }
+
   // ── shell ──────────────────────────────────────────────────────────────────
   const VIEWS = [
-    ["signals", "SIGNALS"], ["book", "BOOK"], ["rules", "THE RULES"],
+    ["signals", "SIGNALS"], ["held", "HELD POSITIONS"], ["closed", "CLOSED TRADES"],
+    ["summary", "SUMMARY"], ["book", "BOOK"], ["rules", "THE RULES"],
     ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
   ];
 
@@ -1537,6 +1677,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!body) return;
     body.innerHTML = VIEW === "rules" ? rulesHTML()
       : VIEW === "signals" ? signalsHTML()
+      : VIEW === "held" ? heldPositionsHTML()
+      : VIEW === "closed" ? closedTradesHTML()
+      : VIEW === "summary" ? summaryHTML()
       : VIEW === "book" ? bookHTML()
       : VIEW === "sizing" ? sizingHTML()
       : evidenceHTML();
@@ -1567,7 +1710,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // or malformed input always resolves to the defaults below, and a caller
   // can never push an invalid value into the address bar.
   const URL_MARKETS = ["asx", "nasdaq", "crypto", "futures"];
-  const URL_VIEWS = ["signals", "book", "rules", "sizing", "evidence"];
+  const URL_VIEWS = ["signals", "held", "closed", "summary", "book", "rules", "sizing", "evidence"];
   const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
   const URL_SORTS = ["fired", "distance", "n", "symbol"];
   const URL_DEFAULTS = { m: "asx", v: "signals", f: "fired", s: "", sort: "fired" };
