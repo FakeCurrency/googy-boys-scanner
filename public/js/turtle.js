@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V8";
+  const BUILD = "V9";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -208,7 +208,7 @@
   function deckPillsHTML(counts) {
     const DEFS = [
       ["fired", "FIRED TODAY", counts.fired > 0],
-      ["held", "PORTFOLIO", false],
+      ["held", "IN A POSITION", false],
       ["near", "APPROACHING", false],
       ["blocked", "S1 BLOCKED", false],
       ["all", "ALL", false],
@@ -2088,7 +2088,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         // pill === active seg" is a promise about POSITION as well as state.
         const counts = filterCounts() || { fired: 0, held: 0, near: 0, blocked: 0, all: 0 };
         ctl.innerHTML = '<div class="control-group"><div class="seg" role="group" aria-label="Filter">' +
-          [["fired", "FIRED TODAY"], ["held", "PORTFOLIO"], ["near", "APPROACHING"],
+          [["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"],
             ["blocked", "S1 BLOCKED"], ["all", "ALL"]]
             .map(([k, l]) => '<button class="seg-btn' + (FILTER === k ? " is-active" : "") +
               '" data-filter="' + k + '">' + l + ' <span class="seg-count">' + big(counts[k]) +
