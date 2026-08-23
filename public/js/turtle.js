@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V9";
+  const BUILD = "V10";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -975,9 +975,10 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       return '<p class="tt-empty">No open positions yet — when the Turtle rules put one on it shows here with live P&amp;L, risk and its distance to the stop.</p>';
     }
 
-    // Current market only (levered sleeves carry their own market id and live on
-    // the BOOK view); the retired ASX rows are excluded.
-    const rows = (BOOK.open || []).filter((p) => p.market === MARKET && p.market !== "asx");
+    // Current market AND its levered sleeve (scanMarketFor folds a levered
+    // sleeve into its base market — same currency, so no A$/US$ mixing); the
+    // retired ASX rows never match a selectable market. Makes 5x rows visible.
+    const rows = (BOOK.open || []).filter((p) => scanMarketFor(p.market) === MARKET);
     if (!rows.length) {
       return '<p class="tt-empty">No open positions in ' + esc(MARKET.toUpperCase()) +
         ' — watch the SIGNALS tab for the next breakout.</p>';
@@ -1174,9 +1175,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!BOOK || !BOOK.closed || !BOOK.closed.length) {
       return '<p class="tt-empty">No closed trades yet — this fills in as the Turtle rules take you out of positions.</p>';
     }
-    // Current market only, so the curve and stats never mix currencies (an
-    // A$ + US$ equity line is the face-value trap CLAUDE.md warns about).
-    const all = (BOOK.closed || []).filter((t) => t.market === MARKET);
+    // Current market plus its levered sleeve (same currency, so the curve never
+    // mixes A$ + US$ — the face-value trap CLAUDE.md warns about).
+    const all = (BOOK.closed || []).filter((t) => scanMarketFor(t.market) === MARKET);
     if (!all.length) {
       return '<p class="tt-empty">No closed trades in ' + esc(MARKET.toUpperCase()) + ' yet.</p>';
     }
@@ -1354,7 +1355,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!BOOK || !BOOK.skips || !BOOK.skips.length) {
       return '<p class="tt-empty">No skips recorded — every name the scan evaluated was either taken or simply had no signal.</p>';
     }
-    const skips = (BOOK.skips || []).filter((k) => k.market === MARKET);
+    const skips = (BOOK.skips || []).filter((k) => scanMarketFor(k.market) === MARKET);
     if (!skips.length) {
       return '<p class="tt-empty">No skips in ' + esc(MARKET.toUpperCase()) + " — nothing was held back here.</p>";
     }
@@ -2045,11 +2046,14 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // Persistent count on the PORTFOLIO and CLOSED tabs so the size of the book
   // is legible without opening either. 0 is shown (you hold nothing / nothing
   // closed yet); null hides the badge (no scan/book loaded, so it is unknown).
+  // Counts must match what each view actually shows: current market PLUS its
+  // levered sleeve (scanMarketFor folds a levered sleeve into its base market),
+  // so the badge and the list can never disagree and the 5x positions count.
   function tabCountFor(k) {
     if (!BOOK) return null;
-    if (k === "held") return (BOOK.open || []).length;
-    if (k === "closed") return (BOOK.closed || []).length;
-    if (k === "skips") return (BOOK.skips || []).filter((s) => s.market === MARKET).length;
+    if (k === "held") return (BOOK.open || []).filter((p) => scanMarketFor(p.market) === MARKET).length;
+    if (k === "closed") return (BOOK.closed || []).filter((t) => scanMarketFor(t.market) === MARKET).length;
+    if (k === "skips") return (BOOK.skips || []).filter((s) => scanMarketFor(s.market) === MARKET).length;
     return null;
   }
 
