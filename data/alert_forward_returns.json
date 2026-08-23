@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-08-22T22:42:45+00:00",
+ "updated_at": "2026-08-23T22:42:25+00:00",
  "entries": [
   {
    "key": "2026-08-20|nasdaq|TMUS|short|2",
@@ -4252,7 +4252,7 @@
    "base_day": "2026-08-18",
    "base_close": 55.79675293,
    "fwd": {
-    "5": null,
+    "5": 0.301269,
     "10": null,
     "20": null,
     "1": 0.067587
@@ -4272,7 +4272,7 @@
    "base_day": "2026-08-18",
    "base_close": 64680.7109375,
    "fwd": {
-    "5": null,
+    "5": 0.20044,
     "10": null,
     "20": null,
     "1": 0.070894
@@ -4446,7 +4446,7 @@
    "base_day": "2026-08-18",
    "base_close": 0.08203,
    "fwd": {
-    "5": null,
+    "5": 0.00527,
     "10": null,
     "20": null,
     "1": 0.004364
@@ -10422,7 +10422,7 @@
    "base_close": 4337.82373047,
    "fwd": {
     "5": -0.003478,
-    "10": null,
+    "10": 0.059414,
     "20": null,
     "1": 0.00488
    }
@@ -10442,7 +10442,7 @@
    "base_close": 4353.86523438,
    "fwd": {
     "5": -0.004849,
-    "10": null,
+    "10": 0.056643,
     "20": null,
     "1": 0.004722
    }
@@ -20008,7 +20008,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Utilities"
+   "sector": "Utilities",
+   "grade_raw": "A+",
+   "score": 8,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|SNY|short|2",
@@ -20029,7 +20032,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Healthcare"
+   "sector": "Healthcare",
+   "grade_raw": "A+",
+   "score": 8,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|PECO|long|2",
@@ -20050,7 +20056,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Real Estate"
+   "sector": "Real Estate",
+   "grade_raw": "WATCH",
+   "score": 3,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|MTRX|long|2",
@@ -20071,7 +20080,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Industrials"
+   "sector": "Industrials",
+   "grade_raw": "B+",
+   "score": 4,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|LYTS|long|2",
@@ -20092,7 +20104,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Technology"
+   "sector": "Technology",
+   "grade_raw": "B+",
+   "score": 8,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|EVRG|long|2",
@@ -20113,7 +20128,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Utilities"
+   "sector": "Utilities",
+   "grade_raw": "WATCH",
+   "score": 3,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|DRS|long|2",
@@ -20134,7 +20152,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Industrials"
+   "sector": "Industrials",
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|CVGI|long|2",
@@ -20155,7 +20176,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Consumer Cyclical"
+   "sector": "Consumer Cyclical",
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
   },
   {
    "key": "2026-08-22|nasdaq|ANTX|long|2",
@@ -20176,7 +20200,10 @@
     "10": null,
     "20": null
    },
-   "sector": "Healthcare"
+   "sector": "Healthcare",
+   "grade_raw": "A+",
+   "score": 8,
+   "is_product": false
   },
   {
    "key": "2026-08-22|crypto|KCS|long|2",
@@ -20190,9 +20217,9 @@
     "VIVEK"
    ],
    "base_day": "2026-08-22",
-   "base_close": null,
+   "base_close": 7.48822403,
    "fwd": {
-    "1": null,
+    "1": -0.02053,
     "5": null,
     "10": null,
     "20": null
@@ -20224,6 +20251,99 @@
    "grade_raw": "A+",
    "score": 9,
    "is_product": true
+  },
+  {
+   "key": "2026-08-23|crypto|KCS|short|2",
+   "date": "2026-08-23T09:11:18+00:00",
+   "market": "crypto",
+   "ticker": "KCS",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-23",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-23|crypto|ICP|short|2",
+   "date": "2026-08-23T09:11:18+00:00",
+   "market": "crypto",
+   "ticker": "ICP",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-23",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-23|crypto|ALGO|short|2",
+   "date": "2026-08-23T09:11:18+00:00",
+   "market": "crypto",
+   "ticker": "ALGO",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-23",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "B+",
+   "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-23|asx|MGX|long|2",
+   "date": "2026-08-23T09:11:18+00:00",
+   "market": "asx",
+   "ticker": "MGX",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "SPECS",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-23",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Materials",
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
   }
  ]
 }
