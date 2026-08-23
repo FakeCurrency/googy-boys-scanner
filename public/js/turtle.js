@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V6";
+  const BUILD = "V7";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -1311,6 +1311,85 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     '</div>';
   }
 
+  // Cash-skip capacity hint (Q34): the cheapest name we passed for lack of room,
+  // so "free about $X and the next one fits" is a concrete number, not a vibe.
+  function cashFreeNote(cashSkips) {
+    const priced = cashSkips.filter((k) => k.want_notional != null && isFinite(k.want_notional));
+    if (!priced.length) {
+      return '<p class="tt-skip-why">Passed for lack of capital room; none carries a sizing figure to say how much would fit.</p>';
+    }
+    const cheapest = Math.min.apply(null, priced.map((k) => k.want_notional));
+    return '<p class="tt-skip-fit">Freeing about <b>' + money(cheapest, 0) +
+      "</b> of capital would make room for the smallest of these (" + priced.length + " priced).</p>";
+  }
+
+  // SKIPS view (V7, Q32/Q34/Q35): the ledger of names the scan evaluated but a
+  // rule held back, grouped by reason into collapsible sections, current market
+  // only. Its own surface now, not a jump into the BOOK view.
+  const SKIP_LABEL = {
+    cash: "Cash cap — no capital room",
+    close_corr_cap: "Correlation cap — closely correlated",
+    loose_corr_cap: "Correlation cap — loosely correlated",
+    direction_cap: "Direction cap — too many one way",
+    no_margin: "No margin available",
+    no_margin_file: "No futures margin file",
+    already: "Already acted on this bar",
+    s1_blocked: "System 1 filtered",
+  };
+  function skipReasonWhy(reason) {
+    const w = {
+      cash: "The book is already at its capital cap, so a new entry cannot be funded — a capacity limit, not a quality judgment.",
+      close_corr_cap: "Too many closely-correlated units are already open.",
+      loose_corr_cap: "Too many loosely-correlated units are already open.",
+      direction_cap: "Too many units are already open in one direction.",
+      no_margin: "Posted margin would exceed free margin on the levered sleeve.",
+      no_margin_file: "The futures margin file does not exist, so that sleeve is 0/0 by construction until real margins are supplied.",
+      already: "The book already acted on this same signal bar; it will not re-fire off the identical bar.",
+      s1_blocked: "The previous " + P.s1_entry + "-day breakout was a filter-winner, so System 1 is skipped. The " +
+        P.s2_entry + "-day failsafe still applies.",
+    };
+    return w[reason] || "";
+  }
+  function skipsHTML() {
+    if (!BOOK || !BOOK.skips || !BOOK.skips.length) {
+      return '<p class="tt-empty">No skips recorded — every name the scan evaluated was either taken or simply had no signal.</p>';
+    }
+    const skips = (BOOK.skips || []).filter((k) => k.market === MARKET);
+    if (!skips.length) {
+      return '<p class="tt-empty">No skips in ' + esc(MARKET.toUpperCase()) + " — nothing was held back here.</p>";
+    }
+    const groups = {};
+    skips.forEach((k) => { const r = k.reason || "other"; (groups[r] = groups[r] || []).push(k); });
+    // Rarer / structural reasons first, the numerous cash skips last — same
+    // intent as the BOOK board (surface the caps before the crowd).
+    const order = Object.keys(groups).sort((a, b) => groups[a].length - groups[b].length);
+
+    let html = '<div class="tt-pf-header">' +
+      '<div class="tt-pf-tile"><span class="tt-pf-label">Skipped</span><b class="tt-pf-val mono">' +
+        big(skips.length) + '</b><span class="tt-pf-sub">' + esc(MARKET.toUpperCase()) + '</span></div>' +
+      '<div class="tt-pf-tile"><span class="tt-pf-label">Reasons</span><b class="tt-pf-val mono">' +
+        Object.keys(groups).length + '</b><span class="tt-pf-sub">distinct</span></div>' +
+      '</div>';
+    html += '<p class="tt-note">A <b>skip</b> is a name the scan evaluated where a rule prevented a position — ' +
+      "the ledger of what was held back, and why.</p>";
+
+    order.forEach((reason) => {
+      const list = groups[reason];
+      const label = SKIP_LABEL[reason] || reason;
+      const why = skipReasonWhy(reason);
+      html += '<details class="tt-skip-group"' + (list.length <= 8 ? " open" : "") + ">" +
+        '<summary><b>' + esc(label) + '</b> <span class="tt-skip-count">' + big(list.length) + "</span>" +
+        '<code class="tt-skip-code">' + esc(reason) + "</code></summary>" +
+        (why ? '<p class="tt-skip-why">' + why + "</p>" : "");
+      if (reason === "cash") html += cashFreeNote(list);
+      html += '<div class="tt-skip-list">' +
+        list.map((k) => '<span class="tt-skip-item"><b class="mono">' + esc(k.symbol) + "</b>" +
+          (k.name ? '<span class="tt-skip-name">' + esc(k.name) + "</span>" : "") + "</span>").join("") +
+        "</div></details>";
+    });
+    return html;
+  }
+
   function bookHTML() {
     if (!BOOK) {
       return '<p class="tt-empty">The forward book has not been written yet. ' +
@@ -1956,8 +2035,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // strip — URL_VIEWS still validates the same eight keys, so deep links hold.
   const VIEWS = [
     ["signals", "SIGNALS"], ["held", "PORTFOLIO"], ["summary", "SUMMARY"],
-    ["book", "BOOK"], ["closed", "CLOSED TRADES"], ["rules", "THE RULES"],
-    ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
+    ["book", "BOOK"], ["skips", "SKIPS"], ["closed", "CLOSED TRADES"],
+    ["rules", "THE RULES"], ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
   ];
   // The reference cluster — a divider is drawn in the strip before the first
   // of these, separating it from the live/trading views ahead of it.
@@ -1970,6 +2049,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     if (!BOOK) return null;
     if (k === "held") return (BOOK.open || []).length;
     if (k === "closed") return (BOOK.closed || []).length;
+    if (k === "skips") return (BOOK.skips || []).filter((s) => s.market === MARKET).length;
     return null;
   }
 
@@ -2029,6 +2109,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       : VIEW === "closed" ? closedTradesHTML()
       : VIEW === "summary" ? summaryHTML()
       : VIEW === "book" ? bookHTML()
+      : VIEW === "skips" ? skipsHTML()
       : VIEW === "sizing" ? sizingHTML()
       : evidenceHTML();
     const eq = document.getElementById("tt-equity");
@@ -2058,7 +2139,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // or malformed input always resolves to the defaults below, and a caller
   // can never push an invalid value into the address bar.
   const URL_MARKETS = ["nasdaq", "crypto", "futures"];
-  const URL_VIEWS = ["signals", "held", "closed", "summary", "book", "rules", "sizing", "evidence"];
+  const URL_VIEWS = ["signals", "held", "closed", "summary", "book", "skips", "rules", "sizing", "evidence"];
   const URL_FILTERS = ["all", "fired", "held", "near", "blocked"];
   const URL_SORTS = ["fired", "distance", "n", "symbol"];
   const URL_DEFAULTS = { m: "nasdaq", v: "signals", f: "fired", s: "", sort: "fired" };
@@ -2257,9 +2338,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       const sk = e.target.closest("[data-skips]");
       if (sk) {
         e.preventDefault();
-        VIEW = "book"; TOUCHED = true; pushURLState(); render();
-        const skipsEl = document.getElementById("tt-skips");
-        if (skipsEl && skipsEl.scrollIntoView) skipsEl.scrollIntoView({ block: "start" });
+        VIEW = "skips"; TOUCHED = true; pushURLState(); render();
         return;
       }
       const f = e.target.closest("[data-filter]");

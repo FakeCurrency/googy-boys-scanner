@@ -542,6 +542,37 @@
 .tt-approach-fill { height: 100%; border-radius: 999px; background: var(--orange, #ff9f0a); }
 .tt-approach-lbl { font: 600 10px/1 var(--mono); color: var(--orange, #ff9f0a); white-space: nowrap; }
 
+/* ── SKIPS view (V7): reason groups, collapsible ─────────────────────────── */
+.tt-skip-group {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: var(--panel-2, var(--fill));
+}
+.tt-skip-group > summary {
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; list-style: none;
+}
+.tt-skip-group > summary::-webkit-details-marker { display: none; }
+.tt-skip-group > summary::before { content: "▸"; color: var(--muted); font-size: 10px; }
+.tt-skip-group[open] > summary::before { content: "▾"; }
+.tt-skip-count {
+  font: 700 11px/1 var(--mono); padding: 2px 7px; border-radius: 999px;
+  background: var(--fill-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--border); color: var(--text);
+}
+.tt-skip-code { margin-left: auto; font: 600 10px/1 var(--mono); color: var(--muted); }
+.tt-skip-why { font-size: 11.5px; color: var(--muted); margin: 8px 0 6px; }
+.tt-skip-fit { font-size: 11.5px; color: var(--blue, #2f81f7); margin: 6px 0; }
+.tt-skip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tt-skip-item {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 4px 8px; border-radius: 6px;
+  background: var(--fill-2, rgba(255, 255, 255, 0.04)); border: 1px solid var(--border);
+}
+.tt-skip-item b { font-size: 12px; }
+.tt-skip-name { font-size: 10px; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Body: grid of always-visible fields */
 .tt-held-body, .tt-closed-body {
   margin-bottom: 12px;

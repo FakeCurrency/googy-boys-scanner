@@ -872,22 +872,21 @@ test("a pill click switches VIEW to signals as well as FILTER, so a pill works f
     "clicking a deck pill from RULES/SIZING/EVIDENCE must land on SIGNALS with that filter live");
 });
 
-test("SKIPS is its own attribute — not a ninth view, not a FILTER value", () => {
+test("SKIPS is now its own VIEW (V7) and the deck pill switches to it", () => {
   // mount() is the last function before the window.GBSTurtle export, so
   // slicing to that export is the whole function body -- robust to mount()
-  // growing in later phases, unlike a fixed character count that a later
-  // phase's own new click branch can silently push past (Phase 6 did,
-  // fixing what used to be a hardcoded +3500 here).
+  // growing in later phases, unlike a fixed character count.
   const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
   assert.ok(/closest\("\[data-skips\]"\)/.test(mountBody));
-  assert.ok(/VIEW = "book";[\s\S]{0,40}pushURLState\(\)/.test(mountBody),
-    "SKIPS must push the existing book view onto the URL like any other view change");
-  assert.ok(/getElementById\("tt-skips"\)/.test(mountBody), "must scroll the skip table into view");
+  assert.ok(/VIEW = "skips";[\s\S]{0,40}pushURLState\(\)/.test(mountBody),
+    "the SKIPS deck pill must switch to the skips view like any other view change");
   const start = SRC.indexOf("const VIEWS = [");
   const viewsBody = SRC.slice(start, SRC.indexOf("];", start) + 2);
-  assert.ok(!/skips/i.test(viewsBody), "VIEWS must not gain a ninth tab for this");
+  assert.ok(/\["skips",/.test(viewsBody), "VIEWS must include the skips tab");
   const tabCount = (viewsBody.match(/\["\w+",/g) || []).length;
-  assert.equal(tabCount, 8, "signals/held/closed/summary/book/rules/sizing/evidence");
+  assert.equal(tabCount, 9, "signals/held/summary/book/skips/closed/rules/sizing/evidence");
+  assert.ok(/"skips"/.test(SRC.slice(SRC.indexOf("const URL_VIEWS = ["), SRC.indexOf("const URL_VIEWS = [") + 200)),
+    "skips must be a valid URL view so the tab is deep-linkable");
 });
 
 test("#tt-skips exists on the skip-reason section so the SKIPS pill has something to scroll to", () => {
