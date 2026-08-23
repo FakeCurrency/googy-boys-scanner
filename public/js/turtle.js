@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V12";
+  const BUILD = "V13";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -2438,7 +2438,29 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         badge.id = "tt-build";
         badge.className = "tt-build-badge";
         badge.textContent = BUILD;
-        badge.title = "Build " + BUILD + " — bumps on every change shipped to this page";
+        badge.title = "Build " + BUILD + " — tap for the last scan time";
+        badge.setAttribute("role", "button");
+        badge.setAttribute("tabindex", "0");
+        // Tap the badge to reveal the current market's last scan time (Q49),
+        // read live from DATA at click time. A toggle, not a timed flash —
+        // no animation (Q43); tap again (or anywhere) to dismiss.
+        const toggleWhen = (e) => {
+          if (e) e.stopPropagation();
+          const existing = document.getElementById("tt-build-pop");
+          if (existing) { existing.remove(); return; }
+          const when = (DATA && DATA.generated_at)
+            ? String(DATA.generated_at).slice(0, 16).replace("T", " ") + " UTC"
+            : "no scan loaded yet";
+          const pop = document.createElement("div");
+          pop.id = "tt-build-pop";
+          pop.className = "tt-build-pop";
+          pop.textContent = "Build " + BUILD + " · " + esc(MARKET.toUpperCase()) + " last scan " + when;
+          document.body.appendChild(pop);
+        };
+        badge.addEventListener("click", toggleWhen);
+        badge.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleWhen(e); }
+        });
         topRight.insertBefore(badge, topRight.firstChild);
       }
     }
@@ -2455,6 +2477,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
       });
     }
     document.addEventListener("click", (e) => {
+      // Dismiss the build-badge popover (Q49) on any click outside the badge.
+      const bp = document.getElementById("tt-build-pop");
+      if (bp && !(e.target.closest && e.target.closest("#tt-build"))) bp.remove();
       // Scoped to #tt-views on purpose: an unscoped closest() on this same
       // attribute would also catch any future match outside the tab strip
       // (Phase 5's deck pills are exactly that risk) and steal this handler.

@@ -719,15 +719,42 @@
 }
 
 .tt-empty {
-  padding: 24px 18px;
+  padding: 28px 18px;
   text-align: center;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.55;
+  max-width: 54ch;
+  margin: 8px auto;
   background: var(--panel);
   border: 1px dashed var(--border-2);
   border-radius: var(--radius);
 }
+/* Friendly empty states (Q48): a turtle marks "nothing here yet", not an error. */
+.tt-empty::before {
+  content: "🐢";
+  display: block;
+  font-size: 22px;
+  margin-bottom: 8px;
+  opacity: 0.65;
+}
 .tt-empty code { font-family: var(--mono); color: var(--text-2); }
+
+/* Build-badge tap popover (Q49): last scan time, on demand. */
+.tt-build-pop {
+  position: fixed;
+  top: 52px;
+  right: 12px;
+  z-index: 60;
+  font: 600 11px/1.4 var(--mono, ui-monospace, monospace);
+  color: var(--text, #fff);
+  background: var(--panel-2, rgba(20, 24, 32, 0.98));
+  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.14));
+  border-radius: 8px;
+  padding: 8px 11px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  max-width: 78vw;
+}
 
 /* ── the calculator ─────────────────────────────────────────────────────── */
 .tt-calc {

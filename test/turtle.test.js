@@ -1116,7 +1116,9 @@ test("a symbol not found in the destination market's scan reverts the jump inste
 
 test("the click delegate and the keydown handler both wire [data-open-symbol] to jumpToBookSymbol, exactly once each", () => {
   const mountBody = SRC.slice(SRC.indexOf("function mount("), SRC.indexOf("window.GBSTurtle = {"));
-  const kwIdx = mountBody.indexOf('addEventListener("keydown"');
+  // The DOCUMENT keydown delegate is the boundary, not just any keydown (the
+  // build badge wires its own keydown earlier, V13).
+  const kwIdx = mountBody.indexOf('document.addEventListener("keydown"');
   const clickBranch = mountBody.slice(0, kwIdx);
   const keydownBranch = mountBody.slice(kwIdx);
   assert.ok(/e\.target\.closest\("\[data-open-symbol\]"\)/.test(clickBranch), "click delegate missing the selector");
