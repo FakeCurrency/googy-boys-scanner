@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V7";
+  const BUILD = "V8";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -2035,8 +2035,8 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   // strip — URL_VIEWS still validates the same eight keys, so deep links hold.
   const VIEWS = [
     ["signals", "SIGNALS"], ["held", "PORTFOLIO"], ["summary", "SUMMARY"],
-    ["book", "BOOK"], ["skips", "SKIPS"], ["closed", "CLOSED TRADES"],
-    ["rules", "THE RULES"], ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
+    ["book", "BOOK"], ["skips", "SKIPS"], ["rules", "THE RULES"],
+    ["sizing", "SIZING"], ["evidence", "EVIDENCE"], ["closed", "CLOSED TRADES"],
   ];
   // The reference cluster — a divider is drawn in the strip before the first
   // of these, separating it from the live/trading views ahead of it.
