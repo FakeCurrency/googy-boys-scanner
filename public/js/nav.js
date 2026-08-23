@@ -88,10 +88,12 @@
     const paN = paCount();
 
     if (mount) {
-      const pill = (it) =>
-        `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
-        `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${it.label}` +
-        `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
+      const pill = (it) => {
+        const label = it.key === "index" && here === "turtle" ? "HOME" : it.label;
+        return `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
+          `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${label}` +
+          `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
+      };
       const moreActive = more.some((it) => it.key === here);
       // BACK (owner 2026-07-22): one click to the previous page from anywhere
       // but the dashboard. Falls back to SCAN when there's no in-site history.
@@ -146,11 +148,6 @@
       bar.className = "site-tabs";
       bar.setAttribute("aria-label", "Primary");
       const sheetActive = SHEET.some((it) => it.key === here);
-      const tabHTML = TABS.map((it) =>
-        `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
-        `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
-        `<span class="site-tab-lbl">${it.label.replace(" ⚡", "").replace("AI ", "")}</span></a>`
-      ).join("");
       // #30: a 6th MORE tab opens a bottom sheet with every overflow
       // destination — the only way to reach SPECS/ALERTS/NEWS/AI BOT/SYSTEM/
       // HOW IT WORKS on a phone (the desktop pill row is hidden there).
@@ -158,6 +155,12 @@
         `<button class="site-tab site-tab-more${sheetActive ? " is-here" : ""}" type="button" aria-haspopup="dialog" aria-expanded="false">` +
         `<span class="site-tab-ico" aria-hidden="true">⋯</span>` +
         `<span class="site-tab-lbl">MORE</span></button>`;
+      const tabHTML = TABS.map((it) => {
+        const tabLabel = it.key === "index" && here === "turtle" ? "HOME" : it.label;
+        return `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
+          `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
+          `<span class="site-tab-lbl">${tabLabel.replace(" ⚡", "").replace("AI ", "")}</span></a>`;
+      }).join("");
       bar.innerHTML = tabHTML + moreTab;
       document.body.appendChild(bar);
       document.body.classList.add("has-site-tabs");
