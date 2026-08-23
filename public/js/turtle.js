@@ -46,6 +46,12 @@
   const MARKETS = ["nasdaq", "crypto", "futures"];
   const CUR = { nasdaq: "$", crypto: "$", futures: "$" };
 
+  // Visible deploy marker, top-right of the page. Bumped by one on EVERY change
+  // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
+  // which build is actually live — no cache guessing. Bump this together with
+  // the turtle.js ?v= on turtle.html every time.
+  const BUILD = "V1";
+
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
   let PARAMS_ARE_LIVE = false;
@@ -2030,6 +2036,21 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   function mount() {
     applyState(parseTurtleURL(window.location.search));
     replaceURLState();
+    // The visible build marker (V1, V2, …) in the header's top-right corner.
+    // textContent, never innerHTML — BUILD is a literal, but the discipline
+    // keeps it safe if it ever becomes data-driven. Injected once here, not in
+    // render(), so a re-render never stacks a second badge.
+    if (document.querySelector && document.createElement) {
+      const topRight = document.querySelector(".deck-top-right");
+      if (topRight && !document.getElementById("tt-build")) {
+        const badge = document.createElement("span");
+        badge.id = "tt-build";
+        badge.className = "tt-build-badge";
+        badge.textContent = BUILD;
+        badge.title = "Build " + BUILD + " — bumps on every change shipped to this page";
+        topRight.insertBefore(badge, topRight.firstChild);
+      }
+    }
     window.addEventListener("popstate", onPopState);
     // #search-trigger (Phase 4): reuse the one command palette the shared
     // nav already exposes on every page (window.GBSPalette, opened by
