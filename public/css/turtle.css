@@ -521,6 +521,27 @@
   animation: slideDown .18s ease;
 }
 
+/* ── SIGNALS emphasis (V6) ───────────────────────────────────────────────── */
+/* Fired rows read loudest, approaching quieter, held/flat neutral (Q27). The
+ * rail is a ::before so the row's hover/open box-shadow can never wipe it. */
+.tt-row.tt-fired-row, .tt-row.tt-near-row { position: relative; }
+.tt-row.tt-fired-row::before, .tt-row.tt-near-row::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.tt-row.tt-fired-row::before { background: var(--green, #30d15f); }
+.tt-row.tt-near-row::before { background: var(--orange, #ff9f0a); }
+.tt-row.tt-fired-row { border-color: rgba(48, 209, 88, 0.35); }
+
+/* Inline S1-filter reason (Q31). */
+.tt-why-inline { font: 600 10px/1.3 var(--mono); color: var(--muted); letter-spacing: .01em; }
+
+/* APPROACHING "% to breakout" bar (Q29). */
+.tt-approach { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.tt-approach-track { flex: 1; height: 5px; border-radius: 999px; background: var(--fill-2, rgba(255, 255, 255, 0.06)); overflow: hidden; }
+.tt-approach-fill { height: 100%; border-radius: 999px; background: var(--orange, #ff9f0a); }
+.tt-approach-lbl { font: 600 10px/1 var(--mono); color: var(--orange, #ff9f0a); white-space: nowrap; }
+
 /* Body: grid of always-visible fields */
 .tt-held-body, .tt-closed-body {
   margin-bottom: 12px;

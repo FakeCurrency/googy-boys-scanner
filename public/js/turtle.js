@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V5";
+  const BUILD = "V6";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -661,7 +661,9 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         '<div class="tt-state">' + stateChip(r) +
           (r.s1_blocked ? '<span class="tt-chip is-blocked" title="The previous ' +
             P.s1_entry + '-day breakout in this name was a filter-winner, so System 1 is ' +
-            'skipped until one fails. The ' + P.s2_entry + '-day failsafe still applies.">S1 filtered</span>' : "") +
+            'skipped until one fails. The ' + P.s2_entry + '-day failsafe still applies.">S1 filtered</span>' +
+            '<span class="tt-why-inline">prior ' + P.s1_entry + 'd breakout won · ' +
+            P.s2_entry + 'd failsafe live</span>' : "") +
           vehicleBadgeHTML(r.symbol) +
           capSkipBadgeHTML(r.symbol) +
         "</div>" +
@@ -679,7 +681,24 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     const attrs = ' data-sym="' + esc(r.symbol) + '" tabindex="0" role="button"' +
       ' aria-expanded="' + (open ? "true" : "false") + '"' +
       ' aria-label="' + esc(r.symbol) + " " + esc(r.state) + ' — Enter for details"';
-    if (!open) return '<article class="tt-row"' + attrs + ">" + head + "</article>";
+
+    // A fired row gets a loud green rail, an approaching one a quieter amber
+    // rail (Q27); held/flat rows stay neutral. Rendered as a ::before rail in
+    // CSS so hover/open box-shadows can never wipe it.
+    const rowCls = r.signal ? " tt-fired-row" : (r.approaching && r.nearest) ? " tt-near-row" : "";
+
+    // APPROACHING progress bar (Q29): 0% = just entered the approach band
+    // (approach_pct away), 100% = at the breakout level. Collapsed-visible.
+    let approachBar = "";
+    if (!r.signal && r.approaching && r.nearest && r.nearest.distance_pct != null) {
+      const dist = Math.abs(r.nearest.distance_pct);
+      const prog = Math.max(0, Math.min(100, (1 - dist / (P.approach_pct || 3)) * 100));
+      approachBar = '<div class="tt-approach"><div class="tt-approach-track">' +
+        '<div class="tt-approach-fill" style="width:' + prog.toFixed(0) + '%"></div></div>' +
+        '<span class="tt-approach-lbl">' + prog.toFixed(0) + '% to breakout</span></div>';
+    }
+
+    if (!open) return '<article class="tt-row' + rowCls + '"' + attrs + ">" + head + approachBar + "</article>";
 
     let detail = "";
     const href = chartHref(MARKET, r.symbol);
@@ -764,7 +783,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
     } else {
       detail += '<p class="tt-note">No closed trades in the last ' + esc(P.period) + ".</p>";
     }
-    return '<article class="tt-row is-open"' + attrs + ">" + head +
+    return '<article class="tt-row is-open' + rowCls + '"' + attrs + ">" + head + approachBar +
       '<div class="tt-detail">' + detail + "</div></article>";
   }
 
