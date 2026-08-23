@@ -50,7 +50,7 @@
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
   // which build is actually live — no cache guessing. Bump this together with
   // the turtle.js ?v= on turtle.html every time.
-  const BUILD = "V1";
+  const BUILD = "V2";
 
   let DATA = null;               // the current market's payload, or null
   let P = FALLBACK;              // params in force (payload's, else the mirror)
@@ -206,7 +206,7 @@
   function deckPillsHTML(counts) {
     const DEFS = [
       ["fired", "FIRED TODAY", counts.fired > 0],
-      ["held", "IN A POSITION", false],
+      ["held", "PORTFOLIO", false],
       ["near", "APPROACHING", false],
       ["blocked", "S1 BLOCKED", false],
       ["all", "ALL", false],
@@ -1799,10 +1799,15 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
   }
 
   // ── shell ──────────────────────────────────────────────────────────────────
+  // CLOSED TRADES sits LAST on purpose (owner, 2026-08-23): the live-facing
+  // views (signals, portfolio, summary, book) lead; the historical record and
+  // the reference material (rules/sizing/evidence) trail; closed trades are
+  // the tail of the tail. Reordering here only moves the tab strip — URL_VIEWS
+  // still validates the same eight keys, so deep links are unaffected.
   const VIEWS = [
-    ["signals", "SIGNALS"], ["held", "HELD POSITIONS"], ["closed", "CLOSED TRADES"],
-    ["summary", "SUMMARY"], ["book", "BOOK"], ["rules", "THE RULES"],
-    ["sizing", "SIZING"], ["evidence", "EVIDENCE"],
+    ["signals", "SIGNALS"], ["held", "HELD POSITIONS"], ["summary", "SUMMARY"],
+    ["book", "BOOK"], ["rules", "THE RULES"], ["sizing", "SIZING"],
+    ["evidence", "EVIDENCE"], ["closed", "CLOSED TRADES"],
   ];
 
   function render() {
@@ -1829,7 +1834,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         // pill === active seg" is a promise about POSITION as well as state.
         const counts = filterCounts() || { fired: 0, held: 0, near: 0, blocked: 0, all: 0 };
         ctl.innerHTML = '<div class="control-group"><div class="seg" role="group" aria-label="Filter">' +
-          [["fired", "FIRED TODAY"], ["held", "IN A POSITION"], ["near", "APPROACHING"],
+          [["fired", "FIRED TODAY"], ["held", "PORTFOLIO"], ["near", "APPROACHING"],
             ["blocked", "S1 BLOCKED"], ["all", "ALL"]]
             .map(([k, l]) => '<button class="seg-btn' + (FILTER === k ? " is-active" : "") +
               '" data-filter="' + k + '">' + l + ' <span class="seg-count">' + big(counts[k]) +

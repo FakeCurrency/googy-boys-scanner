@@ -54,6 +54,49 @@
   -webkit-overflow-scrolling: touch;
 }
 #tt-views::-webkit-scrollbar { display: none; }
+
+/* ── active-state clarity ────────────────────────────────────────────────── */
+/* The problem this fixes: FIRED TODAY carries a permanent green fill whenever
+ * it has signals, while the SELECTED tab/pill only had a faint outline — so the
+ * green pill always looked "picked" and you could not tell which view was open.
+ * Here selection is a FILLED ACCENT, deliberately a different colour from the
+ * green "there is action today" semantic, so the two can never be confused.
+ * Everything is scoped to this page's own #tt-views / #tt-deck containers; the
+ * main scanner shares these class names and is intentionally left untouched. */
+
+/* View tabs become a segmented pill row: the open view is a solid accent chip,
+ * every other tab a muted outline — "what's open" is unmistakable at a glance. */
+#tt-views { gap: 8px; border-bottom: 0; padding-bottom: 2px; }
+#tt-views .view-tab {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding: 7px 13px;
+  border-radius: 999px;
+  color: var(--muted, #8a94a6);
+  background: var(--fill-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.09));
+}
+#tt-views .view-tab:hover { color: var(--text-2, #c5cdd8); }
+#tt-views .view-tab.is-active {
+  color: #fff;
+  background: var(--accent, #2f81f7);
+  border-color: var(--accent, #2f81f7);
+  border-bottom-color: var(--accent, #2f81f7);
+}
+
+/* Deck filter pills: the selected pill gets a raised panel and an accent ring,
+ * which overrides the .g / .o / .t semantic fills so selection always wins. */
+#tt-deck .fpill.is-active {
+  outline: 0;
+  color: var(--text, #fff);
+  background: var(--panel-3, rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 0 0 2px var(--accent, #2f81f7);
+}
+#tt-deck .fpill.is-active .seg-count {
+  color: #d6e6ff;
+  background: rgba(47, 129, 247, 0.18);
+  border-color: rgba(47, 129, 247, 0.5);
+}
 #tt-views .view-tab { flex: 0 0 auto; }
 
 /* ── the market switch ──────────────────────────────────────────────────── */
