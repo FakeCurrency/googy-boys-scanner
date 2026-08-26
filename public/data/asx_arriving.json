@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-26T07:46:06+10:00",
+  "generated_at": "2026-08-26T11:27:01+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "RSM",
+      "name": "Russell Investments Australian Semi-Government Bond ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 20.31999969,
+      "turnover_avg20": 81411,
+      "turnover_today": 1219464,
+      "rvol": 15.0,
+      "adv_usd": 81411.08,
+      "fund": true,
+      "is_product": true
+    },
     {
       "symbol": "AR3",
       "name": "Australian Rare Earths Limited",
@@ -22,15 +35,15 @@
       "is_product": false
     },
     {
-      "symbol": "CIVH",
-      "name": "ClearBridge Global Infrastructure Value Fund (Hedged) Active ETF",
+      "symbol": "SSO",
+      "name": "SPDR S&P/ASX Small Ordinaries Fund",
       "sector": "Unclassified",
       "dir": "LONG",
-      "price": 1.11500001,
-      "turnover_avg20": 64639,
-      "turnover_today": 356555,
-      "rvol": 5.5,
-      "adv_usd": 64639.78,
+      "price": 15.27000046,
+      "turnover_avg20": 47589,
+      "turnover_today": 294100,
+      "rvol": 6.0,
+      "adv_usd": 47589.9,
       "fund": true,
       "is_product": true
     },
@@ -61,15 +74,15 @@
       "is_product": false
     },
     {
-      "symbol": "GROW",
-      "name": "Schroder Real Return (Managed Fund)",
+      "symbol": "SWTZ",
+      "name": "Switzer Dividend Growth Fund (Quoted Managed Fund)",
       "sector": "Unclassified",
       "dir": "LONG",
-      "price": 4.09000015,
-      "turnover_avg20": 62484,
-      "turnover_today": 240945,
-      "rvol": 3.8,
-      "adv_usd": 62484.12,
+      "price": 2.4000001,
+      "turnover_avg20": 56054,
+      "turnover_today": 244874,
+      "rvol": 4.4,
+      "adv_usd": 56054.33,
       "fund": true,
       "is_product": true
     },
@@ -113,6 +126,19 @@
       "is_product": false
     },
     {
+      "symbol": "FHCO",
+      "name": "Fidelity Australian High Conviction Active ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 6.38000011,
+      "turnover_avg20": 42391,
+      "turnover_today": 181236,
+      "rvol": 4.3,
+      "adv_usd": 42391.34,
+      "fund": true,
+      "is_product": true
+    },
+    {
       "symbol": "AGD",
       "name": "Austral Gold Limited",
       "sector": "Materials",
@@ -126,43 +152,17 @@
       "is_product": false
     },
     {
-      "symbol": "HMY",
-      "name": "Harmoney Corp Limited",
-      "sector": "Financials",
-      "dir": "SHORT",
-      "price": 0.80000001,
-      "turnover_avg20": 29381,
-      "turnover_today": 148021,
-      "rvol": 5.0,
-      "adv_usd": 29381.46,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "NZM",
-      "name": "NZME Limited",
-      "sector": "Communication Services",
+      "symbol": "AUST",
+      "name": "BetaShares Managed Risk Australian Share Fund (managed fund)",
+      "sector": "Unclassified",
       "dir": "LONG",
-      "price": 0.93000001,
-      "turnover_avg20": 29353,
-      "turnover_today": 129849,
-      "rvol": 4.3,
-      "adv_usd": 29353.0,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "AKA",
-      "name": "Aureka Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.115,
-      "turnover_avg20": 19716,
-      "turnover_today": 122107,
-      "rvol": 5.2,
-      "adv_usd": 19716.02,
-      "fund": false,
-      "is_product": false
+      "price": 18.35000038,
+      "turnover_avg20": 17180,
+      "turnover_today": 149625,
+      "rvol": 8.7,
+      "adv_usd": 17180.54,
+      "fund": true,
+      "is_product": true
     }
   ]
 }
