@@ -55,10 +55,10 @@
       "risk_pct": 0.2539,
       "risk_usd": 380.87,
       "source": "vivek_bot",
-      "unreal_r": 1.568,
-      "unreal_usd": 597.06,
+      "unreal_r": 1.519,
+      "unreal_usd": 578.44,
       "lens": "vivek",
-      "last_mark": 37.34999847,
+      "last_mark": 37.18999863,
       "notional_before": 503.36,
       "units_before": 15.7349343,
       "risk_usd_before": 35.0,
@@ -77,85 +77,6 @@
       },
       "level_tf": "3d",
       "level_tf_source": "evaluate"
-    },
-    {
-      "id": "IGL:long:1D:2026-07-28",
-      "symbol": "IGL",
-      "name": "IVE Group Limited",
-      "sector": "Communication Services",
-      "market": "asx",
-      "direction": "long",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "1D",
-      "entry": 2.7349999,
-      "stop": 2.7349999,
-      "tp1": 2.91414629,
-      "tp2": 3.08329222,
-      "tp3": 3.62625168,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.17225022,
-      "rr": 2.02,
-      "trigger_bar": null,
-      "entry_date": "2026-07-28",
-      "opened_at": "2026-07-28T03:39:33+00:00",
-      "status": "open",
-      "tp1_hit": true,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.25,
-      "realized_r": 0.248,
-      "gross_r": 0.26,
-      "cost_r": 0.012,
-      "exits": [
-        {
-          "reason": "tp1",
-          "price": 2.91414629,
-          "pct": 0.25,
-          "date": "2026-08-04"
-        }
-      ],
-      "mae": 2.7349999,
-      "mfe": 2.9700000286102295,
-      "mae_r": 0.0,
-      "mfe_r": 1.364,
-      "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 1828.15363174,
-      "notional": 5000.0,
-      "leverage": 0.03,
-      "leverage_target": 5.0,
-      "risk_pct": 0.2099,
-      "risk_usd": 314.9,
-      "source": "vivek_bot",
-      "lens": "vivek",
-      "signal_entry": 2.74000001,
-      "fill_slip_bps": -18.2,
-      "last_mark": 2.76999998,
-      "unreal_r": 0.152,
-      "unreal_usd": 47.99,
-      "notional_before": 541.04,
-      "units_before": 197.46084535,
-      "risk_usd_before": 35.0,
-      "resized_at": "2026-07-28T07:58:57+00:00",
-      "sizing_mode": "fixed_notional",
-      "day_marks": {
-        "2026-08-18": 2.86999989,
-        "2026-08-19": 2.8900001,
-        "2026-08-20": 2.86999989,
-        "2026-08-21": 2.94000006,
-        "2026-08-22": 2.9000001,
-        "2026-08-23": 2.9000001,
-        "2026-08-24": 2.9000001,
-        "2026-08-25": 2.88000011,
-        "2026-08-26": 2.93000007
-      },
-      "level_tf": "h4",
-      "level_tf_source": "scan",
-      "stale_pinged": "2026-08-26"
     },
     {
       "id": "USL:long:1D:2026-07-28",
@@ -199,9 +120,9 @@
         }
       ],
       "mae": 0.66500002,
-      "mfe": 0.8849999904632568,
+      "mfe": 0.8949999809265137,
       "mae_r": 0.0,
-      "mfe_r": 1.968,
+      "mfe_r": 2.057,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 7518.79676635,
       "notional": 5000.0,
@@ -213,9 +134,9 @@
       "lens": "vivek",
       "signal_entry": 0.71499997,
       "fill_slip_bps": -699.3,
-      "last_mark": 0.88499999,
-      "unreal_r": 1.476,
-      "unreal_usd": 1240.6,
+      "last_mark": 0.89499998,
+      "unreal_r": 1.543,
+      "unreal_usd": 1296.99,
       "notional_before": 154.68,
       "units_before": 216.33077297,
       "risk_usd_before": 35.0,
@@ -297,7 +218,7 @@
       "level_tf": "3d",
       "signal_entry": 88.87000275,
       "fill_slip_bps": 88.9,
-      "last_mark": 77.18000031,
+      "last_mark": 77.02999878,
       "day_marks": {
         "2026-08-18": 86.19000244,
         "2026-08-19": 79.94000244,
@@ -309,8 +230,8 @@
         "2026-08-25": 77.5,
         "2026-08-26": 78.16999817
       },
-      "unreal_r": -0.781,
-      "unreal_usd": -667.42
+      "unreal_r": -0.791,
+      "unreal_usd": -675.44
     },
     {
       "id": "RHC:long:1W:2026-08-14",
@@ -346,9 +267,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0027,
       "exits": [],
-      "mae": 44.06999969482422,
+      "mae": 43.81999969482422,
       "mfe": 45.33000183105469,
-      "mae_r": -0.059,
+      "mae_r": -0.08,
       "mfe_r": 0.052,
       "entry_type_label": "Break of small structure near the 200 SMA",
       "units": 116.98642498,
@@ -374,7 +295,7 @@
       "level_tf": "weekly",
       "signal_entry": 42.74000168,
       "fill_slip_bps": 467.9,
-      "last_mark": 44.06999969,
+      "last_mark": 43.81999969,
       "day_marks": {
         "2026-08-18": 44.81000137,
         "2026-08-19": 44.65000153,
@@ -386,8 +307,8 @@
         "2026-08-25": 44.09999847,
         "2026-08-26": 44.36000061
       },
-      "unreal_r": -0.059,
-      "unreal_usd": -64.69
+      "unreal_r": -0.08,
+      "unreal_usd": -88.82
     },
     {
       "id": "SMR:long:1W:2026-08-17",
@@ -423,9 +344,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0028,
       "exits": [],
-      "mae": 2.555000066757202,
+      "mae": 2.549999952316284,
       "mfe": 2.759999990463257,
-      "mae_r": -0.106,
+      "mae_r": -0.114,
       "mfe_r": 0.205,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 1930.50199759,
@@ -451,7 +372,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.58999991,
       "fill_slip_bps": 135.1,
-      "last_mark": 2.55500007,
+      "last_mark": 2.54999995,
       "day_marks": {
         "2026-08-18": 2.58999991,
         "2026-08-19": 2.6099999,
@@ -463,8 +384,8 @@
         "2026-08-25": 2.72000003,
         "2026-08-26": 2.58999991
       },
-      "unreal_r": -0.106,
-      "unreal_usd": -127.96
+      "unreal_r": -0.114,
+      "unreal_usd": -137.1
     },
     {
       "id": "SNL:long:3D:2026-08-18",
@@ -528,7 +449,7 @@
       "level_tf": "3d",
       "signal_entry": 34.52999878,
       "fill_slip_bps": -72.4,
-      "last_mark": 36.18999863,
+      "last_mark": 36.11000061,
       "day_marks": {
         "2026-08-18": 34.27999878,
         "2026-08-19": 33.56999969,
@@ -540,8 +461,8 @@
         "2026-08-25": 34.72999954,
         "2026-08-26": 35.31999969
       },
-      "unreal_r": 0.379,
-      "unreal_usd": 290.28
+      "unreal_r": 0.363,
+      "unreal_usd": 278.12
     },
     {
       "id": "NWS:long:3D:2026-08-18",
@@ -596,7 +517,7 @@
       "level_tf": "3d",
       "signal_entry": 46.88999939,
       "fill_slip_bps": -149.3,
-      "last_mark": 48.95000076,
+      "last_mark": 48.81000137,
       "day_marks": {
         "2026-08-18": 46.18999863,
         "2026-08-19": 46.22000122,
@@ -608,8 +529,8 @@
         "2026-08-25": 48.18999863,
         "2026-08-26": 48.95000076
       },
-      "unreal_r": 0.5,
-      "unreal_usd": 331.66
+      "unreal_r": 0.475,
+      "unreal_usd": 314.83
     },
     {
       "id": "VVA:long:3D:2026-08-18",
@@ -723,9 +644,9 @@
       "cost_r": 0.0105,
       "exits": [],
       "mae": 2.9700000286102295,
-      "mfe": 3.0199999809265137,
+      "mfe": 3.0399999618530273,
       "mae_r": -0.1,
-      "mfe_r": 0.15,
+      "mfe_r": 0.25,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 1677.85233773,
       "notional": 5000.0,
@@ -741,7 +662,7 @@
       "level_tf": "3d",
       "signal_entry": 2.98000002,
       "fill_slip_bps": 33.6,
-      "last_mark": 3.01999998,
+      "last_mark": 3.03999996,
       "day_marks": {
         "2026-08-21": 2.99000001,
         "2026-08-22": 2.98000002,
@@ -750,8 +671,8 @@
         "2026-08-25": 2.97000003,
         "2026-08-26": 2.98000002
       },
-      "unreal_r": 0.15,
-      "unreal_usd": 47.82
+      "unreal_r": 0.25,
+      "unreal_usd": 79.7
     },
     {
       "id": "CCP:long:3D:2026-08-21",
@@ -806,7 +727,7 @@
       "level_tf": "3d",
       "signal_entry": 13.35000038,
       "fill_slip_bps": 382.0,
-      "last_mark": 14.25,
+      "last_mark": 14.23999977,
       "day_marks": {
         "2026-08-21": 13.85999966,
         "2026-08-22": 13.98999977,
@@ -815,8 +736,8 @@
         "2026-08-25": 13.96000004,
         "2026-08-26": 14.17000008
       },
-      "unreal_r": 0.175,
-      "unreal_usd": 112.68
+      "unreal_r": 0.17,
+      "unreal_usd": 109.79
     },
     {
       "id": "AGL:long:1W:2026-08-21",
@@ -880,7 +801,7 @@
       "level_tf": "weekly",
       "signal_entry": 8.97000027,
       "fill_slip_bps": -133.8,
-      "last_mark": 8.64999962,
+      "last_mark": 8.65999985,
       "day_marks": {
         "2026-08-21": 8.85000038,
         "2026-08-22": 8.88000011,
@@ -889,8 +810,8 @@
         "2026-08-25": 8.77999973,
         "2026-08-26": 8.56999969
       },
-      "unreal_r": -0.152,
-      "unreal_usd": -121.68
+      "unreal_r": -0.145,
+      "unreal_usd": -115.59
     },
     {
       "id": "CWY:long:1W:2026-08-21",
@@ -926,9 +847,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0035,
       "exits": [],
-      "mae": 2.5850000381469727,
+      "mae": 2.575000047683716,
       "mfe": 2.630000114440918,
-      "mae_r": -0.057,
+      "mae_r": -0.076,
       "mfe_r": 0.029,
       "entry_type_label": "Break of small structure near the 200 SMA",
       "units": 2040.81628488,
@@ -954,7 +875,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.45000005,
       "fill_slip_bps": 673.5,
-      "last_mark": 2.59500003,
+      "last_mark": 2.57500005,
       "day_marks": {
         "2026-08-21": 2.61500001,
         "2026-08-22": 2.63000011,
@@ -963,8 +884,8 @@
         "2026-08-25": 2.58999991,
         "2026-08-26": 2.58999991
       },
-      "unreal_r": -0.038,
-      "unreal_usd": -27.99
+      "unreal_r": -0.076,
+      "unreal_usd": -55.98
     },
     {
       "id": "MGR:long:1W:2026-08-24",
@@ -1000,9 +921,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0031,
       "exits": [],
-      "mae": 1.8669999837875366,
+      "mae": 1.8550000190734863,
       "mfe": 1.906999945640564,
-      "mae_r": -0.07,
+      "mae_r": -0.099,
       "mfe_r": 0.023,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 2617.80108824,
@@ -1028,14 +949,69 @@
       "level_tf": "weekly",
       "signal_entry": 1.90999997,
       "fill_slip_bps": -68.1,
-      "last_mark": 1.88,
+      "last_mark": 1.85500002,
       "day_marks": {
         "2026-08-24": 1.89699996,
         "2026-08-25": 1.89999998,
         "2026-08-26": 1.875
       },
-      "unreal_r": -0.04,
-      "unreal_usd": -45.86
+      "unreal_r": -0.099,
+      "unreal_usd": -113.3
+    },
+    {
+      "id": "WHI:long:1W:2026-08-26",
+      "symbol": "WHI",
+      "name": "Whitefield Income Limited",
+      "sector": "Unclassified",
+      "market": "asx",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 1.30200005,
+      "stop": 1.18781128,
+      "tp1": 1.39507244,
+      "tp2": 1.50451838,
+      "tp3": 1.8609433,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.11418877,
+      "rr": 1.77,
+      "trigger_bar": null,
+      "entry_date": "2026-08-26",
+      "opened_at": "2026-08-26T03:25:42+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 1.30200005,
+      "mfe": 1.30200005,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 3846.15399408,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.2877,
+      "risk_usd": 431.49,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "signal_entry": 1.29999995,
+      "fill_slip_bps": 15.4,
+      "last_mark": 1.30200005
     },
     {
       "id": "YORW:long:3D:2026-08-07",
@@ -2066,7 +2042,7 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 113.99452972,
+      "last_mark": 113.83473206,
       "day_marks": {
         "2026-08-18": 99.62188721,
         "2026-08-19": 101.12966156,
@@ -2078,8 +2054,8 @@
         "2026-08-25": 116.25106049,
         "2026-08-26": 113.33570862
       },
-      "unreal_r": 2.83,
-      "unreal_usd": 1414.88,
+      "unreal_r": 2.815,
+      "unreal_usd": 1407.13,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2141,7 +2117,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 1.72399998,
+      "last_mark": 1.72599995,
       "day_marks": {
         "2026-08-18": 1.46599996,
         "2026-08-19": 1.51900005,
@@ -2153,8 +2129,8 @@
         "2026-08-25": 1.76100004,
         "2026-08-26": 1.72300005
       },
-      "unreal_r": 1.444,
-      "unreal_usd": 716.86,
+      "unreal_r": 1.454,
+      "unreal_usd": 722.15,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2220,7 +2196,7 @@
       "level_tf": "weekly",
       "signal_entry": 64262.11328125,
       "fill_slip_bps": 2.4,
-      "last_mark": 78782.6484375,
+      "last_mark": 79000.0078125,
       "day_marks": {
         "2026-08-18": 64429.2109375,
         "2026-08-19": 64716.0,
@@ -2232,8 +2208,8 @@
         "2026-08-25": 78958.390625,
         "2026-08-26": 78542.6484375
       },
-      "unreal_r": 1.167,
-      "unreal_usd": 1127.17
+      "unreal_r": 1.184,
+      "unreal_usd": 1144.06
     }
   ],
   "closed": [
@@ -3982,6 +3958,95 @@
       "exit_date": "2026-08-21",
       "exit_reason": "manual",
       "hold_days": 14
+    },
+    {
+      "id": "IGL:long:1D:2026-07-28",
+      "symbol": "IGL",
+      "name": "IVE Group Limited",
+      "sector": "Communication Services",
+      "market": "asx",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1D",
+      "entry": 2.7349999,
+      "stop": 2.7349999,
+      "tp1": 2.91414629,
+      "tp2": 3.08329222,
+      "tp3": 3.62625168,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.17225022,
+      "rr": 2.02,
+      "trigger_bar": null,
+      "entry_date": "2026-07-28",
+      "opened_at": "2026-07-28T03:39:33+00:00",
+      "status": "closed",
+      "tp1_hit": true,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": 0.0004,
+      "gross_r": 0.0205,
+      "cost_r": 0.0201,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 2.91414629,
+          "pct": 0.25,
+          "date": "2026-08-04"
+        },
+        {
+          "reason": "stop",
+          "price": 2.68000007,
+          "pct": 0.75,
+          "date": "2026-08-26"
+        }
+      ],
+      "mae": 2.680000066757202,
+      "mfe": 2.9700000286102295,
+      "mae_r": -0.319,
+      "mfe_r": 1.364,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 1828.15363174,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.2099,
+      "risk_usd": 314.9,
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "signal_entry": 2.74000001,
+      "fill_slip_bps": -18.2,
+      "last_mark": 2.68000007,
+      "unreal_r": 0.152,
+      "unreal_usd": 47.99,
+      "notional_before": 541.04,
+      "units_before": 197.46084535,
+      "risk_usd_before": 35.0,
+      "resized_at": "2026-07-28T07:58:57+00:00",
+      "sizing_mode": "fixed_notional",
+      "day_marks": {
+        "2026-08-18": 2.86999989,
+        "2026-08-19": 2.8900001,
+        "2026-08-20": 2.86999989,
+        "2026-08-21": 2.94000006,
+        "2026-08-22": 2.9000001,
+        "2026-08-23": 2.9000001,
+        "2026-08-24": 2.9000001,
+        "2026-08-25": 2.88000011,
+        "2026-08-26": 2.93000007
+      },
+      "level_tf": "h4",
+      "level_tf_source": "scan",
+      "stale_pinged": "2026-08-26",
+      "exit_price": 2.68000007,
+      "exit_date": "2026-08-26",
+      "exit_reason": "trail",
+      "hold_days": 29
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -6319,20 +6384,20 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 2172.59,
+      "week_usd": 2162.51,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -56.22,
-      "worst_week_usd": 2172.59,
-      "realised_usd": 0.0,
+      "worst_session_usd": -11.46,
+      "worst_week_usd": 2162.51,
+      "realised_usd": -81.75,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -56.22,
-      "session_usd": -56.22,
+      "unrealised_usd": 70.29,
+      "session_usd": -11.46,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 14,
-      "open_total_usd": 2785.71,
+      "open": 13,
+      "open_total_usd": 2566.76,
       "notified": ""
     },
     "nasdaq": {
@@ -6365,27 +6430,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 2368.23,
+      "week_usd": 2382.66,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 53.24,
-      "worst_week_usd": 2368.23,
+      "worst_session_usd": 67.68,
+      "worst_week_usd": 2382.66,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 53.24,
-      "session_usd": 53.24,
+      "unrealised_usd": 67.68,
+      "session_usd": 67.68,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 3564.03,
+      "open_total_usd": 3578.46,
       "notified": ""
     }
   },
   "summary": {
     "open": 30,
-    "unreal_usd": 5209.12,
+    "unreal_usd": 5082.7,
     "updated_day": "2026-08-26"
   },
-  "updated_at": "2026-08-26T02:02:42+00:00"
+  "updated_at": "2026-08-26T03:25:49+00:00"
 }
