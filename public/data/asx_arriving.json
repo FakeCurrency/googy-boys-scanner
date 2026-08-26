@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-08-27T07:21:05+10:00",
+  "generated_at": "2026-08-27T09:04:29+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "RSM",
-      "name": "Russell Investments Australian Semi-Government Bond ETF",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 20.31999969,
-      "turnover_avg20": 81411,
-      "turnover_today": 1219464,
-      "rvol": 15.0,
-      "adv_usd": 81411.08,
-      "fund": true,
-      "is_product": true
-    },
     {
       "symbol": "LRT",
       "name": "Lowell Resources Fund",
@@ -35,15 +22,15 @@
       "is_product": true
     },
     {
-      "symbol": "SSO",
-      "name": "SPDR S&P/ASX Small Ordinaries Fund",
+      "symbol": "MVOL",
+      "name": "iShares Edge MSCI Australia Minimum Volatility ETF",
       "sector": "Unclassified",
       "dir": "LONG",
-      "price": 15.27000046,
-      "turnover_avg20": 47589,
-      "turnover_today": 294100,
-      "rvol": 6.0,
-      "adv_usd": 47589.9,
+      "price": 36.22999954,
+      "turnover_avg20": 24310,
+      "turnover_today": 322591,
+      "rvol": 13.3,
+      "adv_usd": 24310.96,
       "fund": true,
       "is_product": true
     },
@@ -100,19 +87,6 @@
       "is_product": false
     },
     {
-      "symbol": "SWTZ",
-      "name": "Switzer Dividend Growth Fund (Quoted Managed Fund)",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 2.4000001,
-      "turnover_avg20": 56054,
-      "turnover_today": 244874,
-      "rvol": 4.4,
-      "adv_usd": 56054.33,
-      "fund": true,
-      "is_product": true
-    },
-    {
       "symbol": "FHCO",
       "name": "Fidelity Australian High Conviction Active ETF",
       "sector": "Unclassified",
@@ -137,19 +111,6 @@
       "adv_usd": 41840.07,
       "fund": false,
       "is_product": false
-    },
-    {
-      "symbol": "AUST",
-      "name": "BetaShares Managed Risk Australian Share Fund (managed fund)",
-      "sector": "Unclassified",
-      "dir": "LONG",
-      "price": 18.35000038,
-      "turnover_avg20": 17180,
-      "turnover_today": 149625,
-      "rvol": 8.7,
-      "adv_usd": 17180.54,
-      "fund": true,
-      "is_product": true
     }
   ]
 }
