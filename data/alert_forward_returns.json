@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-08-27T00:36:45+00:00",
+ "updated_at": "2026-08-27T03:22:19+00:00",
  "entries": [
   {
    "key": "2026-08-20|nasdaq|TMUS|short|2",
@@ -641,7 +641,7 @@
    "base_day": "2026-08-20",
    "base_close": 96.48000336,
    "fwd": {
-    "5": null,
+    "5": -0.008707,
     "10": null,
     "20": null,
     "1": -0.009225
@@ -2096,7 +2096,7 @@
    "base_day": "2026-08-19",
    "base_close": 1.80499995,
    "fwd": {
-    "5": null,
+    "5": -0.008174,
     "10": null,
     "20": null,
     "1": -0.016349
@@ -10136,7 +10136,7 @@
    "base_close": 47.54000092,
    "fwd": {
     "5": -0.008414,
-    "10": null,
+    "10": -0.017669,
     "20": null,
     "1": -0.001893
    },
@@ -10356,7 +10356,7 @@
    "base_close": 0.005,
    "fwd": {
     "5": 0.0,
-    "10": null,
+    "10": 0.4,
     "20": null,
     "1": 0.0
    },
@@ -11100,7 +11100,7 @@
    "base_close": 47.54000092,
    "fwd": {
     "5": -0.008414,
-    "10": null,
+    "10": -0.017669,
     "20": null,
     "1": -0.001893
    },
@@ -21865,7 +21865,7 @@
    "base_day": "2026-08-26",
    "base_close": 0.021,
    "fwd": {
-    "1": null,
+    "1": 0.0,
     "5": null,
     "10": null,
     "20": null
@@ -21940,7 +21940,7 @@
    "base_day": "2026-08-26",
    "base_close": 0.13500001,
    "fwd": {
-    "1": null,
+    "1": 0.0,
     "5": null,
     "10": null,
     "20": null
@@ -22397,7 +22397,7 @@
    "base_day": "2026-08-26",
    "base_close": 95.77999878,
    "fwd": {
-    "1": null,
+    "1": -0.001462,
     "5": null,
     "10": null,
     "20": null
@@ -23243,7 +23243,8 @@
    "sector": "Unclassified",
    "grade_raw": "B+",
    "score": 7,
-   "is_product": true
+   "is_product": true,
+   "breadth200": 0.504
   },
   {
    "key": "2026-08-27|asx|IXI|short|2",
@@ -23267,7 +23268,8 @@
    "sector": "Unclassified",
    "grade_raw": "A+",
    "score": 9,
-   "is_product": true
+   "is_product": true,
+   "breadth200": 0.504
   },
   {
    "key": "2026-08-26|nasdaq|SENS|short|2",
@@ -23516,7 +23518,8 @@
    "sector": "Unclassified",
    "grade_raw": "B+",
    "score": 9,
-   "is_product": true
+   "is_product": true,
+   "breadth200": 0.504
   },
   {
    "key": "2026-08-26|nasdaq|VRSK|short|2",
@@ -23676,7 +23679,7 @@
    "base_day": "2026-08-26",
    "base_close": 0.083,
    "fwd": {
-    "1": null,
+    "1": 0.024096,
     "5": null,
     "10": null,
     "20": null
@@ -23897,7 +23900,7 @@
     "VIVEK"
    ],
    "base_day": "2026-08-26",
-   "base_close": null,
+   "base_close": 1.82000005,
    "fwd": {
     "1": null,
     "5": null,
@@ -23965,7 +23968,7 @@
    "base_day": "2026-08-26",
    "base_close": 0.032,
    "fwd": {
-    "1": null,
+    "1": 0.0,
     "5": null,
     "10": null,
     "20": null
@@ -24119,13 +24122,663 @@
    "base_day": "2026-08-26",
    "base_close": 95.77999878,
    "fwd": {
-    "1": null,
+    "1": -0.001462,
     "5": null,
     "10": null,
     "20": null
    },
    "sector": "Unclassified",
    "breadth200": 0.4553
+  },
+  {
+   "key": "2026-08-26|nasdaq|SOFI|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "SOFI",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 18.84000015,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Financial Services",
+   "breadth200": 0.6662,
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|PENN|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "PENN",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 17.85000038,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Cyclical",
+   "breadth200": 0.6662,
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|ODFL|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "ODFL",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 199.42999268,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "B+",
+   "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|MTRX|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "MTRX",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 10.73999977,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "A+",
+   "score": 8,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|MRTN|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "MRTN",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 14.46000004,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "WATCH",
+   "score": 3,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|KHC|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "KHC",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 24.79000092,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Defensive",
+   "breadth200": 0.6662,
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|HON|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "HON",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 220.66999817,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|HLNE|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "HLNE",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 105.26999664,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Financial Services",
+   "breadth200": 0.6662,
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|GFS|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "GFS",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 45.66999817,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Technology",
+   "breadth200": 0.6662,
+   "grade_raw": "B+",
+   "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|CRBU|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "CRBU",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 1.64999998,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Healthcare",
+   "breadth200": 0.6662,
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|CPB|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "CPB",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 23.22999954,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Defensive",
+   "breadth200": 0.6662,
+   "grade_raw": "B+",
+   "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|CAR|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "CAR",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 144.0,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "A+",
+   "score": 10,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|BOOM|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "BOOM",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 6.63000011,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.6662,
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|BMRC|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "BMRC",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 26.78000069,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Financial Services",
+   "breadth200": 0.6662,
+   "grade_raw": "B+",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-26|nasdaq|BANF|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "nasdaq",
+   "ticker": "BANF",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-26",
+   "base_close": 111.80000305,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Financial Services",
+   "breadth200": 0.6662,
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|WBT|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "WBT",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Information Technology",
+   "breadth200": 0.504,
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|USD|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "USD",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Unclassified",
+   "breadth200": 0.504,
+   "grade_raw": "A+",
+   "score": 10,
+   "is_product": true
+  },
+  {
+   "key": "2026-08-27|asx|TSO|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "TSO",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Materials",
+   "breadth200": 0.504,
+   "grade_raw": "A",
+   "score": 6,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|TPG|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "TPG",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Communication Services",
+   "breadth200": 0.504,
+   "grade_raw": "A+",
+   "score": 8,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|TER|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "TER",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Energy",
+   "breadth200": 0.504,
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|TBIL|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "TBIL",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Unclassified",
+   "breadth200": 0.504,
+   "grade_raw": "B+",
+   "score": 10,
+   "is_product": true
+  },
+  {
+   "key": "2026-08-27|asx|PNV|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "PNV",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Health Care",
+   "breadth200": 0.504,
+   "grade_raw": "B+",
+   "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|MTS|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "MTS",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Staples",
+   "breadth200": 0.504,
+   "grade_raw": "A",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|APE|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "APE",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Discretionary",
+   "breadth200": 0.504,
+   "grade_raw": "B+",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|ALL|long|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "ALL",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Discretionary",
+   "breadth200": 0.504,
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
+  },
+  {
+   "key": "2026-08-27|asx|ACF|short|2",
+   "date": "2026-08-27T02:21:45+00:00",
+   "market": "asx",
+   "ticker": "ACF",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-08-27",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Industrials",
+   "breadth200": 0.504,
+   "grade_raw": "A+",
+   "score": 9,
+   "is_product": false
   }
  ]
 }
