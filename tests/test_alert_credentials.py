@@ -115,3 +115,65 @@ def test_the_evidence_brief_workflow_trims_the_same_characters():
     wf = _src(".github/workflows/evidence_brief.yml")
     assert "\\ufeff" in wf, "the workflow's inline trim lost the BOM"
     assert "\\u200b" in wf
+
+
+# ── the workflows' own failure pings (found live 2026-08-27) ─────────────────
+#
+# The 2026-08-01 fix routed every PYTHON sender through clean_secret and left
+# five workflows curling the secret raw in their `Alert on failure` steps.
+# curl parses "<BOM>https" as a HOSTNAME and the path after the next colon as
+# a port, dies with "Port number was not a decimal number between 0 and
+# 65535", and `|| true` swallowed it — so the red-run Discord ping for
+# scan/crypto_bot/phasemap/backup_book/turtle had NEVER delivered. Proven in
+# the live log of turtle run #29 (2026-08-24), where the scan failure itself
+# was Yahoo throttling but the alert about it silently died. These pins are
+# the two halves of the repair.
+
+_WORKFLOWS = ROOT / ".github" / "workflows"
+
+# The workflows whose failure ping posts via curl (rather than a Python
+# sender that already routes through clean_secret / the inline trim).
+_CURL_PING_WORKFLOWS = (
+    "scan.yml", "crypto_bot.yml", "phasemap.yml", "backup_book.yml",
+    "turtle.yml",
+)
+
+
+def test_no_workflow_hands_the_raw_webhook_to_curl():
+    # The shape being banned is the URL-as-final-argument line:
+    #     "$DISCORD_WEBHOOK_URL" || true
+    # The emptiness guard `[ -z "$DISCORD_WEBHOOK_URL" ]` and env: blocks are
+    # legitimate raw reads and do not match. Any curl must target the trimmed
+    # $URL instead.
+    offenders = []
+    for wf in sorted(_WORKFLOWS.glob("*.yml")):
+        for i, line in enumerate(
+                wf.read_text(encoding="utf-8").splitlines(), 1):
+            if re.match(r'\s*"\$DISCORD_WEBHOOK_URL"', line):
+                offenders.append(f"{wf.name}:{i}")
+    assert not offenders, (
+        "these lines hand the pasted secret straight to a command; the "
+        "stored value carries a leading U+FEFF, so the send dies inside "
+        f"|| true and nobody hears the red run: {offenders}")
+
+
+def test_the_failure_ping_workflows_trim_the_same_characters():
+    # Each curl-pinging workflow must inline clean_secret's exact ends-only
+    # character set before the send — the same rule the evidence brief pin
+    # above enforces for its Python post.
+    for name in _CURL_PING_WORKFLOWS:
+        wf = _src(f".github/workflows/{name}")
+        assert "\\ufeff" in wf, f"{name}: the inline trim lost the BOM"
+        assert "\\u200b" in wf, f"{name}: the inline trim lost the zero-widths"
+
+
+def test_a_dead_failure_ping_is_no_longer_silent():
+    # The counterpart of removing `|| true` from the send: a curl that cannot
+    # deliver must say so on the run page. Every curl-pinging workflow carries
+    # the ::warning:: fallback, so the next credential problem is visible on
+    # the very first red run instead of after weeks of silence.
+    for name in _CURL_PING_WORKFLOWS:
+        wf = _src(f".github/workflows/{name}")
+        assert "::warning::Discord failure ping did not deliver" in wf, (
+            f"{name}: the failed-send warning is gone — a dead ping is "
+            "silent again")

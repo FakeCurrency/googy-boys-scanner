@@ -150,6 +150,24 @@ Still true after the fix: **Telegram and SMTP are UNCONFIGURED** (empty
 secrets), so Discord is the only live channel. Run `test_alerts.yml` after any
 alert-secret change and read the job log — it is the only end-to-end proof.
 
+**THE 2026-08-01 FIX MISSED THE WORKFLOWS' OWN FAILURE PINGS (found
+2026-08-27).** Five workflows — scan, crypto_bot, phasemap, backup_book,
+turtle — curled the secret RAW in their `Alert on failure` steps. curl parses
+`<BOM>https` as a HOSTNAME and what follows the next colon as a port, dies
+with `curl: (3) URL rejected: Port number was not a decimal number`, and the
+`|| true` on the send swallowed it — so **the red-run Discord ping from those
+five workflows had never once delivered**. Proven in the live log of turtle
+run #29 (2026-08-24): the scan failure was routine Yahoo throttling, but the
+alert about it died silently. All five now trim into `$URL` via an inlined
+`clean_secret` one-liner (same char set), post with the named UA and
+`--fail`, and a dead send prints `::warning::Discord failure ping did not
+deliver` on the run page instead of nothing. Three pins in
+`tests/test_alert_credentials.py`: no workflow may hand
+`"$DISCORD_WEBHOOK_URL"` to a command, the five must carry the trim, and the
+warning line must survive. The secret itself STILL carries its BOM — the
+Python paths shrug it off and now the curl paths do too, but re-pasting it
+clean remains worth doing in the same sitting as any secrets change.
+
 **The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108,
 #109).** scan.yml, crypto_bot.yml and close_position.yml share concurrency
 `group: scan` so two writers can never touch the paper book at once
