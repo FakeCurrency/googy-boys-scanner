@@ -117,6 +117,25 @@ jobs:
           fi
           echo "run=true" >> "$GITHUB_OUTPUT"
 
+      # PIGGYBACK TICK (2026-08-27) — same rationale as kill_switch.yml's:
+      # GitHub coalesces stop_watcher's 5-minute cron to ~31 starts/day, so
+      # every 24/7 workflow fires one best-effort authed tick. In the GATE
+      # job deliberately: it runs on every fire (even when the scan job
+      # skips) and sits outside the `scan` mutex, so the beat lands whether
+      # or not a scan follows. Best-effort: stop_watcher owns the verdicts;
+      # a dead beat never reddens the gate.
+      - name: Fire the paper stop/target tick (best-effort piggyback)
+        if: always()
+        continue-on-error: true
+        env:
+          TICK_URL: ${{ vars.TICK_URL }}
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+        run: |
+          [ -z "${TICK_SECRET:-}" ] && { echo "TICK_SECRET not set - skipping."; exit 0; }
+          URL="${TICK_URL:-https://googy-boys-scanner.pages.dev/api/tick}"
+          code=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TICK_SECRET}" "$URL") || true
+          echo "piggyback tick: HTTP ${code:-000} (verdicts belong to stop_watcher.yml)"
+
   # The "scan" mutex — job-scoped since 2026-07-28 (full rationale in scan.yml,
   # on its `scan` job). Short version: this job is the one that writes the paper
   # book, so this job is what must never run beside scan.yml's. The gate above

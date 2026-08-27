@@ -808,6 +808,103 @@ def test_503_is_still_green_and_still_says_so(tmp_path):
     assert "NOT CONFIGURED" in p.stdout
 
 
+def test_a_healthy_run_fires_every_tick_in_the_loop(tmp_path):
+    """The 2026-08-27 loop: GitHub coalesces how often runs START (~31/day
+    against a */5 cron, gaps to 115 min), so each run now ticks 4 times at
+    5-minute spacing. A healthy run must actually deliver all four beats —
+    a loop that exits after one tick silently reverts to the old cadence."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text('#!/bin/sh\nprintf 200\nexit 0\n')
+    (bin_dir / "sleep").write_text('#!/bin/sh\nexit 0\n')
+    for f in ("curl", "sleep"):
+        (bin_dir / f).chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_tick_run_block())
+    p = subprocess.run(
+        ["bash", "-e", str(script)], capture_output=True, text=True, timeout=60,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp_path),
+             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md")})
+    assert p.returncode == 0
+    assert p.stdout.count("watcher OK (HTTP 200)") == 4, (
+        "the loop must fire all 4 beats on a healthy run:\n" + p.stdout)
+
+
+def test_a_single_000_blip_costs_one_beat_not_the_window(tmp_path):
+    """In the loop, a 000 tick continues to the next beat rather than ending
+    the run: a two-minute egress blip should cost five minutes of coverage,
+    not fifteen. A run with any successful tick must exit 0 WITHOUT the
+    UNREACHABLE verdict — that verdict is reserved for a fully dark window."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # Stateful stub: the first 3 calls (= tick 1's three attempts) fail as a
+    # timeout does; every later call answers 200.
+    (bin_dir / "curl").write_text(
+        '#!/bin/sh\n'
+        'n=$(cat "$CURL_STATE" 2>/dev/null || echo 0)\n'
+        'n=$((n + 1)); printf %s "$n" > "$CURL_STATE"\n'
+        'if [ "$n" -le 3 ]; then printf 000; exit 28; fi\n'
+        'printf 200; exit 0\n')
+    (bin_dir / "sleep").write_text('#!/bin/sh\nexit 0\n')
+    for f in ("curl", "sleep"):
+        (bin_dir / f).chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_tick_run_block())
+    p = subprocess.run(
+        ["bash", "-e", str(script)], capture_output=True, text=True, timeout=60,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(tmp_path),
+             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
+             "CURL_STATE": str(tmp_path / "curl_calls")})
+    assert p.returncode == 0, p.stdout[-400:] + p.stderr[-400:]
+    assert "continuing to the next beat" in p.stdout, (
+        "tick 1's 000 must hand over to tick 2, not end the run")
+    assert p.stdout.count("watcher OK (HTTP 200)") == 3, (
+        "ticks 2-4 must still deliver their beats:\n" + p.stdout)
+    assert "UNREACHABLE" not in p.stdout, (
+        "a partially-answered window is not an unreachable one")
+
+
+def test_the_piggyback_ticks_exist_and_can_never_redden_their_hosts():
+    """The other half of the 2026-08-27 cadence fix: kill_switch.yml and
+    crypto_bot.yml each fire one best-effort authed tick per run, because the
+    union of interleaved 24/7 schedules is what restores the real stop/target
+    cadence. Two properties, both load-bearing: the step exists (delete it and
+    the cadence silently halves), and it is INCAPABLE of failing its host —
+    a dead tick on the kill-switch job must never block the safety net."""
+    for wf_name in ("kill_switch.yml", "crypto_bot.yml"):
+        raw = (WF / wf_name).read_text(encoding="utf-8")
+        assert "best-effort piggyback" in raw, f"{wf_name}: piggyback tick step is gone"
+        at = raw.index("best-effort piggyback")
+        step = raw[raw.rindex("- name:", 0, at):]
+        step = step[:step.index("- name:", 10)] if "- name:" in step[10:] else step
+        assert "continue-on-error: true" in step, f"{wf_name}: tick can fail its host"
+        assert "exit 1" not in step, f"{wf_name}: tick step must have no fatal branch"
+        assert 'TICK_SECRET:-}" ] && { echo' in step or "TICK_SECRET:-}" in step, \
+            f"{wf_name}: missing the no-secret skip guard"
+        assert "|| true" in step, f"{wf_name}: the curl status guard is gone (#372 class)"
+
+
+def test_the_daily_writers_carry_scheduler_drop_backstops():
+    """2026-08-26: GitHub's scheduler dropped the 21:35 backup and 22:20 edge
+    crons ENTIRELY — no run of any conclusion — while delaying evidence_brief
+    3h; third documented drop of this class (2026-07-24, 2026-07-30). Each
+    daily writer now carries a second cron ~2h later behind a freshness gate,
+    so a healthy scheduler costs zero extra runs and a ghosted cron heals the
+    same night instead of leaving a silent day-sized hole."""
+    ar = (WF / "alert_returns.yml").read_text(encoding="utf-8")
+    assert '"50 23 * * *"' in ar, "alert_returns lost its backstop cron"
+    assert "Backstop freshness gate" in ar
+    assert "status=success" in ar, (
+        "the gate must key on a SUCCESSFUL scheduled run — a failed 22:20 "
+        "still needs the backstop")
+    bb = (WF / "backup_book.yml").read_text(encoding="utf-8")
+    assert '"35 23 * * *"' in bb, "backup_book lost its backstop cron"
+    assert "Backstop freshness gate" in bb
+    assert 'grep -q "^$(date -u +%Y-%m-%d)T"' in bb, (
+        "the local snapshot-exists check is the gate; without it the backstop "
+        "doubles every night's snapshot")
+
+
 def test_the_watchdog_really_does_own_the_unreachable_alarm():
     """The 000 branch hands its alarm to watchdog.probe_endpoints(). If that
     handoff is fiction the alarm is simply gone, so pin the receiving end."""

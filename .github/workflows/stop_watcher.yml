@@ -1,10 +1,31 @@
 name: Paper stop/target watcher (24/7)
 
-# Pings the cloud watcher (/api/tick) every 5 minutes so paper-position stops
-# and targets fire even when no chart page is open on any device. 100% paper —
-# the endpoint never places a real order. 5 min is the GitHub cron minimum; for
-# tighter granularity point an external uptime cron or a Cloudflare cron Worker
-# at the same URL.
+# Pings the cloud watcher (/api/tick) so paper-position stops and targets fire
+# even when no chart page is open on any device. 100% paper — the endpoint
+# never places a real order.
+#
+# THE CRON SAYS */5; GITHUB DOES NOT DELIVER THAT (measured 2026-08-27, run
+# audit): on this repo's busy schedule the scheduler coalesces the 5-minute
+# cron to ~31 STARTS A DAY, with observed start-to-start gaps of 20–115
+# minutes — so "every 5 minutes" was really "every ~46 minutes on average",
+# and a paper stop could sit unevaluated for nearly two hours. Two fixes,
+# both in-repo (the repo is PUBLIC, so runner minutes are free):
+#
+#   1. EACH RUN IS NOW A TICK LOOP: 4 ticks at 5-minute spacing (~15 min of
+#      runner time per start). GitHub can coalesce how often runs START; it
+#      cannot coalesce what a run does while it lives. ~31 starts/day × 4
+#      ticks ≈ 124 ticks/day from this workflow alone.
+#   2. PIGGYBACK TICKS: kill_switch.yml and crypto_bot.yml (both 24/7,
+#      ~27–33 starts/day each, schedules interleaved with this one) each
+#      fire one best-effort authed tick per run. The union of schedules is
+#      what restores the real cadence — combined ≈ a tick every ~8 minutes.
+#
+# Deliberately NOT a resident loop (one run chaining into the next forever):
+# that is cron-as-a-service on GitHub's runners and the kind of thing that
+# gets a repo throttled harder. For a guaranteed 5-minute beat the honest
+# fix is an external cron (Cloudflare Worker cron trigger / any uptime
+# pinger) pointed at the same URL with the same bearer secret — owner's
+# infrastructure, noted in the run summary when relevant.
 on:
   # SCHEDULE RE-REGISTRATION (2026-07-30): the scheduler stopped creating runs
   # for EVERY cron in this repo after ~01:15 UTC — the same window in which
@@ -14,10 +35,13 @@ on:
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
-# Reads nothing, writes nothing. It only makes an outbound HTTPS call.
+# Reads nothing, writes nothing. It only makes outbound HTTPS calls.
 permissions:
   contents: read
 
+# One pending slot behind a running loop; identical runs, so eviction of an
+# older pending run costs nothing. cancel-in-progress stays false — a loop
+# mid-tick must not be killed by the next cron arriving.
 concurrency:
   group: stop-watcher
   cancel-in-progress: false
@@ -25,11 +49,11 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    # A hung curl must not sit on the stop-watcher concurrency group for six
-    # hours while five-minute crons queue up behind it.
-    timeout-minutes: 5
+    # The 4-tick loop runs ~15.5 min healthy; a hung curl must still not sit
+    # on the stop-watcher concurrency group while five-minute crons queue.
+    timeout-minutes: 25
     steps:
-      - name: Fire the cloud stop/target watcher
+      - name: Fire the cloud stop/target watcher (tick loop)
         env:
           # Optional override; defaults to the production Pages URL.
           TICK_URL: ${{ vars.TICK_URL }}
@@ -45,147 +69,162 @@ jobs:
           # THIS STEP IS THE ONLY THING THAT FIRES PAPER STOPS WHEN NO PAGE IS
           # OPEN (2026-07-28). It used to emit ::warning:: on a non-200 and exit
           # 0, so /api/tick could return 503 — the documented fail-closed state
-          # when TICK_SECRET is unset in Cloudflare — on all 288 runs a day and
-          # every one of them showed green. Nothing else watches this endpoint,
-          # so "green" was the entire signal, and it meant nothing. Three tries
+          # when TICK_SECRET is unset in Cloudflare — on every run and every one
+          # showed green. Nothing else watches this endpoint, so "green" was
+          # the entire signal, and it meant nothing. Three tries per tick
           # absorb a genuine transient; a persistent outage fails the job so
           # GitHub emails about it.
           #
-          # 503 IS THE ONE NON-200 THAT DOES NOT FAIL THE JOB (2026-07-28,
-          # second pass — and this is a deliberate exception, not a relapse into
-          # the meaningless green above). tick.js checks its own configuration
-          # BEFORE it does any work: no TICK_SECRET (or no JOURNAL_KV) -> 503,
-          # configured-but-unauthenticated -> 401. So 503 does not mean "the
-          # watcher broke", it means "the watcher was never switched on" — a
-          # standing setup gap that only the repo owner can close, in the
-          # Cloudflare dashboard. Failing on it emails 288 times a DAY, every
-          # day, about a fact that will not change until he acts; the first
-          # version of this shipped at 11:42 UTC and the flood started five
-          # minutes later. An alarm that cannot stop ringing gets muted, and a
-          # muted channel is how the original blackout happened. The 503 case
-          # therefore moves to scanner/watchdog.py probe_endpoints(), which has
-          # the state to say it ONCE, remind every WATCHDOG_RENOTIFY_HOURS, and
-          # say so again when it recovers — none of which a red run can do.
-          # Every OTHER non-200 still fails here: 401/000/5xx mean the watcher
-          # was configured and has now broken or gone unreachable, which is a
-          # real regression and worth an email the moment it happens.
+          # THE VERDICT TAXONOMY (unchanged by the 2026-08-27 loop):
           #
-          # 401 MUST STAY FATAL EVEN THOUGH IT ALSO FLOODS, and the reason is
-          # not symmetry -- it is that THIS JOB IS THE ONLY THING THAT CAN SEE
-          # IT. The watchdog's probe is unauthenticated by construction, so a
-          # 401 reads to it as "configured and correctly refusing an anonymous
-          # caller" = healthy. That is the right reading for an anonymous
-          # prober and the wrong one for the system: TICK_SECRET set in
-          # Cloudflare but absent or mismatched in GitHub means the watcher
-          # still is not running, and only a caller holding the secret can tell
-          # those two apart. Route 401 to a green run and the half-configured
-          # state becomes invisible to every channel at once -- exactly the
-          # blackout this whole commit exists to undo, wearing a better
-          # disguise. It is also the one flood that follows immediately from an
-          # action the owner just took, so it is feedback rather than ambience,
-          # and it stops the moment he sets the second half.
-          code=""
-          for attempt in 1 2 3; do
-            # NO `|| echo 000` HERE. curl writes %{http_code} even when it fails
-            # to connect (as literal 000), so the fallback appended a SECOND one
-            # and the variable read "000000" — which is not "200", so the check
-            # still worked, but every log line and every alert reported a status
-            # code that does not exist. Normalise below instead, which also
-            # covers curl dying before it writes anything at all.
-            # `|| true` IS LOAD-BEARING and is NOT a relapse into the `|| echo
-            # 000` removed above (2026-08-04, run #372). GitHub's default shell
-            # is `bash -e {0}`, so a failing command substitution ABORTS THE
-            # STEP: curl exit 28 ("Operation timed out after 30002 ms with 0
-            # bytes received") killed the step ON THIS LINE — before the
-            # normalisation below, before the retry, and before the 503 and
-            # exit-1 branches could run. The log proves it: not one "attempt N"
-            # line was printed. So the three tries that exist to absorb a
-            # transient were unreachable by the most common transient there is,
-            # and a single 30-second stall was reported as "stop watcher DOWN"
-            # (it was not; #277 on Jul 28 was the same signature).
-            # `|| true` neutralises curl's STATUS without appending a second
-            # value to its OUTPUT — which is the whole distinction from `|| echo
-            # 000` and the "000000" bug. This job judges on the HTTP code, never
-            # on curl's exit code; a real outage still fails after 3 attempts.
-            code=$(curl -sS -m 30 -o /tmp/tick.json -w "%{http_code}" "${AUTH[@]}" "$URL") || true
-            case "$code" in [0-9][0-9][0-9]) ;; *) code="000" ;; esac
-            echo "attempt ${attempt}: HTTP ${code}"
-            cat /tmp/tick.json 2>/dev/null || true
-            echo
-            if [ "$code" = "200" ]; then break; fi
-            if [ "$attempt" != "3" ]; then sleep 10; fi
+          # 503 DOES NOT FAIL THE JOB (2026-07-28 — a deliberate exception,
+          # not a relapse into the meaningless green above). tick.js checks its
+          # own configuration BEFORE it does any work: no TICK_SECRET (or no
+          # JOURNAL_KV) -> 503, configured-but-unauthenticated -> 401. So 503
+          # does not mean "the watcher broke", it means "the watcher was never
+          # switched on" — a standing setup gap only the repo owner can close,
+          # in the Cloudflare dashboard. Failing on it emails hundreds of
+          # times a day about a fact that will not change until he acts. An
+          # alarm that cannot stop ringing gets muted, and a muted channel is
+          # how the original blackout happened. The 503 case therefore lives in
+          # scanner/watchdog.py probe_endpoints(), which has the state to say
+          # it ONCE, remind every WATCHDOG_RENOTIFY_HOURS, and say so again
+          # when it recovers — none of which a red run can do.
+          #
+          # 000 (NO ANSWER) IS NOT FATAL EITHER (2026-08-18, run #776): every
+          # other code is a statement Cloudflare made about its own state,
+          # which one runner can trust; 000 is the ABSENCE of a statement, and
+          # from a single vantage point it cannot distinguish a site outage
+          # from this runner's egress hiccuping — which is what it has been
+          # every single time (#277, #372, #406, #776 — four for four). The
+          # alarm moves to watchdog.probe_endpoints() (kill_switch.yml,
+          # half-hourly, a SECOND vantage point) which raises tick_unreachable
+          # through the state machine that can announce recovery. In the loop,
+          # a 000 tick simply continues to the next tick — a blip that clears
+          # in five minutes costs one beat, not the whole window.
+          #
+          # 401 MUST STAY FATAL EVEN THOUGH IT FLOODS, and the reason is not
+          # symmetry — it is that THIS JOB IS THE ONLY THING THAT CAN SEE IT.
+          # The watchdog's probe is unauthenticated by construction, so a 401
+          # reads to it as "configured and correctly refusing an anonymous
+          # caller" = healthy. Right for the prober, wrong for the system:
+          # TICK_SECRET set in Cloudflare but absent or mismatched in GitHub
+          # means the watcher still is not running, and only a caller holding
+          # the secret can tell those apart. It is also the one flood that
+          # follows immediately from an action the owner just took, so it is
+          # feedback rather than ambience, and it stops when he sets the
+          # second half. 5xx likewise: the site answered and is erroring —
+          # evidence, fatal, immediately.
+          TICKS=4
+          INTERVAL=300
+          ok_ticks=0
+          dead_ticks=0
+          for tick in $(seq 1 "$TICKS"); do
+            echo "== tick ${tick}/${TICKS}"
+            code=""
+            for attempt in 1 2 3; do
+              # NO `|| echo 000` HERE. curl writes %{http_code} even when it
+              # fails to connect (as literal 000), so the fallback appended a
+              # SECOND one and the variable read "000000" — which is not
+              # "200", so the check still worked, but every log line reported
+              # a status code that does not exist. Normalise below instead,
+              # which also covers curl dying before it writes anything at all.
+              # `|| true` IS LOAD-BEARING and is NOT a relapse into the
+              # `|| echo 000` removed above (2026-08-04, run #372). GitHub's
+              # default shell is `bash -e {0}`, so a failing command
+              # substitution ABORTS THE STEP: curl exit 28 ("Operation timed
+              # out") killed the step ON THIS LINE — before the normalisation,
+              # the retry, and the 503 and exit-1 branches alike. The log
+              # proves it: not one "attempt N" line printed. `|| true`
+              # neutralises curl's STATUS without appending a second value to
+              # its OUTPUT — the whole distinction from `|| echo 000` and the
+              # "000000" bug. This job judges on the HTTP code, never on
+              # curl's exit code; a real outage still fails after 3 attempts.
+              code=$(curl -sS -m 30 -o /tmp/tick.json -w "%{http_code}" "${AUTH[@]}" "$URL") || true
+              case "$code" in [0-9][0-9][0-9]) ;; *) code="000" ;; esac
+              echo "attempt ${attempt}: HTTP ${code}"
+              cat /tmp/tick.json 2>/dev/null || true
+              echo
+              if [ "$code" = "200" ]; then break; fi
+              if [ "$attempt" != "3" ]; then sleep 10; fi
+            done
+
+            # NOT-CONFIGURED: loud on the run page, silent in your inbox, and
+            # no point looping — a setup gap does not heal in fifteen minutes.
+            if [ "$code" = "503" ]; then
+              echo "::warning::stop watcher NOT CONFIGURED — /api/tick is fail-closed (HTTP 503)."
+              echo "TICK_SECRET is unset in Cloudflare, so the cloud watcher has never run."
+              echo "Paper stops/targets only fire while a chart page is open."
+              {
+                echo "## Stop watcher NOT CONFIGURED"
+                echo ""
+                echo "\`${URL}\` returned **HTTP 503** — the documented fail-closed state."
+                echo ""
+                echo "\`TICK_SECRET\` is not set in the Cloudflare Pages project, so the"
+                echo "cloud stop/target watcher has never been able to run. Paper stops"
+                echo "and targets only fire while a chart page is open on some device."
+                echo ""
+                echo "**Fix:** Cloudflare Pages → the project → Settings → Environment"
+                echo "variables → add \`TICK_SECRET\`, then set the identical value as the"
+                echo "\`TICK_SECRET\` GitHub Actions secret. Redeploy for it to take effect."
+                echo ""
+                echo "**Do both halves in one sitting.** Setting it in Cloudflare alone"
+                echo "moves this job from 503 to **401** — configured, but this job cannot"
+                echo "authenticate — and a 401 DOES fail the run until the two values"
+                echo "match. That is deliberate, but it is a loud way to find out you"
+                echo "did half of it."
+                echo ""
+                echo "This job stays green on purpose: it is a setup gap, not a"
+                echo "regression, and it would otherwise email on every start. The"
+                echo "watchdog reports it once and reminds every 6h until it clears."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+
+            # UNREACHABLE this tick: log it, keep the loop alive — the next
+            # beat is five minutes away and blips have historically cleared.
+            if [ "$code" = "000" ]; then
+              dead_ticks=$((dead_ticks + 1))
+              echo "tick ${tick}: no answer (000) after 3 attempts — continuing to the next beat"
+            elif [ "$code" != "200" ]; then
+              # Evidence FROM the server (401 secret mismatch / 5xx erroring):
+              # fatal immediately — waiting out the window delays a real email.
+              echo "::error::stop watcher DOWN — /api/tick returned HTTP ${code} on 3 consecutive attempts."
+              echo "Paper stops and targets are NOT being evaluated while this fails."
+              echo "401 = TICK_SECRET mismatched between Cloudflare and GitHub (only this job can see that)."
+              {
+                echo "## Stop watcher DOWN"
+                echo ""
+                echo "\`${URL}\` returned **HTTP ${code}** on 3 consecutive attempts."
+                echo ""
+                echo "Paper stops/targets are not being evaluated. 401 means the watcher IS"
+                echo "configured in Cloudflare but this job's \`TICK_SECRET\` does not match"
+                echo "it — and this job is the only caller that holds the secret, so it is the"
+                echo "only thing that can see a half-configured setup. A 5xx means the site"
+                echo "answered and is erroring. Both are evidence; 000 (no answer) is handled"
+                echo "separately and is deliberately not fatal."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              ok_ticks=$((ok_ticks + 1))
+              echo "tick ${tick}: watcher OK (HTTP 200)"
+            fi
+
+            if [ "$tick" != "$TICKS" ]; then sleep "$INTERVAL"; fi
           done
 
-          # NOT-CONFIGURED: loud on the run page, silent in your inbox. The
-          # watchdog owns this alarm (once, then every 6h, then on recovery).
-          if [ "$code" = "503" ]; then
-            echo "::warning::stop watcher NOT CONFIGURED — /api/tick is fail-closed (HTTP 503)."
-            echo "TICK_SECRET is unset in Cloudflare, so the cloud watcher has never run."
-            echo "Paper stops/targets only fire while a chart page is open."
-            {
-              echo "## Stop watcher NOT CONFIGURED"
-              echo ""
-              echo "\`${URL}\` returned **HTTP 503** — the documented fail-closed state."
-              echo ""
-              echo "\`TICK_SECRET\` is not set in the Cloudflare Pages project, so the"
-              echo "cloud stop/target watcher has never been able to run. Paper stops"
-              echo "and targets only fire while a chart page is open on some device."
-              echo ""
-              echo "**Fix:** Cloudflare Pages → the project → Settings → Environment"
-              echo "variables → add \`TICK_SECRET\`, then set the identical value as the"
-              echo "\`TICK_SECRET\` GitHub Actions secret. Redeploy for it to take effect."
-              echo ""
-              echo "**Do both halves in one sitting.** Setting it in Cloudflare alone"
-              echo "moves this job from 503 to **401** — configured, but this job cannot"
-              echo "authenticate — and a 401 DOES fail the run, every 5 minutes, until"
-              echo "the two values match. That is deliberate (see below), but it is a"
-              echo "loud way to find out you did half of it."
-              echo ""
-              echo "This job stays green on purpose: it is a setup gap, not a"
-              echo "regression, and it would otherwise email 288 times a day. The"
-              echo "watchdog reports it once and reminds every 6h until it clears."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          # UNREACHABLE (000): loud on the run page, SILENT in the inbox — and
-          # the reason is a vantage-point argument, not a softening.
-          #
-          # Every other branch here judges an answer the SERVER produced: 200,
-          # 401 and 503 are all statements by Cloudflare about its own state,
-          # and one runner can trust them. 000 is the absence of an answer, and
-          # from a single runner it cannot tell "the site is down" from "my
-          # egress hiccuped for two minutes" — which is what it has actually
-          # been every time. Run #776 (2026-08-18) reported DOWN on 3×000 while
-          # /api/tick was answering 401 normally throughout, and #277, #372 and
-          # #406 were the same family. Four false alarms out of four on a job
-          # that runs 288 times a day is how a channel gets muted, and a muted
-          # channel is the original blackout.
-          #
-          # The alarm is not dropped, it MOVES to the component that has a
-          # second vantage point and can retract: watchdog.probe_endpoints()
-          # (kill_switch.yml, half-hourly) probes the same URL from a different
-          # runner at a different time and raises `tick_unreachable` through the
-          # standard state machine — say it once, remind every
-          # WATCHDOG_RENOTIFY_HOURS, and ANNOUNCE RECOVERY, which a red run
-          # structurally cannot do. A blip that only this runner saw finds the
-          # watchdog answering 401 and stays silent, correctly. A real outage is
-          # seen by both and gets reported once with a recovery notice, instead
-          # of 288 emails a day with none.
-          #
-          # Cost, stated: detection of a genuine site outage moves from ~5 min
-          # to at most 30. That is the deliberate trade for an alarm that is
-          # believed when it fires. Everything the server answers stays fatal
-          # below — this branch narrows the fatal set to codes that ARE evidence.
-          if [ "$code" = "000" ]; then
-            echo "::warning::stop watcher UNREACHABLE — /api/tick gave no answer (000) on 3 attempts."
+          if [ "$ok_ticks" = "0" ]; then
+            # Every beat in the window went unanswered. Still not fatal — a
+            # single vantage point cannot tell a site outage from its own
+            # egress dying — but say it loudly and name who owns the alarm.
+            echo "::warning::stop watcher UNREACHABLE — /api/tick gave no answer (000) on all ${TICKS} ticks."
             echo "The site could not be reached FROM THIS RUNNER. A single vantage point"
             echo "cannot tell a site outage from a local network blip, so the watchdog"
             echo "(kill_switch.yml, half-hourly, with recovery notices) owns this alarm."
             {
               echo "## Stop watcher UNREACHABLE (not necessarily down)"
               echo ""
-              echo "\`${URL}\` gave **no answer at all (000)** on 3 consecutive attempts."
+              echo "\`${URL}\` gave **no answer at all (000)** on every tick of this run."
               echo ""
               echo "This job stays green on purpose. 000 is the absence of an answer, so"
               echo "from one runner it cannot be told apart from a local network blip —"
@@ -204,23 +243,4 @@ jobs:
             exit 0
           fi
 
-          if [ "$code" != "200" ]; then
-            echo "::error::stop watcher DOWN — /api/tick returned HTTP ${code} on 3 consecutive attempts."
-            echo "Paper stops and targets are NOT being evaluated while this fails."
-            echo "401 = TICK_SECRET mismatched between Cloudflare and GitHub (only this job can see that)."
-            {
-              echo "## Stop watcher DOWN"
-              echo ""
-              echo "\`${URL}\` returned **HTTP ${code}** on 3 consecutive attempts."
-              echo ""
-              echo "Paper stops/targets are not being evaluated. 401 means the watcher IS"
-              echo "configured in Cloudflare but this job's \`TICK_SECRET\` does not match"
-              echo "it — and this job is the only caller that holds the secret, so it is the"
-              echo "only thing that can see a half-configured setup. A 5xx means the site"
-              echo "answered and is erroring. Both are evidence; 000 (no answer) is handled"
-              echo "above and is deliberately not fatal."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-          echo "watcher OK (HTTP 200)"
+          echo "loop done: ${ok_ticks}/${TICKS} ticks OK, ${dead_ticks} unanswered"

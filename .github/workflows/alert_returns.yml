@@ -27,10 +27,23 @@ name: Alert forward returns
 on:
   schedule:
     - cron: "20 22 * * *"
+    # BACKSTOP (2026-08-27): on 2026-08-26 the scheduler dropped the 22:20
+    # firing ENTIRELY — no run of any conclusion — in the same 21:00–23:00
+    # window that dropped backup_book's cron and delayed evidence_brief 3h
+    # (same class as the documented 2026-07-24 / 2026-07-30 drops). The gate
+    # step skips this cron when a scheduled run already SUCCEEDED today, so a
+    # healthy scheduler costs zero extra Yahoo walks and a ghosted 22:20 is
+    # healed within 90 minutes instead of leaving the ledgers a day stale.
+    - cron: "50 23 * * *"
   workflow_dispatch: {}
 
 permissions:
   contents: write
+  # The backstop gate asks the Actions API whether today's scheduled run
+  # already succeeded — read-only, and the only honest signal on a shallow
+  # checkout (git log can't see past the tip, and artefact timestamps go
+  # quiet on legitimately-unchanged days).
+  actions: read
 
 jobs:
   returns:
@@ -39,7 +52,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      # The backstop cron's freshness gate. Fail-OPEN: an unreadable API
+      # answer reads as "no run today" and the backstop runs — every script
+      # below is idempotent and the commit step already skips on the
+      # *_UNCHANGED sentinels, so a redundant pass costs minutes, while a
+      # skipped needed pass is the exact hole the backstop exists to close.
+      - id: gate
+        name: Backstop freshness gate
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$SCHEDULE" = "50 23 * * *" ]; then
+            TODAY=$(date -u +%Y-%m-%d)
+            N=$(curl -sS -m 20 -H "Authorization: Bearer ${GH_TOKEN}"               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/alert_returns.yml/runs?event=schedule&status=success&created=%3E%3D${TODAY}&per_page=5"               | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('workflow_runs', [])))" 2>/dev/null) || N=0
+            echo "backstop 23:50 - successful scheduled runs today: ${N:-0}"
+            if [ "${N:-0}" -gt 0 ] 2>/dev/null; then
+              echo "The 22:20 run already landed. Skipping."
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
@@ -47,9 +84,11 @@ jobs:
       # Needs the pinned yfinance stack — the script prices through
       # scanner.data.download, the same access the scanner itself uses.
       - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
         run: pip install -r requirements.txt
 
       - name: Ingest + stamp forward returns
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           python scripts/alert_returns.py 2>&1 | tee /tmp/alert_returns_out.txt
@@ -58,6 +97,7 @@ jobs:
       # stamped by the same imported machinery on the same Yahoo plumbing —
       # so "does alignment beat plain A+" keeps answering itself.
       - name: Build the A+ roster baseline
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           python scripts/edge_rosters.py 2>&1 | tee /tmp/edge_rosters_out.txt
@@ -66,6 +106,7 @@ jobs:
       # unrealized R survives a uniform pullback, against the REAL stops.
       # Published for the journal's quiet tide line.
       - name: Book stress report
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           python scripts/book_stress.py 2>&1 | tee /tmp/book_stress_out.txt
@@ -73,6 +114,7 @@ jobs:
       # The daily research digest (batch-100 WS-J): the edge report's ledger
       # view lands on the run page every day, no local checkout needed.
       - name: Edge report to step summary
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           python scripts/alert_edge_report.py 2>&1 | tee /tmp/edge_report_out.txt
@@ -86,11 +128,13 @@ jobs:
       # numbers as a small committed artefact, built from the report's OWN
       # stat functions — diffable day over day in git.
       - name: Edge summary artefact
+        if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
           python scripts/edge_summary.py 2>&1 | tee /tmp/edge_summary_out.txt
 
       - name: Commit & push (surgical — the edge artefacts only)
+        if: steps.gate.outputs.run == 'true'
         run: |
           if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt \
              && grep -q EDGE_ROSTERS_UNCHANGED /tmp/edge_rosters_out.txt \

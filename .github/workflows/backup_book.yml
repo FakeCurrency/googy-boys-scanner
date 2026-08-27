@@ -18,6 +18,14 @@ on:
     # so each night's snapshot captures that day's final book. Runs weekends
     # too (the crypto book updates 24/7).
     - cron: "35 21 * * *"
+    # BACKSTOP (2026-08-27): on 2026-08-26 the scheduler dropped the 21:35
+    # firing ENTIRELY — no run of any conclusion — in the same 21:00–23:00
+    # window that delayed evidence_brief 3h and dropped alert_returns too
+    # (the 2026-07-24/07-30 drops were the same class). The gate below skips
+    # this cron when today's snapshot already exists in the checkout, so a
+    # healthy scheduler costs zero extra snapshots and a ghosted 21:35 is
+    # healed within two hours instead of aging into a silent hole.
+    - cron: "35 23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -37,8 +45,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The backstop cron's freshness gate — LOCAL, off the fresh checkout:
+      # snapshots are committed in-tree as backups/<UTC-timestamp>/, so
+      # "did today's 21:35 land" is one ls. Fail-open: an unreadable dir
+      # reads as no-snapshot and the backstop runs (an extra snapshot is
+      # cheap; a missing one is the failure this cron exists to prevent).
+      - id: gate
+        name: Backstop freshness gate
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$SCHEDULE" = "35 23 * * *" ] && ls backups 2>/dev/null | grep -q "^$(date -u +%Y-%m-%d)T"; then
+            echo "Backstop 23:35 - today's snapshot already exists. Skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # backup_journal.py is stdlib-only — no pip install needed.
       - name: Create timestamped backup
+        if: steps.gate.outputs.run == 'true'
         run: python3 scripts/backup_journal.py backup
 
       # Off-tree copy (2026-07-21): the snapshot committed below lives in the
@@ -49,6 +75,7 @@ jobs:
       # run → download the artifact, unzip, then
       #   python scripts/backup_journal.py restore <backup-dir>
       - name: Upload snapshots as run artifact (off-tree copy)
+        if: steps.gate.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: book-backups-${{ github.run_id }}
@@ -57,6 +84,7 @@ jobs:
           if-no-files-found: error
 
       - name: Commit backup (surgical — only the new backups/ dir)
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

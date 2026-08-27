@@ -108,3 +108,25 @@ jobs:
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: python -m scanner.watchdog
+
+      # PIGGYBACK TICK (2026-08-27). GitHub coalesces stop_watcher's 5-minute
+      # cron to ~31 starts/day on this repo (observed gaps to 115 min), so
+      # every 24/7 workflow now fires one best-effort authed tick — the union
+      # of interleaved schedules is what restores the real stop/target
+      # cadence. Best-effort BY CONSTRUCTION: stop_watcher owns every tick
+      # verdict (503/000/401 taxonomy, summaries, the watchdog handoff); this
+      # is only an extra beat, and a dead beat must never redden a
+      # kill-switch run. NOT the watchdog's anonymous probe one step up —
+      # that one must stay credential-free (test-pinned) so the monitor never
+      # moves the thing it monitors; this step exists precisely to move it.
+      - name: Fire the paper stop/target tick (best-effort piggyback)
+        if: always()
+        continue-on-error: true
+        env:
+          TICK_URL: ${{ vars.TICK_URL }}
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+        run: |
+          [ -z "${TICK_SECRET:-}" ] && { echo "TICK_SECRET not set - skipping."; exit 0; }
+          URL="${TICK_URL:-https://googy-boys-scanner.pages.dev/api/tick}"
+          code=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TICK_SECRET}" "$URL") || true
+          echo "piggyback tick: HTTP ${code:-000} (verdicts belong to stop_watcher.yml)"
