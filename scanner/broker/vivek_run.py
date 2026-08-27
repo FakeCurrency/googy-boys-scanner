@@ -682,8 +682,8 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # not"). The flag is computed on the TICKET, which lives for the length of
     # one decide() call and is then gone -- if it does not land here it exists
     # only in a log line inside a finished Actions run, which is not a place a
-    # decision gets made. On the row it reaches the journal page, the Discord
-    # ping below, and any later post-mortem asking "was this one marked when it
+    # decision gets made. On the row it reaches the journal page, the review
+    # push below, and any later post-mortem asking "was this one marked when it
     # was taken?". Stored as the plan's list verbatim, empty list when clean, so
     # "no flags" and "written before flags existed" stay distinguishable at
     # every reader. Report-only, exactly as on the ticket: nothing downstream
@@ -716,7 +716,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
 
 
 def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
-    """Ping Discord for positions opened carrying a review flag.
+    """Push a NOTICE for positions opened carrying a review flag.
 
     Owner, 2026-07-28: "Flag this in the future so i can verify whether claude
     or I should take the position or not." This is the delivery half of that.

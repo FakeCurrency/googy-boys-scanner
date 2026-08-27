@@ -582,7 +582,7 @@
   // Review chip — this position was flagged HEAVY when the bot took it
   // (server-side, scanner/broker/vivek_bot.review_flags; owner 2026-07-28:
   // "Flag this in the future so i can verify whether claude or I should take
-  // the position or not"). The Discord ping is what arrives in time to act on;
+  // the position or not"). The review push is what arrives in time to act on;
   // this is the same fact on the page, for the trade you are looking at.
   //
   // It renders on CLOSED rows too, on purpose. The flag records what was known
@@ -1147,7 +1147,7 @@
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       };
-      // Fix-10 #5: clipboard-first — paste straight into Discord/chat; the
+      // Fix-10 #5: clipboard-first — paste straight into any chat; the
       // toast offers the file too. Falls back to a plain download wherever
       // the clipboard image API isn't available.
       let copied = false;

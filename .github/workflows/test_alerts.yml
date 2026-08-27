@@ -1,10 +1,10 @@
 name: Alert-path self-test
 
 # Manual-only (2026-07-21, Phase 6 P2): proves the alert channels DELIVER by
-# forcing one test message through every configured route (Discord, Telegram,
+# forcing one test message through every configured route (Telegram,
 # email) via `scanner.watchdog --test-alert`, running where the real secrets
 # live. An unexercised email path is a CRITICAL that silently degrades to
-# Discord-only — run this once after ANY alert-secret change and read the
+# a single channel — run this once after ANY alert-secret change and read the
 # per-channel result in the job summary. It sends real (clearly-labelled)
 # test messages, so it has NO schedule and never runs automatically.
 
@@ -36,7 +36,6 @@ jobs:
       - name: Send test alert through every configured channel
         env:
           WATCHDOG_HOST: self-test
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}

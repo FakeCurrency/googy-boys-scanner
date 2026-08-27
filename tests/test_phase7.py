@@ -49,15 +49,16 @@ class TestAlertRouterChannels:
         from scanner.broker.alert_router import get_channels
         channels = get_channels("kill_switch")
         assert "telegram" in channels
-        assert "discord"  in channels
         assert "email"    in channels
+        # discord removed 2026-08-27 (owner ruling)
+        assert "discord" not in channels
 
     def test_warning_events_exclude_email(self):
         from scanner.broker.alert_router import get_channels
         channels = get_channels("anomaly")
         assert "telegram" in channels
-        assert "discord"  in channels
         assert "email" not in channels
+        assert "discord" not in channels
 
     def test_explicit_severity_override(self):
         from scanner.broker.alert_router import get_channels

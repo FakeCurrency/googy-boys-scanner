@@ -5,7 +5,8 @@
 # Runs scripts/evidence_brief.py — a READ-ONLY reporter over committed
 # artifacts (tests/test_evidence_brief.py pins that it writes nothing and
 # imports nothing from scanner/ or broker/) — and delivers the printed brief
-# to the run's step summary and to Discord. Delivery lives HERE and not in the
+# to the run's step summary (Discord delivery removed 2026-08-27 with the
+# whole channel). Delivery lives HERE and not in the
 # script on purpose: the script's no-imports/no-writes properties are pinned,
 # so the workflow is the only place a channel can be attached without
 # weakening them.
@@ -70,33 +71,3 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Discord is where every other owner-facing ping already goes. A missing
-      # webhook degrades to the step summary rather than failing: the brief
-      # was still produced, and a red run about a missing secret is the
-      # unactionable-alarm shape again. Posted as one fenced message; the
-      # brief's 15-line budget keeps it far under Discord's 2000-char limit,
-      # and the head -c is a belt against that ever changing.
-      - name: Post to Discord
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "::warning::DISCORD_WEBHOOK_URL not set - brief delivered to step summary only"
-            exit 0
-          fi
-          python - <<'EOF'
-          import json, os, urllib.request
-          # Same trim as scanner.config.clean_secret (inlined - the workflow
-          # must not depend on repo imports): the live webhook secret was
-          # pasted with a leading U+FEFF, which urllib rejects as an unknown
-          # url type. Ends only; interior bytes untouched.
-          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
-              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
-          body = open("brief.txt", encoding="utf-8").read()[:1800]
-          req = urllib.request.Request(
-              url,
-              data=json.dumps({"content": "```\n" + body + "\n```"}).encode(),
-              headers={"Content-Type": "application/json",
-                       "User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
-          urllib.request.urlopen(req, timeout=30)
-          EOF

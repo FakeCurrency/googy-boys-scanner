@@ -464,8 +464,6 @@ def _dispatch(severity: str, text: str) -> list[str]:
         ok = False
         if ch == "telegram":
             ok = ad._telegram(text)
-        elif ch == "discord":
-            ok = ad._discord(text)
         elif ch == "email":
             subject = text.splitlines()[0][:120]
             ok = ad._email(subject, text)
@@ -552,8 +550,11 @@ def test_alert() -> None:
     per-channel delivery result (2026-07-21, Phase 6 P2). This is how the
     owner PROVES the alert paths actually deliver — before Phase 6 the email
     leg (GBS_SMTP_*) had never once been exercised, so a CRITICAL could have
-    silently degraded to Discord-only. Run locally with the secrets exported,
-    or via a manual workflow dispatch."""
+    silently degraded to a single channel. Run locally with the secrets
+    exported, or via a manual workflow dispatch. (Since the 2026-08-27
+    Discord removal no push channel is configured, so this prints NOT
+    delivered for every tier — it becomes the proof harness again the day
+    the replacement channel lands.)"""
     host = os.environ.get("WATCHDOG_HOST", "manual")
     text = (f"[Vivek 5.0] Watchdog TEST ALERT (host: {host}) - if you can "
             f"read this, this channel delivers. No action needed.")

@@ -160,12 +160,14 @@ def test_the_workflow_is_NOT_in_the_scan_concurrency_group():
         "no concurrency key at all - the job writes nothing and must never queue"
 
 
-def test_the_alert_uses_the_proven_discord_path():
-    # BOM-trimmed URL + named UA — the two halves of CLAUDE.md "ALERT
-    # DELIVERY" that made the channel deliverable at all.
-    assert "\\ufeff" in WF
-    assert "vivek5-alerts/1.0" in WF
-    assert "DISCORD_WEBHOOK_URL" in WF
+def test_the_finding_still_reaches_the_run_page_after_the_discord_removal():
+    # Discord removed 2026-08-27 (owner ruling). The sentinel's finding now
+    # travels via the step summary + a ::warning:: annotation on the run page
+    # — a detection that lands nowhere is not detection, so both must stay
+    # until the replacement channel takes over delivery.
+    assert "DISCORD_WEBHOOK_URL" not in WF, "the removed channel crept back in"
+    assert "GITHUB_STEP_SUMMARY" in WF
+    assert "::warning::unrecognized commit identity" in WF
 
 
 def test_it_fires_on_every_push_to_main_with_no_path_filter():

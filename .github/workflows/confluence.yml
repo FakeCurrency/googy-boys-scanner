@@ -1,6 +1,7 @@
 name: Confluence alert (post-nightly)
 
-# Multi-lens confluence -> Discord ping, 15 min after the PhaseMap/Specs
+# Multi-lens confluence engine (ALERTS log + push-owed state; delivery
+# removed 2026-08-27), 15 min after the PhaseMap/Specs
 # nightly lands (2026-07-20, review H6). This workflow exists so the
 # confluence dedupe state (journal/confluence_state.json +
 # public/data/phasemap/alert_history.json) has a SINGLE committing owner:
@@ -43,9 +44,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Confluence Discord alert
+      - name: Confluence alert engine (ALERTS log + state)
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 

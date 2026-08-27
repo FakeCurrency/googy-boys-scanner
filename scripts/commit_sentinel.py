@@ -13,7 +13,7 @@ three things against what main's real history actually looks like:
      never read as "everything was fine".
 
 Exit 0 = all known. Exit 1 = anomaly NAMED in the printed report (the
-workflow posts it to Discord and stays green — detection only; nothing is
+workflow surfaces it on the run page and stays green — detection only; nothing is
 ever blocked or reverted, per the owner's incident review). Any other exit
 is a crash and the workflow goes red.
 

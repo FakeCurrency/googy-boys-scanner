@@ -561,8 +561,9 @@ def cap_streak(hist: dict, market: str) -> int:
 # because a dashboard only works on the days you open it. `SECTOR_BREADTH_RUN_
 # ALERT` is the point at which "a sector has been leading unheld" stops being a
 # thing worth publishing and becomes a thing worth interrupting someone about,
-# and this is the interruption. Discord, per the owner -- the same channel the
-# confluence pings already land in, so there is one place to look and not two.
+# and this is the interruption. It routed to Discord per the owner until the
+# 2026-08-27 channel removal; it now routes wherever the NOTICE tier points
+# (config.ALERT_CHANNELS -- currently nowhere, awaiting the next channel).
 #
 # STILL REPORT-ONLY. It changes what gets SAID and never what gets taken. The
 # decisions this alert will provoke -- raise the 3-per-sector cap, tilt the
@@ -617,7 +618,7 @@ def _sector_row(blk: dict, sector: str) -> dict:
 
 
 def notify(hist: dict, blocks: dict, day: str, send=None) -> list[str]:
-    """Ping Discord for each sector whose unheld run has gone on long enough.
+    """Push a NOTICE for each sector whose unheld run has gone on long enough.
 
     Fires the first time a sector appears in `horizon()["sustained"]`, then at
     most once every `SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS` calendar days for as

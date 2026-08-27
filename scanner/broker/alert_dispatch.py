@@ -1,12 +1,18 @@
-"""Unified event-alert dispatcher: email, Telegram, Discord.
+"""Unified event-alert dispatcher: email, Telegram.
 
 All broker events that warrant human attention — kill switch trigger, daily
 loss limit, order failures, scan anomalies — flow through here.
 
+The Discord sender was REMOVED 2026-08-27 (owner ruling: "get rid of the
+discord aspect, I will work on implementing something new in the future").
+This module is where the replacement channel plugs in: add a `_<channel>`
+sender beside `_telegram`/`_email`, wire it into `send()` below and into
+`alert_router.smart_send`, and add the channel name to
+config.ALERT_CHANNELS' tiers.
+
 Environment vars (all optional; unused channels are silently skipped):
   TELEGRAM_BOT_TOKEN     Bot API token from @BotFather
   TELEGRAM_CHAT_ID       Target chat/channel ID (negative for group chats)
-  DISCORD_WEBHOOK_URL    Webhook URL from Server Settings → Integrations
 
 Email uses the same GBS_SMTP_* vars as scanner/alerts.py.
 """
@@ -21,15 +27,15 @@ from email.mime.text import MIMEText
 log = logging.getLogger(__name__)
 
 
-# Discord (and anything behind Cloudflare) may 403 a default Python UA as a
-# bot. A named agent is both politer and deliverable.
+# Webhook edges (Discord's did, and anything behind Cloudflare may) 403 a
+# default Python UA as a bot. A named agent is both politer and deliverable.
 _UA = "vivek5-alerts/1.0 (+github-actions)"
 
 
 def _cred(name: str) -> str:
     """Read a pasted credential tolerantly — see config.clean_secret for the
-    live incident (a BOM inside DISCORD_WEBHOOK_URL silenced the whole
-    Discord channel because every sender here swallows its exceptions)."""
+    live incident (a BOM inside the then-live DISCORD_WEBHOOK_URL silenced
+    that whole channel because every sender here swallows its exceptions)."""
     try:
         from scanner.config import clean_secret
         return clean_secret(os.environ.get(name, ""))
@@ -80,22 +86,6 @@ def _telegram(text: str) -> bool:
         return False
 
 
-def _discord(text: str) -> bool:
-    url = _cred("DISCORD_WEBHOOK_URL")
-    if not url:
-        return False
-    data = _json.dumps({"content": text}).encode()
-    try:
-        req = urllib.request.Request(
-            url, data=data, headers={"Content-Type": "application/json",
-                                     "User-Agent": _UA})
-        urllib.request.urlopen(req, timeout=10)
-        return True
-    except Exception as e:
-        log.warning("discord alert failed: %s", e)
-        return False
-
-
 def _email(subject: str, body: str) -> bool:
     host = _cred("GBS_SMTP_HOST")
     user = _cred("GBS_SMTP_USER")
@@ -134,8 +124,6 @@ def send(event_type: str, title: str, details: str = "") -> None:
     channels: list[str] = []
     if _telegram(message):
         channels.append("telegram")
-    if _discord(message):
-        channels.append("discord")
     if _email(f"Vivek 5.0 — {title}", message):
         channels.append("email")
 

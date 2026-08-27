@@ -1,9 +1,11 @@
 """Smart alert routing — Phase 7 Advanced Monitoring & Alerting.
 
 Wraps alert_dispatch with:
-  - Severity-based channel selection
-      CRITICAL → Telegram + Discord + Email
-      WARNING  → Telegram + Discord
+  - Severity-based channel selection (config.ALERT_CHANNELS is the live map)
+      CRITICAL → Telegram + Email
+      WARNING  → Telegram
+      NOTICE   → no channel (Discord removed 2026-08-27; the replacement
+                 channel adds itself back to these tiers)
       INFO     → log only (no push)
   - Per-event-type rate limiting to prevent alert storms
   - State persisted to journal/alert_state.json so rate limits
@@ -51,18 +53,20 @@ _SEV_MAP = {
     # missing key here is not an error — it is a silent DOWNGRADE. Both of the
     # events below are CRITICAL in config, and CRITICAL is the only tier that
     # reaches email; landing on the WARNING default would drop them to
-    # telegram+discord without a word in any log. That is the whole failure
+    # telegram-only without a word in any log. That is the whole failure
     # mode: these tables are only consulted when config is unavailable, which is
     # exactly the moment nobody is watching closely.
     "vivek_guard":     "CRITICAL",
     "orphan_position": "CRITICAL",
 }
 
+# Discord removed 2026-08-27 (owner ruling) — see config.ALERT_CHANNELS,
+# which this table only mirrors for the config-unavailable fallback case.
 _CHAN_MAP = {
-    "CRITICAL": ["telegram", "discord", "email"],
-    "WARNING":  ["telegram", "discord"],
+    "CRITICAL": ["telegram", "email"],
+    "WARNING":  ["telegram"],
     "INFO":     [],
-    "NOTICE":   ["discord"],
+    "NOTICE":   [],
 }
 
 _RATE_MAP = {
@@ -267,7 +271,7 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
         return
 
     # Delegate actual delivery to the low-level dispatcher
-    from .alert_dispatch import _telegram, _discord, _email, _EMOJI
+    from .alert_dispatch import _telegram, _email, _EMOJI
 
     emoji   = _EMOJI.get(event_type, "ℹ️")
     message = f"{emoji} [Vivek 5.0] {title}"
@@ -277,8 +281,6 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
     fired: list[str] = []
     if "telegram" in channels and _telegram(message):
         fired.append("telegram")
-    if "discord" in channels and _discord(message):
-        fired.append("discord")
     if "email" in channels and _email(f"Vivek 5.0 — {title}", message):
         fired.append("email")
 
@@ -300,6 +302,7 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
         log.warning(
             "smart_send: NOBODY WAS TOLD  event=%s  severity=%s  wanted=%s  "
             "(no channel accepted — check the workflow's env block for "
-            "DISCORD_WEBHOOK_URL / TELEGRAM_* / GBS_SMTP_*)",
+            "TELEGRAM_* / GBS_SMTP_*; no push channel is live since the "
+            "2026-08-27 Discord removal)",
             event_type, severity, ",".join(channels),
         )

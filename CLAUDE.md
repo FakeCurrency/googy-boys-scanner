@@ -37,9 +37,9 @@ confluence machinery; the fourth, TURTLE, is deliberately outside it:
    anywhere else in the tree. See the TURTLE section below.
 
 **Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
-agreements get banners everywhere, Discord pings (`scanner/confluence_alert.py`,
-triples mention @here; state-deduped), a permanent ALERTS page log, and the
-★ MY NAMES page.
+agreements get banners everywhere, a permanent ALERTS page log
+(`scanner/confluence_alert.py`, state-deduped — push DELIVERY REMOVED
+2026-08-27, see ALERT DELIVERY below), and the ★ MY NAMES page.
 
 ---
 
@@ -65,7 +65,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
   scan.py              scan_vivek_market → public/data/<m>_vivek.json
   run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
   spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
-  confluence_alert.py  multi-lens Discord pings + ALERTS page history log
+  confluence_alert.py  multi-lens confluence engine: ALERTS page history log
+                       + push-owed state (delivery removed 2026-08-27)
   vivek_backtest.py    walk-forward replay (1D/3D/1W, level_tf cohorts)
   vivek_journal.py     RETIRED as a journal (2026-07-09) — module kept: the
                        backtester + bot runner import its trade primitives
@@ -114,10 +115,10 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
-| evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary + Discord (owner-ruled 2026-08-01). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
-| commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + Discord WARNING (evidence_brief pattern), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
+| evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
+| commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. Pins: `tests/test_turtle.py` |
-| alert_returns.yml | daily 22:20 UTC | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) → a SUNDAY-ONLY Discord digest of the report head (BOM-trim + named UA per 2026-08-01; missing webhook degrades, never reds). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
+| alert_returns.yml | daily 22:20 UTC | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -146,9 +147,31 @@ self-test corroborated: `sent via NONE — NOT delivered: telegram,discord,email
    the brief's run #3 delivering. Applied at all three post sites
    (alert_dispatch urllib ×2, discord.post_webhook requests, the workflow).
 
-Still true after the fix: **Telegram and SMTP are UNCONFIGURED** (empty
-secrets), so Discord is the only live channel. Run `test_alerts.yml` after any
-alert-secret change and read the job log — it is the only end-to-end proof.
+**DISCORD REMOVED ENTIRELY, 2026-08-27 (owner ruling: "get rid of the discord
+aspect, I will work on implementing something new in the future").** Everything
+above and below in this section is HISTORY — the incidents were real and their
+lessons (clean_secret at every credential boundary, named UA, loud dead-sends)
+carry over to whatever channel comes next. What was removed: the `_discord`
+sender in alert_dispatch, `scanner/discord.py` outright, confluence_alert's
+webhook post (the ALERTS page log and the signed push-owed state SURVIVE — an
+undelivered alignment holds a NEGATIVE state count, so the replacement
+channel's first run pings everything still current), the watchdog's discord
+branch, every workflow Discord step/env line, and "discord" from every
+ALERT_CHANNELS tier (NOTICE is now channel-less). The router, severities, rate
+limits and every page surface stay: the new channel plugs in by adding a
+sender to alert_dispatch, wiring it in smart_send/watchdog._dispatch, and
+naming itself in config.ALERT_CHANNELS. Pinned in
+`tests/test_alert_credentials.py` (no workflow may reference
+DISCORD_WEBHOOK_URL; no scanner/scripts code may read it). UNTIL THEN THE ONLY
+ALARMS ARE GitHub's own red-run emails plus the run pages' `::warning::`
+annotations — Telegram and SMTP remain unconfigured, so `smart_send` logs
+"NOBODY WAS TOLD" on every routable event. The owner can delete the
+DISCORD_WEBHOOK_URL secret from GitHub + Cloudflare whenever convenient;
+nothing reads it.
+
+HISTORY (pre-removal): **Telegram and SMTP are UNCONFIGURED** (empty
+secrets), so Discord was the only live channel. `test_alerts.yml` remains the
+end-to-end proof harness for whatever channel comes next.
 
 **THE 2026-08-01 FIX MISSED THE WORKFLOWS' OWN FAILURE PINGS (found
 2026-08-27).** Five workflows — scan, crypto_bot, phasemap, backup_book,
@@ -486,10 +509,12 @@ can verify whether claude or I should take the position or not."* A plan whose
   `0 < threshold < ceiling` so the dead-code case fails loudly. 0 = off.
 - **Three hops, because a flag nobody sees is not a flag.** The ticket carries
   `review` (a list, empty when clean); `_ticket_to_position` copies it onto the
-  book row; `vivek_run._notify_reviews` pushes it to Discord. Skip any hop and
+  book row; `vivek_run._notify_reviews` pushes it through the NOTICE tier
+  (channel-less since 2026-08-27). Skip any hop and
   the mark survives only in a log line inside a finished Actions run, which is
   not a place a decision gets made.
-- **The push is `trade_review`, NOTICE → Discord only, rate limit 0**
+- **The push is `trade_review`, NOTICE tier (channel-less since the
+  2026-08-27 Discord removal), rate limit 0**
   (`VIVEK_BOT_REVIEW_PUSH`, ON — unlike `VIVEK_BOT_NOTIFY_TRADES` beside it,
   which digests every open/close through every channel including email and stays
   off). Fires AFTER `_save_market_book`, so a dry run is silent and nothing is
@@ -827,13 +852,15 @@ the owner's call, not a refactor. Keep it that way.
   index.html. Both hide themselves silently if the JSON is missing, so a
   market that has never run degrades to nothing rather than to an error.
 - Constants: `SECTOR_BREADTH_*` in `scanner/config.py`.
-- **The sustained-run alarm pushes to Discord** (2026-07-28, owner decision —
+- **The sustained-run alarm pushes through the NOTICE tier** (2026-07-28,
+  owner decision; channel-less since the 2026-08-27 Discord removal —
   `sectorbreadth.notify()`). A dashboard only works on the days you open it, and
   the raw ingredients of the July rotation were on the page for four weeks while
   the miss happened anyway. `notify()` fires the first time a sector enters
   `horizon()["sustained"]`, then at most once every
   `SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS` (7) for as long as the run lasts.
-  - **Its own `NOTICE` severity tier**, routed to `["discord"]` only. INFO is
+  - **Its own `NOTICE` severity tier** (routed to `["discord"]` until the
+    2026-08-27 removal; now `[]`). INFO is
     silent and WARNING would file a market observation beside kill switches and
     order failures at the same volume. Nothing is *wrong* when this fires.
   - **The ping memory lives in `data/sector_history.json`** under
@@ -1454,7 +1481,8 @@ Lighthouse budget was measuring the TAPE" below.
   `test_oscillation_never_demotes_AND_THAT_IS_THE_POINT` is the pin and carries
   the reasoning, so the next reader of `vivek.py:570` reaches it before the edit.
   Still true and still harmless: the held grade inflates `sectorbreadth`'s A+/A
-  participation counts and `discord.py`'s tradeable list — both REPORT-ONLY, and
+  participation counts (report-only; `discord.py`'s tradeable list read it too
+  until that module was deleted 2026-08-27), and
   the bot buys `grade_raw`.
 - **#65 — the observability half shipped; the caching half is the DECISION, not
   an unfinished edit.** `_fetch_sector` now returns a verdict beside the value —
@@ -2294,8 +2322,9 @@ The facts a later session must not re-derive:
 
 ## Secrets
 
-Set: `DISCORD_WEBHOOK_URL` (private #alerts, triples-only via
-`DISCORD_CONF_MIN_LENSES`), `BYBIT_*` (testnet), `ALPACA_*` (legacy),
+Set: `DISCORD_WEBHOOK_URL` (ORPHANED 2026-08-27 — the channel was removed;
+nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
+`BYBIT_*` (testnet), `ALPACA_*` (legacy),
 `TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
 **Pending owner:** `GBS_SYNC_CODE` (activates watchlist-aware pings),
 data-provider key, Cloudflare Access.

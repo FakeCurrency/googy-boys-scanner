@@ -753,8 +753,12 @@ def test_a_single_market_failure_must_not_discard_the_others():
     guard = commit[:commit.index("run: |")]
     assert "if: success() || failure()" in guard, \
         "the commit must survive a partial-failure scan"
-    # and the alarm must be untouched
-    assert "if: failure()" in wf, "a failed market must still alert"
+    # and the alarm must be untouched: since the 2026-08-27 Discord removal
+    # the alarm IS the red run (GitHub's own failure email), so the scan step
+    # must not be allowed to swallow its own exit code.
+    scan_step = wf[wf.index("name: Run the Turtle scan"):wf.index("name: Scan summary")]
+    assert "continue-on-error" not in scan_step, \
+        "a failed market must still redden the run - the red run is the alarm"
 
 
 def test_the_must_change_gate_is_ANY_OF_so_a_partial_run_still_commits():

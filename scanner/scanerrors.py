@@ -21,7 +21,7 @@ Three deliberate limits:
 
 * **It is not an alert channel.** It changes what a scan SAYS, never what it
   does — nothing is re-raised, no name is dropped, no threshold moves. Routing
-  a scan-health number into Discord is an alerting-threshold decision and
+  a scan-health number into a push channel is an alerting-threshold decision and
   therefore the owner's.
 * **The published sample is CAPPED** (``SCAN_ERROR_SAMPLE_MAX``). These payloads
   are committed by the scan workflow, so an unbounded list would write thousands

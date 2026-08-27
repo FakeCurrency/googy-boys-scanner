@@ -5,7 +5,7 @@
    top of journal.html, so the owner can see exactly what is locking capacity
    and make an explicit call.
 
-   WHY IT EXISTS. The probe's Discord ping is a moment; this is the standing
+   WHY IT EXISTS. The probe's push ping is a moment; this is the standing
    answer to "what is squatting my slots right now". The two automatic rules
    leave a gap on purpose — MAX_HOLD_DAYS only time-stops pre-TP1 stalls, and a
    runner past TP1 is exempt from it forever — so a +0.1R runner can hold one

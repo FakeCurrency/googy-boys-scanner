@@ -90,40 +90,6 @@ jobs:
           set -o pipefail
           python scripts/edge_summary.py 2>&1 | tee /tmp/edge_summary_out.txt
 
-      # Sunday digest (batch-100 WS-J): once a week the edge report's head
-      # goes to Discord, the channel the owner actually reads. Sundays only —
-      # a daily research ping is ambience, and ambience gets muted (the
-      # stop_watcher lesson). Missing webhook degrades to the step summary
-      # (the report already landed there); never a red run.
-      - name: Sunday Discord digest
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ "$(date -u +%u)" != "7" ]; then
-            echo "Not Sunday - digest skipped."
-            exit 0
-          fi
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "::warning::DISCORD_WEBHOOK_URL not set - digest in step summary only"
-            exit 0
-          fi
-          python - <<'EOF'
-          import json, os, urllib.request
-          # Same trim as scanner.config.clean_secret (inlined — the workflow
-          # must not depend on repo imports): the live webhook secret was
-          # pasted with a leading U+FEFF once already. Ends only.
-          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
-              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
-          body = open("/tmp/edge_report_out.txt", encoding="utf-8").read()[:1800]
-          req = urllib.request.Request(
-              url,
-              data=json.dumps({"content": "**Weekly edge digest**\n```\n"
-                               + body + "\n```"}).encode(),
-              headers={"Content-Type": "application/json",
-                       "User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
-          urllib.request.urlopen(req, timeout=30)
-          EOF
-
       - name: Commit & push (surgical — the edge artefacts only)
         run: |
           if grep -q ALERT_RETURNS_UNCHANGED /tmp/alert_returns_out.txt \

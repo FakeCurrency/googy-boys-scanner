@@ -181,7 +181,6 @@ jobs:
           # (:372-432) and the book-corrupt alarm (:101-111). Crypto is the one
           # market that trades while nobody is awake, which makes it the one
           # market where a silent alert path is the whole failure.
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
           GBS_SMTP_HOST:       ${{ secrets.GBS_SMTP_HOST }}
@@ -318,7 +317,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WATCHDOG_HOST: crypto_bot
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
@@ -328,22 +326,3 @@ jobs:
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: python -m scanner.watchdog
 
-      # If anything above failed, say so — otherwise the site quietly serves
-      # stale data and nobody notices until the freshness badge goes orange.
-      - name: Alert on failure (Discord)
-        if: failure()
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
-          # The stored secret still carries its leading U+FEFF (ALERT DELIVERY,
-          # 2026-08-01). curl parses "<BOM>https" as a HOSTNAME and the rest as
-          # a port ("Port number was not a decimal number"), so this ping died
-          # inside `|| true` on every red run -- proven live by turtle run #29
-          # (2026-08-24). Same trim as config.clean_secret, inlined: ends only.
-          URL=$(python3 -c 'import os,sys; sys.stdout.write(os.environ["DISCORD_WEBHOOK_URL"].strip(" \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f"))' || true)
-          curl -sS --fail -X POST -H 'Content-Type: application/json' \
-            -A 'vivek5-alerts/1.0 (+github-actions)' \
-            -d "{\"content\":\"WARNING: **${{ github.workflow }}** run FAILED - scan data may be going stale. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-            "$URL" \
-            || echo "::warning::Discord failure ping did not deliver - this red run is the only alarm"

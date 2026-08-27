@@ -7,11 +7,11 @@
 # checks every push to main against the identities that legitimately write
 # here (the authenticated pusher AND each commit's author/committer email —
 # see scripts/commit_sentinel.py for the observed allowlist and its honest
-# limits) and alerts through the EXISTING Discord path on any mismatch.
+# limits) and surfaces any mismatch on the run page + step summary.
 #
 # DETECTION ONLY, by owner-reviewed design: it never blocks, reverts or
 # otherwise acts on a commit. An anomaly is script exit 1 — that is CONTENT,
-# not a crash, so the run stays GREEN and the finding travels via Discord +
+# not a crash, so the run stays GREEN and the finding travels via the
 # step summary (the evidence_brief.yml pattern: a red run about a fact the
 # run cannot change is the unactionable-alarm shape this repo mutes). Any
 # other exit code is a real crash and stays fatal.
@@ -68,36 +68,6 @@ jobs:
               cat sentinel.txt
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::unrecognized commit identity on main - see the step summary and Discord"
+            echo "::warning::unrecognized commit identity on main - see the step summary"
           fi
 
-      # Same delivery as evidence_brief.yml — the one Discord path that is
-      # known to work (BOM-trimmed URL + named UA; see CLAUDE.md "ALERT
-      # DELIVERY"). A missing webhook degrades to the step summary rather
-      # than failing: the finding was still produced and recorded.
-      - name: Alert Discord
-        if: steps.inspect.outputs.anomaly == '1'
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "::warning::DISCORD_WEBHOOK_URL not set - sentinel finding delivered to step summary only"
-            exit 0
-          fi
-          python - <<'EOF'
-          import json, os, urllib.request
-          # Same trim as scanner.config.clean_secret (inlined - the workflow
-          # must not depend on repo imports): the live webhook secret was
-          # pasted with a leading U+FEFF, which urllib rejects as an unknown
-          # url type. Ends only; interior bytes untouched.
-          url = os.environ["DISCORD_WEBHOOK_URL"].strip(
-              " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
-          body = open("sentinel.txt", encoding="utf-8").read()[:1700]
-          msg = "WARNING commit sentinel - unrecognized identity pushed to main\n```\n" + body + "\n```"
-          req = urllib.request.Request(
-              url,
-              data=json.dumps({"content": msg}).encode(),
-              headers={"Content-Type": "application/json",
-                       "User-Agent": "vivek5-alerts/1.0 (+github-actions)"})
-          urllib.request.urlopen(req, timeout=30)
-          EOF

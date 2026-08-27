@@ -606,8 +606,9 @@ SECTOR_BREADTH_PUBLISH_DAYS = 180
 #    being missed in progress, which is the whole reason this module exists.
 #    July ran nineteen. Report-only -- it changes the volume, never the trades.
 SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm to Discord (owner's choice, same
-#    channel as the confluence pings) instead of only colouring the page. A
+#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
+#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
+#    no live channel) instead of only colouring the page. A
 #    surface you have to open to be warned by is a surface that warns you after
 #    you already looked, which in July was never. Rate-limited through
 #    journal/alert_state.json so a 19-session run pings once, not nineteen times.
@@ -664,8 +665,7 @@ REGIME_MIN_DAY_COVERAGE = 0.5
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per
-# bot trade event (hourly-ish in session). Flip to True when you want pushes
-# (and add DISCORD_WEBHOOK_URL to the scan workflow env for Discord instead).
+# bot trade event (hourly-ish in session).
 VIVEK_BOT_NOTIFY_TRADES = False
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the
@@ -689,12 +689,12 @@ VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
 # on ordinary trades. 0 = off.
 VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
 
-# Push the review flag to Discord when a flagged position is actually opened
+# Push the review flag through the NOTICE tier when a flagged position is opened
 # (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
 # and the difference is the point: that one digests EVERY open and close through
 # alert_dispatch, which fires every configured channel including email, so it is
 # off to avoid emailing routine trades. This one fires only on the flagged
-# minority, at NOTICE, to Discord alone. A flag nobody sees on the day is not a
+# minority, at NOTICE. A flag nobody sees on the day is not a
 # flag -- the whole instruction was so the owner could decide before the trade
 # has moved. Set False to keep the flag on the row and the page but stop the
 # push.
@@ -955,15 +955,22 @@ ALERT_SEVERITY = {
 # Flip back to True when the bot is ready to go live again.
 TELEGRAM_ENABLED = False
 
-# Map severity → alert channels (telegram / discord / email)
+# Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
+# by owner ruling — "get rid of the discord aspect, I will work on
+# implementing something new in the future". The router, tiers and rate
+# limits all stay: the next channel plugs in here by adding its name to the
+# tiers below and a sender to alert_dispatch. Until then CRITICAL/WARNING
+# route to telegram+email, both currently unconfigured, so delivery is the
+# router's "NOBODY WAS TOLD" log line plus GitHub's own red-run emails.)
 ALERT_CHANNELS = {
-    "CRITICAL": ["telegram", "discord", "email"],
-    "WARNING":  ["telegram", "discord"],
+    "CRITICAL": ["telegram", "email"],
+    "WARNING":  ["telegram"],
     "INFO":     [],  # log only — no push notification for routine events
-    # Discord only, by owner decision (2026-07-28) — the same private channel
-    # the confluence pings land in, so market observations stay in one place
-    # and the email/Telegram legs remain reserved for things that are broken.
-    "NOTICE":   ["discord"],
+    # NOTICE was Discord-only by the 2026-07-28 ruling (market observations,
+    # nothing broken). With that channel removed it pushes nowhere; the
+    # events are still computed, logged and deduped by their owners, so the
+    # future channel inherits them by adding itself to this list.
+    "NOTICE":   [],
 }
 
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
@@ -1159,10 +1166,11 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 }
 
 # ---------------------------------------------------------------------------
-# Discord digest — posts new tradeable setups to a Discord channel webhook
+# Alert credentials — the boundary every pasted secret crosses
 # ---------------------------------------------------------------------------
-# Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
-# the module writes a preview and no-ops (never fails the workflow).
+# (The Discord digest that used to live under this heading was removed with
+# the whole Discord channel on 2026-08-27; clean_secret stays because it
+# guards EVERY pasted credential, not one channel's.)
 
 
 def clean_secret(value) -> str:
@@ -1183,25 +1191,14 @@ def clean_secret(value) -> str:
     """
     return str(value or "").strip(
         " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
-DISCORD_USERNAME       = "Vivek 5.0"
-DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
-DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
-DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
-DISCORD_CONF_MENTION   = "@here"     # mention on TRIPLE-lens confluence alerts ("" = silent)
-DISCORD_CONF_MIN_LENSES = 3          # only post alignments with at least this many lenses
+CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this many lenses
                                      # (3 = triples only — owner's call 2026-07-02; the site
-                                     # still shows every 2-lens alignment visually)
+                                     # still shows every 2-lens alignment visually. Channel-
+                                     # independent POLICY, kept through the 2026-08-27 Discord
+                                     # removal: confluence_alert still computes what deserves a
+                                     # push and records it as undelivered, so the next channel
+                                     # pings everything current on its first run.)
 SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
-DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
-DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
-    "A+": 0x30D158, "A": 0x0A84FF, "B": 0xFF9500, "C": 0x8E8E93,
-}
-DISCORD_GRADE_EMOJI    = {           # per-setup marker
-    "A+": "🟢", "A": "🔵", "B": "🟠", "C": "⚪",
-}
-DISCORD_POST_RETRIES   = 4           # network/5xx retry attempts (with back-off)
-# Grade precedence for the min-grade filter (lower index = stronger).
-GRADE_PRECEDENCE       = ["A+", "A", "B", "C"]
 
 # ---------------------------------------------------------------------------
 # Phase 9: Capital Scaling Framework
@@ -1331,7 +1328,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
 # same lesson as sectorbreadth's ping memory), resets on the first successful
-# publish, and pings Discord ONCE per episode, exactly at the threshold.
+# publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
 

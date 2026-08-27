@@ -164,9 +164,11 @@ def test_the_retry_loop_carries_the_summary_through_the_rebase():
         "a push race must not silently drop the summary from the retried commit"
 
 
-def test_the_sunday_digest_is_gated_missing_webhook_safe_and_bom_trimmed():
+def test_the_digest_leg_is_gone_and_the_report_still_lands_in_the_summary():
+    # The Sunday Discord digest was removed with the whole channel
+    # (2026-08-27, owner ruling). The edge report's delivery is now the step
+    # summary alone — which the daily run always wrote anyway — so the pin is
+    # that the summary write survives and the removed channel stays removed.
     wf = (ROOT / ".github" / "workflows" / "alert_returns.yml").read_text(encoding="utf-8")
-    assert 'date -u +%u' in wf and '"7"' in wf, "digest fires on Sundays only"
-    assert "DISCORD_WEBHOOK_URL not set" in wf, "missing webhook degrades, never reds"
-    assert "\\ufeff" in wf, "the webhook trim must survive the BOM paste (2026-08-01)"
-    assert "vivek5-alerts/1.0" in wf, "Discord 403s the default Python UA"
+    assert "DISCORD_WEBHOOK_URL" not in wf, "the removed channel crept back in"
+    assert "GITHUB_STEP_SUMMARY" in wf, "the report must still land somewhere readable"

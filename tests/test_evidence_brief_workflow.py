@@ -51,11 +51,12 @@ def test_the_issue_flag_is_tolerated_and_a_crash_is_not():
     assert "exit \"$rc\"" in WF
 
 
-def test_a_missing_webhook_degrades_never_reddens():
-    at = WF.index('-z "$DISCORD_WEBHOOK_URL"')
-    tail = WF[at:at + 200]
-    assert "exit 0" in tail, "missing webhook must exit 0 (summary-only), not fail"
-    assert "::warning::" in tail, "and must say so on the run page"
+def test_the_discord_leg_is_gone_and_the_brief_still_lands_in_the_summary():
+    # Post-to-Discord removed 2026-08-27 with the whole channel (owner
+    # ruling). The brief's delivery is the step summary; the pin is that the
+    # summary write survives and the removed channel stays removed.
+    assert "DISCORD_WEBHOOK_URL" not in WF, "the removed channel crept back in"
+    assert "GITHUB_STEP_SUMMARY" in WF, "the brief must still land somewhere readable"
 
 
 def test_it_has_a_timeout():

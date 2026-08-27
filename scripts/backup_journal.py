@@ -71,7 +71,7 @@ BACKUP_FILES = [
     #                                 and `held` is null there because it is
     #                                 genuinely unknowable. It also carries the
     #                                 sector_run ping memory, so losing it
-    #                                 re-fires the Discord alarm for every
+    #                                 re-fires the sector-run alarm for every
     #                                 sector mid-run.
     #   data/sector_map.json          a SIGNAL PATH since REFINEMENTS #38 - it
     #   public/data/sector_map.json   decides which rows the 3-per-sector cap

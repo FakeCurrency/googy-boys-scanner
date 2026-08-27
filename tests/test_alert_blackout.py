@@ -75,8 +75,6 @@ class TestRateLimitWindowIsSpentOnDelivery:
         monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"health": 3600})
         monkeypatch.setattr("scanner.broker.alert_dispatch._telegram",
                             lambda *_: False)
-        monkeypatch.setattr("scanner.broker.alert_dispatch._discord",
-                            lambda *_: False)
         monkeypatch.setattr("scanner.broker.alert_dispatch._email",
                             lambda *_: False)
         ar.smart_send("health", "nobody is listening")
@@ -86,8 +84,6 @@ class TestRateLimitWindowIsSpentOnDelivery:
         from scanner.broker import alert_router as ar
         monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"health": 3600})
         monkeypatch.setattr("scanner.broker.alert_dispatch._telegram",
-                            lambda *_: False)
-        monkeypatch.setattr("scanner.broker.alert_dispatch._discord",
                             lambda *_: True)
         monkeypatch.setattr("scanner.broker.alert_dispatch._email",
                             lambda *_: False)
@@ -100,7 +96,7 @@ class TestRateLimitWindowIsSpentOnDelivery:
 class TestSilenceIsLoud:
     def test_router_warns_when_no_channel_accepts(self, state, monkeypatch, caplog):
         from scanner.broker import alert_router as ar
-        for ch in ("_telegram", "_discord", "_email"):
+        for ch in ("_telegram", "_email"):
             monkeypatch.setattr(f"scanner.broker.alert_dispatch.{ch}",
                                 lambda *_: False)
         with caplog.at_level("WARNING"):
@@ -110,7 +106,7 @@ class TestSilenceIsLoud:
 
     def test_dispatch_warns_when_no_channel_is_configured(self, monkeypatch, caplog):
         from scanner.broker import alert_dispatch as ad
-        for ch in ("_telegram", "_discord", "_email"):
+        for ch in ("_telegram", "_email"):
             monkeypatch.setattr(ad, ch, lambda *_: False)
         with caplog.at_level("WARNING"):
             ad.send("kill_switch", "fired")

@@ -789,16 +789,17 @@ def test_a_broken_alert_path_never_costs_a_scan(paths, monkeypatch):
     assert (paths / "pub" / "sector_breadth.json").exists()
 
 
-def test_the_alert_routes_to_discord_only():
-    """Owner decision (2026-07-28): the same channel the confluence pings land
-    in. Nothing is BROKEN when this fires, so it must not sit in the same feed
-    at the same volume as order failures and circuit breakers."""
+def test_the_alert_routes_through_the_NOTICE_tier():
+    """Owner decision (2026-07-28): NOTICE, because nothing is BROKEN when
+    this fires — it must not sit in the same feed at the same volume as order
+    failures and circuit breakers. Channel-less since the 2026-08-27 Discord
+    removal; the replacement channel re-adds itself to the NOTICE tier."""
     from scanner.broker import alert_router as ar
     assert ar.get_severity("sector_run") == "NOTICE"
-    assert ar.get_channels("sector_run") == ["discord"]
+    assert ar.get_channels("sector_run") == []  # no push channel since the 2026-08-27 Discord removal
     # the router must not second-guess our per-sector dedupe
     assert config.ALERT_RATE_LIMITS["sector_run"] == 0
-    assert ar._CHAN_MAP["NOTICE"] == ["discord"]     # config-less fallback agrees
+    assert ar._CHAN_MAP["NOTICE"] == []              # config-less fallback agrees
 
 
 def test_the_message_is_plain_ascii(push):

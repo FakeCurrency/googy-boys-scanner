@@ -139,9 +139,9 @@ jobs:
       # the equities' forward history because crypto could not fetch. Crypto's
       # fetch failed three times on 2026-08-21 alone.
       #
-      # The job still goes RED (the scan step's failure stands, and the Discord
-      # alert below is on failure()), so the alarm is unchanged. Only the
-      # discarding stops. The staging below is already surgical and per-market,
+      # The job still goes RED (the scan step's failure stands, and GitHub's own
+      # red-run email is the alarm since the 2026-08-27 Discord removal). Only
+      # the discarding stops. The staging below is already surgical and per-market,
       # and assert_staged is ANY-OF, so a market that failed the coverage floor
       # simply has no file to stage and the ones that worked still land.
       - name: Commit & push (surgical — the turtle files only)
@@ -199,20 +199,3 @@ jobs:
           done
           echo "Could not push after retries"; exit 1
 
-      - name: Alert on failure (Discord)
-        if: failure()
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
-          # The stored secret still carries its leading U+FEFF (ALERT DELIVERY,
-          # 2026-08-01). curl parses "<BOM>https" as a HOSTNAME and the rest as
-          # a port ("Port number was not a decimal number"), so this ping died
-          # inside `|| true` on every red run — proven live by run #29
-          # (2026-08-24). Same trim as config.clean_secret, inlined: ends only.
-          URL=$(python3 -c 'import os,sys; sys.stdout.write(os.environ["DISCORD_WEBHOOK_URL"].strip(" \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f"))' || true)
-          curl -sS --fail -X POST -H 'Content-Type: application/json' \
-            -A 'vivek5-alerts/1.0 (+github-actions)' \
-            -d "{\"content\":\"WARNING: **${{ github.workflow }}** run FAILED - the Turtle lens data is going stale. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-            "$URL" \
-            || echo "::warning::Discord failure ping did not deliver - this red run is the only alarm"

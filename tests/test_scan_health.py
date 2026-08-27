@@ -99,7 +99,7 @@ def test_the_event_is_registered_everywhere_it_needs_to_be():
     fallback tables is not an error, it is a silent severity DOWNGRADE."""
     from scanner.broker import alert_router as ar
     assert ar.get_severity("scan_dry") == "NOTICE"
-    assert ar.get_channels("scan_dry") == ["discord"]
+    assert ar.get_channels("scan_dry") == []  # no push channel since the 2026-08-27 Discord removal
     assert config.ALERT_RATE_LIMITS["scan_dry"] == 0
     # the config-less fallbacks must agree, or a config import failure
     # silently downgrades the event to WARNING and re-routes it

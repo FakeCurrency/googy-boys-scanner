@@ -54,14 +54,6 @@ class _Sent:
         return _R()
 
 
-def test_discord_send_survives_a_bom_in_the_stored_secret(monkeypatch):
-    sent = _Sent()
-    monkeypatch.setenv("DISCORD_WEBHOOK_URL", DIRTY)
-    monkeypatch.setattr(ad.urllib.request, "urlopen", sent.urlopen)
-    assert ad._discord("test message") is True
-    assert sent.url == CLEAN, f"request went to {sent.url!r}"
-
-
 def test_telegram_creds_are_cleaned_before_the_url_is_built(monkeypatch):
     sent = _Sent()
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "﻿123:abc ")
@@ -76,8 +68,11 @@ def test_telegram_creds_are_cleaned_before_the_url_is_built(monkeypatch):
 
 def test_a_missing_secret_still_reads_as_not_configured(monkeypatch):
     # The cleaner must not turn "unset" into a phantom empty-string send.
-    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
-    assert ad._discord("x") is False
+    for name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+        monkeypatch.delenv(name, raising=False)
+    import scanner.config as cfg
+    monkeypatch.setattr(cfg, "TELEGRAM_ENABLED", True, raising=False)
+    assert ad._telegram("x") is False
 
 
 # ── the other two read sites route through the cleaner (source pins) ─────────
@@ -86,16 +81,20 @@ def _src(rel):
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
-def test_confluence_alert_cleans_its_webhook_read():
-    assert re.search(r"clean_secret\(os\.environ\.get\(\"DISCORD_WEBHOOK_URL\"",
-                     _src("scanner/confluence_alert.py")), \
-        "confluence_alert.py no longer routes its webhook through clean_secret"
-
-
-def test_discord_digest_cleans_its_webhook_read():
-    assert re.search(r"clean_secret\(os\.getenv\(\"DISCORD_WEBHOOK_URL\"",
-                     _src("scanner/discord.py")), \
-        "discord.py no longer routes its webhook through clean_secret"
+def test_no_scanner_code_reads_the_removed_discord_webhook():
+    # Discord was removed 2026-08-27 (owner ruling). A webhook read creeping
+    # back into scanner/ or scripts/ would be a partial, untested revival of
+    # the channel — the replacement goes through alert_dispatch/_cred like
+    # every other credential, not through a scattered env read.
+    read_forms = re.compile(
+        r"(?:os\.environ\.get|os\.getenv|environ\[|getenv\()\s*\(?\s*"
+        r"[\"']DISCORD_WEBHOOK_URL")
+    offenders = []
+    for base in ("scanner", "scripts"):
+        for py in sorted((ROOT / base).rglob("*.py")):
+            if read_forms.search(py.read_text(encoding="utf-8")):
+                offenders.append(str(py.relative_to(ROOT)))
+    assert not offenders, f"webhook read crept back in: {offenders}"
 
 
 def test_no_sender_in_alert_dispatch_reads_a_credential_raw():
@@ -111,69 +110,27 @@ def test_no_sender_in_alert_dispatch_reads_a_credential_raw():
         assert raw is None, f"{name} is read raw, bypassing _cred"
 
 
-def test_the_evidence_brief_workflow_trims_the_same_characters():
-    wf = _src(".github/workflows/evidence_brief.yml")
-    assert "\\ufeff" in wf, "the workflow's inline trim lost the BOM"
-    assert "\\u200b" in wf
-
-
-# ── the workflows' own failure pings (found live 2026-08-27) ─────────────────
+# ── the workflows (Discord removed 2026-08-27, owner ruling) ─────────────────
 #
-# The 2026-08-01 fix routed every PYTHON sender through clean_secret and left
-# five workflows curling the secret raw in their `Alert on failure` steps.
-# curl parses "<BOM>https" as a HOSTNAME and the path after the next colon as
-# a port, dies with "Port number was not a decimal number between 0 and
-# 65535", and `|| true` swallowed it — so the red-run Discord ping for
-# scan/crypto_bot/phasemap/backup_book/turtle had NEVER delivered. Proven in
-# the live log of turtle run #29 (2026-08-24), where the scan failure itself
-# was Yahoo throttling but the alert about it silently died. These pins are
-# the two halves of the repair.
-
-_WORKFLOWS = ROOT / ".github" / "workflows"
-
-# The workflows whose failure ping posts via curl (rather than a Python
-# sender that already routes through clean_secret / the inline trim).
-_CURL_PING_WORKFLOWS = (
-    "scan.yml", "crypto_bot.yml", "phasemap.yml", "backup_book.yml",
-    "turtle.yml",
-)
+# History, so the next reader knows why a whole family of pins vanished here:
+# the 2026-08-01 fix routed every Python sender through clean_secret; on
+# 2026-08-27 an audit found five workflows still curling the secret raw in
+# their failure pings (curl parses "<BOM>https" as a hostname and dies inside
+# `|| true` — proven in turtle run #29's live log), and the same day the
+# owner ruled the whole Discord channel OUT ("get rid of the discord aspect,
+# I will work on implementing something new in the future"). So instead of
+# pinning trims onto Discord steps, the pin is now that the steps are GONE.
 
 
-def test_no_workflow_hands_the_raw_webhook_to_curl():
-    # The shape being banned is the URL-as-final-argument line:
-    #     "$DISCORD_WEBHOOK_URL" || true
-    # The emptiness guard `[ -z "$DISCORD_WEBHOOK_URL" ]` and env: blocks are
-    # legitimate raw reads and do not match. Any curl must target the trimmed
-    # $URL instead.
+def test_no_workflow_references_the_removed_discord_webhook():
+    """Any DISCORD_WEBHOOK_URL in a workflow is a partial revival of the
+    removed channel: an env line feeding a sender that no longer exists, or a
+    new raw curl re-importing the BOM bug. The replacement channel gets its
+    own secret name, its own sender in alert_dispatch, and its own pins."""
     offenders = []
-    for wf in sorted(_WORKFLOWS.glob("*.yml")):
+    for wf in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
         for i, line in enumerate(
                 wf.read_text(encoding="utf-8").splitlines(), 1):
-            if re.match(r'\s*"\$DISCORD_WEBHOOK_URL"', line):
+            if "DISCORD_WEBHOOK_URL" in line:
                 offenders.append(f"{wf.name}:{i}")
-    assert not offenders, (
-        "these lines hand the pasted secret straight to a command; the "
-        "stored value carries a leading U+FEFF, so the send dies inside "
-        f"|| true and nobody hears the red run: {offenders}")
-
-
-def test_the_failure_ping_workflows_trim_the_same_characters():
-    # Each curl-pinging workflow must inline clean_secret's exact ends-only
-    # character set before the send — the same rule the evidence brief pin
-    # above enforces for its Python post.
-    for name in _CURL_PING_WORKFLOWS:
-        wf = _src(f".github/workflows/{name}")
-        assert "\\ufeff" in wf, f"{name}: the inline trim lost the BOM"
-        assert "\\u200b" in wf, f"{name}: the inline trim lost the zero-widths"
-
-
-def test_a_dead_failure_ping_is_no_longer_silent():
-    # The counterpart of removing `|| true` from the send: a curl that cannot
-    # deliver must say so on the run page. Every curl-pinging workflow carries
-    # the ::warning:: fallback, so the next credential problem is visible on
-    # the very first red run instead of after weeks of silence.
-    for name in _CURL_PING_WORKFLOWS:
-        wf = _src(f".github/workflows/{name}")
-        assert "::warning::Discord failure ping did not deliver" in wf, (
-            f"{name}: the failed-send warning is gone — a dead ping is "
-            "silent again")
+    assert not offenders, f"Discord webhook crept back in: {offenders}"

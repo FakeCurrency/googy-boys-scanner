@@ -1,4 +1,4 @@
-/* ALERTS page — the multi-lens alignment log (Discord pings scroll away;
+/* ALERTS page — the multi-lens alignment log (push pings scroll away;
    this page doesn't). Reads public/data/phasemap/alert_history.json.
    2026-07-10: market filter + collapsible day groups (the log grew fast —
    ~27 alignments/day — so only the newest day starts expanded). */

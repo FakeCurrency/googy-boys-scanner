@@ -65,7 +65,7 @@ jobs:
           git add -A backups
           # Must-change gate (2026-07-20 Phase 5): every run creates a NEW
           # timestamped dir under backups/ — empty staging here can only mean
-          # the backup was silently lost. Fail loudly (email + Discord).
+          # the backup was silently lost. Fail loudly (red run + GitHub's email).
           bash scripts/assert_staged.sh "book backup" backups
           if git diff --cached --quiet; then
             echo "Nothing to back up."
@@ -92,24 +92,7 @@ jobs:
       # would never be committed and the off-tree artifact never uploaded, so
       # the response to "tonight's backup is incomplete" would be to also not
       # keep the incomplete one. An incomplete backup still beats none. The
-      # job goes red and the Discord alert fires either way.
+      # job goes red either way (GitHub's red-run email is the alarm).
       - name: Verify the snapshot contains the track record
         run: python3 scripts/backup_journal.py verify
 
-      - name: Alert on failure (Discord)
-        if: failure()
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
-          # The stored secret still carries its leading U+FEFF (ALERT DELIVERY,
-          # 2026-08-01). curl parses "<BOM>https" as a HOSTNAME and the rest as
-          # a port ("Port number was not a decimal number"), so this ping died
-          # inside `|| true` on every red run -- proven live by turtle run #29
-          # (2026-08-24). Same trim as config.clean_secret, inlined: ends only.
-          URL=$(python3 -c 'import os,sys; sys.stdout.write(os.environ["DISCORD_WEBHOOK_URL"].strip(" \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f"))' || true)
-          curl -sS --fail -X POST -H 'Content-Type: application/json' \
-            -A 'vivek5-alerts/1.0 (+github-actions)' \
-            -d "{\"content\":\"WARNING: **${{ github.workflow }}** FAILED - the bot book has no fresh backup. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-            "$URL" \
-            || echo "::warning::Discord failure ping did not deliver - this red run is the only alarm"

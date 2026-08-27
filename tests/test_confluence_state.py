@@ -12,8 +12,14 @@ watchlist gets it too — +count means DELIVERED, -count means seen for the
 ALERTS-page log but never posted.
 
 These tests run the real module against a tmp filesystem (DATA/STATE_FILE/
-HISTORY_FILE are monkeypatched module globals) with load_watch_keys and
-post_webhook stubbed at the call boundary — no re-typed logic.
+HISTORY_FILE are monkeypatched module globals) with load_watch_keys stubbed at
+the call boundary — no re-typed logic.
+
+DELIVERY REMOVED 2026-08-27 (owner ruling): there is no webhook post anymore.
+"Pings" in these tests became "push-worthy (undelivered)" run-log lines plus
+NEGATIVE state counts — the machine still decides exactly what a channel OWES
+the owner, and the pin is that nothing is ever burned while no channel exists,
+so the replacement channel's first run pings everything still current.
 """
 
 from __future__ import annotations
@@ -87,11 +93,7 @@ def wired(tmp_path, monkeypatch):
     monkeypatch.setattr(ca, "DATA", data)
     monkeypatch.setattr(ca, "STATE_FILE", tmp_path / "confluence_state.json")
     monkeypatch.setattr(ca, "HISTORY_FILE", data / "phasemap" / "alert_history.json")
-    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.test/hook")
-    monkeypatch.setattr(ca.config, "DISCORD_CONF_MIN_LENSES", 3, raising=False)
-
-    posted = []
-    monkeypatch.setattr(ca, "post_webhook", lambda url, p: posted.append(p) or True)
+    monkeypatch.setattr(ca.config, "CONF_ALERT_MIN_LENSES", 3, raising=False)
 
     watch: set[str] = set()
     monkeypatch.setattr(ca, "load_watch_keys", lambda: set(watch))
@@ -109,68 +111,64 @@ def wired(tmp_path, monkeypatch):
     def state():
         return json.loads((tmp_path / "confluence_state.json").read_text(encoding="utf-8"))
 
-    return type("W", (), {"scan": staticmethod(scan), "posted": posted,
+    return type("W", (), {"scan": staticmethod(scan),
                           "watch": watch, "state": staticmethod(state),
                           "run": staticmethod(lambda: ca.main(["--market", "asx"]))})
 
 
 class TestStarLater:
-    def test_the_burned_count_scenario_now_pings(self, wired):
-        # Day 1: 2-lens forms, unwatched, channel is triples-only → no ping,
-        # state must record it as SEEN-NOT-POSTED (negative).
+    def test_the_burned_count_scenario_stays_owed(self, wired, capsys):
+        # Day 1: 2-lens forms, unwatched, threshold is triples-only → not
+        # push-worthy, state records it as SEEN-NOT-DELIVERED (negative).
         wired.scan(count=2)
         assert wired.run() == 0
-        assert wired.posted == []
+        assert "push-worthy" not in capsys.readouterr().out
         assert wired.state()["asx:WES:long"] == -2
 
         # Day 2: the owner stars WES. Same alignment, same count — the OLD code
-        # was `2 > 2` here and stayed silent forever. It must ping now.
+        # was `2 > 2` here and stayed silent forever. It must now be recognised
+        # as push-worthy, and — with no channel — stay recorded as OWED
+        # (negative), so the future channel's first run delivers it.
         wired.watch.add("ASX:WES")
         assert wired.run() == 0
-        assert len(wired.posted) == 1
-        assert "WES" in json.dumps(wired.posted[0])
-        assert wired.state()["asx:WES:long"] == 2   # delivered → positive
+        assert "push-worthy (undelivered)" in capsys.readouterr().out
+        assert wired.state()["asx:WES:long"] == -2
 
-        # Day 3: still starred, still 2-lens — delivered already, no re-ping.
-        assert wired.run() == 0
-        assert len(wired.posted) == 1
-
-    def test_watchlist_outage_does_not_burn_the_count(self, wired):
+    def test_watchlist_outage_does_not_burn_the_count(self, wired, capsys):
         # The fetch-failed case is indistinguishable from "no stars" at the call
         # site (both are an empty set) — the sign is what keeps it safe.
         wired.scan(count=2)
         assert wired.run() == 0                      # outage run: watch empty
+        capsys.readouterr()
         wired.watch.add("ASX:WES")                   # fetch recovers, name starred
         assert wired.run() == 0
-        assert len(wired.posted) == 1
+        assert "push-worthy (undelivered)" in capsys.readouterr().out
 
-    def test_an_upgrade_still_pings_over_a_negative(self, wired):
+    def test_an_upgrade_is_owed_over_a_negative(self, wired, capsys):
         wired.scan(count=2)
         wired.run()                                  # -2, unwatched
+        capsys.readouterr()
         wired.scan(count=3)
         assert wired.run() == 0                      # 3 >= min_lenses, 3 > -2
-        assert len(wired.posted) == 1
-        assert wired.state()["asx:WES:long"] == 3
+        assert "push-worthy (undelivered)" in capsys.readouterr().out
+        assert wired.state()["asx:WES:long"] == -3   # still owed, still signed
 
-    def test_a_delivered_triple_never_repings(self, wired):
+    def test_a_previously_delivered_count_never_re_pings(self, wired, capsys):
+        # Rows delivered before the 2026-08-27 removal hold POSITIVE counts.
+        # They must stay quiet: only counts ABOVE the signed prev are owed.
         wired.scan(count=3)
-        wired.run()
-        assert len(wired.posted) == 1
-        wired.run()
-        wired.run()
-        assert len(wired.posted) == 1
-
-    def test_post_failure_leaves_state_unsaved_so_it_retries(self, wired, monkeypatch):
-        wired.scan(count=3)
-        monkeypatch.setattr(ca, "post_webhook", lambda url, p: False)
+        ca.STATE_FILE.write_text(json.dumps({"asx:WES:long": 3}),
+                                 encoding="utf-8")
         assert wired.run() == 0
-        assert not (ca.STATE_FILE).exists()          # nothing marked as seen
+        assert "push-worthy" not in capsys.readouterr().out
 
-    def test_no_webhook_leaves_postable_state_untouched(self, wired, monkeypatch):
-        monkeypatch.delenv("DISCORD_WEBHOOK_URL")
+    def test_an_owed_triple_is_never_promoted_without_delivery(self, wired):
+        # The failure that would silently strand the future channel: some code
+        # path marking an alignment positive (delivered) when nothing sent it.
         wired.scan(count=3)
-        assert wired.run() == 0
-        assert not (ca.STATE_FILE).exists()          # pings when the secret lands
+        for _ in range(3):
+            assert wired.run() == 0
+            assert wired.state()["asx:WES:long"] == -3
 
 
 # ── the history dedup day is the MARKET's day ────────────────────────────────
@@ -202,7 +200,7 @@ class TestSessionDay:
         assert ca._entry_session_day({"date": "not-a-date", "market": "asx"}) == "not-a-date"
 
     def test_append_history_dedups_within_a_day(self, wired, monkeypatch):
-        monkeypatch.setattr(ca.config, "DISCORD_CONF_MIN_LENSES", 99, raising=False)
+        monkeypatch.setattr(ca.config, "CONF_ALERT_MIN_LENSES", 99, raising=False)
         wired.scan(count=2)
         wired.run()
         # Second run same day: state now knows the count, nothing fresh — and

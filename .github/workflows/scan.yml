@@ -320,15 +320,11 @@ jobs:
           GBS_SMTP_USER: ${{ secrets.GBS_SMTP_USER }}
           GBS_SMTP_PASS: ${{ secrets.GBS_SMTP_PASS }}
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
-          # SMTP ALONE IS NOT ENOUGH (2026-07-28). Email is the only channel
-          # CRITICAL doesn't share with anything else; the two tiers that carry
-          # the scan's own observations route elsewhere. NOTICE is Discord-ONLY
-          # (config.ALERT_CHANNELS), so with no webhook here `trade_review`
-          # ("should Claude take this, or should I?") and `sector_run` (HORIZON's
-          # sustained-run alarm) resolved to an empty channel list every scan —
-          # both features were shipped dark. WARNING is telegram+discord, so it
-          # was landing nowhere too. Do not trim this back to SMTP.
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # Discord REMOVED 2026-08-27 (owner ruling) — its webhook env line
+          # is gone from this block. Telegram + SMTP stay exported so the
+          # router's remaining channels work the moment their secrets are
+          # configured; NOTICE-tier events (trade_review, sector_run, ...)
+          # push nowhere until the replacement channel lands.
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
           # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
@@ -420,25 +416,27 @@ jobs:
       - name: Verify book integrity
         run: python -m scanner.broker.vivek_run --verify
 
-      # Multi-lens confluence -> Discord ping. VIVEK results just refreshed;
-      # PhaseMap/Specs files are the nightly ones from the checkout. State-
-      # deduped, so the intraday cadence doesn't spam. Never blocks the scan.
-      - name: Confluence Discord alert
+      # Multi-lens confluence engine. VIVEK results just refreshed; PhaseMap/
+      # Specs files are the nightly ones from the checkout. Writes the ALERTS
+      # page log (which the edge pipeline ingests) and tracks push-owed state.
+      # DELIVERY REMOVED 2026-08-27 — no webhook env; undelivered alignments
+      # accrue as negative state counts for the future channel. Never blocks
+      # the scan.
+      - name: Confluence alert engine (ALERTS log + state)
         continue-on-error: true
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
-      # NOTE: the paper-trade journal, Telegram alerts and Discord digest read the
-      # retired pullback/reversal/short scans, which the VIVEK-only pipeline no
-      # longer produces. They are disabled until VIVEK-native versions are wired
-      # (see ROADMAP). Re-enabling them as-is would act on stale legacy JSON.
+      # NOTE: the paper-trade journal and Telegram alerts read the retired
+      # pullback/reversal/short scans, which the VIVEK-only pipeline no longer
+      # produces. They are disabled until VIVEK-native versions are wired (see
+      # ROADMAP). Re-enabling them as-is would act on stale legacy JSON. (The
+      # Discord digest that used to sit beside them was deleted outright with
+      # the 2026-08-27 channel removal — scanner/discord.py no longer exists.)
       #
       #   - name: Update paper-trade journal
       #     run: python -m scanner.journal
-      #   - name: Discord digest (new A+/A setups)
-      #     run: python -m scanner.discord
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)
         run: |
@@ -643,22 +641,3 @@ jobs:
           done
           echo "Could not push after retries"; exit 1
 
-      # If anything above failed, say so — otherwise the site quietly serves
-      # stale data and nobody notices until the freshness badge goes orange.
-      - name: Alert on failure (Discord)
-        if: failure()
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured - skipping."; exit 0; }
-          # The stored secret still carries its leading U+FEFF (ALERT DELIVERY,
-          # 2026-08-01). curl parses "<BOM>https" as a HOSTNAME and the rest as
-          # a port ("Port number was not a decimal number"), so this ping died
-          # inside `|| true` on every red run -- proven live by turtle run #29
-          # (2026-08-24). Same trim as config.clean_secret, inlined: ends only.
-          URL=$(python3 -c 'import os,sys; sys.stdout.write(os.environ["DISCORD_WEBHOOK_URL"].strip(" \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f"))' || true)
-          curl -sS --fail -X POST -H 'Content-Type: application/json' \
-            -A 'vivek5-alerts/1.0 (+github-actions)' \
-            -d "{\"content\":\"WARNING: **${{ github.workflow }}** run FAILED - scan data may be going stale. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
-            "$URL" \
-            || echo "::warning::Discord failure ping did not deliver - this red run is the only alarm"

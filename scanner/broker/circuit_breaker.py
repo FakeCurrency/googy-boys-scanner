@@ -61,7 +61,7 @@ def check_consecutive_losses(journal: dict, notify: bool = True) -> dict:
     `notify=False` computes the verdict without pushing the alert, for callers
     that are ASKING WHAT THIS WOULD SAY rather than acting on it. Without it a
     read-only reporter (scripts/health_check.py's bot-book readout) announces
-    "circuit breaker fired -- new orders paused" to Discord about a book whose
+    "circuit breaker fired -- new orders paused" to a push channel about a book whose
     entries were never paused, which is worse than not reporting at all. The
     default is True so every existing caller behaves exactly as before.
 

@@ -288,13 +288,13 @@ def test_a_failing_channel_never_breaks_the_run():
 
 
 def test_the_pushed_event_type_is_routed_and_not_rate_limited():
-    # NOTICE -> discord only, and a limit here could only ever drop the second
+    # NOTICE is channel-less since 2026-08-27, and a limit here could only ever drop the second
     # market's flagged open in a sequential run.
     from scanner.broker import alert_router as ar
     assert config.ALERT_SEVERITY["trade_review"] == "NOTICE"
-    assert config.ALERT_CHANNELS["NOTICE"] == ["discord"]
+    assert config.ALERT_CHANNELS["NOTICE"] == []  # no push channel since the 2026-08-27 Discord removal
     assert config.ALERT_RATE_LIMITS["trade_review"] == 0
-    assert ar.get_channels("trade_review") == ["discord"]
+    assert ar.get_channels("trade_review") == []  # channel-less until the replacement lands
 
 
 def test_the_message_is_cp1252_safe():

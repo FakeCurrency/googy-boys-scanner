@@ -1,24 +1,31 @@
-"""Multi-lens confluence Discord alert.
+"""Multi-lens confluence alert engine.
 
 When the same name has ACTIVE, direction-aligned setups on more than one
 lens (VIVEK 200-SMA reaction · PhaseMap trap/displacement · Specs volume
-breakout), post it to Discord — the site shows it visually, this makes sure
-the owner gets PINGED. Mirrors the frontend's PM.loadConfluence exactly.
+breakout), record it: the ALERTS page log is the durable record, and the
+delivery state tracks what a push channel owes the owner. Mirrors the
+frontend's PM.loadConfluence exactly.
 
-    python -m scanner.confluence_alert            # all markets, post new only
-    python -m scanner.confluence_alert --dry-run  # preview, post nothing
+    python -m scanner.confluence_alert            # all markets
+    python -m scanner.confluence_alert --dry-run  # preview, write nothing new
 
-Behaviour:
-  * State-deduped (journal/confluence_state.json): an alignment pings once,
-    when it first appears — and again only if it UPGRADES (2-lens -> 3-lens)
-    or if it fully lapses and later re-forms.
-  * 3-lens alignments carry a mention (config.DISCORD_CONF_MENTION, default
-    @here) — the rare full-house event. 2-lens posts are silent embeds.
+DELIVERY REMOVED 2026-08-27 (owner ruling: "get rid of the discord aspect,
+I will work on implementing something new in the future"). The Discord
+webhook post is gone; everything below it survives on purpose:
+  * State-deduped (journal/confluence_state.json): an alignment is owed one
+    ping, when it first appears — and again only if it UPGRADES (2-lens ->
+    3-lens) or fully lapses and later re-forms. Undelivered alignments are
+    recorded with NEGATIVE counts (see build_state), exactly as the old
+    "webhook not configured" branch did — so the first run after the next
+    channel lands pings everything still current, with nothing burned.
   * WATCHLIST-AWARE: when GBS_SYNC_CODE is set (GitHub secret, same code the
-    owner types on the site), starred names and open journal positions bypass
-    the lens threshold — a 2-lens alignment on YOUR name pings with a ★ even
-    while the channel is triples-only. No code -> feature silently off.
-  * Without DISCORD_WEBHOOK_URL it previews and exits 0 — never fails CI.
+    owner types on the site), starred names and open journal positions
+    bypass the lens threshold (config.CONF_ALERT_MIN_LENSES). The bypass
+    still decides what counts as push-worthy, so the future channel inherits
+    it unchanged.
+  * The ALERTS page log (append_history) is written for EVERY new alignment
+    regardless of the push threshold — and the daily edge pipeline ingests
+    it, so it must keep being written.
 """
 
 from __future__ import annotations
@@ -31,7 +38,6 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from . import config, output
-from .discord import post_webhook
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / "public" / "data"
@@ -110,7 +116,8 @@ def build_state(alignments: list[dict], state: dict, posted_keys: set[str]) -> d
     SIGNED COUNTS (2026-07-29): +count means "this count was actually POSTED",
     -count means "seen for the history log, but never delivered". The old state
     recorded a bare +count for EVERYTHING current — including 2-lens alignments
-    that were below DISCORD_CONF_MIN_LENSES and not watchlisted, and including
+    that were below the push threshold (CONF_ALERT_MIN_LENSES) and not
+    watchlisted, and including
     runs where the watchlist itself was unavailable (GBS_SYNC_CODE unset, or
     the /api/journal fetch flaked, both of which return an empty watch set).
     That burned the count: star the name a day later and `count > prev` is
@@ -160,9 +167,10 @@ def _entry_session_day(e: dict) -> str:
 
 
 def append_history(fresh: list[dict]) -> None:
-    """Site-side alert log (public/data/phasemap/alert_history.json) — Discord
+    """Site-side alert log (public/data/phasemap/alert_history.json) — push
     pings scroll away; the ALERTS page doesn't. Written for EVERY new
-    alignment regardless of the Discord lens threshold, deduped per market-day."""
+    alignment regardless of the push threshold, deduped per market-day.
+    The edge pipeline ingests this file daily — it must keep being written."""
     if not fresh:
         return
     try:
@@ -221,40 +229,6 @@ def _watch_key(a: dict) -> str:
     return f"{a['market']}:{a['ticker']}".upper()
 
 
-def build_payloads(fresh: list[dict], watch: set[str] | None = None) -> list[dict]:
-    watch = watch or set()
-    triples = [a for a in fresh if a["count"] >= 3]
-    lines = []
-    for a in fresh[:20]:
-        arrow = "🔻 SHORT" if a["side"] == "short" else "🔼 LONG"
-        icon = "🎯" if a["count"] >= 3 else "⨂"
-        star = "★ " if _watch_key(a) in watch else ""
-        d = "&dir=bearish" if a["side"] == "short" else "&dir=bullish"
-        url = f"{SITE}/chart.html?m={a['market']}&s={a['ticker']}&pm=1{d}"
-        lines.append(
-            f"{icon} {star}**[{a['ticker']}]({url})** {arrow} · {a['market'].upper()} · "
-            f"{a['count']}-LENS — {' + '.join(a['labels'])}")
-    if len(fresh) > 20:
-        lines.append(f"… +{len(fresh) - 20} more on the site")
-    embed = {
-        "title": "⨂ Multi-lens alignment" + (" — 🎯 TRIPLE" if triples else ""),
-        "description": "\n".join(lines)[:4000] +
-            "\n\n*Independent lenses agreeing on one name at one time. "
-            "Analysis only — not financial advice.*",
-        "color": 0xFFB224 if triples else 0x37D0C4,
-        "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
-    payload = {
-        "username": getattr(config, "DISCORD_USERNAME", "Vivek 5.0"),
-        "embeds": [embed],
-    }
-    mention = getattr(config, "DISCORD_CONF_MENTION", "@here")
-    if triples and mention:
-        payload["content"] = (f"{mention} 🎯 **TRIPLE-LENS ALIGNMENT** — "
-                              + ", ".join(a["ticker"] for a in triples))
-    return [payload]
-
-
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="confluence alert")
     ap.add_argument("--market", default="all")
@@ -272,11 +246,11 @@ def main(argv=None) -> int:
         except Exception:
             state = {}
     fresh = diff_new(alignments, state)
-    # Discord only carries alignments at/above the lens threshold (default:
+    # Only alignments at/above the lens threshold are push-worthy (default:
     # triples only). The site still shows every 2-lens alignment visually —
     # state tracks them all (signed, see build_state), so a 2->3 upgrade
-    # always pings.
-    min_lenses = getattr(config, "DISCORD_CONF_MIN_LENSES", 2)
+    # always earns a ping.
+    min_lenses = getattr(config, "CONF_ALERT_MIN_LENSES", 2)
     # Starred names + open positions bypass the threshold: YOUR names ping
     # at 2 lenses even while the channel is triples-only.
     watch = load_watch_keys()
@@ -293,29 +267,22 @@ def main(argv=None) -> int:
           f"{len(to_post)} to post (>= {min_lenses} lenses or watchlisted; "
           f"{starred} watchlisted, {len(watch)} names tracked)")
     if not args.dry_run:
-        append_history(fresh)   # the ALERTS page log — independent of Discord
-    if not to_post:
-        _save_state_if_changed(state, build_state(alignments, state, set()))
+        append_history(fresh)   # the ALERTS page log — independent of any push
+    # DELIVERY REMOVED 2026-08-27 (owner ruling). No payload is built and no
+    # webhook is read; push-worthy alignments are printed for the run log and
+    # the state is saved with NO posted keys, so build_state records each one
+    # as seen-but-undelivered (negative count). That is deliberately the same
+    # path the old "webhook not configured" branch took: the first run after
+    # the replacement channel lands finds `count > signed prev` true for
+    # everything still current and pings the lot, with nothing burned.
+    for a in to_post:
+        star = "* " if _watch_key(a) in watch else ""
+        print(f"confluence: push-worthy (undelivered) {star}{a['market']}:"
+              f"{a['ticker']} {a['side'].upper()} {a['count']}-lens - "
+              f"{' + '.join(a['labels'])}")
+    if args.dry_run and to_post:
         return 0
-
-    payloads = build_payloads(to_post, watch)
-    url = config.clean_secret(os.environ.get("DISCORD_WEBHOOK_URL", ""))
-    if args.dry_run:
-        print(json.dumps(payloads, indent=2)[:2500])
-        return 0
-    if not url:
-        # No webhook configured: preview only and DON'T mark anything as seen,
-        # so the first run after the secret is added pings everything current.
-        print(json.dumps(payloads, indent=2)[:1200])
-        print("confluence: DISCORD_WEBHOOK_URL not set — preview only, state untouched")
-        return 0
-    for p in payloads:
-        if not post_webhook(url, p):
-            print("confluence: post failed — state NOT saved (will retry next run)")
-            return 0
-    print(f"confluence: posted {len(to_post)} alignment(s) to Discord")
-    _save_state_if_changed(state, build_state(alignments, state,
-                                              {_state_key(a) for a in to_post}))
+    _save_state_if_changed(state, build_state(alignments, state, set()))
     return 0
 
 
