@@ -55,10 +55,10 @@
       "risk_pct": 0.2539,
       "risk_usd": 380.87,
       "source": "vivek_bot",
-      "unreal_r": 1.274,
-      "unreal_usd": 485.33,
+      "unreal_r": 1.293,
+      "unreal_usd": 492.31,
       "lens": "vivek",
-      "last_mark": 36.38999939,
+      "last_mark": 36.45000076,
       "notional_before": 503.36,
       "units_before": 15.7349343,
       "risk_usd_before": 35.0,
@@ -218,7 +218,7 @@
       "level_tf": "3d",
       "signal_entry": 88.87000275,
       "fill_slip_bps": 88.9,
-      "last_mark": 76.25,
+      "last_mark": 76.09999847,
       "day_marks": {
         "2026-08-20": 79.73999786,
         "2026-08-21": 76.48000336,
@@ -230,8 +230,8 @@
         "2026-08-27": 78.0,
         "2026-08-28": 76.05000305
       },
-      "unreal_r": -0.84,
-      "unreal_usd": -717.16
+      "unreal_r": -0.849,
+      "unreal_usd": -725.18
     },
     {
       "id": "RHC:long:1W:2026-08-14",
@@ -275,9 +275,9 @@
         }
       ],
       "mae": 43.81999969482422,
-      "mfe": 51.1150016784668,
+      "mfe": 51.16999816894531,
       "mae_r": -0.08,
-      "mfe_r": 0.557,
+      "mfe_r": 0.562,
       "entry_type_label": "Break of small structure near the 200 SMA",
       "units": 116.98642498,
       "notional": 5000.0,
@@ -302,7 +302,7 @@
       "level_tf": "weekly",
       "signal_entry": 42.74000168,
       "fill_slip_bps": 467.9,
-      "last_mark": 51.11500168,
+      "last_mark": 50.84000015,
       "day_marks": {
         "2026-08-20": 44.90000153,
         "2026-08-21": 44.65000153,
@@ -314,8 +314,8 @@
         "2026-08-27": 44.02000046,
         "2026-08-28": 50.06000137
       },
-      "unreal_r": 0.418,
-      "unreal_usd": 461.61,
+      "unreal_r": 0.4,
+      "unreal_usd": 441.69,
       "stale_pinged": "2026-08-28"
     },
     {
@@ -380,7 +380,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.58999991,
       "fill_slip_bps": 135.1,
-      "last_mark": 2.67000008,
+      "last_mark": 2.65499997,
       "day_marks": {
         "2026-08-20": 2.6099999,
         "2026-08-21": 2.66000009,
@@ -392,8 +392,8 @@
         "2026-08-27": 2.52999997,
         "2026-08-28": 2.6500001
       },
-      "unreal_r": 0.068,
-      "unreal_usd": 82.26
+      "unreal_r": 0.046,
+      "unreal_usd": 54.84
     },
     {
       "id": "SNL:long:3D:2026-08-18",
@@ -525,7 +525,7 @@
       "level_tf": "3d",
       "signal_entry": 46.88999939,
       "fill_slip_bps": -149.3,
-      "last_mark": 48.86000061,
+      "last_mark": 48.90999985,
       "day_marks": {
         "2026-08-20": 47.11999893,
         "2026-08-21": 47.24000168,
@@ -537,8 +537,8 @@
         "2026-08-27": 48.65000153,
         "2026-08-28": 48.65000153
       },
-      "unreal_r": 0.484,
-      "unreal_usd": 320.84
+      "unreal_r": 0.493,
+      "unreal_usd": 326.85
     },
     {
       "id": "VVA:long:3D:2026-08-18",
@@ -602,7 +602,7 @@
       "level_tf": "3d",
       "signal_entry": 1.5,
       "fill_slip_bps": -300.0,
-      "last_mark": 1.54999995,
+      "last_mark": 1.55499995,
       "day_marks": {
         "2026-08-20": 1.52499998,
         "2026-08-21": 1.56500006,
@@ -614,8 +614,8 @@
         "2026-08-27": 1.59000003,
         "2026-08-28": 1.54999995
       },
-      "unreal_r": 0.568,
-      "unreal_usd": 401.89
+      "unreal_r": 0.598,
+      "unreal_usd": 423.04
     },
     {
       "id": "HM1:long:3D:2026-08-21",
@@ -628,7 +628,7 @@
       "entry_type": "reclaim",
       "timeframe": "3D",
       "entry": 2.99000001,
-      "stop": 2.78972659,
+      "stop": 2.99000001,
       "tp1": 3.14569248,
       "tp2": 3.38766895,
       "tp3": 3.93136718,
@@ -643,18 +643,25 @@
       "entry_date": "2026-08-21",
       "opened_at": "2026-08-21T05:49:10+00:00",
       "status": "open",
-      "tp1_hit": false,
+      "tp1_hit": true,
       "tp2_hit": false,
       "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0105,
-      "gross_r": 0.0,
-      "cost_r": 0.0105,
-      "exits": [],
+      "booked_pct": 0.25,
+      "realized_r": 0.1831,
+      "gross_r": 0.1943,
+      "cost_r": 0.0112,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 3.14569248,
+          "pct": 0.25,
+          "date": "2026-08-28"
+        }
+      ],
       "mae": 2.9700000286102295,
-      "mfe": 3.140000104904175,
+      "mfe": 3.1600000858306885,
       "mae_r": -0.1,
-      "mfe_r": 0.749,
+      "mfe_r": 0.849,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 1677.85233773,
       "notional": 5000.0,
@@ -670,7 +677,7 @@
       "level_tf": "3d",
       "signal_entry": 2.98000002,
       "fill_slip_bps": 33.6,
-      "last_mark": 3.1400001,
+      "last_mark": 3.16000009,
       "day_marks": {
         "2026-08-21": 2.99000001,
         "2026-08-22": 2.98000002,
@@ -681,8 +688,8 @@
         "2026-08-27": 3.02999997,
         "2026-08-28": 3.05999994
       },
-      "unreal_r": 0.749,
-      "unreal_usd": 239.11
+      "unreal_r": 0.637,
+      "unreal_usd": 203.24
     },
     {
       "id": "CCP:long:3D:2026-08-21",
@@ -737,7 +744,7 @@
       "level_tf": "3d",
       "signal_entry": 13.35000038,
       "fill_slip_bps": 382.0,
-      "last_mark": 14.01000023,
+      "last_mark": 14.10000038,
       "day_marks": {
         "2026-08-21": 13.85999966,
         "2026-08-22": 13.98999977,
@@ -748,8 +755,8 @@
         "2026-08-27": 14.27999973,
         "2026-08-28": 13.96000004
       },
-      "unreal_r": 0.067,
-      "unreal_usd": 43.34
+      "unreal_r": 0.108,
+      "unreal_usd": 69.34
     },
     {
       "id": "AGL:long:1W:2026-08-21",
@@ -785,9 +792,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0047,
       "exits": [],
-      "mae": 8.5,
+      "mae": 8.494999885559082,
       "mfe": 8.85000038,
-      "mae_r": -0.267,
+      "mae_r": -0.27,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 557.41358411,
@@ -813,7 +820,7 @@
       "level_tf": "weekly",
       "signal_entry": 8.97000027,
       "fill_slip_bps": -133.8,
-      "last_mark": 8.5,
+      "last_mark": 8.50500011,
       "day_marks": {
         "2026-08-21": 8.85000038,
         "2026-08-22": 8.88000011,
@@ -824,8 +831,8 @@
         "2026-08-27": 8.64999962,
         "2026-08-28": 8.60000038
       },
-      "unreal_r": -0.267,
-      "unreal_usd": -212.93
+      "unreal_r": -0.263,
+      "unreal_usd": -209.89
     },
     {
       "id": "CWY:long:1W:2026-08-21",
@@ -889,7 +896,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.45000005,
       "fill_slip_bps": 673.5,
-      "last_mark": 2.58999991,
+      "last_mark": 2.58500004,
       "day_marks": {
         "2026-08-21": 2.61500001,
         "2026-08-22": 2.63000011,
@@ -900,8 +907,8 @@
         "2026-08-27": 2.54999995,
         "2026-08-28": 2.55999994
       },
-      "unreal_r": -0.048,
-      "unreal_usd": -34.99
+      "unreal_r": -0.057,
+      "unreal_usd": -41.98
     },
     {
       "id": "MGR:long:1W:2026-08-24",
@@ -937,9 +944,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0031,
       "exits": [],
-      "mae": 1.7949999570846558,
+      "mae": 1.7920000553131104,
       "mfe": 1.906999945640564,
-      "mae_r": -0.239,
+      "mae_r": -0.246,
       "mfe_r": 0.023,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 2617.80108824,
@@ -965,7 +972,7 @@
       "level_tf": "weekly",
       "signal_entry": 1.90999997,
       "fill_slip_bps": -68.1,
-      "last_mark": 1.79999995,
+      "last_mark": 1.79200006,
       "day_marks": {
         "2026-08-24": 1.89699996,
         "2026-08-25": 1.89999998,
@@ -973,8 +980,8 @@
         "2026-08-27": 1.85000002,
         "2026-08-28": 1.82000005
       },
-      "unreal_r": -0.228,
-      "unreal_usd": -261.67
+      "unreal_r": -0.246,
+      "unreal_usd": -283.25
     },
     {
       "id": "WHI:long:1W:2026-08-26",
@@ -2080,7 +2087,7 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 112.21615601,
+      "last_mark": 112.52190399,
       "day_marks": {
         "2026-08-20": 103.09355164,
         "2026-08-21": 106.9597168,
@@ -2092,8 +2099,8 @@
         "2026-08-27": 113.40242767,
         "2026-08-28": 113.88021088
       },
-      "unreal_r": 2.658,
-      "unreal_usd": 1328.64,
+      "unreal_r": 2.687,
+      "unreal_usd": 1343.47,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2155,7 +2162,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 1.74000001,
+      "last_mark": 1.74300003,
       "day_marks": {
         "2026-08-20": 1.62,
         "2026-08-21": 1.65100002,
@@ -2167,8 +2174,8 @@
         "2026-08-27": 1.73300004,
         "2026-08-28": 1.76300001
       },
-      "unreal_r": 1.529,
-      "unreal_usd": 759.18,
+      "unreal_r": 1.545,
+      "unreal_usd": 767.12,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2234,7 +2241,7 @@
       "level_tf": "weekly",
       "signal_entry": 64262.11328125,
       "fill_slip_bps": 2.4,
-      "last_mark": 79596.421875,
+      "last_mark": 79789.1015625,
       "day_marks": {
         "2026-08-20": 69298.2265625,
         "2026-08-21": 73090.3671875,
@@ -2246,8 +2253,8 @@
         "2026-08-27": 79061.7265625,
         "2026-08-28": 80242.1328125
       },
-      "unreal_r": 1.232,
-      "unreal_usd": 1190.4
+      "unreal_r": 1.248,
+      "unreal_usd": 1205.38
     }
   ],
   "closed": [
@@ -6422,20 +6429,20 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 647.01,
+      "week_usd": 652.22,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 268.67,
-      "worst_week_usd": 647.01,
+      "worst_session_usd": 273.39,
+      "worst_week_usd": 652.22,
       "realised_usd": 0.0,
-      "open_realised_usd": 20.79,
-      "unrealised_usd": 247.88,
-      "session_usd": 268.67,
+      "open_realised_usd": 54.22,
+      "unrealised_usd": 219.16,
+      "session_usd": 273.39,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 14,
-      "open_total_usd": 2716.25,
+      "open_total_usd": 2721.45,
       "notified": ""
     },
     "nasdaq": {
@@ -6468,27 +6475,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 995.9,
+      "week_usd": 1033.64,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -191.71,
-      "worst_week_usd": 995.9,
+      "worst_session_usd": -153.98,
+      "worst_week_usd": 1033.64,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -191.71,
-      "session_usd": -191.71,
+      "unrealised_usd": -153.98,
+      "session_usd": -153.98,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 3583.35,
+      "open_total_usd": 3621.09,
       "notified": ""
     }
   },
   "summary": {
     "open": 30,
-    "unreal_usd": 4541.39,
+    "unreal_usd": 4522.52,
     "updated_day": "2026-08-28"
   },
-  "updated_at": "2026-08-28T05:29:03+00:00"
+  "updated_at": "2026-08-28T05:41:06+00:00"
 }
