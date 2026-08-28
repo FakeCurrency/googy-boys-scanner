@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-08-28T18:56:33+00:00",
+ "generated_at": "2026-08-28T21:03:53+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -92,8 +92,9 @@
    "last_mark": 85.63999939,
    "mark_date": "2026-08-28",
    "fees": 1.916734,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.5942,
+   "mae_r": -0.3962,
+   "unpriced_runs": 0
   },
   {
    "symbol": "CSCO",
@@ -111,7 +112,7 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 112.15000153,
+   "last_mark": 109.93000031,
    "mark_date": "2026-08-28",
    "fees": 2.105294,
    "mfe_r": 0.0371,
@@ -134,10 +135,10 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 112.38999939,
+   "last_mark": 110.59999847,
    "mark_date": "2026-08-28",
    "fees": 1.891801,
-   "mfe_r": 0.0,
+   "mfe_r": 0.1693,
    "mae_r": -0.9021,
    "unpriced_runs": 0
   },
@@ -157,10 +158,10 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 304.57998657,
+   "last_mark": 296.10501099,
    "mark_date": "2026-08-28",
    "fees": 1.205845,
-   "mfe_r": 0.4179,
+   "mfe_r": 0.5635,
    "mae_r": -0.0946,
    "unpriced_runs": 0
   },
@@ -181,10 +182,10 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 17.62000084,
+   "last_mark": 16.51000023,
    "mark_date": "2026-08-28",
    "fees": 1.569816,
-   "mfe_r": 0.372,
+   "mfe_r": 0.5311,
    "mae_r": -0.2599,
    "unpriced_runs": 0
   },
@@ -724,8 +725,8 @@
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1304.82,
-   "equity": 5000.0
+   "want_notional": 1277.77,
+   "equity": 4896.33
   },
   {
    "as_of": "2026-08-28",
@@ -734,8 +735,18 @@
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1529.95,
-   "equity": 5000.0
+   "want_notional": 1498.23,
+   "equity": 4896.33
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "asx",
+   "symbol": "XRO",
+   "action": "add",
+   "reason": "cash",
+   "units_held": 1,
+   "want_notional": 1302.3,
+   "equity": 4896.33
   },
   {
    "as_of": "2026-08-28",
@@ -1054,296 +1065,316 @@
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 738.06,
+   "want_notional": 732.24,
    "equity": 4739.89
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "NVDA",
-   "action": "entry",
+   "symbol": "CORZ",
+   "action": "add",
    "reason": "cash",
-   "want_notional": 1494.27,
-   "equity": 4739.89,
-   "system": 2
+   "units_held": 2,
+   "want_notional": 473.43,
+   "equity": 4739.89
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "CRWD",
+   "symbol": "MPWR",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 991.58,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "FTNT",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1236.1,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "TTWO",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1328.5,
+   "want_notional": 835.72,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "ADSK",
+   "symbol": "FSLR",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1344.1,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "MNDY",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 826.31,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "PSKY",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1281.89,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "SAIL",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 944.97,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "SRPT",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 935.96,
-   "equity": 4739.89,
-   "system": 2
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "EBC",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 2264.47,
+   "want_notional": 873.48,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "BL",
+   "symbol": "MKSI",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 992.52,
+   "want_notional": 629.17,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "BGC",
+   "symbol": "XEL",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1475.69,
-   "equity": 4739.89,
-   "system": 1
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "CNXC",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 815.74,
+   "want_notional": 2434.33,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "CSIQ",
+   "symbol": "AFRM",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 661.23,
-   "equity": 4739.89,
-   "system": 1
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "ANDE",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1153.68,
+   "want_notional": 950.52,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "GPRE",
+   "symbol": "QBTS",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 823.54,
+   "want_notional": 542.97,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "CDW",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1041.04,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "WAFD",
+   "symbol": "CASY",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2776.51,
-   "equity": 4739.89,
-   "system": 1
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "CABA",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 859.13,
+   "want_notional": 1310.26,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "EFSC",
+   "symbol": "BBIO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2384.15,
+   "want_notional": 1307.0,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "SCHL",
+   "symbol": "VICR",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1227.88,
+   "want_notional": 460.85,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "DBX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1515.63,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "CNOB",
+   "symbol": "CHKP",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2378.89,
+   "want_notional": 1377.65,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "SHOE",
+   "symbol": "VISN",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1032.68,
+   "want_notional": 402.86,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "NBTX",
+   "symbol": "SYRE",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 716.13,
+   "want_notional": 740.03,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "REG",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 3066.9,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "HAFC",
+   "symbol": "PENG",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2573.24,
+   "want_notional": 466.79,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "SLRC",
+   "symbol": "AMBA",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2283.24,
+   "want_notional": 712.13,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "OPK",
+   "symbol": "KLIC",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1054.71,
-   "equity": 4739.89,
-   "system": 1
-  },
-  {
-   "as_of": "2026-08-28",
-   "market": "nasdaq",
-   "symbol": "AVNW",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 900.14,
+   "want_notional": 632.18,
    "equity": 4739.89,
    "system": 2
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "MCBS",
+   "symbol": "RRR",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1903.04,
+   "want_notional": 1427.4,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "ACLS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 623.31,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-08-28",
    "market": "nasdaq",
-   "symbol": "MRBK",
+   "symbol": "PLAB",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1602.84,
+   "want_notional": 674.86,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "AEVA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 349.83,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "LINE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1471.36,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "LAUR",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1730.79,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "STRA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1455.45,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "TRMD",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1564.35,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "FNKO",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 819.41,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "TASK",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 975.94,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "GLAD",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2512.94,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "nasdaq",
+   "symbol": "NMRA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 536.26,
    "equity": 4739.89,
    "system": 1
   },
@@ -1385,13 +1416,58 @@
    "side": "long",
    "units_held": 1,
    "system": 2
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "futures",
+   "symbol": "ZN",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.1036,
+   "micro_contracts": null,
+   "one_contract_risk_pct": 19.31,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "futures",
+   "symbol": "CC",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0172,
+   "micro_contracts": null,
+   "one_contract_risk_pct": 116.35,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "futures",
+   "symbol": "KC",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0092,
+   "micro_contracts": null,
+   "one_contract_risk_pct": 217.39,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "futures",
+   "symbol": "SI",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0052,
+   "micro_contracts": 0.0258,
+   "one_contract_risk_pct": 77.63,
+   "equity": 5000.0
   }
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 63,
+  "cash": 66,
   "close_corr_cap": 3,
-  "total": 66
+  "unit_lt_one": 4,
+  "total": 73
  },
  "summary": {
   "started": "2026-08-21",

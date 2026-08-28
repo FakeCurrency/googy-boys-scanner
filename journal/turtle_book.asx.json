@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "asx",
- "generated_at": "2026-08-28T18:56:33+00:00",
+ "generated_at": "2026-08-28T21:00:54+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -93,8 +93,9 @@
    "last_mark": 85.63999939,
    "mark_date": "2026-08-28",
    "fees": 1.916734,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.5942,
+   "mae_r": -0.3962,
+   "unpriced_runs": 0
   }
  ],
  "closed": [
@@ -142,10 +143,7 @@
   "fees_paid": 3.67,
   "sizing_equity": 4896.33
  },
- "events": [
-  "EXIT NWH stop -1.0367R",
-  "ENTER XRO S2 long @ 85.64"
- ],
+ "events": [],
  "skips": [
   {
    "as_of": "2026-08-28",
@@ -154,8 +152,8 @@
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1304.82,
-   "equity": 5000.0
+   "want_notional": 1277.77,
+   "equity": 4896.33
   },
   {
    "as_of": "2026-08-28",
@@ -164,8 +162,18 @@
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1529.95,
-   "equity": 5000.0
+   "want_notional": 1498.23,
+   "equity": 4896.33
+  },
+  {
+   "as_of": "2026-08-28",
+   "market": "asx",
+   "symbol": "XRO",
+   "action": "add",
+   "reason": "cash",
+   "units_held": 1,
+   "want_notional": 1302.3,
+   "equity": 4896.33
   },
   {
    "as_of": "2026-08-28",
@@ -479,7 +487,7 @@
   }
  ],
  "skip_counts": {
-  "cash": 33,
-  "total": 33
+  "cash": 34,
+  "total": 34
  }
 }
