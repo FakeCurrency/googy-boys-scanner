@@ -171,6 +171,78 @@ const cases = [
     assert.equal(status, 200);
     assert.equal(body.action, "cooling_down");
   }],
+
+  // ---- the heal-only window (2026-08-28) ----------------------------------
+  // Measured live: a dispatched scan takes ~13-18 min to become a fresh
+  // asset, the shared cooldown is 5 min (the SCAN button's number), so the
+  // monitor's +5/+10 min probes each spent ANOTHER unit of the 24/day cap on
+  // the same stale episode. Eight episodes burned the whole budget and the
+  // owner was paged with heal_cap_reached on a day every heal had SUCCEEDED.
+  // One episode must cost one heal.
+
+  ["one stale episode costs ONE heal: the next probe is green and does not re-dispatch", async () => {
+    const store = {};
+    const kv = fakeKV(store);
+    let dispatches = 0;
+    currentFetch = async () => { dispatches++; return new Response(null, { status: 204 }); };
+    const first = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(first.body.action, "dispatched");
+    assert.equal(dispatches, 1);
+    // The probe 5 minutes later: the shared 5-min key may or may not have
+    // expired by then, so the HEAL key is what must hold the line. Simulate
+    // the shared key expiring while the heal window stands.
+    delete store["ratelimit:scan:asx"];
+    const second = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(second.status, 200, "still green — the system already acted");
+    assert.equal(second.body.action, "heal_in_flight");
+    assert.equal(dispatches, 1, "the same episode must not spend a second heal");
+    assert.equal(store["ratelimit:heal:day:" + new Date().toISOString().slice(0, 10)], "1",
+      "exactly one unit of the daily cap spent");
+  }],
+
+  ["a failed dispatch refunds the heal window so the next probe can retry", async () => {
+    const store = {};
+    const kv = fakeKV(store);
+    let calls = 0;
+    currentFetch = async () => { calls++; return new Response(null, { status: calls === 1 ? 500 : 204 }); };
+    const first = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(first.status, 503);
+    assert.equal(first.body.action, "dispatch_failed");
+    assert.equal(store["ratelimit:heal:cool:asx"], undefined,
+      "nothing was dispatched — the window must not stand in the retry's way");
+    const second = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(second.body.action, "dispatched");
+    assert.equal(calls, 2, "the retry really re-dispatched");
+  }],
+
+  ["a dispatch timeout KEEPS the heal window — the scan may still have landed", async () => {
+    const store = {};
+    const kv = fakeKV(store);
+    let calls = 0;
+    currentFetch = async () => { calls++; const e = new Error("aborted"); e.name = "AbortError"; throw e; };
+    const first = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(first.status, 503);
+    assert.equal(first.body.action, "dispatch_timeout");
+    assert.equal(store["ratelimit:heal:cool:asx"], "1",
+      "a maybe-landed dispatch must hold its window — a duplicate scan costs more than a wait");
+    const second = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(second.body.action, "heal_in_flight");
+    assert.equal(calls, 1, "no second dispatch behind a maybe-landed one");
+  }],
+
+  ["the heal window is per market — an ASX heal must not block a crypto heal", async () => {
+    const store = { "ratelimit:heal:cool:asx": "1" };
+    const kv = fakeKV(store);
+    let seenBody = null;
+    currentFetch = async (_url, opts) => { seenBody = JSON.parse(opts.body); return new Response(null, { status: 204 }); };
+    const staleCrypto = {
+      ...MIXED,
+      "/data/crypto_prices.json": { generated_at: minsAgo(200) },
+    };
+    const { body } = await call("?market=crypto&stale_min=90", { assets: staleCrypto, kv });
+    assert.equal(body.action, "dispatched");
+    assert.equal(seenBody.inputs.market, "crypto");
+  }],
 ];
 
 async function main() {

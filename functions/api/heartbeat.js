@@ -70,6 +70,24 @@ const DEFAULT_STALE_MIN = 90;
 // the one control he reaches for when he notices something is wrong.
 const HEAL_DAILY_CAP = 24;
 
+// HEAL-ONLY COOLDOWN (2026-08-28) — the budget-burn fix, measured live.
+// A dispatched scan takes ~13-18 min to become a fresh asset (10-15 min run
+// + commit + Pages deploy), but the shared cooldown above is 5 min because
+// that is what the SCAN button needs. So on a stale episode, the monitor's
+// probes at +0/+5/+10 min EACH dispatched a heal before the first one's data
+// could possibly land — 3 heals spent per episode. On 2026-08-28 GitHub's
+// scheduler was near-dead all day, the healer carried ~75% of the pipeline
+// (funnel_history trigger stamps: 32 of 41 scans), and 8-ish episodes x 3
+// burned the whole 24/day cap by 18:52 UTC — so the NEXT ordinary episode
+// paged the owner with heal_cap_reached while every heal had succeeded.
+// This window covers the dispatch->fresh-asset latency with slack, so one
+// episode now costs one heal and the cap means 24 EPISODES. Deliberately a
+// SECOND key, not a longer shared TTL: stretching the shared key would lock
+// the owner's SCAN button for 25 min after every heal. Worst case of too
+// long: a silently-lost heal delays the retry by this window — /api/health
+// still alarms independently at 4h, so nothing is masked.
+const HEAL_COOL_SEC = 1500;
+
 const BOOK = "/data/vivek_bot_book.json";
 
 // Per-market freshness sidecars — same fix as health.js shipped 2026-07-28 for
@@ -157,6 +175,15 @@ export async function onRequestGet(context) {
   let refund = null;
   if (env.JOURNAL_KV) {
     try {
+      // Heal-only window first (see HEAL_COOL_SEC): a heal was dispatched
+      // within the last 25 min and its data cannot have landed yet. Green —
+      // the system already did the right thing; probing harder cannot help,
+      // and before this window existed each extra probe here spent another
+      // unit of the daily cap on the SAME episode.
+      const healKey = `ratelimit:heal:cool:${market}`;
+      if (await env.JOURNAL_KV.get(healKey)) {
+        return json(200, { ok: true, healthy: false, action: "heal_in_flight", ...base });
+      }
       const cdKey = `ratelimit:scan:${market}`;
       if (await env.JOURNAL_KV.get(cdKey)) {
         // A heal (or a manual SCAN) is already in flight. Not an error — the
@@ -175,10 +202,12 @@ export async function onRequestGet(context) {
         });
       }
       await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 300 });
+      await env.JOURNAL_KV.put(healKey, "1", { expirationTtl: HEAL_COOL_SEC });
       await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
       refund = async () => {
         try {
           await env.JOURNAL_KV.delete(cdKey);
+          await env.JOURNAL_KV.delete(healKey);
           await env.JOURNAL_KV.put(dayKey, String(used), { expirationTtl: 172800 });
         } catch (_) { /* best effort */ }
       };
