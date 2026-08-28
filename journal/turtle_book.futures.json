@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "futures",
- "generated_at": "2026-08-27T20:01:41+00:00",
+ "generated_at": "2026-08-28T06:26:56+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [],
@@ -24,21 +24,8 @@
   "sizing_equity": 5000.0
  },
  "events": [],
- "skips": [
-  {
-   "as_of": "2026-08-27",
-   "market": "futures",
-   "symbol": "CC",
-   "action": "entry",
-   "reason": "unit_lt_one",
-   "full_contracts": 0.0173,
-   "micro_contracts": null,
-   "one_contract_risk_pct": 115.55,
-   "equity": 5000.0
-  }
- ],
+ "skips": [],
  "skip_counts": {
-  "unit_lt_one": 1,
-  "total": 1
+  "total": 0
  }
 }
