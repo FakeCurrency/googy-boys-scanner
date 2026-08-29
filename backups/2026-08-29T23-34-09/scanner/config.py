@@ -269,6 +269,13 @@ VIVEK_INCLUDE_3D_LEVEL = True      # 2026-07-02: also treat the 3-Day 200 SMA as
                                    # (the level the community was watching) but was -23% from
                                    # the Daily and +10% from the Weekly -> invisible to the scan
 VIVEK_DATA_PERIOD      = "5y"      # long history so a Weekly SMA200 is meaningful
+
+# $0 forward-only adjusted daily archive (owner order 2026-08-15) — STORAGE
+# ONLY; nothing in the scan/grade/bot path reads it. See scanner/history_archive.py.
+HISTORY_ARCHIVE_MARKETS = ("asx",)   # ASX first — the market whose free history is weakest
+HISTORY_ARCHIVE_MAX_BARS = 2600      # ~10y per symbol; oldest trimmed beyond this
+HISTORY_ARCHIVE_MAX_FILES = 1500     # cap on distinct archived names per market
+HISTORY_ARCHIVE_SPLICE_MAX_DRIFT = 0.25  # join-ratio drift beyond this flags splice_suspect
 VIVEK_MIN_WEEKLY_BARS  = 60        # need at least this many weekly bars to use Weekly SMA
 VIVEK_MIN_HISTORY      = 220       # min daily bars to compute a Daily SMA200 (~H4 proxy)
 VIVEK_ATR_STOP_MULT    = 1.0       # stop sits ATR×this beyond the reaction extreme
@@ -350,10 +357,63 @@ VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below thi
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
 # trading. Affects the bot's selection only; the scanner still displays them.
 VIVEK_BOT_EXCLUDE_FUNDS = True
+
+# ── PRODUCT flag — DISPLAY-ONLY, published as `is_product` (2026-08-19) ──────
+# Name patterns for the non-operating instrument classes the fund keyword list
+# (vivek_bot._FUND_NAME_KEYWORDS) structurally misses. Measured on the live
+# scans before writing: 4 ASX LICs graded A+ (AFI, BTI, HM1, RG8 — none carry
+# FUND/TRUST/ETF in the name) and 4 NASDAQ preferred lines (STRF, STRD, STRC,
+# MCHPP) were dressing as operating-company opportunities on the deck.
+#
+# THE FENCE, stated where the patterns live: scan.py publishes the flag for the
+# UI to dim/mark/rank with. NOTHING in scanner/broker/ may read `is_product` or
+# this constant — the bot's fund test is _is_fund_or_reit and it stays
+# byte-untouched, because changing what the bot may take mid-w3-1 is a rule
+# change by stealth. tests/test_product_flag.py greps the broker tree and goes
+# red on the first reference.
+#
+# Pattern notes, each learned from a live near-miss:
+#   * preferreds match on the WORDS "preferred stock/shares", which also nets
+#     depositary-preferred lines (HBANP-class); bare "Depositary Shares" is
+#     deliberately NOT a pattern — Sanofi/JD/Ryanair ADS are real companies.
+#   * the LIC form is "InvestmentS Limited/Ltd" (PLURAL only) plus
+#     "Investment Company/Co": the plural rule is what keeps Australian
+#     Ethical Investment Ltd — an operating fund MANAGER — off the list.
+#     Known borderline it does catch: NGI (Navigator Global Investments),
+#     an asset-management holding co. Accepted: display-only, B+ today.
+#   * notes-due / debentures / warrants / rights: zero hits on today's tape,
+#     kept because these listing classes appear on NASDAQ routinely and each
+#     would otherwise dress as a stock the moment one grades.
+PRODUCT_NAME_PATTERNS = (
+    r"\bPREFERRED (STOCK|STOCKS|SHARES)\b",
+    r"\bINVESTMENTS (LIMITED|LTD)\b",
+    r"\bINVESTMENT (COMPANY|CO)\b",
+    r"\bNOTES DUE\b",
+    r"\bDEBENTURES?\b",
+    r"\bWARRANTS?\b",
+    r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
+)
 # Favour the strongest trigger: the walk-forward backtest showed "retest" is
 # flat-to-negative while "reclaim" carries the edge, so the bot skips these
 # entry types. Selection-only; the scanner still shows them. Empty list = take all.
 VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
+# W3-ONLY LEVEL GATE (owner-signed 2026-08-02, pre-registered cycle "w3-1").
+# The bot considers only candidate rows whose headline plan level_tf is in this
+# tuple. Evidence: three disjoint pre-registered samples (IS / OOS / C3) each
+# passed gates W-1/W-2/W-3 - weekly+3d is the program's only thrice-replicated
+# positive cohort (+0.056R/trade, +0.031 R/slot-month pooled over 918 trades,
+# survives 2x cost; survivorship caveat applies - see RESEARCH ledger and
+# reviews/2026-08-02-c3-verdict in the project). Empty tuple = gate OFF (all
+# levels, prior behaviour byte-identical). FAIL-CLOSED in vivek_run: a row with
+# a missing/blank level_tf is dropped and counted, never waved through.
+# Candidate ENTRIES only - held positions, exits, time-stops and loss guards
+# are untouched by this gate.
+VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
+# Audit-only cycle tag stamped on new book rows while a pre-registered live
+# cycle runs (the sizing_mode precedent: nothing reads it to decide anything;
+# it exists so pre-gate and in-cycle cohorts never blur in later reads).
+# Empty string = no active cycle, no stamp.
+VIVEK_BOT_CYCLE_TAG = "w3-1"
 VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
@@ -457,6 +517,30 @@ VIVEK_BOT_MAX_HOLD_DAYS  = 28
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+
+# ── Parity backtest + n≥30 decision pack (simulation-only; live bot UNTOUCHED)
+# These knobs exist so the parity replay and its variant grid read ONE place
+# instead of scattering magic numbers through vivek_backtest / vivek_parity.
+# Changing them does NOT change the live bot — vivek_bot.py / vivek_run.py never
+# import the VIVEK_PARITY_* names. The live time-stop remains VIVEK_BOT_MAX_HOLD_DAYS.
+VIVEK_PARITY_OUT_FILE = "public/data/vivek_backtest_parity.json"
+VIVEK_PARITY_DEFAULT_PERIOD = "5y"
+# MFE checkpoints stamped on every parity trade (calendar days from entry).
+# Used by the V2 early-momentum variants and the decision pack.
+VIVEK_PARITY_MFE_DAYS = (5, 10, 14, 21)
+# V1 time-stop grid (calendar days, pre-TP1 only — same shape as live).
+# 0 / None in a variant means "off". Baseline uses VIVEK_BOT_MAX_HOLD_DAYS.
+VIVEK_PARITY_V1_HOLD_DAYS = (42, 56, 0)
+# V2 early-momentum cut grid: (hold_day, mfe_r_floor). Cut if held >= day,
+# still pre-TP1, and peak mfe_r is still below the floor.
+VIVEK_PARITY_V2_CUTS = (
+    (10, 0.25), (10, 0.50),
+    (14, 0.25), (14, 0.50),
+)
+# A variant only PASSES if its R/slot-month improvement holds in BOTH ASX and
+# NASDAQ and in BOTH time halves of the sample (crypto is reported but not a
+# pass gate — thin N).
+VIVEK_PARITY_PASS_MARKETS = ("asx", "nasdaq")
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes
@@ -522,8 +606,9 @@ SECTOR_BREADTH_PUBLISH_DAYS = 180
 #    being missed in progress, which is the whole reason this module exists.
 #    July ran nineteen. Report-only -- it changes the volume, never the trades.
 SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm to Discord (owner's choice, same
-#    channel as the confluence pings) instead of only colouring the page. A
+#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
+#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
+#    no live channel) instead of only colouring the page. A
 #    surface you have to open to be warned by is a surface that warns you after
 #    you already looked, which in July was never. Rate-limited through
 #    journal/alert_state.json so a 19-session run pings once, not nineteen times.
@@ -580,8 +665,7 @@ REGIME_MIN_DAY_COVERAGE = 0.5
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per
-# bot trade event (hourly-ish in session). Flip to True when you want pushes
-# (and add DISCORD_WEBHOOK_URL to the scan workflow env for Discord instead).
+# bot trade event (hourly-ish in session).
 VIVEK_BOT_NOTIFY_TRADES = False
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the
@@ -605,12 +689,12 @@ VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
 # on ordinary trades. 0 = off.
 VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
 
-# Push the review flag to Discord when a flagged position is actually opened
+# Push the review flag through the NOTICE tier when a flagged position is opened
 # (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
 # and the difference is the point: that one digests EVERY open and close through
 # alert_dispatch, which fires every configured channel including email, so it is
 # off to avoid emailing routine trades. This one fires only on the flagged
-# minority, at NOTICE, to Discord alone. A flag nobody sees on the day is not a
+# minority, at NOTICE. A flag nobody sees on the day is not a
 # flag -- the whole instruction was so the owner could decide before the trade
 # has moved. Set False to keep the flag on the row and the page but stop the
 # push.
@@ -871,15 +955,22 @@ ALERT_SEVERITY = {
 # Flip back to True when the bot is ready to go live again.
 TELEGRAM_ENABLED = False
 
-# Map severity → alert channels (telegram / discord / email)
+# Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
+# by owner ruling — "get rid of the discord aspect, I will work on
+# implementing something new in the future". The router, tiers and rate
+# limits all stay: the next channel plugs in here by adding its name to the
+# tiers below and a sender to alert_dispatch. Until then CRITICAL/WARNING
+# route to telegram+email, both currently unconfigured, so delivery is the
+# router's "NOBODY WAS TOLD" log line plus GitHub's own red-run emails.)
 ALERT_CHANNELS = {
-    "CRITICAL": ["telegram", "discord", "email"],
-    "WARNING":  ["telegram", "discord"],
+    "CRITICAL": ["telegram", "email"],
+    "WARNING":  ["telegram"],
     "INFO":     [],  # log only — no push notification for routine events
-    # Discord only, by owner decision (2026-07-28) — the same private channel
-    # the confluence pings land in, so market observations stay in one place
-    # and the email/Telegram legs remain reserved for things that are broken.
-    "NOTICE":   ["discord"],
+    # NOTICE was Discord-only by the 2026-07-28 ruling (market observations,
+    # nothing broken). With that channel removed it pushes nowhere; the
+    # events are still computed, logged and deduped by their owners, so the
+    # future channel inherits them by adding itself to this list.
+    "NOTICE":   [],
 }
 
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
@@ -967,6 +1058,33 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 # and would then take three days to notice anything. 40 weekday-hours lets one
 # fully missed session pass in silence and fires on the second.
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
+
+# ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
+# Research artefact only: measures whether multi-lens alignment predicts
+# anything. Horizons are TRADING SESSIONS after the alert's own session close;
+# the ledger (data/alert_forward_returns.json) is durable precisely because the
+# public alert_history.json is a rolling 800-cap window that evicts entries at
+# ~14 days on current volume - a 20-session return can never mature there.
+ALERT_RETURNS_HORIZONS = (1, 5, 10, 20)   # 1-session added 2026-08-20: the
+# fast-maturing curve — with a 14-day eviction upstream and 20-session answers
+# a month out, the 1-session point is what makes the maturity curve readable
+# while the batch's edge questions are still warm. Legacy rows' fwd dicts are
+# padded (missing horizon = unstamped, filled on the next run), never wiped.
+# Ledger cap: only FULLY-stamped entries are ever trimmed (dropping a waiting
+# entry would silently un-measure the feature). ~57 alignments/day today, so
+# 20,000 is roughly a year of memory.
+ALERT_RETURNS_CAP = 20000
+# Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
+# single-lens BASELINE cohort, stamped with the same forward returns on the
+# same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
+# answering itself without git archaeology. ~160 A+ rows/day -> 20k is ~4
+# months of memory; trim only ever drops fully-stamped rows.
+ALERT_ROSTER_CAP = 20000
+# Book tide-stress shocks (scripts/book_stress.py, batch-100 WS-D): uniform
+# beta-1 mark drawdowns tested against every long's REAL stop. -3% is roughly
+# a reversion of breadth to its 6-month mean as measured 2026-08-20; -10% is
+# the February trough revisited.
+BOOK_STRESS_SHOCKS = (0.03, 0.05, 0.08, 0.10)
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
@@ -980,6 +1098,12 @@ WATCHDOG_RUNS = {
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
+    "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
+    # The Turtle lens (2026-08-21). WARNING rather than CRITICAL on purpose:
+    # a stale Turtle file costs a day of breakout signals on a REPORT-ONLY
+    # surface, and the page shows its own generated_at, so a missed night is
+    # visible to the reader without an alarm ringing about it.
+    "turtle.yml":      {"max_age_h": 26.0, "severity": "WARNING"},
     # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
     # It commits nothing, which is exactly why it needs an entry here: every
     # other watchdog target is caught by its output going stale, and this one
@@ -1042,29 +1166,39 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 }
 
 # ---------------------------------------------------------------------------
-# Discord digest — posts new tradeable setups to a Discord channel webhook
+# Alert credentials — the boundary every pasted secret crosses
 # ---------------------------------------------------------------------------
-# Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
-# the module writes a preview and no-ops (never fails the workflow).
-DISCORD_USERNAME       = "Vivek 5.0"
-DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
-DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
-DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
-DISCORD_CONF_MENTION   = "@here"     # mention on TRIPLE-lens confluence alerts ("" = silent)
-DISCORD_CONF_MIN_LENSES = 3          # only post alignments with at least this many lenses
+# (The Discord digest that used to live under this heading was removed with
+# the whole Discord channel on 2026-08-27; clean_secret stays because it
+# guards EVERY pasted credential, not one channel's.)
+
+
+def clean_secret(value) -> str:
+    """Strip the invisible baggage a hand-pasted secret can carry.
+
+    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
+    a byte-order mark, invisible in the GitHub secrets box — which urllib
+    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
+    in try/log-warning, so the entire Discord channel (stale probes, trade
+    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
+    as that paste was in place; the evidence brief's first delivery was
+    simply the first caller that let the exception fail a run out loud.
+
+    Every consumer of a pasted credential routes through here, so the next
+    stray BOM, zero-width character or trailing newline dies at the boundary
+    instead of inside a swallowed exception. Interior characters are never
+    touched — this trims ends only.
+    """
+    return str(value or "").strip(
+        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this many lenses
                                      # (3 = triples only — owner's call 2026-07-02; the site
-                                     # still shows every 2-lens alignment visually)
+                                     # still shows every 2-lens alignment visually. Channel-
+                                     # independent POLICY, kept through the 2026-08-27 Discord
+                                     # removal: confluence_alert still computes what deserves a
+                                     # push and records it as undelivered, so the next channel
+                                     # pings everything current on its first run.)
 SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
-DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
-DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
-    "A+": 0x30D158, "A": 0x0A84FF, "B": 0xFF9500, "C": 0x8E8E93,
-}
-DISCORD_GRADE_EMOJI    = {           # per-setup marker
-    "A+": "🟢", "A": "🔵", "B": "🟠", "C": "⚪",
-}
-DISCORD_POST_RETRIES   = 4           # network/5xx retry attempts (with back-off)
-# Grade precedence for the min-grade filter (lower index = stronger).
-GRADE_PRECEDENCE       = ["A+", "A", "B", "C"]
 
 # ---------------------------------------------------------------------------
 # Phase 9: Capital Scaling Framework
@@ -1194,7 +1328,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
 # same lesson as sectorbreadth's ping memory), resets on the first successful
-# publish, and pings Discord ONCE per episode, exactly at the threshold.
+# publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
 
@@ -1369,3 +1503,385 @@ X_ACCOUNTS = [
     {"handle": "wolfgangkasper",  "name": "Wolf Capital"},
     {"handle": "Guv999",          "name": "Guv"},
 ]
+
+# ---------------------------------------------------------------------------
+# TURTLE — the fourth lens (turtle.py / turtle_run.py), added 2026-08-21
+# ---------------------------------------------------------------------------
+# The Richard Dennis / William Eckhardt 1983 breakout system, implemented from
+# the Original Turtle Trading Rules rather than from the popular simplification
+# (see the TURTLE section in CLAUDE.md for the two rules the short version
+# drops and why they matter). REPORT-ONLY: nothing under scanner/broker/ may
+# import this lens, and a test fails the push if it ever does. The numbers
+# below are the ORIGINAL ones — they are not tuned, and retuning them makes
+# this something other than the Turtle system, which is the one thing this
+# lens exists to state exactly.
+
+# N — the Turtles' volatility unit. The original rules define
+#   True Range = max(H-L, H-PDC, PDC-L)
+#   N = (19 * PDN + TR) / 20
+# which is Wilder smoothing at period 20, i.e. exactly indicators.atr(df, 20).
+# The lens CALLS that function rather than re-deriving the recurrence, so the
+# repo has one true-range implementation and cannot drift into two.
+TURTLE_N_PERIOD = 20
+
+# Entry channels (Donchian breakouts), measured on the bars STRICTLY BEFORE
+# the signal bar — a channel that includes today's own high can never be
+# broken by today's own high, which is the classic look-ahead in this system.
+TURTLE_S1_ENTRY = 20      # System 1: the 20-day breakout (filtered, see below)
+TURTLE_S2_ENTRY = 55      # System 2: the 55-day breakout (never filtered)
+
+# Exit channels. A System 1 position exits on the 10-day low, a System 2
+# position on the 20-day low (mirrored for shorts). The system that ENTERED
+# owns the exit — a position opened on the 55-day breakout does not exit on
+# the 10-day low just because that level arrives first.
+TURTLE_S1_EXIT = 10
+TURTLE_S2_EXIT = 20
+
+# The stop: 2N from the entry of the MOST RECENT unit, applied to the whole
+# position. Adding a unit therefore tightens the stop on every unit already
+# held (see TURTLE_PYRAMID_STEP_N).
+TURTLE_STOP_N = 2.0
+
+# Pyramiding: add one unit for every 1/2 N the price moves in your favour,
+# measured from the last unit's fill, to a maximum of TURTLE_MAX_UNITS total
+# (i.e. the initial unit plus three adds).
+TURTLE_PYRAMID_STEP_N = 0.5
+TURTLE_MAX_UNITS = 4
+
+# Unit size: Unit = (TURTLE_RISK_PCT * Account) / (N * DollarsPerPoint).
+# For a share, DollarsPerPoint is 1 by construction (a $1 move on one share is
+# $1), so a unit is (1% of account) / N shares. One unit moving 1N is
+# therefore exactly 1% of the account, which is the link that makes every
+# other number here express itself in equity terms.
+#
+# What a FULL four-unit position actually risks, computed rather than
+# asserted (tests/test_turtle.py pins it): entries sit at 0, +1/2N, +1N,
+# +3/2N above the breakout and the single shared stop ends 2N under the last
+# one, i.e. 1/2N BELOW the breakout. The four units lose 1/2N, 1N, 3/2N and
+# 2N = 5N total = 5% of the account. Left on their own 2N stops they would
+# lose 8N = 8%. Halving that is the entire purpose of the 1/2N stop raise,
+# and it is the rule retail implementations most often drop.
+TURTLE_RISK_PCT = 0.01
+
+# The correlation ceilings, in units. The Turtles traded a diversified futures
+# portfolio and these limits are what kept 4-unit positions from becoming one
+# giant bet on a single theme. This repo has no correlation matrix, so the
+# lens reports them against SECTOR as a stated approximation — see the page.
+TURTLE_MAX_UNITS_CLOSE_CORR = 6     # closely correlated markets
+TURTLE_MAX_UNITS_LOOSE_CORR = 10    # loosely correlated markets
+TURTLE_MAX_UNITS_DIRECTION = 12     # total units long, or total short
+
+# The drawdown rule, and it compounds: for every TURTLE_DRAWDOWN_STEP_PCT the
+# account is down from its peak, cut the equity you SIZE FROM by
+# TURTLE_DRAWDOWN_CUT_PCT. A 20% drawdown therefore sizes off 0.8 * 0.8 = 64%
+# of the real account, not 60%.
+TURTLE_DRAWDOWN_STEP_PCT = 10.0
+TURTLE_DRAWDOWN_CUT_PCT = 20.0
+
+# The documented alternative stop ("Whipsaw"): a quarter of the risk at a
+# quarter of the distance. Reported by the lens for comparison; it is not the
+# default, because 2N is what the rules specify.
+TURTLE_WHIPSAW_RISK_PCT = 0.005
+TURTLE_WHIPSAW_STOP_N = 0.5
+
+# The account the published unit sizes are computed against. Display only —
+# the page lets you type your own and recomputes in the browser. It is
+# deliberately NOT VIVEK_BOT_ACCOUNT_EQUITY: the Turtle lens must never read
+# or imply anything about the live paper book.
+TURTLE_ACCOUNT_EQUITY = 5_000.0
+
+# Shorts are part of the original system (every rule mirrors). The lens
+# COMPUTES both sides and publishes them; whether the deck displays shorts
+# prominently is a display question the edge research already has opinions
+# about (EDGE_RESEARCH_2026-08-20 section 7).
+TURTLE_ALLOW_SHORTS = True
+
+# Minimum daily bars before a name is evaluated at all. The 55-day channel
+# plus a 20-period Wilder N plus enough history for the System 1 filter to
+# have seen a prior breakout: 250 sessions is about a year and is the point
+# below which the filter state is guesswork rather than history.
+TURTLE_MIN_BARS = 250
+
+# Liquidity floors, per market key. A Donchian breakout on a name that trades
+# $12,000 a day is a real breakout and an unfillable one; the lens would be
+# lying by omission if it listed those without a gate.
+TURTLE_MIN_PRICE = {"asx": 0.10, "nasdaq": 1.00, "crypto": 0.0}
+TURTLE_MIN_DVOL = {"asx": 250_000.0, "nasdaq": 1_000_000.0, "crypto": 1_000_000.0}
+TURTLE_DVOL_LOOKBACK = 20
+
+# How close to a breakout level a flat name must be to be published as
+# "approaching" rather than dropped. The scan is a daily file; a name 0.4%
+# under its 55-day high today is the one you want to have seen yesterday.
+TURTLE_APPROACH_PCT = 3.0
+
+# Round-trip trading cost charged to every replayed trade, in basis points
+# PER SIDE of notional. A trend-following system takes a great many small
+# losses, so cost is not a rounding error on the result -- it is a material
+# part of it, and a backtest that omits it is quoting a number nobody could
+# have earned. 15 bps a side covers retail brokerage plus roughly half a
+# spread on a liquid name; it is deliberately not tuned to make any market
+# look good. Every trade publishes `gross_r` beside the net `r` and
+# `cost_r`, so the size of the haircut is always visible rather than baked in.
+# Set to 0 to reproduce a frictionless replay.
+TURTLE_COST_BPS = 15.0
+
+# THE FUTURES SLEEVE -- the vehicle the system was actually designed for.
+#
+# The Turtles traded roughly twenty LIQUID, UNCORRELATED futures across
+# currencies, rates, metals, energy, softs and indices, and diversification
+# across genuinely different markets is the MECHANISM that makes the
+# expectancy positive, not a garnish on top of it. A hundred NASDAQ names is
+# one tech factor wearing a hundred tickers; a 2,212-name ASX list is one
+# resources-and-banks tape. Running this lens on equities and calling the
+# result "Turtle" tests something the system never claimed.
+#
+# So the lens gets a fourth market. Same frozen rules, same engine, no tuning
+# -- the only thing that changes is what it is pointed at.
+#
+# `dpp` is DOLLARS PER POINT for the full-size contract and it is the single
+# most important number here: unit size is (1% x equity) / (N x dpp), so
+# getting it wrong misprices every position. `micro` names the CME micro where
+# one exists, with `micro_dpp` its multiplier -- that is what decides whether
+# a small account can hold one unit at all, and the honest answer for most of
+# these at $5,000 is that it cannot.
+#
+# Data comes from the continuous front-month series (yfinance "=F"). Those are
+# back-adjusted rolls, not a tradeable instrument: good enough for channel and
+# N arithmetic, wrong for exact fills. Said on the page rather than hidden.
+# The grains and meats the Turtles deliberately EXCLUDED are excluded here
+# too -- Dennis was at exchange position limits in grains for his own account.
+#
+# EVERY ROW CARRIES ITS SOURCE. `dpp` is the one number here that silently
+# misprices everything downstream if it is wrong -- unit size, stop distance
+# and the pyramid step all divide by it -- and it is not checkable by looking
+# at it, because a plausible wrong multiplier looks exactly like a right one.
+# So each entry states the exchange contract size and the quote convention it
+# was derived from. Exchange is CME Group (CME/CBOT/NYMEX/COMEX) except the
+# four softs, which are ICE Futures U.S. The rule for a cents-quoted contract
+# is dpp = contract size / 100, because one "point" on those tapes is one cent.
+# Do not edit a number here without editing the comment beside it, and do not
+# edit the comment to match a number.
+TURTLE_FUTURES = [
+    # --- currencies (the Turtles' biggest 1980s winners) ---
+    # CME Euro FX: 125,000 EUR, quoted USD per EUR -> $125,000 per 1.00.
+    # Micro M6E is one tenth: 12,500 EUR.
+    {"symbol": "6E", "yf": "6E=F", "name": "Euro FX", "group": "currency",
+     "dpp": 125_000, "micro": "M6E", "micro_dpp": 12_500},
+    # CME Japanese Yen: 12,500,000 JPY, quoted USD per yen -> $12,500,000 per
+    # 1.00. Yahoo prints this tape at ~0.0068, so the multiplier is large and
+    # correct rather than a typo.
+    {"symbol": "6J", "yf": "6J=F", "name": "Japanese Yen", "group": "currency",
+     "dpp": 12_500_000, "micro": "", "micro_dpp": 0},
+    # CME British Pound: 62,500 GBP, quoted USD per GBP. Micro M6B: 6,250.
+    {"symbol": "6B", "yf": "6B=F", "name": "British Pound", "group": "currency",
+     "dpp": 62_500, "micro": "M6B", "micro_dpp": 6_250},
+    # CME Australian Dollar: 100,000 AUD, quoted USD per AUD. Micro M6A: 10,000.
+    {"symbol": "6A", "yf": "6A=F", "name": "Australian Dollar", "group": "currency",
+     "dpp": 100_000, "micro": "M6A", "micro_dpp": 10_000},
+    # CME Canadian Dollar: 100,000 CAD, quoted USD per CAD.
+    {"symbol": "6C", "yf": "6C=F", "name": "Canadian Dollar", "group": "currency",
+     "dpp": 100_000, "micro": "", "micro_dpp": 0},
+    # CME Swiss Franc: 125,000 CHF, quoted USD per CHF.
+    {"symbol": "6S", "yf": "6S=F", "name": "Swiss Franc", "group": "currency",
+     "dpp": 125_000, "micro": "", "micro_dpp": 0},
+    # --- rates ---
+    # CBOT 30-Year T-Bond: $100,000 face, quoted in points of par, so one
+    # full point (1% of face) is $1,000. Yahoo prints the decimalised handle.
+    {"symbol": "ZB", "yf": "ZB=F", "name": "30-Year T-Bond", "group": "rates",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # CBOT 10-Year T-Note: $100,000 face, points of par -> $1,000 a point.
+    # NO MICRO. CME's "Micro 10-Year Yield" is not a fraction of ZN -- it is a
+    # different instrument that trades YIELD at $10 a basis point, so listing
+    # it here would misprice every rates unit. An honest empty field beats a
+    # plausible wrong one.
+    {"symbol": "ZN", "yf": "ZN=F", "name": "10-Year T-Note", "group": "rates",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # --- metals ---
+    # COMEX Gold: 100 troy oz, quoted USD per oz -> $100 per $1. MGC: 10 oz.
+    {"symbol": "GC", "yf": "GC=F", "name": "Gold", "group": "metals",
+     "dpp": 100, "micro": "MGC", "micro_dpp": 10},
+    # COMEX Silver: 5,000 troy oz, quoted USD per oz -> $5,000 per $1.
+    # Micro Silver (SIL) is 1,000 oz -> $1,000. Note SIL is a fifth, not a
+    # tenth: the metals micros are not a uniform ratio.
+    {"symbol": "SI", "yf": "SI=F", "name": "Silver", "group": "metals",
+     "dpp": 5_000, "micro": "SIL", "micro_dpp": 1_000},
+    # COMEX Copper: 25,000 lb, quoted USD per lb -> $25,000 per $1. This tape
+    # is quoted in DOLLARS per pound (~4.50), not cents, so the /100 rule that
+    # governs the softs below does not apply. MHG: 2,500 lb.
+    {"symbol": "HG", "yf": "HG=F", "name": "Copper", "group": "metals",
+     "dpp": 25_000, "micro": "MHG", "micro_dpp": 2_500},
+    # --- energy ---
+    # NYMEX WTI Crude: 1,000 barrels, quoted USD per barrel. MCL: 100 bbl.
+    {"symbol": "CL", "yf": "CL=F", "name": "Crude Oil (WTI)", "group": "energy",
+     "dpp": 1_000, "micro": "MCL", "micro_dpp": 100},
+    # NYMEX Heating Oil (ULSD): 42,000 US gallons, quoted USD per gallon.
+    {"symbol": "HO", "yf": "HO=F", "name": "Heating Oil", "group": "energy",
+     "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    # NYMEX RBOB Gasoline: 42,000 US gallons, quoted USD per gallon.
+    {"symbol": "RB", "yf": "RB=F", "name": "RBOB Gasoline", "group": "energy",
+     "dpp": 42_000, "micro": "", "micro_dpp": 0},
+    # NYMEX Henry Hub Natural Gas: 10,000 MMBtu, quoted USD per MMBtu.
+    # Micro MNG: 2,500 MMBtu -> a quarter, again not a tenth.
+    {"symbol": "NG", "yf": "NG=F", "name": "Natural Gas", "group": "energy",
+     "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
+    # --- softs (the Turtles traded these; grains and meats they did NOT) ---
+        # ICE Coffee C: 37,500 lb per contract, quoted in CENTS per lb on KC=F --
+    # so one "point" on the tape is one cent, and dpp = 37,500 / 100 = 375,
+    # the same size/100 rule as SB and CT below. (Corrected 2026-08-22. The
+    # prior 37,500 traced to a 2026-08-21 audit whose reference table did not
+    # contain KC at all -- the "affirmation" was vacuous -- and it overstated
+    # dpp 100x, so KC units computed 100x too SMALL and coffee could never
+    # trade; the page printed one_contract_risk_pct at 100x as the visible
+    # artefact. Conservative in both states: at $5,000 a single KC contract
+    # does not fit either way.)
+    {"symbol": "KC", "yf": "KC=F", "name": "Coffee", "group": "softs",
+     "dpp": 375, "micro": "", "micro_dpp": 0},
+    # ICE Cocoa: 10 metric tons, quoted USD per metric ton -> $10 per $1.
+    # Dollar-quoted, so the /100 cents rule does not apply.
+    {"symbol": "CC", "yf": "CC=F", "name": "Cocoa", "group": "softs",
+     "dpp": 10, "micro": "", "micro_dpp": 0},
+    # ICE Sugar No. 11: 112,000 lb, quoted US cents per pound -> $1,120 a cent.
+    {"symbol": "SB", "yf": "SB=F", "name": "Sugar No. 11", "group": "softs",
+     "dpp": 1_120, "micro": "", "micro_dpp": 0},
+    # ICE Cotton No. 2: 50,000 lb, quoted US cents per pound -> $500 a cent.
+    {"symbol": "CT", "yf": "CT=F", "name": "Cotton", "group": "softs",
+     "dpp": 500, "micro": "", "micro_dpp": 0},
+    # --- indices (not a 1983 Turtle market at this size, but it is the one
+    #     a small account can actually reach, so it is carried and labelled) ---
+    # CME E-mini S&P 500: $50 x index. Micro MES: $5 x index.
+    {"symbol": "ES", "yf": "ES=F", "name": "S&P 500", "group": "index",
+     "dpp": 50, "micro": "MES", "micro_dpp": 5},
+    # CME E-mini Nasdaq-100: $20 x index. Micro MNQ: $2 x index.
+    {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
+     "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
+]
+
+# ROLL-GAP DETECTION for the futures sleeve. Continuous front-month "=F"
+# series are BACK-ADJUSTED, so the roll from one contract month to the next
+# lands inside the price history as a step that looks like a real overnight
+# move. It is not one -- nobody could have traded it -- and Wilder's true
+# range counts it in full.
+#
+# Measured on a simulated quarterly-rolling tape: a roll inflates N by
+# 13-22% ON THE BAR AFTER IT, which is precisely the bar a position opened
+# that day is sized and stopped from. A 22% inflated N means a stop 22% too
+# wide and a unit 22% too small. Diluted across the 20-bar window the
+# steady-state distortion is around 1%, so this is a spike problem, not a
+# level problem.
+#
+# A bar is FLAGGED when its overnight gap exceeds this multiple of its own
+# range. On the simulated tape that separated cleanly: 3.78x at roll bars
+# against 0.28x typical, catching 7 of 7 rolls and nothing else.
+#
+# DETECTION AND DISCLOSURE ONLY. The true-range formula is NOT touched --
+# that is frozen detection law, and silently winsorising TR to make a number
+# look better is exactly the move this lens exists to refuse. The proper fix
+# is real roll dates, which this repo does not have; until then the page says
+# which rows are affected.
+TURTLE_ROLL_GAP_RATIO = 3.0
+
+# THE FORWARD PAPER BOOK (turtle_book.py). Completely separate from the
+# VIVEK paper bot: own file, own equity, own slot pool, own sizing. The
+# five-year replay cannot answer "does this work" -- its universe is today's
+# listed names, so it was selected on outcomes the system could not have
+# known -- and waiting will not make it answerable. A forward book starts
+# flat, takes only what fires from the day it starts, and pays costs.
+TURTLE_BOOK_EQUITY = 5_000.0
+
+# Cash constraint, as a percentage of realised equity. 100 = no leverage.
+# The replay has NO equivalent and that is a real gap in it: crypto's median
+# unit is ~30% of a $5,000 account, so a four-unit position is ~119% of the
+# book -- impossible without margin, and the replay records it anyway. A
+# forward book without this would inherit the flaw it exists to escape.
+TURTLE_BOOK_MAX_NOTIONAL_PCT = 100.0
+
+# THE CRYPTO 5x SLEEVE (2026-08-22, owner-ordered) -- the only vehicle a
+# $5,000 account can run the UNCHANGED 1%/N Turtle unit in without rounding
+# up into extra risk. Day one of the cash book proved the constraint: a
+# crypto unit costs 25-31% of the sleeve in CASH, so the book saturated at
+# 3-4 units and 37 signals died as `cash` skips -- a binding constraint the
+# original rules never had, because the Turtles' leverage came from futures
+# margin. This sleeve is the perp analogue of that margin, stated as such:
+#
+#   posted margin  = notional / leverage         (NOT Dennis's futures IM)
+#   unit           = (1% x equity) / N           (the formula does not move)
+#   refuse         if posted > equity - sum(posted of opens)   -> no_margin
+#   liquidate      if adverse MTM <= -posted                   -> liquidation
+#   margin_mode    isolated: each position's posted stands alone
+#
+# It is a NEW forward series (journal/turtle_book.crypto5x.json) beside the
+# cash crypto book, never a restatement of it -- cash's -16% day one is
+# evidence about the cash vehicle and stays exactly as recorded. Same frozen
+# law throughout: daily bars (the 4-hour cron is a SCAN CADENCE, not a
+# 4-hour Donchian), 15 bps a side, crypto = ONE correlated bucket, 4/6/12
+# unit ceilings, compounding drawdown step-down. ASX and NASDAQ stay cash at
+# leverage 1: nothing here touches them.
+TURTLE_5X = {
+    "market": "crypto5x",
+    "leverage": 5.0,
+    "fractional": True,          # coins split; futures contracts do not
+    "cost_bps": TURTLE_COST_BPS, # deliberately the same 15 bps -- a cheaper
+                                 # cost model for the levered book would make
+                                 # the two series incomparable
+    "margin_mode": "isolated",
+}
+
+# Yahoo symbol collisions in the crypto universe. universe._fetch_crypto maps
+# CoinGecko tickers naively to "<SYM>-USD", and on Yahoo several of those
+# tickers belong to DIFFERENT, dead tokens -- so the scan has been reading
+# Apricot where it meant Aptos. The real coins live under Yahoo's suffixed
+# ids. THE CASH UNIVERSE IS DELIBERATELY NOT CHANGED by this map: the cash
+# crypto book is a running experiment and editing its universe mid-flight
+# changes which trades it takes. The 5x sleeve (and only it) applies these
+# overrides, displays the plain symbol, and rejects any row whose last close
+# is not a positive number.
+TURTLE_5X_YF_OVERRIDES = {
+    "APT": "APT21794-USD",   # Aptos      -- bare APT-USD is Apricot
+    "ARB": "ARB11841-USD",   # Arbitrum   -- bare ARB-USD is ARbit
+    "SUI": "SUI20947-USD",   # Sui        -- bare SUI-USD is Salmonation
+    "UNI": "UNI7083-USD",    # Uniswap    -- bare UNI-USD is UNICORN
+    "TON": "TON11419-USD",   # Toncoin    -- bare TON-USD is TON-Token
+}
+
+# Where REAL futures margin data would live, if and when the owner supplies
+# it: {"as_of": ..., "source": ..., "contracts": {"MES": {"initial": ...,
+# "maintenance": ...}, ...}}. THE FILE DOES NOT EXIST AND MUST NOT BE
+# INVENTED -- margin requirements are exchange facts, not estimates. While it
+# is absent the forward book refuses every new futures open with
+# `no_margin_file` (turtle_book._futures_gates), which is the honest state:
+# a futures book with made-up margin is a backtest wearing a book's clothes.
+TURTLE_FUTURES_MARGIN_FILE = "data/futures_margins.json"
+
+# Minimum share of a market's universe that must come back with usable bars
+# before the scan is allowed to publish. Below this the run RAISES and leaves
+# the previous file in place.
+#
+# The 2026-08-21 incident is why: a scheduled run got 5 of 101 crypto names
+# back from Yahoo, evaluated one, and published `errors: 0`. Every watchdog in
+# this repo checks file AGE, so a fresh file holding one name looked exactly
+# like a healthy one. 60% is deliberately loose - Yahoo routinely drops a few
+# percent and the recovery sweep usually reclaims them - so anything that
+# trips this is a real outage, not a bad afternoon.
+TURTLE_MIN_COVERAGE_PCT = 60.0
+
+# A 60% SHARE is calibrated for a 2,000-name directory, where losing 40% is a
+# mass outage. On the 21-contract futures sleeve the same arithmetic is
+# absurd: 8 contracts missing is 62% coverage - "above the floor" - and
+# publishes a sleeve with whole asset groups absent as if it were whole. So a
+# small universe gets an ABSOLUTE ceiling on missing names instead: at or
+# under TURTLE_SMALL_UNIVERSE_MAX names, MORE than
+# TURTLE_SMALL_UNIVERSE_MAX_MISSING unpriced names refuses to publish and
+# leaves yesterday's file standing (the share floor still applies too - the
+# tighter rule wins). Two missing of 21 (90.5%) still publishes, because one
+# permanently broken Yahoo symbol must not hold the whole sleeve hostage
+# forever - but every missing name is NAMED in the payload rather than merely
+# counted, because on a fixed 21-row table each absence is an asset group,
+# not a rounding error. Equity universes are untouched: they stay on the
+# 60% share above.
+TURTLE_SMALL_UNIVERSE_MAX = 30
+TURTLE_SMALL_UNIVERSE_MAX_MISSING = 2
+
+# Rows published per market. The full ASX universe throws off far more
+# breakouts than a page can show; ranking is by proximity to the level and
+# then by liquidity, and the payload states how many were dropped.
+TURTLE_MAX_ROWS = 400
