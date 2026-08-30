@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "futures",
- "generated_at": "2026-08-29T14:45:12+00:00",
+ "generated_at": "2026-08-30T14:37:14+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [],
@@ -26,19 +26,52 @@
  "events": [],
  "skips": [
   {
-   "as_of": "2026-08-29",
+   "as_of": "2026-08-30",
    "market": "futures",
-   "symbol": "RB",
+   "symbol": "ZN",
    "action": "entry",
    "reason": "unit_lt_one",
-   "full_contracts": 0.0099,
+   "full_contracts": 0.1036,
    "micro_contracts": null,
-   "one_contract_risk_pct": 202.87,
+   "one_contract_risk_pct": 19.31,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-30",
+   "market": "futures",
+   "symbol": "CC",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0172,
+   "micro_contracts": null,
+   "one_contract_risk_pct": 116.35,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-30",
+   "market": "futures",
+   "symbol": "KC",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0092,
+   "micro_contracts": null,
+   "one_contract_risk_pct": 217.39,
+   "equity": 5000.0
+  },
+  {
+   "as_of": "2026-08-30",
+   "market": "futures",
+   "symbol": "SI",
+   "action": "entry",
+   "reason": "unit_lt_one",
+   "full_contracts": 0.0052,
+   "micro_contracts": 0.0258,
+   "one_contract_risk_pct": 77.63,
    "equity": 5000.0
   }
  ],
  "skip_counts": {
-  "unit_lt_one": 1,
-  "total": 1
+  "unit_lt_one": 4,
+  "total": 4
  }
 }
