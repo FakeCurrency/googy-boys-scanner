@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-08-30T14:37:08+00:00",
+ "generated_at": "2026-08-30T19:17:05+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -13,20 +13,43 @@
    "side": "short",
    "system": 1,
    "n": 0.00320312,
-   "units": 10391.43260321,
+   "units": 20782.86520642,
    "fills": [
-    0.09686227
+    0.09686227,
+    0.09526071
    ],
-   "cost_basis": 1006.537765,
-   "stop": 0.10326851,
-   "last_fill": 0.09686227,
+   "cost_basis": 1996.433013,
+   "stop": 0.10166695,
+   "last_fill": 0.09526071,
    "opened": "2026-08-27",
-   "last_mark": 0.09567973,
+   "last_mark": 0.09524291,
    "mark_date": "2026-08-30",
-   "fees": 1.509807,
-   "mfe_r": 0.1989,
+   "fees": 2.99465,
+   "mfe_r": 0.2944,
    "mae_r": -0.5033,
    "unpriced_runs": 0
+  },
+  {
+   "symbol": "ZEC",
+   "market": "crypto",
+   "name": "Zcash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 49.72837852,
+   "units": 0.66933623,
+   "fills": [
+    869.76000977
+   ],
+   "cost_basis": 582.161889,
+   "stop": 770.30325273,
+   "last_fill": 869.76000977,
+   "opened": "2026-08-30",
+   "last_mark": 869.76000977,
+   "mark_date": "2026-08-30",
+   "fees": 0.873243,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
   }
  ],
  "closed": [
@@ -219,8 +242,8 @@
   "equity_start": 5000.0,
   "equity": 4160.63,
   "return_pct": -16.787,
-  "open_positions": 1,
-  "open_units": 1,
+  "open_positions": 2,
+  "open_units": 3,
   "closed": 7,
   "wins": 1,
   "win_pct": 14.3,
@@ -231,7 +254,10 @@
   "fees_paid": 49.19,
   "sizing_equity": 3328.5
  },
- "events": [],
+ "events": [
+  "ADD JST u2 @ 0.0952607",
+  "ENTER ZEC S2 long @ 869.76"
+ ],
  "skips": [],
  "skip_counts": {
   "total": 0
