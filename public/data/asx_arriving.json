@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-01T02:18:41+10:00",
+  "generated_at": "2026-09-01T04:01:23+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "CZN",
+      "name": "Corazon Mining Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.13500001,
+      "turnover_avg20": 99248,
+      "turnover_today": 408497,
+      "rvol": 3.1,
+      "adv_usd": 99248.47,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "AHC",
       "name": "Austco Healthcare Limited",
@@ -72,6 +85,19 @@
       "adv_usd": 24917.12,
       "fund": false,
       "is_product": false
+    },
+    {
+      "symbol": "JHPI",
+      "name": "JPMorgan Equity Premium Income Active ETF (Managed Fund) (Hedged)",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 46.16999817,
+      "turnover_avg20": 36656,
+      "turnover_today": 115240,
+      "rvol": 3.1,
+      "adv_usd": 36656.95,
+      "fund": true,
+      "is_product": true
     },
     {
       "symbol": "RZI",
