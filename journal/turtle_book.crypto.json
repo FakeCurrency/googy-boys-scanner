@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-08-31T16:07:33+00:00",
+ "generated_at": "2026-08-31T17:18:56+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -22,7 +22,7 @@
    "stop": 0.10166695,
    "last_fill": 0.09526071,
    "opened": "2026-08-27",
-   "last_mark": 0.09695119,
+   "last_mark": 0.09759553,
    "mark_date": "2026-08-31",
    "fees": 2.99465,
    "mfe_r": 0.3609,
@@ -45,12 +45,34 @@
    "stop": 770.30325273,
    "last_fill": 869.76000977,
    "opened": "2026-08-30",
-   "last_mark": 844.07000732,
+   "last_mark": 838.34002686,
    "mark_date": "2026-08-31",
    "fees": 0.873243,
    "mfe_r": 0.1292,
    "mae_r": -0.6123,
    "unpriced_runs": 0
+  },
+  {
+   "symbol": "DASH",
+   "market": "crypto",
+   "name": "Dash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 2.67934934,
+   "units": 12.42279426,
+   "fills": [
+    47.54999924
+   ],
+   "cost_basis": 590.703858,
+   "stop": 42.19130056,
+   "last_fill": 47.54999924,
+   "opened": "2026-08-31",
+   "last_mark": 47.54999924,
+   "mark_date": "2026-08-31",
+   "fees": 0.886056,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
   }
  ],
  "closed": [
@@ -243,8 +265,8 @@
   "equity_start": 5000.0,
   "equity": 4160.63,
   "return_pct": -16.787,
-  "open_positions": 2,
-  "open_units": 3,
+  "open_positions": 3,
+  "open_units": 4,
   "closed": 7,
   "wins": 1,
   "win_pct": 14.3,
@@ -255,7 +277,9 @@
   "fees_paid": 49.19,
   "sizing_equity": 3328.5
  },
- "events": [],
+ "events": [
+  "ENTER DASH S2 long @ 47.55"
+ ],
  "skips": [],
  "skip_counts": {
   "total": 0
