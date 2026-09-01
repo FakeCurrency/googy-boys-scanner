@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-02T07:08:19+10:00",
+  "generated_at": "2026-09-02T08:52:12+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
@@ -9,15 +9,28 @@
   },
   "results": [
     {
-      "symbol": "GMTL",
-      "name": "Global X Green Metal Miners ETF",
+      "symbol": "BOND",
+      "name": "SPDR S&P/ASX Australian Bond Fund",
       "sector": "Unclassified",
       "dir": "LONG",
-      "price": 13.09000015,
-      "turnover_avg20": 49576,
-      "turnover_today": 150626,
-      "rvol": 3.0,
-      "adv_usd": 49576.62,
+      "price": 25.13999939,
+      "turnover_avg20": 87919,
+      "turnover_today": 290869,
+      "rvol": 3.3,
+      "adv_usd": 87919.7,
+      "fund": true,
+      "is_product": true
+    },
+    {
+      "symbol": "LHGG",
+      "name": "Lakehouse Global Growth Fund Active ETF",
+      "sector": "Unclassified",
+      "dir": "SHORT",
+      "price": 1.89499998,
+      "turnover_avg20": 36895,
+      "turnover_today": 263041,
+      "rvol": 6.9,
+      "adv_usd": 36895.83,
       "fund": true,
       "is_product": true
     },
@@ -74,15 +87,15 @@
       "is_product": false
     },
     {
-      "symbol": "R3AL",
-      "name": "Martin Currie Real Income Fund - Active ETF",
+      "symbol": "CGHE",
+      "name": "Claremont Global Fund (hedged) (Managed Fund)",
       "sector": "Unclassified",
-      "dir": "SHORT",
+      "dir": "LONG",
       "price": 1.51999998,
-      "turnover_avg20": 24602,
-      "turnover_today": 120121,
-      "rvol": 5.0,
-      "adv_usd": 24602.42,
+      "turnover_avg20": 9069,
+      "turnover_today": 114674,
+      "rvol": 12.5,
+      "adv_usd": 9069.16,
       "fund": true,
       "is_product": true
     }
