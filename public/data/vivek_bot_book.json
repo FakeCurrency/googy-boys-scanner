@@ -55,10 +55,10 @@
       "risk_pct": 0.2539,
       "risk_usd": 380.87,
       "source": "vivek_bot",
-      "unreal_r": 1.338,
-      "unreal_usd": 509.77,
+      "unreal_r": 1.308,
+      "unreal_usd": 498.13,
       "lens": "vivek",
-      "last_mark": 36.59999847,
+      "last_mark": 36.5,
       "notional_before": 503.36,
       "units_before": 15.7349343,
       "risk_usd_before": 35.0,
@@ -134,9 +134,9 @@
       "lens": "vivek",
       "signal_entry": 0.71499997,
       "fill_slip_bps": -699.3,
-      "last_mark": 0.86000001,
-      "unreal_r": 1.308,
-      "unreal_usd": 1099.62,
+      "last_mark": 0.87,
+      "unreal_r": 1.375,
+      "unreal_usd": 1156.01,
       "notional_before": 154.68,
       "units_before": 216.33077297,
       "risk_usd_before": 35.0,
@@ -155,83 +155,6 @@
       },
       "level_tf": "h4",
       "level_tf_source": "scan"
-    },
-    {
-      "id": "HUB:long:3D:2026-08-10",
-      "symbol": "HUB",
-      "name": "HUB24 Limited",
-      "sector": "Financials",
-      "market": "asx",
-      "direction": "long",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "3D",
-      "entry": 89.66000366,
-      "stop": 73.68821548,
-      "tp1": 103.73970682,
-      "tp2": 117.09914074,
-      "tp3": 164.77893907,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 15.97178818,
-      "rr": 1.72,
-      "trigger_bar": null,
-      "entry_date": "2026-08-10",
-      "opened_at": "2026-08-10T01:37:22+00:00",
-      "status": "open",
-      "tp1_hit": false,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0039,
-      "gross_r": 0.0,
-      "cost_r": 0.0039,
-      "exits": [],
-      "mae": 74.27999877929688,
-      "mfe": 90.2699966430664,
-      "mae_r": -0.963,
-      "mfe_r": 0.038,
-      "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 56.26195392,
-      "notional": 5000.0,
-      "leverage": 0.03,
-      "leverage_target": 5.0,
-      "risk_pct": 0.5694,
-      "risk_usd": 854.16,
-      "sizing_mode": "fixed_notional",
-      "cycle": "w3-1",
-      "review": [
-        {
-          "code": "heavy_risk",
-          "share_pct": 19.0,
-          "stop_pct": 17.1,
-          "risk_usd": 854.16,
-          "limit_usd": 4500.0,
-          "note": "a 1R loss here is $854 - 19% of the $4,500 daily loss guard, on a 17% stop"
-        }
-      ],
-      "source": "vivek_bot",
-      "lens": "vivek",
-      "level_tf": "3d",
-      "signal_entry": 88.87000275,
-      "fill_slip_bps": 88.9,
-      "last_mark": 74.27999878,
-      "day_marks": {
-        "2026-08-24": 76.20999908,
-        "2026-08-25": 77.5,
-        "2026-08-26": 78.16999817,
-        "2026-08-27": 78.0,
-        "2026-08-28": 76.05000305,
-        "2026-08-29": 76.55000305,
-        "2026-08-30": 76.55000305,
-        "2026-08-31": 76.55000305,
-        "2026-09-01": 75.79000092
-      },
-      "unreal_r": -0.963,
-      "unreal_usd": -822.51
     },
     {
       "id": "SNL:long:3D:2026-08-18",
@@ -295,7 +218,7 @@
       "level_tf": "3d",
       "signal_entry": 34.52999878,
       "fill_slip_bps": -72.4,
-      "last_mark": 35.33000183,
+      "last_mark": 35.75999832,
       "day_marks": {
         "2026-08-24": 34.0,
         "2026-08-25": 34.72999954,
@@ -307,8 +230,8 @@
         "2026-08-31": 35.47000122,
         "2026-09-01": 35.83000183
       },
-      "unreal_r": 0.208,
-      "unreal_usd": 159.58,
+      "unreal_r": 0.293,
+      "unreal_usd": 224.93,
       "stale_pinged": "2026-09-01"
     },
     {
@@ -364,7 +287,7 @@
       "level_tf": "3d",
       "signal_entry": 46.88999939,
       "fill_slip_bps": -149.3,
-      "last_mark": 47.82500076,
+      "last_mark": 48.02000046,
       "day_marks": {
         "2026-08-24": 47.34000015,
         "2026-08-25": 48.18999863,
@@ -376,8 +299,8 @@
         "2026-08-31": 48.81000137,
         "2026-09-01": 48.74000168
       },
-      "unreal_r": 0.296,
-      "unreal_usd": 196.47,
+      "unreal_r": 0.332,
+      "unreal_usd": 219.9,
       "stale_pinged": "2026-09-01"
     },
     {
@@ -442,7 +365,7 @@
       "level_tf": "3d",
       "signal_entry": 1.5,
       "fill_slip_bps": -300.0,
-      "last_mark": 1.53999996,
+      "last_mark": 1.55499995,
       "day_marks": {
         "2026-08-24": 1.60000002,
         "2026-08-25": 1.61000001,
@@ -454,8 +377,8 @@
         "2026-08-31": 1.53999996,
         "2026-09-01": 1.53999996
       },
-      "unreal_r": 0.508,
-      "unreal_usd": 359.59
+      "unreal_r": 0.598,
+      "unreal_usd": 423.04
     },
     {
       "id": "HM1:long:3D:2026-08-21",
@@ -517,7 +440,7 @@
       "level_tf": "3d",
       "signal_entry": 2.98000002,
       "fill_slip_bps": 33.6,
-      "last_mark": 3.1400001,
+      "last_mark": 3.11999989,
       "day_marks": {
         "2026-08-24": 2.98000002,
         "2026-08-25": 2.97000003,
@@ -529,8 +452,8 @@
         "2026-08-31": 3.1400001,
         "2026-09-01": 3.0999999
       },
-      "unreal_r": 0.562,
-      "unreal_usd": 179.33
+      "unreal_r": 0.487,
+      "unreal_usd": 155.42
     },
     {
       "id": "CCP:long:3D:2026-08-21",
@@ -585,7 +508,7 @@
       "level_tf": "3d",
       "signal_entry": 13.35000038,
       "fill_slip_bps": 382.0,
-      "last_mark": 13.93000031,
+      "last_mark": 14.07999992,
       "day_marks": {
         "2026-08-24": 13.98999977,
         "2026-08-25": 13.96000004,
@@ -597,8 +520,8 @@
         "2026-08-31": 14.02000046,
         "2026-09-01": 14.01000023
       },
-      "unreal_r": 0.031,
-      "unreal_usd": 20.22
+      "unreal_r": 0.099,
+      "unreal_usd": 63.56
     },
     {
       "id": "AGL:long:1W:2026-08-21",
@@ -662,7 +585,7 @@
       "level_tf": "weekly",
       "signal_entry": 8.97000027,
       "fill_slip_bps": -133.8,
-      "last_mark": 8.60000038,
+      "last_mark": 8.67000008,
       "day_marks": {
         "2026-08-24": 8.88000011,
         "2026-08-25": 8.77999973,
@@ -674,8 +597,8 @@
         "2026-08-31": 8.53999996,
         "2026-09-01": 8.57999992
       },
-      "unreal_r": -0.19,
-      "unreal_usd": -152.09
+      "unreal_r": -0.137,
+      "unreal_usd": -109.51
     },
     {
       "id": "CWY:long:1W:2026-08-21",
@@ -739,7 +662,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.45000005,
       "fill_slip_bps": 673.5,
-      "last_mark": 2.57500005,
+      "last_mark": 2.57999992,
       "day_marks": {
         "2026-08-24": 2.63000011,
         "2026-08-25": 2.58999991,
@@ -751,8 +674,8 @@
         "2026-08-31": 2.56999993,
         "2026-09-01": 2.5999999
       },
-      "unreal_r": -0.076,
-      "unreal_usd": -55.98
+      "unreal_r": -0.067,
+      "unreal_usd": -48.98
     },
     {
       "id": "MGR:long:1W:2026-08-24",
@@ -816,7 +739,7 @@
       "level_tf": "weekly",
       "signal_entry": 1.90999997,
       "fill_slip_bps": -68.1,
-      "last_mark": 1.82000005,
+      "last_mark": 1.84200001,
       "day_marks": {
         "2026-08-24": 1.89699996,
         "2026-08-25": 1.89999998,
@@ -828,8 +751,8 @@
         "2026-08-31": 1.79499996,
         "2026-09-01": 1.82000005
       },
-      "unreal_r": -0.181,
-      "unreal_usd": -207.72
+      "unreal_r": -0.129,
+      "unreal_usd": -148.37
     },
     {
       "id": "WHI:long:1W:2026-08-26",
@@ -884,7 +807,7 @@
       "level_tf": "weekly",
       "signal_entry": 1.29999995,
       "fill_slip_bps": 15.4,
-      "last_mark": 1.32000005,
+      "last_mark": 1.33000004,
       "day_marks": {
         "2026-08-26": 1.30200005,
         "2026-08-27": 1.30999994,
@@ -894,8 +817,8 @@
         "2026-08-31": 1.29999995,
         "2026-09-01": 1.32000005
       },
-      "unreal_r": 0.158,
-      "unreal_usd": 68.02
+      "unreal_r": 0.245,
+      "unreal_usd": 105.8
     },
     {
       "id": "HLO:long:1W:2026-08-31",
@@ -966,6 +889,61 @@
       },
       "unreal_r": -0.15,
       "unreal_usd": -149.38
+    },
+    {
+      "id": "AIA:long:1W:2026-09-01",
+      "symbol": "AIA",
+      "name": "Auckland International Airport Limited",
+      "sector": "Industrials",
+      "market": "asx",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 7.09000015,
+      "stop": 6.53598949,
+      "tp1": 7.80598023,
+      "tp2": 9.31203161,
+      "tp3": 10.70005267,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.55401066,
+      "rr": 4.01,
+      "trigger_bar": null,
+      "entry_date": "2026-09-01",
+      "opened_at": "2026-09-01T02:23:11+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 7.09000015,
+      "mfe": 7.09000015,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 691.56293031,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.32,
+      "risk_usd": 479.95,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "signal_entry": 7.23000002,
+      "fill_slip_bps": -193.6,
+      "last_mark": 7.09000015
     },
     {
       "id": "YORW:long:3D:2026-08-07",
@@ -2001,7 +1979,7 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 112.00569153,
+      "last_mark": 111.47836304,
       "day_marks": {
         "2026-08-24": 112.55111694,
         "2026-08-25": 116.25106049,
@@ -2013,8 +1991,8 @@
         "2026-08-31": 112.13815308,
         "2026-09-01": 112.11191559
       },
-      "unreal_r": 2.637,
-      "unreal_usd": 1318.43,
+      "unreal_r": 2.586,
+      "unreal_usd": 1292.86,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2082,7 +2060,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 1.86399996,
+      "last_mark": 1.84599996,
       "day_marks": {
         "2026-08-24": 1.75300002,
         "2026-08-25": 1.76100004,
@@ -2094,8 +2072,8 @@
         "2026-08-31": 1.80999994,
         "2026-09-01": 1.86699998
       },
-      "unreal_r": 0.73,
-      "unreal_usd": 362.4,
+      "unreal_r": 0.698,
+      "unreal_usd": 346.53,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2161,7 +2139,7 @@
       "level_tf": "weekly",
       "signal_entry": 64262.11328125,
       "fill_slip_bps": 2.4,
-      "last_mark": 78788.3125,
+      "last_mark": 78197.0,
       "day_marks": {
         "2026-08-24": 77568.9296875,
         "2026-08-25": 78958.390625,
@@ -2173,8 +2151,8 @@
         "2026-08-31": 77613.078125,
         "2026-09-01": 78550.390625
       },
-      "unreal_r": 1.167,
-      "unreal_usd": 1127.61
+      "unreal_r": 1.12,
+      "unreal_usd": 1081.66
     }
   ],
   "closed": [
@@ -4196,6 +4174,94 @@
       "exit_date": "2026-08-31",
       "exit_reason": "manual",
       "hold_days": 17
+    },
+    {
+      "id": "HUB:long:3D:2026-08-10",
+      "symbol": "HUB",
+      "name": "HUB24 Limited",
+      "sector": "Financials",
+      "market": "asx",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 89.66000366,
+      "stop": 73.68821548,
+      "tp1": 103.73970682,
+      "tp2": 117.09914074,
+      "tp3": 164.77893907,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 15.97178818,
+      "rr": 1.72,
+      "trigger_bar": null,
+      "entry_date": "2026-08-10",
+      "opened_at": "2026-08-10T01:37:22+00:00",
+      "status": "closed",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": -1.0214,
+      "gross_r": -1.0143,
+      "cost_r": 0.0071,
+      "exits": [
+        {
+          "reason": "stop",
+          "price": 73.45999908,
+          "pct": 1.0,
+          "date": "2026-09-01"
+        }
+      ],
+      "mae": 73.45999908447266,
+      "mfe": 90.2699966430664,
+      "mae_r": -1.014,
+      "mfe_r": 0.038,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 56.26195392,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.5694,
+      "risk_usd": 854.16,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 19.0,
+          "stop_pct": 17.1,
+          "risk_usd": 854.16,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $854 - 19% of the $4,500 daily loss guard, on a 17% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 88.87000275,
+      "fill_slip_bps": 88.9,
+      "last_mark": 73.45999908,
+      "day_marks": {
+        "2026-08-24": 76.20999908,
+        "2026-08-25": 77.5,
+        "2026-08-26": 78.16999817,
+        "2026-08-27": 78.0,
+        "2026-08-28": 76.05000305,
+        "2026-08-29": 76.55000305,
+        "2026-08-30": 76.55000305,
+        "2026-08-31": 76.55000305,
+        "2026-09-01": 75.79000092
+      },
+      "unreal_r": -0.963,
+      "unreal_usd": -822.51,
+      "exit_price": 73.45999908,
+      "exit_date": "2026-09-01",
+      "exit_reason": "stop",
+      "hold_days": 22
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -7144,20 +7210,20 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 103.64,
+      "week_usd": -233.45,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -334.46,
-      "worst_week_usd": 103.64,
-      "realised_usd": 0.0,
+      "worst_session_usd": -763.0,
+      "worst_week_usd": -233.45,
+      "realised_usd": -872.44,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -334.46,
-      "session_usd": -334.46,
+      "unrealised_usd": 109.44,
+      "session_usd": -763.0,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 13,
-      "open_total_usd": 1684.7,
+      "open": 12,
+      "open_total_usd": 2873.68,
       "notified": ""
     },
     "nasdaq": {
@@ -7190,27 +7256,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 98.12,
+      "week_usd": 10.73,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 10.69,
-      "worst_week_usd": 98.12,
+      "worst_session_usd": -76.7,
+      "worst_week_usd": 10.73,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 10.69,
-      "session_usd": 10.69,
+      "unrealised_usd": -76.7,
+      "session_usd": -76.7,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 3883.99,
+      "open_total_usd": 3796.6,
       "notified": ""
     }
   },
   "summary": {
     "open": 30,
-    "unreal_usd": 2721.8,
+    "unreal_usd": 3820.04,
     "updated_day": "2026-09-01"
   },
-  "updated_at": "2026-09-01T00:43:38+00:00"
+  "updated_at": "2026-09-01T02:23:17+00:00"
 }
