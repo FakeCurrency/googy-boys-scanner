@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-01T12:22:31+10:00",
+  "generated_at": "2026-09-01T14:03:47+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "ELT",
+      "name": "Elementos Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.36000001,
+      "turnover_avg20": 87020,
+      "turnover_today": 451207,
+      "rvol": 5.2,
+      "adv_usd": 87020.18,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "CZN",
       "name": "Corazon Mining Limited",
@@ -35,19 +48,6 @@
       "is_product": false
     },
     {
-      "symbol": "AHC",
-      "name": "Austco Healthcare Limited",
-      "sector": "Health Care",
-      "dir": "LONG",
-      "price": 0.245,
-      "turnover_avg20": 43157,
-      "turnover_today": 303127,
-      "rvol": 6.7,
-      "adv_usd": 43157.02,
-      "fund": false,
-      "is_product": false
-    },
-    {
       "symbol": "ARI",
       "name": "Arika Resources Limited",
       "sector": "Materials",
@@ -61,17 +61,17 @@
       "is_product": false
     },
     {
-      "symbol": "EIGA",
-      "name": "eInvest Income Generator Fund (Managed Fund)",
-      "sector": "Unclassified",
+      "symbol": "LTP",
+      "name": "LTR Pharma Limited",
+      "sector": "Health Care",
       "dir": "LONG",
-      "price": 3.79999995,
-      "turnover_avg20": 48856,
-      "turnover_today": 164684,
-      "rvol": 3.4,
-      "adv_usd": 48856.95,
-      "fund": true,
-      "is_product": true
+      "price": 0.505,
+      "turnover_avg20": 67445,
+      "turnover_today": 204156,
+      "rvol": 3.0,
+      "adv_usd": 67445.49,
+      "fund": false,
+      "is_product": false
     },
     {
       "symbol": "LML",
@@ -85,6 +85,19 @@
       "adv_usd": 42098.83,
       "fund": false,
       "is_product": false
+    },
+    {
+      "symbol": "RMBS",
+      "name": "VanEck Australian RMBS ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 25.02000046,
+      "turnover_avg20": 37128,
+      "turnover_today": 146041,
+      "rvol": 3.9,
+      "adv_usd": 37128.25,
+      "fund": true,
+      "is_product": true
     },
     {
       "symbol": "ESK",
