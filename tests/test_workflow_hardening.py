@@ -884,6 +884,36 @@ def test_the_piggyback_ticks_exist_and_can_never_redden_their_hosts():
         assert "|| true" in step, f"{wf_name}: the curl status guard is gone (#372 class)"
 
 
+def test_the_phasemap_gate_collects_failures_instead_of_discarding_siblings():
+    """2026-08-29, phasemap run #63: Yahoo starved crypto so its latest.json
+    came out byte-unchanged, the crypto assert_staged exited the commit step
+    under bash -e BEFORE the commit ran, and ASX's + NASDAQ's freshly staged
+    snapshots were discarded with it — one starved market threw away two
+    healthy ones (the turtle.yml 2026-08-21 blast-radius class). The gate now
+    COLLECTS failures and the step exits with the verdict at the END, after
+    the commit/push of whatever did stage. Three properties, all load-bearing:
+    every scheduled assert is `|| GATE_FAILED=1` (an unguarded one re-aborts
+    the step), the verdict variable is initialised, and every success exit
+    carries it (an `exit 0` there un-reds the alarm entirely)."""
+    body = _load("phasemap.yml")["jobs"]["phasemap"]["steps"][-1]["run"]
+    assert "GATE_FAILED=0" in body, "the verdict variable lost its initialisation"
+    sched = body[body.index('= "schedule"'):body.index("else")]
+    unguarded = [l for l in sched.splitlines()
+                 if "assert_staged.sh" in l and "|| GATE_FAILED=1" not in l]
+    assert not unguarded, (
+        "these scheduled asserts abort the step before the commit again, "
+        f"re-opening the run-#63 discard: {unguarded}")
+    for exit_line in ('echo "No data changes to commit."',
+                      'echo "Nothing new vs main."'):
+        at = body.index(exit_line)
+        tail = body[at:at + 120]
+        assert 'exit "$GATE_FAILED"' in tail, (
+            f"the exit after {exit_line!r} no longer carries the gate verdict")
+    pushed = body[body.index('echo "Pushed."'):]
+    assert 'exit "$GATE_FAILED"' in pushed[:400], (
+        "a successful push must still redden the run when a gate tripped")
+
+
 def test_the_daily_writers_carry_scheduler_drop_backstops():
     """2026-08-26: GitHub's scheduler dropped the 21:35 backup and 22:20 edge
     crons ENTIRELY — no run of any conclusion — while delaying evidence_brief

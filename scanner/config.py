@@ -1614,6 +1614,18 @@ TURTLE_DVOL_LOOKBACK = 20
 # under its 55-day high today is the one you want to have seen yesterday.
 TURTLE_APPROACH_PCT = 3.0
 
+# One in-run SECOND CHANCE for a market that failed, after this cooldown
+# (2026-09-01 — turtle runs #64 and #88, both the same shape). The dominant
+# failure class is Yahoo throttling gutting one market's batch below the
+# coverage floor, and a throttle window routinely clears in minutes — but the
+# runner's only retries were the per-batch ones (seconds apart, inside the
+# same window), so the run went red, emailed the owner, and then healed
+# untouched on the next cron hours later. Now the runner sleeps this long and
+# re-scans just the failed market(s) once; a retry that still fails keeps the
+# red run and the email, so the coverage floor's alarm is not softened — only
+# its false-positive rate on transient throttling. 0 = off.
+TURTLE_THROTTLE_RETRY_COOLDOWN_S = 180.0
+
 # Round-trip trading cost charged to every replayed trade, in basis points
 # PER SIDE of notional. A trend-following system takes a great many small
 # losses, so cost is not a rounding error on the result -- it is a material

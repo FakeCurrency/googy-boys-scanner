@@ -200,10 +200,22 @@ jobs:
           # advances every market's latest.json (run_date is daily) — staging
           # none of them means output is being lost; fail loudly. Manual
           # single-market dispatches only warn.
+          # THE GATE NO LONGER ABORTS THE COMMIT (2026-09-01 — run #63,
+          # 2026-08-29). Yahoo rate-limited crypto so hard its latest.json
+          # came out byte-unchanged; the crypto assert exited this step under
+          # bash -e BEFORE the commit ran, and ASX's + NASDAQ's freshly
+          # staged snapshots (plus the spec files) were discarded with it —
+          # one starved market threw away two healthy ones, the exact blast
+          # radius turtle.yml was fixed for on 2026-08-21. The asserts now
+          # COLLECT failures, the commit/push of whatever DID stage happens
+          # regardless, and the step exits 1 at the END when any gate
+          # tripped. The alarm is unchanged (same red run, same email);
+          # only the discarding stops.
+          GATE_FAILED=0
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-            bash scripts/assert_staged.sh "phasemap asx"    public/data/phasemap/asx/latest.json
-            bash scripts/assert_staged.sh "phasemap nasdaq" public/data/phasemap/nasdaq/latest.json
-            bash scripts/assert_staged.sh "phasemap crypto" public/data/phasemap/crypto/latest.json
+            bash scripts/assert_staged.sh "phasemap asx"    public/data/phasemap/asx/latest.json || GATE_FAILED=1
+            bash scripts/assert_staged.sh "phasemap nasdaq" public/data/phasemap/nasdaq/latest.json || GATE_FAILED=1
+            bash scripts/assert_staged.sh "phasemap crypto" public/data/phasemap/crypto/latest.json || GATE_FAILED=1
             # TOP100 #54 — the spec files got the same must-change treatment,
             # but GATED on the Specs step having reported success. Asserting
             # them unconditionally would convert a deliberately-tolerated
@@ -214,8 +226,8 @@ jobs:
             # successful scan_market and os.replace()s the file, so rc=0
             # guarantees both files were rewritten and therefore differ.
             if [ "$SPECS_OK" = "true" ]; then
-              bash scripts/assert_staged.sh "specs asx"    public/data/asx_spec.json
-              bash scripts/assert_staged.sh "specs nasdaq" public/data/nasdaq_spec.json
+              bash scripts/assert_staged.sh "specs asx"    public/data/asx_spec.json || GATE_FAILED=1
+              bash scripts/assert_staged.sh "specs nasdaq" public/data/nasdaq_spec.json || GATE_FAILED=1
             else
               echo "::warning::Specs reported failure - skipping its must-change gate. The spec files on the site are last night's or older, and confluence_alert reads them with no freshness check."
             fi
@@ -228,7 +240,7 @@ jobs:
           fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."
-            exit 0
+            exit "$GATE_FAILED"
           fi
           git commit -m "data: phasemap $(date -u +'%Y-%m-%d %H:%M UTC')"
           SHA=$(git rev-parse HEAD)
@@ -258,9 +270,15 @@ jobs:
               fi
             done
             git add -A
-            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit "$GATE_FAILED"; fi
             git commit -m "data: phasemap $(date -u +'%Y-%m-%d %H:%M UTC')"
-            if git push origin HEAD:main; then echo "Pushed."; exit 0; fi
+            if git push origin HEAD:main; then
+              echo "Pushed."
+              if [ "$GATE_FAILED" != "0" ]; then
+                echo "::error::a must-change gate tripped (see ASSERT-STAGED above) - the healthy markets were committed, this run is red for the starved one"
+              fi
+              exit "$GATE_FAILED"
+            fi
             echo "Push race — retry $i"; sleep $((i * 3))
           done
           echo "Could not push after retries"; exit 1

@@ -1302,3 +1302,73 @@ def test_the_coverage_rule_is_PUBLISHED_beside_the_results():
     assert p["min_coverage_pct"] == config.TURTLE_MIN_COVERAGE_PCT
     assert p["small_universe_max"] == config.TURTLE_SMALL_UNIVERSE_MAX
     assert p["small_universe_max_missing"] == config.TURTLE_SMALL_UNIVERSE_MAX_MISSING
+
+
+# ── the throttle retry (2026-09-01, runs #64/#88) ────────────────────────────
+# Yahoo throttling one market under the coverage floor was the only failure
+# class this workflow had, and a throttle window clears in minutes — but the
+# runner's per-batch retries are seconds apart, inside the same window, so
+# the run went red and emailed the owner about a transient that healed
+# untouched hours later. main() now re-scans just the failed market(s) once
+# after TURTLE_THROTTLE_RETRY_COOLDOWN_S. These pins are the contract: one
+# retry, only the failures, a real cooldown, and a persistent failure still
+# reddens the run.
+
+class _ScanRecorder:
+    def __init__(self, fail_first=(), fail_always=()):
+        self.calls = []
+        self._fail_first = set(fail_first)
+        self._fail_always = set(fail_always)
+
+    def __call__(self, market, **kw):
+        self.calls.append(market)
+        if market in self._fail_always:
+            raise RuntimeError(f"[{market}] persistent")
+        if market in self._fail_first and self.calls.count(market) == 1:
+            raise RuntimeError(f"[{market}] transient throttle")
+        return {}
+
+
+def _wire(monkeypatch, rec, cooldown):
+    monkeypatch.setattr(turtle_run, "scan_market", rec)
+    monkeypatch.setattr(turtle_run.turtle_book, "write_combined", lambda: None)
+    monkeypatch.setattr(config, "TURTLE_THROTTLE_RETRY_COOLDOWN_S", cooldown,
+                        raising=False)
+    sleeps = []
+    monkeypatch.setattr(turtle_run.time, "sleep", lambda s: sleeps.append(s))
+    return sleeps
+
+
+def test_a_transient_failure_is_retried_once_and_clears_the_red(monkeypatch):
+    rec = _ScanRecorder(fail_first={"crypto"})
+    sleeps = _wire(monkeypatch, rec, 180.0)
+    assert turtle_run.main(["--market", "all"]) == 0
+    # only the failed market got the second scan, after one real cooldown
+    assert rec.calls.count("crypto") == 2
+    for m in turtle_run.MARKETS:
+        if m != "crypto":
+            assert rec.calls.count(m) == 1, f"{m} must not be re-scanned"
+    assert sleeps == [180.0]
+
+
+def test_a_persistent_failure_still_reddens_the_run_after_exactly_one_retry(monkeypatch):
+    rec = _ScanRecorder(fail_always={"crypto"})
+    sleeps = _wire(monkeypatch, rec, 180.0)
+    assert turtle_run.main(["--market", "all"]) == 1
+    assert rec.calls.count("crypto") == 2, "one retry, never a loop"
+    assert sleeps == [180.0]
+
+
+def test_cooldown_zero_disables_the_retry_entirely(monkeypatch):
+    rec = _ScanRecorder(fail_always={"crypto"})
+    sleeps = _wire(monkeypatch, rec, 0)
+    assert turtle_run.main(["--market", "all"]) == 1
+    assert rec.calls.count("crypto") == 1
+    assert sleeps == []
+
+
+def test_a_clean_run_never_sleeps(monkeypatch):
+    rec = _ScanRecorder()
+    sleeps = _wire(monkeypatch, rec, 180.0)
+    assert turtle_run.main(["--market", "all"]) == 0
+    assert sleeps == []

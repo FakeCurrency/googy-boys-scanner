@@ -21,6 +21,7 @@ import argparse
 import datetime
 import os
 import sys
+import time
 import zoneinfo
 
 from . import (config, data, output, scanerrors, turtle, turtle_book,
@@ -474,6 +475,28 @@ def main(argv=None) -> int:
             # night with no ASX breakouts.
             failed.append(m)
             print(f"[{m}] turtle scan FAILED: {e.__class__.__name__}: {e}")
+    # ONE SECOND CHANCE, after a real cooldown (2026-09-01 -- runs #64/#88).
+    # The dominant failure here is Yahoo throttling one market's batch under
+    # the coverage floor, and a throttle window clears in minutes; the
+    # per-batch retries above it are seconds apart, inside the same window.
+    # Only the failed market(s) are re-scanned, once. A retry that still
+    # fails keeps the red run -- the floor's alarm is untouched, only its
+    # false-positive rate on transients.
+    cooldown = float(getattr(config, "TURTLE_THROTTLE_RETRY_COOLDOWN_S", 0) or 0)
+    if failed and cooldown > 0:
+        print(f"turtle: retrying {len(failed)} failed market(s) once after "
+              f"{cooldown:.0f}s cooldown: {', '.join(failed)}")
+        time.sleep(cooldown)
+        still_failed = []
+        for m in failed:
+            try:
+                scan_market(m, limit=args.limit, period=args.period,
+                            equity=args.equity, portfolio=args.portfolio)
+                print(f"[{m}] turtle retry OK - the first failure was a transient")
+            except Exception as e:                               # noqa: BLE001
+                still_failed.append(m)
+                print(f"[{m}] turtle retry FAILED: {e.__class__.__name__}: {e}")
+        failed = still_failed
     # The derived combined book, regenerated from whatever per-market files
     # exist. Report-only, and it must never take the scan down with it.
     try:
