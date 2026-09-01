@@ -1,34 +1,10 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-01T04:55:20+00:00",
+ "generated_at": "2026-09-01T13:27:30+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
-  {
-   "symbol": "JST",
-   "market": "crypto",
-   "name": "JUST",
-   "sector": "",
-   "side": "short",
-   "system": 1,
-   "n": 0.00320312,
-   "units": 20782.86520642,
-   "fills": [
-    0.09686227,
-    0.09526071
-   ],
-   "cost_basis": 1996.433013,
-   "stop": 0.10166695,
-   "last_fill": 0.09526071,
-   "opened": "2026-08-27",
-   "last_mark": 0.1008319,
-   "mark_date": "2026-09-01",
-   "fees": 2.99465,
-   "mfe_r": 0.3609,
-   "mae_r": -0.768,
-   "unpriced_runs": 0
-  },
   {
    "symbol": "ZEC",
    "market": "crypto",
@@ -45,7 +21,7 @@
    "stop": 770.30325273,
    "last_fill": 869.76000977,
    "opened": "2026-08-30",
-   "last_mark": 851.0,
+   "last_mark": 846.79998779,
    "mark_date": "2026-09-01",
    "fees": 0.873243,
    "mfe_r": 0.1292,
@@ -262,26 +238,55 @@
    "fills": [
     47.54999924
    ]
+  },
+  {
+   "symbol": "JST",
+   "market": "crypto",
+   "name": "JUST",
+   "sector": "",
+   "side": "short",
+   "system": 1,
+   "n": 0.00320312,
+   "units": 20782.86520642,
+   "opened": "2026-08-27",
+   "closed": "2026-09-01",
+   "closed_bar": "2026-09-01",
+   "exit": 0.10166695,
+   "reason": "stop",
+   "entry_avg": 0.09606149,
+   "gross": -116.4975,
+   "fees": 6.164,
+   "pnl": -122.6616,
+   "r": -0.9213,
+   "gross_r": -0.875,
+   "mfe_r": 0.3609,
+   "mae_r": -0.9444,
+   "fills": [
+    0.09686227,
+    0.09526071
+   ]
   }
  ],
  "summary": {
   "started": "2026-08-21",
   "equity_start": 5000.0,
-  "equity": 4086.72,
-  "return_pct": -18.266,
-  "open_positions": 2,
-  "open_units": 3,
-  "closed": 8,
+  "equity": 3964.06,
+  "return_pct": -20.719,
+  "open_positions": 1,
+  "open_units": 1,
+  "closed": 9,
   "wins": 1,
-  "win_pct": 12.5,
-  "total_r": -7.879,
-  "avg_r": -0.9849,
-  "median_r": -1.0768,
-  "realized_pnl": -913.28,
-  "fees_paid": 50.86,
-  "sizing_equity": 3269.38
+  "win_pct": 11.1,
+  "total_r": -8.801,
+  "avg_r": -0.9779,
+  "median_r": -1.0434,
+  "realized_pnl": -1035.94,
+  "fees_paid": 57.02,
+  "sizing_equity": 2537.0
  },
- "events": [],
+ "events": [
+  "EXIT JST stop -0.9213R"
+ ],
  "skips": [],
  "skip_counts": {
   "total": 0

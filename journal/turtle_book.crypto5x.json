@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto5x",
- "generated_at": "2026-09-01T04:55:20+00:00",
+ "generated_at": "2026-09-01T13:27:30+00:00",
  "started": "2026-08-22",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 851.0,
+   "last_mark": 846.79998779,
    "mark_date": "2026-09-01",
    "fees": 1.495422,
    "mfe_r": 1.1996,
@@ -45,7 +45,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 45.88000107,
+   "last_mark": 44.88000107,
    "mark_date": "2026-09-01",
    "fees": 1.59963,
    "mfe_r": 2.1019,
@@ -70,10 +70,10 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 5.37200022,
+   "last_mark": 5.76870012,
    "mark_date": "2026-09-01",
    "fees": 2.795106,
-   "mfe_r": 2.2294,
+   "mfe_r": 3.2117,
    "mae_r": -0.3171,
    "posted": 372.680877,
    "unpriced_runs": 0
@@ -94,7 +94,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 1.96060002,
+   "last_mark": 1.98469996,
    "mark_date": "2026-09-01",
    "fees": 1.422235,
    "mfe_r": 1.0261,
@@ -118,37 +118,12 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.3705,
+   "last_mark": 0.36919999,
    "mark_date": "2026-09-01",
    "fees": 1.080912,
    "mfe_r": 0.9577,
    "mae_r": -0.9042,
    "posted": 144.121561,
-   "unpriced_runs": 0
-  },
-  {
-   "symbol": "JST",
-   "market": "crypto5x",
-   "name": "JUST",
-   "sector": "",
-   "side": "short",
-   "system": 1,
-   "n": 0.00320312,
-   "units": 30896.76159495,
-   "fills": [
-    0.09686227,
-    0.09526071
-   ],
-   "cost_basis": 2968.247468,
-   "stop": 0.10166695,
-   "last_fill": 0.09526071,
-   "opened": "2026-08-27",
-   "last_mark": 0.1008319,
-   "mark_date": "2026-09-01",
-   "fees": 4.452371,
-   "mfe_r": 0.3622,
-   "mae_r": -0.7666,
-   "posted": 593.649493,
    "unpriced_runs": 0
   }
  ],
@@ -179,27 +154,55 @@
     277.13000488
    ],
    "posted": 236.430179
+  },
+  {
+   "symbol": "JST",
+   "market": "crypto5x",
+   "name": "JUST",
+   "sector": "",
+   "side": "short",
+   "system": 1,
+   "n": 0.00320312,
+   "units": 30896.76159495,
+   "opened": "2026-08-27",
+   "closed": "2026-09-01",
+   "closed_bar": "2026-09-01",
+   "exit": 0.10166695,
+   "reason": "stop",
+   "entry_avg": 0.09606986,
+   "gross": -172.932,
+   "fees": 9.1641,
+   "pnl": -182.0962,
+   "r": -0.92,
+   "gross_r": -0.8737,
+   "mfe_r": 0.3622,
+   "mae_r": -0.9431,
+   "fills": [
+    0.09686227,
+    0.09526071
+   ],
+   "posted": 593.649493
   }
  ],
  "summary": {
   "started": "2026-08-22",
   "equity_start": 5000.0,
-  "equity": 4896.6,
-  "return_pct": -2.068,
-  "open_positions": 6,
-  "open_units": 8,
-  "closed": 1,
+  "equity": 4714.51,
+  "return_pct": -5.71,
+  "open_positions": 5,
+  "open_units": 6,
+  "closed": 2,
   "wins": 0,
   "win_pct": 0.0,
-  "total_r": -1.034,
-  "avg_r": -1.034,
-  "median_r": -1.034,
-  "realized_pnl": -103.4,
-  "fees_paid": 3.4,
-  "sizing_equity": 4896.6,
+  "total_r": -1.954,
+  "avg_r": -0.977,
+  "median_r": -0.977,
+  "realized_pnl": -285.49,
+  "fees_paid": 12.56,
+  "sizing_equity": 4714.51,
   "leverage": 5.0,
-  "posted_margin": 1712.76,
-  "free_margin": 3183.85
+  "posted_margin": 1119.11,
+  "free_margin": 3595.4
  },
  "params": {
   "leverage": 5.0,
@@ -207,7 +210,9 @@
   "cost_bps": 15.0,
   "margin_mode": "isolated"
  },
- "events": [],
+ "events": [
+  "EXIT JST stop -0.92R"
+ ],
  "skips": [
   {
    "as_of": "2026-09-01",
