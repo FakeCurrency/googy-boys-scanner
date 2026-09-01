@@ -1,13 +1,39 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-02T02:56:50+10:00",
+  "generated_at": "2026-09-02T03:37:29+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "GMTL",
+      "name": "Global X Green Metal Miners ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 13.09000015,
+      "turnover_avg20": 49576,
+      "turnover_today": 150626,
+      "rvol": 3.0,
+      "adv_usd": 49576.62,
+      "fund": true,
+      "is_product": true
+    },
+    {
+      "symbol": "RMBS",
+      "name": "VanEck Australian RMBS ETF",
+      "sector": "Unclassified",
+      "dir": "LONG",
+      "price": 24.91500092,
+      "turnover_avg20": 36972,
+      "turnover_today": 145428,
+      "rvol": 3.9,
+      "adv_usd": 36972.44,
+      "fund": true,
+      "is_product": true
+    },
     {
       "symbol": "UBN",
       "name": "Urbanise.com Limited",
