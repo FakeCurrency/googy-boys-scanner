@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-01T01:31:56+00:00",
+ "generated_at": "2026-09-01T04:55:20+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -206,11 +206,11 @@
    "stop": 0.10166695,
    "last_fill": 0.09526071,
    "opened": "2026-08-27",
-   "last_mark": 0.0996915,
-   "mark_date": "2026-08-31",
+   "last_mark": 0.1008319,
+   "mark_date": "2026-09-01",
    "fees": 2.99465,
    "mfe_r": 0.3609,
-   "mae_r": -0.6293,
+   "mae_r": -0.768,
    "unpriced_runs": 0
   },
   {
@@ -229,8 +229,8 @@
    "stop": 770.30325273,
    "last_fill": 869.76000977,
    "opened": "2026-08-30",
-   "last_mark": 847.20001221,
-   "mark_date": "2026-08-31",
+   "last_mark": 851.0,
+   "mark_date": "2026-09-01",
    "fees": 0.873243,
    "mfe_r": 0.1292,
    "mae_r": -0.6123,
@@ -252,8 +252,8 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 847.20001221,
-   "mark_date": "2026-08-31",
+   "last_mark": 851.0,
+   "mark_date": "2026-09-01",
    "fees": 1.495422,
    "mfe_r": 1.1996,
    "mae_r": -0.6953,
@@ -276,8 +276,8 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 44.54999924,
-   "mark_date": "2026-08-31",
+   "last_mark": 45.88000107,
+   "mark_date": "2026-09-01",
    "fees": 1.59963,
    "mfe_r": 2.1019,
    "mae_r": -0.861,
@@ -301,8 +301,8 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 5.19369984,
-   "mark_date": "2026-08-31",
+   "last_mark": 5.37200022,
+   "mark_date": "2026-09-01",
    "fees": 2.795106,
    "mfe_r": 2.2294,
    "mae_r": -0.3171,
@@ -325,8 +325,8 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 1.91900003,
-   "mark_date": "2026-08-31",
+   "last_mark": 1.96060002,
+   "mark_date": "2026-09-01",
    "fees": 1.422235,
    "mfe_r": 1.0261,
    "mae_r": -0.7196,
@@ -349,8 +349,8 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.366,
-   "mark_date": "2026-08-31",
+   "last_mark": 0.3705,
+   "mark_date": "2026-09-01",
    "fees": 1.080912,
    "mfe_r": 0.9577,
    "mae_r": -0.9042,
@@ -374,11 +374,11 @@
    "stop": 0.10166695,
    "last_fill": 0.09526071,
    "opened": "2026-08-27",
-   "last_mark": 0.0996915,
-   "mark_date": "2026-08-31",
+   "last_mark": 0.1008319,
+   "mark_date": "2026-09-01",
    "fees": 4.452371,
    "mfe_r": 0.3622,
-   "mae_r": -0.628,
+   "mae_r": -0.7666,
    "posted": 593.649493,
    "unpriced_runs": 0
   }
@@ -1484,16 +1484,7 @@
    "system": 1
   },
   {
-   "as_of": "2026-08-31",
-   "market": "crypto",
-   "symbol": "DASH",
-   "action": "entry",
-   "reason": "same_bar_reentry",
-   "signal": "s2_long",
-   "bar": "2026-08-31"
-  },
-  {
-   "as_of": "2026-08-31",
+   "as_of": "2026-09-01",
    "market": "crypto5x",
    "symbol": "ZEC",
    "action": "add",
@@ -1506,7 +1497,7 @@
    "system": 2
   },
   {
-   "as_of": "2026-08-31",
+   "as_of": "2026-09-01",
    "market": "crypto5x",
    "symbol": "DASH",
    "action": "add",
@@ -1519,7 +1510,7 @@
    "system": 2
   },
   {
-   "as_of": "2026-08-31",
+   "as_of": "2026-09-01",
    "market": "crypto5x",
    "symbol": "UNI",
    "action": "add",
@@ -1530,6 +1521,31 @@
    "side": "long",
    "units_held": 2,
    "system": 1
+  },
+  {
+   "as_of": "2026-09-01",
+   "market": "crypto5x",
+   "symbol": "NEAR",
+   "action": "add",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "units_held": 1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-01",
+   "market": "crypto5x",
+   "symbol": "ARB",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
   },
   {
    "as_of": "2026-09-01",
@@ -1557,10 +1573,9 @@
  "started": "2026-08-21",
  "skip_counts": {
   "cash": 71,
-  "same_bar_reentry": 1,
-  "close_corr_cap": 3,
+  "close_corr_cap": 5,
   "unit_lt_one": 2,
-  "total": 77
+  "total": 78
  },
  "summary": {
   "started": "2026-08-21",
