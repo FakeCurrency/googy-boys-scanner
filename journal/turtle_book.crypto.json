@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-01T22:33:02+00:00",
+ "generated_at": "2026-09-02T04:16:39+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,12 +21,34 @@
    "stop": 770.30325273,
    "last_fill": 869.76000977,
    "opened": "2026-08-30",
-   "last_mark": 823.85998535,
-   "mark_date": "2026-09-01",
+   "last_mark": 833.2800293,
+   "mark_date": "2026-09-02",
    "fees": 0.873243,
    "mfe_r": 0.1292,
    "mae_r": -0.6123,
    "unpriced_runs": 0
+  },
+  {
+   "symbol": "GRAM",
+   "market": "crypto",
+   "name": "Gram (prev. Toncoin)",
+   "sector": "",
+   "side": "short",
+   "system": 2,
+   "n": 0.06419092,
+   "units": 395.22688879,
+   "fills": [
+    1.30887294
+   ],
+   "cost_basis": 517.301779,
+   "stop": 1.43725478,
+   "last_fill": 1.30887294,
+   "opened": "2026-09-02",
+   "last_mark": 1.30887294,
+   "mark_date": "2026-09-02",
+   "fees": 0.775953,
+   "mfe_r": 0.0,
+   "mae_r": 0.0
   }
  ],
  "closed": [
@@ -272,8 +294,8 @@
   "equity_start": 5000.0,
   "equity": 3964.06,
   "return_pct": -20.719,
-  "open_positions": 1,
-  "open_units": 1,
+  "open_positions": 2,
+  "open_units": 2,
   "closed": 9,
   "wins": 1,
   "win_pct": 11.1,
@@ -284,7 +306,9 @@
   "fees_paid": 57.02,
   "sizing_equity": 2537.0
  },
- "events": [],
+ "events": [
+  "ENTER GRAM S2 short @ 1.30887"
+ ],
  "skips": [],
  "skip_counts": {
   "total": 0
