@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "nasdaq",
- "generated_at": "2026-09-02T13:52:09+00:00",
+ "generated_at": "2026-09-02T23:32:58+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,10 +21,10 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 109.08999634,
+   "last_mark": 109.45500183,
    "mark_date": "2026-09-02",
    "fees": 2.105294,
-   "mfe_r": 0.0845,
+   "mfe_r": 0.1525,
    "mae_r": -0.4303,
    "unpriced_runs": 0
   },
@@ -44,7 +44,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 107.5,
+   "last_mark": 108.34999847,
    "mark_date": "2026-09-02",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -67,7 +67,7 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 294.45001221,
+   "last_mark": 302.02999878,
    "mark_date": "2026-09-02",
    "fees": 1.205845,
    "mfe_r": 0.7205,
@@ -91,7 +91,7 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 15.89000034,
+   "last_mark": 16.80999947,
    "mark_date": "2026-09-02",
    "fees": 1.569816,
    "mfe_r": 0.7089,
@@ -114,7 +114,7 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 10.18999958,
+   "last_mark": 10.35000038,
    "mark_date": "2026-09-02",
    "fees": 0.324298,
    "mfe_r": 0.3065,
@@ -217,6 +217,16 @@
   {
    "as_of": "2026-09-02",
    "market": "nasdaq",
+   "symbol": "NFLX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1703.21,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
    "symbol": "CRDO",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -253,11 +263,69 @@
   {
    "as_of": "2026-09-02",
    "market": "nasdaq",
+   "symbol": "ORLY",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "UTHR",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "APA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1451.39,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "RMBS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
    "symbol": "MDGL",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1228.34,
+   "want_notional": 1217.78,
    "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "LECO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
    "system": 1
   },
   {
@@ -266,9 +334,77 @@
    "symbol": "EXEL",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1653.92,
+   "want_notional": 1669.54,
    "equity": 4739.89,
    "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "SFM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "QLYS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "CVLT",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "VRNS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 970.97,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "SRPT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 935.79,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "FA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-02",
@@ -276,9 +412,31 @@
    "symbol": "LFST",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1297.69,
+   "want_notional": 1300.22,
    "equity": 4739.89,
    "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "LIVN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1577.53,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "LAUR",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-02",
@@ -303,11 +461,53 @@
    "bucket": "unclassified",
    "side": "short",
    "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "MLYS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1059.46,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "CABA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 812.88,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "KRNY",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2075.91,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-02",
+   "market": "nasdaq",
+   "symbol": "CGNT",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   }
  ],
  "skip_counts": {
-  "close_corr_cap": 6,
-  "cash": 6,
-  "total": 12
+  "close_corr_cap": 16,
+  "cash": 14,
+  "total": 30
  }
 }
