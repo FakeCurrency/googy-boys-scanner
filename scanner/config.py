@@ -1766,7 +1766,123 @@ TURTLE_FUTURES = [
     # CME E-mini Nasdaq-100: $20 x index. Micro MNQ: $2 x index.
     {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
      "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
+    # --- added 2026-09-02, owner ask: "US30, NAS100, GOLD, COPPER, SILVER --
+    #     effectively every future CMC's CFDs allow".
+    #
+    # FOUR OF THE FIVE HE NAMED WERE ALREADY HERE (NAS100=NQ, GOLD=GC,
+    # SILVER=SI, COPPER=HG). They did not read as available because the fit
+    # table refuses them: a Turtle unit at $5,000 is a FRACTION of one
+    # contract, so the sleeve says "0.628 contracts - refused" and a reader
+    # reasonably concludes the instrument is missing. What was genuinely
+    # absent is the Dow, plus the four below that round out the same asset
+    # groups on tapes CMC also quotes. The CFD sizing block (cfd_sizing) is
+    # the other half of that answer: same tape, a vehicle that sizes
+    # fractionally, and a verdict that is readable rather than a refusal.
+    #
+    # SAFETY NOTE on these five dpp values: the CFD lens uses dpp = 1 by
+    # construction (one unit = one dollar per point), so an error in the
+    # exchange multipliers below can only misprice the FUTURES fit verdict --
+    # which already refuses every row at this equity -- and cannot reach the
+    # CFD unit. That is why they were safe to add before a spec file exists.
+    # CBOT E-mini Dow: $5 x index. Micro MYM: $0.50 x index. THE ONE THE
+    # OWNER NAMED THAT WAS ACTUALLY MISSING.
+    {"symbol": "YM", "yf": "YM=F", "name": "Dow 30", "group": "index",
+     "dpp": 5, "micro": "MYM", "micro_dpp": 0.5},
+    # CME E-mini Russell 2000: $50 x index. Micro M2K: $5 x index.
+    {"symbol": "RTY", "yf": "RTY=F", "name": "Russell 2000", "group": "index",
+     "dpp": 50, "micro": "M2K", "micro_dpp": 5},
+    # ICE Brent Crude (Yahoo BZ=F is the Last Day Financial contract):
+    # 1,000 barrels, quoted USD per barrel -> $1,000 per $1. The second
+    # energy benchmark; it and WTI are the same bucket, not two bets.
+    {"symbol": "BZ", "yf": "BZ=F", "name": "Brent Crude", "group": "energy",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # NYMEX Platinum: 50 troy oz, quoted USD per oz -> $50 per $1.
+    {"symbol": "PL", "yf": "PL=F", "name": "Platinum", "group": "metals",
+     "dpp": 50, "micro": "", "micro_dpp": 0},
+    # NYMEX Palladium: 100 troy oz, quoted USD per oz -> $100 per $1.
+    {"symbol": "PA", "yf": "PA=F", "name": "Palladium", "group": "metals",
+     "dpp": 100, "micro": "", "micro_dpp": 0},
 ]
+
+# THE CFD SIZING LENS (2026-09-02, owner ask). The same tapes as the futures
+# sleeve above, read through the vehicle he can actually reach: a CMC CFD.
+#
+# WHY THIS IS A LENS AND NOT A BOOK. A CFD differs from an exchange future on
+# every axis the forward book models -- fractional sizing, broker margin
+# rather than exchange IM, a close-out that can PRECEDE the 2N stop, and daily
+# financing on full notional -- and every one of those numbers is a fact from
+# CMC's product library and PDS, not an estimate. This repo already refuses to
+# invent exchange initial margin (TURTLE_FUTURES_MARGIN_FILE); inventing a
+# broker's margin rate, minimum trade size and funding rate would be the same
+# error with more decimals. So what ships here is the half that needs NO
+# broker data at all, and it is the half that answers the question:
+#
+#   units = (TURTLE_RISK_PCT x equity) / N        -- with dpp = 1
+#
+# THE POINT OF dpp = 1: a CFD unit is quoted as CURRENCY PER POINT, so setting
+# dollars-per-point to 1 makes `units` mean "dollars of exposure per point of
+# price", which is VEHICLE-INDEPENDENT and correct whatever CMC's own unit
+# turns out to be. The owner reads "Value of 1 point" off the CMC order ticket
+# and divides. If CMC's unit is $1/point (the convention every source points
+# at, though only one primary source was found for it), the number transfers
+# 1:1. Nothing downstream has to trust an unverified multiplier.
+TURTLE_CFD_DPP = 1.0
+
+# Broker minimum trade size and step. UNKNOWN, and it is THE number that
+# decides whether this project exists: at $5,000 the Turtle unit on the Dow,
+# the Nasdaq, the S&P and gold is a FRACTION of one $1/point unit (measured
+# 2026-09-02: NQ 0.096, GC 0.628, ES 0.670), so a 1.0-unit floor refuses
+# exactly the instruments the owner asked for and the fractional vehicle
+# solves nothing for them. A 0.1 floor takes gold, the S&P and the Dow and
+# still refuses the Nasdaq. The sleeve therefore publishes the verdict at
+# BOTH floors rather than picking one, and says which it used. Replace with
+# the real per-instrument figure when the spec file lands.
+TURTLE_CFD_MIN_UNITS = (1.0, 0.1)
+
+# Annual holding (financing) rate charged on FULL NOTIONAL, not on the
+# borrowed part -- 20:1 margin does not mean you finance a twentieth.
+#
+# THIS IS A STATED ASSUMPTION, NOT A MEASURED RATE, and it is labelled as one
+# everywhere it surfaces. CMC charges a benchmark plus a spread and the pair
+# moves; the owner's own statement is the only authority. It is here at all
+# because financing is not a rounding error on a system that holds winners for
+# months, and a sleeve that omitted it would quote a number nobody could earn:
+#
+#   carry over D days, in R = 0.5 x (P/N) x r x D/365
+#
+# which depends only on the volatility ratio, so it PUNISHES QUIET MARKETS
+# hardest -- the ones a trend follower most wants to hold. Measured on the
+# live tape at 8%: crude 0.16R over 60 days, the S&P 0.67R, the Nasdaq 0.37R.
+# An index position that has to clear two thirds of an R before it breaks even
+# on carry is a materially different trade from the futures one it replaces.
+TURTLE_CFD_FINANCING_PCT_ASSUMED = 8.0
+
+# ASIC's retail leverage caps by asset class (Product Intervention Order,
+# Instrument 2020/986, in force 2021-03-29, extended by 2022/259). These are
+# REGULATORY CEILINGS on what any Australian retail CFD issuer may offer --
+# CMC may require MORE margin than this and never less, so using the cap
+# computes the MOST leveraged (worst) case, which is the honest direction for
+# a risk read. Recorded as the owner's jurisdiction, flagged as needing
+# confirmation against his own account's classification (retail vs wholesale
+# changes them entirely).
+#
+# The number that matters is not the leverage, it is where the broker's
+# close-out sits relative to the 2N stop: on posted-margin exhaustion the
+# close-out distance is P/L, so the Turtle stop only binds while
+# N/P < 1/(2L). At 20:1 that is N/P < 2.5%. ABOVE that line leverage has
+# silently replaced the exit rule, and the row says so.
+TURTLE_CFD_ASIC_LEVERAGE = {
+    "index": 20.0,      # major stock index CFDs
+    "metals": 20.0,     # gold is 20:1; the other metals are 10:1 (see below)
+    "currency": 30.0,   # major FX pairs
+    "energy": 10.0,     # commodities other than gold
+    "softs": 10.0,
+    "rates": 10.0,
+}
+# Gold is the only metal ASIC puts in the 20:1 band; silver, copper, platinum
+# and palladium are "commodities other than gold" at 10:1. Keyed per symbol
+# so the group default above cannot quietly over-leverage them.
+TURTLE_CFD_LEVERAGE_OVERRIDE = {"SI": 10.0, "HG": 10.0, "PL": 10.0, "PA": 10.0}
 
 # ROLL-GAP DETECTION for the futures sleeve. Continuous front-month "=F"
 # series are BACK-ADJUSTED, so the roll from one contract month to the next

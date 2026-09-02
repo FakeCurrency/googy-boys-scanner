@@ -2202,6 +2202,77 @@ the paper book, and outside every signal path in the repo. `scanner/turtle.py`
     replacement node is found by comparing dataset rather than by building a
     selector.
 
+### TURTLE 2026-09-02 — the CFD lens, and the correlation bug it uncovered
+
+Owner ask: *"I want to expand on the FUTURES — US30, NAS100, GOLD, COPPER,
+SILVER, effectively every future that CMC CFD's allows."* What shipped is the
+half that needs NO broker data; what did not ship is named below with the one
+number that unblocks it.
+
+1. **FOUR OF THE FIVE HE NAMED WERE ALREADY IN THE SLEEVE.** NAS100 = NQ,
+   GOLD = GC, SILVER = SI, COPPER = HG, all there since 2026-08-21. They read
+   as missing because the fit table REFUSES them — a Turtle unit at $5,000 is
+   a fraction of one contract — and a refusal looks like an absence. Only the
+   Dow was genuinely gone. Added YM (Dow 30) plus RTY, BZ, PL, PA: **21 -> 26
+   rows, deliberately still under `TURTLE_SMALL_UNIVERSE_MAX` = 30** so the
+   max-2-missing protection keeps applying. Grow it past 30 and that ceiling
+   silently stops covering the sleeve (the dead-code test catches it).
+2. **THE CFD LENS IS PRICED IN DOLLARS PER POINT, and that is what let it ship
+   without CMC's product library.** `turtle.cfd_sizing` sets `dpp = 1`, so
+   `units = (1% x equity) / N` means "dollars of exposure per point" — a
+   VEHICLE-INDEPENDENT quantity. The owner reads *Value of 1 point* off the
+   CMC ticket and divides. A test feeds one row two wildly different exchange
+   multipliers and fails if the CFD unit moves: no unverified broker number
+   can reach it, which is the KC-100x failure class closed by construction.
+3. **THE MINIMUM TRADE SIZE IS THE NUMBER THAT DECIDES THE PROJECT, AND IT IS
+   UNKNOWN.** Measured on the live tape at $5,000: NQ 0.096 units, GC 0.628,
+   ES 0.670, CC 0.175 — so a **1.0-unit floor refuses every instrument the
+   owner named except the ones that were already tradeable**, and the
+   fractional vehicle rescues nothing for them. A 0.1 floor takes gold, the
+   S&P and the Dow and still refuses the Nasdaq. The sleeve therefore
+   publishes the verdict at BOTH floors (`TURTLE_CFD_MIN_UNITS`) rather than
+   picking one. **Read CMC's minimum trade size / step first; it decides
+   whether any of this is reachable.**
+4. **CARRY PUNISHES THE QUIET MARKETS HARDEST, which is the counter-intuitive
+   fact this vehicle turns on.** Financing is charged on FULL notional, so in
+   R it is `0.5 x (P/N) x r x D/365` — a function of the volatility ratio
+   alone. A calm tape buys a big unit, hence big notional, hence a big bill.
+   Measured at an assumed 8%: crude 0.16R over 60 days, the Nasdaq 0.37R, the
+   S&P 0.67R, **the euro 1.61R** — a EURUSD CFD held two months owes more than
+   its own 1R before it does anything. `TURTLE_CFD_FINANCING_PCT_ASSUMED` is
+   an ASSUMPTION, labelled as one on the page; the owner's statement is the
+   only authority.
+5. **A BROKER CLOSE-OUT CAN PRECEDE THE 2N STOP, and then it is not this
+   system.** Close-out on posted margin sits `P/L` away, so the Turtle stop
+   only binds while `N/P < 1/(2L)` — at 20:1 that is `N/P < 2.5%`. Above it
+   the exit rule has been silently replaced by the leverage. Published per row
+   as `stop_binds`; every row on the live tape currently passes.
+6. **ASIC's retail caps are used as the leverage model** (Instrument 2020/986,
+   extended by 2022/259) because they are REGULATORY CEILINGS — CMC may demand
+   more margin and never less, so the cap computes the worst case, which is
+   the honest direction for a risk read. Gold is the only metal in the 20:1
+   band; silver/copper/platinum/palladium are 10:1 "commodities other than
+   gold" and carry a per-symbol override so a group default cannot quietly
+   double their leverage.
+7. **NO CFD FORWARD BOOK SHIPPED, deliberately.** A book needs the real margin
+   rate, minimum size, step and funding rate — all facts from CMC's product
+   library and PDS, none of them estimable. This repo already refuses to
+   invent exchange initial margin (`TURTLE_FUTURES_MARGIN_FILE`); inventing a
+   broker's would be the same error with more decimals. The lens answers "what
+   would this cost and would it fit"; the book waits for the file.
+8. **THE CORRELATION-BUCKET BUG, found while wiring this and confirmed against
+   the live payload.** `turtle_book._bucket` read `row["sector"]` only, but
+   `config.TURTLE_FUTURES` rows carry `group` and NO `sector` — so all 21
+   contracts fell through to `"unclassified"` and **gold, crude, the euro and
+   coffee shared ONE 6-unit correlated ceiling** while six genuinely different
+   asset groups counted as one. Invisible because the sleeve is 0/0, and
+   accidentally CONSERVATIVE while it lasted (one bucket is tighter than six),
+   so no trade was ever wrongly allowed. Now `sector or group`, which keeps an
+   equity row's real sector winning where it exists and leaves crypto's
+   deliberate single bucket alone. **Fixed while the sleeve has no series to
+   disturb** — the same repair after it starts trading would be a mid-flight
+   change to which trades it takes.
+
 ### TURTLE 2026-08-22 — the 5x sleeve, the gates, and the portfolio replay
 
 Facts a later session must not re-derive (ledger of record:

@@ -404,6 +404,68 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
         "computes them.");
   }
 
+  // THE CFD READ of the same row (2026-09-02, owner ask). The futures block
+  // above ends in a refusal for every contract at this account size, which is
+  // a true and useful finding and also a dead end — the reader is told what
+  // he cannot do and nothing about what he can. This says the other half:
+  // the identical Turtle unit in a vehicle that is not quantised into whole
+  // contracts, priced in DOLLARS PER POINT so it needs no broker multiplier
+  // to be correct. Every number it prints is derived from N, price and equity
+  // alone; the three it cannot derive (minimum trade size, the real margin
+  // rate, the real financing rate) are named as unknown rather than guessed.
+  function cfdHTML(r) {
+    const c = r.cfd;
+    if (!c || c.units == null) return "";
+    const fits = c.fits || {};
+    const floors = Object.keys(fits);
+    const anyFit = floors.some((k) => fits[k]);
+    let out = '<div class="tt-detail-grid">' +
+      kv("As a CFD, one unit", num(c.units, c.units < 10 ? 3 : 0) + " $/point") +
+      kv("Exposure", money(c.notional, 0) + " (" + pct(c.notional_pct, 0) + " of the account)") +
+      kv("Volatility (N/price)", pct(c.n_pct)) +
+      kv("Carry over 60 days", num(c.carry_r_60d, 2) + "R") +
+      "</div>";
+    out += '<p class="tt-note"><b>Sized in dollars per point, on purpose.</b> ' +
+      "One CFD unit is one dollar of exposure per point of price, so this " +
+      "number is correct whatever CMC calls its own unit — read " +
+      "<i>Value of 1 point</i> off the order ticket and divide. Nothing here " +
+      "trusts a broker multiplier this repo has not seen.</p>";
+    // The minimum-size verdict, which is the number that decides everything.
+    out += '<p class="tt-note"><b>Whether it fits depends on a number only ' +
+      "CMC can tell you.</b> At " + money(EQUITY, 0) + " this unit is " +
+      num(c.units, 3) + " $/point. " +
+      floors.map((k) => "at a " + k + "-unit minimum it " +
+        (fits[k] ? "<b>fits</b>" : "does <b>not</b> fit")).join(", ") + ". " +
+      (anyFit
+        ? "So this instrument is reachable — but only if the minimum trade " +
+          "size is the smaller one. Check it before sizing anything."
+        : "So this instrument is <b>out of reach at this account size in " +
+          "either case</b>, and the fractional vehicle does not rescue it. " +
+          "That is the same refusal the futures block gives, arriving by a " +
+          "different route — which is itself the answer.") +
+      "</p>";
+    // The gate that decides whether it is a Turtle trade at all.
+    if (c.stop_binds === false) {
+      out += '<p class="tt-note"><b>The broker would close this out before ' +
+        "the " + P.stop_n + "N stop fires.</b> At the " + num(c.leverage, 0) +
+        ":1 cap the close-out sits about " + pct(c.liq_pct) + " away while the " +
+        "stop sits " + pct(c.n_pct * P.stop_n) + " away. The exit rule has been " +
+        "replaced by the leverage, so this is not the Turtle system in a " +
+        "different wrapper — it is a different trade. Post more margin than " +
+        "the minimum, or leave it.</p>";
+    }
+    out += '<p class="tt-note"><b>Carry is charged on the full exposure, ' +
+      "every day, and it punishes the calm markets hardest.</b> A quiet tape " +
+      "buys a big unit, and a big unit is a big financing bill: the cost in R " +
+      "is half the price-to-N ratio times the annual rate. At an <b>assumed " +
+      num(c.carry_pct_assumed, 1) + "%</b> — an assumption, not a rate this " +
+      "repo has read — a 60-day hold here costs " + num(c.carry_r_60d, 2) +
+      "R before the trade has done anything. Replace that percentage with the " +
+      "one on your own statement; on the slowest instruments it is the " +
+      "difference between an edge and a fee.</p>";
+    return out;
+  }
+
   function ladderTableHTML(entry, n, side) {
     const rows = ladder(entry, n, side);
     const sign = side === "short" ? -1 : 1;
@@ -743,6 +805,7 @@ Unit = ( ${(P.risk_pct * 100).toFixed(0)}% &times; account ) / dollar volatility
           "different and much more dangerous one. Raise the account or trade " +
           "a market whose unit fits.</p>";
       }
+      detail += cfdHTML(r);
     }
 
     if (r.state === "flat" && r.triggers) {

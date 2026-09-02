@@ -196,7 +196,23 @@ def _bucket(row: dict, market: str) -> str:
     """
     if market in ("crypto", "crypto5x"):
         return "crypto"
-    return (row.get("sector") or "").strip().lower() or "unclassified"
+    # FUTURES/CFD ROWS CARRY `group`, NOT `sector` (bug found 2026-09-02).
+    # config.TURTLE_FUTURES declares currency/rates/metals/energy/softs/index
+    # under the key `group`, and build_row copies `info.get("sector", "")` --
+    # which those rows do not have -- so all 21 contracts fell through to
+    # "unclassified" and shared ONE 6-unit correlated bucket. Gold, crude,
+    # the euro and coffee counted against each other while six genuinely
+    # different asset groups counted as one. It was invisible because the
+    # sleeve is 0/0 (every open refused for want of a margin file) and
+    # accidentally CONSERVATIVE while it lasted -- one bucket is tighter than
+    # six, so no trade was ever wrongly allowed. Repaired here rather than at
+    # the row builder because `sector` on an equity row means something else
+    # and must keep winning where it exists. Fixed now, while the sleeve has
+    # no series to disturb: the same repair after it starts trading would be
+    # a mid-flight change to which trades it takes.
+    return ((row.get("sector") or "").strip().lower()
+            or (row.get("group") or "").strip().lower()
+            or "unclassified")
 
 
 def _lev_cfg(market: str) -> dict | None:

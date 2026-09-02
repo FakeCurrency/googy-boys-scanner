@@ -710,6 +710,80 @@ def contract_sizing(equity: float, n: float, info: dict) -> dict:
     return out
 
 
+def cfd_leverage(info: dict) -> float:
+    """The ASIC retail leverage cap for this instrument's class.
+
+    A CEILING on what an Australian retail issuer may offer, so it computes
+    the most-levered case; CMC may demand more margin and never less. The
+    per-symbol override exists because gold sits in the 20:1 band while every
+    other metal is a 10:1 "commodity other than gold" -- a group default alone
+    would quietly double the leverage on silver, copper, platinum, palladium.
+    """
+    sym = str(info.get("symbol") or "")
+    over = config.TURTLE_CFD_LEVERAGE_OVERRIDE.get(sym)
+    if over:
+        return float(over)
+    return float(config.TURTLE_CFD_ASIC_LEVERAGE.get(
+        str(info.get("group") or ""), 10.0))
+
+
+def cfd_sizing(equity: float, n: float, price: float, info: dict) -> dict:
+    """The same Turtle unit read through a CFD, where size is not quantised.
+
+    `units` is DOLLARS OF EXPOSURE PER POINT, because dpp is 1 by
+    construction (config.TURTLE_CFD_DPP). That makes it vehicle-independent:
+    whatever CMC's own unit turns out to be, the owner divides this by the
+    ticket's "Value of 1 point" and gets his quantity. Nothing here trusts an
+    unverified broker multiplier, which is why it can ship before the spec
+    file exists.
+
+    Three verdicts travel with it, and each is a thing a futures row cannot
+    say:
+
+    `fits` -- against BOTH candidate minimum trade sizes, because the real one
+    is unknown and it is the number that decides the whole project. At $5,000
+    a 1.0 floor refuses the Dow, the Nasdaq, the S&P and gold; a 0.1 floor
+    takes three of the four. Publishing one floor would be picking an answer.
+
+    `carry_r_60d` -- financing is charged on FULL notional daily, so over D
+    days it costs 0.5 x (P/N) x r x D/365 in R. It depends only on the
+    volatility ratio, which means it punishes the QUIET markets a trend
+    follower most wants to hold. Stated at an ASSUMED rate, labelled as such.
+
+    `stop_binds` -- the one that matters most. A broker close-out on posted
+    margin sits P/L away, so the 2N stop is only the real exit while
+    N/P < 1/(2L). Above that line the position is liquidated before the
+    Turtle rule fires and the system's exit has been silently replaced by the
+    leverage. A row that fails this is not a Turtle trade wearing a CFD; it is
+    a different trade.
+    """
+    out = {"dpp": config.TURTLE_CFD_DPP, "units": None, "notional": None,
+           "notional_pct": None, "leverage": cfd_leverage(info),
+           "fits": {}, "carry_r_60d": None, "carry_pct_assumed":
+           config.TURTLE_CFD_FINANCING_PCT_ASSUMED,
+           "stop_binds": None, "liq_pct": None, "n_pct": None}
+    if not (n and n > 0 and price and price > 0 and equity > 0):
+        return out
+    units = (config.TURTLE_RISK_PCT * equity) / (n * config.TURTLE_CFD_DPP)
+    notional = units * price * config.TURTLE_CFD_DPP
+    out["units"] = round(units, 4)
+    out["notional"] = round(notional, 2)
+    out["notional_pct"] = round(100.0 * notional / equity, 1)
+    out["fits"] = {str(m): bool(units >= m)
+                   for m in config.TURTLE_CFD_MIN_UNITS}
+    # Carry as a share of the trade's own 1R (1R = 2N x units), at the stated
+    # assumed rate, over a 60-day hold.
+    r_annual = config.TURTLE_CFD_FINANCING_PCT_ASSUMED / 100.0
+    out["carry_r_60d"] = round(0.5 * (price / n) * r_annual * 60.0 / 365.0, 3)
+    # Does the 2N stop fire before the broker's close-out?
+    lev = out["leverage"]
+    n_over_p = n / price
+    out["n_pct"] = round(100.0 * n_over_p, 2)
+    out["liq_pct"] = round(100.0 / lev, 2) if lev > 0 else None
+    out["stop_binds"] = bool(n_over_p < (1.0 / (2.0 * lev))) if lev > 0 else None
+    return out
+
+
 def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
               equity: float | None = None) -> dict | None:
     """One published row: state, the exact numbers to act on, and the record."""
@@ -766,6 +840,12 @@ def build_row(symbol: str, info: dict, df: pd.DataFrame, market: str,
     if info.get("dpp"):
         row["contracts"] = contract_sizing(equity, n, info)
         row["group"] = info.get("group", "")
+        # The same unit through a CFD, where size is not quantised into whole
+        # contracts. Published beside `contracts` rather than instead of it:
+        # the futures refusal is the finding that $5,000 cannot run exchange
+        # futures, and replacing it would erase that evidence.
+        row["cfd"] = cfd_sizing(equity, n, price,
+                                dict(info, symbol=symbol))
         # Back-adjusted continuous series carry their contract rolls as price
         # steps. Published so a futures number is never read as if the tape
         # were tradeable end to end.

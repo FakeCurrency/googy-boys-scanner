@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scanner import config, turtle, turtle_run
+from scanner import config, turtle, turtle_book, turtle_run
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -1225,43 +1225,57 @@ def test_a_futures_fetch_failure_never_costs_an_equity_publish(tmp_path, monkeyp
         "and nothing may be published for the market that failed"
 
 
-def test_THIRTEEN_of_twentyone_futures_priced_refuses_to_publish(tmp_path, monkeypatch):
-    """The arithmetic the shared floor got wrong: 13 of 21 is 61.9%, ABOVE
+def test_a_sleeve_above_the_SHARE_floor_but_below_the_ABSOLUTE_one_refuses(tmp_path, monkeypatch):
+    """The arithmetic the shared floor got wrong: 13 of 21 was 61.9%, ABOVE
     the 60% share floor, so the old rule published a sleeve missing eight
     contracts -- whole asset groups absent -- as if it were whole. The
     absolute ceiling for small universes must catch it, and the refusal must
-    NAME every missing contract, because on a fixed 21-row table each absence
-    is a market group rather than throttle noise."""
+    NAME every missing contract, because on a fixed table each absence is a
+    market group rather than throttle noise.
+
+    DERIVED FROM THE SLEEVE, NOT HARDCODED (2026-09-02, when it grew 21 -> 26
+    for the CFD lens). The old version asserted len(sleeve) == 21 and broke on
+    a legitimate addition -- a count is not the property being tested. What is
+    being tested is the GAP between the two floors, so the fixture is built to
+    sit inside it and the preconditions are asserted out loud."""
     sleeve = config.TURTLE_FUTURES
-    assert len(sleeve) == 21, "the sleeve arithmetic below assumes 21 rows"
-    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:13]}
+    n_total = len(sleeve)
+    priced = int(n_total * 0.65)          # comfortably above the 60% share floor
+    missing = n_total - priced
+    assert 100.0 * priced / n_total > config.TURTLE_MIN_COVERAGE_PCT, \
+        "the fixture must clear the SHARE floor or it proves nothing"
+    assert missing > config.TURTLE_SMALL_UNIVERSE_MAX_MISSING, \
+        "...while breaching the ABSOLUTE ceiling, which is the gap under test"
+    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:priced]}
     monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
     monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
 
     with pytest.raises(RuntimeError) as e:
         turtle_run.scan_market("futures")
     msg = str(e.value)
-    for f in sleeve[13:]:
+    for f in sleeve[priced:]:
         assert f["symbol"] in msg, f"the refusal must name {f['symbol']}"
     assert not (tmp_path / "futures_turtle.json").exists(), \
         "yesterday's file is better than a gutted one"
 
 
-def test_nineteen_of_twentyone_still_publishes_and_NAMES_the_missing(tmp_path, monkeypatch):
+def test_exactly_MAX_MISSING_still_publishes_and_NAMES_the_missing(tmp_path, monkeypatch):
     """The other side of the ceiling: one or two individually broken Yahoo
-    symbols must not hold the whole sleeve hostage forever. Two missing
-    publishes -- with both absentees named in the payload, not merely
-    counted."""
+    symbols must not hold the whole sleeve hostage forever. Exactly
+    MAX_MISSING absent publishes -- with every absentee named in the payload,
+    not merely counted. Derived from the sleeve for the same reason as the
+    test above."""
     sleeve = config.TURTLE_FUTURES
-    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:19]}
+    keep = len(sleeve) - config.TURTLE_SMALL_UNIVERSE_MAX_MISSING
+    frames = {f["yf"]: band([100.0] * 300) for f in sleeve[:keep]}
     monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
     monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
 
     payload = turtle_run.scan_market("futures")
     assert (tmp_path / "futures_turtle.json").exists()
-    assert payload["skipped_no_data"] == 2
+    assert payload["skipped_no_data"] == config.TURTLE_SMALL_UNIVERSE_MAX_MISSING
     assert payload["skipped_no_data_symbols"] == \
-        sorted(f["symbol"] for f in sleeve[19:]), \
+        sorted(f["symbol"] for f in sleeve[keep:]), \
         "each absence on a small sleeve is an asset group and must be named"
 
 
@@ -1372,3 +1386,104 @@ def test_a_clean_run_never_sleeps(monkeypatch):
     sleeps = _wire(monkeypatch, rec, 180.0)
     assert turtle_run.main(["--market", "all"]) == 0
     assert sleeps == []
+
+
+# ── the CFD lens + the correlation-bucket repair (2026-09-02) ────────────────
+# Owner ask: "US30, NAS100, GOLD, COPPER, SILVER -- effectively every future
+# CMC's CFDs allow". Four of the five were already in the sleeve and read as
+# missing only because the fit table refuses a fractional CONTRACT. The CFD
+# lens answers the same row in a vehicle that sizes fractionally, using no
+# broker data at all -- which is what let it ship before a spec file exists.
+
+def test_the_owner_named_five_and_four_were_already_in_the_sleeve():
+    """The finding that reframed the request: NAS100/GOLD/SILVER/COPPER are
+    NQ/GC/SI/HG and have been there since the sleeve shipped. Only the Dow was
+    genuinely absent. If a later edit removes any of them the answer given to
+    the owner stops being true, so pin the mapping rather than the prose."""
+    syms = {f["symbol"] for f in config.TURTLE_FUTURES}
+    for named, sym in (("NAS100", "NQ"), ("GOLD", "GC"),
+                       ("SILVER", "SI"), ("COPPER", "HG"), ("US30", "YM")):
+        assert sym in syms, f"{named} ({sym}) left the sleeve"
+
+
+def test_cfd_units_are_dollars_per_point_and_ignore_the_exchange_multiplier():
+    """THE property that let this ship without CMC's product library: a CFD
+    unit is dollars of exposure per point, so it divides by N alone. Feed the
+    same row two wildly different exchange dpp values and the CFD unit must
+    not move -- if it ever does, an unverified broker multiplier has crept in
+    and the KC 100x failure has a new home."""
+    a = turtle.cfd_sizing(5000.0, 2.0, 100.0, {"symbol": "X", "group": "energy", "dpp": 1_000})
+    b = turtle.cfd_sizing(5000.0, 2.0, 100.0, {"symbol": "X", "group": "energy", "dpp": 1})
+    assert a["units"] == b["units"] == pytest.approx(25.0)   # 0.01*5000/2
+    assert a["dpp"] == config.TURTLE_CFD_DPP == 1.0
+
+
+def test_the_cfd_fit_verdict_is_published_at_BOTH_candidate_floors():
+    """The minimum trade size is the number that decides whether the project
+    exists and it is UNKNOWN, so the sleeve must not pick one. At $5,000 the
+    Nasdaq unit is ~0.1 and gold's is ~0.63: a 1.0 floor refuses both, a 0.1
+    floor takes gold. Publishing a single verdict would be answering a
+    question only CMC can answer."""
+    c = turtle.cfd_sizing(5000.0, 79.6, 4413.6, {"symbol": "GC", "group": "metals"})
+    assert set(c["fits"]) == {str(m) for m in config.TURTLE_CFD_MIN_UNITS}
+    assert c["fits"]["1.0"] is False and c["fits"]["0.1"] is True, \
+        "gold at $5,000 is 0.63 units - refused whole, allowed fractional"
+
+
+def test_a_position_the_broker_closes_out_before_the_2N_stop_is_flagged():
+    """The gate that matters most: a close-out on posted margin sits P/L away,
+    so the Turtle stop is only the real exit while N/P < 1/(2L). Above that
+    line leverage has silently replaced the system's exit rule and the row is
+    not a Turtle trade at all."""
+    # N/P = 10% at 20:1 -> liq at 5%, stop at 20%: the broker gets there first.
+    hot = turtle.cfd_sizing(5000.0, 10.0, 100.0, {"symbol": "H", "group": "index"})
+    assert hot["stop_binds"] is False
+    # N/P = 1% at 20:1 -> stop at 2% is well inside the 5% liq line.
+    calm = turtle.cfd_sizing(5000.0, 1.0, 100.0, {"symbol": "C", "group": "index"})
+    assert calm["stop_binds"] is True
+
+
+def test_carry_punishes_the_QUIET_markets_hardest_which_is_the_warning():
+    """Financing is charged on FULL notional, so in R it is 0.5*(P/N)*r*D/365
+    -- it depends only on the volatility ratio. A low-N instrument buys a huge
+    unit, hence a huge notional, hence a carry bill that can exceed the trade's
+    own 1R. Measured on the live tape: the euro at N/P=0.41% costs ~1.6R over
+    60 days. That inversion (the calmest trend costs the most to hold) is the
+    single most counter-intuitive fact about this vehicle and must stay
+    visible."""
+    quiet = turtle.cfd_sizing(5000.0, 0.41, 100.0, {"symbol": "Q", "group": "currency"})
+    noisy = turtle.cfd_sizing(5000.0, 5.00, 100.0, {"symbol": "N", "group": "energy"})
+    assert quiet["carry_r_60d"] > noisy["carry_r_60d"] * 10, \
+        "the quiet market must carry the bigger financing bill, not the smaller"
+    assert quiet["carry_pct_assumed"] == config.TURTLE_CFD_FINANCING_PCT_ASSUMED
+
+
+def test_gold_is_the_only_metal_at_the_20_to_1_band():
+    """ASIC puts gold in the 20:1 band and every other metal in the 10:1
+    'commodities other than gold' band. A group default alone would silently
+    double the leverage -- and halve the close-out distance -- on silver,
+    copper, platinum and palladium."""
+    assert turtle.cfd_leverage({"symbol": "GC", "group": "metals"}) == 20.0
+    for sym in ("SI", "HG", "PL", "PA"):
+        assert turtle.cfd_leverage({"symbol": sym, "group": "metals"}) == 10.0, \
+            f"{sym} must not inherit gold's band"
+
+
+def test_futures_rows_bucket_by_ASSET_GROUP_not_all_into_unclassified():
+    """THE BUG, found 2026-09-02 and confirmed against the live payload: every
+    one of the sleeve's rows carries `group` and NO `sector`, while _bucket
+    read `sector` only -- so gold, crude, the euro and coffee all landed in
+    one 'unclassified' bucket and counted against a single 6-unit correlated
+    ceiling. Invisible because the sleeve is 0/0, and conservative while it
+    lasted, but the cap was not doing what it says."""
+    rows = [{"symbol": f["symbol"], "group": f["group"], "sector": ""}
+            for f in config.TURTLE_FUTURES]
+    buckets = {turtle_book._bucket(r, "futures") for r in rows}
+    assert "unclassified" not in buckets, \
+        "a row carrying a group must never fall through to unclassified"
+    assert buckets >= {"currency", "energy", "metals", "softs", "rates", "index"}
+    # An equity row's real sector must still win where it exists.
+    assert turtle_book._bucket(
+        {"sector": "Financials", "group": "index"}, "asx") == "financials"
+    # ...and crypto stays one bucket, which is a deliberate ruling, not a gap.
+    assert turtle_book._bucket({"sector": "x", "group": "y"}, "crypto") == "crypto"

@@ -164,6 +164,12 @@ def fit_table(rows: list[dict], equity: float | None = None) -> list[dict]:
         out.append({
             "symbol": r["symbol"], "name": r.get("name", ""),
             "group": r.get("group", ""),
+            "price": r.get("price"),
+            # The CFD read of the same row (2026-09-02). Carried on the fit
+            # table because THIS is the table that answers "what can $5,000
+            # actually hold", and for every instrument the owner named the
+            # futures answer is "nothing" while the CFD answer is a number.
+            "cfd": r.get("cfd") or {},
             "n": n,
             "dpp": c.get("dpp"),
             "micro": c.get("micro") or "",
