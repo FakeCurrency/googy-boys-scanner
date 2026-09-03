@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-03T22:30:24+00:00",
+ "generated_at": "2026-09-03T23:29:29+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -112,10 +112,10 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 108.16999817,
+   "last_mark": 108.61000061,
    "mark_date": "2026-09-03",
    "fees": 2.105294,
-   "mfe_r": 0.2254,
+   "mfe_r": 0.2549,
    "mae_r": -0.4303,
    "unpriced_runs": 0
   },
@@ -135,7 +135,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 108.38500214,
+   "last_mark": 108.66000366,
    "mark_date": "2026-09-03",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -158,7 +158,7 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 312.54998779,
+   "last_mark": 305.51998901,
    "mark_date": "2026-09-03",
    "fees": 1.205845,
    "mfe_r": 0.7205,
@@ -182,7 +182,7 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 16.93000031,
+   "last_mark": 17.89999962,
    "mark_date": "2026-09-03",
    "fees": 1.569816,
    "mfe_r": 0.7089,
@@ -205,11 +205,11 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 10.64999962,
+   "last_mark": 11.35999966,
    "mark_date": "2026-09-03",
    "fees": 0.324298,
    "mfe_r": 0.3065,
-   "mae_r": -0.2109,
+   "mae_r": -0.4056,
    "unpriced_runs": 0
   },
   {
@@ -1088,6 +1088,16 @@
   {
    "as_of": "2026-09-03",
    "market": "nasdaq",
+   "symbol": "CSCO",
+   "action": "add",
+   "reason": "cash",
+   "units_held": 1,
+   "want_notional": 1306.82,
+   "equity": 4739.89
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
    "symbol": "UAL",
    "action": "add",
    "reason": "cash",
@@ -1121,7 +1131,7 @@
    "symbol": "META",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1393.27,
+   "want_notional": 1378.68,
    "equity": 4739.89,
    "system": 1
   },
@@ -1131,7 +1141,17 @@
    "symbol": "HOOD",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 897.24,
+   "want_notional": 909.65,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "COIN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 815.76,
    "equity": 4739.89,
    "system": 2
   },
@@ -1141,7 +1161,7 @@
    "symbol": "ULTA",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1470.81,
+   "want_notional": 1450.04,
    "equity": 4739.89,
    "system": 2
   },
@@ -1155,6 +1175,16 @@
    "cap": 6,
    "bucket": "unclassified",
    "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "KDP",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1829.07,
+   "equity": 4739.89,
    "system": 1
   },
   {
@@ -1175,7 +1205,7 @@
    "symbol": "PFG",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2209.62,
+   "want_notional": 2170.42,
    "equity": 4739.89,
    "system": 2
   },
@@ -1197,7 +1227,7 @@
    "symbol": "RELY",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1190.91,
+   "want_notional": 1126.74,
    "equity": 4739.89,
    "system": 2
   },
@@ -1216,7 +1246,39 @@
   {
    "as_of": "2026-09-03",
    "market": "nasdaq",
+   "symbol": "SLAB",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 9597.77,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "WMG",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1533.72,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
    "symbol": "BELFB",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "BELFA",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1231,7 +1293,7 @@
    "symbol": "INTR",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1081.95,
+   "want_notional": 1010.21,
    "equity": 4739.89,
    "system": 2
   },
@@ -1250,12 +1312,46 @@
   {
    "as_of": "2026-09-03",
    "market": "nasdaq",
+   "symbol": "STOK",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
    "symbol": "MLYS",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1060.93,
+   "want_notional": 1016.28,
    "equity": 4739.89,
    "system": 1
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "HTO",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2307.54,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "WDFC",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
   },
   {
    "as_of": "2026-09-03",
@@ -1263,7 +1359,7 @@
    "symbol": "KRNY",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2146.96,
+   "want_notional": 2112.8,
    "equity": 4739.89,
    "system": 2
   },
@@ -1273,8 +1369,30 @@
    "symbol": "UFCS",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1792.29,
+   "want_notional": 1784.34,
    "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "CHMG",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1787.79,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "MOMO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
    "system": 2
   },
   {
@@ -1283,7 +1401,7 @@
    "symbol": "EPRX",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 865.26,
+   "want_notional": 861.62,
    "equity": 4739.89,
    "system": 2
   },
@@ -1305,7 +1423,17 @@
    "symbol": "CNL",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 875.54,
+   "want_notional": 893.8,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "nasdaq",
+   "symbol": "HCM",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1657.79,
    "equity": 4739.89,
    "system": 2
   },
@@ -1315,7 +1443,7 @@
    "symbol": "AUDC",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1586.25,
+   "want_notional": 1525.06,
    "equity": 4739.89,
    "system": 1
   },
@@ -1397,10 +1525,10 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 38,
-  "close_corr_cap": 12,
+  "cash": 46,
+  "close_corr_cap": 16,
   "unit_lt_one": 1,
-  "total": 51
+  "total": 63
  },
  "summary": {
   "started": "2026-08-21",
