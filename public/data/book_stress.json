@@ -1,35 +1,35 @@
 {
  "schema_version": 1,
- "generated_at": "2026-09-02T00:21:02+00:00",
- "book_updated_at": "2026-09-01T23:24:09+00:00",
+ "generated_at": "2026-09-03T00:21:29+00:00",
+ "book_updated_at": "2026-09-02T23:24:06+00:00",
  "n_long": 30,
  "n_short_untouched": 0,
  "n_skipped_unpriced": 0,
- "base_unreal_r": 6.14,
+ "base_unreal_r": 5.21,
  "shocks": [
   {
    "shock_pct": 3.0,
    "stopped": 2,
-   "unreal_r": 2.23,
-   "given_back_r": 3.91
+   "unreal_r": 1.53,
+   "given_back_r": 3.67
   },
   {
    "shock_pct": 5.0,
    "stopped": 4,
-   "unreal_r": -2.26,
-   "given_back_r": 8.41
+   "unreal_r": -2.82,
+   "given_back_r": 8.03
   },
   {
    "shock_pct": 8.0,
-   "stopped": 8,
-   "unreal_r": -8.14,
-   "given_back_r": 14.29
+   "stopped": 7,
+   "unreal_r": -8.69,
+   "given_back_r": 13.89
   },
   {
    "shock_pct": 10.0,
    "stopped": 10,
-   "unreal_r": -11.17,
-   "given_back_r": 17.31
+   "unreal_r": -11.77,
+   "given_back_r": 16.97
   }
  ],
  "method": "uniform beta-1 shock on every long's last_mark vs its real stop; a stopped position realises its stop's R; no correlations, no betas - the honest floor of sophistication"
