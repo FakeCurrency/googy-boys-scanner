@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-03T13:49:47+00:00",
+ "generated_at": "2026-09-03T19:16:11+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -213,29 +213,6 @@
    "unpriced_runs": 0
   },
   {
-   "symbol": "ZEC",
-   "market": "crypto",
-   "name": "Zcash",
-   "sector": "",
-   "side": "long",
-   "system": 2,
-   "n": 49.72837852,
-   "units": 0.66933623,
-   "fills": [
-    869.76000977
-   ],
-   "cost_basis": 582.161889,
-   "stop": 770.30325273,
-   "last_fill": 869.76000977,
-   "opened": "2026-08-30",
-   "last_mark": 855.5,
-   "mark_date": "2026-09-03",
-   "fees": 0.873243,
-   "mfe_r": 0.1292,
-   "mae_r": -0.8073,
-   "unpriced_runs": 0
-  },
-  {
    "symbol": "GRAM",
    "market": "crypto",
    "name": "Gram (prev. Toncoin)",
@@ -251,11 +228,11 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.33685362,
+   "last_mark": 1.37522364,
    "mark_date": "2026-09-03",
    "fees": 0.775953,
    "mfe_r": 0.0872,
-   "mae_r": -0.2608,
+   "mae_r": -0.5238,
    "unpriced_runs": 0
   },
   {
@@ -274,10 +251,10 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 855.5,
+   "last_mark": 964.4699707,
    "mark_date": "2026-09-03",
    "fees": 1.495422,
-   "mfe_r": 1.1996,
+   "mfe_r": 2.2326,
    "mae_r": -0.6953,
    "posted": 199.389666,
    "unpriced_runs": 0
@@ -298,7 +275,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 42.88000107,
+   "last_mark": 46.09000015,
    "mark_date": "2026-09-03",
    "fees": 1.59963,
    "mfe_r": 2.1019,
@@ -323,7 +300,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 6.18529987,
+   "last_mark": 6.25939989,
    "mark_date": "2026-09-03",
    "fees": 2.795106,
    "mfe_r": 4.1548,
@@ -347,7 +324,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 1.91939998,
+   "last_mark": 1.98819995,
    "mark_date": "2026-09-03",
    "fees": 1.422235,
    "mfe_r": 1.0261,
@@ -371,7 +348,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.3784,
+   "last_mark": 0.40099999,
    "mark_date": "2026-09-03",
    "fees": 1.080912,
    "mfe_r": 0.9577,
@@ -395,11 +372,11 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.33685362,
+   "last_mark": 1.37522364,
    "mark_date": "2026-09-03",
    "fees": 1.441954,
    "mfe_r": 0.0872,
-   "mae_r": -0.2608,
+   "mae_r": -0.5238,
    "posted": 192.260557,
    "unpriced_runs": 0
   }
@@ -697,6 +674,35 @@
    ]
   },
   {
+   "symbol": "ZEC",
+   "market": "crypto",
+   "name": "Zcash",
+   "sector": "",
+   "side": "long",
+   "system": 2,
+   "n": 49.72837852,
+   "units": 2.19984929,
+   "opened": "2026-08-30",
+   "closed": "2026-09-03",
+   "closed_bar": "2026-09-03",
+   "exit": 814.46380615,
+   "reason": "stop",
+   "entry_avg": 904.35780535,
+   "gross": -197.7533,
+   "fees": 5.6717,
+   "pnl": -203.425,
+   "r": -0.9298,
+   "gross_r": -0.9039,
+   "mfe_r": 0.9499,
+   "mae_r": -0.8073,
+   "fills": [
+    869.76000977,
+    894.62419903,
+    919.48838829,
+    944.35257755
+   ]
+  },
+  {
    "symbol": "BCH",
    "market": "crypto5x",
    "name": "Bitcoin Cash",
@@ -790,19 +796,19 @@
   "crypto": {
    "started": "2026-08-21",
    "equity_start": 5000.0,
-   "equity": 3964.06,
-   "return_pct": -20.719,
-   "open_positions": 2,
-   "open_units": 2,
-   "closed": 9,
+   "equity": 3760.63,
+   "return_pct": -24.787,
+   "open_positions": 1,
+   "open_units": 1,
+   "closed": 10,
    "wins": 1,
-   "win_pct": 11.1,
-   "total_r": -8.801,
-   "avg_r": -0.9779,
-   "median_r": -1.0434,
-   "realized_pnl": -1035.94,
-   "fees_paid": 57.02,
-   "sizing_equity": 2537.0
+   "win_pct": 10.0,
+   "total_r": -9.73,
+   "avg_r": -0.973,
+   "median_r": -1.0152,
+   "realized_pnl": -1239.37,
+   "fees_paid": 62.69,
+   "sizing_equity": 2406.81
   },
   "crypto5x": {
    "started": "2026-08-22",
@@ -1355,6 +1361,19 @@
   {
    "as_of": "2026-09-03",
    "market": "crypto5x",
+   "symbol": "NEAR",
+   "action": "add",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "units_held": 1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-03",
+   "market": "crypto5x",
    "symbol": "ARB",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1379,25 +1398,25 @@
  "started": "2026-08-21",
  "skip_counts": {
   "cash": 38,
-  "close_corr_cap": 11,
+  "close_corr_cap": 12,
   "unit_lt_one": 1,
-  "total": 50
+  "total": 51
  },
  "summary": {
   "started": "2026-08-21",
   "equity_start": 25000.0,
-  "equity": 23314.79,
-  "return_pct": -6.741,
-  "open_positions": 17,
-  "open_units": 19,
-  "closed": 13,
+  "equity": 23111.37,
+  "return_pct": -7.555,
+  "open_positions": 16,
+  "open_units": 18,
+  "closed": 14,
   "wins": 1,
-  "win_pct": 7.7,
-  "total_r": -12.442,
-  "avg_r": -0.9571,
-  "median_r": -1.034,
-  "realized_pnl": -1685.21,
-  "fees_paid": 83.36,
-  "sizing_equity": 23314.79
+  "win_pct": 7.1,
+  "total_r": -13.371,
+  "avg_r": -0.9551,
+  "median_r": -1.0106,
+  "realized_pnl": -1888.63,
+  "fees_paid": 89.03,
+  "sizing_equity": 23111.37
  }
 }
