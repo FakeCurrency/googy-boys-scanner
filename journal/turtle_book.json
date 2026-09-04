@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-04T22:19:19+00:00",
+ "generated_at": "2026-09-04T23:13:29+00:00",
  "equity_start": 25000.0,
  "open": [
   {
@@ -135,7 +135,7 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 109.66999817,
+   "last_mark": 109.19999695,
    "mark_date": "2026-09-04",
    "fees": 2.105294,
    "mfe_r": 0.2549,
@@ -158,7 +158,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 109.94999695,
+   "last_mark": 111.37999725,
    "mark_date": "2026-09-04",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -181,7 +181,7 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 309.73999023,
+   "last_mark": 317.0,
    "mark_date": "2026-09-04",
    "fees": 1.205845,
    "mfe_r": 0.7205,
@@ -205,7 +205,7 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 18.05999947,
+   "last_mark": 17.88999939,
    "mark_date": "2026-09-04",
    "fees": 1.569816,
    "mfe_r": 0.7089,
@@ -228,7 +228,7 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 11.46000004,
+   "last_mark": 11.10000038,
    "mark_date": "2026-09-04",
    "fees": 0.324298,
    "mfe_r": 0.3065,
@@ -1099,6 +1099,30 @@
   {
    "as_of": "2026-09-04",
    "market": "nasdaq",
+   "symbol": "ISRG",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "SNPS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
    "symbol": "LULU",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1107,6 +1131,18 @@
    "bucket": "unclassified",
    "side": "short",
    "system": 2
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "GH",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-04",
@@ -1135,6 +1171,18 @@
   {
    "as_of": "2026-09-04",
    "market": "nasdaq",
+   "symbol": "CPB",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
    "symbol": "CALM",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1142,6 +1190,28 @@
    "cap": 6,
    "bucket": "unclassified",
    "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "REAL",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "RNW",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 3149.27,
+   "equity": 4739.89,
    "system": 2
   },
   {
@@ -1159,16 +1229,6 @@
   {
    "as_of": "2026-09-04",
    "market": "nasdaq",
-   "symbol": "XRX",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 846.49,
-   "equity": 4739.89,
-   "system": 1
-  },
-  {
-   "as_of": "2026-09-04",
-   "market": "nasdaq",
    "symbol": "WOOF",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1177,6 +1237,26 @@
    "bucket": "unclassified",
    "side": "short",
    "system": 2
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "XRX",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 823.43,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "MBWM",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2100.06,
+   "equity": 4739.89,
+   "system": 1
   },
   {
    "as_of": "2026-09-04",
@@ -1193,10 +1273,10 @@
   {
    "as_of": "2026-09-04",
    "market": "nasdaq",
-   "symbol": "SND",
+   "symbol": "PYXS",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 961.58,
+   "want_notional": 542.16,
    "equity": 4739.89,
    "system": 2
   },
@@ -1206,7 +1286,37 @@
    "symbol": "AOUT",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 836.48,
+   "want_notional": 863.27,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "SND",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 971.4,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "TTGT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 820.3,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-04",
+   "market": "nasdaq",
+   "symbol": "DLTH",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 872.51,
    "equity": 4739.89,
    "system": 1
   },
@@ -1296,11 +1406,11 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 15,
-  "close_corr_cap": 11,
+  "cash": 20,
+  "close_corr_cap": 16,
   "same_bar_reentry": 1,
   "unit_lt_one": 2,
-  "total": 29
+  "total": 39
  },
  "summary": {
   "started": "2026-08-21",
