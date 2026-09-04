@@ -1,51 +1,11 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-09-03T19:17:47-04:00",
+  "generated_at": "2026-09-03T22:04:47-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "YQ",
-      "name": "17 Education & Technology Group Inc. - American Depositary Shares",
-      "sector": "",
-      "dir": "LONG",
-      "price": 2.76999998,
-      "turnover_avg20": 389281,
-      "turnover_today": 7238356,
-      "rvol": 18.3,
-      "adv_usd": 389281.26,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "HEPS",
-      "name": "D-Market Electronic Services & Trading - American Depositary Shares",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 2.68000007,
-      "turnover_avg20": 585854,
-      "turnover_today": 2504401,
-      "rvol": 4.3,
-      "adv_usd": 585854.96,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "AOUT",
-      "name": "American Outdoor Brands, Inc. - Common Stock",
-      "sector": "",
-      "dir": "LONG",
-      "price": 10.01000023,
-      "turnover_avg20": 592220,
-      "turnover_today": 2340658,
-      "rvol": 4.4,
-      "adv_usd": 592220.62,
-      "fund": false,
-      "is_product": false
-    }
-  ]
+  "results": []
 }
