@@ -2318,6 +2318,22 @@ Facts a later session must not re-derive (ledger of record:
    only; the combined figure adds A$+US$ at face value; a first print is not
    evidence until >= 30 closes AND >= 20 trading days; the 4h crypto cron is
    a scan cadence, not a 4-hour Donchian (daily bars are the clock).
+9. **The scan reads through the LAST-GOOD FRAME CACHE (2026-09-05, `c9ff4957`).**
+   Every red run this workflow ever had (#29/#64/#88/#120) was Yahoo
+   throttling one market under the coverage floor while scan.yml walked the
+   same directory through the same window and published — because the scan
+   fills dropped names from `.cache/frames` and `turtle_run` fetched fresh
+   only. `scan_market` now routes `data.download` through
+   `data.merge_with_cache` (same fossil ceiling — a >10-day cached frame is
+   refused, so a prolonged outage still trips the floor) and turtle.yml
+   restores the shared `vivek-frames-` cache entry BEFORE the scan step.
+   The cache share is published (`data_from_cache`) and printed on the
+   coverage line. The floor, the refusal and the red-run alarm are untouched.
+   Do not re-introduce a bare `data.download` here. Side effect worth
+   knowing: `tests/conftest.py` now gives EVERY test its own empty
+   `_CACHE_DIR` (autouse) — a test that needs a warm cache seeds it with
+   `data.save_frame_cache`, and `band()` frames are 2015-dated so a cached
+   copy of one is a fossil by construction.
 
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 
