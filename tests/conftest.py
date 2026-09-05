@@ -14,7 +14,24 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scanner import data as _data  # noqa: E402
 from scanner.scalp_journal import _session_day  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _isolated_frame_cache(tmp_path, monkeypatch):
+    """Every test gets its own empty last-good frame cache (2026-09-05).
+
+    `turtle_run.scan_market` now routes its download through
+    `data.merge_with_cache`, the same last-good cache the VIVEK scan uses.
+    Without this redirect a test that hands the runner full frames would SAVE
+    them to the repo's real `.cache/frames`, and the next test expecting a
+    gutted download to trip the coverage floor would find that download
+    quietly refilled from the previous test's cache -- order-dependent
+    results, and pytest writing the developer's live cache as a side effect.
+    Tests that need a warm cache seed their own via `data.save_frame_cache`.
+    """
+    monkeypatch.setattr(_data, "_CACHE_DIR", tmp_path / "frames")
 
 
 @pytest.fixture

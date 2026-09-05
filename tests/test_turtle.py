@@ -1487,3 +1487,123 @@ def test_futures_rows_bucket_by_ASSET_GROUP_not_all_into_unclassified():
         {"sector": "Financials", "group": "index"}, "asx") == "financials"
     # ...and crypto stays one bucket, which is a deliberate ruling, not a gap.
     assert turtle_book._bucket({"sector": "x", "group": "y"}, "crypto") == "crypto"
+
+
+# ---------------------------------------------------------------------------
+# the last-good frame cache (2026-09-05 -- runs #29/#64/#88/#120)
+# ---------------------------------------------------------------------------
+# Every red run this workflow ever had was Yahoo throttling one market's
+# batch under the coverage floor -- while scan.yml walked the SAME directory
+# through the same window and published, because it fills the dropped names
+# from `.cache/frames`. turtle_run fetched fresh only. Same merge now, same
+# fossil ceiling, and the cache share is published so a cache-heavy night is
+# visible as one.
+
+def _recent(df: pd.DataFrame) -> pd.DataFrame:
+    """Re-date a `band()` frame so its last bar is today -- `band()` dates from
+    2015, which makes every cached copy a fossil under FRAME_CACHE_MAX_AGE_DAYS
+    (the negative case below relies on exactly that)."""
+    out = df.copy()
+    out.index = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=len(df))
+    return out
+
+
+def _universe(n):
+    return [{"symbol": f"T{i}", "name": f"T{i}", "sector": "", "yf": f"T{i}.AX"}
+            for i in range(n)]
+
+
+def test_a_throttled_download_is_filled_from_the_last_good_cache(tmp_path, monkeypatch):
+    """The 2026-09-05 failure, replayed with a warm cache: Yahoo returns 1 of
+    10 names (10%, far under the 60% floor) but yesterday's frames for the
+    other nine are cached and recent. The scan must publish -- and must SAY
+    how much of its coverage came off the cache."""
+    from scanner import data
+    universe = _universe(10)
+    yesterday = {f"T{i}.AX": _recent(band([100.0] * 260 + ramp(101, 130))) for i in range(10)}
+    data.save_frame_cache("asx", yesterday)                    # warm cache
+    throttled = {"T0.AX": yesterday["T0.AX"]}                  # today's download: 1 of 10
+
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: throttled)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    payload = turtle_run.scan_market("asx")                    # no RuntimeError
+    assert payload["data_coverage_pct"] == pytest.approx(100.0)
+    assert payload["skipped_no_data"] == 0
+    assert payload["data_from_cache"] == 9, "nine names came off the cache and it must say so"
+    assert payload["data_stale_dropped"] == 0
+    assert (tmp_path / "asx_turtle.json").exists()
+
+
+def test_a_fossil_cache_does_NOT_rescue_the_coverage_floor(tmp_path, monkeypatch):
+    """The honesty half. A cache older than FRAME_CACHE_MAX_AGE_DAYS is a
+    fossil: reusing it would publish a 'fresh' file priced off bars from
+    weeks ago, which is worse than the red run it avoids. `band()` frames are
+    dated 2015, so the cached copies here are fossils by construction; the
+    floor must still trip and the file must still be refused."""
+    from scanner import data
+    universe = _universe(10)
+    old = {f"T{i}.AX": band([100.0] * 260 + ramp(101, 130)) for i in range(10)}
+    data.save_frame_cache("asx", old)                          # a FOSSIL cache
+    throttled = {"T0.AX": _recent(old["T0.AX"])}
+
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: throttled)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+
+    # A 10-name universe trips the SMALL-universe rule (max 2 missing) before
+    # the 60% share floor; both refuse with the same words, and the refusal
+    # is the property under test -- not which of the two floors said it.
+    with pytest.raises(RuntimeError, match="REFUSING to publish"):
+        turtle_run.scan_market("asx")
+    assert not (tmp_path / "asx_turtle.json").exists(), \
+        "yesterday's file is better than one priced off 2015 bars"
+
+
+def test_a_fresh_download_refreshes_the_cache_for_the_next_run(tmp_path, monkeypatch):
+    """The merge is two-way: what this run DID get is saved, so the next
+    throttled run has something to fill from. Without the save the cache
+    would only ever be as good as whatever scan.yml last wrote."""
+    from scanner import data
+    universe = _universe(3)
+    frames = {f"T{i}.AX": _recent(band([100.0] * 260 + ramp(101, 130))) for i in range(3)}
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: frames)
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+    assert data.load_frame_cache("asx") == {}, "the fixture starts every test cold"
+    turtle_run.scan_market("asx")
+    assert set(data.load_frame_cache("asx")) == set(frames), "this run's frames are now cached"
+
+
+def test_the_workflow_restores_the_shared_frame_cache():
+    """The engine can only merge a cache the runner actually has. scan.yml and
+    crypto_bot.yml restore `.cache/frames` under the `vivek-frames-` prefix;
+    this job must restore the SAME entry, BEFORE the scan step, or the merge
+    runs against an empty directory on every fresh runner and the fix is
+    decorative."""
+    wf = (ROOT / ".github" / "workflows" / "turtle.yml").read_text(encoding="utf-8")
+    cache_at = wf.find("path: .cache/frames")
+    scan_at = wf.find("name: Run the Turtle scan")
+    assert cache_at != -1, "turtle.yml must restore .cache/frames"
+    assert cache_at < scan_at, "the cache must be restored before the scan runs"
+    step = wf[wf.rfind("- name:", 0, cache_at):scan_at]
+    assert "actions/cache@v4" in step
+    assert "vivek-frames-${{ github.run_id }}" in step, "same key shape as scan.yml"
+    assert "restore-keys" in step and "vivek-frames-" in step, \
+        "the prefix fallback is what makes the newest cache from ANY writer restorable"
+
+
+def test_the_cache_share_is_printed_on_the_coverage_line(tmp_path, monkeypatch, capsys):
+    """The run page reads the coverage line, not the JSON. A night that was
+    90% cache must read as one there too."""
+    from scanner import data
+    universe = _universe(10)
+    yesterday = {f"T{i}.AX": _recent(band([100.0] * 260 + ramp(101, 130))) for i in range(10)}
+    data.save_frame_cache("asx", yesterday)
+    monkeypatch.setattr(turtle_run.universe, "load_universe", lambda m, full=True: universe)
+    monkeypatch.setattr(turtle_run.data, "download", lambda t, **kw: {"T0.AX": yesterday["T0.AX"]})
+    monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
+    turtle_run.scan_market("asx")
+    out = capsys.readouterr().out
+    assert "coverage 100.0%" in out and "9 from cache" in out

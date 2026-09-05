@@ -80,6 +80,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Last-good per-ticker frame cache, the SAME entry scan.yml and
+      # crypto_bot.yml restore and refresh: names Yahoo throttles out of this
+      # run are filled from it, so a throttle window no longer drops a whole
+      # market under the coverage floor (runs #29/#64/#88/#120 -- every red
+      # run this workflow has had). Keyed by run id so the newest cache from
+      # ANY of the three writers is restored and an updated one is written.
+      - name: Restore frame cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames
+          key: vivek-frames-${{ github.run_id }}
+          restore-keys: |
+            vivek-frames-
+
       # Free-text inputs travel through env, never through ${{ }} inside a
       # run: block — the runner does not shell-interpolate env values, so a
       # crafted input cannot inject commands (2026-07-20 security pass).

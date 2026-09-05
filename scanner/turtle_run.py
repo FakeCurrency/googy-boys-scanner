@@ -239,7 +239,19 @@ def scan_market(market_key: str, limit: int | None = None,
     if limit:
         items = items[:limit]
     yf_map = {it["yf"]: it for it in items}
-    frames = data.download(list(yf_map), period=period, interval="1d")
+    fresh = data.download(list(yf_map), period=period, interval="1d")
+    # THE LAST-GOOD FRAME CACHE (2026-09-05 -- runs #29/#64/#88/#120). Every
+    # one of those red runs was Yahoo throttling one market's batch under the
+    # coverage floor, and every one of them happened while scan.yml walked the
+    # SAME directory through the same throttle window and published fine --
+    # because the scan fills the names Yahoo dropped from `.cache/frames`
+    # (restored across runs via actions/cache) and this runner fetched fresh
+    # only. Same merge, same fossil ceiling (FRAME_CACHE_MAX_AGE_DAYS): a name
+    # cached more than ten days ago is NOT reused, so a prolonged outage still
+    # falls through the floor rather than being papered over with old bars.
+    # The cache share is published and printed so a cache-heavy night is
+    # visible as one, never mistaken for a fresh walk.
+    frames, cache_stats = data.merge_with_cache(market_key, fresh, list(yf_map))
 
     rows: list[dict] = []
     errors = scanerrors.ErrorLog(f"turtle [{market_key}]")
@@ -328,6 +340,10 @@ def scan_market(market_key: str, limit: int | None = None,
         # would be hundreds of lines of Yahoo throttle noise.
         "skipped_no_data_symbols": sorted(no_data_syms) if small else [],
         "data_coverage_pct": round(cover_pct, 1),
+        # How much of that coverage came off the last-good cache rather than
+        # today's download, and how many cached names were refused as fossils.
+        "data_from_cache": int(cache_stats.get("reused", 0)),
+        "data_stale_dropped": int(cache_stats.get("stale_dropped", 0)),
         "skipped_short_history": skipped_short,
         "skipped_illiquid": skipped_illiquid,
         "truncated": max(0, len(rows) - len(published)),
@@ -344,8 +360,10 @@ def scan_market(market_key: str, limit: int | None = None,
     path = os.path.join(OUT_DIR, f"{market_key}_turtle.json")
     output.write_json(path, payload, indent=1, ensure_ascii=False, newline=True)
     agg = payload["aggregate"]
+    reused = int(cache_stats.get("reused", 0))
     print(f"[{market_key}] turtle: coverage {cover_pct:.1f}% "
-          f"({covered}/{len(yf_map)} priced, {skipped_no_data} no data)")
+          f"({covered}/{len(yf_map)} priced, {skipped_no_data} no data"
+          f"{f', {reused} from cache' if reused else ''})")
     if small and no_data_syms:
         print(f"[{market_key}] turtle: unpriced this run: "
               f"{', '.join(sorted(no_data_syms))}")
