@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-05T04:14:57+00:00",
+ "generated_at": "2026-09-05T11:49:08+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,11 +21,11 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.39695883,
+   "last_mark": 1.42433882,
    "mark_date": "2026-09-05",
    "fees": 0.775953,
    "mfe_r": 0.0872,
-   "mae_r": -0.7549,
+   "mae_r": -0.9519,
    "unpriced_runs": 0
   },
   {
@@ -45,7 +45,7 @@
    "stop": 904.86570891,
    "last_fill": 1018.91146291,
    "opened": "2026-09-04",
-   "last_mark": 1025.09997559,
+   "last_mark": 1008.40997314,
    "mark_date": "2026-09-05",
    "fees": 1.255465,
    "mfe_r": 0.324,
@@ -70,11 +70,11 @@
    "stop": 2.00622615,
    "last_fill": 2.25437393,
    "opened": "2026-09-04",
-   "last_mark": 2.21950006,
+   "last_mark": 2.26149988,
    "mark_date": "2026-09-05",
    "fees": 1.888664,
    "mfe_r": 0.5082,
-   "mae_r": 0.0,
+   "mae_r": -0.0837,
    "unpriced_runs": 0
   },
   {
@@ -93,11 +93,12 @@
    "stop": 59.78798172,
    "last_fill": 67.5,
    "opened": "2026-09-05",
-   "last_mark": 67.5,
+   "last_mark": 68.04000092,
    "mark_date": "2026-09-05",
    "fees": 0.623695,
-   "mfe_r": 0.0,
-   "mae_r": 0.0
+   "mfe_r": 0.688,
+   "mae_r": -0.6371,
+   "unpriced_runs": 0
   }
  ],
  "closed": [
@@ -410,13 +411,36 @@
   "fees_paid": 63.81,
   "sizing_equity": 2375.28
  },
- "events": [
-  "ADD NEAR u2 @ 2.19234",
-  "ADD NEAR u3 @ 2.25437",
-  "ENTER DASH S2 long @ 67.5"
+ "events": [],
+ "skips": [
+  {
+   "as_of": "2026-09-05",
+   "market": "crypto",
+   "symbol": "DASH",
+   "action": "add",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "units_held": 1,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-05",
+   "market": "crypto",
+   "symbol": "ICP",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  }
  ],
- "skips": [],
  "skip_counts": {
-  "total": 0
+  "close_corr_cap": 2,
+  "total": 2
  }
 }
