@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-05T10:30:51+10:00",
+ "generated_at": "2026-09-05T22:58:34+10:00",
  "market": "futures",
  "lens": "turtle",
  "currency_symbol": "$",
@@ -52,8 +52,8 @@
   "short": 2,
   "flat": 19,
   "fired_today": 1,
-  "added_today": 1,
-  "approaching": 8,
+  "added_today": 0,
+  "approaching": 9,
   "s1_blocked": 20
  },
  "results": [
@@ -61,18 +61,18 @@
    "symbol": "6J",
    "name": "Japanese Yen",
    "sector": "",
-   "price": 0.006404,
-   "n": 4.441e-05,
+   "price": 0.006405,
+   "n": 4.439e-05,
    "n_pct": 0.69,
-   "dvol": 943.0,
+   "dvol": 982.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "s1_long",
    "bar": {
     "o": 0.006422000005841255,
     "h": 0.006444000173360109,
-    "l": 0.006383500061929226,
-    "c": 0.0064039998687803745
+    "l": 0.006384000182151794,
+    "c": 0.0064050001092255116
    },
    "exits": {
     "x1_lo": 0.0062409997917711735,
@@ -85,7 +85,7 @@
    "s1_filter_known": true,
    "bars": 1258,
    "date": "2026-09-04",
-   "unit_shares": 0.090064,
+   "unit_shares": 0.090115,
    "unit_notional": 0.0,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
@@ -188,7 +188,7 @@
     "exit_channel": 10,
     "entry_date": "2026-09-04",
     "bars": 0,
-    "open_r": -0.4476,
+    "open_r": -0.4361,
     "mfe_r": 0.0,
     "mae_r": 0.0
    },
@@ -200,20 +200,20 @@
     "full_contracts": 0.0901,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 22.21
+    "one_contract_risk_pct": 22.19
    },
    "group": "currency",
    "cfd": {
     "dpp": 1.0,
-    "units": 1125803.5671,
-    "notional": 7209.65,
-    "notional_pct": 144.2,
+    "units": 1126437.7935,
+    "notional": 7214.83,
+    "notional_pct": 144.3,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.948,
+    "carry_r_60d": 0.949,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -227,38 +227,38 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 0.75
+   "stop_distance_pct": 0.77
   },
   {
    "symbol": "ZN",
    "name": "10-Year T-Note",
    "sector": "",
-   "price": 107.5,
-   "n": 0.470781,
-   "n_pct": 0.44,
-   "dvol": 201672245.0,
+   "price": 107.734375,
+   "n": 0.46374975,
+   "n_pct": 0.43,
+   "dvol": 192383021.0,
    "liquid_share": 1.0,
    "state": "short",
    "signal": "",
    "bar": {
-    "o": 107.59375,
-    "h": 107.796875,
-    "l": 107.25,
-    "c": 107.5
+    "o": 107.90625,
+    "h": 108.125,
+    "l": 107.59375,
+    "c": 107.734375
    },
    "exits": {
-    "x1_lo": 107.25,
+    "x1_lo": 107.53125,
     "x1_hi": 109.0,
-    "x2_lo": 107.25,
+    "x2_lo": 107.53125,
     "x2_hi": 109.109375
    },
-   "added_today": 2,
+   "added_today": 0,
    "s1_blocked": true,
    "s1_filter_known": true,
    "bars": 1258,
    "date": "2026-09-04",
-   "unit_shares": 0.106206,
-   "unit_notional": 11.42,
+   "unit_shares": 0.107817,
+   "unit_notional": 11.62,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -344,45 +344,45 @@
     "side": "short",
     "system": 2,
     "entry": 107.984375,
-    "avg": 107.62530081,
-    "units": 4,
+    "avg": 107.8646836,
+    "units": 2,
     "n": 0.47876558,
-    "stop": 108.22375779,
-    "next_add": null,
+    "stop": 108.70252337,
+    "next_add": 107.50560942,
     "exit_level": 109.109375,
     "exit_channel": 20,
     "entry_date": "2026-08-31",
     "bars": 4,
-    "open_r": 0.5234,
-    "mfe_r": 0.7669,
-    "mae_r": -0.1142
+    "open_r": 0.2722,
+    "mfe_r": 0.4732,
+    "mae_r": -0.1469
    },
    "triggers": null,
    "contracts": {
     "dpp": 1000,
     "micro": "",
     "micro_dpp": 0,
-    "full_contracts": 0.1062,
+    "full_contracts": 0.1078,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 18.83
+    "one_contract_risk_pct": 18.55
    },
    "group": "rates",
    "cfd": {
     "dpp": 1.0,
-    "units": 106.2065,
-    "notional": 11417.2,
-    "notional_pct": 228.3,
+    "units": 107.8168,
+    "notional": 11615.57,
+    "notional_pct": 232.3,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.501,
+    "carry_r_60d": 1.528,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 0.44
+    "n_pct": 0.43
    },
    "rolls": {
     "bars": 1,
@@ -392,24 +392,24 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 0.67
+   "stop_distance_pct": 0.9
   },
   {
    "symbol": "CC",
    "name": "Cocoa",
    "sector": "",
-   "price": 6175.0,
-   "n": 255.87082973,
-   "n_pct": 4.14,
-   "dvol": 38849829.0,
+   "price": 6082.0,
+   "n": 243.42082973,
+   "n_pct": 4.0,
+   "dvol": 35167369.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
    "bar": {
-    "o": 6180.0,
-    "h": 6314.0,
-    "l": 6149.0,
-    "c": 6175.0
+    "o": 6049.0,
+    "h": 6052.0,
+    "l": 6049.0,
+    "c": 6082.0
    },
    "exits": {
     "x1_lo": 5689.0,
@@ -422,8 +422,8 @@
    "s1_filter_known": true,
    "bars": 1257,
    "date": "2026-09-04",
-   "unit_shares": 0.019541,
-   "unit_notional": 120.67,
+   "unit_shares": 0.020541,
+   "unit_notional": 124.93,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -526,36 +526,36 @@
     "exit_channel": 20,
     "entry_date": "2026-08-28",
     "bars": 5,
-    "open_r": -0.5842,
+    "open_r": -0.7513,
     "mfe_r": 0.1851,
-    "mae_r": -0.6309
+    "mae_r": -0.8106
    },
    "triggers": null,
    "contracts": {
     "dpp": 10,
     "micro": "",
     "micro_dpp": 0,
-    "full_contracts": 0.0195,
+    "full_contracts": 0.0205,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 102.35
+    "one_contract_risk_pct": 97.37
    },
    "group": "softs",
    "cfd": {
     "dpp": 1.0,
-    "units": 0.1954,
-    "notional": 1206.66,
-    "notional_pct": 24.1,
+    "units": 0.2054,
+    "notional": 1249.28,
+    "notional_pct": 25.0,
     "leverage": 10.0,
     "fits": {
      "1.0": false,
      "0.1": true
     },
-    "carry_r_60d": 0.159,
+    "carry_r_60d": 0.164,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.14
+    "n_pct": 4.0
    },
    "rolls": {
     "bars": 27,
@@ -565,16 +565,16 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 3.75
+   "stop_distance_pct": 2.27
   },
   {
    "symbol": "SB",
    "name": "Sugar No. 11",
    "sector": "",
-   "price": 18.02000046,
+   "price": 18.06999969,
    "n": 0.56747528,
-   "n_pct": 3.15,
-   "dvol": 2043795.0,
+   "n_pct": 3.14,
+   "dvol": 2136907.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -582,7 +582,7 @@
     "o": 18.010000228881836,
     "h": 18.479999542236328,
     "l": 17.920000076293945,
-    "c": 18.020000457763672
+    "c": 18.06999969482422
    },
    "exits": {
     "x1_lo": 17.079999923706055,
@@ -689,7 +689,7 @@
     "exit_channel": 20,
     "entry_date": "2026-08-06",
     "bars": 21,
-    "open_r": 14.115,
+    "open_r": 14.4119,
     "mfe_r": 5.017,
     "mae_r": 0.0
    },
@@ -707,7 +707,7 @@
    "cfd": {
     "dpp": 1.0,
     "units": 88.1096,
-    "notional": 1587.73,
+    "notional": 1592.14,
     "notional_pct": 31.8,
     "leverage": 10.0,
     "fits": {
@@ -718,7 +718,7 @@
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.15
+    "n_pct": 3.14
    },
    "rolls": {
     "bars": 1,
@@ -728,16 +728,16 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 15.53
+   "stop_distance_pct": 15.76
   },
   {
    "symbol": "HO",
    "name": "Heating Oil",
    "sector": "",
-   "price": 4.54699993,
+   "price": 4.54020023,
    "n": 0.17785005,
-   "n_pct": 3.91,
-   "dvol": 157676.0,
+   "n_pct": 3.92,
+   "dvol": 155277.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -745,7 +745,7 @@
     "o": 4.597599983215332,
     "h": 4.60260009765625,
     "l": 4.433800220489502,
-    "c": 4.546999931335449
+    "c": 4.540200233459473
    },
    "exits": {
     "x1_lo": 4.072999954223633,
@@ -850,7 +850,7 @@
     "exit_channel": 20,
     "entry_date": "2026-09-01",
     "bars": 3,
-    "open_r": -0.4816,
+    "open_r": -0.5209,
     "mfe_r": 0.6058,
     "mae_r": -0.3537
    },
@@ -868,8 +868,8 @@
    "cfd": {
     "dpp": 1.0,
     "units": 281.1357,
-    "notional": 1278.32,
-    "notional_pct": 25.6,
+    "notional": 1276.41,
+    "notional_pct": 25.5,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
@@ -879,7 +879,7 @@
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.91
+    "n_pct": 3.92
    },
    "rolls": {
     "bars": 1,
@@ -889,16 +889,16 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 4.15
+   "stop_distance_pct": 4.01
   },
   {
    "symbol": "6A",
    "name": "Australian Dollar",
    "sector": "",
-   "price": 0.72035003,
+   "price": 0.72030002,
    "n": 0.00396744,
    "n_pct": 0.55,
-   "dvol": 46383.0,
+   "dvol": 49522.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -906,7 +906,7 @@
     "o": 0.7200000286102295,
     "h": 0.7213500142097473,
     "l": 0.7170500159263611,
-    "c": 0.7203500270843506
+    "c": 0.720300018787384
    },
    "exits": {
     "x1_lo": 0.7120500206947327,
@@ -1025,7 +1025,7 @@
     "exit_channel": 10,
     "entry_date": "2026-07-30",
     "bars": 26,
-    "open_r": 7.2458,
+    "open_r": 7.2213,
     "mfe_r": 2.3273,
     "mae_r": -0.4276
    },
@@ -1043,7 +1043,7 @@
    "cfd": {
     "dpp": 1.0,
     "units": 12602.5874,
-    "notional": 9078.27,
+    "notional": 9077.64,
     "notional_pct": 181.6,
     "leverage": 30.0,
     "fits": {
@@ -1064,16 +1064,16 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 2.76
+   "stop_distance_pct": 2.75
   },
   {
    "symbol": "6S",
    "name": "Swiss Franc",
    "sector": "",
-   "price": 1.23564994,
+   "price": 1.23525,
    "n": 0.00835256,
    "n_pct": 0.68,
-   "dvol": 35936.0,
+   "dvol": 37029.0,
    "liquid_share": 1.0,
    "state": "short",
    "signal": "",
@@ -1081,7 +1081,7 @@
     "o": 1.239549994468689,
     "h": 1.2398500442504883,
     "l": 1.2315499782562256,
-    "c": 1.2356499433517456
+    "c": 1.2352499961853027
    },
    "exits": {
     "x1_lo": 1.2275500297546387,
@@ -1190,7 +1190,7 @@
     "exit_channel": 10,
     "entry_date": "2026-09-02",
     "bars": 2,
-    "open_r": -0.2564,
+    "open_r": -0.232,
     "mfe_r": 0.0366,
     "mae_r": -0.6989
    },
@@ -1208,14 +1208,14 @@
    "cfd": {
     "dpp": 1.0,
     "units": 5986.1853,
-    "notional": 7396.83,
+    "notional": 7394.44,
     "notional_pct": 147.9,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.973,
+    "carry_r_60d": 0.972,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -1229,175 +1229,16 @@
    },
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 0.99
-  },
-  {
-   "symbol": "ZB",
-   "name": "30-Year T-Bond",
-   "sector": "",
-   "price": 108.65625,
-   "n": 0.94316293,
-   "n_pct": 0.87,
-   "dvol": 58440648.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 108.625,
-    "h": 109.0,
-    "l": 108.1875,
-    "c": 108.65625
-   },
-   "exits": {
-    "x1_lo": 108.1875,
-    "x1_hi": 110.5,
-    "x2_lo": 107.90625,
-    "x2_hi": 110.5
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1258,
-   "date": "2026-09-04",
-   "unit_shares": 0.053013,
-   "unit_notional": 5.76,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 40,
-    "wins": 5,
-    "win_pct": 12.5,
-    "total_r": -59.054,
-    "avg_r": -1.4764,
-    "median_r": -2.1026,
-    "gross_r": -41.183,
-    "cost_r": 17.872,
-    "top10_share": null,
-    "max_dd_r": -63.217,
-    "expectancy_r": -1.4764,
-    "by_system": {
-     "1": {
-      "n": 7,
-      "total_r": -16.208,
-      "avg_r": -2.3155,
-      "win_pct": 0.0
-     },
-     "2": {
-      "n": 33,
-      "total_r": -42.846,
-      "avg_r": -1.2984,
-      "win_pct": 15.2
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 29,
-      "total_r": -68.266,
-      "avg_r": -2.354
-     },
-     "channel": {
-      "n": 11,
-      "total_r": 9.211,
-      "avg_r": 0.8374
-     }
-    },
-    "equity_curve_r": [
-     -2.7381,
-     -3.9295,
-     2.3641,
-     -0.1446,
-     -3.0547,
-     4.1626,
-     2.2011,
-     0.2224,
-     -3.9626,
-     -5.0722,
-     -7.0478,
-     -7.8752,
-     -10.4856,
-     -13.5351,
-     -16.5295,
-     -14.1644,
-     -13.6018,
-     -15.6312,
-     -18.8863,
-     -21.9286,
-     -23.0602,
-     -24.222,
-     -21.6007,
-     -22.9931,
-     -24.8985,
-     -27.0524,
-     -30.2066,
-     -33.1844,
-     -35.7815,
-     -36.932,
-     -40.0159,
-     -42.1515,
-     -44.6542,
-     -46.7401,
-     -49.4133,
-     -50.7493,
-     -53.6121,
-     -55.766,
-     -57.8853,
-     -59.0543
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 110.5,
-    "s2_long": 114.625,
-    "s1_short": 107.90625,
-    "s2_short": 107.90625
-   },
-   "contracts": {
-    "dpp": 1000,
-    "micro": "",
-    "micro_dpp": 0,
-    "full_contracts": 0.053,
-    "micro_contracts": null,
-    "unit_fits": false,
-    "one_contract_risk_pct": 37.73
-   },
-   "group": "rates",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 53.0131,
-    "notional": 5760.21,
-    "notional_pct": 115.2,
-    "leverage": 10.0,
-    "fits": {
-     "1.0": true,
-     "0.1": true
-    },
-    "carry_r_60d": 0.758,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 10.0,
-    "n_pct": 0.87
-   },
-   "rolls": {
-    "bars": 3,
-    "share": 0.0024,
-    "in_n_window": false,
-    "last": "2025-12-18"
-   },
-   "nearest": {
-    "key": "s2_short",
-    "level": 107.90625,
-    "distance_pct": 0.69
-   },
-   "approaching": true
+   "stop_distance_pct": 1.02
   },
   {
    "symbol": "6C",
    "name": "Canadian Dollar",
    "sector": "",
-   "price": 0.72299999,
+   "price": 0.72285002,
    "n": 0.0029323,
    "n_pct": 0.41,
-   "dvol": 44564.0,
+   "dvol": 43366.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -1405,7 +1246,7 @@
     "o": 0.725350022315979,
     "h": 0.7257000207901001,
     "l": 0.7210999727249146,
-    "c": 0.7229999899864197
+    "c": 0.7228500247001648
    },
    "exits": {
     "x1_lo": 0.7177500128746033,
@@ -1530,8 +1371,8 @@
    "cfd": {
     "dpp": 1.0,
     "units": 17051.4446,
-    "notional": 12328.19,
-    "notional_pct": 246.6,
+    "notional": 12325.64,
+    "notional_pct": 246.5,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
@@ -1552,7 +1393,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.72895002,
-    "distance_pct": 0.82
+    "distance_pct": 0.84
    },
    "approaching": true
   },
@@ -1560,10 +1401,10 @@
    "symbol": "6E",
    "name": "Euro FX",
    "sector": "",
-   "price": 1.16184998,
+   "price": 1.16139996,
    "n": 0.00479839,
    "n_pct": 0.41,
-   "dvol": 137865.0,
+   "dvol": 139746.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -1571,7 +1412,7 @@
     "o": 1.163100004196167,
     "h": 1.163699984550476,
     "l": 1.1588000059127808,
-    "c": 1.1618499755859375
+    "c": 1.1613999605178833
    },
    "exits": {
     "x1_lo": 1.1571999788284302,
@@ -1687,14 +1528,14 @@
    "cfd": {
     "dpp": 1.0,
     "units": 10420.1663,
-    "notional": 12106.67,
-    "notional_pct": 242.1,
+    "notional": 12101.98,
+    "notional_pct": 242.0,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.592,
+    "carry_r_60d": 1.591,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -1709,7 +1550,166 @@
    "nearest": {
     "key": "s2_long",
     "level": 1.17219996,
-    "distance_pct": 0.89
+    "distance_pct": 0.93
+   },
+   "approaching": true
+  },
+  {
+   "symbol": "ZB",
+   "name": "30-Year T-Bond",
+   "sector": "",
+   "price": 109.21875,
+   "n": 0.91972543,
+   "n_pct": 0.84,
+   "dvol": 56349212.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 109.15625,
+    "h": 109.5,
+    "l": 108.9375,
+    "c": 109.21875
+   },
+   "exits": {
+    "x1_lo": 108.40625,
+    "x1_hi": 110.5,
+    "x2_lo": 107.90625,
+    "x2_hi": 110.5
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1258,
+   "date": "2026-09-04",
+   "unit_shares": 0.054364,
+   "unit_notional": 5.94,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 40,
+    "wins": 5,
+    "win_pct": 12.5,
+    "total_r": -59.054,
+    "avg_r": -1.4764,
+    "median_r": -2.1026,
+    "gross_r": -41.183,
+    "cost_r": 17.872,
+    "top10_share": null,
+    "max_dd_r": -63.217,
+    "expectancy_r": -1.4764,
+    "by_system": {
+     "1": {
+      "n": 7,
+      "total_r": -16.208,
+      "avg_r": -2.3155,
+      "win_pct": 0.0
+     },
+     "2": {
+      "n": 33,
+      "total_r": -42.846,
+      "avg_r": -1.2984,
+      "win_pct": 15.2
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 29,
+      "total_r": -68.266,
+      "avg_r": -2.354
+     },
+     "channel": {
+      "n": 11,
+      "total_r": 9.211,
+      "avg_r": 0.8374
+     }
+    },
+    "equity_curve_r": [
+     -2.7381,
+     -3.9295,
+     2.3641,
+     -0.1446,
+     -3.0547,
+     4.1626,
+     2.2011,
+     0.2224,
+     -3.9626,
+     -5.0722,
+     -7.0478,
+     -7.8752,
+     -10.4856,
+     -13.5351,
+     -16.5295,
+     -14.1644,
+     -13.6018,
+     -15.6312,
+     -18.8863,
+     -21.9286,
+     -23.0602,
+     -24.222,
+     -21.6007,
+     -22.9931,
+     -24.8985,
+     -27.0524,
+     -30.2066,
+     -33.1844,
+     -35.7815,
+     -36.932,
+     -40.0159,
+     -42.1515,
+     -44.6542,
+     -46.7401,
+     -49.4133,
+     -50.7493,
+     -53.6121,
+     -55.766,
+     -57.8853,
+     -59.0543
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 110.5,
+    "s2_long": 114.625,
+    "s1_short": 107.90625,
+    "s2_short": 107.90625
+   },
+   "contracts": {
+    "dpp": 1000,
+    "micro": "",
+    "micro_dpp": 0,
+    "full_contracts": 0.0544,
+    "micro_contracts": null,
+    "unit_fits": false,
+    "one_contract_risk_pct": 36.79
+   },
+   "group": "rates",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 54.3641,
+    "notional": 5937.57,
+    "notional_pct": 118.8,
+    "leverage": 10.0,
+    "fits": {
+     "1.0": true,
+     "0.1": true
+    },
+    "carry_r_60d": 0.781,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 10.0,
+    "n_pct": 0.84
+   },
+   "rolls": {
+    "bars": 3,
+    "share": 0.0024,
+    "in_n_window": false,
+    "last": "2025-12-18"
+   },
+   "nearest": {
+    "key": "s2_short",
+    "level": 107.90625,
+    "distance_pct": 1.2
    },
    "approaching": true
   },
@@ -1717,10 +1717,10 @@
    "symbol": "6B",
    "name": "British Pound",
    "sector": "",
-   "price": 1.35169995,
+   "price": 1.35140002,
    "n": 0.0056955,
    "n_pct": 0.42,
-   "dvol": 78288.0,
+   "dvol": 84884.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -1728,7 +1728,7 @@
     "o": 1.3524999618530273,
     "h": 1.3549000024795532,
     "l": 1.347599983215332,
-    "c": 1.351699948310852
+    "c": 1.3514000177383423
    },
    "exits": {
     "x1_lo": 1.347499966621399,
@@ -1845,14 +1845,14 @@
    "cfd": {
     "dpp": 1.0,
     "units": 8778.8573,
-    "notional": 11866.38,
+    "notional": 11863.75,
     "notional_pct": 237.3,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.561,
+    "carry_r_60d": 1.56,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -1867,173 +1867,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1.36759996,
-    "distance_pct": 1.18
-   },
-   "approaching": true
-  },
-  {
-   "symbol": "HG",
-   "name": "Copper",
-   "sector": "",
-   "price": 6.66800022,
-   "n": 0.09932328,
-   "n_pct": 1.49,
-   "dvol": 25409.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 6.666999816894531,
-    "h": 6.702499866485596,
-    "l": 6.616000175476074,
-    "c": 6.668000221252441
-   },
-   "exits": {
-    "x1_lo": 6.414999961853027,
-    "x1_hi": 6.75,
-    "x2_lo": 6.406000137329102,
-    "x2_hi": 6.75
-   },
-   "added_today": 0,
-   "s1_blocked": false,
-   "s1_filter_known": true,
-   "bars": 1258,
-   "date": "2026-09-04",
-   "unit_shares": 0.020136,
-   "unit_notional": 0.13,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 47,
-    "wins": 7,
-    "win_pct": 14.9,
-    "total_r": -9.535,
-    "avg_r": -0.2029,
-    "median_r": -1.9106,
-    "gross_r": 1.882,
-    "cost_r": 11.418,
-    "top10_share": null,
-    "max_dd_r": -35.535,
-    "expectancy_r": -0.2029,
-    "by_system": {
-     "1": {
-      "n": 22,
-      "total_r": 29.658,
-      "avg_r": 1.3481,
-      "win_pct": 22.7
-     },
-     "2": {
-      "n": 25,
-      "total_r": -39.192,
-      "avg_r": -1.5677,
-      "win_pct": 8.0
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 37,
-      "total_r": -79.288,
-      "avg_r": -2.1429
-     },
-     "channel": {
-      "n": 10,
-      "total_r": 69.753,
-      "avg_r": 6.9753
-     }
-    },
-    "equity_curve_r": [
-     -1.0808,
-     -2.5342,
-     -3.6222,
-     -5.5328,
-     -8.0557,
-     -10.7292,
-     -12.0847,
-     -7.7089,
-     7.4983,
-     5.0495,
-     3.1422,
-     1.5201,
-     0.4443,
-     -1.7117,
-     -4.8398,
-     -7.3506,
-     -9.9961,
-     -12.0464,
-     -14.5196,
-     -15.637,
-     -17.9871,
-     -20.9032,
-     -20.8977,
-     -22.8656,
-     -24.8912,
-     -28.0372,
-     14.5254,
-     15.3369,
-     17.0761,
-     15.9688,
-     13.2299,
-     11.2933,
-     9.1032,
-     7.243,
-     4.4689,
-     1.9638,
-     0.8954,
-     -1.8523,
-     -6.5612,
-     -7.0665,
-     -8.9902,
-     -1.2233,
-     -4.7261,
-     -5.8069,
-     -6.5638,
-     -8.4247,
-     -9.5346
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 6.75,
-    "s2_long": 6.75,
-    "s1_short": 6.406000137329102,
-    "s2_short": 5.928500175476074
-   },
-   "contracts": {
-    "dpp": 25000,
-    "micro": "MHG",
-    "micro_dpp": 2500,
-    "full_contracts": 0.0201,
-    "micro_contracts": 0.2014,
-    "unit_fits": false,
-    "one_contract_risk_pct": 9.93
-   },
-   "group": "metals",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 503.4066,
-    "notional": 3356.72,
-    "notional_pct": 67.1,
-    "leverage": 10.0,
-    "fits": {
-     "1.0": true,
-     "0.1": true
-    },
-    "carry_r_60d": 0.441,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 10.0,
-    "n_pct": 1.49
-   },
-   "rolls": {
-    "bars": 92,
-    "share": 0.0731,
-    "in_n_window": true,
-    "last": "2026-08-25"
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 6.75,
-    "distance_pct": 1.23
+    "distance_pct": 1.2
    },
    "approaching": true
   },
@@ -2044,7 +1878,7 @@
    "price": 7722.0,
    "n": 75.66969963,
    "n_pct": 0.98,
-   "dvol": 9254835731.0,
+   "dvol": 9423450391.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -2204,13 +2038,340 @@
    "approaching": true
   },
   {
+   "symbol": "CL",
+   "name": "Crude Oil (WTI)",
+   "sector": "",
+   "price": 91.48000336,
+   "n": 3.76143572,
+   "n_pct": 4.11,
+   "dvol": 20370742.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 91.66999816894531,
+    "h": 92.16999816894531,
+    "l": 88.72000122070312,
+    "c": 91.4800033569336
+   },
+   "exits": {
+    "x1_lo": 79.62000274658203,
+    "x1_hi": 93.13999938964844,
+    "x2_lo": 77.79000091552734,
+    "x2_hi": 93.13999938964844
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1257,
+   "date": "2026-09-04",
+   "unit_shares": 0.013293,
+   "unit_notional": 1.22,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 42,
+    "wins": 7,
+    "win_pct": 16.7,
+    "total_r": -41.658,
+    "avg_r": -0.9919,
+    "median_r": -1.0594,
+    "gross_r": -36.465,
+    "cost_r": 5.193,
+    "top10_share": null,
+    "max_dd_r": -47.218,
+    "expectancy_r": -0.9919,
+    "by_system": {
+     "1": {
+      "n": 12,
+      "total_r": -3.126,
+      "avg_r": -0.2605,
+      "win_pct": 33.3
+     },
+     "2": {
+      "n": 30,
+      "total_r": -38.532,
+      "avg_r": -1.2844,
+      "win_pct": 10.0
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 29,
+      "total_r": -47.29,
+      "avg_r": -1.6307
+     },
+     "channel": {
+      "n": 13,
+      "total_r": 5.632,
+      "avg_r": 0.4332
+     }
+    },
+    "equity_curve_r": [
+     -2.198,
+     -4.8307,
+     -0.1948,
+     -1.2225,
+     -3.8413,
+     -5.6446,
+     -7.2484,
+     -9.6844,
+     -10.7219,
+     -9.6951,
+     -10.7401,
+     -12.5098,
+     -13.5534,
+     -14.5909,
+     -15.6303,
+     -12.7129,
+     -13.5578,
+     -16.2214,
+     -18.8763,
+     -19.4794,
+     -20.5423,
+     -21.6067,
+     -23.7202,
+     -25.2799,
+     -26.3326,
+     -27.383,
+     -29.9792,
+     -28.8139,
+     -31.2313,
+     -33.0753,
+     -35.7334,
+     -36.854,
+     -37.8923,
+     -38.5885,
+     -39.6444,
+     -42.3666,
+     -44.1045,
+     -46.8214,
+     -46.173,
+     -47.2184,
+     -44.2167,
+     -41.6583
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 93.13999938964844,
+    "s2_long": 93.5,
+    "s1_short": 77.79000091552734,
+    "s2_short": 67.04000091552734
+   },
+   "contracts": {
+    "dpp": 1000,
+    "micro": "MCL",
+    "micro_dpp": 100,
+    "full_contracts": 0.0133,
+    "micro_contracts": 0.1329,
+    "unit_fits": false,
+    "one_contract_risk_pct": 15.05
+   },
+   "group": "energy",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 13.2928,
+    "notional": 1216.03,
+    "notional_pct": 24.3,
+    "leverage": 10.0,
+    "fits": {
+     "1.0": true,
+     "0.1": true
+    },
+    "carry_r_60d": 0.16,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 10.0,
+    "n_pct": 4.11
+   },
+   "rolls": {
+    "bars": 0,
+    "share": 0.0,
+    "in_n_window": false,
+    "last": null
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 93.5,
+    "distance_pct": 2.21
+   },
+   "approaching": true
+  },
+  {
+   "symbol": "HG",
+   "name": "Copper",
+   "sector": "",
+   "price": 6.59700012,
+   "n": 0.09444829,
+   "n_pct": 1.43,
+   "dvol": 15456.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 6.5954999923706055,
+    "h": 6.598499774932861,
+    "l": 6.570499897003174,
+    "c": 6.5970001220703125
+   },
+   "exits": {
+    "x1_lo": 6.414999961853027,
+    "x1_hi": 6.75,
+    "x2_lo": 6.406000137329102,
+    "x2_hi": 6.75
+   },
+   "added_today": 0,
+   "s1_blocked": false,
+   "s1_filter_known": true,
+   "bars": 1258,
+   "date": "2026-09-04",
+   "unit_shares": 0.021176,
+   "unit_notional": 0.14,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 47,
+    "wins": 7,
+    "win_pct": 14.9,
+    "total_r": -9.535,
+    "avg_r": -0.2029,
+    "median_r": -1.9106,
+    "gross_r": 1.882,
+    "cost_r": 11.418,
+    "top10_share": null,
+    "max_dd_r": -35.535,
+    "expectancy_r": -0.2029,
+    "by_system": {
+     "1": {
+      "n": 22,
+      "total_r": 29.658,
+      "avg_r": 1.3481,
+      "win_pct": 22.7
+     },
+     "2": {
+      "n": 25,
+      "total_r": -39.192,
+      "avg_r": -1.5677,
+      "win_pct": 8.0
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 37,
+      "total_r": -79.288,
+      "avg_r": -2.1429
+     },
+     "channel": {
+      "n": 10,
+      "total_r": 69.753,
+      "avg_r": 6.9753
+     }
+    },
+    "equity_curve_r": [
+     -1.0808,
+     -2.5342,
+     -3.6222,
+     -5.5328,
+     -8.0557,
+     -10.7292,
+     -12.0847,
+     -7.7089,
+     7.4983,
+     5.0495,
+     3.1422,
+     1.5201,
+     0.4443,
+     -1.7117,
+     -4.8398,
+     -7.3506,
+     -9.9961,
+     -12.0464,
+     -14.5196,
+     -15.637,
+     -17.9871,
+     -20.9032,
+     -20.8977,
+     -22.8656,
+     -24.8912,
+     -28.0372,
+     14.5254,
+     15.3369,
+     17.0761,
+     15.9688,
+     13.2299,
+     11.2933,
+     9.1032,
+     7.243,
+     4.4689,
+     1.9638,
+     0.8954,
+     -1.8523,
+     -6.5612,
+     -7.0665,
+     -8.9902,
+     -1.2233,
+     -4.7261,
+     -5.8069,
+     -6.5638,
+     -8.4247,
+     -9.5346
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 6.75,
+    "s2_long": 6.75,
+    "s1_short": 6.406000137329102,
+    "s2_short": 5.928500175476074
+   },
+   "contracts": {
+    "dpp": 25000,
+    "micro": "MHG",
+    "micro_dpp": 2500,
+    "full_contracts": 0.0212,
+    "micro_contracts": 0.2118,
+    "unit_fits": false,
+    "one_contract_risk_pct": 9.44
+   },
+   "group": "metals",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 529.3902,
+    "notional": 3492.39,
+    "notional_pct": 69.8,
+    "leverage": 10.0,
+    "fits": {
+     "1.0": true,
+     "0.1": true
+    },
+    "carry_r_60d": 0.459,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 10.0,
+    "n_pct": 1.43
+   },
+   "rolls": {
+    "bars": 92,
+    "share": 0.0731,
+    "in_n_window": true,
+    "last": "2026-08-25"
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 6.75,
+    "distance_pct": 2.32
+   },
+   "approaching": true
+  },
+  {
    "symbol": "RTY",
    "name": "Russell 2000",
    "sector": "",
    "price": 2976.60009766,
    "n": 40.58141119,
    "n_pct": 1.36,
-   "dvol": 415697131.0,
+   "dvol": 412486926.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -2372,174 +2533,13 @@
    "approaching": true
   },
   {
-   "symbol": "CL",
-   "name": "Crude Oil (WTI)",
-   "sector": "",
-   "price": 91.22000122,
-   "n": 3.76143572,
-   "n_pct": 4.12,
-   "dvol": 19831564.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 91.66999816894531,
-    "h": 92.16999816894531,
-    "l": 88.72000122070312,
-    "c": 91.22000122070312
-   },
-   "exits": {
-    "x1_lo": 79.62000274658203,
-    "x1_hi": 93.13999938964844,
-    "x2_lo": 77.79000091552734,
-    "x2_hi": 93.13999938964844
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1257,
-   "date": "2026-09-04",
-   "unit_shares": 0.013293,
-   "unit_notional": 1.21,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 42,
-    "wins": 7,
-    "win_pct": 16.7,
-    "total_r": -41.658,
-    "avg_r": -0.9919,
-    "median_r": -1.0594,
-    "gross_r": -36.465,
-    "cost_r": 5.193,
-    "top10_share": null,
-    "max_dd_r": -47.218,
-    "expectancy_r": -0.9919,
-    "by_system": {
-     "1": {
-      "n": 12,
-      "total_r": -3.126,
-      "avg_r": -0.2605,
-      "win_pct": 33.3
-     },
-     "2": {
-      "n": 30,
-      "total_r": -38.532,
-      "avg_r": -1.2844,
-      "win_pct": 10.0
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 29,
-      "total_r": -47.29,
-      "avg_r": -1.6307
-     },
-     "channel": {
-      "n": 13,
-      "total_r": 5.632,
-      "avg_r": 0.4332
-     }
-    },
-    "equity_curve_r": [
-     -2.198,
-     -4.8307,
-     -0.1948,
-     -1.2225,
-     -3.8413,
-     -5.6446,
-     -7.2484,
-     -9.6844,
-     -10.7219,
-     -9.6951,
-     -10.7401,
-     -12.5098,
-     -13.5534,
-     -14.5909,
-     -15.6303,
-     -12.7129,
-     -13.5578,
-     -16.2214,
-     -18.8763,
-     -19.4794,
-     -20.5423,
-     -21.6067,
-     -23.7202,
-     -25.2799,
-     -26.3326,
-     -27.383,
-     -29.9792,
-     -28.8139,
-     -31.2313,
-     -33.0753,
-     -35.7334,
-     -36.854,
-     -37.8923,
-     -38.5885,
-     -39.6444,
-     -42.3666,
-     -44.1045,
-     -46.8214,
-     -46.173,
-     -47.2184,
-     -44.2167,
-     -41.6583
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 93.13999938964844,
-    "s2_long": 93.5,
-    "s1_short": 77.79000091552734,
-    "s2_short": 67.04000091552734
-   },
-   "contracts": {
-    "dpp": 1000,
-    "micro": "MCL",
-    "micro_dpp": 100,
-    "full_contracts": 0.0133,
-    "micro_contracts": 0.1329,
-    "unit_fits": false,
-    "one_contract_risk_pct": 15.05
-   },
-   "group": "energy",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 13.2928,
-    "notional": 1212.57,
-    "notional_pct": 24.3,
-    "leverage": 10.0,
-    "fits": {
-     "1.0": true,
-     "0.1": true
-    },
-    "carry_r_60d": 0.159,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 10.0,
-    "n_pct": 4.12
-   },
-   "rolls": {
-    "bars": 0,
-    "share": 0.0,
-    "in_n_window": false,
-    "last": null
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 93.5,
-    "distance_pct": 2.5
-   },
-   "approaching": true
-  },
-  {
    "symbol": "YM",
    "name": "Dow 30",
    "sector": "",
-   "price": 53275.0,
+   "price": 53440.0,
    "n": 546.53227533,
-   "n_pct": 1.03,
-   "dvol": 3059642116.0,
+   "n_pct": 1.02,
+   "dvol": 3110859466.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -2547,7 +2547,7 @@
     "o": 53707.0,
     "h": 53772.0,
     "l": 53235.0,
-    "c": 53275.0
+    "c": 53440.0
    },
    "exits": {
     "x1_lo": 52720.0,
@@ -2561,7 +2561,7 @@
    "bars": 1258,
    "date": "2026-09-04",
    "unit_shares": 0.018297,
-   "unit_notional": 974.78,
+   "unit_notional": 977.8,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2668,18 +2668,18 @@
    "cfd": {
     "dpp": 1.0,
     "units": 0.0915,
-    "notional": 4873.91,
-    "notional_pct": 97.5,
+    "notional": 4889.01,
+    "notional_pct": 97.8,
     "leverage": 20.0,
     "fits": {
      "1.0": false,
      "0.1": false
     },
-    "carry_r_60d": 0.641,
+    "carry_r_60d": 0.643,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 5.0,
-    "n_pct": 1.03
+    "n_pct": 1.02
    },
    "rolls": {
     "bars": 17,
@@ -2690,26 +2690,26 @@
    "nearest": {
     "key": "s2_long",
     "level": 54884.0,
-    "distance_pct": 3.02
+    "distance_pct": 2.7
    },
-   "approaching": false
+   "approaching": true
   },
   {
    "symbol": "PL",
    "name": "Platinum",
    "sector": "",
-   "price": 1828.5,
-   "n": 34.05884812,
-   "n_pct": 1.86,
-   "dvol": 1684896.0,
+   "price": 1821.0,
+   "n": 31.73384812,
+   "n_pct": 1.74,
+   "dvol": 16847.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
-    "o": 1831.5,
-    "h": 1839.0,
-    "l": 1785.0999755859375,
-    "c": 1828.5
+    "o": 1821.0,
+    "h": 1821.0,
+    "l": 1821.0,
+    "c": 1821.0
    },
    "exits": {
     "x1_lo": 1759.800048828125,
@@ -2722,8 +2722,8 @@
    "s1_filter_known": true,
    "bars": 1257,
    "date": "2026-09-04",
-   "unit_shares": 0.029361,
-   "unit_notional": 53.69,
+   "unit_shares": 0.031512,
+   "unit_notional": 57.38,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2833,27 +2833,27 @@
     "dpp": 50,
     "micro": "",
     "micro_dpp": 0,
-    "full_contracts": 0.0294,
+    "full_contracts": 0.0315,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 68.12
+    "one_contract_risk_pct": 63.47
    },
    "group": "metals",
    "cfd": {
     "dpp": 1.0,
-    "units": 1.468,
-    "notional": 2684.32,
-    "notional_pct": 53.7,
+    "units": 1.5756,
+    "notional": 2869.18,
+    "notional_pct": 57.4,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.353,
+    "carry_r_60d": 0.377,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 1.86
+    "n_pct": 1.74
    },
    "rolls": {
     "bars": 81,
@@ -2864,162 +2864,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1887.90002441,
-    "distance_pct": 3.25
-   },
-   "approaching": false
-  },
-  {
-   "symbol": "GC",
-   "name": "Gold",
-   "sector": "",
-   "price": 4477.20019531,
-   "n": 84.31130404,
-   "n_pct": 1.88,
-   "dvol": 46026795.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 4522.0,
-    "h": 4537.7998046875,
-    "l": 4412.0,
-    "c": 4477.2001953125
-   },
-   "exits": {
-    "x1_lo": 4292.2001953125,
-    "x1_hi": 4670.89990234375,
-    "x2_lo": 4292.2001953125,
-    "x2_hi": 4670.89990234375
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1257,
-   "date": "2026-09-04",
-   "unit_shares": 0.00593,
-   "unit_notional": 26.55,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 36,
-    "wins": 9,
-    "win_pct": 25.0,
-    "total_r": 108.567,
-    "avg_r": 3.0158,
-    "median_r": -1.2582,
-    "gross_r": 123.085,
-    "cost_r": 14.517,
-    "top10_share": 1.452,
-    "max_dd_r": -23.997,
-    "expectancy_r": 3.0158,
-    "by_system": {
-     "1": {
-      "n": 16,
-      "total_r": 5.567,
-      "avg_r": 0.3479,
-      "win_pct": 25.0
-     },
-     "2": {
-      "n": 20,
-      "total_r": 103.001,
-      "avg_r": 5.15,
-      "win_pct": 25.0
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 24,
-      "total_r": -46.748,
-      "avg_r": -1.9478
-     },
-     "channel": {
-      "n": 12,
-      "total_r": 155.316,
-      "avg_r": 12.943
-     }
-    },
-    "equity_curve_r": [
-     -0.8513,
-     -2.0106,
-     0.6564,
-     -1.943,
-     -1.3656,
-     3.3577,
-     2.4363,
-     1.3087,
-     18.8586,
-     16.8438,
-     16.5967,
-     14.3859,
-     11.5162,
-     10.159,
-     7.5614,
-     4.5324,
-     2.4132,
-     0.9285,
-     -0.7818,
-     -3.1448,
-     -5.1385,
-     15.5489,
-     13.2641,
-     12.1337,
-     20.3178,
-     19.1865,
-     17.4905,
-     45.5531,
-     43.6717,
-     40.9401,
-     39.8186,
-     111.3717,
-     110.3073,
-     107.5029,
-     111.3968,
-     108.5674
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 4670.89990234375,
-    "s2_long": 4670.89990234375,
-    "s1_short": 4292.2001953125,
-    "s2_short": 3962.5
-   },
-   "contracts": {
-    "dpp": 100,
-    "micro": "MGC",
-    "micro_dpp": 10,
-    "full_contracts": 0.0059,
-    "micro_contracts": 0.0593,
-    "unit_fits": false,
-    "one_contract_risk_pct": 33.72
-   },
-   "group": "metals",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 0.593,
-    "notional": 2655.16,
-    "notional_pct": 53.1,
-    "leverage": 20.0,
-    "fits": {
-     "1.0": false,
-     "0.1": true
-    },
-    "carry_r_60d": 0.349,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 5.0,
-    "n_pct": 1.88
-   },
-   "rolls": {
-    "bars": 42,
-    "share": 0.0334,
-    "in_n_window": false,
-    "last": "2026-07-28"
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 4670.89990234,
-    "distance_pct": 4.33
+    "distance_pct": 3.67
    },
    "approaching": false
   },
@@ -3030,7 +2875,7 @@
    "price": 29565.25,
    "n": 497.31162302,
    "n_pct": 1.68,
-   "dvol": 14397537039.0,
+   "dvol": 14653105086.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3189,21 +3034,176 @@
    "approaching": false
   },
   {
-   "symbol": "PA",
-   "name": "Palladium",
+   "symbol": "GC",
+   "name": "Gold",
    "sector": "",
-   "price": 1400.0,
-   "n": 34.34259661,
-   "n_pct": 2.45,
-   "dvol": 524633.0,
+   "price": 4429.79980469,
+   "n": 81.11633334,
+   "n_pct": 1.83,
+   "dvol": 4278840.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
-    "o": 1437.0,
-    "h": 1439.0,
-    "l": 1394.0,
-    "c": 1400.0
+    "o": 4429.7998046875,
+    "h": 4429.7998046875,
+    "l": 4429.7998046875,
+    "c": 4429.7998046875
+   },
+   "exits": {
+    "x1_lo": 4292.2001953125,
+    "x1_hi": 4670.89990234375,
+    "x2_lo": 4292.2001953125,
+    "x2_hi": 4670.89990234375
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1257,
+   "date": "2026-09-04",
+   "unit_shares": 0.006164,
+   "unit_notional": 27.31,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 36,
+    "wins": 9,
+    "win_pct": 25.0,
+    "total_r": 108.567,
+    "avg_r": 3.0158,
+    "median_r": -1.2582,
+    "gross_r": 123.085,
+    "cost_r": 14.517,
+    "top10_share": 1.452,
+    "max_dd_r": -23.997,
+    "expectancy_r": 3.0158,
+    "by_system": {
+     "1": {
+      "n": 16,
+      "total_r": 5.567,
+      "avg_r": 0.3479,
+      "win_pct": 25.0
+     },
+     "2": {
+      "n": 20,
+      "total_r": 103.001,
+      "avg_r": 5.15,
+      "win_pct": 25.0
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 24,
+      "total_r": -46.748,
+      "avg_r": -1.9478
+     },
+     "channel": {
+      "n": 12,
+      "total_r": 155.316,
+      "avg_r": 12.943
+     }
+    },
+    "equity_curve_r": [
+     -0.8513,
+     -2.0106,
+     0.6564,
+     -1.943,
+     -1.3656,
+     3.3577,
+     2.4363,
+     1.3087,
+     18.8586,
+     16.8438,
+     16.5967,
+     14.3859,
+     11.5162,
+     10.159,
+     7.5614,
+     4.5324,
+     2.4132,
+     0.9285,
+     -0.7818,
+     -3.1448,
+     -5.1385,
+     15.5489,
+     13.2641,
+     12.1337,
+     20.3178,
+     19.1865,
+     17.4905,
+     45.5531,
+     43.6717,
+     40.9401,
+     39.8186,
+     111.3717,
+     110.3073,
+     107.5029,
+     111.3968,
+     108.5674
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 4670.89990234375,
+    "s2_long": 4670.89990234375,
+    "s1_short": 4292.2001953125,
+    "s2_short": 3962.5
+   },
+   "contracts": {
+    "dpp": 100,
+    "micro": "MGC",
+    "micro_dpp": 10,
+    "full_contracts": 0.0062,
+    "micro_contracts": 0.0616,
+    "unit_fits": false,
+    "one_contract_risk_pct": 32.45
+   },
+   "group": "metals",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 0.6164,
+    "notional": 2730.52,
+    "notional_pct": 54.6,
+    "leverage": 20.0,
+    "fits": {
+     "1.0": false,
+     "0.1": true
+    },
+    "carry_r_60d": 0.359,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 5.0,
+    "n_pct": 1.83
+   },
+   "rolls": {
+    "bars": 42,
+    "share": 0.0334,
+    "in_n_window": false,
+    "last": "2026-07-28"
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 4670.89990234,
+    "distance_pct": 5.44
+   },
+   "approaching": false
+  },
+  {
+   "symbol": "PA",
+   "name": "Palladium",
+   "sector": "",
+   "price": 1390.09997559,
+   "n": 33.88259905,
+   "n_pct": 2.44,
+   "dvol": 213002.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 1390.0999755859375,
+    "h": 1390.0999755859375,
+    "l": 1390.0999755859375,
+    "c": 1390.0999755859375
    },
    "exits": {
     "x1_lo": 1317.199951171875,
@@ -3216,8 +3216,8 @@
    "s1_filter_known": true,
    "bars": 1256,
    "date": "2026-09-04",
-   "unit_shares": 0.014559,
-   "unit_notional": 20.38,
+   "unit_shares": 0.014757,
+   "unit_notional": 20.51,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3326,27 +3326,27 @@
     "dpp": 100,
     "micro": "",
     "micro_dpp": 0,
-    "full_contracts": 0.0146,
+    "full_contracts": 0.0148,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 137.37
+    "one_contract_risk_pct": 135.53
    },
    "group": "metals",
    "cfd": {
     "dpp": 1.0,
-    "units": 1.4559,
-    "notional": 2038.29,
-    "notional_pct": 40.8,
+    "units": 1.4757,
+    "notional": 2051.35,
+    "notional_pct": 41.0,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.268,
+    "carry_r_60d": 0.27,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 2.45
+    "n_pct": 2.44
    },
    "rolls": {
     "bars": 43,
@@ -3357,167 +3357,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1469.5,
-    "distance_pct": 4.96
-   },
-   "approaching": false
-  },
-  {
-   "symbol": "CT",
-   "name": "Cotton",
-   "sector": "",
-   "price": 86.73999786,
-   "n": 2.02031624,
-   "n_pct": 2.33,
-   "dvol": 107319.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 0.0,
-    "h": 89.7300033569336,
-    "l": 88.87999725341797,
-    "c": 86.73999786376953
-   },
-   "exits": {
-    "x1_lo": 82.62000274658203,
-    "x1_hi": 92.1500015258789,
-    "x2_lo": 81.48999786376953,
-    "x2_hi": 92.1500015258789
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1258,
-   "date": "2026-09-04",
-   "unit_shares": 0.049497,
-   "unit_notional": 4.29,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 41,
-    "wins": 7,
-    "win_pct": 17.1,
-    "total_r": -5.883,
-    "avg_r": -0.1435,
-    "median_r": -1.6874,
-    "gross_r": 2.663,
-    "cost_r": 8.546,
-    "top10_share": null,
-    "max_dd_r": -46.783,
-    "expectancy_r": -0.1435,
-    "by_system": {
-     "1": {
-      "n": 19,
-      "total_r": 11.651,
-      "avg_r": 0.6132,
-      "win_pct": 10.5
-     },
-     "2": {
-      "n": 22,
-      "total_r": -17.534,
-      "avg_r": -0.797,
-      "win_pct": 22.7
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 32,
-      "total_r": -62.966,
-      "avg_r": -1.9677
-     },
-     "channel": {
-      "n": 9,
-      "total_r": 57.083,
-      "avg_r": 6.3425
-     }
-    },
-    "equity_curve_r": [
-     -1.2731,
-     -3.5386,
-     -5.9032,
-     0.1902,
-     1.5013,
-     -0.3098,
-     -2.8699,
-     -5.5491,
-     -6.5927,
-     -8.4334,
-     -9.481,
-     -10.8736,
-     -12.0718,
-     -14.3706,
-     -17.1237,
-     -19.6037,
-     -20.702,
-     -23.5904,
-     -26.3801,
-     -15.6712,
-     -14.0211,
-     -15.0803,
-     -13.4686,
-     -16.268,
-     -18.1866,
-     -20.3476,
-     -22.035,
-     -24.298,
-     -25.7293,
-     -26.7972,
-     -32.7488,
-     -34.0352,
-     -35.8053,
-     -36.9434,
-     -38.056,
-     -41.5763,
-     -44.1602,
-     -45.2821,
-     -6.8019,
-     -9.2616,
-     -5.8831
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 92.1500015258789,
-    "s2_long": 92.1500015258789,
-    "s1_short": 81.48999786376953,
-    "s2_short": 70.66000366210938
-   },
-   "contracts": {
-    "dpp": 500,
-    "micro": "",
-    "micro_dpp": 0,
-    "full_contracts": 0.0495,
-    "micro_contracts": null,
-    "unit_fits": false,
-    "one_contract_risk_pct": 40.41
-   },
-   "group": "softs",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 24.7486,
-    "notional": 2146.69,
-    "notional_pct": 42.9,
-    "leverage": 10.0,
-    "fits": {
-     "1.0": true,
-     "0.1": true
-    },
-    "carry_r_60d": 0.282,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 10.0,
-    "n_pct": 2.33
-   },
-   "rolls": {
-    "bars": 20,
-    "share": 0.0159,
-    "in_n_window": true,
-    "last": "2026-09-04"
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 92.15000153,
-    "distance_pct": 6.24
+    "distance_pct": 5.71
    },
    "approaching": false
   },
@@ -3525,10 +3365,10 @@
    "symbol": "BZ",
    "name": "Brent Crude",
    "sector": "",
-   "price": 95.83000183,
+   "price": 96.27999878,
    "n": 3.88172881,
-   "n_pct": 4.05,
-   "dvol": 2541840.0,
+   "n_pct": 4.03,
+   "dvol": 2639095.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3536,7 +3376,7 @@
     "o": 95.87999725341797,
     "h": 96.55999755859375,
     "l": 93.16999816894531,
-    "c": 95.83000183105469
+    "c": 96.27999877929688
    },
    "exits": {
     "x1_lo": 85.4800033569336,
@@ -3550,7 +3390,7 @@
    "bars": 1258,
    "date": "2026-09-04",
    "unit_shares": 0.012881,
-   "unit_notional": 1.23,
+   "unit_notional": 1.24,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3648,18 +3488,18 @@
    "cfd": {
     "dpp": 1.0,
     "units": 12.8809,
-    "notional": 1234.37,
-    "notional_pct": 24.7,
+    "notional": 1240.17,
+    "notional_pct": 24.8,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.162,
+    "carry_r_60d": 0.163,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.05
+    "n_pct": 4.03
    },
    "rolls": {
     "bars": 0,
@@ -3670,168 +3510,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 102.01000214,
-    "distance_pct": 6.45
-   },
-   "approaching": false
-  },
-  {
-   "symbol": "SI",
-   "name": "Silver",
-   "sector": "",
-   "price": 66.81999969,
-   "n": 1.98930729,
-   "n_pct": 2.98,
-   "dvol": 237239.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 67.62999725341797,
-    "h": 67.80999755859375,
-    "l": 65.33499908447266,
-    "c": 66.81999969482422
-   },
-   "exits": {
-    "x1_lo": 63.36000061035156,
-    "x1_hi": 71.16000366210938,
-    "x2_lo": 63.119998931884766,
-    "x2_hi": 71.16000366210938
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1257,
-   "date": "2026-09-04",
-   "unit_shares": 0.005027,
-   "unit_notional": 0.34,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 42,
-    "wins": 8,
-    "win_pct": 19.0,
-    "total_r": 115.367,
-    "avg_r": 2.7468,
-    "median_r": -1.5408,
-    "gross_r": 124.686,
-    "cost_r": 9.319,
-    "top10_share": 1.509,
-    "max_dd_r": -16.105,
-    "expectancy_r": 2.7468,
-    "by_system": {
-     "1": {
-      "n": 21,
-      "total_r": 24.626,
-      "avg_r": 1.1727,
-      "win_pct": 33.3
-     },
-     "2": {
-      "n": 21,
-      "total_r": 90.741,
-      "avg_r": 4.321,
-      "win_pct": 4.8
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 33,
-      "total_r": -59.605,
-      "avg_r": -1.8062
-     },
-     "channel": {
-      "n": 9,
-      "total_r": 174.973,
-      "avg_r": 19.4414
-     }
-    },
-    "equity_curve_r": [
-     0.9257,
-     -0.6315,
-     -2.1558,
-     -3.3359,
-     -5.788,
-     -6.8643,
-     -1.5109,
-     5.7818,
-     3.1156,
-     1.1627,
-     0.1068,
-     8.2077,
-     6.2564,
-     8.2727,
-     5.9653,
-     4.792,
-     2.886,
-     0.8456,
-     -0.8956,
-     -1.9973,
-     -3.9413,
-     -6.6807,
-     -7.8319,
-     11.147,
-     10.6072,
-     9.5412,
-     6.7374,
-     4.9767,
-     3.8976,
-     1.3642,
-     -0.4249,
-     -1.2709,
-     -3.7137,
-     -4.5773,
-     -0.0049,
-     -2.8969,
-     125.3754,
-     123.1709,
-     121.3476,
-     119.2875,
-     116.426,
-     115.3673
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 71.16000366210938,
-    "s2_long": 71.16000366210938,
-    "s1_short": 63.119998931884766,
-    "s2_short": 55.01499938964844
-   },
-   "contracts": {
-    "dpp": 5000,
-    "micro": "SIL",
-    "micro_dpp": 1000,
-    "full_contracts": 0.005,
-    "micro_contracts": 0.0251,
-    "unit_fits": false,
-    "one_contract_risk_pct": 79.57
-   },
-   "group": "metals",
-   "cfd": {
-    "dpp": 1.0,
-    "units": 25.1344,
-    "notional": 1679.48,
-    "notional_pct": 33.6,
-    "leverage": 10.0,
-    "fits": {
-     "1.0": true,
-     "0.1": true
-    },
-    "carry_r_60d": 0.221,
-    "carry_pct_assumed": 8.0,
-    "stop_binds": true,
-    "liq_pct": 10.0,
-    "n_pct": 2.98
-   },
-   "rolls": {
-    "bars": 78,
-    "share": 0.0621,
-    "in_n_window": true,
-    "last": "2026-08-13"
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 71.16000366,
-    "distance_pct": 6.5
+    "distance_pct": 5.95
    },
    "approaching": false
   },
@@ -3839,10 +3518,10 @@
    "symbol": "RB",
    "name": "RBOB Gasoline",
    "sector": "",
-   "price": 3.19980001,
+   "price": 3.21460009,
    "n": 0.13083226,
-   "n_pct": 4.09,
-   "dvol": 146105.0,
+   "n_pct": 4.07,
+   "dvol": 143538.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3850,7 +3529,7 @@
     "o": 3.1489999294281006,
     "h": 3.2202999591827393,
     "l": 3.0838000774383545,
-    "c": 3.1998000144958496
+    "c": 3.214600086212158
    },
    "exits": {
     "x1_lo": 3.0539000034332275,
@@ -3962,18 +3641,18 @@
    "cfd": {
     "dpp": 1.0,
     "units": 382.1688,
-    "notional": 1222.86,
-    "notional_pct": 24.5,
+    "notional": 1228.52,
+    "notional_pct": 24.6,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.161,
+    "carry_r_60d": 0.162,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.09
+    "n_pct": 4.07
    },
    "rolls": {
     "bars": 5,
@@ -3984,172 +3663,328 @@
    "nearest": {
     "key": "s1_short",
     "level": 2.98000002,
-    "distance_pct": 6.87
+    "distance_pct": 7.3
    },
    "approaching": false
   },
   {
-   "symbol": "KC",
-   "name": "Coffee",
+   "symbol": "SI",
+   "name": "Silver",
    "sector": "",
-   "price": 292.8999939,
-   "n": 13.4163786,
-   "n_pct": 4.58,
-   "dvol": 1940965.0,
+   "price": 66.04699707,
+   "n": 1.94095753,
+   "n_pct": 2.94,
+   "dvol": 102370.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
-    "o": 296.1000061035156,
-    "h": 300.8500061035156,
-    "l": 292.75,
-    "c": 292.8999938964844
+    "o": 66.5250015258789,
+    "h": 66.54000091552734,
+    "l": 65.46499633789062,
+    "c": 66.0469970703125
    },
    "exits": {
-    "x1_lo": 292.75,
-    "x1_hi": 377.95001220703125,
-    "x2_lo": 292.75,
-    "x2_hi": 377.95001220703125
+    "x1_lo": 63.36000061035156,
+    "x1_hi": 71.16000366210938,
+    "x2_lo": 63.119998931884766,
+    "x2_hi": 71.16000366210938
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1257,
+   "date": "2026-09-04",
+   "unit_shares": 0.005152,
+   "unit_notional": 0.34,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 42,
+    "wins": 8,
+    "win_pct": 19.0,
+    "total_r": 115.367,
+    "avg_r": 2.7468,
+    "median_r": -1.5408,
+    "gross_r": 124.686,
+    "cost_r": 9.319,
+    "top10_share": 1.509,
+    "max_dd_r": -16.105,
+    "expectancy_r": 2.7468,
+    "by_system": {
+     "1": {
+      "n": 21,
+      "total_r": 24.626,
+      "avg_r": 1.1727,
+      "win_pct": 33.3
+     },
+     "2": {
+      "n": 21,
+      "total_r": 90.741,
+      "avg_r": 4.321,
+      "win_pct": 4.8
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 33,
+      "total_r": -59.605,
+      "avg_r": -1.8062
+     },
+     "channel": {
+      "n": 9,
+      "total_r": 174.973,
+      "avg_r": 19.4414
+     }
+    },
+    "equity_curve_r": [
+     0.9257,
+     -0.6315,
+     -2.1558,
+     -3.3359,
+     -5.788,
+     -6.8643,
+     -1.5109,
+     5.7818,
+     3.1156,
+     1.1627,
+     0.1068,
+     8.2077,
+     6.2564,
+     8.2727,
+     5.9653,
+     4.792,
+     2.886,
+     0.8456,
+     -0.8956,
+     -1.9973,
+     -3.9413,
+     -6.6807,
+     -7.8319,
+     11.147,
+     10.6072,
+     9.5412,
+     6.7374,
+     4.9767,
+     3.8976,
+     1.3642,
+     -0.4249,
+     -1.2709,
+     -3.7137,
+     -4.5773,
+     -0.0049,
+     -2.8969,
+     125.3754,
+     123.1709,
+     121.3476,
+     119.2875,
+     116.426,
+     115.3673
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 71.16000366210938,
+    "s2_long": 71.16000366210938,
+    "s1_short": 63.119998931884766,
+    "s2_short": 55.01499938964844
+   },
+   "contracts": {
+    "dpp": 5000,
+    "micro": "SIL",
+    "micro_dpp": 1000,
+    "full_contracts": 0.0052,
+    "micro_contracts": 0.0258,
+    "unit_fits": false,
+    "one_contract_risk_pct": 77.64
+   },
+   "group": "metals",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 25.7605,
+    "notional": 1701.4,
+    "notional_pct": 34.0,
+    "leverage": 10.0,
+    "fits": {
+     "1.0": true,
+     "0.1": true
+    },
+    "carry_r_60d": 0.224,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 10.0,
+    "n_pct": 2.94
+   },
+   "rolls": {
+    "bars": 78,
+    "share": 0.0621,
+    "in_n_window": true,
+    "last": "2026-08-13"
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 71.16000366,
+    "distance_pct": 7.74
+   },
+   "approaching": false
+  },
+  {
+   "symbol": "CT",
+   "name": "Cotton",
+   "sector": "",
+   "price": 82.41999817,
+   "n": 1.78531601,
+   "n_pct": 2.17,
+   "dvol": 3009.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 83.30999755859375,
+    "h": 84.0,
+    "l": 82.33000183105469,
+    "c": 82.41999816894531
+   },
+   "exits": {
+    "x1_lo": 82.33000183105469,
+    "x1_hi": 92.1500015258789,
+    "x2_lo": 81.48999786376953,
+    "x2_hi": 92.1500015258789
    },
    "added_today": 0,
    "s1_blocked": true,
    "s1_filter_known": true,
    "bars": 1258,
    "date": "2026-09-04",
-   "unit_shares": 0.009938,
-   "unit_notional": 2.91,
+   "unit_shares": 0.056012,
+   "unit_notional": 4.62,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
-    "n": 46,
-    "wins": 8,
-    "win_pct": 17.4,
-    "total_r": -22.659,
-    "avg_r": -0.4926,
-    "median_r": -1.688,
-    "gross_r": -16.147,
-    "cost_r": 6.513,
+    "n": 41,
+    "wins": 7,
+    "win_pct": 17.1,
+    "total_r": -5.883,
+    "avg_r": -0.1435,
+    "median_r": -1.6874,
+    "gross_r": 2.663,
+    "cost_r": 8.546,
     "top10_share": null,
-    "max_dd_r": -39.783,
-    "expectancy_r": -0.4926,
+    "max_dd_r": -46.783,
+    "expectancy_r": -0.1435,
     "by_system": {
      "1": {
-      "n": 17,
-      "total_r": 9.574,
-      "avg_r": 0.5632,
-      "win_pct": 23.5
+      "n": 19,
+      "total_r": 11.651,
+      "avg_r": 0.6132,
+      "win_pct": 10.5
      },
      "2": {
-      "n": 29,
-      "total_r": -32.234,
-      "avg_r": -1.1115,
-      "win_pct": 13.8
+      "n": 22,
+      "total_r": -17.534,
+      "avg_r": -0.797,
+      "win_pct": 22.7
      }
     },
     "by_reason": {
      "stop": {
-      "n": 38,
-      "total_r": -74.336,
-      "avg_r": -1.9562
+      "n": 32,
+      "total_r": -62.966,
+      "avg_r": -1.9677
      },
      "channel": {
-      "n": 8,
-      "total_r": 51.676,
-      "avg_r": 6.4595
+      "n": 9,
+      "total_r": 57.083,
+      "avg_r": 6.3425
      }
     },
     "equity_curve_r": [
-     -1.8538,
-     -3.6847,
-     -5.5592,
-     -7.434,
-     -8.8118,
-     -10.4597,
-     -14.2264,
-     -16.0824,
-     -17.6653,
-     -19.544,
-     -10.7564,
-     -13.4346,
-     -15.5616,
-     -18.7269,
-     -21.132,
-     -22.1884,
-     -19.3874,
-     -23.8266,
-     -25.0884,
-     -26.1422,
-     -28.6446,
-     -22.0013,
-     -24.2762,
-     -25.3289,
-     -26.3761,
-     -27.4934,
-     -29.9219,
-     -30.9762,
-     -33.3775,
-     -34.4432,
-     -36.876,
-     -38.7316,
-     -39.7829,
-     -26.0476,
-     -21.1089,
-     -22.1501,
-     -21.9275,
-     -11.9626,
-     -14.851,
-     -16.5223,
-     -11.9394,
-     -13.6441,
-     -16.3566,
-     -18.4988,
-     -20.0335,
-     -22.6594
+     -1.2731,
+     -3.5386,
+     -5.9032,
+     0.1902,
+     1.5013,
+     -0.3098,
+     -2.8699,
+     -5.5491,
+     -6.5927,
+     -8.4334,
+     -9.481,
+     -10.8736,
+     -12.0718,
+     -14.3706,
+     -17.1237,
+     -19.6037,
+     -20.702,
+     -23.5904,
+     -26.3801,
+     -15.6712,
+     -14.0211,
+     -15.0803,
+     -13.4686,
+     -16.268,
+     -18.1866,
+     -20.3476,
+     -22.035,
+     -24.298,
+     -25.7293,
+     -26.7972,
+     -32.7488,
+     -34.0352,
+     -35.8053,
+     -36.9434,
+     -38.056,
+     -41.5763,
+     -44.1602,
+     -45.2821,
+     -6.8019,
+     -9.2616,
+     -5.8831
     ]
    },
    "position": null,
    "triggers": {
-    "s1_long": 377.95001220703125,
-    "s2_long": 377.95001220703125,
-    "s1_short": 292.75,
-    "s2_short": 269.79998779296875
+    "s1_long": 92.1500015258789,
+    "s2_long": 92.1500015258789,
+    "s1_short": 81.48999786376953,
+    "s2_short": 70.66000366210938
    },
    "contracts": {
-    "dpp": 375,
+    "dpp": 500,
     "micro": "",
     "micro_dpp": 0,
-    "full_contracts": 0.0099,
+    "full_contracts": 0.056,
     "micro_contracts": null,
     "unit_fits": false,
-    "one_contract_risk_pct": 201.25
+    "one_contract_risk_pct": 35.71
    },
    "group": "softs",
    "cfd": {
     "dpp": 1.0,
-    "units": 3.7268,
-    "notional": 1091.58,
-    "notional_pct": 21.8,
+    "units": 28.0062,
+    "notional": 2308.27,
+    "notional_pct": 46.2,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.144,
+    "carry_r_60d": 0.304,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.58
+    "n_pct": 2.17
    },
    "rolls": {
-    "bars": 38,
-    "share": 0.0302,
-    "in_n_window": true,
-    "last": "2026-09-04"
+    "bars": 19,
+    "share": 0.0151,
+    "in_n_window": false,
+    "last": "2026-07-10"
    },
    "nearest": {
-    "key": "s2_short",
-    "level": 269.79998779,
-    "distance_pct": 7.89
+    "key": "s2_long",
+    "level": 92.15000153,
+    "distance_pct": 11.81
    },
    "approaching": false
   },
@@ -4157,10 +3992,10 @@
    "symbol": "NG",
    "name": "Natural Gas",
    "sector": "",
-   "price": 2.93899989,
+   "price": 2.9749999,
    "n": 0.10770361,
-   "n_pct": 3.66,
-   "dvol": 410196.0,
+   "n_pct": 3.62,
+   "dvol": 427902.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -4168,7 +4003,7 @@
     "o": 2.9260001182556152,
     "h": 2.9860000610351562,
     "l": 2.9019999504089355,
-    "c": 2.938999891281128
+    "c": 2.9749999046325684
    },
    "exits": {
     "x1_lo": 2.696000099182129,
@@ -4289,18 +4124,18 @@
    "cfd": {
     "dpp": 1.0,
     "units": 464.237,
-    "notional": 1364.39,
-    "notional_pct": 27.3,
+    "notional": 1381.11,
+    "notional_pct": 27.6,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.179,
+    "carry_r_60d": 0.182,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.66
+    "n_pct": 3.62
    },
    "rolls": {
     "bars": 4,
@@ -4311,7 +4146,172 @@
    "nearest": {
     "key": "s2_short",
     "level": 2.61599994,
-    "distance_pct": 10.99
+    "distance_pct": 12.07
+   },
+   "approaching": false
+  },
+  {
+   "symbol": "KC",
+   "name": "Coffee",
+   "sector": "",
+   "price": 324.25,
+   "n": 11.90637799,
+   "n_pct": 3.67,
+   "dvol": 1718764.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 325.75,
+    "h": 325.75,
+    "l": 325.75,
+    "c": 324.25
+   },
+   "exits": {
+    "x1_lo": 320.0,
+    "x1_hi": 377.95001220703125,
+    "x2_lo": 320.0,
+    "x2_hi": 377.95001220703125
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1258,
+   "date": "2026-09-04",
+   "unit_shares": 0.011198,
+   "unit_notional": 3.63,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 46,
+    "wins": 8,
+    "win_pct": 17.4,
+    "total_r": -22.659,
+    "avg_r": -0.4926,
+    "median_r": -1.688,
+    "gross_r": -16.147,
+    "cost_r": 6.513,
+    "top10_share": null,
+    "max_dd_r": -39.783,
+    "expectancy_r": -0.4926,
+    "by_system": {
+     "1": {
+      "n": 17,
+      "total_r": 9.574,
+      "avg_r": 0.5632,
+      "win_pct": 23.5
+     },
+     "2": {
+      "n": 29,
+      "total_r": -32.234,
+      "avg_r": -1.1115,
+      "win_pct": 13.8
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 38,
+      "total_r": -74.336,
+      "avg_r": -1.9562
+     },
+     "channel": {
+      "n": 8,
+      "total_r": 51.676,
+      "avg_r": 6.4595
+     }
+    },
+    "equity_curve_r": [
+     -1.8538,
+     -3.6847,
+     -5.5592,
+     -7.434,
+     -8.8118,
+     -10.4597,
+     -14.2264,
+     -16.0824,
+     -17.6653,
+     -19.544,
+     -10.7564,
+     -13.4346,
+     -15.5616,
+     -18.7269,
+     -21.132,
+     -22.1884,
+     -19.3874,
+     -23.8266,
+     -25.0884,
+     -26.1422,
+     -28.6446,
+     -22.0013,
+     -24.2762,
+     -25.3289,
+     -26.3761,
+     -27.4934,
+     -29.9219,
+     -30.9762,
+     -33.3775,
+     -34.4432,
+     -36.876,
+     -38.7316,
+     -39.7829,
+     -26.0476,
+     -21.1089,
+     -22.1501,
+     -21.9275,
+     -11.9626,
+     -14.851,
+     -16.5223,
+     -11.9394,
+     -13.6441,
+     -16.3566,
+     -18.4988,
+     -20.0335,
+     -22.6594
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 377.95001220703125,
+    "s2_long": 377.95001220703125,
+    "s1_short": 320.0,
+    "s2_short": 269.79998779296875
+   },
+   "contracts": {
+    "dpp": 375,
+    "micro": "",
+    "micro_dpp": 0,
+    "full_contracts": 0.0112,
+    "micro_contracts": null,
+    "unit_fits": false,
+    "one_contract_risk_pct": 178.6
+   },
+   "group": "softs",
+   "cfd": {
+    "dpp": 1.0,
+    "units": 4.1994,
+    "notional": 1361.67,
+    "notional_pct": 27.2,
+    "leverage": 10.0,
+    "fits": {
+     "1.0": true,
+     "0.1": true
+    },
+    "carry_r_60d": 0.179,
+    "carry_pct_assumed": 8.0,
+    "stop_binds": true,
+    "liq_pct": 10.0,
+    "n_pct": 3.67
+   },
+   "rolls": {
+    "bars": 37,
+    "share": 0.0294,
+    "in_n_window": false,
+    "last": "2026-06-30"
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 377.95001221,
+    "distance_pct": 16.56
    },
    "approaching": false
   }
@@ -4323,11 +4323,11 @@
    "symbol": "6A",
    "name": "Australian Dollar",
    "group": "currency",
-   "price": 0.72035003,
+   "price": 0.72030002,
    "cfd": {
     "dpp": 1.0,
     "units": 12602.5874,
-    "notional": 9078.27,
+    "notional": 9077.64,
     "notional_pct": 181.6,
     "leverage": 30.0,
     "fits": {
@@ -4356,18 +4356,18 @@
    "symbol": "6B",
    "name": "British Pound",
    "group": "currency",
-   "price": 1.35169995,
+   "price": 1.35140002,
    "cfd": {
     "dpp": 1.0,
     "units": 8778.8573,
-    "notional": 11866.38,
+    "notional": 11863.75,
     "notional_pct": 237.3,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.561,
+    "carry_r_60d": 1.56,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -4389,18 +4389,18 @@
    "symbol": "6E",
    "name": "Euro FX",
    "group": "currency",
-   "price": 1.16184998,
+   "price": 1.16139996,
    "cfd": {
     "dpp": 1.0,
     "units": 10420.1663,
-    "notional": 12106.67,
-    "notional_pct": 242.1,
+    "notional": 12101.98,
+    "notional_pct": 242.0,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.592,
+    "carry_r_60d": 1.591,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -4422,22 +4422,22 @@
    "symbol": "CL",
    "name": "Crude Oil (WTI)",
    "group": "energy",
-   "price": 91.22000122,
+   "price": 91.48000336,
    "cfd": {
     "dpp": 1.0,
     "units": 13.2928,
-    "notional": 1212.57,
+    "notional": 1216.03,
     "notional_pct": 24.3,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.159,
+    "carry_r_60d": 0.16,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.12
+    "n_pct": 4.11
    },
    "n": 3.76143572,
    "dpp": 1000,
@@ -4488,32 +4488,32 @@
    "symbol": "GC",
    "name": "Gold",
    "group": "metals",
-   "price": 4477.20019531,
+   "price": 4429.79980469,
    "cfd": {
     "dpp": 1.0,
-    "units": 0.593,
-    "notional": 2655.16,
-    "notional_pct": 53.1,
+    "units": 0.6164,
+    "notional": 2730.52,
+    "notional_pct": 54.6,
     "leverage": 20.0,
     "fits": {
      "1.0": false,
      "0.1": true
     },
-    "carry_r_60d": 0.349,
+    "carry_r_60d": 0.359,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 5.0,
-    "n_pct": 1.88
+    "n_pct": 1.83
    },
-   "n": 84.31130404,
+   "n": 81.11633334,
    "dpp": 100,
    "micro": "MGC",
    "micro_dpp": 10,
-   "full_contracts": 0.0059,
-   "micro_contracts": 0.0593,
+   "full_contracts": 0.0062,
+   "micro_contracts": 0.0616,
    "unit_fits": false,
-   "two_n_risk_smallest": 1686.23,
-   "one_contract_risk_pct": 33.72,
+   "two_n_risk_smallest": 1622.33,
+   "one_contract_risk_pct": 32.45,
    "roll_in_n_window": false,
    "equity": 5000.0
   },
@@ -4521,32 +4521,32 @@
    "symbol": "HG",
    "name": "Copper",
    "group": "metals",
-   "price": 6.66800022,
+   "price": 6.59700012,
    "cfd": {
     "dpp": 1.0,
-    "units": 503.4066,
-    "notional": 3356.72,
-    "notional_pct": 67.1,
+    "units": 529.3902,
+    "notional": 3492.39,
+    "notional_pct": 69.8,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.441,
+    "carry_r_60d": 0.459,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 1.49
+    "n_pct": 1.43
    },
-   "n": 0.09932328,
+   "n": 0.09444829,
    "dpp": 25000,
    "micro": "MHG",
    "micro_dpp": 2500,
-   "full_contracts": 0.0201,
-   "micro_contracts": 0.2014,
+   "full_contracts": 0.0212,
+   "micro_contracts": 0.2118,
    "unit_fits": false,
-   "two_n_risk_smallest": 496.62,
-   "one_contract_risk_pct": 9.93,
+   "two_n_risk_smallest": 472.24,
+   "one_contract_risk_pct": 9.44,
    "roll_in_n_window": true,
    "equity": 5000.0
   },
@@ -4554,22 +4554,22 @@
    "symbol": "NG",
    "name": "Natural Gas",
    "group": "energy",
-   "price": 2.93899989,
+   "price": 2.9749999,
    "cfd": {
     "dpp": 1.0,
     "units": 464.237,
-    "notional": 1364.39,
-    "notional_pct": 27.3,
+    "notional": 1381.11,
+    "notional_pct": 27.6,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.179,
+    "carry_r_60d": 0.182,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.66
+    "n_pct": 3.62
    },
    "n": 0.10770361,
    "dpp": 10000,
@@ -4653,32 +4653,32 @@
    "symbol": "SI",
    "name": "Silver",
    "group": "metals",
-   "price": 66.81999969,
+   "price": 66.04699707,
    "cfd": {
     "dpp": 1.0,
-    "units": 25.1344,
-    "notional": 1679.48,
-    "notional_pct": 33.6,
+    "units": 25.7605,
+    "notional": 1701.4,
+    "notional_pct": 34.0,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.221,
+    "carry_r_60d": 0.224,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 2.98
+    "n_pct": 2.94
    },
-   "n": 1.98930729,
+   "n": 1.94095753,
    "dpp": 5000,
    "micro": "SIL",
    "micro_dpp": 1000,
-   "full_contracts": 0.005,
-   "micro_contracts": 0.0251,
+   "full_contracts": 0.0052,
+   "micro_contracts": 0.0258,
    "unit_fits": false,
-   "two_n_risk_smallest": 3978.61,
-   "one_contract_risk_pct": 79.57,
+   "two_n_risk_smallest": 3881.92,
+   "one_contract_risk_pct": 77.64,
    "roll_in_n_window": true,
    "equity": 5000.0
   },
@@ -4686,22 +4686,22 @@
    "symbol": "YM",
    "name": "Dow 30",
    "group": "index",
-   "price": 53275.0,
+   "price": 53440.0,
    "cfd": {
     "dpp": 1.0,
     "units": 0.0915,
-    "notional": 4873.91,
-    "notional_pct": 97.5,
+    "notional": 4889.01,
+    "notional_pct": 97.8,
     "leverage": 20.0,
     "fits": {
      "1.0": false,
      "0.1": false
     },
-    "carry_r_60d": 0.641,
+    "carry_r_60d": 0.643,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 5.0,
-    "n_pct": 1.03
+    "n_pct": 1.02
    },
    "n": 546.53227533,
    "dpp": 5,
@@ -4719,12 +4719,12 @@
    "symbol": "6C",
    "name": "Canadian Dollar",
    "group": "currency",
-   "price": 0.72299999,
+   "price": 0.72285002,
    "cfd": {
     "dpp": 1.0,
     "units": 17051.4446,
-    "notional": 12328.19,
-    "notional_pct": 246.6,
+    "notional": 12325.64,
+    "notional_pct": 246.5,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
@@ -4752,32 +4752,32 @@
    "symbol": "6J",
    "name": "Japanese Yen",
    "group": "currency",
-   "price": 0.006404,
+   "price": 0.006405,
    "cfd": {
     "dpp": 1.0,
-    "units": 1125803.5671,
-    "notional": 7209.65,
-    "notional_pct": 144.2,
+    "units": 1126437.7935,
+    "notional": 7214.83,
+    "notional_pct": 144.3,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.948,
+    "carry_r_60d": 0.949,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
     "n_pct": 0.69
    },
-   "n": 4.441e-05,
+   "n": 4.439e-05,
    "dpp": 12500000,
    "micro": "",
    "micro_dpp": 0,
    "full_contracts": 0.0901,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 1110.25,
-   "one_contract_risk_pct": 22.21,
+   "two_n_risk_smallest": 1109.75,
+   "one_contract_risk_pct": 22.19,
    "roll_in_n_window": false,
    "equity": 5000.0
   },
@@ -4785,18 +4785,18 @@
    "symbol": "6S",
    "name": "Swiss Franc",
    "group": "currency",
-   "price": 1.23564994,
+   "price": 1.23525,
    "cfd": {
     "dpp": 1.0,
     "units": 5986.1853,
-    "notional": 7396.83,
+    "notional": 7394.44,
     "notional_pct": 147.9,
     "leverage": 30.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.973,
+    "carry_r_60d": 0.972,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 3.33,
@@ -4818,22 +4818,22 @@
    "symbol": "BZ",
    "name": "Brent Crude",
    "group": "energy",
-   "price": 95.83000183,
+   "price": 96.27999878,
    "cfd": {
     "dpp": 1.0,
     "units": 12.8809,
-    "notional": 1234.37,
-    "notional_pct": 24.7,
+    "notional": 1240.17,
+    "notional_pct": 24.8,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.162,
+    "carry_r_60d": 0.163,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.05
+    "n_pct": 4.03
    },
    "n": 3.88172881,
    "dpp": 1000,
@@ -4851,32 +4851,32 @@
    "symbol": "CC",
    "name": "Cocoa",
    "group": "softs",
-   "price": 6175.0,
+   "price": 6082.0,
    "cfd": {
     "dpp": 1.0,
-    "units": 0.1954,
-    "notional": 1206.66,
-    "notional_pct": 24.1,
+    "units": 0.2054,
+    "notional": 1249.28,
+    "notional_pct": 25.0,
     "leverage": 10.0,
     "fits": {
      "1.0": false,
      "0.1": true
     },
-    "carry_r_60d": 0.159,
+    "carry_r_60d": 0.164,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.14
+    "n_pct": 4.0
    },
-   "n": 255.87082973,
+   "n": 243.42082973,
    "dpp": 10,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.0195,
+   "full_contracts": 0.0205,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 5117.42,
-   "one_contract_risk_pct": 102.35,
+   "two_n_risk_smallest": 4868.42,
+   "one_contract_risk_pct": 97.37,
    "roll_in_n_window": true,
    "equity": 5000.0
   },
@@ -4884,45 +4884,45 @@
    "symbol": "CT",
    "name": "Cotton",
    "group": "softs",
-   "price": 86.73999786,
+   "price": 82.41999817,
    "cfd": {
     "dpp": 1.0,
-    "units": 24.7486,
-    "notional": 2146.69,
-    "notional_pct": 42.9,
+    "units": 28.0062,
+    "notional": 2308.27,
+    "notional_pct": 46.2,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.282,
+    "carry_r_60d": 0.304,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 2.33
+    "n_pct": 2.17
    },
-   "n": 2.02031624,
+   "n": 1.78531601,
    "dpp": 500,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.0495,
+   "full_contracts": 0.056,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 2020.32,
-   "one_contract_risk_pct": 40.41,
-   "roll_in_n_window": true,
+   "two_n_risk_smallest": 1785.32,
+   "one_contract_risk_pct": 35.71,
+   "roll_in_n_window": false,
    "equity": 5000.0
   },
   {
    "symbol": "HO",
    "name": "Heating Oil",
    "group": "energy",
-   "price": 4.54699993,
+   "price": 4.54020023,
    "cfd": {
     "dpp": 1.0,
     "units": 281.1357,
-    "notional": 1278.32,
-    "notional_pct": 25.6,
+    "notional": 1276.41,
+    "notional_pct": 25.5,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
@@ -4932,7 +4932,7 @@
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.91
+    "n_pct": 3.92
    },
    "n": 0.17785005,
    "dpp": 42000,
@@ -4950,65 +4950,65 @@
    "symbol": "KC",
    "name": "Coffee",
    "group": "softs",
-   "price": 292.8999939,
+   "price": 324.25,
    "cfd": {
     "dpp": 1.0,
-    "units": 3.7268,
-    "notional": 1091.58,
-    "notional_pct": 21.8,
+    "units": 4.1994,
+    "notional": 1361.67,
+    "notional_pct": 27.2,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.144,
+    "carry_r_60d": 0.179,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.58
+    "n_pct": 3.67
    },
-   "n": 13.4163786,
+   "n": 11.90637799,
    "dpp": 375,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.0099,
+   "full_contracts": 0.0112,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 10062.28,
-   "one_contract_risk_pct": 201.25,
-   "roll_in_n_window": true,
+   "two_n_risk_smallest": 8929.78,
+   "one_contract_risk_pct": 178.6,
+   "roll_in_n_window": false,
    "equity": 5000.0
   },
   {
    "symbol": "PA",
    "name": "Palladium",
    "group": "metals",
-   "price": 1400.0,
+   "price": 1390.09997559,
    "cfd": {
     "dpp": 1.0,
-    "units": 1.4559,
-    "notional": 2038.29,
-    "notional_pct": 40.8,
+    "units": 1.4757,
+    "notional": 2051.35,
+    "notional_pct": 41.0,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.268,
+    "carry_r_60d": 0.27,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 2.45
+    "n_pct": 2.44
    },
-   "n": 34.34259661,
+   "n": 33.88259905,
    "dpp": 100,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.0146,
+   "full_contracts": 0.0148,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 6868.52,
-   "one_contract_risk_pct": 137.37,
+   "two_n_risk_smallest": 6776.52,
+   "one_contract_risk_pct": 135.53,
    "roll_in_n_window": true,
    "equity": 5000.0
   },
@@ -5016,32 +5016,32 @@
    "symbol": "PL",
    "name": "Platinum",
    "group": "metals",
-   "price": 1828.5,
+   "price": 1821.0,
    "cfd": {
     "dpp": 1.0,
-    "units": 1.468,
-    "notional": 2684.32,
-    "notional_pct": 53.7,
+    "units": 1.5756,
+    "notional": 2869.18,
+    "notional_pct": 57.4,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.353,
+    "carry_r_60d": 0.377,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 1.86
+    "n_pct": 1.74
    },
-   "n": 34.05884812,
+   "n": 31.73384812,
    "dpp": 50,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.0294,
+   "full_contracts": 0.0315,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 3405.88,
-   "one_contract_risk_pct": 68.12,
+   "two_n_risk_smallest": 3173.38,
+   "one_contract_risk_pct": 63.47,
    "roll_in_n_window": false,
    "equity": 5000.0
   },
@@ -5049,22 +5049,22 @@
    "symbol": "RB",
    "name": "RBOB Gasoline",
    "group": "energy",
-   "price": 3.19980001,
+   "price": 3.21460009,
    "cfd": {
     "dpp": 1.0,
     "units": 382.1688,
-    "notional": 1222.86,
-    "notional_pct": 24.5,
+    "notional": 1228.52,
+    "notional_pct": 24.6,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.161,
+    "carry_r_60d": 0.162,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 4.09
+    "n_pct": 4.07
    },
    "n": 0.13083226,
    "dpp": 42000,
@@ -5082,11 +5082,11 @@
    "symbol": "SB",
    "name": "Sugar No. 11",
    "group": "softs",
-   "price": 18.02000046,
+   "price": 18.06999969,
    "cfd": {
     "dpp": 1.0,
     "units": 88.1096,
-    "notional": 1587.73,
+    "notional": 1592.14,
     "notional_pct": 31.8,
     "leverage": 10.0,
     "fits": {
@@ -5097,7 +5097,7 @@
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 3.15
+    "n_pct": 3.14
    },
    "n": 0.56747528,
    "dpp": 1120,
@@ -5115,32 +5115,32 @@
    "symbol": "ZB",
    "name": "30-Year T-Bond",
    "group": "rates",
-   "price": 108.65625,
+   "price": 109.21875,
    "cfd": {
     "dpp": 1.0,
-    "units": 53.0131,
-    "notional": 5760.21,
-    "notional_pct": 115.2,
+    "units": 54.3641,
+    "notional": 5937.57,
+    "notional_pct": 118.8,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 0.758,
+    "carry_r_60d": 0.781,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 0.87
+    "n_pct": 0.84
    },
-   "n": 0.94316293,
+   "n": 0.91972543,
    "dpp": 1000,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.053,
+   "full_contracts": 0.0544,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 1886.33,
-   "one_contract_risk_pct": 37.73,
+   "two_n_risk_smallest": 1839.45,
+   "one_contract_risk_pct": 36.79,
    "roll_in_n_window": false,
    "equity": 5000.0
   },
@@ -5148,32 +5148,32 @@
    "symbol": "ZN",
    "name": "10-Year T-Note",
    "group": "rates",
-   "price": 107.5,
+   "price": 107.734375,
    "cfd": {
     "dpp": 1.0,
-    "units": 106.2065,
-    "notional": 11417.2,
-    "notional_pct": 228.3,
+    "units": 107.8168,
+    "notional": 11615.57,
+    "notional_pct": 232.3,
     "leverage": 10.0,
     "fits": {
      "1.0": true,
      "0.1": true
     },
-    "carry_r_60d": 1.501,
+    "carry_r_60d": 1.528,
     "carry_pct_assumed": 8.0,
     "stop_binds": true,
     "liq_pct": 10.0,
-    "n_pct": 0.44
+    "n_pct": 0.43
    },
-   "n": 0.470781,
+   "n": 0.46374975,
    "dpp": 1000,
    "micro": "",
    "micro_dpp": 0,
-   "full_contracts": 0.1062,
+   "full_contracts": 0.1078,
    "micro_contracts": null,
    "unit_fits": false,
-   "two_n_risk_smallest": 941.56,
-   "one_contract_risk_pct": 18.83,
+   "two_n_risk_smallest": 927.5,
+   "one_contract_risk_pct": 18.55,
    "roll_in_n_window": false,
    "equity": 5000.0
   }
