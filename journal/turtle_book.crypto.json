@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-06T04:23:39+00:00",
+ "generated_at": "2026-09-06T12:06:51+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.42475808,
+   "last_mark": 1.42344809,
    "mark_date": "2026-09-06",
    "fees": 0.775953,
    "mfe_r": 0.0872,
@@ -45,10 +45,10 @@
    "stop": 904.86570891,
    "last_fill": 1018.91146291,
    "opened": "2026-09-04",
-   "last_mark": 1067.32995605,
+   "last_mark": 1174.64001465,
    "mark_date": "2026-09-06",
    "fees": 1.255465,
-   "mfe_r": 0.665,
+   "mfe_r": 1.7244,
    "mae_r": -0.6077,
    "unpriced_runs": 0
   },
@@ -70,10 +70,10 @@
    "stop": 2.00622615,
    "last_fill": 2.25437393,
    "opened": "2026-09-04",
-   "last_mark": 2.19169998,
+   "last_mark": 2.37820005,
    "mark_date": "2026-09-06",
    "fees": 1.888664,
-   "mfe_r": 0.5082,
+   "mfe_r": 0.8731,
    "mae_r": -0.1054,
    "unpriced_runs": 0
   },
@@ -93,10 +93,10 @@
    "stop": 59.78798172,
    "last_fill": 67.5,
    "opened": "2026-09-05",
-   "last_mark": 69.02999878,
+   "last_mark": 67.48000336,
    "mark_date": "2026-09-06",
    "fees": 0.623695,
-   "mfe_r": 0.688,
+   "mfe_r": 1.3772,
    "mae_r": -0.6371,
    "unpriced_runs": 0
   }
@@ -429,25 +429,27 @@
   {
    "as_of": "2026-09-06",
    "market": "crypto",
-   "symbol": "ICP",
-   "action": "entry",
+   "symbol": "NEAR",
+   "action": "add",
    "reason": "close_corr_cap",
    "units_on_book": 6,
    "cap": 6,
    "bucket": "crypto",
    "side": "long",
+   "units_held": 3,
    "system": 2
   },
   {
    "as_of": "2026-09-06",
    "market": "crypto",
-   "symbol": "JST",
-   "action": "entry",
+   "symbol": "DASH",
+   "action": "add",
    "reason": "close_corr_cap",
    "units_on_book": 6,
    "cap": 6,
    "bucket": "crypto",
    "side": "long",
+   "units_held": 1,
    "system": 2
   }
  ],
