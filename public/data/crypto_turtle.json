@@ -1,17 +1,17 @@
 {
- "generated_at": "2026-09-06T22:06:51+10:00",
+ "generated_at": "2026-09-06T23:08:08+10:00",
  "market": "crypto",
  "lens": "turtle",
  "currency_symbol": "$",
  "universe_size": 101,
  "evaluated": 48,
- "skipped_no_data": 11,
+ "skipped_no_data": 31,
  "skipped_no_data_symbols": [],
- "data_coverage_pct": 89.1,
- "data_from_cache": 0,
- "data_stale_dropped": 0,
- "skipped_short_history": 13,
- "skipped_illiquid": 29,
+ "data_coverage_pct": 69.3,
+ "data_from_cache": 66,
+ "data_stale_dropped": 20,
+ "skipped_short_history": 4,
+ "skipped_illiquid": 18,
  "truncated": 0,
  "params": {
   "n_period": 20,
@@ -63,10 +63,10 @@
    "symbol": "BTC",
    "name": "Bitcoin",
    "sector": "",
-   "price": 79906.0,
+   "price": 79900.0,
    "n": 2156.26052694,
    "n_pct": 2.7,
-   "dvol": 2746375853581156.0,
+   "dvol": 2746264383826788.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -74,7 +74,7 @@
     "o": 79830.3828125,
     "h": 80106.03125,
     "l": 79682.578125,
-    "c": 79906.0
+    "c": 79900.0
    },
    "exits": {
     "x1_lo": 76248.3046875,
@@ -88,7 +88,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 0.023188,
-   "unit_notional": 1852.88,
+   "unit_notional": 1852.74,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -202,7 +202,7 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 8.9984,
+    "open_r": 8.9907,
     "mfe_r": 3.9159,
     "mae_r": 0.0
    },
@@ -215,10 +215,10 @@
    "symbol": "ETH",
    "name": "Ethereum",
    "sector": "",
-   "price": 2499.90991211,
+   "price": 2499.62988281,
    "n": 87.79640218,
    "n_pct": 3.51,
-   "dvol": 41445180964501.0,
+   "dvol": 41448066487930.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -226,7 +226,7 @@
     "o": 2480.53955078125,
     "h": 2522.641357421875,
     "l": 2480.244140625,
-    "c": 2499.909912109375
+    "c": 2499.6298828125
    },
    "exits": {
     "x1_lo": 2356.188232421875,
@@ -240,7 +240,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 0.569499,
-   "unit_notional": 1423.7,
+   "unit_notional": 1423.54,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -352,23 +352,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-19",
     "bars": 18,
-    "open_r": 12.0282,
+    "open_r": 12.017,
     "mfe_r": 5.9197,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 11.93
+   "stop_distance_pct": 11.92
   },
   {
    "symbol": "BNB",
    "name": "BNB",
    "sector": "",
-   "price": 757.67999268,
+   "price": 757.60998535,
    "n": 19.89822659,
    "n_pct": 2.63,
-   "dvol": 1254575906025.0,
+   "dvol": 1254136203864.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -376,7 +376,7 @@
     "o": 766.8208618164062,
     "h": 768.5473022460938,
     "l": 755.3735961914062,
-    "c": 757.6799926757812
+    "c": 757.6099853515625
    },
    "exits": {
     "x1_lo": 675.1741943359375,
@@ -390,7 +390,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 2.512787,
-   "unit_notional": 1903.89,
+   "unit_notional": 1903.71,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -510,7 +510,7 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 16.4755,
+    "open_r": 16.4643,
     "mfe_r": 5.7358,
     "mae_r": 0.0
    },
@@ -523,10 +523,10 @@
    "symbol": "ZEC",
    "name": "Zcash",
    "sector": "",
-   "price": 1174.64001465,
+   "price": 1172.86999512,
    "n": 63.24257866,
-   "n_pct": 5.38,
-   "dvol": 1009407578394.0,
+   "n_pct": 5.39,
+   "dvol": 1009323566670.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -534,7 +534,7 @@
     "o": 1025.1287841796875,
     "h": 1201.3193359375,
     "l": 1023.7303466796875,
-    "c": 1174.6400146484375
+    "c": 1172.8699951171875
    },
    "exits": {
     "x1_lo": 780.2109375,
@@ -548,7 +548,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 0.790607,
-   "unit_notional": 928.68,
+   "unit_notional": 927.28,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -674,23 +674,23 @@
     "exit_channel": 20,
     "entry_date": "2026-09-04",
     "bars": 2,
-    "open_r": 5.0837,
+    "open_r": 5.02,
     "mfe_r": 2.0171,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 17.54
+   "stop_distance_pct": 17.42
   },
   {
    "symbol": "SOL",
    "name": "Solana",
    "sector": "",
-   "price": 106.40000153,
+   "price": 106.44000244,
    "n": 4.18069865,
    "n_pct": 3.93,
-   "dvol": 428170340783.0,
+   "dvol": 428182603219.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -698,7 +698,7 @@
     "o": 103.19064331054688,
     "h": 106.97151947021484,
     "l": 103.19064331054688,
-    "c": 106.4000015258789
+    "c": 106.44000244140625
    },
    "exits": {
     "x1_lo": 97.45088195800781,
@@ -712,7 +712,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 11.959724,
-   "unit_notional": 1272.51,
+   "unit_notional": 1272.99,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -821,23 +821,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 14.0553,
+    "open_r": 14.0872,
     "mfe_r": 4.6144,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 19.51
+   "stop_distance_pct": 19.54
   },
   {
    "symbol": "XMR",
    "name": "Monero",
    "sector": "",
-   "price": 537.94146729,
+   "price": 538.41729736,
    "n": 28.71469652,
-   "n_pct": 5.34,
-   "dvol": 60499408681.0,
+   "n_pct": 5.33,
+   "dvol": 60504303874.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -845,7 +845,7 @@
     "o": 554.9302368164062,
     "h": 559.1375122070312,
     "l": 535.9609985351562,
-    "c": 537.9414672851562
+    "c": 538.4172973632812
    },
    "exits": {
     "x1_lo": 454.6303405761719,
@@ -859,7 +859,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 1.741269,
-   "unit_notional": 936.7,
+   "unit_notional": 937.53,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -983,23 +983,23 @@
     "exit_channel": 10,
     "entry_date": "2026-07-16",
     "bars": 52,
-    "open_r": 21.9906,
+    "open_r": 22.046,
     "mfe_r": 6.6723,
     "mae_r": -0.416
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 39.12
+   "stop_distance_pct": 39.17
   },
   {
    "symbol": "LTC",
    "name": "Litecoin",
    "sector": "",
-   "price": 54.60499954,
+   "price": 54.56999969,
    "n": 1.82861157,
    "n_pct": 3.35,
-   "dvol": 15526353033.0,
+   "dvol": 15524707230.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1007,7 +1007,7 @@
     "o": 54.687503814697266,
     "h": 55.05950164794922,
     "l": 53.66608428955078,
-    "c": 54.60499954223633
+    "c": 54.56999969482422
    },
    "exits": {
     "x1_lo": 47.656776428222656,
@@ -1021,7 +1021,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 27.34315,
-   "unit_notional": 1493.07,
+   "unit_notional": 1492.12,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1153,23 +1153,23 @@
     "exit_channel": 10,
     "entry_date": "2026-08-19",
     "bars": 18,
-    "open_r": 14.0306,
+    "open_r": 13.9642,
     "mfe_r": 4.2313,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 15.94
+   "stop_distance_pct": 15.89
   },
   {
    "symbol": "WBT",
    "name": "WhiteBIT Coin",
    "sector": "",
-   "price": 73.69847107,
+   "price": 73.69737244,
    "n": 1.89668915,
    "n_pct": 2.57,
-   "dvol": 9882882146.0,
+   "dvol": 9882781896.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1177,7 +1177,7 @@
     "o": 73.45075988769531,
     "h": 73.90738677978516,
     "l": 73.45075988769531,
-    "c": 73.69847106933594
+    "c": 73.69737243652344
    },
    "exits": {
     "x1_lo": 70.1568603515625,
@@ -1191,7 +1191,7 @@
    "bars": 1473,
    "date": "2026-09-06",
    "unit_shares": 26.361726,
-   "unit_notional": 1942.82,
+   "unit_notional": 1942.79,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1294,23 +1294,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 19.3833,
+    "open_r": 19.3816,
     "mfe_r": 5.728,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 19.08
+   "stop_distance_pct": 19.07
   },
   {
    "symbol": "DASH",
    "name": "Dash",
    "sector": "",
-   "price": 67.48000336,
+   "price": 67.37999725,
    "n": 4.46906549,
-   "n_pct": 6.62,
-   "dvol": 7838063496.0,
+   "n_pct": 6.63,
+   "dvol": 7835659623.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1318,7 +1318,7 @@
     "o": 65.60709381103516,
     "h": 78.12063598632812,
     "l": 65.60709381103516,
-    "c": 67.4800033569336
+    "c": 67.37999725341797
    },
    "exits": {
     "x1_lo": 37.16212463378906,
@@ -1332,7 +1332,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 11.188021,
-   "unit_notional": 754.97,
+   "unit_notional": 753.85,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1459,23 +1459,23 @@
     "exit_channel": 20,
     "entry_date": "2026-09-04",
     "bars": 2,
-    "open_r": 4.9418,
+    "open_r": 4.8743,
     "mfe_r": 5.0181,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 11.62
+   "stop_distance_pct": 11.49
   },
   {
    "symbol": "LINK",
    "name": "Chainlink",
    "sector": "",
-   "price": 12.25899982,
+   "price": 12.26099968,
    "n": 0.49845296,
    "n_pct": 4.07,
-   "dvol": 5167843296.0,
+   "dvol": 5168050395.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1483,7 +1483,7 @@
     "o": 12.049544334411621,
     "h": 12.419060707092285,
     "l": 12.049544334411621,
-    "c": 12.258999824523926
+    "c": 12.26099967956543
    },
    "exits": {
     "x1_lo": 10.928661346435547,
@@ -1497,7 +1497,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 100.310368,
-   "unit_notional": 1229.7,
+   "unit_notional": 1229.91,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1617,23 +1617,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-12",
     "bars": 25,
-    "open_r": 22.6256,
+    "open_r": 22.6398,
     "mfe_r": 6.5714,
     "mae_r": -0.4359
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 28.83
+   "stop_distance_pct": 28.84
   },
   {
    "symbol": "OKB",
    "name": "OKB",
    "sector": "",
-   "price": 113.97773743,
+   "price": 113.9814682,
    "n": 4.77831674,
    "n_pct": 4.19,
-   "dvol": 4366189244.0,
+   "dvol": 4362211214.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1641,7 +1641,7 @@
     "o": 113.39192199707031,
     "h": 115.89469909667969,
     "l": 113.38845825195312,
-    "c": 113.97773742675781
+    "c": 113.9814682006836
    },
    "exits": {
     "x1_lo": 103.12181091308594,
@@ -1655,7 +1655,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 10.463936,
-   "unit_notional": 1192.66,
+   "unit_notional": 1192.69,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1773,23 +1773,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-08",
     "bars": 29,
-    "open_r": 18.4159,
+    "open_r": 18.4193,
     "mfe_r": 6.5838,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 19.67
+   "stop_distance_pct": 19.68
   },
   {
    "symbol": "AVAX",
    "name": "Avalanche",
    "sector": "",
-   "price": 7.69199991,
+   "price": 7.68499994,
    "n": 0.29502258,
    "n_pct": 3.84,
-   "dvol": 2289108215.0,
+   "dvol": 2288536943.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1797,7 +1797,7 @@
     "o": 7.594155788421631,
     "h": 7.734075546264648,
     "l": 7.589771747589111,
-    "c": 7.691999912261963
+    "c": 7.684999942779541
    },
    "exits": {
     "x1_lo": 7.048913955688477,
@@ -1811,7 +1811,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 169.47855,
-   "unit_notional": 1303.63,
+   "unit_notional": 1302.44,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -1911,23 +1911,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 2.5709,
+    "open_r": 2.5187,
     "mfe_r": 2.2528,
     "mae_r": -0.082
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 8.6
+   "stop_distance_pct": 8.51
   },
   {
    "symbol": "NEAR",
    "name": "NEAR Protocol",
    "sector": "",
-   "price": 2.37820005,
+   "price": 2.37579989,
    "n": 0.13004227,
    "n_pct": 5.47,
-   "dvol": 624666230.0,
+   "dvol": 624668396.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -1935,7 +1935,7 @@
     "o": 2.1920478343963623,
     "h": 2.408998727798462,
     "l": 2.1800718307495117,
-    "c": 2.378200054168701
+    "c": 2.3757998943328857
    },
    "exits": {
     "x1_lo": 1.7824959754943848,
@@ -1949,7 +1949,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 384.490377,
-   "unit_notional": 914.4,
+   "unit_notional": 913.47,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2056,14 +2056,14 @@
     "exit_channel": 20,
     "entry_date": "2026-09-04",
     "bars": 2,
-    "open_r": 2.5158,
+    "open_r": 2.4748,
     "mfe_r": 1.1355,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 12.34
+   "stop_distance_pct": 12.25
   },
   {
    "symbol": "ICP",
@@ -2072,7 +2072,7 @@
    "price": 2.6724999,
    "n": 0.12699234,
    "n_pct": 4.75,
-   "dvol": 138809002.0,
+   "dvol": 138806229.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -2210,10 +2210,10 @@
    "symbol": "ENA",
    "name": "Ethena",
    "sector": "",
-   "price": 0.17385,
+   "price": 0.17363,
    "n": 0.01369161,
-   "n_pct": 7.88,
-   "dvol": 119202158.0,
+   "n_pct": 7.89,
+   "dvol": 119192434.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -2221,7 +2221,7 @@
     "o": 0.1715744435787201,
     "h": 0.18820735812187195,
     "l": 0.1715744435787201,
-    "c": 0.17384999990463257
+    "c": 0.1736299991607666
    },
    "exits": {
     "x1_lo": 0.145797997713089,
@@ -2235,7 +2235,7 @@
    "bars": 888,
    "date": "2026-09-06",
    "unit_shares": 3651.872557,
-   "unit_notional": 634.88,
+   "unit_notional": 634.07,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2321,23 +2321,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 23.9797,
+    "open_r": 23.8913,
     "mfe_r": 9.1631,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 35.46
+   "stop_distance_pct": 35.38
   },
   {
    "symbol": "CAKE",
    "name": "PancakeSwap",
    "sector": "",
-   "price": 2.21300006,
+   "price": 2.21399999,
    "n": 0.09306663,
-   "n_pct": 4.21,
-   "dvol": 97758309.0,
+   "n_pct": 4.2,
+   "dvol": 97725185.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -2345,7 +2345,7 @@
     "o": 2.2505857944488525,
     "h": 2.279073476791382,
     "l": 2.181075096130371,
-    "c": 2.2130000591278076
+    "c": 2.2139999866485596
    },
    "exits": {
     "x1_lo": 1.6839239597320557,
@@ -2359,7 +2359,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 537.249486,
-   "unit_notional": 1188.93,
+   "unit_notional": 1189.47,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2469,14 +2469,14 @@
     "exit_channel": 20,
     "entry_date": "2026-08-18",
     "bars": 19,
-    "open_r": 36.9245,
+    "open_r": 36.9785,
     "mfe_r": 10.8358,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 32.63
+   "stop_distance_pct": 32.66
   },
   {
    "symbol": "ETHFI",
@@ -2485,7 +2485,7 @@
    "price": 0.58899999,
    "n": 0.04047709,
    "n_pct": 6.87,
-   "dvol": 29506313.0,
+   "dvol": 29505365.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -2604,10 +2604,10 @@
    "symbol": "CRV",
    "name": "Curve DAO",
    "sector": "",
-   "price": 0.375,
+   "price": 0.3739,
    "n": 0.0236026,
-   "n_pct": 6.29,
-   "dvol": 28957055.0,
+   "n_pct": 6.31,
+   "dvol": 28954063.0,
    "liquid_share": 1.0,
    "state": "long",
    "signal": "",
@@ -2615,7 +2615,7 @@
     "o": 0.3791429400444031,
     "h": 0.39009466767311096,
     "l": 0.3709849417209625,
-    "c": 0.375
+    "c": 0.37389999628067017
    },
    "exits": {
     "x1_lo": 0.29160499572753906,
@@ -2629,7 +2629,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 2118.410258,
-   "unit_notional": 794.4,
+   "unit_notional": 792.07,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -2752,14 +2752,14 @@
     "exit_channel": 10,
     "entry_date": "2026-08-08",
     "bars": 29,
-    "open_r": 30.8092,
+    "open_r": 30.5776,
     "mfe_r": 9.0384,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 42.14
+   "stop_distance_pct": 41.96
   },
   {
    "symbol": "GT",
@@ -2910,10 +2910,10 @@
    "symbol": "BGB",
    "name": "Bitget Token",
    "sector": "",
-   "price": 2.00834417,
+   "price": 2.0079422,
    "n": 0.06088112,
    "n_pct": 3.03,
-   "dvol": 20842264.0,
+   "dvol": 20841740.0,
    "liquid_share": 0.806,
    "state": "long",
    "signal": "",
@@ -2921,7 +2921,7 @@
     "o": 2.0294103622436523,
     "h": 2.0464155673980713,
     "l": 1.9931827783584595,
-    "c": 2.0083441734313965
+    "c": 2.0079421997070312
    },
    "exits": {
     "x1_lo": 1.8680239915847778,
@@ -2935,7 +2935,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 821.272689,
-   "unit_notional": 1649.4,
+   "unit_notional": 1649.07,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3037,23 +3037,23 @@
     "exit_channel": 20,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 9.8047,
+    "open_r": 9.7852,
     "mfe_r": 3.6389,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 12.51
+   "stop_distance_pct": 12.49
   },
   {
    "symbol": "PYTH",
    "name": "Pyth Network",
    "sector": "",
-   "price": 0.05562,
+   "price": 0.05557,
    "n": 0.00349178,
    "n_pct": 6.28,
-   "dvol": 7391295.0,
+   "dvol": 7391172.0,
    "liquid_share": 0.841,
    "state": "long",
    "signal": "",
@@ -3061,7 +3061,7 @@
     "o": 0.05516048148274422,
     "h": 0.056858450174331665,
     "l": 0.05441627651453018,
-    "c": 0.05561999976634979
+    "c": 0.05556999891996384
    },
    "exits": {
     "x1_lo": 0.04607599973678589,
@@ -3075,7 +3075,7 @@
    "bars": 1022,
    "date": "2026-09-06",
    "unit_shares": 14319.334935,
-   "unit_notional": 796.44,
+   "unit_notional": 795.73,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3162,23 +3162,23 @@
     "exit_channel": 10,
     "entry_date": "2026-08-20",
     "bars": 17,
-    "open_r": 8.8953,
+    "open_r": 8.8521,
     "mfe_r": 3.4456,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 23.67
+   "stop_distance_pct": 23.61
   },
   {
    "symbol": "JST",
    "name": "JUST",
    "sector": "",
-   "price": 0.1122435,
+   "price": 0.11229631,
    "n": 0.0033179,
-   "n_pct": 2.96,
-   "dvol": 3349880.0,
+   "n_pct": 2.95,
+   "dvol": 3350145.0,
    "liquid_share": 0.677,
    "state": "long",
    "signal": "",
@@ -3186,7 +3186,7 @@
     "o": 0.11027751863002777,
     "h": 0.11237943172454834,
     "l": 0.11020739376544952,
-    "c": 0.11224350333213806
+    "c": 0.11229631304740906
    },
    "exits": {
     "x1_lo": 0.09374500066041946,
@@ -3200,7 +3200,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 15069.76038,
-   "unit_notional": 1691.48,
+   "unit_notional": 1692.28,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3327,23 +3327,23 @@
     "exit_channel": 20,
     "entry_date": "2026-09-05",
     "bars": 1,
-    "open_r": 0.4886,
+    "open_r": 0.504,
     "mfe_r": 0.3892,
     "mae_r": 0.0
    },
    "triggers": null,
    "nearest": null,
    "approaching": false,
-   "stop_distance_pct": 6.81
+   "stop_distance_pct": 6.85
   },
   {
    "symbol": "PAXG",
    "name": "PAX Gold",
    "sector": "",
-   "price": 4430.66015625,
+   "price": 4430.58984375,
    "n": 69.72216131,
    "n_pct": 1.57,
-   "dvol": 885275624291.0,
+   "dvol": 885267648644.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3351,7 +3351,7 @@
     "o": 4432.4501953125,
     "h": 4432.97119140625,
     "l": 4424.05126953125,
-    "c": 4430.66015625
+    "c": 4430.58984375
    },
    "exits": {
     "x1_lo": 4294.982421875,
@@ -3365,7 +3365,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 0.717132,
-   "unit_notional": 3177.37,
+   "unit_notional": 3177.32,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3488,10 +3488,10 @@
    "symbol": "XAUT",
    "name": "Tether Gold",
    "sector": "",
-   "price": 4423.70458984,
+   "price": 4423.48095703,
    "n": 67.62365626,
    "n_pct": 1.53,
-   "dvol": 1303920447752.0,
+   "dvol": 1304088188369.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3499,7 +3499,7 @@
     "o": 4427.2958984375,
     "h": 4427.2958984375,
     "l": 4419.15966796875,
-    "c": 4423.70458984375
+    "c": 4423.48095703125
    },
    "exits": {
     "x1_lo": 4286.9091796875,
@@ -3513,7 +3513,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 0.739386,
-   "unit_notional": 3270.83,
+   "unit_notional": 3270.66,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3628,10 +3628,10 @@
    "symbol": "LEO",
    "name": "LEO Token",
    "sector": "",
-   "price": 9.34620762,
+   "price": 9.34617329,
    "n": 0.18392796,
    "n_pct": 1.97,
-   "dvol": 2480967.0,
+   "dvol": 2480986.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3639,7 +3639,7 @@
     "o": 9.295075416564941,
     "h": 9.349270820617676,
     "l": 9.295028686523438,
-    "c": 9.346207618713379
+    "c": 9.346173286437988
    },
    "exits": {
     "x1_lo": 9.206782341003418,
@@ -3653,7 +3653,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 271.845557,
-   "unit_notional": 2540.73,
+   "unit_notional": 2540.72,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3784,10 +3784,10 @@
    "symbol": "QNT",
    "name": "Quant",
    "sector": "",
-   "price": 65.76000214,
+   "price": 65.81999969,
    "n": 2.36960618,
    "n_pct": 3.6,
-   "dvol": 477592330.0,
+   "dvol": 477610116.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -3795,7 +3795,7 @@
     "o": 64.91119384765625,
     "h": 67.08863830566406,
     "l": 64.85399627685547,
-    "c": 65.76000213623047
+    "c": 65.81999969482422
    },
    "exits": {
     "x1_lo": 59.64207077026367,
@@ -3809,7 +3809,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 21.100553,
-   "unit_notional": 1387.57,
+   "unit_notional": 1388.84,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -3922,7 +3922,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 68.23112488,
-    "distance_pct": 3.76
+    "distance_pct": 3.66
    },
    "approaching": false
   },
@@ -3930,22 +3930,22 @@
    "symbol": "DOT",
    "name": "Polkadot",
    "sector": "",
-   "price": 0.98890001,
-   "n": 0.04345701,
+   "price": 0.99199998,
+   "n": 0.0435224,
    "n_pct": 4.39,
-   "dvol": 97957980.0,
+   "dvol": 97990248.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
     "o": 0.9158065319061279,
-    "h": 0.9851626753807068,
+    "h": 0.9864704608917236,
     "l": 0.9157021641731262,
-    "c": 0.9889000058174133
+    "c": 0.9919999837875366
    },
    "exits": {
     "x1_lo": 0.8115749955177307,
-    "x1_hi": 0.9851626753807068,
+    "x1_hi": 0.9864704608917236,
     "x2_lo": 0.7278050184249878,
     "x2_hi": 1.0287840366363525
    },
@@ -3954,8 +3954,8 @@
    "s1_filter_known": true,
    "bars": 1827,
    "date": "2026-09-06",
-   "unit_shares": 1150.562233,
-   "unit_notional": 1137.79,
+   "unit_shares": 1148.833596,
+   "unit_notional": 1139.64,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -4067,7 +4067,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1.02878404,
-    "distance_pct": 4.03
+    "distance_pct": 3.71
    },
    "approaching": false
   },
@@ -4075,10 +4075,10 @@
    "symbol": "TRX",
    "name": "TRON",
    "sector": "",
-   "price": 0.33504367,
+   "price": 0.33504421,
    "n": 0.00455492,
    "n_pct": 1.36,
-   "dvol": 185215922.0,
+   "dvol": 185210360.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -4086,7 +4086,7 @@
     "o": 0.3339308798313141,
     "h": 0.33516693115234375,
     "l": 0.3330272138118744,
-    "c": 0.33504366874694824
+    "c": 0.3350442051887512
    },
    "exits": {
     "x1_lo": 0.3215689957141876,
@@ -4227,7 +4227,7 @@
    "price": 0.0814,
    "n": 0.00302716,
    "n_pct": 3.72,
-   "dvol": 5590274.0,
+   "dvol": 5590368.0,
    "liquid_share": 0.962,
    "state": "flat",
    "signal": "",
@@ -4365,10 +4365,10 @@
    "symbol": "AAVE",
    "name": "Aave",
    "sector": "",
-   "price": 135.03999329,
+   "price": 134.99000549,
    "n": 6.87555705,
    "n_pct": 5.09,
-   "dvol": 44499525651.0,
+   "dvol": 44498351185.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -4376,7 +4376,7 @@
     "o": 134.38815307617188,
     "h": 139.5979461669922,
     "l": 133.83816528320312,
-    "c": 135.0399932861328
+    "c": 134.99000549316406
    },
    "exits": {
     "x1_lo": 120.6384506225586,
@@ -4390,7 +4390,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 7.272138,
-   "unit_notional": 982.03,
+   "unit_notional": 981.67,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -4505,7 +4505,154 @@
    "nearest": {
     "key": "s2_long",
     "level": 144.72573853,
-    "distance_pct": 7.17
+    "distance_pct": 7.21
+   },
+   "approaching": false
+  },
+  {
+   "symbol": "ATOM",
+   "name": "Cosmos Hub",
+   "sector": "",
+   "price": 1.59590006,
+   "n": 0.06544348,
+   "n_pct": 4.1,
+   "dvol": 44334465.0,
+   "liquid_share": 1.0,
+   "state": "flat",
+   "signal": "",
+   "bar": {
+    "o": 1.5568801164627075,
+    "h": 1.6076972484588623,
+    "l": 1.5568801164627075,
+    "c": 1.595900058746338
+   },
+   "exits": {
+    "x1_lo": 1.4407650232315063,
+    "x1_hi": 1.6076972484588623,
+    "x2_lo": 1.3794870376586914,
+    "x2_hi": 1.7127490043640137
+   },
+   "added_today": 0,
+   "s1_blocked": true,
+   "s1_filter_known": true,
+   "bars": 1827,
+   "date": "2026-09-06",
+   "unit_shares": 764.018109,
+   "unit_notional": 1219.3,
+   "unit_risk_per_n": 50.0,
+   "unit_stop_loss": 100.0,
+   "record": {
+    "n": 60,
+    "wins": 10,
+    "win_pct": 16.7,
+    "total_r": -22.168,
+    "avg_r": -0.3695,
+    "median_r": -1.2412,
+    "gross_r": -17.827,
+    "cost_r": 4.341,
+    "top10_share": null,
+    "max_dd_r": -41.549,
+    "expectancy_r": -0.3695,
+    "by_system": {
+     "1": {
+      "n": 14,
+      "total_r": 12.888,
+      "avg_r": 0.9206,
+      "win_pct": 21.4
+     },
+     "2": {
+      "n": 46,
+      "total_r": -35.056,
+      "avg_r": -0.7621,
+      "win_pct": 15.2
+     }
+    },
+    "by_reason": {
+     "stop": {
+      "n": 46,
+      "total_r": -81.646,
+      "avg_r": -1.7749
+     },
+     "channel": {
+      "n": 14,
+      "total_r": 59.478,
+      "avg_r": 4.2484
+     }
+    },
+    "equity_curve_r": [
+     -1.0596,
+     -3.3517,
+     -4.3656,
+     -5.6704,
+     -7.441,
+     -10.0171,
+     -11.0336,
+     -13.3195,
+     4.1007,
+     2.3118,
+     0.0051,
+     -1.6429,
+     -4.1665,
+     -5.7198,
+     -7.355,
+     0.5,
+     -1.6923,
+     -2.7219,
+     -2.0352,
+     7.0101,
+     5.9637,
+     4.9182,
+     2.2639,
+     1.0863,
+     12.8134,
+     12.0873,
+     9.4401,
+     7.0853,
+     6.0551,
+     5.0266,
+     7.8674,
+     19.3804,
+     19.1622,
+     16.5535,
+     15.5206,
+     13.1992,
+     10.7851,
+     8.1856,
+     6.0115,
+     3.4167,
+     5.321,
+     4.2984,
+     3.2771,
+     1.8442,
+     -0.7617,
+     -3.4002,
+     -4.4286,
+     -6.8179,
+     -6.1074,
+     -8.6877,
+     -11.004,
+     -11.7757,
+     -13.5854,
+     -14.6284,
+     -17.3037,
+     -18.3434,
+     -19.3766,
+     -21.9887,
+     -21.1306,
+     -22.1681
+    ]
+   },
+   "position": null,
+   "triggers": {
+    "s1_long": 1.7127490043640137,
+    "s2_long": 1.7127490043640137,
+    "s1_short": 1.3794870376586914,
+    "s2_short": 1.2151230573654175
+   },
+   "nearest": {
+    "key": "s2_long",
+    "level": 1.712749,
+    "distance_pct": 7.32
    },
    "approaching": false
   },
@@ -4513,10 +4660,10 @@
    "symbol": "FET",
    "name": "Artificial Superintelligence Alliance",
    "sector": "",
-   "price": 0.17128,
+   "price": 0.17015,
    "n": 0.0100794,
-   "n_pct": 5.88,
-   "dvol": 20820388.0,
+   "n_pct": 5.92,
+   "dvol": 20802092.0,
    "liquid_share": 0.96,
    "state": "flat",
    "signal": "",
@@ -4524,7 +4671,7 @@
     "o": 0.16460765898227692,
     "h": 0.1720086932182312,
     "l": 0.16415701806545258,
-    "c": 0.17127999663352966
+    "c": 0.1701499968767166
    },
    "exits": {
     "x1_lo": 0.1456809937953949,
@@ -4538,7 +4685,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 4960.611865,
-   "unit_notional": 849.65,
+   "unit_notional": 844.05,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -4658,154 +4805,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.183697,
-    "distance_pct": 7.25
-   },
-   "approaching": false
-  },
-  {
-   "symbol": "ATOM",
-   "name": "Cosmos Hub",
-   "sector": "",
-   "price": 1.59500003,
-   "n": 0.06544348,
-   "n_pct": 4.1,
-   "dvol": 44330729.0,
-   "liquid_share": 1.0,
-   "state": "flat",
-   "signal": "",
-   "bar": {
-    "o": 1.5568801164627075,
-    "h": 1.6076972484588623,
-    "l": 1.5568801164627075,
-    "c": 1.5950000286102295
-   },
-   "exits": {
-    "x1_lo": 1.4407650232315063,
-    "x1_hi": 1.6076972484588623,
-    "x2_lo": 1.3794870376586914,
-    "x2_hi": 1.7127490043640137
-   },
-   "added_today": 0,
-   "s1_blocked": true,
-   "s1_filter_known": true,
-   "bars": 1827,
-   "date": "2026-09-06",
-   "unit_shares": 764.018109,
-   "unit_notional": 1218.61,
-   "unit_risk_per_n": 50.0,
-   "unit_stop_loss": 100.0,
-   "record": {
-    "n": 60,
-    "wins": 10,
-    "win_pct": 16.7,
-    "total_r": -22.168,
-    "avg_r": -0.3695,
-    "median_r": -1.2412,
-    "gross_r": -17.827,
-    "cost_r": 4.341,
-    "top10_share": null,
-    "max_dd_r": -41.549,
-    "expectancy_r": -0.3695,
-    "by_system": {
-     "1": {
-      "n": 14,
-      "total_r": 12.888,
-      "avg_r": 0.9206,
-      "win_pct": 21.4
-     },
-     "2": {
-      "n": 46,
-      "total_r": -35.056,
-      "avg_r": -0.7621,
-      "win_pct": 15.2
-     }
-    },
-    "by_reason": {
-     "stop": {
-      "n": 46,
-      "total_r": -81.646,
-      "avg_r": -1.7749
-     },
-     "channel": {
-      "n": 14,
-      "total_r": 59.478,
-      "avg_r": 4.2484
-     }
-    },
-    "equity_curve_r": [
-     -1.0596,
-     -3.3517,
-     -4.3656,
-     -5.6704,
-     -7.441,
-     -10.0171,
-     -11.0336,
-     -13.3195,
-     4.1007,
-     2.3118,
-     0.0051,
-     -1.6429,
-     -4.1665,
-     -5.7198,
-     -7.355,
-     0.5,
-     -1.6923,
-     -2.7219,
-     -2.0352,
-     7.0101,
-     5.9637,
-     4.9182,
-     2.2639,
-     1.0863,
-     12.8134,
-     12.0873,
-     9.4401,
-     7.0853,
-     6.0551,
-     5.0266,
-     7.8674,
-     19.3804,
-     19.1622,
-     16.5535,
-     15.5206,
-     13.1992,
-     10.7851,
-     8.1856,
-     6.0115,
-     3.4167,
-     5.321,
-     4.2984,
-     3.2771,
-     1.8442,
-     -0.7617,
-     -3.4002,
-     -4.4286,
-     -6.8179,
-     -6.1074,
-     -8.6877,
-     -11.004,
-     -11.7757,
-     -13.5854,
-     -14.6284,
-     -17.3037,
-     -18.3434,
-     -19.3766,
-     -21.9887,
-     -21.1306,
-     -22.1681
-    ]
-   },
-   "position": null,
-   "triggers": {
-    "s1_long": 1.7127490043640137,
-    "s2_long": 1.7127490043640137,
-    "s1_short": 1.3794870376586914,
-    "s2_short": 1.2151230573654175
-   },
-   "nearest": {
-    "key": "s2_long",
-    "level": 1.712749,
-    "distance_pct": 7.38
+    "distance_pct": 7.96
    },
    "approaching": false
   },
@@ -4813,10 +4813,10 @@
    "symbol": "FIL",
    "name": "Filecoin",
    "sector": "",
-   "price": 0.79629999,
+   "price": 0.79460001,
    "n": 0.04489406,
-   "n_pct": 5.64,
-   "dvol": 75805366.0,
+   "n_pct": 5.65,
+   "dvol": 75794807.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -4824,7 +4824,7 @@
     "o": 0.787369966506958,
     "h": 0.8363879323005676,
     "l": 0.787369966506958,
-    "c": 0.7962999939918518
+    "c": 0.7946000099182129
    },
    "exits": {
     "x1_lo": 0.6515899896621704,
@@ -4838,7 +4838,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 1113.733166,
-   "unit_notional": 886.87,
+   "unit_notional": 884.97,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -4948,7 +4948,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.85842699,
-    "distance_pct": 7.8
+    "distance_pct": 8.03
    },
    "approaching": false
   },
@@ -4956,18 +4956,18 @@
    "symbol": "RENDER",
    "name": "Render",
    "sector": "",
-   "price": 1.51559997,
-   "n": 0.07020275,
-   "n_pct": 4.63,
-   "dvol": 42783020.0,
+   "price": 1.51160002,
+   "n": 0.07029522,
+   "n_pct": 4.65,
+   "dvol": 42808877.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
     "o": 1.4653606414794922,
-    "h": 1.5174049139022827,
+    "h": 1.5192543268203735,
     "l": 1.4653606414794922,
-    "c": 1.5155999660491943
+    "c": 1.5116000175476074
    },
    "exits": {
     "x1_lo": 1.3842159509658813,
@@ -4980,8 +4980,8 @@
    "s1_filter_known": true,
    "bars": 1826,
    "date": "2026-09-06",
-   "unit_shares": 712.222843,
-   "unit_notional": 1079.44,
+   "unit_shares": 711.285941,
+   "unit_notional": 1075.18,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5085,7 +5085,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1.63374901,
-    "distance_pct": 7.8
+    "distance_pct": 8.08
    },
    "approaching": false
   },
@@ -5093,10 +5093,10 @@
    "symbol": "GRAM",
    "name": "Gram (prev. Toncoin)",
    "sector": "",
-   "price": 1.42344809,
+   "price": 1.42365134,
    "n": 0.06066404,
    "n_pct": 4.26,
-   "dvol": 107832926.0,
+   "dvol": 107831165.0,
    "liquid_share": 0.1,
    "state": "flat",
    "signal": "",
@@ -5104,7 +5104,7 @@
     "o": 1.4316819906234741,
     "h": 1.4346750974655151,
     "l": 1.4092724323272705,
-    "c": 1.423448085784912
+    "c": 1.4236513376235962
    },
    "exits": {
     "x1_lo": 1.2972569465637207,
@@ -5118,7 +5118,7 @@
    "bars": 873,
    "date": "2026-09-06",
    "unit_shares": 824.211548,
-   "unit_notional": 1173.22,
+   "unit_notional": 1173.39,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5177,7 +5177,7 @@
    "nearest": {
     "key": "s2_short",
     "level": 1.29725695,
-    "distance_pct": 8.87
+    "distance_pct": 8.88
    },
    "approaching": false
   },
@@ -5185,18 +5185,18 @@
    "symbol": "WLD",
    "name": "Worldcoin",
    "sector": "",
-   "price": 0.42199999,
-   "n": 0.02834529,
-   "n_pct": 6.72,
-   "dvol": 84084572.0,
+   "price": 0.4217,
+   "n": 0.02839884,
+   "n_pct": 6.73,
+   "dvol": 84101616.0,
    "liquid_share": 0.692,
    "state": "flat",
    "signal": "",
    "bar": {
     "o": 0.3974108099937439,
-    "h": 0.4189825654029846,
+    "h": 0.4200536608695984,
     "l": 0.39601296186447144,
-    "c": 0.421999990940094
+    "c": 0.42170000076293945
    },
    "exits": {
     "x1_lo": 0.35370299220085144,
@@ -5209,8 +5209,8 @@
    "s1_filter_known": true,
    "bars": 1635,
    "date": "2026-09-06",
-   "unit_shares": 1763.961526,
-   "unit_notional": 744.39,
+   "unit_shares": 1760.635032,
+   "unit_notional": 742.46,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5309,7 +5309,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.460693,
-    "distance_pct": 9.17
+    "distance_pct": 9.25
    },
    "approaching": false
   },
@@ -5317,10 +5317,10 @@
    "symbol": "ALGO",
    "name": "Algorand",
    "sector": "",
-   "price": 0.09535,
+   "price": 0.09531,
    "n": 0.00443673,
-   "n_pct": 4.65,
-   "dvol": 2478253.0,
+   "n_pct": 4.66,
+   "dvol": 2478069.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -5328,7 +5328,7 @@
     "o": 0.09440572559833527,
     "h": 0.09600965678691864,
     "l": 0.093965083360672,
-    "c": 0.0953499972820282
+    "c": 0.09531000256538391
    },
    "exits": {
     "x1_lo": 0.08373100310564041,
@@ -5342,7 +5342,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 11269.552006,
-   "unit_notional": 1074.55,
+   "unit_notional": 1074.1,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5461,7 +5461,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.104638,
-    "distance_pct": 9.74
+    "distance_pct": 9.79
    },
    "approaching": false
   },
@@ -5469,18 +5469,18 @@
    "symbol": "KCS",
    "name": "KuCoin",
    "sector": "",
-   "price": 7.14157104,
-   "n": 0.25203742,
+   "price": 7.14155436,
+   "n": 0.25204371,
    "n_pct": 3.53,
-   "dvol": 129836822.0,
+   "dvol": 129837026.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
     "o": 7.237881660461426,
     "h": 7.2875165939331055,
-    "l": 7.141571044921875,
-    "c": 7.141571044921875
+    "l": 7.141445159912109,
+    "c": 7.141554355621338
    },
    "exits": {
     "x1_lo": 6.82710599899292,
@@ -5493,8 +5493,8 @@
    "s1_filter_known": true,
    "bars": 1827,
    "date": "2026-09-06",
-   "unit_shares": 198.383242,
-   "unit_notional": 1416.77,
+   "unit_shares": 198.378288,
+   "unit_notional": 1416.73,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5601,10 +5601,10 @@
    "symbol": "DOGE",
    "name": "Dogecoin",
    "sector": "",
-   "price": 0.08985,
+   "price": 0.08996,
    "n": 0.004104,
-   "n_pct": 4.57,
-   "dvol": 98641098.0,
+   "n_pct": 4.56,
+   "dvol": 98634013.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -5612,7 +5612,7 @@
     "o": 0.08968598395586014,
     "h": 0.09177419543266296,
     "l": 0.08967950940132141,
-    "c": 0.08985000103712082
+    "c": 0.0899600014090538
    },
    "exits": {
     "x1_lo": 0.08028300106525421,
@@ -5626,7 +5626,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 12183.236086,
-   "unit_notional": 1094.66,
+   "unit_notional": 1096.0,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5734,7 +5734,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.099979,
-    "distance_pct": 11.27
+    "distance_pct": 11.14
    },
    "approaching": false
   },
@@ -5742,10 +5742,10 @@
    "symbol": "NEXO",
    "name": "NEXO",
    "sector": "",
-   "price": 0.83175379,
+   "price": 0.83131713,
    "n": 0.03175312,
    "n_pct": 3.82,
-   "dvol": 6164161.0,
+   "dvol": 6163880.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -5753,7 +5753,7 @@
     "o": 0.8407091498374939,
     "h": 0.8415842652320862,
     "l": 0.8304163813591003,
-    "c": 0.8317537903785706
+    "c": 0.831317126750946
    },
    "exits": {
     "x1_lo": 0.8162720203399658,
@@ -5767,7 +5767,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 1574.648629,
-   "unit_notional": 1309.72,
+   "unit_notional": 1309.03,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5877,7 +5877,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.93292397,
-    "distance_pct": 12.16
+    "distance_pct": 12.22
    },
    "approaching": false
   },
@@ -5885,18 +5885,18 @@
    "symbol": "ONDO",
    "name": "Ondo",
    "sector": "",
-   "price": 0.37920001,
-   "n": 0.0211335,
+   "price": 0.37964001,
+   "n": 0.02115477,
    "n_pct": 5.57,
-   "dvol": 48586606.0,
+   "dvol": 48619451.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
    "bar": {
     "o": 0.37036192417144775,
-    "h": 0.38054680824279785,
+    "h": 0.38097235560417175,
     "l": 0.37036192417144775,
-    "c": 0.3792000114917755
+    "c": 0.37964001297950745
    },
    "exits": {
     "x1_lo": 0.3358370065689087,
@@ -5909,8 +5909,8 @@
    "s1_filter_known": true,
    "bars": 963,
    "date": "2026-09-06",
-   "unit_shares": 2365.91249,
-   "unit_notional": 897.15,
+   "unit_shares": 2363.532867,
+   "unit_notional": 897.29,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -5993,7 +5993,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.42701399,
-    "distance_pct": 12.61
+    "distance_pct": 12.48
    },
    "approaching": false
   },
@@ -6001,10 +6001,10 @@
    "symbol": "BCH",
    "name": "Bitcoin Cash",
    "sector": "",
-   "price": 260.23999023,
+   "price": 260.20001221,
    "n": 12.45596856,
    "n_pct": 4.79,
-   "dvol": 59828693581.0,
+   "dvol": 59798327464.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6012,7 +6012,7 @@
     "o": 257.00494384765625,
     "h": 263.7406921386719,
     "l": 256.45233154296875,
-    "c": 260.239990234375
+    "c": 260.20001220703125
    },
    "exits": {
     "x1_lo": 241.19081115722656,
@@ -6026,7 +6026,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 4.01414,
-   "unit_notional": 1044.64,
+   "unit_notional": 1044.48,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -6146,7 +6146,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 302.92919922,
-    "distance_pct": 16.4
+    "distance_pct": 16.42
    },
    "approaching": false
   },
@@ -6154,10 +6154,10 @@
    "symbol": "ADA",
    "name": "Cardano",
    "sector": "",
-   "price": 0.22052,
+   "price": 0.22058,
    "n": 0.01199202,
    "n_pct": 5.44,
-   "dvol": 115042675.0,
+   "dvol": 115057275.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6165,7 +6165,7 @@
     "o": 0.21852707862854004,
     "h": 0.22314614057540894,
     "l": 0.2176269143819809,
-    "c": 0.2205200046300888
+    "c": 0.22057999670505524
    },
    "exits": {
     "x1_lo": 0.19075599312782288,
@@ -6179,7 +6179,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 4169.439093,
-   "unit_notional": 919.44,
+   "unit_notional": 919.69,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -6286,7 +6286,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 0.25770301,
-    "distance_pct": 16.86
+    "distance_pct": 16.83
    },
    "approaching": false
   },
@@ -6294,10 +6294,10 @@
    "symbol": "ETC",
    "name": "Ethereum Classic",
    "sector": "",
-   "price": 7.73600006,
+   "price": 7.73400021,
    "n": 0.32041738,
    "n_pct": 4.14,
-   "dvol": 347579650.0,
+   "dvol": 347528567.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6305,7 +6305,7 @@
     "o": 7.739635467529297,
     "h": 7.849027633666992,
     "l": 7.711963653564453,
-    "c": 7.736000061035156
+    "c": 7.734000205993652
    },
    "exits": {
     "x1_lo": 7.120368957519531,
@@ -6319,7 +6319,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 156.046466,
-   "unit_notional": 1207.18,
+   "unit_notional": 1206.86,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -6425,7 +6425,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 9.04358101,
-    "distance_pct": 16.9
+    "distance_pct": 16.93
    },
    "approaching": false
   },
@@ -6436,7 +6436,7 @@
    "price": 5.10900021,
    "n": 0.31717982,
    "n_pct": 6.21,
-   "dvol": 405604808.0,
+   "dvol": 405594064.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6576,10 +6576,10 @@
    "symbol": "XLM",
    "name": "Stellar",
    "sector": "",
-   "price": 0.186756,
+   "price": 0.18666101,
    "n": 0.00861985,
    "n_pct": 4.62,
-   "dvol": 36013434.0,
+   "dvol": 36012726.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6587,7 +6587,7 @@
     "o": 0.18407884240150452,
     "h": 0.18750664591789246,
     "l": 0.1840488463640213,
-    "c": 0.18675599992275238
+    "c": 0.1866610050201416
    },
    "exits": {
     "x1_lo": 0.1716500073671341,
@@ -6601,7 +6601,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 5800.567204,
-   "unit_notional": 1083.29,
+   "unit_notional": 1082.74,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -6718,7 +6718,7 @@
    "nearest": {
     "key": "s2_short",
     "level": 0.1525,
-    "distance_pct": 18.34
+    "distance_pct": 18.3
    },
    "approaching": false
   },
@@ -6726,10 +6726,10 @@
    "symbol": "XRP",
    "name": "XRP",
    "sector": "",
-   "price": 1.41960001,
+   "price": 1.42030001,
    "n": 0.06500056,
    "n_pct": 4.58,
-   "dvol": 6231562776.0,
+   "dvol": 6231499732.0,
    "liquid_share": 1.0,
    "state": "flat",
    "signal": "",
@@ -6737,7 +6737,7 @@
     "o": 1.412487268447876,
     "h": 1.4290097951889038,
     "l": 1.4121229648590088,
-    "c": 1.419600009918213
+    "c": 1.420300006866455
    },
    "exits": {
     "x1_lo": 1.3135950565338135,
@@ -6751,7 +6751,7 @@
    "bars": 1827,
    "date": "2026-09-06",
    "unit_shares": 769.224154,
-   "unit_notional": 1091.99,
+   "unit_notional": 1092.53,
    "unit_risk_per_n": 50.0,
    "unit_stop_loss": 100.0,
    "record": {
@@ -6865,7 +6865,7 @@
    "nearest": {
     "key": "s2_long",
     "level": 1.68375397,
-    "distance_pct": 18.61
+    "distance_pct": 18.55
    },
    "approaching": false
   },
