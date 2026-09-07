@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-09-06",
+  "run_date": "2026-09-08",
   "ruleset_version": "1.3.1",
   "universe_size": 1426,
   "narrations_file": "narrations.json",
@@ -341,8 +341,8 @@
             "prior_low",
             "box_low",
             "equal_lows",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -6904,14 +6904,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 6.7296,
+          "low": 6.7424,
           "high": 7.3376,
           "status": "RESPECTED",
           "confluence": 5,
           "sources": [
-            "equal_lows",
             "fib_ext_1618",
             "box_low",
+            "equal_lows",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -6955,7 +6955,7 @@
       "route_to": null,
       "name": "BCP Investment Corporation - Closed End Fund",
       "sector": "",
-      "next": "bounces staying below 7.46–7.49; next objective the 6.73–7.34 zone (T1)"
+      "next": "bounces staying below 7.46–7.49; next objective the 6.74–7.34 zone (T1)"
     },
     {
       "ticker": "BPYPN",
@@ -11081,7 +11081,7 @@
       ],
       "metrics": {
         "retrace_pct": 0.4054,
-        "dist_to_yearly_open_pct": 0.0139,
+        "dist_to_yearly_open_pct": 0.0138,
         "avg_turnover_20d": 848778,
         "close": 20.8,
         "sweep_date": "2026-09-03",
@@ -36493,8 +36493,8 @@
           "confluence": 3,
           "sources": [
             "equal_highs",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-08-07"
         },
@@ -36675,8 +36675,8 @@
           "sources": [
             "fib_ext_10",
             "equal_highs",
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-07-31"
         },
@@ -45624,8 +45624,8 @@
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 16.2433,
-          "high": 16.3215,
+          "low": 16.2432,
+          "high": 16.3214,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
