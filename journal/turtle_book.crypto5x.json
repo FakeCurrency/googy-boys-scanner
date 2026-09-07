@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto5x",
- "generated_at": "2026-09-07T14:14:01+00:00",
+ "generated_at": "2026-09-07T15:16:44+00:00",
  "started": "2026-08-22",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 1172.84997559,
+   "last_mark": 1171.94995117,
    "mark_date": "2026-09-07",
    "fees": 1.495422,
    "mfe_r": 5.7989,
@@ -45,7 +45,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 66.61000061,
+   "last_mark": 66.29000092,
    "mark_date": "2026-09-07",
    "fees": 1.59963,
    "mfe_r": 9.962,
@@ -70,7 +70,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 7.06449986,
+   "last_mark": 6.99980021,
    "mark_date": "2026-09-07",
    "fees": 2.795106,
    "mfe_r": 6.5177,
@@ -94,7 +94,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 2.36829996,
+   "last_mark": 2.34859991,
    "mark_date": "2026-09-07",
    "fees": 1.422235,
    "mfe_r": 2.7552,
@@ -118,7 +118,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.4682,
+   "last_mark": 0.4596,
    "mark_date": "2026-09-07",
    "fees": 1.080912,
    "mfe_r": 1.1329,
@@ -142,36 +142,13 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.41406524,
+   "last_mark": 1.4119432,
    "mark_date": "2026-09-07",
    "fees": 1.441954,
    "mfe_r": 0.0872,
    "mae_r": -0.9963,
    "posted": 192.260557,
    "unpriced_runs": 0
-  },
-  {
-   "symbol": "LEO",
-   "market": "crypto5x",
-   "name": "LEO Token",
-   "sector": "",
-   "side": "short",
-   "system": 1,
-   "n": 0.20634824,
-   "units": 228.4733468,
-   "fills": [
-    9.14823818
-   ],
-   "cost_basis": 2090.128595,
-   "stop": 9.56093466,
-   "last_fill": 9.14823818,
-   "opened": "2026-09-07",
-   "last_mark": 9.14823818,
-   "mark_date": "2026-09-07",
-   "fees": 3.135193,
-   "mfe_r": 0.0,
-   "mae_r": 0.0,
-   "posted": 418.025719
   }
  ],
  "closed": [
@@ -229,27 +206,56 @@
     0.09526071
    ],
    "posted": 593.649493
+  },
+  {
+   "symbol": "LEO",
+   "market": "crypto5x",
+   "name": "LEO Token",
+   "sector": "",
+   "side": "short",
+   "system": 1,
+   "n": 0.20634824,
+   "units": 685.4200404,
+   "opened": "2026-09-07",
+   "closed": "2026-09-07",
+   "closed_bar": "2026-09-07",
+   "exit": 9.35458642,
+   "reason": "stop",
+   "entry_avg": 9.04506406,
+   "gross": -212.1528,
+   "fees": 18.9172,
+   "pnl": -231.0701,
+   "r": -0.8169,
+   "gross_r": -0.75,
+   "mfe_r": 0.7461,
+   "mae_r": -0.6339,
+   "fills": [
+    9.14823818,
+    9.04506406,
+    8.94188994
+   ],
+   "posted": 1239.933635
   }
  ],
  "summary": {
   "started": "2026-08-22",
   "equity_start": 5000.0,
-  "equity": 4714.51,
-  "return_pct": -5.71,
-  "open_positions": 7,
-  "open_units": 8,
-  "closed": 2,
+  "equity": 4483.44,
+  "return_pct": -10.331,
+  "open_positions": 6,
+  "open_units": 7,
+  "closed": 3,
   "wins": 0,
   "win_pct": 0.0,
-  "total_r": -1.954,
-  "avg_r": -0.977,
-  "median_r": -0.977,
-  "realized_pnl": -285.49,
-  "fees_paid": 12.56,
-  "sizing_equity": 4714.51,
+  "total_r": -2.771,
+  "avg_r": -0.9236,
+  "median_r": -0.92,
+  "realized_pnl": -516.56,
+  "fees_paid": 31.48,
+  "sizing_equity": 3586.75,
   "leverage": 5.0,
-  "posted_margin": 1729.39,
-  "free_margin": 2985.11
+  "posted_margin": 1311.37,
+  "free_margin": 3172.07
  },
  "params": {
   "leverage": 5.0,
@@ -258,7 +264,9 @@
   "margin_mode": "isolated"
  },
  "events": [
-  "ENTER LEO S1 short @ 9.14824"
+  "ADD LEO u2 @ 9.04506",
+  "ADD LEO u3 @ 8.94189",
+  "EXIT LEO stop-after-add -0.8169R"
  ],
  "skips": [
   {
@@ -329,6 +337,15 @@
   {
    "as_of": "2026-09-07",
    "market": "crypto5x",
+   "symbol": "LEO",
+   "action": "entry",
+   "reason": "same_bar_reentry",
+   "signal": "s1_short",
+   "bar": "2026-09-07"
+  },
+  {
+   "as_of": "2026-09-07",
+   "market": "crypto5x",
    "symbol": "DOT",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -349,10 +366,23 @@
    "bucket": "crypto",
    "side": "long",
    "system": 2
+  },
+  {
+   "as_of": "2026-09-07",
+   "market": "crypto5x",
+   "symbol": "TIA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
   }
  ],
  "skip_counts": {
-  "close_corr_cap": 7,
-  "total": 7
+  "close_corr_cap": 8,
+  "same_bar_reentry": 1,
+  "total": 9
  }
 }

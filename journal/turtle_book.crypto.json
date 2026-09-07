@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-07T14:14:01+00:00",
+ "generated_at": "2026-09-07T15:16:44+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.41406524,
+   "last_mark": 1.4119432,
    "mark_date": "2026-09-07",
    "fees": 0.775953,
    "mfe_r": 0.0872,
@@ -45,7 +45,7 @@
    "stop": 904.86570891,
    "last_fill": 1018.91146291,
    "opened": "2026-09-04",
-   "last_mark": 1172.84997559,
+   "last_mark": 1171.94995117,
    "mark_date": "2026-09-07",
    "fees": 1.255465,
    "mfe_r": 2.1167,
@@ -70,7 +70,7 @@
    "stop": 2.00622615,
    "last_fill": 2.25437393,
    "opened": "2026-09-04",
-   "last_mark": 2.36829996,
+   "last_mark": 2.34859991,
    "mark_date": "2026-09-07",
    "fees": 1.888664,
    "mfe_r": 1.1971,
@@ -93,7 +93,7 @@
    "stop": 59.78798172,
    "last_fill": 67.5,
    "opened": "2026-09-05",
-   "last_mark": 66.61000061,
+   "last_mark": 66.29000092,
    "mark_date": "2026-09-07",
    "fees": 0.623695,
    "mfe_r": 1.3772,
@@ -491,17 +491,29 @@
   {
    "as_of": "2026-09-07",
    "market": "crypto",
+   "symbol": "TIA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-07",
+   "market": "crypto",
    "symbol": "LEO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1053.06,
+   "want_notional": 1053.2,
    "equity": 3711.38,
    "system": 1
   }
  ],
  "skip_counts": {
-  "close_corr_cap": 6,
+  "close_corr_cap": 7,
   "cash": 1,
-  "total": 7
+  "total": 8
  }
 }
