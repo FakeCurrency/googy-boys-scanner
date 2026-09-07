@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto5x",
- "generated_at": "2026-09-07T15:16:44+00:00",
+ "generated_at": "2026-09-07T19:51:51+00:00",
  "started": "2026-08-22",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 1171.94995117,
+   "last_mark": 1164.30004883,
    "mark_date": "2026-09-07",
    "fees": 1.495422,
    "mfe_r": 5.7989,
@@ -45,7 +45,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 66.29000092,
+   "last_mark": 64.16000366,
    "mark_date": "2026-09-07",
    "fees": 1.59963,
    "mfe_r": 9.962,
@@ -70,7 +70,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 6.99980021,
+   "last_mark": 6.94649982,
    "mark_date": "2026-09-07",
    "fees": 2.795106,
    "mfe_r": 6.5177,
@@ -94,7 +94,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 2.34859991,
+   "last_mark": 2.31809998,
    "mark_date": "2026-09-07",
    "fees": 1.422235,
    "mfe_r": 2.7552,
@@ -118,10 +118,10 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.4596,
+   "last_mark": 0.4632,
    "mark_date": "2026-09-07",
    "fees": 1.080912,
-   "mfe_r": 1.1329,
+   "mfe_r": 1.24,
    "mae_r": -0.9206,
    "posted": 144.121561,
    "unpriced_runs": 0
@@ -142,7 +142,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.4119432,
+   "last_mark": 1.40401852,
    "mark_date": "2026-09-07",
    "fees": 1.441954,
    "mfe_r": 0.0872,
@@ -263,11 +263,7 @@
   "cost_bps": 15.0,
   "margin_mode": "isolated"
  },
- "events": [
-  "ADD LEO u2 @ 9.04506",
-  "ADD LEO u3 @ 8.94189",
-  "EXIT LEO stop-after-add -0.8169R"
- ],
+ "events": [],
  "skips": [
   {
    "as_of": "2026-09-07",
@@ -346,6 +342,18 @@
   {
    "as_of": "2026-09-07",
    "market": "crypto5x",
+   "symbol": "INJ",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-07",
+   "market": "crypto5x",
    "symbol": "DOT",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -370,7 +378,7 @@
   {
    "as_of": "2026-09-07",
    "market": "crypto5x",
-   "symbol": "TIA",
+   "symbol": "FET",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -381,8 +389,8 @@
   }
  ],
  "skip_counts": {
-  "close_corr_cap": 8,
+  "close_corr_cap": 9,
   "same_bar_reentry": 1,
-  "total": 9
+  "total": 10
  }
 }
