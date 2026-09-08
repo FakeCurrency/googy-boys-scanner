@@ -1,7 +1,7 @@
 {
   "run_date": "2026-09-08",
   "ruleset_version": "1.3.1",
-  "universe_size": 1426,
+  "universe_size": 1425,
   "results": [
     {
       "ticker": "ACLS",
@@ -1407,7 +1407,7 @@
           "id": "t2",
           "type": "TARGET",
           "low": 305.6434,
-          "high": 323.0336,
+          "high": 323.0337,
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
@@ -6969,14 +6969,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 6.7424,
+          "low": 6.7296,
           "high": 7.3376,
           "status": "RESPECTED",
           "confluence": 5,
           "sources": [
+            "equal_lows",
             "fib_ext_1618",
             "box_low",
-            "equal_lows",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -7020,8 +7020,8 @@
       "route_to": null,
       "name": "BCP Investment Corporation - Closed End Fund",
       "sector": "",
-      "narration": "Displacement confirmed on 2026-09-03. First draw is the 6.74–7.34 zone (the 1.618–2.0 extension of the leg + the bottom of the range + a shelf of equal lows + the quarterly open + the 1.0–1.272 extension of the leg); beyond that, 6.64–6.71 (a prior swing low). The continuation thesis stays valid while bounces hold below the 7.46–7.49 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 7.89. Analysis only — not financial advice.",
-      "next": "bounces staying below 7.46–7.49; next objective the 6.74–7.34 zone (T1)"
+      "narration": "Displacement confirmed on 2026-09-03. First draw is the 6.73–7.34 zone (a shelf of equal lows + the 1.618–2.0 extension of the leg + the bottom of the range + the quarterly open + the 1.0–1.272 extension of the leg); beyond that, 6.64–6.71 (a prior swing low). The continuation thesis stays valid while bounces hold below the 7.46–7.49 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 7.89. Analysis only — not financial advice.",
+      "next": "bounces staying below 7.46–7.49; next objective the 6.73–7.34 zone (T1)"
     },
     {
       "ticker": "BPYPN",
@@ -11216,7 +11216,7 @@
       ],
       "metrics": {
         "retrace_pct": 0.4054,
-        "dist_to_yearly_open_pct": 0.0138,
+        "dist_to_yearly_open_pct": 0.0139,
         "avg_turnover_20d": 848778,
         "close": 20.8,
         "sweep_date": "2026-09-03",
@@ -19059,52 +19059,6 @@
       "sector": "",
       "narration": "LNT ran the 67.38–67.54 lows on 2026-08-31 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
-    },
-    {
-      "ticker": "LPSN",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 3.13,
-          "high": 3.25,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 3.25,
-          "high": 3.3555,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-02"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.5,
-        "dist_to_yearly_open_pct": -0.201,
-        "avg_turnover_20d": 877246,
-        "close": 3.1,
-        "sweep_date": "2026-09-02",
-        "sweep_depth_pct": 0.0383,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "LivePerson, Inc. - Common Stock",
-      "sector": "",
-      "narration": "LPSN ran the 3.13–3.25 highs on 2026-09-02 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "LSAK",
@@ -38524,8 +38478,8 @@
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "equal_lows"
           ],
           "created_date": "2026-08-05"
