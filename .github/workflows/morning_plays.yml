@@ -1,0 +1,80 @@
+name: Morning plays (Discord)
+
+# The daily HIGH-CONVICTION digest (scripts/morning_plays.py, 2026-09-08 owner
+# ask): every Melbourne morning, post the high-conviction VIVEK 5.0 plays across
+# ASX + NASDAQ to a Discord channel.
+#
+# READ-ONLY: it reads the COMMITTED scan JSON (public/data/<market>_vivek.json)
+# and posts. It never scans, never touches Yahoo, never commits, and is NOT in
+# the `scan` concurrency group -- so it needs no assert_staged and no
+# WATCHDOG_RUNS entry (same as evidence_brief.yml, which also only reads +
+# delivers).
+#
+# THE CHANNEL IS NEW, NOT A REVIVAL. Discord as an ALERT channel was removed
+# 2026-08-27; this uses its OWN secret (DISCORD_MORNING_WEBHOOK_URL), which is
+# the sanctioned path the credential pins name for "something new". Until the
+# owner creates the webhook and sets that secret, the script warns loudly and
+# exits 0 (a green setup gap).
+#
+# SUPERSET CRONS for 7:00 Melbourne year-round (the DST trick this repo uses on
+# every local-time job): 07:00 AEDT = 20:00 UTC, 07:00 AEST = 21:00 UTC. Both
+# fire daily; the script sends only on the run whose Melbourne local hour is 7,
+# so exactly one lands per day.
+
+on:
+  schedule:
+    - cron: "0 20 * * *"   # 07:00 Melbourne during AEDT (Oct-Apr)
+    - cron: "0 21 * * *"   # 07:00 Melbourne during AEST (Apr-Oct)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Send now regardless of the Melbourne hour (for testing)"
+        default: "true"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morning-plays
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # stdlib-only: the script reads committed JSON and scanner.config (pure
+      # constants, no pandas), so no pip install is needed.
+      - name: Post the morning digest
+        env:
+          # The channel's own secret -- deliberately its own distinct name, not
+          # the removed alert webhook secret. Absent = the script warns + exits 0.
+          DISCORD_MORNING_WEBHOOK_URL: ${{ secrets.DISCORD_MORNING_WEBHOOK_URL }}
+          # Free-text/boolean inputs travel through env, never ${{ }} inside a
+          # run block (2026-07-20 security pass).
+          EVENT: ${{ github.event_name }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          set -o pipefail
+          ARGS=""
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$FORCE" != "false" ]; then
+            ARGS="--force"
+          fi
+          python3 scripts/morning_plays.py $ARGS 2>&1 | tee /tmp/mp.txt
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo '### Morning plays'
+            echo '```'
+            cat /tmp/mp.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

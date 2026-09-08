@@ -2013,3 +2013,31 @@ TURTLE_SMALL_UNIVERSE_MAX_MISSING = 2
 # breakouts than a page can show; ranking is by proximity to the level and
 # then by liquidity, and the payload states how many were dropped.
 TURTLE_MAX_ROWS = 400
+
+# ---------------------------------------------------------------------------
+# MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
+# across ASX + NASDAQ (owner ask, 2026-09-08). scripts/morning_plays.py reads
+# the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
+# Discord once each Melbourne morning.
+#
+# THE CHANNEL IS DELIBERATELY NEW, NOT A REVIVAL. Discord as an ALERT channel
+# was ruled out 2026-08-27 ("get rid of the discord aspect, I will work on
+# implementing something new in the future"), and tests/test_alert_credentials
+# pins that the removed alert webhook (DISCORD_WEBHOOK_URL) never creeps back
+# into a workflow or scanner/scripts. That pin's own docstring names the
+# sanctioned path for the "something new": its OWN secret name. So this digest
+# uses a SEPARATE secret and is a standalone content push, NOT routed through
+# the severity/rate-limit alert router (a once-a-day digest is not an alert).
+MORNING_PLAYS_WEBHOOK_ENV = "DISCORD_MORNING_WEBHOOK_URL"   # owner sets this secret
+MORNING_PLAYS_MARKETS = ("asx", "nasdaq")
+MORNING_PLAYS_TZ = "Australia/Melbourne"
+MORNING_PLAYS_HOUR = 7             # send at ~07:00 Melbourne (see morning_plays.yml)
+MORNING_PLAYS_MAX_ROWS = 20        # per market, to stay inside Discord's limits
+MORNING_PLAYS_UA = "vivek5-morning/1.0"   # named UA — Discord 403s Python's default
+# A stale scan (weekend / dropped cron) still sends, but says so: flag a market
+# whose newest scan is older than this many hours.
+MORNING_PLAYS_STALE_H = 20.0
+# Absolute URL of the deployed app, for a "open the SCAN page" link in the
+# digest. Empty = omit the link (a dead link is worse than none). The owner
+# can set their Cloudflare Pages URL here.
+MORNING_PLAYS_APP_URL = ""

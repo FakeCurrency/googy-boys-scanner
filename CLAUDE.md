@@ -116,6 +116,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
+| morning_plays.yml | 20:00 + 21:00 UTC daily (superset for 07:00 Melbourne) | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (ASX + NASDAQ) to Discord (owner ask 2026-09-08). READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Both crons fire daily; the script sends only on the run whose Melbourne hour is 7 (DST superset trick), so exactly one lands. Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. ONE IN-RUN RETRY for a failed market (2026-09-01 — runs #64/#88, both Yahoo-throttle-under-the-coverage-floor): main() re-scans just the failed market(s) once after `TURTLE_THROTTLE_RETRY_COOLDOWN_S` (180s; 0=off), because a throttle window clears in minutes while the per-batch retries sit seconds apart inside it. A persistent failure still reddens the run — the floor's alarm is untouched, only its false-positive rate. Pins: `tests/test_turtle.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
@@ -172,6 +173,41 @@ nothing reads it.
 HISTORY (pre-removal): **Telegram and SMTP are UNCONFIGURED** (empty
 secrets), so Discord was the only live channel. `test_alerts.yml` remains the
 end-to-end proof harness for whatever channel comes next.
+
+### MORNING PLAYS — a NEW, sanctioned Discord digest (2026-09-08)
+
+The 2026-08-27 removal killed Discord as the ALERT router. The owner then asked
+for the "something new" it foreshadowed: **a daily digest of the HIGH-CONVICTION
+VIVEK 5.0 plays across ASX + NASDAQ, posted to Discord each Melbourne morning.**
+`scripts/morning_plays.py` + `.github/workflows/morning_plays.yml`.
+
+- **It is NOT a revival of the alert router, by construction.** It is a
+  standalone once-a-day content push (reco_note / evidence_brief shape), NOT
+  routed through `alert_dispatch`'s severity tiers / rate limits — a digest is
+  not an alert. It uses its OWN secret **`DISCORD_MORNING_WEBHOOK_URL`**, a
+  distinct name from the removed `DISCORD_WEBHOOK_URL`, which is exactly the
+  path `test_no_workflow_references_the_removed_discord_webhook`'s own docstring
+  names ("the replacement channel gets its own secret name"). Both credential
+  pins still hold unchanged — do NOT weaken them, and do NOT let the LITERAL
+  string `DISCORD_WEBHOOK_URL` appear in this workflow (even in a comment: the
+  pin is a substring check, and it caught exactly that on the first draft).
+- **HIGH CONVICTION is reproduced from app.js `isHighConviction` EXACTLY**: a
+  weekly (1W) reclaim that is armed and either A/A+ grade or has >= 2 structural
+  TPs. `test_morning_plays.py::test_it_matches_the_shipped_app_js_rule` slices
+  the shipped app.js so the two cannot drift silently. If that rule changes in
+  app.js, change `morning_plays.is_high_conviction` with it.
+- **READ-ONLY**: reads the COMMITTED `public/data/<market>_vivek.json` (no scan,
+  no Yahoo, not in the scan mutex), posts, commits nothing — so no assert_staged
+  and no WATCHDOG entry, like evidence_brief. The webhook runs through
+  `config.clean_secret` (the 2026-08-01 BOM lesson) and posts with a named UA
+  (Discord 403s Python's default). Missing secret = `::warning::` + exit 0 (a
+  green setup gap); a genuine delivery failure = exit 1 (loud, since GitHub's
+  red-run email is the only alarm).
+- **Owner action to switch it on**: create a Discord webhook for the channel he
+  wants and add it as the `DISCORD_MORNING_WEBHOOK_URL` Actions secret. Until
+  then every run is a green no-op that says so. Constants (markets, 07:00 hour,
+  per-market cap, staleness flag, optional app URL) live in `config.py`
+  (`MORNING_PLAYS_*`). Manual `workflow_dispatch` sends immediately (force).
 
 **THE 2026-08-01 FIX MISSED THE WORKFLOWS' OWN FAILURE PINGS (found
 2026-08-27).** Five workflows — scan, crypto_bot, phasemap, backup_book,
@@ -2450,7 +2486,10 @@ Set: `DISCORD_WEBHOOK_URL` (ORPHANED 2026-08-27 — the channel was removed;
 nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
 `BYBIT_*` (testnet), `ALPACA_*` (legacy),
 `TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
-**Pending owner:** `GBS_SYNC_CODE` (activates watchlist-aware pings),
+**Pending owner:** `DISCORD_MORNING_WEBHOOK_URL` (switches on the morning
+high-conviction digest — see MORNING PLAYS; a fresh webhook for a dedicated
+channel, distinct from the removed alert webhook), `GBS_SYNC_CODE` (activates
+watchlist-aware pings),
 data-provider key, Cloudflare Access.
 
 ---
