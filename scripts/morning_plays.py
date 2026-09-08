@@ -1,32 +1,36 @@
 """Morning Discord digest of HIGH-CONVICTION VIVEK 5.0 plays (2026-09-08).
 
-Every Melbourne morning, collect the high-conviction setups across ASX and
-NASDAQ and post them to a Discord channel. READ-ONLY: it reads the COMMITTED
-scan JSON (public/data/<market>_vivek.json) and posts -- it never scans, never
-touches Yahoo, never commits, and is not in the scan concurrency group. The
-pattern is reco_note.py / evidence_brief.py, not the alert router.
+Every Melbourne morning, collect the qualifying LONG setups across ASX and
+NASDAQ and post them to a Discord channel as a CLEAN text list. READ-ONLY: it
+reads the COMMITTED scan JSON (public/data/<market>_vivek.json) and posts -- it
+never scans, never touches Yahoo, never commits, and is not in the scan
+concurrency group. The pattern is reco_note.py / evidence_brief.py.
 
-HIGH CONVICTION is defined EXACTLY as the dashboard's app.js isHighConviction:
-a WEEKLY (1W) reclaim that is armed and is either A/A+ grade OR has strong
-structure (>= 2 structural take-profits). Reproduced here from the same lite
-plan fields the summary keeps (config.VIVEK_SUMMARY_PLAN_FIELDS). If that rule
-ever changes in app.js, change it here too -- test_morning_plays.py pins the
-shared shape.
+WHAT QUALIFIES (owner spec, 2026-09-08): LONG only, never a SHORT; never a
+FUND / REIT / LIC / preferred (the scan's `is_product` flag); and either
+  * HIGH CONVICTION  -- app.js isHighConviction: a WEEKLY (1W) reclaim that is
+    armed and is A/A+ grade or has strong structure (>= 2 structural TPs); or
+  * (opt-in) a plain A+ long, when MORNING_PLAYS_INCLUDE_ALL_APLUS is True.
+Default is high-conviction longs only -- a tight, focused list. Turning the
+A+ opt-in on adds ~90 more names a day (every plain long A+), a much longer
+list; the message is chunked across several posts if it would exceed Discord's
+2000-char limit.
+
+Each play renders as `SYMBOL -> label`, where the label says why it made the
+cut: "A+ High conviction", "High conviction", or "A+".
 
 THE CHANNEL. Discord as an ALERT channel was removed 2026-08-27; this is the
 "something new" the owner foreshadowed, on its OWN secret
-(config.MORNING_PLAYS_WEBHOOK_ENV = DISCORD_MORNING_WEBHOOK_URL) so it never
-revives the removed alert webhook the credential pins guard. The webhook is
-run through config.clean_secret (the 2026-08-01 BOM lesson) and posted with a
-named User-Agent (Discord 403s Python's default UA).
+(config.MORNING_PLAYS_WEBHOOK_ENV = DISCORD_MORNING_WEBHOOK_URL). The webhook
+runs through config.clean_secret (the BOM lesson) and posts with a named UA.
 
 Exit codes: 0 on a clean send / a "not my hour" skip / a missing webhook
-(setup gap, warned loudly, like the tick 503 branch); 1 on a genuine delivery
-failure, so the run reddens and GitHub emails -- a dead send must be loud.
+(setup gap, warned loudly); 1 on a genuine delivery failure, so the run reddens
+and GitHub emails.
 
     python scripts/morning_plays.py                 # gated to Melbourne 07:00
     python scripts/morning_plays.py --force         # send now regardless of hour
-    python scripts/morning_plays.py --force --dry-run   # print payload, post nothing
+    python scripts/morning_plays.py --force --dry-run   # print, post nothing
 """
 
 from __future__ import annotations
@@ -47,6 +51,7 @@ if str(ROOT) not in sys.path:                # runnable as `python scripts/morni
 from scanner import config                   # noqa: E402
 
 DATA_DIR = ROOT / "public" / "data"
+CONTENT_LIMIT = 1900                          # Discord caps `content` at 2000; leave slack
 
 
 # ── the definition, identical to app.js isHighConviction ─────────────────────
@@ -64,6 +69,33 @@ def is_high_conviction(row: dict) -> bool:
     good_grade = row.get("grade") in ("A+", "A")
     strong_structure = (p.get("structural_tps") or 0) >= 2
     return bool(good_grade or strong_structure)
+
+
+def _is_long(row: dict) -> bool:
+    return str(row.get("dir", "LONG")).upper() != "SHORT"
+
+
+def qualifies(row: dict) -> bool:
+    """LONG, not a fund/REIT, and high-conviction (or a plain A+ when the A+
+    opt-in is on)."""
+    if not _is_long(row):
+        return False
+    if row.get("is_product"):                 # fund / REIT / LIC / preferred
+        return False
+    if is_high_conviction(row):
+        return True
+    return bool(getattr(config, "MORNING_PLAYS_INCLUDE_ALL_APLUS", False)
+                and row.get("grade") == "A+")
+
+
+def play_label(row: dict) -> str:
+    aplus = row.get("grade") == "A+"
+    hc = is_high_conviction(row)
+    if aplus and hc:
+        return "A+ High conviction"
+    if hc:
+        return "High conviction"
+    return "A+" if aplus else ""
 
 
 # ── loading + selecting ──────────────────────────────────────────────────────
@@ -89,79 +121,71 @@ def _scan_age_hours(generated_at: str | None, now_utc: dt.datetime) -> float | N
         return None
 
 
-def pick(rows: list[dict], cap: int) -> list[dict]:
-    """High-conviction rows, strongest first (score desc), capped."""
-    hc = [r for r in rows if is_high_conviction(r)]
-    hc.sort(key=lambda r: (-(r.get("score") or 0), str(r.get("symbol") or "")))
-    return hc[:cap]
+def select(rows: list[dict]) -> list[dict]:
+    """Qualifying LONG rows, strongest first (score desc)."""
+    q = [r for r in rows if qualifies(r)]
+    q.sort(key=lambda r: (-(r.get("score") or 0), str(r.get("symbol") or "")))
+    return q
 
 
-# ── formatting the Discord payload (pure) ────────────────────────────────────
+# ── formatting the clean text (pure) ─────────────────────────────────────────
 
-def _num(x) -> str:
-    if x is None:
-        return "-"
-    try:
-        v = float(x)
-    except (TypeError, ValueError):
-        return str(x)
-    return f"{v:g}"
-
-
-def _play_line(r: dict) -> str:
-    is_short = str(r.get("dir", "LONG")).upper() == "SHORT"
-    arrow = "▼" if is_short else "▲"          # down/up triangle
-    side = "SHORT" if is_short else "LONG"
-    name = str(r.get("name") or "").strip()
-    bits = [f"{arrow} **{r.get('symbol', '?')}** {side} · {r.get('grade', '?')}"]
-    if name and name.upper() != str(r.get("symbol") or "").upper():
-        bits.append(name[:40])
-    lv = f"entry {_num(r.get('entry'))} · stop {_num(r.get('stop'))}"
-    rr = r.get("rr")
-    if rr not in (None, 0):
-        lv += f" · R:R {_num(rr)}"
-    bits.append(lv)
-    if r.get("is_product"):
-        bits.append("⚠ FUND/REIT")            # not bot-tradeable / rarely on CFDs
-    return " · ".join(bits)
+def _market_block(market: str, picks: list[dict], cap: int,
+                  age: float | None, stale_h: float) -> list[str]:
+    lines = [f"**{market.upper()} plays**"]
+    if not picks:
+        lines.append("(none this morning)")
+        return lines
+    for r in picks[:cap]:
+        lines.append(f"{r.get('symbol', '?')} → {play_label(r)}")   # SYM -> label
+    if len(picks) > cap:
+        lines.append(f"...+{len(picks) - cap} more (see the app)")
+    if age is not None and stale_h and age > stale_h:
+        lines.append(f"_(scan {age:.0f}h old)_")
+    return lines
 
 
-def build_payload(picks_by_market: dict[str, list[dict]],
-                  ages: dict[str, float | None],
-                  when_label: str) -> dict:
-    """The Discord webhook JSON. `picks_by_market` is market -> [rows]."""
+def build_messages(picks_by_market: dict[str, list[dict]],
+                   ages: dict[str, float | None],
+                   when_label: str) -> list[str]:
+    """One or more Discord `content` strings (chunked to CONTENT_LIMIT)."""
+    header = f"\U0001f3af **Morning plays — {when_label}**"
     total = sum(len(v) for v in picks_by_market.values())
-    stale_h = float(getattr(config, "MORNING_PLAYS_STALE_H", 20.0) or 0)
     if not total:
-        return {"content": (f"\U0001f3af **High conviction — {when_label}**\n"
-                            "No high-conviction plays across ASX or NASDAQ this "
-                            "morning.")}
+        return [header + "\nNo long high-conviction plays across ASX + NASDAQ "
+                         "this morning."]
 
-    embeds = []
+    cap = int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
+    stale_h = float(getattr(config, "MORNING_PLAYS_STALE_H", 20.0) or 0)
+    lines = [header]
     for market, picks in picks_by_market.items():
-        if not picks:
-            continue
-        title = f"{market.upper()} — {len(picks)}"
-        age = ages.get(market)
-        if age is not None and stale_h and age > stale_h:
-            title += f"  (scan {age:.0f}h old)"
-        desc = "\n".join(_play_line(r) for r in picks)
-        embeds.append({"title": title, "description": desc[:4000],
-                       "color": 0x2FD07F})
-    plural = "play" if total == 1 else "plays"
-    content = (f"\U0001f3af **High conviction — {when_label}**\n"
-               f"{total} {plural} across ASX + NASDAQ "
-               "(weekly reclaim, A/A+ or strong structure).")
+        lines.append("")
+        lines.extend(_market_block(market, picks, cap, ages.get(market), stale_h))
     url = str(getattr(config, "MORNING_PLAYS_APP_URL", "") or "").strip()
     if url:
-        content += f"\n{url}"
-    return {"content": content, "embeds": embeds[:10]}
+        lines += ["", url]
+    return _chunk(lines)
+
+
+def _chunk(lines: list[str], limit: int = CONTENT_LIMIT) -> list[str]:
+    """Pack lines into <=limit-char messages, never splitting a line."""
+    out, cur = [], ""
+    for ln in lines:
+        piece = (cur + "\n" + ln) if cur else ln
+        if len(piece) > limit and cur:
+            out.append(cur)
+            cur = ln
+        else:
+            cur = piece
+    if cur:
+        out.append(cur)
+    return out or [""]
 
 
 # ── posting ──────────────────────────────────────────────────────────────────
 
 def post(webhook: str, payload: dict, ua: str, urlopen=urllib.request.urlopen) -> int:
-    """POST the payload; return the HTTP status. Raises on transport failure."""
+    """POST one payload; return the HTTP status. Raises on transport failure."""
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         webhook, data=data, method="POST",
@@ -181,10 +205,9 @@ def should_send_now(now_local: dt.datetime, hour: int, force: bool) -> bool:
 def gather(data_dir: pathlib.Path, now_utc: dt.datetime) -> tuple[dict, dict]:
     picks_by_market: dict[str, list[dict]] = {}
     ages: dict[str, float | None] = {}
-    cap = int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
     for market in config.MORNING_PLAYS_MARKETS:
         payload = load_market(market, data_dir)
-        picks_by_market[market] = pick(payload.get("results", []), cap)
+        picks_by_market[market] = select(payload.get("results", []))
         ages[market] = _scan_age_hours(payload.get("generated_at"), now_utc)
     return picks_by_market, ages
 
@@ -194,7 +217,7 @@ def main(argv=None) -> int:
     ap.add_argument("--force", action="store_true",
                     help="send regardless of the Melbourne hour (manual test)")
     ap.add_argument("--dry-run", action="store_true",
-                    help="print the payload, post nothing")
+                    help="print the messages, post nothing")
     ap.add_argument("--data-dir", default=str(DATA_DIR))
     args = ap.parse_args(argv)
 
@@ -210,35 +233,38 @@ def main(argv=None) -> int:
 
     when_label = f"{now_local:%a %-d %b}, {hour:02d}:00 Melbourne"
     picks_by_market, ages = gather(pathlib.Path(args.data_dir), now_utc)
-    payload = build_payload(picks_by_market, ages, when_label)
+    messages = build_messages(picks_by_market, ages, when_label)
     total = sum(len(v) for v in picks_by_market.values())
     per = ", ".join(f"{m} {len(v)}" for m, v in picks_by_market.items())
-    print(f"morning_plays: {total} high-conviction plays ({per})")
+    print(f"morning_plays: {total} qualifying long plays ({per}); "
+          f"{len(messages)} message(s)")
 
     if args.dry_run:
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        for m in messages:
+            print("-" * 8)
+            print(m)
         return 0
 
     webhook = config.clean_secret(os.environ.get(config.MORNING_PLAYS_WEBHOOK_ENV))
     if not webhook:
-        # Setup gap, not a fault: the owner has not created the webhook yet.
-        # Loud on the run page (like the tick 503 branch), green run.
         print(f"::warning::{config.MORNING_PLAYS_WEBHOOK_ENV} is not set - "
               "nothing was sent. Create a Discord webhook for the channel you "
               "want and add it as that Actions secret to switch this on.")
         return 0
 
-    try:
-        status = post(webhook, payload, config.MORNING_PLAYS_UA)
-    except Exception as e:                                   # noqa: BLE001
-        print(f"::error::morning_plays: Discord POST failed: "
-              f"{e.__class__.__name__}: {e}")
-        return 1
-    if 200 <= status < 300:
-        print(f"morning_plays: delivered ({status}).")
-        return 0
-    print(f"::error::morning_plays: Discord returned HTTP {status} - not delivered.")
-    return 1
+    for i, msg in enumerate(messages, 1):
+        try:
+            status = post(webhook, {"content": msg}, config.MORNING_PLAYS_UA)
+        except Exception as e:                              # noqa: BLE001
+            print(f"::error::morning_plays: Discord POST {i}/{len(messages)} "
+                  f"failed: {e.__class__.__name__}: {e}")
+            return 1
+        if not (200 <= status < 300):
+            print(f"::error::morning_plays: Discord returned HTTP {status} on "
+                  f"message {i}/{len(messages)} - not delivered.")
+            return 1
+    print(f"morning_plays: delivered {len(messages)} message(s).")
+    return 0
 
 
 if __name__ == "__main__":

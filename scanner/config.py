@@ -2033,6 +2033,11 @@ MORNING_PLAYS_MARKETS = ("asx", "nasdaq")
 MORNING_PLAYS_TZ = "Australia/Melbourne"
 MORNING_PLAYS_HOUR = 7             # send at ~07:00 Melbourne (see morning_plays.yml)
 MORNING_PLAYS_MAX_ROWS = 20        # per market, to stay inside Discord's limits
+# False = LONG high-conviction plays only (a tight, focused list, ~7/day).
+# True = ALSO every plain LONG A+ play (~100/day across ASX+NASDAQ) -- a much
+# longer watchlist, chunked across several Discord posts. Shorts and
+# funds/REITs (is_product) are excluded either way.
+MORNING_PLAYS_INCLUDE_ALL_APLUS = False
 MORNING_PLAYS_UA = "vivek5-morning/1.0"   # named UA — Discord 403s Python's default
 # A stale scan (weekend / dropped cron) still sends, but says so: flag a market
 # whose newest scan is older than this many hours.
