@@ -149,35 +149,6 @@
    "fees_paid": 1497.8,
    "ordering": "same-day entries by that bar's dollar volume desc, then symbol",
    "caveat": "Shared-equity replay of the frozen Turtle rules over TODAY'S surviving universe. One in-sample pass: not walk-forward, not a forward record, not 'the Turtle return'. The forward books are the evidence; this is the portfolio-shaped context for them."
-  },
-  "futures21_5k": {
-   "market": "futures",
-   "equity_start": 5000.0,
-   "leverage": 1.0,
-   "universe_size": 26,
-   "equity_realized": 5000.0,
-   "equity_marked": 5000.0,
-   "return_pct_marked": 0.0,
-   "max_dd_pct_marked": 0.0,
-   "trades": 0,
-   "wins": 0,
-   "win_pct": null,
-   "total_r": 0,
-   "mean_r": null,
-   "median_r": null,
-   "top10_share": null,
-   "open_at_end": {
-    "positions": 0,
-    "units": 0,
-    "symbols": []
-   },
-   "refused_units": {
-    "no_margin_file": 4523,
-    "roll_window": 905
-   },
-   "fees_paid": 0.0,
-   "ordering": "same-day entries by that bar's dollar volume desc, then symbol",
-   "caveat": "Shared-equity replay of the frozen Turtle rules over TODAY'S surviving universe. One in-sample pass: not walk-forward, not a forward record, not 'the Turtle return'. The forward books are the evidence; this is the portfolio-shaped context for them."
   }
  }
 }

@@ -2069,6 +2069,27 @@ meant** — the failure mode that survives review because the value looks fine.
 
 ## TURTLE — the fourth lens (2026-08-21)
 
+> **FUTURES MARKET REMOVED 2026-09-08 (owner: "I don't use it and have never
+> used it").** This SUPERSEDES the futures/CFD material below (the "THE FUTURES
+> SLEEVE" config block, the "TURTLE 2026-09-02 — the CFD lens" subsection, and
+> the futures halves of the 2026-08-22 sleeve/portfolio notes). What was
+> removed: `futures` from `turtle_run.MARKETS`, the `0 23` futures cron and the
+> `futures` dispatch option in turtle.yml, the FUTURES market tab in
+> `turtle.html` + `turtle.js` (MARKETS/CUR/NEXT_CRON), the `futures21_5k`
+> portfolio sleeve, and the published data (`public/data/futures_turtle.json`,
+> `journal/turtle_book.futures.json`, plus futures pruned from the combined
+> `turtle_book.json` and `turtle_portfolio.json`). **Do NOT re-add `futures` to
+> `turtle_run.MARKETS` or a FUTURES market tab.** DORMANT and retained on
+> purpose (only so the pure-maths unit tests still pin them — nothing routes to
+> them): `config.TURTLE_FUTURES` + `TURTLE_CFD_*` + `TURTLE_FUTURES_MARGIN_FILE`
+> + `TURTLE_ROLL_GAP_RATIO`; `turtle.py` cfd_sizing/contract_sizing/cfd_leverage/
+> roll_suspects; `turtle_run.fit_table` + the `scan_market("futures")` branch;
+> `turtle_book` `_futures_gates`/`_load_margin_file`/the `futures` branch of
+> `update()` + `write_combined`'s `futures` default; `turtle_portfolio`'s
+> `contracts=` path; and the RULES/SIZING reference views' CFD content in
+> `turtle.js`. A later session may fully excise these dormant pieces (and their
+> ~30 unit tests) as a clean follow-up; they are inert and harmless until then.
+
 The 1983 Dennis/Eckhardt breakout system, on its own tab at `/turtle.html`.
 Owner asked for "a separate set of RULES on a separate TAB", and *separate* is
 the load-bearing word: this lens is outside the confluence machinery, outside

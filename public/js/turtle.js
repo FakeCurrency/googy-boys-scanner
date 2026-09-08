@@ -43,8 +43,8 @@
     period: "5y",
   };
 
-  const MARKETS = ["nasdaq", "crypto", "futures"];
-  const CUR = { nasdaq: "$", crypto: "$", futures: "$" };
+  const MARKETS = ["nasdaq", "crypto"];   // FUTURES removed 2026-09-08 (owner: never used it)
+  const CUR = { nasdaq: "$", crypto: "$" };
 
   // Visible deploy marker, top-right of the page. Bumped by one on EVERY change
   // shipped to this page (V1, V2, V3, …) so a glance at the corner confirms
@@ -197,7 +197,6 @@
   const NEXT_CRON = {
     nasdaq: "next scan ~21:30 UTC weekdays",
     crypto: "next scan every 4h (:05 past the hour)",
-    futures: "next scan ~23:00 UTC weekdays",
   };
 
   // Buttons, not badges: role=group, one FILTER value per pill, shared with

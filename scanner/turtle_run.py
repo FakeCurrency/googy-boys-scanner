@@ -27,7 +27,7 @@ import zoneinfo
 from . import (config, data, output, scanerrors, turtle, turtle_book,
                turtle_portfolio, universe)
 
-MARKETS = ("asx", "nasdaq", "crypto", "futures")
+MARKETS = ("asx", "nasdaq", "crypto")   # FUTURES removed 2026-09-08 (owner: never used it)
 PERIOD = "5y"
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "public", "data")
@@ -451,12 +451,10 @@ def scan_market(market_key: str, limit: int | None = None,
                 sleeves["crypto_5x_5k"] = turtle_portfolio.replay_sleeve(
                     c5, market="crypto", equity_start=5000.0,
                     leverage=float(config.TURTLE_5X["leverage"]))
-            elif market_key == "futures":
-                contracts = {f["symbol"]: f for f in config.TURTLE_FUTURES}
-                sleeves["futures21_5k"] = turtle_portfolio.replay_sleeve(
-                    sym_frames, market="futures", equity_start=5000.0,
-                    contracts=contracts,
-                    margins=turtle_book._load_margin_file())
+            # FUTURES sleeve removed 2026-09-08 (owner: never used it). The
+            # replay helper (turtle_portfolio.replay_sleeve with `contracts`)
+            # and config.TURTLE_FUTURES stay in the tree, dormant, for the
+            # unit tests that pin the sizing maths -- nothing routes to them.
             if sleeves:
                 turtle_portfolio.write_sleeves(sleeves)
                 for k, v in sleeves.items():

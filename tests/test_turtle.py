@@ -1012,12 +1012,15 @@ def test_sizing_scales_with_dollars_per_point_not_with_price():
 
 
 def test_futures_is_a_declared_list_so_the_sleeve_has_no_survivorship():
-    """Every other market here is 'whatever is listed today', which selects on
-    outcomes. The sleeve is fixed and chosen on 1983 grounds, so nothing in it
-    was picked because it went up."""
-    src = (ROOT / "scanner" / "turtle_run.py").read_text(encoding="utf-8")
-    assert "config.TURTLE_FUTURES" in src
-    assert "futures" in turtle_run.MARKETS
+    """The futures sleeve was a fixed 1983-grounds list, not 'whatever is
+    listed today', so nothing in it was picked because it went up.
+
+    FUTURES was REMOVED as a live market 2026-09-08 (owner: never used it),
+    so it is no longer in turtle_run.MARKETS and no cron routes to it. The
+    declared list (config.TURTLE_FUTURES) and the sizing helpers stay in the
+    tree, dormant, only so the unit tests below still pin the maths."""
+    assert "futures" not in turtle_run.MARKETS
+    assert config.TURTLE_FUTURES and all(f["yf"].endswith("=F") for f in config.TURTLE_FUTURES)
 
 
 def _rolling_tape(rolls=7, step=4.0, seed=3, n=500):
@@ -1193,35 +1196,35 @@ def test_prints_are_ascii_only():
 
 
 # ---------------------------------------------------------------------------
-# the futures sleeve's blast radius and its coverage floor (2026-08-21)
+# one market's fetch failure never costs another market's publish (2026-08-21;
+# retargeted 2026-09-08 off the removed futures sleeve onto a valid pair)
 # ---------------------------------------------------------------------------
 
-def test_a_futures_fetch_failure_never_costs_an_equity_publish(tmp_path, monkeypatch):
-    """`=F` symbols have never been through data.download in this repo, so the
-    first futures night is the night MOST likely to fail -- and a failure
-    there must cost the futures file only. Futures is deliberately FIRST in
-    the market list here, which is the stronger ordering claim: even a
-    failure that precedes the equity scans must leave them publishing. The
-    run still returns 1, so the alarm is unchanged; only the discarding
-    stops."""
+def test_a_market_fetch_failure_never_costs_another_markets_publish(tmp_path, monkeypatch):
+    """A failure that precedes another market's scan must leave it publishing:
+    the run still returns 1, so the alarm is unchanged; only the discarding
+    stops. (Was the futures blast-radius test until futures was removed
+    2026-09-08 -- crypto now plays the failing-first market.)"""
     eq_frames = {"GOOD.AX": band([100.0] * 260 + ramp(101, 130))}
-    items = [{"symbol": "GOOD", "name": "GOOD", "sector": "", "yf": "GOOD.AX"}]
+    uni = {"crypto": [{"symbol": "BAD", "name": "BAD", "sector": "", "yf": "BAD-USD"}],
+           "asx": [{"symbol": "GOOD", "name": "GOOD", "sector": "", "yf": "GOOD.AX"}]}
 
     def fake_download(tickers, **kw):
-        if any(str(t).endswith("=F") for t in tickers):
-            return {}                     # the whole =F download dies
+        if any(str(t).endswith("-USD") for t in tickers):
+            return {}                     # the whole crypto download dies
         return eq_frames
 
     monkeypatch.setattr(turtle_run.universe, "load_universe",
-                        lambda m, full=True: items)
+                        lambda m, full=True: uni.get(m, []))
     monkeypatch.setattr(turtle_run.data, "download", fake_download)
+    monkeypatch.setattr(turtle_run.time, "sleep", lambda s: None)   # skip the retry cooldown
     monkeypatch.setattr(turtle_run, "OUT_DIR", str(tmp_path))
 
-    rc = turtle_run.main(["--market", "futures,asx"])
+    rc = turtle_run.main(["--market", "crypto,asx"])
     assert rc == 1, "a failed market is still a red run"
     assert (tmp_path / "asx_turtle.json").exists(), \
-        "the equity publish must survive the futures failure"
-    assert not (tmp_path / "futures_turtle.json").exists(), \
+        "the healthy market's publish must survive the other's failure"
+    assert not (tmp_path / "crypto_turtle.json").exists(), \
         "and nothing may be published for the market that failed"
 
 
