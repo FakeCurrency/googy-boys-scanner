@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-08T22:33:50+00:00",
- "equity_start": 25000.0,
+ "generated_at": "2026-09-08T23:37:44+00:00",
+ "equity_start": 20000.0,
  "open": [
   {
    "symbol": "JBH",
@@ -135,7 +135,7 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 108.65000153,
+   "last_mark": 109.16999817,
    "mark_date": "2026-09-08",
    "fees": 2.105294,
    "mfe_r": 0.2549,
@@ -158,7 +158,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 109.45999908,
+   "last_mark": 108.23500061,
    "mark_date": "2026-09-08",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -181,11 +181,11 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 321.33999634,
+   "last_mark": 325.76998901,
    "mark_date": "2026-09-08",
    "fees": 1.205845,
    "mfe_r": 0.7205,
-   "mae_r": -0.1697,
+   "mae_r": -0.346,
    "unpriced_runs": 0
   },
   {
@@ -205,11 +205,11 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 18.34000015,
+   "last_mark": 18.72999954,
    "mark_date": "2026-09-08",
    "fees": 1.569816,
    "mfe_r": 0.7089,
-   "mae_r": -0.2599,
+   "mae_r": -0.3338,
    "unpriced_runs": 0
   },
   {
@@ -228,7 +228,7 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 11.06599998,
+   "last_mark": 10.57999992,
    "mark_date": "2026-09-08",
    "fees": 0.324298,
    "mfe_r": 0.3065,
@@ -1011,23 +1011,6 @@
     "cost_bps": 15.0,
     "margin_mode": "isolated"
    }
-  },
-  "futures": {
-   "started": "2026-08-21",
-   "equity_start": 5000.0,
-   "equity": 5000.0,
-   "return_pct": 0.0,
-   "open_positions": 0,
-   "open_units": 0,
-   "closed": 0,
-   "wins": 0,
-   "win_pct": null,
-   "total_r": 0.0,
-   "avg_r": null,
-   "median_r": null,
-   "realized_pnl": 0,
-   "fees_paid": 0,
-   "sizing_equity": 5000.0
   }
  },
  "skips": [
@@ -1144,10 +1127,64 @@
   {
    "as_of": "2026-09-08",
    "market": "nasdaq",
+   "symbol": "LITE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 641.06,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "IREN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 602.58,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "SMTC",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 680.37,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "EBAY",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "FISV",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
    "symbol": "ROIV",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1315.22,
+   "want_notional": 1280.35,
    "equity": 4739.89,
    "system": 2
   },
@@ -1178,14 +1215,26 @@
   {
    "as_of": "2026-09-08",
    "market": "nasdaq",
-   "symbol": "BEAM",
+   "symbol": "GRAB",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
    "cap": 6,
    "bucket": "unclassified",
    "side": "short",
-   "system": 1
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "POOL",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
   },
   {
    "as_of": "2026-09-08",
@@ -1202,6 +1251,18 @@
   {
    "as_of": "2026-09-08",
    "market": "nasdaq",
+   "symbol": "BEAM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
    "symbol": "MZTI",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1214,14 +1275,12 @@
   {
    "as_of": "2026-09-08",
    "market": "nasdaq",
-   "symbol": "DNLI",
+   "symbol": "NWL",
    "action": "entry",
-   "reason": "close_corr_cap",
-   "units_on_book": 6,
-   "cap": 6,
-   "bucket": "unclassified",
-   "side": "short",
-   "system": 2
+   "reason": "cash",
+   "want_notional": 909.61,
+   "equity": 4739.89,
+   "system": 1
   },
   {
    "as_of": "2026-09-08",
@@ -1229,8 +1288,20 @@
    "symbol": "PHVS",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 988.53,
+   "want_notional": 928.65,
    "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "DNLI",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
    "system": 2
   },
   {
@@ -1272,7 +1343,53 @@
   {
    "as_of": "2026-09-08",
    "market": "nasdaq",
+   "symbol": "CMPR",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "ATEC",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
    "symbol": "ANNX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "CHA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1214.11,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "IART",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1292,6 +1409,28 @@
    "bucket": "unclassified",
    "side": "short",
    "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "CRESY",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1343.41,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-08",
+   "market": "nasdaq",
+   "symbol": "UTMD",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-08",
@@ -1479,42 +1618,19 @@
    "bucket": "crypto",
    "side": "long",
    "system": 2
-  },
-  {
-   "as_of": "2026-09-08",
-   "market": "futures",
-   "symbol": "CL",
-   "action": "entry",
-   "reason": "unit_lt_one",
-   "full_contracts": 0.0133,
-   "micro_contracts": 0.1328,
-   "one_contract_risk_pct": 15.07,
-   "equity": 5000.0
-  },
-  {
-   "as_of": "2026-09-08",
-   "market": "futures",
-   "symbol": "HG",
-   "action": "entry",
-   "reason": "unit_lt_one",
-   "full_contracts": 0.0193,
-   "micro_contracts": 0.1932,
-   "one_contract_risk_pct": 10.35,
-   "equity": 5000.0
   }
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 13,
-  "close_corr_cap": 26,
-  "unit_lt_one": 2,
-  "total": 41
+  "cash": 19,
+  "close_corr_cap": 34,
+  "total": 53
  },
  "summary": {
   "started": "2026-08-21",
-  "equity_start": 25000.0,
-  "equity": 22729.43,
-  "return_pct": -9.082,
+  "equity_start": 20000.0,
+  "equity": 17729.43,
+  "return_pct": -11.353,
   "open_positions": 20,
   "open_units": 25,
   "closed": 17,
@@ -1525,6 +1641,6 @@
   "median_r": -1.0233,
   "realized_pnl": -2270.57,
   "fees_paid": 112.75,
-  "sizing_equity": 22729.43
+  "sizing_equity": 14183.54
  }
 }
