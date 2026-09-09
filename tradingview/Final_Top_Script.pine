@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v4: v3 + in-chart tags)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v5: v4 + reversal box)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,9 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v5 (2026-09-09): REVERSAL BOX -- the counter-trend call in all four 5.0 charts
+// (short the pump at an RSI extreme: stop above the high, target at the old
+// low). Auto-drawn from the current close while RSI is at an extreme.
 // v4 (2026-09-09): Entry / SL / TP tags drawn INSIDE the pane (the owner's chart
 // hides price-scale labels, so v2's display.price_scale plots showed nothing).
 // v3 (2026-09-09): a KEY table pinned to a chart corner (legend + live rows).
@@ -150,6 +153,13 @@ cProfitS   = input.color(#3b82f6, "Short profit", group = gTr, inline = "tc")
 cStop      = input.color(#ef4444, "Stop",  group = gTr, inline = "tc")
 cEntry     = input.color(#9ca3af, "Entry", group = gTr, inline = "tc")
 
+gRev = "Reversal box (RSI extreme, counter-trend, 5.0-style)"
+revOn     = input.bool(true, "Draw a counter-trend box while RSI is at an extreme", group = gRev, display = display.none)
+revLook   = input.int(30, "Structure lookback (bars): target = opposite swing, stop = swing + pad", minval = 2, group = gRev, display = display.none)
+revPad    = input.float(1.0, "ATR pad beyond the swing for the stop", minval = 0, step = 0.25, group = gRev, display = display.none)
+revMaxAge = input.int(60, "Keep the box for (bars) after RSI leaves the zone", minval = 1, group = gRev, display = display.none)
+revHide   = input.bool(true, "Hide the trend box while a reversal box is active", group = gRev, display = display.none)
+
 gKey = "Key (legend in a chart corner)"
 showKey = input.bool(true, "Show the key", group = gKey, display = display.none)
 keyPos  = input.string("Top left", "Corner", options = ["Top left", "Top right", "Bottom left", "Bottom right"], group = gKey, display = display.none)
@@ -263,6 +273,49 @@ else if sigDir == -1 and not na(extPx) and low < extPx
     extBar := bar_index
 sigFresh = not na(sigBar) and bar_index - sigBar <= autoMaxAge
 
+// reversal box: while RSI sits at an extreme the box re-anchors to the current
+// bar (entry = close, stop = swing + pad, target = the opposite swing); once
+// RSI leaves the zone it freezes and stays until the stop or the target
+// prints, or revMaxAge bars pass
+inOB  = rsiV >= rsiOB
+inOS  = rsiV <= rsiOS
+revHH = ta.highest(high, revLook)
+revLL = ta.lowest(low, revLook)
+var int   rvDir = 0
+var int   rvBar = na
+var float rvEnt = na
+var float rvStp = na
+var float rvTgt = na
+var int   rvOff = na
+if revOn and inOB
+    rvDir := -1
+    rvBar := bar_index
+    rvEnt := close
+    rvStp := revHH + atrV * revPad
+    rvTgt := revLL
+    rvOff := na
+else if revOn and inOS
+    rvDir := 1
+    rvBar := bar_index
+    rvEnt := close
+    rvStp := revLL - atrV * revPad
+    rvTgt := revHH
+    rvOff := na
+else if rvDir != 0
+    if na(rvOff)
+        rvOff := bar_index
+    rvHit = rvDir == -1 ? (high >= rvStp or low <= rvTgt) : (low <= rvStp or high >= rvTgt)
+    if rvHit or bar_index - rvOff > revMaxAge
+        rvDir := 0
+rvActive = revOn and rvDir != 0
+rvRisk   = math.abs(rvEnt - rvStp)
+rvTp1    = rvEnt + rvDir * rvRisk
+rvTp2    = rvEnt + rvDir * rvRisk * 2
+rvTp1In  = rvDir == -1 ? rvTp1 > rvTgt : rvTp1 < rvTgt
+rvTp2In  = rvDir == -1 ? rvTp2 > rvTgt : rvTp2 < rvTgt
+rvCol    = rvDir == 1 ? cProfitL : cProfitS
+revNew   = (inOB and not inOB[1]) or (inOS and not inOS[1])
+
 // key levels, filtered by distance from price (na = not shown)
 lvlATH = showATH and f_near(ath) ? ath : na
 lvlATL = showATH and f_near(atl) ? atl : na
@@ -299,7 +352,7 @@ srL3c = close < srL3 ? cBroken : cSup
 // trade box: entry / stop / targets (na when there is nothing to show)
 tDir   = trMode == "Manual" ? (trDir == "Long" ? 1 : -1) : sigDir
 tFresh = trMode == "Manual" or sigFresh
-tShow  = trMode != "Off" and tDir != 0 and tFresh
+tShow  = trMode != "Off" and tDir != 0 and tFresh and not (revHide and rvActive)
 entRaw = trMode == "Manual" ? (mEntry > 0 ? mEntry : close) : sigEntry
 atrStp = tDir == 1 ? entRaw - atrV * atrMult : entRaw + atrV * atrMult
 stpRaw = trMode == "Manual" ? (mSL > 0 ? mSL : atrStp) : sigStop
@@ -357,6 +410,9 @@ plot(tStp, "SL",    color = cStop,  display = display.price_scale)
 plot(tTp1, "TP1",   color = pc,     display = display.price_scale)
 plot(tTp2, "TP2",   color = pc,     display = display.price_scale)
 plot(tTp3, "TP3",   color = pc,     display = display.price_scale)
+plot(rvActive ? rvEnt : na, "Rev entry",  color = cEntry, display = display.price_scale)
+plot(rvActive ? rvStp : na, "Rev SL",     color = cStop,  display = display.price_scale)
+plot(rvActive ? rvTgt : na, "Rev target", color = rvCol,  display = display.price_scale)
 
 if bullSig
     txt = "Bullish\n+" + str.tostring(bullScore)
@@ -507,13 +563,37 @@ if barstate.islast
             f_tag(tp2, "TP2 " + f_px(tp2), pc)
             f_tag(tp3, "TP3 " + f_px(tp3), pc)
 
+    if rvActive
+        rx1 = rvBar
+        rx2 = bar_index + extendBars
+        rbP = box.new(rx1, math.max(rvEnt, rvTgt), rx2, math.min(rvEnt, rvTgt), border_color = color.new(rvCol, 50), bgcolor = color.new(rvCol, 80))
+        rbS = box.new(rx1, math.max(rvEnt, rvStp), rx2, math.min(rvEnt, rvStp), border_color = color.new(cStop, 50), bgcolor = color.new(cStop, 80))
+        array.push(bxs, rbP)
+        array.push(bxs, rbS)
+        rl0 = line.new(rx1, rvEnt, rx2, rvEnt, color = color.new(cEntry, 20), style = line.style_dashed, width = 1)
+        array.push(lns, rl0)
+        if rvTp1In
+            rl1 = line.new(rx1, rvTp1, rx2, rvTp1, color = color.new(rvCol, 0), style = line.style_dashed, width = 1)
+            array.push(lns, rl1)
+            if tagTrade
+                f_tag(rvTp1, "TP1 " + f_px(rvTp1), rvCol)
+        if rvTp2In
+            rl2 = line.new(rx1, rvTp2, rx2, rvTp2, color = color.new(rvCol, 0), style = line.style_dashed, width = 1)
+            array.push(lns, rl2)
+            if tagTrade
+                f_tag(rvTp2, "TP2 " + f_px(rvTp2), rvCol)
+        if tagTrade
+            f_tag(rvStp, "SL " + f_px(rvStp), cStop)
+            f_tag(rvEnt, (rvDir == -1 ? "SHORT " : "LONG ") + f_px(rvEnt), cEntry)
+            f_tag(rvTgt, "Target " + f_px(rvTgt), rvCol)
+
 // ------------------------------------------------------------------- key ----
 // A legend pinned to a chart corner (a table never moves with the bars): what
 // every mark means, plus three live rows -- trend now, last signal, and the
 // current trade box written out the way a call is posted.
 kPos = keyPos == "Top right" ? position.top_right : keyPos == "Bottom left" ? position.bottom_left : keyPos == "Bottom right" ? position.bottom_right : position.top_left
 kSz  = keySize == "tiny" ? size.tiny : keySize == "normal" ? size.normal : size.small
-var table key = showKey ? table.new(kPos, 2, 13, bgcolor = color.new(color.black, 25), frame_color = color.new(color.gray, 50), frame_width = 1, border_color = color.new(color.gray, 85), border_width = 1) : na
+var table key = showKey ? table.new(kPos, 2, 14, bgcolor = color.new(color.black, 25), frame_color = color.new(color.gray, 50), frame_width = 1, border_color = color.new(color.gray, 85), border_width = 1) : na
 
 f_cell(r, c, txt, col) =>
     table.cell(key, c, r, txt, text_color = col, text_halign = text.align_left, text_size = kSz)
@@ -525,7 +605,8 @@ if showKey and barstate.islast
     cW = color.new(color.white, 10)
     cG = color.new(color.gray, 0)
     lastTxt  = sigDir == 0 ? "none yet" : (sigDir == 1 ? "Bullish +" : "Bearish -") + str.tostring(sigScore) + ", " + str.tostring(bar_index - sigBar) + " bars ago" + (sigFresh ? "" : " (too old for a trade box)")
-    tradeTxt = tShow ? (tDir == 1 ? "LONG" : "SHORT") + " entry " + f_px(entRaw) + " / SL " + f_px(stp) + " / TP1 " + f_px(tp1) + " / TP2 " + f_px(tp2) + " / TP3 " + f_px(tp3) : trMode == "Off" ? "trade box is off" : "none (no signal in the last " + str.tostring(autoMaxAge) + " bars)"
+    revTxt   = (rvDir == -1 ? "SHORT (reversal, RSI " : "LONG (reversal, RSI ") + str.tostring(rsiV, "#") + ") entry " + f_px(rvEnt) + " / SL " + f_px(rvStp) + " / target " + f_px(rvTgt)
+    tradeTxt = rvActive ? revTxt : tShow ? (tDir == 1 ? "LONG" : "SHORT") + " entry " + f_px(entRaw) + " / SL " + f_px(stp) + " / TP1 " + f_px(tp1) + " / TP2 " + f_px(tp2) + " / TP3 " + f_px(tp3) : trMode == "Off" ? "trade box is off" : "none (no signal in the last " + str.tostring(autoMaxAge) + " bars)"
     f_cell(0, 0, "KEY", cW)
     f_cell(0, 1, "Final_Top_Script", cG)
     f_cell(1, 0, "Thin blue line", cFast)
@@ -546,16 +627,19 @@ if showKey and barstate.islast
     f_cell(8, 1, "Green: RSI at or above " + str.tostring(rsiOB, "#") + " (overbought). Red: RSI at or below " + str.tostring(rsiOS, "#") + " (oversold)", cW)
     f_cell(9, 0, "Level lines", cName)
     f_cell(9, 1, "ATH / ATL = all-time high / low. Y.O = yearly open. Dashed = last signal to the extreme since", cW)
+    f_cell(10, 0, "Reversal box", cProfitS)
+    f_cell(10, 1, "RSI at or above " + str.tostring(rsiOB, "#") + " = SHORT box from the close (blue), at or below " + str.tostring(rsiOS, "#") + " = LONG box (green). SL = swing + ATR pad, target = the opposite swing", cW)
     if keyLive
-        f_cell(10, 0, "Trend now", slowCol)
-        f_cell(10, 1, regime ? "UP (Mid above Slow)" : "DOWN (Mid below Slow)", slowCol)
-        f_cell(11, 0, "Last signal", sigDir == 1 ? cBull : sigDir == -1 ? cBear : cG)
-        f_cell(11, 1, lastTxt, cW)
-        f_cell(12, 0, "Trade now", tShow ? pc : cG)
-        f_cell(12, 1, tradeTxt, cW)
+        f_cell(11, 0, "Trend now", slowCol)
+        f_cell(11, 1, regime ? "UP (Mid above Slow)" : "DOWN (Mid below Slow)", slowCol)
+        f_cell(12, 0, "Last signal", sigDir == 1 ? cBull : sigDir == -1 ? cBear : cG)
+        f_cell(12, 1, lastTxt, cW)
+        f_cell(13, 0, "Trade now", rvActive ? rvCol : tShow ? pc : cG)
+        f_cell(13, 1, tradeTxt, cW)
 
 // ---------------------------------------------------------------- alerts ----
 alertcondition(bullSig, title = "Bullish signal", message = "Final_Top_Script: Bullish Fast x Mid cross")
 alertcondition(bearSig, title = "Bearish signal", message = "Final_Top_Script: Bearish Fast x Mid cross")
 alertcondition(goldX,   title = "Golden cross",   message = "Final_Top_Script: Mid crossed above Slow")
 alertcondition(deadX,   title = "Death cross",    message = "Final_Top_Script: Mid crossed below Slow")
+alertcondition(revNew,  title = "RSI extreme",     message = "Final_Top_Script: RSI entered an extreme, reversal box drawn")
