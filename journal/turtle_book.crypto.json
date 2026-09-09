@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-08T22:33:49+00:00",
+ "generated_at": "2026-09-09T04:28:19+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,8 +21,8 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.39944637,
-   "mark_date": "2026-09-08",
+   "last_mark": 1.38755906,
+   "mark_date": "2026-09-09",
    "fees": 0.775953,
    "mfe_r": 0.0872,
    "mae_r": -0.9963,
@@ -45,8 +45,8 @@
    "stop": 904.86570891,
    "last_fill": 1018.91146291,
    "opened": "2026-09-04",
-   "last_mark": 1176.81994629,
-   "mark_date": "2026-09-08",
+   "last_mark": 1206.93005371,
+   "mark_date": "2026-09-09",
    "fees": 1.255465,
    "mfe_r": 2.1167,
    "mae_r": -0.6077,
@@ -70,8 +70,8 @@
    "stop": 2.00622615,
    "last_fill": 2.25437393,
    "opened": "2026-09-04",
-   "last_mark": 2.30130005,
-   "mark_date": "2026-09-08",
+   "last_mark": 2.31170011,
+   "mark_date": "2026-09-09",
    "fees": 1.888664,
    "mfe_r": 1.1971,
    "mae_r": -0.1054,
@@ -93,8 +93,8 @@
    "stop": 59.78798172,
    "last_fill": 67.5,
    "opened": "2026-09-05",
-   "last_mark": 62.34000015,
-   "mark_date": "2026-09-08",
+   "last_mark": 63.11000061,
+   "mark_date": "2026-09-09",
    "fees": 0.623695,
    "mfe_r": 1.3772,
    "mae_r": -0.7625,
@@ -414,7 +414,7 @@
  "events": [],
  "skips": [
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "crypto",
    "symbol": "ZEC",
    "action": "add",
@@ -427,7 +427,7 @@
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "crypto",
    "symbol": "NEAR",
    "action": "add",
@@ -440,7 +440,7 @@
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "crypto",
    "symbol": "INJ",
    "action": "entry",
@@ -452,19 +452,7 @@
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
-   "market": "crypto",
-   "symbol": "QNT",
-   "action": "entry",
-   "reason": "close_corr_cap",
-   "units_on_book": 6,
-   "cap": 6,
-   "bucket": "crypto",
-   "side": "long",
-   "system": 2
-  },
-  {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "crypto",
    "symbol": "ATOM",
    "action": "entry",
@@ -477,7 +465,7 @@
   }
  ],
  "skip_counts": {
-  "close_corr_cap": 5,
-  "total": 5
+  "close_corr_cap": 4,
+  "total": 4
  }
 }
