@@ -1,14 +1,19 @@
 name: Morning plays (Discord)
 
-# The daily HIGH-CONVICTION digest (scripts/morning_plays.py, 2026-09-08 owner
-# ask): every Melbourne morning, post the high-conviction VIVEK 5.0 plays across
-# ASX + NASDAQ to a Discord channel.
+# The daily HIGH-CONVICTION digest (scripts/morning_plays.py). Two market-
+# specific slots, each ~30 min after its market's close (owner ask 2026-09-09):
+#   * ASX             at 16:30 Melbourne (afternoon)
+#   * NASDAQ + Crypto at 06:30 Melbourne (next morning)
+# A run posts only the slot whose Melbourne HOUR is live (config
+# MORNING_PLAYS_SCHEDULE); every other fire is a silent no-op.
 #
-# READ-ONLY: it reads the COMMITTED scan JSON (public/data/<market>_vivek.json)
-# and posts. It never scans, never touches Yahoo, never commits, and is NOT in
-# the `scan` concurrency group -- so it needs no assert_staged and no
-# WATCHDOG_RUNS entry (same as evidence_brief.yml, which also only reads +
-# delivers).
+# READ-ONLY to the repo: it reads the COMMITTED scan JSON
+# (public/data/<market>_vivek.json) and posts. It never scans, never touches
+# Yahoo, never commits, and is NOT in the `scan` concurrency group -- so it
+# needs no assert_staged and no WATCHDOG_RUNS entry (same as evidence_brief.yml,
+# which also only reads + delivers). Its only state is a tiny actions/cache file
+# (the 7-day de-dup sent-list), the same cross-run pattern as the watchdog
+# state -- restored before the run, saved after, gitignored, never committed.
 #
 # THE CHANNEL IS NEW, NOT A REVIVAL. Discord as an ALERT channel was removed
 # 2026-08-27; this uses its OWN secret (DISCORD_MORNING_WEBHOOK_URL), which is
@@ -16,19 +21,26 @@ name: Morning plays (Discord)
 # owner creates the webhook and sets that secret, the script warns loudly and
 # exits 0 (a green setup gap).
 #
-# SUPERSET CRONS for 7:00 Melbourne year-round (the DST trick this repo uses on
-# every local-time job): 07:00 AEDT = 20:00 UTC, 07:00 AEST = 21:00 UTC. Both
-# fire daily; the script sends only on the run whose Melbourne local hour is 7,
-# so exactly one lands per day.
+# SUPERSET CRONS, the DST trick this repo uses on every local-time job. Each
+# slot has two crons (one per DST offset); the in-job HOUR gate sends on the one
+# that lands on the slot's Melbourne hour and no-ops the other, which lands +-1
+# hour away (Melbourne hours 5/7/15/17 -- none of them a slot). So exactly one
+# cron per slot posts per day, year-round.
+#   16:30 Melbourne (ASX):            05:30 UTC (AEDT) / 06:30 UTC (AEST)
+#   06:30 Melbourne (NASDAQ+Crypto):  19:30 UTC (AEDT) / 20:30 UTC (AEST)
+# HOUR-level, not minute-level, on purpose: GitHub coalesces/delays crons, so a
+# :30 cron slipping a few minutes still lands in its slot's hour.
 
 on:
   schedule:
-    - cron: "0 20 * * *"   # 07:00 Melbourne during AEDT (Oct-Apr)
-    - cron: "0 21 * * *"   # 07:00 Melbourne during AEST (Apr-Oct)
+    - cron: "30 5 * * *"    # 16:30 Melbourne during AEDT (Oct-Apr) -- ASX
+    - cron: "30 6 * * *"    # 16:30 Melbourne during AEST (Apr-Oct) -- ASX
+    - cron: "30 19 * * *"   # 06:30 Melbourne during AEDT (Oct-Apr) -- NASDAQ+Crypto
+    - cron: "30 20 * * *"   # 06:30 Melbourne during AEST (Apr-Oct) -- NASDAQ+Crypto
   workflow_dispatch:
     inputs:
       force:
-        description: "Send now regardless of the Melbourne hour (for testing)"
+        description: "Send ALL markets now regardless of the Melbourne hour (for testing)"
         default: "true"
         required: false
 
@@ -49,6 +61,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # The 7-day de-dup memory. Cross-run ephemeral state, never committed --
+      # a unique key always writes a fresh entry; the restore-keys prefix pulls
+      # the most recent one back. Accessed twice a day, so it never ages out.
+      - name: Restore the sent-list (de-dup memory)
+        uses: actions/cache@v4
+        with:
+          path: .cache/morning_plays_sent.json
+          key: morning-plays-sent-${{ github.run_id }}
+          restore-keys: |
+            morning-plays-sent-
 
       # stdlib-only: the script reads committed JSON and scanner.config (pure
       # constants, no pandas), so no pip install is needed.

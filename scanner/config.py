@@ -2016,9 +2016,20 @@ TURTLE_MAX_ROWS = 400
 
 # ---------------------------------------------------------------------------
 # MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
-# across ASX + NASDAQ (owner ask, 2026-09-08). scripts/morning_plays.py reads
-# the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
-# Discord once each Melbourne morning.
+# (owner ask, 2026-09-08; scheduling reworked 2026-09-09). scripts/morning_plays
+# reads the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
+# Discord. The name is historical -- ASX now goes out in the AFTERNOON.
+#
+# TWO MARKET-SPECIFIC SLOTS, each ~30 min after its market's close (owner,
+# 2026-09-09): ASX at 16:30 Melbourne, NASDAQ + Crypto at 06:30 Melbourne. So a
+# given run sends only the slot whose Melbourne HOUR is live -- crypto trades
+# 24/7 but rides the US slot so both sides land in one morning message. The
+# gate is HOUR-level, not minute-level, on purpose: GitHub coalesces/delays
+# crons (see stop_watcher), so a :30 cron slipping a few minutes must still
+# send. Each slot's DST superset off-cron lands +-1 hour in Melbourne (hours 5,
+# 7, 15, 17), none of which is a slot hour, so hour-gating excludes them
+# cleanly and a slot can never double-send. (morning_plays.yml carries the four
+# UTC crons.)
 #
 # THE CHANNEL IS DELIBERATELY NEW, NOT A REVIVAL. Discord as an ALERT channel
 # was ruled out 2026-08-27 ("get rid of the discord aspect, I will work on
@@ -2029,9 +2040,30 @@ TURTLE_MAX_ROWS = 400
 # uses a SEPARATE secret and is a standalone content push, NOT routed through
 # the severity/rate-limit alert router (a once-a-day digest is not an alert).
 MORNING_PLAYS_WEBHOOK_ENV = "DISCORD_MORNING_WEBHOOK_URL"   # owner sets this secret
-MORNING_PLAYS_MARKETS = ("asx", "nasdaq")
 MORNING_PLAYS_TZ = "Australia/Melbourne"
-MORNING_PLAYS_HOUR = 7             # send at ~07:00 Melbourne (see morning_plays.yml)
+# {Melbourne local HOUR -> markets sent at that hour}. A scheduled run sends the
+# slot matching the current hour, or no-ops (the expected fate of every DST
+# off-cron). Order within a slot is the order printed.
+MORNING_PLAYS_SCHEDULE = {
+    16: ("asx",),               # 16:30 Melbourne, ~30 min after the 16:00 ASX close
+    6:  ("nasdaq", "crypto"),   # 06:30 Melbourne, ~30 min after the US close
+}
+# Every market the schedule sends, in printed order, de-duplicated. Derived so
+# the schedule stays the single source of truth (a manual --force test sends
+# this union; build_messages labels the empty case from the live slot's keys).
+MORNING_PLAYS_MARKETS = tuple(dict.fromkeys(
+    m for markets in MORNING_PLAYS_SCHEDULE.values() for m in markets))
+# Don't repeat a ticker the digest already SENT within this many days -- the
+# reader charts each name, so a name should not be re-shared while its weekly
+# setup persists (weekly setups stay valid for days/weeks, so without this the
+# same names recur morning after morning). Counted from when it was SENT, not
+# from when it went high-conviction: a name reappears once the gap passes, if
+# still qualifying. State is a small actions/cache file (below) -- the same
+# ephemeral cross-run pattern as the watchdog state -- so the JOB STAYS
+# READ-ONLY to the repo. Only ACTUALLY-DELIVERED tickers are recorded, so a
+# failed post never silently buries a name. 0 = no dedup (repeat freely).
+MORNING_PLAYS_DEDUP_DAYS = 7
+MORNING_PLAYS_SEEN_FILE = ".cache/morning_plays_sent.json"
 MORNING_PLAYS_MAX_ROWS = 20        # per market, to stay inside Discord's limits
 # False = LONG high-conviction plays only (a tight, focused list, ~7/day).
 # True = ALSO every plain LONG A+ play (~100/day across ASX+NASDAQ) -- a much
