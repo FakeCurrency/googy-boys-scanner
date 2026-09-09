@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v2, decluttered)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v3: v2 + corner key)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,7 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v3 (2026-09-09): a KEY table pinned to a chart corner (legend + live rows).
 // v2 changes (2026-09-09, after the first live paste): Background Zone off by
 // default, RSI columns at the extremes only, price-scale labels instead of
 // margin tags, level distance filter, stop cap + freshness limit on the auto
@@ -145,6 +146,12 @@ cProfitS   = input.color(#3b82f6, "Short profit", group = gTr, inline = "tc")
 cStop      = input.color(#ef4444, "Stop",  group = gTr, inline = "tc")
 cEntry     = input.color(#9ca3af, "Entry", group = gTr, inline = "tc")
 
+gKey = "Key (legend in a chart corner)"
+showKey = input.bool(true, "Show the key", group = gKey, display = display.none)
+keyPos  = input.string("Top left", "Corner", options = ["Top left", "Top right", "Bottom left", "Bottom right"], group = gKey, display = display.none)
+keySize = input.string("small", "Text size", options = ["tiny", "small", "normal"], group = gKey, display = display.none)
+keyLive = input.bool(true, "Live rows (trend now, last signal, trade now)", group = gKey, display = display.none)
+
 // --------------------------------------------------------------- helpers ----
 // Both MAs are computed every bar so the ta.* history stays consistent
 // whichever type is selected.
@@ -156,6 +163,9 @@ f_ma(s, len) =>
 // a level is "near" when it sits between price / (1 + d) and price * (1 + d)
 f_near(p) =>
     maxDist == 0 or (not na(p) and p > 0 and p / close <= 1 + maxDist / 100 and close / p <= 1 + maxDist / 100)
+
+f_px(price) =>
+    str.tostring(price, format.mintick)
 
 // safe array read (na when the slot does not exist)
 f_at(a, i) =>
@@ -224,6 +234,7 @@ if not na(pl)
 // last signal memory: where it fired, its stop, and the extreme printed since
 var int   sigBar   = na
 var int   sigDir   = 0
+var int   sigScore = 0
 var float sigPx    = na
 var float sigEntry = na
 var float sigStop  = na
@@ -232,6 +243,7 @@ var int   extBar   = na
 if bullSig or bearSig
     sigBar   := bar_index
     sigDir   := bullSig ? 1 : -1
+    sigScore := bullSig ? bullScore : bearScore
     sigPx    := bullSig ? low : high
     sigEntry := close
     atrStop   = bullSig ? close - atrV * atrMult : close + atrV * atrMult
@@ -463,6 +475,53 @@ if barstate.islast
         array.push(lns, ln1)
         array.push(lns, ln2)
         array.push(lns, ln3)
+
+// ------------------------------------------------------------------- key ----
+// A legend pinned to a chart corner (a table never moves with the bars): what
+// every mark means, plus three live rows -- trend now, last signal, and the
+// current trade box written out the way a call is posted.
+kPos = keyPos == "Top right" ? position.top_right : keyPos == "Bottom left" ? position.bottom_left : keyPos == "Bottom right" ? position.bottom_right : position.top_left
+kSz  = keySize == "tiny" ? size.tiny : keySize == "normal" ? size.normal : size.small
+var table key = showKey ? table.new(kPos, 2, 13, bgcolor = color.new(color.black, 25), frame_color = color.new(color.gray, 50), frame_width = 1, border_color = color.new(color.gray, 85), border_width = 1) : na
+
+f_cell(r, c, txt, col) =>
+    table.cell(key, c, r, txt, text_color = col, text_halign = text.align_left, text_size = kSz)
+
+maxScore = 1 + (useMacd ? 1 : 0) + (useSlow ? 1 : 0) + (useRsi ? 1 : 0)
+scoreTxt = "Score: 1 for the cross" + (useMacd ? ", +1 MACD agrees" : "") + (useSlow ? ", +1 price beyond Slow" : "") + (useRsi ? ", +1 RSI agrees" : "") + " (max " + str.tostring(maxScore) + ")"
+
+if showKey and barstate.islast
+    cW = color.new(color.white, 10)
+    cG = color.new(color.gray, 0)
+    lastTxt  = sigDir == 0 ? "none yet" : (sigDir == 1 ? "Bullish +" : "Bearish -") + str.tostring(sigScore) + ", " + str.tostring(bar_index - sigBar) + " bars ago" + (sigFresh ? "" : " (too old for a trade box)")
+    tradeTxt = tShow ? (tDir == 1 ? "LONG" : "SHORT") + " entry " + f_px(entRaw) + " / SL " + f_px(stp) + " / TP1 " + f_px(tp1) + " / TP2 " + f_px(tp2) + " / TP3 " + f_px(tp3) : trMode == "Off" ? "trade box is off" : "none (no signal in the last " + str.tostring(autoMaxAge) + " bars)"
+    f_cell(0, 0, "KEY", cW)
+    f_cell(0, 1, "Final_Top_Script", cG)
+    f_cell(1, 0, "Thin blue line", cFast)
+    f_cell(1, 1, "Fast " + str.tostring(fastLen) + " " + maType, cW)
+    f_cell(2, 0, "Thick blue line", cMid)
+    f_cell(2, 1, "Mid " + str.tostring(midLen) + " " + maType, cW)
+    f_cell(3, 0, "Thick green / red line", slowCol)
+    f_cell(3, 1, "Slow " + str.tostring(slowLen) + " " + maType + ". Green = Mid above it (uptrend), red = Mid below it (downtrend). The band is the gap", cW)
+    f_cell(4, 0, "Bullish +N  (blue arrow up)", cBull)
+    f_cell(4, 1, "Fast crossed ABOVE Mid. " + scoreTxt, cW)
+    f_cell(5, 0, "Bearish -N  (red arrow down)", cBear)
+    f_cell(5, 1, "Fast crossed BELOW Mid. " + scoreTxt, cW)
+    f_cell(6, 0, "Boxes", cW)
+    f_cell(6, 1, "Green = long profit zone, blue = short profit zone (Entry to TP3). Red = stop zone (Entry to SL)", cW)
+    f_cell(7, 0, "Price tags", cW)
+    f_cell(7, 1, "TP1-3 = targets, SL = stop, Entry. R = resistance (red), S = support (green), grey = broken", cW)
+    f_cell(8, 0, "Vertical columns", cW)
+    f_cell(8, 1, "Green: RSI at or above " + str.tostring(rsiOB, "#") + " (overbought). Red: RSI at or below " + str.tostring(rsiOS, "#") + " (oversold)", cW)
+    f_cell(9, 0, "Level lines", cName)
+    f_cell(9, 1, "ATH / ATL = all-time high / low. Y.O = yearly open. Dashed = last signal to the extreme since", cW)
+    if keyLive
+        f_cell(10, 0, "Trend now", slowCol)
+        f_cell(10, 1, regime ? "UP (Mid above Slow)" : "DOWN (Mid below Slow)", slowCol)
+        f_cell(11, 0, "Last signal", sigDir == 1 ? cBull : sigDir == -1 ? cBear : cG)
+        f_cell(11, 1, lastTxt, cW)
+        f_cell(12, 0, "Trade now", tShow ? pc : cG)
+        f_cell(12, 1, tradeTxt, cW)
 
 // ---------------------------------------------------------------- alerts ----
 alertcondition(bullSig, title = "Bullish signal", message = "Final_Top_Script: Bullish Fast x Mid cross")
