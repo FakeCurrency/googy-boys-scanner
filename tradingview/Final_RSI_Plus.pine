@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_RSI_Plus  --  the "RSI+" pane of the 5.0 layout
+// Final_RSI_Plus  --  the "RSI+" pane of the 5.0 layout  (v2: inputs hidden from the status line)
 // -----------------------------------------------------------------------------
 // RSI with a smoothing MA and a blue / red fill between them (blue while RSI is
 // above its MA), 70 / 75 and 30 / 25 bands, a long-run RSI average, vertical
@@ -12,23 +12,23 @@
 // =============================================================================
 indicator("Final_RSI_Plus", shorttitle = "RSI+", overlay = false)
 
-rsiLen      = input.int(14, "RSI Length", minval = 1)
-rsiSrc      = input.source(close, "Source")
-maLen       = input.int(14, "MA Length", minval = 1)
-maType      = input.string("SMA", "MA Type", options = ["SMA", "EMA"])
-longLen     = input.int(50, "Long-run average length", minval = 1)
-ob1         = input.float(70, "Overbought", inline = "ob")
-ob2         = input.float(75, "extreme",    inline = "ob")
-os1         = input.float(30, "Oversold",   inline = "os")
-os2         = input.float(25, "extreme",    inline = "os")
-midL        = input.float(50, "Midline")
-showCols    = input.bool(true, "Columns on the extremes (overbought = blue, oversold = red)")
-showMidCols = input.bool(false, "Grey column when RSI crosses the midline")
-showDiv     = input.bool(true, "Regular divergences")
-lbL         = input.int(5,  "Pivot lookback left",  minval = 1)
-lbR         = input.int(5,  "Pivot lookback right", minval = 1)
-rangeUpper  = input.int(60, "Max bars between pivots", minval = 1)
-rangeLower  = input.int(5,  "Min bars between pivots", minval = 1)
+rsiLen      = input.int(14, "RSI Length", minval = 1, display = display.none)
+rsiSrc      = input.source(close, "Source", display = display.none)
+maLen       = input.int(14, "MA Length", minval = 1, display = display.none)
+maType      = input.string("SMA", "MA Type", options = ["SMA", "EMA"], display = display.none)
+longLen     = input.int(50, "Long-run average length", minval = 1, display = display.none)
+ob1         = input.float(70, "Overbought", inline = "ob", display = display.none)
+ob2         = input.float(75, "extreme",    inline = "ob", display = display.none)
+os1         = input.float(30, "Oversold",   inline = "os", display = display.none)
+os2         = input.float(25, "extreme",    inline = "os", display = display.none)
+midL        = input.float(50, "Midline", display = display.none)
+showCols    = input.bool(true, "Columns on the extremes (overbought = blue, oversold = red)", display = display.none)
+showMidCols = input.bool(false, "Grey column when RSI crosses the midline", display = display.none)
+showDiv     = input.bool(true, "Regular divergences", display = display.none)
+lbL         = input.int(5,  "Pivot lookback left",  minval = 1, display = display.none)
+lbR         = input.int(5,  "Pivot lookback right", minval = 1, display = display.none)
+rangeUpper  = input.int(60, "Max bars between pivots", minval = 1, display = display.none)
+rangeLower  = input.int(5,  "Min bars between pivots", minval = 1, display = display.none)
 cRsi        = input.color(#dbe4ff, "RSI", inline = "c")
 cMa         = input.color(#f59e0b, "MA",  inline = "c")
 cUp         = input.color(#3b82f6, "Above MA / overbought", inline = "c2")
@@ -75,8 +75,8 @@ fill(pOs1, pOs2, color = color.new(cDn, 88), title = "Oversold band")
 
 plot(bullDiv ? rsi[lbR] : na, "Bull Div", color = cUp, style = plot.style_circles, linewidth = 3, offset = -lbR)
 plot(bearDiv ? rsi[lbR] : na, "Bear Div", color = cDn, style = plot.style_circles, linewidth = 3, offset = -lbR)
-plotshape(bullDiv ? rsi[lbR] : na, "Bull Div label", style = shape.labelup,   location = location.absolute, color = cUp, textcolor = color.white, text = "Bull", offset = -lbR, size = size.tiny)
-plotshape(bearDiv ? rsi[lbR] : na, "Bear Div label", style = shape.labeldown, location = location.absolute, color = cDn, textcolor = color.white, text = "Bear", offset = -lbR, size = size.tiny)
+plotshape(bullDiv ? rsi[lbR] : na, "Bull Div label", style = shape.labelup,   location = location.absolute, color = cUp, textcolor = color.white, text = "Bull", offset = -lbR, size = size.tiny, display = display.pane)
+plotshape(bearDiv ? rsi[lbR] : na, "Bear Div label", style = shape.labeldown, location = location.absolute, color = cDn, textcolor = color.white, text = "Bear", offset = -lbR, size = size.tiny, display = display.pane)
 plot(longAvg, "Long-run average", color = color.new(color.gray, 30), linewidth = 1)
 
 // --- columns -----------------------------------------------------------------

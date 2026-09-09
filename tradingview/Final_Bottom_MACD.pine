@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Bottom_MACD  --  the MACD pane of the 5.0 layout
+// Final_Bottom_MACD  --  the MACD pane of the 5.0 layout  (v2: inputs hidden from the status line)
 // -----------------------------------------------------------------------------
 // Standard 12 / 26 / 9 MACD with TradingView's four-shade histogram (strong /
 // fading colour on each side of zero), blue MACD line, orange signal line, and
@@ -10,17 +10,17 @@
 // =============================================================================
 indicator("Final_Bottom_MACD", shorttitle = "Final_Bottom_MACD", overlay = false)
 
-fastLen  = input.int(12, "Fast Length",   minval = 1)
-slowLen  = input.int(26, "Slow Length",   minval = 1)
-sigLen   = input.int(9,  "Signal Length", minval = 1)
-src      = input.source(close, "Source")
+fastLen  = input.int(12, "Fast Length",   minval = 1, display = display.none)
+slowLen  = input.int(26, "Slow Length",   minval = 1, display = display.none)
+sigLen   = input.int(9,  "Signal Length", minval = 1, display = display.none)
+src      = input.source(close, "Source", display = display.none)
 cUp1     = input.color(#26a69a, "Hist above zero, rising",  inline = "u")
 cUp2     = input.color(#b2dfdb, "falling",                  inline = "u")
 cDn1     = input.color(#ef5350, "Hist below zero, falling", inline = "d")
 cDn2     = input.color(#ffcdd2, "rising",                   inline = "d")
 cMacd    = input.color(#2962ff, "MACD",   inline = "l")
 cSig     = input.color(#ff6d00, "Signal", inline = "l")
-zeroCols = input.bool(false, "Column on histogram zero-cross")
+zeroCols = input.bool(false, "Column on histogram zero-cross", display = display.none)
 
 [macdLine, sigLine, hist] = ta.macd(src, fastLen, slowLen, sigLen)
 histCol = hist >= 0 ? (hist > nz(hist[1]) ? cUp1 : cUp2) : (hist < nz(hist[1]) ? cDn1 : cDn2)
