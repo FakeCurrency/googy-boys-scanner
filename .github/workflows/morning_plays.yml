@@ -4,8 +4,12 @@ name: Morning plays (Discord)
 # specific slots, each ~30 min after its market's close (owner ask 2026-09-09):
 #   * ASX             at 16:30 Melbourne (afternoon)
 #   * NASDAQ + Crypto at 06:30 Melbourne (next morning)
-# A run posts only the slot whose Melbourne HOUR is live (config
-# MORNING_PLAYS_SCHEDULE); every other fire is a silent no-op.
+# Each cron maps to a slot NAME (below); the script sends that slot when
+# Melbourne is at/past its target time and it has not gone out today (config
+# MORNING_PLAYS_SLOTS + a per-day marker). This is delay-proof: GitHub batched
+# these crons 2-5 HOURS late on 2026-09-09 and the old hour-exact gate missed a
+# whole day. "at/past" catches a late run; the marker stops the slot's second
+# DST cron double-sending. Each slot delivers exactly once per day.
 #
 # READ-ONLY to the repo: it reads the COMMITTED scan JSON
 # (public/data/<market>_vivek.json) and posts. It never scans, never touches
@@ -22,14 +26,13 @@ name: Morning plays (Discord)
 # exits 0 (a green setup gap).
 #
 # SUPERSET CRONS, the DST trick this repo uses on every local-time job. Each
-# slot has two crons (one per DST offset); the in-job HOUR gate sends on the one
-# that lands on the slot's Melbourne hour and no-ops the other, which lands +-1
-# hour away (Melbourne hours 5/7/15/17 -- none of them a slot). So exactly one
-# cron per slot posts per day, year-round.
+# slot has two crons (one per DST offset), and BOTH map to the same slot name.
+# The wrong-DST cron of the pair fires an hour before the target and the script
+# skips it (before-target); whichever cron fires at/after the target sends, and
+# the per-day marker no-ops the rest. So exactly one send per slot per day,
+# year-round, no matter which cron GitHub actually delivers or how late.
 #   16:30 Melbourne (ASX):            05:30 UTC (AEDT) / 06:30 UTC (AEST)
 #   06:30 Melbourne (NASDAQ+Crypto):  19:30 UTC (AEDT) / 20:30 UTC (AEST)
-# HOUR-level, not minute-level, on purpose: GitHub coalesces/delays crons, so a
-# :30 cron slipping a few minutes still lands in its slot's hour.
 
 on:
   schedule:
@@ -84,11 +87,21 @@ jobs:
           # run block (2026-07-20 security pass).
           EVENT: ${{ github.event_name }}
           FORCE: ${{ github.event.inputs.force }}
+          # Which cron fired -- maps to a slot NAME below. Never interpolate a
+          # ${{ }} value inside the run script (2026-07-20 security pass); read
+          # the env var instead.
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -o pipefail
           ARGS=""
           if [ "$EVENT" = "workflow_dispatch" ] && [ "$FORCE" != "false" ]; then
-            ARGS="--force"
+            ARGS="--force"                       # manual test: send all markets now
+          else
+            case "$SCHEDULE" in
+              "30 5 * * *"|"30 6 * * *")   ARGS="--slot asx" ;;   # 16:30 Melbourne
+              "30 19 * * *"|"30 20 * * *") ARGS="--slot us"  ;;   # 06:30 Melbourne
+              *) echo "morning_plays: unmapped schedule '$SCHEDULE' - no-op."; exit 0 ;;
+            esac
           fi
           python3 scripts/morning_plays.py $ARGS 2>&1 | tee /tmp/mp.txt
 

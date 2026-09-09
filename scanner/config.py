@@ -2021,15 +2021,19 @@ TURTLE_MAX_ROWS = 400
 # Discord. The name is historical -- ASX now goes out in the AFTERNOON.
 #
 # TWO MARKET-SPECIFIC SLOTS, each ~30 min after its market's close (owner,
-# 2026-09-09): ASX at 16:30 Melbourne, NASDAQ + Crypto at 06:30 Melbourne. So a
-# given run sends only the slot whose Melbourne HOUR is live -- crypto trades
-# 24/7 but rides the US slot so both sides land in one morning message. The
-# gate is HOUR-level, not minute-level, on purpose: GitHub coalesces/delays
-# crons (see stop_watcher), so a :30 cron slipping a few minutes must still
-# send. Each slot's DST superset off-cron lands +-1 hour in Melbourne (hours 5,
-# 7, 15, 17), none of which is a slot hour, so hour-gating excludes them
-# cleanly and a slot can never double-send. (morning_plays.yml carries the four
-# UTC crons.)
+# 2026-09-09): ASX at 16:30 Melbourne, NASDAQ + Crypto at 06:30 Melbourne.
+# Crypto trades 24/7 but rides the US slot so both sides land in one message.
+#
+# DELAY-PROOF SCHEDULING (rebuilt 2026-09-10 after the first design missed a
+# whole day). GitHub batches free-tier crons and delayed them 2-5 HOURS on
+# 2026-09-09, so an hour-EQUALITY gate ("send only when it is exactly hour 16")
+# no-op'd every delayed run and nothing was delivered. Instead: morning_plays.yml
+# maps each cron to a slot NAME, and the run sends that slot when Melbourne is AT
+# OR PAST the slot's target time today AND the slot has not already gone out today
+# (a per-day marker in the sent-list cache). "at or past" tolerates any delay;
+# the marker stops the slot's second DST superset cron -- and any repeat run in
+# the window -- from double-sending. Net effect: each slot delivers exactly once
+# per day, on the first run at/after its target, however late GitHub is.
 #
 # THE CHANNEL IS DELIBERATELY NEW, NOT A REVIVAL. Discord as an ALERT channel
 # was ruled out 2026-08-27 ("get rid of the discord aspect, I will work on
@@ -2041,18 +2045,25 @@ TURTLE_MAX_ROWS = 400
 # the severity/rate-limit alert router (a once-a-day digest is not an alert).
 MORNING_PLAYS_WEBHOOK_ENV = "DISCORD_MORNING_WEBHOOK_URL"   # owner sets this secret
 MORNING_PLAYS_TZ = "Australia/Melbourne"
-# {Melbourne local HOUR -> markets sent at that hour}. A scheduled run sends the
-# slot matching the current hour, or no-ops (the expected fate of every DST
-# off-cron). Order within a slot is the order printed.
-MORNING_PLAYS_SCHEDULE = {
-    16: ("asx",),               # 16:30 Melbourne, ~30 min after the 16:00 ASX close
-    6:  ("nasdaq", "crypto"),   # 06:30 Melbourne, ~30 min after the US close
+# The named send slots. Each cron in morning_plays.yml maps to a slot NAME (not
+# to a wall-clock hour), so GitHub delaying a cron by hours can no longer make it
+# miss: the run sends its slot as long as Melbourne is AT OR PAST the slot's
+# target time today and the slot has not already gone out today (a per-day marker
+# in the sent-list). "at or past" (not "==") is the whole delay fix; the marker
+# is what stops the slot's OTHER DST superset cron from double-sending. `minute`
+# is only the intended send time shown in the message; the gate keys on `hour`.
+MORNING_PLAYS_SLOTS = {
+    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # ~30 min after the 16:00 ASX close
+    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # ~30 min after the US close
 }
-# Every market the schedule sends, in printed order, de-duplicated. Derived so
-# the schedule stays the single source of truth (a manual --force test sends
-# this union; build_messages labels the empty case from the live slot's keys).
+# {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
+# by a bare local run (no --slot, no --force); the scheduled path uses --slot.
+MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
+# Every market any slot sends, in printed order, de-duplicated. Derived so the
+# slots stay the single source of truth (a manual --force test sends this union;
+# build_messages labels the empty case from the live slot's keys).
 MORNING_PLAYS_MARKETS = tuple(dict.fromkeys(
-    m for markets in MORNING_PLAYS_SCHEDULE.values() for m in markets))
+    m for v in MORNING_PLAYS_SLOTS.values() for m in v["markets"]))
 # Don't repeat a ticker the digest already SENT within this many days -- the
 # reader charts each name, so a name should not be re-shared while its weekly
 # setup persists (weekly setups stay valid for days/weeks, so without this the

@@ -145,17 +145,19 @@ def test_a_stale_scan_is_noted():
 
 # ── the de-dup memory ────────────────────────────────────────────────────────
 
-def test_seen_file_roundtrips(tmp_path):
+def test_state_file_roundtrips_sent_and_slots(tmp_path):
     p = tmp_path / "nested" / "seen.json"                # parent made on save
-    mp.save_seen(p, {"asx:JHX": "2026-09-09", "crypto:LINK": "2026-09-06"})
-    assert mp.load_seen(p) == {"asx:JHX": "2026-09-09", "crypto:LINK": "2026-09-06"}
+    mp.save_state(p, {"sent": {"asx:JHX": "2026-09-09"}, "slots": {"asx": "2026-09-09"}})
+    got = mp.load_state(p)
+    assert got["sent"] == {"asx:JHX": "2026-09-09"}
+    assert got["slots"] == {"asx": "2026-09-09"}
 
 
-def test_load_seen_is_empty_on_a_missing_or_corrupt_file(tmp_path):
-    assert mp.load_seen(tmp_path / "nope.json") == {}
+def test_load_state_is_empty_on_a_missing_or_corrupt_file(tmp_path):
+    assert mp.load_state(tmp_path / "nope.json") == {"sent": {}, "slots": {}}
     bad = tmp_path / "bad.json"
     bad.write_text("{not json", encoding="utf-8")
-    assert mp.load_seen(bad) == {}
+    assert mp.load_state(bad) == {"sent": {}, "slots": {}}
 
 
 def test_filter_unseen_skips_a_ticker_sent_inside_the_window():
@@ -194,29 +196,39 @@ def test_record_sent_stamps_today_and_prunes_the_expired():
     assert "asx:GONE" not in out, "a stamp past the window can no longer suppress"
 
 
-# ── the slot gate ────────────────────────────────────────────────────────────
+# ── the delay-proof slot gate (slot_due) ─────────────────────────────────────
 
-def test_slot_markets_picks_the_live_slot_or_noops(monkeypatch):
+def _melb(h, m=30):
+    return dt.datetime(2026, 9, 9, h, m)                  # a naive Melbourne wall-clock
+
+
+def test_slot_due_sends_at_or_past_target_however_late():
+    # ASX target 16:30. Before it -> skip; at it -> due; HOURS late -> STILL due.
+    assert mp.slot_due("asx", _melb(15), {}) == (False, "before")
+    assert mp.slot_due("asx", _melb(16), {}) == (True, "due")
+    assert mp.slot_due("asx", _melb(21), {})[0] is True, "a 5h-late cron must still send"
+    # US target 06:30.
+    assert mp.slot_due("us", _melb(5), {}) == (False, "before")
+    assert mp.slot_due("us", _melb(7), {})[0] is True, "a 1h-late US cron still sends"
+
+
+def test_slot_due_marks_once_per_day_so_the_second_dst_cron_cannot_double():
+    marks = {"asx": dt.date(2026, 9, 9).isoformat()}
+    assert mp.slot_due("asx", _melb(16), marks) == (False, "done")
+    assert mp.slot_due("asx", _melb(17), marks) == (False, "done")   # the other DST cron
+    # yesterday's marker does not block today
+    assert mp.slot_due("asx", _melb(16), {"asx": "2026-09-08"})[0] is True
+
+
+def test_slot_markets_is_the_legacy_local_fallback(monkeypatch):
+    # kept only for a bare `python morning_plays.py` on a laptop.
     monkeypatch.setattr(config, "MORNING_PLAYS_SCHEDULE",
                         {16: ("asx",), 6: ("nasdaq", "crypto")})
     monkeypatch.setattr(config, "MORNING_PLAYS_MARKETS", ("asx", "nasdaq", "crypto"))
-    afternoon = dt.datetime(2026, 9, 9, 16, 33)
-    morning = dt.datetime(2026, 9, 9, 6, 33)
-    off = dt.datetime(2026, 9, 9, 17, 33)                 # a DST superset off-cron
-    # scheduled: only the live slot's markets, else None
-    assert mp.slot_markets(afternoon, force=False) == ("asx",)
-    assert mp.slot_markets(morning, force=False) == ("nasdaq", "crypto")
-    assert mp.slot_markets(off, force=False) is None      # off-crons no-op
-    # --force sends the whole union, at any hour
-    assert mp.slot_markets(off, force=True) == ("asx", "nasdaq", "crypto")
-
-
-def test_every_dst_offcron_hour_is_a_noop():
-    # the four superset crons land on Melbourne hours 5/6/7 and 15/16/17;
-    # only 6 and 16 are slots, so both off-crons of each pair must no-op.
-    for off_hour in (5, 7, 15, 17):
-        when = dt.datetime(2026, 9, 9, off_hour, 30)
-        assert mp.slot_markets(when, force=False) is None, off_hour
+    assert mp.slot_markets(dt.datetime(2026, 9, 9, 16, 33), force=False) == ("asx",)
+    assert mp.slot_markets(dt.datetime(2026, 9, 9, 11, 0), force=False) is None
+    assert mp.slot_markets(dt.datetime(2026, 9, 9, 11, 0), force=True) == \
+        ("asx", "nasdaq", "crypto")
 
 
 # ── posting ──────────────────────────────────────────────────────────────────
@@ -300,60 +312,94 @@ def test_main_delivers_with_a_cleaned_webhook_and_only_longs(tmp_path, monkeypat
     assert "SHORTY" not in content and "FUNDY" not in content, "no shorts, no funds"
 
 
-def test_a_scheduled_run_sends_only_the_live_slots_market(tmp_path, monkeypatch):
+def test_a_scheduled_slot_sends_only_its_own_markets(tmp_path, monkeypatch):
     _utc_tz(monkeypatch)
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     posts = []
     monkeypatch.setattr(mp, "post",
                         lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
-    # the ASX slot posts JHX (ASX) and NOT HLIT/LINK (the US slot's markets)
-    assert mp.main(["--data-dir", str(_fixtures(tmp_path)),
+    # --slot asx posts JHX (ASX) and NOT HLIT/LINK (the US slot's markets)
+    assert mp.main(["--slot", "asx", "--data-dir", str(_fixtures(tmp_path)),
                     "--seen-file", _seen(tmp_path)], now=ASX_SLOT) == 0
     assert posts and "JHX" in posts[0]
     assert "HLIT" not in posts[0] and "LINK" not in posts[0]
 
 
-def test_a_scheduled_run_off_slot_posts_nothing(tmp_path, monkeypatch):
+def test_a_slot_delivers_even_when_the_cron_is_hours_late(tmp_path, monkeypatch):
+    # THE 2026-09-09 REGRESSION: GitHub delivered the crons 2-5h late and the old
+    # hour-exact gate no-op'd them all. A late run must still deliver its slot.
     _utc_tz(monkeypatch)
-    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
-    called = []
-    monkeypatch.setattr(mp, "post", lambda *a, **k: called.append(1) or 204)
-    off = dt.datetime(2026, 9, 9, 11, 30, tzinfo=dt.timezone.utc)   # no slot at 11
-    assert mp.main(["--data-dir", str(_fixtures(tmp_path)),
-                    "--seen-file", _seen(tmp_path)], now=off) == 0
-    assert not called, "an off-slot cron is a silent no-op"
-
-
-def test_main_records_delivered_tickers_and_suppresses_them_next_run(tmp_path, monkeypatch):
-    _utc_tz(monkeypatch)
-    seen_path = _seen(tmp_path)
-    data_dir = str(_fixtures(tmp_path))
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     posts = []
     monkeypatch.setattr(mp, "post",
                         lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    late = dt.datetime(2026, 9, 9, 12, 0, tzinfo=dt.timezone.utc)   # US target 06:30, 5.5h late
+    assert mp.main(["--slot", "us", "--data-dir", str(_fixtures(tmp_path)),
+                    "--seen-file", _seen(tmp_path)], now=late) == 0
+    assert posts and "HLIT" in posts[0] and "LINK" in posts[0], "a late cron must still send"
 
-    # the US slot delivers HLIT + LINK and records both (market-scoped keys)
-    assert mp.main(["--data-dir", data_dir, "--seen-file", seen_path], now=US_SLOT) == 0
+
+def test_a_slot_before_its_target_posts_nothing(tmp_path, monkeypatch):
+    _utc_tz(monkeypatch)
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    called = []
+    monkeypatch.setattr(mp, "post", lambda *a, **k: called.append(1) or 204)
+    early = dt.datetime(2026, 9, 9, 5, 0, tzinfo=dt.timezone.utc)   # before US 06:30 target
+    assert mp.main(["--slot", "us", "--data-dir", str(_fixtures(tmp_path)),
+                    "--seen-file", _seen(tmp_path)], now=early) == 0
+    assert not called, "the wrong-DST early cron is a silent no-op"
+
+
+def test_the_per_day_marker_makes_the_second_dst_cron_a_silent_noop(tmp_path, monkeypatch):
+    _utc_tz(monkeypatch)
+    seen_path, data_dir = _seen(tmp_path), str(_fixtures(tmp_path))
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    # first US cron of the day delivers and marks the slot done + records tickers
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=US_SLOT) == 0
     assert posts and "HLIT" in posts[0] and "LINK" in posts[0]
-    recorded = mp.load_seen(seen_path)
-    assert recorded.get("nasdaq:HLIT") and recorded.get("crypto:LINK")
-
-    # Second US slot the same day: both were just sent -> the "no new" message.
+    state = mp.load_state(seen_path)
+    assert state["slots"].get("us") == "2026-09-09"
+    assert state["sent"].get("nasdaq:HLIT") and state["sent"].get("crypto:LINK")
+    # the OTHER DST cron fires an hour later, same day -> hard no-op, NOT a "no new" post
     posts.clear()
-    assert mp.main(["--data-dir", data_dir, "--seen-file", seen_path], now=US_SLOT) == 0
+    later = dt.datetime(2026, 9, 9, 7, 30, tzinfo=dt.timezone.utc)
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=later) == 0
+    assert not posts, "the marker suppresses the second cron with no message at all"
+
+
+def test_tickers_stay_suppressed_on_the_next_days_slot(tmp_path, monkeypatch):
+    _utc_tz(monkeypatch)
+    seen_path, data_dir = _seen(tmp_path), str(_fixtures(tmp_path))
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=US_SLOT) == 0
+    assert "HLIT" in posts[0]
+    # next day's US slot (marker is yesterday, so due) -> same names still inside
+    # the 7-day window -> "no new plays", never a duplicate ticker for the reader
+    posts.clear()
+    tomorrow = dt.datetime(2026, 9, 10, 6, 30, tzinfo=dt.timezone.utc)
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=tomorrow) == 0
     assert len(posts) == 1 and "No new plays" in posts[0]
 
 
-def test_a_force_test_never_touches_the_real_dedup_window(tmp_path, monkeypatch):
-    # a --force send must not record, so it can't suppress a real scheduled send
+def test_a_force_test_never_touches_the_real_state(tmp_path, monkeypatch):
+    # a --force send must not record tickers OR mark a slot done
     _utc_tz(monkeypatch)
     seen_path = _seen(tmp_path)
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     monkeypatch.setattr(mp, "post", lambda url, payload, ua, **k: 204)
     assert mp.main(["--force", "--data-dir", str(_fixtures(tmp_path)),
                     "--seen-file", seen_path]) == 0
-    assert mp.load_seen(seen_path) == {}, "a forced test records nothing"
+    assert mp.load_state(seen_path) == {"sent": {}, "slots": {}}, "a forced test records nothing"
 
 
 def test_main_does_not_record_when_the_post_fails(tmp_path, monkeypatch, capsys):
@@ -361,10 +407,11 @@ def test_main_does_not_record_when_the_post_fails(tmp_path, monkeypatch, capsys)
     seen_path = _seen(tmp_path)
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     monkeypatch.setattr(mp, "post", lambda *a, **k: (_ for _ in ()).throw(OSError("reset")))
-    rc = mp.main(["--data-dir", str(_fixtures(tmp_path)),
+    rc = mp.main(["--slot", "us", "--data-dir", str(_fixtures(tmp_path)),
                   "--seen-file", seen_path], now=US_SLOT)
     assert rc == 1 and "::error::" in capsys.readouterr().out
-    assert mp.load_seen(seen_path) == {}, "a failed send buries nothing"
+    state = mp.load_state(seen_path)
+    assert state == {"sent": {}, "slots": {}}, "a failed send buries nothing and marks nothing"
 
 
 def test_main_returns_1_on_a_non_2xx_status(tmp_path, monkeypatch):
@@ -372,9 +419,9 @@ def test_main_returns_1_on_a_non_2xx_status(tmp_path, monkeypatch):
     seen_path = _seen(tmp_path)
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     monkeypatch.setattr(mp, "post", lambda *a, **k: 500)
-    assert mp.main(["--data-dir", str(_fixtures(tmp_path)),
+    assert mp.main(["--slot", "us", "--data-dir", str(_fixtures(tmp_path)),
                     "--seen-file", seen_path], now=US_SLOT) == 1
-    assert mp.load_seen(seen_path) == {}, "a rejected send buries nothing"
+    assert mp.load_state(seen_path)["slots"] == {}, "a rejected send marks no slot done"
 
 
 def test_a_dry_run_never_posts_and_records_nothing(tmp_path, monkeypatch):
@@ -383,7 +430,7 @@ def test_a_dry_run_never_posts_and_records_nothing(tmp_path, monkeypatch):
     monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
     called = []
     monkeypatch.setattr(mp, "post", lambda *a, **k: called.append(1) or 204)
-    assert mp.main(["--dry-run", "--data-dir", str(_fixtures(tmp_path)),
+    assert mp.main(["--slot", "us", "--dry-run", "--data-dir", str(_fixtures(tmp_path)),
                     "--seen-file", seen_path], now=US_SLOT) == 0
     assert not called
-    assert mp.load_seen(seen_path) == {}, "a dry run buries nothing"
+    assert mp.load_state(seen_path) == {"sent": {}, "slots": {}}, "a dry run buries nothing"

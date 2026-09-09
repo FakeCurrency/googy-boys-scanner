@@ -116,7 +116,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
-| morning_plays.yml | four superset crons: `30 5`+`30 6` (ASX 16:30 Melb) · `30 19`+`30 20` UTC (NASDAQ+Crypto 06:30 Melb) | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. A run sends only the slot whose Melbourne HOUR is live (`MORNING_PLAYS_SCHEDULE`); the DST off-crons land on non-slot hours 5/7/15/17 and no-op. 7-day de-dup via a `.cache` sent-list (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
+| morning_plays.yml | four superset crons: `30 5`+`30 6` (ASX 16:30 Melb) · `30 19`+`30 20` UTC (NASDAQ+Crypto 06:30 Melb) | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. ONE IN-RUN RETRY for a failed market (2026-09-01 — runs #64/#88, both Yahoo-throttle-under-the-coverage-floor): main() re-scans just the failed market(s) once after `TURTLE_THROTTLE_RETRY_COOLDOWN_S` (180s; 0=off), because a throttle window clears in minutes while the per-batch retries sit seconds apart inside it. A persistent failure still reddens the run — the floor's alarm is untouched, only its false-positive rate. Pins: `tests/test_turtle.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
@@ -209,33 +209,44 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   entry/stop/RR/company-name clutter -- the owner asked for a scannable list.
 - **TWO MARKET-SPECIFIC SLOTS, ~30 min after each market's close (owner,
   2026-09-09): ASX at 16:30 Melbourne, NASDAQ + Crypto at 06:30 Melbourne.**
-  `config.MORNING_PLAYS_SCHEDULE = {16: (asx,), 6: (nasdaq, crypto)}` is the
-  single source of truth; `MORNING_PLAYS_MARKETS` is derived from it (the union,
-  used only by a manual `--force` test and the empty-case label). Crypto trades
-  24/7 but rides the US slot so both morning markets land in one message. A
-  scheduled run sends ONLY the slot whose Melbourne HOUR is live and no-ops
-  otherwise. **The gate is HOUR-level, not minute-level, deliberately** — GitHub
-  coalesces/delays crons, so a :30 fire slipping a few minutes must still land;
-  and each slot's DST superset off-cron lands ±1 hour away (Melbourne hours 5/7/
-  15/17, none a slot), so hour-gating excludes them and a slot never
-  double-sends. Four UTC crons carry it (see morning_plays.yml). `slot_markets()`
-  is the whole gate; `test_every_dst_offcron_hour_is_a_noop` pins the exclusion.
+  `config.MORNING_PLAYS_SLOTS` (`{asx:{hour16,markets:(asx,)}, us:{hour6,markets:
+  (nasdaq,crypto)}}`) is the single source of truth; `MORNING_PLAYS_MARKETS` (the
+  union) and the legacy `MORNING_PLAYS_SCHEDULE` (hour→markets) are derived. Crypto
+  trades 24/7 but rides the US slot so both morning markets land in one message.
+- **DELAY-PROOF SCHEDULING — rebuilt 2026-09-10 after the FIRST design missed a
+  whole day.** The v1 gate sent only when the Melbourne hour was EXACTLY the slot
+  hour. On 2026-09-09 GitHub batched the free-tier crons **2–5 HOURS late** (runs
+  landed at Melbourne hours 7/8/19/21), so every delayed run saw "not my hour" and
+  no-op'd — nothing delivered all day (confirmed in the run logs; the owner
+  noticed). The fix mirrors turtle.yml: **morning_plays.yml maps each cron to a
+  slot NAME via `github.event.schedule` and passes `--slot`**; `slot_due()` sends
+  the slot when Melbourne is **AT OR PAST** its target today **AND** a per-day
+  marker says it has not gone out today. "At or past" tolerates any delay; the
+  marker (`state["slots"][name]=today` in the sent-list) stops the slot's second
+  DST superset cron — and any repeat run — from double-sending. Net: **each slot
+  delivers exactly once per day, on the first run at/after its target, however
+  late.** The old hour-equality gate survives ONLY as `slot_markets()`, the
+  fallback for a bare local `python morning_plays.py` (no `--slot`, no `--force`).
+  Pins: `test_slot_due_*`, `test_a_slot_delivers_even_when_the_cron_is_hours_late`,
+  `test_the_per_day_marker_makes_the_second_dst_cron_a_silent_noop`.
 - **7-DAY DE-DUP (owner ask, 2026-09-09): a ticker SENT within
   `MORNING_PLAYS_DEDUP_DAYS` (7) is skipped**, because the reader charts each
   name and shares it on, and a weekly setup persists for days — so without this
   the same names recur every day. Counted from when SENT (not from when it went
   high-conviction), so a still-valid name reappears once the window passes.
   State is a tiny actions/cache file (`MORNING_PLAYS_SEEN_FILE`,
-  `.cache/morning_plays_sent.json`) — the watchdog-state cross-run pattern, so
-  the JOB STAYS READ-ONLY to the repo (restored before, saved after, never
-  committed, gitignored). **Only ACTUALLY-DELIVERED tickers are recorded**: a
-  failed post / non-2xx / dry run / missing webhook records nothing, so no name
-  is ever silently buried (retried next run). Keys are market-scoped
-  (`market:SYMBOL`), so an ASX LINK and a crypto LINK never collide. Records are
-  pruned once past the window, so the file stays tiny. **`--force` bypasses the
-  de-dup entirely (read AND write)** — a manual test must never consume the real
-  window nor risk re-sending a name already shared today; scheduled runs do the
-  real de-dup. 0 = repeat freely.
+  `.cache/morning_plays_sent.json`, `{sent, slots}` via `load_state`/`save_state`)
+  — the watchdog-state cross-run pattern, so the JOB STAYS READ-ONLY to the repo
+  (restored before, saved after, never committed, gitignored). The SAME file holds
+  the per-day slot markers (above). **Only ACTUALLY-DELIVERED tickers are
+  recorded**: a failed post / non-2xx / dry run / missing webhook records nothing
+  AND marks no slot done, so no name is ever silently buried and a failed slot
+  retries next run. Keys are market-scoped (`market:SYMBOL`), so an ASX LINK and a
+  crypto LINK never collide. Records prune once past the window. Two dedup layers,
+  by design: the per-day slot marker prevents same-day doubles; the 7-day ticker
+  window prevents cross-day repeats to the reader (who charts each name). **`--force`
+  bypasses ALL state (read AND write)** — a manual test must never consume the real
+  window, mark a slot done, nor re-send a name already shared today. 0 = repeat freely.
 - **READ-ONLY**: reads the COMMITTED `public/data/<market>_vivek.json` (no scan,
   no Yahoo, not in the scan mutex), posts, commits nothing — so no assert_staged
   and no WATCHDOG entry, like evidence_brief. The webhook runs through
