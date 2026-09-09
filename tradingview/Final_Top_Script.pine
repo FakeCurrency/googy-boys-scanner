@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v5: v4 + reversal box)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v5.1: plot budget fixed)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,10 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v5.1 (2026-09-09): RE10140 'too many plots (71), limit 64' on the first paste
+// of v5 -- a series colour costs extra plot slots. Price-scale labels now use
+// fixed colours, the two column layers share one bgcolor, High/Low labels
+// dropped (their lines stay). Worst-case count is now well under the limit.
 // v5 (2026-09-09): REVERSAL BOX -- the counter-trend call in all four 5.0 charts
 // (short the pump at an RSI extreme: stop above the high, target at the old
 // low). Auto-drawn from the current close while RSI is at an extreme.
@@ -342,12 +346,6 @@ srH3 = showSR and f_near(h3) ? h3 : na
 srL1 = showSR and f_near(l1) ? l1 : na
 srL2 = showSR and f_near(l2) ? l2 : na
 srL3 = showSR and f_near(l3) ? l3 : na
-srH1c = close > srH1 ? cBroken : cRes
-srH2c = close > srH2 ? cBroken : cRes
-srH3c = close > srH3 ? cBroken : cRes
-srL1c = close < srL1 ? cBroken : cSup
-srL2c = close < srL2 ? cBroken : cSup
-srL3c = close < srL3 ? cBroken : cSup
 
 // trade box: entry / stop / targets (na when there is nothing to show)
 tDir   = trMode == "Manual" ? (trDir == "Long" ? 1 : -1) : sigDir
@@ -378,41 +376,42 @@ fill(pMid, pSlow, color = showFill ? color.new(slowCol, fillTr) : na, title = "M
 
 bgcolor(showBg ? color.new(slowCol, bgTr) : na, title = "Background Zone")
 rsiCol = rsiV >= rsiOB ? color.new(cSlowBull, colTr) : rsiV <= rsiOS ? color.new(cBear, colTr) : na
-bgcolor(showRsiCols ? rsiCol : na, title = "RSI extreme columns")
 sigCol = bullSig ? color.new(cBull, colTr) : bearSig ? color.new(cBear, colTr) : na
-bgcolor(sigCols ? sigCol : na, title = "Signal columns")
+colCol = showRsiCols and not na(rsiCol) ? rsiCol : sigCols ? sigCol : na
+bgcolor(colCol, title = "Columns (RSI extreme / signal)")
 
 plotshape(bullSig, title = "Bullish arrow", style = shape.arrowup,   location = location.belowbar, color = cBull, size = size.small, display = display.pane)
 plotshape(bearSig, title = "Bearish arrow", style = shape.arrowdown, location = location.abovebar, color = cBear, size = size.small, display = display.pane)
 
-// price-scale labels only (no line drawn by the plot; lines are drawn below)
+// price-scale labels only (no line drawn by the plot; lines are drawn below).
+// FIXED colours on purpose: TradingView charges extra plot slots for a plot
+// whose colour is a series, and the first live paste of v5 hit the 64-plot
+// limit at 71. The lines and in-chart tags still carry the live colours.
 plot(lvlATH, "ATH", color = cLevel, display = display.price_scale)
 plot(lvlATL, "ATL", color = cLevel, display = display.price_scale)
 plot(lvlYO0, "Y.O this year",   color = cLevel, display = display.price_scale)
 plot(lvlYO1, "Y.O last year",   color = cLevel, display = display.price_scale)
 plot(lvlYO2, "Y.O 2 years ago", color = cLevel, display = display.price_scale)
-plot(lvlHi,  "High", color = color.white, display = display.price_scale)
-plot(lvlLo,  "Low",  color = color.white, display = display.price_scale)
 plot(lvlM1, "Level 1", color = cLevel, display = display.price_scale)
 plot(lvlM2, "Level 2", color = cLevel, display = display.price_scale)
 plot(lvlM3, "Level 3", color = cLevel, display = display.price_scale)
 plot(lvlM4, "Level 4", color = cLevel, display = display.price_scale)
 plot(lvlM5, "Level 5", color = cLevel, display = display.price_scale)
 plot(lvlM6, "Level 6", color = cLevel, display = display.price_scale)
-plot(srH1, "R1", color = srH1c, display = display.price_scale)
-plot(srH2, "R2", color = srH2c, display = display.price_scale)
-plot(srH3, "R3", color = srH3c, display = display.price_scale)
-plot(srL1, "S1", color = srL1c, display = display.price_scale)
-plot(srL2, "S2", color = srL2c, display = display.price_scale)
-plot(srL3, "S3", color = srL3c, display = display.price_scale)
+plot(srH1, "R1", color = cRes, display = display.price_scale)
+plot(srH2, "R2", color = cRes, display = display.price_scale)
+plot(srH3, "R3", color = cRes, display = display.price_scale)
+plot(srL1, "S1", color = cSup, display = display.price_scale)
+plot(srL2, "S2", color = cSup, display = display.price_scale)
+plot(srL3, "S3", color = cSup, display = display.price_scale)
 plot(tEnt, "Entry", color = cEntry, display = display.price_scale)
 plot(tStp, "SL",    color = cStop,  display = display.price_scale)
-plot(tTp1, "TP1",   color = pc,     display = display.price_scale)
-plot(tTp2, "TP2",   color = pc,     display = display.price_scale)
-plot(tTp3, "TP3",   color = pc,     display = display.price_scale)
+plot(tTp1, "TP1",   color = cProfitL, display = display.price_scale)
+plot(tTp2, "TP2",   color = cProfitL, display = display.price_scale)
+plot(tTp3, "TP3",   color = cProfitL, display = display.price_scale)
 plot(rvActive ? rvEnt : na, "Rev entry",  color = cEntry, display = display.price_scale)
 plot(rvActive ? rvStp : na, "Rev SL",     color = cStop,  display = display.price_scale)
-plot(rvActive ? rvTgt : na, "Rev target", color = rvCol,  display = display.price_scale)
+plot(rvActive ? rvTgt : na, "Rev target", color = cProfitL, display = display.price_scale)
 
 if bullSig
     txt = "Bullish\n+" + str.tostring(bullScore)
