@@ -55,10 +55,10 @@
       "risk_pct": 0.2539,
       "risk_usd": 380.87,
       "source": "vivek_bot",
-      "unreal_r": 1.054,
-      "unreal_usd": 401.53,
+      "unreal_r": 1.015,
+      "unreal_usd": 386.4,
       "lens": "vivek",
-      "last_mark": 35.66999817,
+      "last_mark": 35.54000092,
       "notional_before": 503.36,
       "units_before": 15.7349343,
       "risk_usd_before": 35.0,
@@ -268,9 +268,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0059,
       "exits": [],
-      "mae": 46.125,
+      "mae": 45.86000061035156,
       "mfe": 49.07500076293945,
-      "mae_r": -0.012,
+      "mae_r": -0.06,
       "mfe_r": 0.523,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 106.63254564,
@@ -287,7 +287,7 @@
       "level_tf": "3d",
       "signal_entry": 46.88999939,
       "fill_slip_bps": -149.3,
-      "last_mark": 46.58000183,
+      "last_mark": 45.86000061,
       "day_marks": {
         "2026-09-01": 48.74000168,
         "2026-09-02": 47.95000076,
@@ -299,8 +299,8 @@
         "2026-09-08": 47.0,
         "2026-09-09": 46.58000183
       },
-      "unreal_r": 0.071,
-      "unreal_usd": 46.86,
+      "unreal_r": -0.06,
+      "unreal_usd": -39.65,
       "stale_pinged": "2026-09-08"
     },
     {
@@ -381,82 +381,6 @@
       "unreal_usd": 465.35
     },
     {
-      "id": "HM1:long:3D:2026-08-21",
-      "symbol": "HM1",
-      "name": "Hearts and Minds Investments Limited",
-      "sector": "Financials",
-      "market": "asx",
-      "direction": "long",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "3D",
-      "entry": 2.99000001,
-      "stop": 2.99000001,
-      "tp1": 3.14569248,
-      "tp2": 3.38766895,
-      "tp3": 3.93136718,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 0.20027342,
-      "rr": 1.99,
-      "trigger_bar": null,
-      "entry_date": "2026-08-21",
-      "opened_at": "2026-08-21T05:49:10+00:00",
-      "status": "open",
-      "tp1_hit": true,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.25,
-      "realized_r": 0.1831,
-      "gross_r": 0.1943,
-      "cost_r": 0.0112,
-      "exits": [
-        {
-          "reason": "tp1",
-          "price": 3.14569248,
-          "pct": 0.25,
-          "date": "2026-08-28"
-        }
-      ],
-      "mae": 2.9700000286102295,
-      "mfe": 3.1600000858306885,
-      "mae_r": -0.1,
-      "mfe_r": 0.849,
-      "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 1677.85233773,
-      "notional": 5000.0,
-      "leverage": 0.03,
-      "leverage_target": 5.0,
-      "risk_pct": 0.2128,
-      "risk_usd": 319.25,
-      "sizing_mode": "fixed_notional",
-      "cycle": "w3-1",
-      "review": [],
-      "source": "vivek_bot",
-      "lens": "vivek",
-      "level_tf": "3d",
-      "signal_entry": 2.98000002,
-      "fill_slip_bps": 33.6,
-      "last_mark": 2.97000003,
-      "day_marks": {
-        "2026-09-01": 3.0999999,
-        "2026-09-02": 3.1099999,
-        "2026-09-03": 3.05999994,
-        "2026-09-04": 3.05999994,
-        "2026-09-05": 3.08999991,
-        "2026-09-06": 3.08999991,
-        "2026-09-07": 3.08999991,
-        "2026-09-08": 3.08999991,
-        "2026-09-09": 3.06999993
-      },
-      "unreal_r": -0.075,
-      "unreal_usd": -23.91,
-      "stale_pinged": "2026-09-04"
-    },
-    {
       "id": "CCP:long:3D:2026-08-21",
       "symbol": "CCP",
       "name": "Credit Corp Group Limited",
@@ -509,7 +433,7 @@
       "level_tf": "3d",
       "signal_entry": 13.35000038,
       "fill_slip_bps": 382.0,
-      "last_mark": 14.18000031,
+      "last_mark": 14.02000046,
       "day_marks": {
         "2026-09-01": 14.01000023,
         "2026-09-02": 14.25,
@@ -521,8 +445,8 @@
         "2026-09-08": 14.36999989,
         "2026-09-09": 14.18000031
       },
-      "unreal_r": 0.143,
-      "unreal_usd": 92.46,
+      "unreal_r": 0.072,
+      "unreal_usd": 46.23,
       "stale_pinged": "2026-09-04"
     },
     {
@@ -587,7 +511,7 @@
       "level_tf": "weekly",
       "signal_entry": 8.97000027,
       "fill_slip_bps": -133.8,
-      "last_mark": 8.72000027,
+      "last_mark": 8.73999977,
       "day_marks": {
         "2026-09-01": 8.57999992,
         "2026-09-02": 8.68000031,
@@ -599,8 +523,8 @@
         "2026-09-08": 8.67000008,
         "2026-09-09": 8.72000027
       },
-      "unreal_r": -0.099,
-      "unreal_usd": -79.09,
+      "unreal_r": -0.084,
+      "unreal_usd": -66.92,
       "stale_pinged": "2026-09-04"
     },
     {
@@ -665,7 +589,7 @@
       "level_tf": "weekly",
       "signal_entry": 2.45000005,
       "fill_slip_bps": 673.5,
-      "last_mark": 2.56999993,
+      "last_mark": 2.55999994,
       "day_marks": {
         "2026-09-01": 2.5999999,
         "2026-09-02": 2.56999993,
@@ -677,8 +601,8 @@
         "2026-09-08": 2.5999999,
         "2026-09-09": 2.56999993
       },
-      "unreal_r": -0.086,
-      "unreal_usd": -62.97,
+      "unreal_r": -0.105,
+      "unreal_usd": -76.97,
       "stale_pinged": "2026-09-04"
     },
     {
@@ -743,7 +667,7 @@
       "level_tf": "weekly",
       "signal_entry": 1.90999997,
       "fill_slip_bps": -68.1,
-      "last_mark": 1.81500006,
+      "last_mark": 1.80200005,
       "day_marks": {
         "2026-09-01": 1.82000005,
         "2026-09-02": 1.85500002,
@@ -755,8 +679,8 @@
         "2026-09-08": 1.84500003,
         "2026-09-09": 1.81500006
       },
-      "unreal_r": -0.192,
-      "unreal_usd": -221.21,
+      "unreal_r": -0.223,
+      "unreal_usd": -256.28,
       "stale_pinged": "2026-09-07"
     },
     {
@@ -812,7 +736,7 @@
       "level_tf": "weekly",
       "signal_entry": 1.29999995,
       "fill_slip_bps": 15.4,
-      "last_mark": 1.27999997,
+      "last_mark": 1.28999996,
       "day_marks": {
         "2026-09-01": 1.32000005,
         "2026-09-02": 1.31500006,
@@ -824,8 +748,8 @@
         "2026-09-08": 1.27999997,
         "2026-09-09": 1.27999997
       },
-      "unreal_r": -0.193,
-      "unreal_usd": -83.13,
+      "unreal_r": -0.105,
+      "unreal_usd": -45.35,
       "stale_pinged": "2026-09-09"
     },
     {
@@ -939,9 +863,9 @@
       "gross_r": 0.0,
       "cost_r": 0.009,
       "exits": [],
-      "mae": 6.929999828338623,
+      "mae": 6.885000228881836,
       "mfe": 7.09000015,
-      "mae_r": -0.289,
+      "mae_r": -0.37,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 691.56293031,
@@ -958,7 +882,7 @@
       "level_tf": "weekly",
       "signal_entry": 7.23000002,
       "fill_slip_bps": -193.6,
-      "last_mark": 6.90999985,
+      "last_mark": 6.88500023,
       "day_marks": {
         "2026-09-01": 7.09000015,
         "2026-09-02": 7.09000015,
@@ -970,8 +894,8 @@
         "2026-09-08": 6.98999977,
         "2026-09-09": 6.90999985
       },
-      "unreal_r": -0.325,
-      "unreal_usd": -155.94
+      "unreal_r": -0.37,
+      "unreal_usd": -177.6
     },
     {
       "id": "JHX:long:1W:2026-09-07",
@@ -1007,9 +931,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0029,
       "exits": [],
-      "mae": 41.904998779296875,
+      "mae": 40.880001068115234,
       "mfe": 42.060001373291016,
-      "mae_r": -0.015,
+      "mae_r": -0.114,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 118.87778976,
@@ -1035,14 +959,14 @@
       "level_tf": "weekly",
       "signal_entry": 42.06000137,
       "fill_slip_bps": 0.0,
-      "last_mark": 41.72999954,
+      "last_mark": 40.88000107,
       "day_marks": {
         "2026-09-07": 42.06000137,
         "2026-09-08": 41.99000168,
         "2026-09-09": 41.72999954
       },
-      "unreal_r": -0.032,
-      "unreal_usd": -39.23
+      "unreal_r": -0.114,
+      "unreal_usd": -140.28
     },
     {
       "id": "YORW:long:3D:2026-08-07",
@@ -1335,7 +1259,7 @@
       "level_tf": "weekly",
       "signal_entry": 45.15000153,
       "fill_slip_bps": 137.3,
-      "last_mark": 43.15499878,
+      "last_mark": 43.15999985,
       "day_marks": {
         "2026-08-31": 44.81999969,
         "2026-09-01": 44.36000061,
@@ -1347,8 +1271,8 @@
         "2026-09-07": 44.24000168,
         "2026-09-08": 44.24000168
       },
-      "unreal_r": -0.378,
-      "unreal_usd": -263.63,
+      "unreal_r": -0.377,
+      "unreal_usd": -263.12,
       "stale_pinged": "2026-09-04"
     },
     {
@@ -1491,7 +1415,7 @@
       "level_tf": "3d",
       "signal_entry": 71.52999878,
       "fill_slip_bps": -72.0,
-      "last_mark": 67.86499786,
+      "last_mark": 67.87000275,
       "day_marks": {
         "2026-08-31": 71.01499939,
         "2026-09-01": 71.01000214,
@@ -1503,8 +1427,8 @@
         "2026-09-07": 68.34999847,
         "2026-09-08": 68.34999847
       },
-      "unreal_r": -0.233,
-      "unreal_usd": -228.56
+      "unreal_r": -0.232,
+      "unreal_usd": -228.2
     },
     {
       "id": "XP:long:1W:2026-08-31",
@@ -1935,7 +1859,7 @@
       "level_tf": "3d",
       "signal_entry": 46.27000046,
       "fill_slip_bps": 0.0,
-      "last_mark": 42.17499924,
+      "last_mark": 42.18000031,
       "day_marks": {
         "2026-08-31": 46.27000046,
         "2026-09-01": 46.27000046,
@@ -1947,8 +1871,8 @@
         "2026-09-07": 44.04999924,
         "2026-09-08": 44.04999924
       },
-      "unreal_r": -0.393,
-      "unreal_usd": -442.51
+      "unreal_r": -0.392,
+      "unreal_usd": -441.97
     },
     {
       "id": "NXST:long:3D:2026-08-31",
@@ -2003,7 +1927,7 @@
       "level_tf": "3d",
       "signal_entry": 182.13000488,
       "fill_slip_bps": 0.0,
-      "last_mark": 169.14500427,
+      "last_mark": 169.1499939,
       "day_marks": {
         "2026-08-31": 182.13000488,
         "2026-09-01": 182.13000488,
@@ -2015,8 +1939,8 @@
         "2026-09-07": 176.83000183,
         "2026-09-08": 176.83000183
       },
-      "unreal_r": -0.991,
-      "unreal_usd": -356.48
+      "unreal_r": -0.99,
+      "unreal_usd": -356.34
     },
     {
       "id": "PLAB:long:3D:2026-09-01",
@@ -2143,7 +2067,7 @@
       "lens": "vivek",
       "signal_entry": 85.64907074,
       "fill_slip_bps": -97.1,
-      "last_mark": 113.74164581,
+      "last_mark": 114.16584015,
       "day_marks": {
         "2026-09-01": 112.11191559,
         "2026-09-02": 110.25334167,
@@ -2155,8 +2079,8 @@
         "2026-09-08": 115.70563507,
         "2026-09-09": 113.87212372
       },
-      "unreal_r": 2.806,
-      "unreal_usd": 1402.62,
+      "unreal_r": 2.847,
+      "unreal_usd": 1423.19,
       "level_tf": "h4",
       "level_tf_source": "scan"
     },
@@ -2230,7 +2154,7 @@
       "lens": "vivek",
       "signal_entry": 1.4569,
       "fill_slip_bps": -26.8,
-      "last_mark": 2.29399991,
+      "last_mark": 2.29299998,
       "day_marks": {
         "2026-09-01": 1.86699998,
         "2026-09-02": 1.79999995,
@@ -2243,7 +2167,7 @@
         "2026-09-09": 2.28299999
       },
       "unreal_r": 0.597,
-      "unreal_usd": 296.62,
+      "unreal_usd": 296.27,
       "level_tf": "h4",
       "level_tf_source": "scan"
     }
@@ -4355,6 +4279,92 @@
       "exit_date": "2026-09-01",
       "exit_reason": "stop",
       "hold_days": 22
+    },
+    {
+      "id": "HM1:long:3D:2026-08-21",
+      "symbol": "HM1",
+      "name": "Hearts and Minds Investments Limited",
+      "sector": "Financials",
+      "market": "asx",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 2.99000001,
+      "stop": 2.99000001,
+      "tp1": 3.14569248,
+      "tp2": 3.38766895,
+      "tp3": 3.93136718,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.20027342,
+      "rr": 1.99,
+      "trigger_bar": null,
+      "entry_date": "2026-08-21",
+      "opened_at": "2026-08-21T05:49:10+00:00",
+      "status": "closed",
+      "tp1_hit": true,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": 0.0255,
+      "gross_r": 0.0445,
+      "cost_r": 0.019,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 3.14569248,
+          "pct": 0.25,
+          "date": "2026-08-28"
+        },
+        {
+          "reason": "stop",
+          "price": 2.95000005,
+          "pct": 0.75,
+          "date": "2026-09-09"
+        }
+      ],
+      "mae": 2.950000047683716,
+      "mfe": 3.1600000858306885,
+      "mae_r": -0.2,
+      "mfe_r": 0.849,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 1677.85233773,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.2128,
+      "risk_usd": 319.25,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 2.98000002,
+      "fill_slip_bps": 33.6,
+      "last_mark": 2.95000005,
+      "day_marks": {
+        "2026-09-01": 3.0999999,
+        "2026-09-02": 3.1099999,
+        "2026-09-03": 3.05999994,
+        "2026-09-04": 3.05999994,
+        "2026-09-05": 3.08999991,
+        "2026-09-06": 3.08999991,
+        "2026-09-07": 3.08999991,
+        "2026-09-08": 3.08999991,
+        "2026-09-09": 3.06999993
+      },
+      "unreal_r": -0.075,
+      "unreal_usd": -23.91,
+      "stale_pinged": "2026-09-04",
+      "exit_price": 2.95000005,
+      "exit_date": "2026-09-09",
+      "exit_reason": "trail",
+      "hold_days": 19
     },
     {
       "id": "TSLA:long:1D:2026-07-01",
@@ -7470,20 +7480,20 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -1427.81,
+      "week_usd": -1584.03,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -119.56,
-      "worst_week_usd": -1427.81,
-      "realised_usd": 0.0,
+      "worst_session_usd": -323.6,
+      "worst_week_usd": -1584.03,
+      "realised_usd": -53.91,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -119.56,
-      "session_usd": -119.56,
+      "unrealised_usd": -269.69,
+      "session_usd": -323.6,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 14,
-      "open_total_usd": 1453.37,
+      "open": 13,
+      "open_total_usd": 1149.14,
       "notified": ""
     },
     "nasdaq": {
@@ -7493,20 +7503,20 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -973.0,
+      "week_usd": -971.45,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -684.19,
-      "worst_week_usd": -973.0,
+      "worst_session_usd": -682.64,
+      "worst_week_usd": -971.45,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -684.19,
-      "session_usd": -684.19,
+      "unrealised_usd": -682.64,
+      "session_usd": -682.64,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 14,
-      "open_total_usd": -1539.54,
+      "open_total_usd": -1538.0,
       "notified": ""
     },
     "crypto": {
@@ -7516,27 +7526,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 1728.67,
+      "week_usd": 1748.88,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -2.45,
-      "worst_week_usd": 1728.67,
+      "worst_session_usd": 17.77,
+      "worst_week_usd": 1748.88,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -2.45,
-      "session_usd": -2.45,
+      "unrealised_usd": 17.77,
+      "session_usd": 17.77,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 2,
-      "open_total_usd": 3165.86,
+      "open_total_usd": 3186.08,
       "notified": ""
     }
   },
   "summary": {
-    "open": 30,
-    "unreal_usd": 1057.75,
+    "open": 29,
+    "unreal_usd": 833.73,
     "updated_day": "2026-09-09"
   },
-  "updated_at": "2026-09-09T00:44:01+00:00"
+  "updated_at": "2026-09-09T02:27:56+00:00"
 }
