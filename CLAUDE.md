@@ -94,6 +94,10 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
                        data/sector_history.json (backfill_history.yml)
   resize_book_notional.py      one-off: restates the OPEN book at the current
                        fixed notional. Dry by default, idempotent, --apply
+tradingview/           Pine Script v6 sources for the owner's TradingView chart
+                       layout (Final_Top_Script / Final_Bottom_MACD /
+                       Final_RSI_Plus + README). CHART-ONLY: nothing imports
+                       them, no test runs over them, outside every signal path
 ```
 
 ## Workflows (current)
@@ -2432,6 +2436,31 @@ Facts a later session must not re-derive (ledger of record:
    `_CACHE_DIR` (autouse) — a test that needs a warm cache seeds it with
    `data.save_frame_cache`, and `band()` frames are 2015-dated so a cached
    copy of one is a fossil by construction.
+
+## TRADINGVIEW TEMPLATES -- chart-only, not a lens (2026-09-09)
+
+`tradingview/` holds the Pine Script v6 sources for the owner's chart layout,
+rebuilt to match the "5.0 Trading" look he uses as a reference: a 20/50/200
+EMA stack with the slow line coloured by regime, scored "Bullish +N" / "-N
+Bearish" cross signals, RSI-extreme columns, key levels (ATH/ATL, yearly
+opens, range High/Low, manual named levels and zones, pivot S/R with
+right-edge price tags), a Long/Short position box with an Entry/SL/TP1-3
+ladder, plus the MACD and RSI+ panes. `tradingview/README.md` maps every
+element of the reference screenshots to the input that produces it, and
+records which parts of those screenshots are TradingView DRAWINGS (the big
+translucent rectangles are the Long/Short Position tool) rather than an
+indicator.
+
+- **It is a chart template and nothing else.** No scanner, broker, script,
+  workflow or test reads the folder; the scripts do not encode VIVEK, PhaseMap,
+  Specs or TURTLE logic and must not be described as a lens. Its 20/50/200 EMA
+  is the owner's charting preference, unrelated to VIVEK's 200-SMA levels.
+- **The files are ASCII-only on purpose** (rule 9 in spirit): TradingView
+  prints the empty-set symbol for na plots by itself, so no non-ASCII glyph is
+  needed to reproduce the reference status line.
+- **No Pine compiler exists in a cloud session**, so the scripts were checked
+  by eye, not compiled. If the owner reports a paste error, fix the named line
+  rather than restructuring.
 
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 

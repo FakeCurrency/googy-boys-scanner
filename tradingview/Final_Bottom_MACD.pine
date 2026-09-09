@@ -1,0 +1,39 @@
+//@version=6
+// =============================================================================
+// Final_Bottom_MACD  --  the MACD pane of the 5.0 layout
+// -----------------------------------------------------------------------------
+// Standard 12 / 26 / 9 MACD with TradingView's four-shade histogram (strong /
+// fading colour on each side of zero), blue MACD line, orange signal line, and
+// optional columns on histogram zero-crosses (the moment the Top script's
+// "+1 when the MACD histogram agrees" flips).
+// Status line order is kept from the previous version: histogram, MACD, signal.
+// =============================================================================
+indicator("Final_Bottom_MACD", shorttitle = "Final_Bottom_MACD", overlay = false)
+
+fastLen  = input.int(12, "Fast Length",   minval = 1)
+slowLen  = input.int(26, "Slow Length",   minval = 1)
+sigLen   = input.int(9,  "Signal Length", minval = 1)
+src      = input.source(close, "Source")
+cUp1     = input.color(#26a69a, "Hist above zero, rising",  inline = "u")
+cUp2     = input.color(#b2dfdb, "falling",                  inline = "u")
+cDn1     = input.color(#ef5350, "Hist below zero, falling", inline = "d")
+cDn2     = input.color(#ffcdd2, "rising",                   inline = "d")
+cMacd    = input.color(#2962ff, "MACD",   inline = "l")
+cSig     = input.color(#ff6d00, "Signal", inline = "l")
+zeroCols = input.bool(false, "Column on histogram zero-cross")
+
+[macdLine, sigLine, hist] = ta.macd(src, fastLen, slowLen, sigLen)
+histCol = hist >= 0 ? (hist > nz(hist[1]) ? cUp1 : cUp2) : (hist < nz(hist[1]) ? cDn1 : cDn2)
+
+plot(hist,     "Histogram", color = histCol, style = plot.style_columns)
+plot(macdLine, "MACD",      color = cMacd, linewidth = 2)
+plot(sigLine,  "Signal",    color = cSig,  linewidth = 2)
+hline(0, "Zero", color = color.new(color.gray, 50), linestyle = hline.style_dashed)
+
+xUp = ta.crossover(hist, 0)
+xDn = ta.crossunder(hist, 0)
+zc  = xUp ? color.new(cUp1, 75) : xDn ? color.new(cDn1, 75) : na
+bgcolor(zeroCols ? zc : na, title = "Zero-cross columns")
+
+alertcondition(xUp, title = "MACD histogram above zero", message = "Final_Bottom_MACD: histogram crossed above zero")
+alertcondition(xDn, title = "MACD histogram below zero", message = "Final_Bottom_MACD: histogram crossed below zero")

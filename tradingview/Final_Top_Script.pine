@@ -1,0 +1,393 @@
+//@version=6
+// =============================================================================
+// Final_Top_Script  --  5.0-style overlay for TradingView
+// -----------------------------------------------------------------------------
+// Drop-in replacement for the previous Final_Top_Script: same indicator name,
+// and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
+// kept (the old 50 is now "Mid Length"; a 20 "Fast Length" was added).
+//
+//   * Fast / Mid / Slow MAs (20 / 50 / 200 EMA by default). The Slow line is
+//     green while Mid > Slow and red otherwise; the Mid-Slow band is filled in
+//     the same colour.
+//   * Scored signals on every Fast x Mid cross: "Bullish +N" / "-N Bearish".
+//     N = 1 for the cross, +1 if the MACD histogram agrees, +1 if price is on
+//     the right side of the Slow MA, (+1 if RSI agrees -- off by default).
+//   * RSI-extreme columns (overbought = green, oversold = red), the regime
+//     background zone, and a dashed line from the last signal to the extreme
+//     printed since it.
+//   * Key levels: ATH / ATL of the loaded history, yearly opens ("2026 Y.O"),
+//     range High / Low, up to six named manual levels and two shaded zones,
+//     and automatic pivot support / resistance (green below price, red above,
+//     grey once broken) with price tags at the right edge.
+//   * A Long / Short position box (profit box + red stop box) with an
+//     Entry / SL / TP1 / TP2 / TP3 ladder, taken from the last signal or typed
+//     in by hand to mirror a posted call.
+//
+// Chart template only: nothing in the scanner reads this file.
+// See tradingview/README.md for the chart settings that complete the look.
+// =============================================================================
+indicator("Final_Top_Script", shorttitle = "Final_Top_Script", overlay = true,
+     max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+
+// ---------------------------------------------------------------- inputs ----
+gMA = "Moving averages"
+fastLen   = input.int(20,  "Fast Length", minval = 1, group = gMA)
+midLen    = input.int(50,  "Mid Length",  minval = 1, group = gMA)
+slowLen   = input.int(200, "Slow Length", minval = 1, group = gMA)
+maType    = input.string("EMA", "MA type", options = ["EMA", "SMA"], group = gMA)
+maSrc     = input.source(close, "Source", group = gMA)
+cFast     = input.color(#5b8cff, "Fast", group = gMA, inline = "c1")
+cMid      = input.color(#2f4bd8, "Mid",  group = gMA, inline = "c1")
+cSlowBull = input.color(#22c55e, "Slow bull", group = gMA, inline = "c2")
+cSlowBear = input.color(#ef4444, "Slow bear", group = gMA, inline = "c2")
+showFill  = input.bool(true, "Fill the Mid-Slow band", group = gMA)
+fillTr    = input.int(82, "Band transparency", minval = 0, maxval = 100, group = gMA)
+showXLbl  = input.bool(false, "Label Mid x Slow crosses (BULLISH / BEARISH)", group = gMA)
+
+gBG = "Background"
+showBg      = input.bool(true, "Show Background Zone", group = gBG)
+bgTr        = input.int(90, "Zone transparency", minval = 0, maxval = 100, group = gBG)
+showRsiCols = input.bool(true, "RSI extreme columns (overbought = green, oversold = red)", group = gBG)
+rsiLen      = input.int(14, "RSI length", minval = 1, group = gBG)
+rsiOB       = input.float(70, "RSI overbought", group = gBG)
+rsiOS       = input.float(30, "RSI oversold", group = gBG)
+colTr       = input.int(78, "Column transparency", minval = 0, maxval = 100, group = gBG)
+
+gSig = "Signals (Fast x Mid cross, scored)"
+showSig   = input.bool(true, "Show Bullish / Bearish signals", group = gSig)
+useMacd   = input.bool(true, "+1 when the MACD histogram agrees", group = gSig)
+useSlow   = input.bool(true, "+1 when price is on the right side of the Slow MA", group = gSig)
+useRsi    = input.bool(false, "+1 when RSI agrees (> 50 / < 50)", group = gSig)
+minScore  = input.int(1, "Minimum score to show", minval = 1, maxval = 4, group = gSig)
+boxedSig  = input.bool(false, "Boxed signal labels", group = gSig)
+sigCols   = input.bool(false, "Column on signal bars", group = gSig)
+showTrend = input.bool(true, "Dashed line: last signal to the extreme since", group = gSig)
+cBull     = input.color(#3b82f6, "Bullish", group = gSig, inline = "sc")
+cBear     = input.color(#ef4444, "Bearish", group = gSig, inline = "sc")
+macdFast  = input.int(12, "MACD fast", minval = 1, group = gSig, inline = "m")
+macdSlow  = input.int(26, "slow",      minval = 1, group = gSig, inline = "m")
+macdSig   = input.int(9,  "signal",    minval = 1, group = gSig, inline = "m")
+
+gLv = "Key levels"
+lblOff    = input.int(3, "Tag offset (bars right of the last bar)", minval = 0, maxval = 100, group = gLv)
+showATH   = input.bool(true, "ATH / ATL of the loaded history", group = gLv)
+showYO    = input.bool(true, "Yearly opens", group = gLv)
+yoCount   = input.int(2, "Yearly opens to show (this year first)", minval = 1, maxval = 3, group = gLv)
+showRange = input.bool(true, "Range High / Low", group = gLv)
+rangeLen  = input.int(100, "Range lookback (bars)", minval = 2, group = gLv)
+cLevel    = input.color(#22c55e, "Level line", group = gLv, inline = "lc")
+cName     = input.color(#f59e0b, "Level name", group = gLv, inline = "lc")
+
+gMan = "Manual levels (0 = off)"
+m1p = input.float(0, "Level 1", group = gMan, inline = "m1")
+m1n = input.string("", "name", group = gMan, inline = "m1")
+m2p = input.float(0, "Level 2", group = gMan, inline = "m2")
+m2n = input.string("", "name", group = gMan, inline = "m2")
+m3p = input.float(0, "Level 3", group = gMan, inline = "m3")
+m3n = input.string("", "name", group = gMan, inline = "m3")
+m4p = input.float(0, "Level 4", group = gMan, inline = "m4")
+m4n = input.string("", "name", group = gMan, inline = "m4")
+m5p = input.float(0, "Level 5", group = gMan, inline = "m5")
+m5n = input.string("", "name", group = gMan, inline = "m5")
+m6p = input.float(0, "Level 6", group = gMan, inline = "m6")
+m6n = input.string("", "name", group = gMan, inline = "m6")
+
+gZn = "Manual zones (0 = off)"
+z1t = input.float(0, "Zone 1 top", group = gZn, inline = "z1")
+z1b = input.float(0, "bottom",     group = gZn, inline = "z1")
+z1n = input.string("", "name",     group = gZn, inline = "z1")
+z1c = input.color(color.new(#06b6d4, 70), "Zone 1 colour", group = gZn)
+z2t = input.float(0, "Zone 2 top", group = gZn, inline = "z2")
+z2b = input.float(0, "bottom",     group = gZn, inline = "z2")
+z2n = input.string("", "name",     group = gZn, inline = "z2")
+z2c = input.color(color.new(#a855f7, 70), "Zone 2 colour", group = gZn)
+
+gSR = "Auto support / resistance (pivots)"
+showSR  = input.bool(true, "Show pivot levels", group = gSR)
+pivLen  = input.int(10, "Pivot strength (bars each side)", minval = 1, group = gSR)
+maxSR   = input.int(5, "Levels per side", minval = 1, maxval = 15, group = gSR)
+cRes    = input.color(#ef4444, "Resistance", group = gSR, inline = "sr")
+cSup    = input.color(#22c55e, "Support",    group = gSR, inline = "sr")
+cBroken = input.color(#6b7280, "Broken",     group = gSR, inline = "sr")
+
+gTr = "Trade box (Long / Short position)"
+trMode     = input.string("Auto (last signal)", "Mode", options = ["Off", "Auto (last signal)", "Manual"], group = gTr)
+slMode     = input.string("Swing", "Auto stop", options = ["Swing", "ATR"], group = gTr)
+swingLen   = input.int(5, "Swing lookback (bars)", minval = 1, group = gTr)
+atrMult    = input.float(1.5, "ATR multiple (ATR stop)", minval = 0.1, step = 0.1, group = gTr)
+atrPad     = input.float(0.25, "ATR pad beyond the swing", minval = 0, step = 0.05, group = gTr)
+r1         = input.float(1.0, "TP1 (R)", minval = 0.1, step = 0.1, group = gTr, inline = "r")
+r2         = input.float(2.0, "TP2 (R)", minval = 0.1, step = 0.1, group = gTr, inline = "r")
+r3         = input.float(3.0, "TP3 (R)", minval = 0.1, step = 0.1, group = gTr, inline = "r")
+extendBars = input.int(30, "Extend the box right (bars)", minval = 1, maxval = 400, group = gTr)
+showLadder = input.bool(true, "Entry / SL / TP tags", group = gTr)
+tagNames   = input.bool(true, "Name the tags (SL / TP1 ...)", group = gTr)
+trDir      = input.string("Long", "Manual: direction", options = ["Long", "Short"], group = gTr)
+mEntry     = input.float(0, "Manual: entry (0 = last close)", group = gTr)
+mSL        = input.float(0, "Manual: SL (0 = ATR stop)", group = gTr)
+mTP1       = input.float(0, "Manual: TP1 (0 = R multiple)", group = gTr)
+mTP2       = input.float(0, "Manual: TP2 (0 = R multiple)", group = gTr)
+mTP3       = input.float(0, "Manual: TP3 (0 = R multiple)", group = gTr)
+mStart     = input.int(10, "Manual: box starts (bars ago)", minval = 0, group = gTr)
+cProfitL   = input.color(#22c55e, "Long profit",  group = gTr, inline = "tc")
+cProfitS   = input.color(#3b82f6, "Short profit", group = gTr, inline = "tc")
+cStop      = input.color(#ef4444, "Stop",  group = gTr, inline = "tc")
+cEntry     = input.color(#9ca3af, "Entry", group = gTr, inline = "tc")
+
+// ----------------------------------------------------------------- calcs ----
+// Both MAs are computed every bar so the ta.* history stays consistent
+// whichever type is selected.
+f_ma(s, len) =>
+    e = ta.ema(s, len)
+    m = ta.sma(s, len)
+    maType == "EMA" ? e : m
+
+maFast  = f_ma(maSrc, fastLen)
+maMid   = f_ma(maSrc, midLen)
+maSlow  = f_ma(maSrc, slowLen)
+regime  = maMid > maSlow
+slowCol = regime ? cSlowBull : cSlowBear
+
+rsiV = ta.rsi(close, rsiLen)
+atrV = ta.atr(14)
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSig)
+swLo = ta.lowest(low, swingLen)
+swHi = ta.highest(high, swingLen)
+rHi  = ta.highest(high, rangeLen)
+rLo  = ta.lowest(low, rangeLen)
+
+bullX = ta.crossover(maFast, maMid)
+bearX = ta.crossunder(maFast, maMid)
+goldX = ta.crossover(maMid, maSlow)
+deadX = ta.crossunder(maMid, maSlow)
+
+bullScore = 1 + (useMacd and macdHist > 0 ? 1 : 0) + (useSlow and close > maSlow ? 1 : 0) + (useRsi and rsiV > 50 ? 1 : 0)
+bearScore = 1 + (useMacd and macdHist < 0 ? 1 : 0) + (useSlow and close < maSlow ? 1 : 0) + (useRsi and rsiV < 50 ? 1 : 0)
+bullSig   = showSig and bullX and bullScore >= minScore
+bearSig   = showSig and bearX and bearScore >= minScore
+
+// all-time high / low of whatever history the chart has loaded
+var float ath = na
+var float atl = na
+ath := na(ath) ? high : math.max(ath, high)
+atl := na(atl) ? low  : math.min(atl, low)
+
+// yearly opens (lookahead on is safe for `open`: it is known at the year start)
+yo0 = request.security(syminfo.tickerid, "12M", open,    lookahead = barmerge.lookahead_on)
+yo1 = request.security(syminfo.tickerid, "12M", open[1], lookahead = barmerge.lookahead_on)
+yo2 = request.security(syminfo.tickerid, "12M", open[2], lookahead = barmerge.lookahead_on)
+yYr = request.security(syminfo.tickerid, "12M", year,    lookahead = barmerge.lookahead_on)
+
+// pivot support / resistance memory (newest first)
+ph = ta.pivothigh(high, pivLen, pivLen)
+pl = ta.pivotlow(low, pivLen, pivLen)
+var phP = array.new<float>()
+var phB = array.new<int>()
+var plP = array.new<float>()
+var plB = array.new<int>()
+if not na(ph)
+    array.unshift(phP, ph)
+    array.unshift(phB, bar_index - pivLen)
+    if array.size(phP) > maxSR
+        array.pop(phP)
+        array.pop(phB)
+if not na(pl)
+    array.unshift(plP, pl)
+    array.unshift(plB, bar_index - pivLen)
+    if array.size(plP) > maxSR
+        array.pop(plP)
+        array.pop(plB)
+
+// last signal memory: where it fired, its stop, and the extreme printed since
+var int   sigBar   = na
+var int   sigDir   = 0
+var float sigPx    = na
+var float sigEntry = na
+var float sigStop  = na
+var float extPx    = na
+var int   extBar   = na
+if bullSig or bearSig
+    sigBar   := bar_index
+    sigDir   := bullSig ? 1 : -1
+    sigPx    := bullSig ? low : high
+    sigEntry := close
+    atrStop   = bullSig ? close - atrV * atrMult : close + atrV * atrMult
+    swStop    = bullSig ? swLo - atrV * atrPad : swHi + atrV * atrPad
+    sigStop  := slMode == "ATR" ? atrStop : swStop
+    extPx    := bullSig ? high : low
+    extBar   := bar_index
+else if sigDir == 1 and not na(extPx) and high > extPx
+    extPx  := high
+    extBar := bar_index
+else if sigDir == -1 and not na(extPx) and low < extPx
+    extPx  := low
+    extBar := bar_index
+
+// ----------------------------------------------------------------- plots ----
+pFast = plot(maFast, "Fast MA", color = cFast,   linewidth = 1)
+pMid  = plot(maMid,  "Mid MA",  color = cMid,    linewidth = 2)
+pSlow = plot(maSlow, "Slow MA", color = slowCol, linewidth = 3)
+fill(pMid, pSlow, color = showFill ? color.new(slowCol, fillTr) : na, title = "Mid-Slow band")
+
+bgcolor(showBg ? color.new(slowCol, bgTr) : na, title = "Background Zone")
+rsiCol = rsiV >= rsiOB ? color.new(cSlowBull, colTr) : rsiV <= rsiOS ? color.new(cBear, colTr) : na
+bgcolor(showRsiCols ? rsiCol : na, title = "RSI extreme columns")
+sigCol = bullSig ? color.new(cBull, colTr) : bearSig ? color.new(cBear, colTr) : na
+bgcolor(sigCols ? sigCol : na, title = "Signal columns")
+
+plotshape(bullSig, title = "Bullish arrow", style = shape.arrowup,   location = location.belowbar, color = cBull, size = size.small)
+plotshape(bearSig, title = "Bearish arrow", style = shape.arrowdown, location = location.abovebar, color = cBear, size = size.small)
+
+if bullSig
+    txt = "Bullish\n+" + str.tostring(bullScore)
+    if boxedSig
+        label.new(bar_index, low, txt, style = label.style_label_up, color = color.new(color.gray, 60), textcolor = cBull, size = size.small)
+    else
+        label.new(bar_index, low - atrV * 1.8, txt, style = label.style_none, textcolor = cBull, size = size.small)
+if bearSig
+    txt = "-" + str.tostring(bearScore) + "\nBearish"
+    if boxedSig
+        label.new(bar_index, high, txt, style = label.style_label_down, color = color.new(color.gray, 60), textcolor = cBear, size = size.small)
+    else
+        label.new(bar_index, high + atrV * 1.8, txt, style = label.style_none, textcolor = cBear, size = size.small)
+
+if showXLbl and goldX
+    label.new(bar_index, maSlow, "BULLISH", style = label.style_label_up,   color = cSlowBull, textcolor = color.white, size = size.small)
+if showXLbl and deadX
+    label.new(bar_index, maSlow, "BEARISH", style = label.style_label_down, color = cSlowBear, textcolor = color.white, size = size.small)
+
+// ------------------------------------------------ last-bar drawings ---------
+// Everything below is redrawn on the last bar only; the arrays hold the ids so
+// the previous tick's objects can be removed first.
+var lns = array.new<line>()
+var lbs = array.new<label>()
+var bxs = array.new<box>()
+
+f_px(price) =>
+    str.tostring(price, format.mintick)
+
+f_hline(price, col, sty, w) =>
+    ln = line.new(bar_index - 1, price, bar_index, price, extend = extend.both, color = col, style = sty, width = w)
+    array.push(lns, ln)
+
+f_seg(x1, price, col, sty, w) =>
+    ln = line.new(x1, price, bar_index + lblOff, price, color = col, style = sty, width = w)
+    array.push(lns, ln)
+
+f_tag(price, txt, bg, tx) =>
+    lb = label.new(bar_index + lblOff, price, txt, style = label.style_label_left, color = bg, textcolor = tx, size = size.small)
+    array.push(lbs, lb)
+
+// name text floats one text-line above the level (the trailing newline lifts it)
+f_name(price, txt) =>
+    lb = label.new(bar_index + lblOff, price, txt + "\n", style = label.style_none, textcolor = cName, size = size.small)
+    array.push(lbs, lb)
+
+f_manual(p, n) =>
+    if p > 0
+        f_hline(p, cLevel, line.style_solid, 1)
+        if n != ""
+            f_name(p, n)
+        f_tag(p, f_px(p), cLevel, color.white)
+
+f_zone(t, b, n, c) =>
+    if t > 0 and b > 0 and t > b
+        bx = box.new(bar_index - 1, t, bar_index, b, border_color = color.new(c, 40), bgcolor = c, extend = extend.both)
+        array.push(bxs, bx)
+        if n != ""
+            f_name(t, n)
+
+if barstate.islast
+    for ln in lns
+        line.delete(ln)
+    array.clear(lns)
+    for lb in lbs
+        label.delete(lb)
+    array.clear(lbs)
+    for bx in bxs
+        box.delete(bx)
+    array.clear(bxs)
+
+    // dashed line from the last signal to the extreme printed since it
+    if showTrend and not na(sigBar) and not na(extBar)
+        tl = line.new(sigBar, sigPx, extBar, extPx, color = color.new(cEntry, 20), style = line.style_dashed, width = 1)
+        array.push(lns, tl)
+
+    if showATH
+        f_hline(ath, cLevel, line.style_solid, 1)
+        f_name(ath, "ATH")
+        f_tag(ath, f_px(ath), cLevel, color.white)
+        f_hline(atl, cLevel, line.style_solid, 1)
+        f_name(atl, "ATL")
+        f_tag(atl, f_px(atl), cLevel, color.white)
+
+    if showYO
+        for i = 0 to yoCount - 1
+            yo = i == 0 ? yo0 : i == 1 ? yo1 : yo2
+            if not na(yo)
+                f_hline(yo, color.new(cLevel, 30), line.style_solid, 1)
+                f_name(yo, str.tostring(yYr - i) + " Y.O")
+                f_tag(yo, f_px(yo), color.new(cLevel, 30), color.white)
+
+    if showRange
+        f_hline(rHi, color.new(cEntry, 30), line.style_dotted, 1)
+        f_tag(rHi, "High  " + f_px(rHi), color.new(color.white, 10), color.black)
+        f_hline(rLo, color.new(cEntry, 30), line.style_dotted, 1)
+        f_tag(rLo, "Low  " + f_px(rLo), color.new(color.white, 10), color.black)
+
+    f_manual(m1p, m1n)
+    f_manual(m2p, m2n)
+    f_manual(m3p, m3n)
+    f_manual(m4p, m4n)
+    f_manual(m5p, m5n)
+    f_manual(m6p, m6n)
+    f_zone(z1t, z1b, z1n, z1c)
+    f_zone(z2t, z2b, z2n, z2c)
+
+    if showSR
+        for [k, p] in phP
+            sb = array.get(phB, k)
+            sc = close > p ? cBroken : cRes
+            f_seg(sb, p, sc, line.style_solid, 1)
+            f_tag(p, f_px(p), sc, color.white)
+        for [j, q] in plP
+            tb = array.get(plB, j)
+            tc = close < q ? cBroken : cSup
+            f_seg(tb, q, tc, line.style_solid, 1)
+            f_tag(q, f_px(q), tc, color.white)
+
+    if trMode != "Off"
+        tDir = trMode == "Manual" ? (trDir == "Long" ? 1 : -1) : sigDir
+        if tDir != 0
+            ent    = trMode == "Manual" ? (mEntry > 0 ? mEntry : close) : sigEntry
+            atrStp = tDir == 1 ? ent - atrV * atrMult : ent + atrV * atrMult
+            stp    = trMode == "Manual" ? (mSL > 0 ? mSL : atrStp) : sigStop
+            risk   = math.abs(ent - stp)
+            tp1    = trMode == "Manual" and mTP1 > 0 ? mTP1 : ent + tDir * risk * r1
+            tp2    = trMode == "Manual" and mTP2 > 0 ? mTP2 : ent + tDir * risk * r2
+            tp3    = trMode == "Manual" and mTP3 > 0 ? mTP3 : ent + tDir * risk * r3
+            x1     = trMode == "Manual" ? math.max(bar_index - mStart, 0) : sigBar
+            x2     = bar_index + extendBars
+            pc     = tDir == 1 ? cProfitL : cProfitS
+            bxP = box.new(x1, math.max(ent, tp3), x2, math.min(ent, tp3), border_color = color.new(pc, 50), bgcolor = color.new(pc, 80))
+            bxS = box.new(x1, math.max(ent, stp), x2, math.min(ent, stp), border_color = color.new(cStop, 50), bgcolor = color.new(cStop, 80))
+            array.push(bxs, bxP)
+            array.push(bxs, bxS)
+            l1 = line.new(x1, tp1, x2, tp1, color = color.new(pc, 30), style = line.style_dotted, width = 1)
+            l2 = line.new(x1, tp2, x2, tp2, color = color.new(pc, 30), style = line.style_dotted, width = 1)
+            l3 = line.new(x1, ent, x2, ent, color = color.new(cEntry, 20), style = line.style_dashed, width = 1)
+            array.push(lns, l1)
+            array.push(lns, l2)
+            array.push(lns, l3)
+            if showLadder
+                f_tag(stp, (tagNames ? "SL  " : "") + f_px(stp), cStop, color.white)
+                f_tag(ent, (tagNames ? "Entry  " : "") + f_px(ent), cEntry, color.white)
+                f_tag(tp1, (tagNames ? "TP1  " : "") + f_px(tp1), pc, color.white)
+                f_tag(tp2, (tagNames ? "TP2  " : "") + f_px(tp2), pc, color.white)
+                f_tag(tp3, (tagNames ? "TP3  " : "") + f_px(tp3), pc, color.white)
+
+// ---------------------------------------------------------------- alerts ----
+alertcondition(bullSig, title = "Bullish signal", message = "Final_Top_Script: Bullish Fast x Mid cross")
+alertcondition(bearSig, title = "Bearish signal", message = "Final_Top_Script: Bearish Fast x Mid cross")
+alertcondition(goldX,   title = "Golden cross",   message = "Final_Top_Script: Mid crossed above Slow")
+alertcondition(deadX,   title = "Death cross",    message = "Final_Top_Script: Mid crossed below Slow")

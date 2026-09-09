@@ -1,0 +1,92 @@
+//@version=6
+// =============================================================================
+// Final_RSI_Plus  --  the "RSI+" pane of the 5.0 layout
+// -----------------------------------------------------------------------------
+// RSI with a smoothing MA and a blue / red fill between them (blue while RSI is
+// above its MA), 70 / 75 and 30 / 25 bands, a long-run RSI average, vertical
+// columns on the extremes (overbought = blue, oversold = red) and regular
+// bull / bear divergence marks.
+// Status line: RSI, MA, 70, 75, 30, 25, 50, bull div, bear div, long average --
+// the two divergence values print as the empty-set symbol when there is none,
+// exactly as the reference pane does.
+// =============================================================================
+indicator("Final_RSI_Plus", shorttitle = "RSI+", overlay = false)
+
+rsiLen      = input.int(14, "RSI Length", minval = 1)
+rsiSrc      = input.source(close, "Source")
+maLen       = input.int(14, "MA Length", minval = 1)
+maType      = input.string("SMA", "MA Type", options = ["SMA", "EMA"])
+longLen     = input.int(50, "Long-run average length", minval = 1)
+ob1         = input.float(70, "Overbought", inline = "ob")
+ob2         = input.float(75, "extreme",    inline = "ob")
+os1         = input.float(30, "Oversold",   inline = "os")
+os2         = input.float(25, "extreme",    inline = "os")
+midL        = input.float(50, "Midline")
+showCols    = input.bool(true, "Columns on the extremes (overbought = blue, oversold = red)")
+showMidCols = input.bool(false, "Grey column when RSI crosses the midline")
+showDiv     = input.bool(true, "Regular divergences")
+lbL         = input.int(5,  "Pivot lookback left",  minval = 1)
+lbR         = input.int(5,  "Pivot lookback right", minval = 1)
+rangeUpper  = input.int(60, "Max bars between pivots", minval = 1)
+rangeLower  = input.int(5,  "Min bars between pivots", minval = 1)
+cRsi        = input.color(#dbe4ff, "RSI", inline = "c")
+cMa         = input.color(#f59e0b, "MA",  inline = "c")
+cUp         = input.color(#3b82f6, "Above MA / overbought", inline = "c2")
+cDn         = input.color(#ef4444, "Below MA / oversold",   inline = "c2")
+
+rsi     = ta.rsi(rsiSrc, rsiLen)
+maS     = ta.sma(rsi, maLen)
+maE     = ta.ema(rsi, maLen)
+rsiMa   = maType == "EMA" ? maE : maS
+longAvg = ta.sma(rsi, longLen)
+
+// --- divergences (regular only), pivots on the RSI itself --------------------
+plFound = not na(ta.pivotlow(rsi, lbL, lbR))
+phFound = not na(ta.pivothigh(rsi, lbL, lbR))
+
+f_inRange(cond) =>
+    bars = ta.barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+// evaluated unconditionally every bar: v6 `and` short-circuits, and a
+// ta.barssince() that only sometimes runs keeps a broken history
+inRangeL = f_inRange(plFound[1])
+inRangeH = f_inRange(phFound[1])
+
+rsiHL   = rsi[lbR] > ta.valuewhen(plFound, rsi[lbR], 1)
+priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+bullDiv = showDiv and plFound and priceLL and rsiHL and inRangeL
+
+rsiLH   = rsi[lbR] < ta.valuewhen(phFound, rsi[lbR], 1)
+priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
+bearDiv = showDiv and phFound and priceHH and rsiLH and inRangeH
+
+// --- plots (order = status line order) ---------------------------------------
+pR   = plot(rsi,   "RSI",    color = cRsi, linewidth = 2)
+pM   = plot(rsiMa, "RSI MA", color = color.new(cMa, 50), linewidth = 1)
+pOb1 = plot(ob1, "Overbought",  color = color.new(cUp, 60))
+pOb2 = plot(ob2, "OB extreme",  color = color.new(cUp, 80))
+pOs1 = plot(os1, "Oversold",    color = color.new(cDn, 60))
+pOs2 = plot(os2, "OS extreme",  color = color.new(cDn, 80))
+plot(midL, "Midline", color = color.new(color.gray, 50))
+fill(pR, pM, color = rsi >= rsiMa ? color.new(cUp, 65) : color.new(cDn, 65), title = "RSI vs MA")
+fill(pOb1, pOb2, color = color.new(cUp, 88), title = "Overbought band")
+fill(pOs1, pOs2, color = color.new(cDn, 88), title = "Oversold band")
+
+plot(bullDiv ? rsi[lbR] : na, "Bull Div", color = cUp, style = plot.style_circles, linewidth = 3, offset = -lbR)
+plot(bearDiv ? rsi[lbR] : na, "Bear Div", color = cDn, style = plot.style_circles, linewidth = 3, offset = -lbR)
+plotshape(bullDiv ? rsi[lbR] : na, "Bull Div label", style = shape.labelup,   location = location.absolute, color = cUp, textcolor = color.white, text = "Bull", offset = -lbR, size = size.tiny)
+plotshape(bearDiv ? rsi[lbR] : na, "Bear Div label", style = shape.labeldown, location = location.absolute, color = cDn, textcolor = color.white, text = "Bear", offset = -lbR, size = size.tiny)
+plot(longAvg, "Long-run average", color = color.new(color.gray, 30), linewidth = 1)
+
+// --- columns -----------------------------------------------------------------
+extCol = rsi >= ob2 ? color.new(cUp, 75) : rsi <= os2 ? color.new(cDn, 75) : na
+bgcolor(showCols ? extCol : na, title = "Extreme columns")
+midX = ta.cross(rsi, midL)
+bgcolor(showMidCols and midX ? color.new(color.gray, 80) : na, title = "Midline cross column")
+
+// --- alerts ------------------------------------------------------------------
+alertcondition(bullDiv, title = "Bullish divergence", message = "Final_RSI_Plus: regular bullish divergence")
+alertcondition(bearDiv, title = "Bearish divergence", message = "Final_RSI_Plus: regular bearish divergence")
+alertcondition(ta.crossover(rsi, ob1),  title = "RSI entered overbought", message = "Final_RSI_Plus: RSI crossed above overbought")
+alertcondition(ta.crossunder(rsi, os1), title = "RSI entered oversold",   message = "Final_RSI_Plus: RSI crossed below oversold")
