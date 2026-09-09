@@ -10,7 +10,7 @@
 // the two divergence values print as the empty-set symbol when there is none,
 // exactly as the reference pane does.
 // =============================================================================
-indicator("Final_RSI_Plus", shorttitle = "RSI+", overlay = false)
+indicator("Vivek 5.0 RSI+", shorttitle = "Vivek 5.0 RSI+", overlay = false)
 
 rsiLen      = input.int(14, "RSI Length", minval = 1, display = display.none)
 rsiSrc      = input.source(close, "Source", display = display.none)
@@ -86,7 +86,7 @@ midX = ta.cross(rsi, midL)
 bgcolor(showMidCols and midX ? color.new(color.gray, 80) : na, title = "Midline cross column")
 
 // --- alerts ------------------------------------------------------------------
-alertcondition(bullDiv, title = "Bullish divergence", message = "Final_RSI_Plus: regular bullish divergence")
-alertcondition(bearDiv, title = "Bearish divergence", message = "Final_RSI_Plus: regular bearish divergence")
-alertcondition(ta.crossover(rsi, ob1),  title = "RSI entered overbought", message = "Final_RSI_Plus: RSI crossed above overbought")
-alertcondition(ta.crossunder(rsi, os1), title = "RSI entered oversold",   message = "Final_RSI_Plus: RSI crossed below oversold")
+alertcondition(bullDiv, title = "Bullish divergence", message = "Vivek 5.0 RSI+: regular bullish divergence")
+alertcondition(bearDiv, title = "Bearish divergence", message = "Vivek 5.0 RSI+: regular bearish divergence")
+alertcondition(ta.crossover(rsi, ob1),  title = "RSI entered overbought", message = "Vivek 5.0 RSI+: RSI crossed above overbought")
+alertcondition(ta.crossunder(rsi, os1), title = "RSI entered oversold",   message = "Vivek 5.0 RSI+: RSI crossed below oversold")

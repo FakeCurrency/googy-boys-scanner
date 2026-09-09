@@ -8,7 +8,7 @@
 // "+1 when the MACD histogram agrees" flips).
 // Status line order is kept from the previous version: histogram, MACD, signal.
 // =============================================================================
-indicator("Final_Bottom_MACD", shorttitle = "Final_Bottom_MACD", overlay = false)
+indicator("Vivek 5.0 MACD", shorttitle = "Vivek 5.0 MACD", overlay = false)
 
 fastLen  = input.int(12, "Fast Length",   minval = 1, display = display.none)
 slowLen  = input.int(26, "Slow Length",   minval = 1, display = display.none)
@@ -35,5 +35,5 @@ xDn = ta.crossunder(hist, 0)
 zc  = xUp ? color.new(cUp1, 75) : xDn ? color.new(cDn1, 75) : na
 bgcolor(zeroCols ? zc : na, title = "Zero-cross columns")
 
-alertcondition(xUp, title = "MACD histogram above zero", message = "Final_Bottom_MACD: histogram crossed above zero")
-alertcondition(xDn, title = "MACD histogram below zero", message = "Final_Bottom_MACD: histogram crossed below zero")
+alertcondition(xUp, title = "MACD histogram above zero", message = "Vivek 5.0 MACD: histogram crossed above zero")
+alertcondition(xDn, title = "MACD histogram below zero", message = "Vivek 5.0 MACD: histogram crossed below zero")

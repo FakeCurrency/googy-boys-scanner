@@ -7,8 +7,8 @@ over it, and it is outside every signal path.
 | File | Pane | Replaces |
 |---|---|---|
 | `Final_Top_Script.pine` | price (overlay) | your existing `Final_Top_Script`. Since v5.2 it is titled **Vivek 5.0 Top** on the chart: TradingView had ended up with several saved scripts under the old name and the chart kept attaching to the v1 copy, so the running version was impossible to tell apart. Remove every `Final_Top_Script` from the chart and from *My scripts*, then add this one. |
-| `Final_Bottom_MACD.pine` | MACD | your existing `Final_Bottom_MACD` (same 12 / 26 / 9, same status-line order) |
-| `Final_RSI_Plus.pine` | RSI+ | the plain `RSI 14 close` pane at the top of your chart |
+| `Final_Bottom_MACD.pine` | MACD | your existing `Final_Bottom_MACD` (same 12 / 26 / 9, same status-line order). Titled **Vivek 5.0 MACD** on the chart. |
+| `Final_RSI_Plus.pine` | RSI+ | the plain `RSI 14 close` pane at the top of your chart. Titled **Vivek 5.0 RSI+** on the chart. |
 
 ## Install
 
