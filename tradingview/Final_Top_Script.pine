@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v5.2: renamed on the chart)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v5.3: plot budget, for real)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,9 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v5.3 (2026-09-09): RE10140 again (68). The real rule: a plot with a const
+// colour = 1 slot, an input or series colour = 2. Axis labels now use literal
+// colours and the pivot / manual level axis labels are gone. ~31 slots.
 // v5.2 (2026-09-09): chart title 'Vivek 5.0 Top' -- the owner's chart was
 // still attached to a v1 copy saved under the shared name Final_Top_Script.
 // v5.1 (2026-09-09): RE10140 'too many plots (71), limit 64' on the first paste
@@ -191,13 +194,6 @@ f_near(p) =>
 f_px(price) =>
     str.tostring(price, format.mintick)
 
-// safe array read (na when the slot does not exist)
-f_at(a, i) =>
-    float v = na
-    if array.size(a) > i
-        v := array.get(a, i)
-    v
-
 // ----------------------------------------------------------------- calcs ----
 maFast  = f_ma(maSrc, fastLen)
 maMid   = f_ma(maSrc, midLen)
@@ -340,18 +336,6 @@ lvlM3  = m3p > 0 and f_near(m3p) ? m3p : na
 lvlM4  = m4p > 0 and f_near(m4p) ? m4p : na
 lvlM5  = m5p > 0 and f_near(m5p) ? m5p : na
 lvlM6  = m6p > 0 and f_near(m6p) ? m6p : na
-h1 = f_at(phP, 0)
-h2 = f_at(phP, 1)
-h3 = f_at(phP, 2)
-l1 = f_at(plP, 0)
-l2 = f_at(plP, 1)
-l3 = f_at(plP, 2)
-srH1 = showSR and f_near(h1) ? h1 : na
-srH2 = showSR and f_near(h2) ? h2 : na
-srH3 = showSR and f_near(h3) ? h3 : na
-srL1 = showSR and f_near(l1) ? l1 : na
-srL2 = showSR and f_near(l2) ? l2 : na
-srL3 = showSR and f_near(l3) ? l3 : na
 
 // trade box: entry / stop / targets (na when there is nothing to show)
 tDir   = trMode == "Manual" ? (trDir == "Long" ? 1 : -1) : sigDir
@@ -390,34 +374,24 @@ plotshape(bullSig, title = "Bullish arrow", style = shape.arrowup,   location = 
 plotshape(bearSig, title = "Bearish arrow", style = shape.arrowdown, location = location.abovebar, color = cBear, size = size.small, display = display.pane)
 
 // price-scale labels only (no line drawn by the plot; lines are drawn below).
-// FIXED colours on purpose: TradingView charges extra plot slots for a plot
-// whose colour is a series, and the first live paste of v5 hit the 64-plot
-// limit at 71. The lines and in-chart tags still carry the live colours.
-plot(lvlATH, "ATH", color = cLevel, display = display.price_scale)
-plot(lvlATL, "ATL", color = cLevel, display = display.price_scale)
-plot(lvlYO0, "Y.O this year",   color = cLevel, display = display.price_scale)
-plot(lvlYO1, "Y.O last year",   color = cLevel, display = display.price_scale)
-plot(lvlYO2, "Y.O 2 years ago", color = cLevel, display = display.price_scale)
-plot(lvlM1, "Level 1", color = cLevel, display = display.price_scale)
-plot(lvlM2, "Level 2", color = cLevel, display = display.price_scale)
-plot(lvlM3, "Level 3", color = cLevel, display = display.price_scale)
-plot(lvlM4, "Level 4", color = cLevel, display = display.price_scale)
-plot(lvlM5, "Level 5", color = cLevel, display = display.price_scale)
-plot(lvlM6, "Level 6", color = cLevel, display = display.price_scale)
-plot(srH1, "R1", color = cRes, display = display.price_scale)
-plot(srH2, "R2", color = cRes, display = display.price_scale)
-plot(srH3, "R3", color = cRes, display = display.price_scale)
-plot(srL1, "S1", color = cSup, display = display.price_scale)
-plot(srL2, "S2", color = cSup, display = display.price_scale)
-plot(srL3, "S3", color = cSup, display = display.price_scale)
-plot(tEnt, "Entry", color = cEntry, display = display.price_scale)
-plot(tStp, "SL",    color = cStop,  display = display.price_scale)
-plot(tTp1, "TP1",   color = cProfitL, display = display.price_scale)
-plot(tTp2, "TP2",   color = cProfitL, display = display.price_scale)
-plot(tTp3, "TP3",   color = cProfitL, display = display.price_scale)
-plot(rvActive ? rvEnt : na, "Rev entry",  color = cEntry, display = display.price_scale)
-plot(rvActive ? rvStp : na, "Rev SL",     color = cStop,  display = display.price_scale)
-plot(rvActive ? rvTgt : na, "Rev target", color = cProfitL, display = display.price_scale)
+// LITERAL colours on purpose: TradingView charges ONE plot slot for a plot
+// whose colour is a compile-time constant and TWO for anything stronger --
+// an input colour included. v5 (71) and v5.2 (68) both tripped the 64 limit
+// on exactly that. Pivot / manual levels have no axis label any more; their
+// lines, names and optional in-chart tags remain.
+plot(lvlATH, "ATH", color = #22c55e, display = display.price_scale)
+plot(lvlATL, "ATL", color = #22c55e, display = display.price_scale)
+plot(lvlYO0, "Y.O this year",   color = #22c55e, display = display.price_scale)
+plot(lvlYO1, "Y.O last year",   color = #22c55e, display = display.price_scale)
+plot(lvlYO2, "Y.O 2 years ago", color = #22c55e, display = display.price_scale)
+plot(tEnt, "Entry", color = #9ca3af, display = display.price_scale)
+plot(tStp, "SL",    color = #ef4444, display = display.price_scale)
+plot(tTp1, "TP1",   color = #22c55e, display = display.price_scale)
+plot(tTp2, "TP2",   color = #22c55e, display = display.price_scale)
+plot(tTp3, "TP3",   color = #22c55e, display = display.price_scale)
+plot(rvActive ? rvEnt : na, "Rev entry",  color = #9ca3af, display = display.price_scale)
+plot(rvActive ? rvStp : na, "Rev SL",     color = #ef4444, display = display.price_scale)
+plot(rvActive ? rvTgt : na, "Rev target", color = #22c55e, display = display.price_scale)
 
 if bullSig
     txt = "Bullish\n+" + str.tostring(bullScore)

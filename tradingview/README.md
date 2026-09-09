@@ -90,12 +90,14 @@ one-line fix.
   `... for every level`, off by default). Turning the chart setting on (chart
   settings, **Scales and lines**, **Labels**) gives the native axis labels as
   well, which is the 5.0 look.
-- **Plot budget.** TradingView allows 64 plot outputs per script and charges
-  extra slots for any plot whose colour is a series (the first paste of v5
-  failed with RE10140, 71 plots). The price-scale label plots therefore use
-  fixed colours and the two column layers share one `bgcolor`; the static
-  check in the commit history counts the worst case (+2 per series colour)
-  and it now sits at 46. Add a plot only if that number stays under 64.
+- **Plot budget.** TradingView allows 64 plot slots per script. A `plot()`
+  whose colour is a compile-time literal (`#22c55e`, `color.red`) costs ONE
+  slot; a colour from an input or a series costs TWO, and `plotshape`,
+  `bgcolor`, `fill` (series colour) and `alertcondition` all count. v5 failed
+  at 71 and v5.2 at 68 on exactly this, because the axis-label plots used
+  input colours. v5.3 gives the axis labels literal colours and drops the
+  pivot / manual level axis labels (their lines, names and in-chart tags
+  stay): 34 slots. Add a plot only if that number stays under 64.
 - **No trade box on a ticker** means the last Fast x Mid cross is older than
   `Auto: only if the signal is within (bars)` (60). It is an age cut-off, not
   a verdict on the trade; the key's *Trade now* row says so. Raise the number
