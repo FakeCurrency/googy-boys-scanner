@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-09T04:28:19+00:00",
+ "generated_at": "2026-09-09T11:43:25+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -20,10 +20,10 @@
    "stop": 74.26583209,
    "last_fill": 69.19999695,
    "opened": "2026-08-21",
-   "last_mark": 66.06999969,
-   "mark_date": "2026-09-08",
+   "last_mark": 65.94999695,
+   "mark_date": "2026-09-09",
    "fees": 2.04902,
-   "mfe_r": 0.6988,
+   "mfe_r": 0.7403,
    "mae_r": -0.3514,
    "unpriced_runs": 0
   },
@@ -43,8 +43,8 @@
    "stop": 22.39376916,
    "last_fill": 21.07999992,
    "opened": "2026-08-21",
-   "last_mark": 19.54999924,
-   "mark_date": "2026-09-08",
+   "last_mark": 19.5,
+   "mark_date": "2026-09-09",
    "fees": 2.406815,
    "mfe_r": 2.0399,
    "mae_r": -0.4567,
@@ -66,8 +66,8 @@
    "stop": 3.40953428,
    "last_fill": 2.8900001,
    "opened": "2026-08-21",
-   "last_mark": 3.02999997,
-   "mark_date": "2026-09-08",
+   "last_mark": 3.1099999,
+   "mark_date": "2026-09-09",
    "fees": 0.834401,
    "mfe_r": 0.2117,
    "mae_r": -0.6352,
@@ -89,11 +89,11 @@
    "stop": 67.87350917,
    "last_fill": 62.43999863,
    "opened": "2026-09-04",
-   "last_mark": 62.59999847,
-   "mark_date": "2026-09-08",
+   "last_mark": 62.86999893,
+   "mark_date": "2026-09-09",
    "fees": 1.652978,
    "mfe_r": 0.3565,
-   "mae_r": -0.2135,
+   "mae_r": -0.2724,
    "unpriced_runs": 0
   },
   {
@@ -112,10 +112,10 @@
    "stop": 3.58725126,
    "last_fill": 2.25,
    "opened": "2026-09-04",
-   "last_mark": 2.22000003,
-   "mark_date": "2026-09-08",
+   "last_mark": 2.0,
+   "mark_date": "2026-09-09",
    "fees": 0.242022,
-   "mfe_r": 0.0748,
+   "mfe_r": 0.187,
    "mae_r": -0.187,
    "unpriced_runs": 0
   },
@@ -1015,104 +1015,184 @@
  },
  "skips": [
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
    "symbol": "JBH",
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1279.45,
+   "want_notional": 1249.36,
    "equity": 4794.72
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
    "symbol": "SHL",
    "action": "add",
    "reason": "cash",
    "units_held": 1,
-   "want_notional": 1430.64,
+   "want_notional": 1416.04,
    "equity": 4794.72
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
-   "symbol": "VCX",
+   "symbol": "FMG",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2125.02,
-   "equity": 4794.72,
-   "system": 2
-  },
-  {
-   "as_of": "2026-09-08",
-   "market": "asx",
-   "symbol": "ORA",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1565.51,
-   "equity": 4794.72,
-   "system": 2
-  },
-  {
-   "as_of": "2026-09-08",
-   "market": "asx",
-   "symbol": "PPC",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1185.28,
+   "want_notional": 1879.88,
    "equity": 4794.72,
    "system": 1
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "PME",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1069.54,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "SEK",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1082.53,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "SRL",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 758.99,
+   "equity": 4794.72,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "EIQ",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 231.91,
+   "equity": 4794.72,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "CQR",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 2233.96,
+   "equity": 4794.72,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-09",
    "market": "asx",
    "symbol": "MVW",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 4688.2,
+   "want_notional": 3960.29,
    "equity": 4794.72,
    "system": 1
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
-   "symbol": "TGN",
+   "symbol": "QOZ",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 726.72,
+   "want_notional": 4766.74,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "AOV",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1592.1,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "APZ",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1122.99,
    "equity": 4794.72,
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
-   "symbol": "WMI",
+   "symbol": "AFG",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1947.75,
+   "want_notional": 1187.56,
    "equity": 4794.72,
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
-   "symbol": "FGX",
+   "symbol": "CWP",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 2605.07,
+   "want_notional": 1429.2,
    "equity": 4794.72,
    "system": 2
   },
   {
-   "as_of": "2026-09-08",
+   "as_of": "2026-09-09",
    "market": "asx",
-   "symbol": "TGF",
+   "symbol": "RF1",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1664.06,
+   "want_notional": 2000.73,
    "equity": 4794.72,
-   "system": 2
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "PFP",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1245.44,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "SFY",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 5575.23,
+   "equity": 4794.72,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-09",
+   "market": "asx",
+   "symbol": "CXU",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 502.12,
+   "equity": 4794.72,
+   "system": 1
   },
   {
    "as_of": "2026-09-08",
@@ -1598,9 +1678,9 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 19,
+  "cash": 27,
   "close_corr_cap": 32,
-  "total": 51
+  "total": 59
  },
  "summary": {
   "started": "2026-08-21",
