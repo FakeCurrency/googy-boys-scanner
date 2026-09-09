@@ -1,11 +1,51 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-09-09T15:30:49-04:00",
+  "generated_at": "2026-09-09T16:55:59-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "WTFCN",
+      "name": "Wintrust Financial Corporation - Depositary Shares, Each Representing a 1/1,000th Interest in a Share of 7.875% Fixed-Rate Reset Non-Cumulative Perpetual Preferred Stock, Series F, no par value, with a liquidation preference of $25,000 per share",
+      "sector": "",
+      "dir": "LONG",
+      "price": 26.19000053,
+      "turnover_avg20": 719696,
+      "turnover_today": 5458729,
+      "rvol": 7.6,
+      "adv_usd": 719696.89,
+      "fund": true,
+      "is_product": true
+    },
+    {
+      "symbol": "HBANP",
+      "name": "Huntington Bancshares Incorporated - Depositary Shares 4.500% Series H Non-Cumulative Perpetual Preferred Stock",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 16.30999947,
+      "turnover_avg20": 974433,
+      "turnover_today": 3055417,
+      "rvol": 3.1,
+      "adv_usd": 974433.98,
+      "fund": false,
+      "is_product": true
+    },
+    {
+      "symbol": "HEPS",
+      "name": "D-Market Electronic Services & Trading - American Depositary Shares",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 2.6500001,
+      "turnover_avg20": 631430,
+      "turnover_today": 2466744,
+      "rvol": 3.9,
+      "adv_usd": 631430.56,
+      "fund": false,
+      "is_product": false
+    }
+  ]
 }
