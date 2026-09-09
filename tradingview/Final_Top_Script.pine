@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v3: v2 + corner key)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v4: v3 + in-chart tags)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,8 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v4 (2026-09-09): Entry / SL / TP tags drawn INSIDE the pane (the owner's chart
+// hides price-scale labels, so v2's display.price_scale plots showed nothing).
 // v3 (2026-09-09): a KEY table pinned to a chart corner (legend + live rows).
 // v2 changes (2026-09-09, after the first live paste): Background Zone off by
 // default, RSI columns at the extremes only, price-scale labels instead of
@@ -81,7 +83,9 @@ macdSig   = input.int(9,  "signal",    minval = 1, group = gSig, inline = "m", d
 
 gLv = "Key levels"
 maxDist   = input.float(100, "Hide a level further than this % from price (0 = show all)", minval = 0, group = gLv, display = display.none)
-lblOff    = input.int(3, "Name offset (bars right of the last bar)", minval = 0, maxval = 100, group = gLv, display = display.none)
+lblOff    = input.int(5, "Tag / name offset (bars right of the last bar)", minval = 0, maxval = 100, group = gLv, display = display.none)
+tagTrade  = input.bool(true, "Tags inside the chart for Entry / SL / TP1-3", group = gLv, display = display.none)
+tagLevels = input.bool(false, "Tags inside the chart for every level", group = gLv, display = display.none)
 showATH   = input.bool(true, "ATH / ATL of the loaded history", group = gLv, display = display.none)
 showYO    = input.bool(true, "Yearly opens", group = gLv, display = display.none)
 yoCount   = input.int(2, "Yearly opens to show (this year first)", minval = 1, maxval = 3, group = gLv, display = display.none)
@@ -387,6 +391,13 @@ f_seg(x1, price, col, sty, w) =>
     ln = line.new(x1, price, bar_index + lblOff, price, color = col, style = sty, width = w)
     array.push(lns, ln)
 
+// price tag drawn INSIDE the pane: the pointer is on the right and the box
+// extends left, so it stays readable however small the chart's right margin
+// is and whatever the price-scale label settings are
+f_tag(price, txt, bg) =>
+    lb = label.new(bar_index + lblOff, price, txt, style = label.style_label_right, color = color.new(bg, 10), textcolor = color.white, size = size.small)
+    array.push(lbs, lb)
+
 // name text floats one text-line above the level (the trailing newline lifts it)
 f_name(price, txt) =>
     lb = label.new(bar_index + lblOff, price, txt + "\n", style = label.style_none, textcolor = cName, size = size.small)
@@ -424,18 +435,28 @@ if barstate.islast
     if not na(lvlATH)
         f_hline(lvlATH, cLevel, line.style_solid, 1)
         f_name(lvlATH, "ATH")
+        if tagLevels
+            f_tag(lvlATH, f_px(lvlATH), cLevel)
     if not na(lvlATL)
         f_hline(lvlATL, cLevel, line.style_solid, 1)
         f_name(lvlATL, "ATL")
+        if tagLevels
+            f_tag(lvlATL, f_px(lvlATL), cLevel)
     if not na(lvlYO0)
         f_hline(lvlYO0, color.new(cLevel, 30), line.style_solid, 1)
         f_name(lvlYO0, str.tostring(yYr) + " Y.O")
+        if tagLevels
+            f_tag(lvlYO0, f_px(lvlYO0), color.new(cLevel, 30))
     if not na(lvlYO1)
         f_hline(lvlYO1, color.new(cLevel, 30), line.style_solid, 1)
         f_name(lvlYO1, str.tostring(yYr - 1) + " Y.O")
+        if tagLevels
+            f_tag(lvlYO1, f_px(lvlYO1), color.new(cLevel, 30))
     if not na(lvlYO2)
         f_hline(lvlYO2, color.new(cLevel, 30), line.style_solid, 1)
         f_name(lvlYO2, str.tostring(yYr - 2) + " Y.O")
+        if tagLevels
+            f_tag(lvlYO2, f_px(lvlYO2), color.new(cLevel, 30))
     if not na(lvlHi)
         f_hline(lvlHi, color.new(cEntry, 30), line.style_dotted, 1)
     if not na(lvlLo)
@@ -456,11 +477,15 @@ if barstate.islast
                 sb = array.get(phB, k)
                 sc = close > p ? cBroken : cRes
                 f_seg(sb, p, sc, line.style_solid, 1)
+                if tagLevels
+                    f_tag(p, f_px(p), sc)
         for [j, q] in plP
             if f_near(q)
                 tb = array.get(plB, j)
                 tc = close < q ? cBroken : cSup
                 f_seg(tb, q, tc, line.style_solid, 1)
+                if tagLevels
+                    f_tag(q, f_px(q), tc)
 
     if tShow
         x1 = trMode == "Manual" ? math.max(bar_index - mStart, 0) : sigBar
@@ -469,12 +494,18 @@ if barstate.islast
         bxS = box.new(x1, math.max(entRaw, stp), x2, math.min(entRaw, stp), border_color = color.new(cStop, 50), bgcolor = color.new(cStop, 80))
         array.push(bxs, bxP)
         array.push(bxs, bxS)
-        ln1 = line.new(x1, tp1, x2, tp1, color = color.new(pc, 30), style = line.style_dotted, width = 1)
-        ln2 = line.new(x1, tp2, x2, tp2, color = color.new(pc, 30), style = line.style_dotted, width = 1)
+        ln1 = line.new(x1, tp1, x2, tp1, color = color.new(pc, 0), style = line.style_dashed, width = 1)
+        ln2 = line.new(x1, tp2, x2, tp2, color = color.new(pc, 0), style = line.style_dashed, width = 1)
         ln3 = line.new(x1, entRaw, x2, entRaw, color = color.new(cEntry, 20), style = line.style_dashed, width = 1)
         array.push(lns, ln1)
         array.push(lns, ln2)
         array.push(lns, ln3)
+        if tagTrade
+            f_tag(stp, "SL " + f_px(stp), cStop)
+            f_tag(entRaw, "Entry " + f_px(entRaw), cEntry)
+            f_tag(tp1, "TP1 " + f_px(tp1), pc)
+            f_tag(tp2, "TP2 " + f_px(tp2), pc)
+            f_tag(tp3, "TP3 " + f_px(tp3), pc)
 
 // ------------------------------------------------------------------- key ----
 // A legend pinned to a chart corner (a table never moves with the bars): what

@@ -71,8 +71,23 @@ one-line fix.
 
 ## Chart settings that complete the look
 
-- **Log scale** on the price pane (the 5.0 charts are all log). Click `L` at
-  the bottom of the price scale or `Alt+L`.
+- **Log scale, always** (the 5.0 charts are all log). Right-click the price
+  scale, tick **Logarithmic** (or `Alt+L`). To make it the default for every
+  new chart: chart settings (the cog), **Template** menu at the bottom-left of
+  the dialog, **Save As Default**. Then save the layout so open charts keep
+  it. A Pine script cannot switch the chart's scale itself.
+- **Price-scale value labels**: the owner's chart has *Indicators and
+  financials value labels* switched OFF, which is why nothing the script
+  plots with `display.price_scale` shows on the axis (and why the EMA values
+  never appear there). v4 therefore draws the Entry / SL / TP1-3 tags INSIDE
+  the pane (`Tags inside the chart for Entry / SL / TP1-3`, on by default;
+  `... for every level`, off by default). Turning the chart setting on (chart
+  settings, **Scales and lines**, **Labels**) gives the native axis labels as
+  well, which is the 5.0 look.
+- **No trade box on a ticker** means the last Fast x Mid cross is older than
+  `Auto: only if the signal is within (bars)` (60). It is an age cut-off, not
+  a verdict on the trade; the key's *Trade now* row says so. Raise the number
+  to see older setups.
 - **Indicator name labels on the price scale** are what print `High` and `ATH`
   as boxes beside the values on the 5.0 charts, and with v2 they also name
   `TP1` / `SL` / `Entry` / `R1` / `S1`: chart settings, **Scales and lines**,
