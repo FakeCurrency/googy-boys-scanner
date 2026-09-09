@@ -6,14 +6,19 @@ over it, and it is outside every signal path.
 
 | File | Pane | Replaces |
 |---|---|---|
-| `Final_Top_Script.pine` | price (overlay) | your existing `Final_Top_Script` (same name, same `Fast Length` / `Slow Length` / `Show Background Zone` inputs, plus everything below) |
+| `Final_Top_Script.pine` | price (overlay) | your existing `Final_Top_Script`. Since v5.2 it is titled **Vivek 5.0 Top** on the chart: TradingView had ended up with several saved scripts under the old name and the chart kept attaching to the v1 copy, so the running version was impossible to tell apart. Remove every `Final_Top_Script` from the chart and from *My scripts*, then add this one. |
 | `Final_Bottom_MACD.pine` | MACD | your existing `Final_Bottom_MACD` (same 12 / 26 / 9, same status-line order) |
 | `Final_RSI_Plus.pine` | RSI+ | the plain `RSI 14 close` pane at the top of your chart |
 
 ## Install
 
 1. TradingView, bottom panel, **Pine Editor**, **Open**, **New indicator**.
-2. Select all, paste the file, **Save** (keep the name the file uses), **Add to chart**.
+2. Select all, paste the file, **Save** under the name the script's `indicator()`
+   line uses (`Vivek 5.0 Top` for the overlay), **Add to chart**. Never save a
+   new version under a name that already exists in *My scripts*: the chart can
+   stay attached to the old copy, which is exactly what happened with v1.
+   The header tells you which version is running: `Vivek 5.0 Top 20 50 200
+   EMA` plus three prices is current; a long row of numbers after `EMA` is v1.
 3. Do the same for the other two files. Remove the old `Final_Top_Script`,
    `Final_Bottom_MACD` and `RSI 14` from the chart, then drag the RSI+ pane
    below MACD if you want the 5.0 order (price, MACD, RSI+).

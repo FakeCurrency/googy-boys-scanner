@@ -1,6 +1,6 @@
 //@version=6
 // =============================================================================
-// Final_Top_Script  --  5.0-style overlay for TradingView  (v5.1: plot budget fixed)
+// Final_Top_Script  --  5.0-style overlay for TradingView  (v5.2: renamed on the chart)
 // -----------------------------------------------------------------------------
 // Drop-in replacement for the previous Final_Top_Script: same indicator name,
 // and the old "Fast Length" / "Slow Length" / "Show Background Zone" inputs are
@@ -27,6 +27,8 @@
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
 //     capped at `maxStopPct` and targets never go below zero.
 //
+// v5.2 (2026-09-09): chart title 'Vivek 5.0 Top' -- the owner's chart was
+// still attached to a v1 copy saved under the shared name Final_Top_Script.
 // v5.1 (2026-09-09): RE10140 'too many plots (71), limit 64' on the first paste
 // of v5 -- a series colour costs extra plot slots. Price-scale labels now use
 // fixed colours, the two column layers share one bgcolor, High/Low labels
@@ -45,7 +47,11 @@
 // Chart template only: nothing in the scanner reads this file.
 // See tradingview/README.md for the chart settings that complete the look.
 // =============================================================================
-indicator("Final_Top_Script", shorttitle = "Final_Top_Script", overlay = true,
+// Titled "Vivek 5.0 Top" (not Final_Top_Script) since v5.2: the owner's
+// TradingView ended up with several saved scripts under the old name and the
+// chart kept attaching to the v1 copy. A distinct title makes the running
+// version obvious on the chart header.
+indicator("Vivek 5.0 Top", shorttitle = "Vivek 5.0 Top", overlay = true,
      max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
 // ---------------------------------------------------------------- inputs ----
@@ -607,7 +613,7 @@ if showKey and barstate.islast
     revTxt   = (rvDir == -1 ? "SHORT (reversal, RSI " : "LONG (reversal, RSI ") + str.tostring(rsiV, "#") + ") entry " + f_px(rvEnt) + " / SL " + f_px(rvStp) + " / target " + f_px(rvTgt)
     tradeTxt = rvActive ? revTxt : tShow ? (tDir == 1 ? "LONG" : "SHORT") + " entry " + f_px(entRaw) + " / SL " + f_px(stp) + " / TP1 " + f_px(tp1) + " / TP2 " + f_px(tp2) + " / TP3 " + f_px(tp3) : trMode == "Off" ? "trade box is off" : "none (no signal in the last " + str.tostring(autoMaxAge) + " bars)"
     f_cell(0, 0, "KEY", cW)
-    f_cell(0, 1, "Final_Top_Script", cG)
+    f_cell(0, 1, "Vivek 5.0 Top", cG)
     f_cell(1, 0, "Thin blue line", cFast)
     f_cell(1, 1, "Fast " + str.tostring(fastLen) + " " + maType, cW)
     f_cell(2, 0, "Thick blue line", cMid)
