@@ -264,6 +264,28 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   slot becomes a no-op instead of a duplicate. Added 2026-09-10 after GitHub ran
   the ASX cron ~3h late (it eventually fires, but the owner wanted it on demand
   without the all-markets force re-sending it).
+- **THE EXTERNAL TRIGGER — `/api/morning_plays` (2026-09-10).** GitHub's free-tier
+  cron cannot be made to fire on time: it ran the ASX slot 2–5h late on 09-09 and
+  had not fired at all by 19:19 Melbourne on 09-10. The delay-proof gate makes a
+  late cron still deliver; only an EXTERNAL scheduler that keeps real time can
+  make it deliver at 16:30/06:30. `functions/api/morning_plays.js` (`GET|POST
+  ?slot=asx|us`) dispatches morning_plays.yml with the `slot` input using the
+  EXISTING `GH_DISPATCH_TOKEN` (it stays in Cloudflare; the pinger never sees a
+  GitHub token). **Fails closed, tick.js-style**: no `MORNING_PLAYS_TRIGGER_SECRET`
+  → 503, wrong key → 401 (`?key=` or `Authorization: Bearer`); slot validated; a
+  KV cooldown (5 min/slot, refunded on a definite failure, kept on timeout —
+  scan.js's rule) bounds Actions spam. Because the dispatch runs the real
+  `--slot` path, an early/duplicate call is a harmless no-op and GitHub's own
+  late cron no-ops once the pinger has delivered. **Schedule the pinger AFTER
+  the target (16:35 / 06:35 Melbourne), never before.** Owner setup: set the
+  secret in Cloudflare Pages env vars, then two cron-job.org jobs (tz
+  Australia/Melbourne) hitting the URL with `&key=`. Until the pinger is live,
+  GitHub's own cron still delivers — hours late, via the delay-proof gate. A
+  Claude Routine was tried as an interim and REJECTED the same hour: Routine-
+  fired sessions carry NO MCP connectors (the create_trigger result says so)
+  and scheduled cloud sessions cannot reach the push token (reco_note note),
+  so one can neither dispatch nor push a kick — do not re-add one.
+  Pins: `test/morning_plays_api.test.js` (11).
 
 **THE 2026-08-01 FIX MISSED THE WORKFLOWS' OWN FAILURE PINGS (found
 2026-08-27).** Five workflows — scan, crypto_bot, phasemap, backup_book,
@@ -2542,7 +2564,9 @@ Set: `DISCORD_WEBHOOK_URL` (ORPHANED 2026-08-27 — the channel was removed;
 nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
 `BYBIT_*` (testnet), `ALPACA_*` (legacy),
 `TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
-**Pending owner:** `DISCORD_MORNING_WEBHOOK_URL` (switches on the morning
+**Pending owner:** `MORNING_PLAYS_TRIGGER_SECRET` (arms `/api/morning_plays`,
+the on-time external trigger for the plays digest — see MORNING PLAYS),
+`DISCORD_MORNING_WEBHOOK_URL` (SET 2026-09-08 — deliveries prove it; switches on the morning
 high-conviction digest — see MORNING PLAYS; a fresh webhook for a dedicated
 channel, distinct from the removed alert webhook), `GBS_SYNC_CODE` (activates
 watchlist-aware pings),

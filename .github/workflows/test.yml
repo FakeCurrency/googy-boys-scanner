@@ -184,6 +184,13 @@ jobs:
       # underlying close/scan/journal action.
       - name: Access log (logged calls / best-effort / coalesced polling, 13)
         run: node test/access_log.test.js
+      # External trigger for the plays digest (2026-09-10): GitHub's cron ran
+      # the ASX slot hours late / not at all, so a real-time pinger now kicks
+      # the workflow via this endpoint. Pinned: fails CLOSED without its
+      # secret, refuses a bad key, validates the slot, dispatches the right
+      # workflow+input, never echoes the GitHub token, refunds the cooldown.
+      - name: Plays-digest external trigger (fail-closed / dispatch / no-echo, 11)
+        run: node test/morning_plays_api.test.js
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.
