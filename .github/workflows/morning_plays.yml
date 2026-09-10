@@ -42,8 +42,14 @@ on:
     - cron: "30 20 * * *"   # 06:30 Melbourne during AEST (Apr-Oct) -- NASDAQ+Crypto
   workflow_dispatch:
     inputs:
+      slot:
+        description: "Run ONE slot now as if scheduled: delivers it AND marks it sent, so today's late cron won't repeat it. Blank = send all markets (force)."
+        type: choice
+        options: ["", "asx", "us"]
+        default: ""
+        required: false
       force:
-        description: "Send ALL markets now regardless of the Melbourne hour (for testing)"
+        description: "(only when slot is blank) send ALL markets now regardless of hour"
         default: "true"
         required: false
 
@@ -87,6 +93,7 @@ jobs:
           # run block (2026-07-20 security pass).
           EVENT: ${{ github.event_name }}
           FORCE: ${{ github.event.inputs.force }}
+          SLOT_INPUT: ${{ github.event.inputs.slot }}
           # Which cron fired -- maps to a slot NAME below. Never interpolate a
           # ${{ }} value inside the run script (2026-07-20 security pass); read
           # the env var instead.
@@ -94,8 +101,15 @@ jobs:
         run: |
           set -o pipefail
           ARGS=""
-          if [ "$EVENT" = "workflow_dispatch" ] && [ "$FORCE" != "false" ]; then
-            ARGS="--force"                       # manual test: send all markets now
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ -n "$SLOT_INPUT" ]; then
+              ARGS="--slot $SLOT_INPUT"          # run one slot as if scheduled (writes state)
+            elif [ "$FORCE" != "false" ]; then
+              ARGS="--force"                     # manual test: send all markets now
+            else
+              echo "morning_plays: dispatch with no slot and force=false - nothing to do."
+              exit 0
+            fi
           else
             case "$SCHEDULE" in
               "30 5 * * *"|"30 6 * * *")   ARGS="--slot asx" ;;   # 16:30 Melbourne

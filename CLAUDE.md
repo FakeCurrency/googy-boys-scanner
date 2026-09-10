@@ -258,8 +258,12 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   wants and add it as the `DISCORD_MORNING_WEBHOOK_URL` Actions secret. Until
   then every run is a green no-op that says so. Constants (schedule, dedup
   window, per-market cap, staleness flag, optional app URL) live in `config.py`
-  (`MORNING_PLAYS_*`). Manual `workflow_dispatch` sends ALL markets immediately
-  (force).
+  (`MORNING_PLAYS_*`). Manual `workflow_dispatch`: leave `slot` blank to force-send
+  ALL markets (a test, writes no state); set `slot=asx`|`us` to run ONE slot as if
+  scheduled — delivers it now AND marks it sent, so a late/dropped cron for that
+  slot becomes a no-op instead of a duplicate. Added 2026-09-10 after GitHub ran
+  the ASX cron ~3h late (it eventually fires, but the owner wanted it on demand
+  without the all-markets force re-sending it).
 
 **THE 2026-08-01 FIX MISSED THE WORKFLOWS' OWN FAILURE PINGS (found
 2026-08-27).** Five workflows — scan, crypto_bot, phasemap, backup_book,
