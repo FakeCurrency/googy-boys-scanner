@@ -1,0 +1,83 @@
+# Ops -- Claude's standing access to cron-job.org and Cloudflare Pages
+# (2026-09-10, owner: "you should be able to set up jobs and all to make this
+# hands off").
+#
+# A cloud Claude session cannot log into either dashboard and its egress proxy
+# refuses both APIs (HTTP 000). A runner can reach them, and the GitHub MCP can
+# dispatch a workflow and read its log. So: Claude dispatches THIS with an
+# action + JSON args, scripts/ops.py does the call with the secret only the
+# runner can read, and the result lands in the log + step summary, REDACTED
+# (secret values, key= query params, and every Cloudflare var VALUE are masked
+# -- see the script's docstring; tests/test_ops.py pins it).
+#
+# Manual only. READ-ONLY to the repo: no checkout writes, no git, no book, not
+# in the `scan` group, no assert_staged / WATCHDOG entry (commits nothing).
+# The three secrets are the owner's to create once; absent = the script says
+# which one and exits 2.
+
+name: Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do (see scripts/ops.py)"
+        type: choice
+        required: true
+        options:
+          - cronjob-list
+          - cronjob-get
+          - cronjob-history
+          - cronjob-create
+          - cronjob-update
+          - cronjob-delete
+          - cf-list-vars
+          - cf-set-var
+          - cf-delete-var
+          - cf-redeploy
+      args:
+        description: "JSON object of arguments for the action"
+        default: "{}"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops
+  cancel-in-progress: false
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # stdlib-only: no pip install. Inputs travel through env, never ${{ }}
+      # inside the run block (2026-07-20 security pass).
+      - name: Run the action
+        env:
+          ACTION: ${{ github.event.inputs.action }}
+          ARGS: ${{ github.event.inputs.args }}
+          CRONJOB_API_KEY: ${{ secrets.CRONJOB_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PAGES_PROJECT: googy-boys-scanner
+        run: |
+          set -o pipefail
+          python3 scripts/ops.py "$ACTION" "$ARGS" 2>&1 | tee /tmp/ops.txt
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo '### Ops'
+            echo '```'
+            cat /tmp/ops.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
