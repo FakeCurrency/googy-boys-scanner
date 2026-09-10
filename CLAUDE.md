@@ -116,7 +116,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
-| morning_plays.yml | four superset crons: `30 5`+`30 6` (ASX 16:30 Melb) · `30 19`+`30 20` UTC (NASDAQ+Crypto 06:30 Melb) | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
+| morning_plays.yml | backstop crons in UTC behind the cron-job.org ladder: `50 7`+`50 8` (ASX, after the 06:37 closing scan) · `50 21`+`50 22` (NASDAQ+Crypto, after the 21:07 post-close scan), Mon–Fri — gated on POST-CLOSE data, see MORNING PLAYS | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
 | ops.yml | manual only | **Claude's standing access (2026-09-10, owner: "you should be able to set up jobs and all to make this hands off").** `scripts/ops.py` runs on a runner (which can reach APIs the cloud session's proxy refuses — api.cron-job.org and api.cloudflare.com both answer HTTP 000 from a session) and Claude dispatches it via the GitHub MCP with an `action` (`cronjob-list/get/history/create/update/delete`, `cf-list-vars/set-var/delete-var/redeploy`) + JSON `args`, then reads the job log. Secrets: `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`. REDACTED OUTPUT IS THE ONLY SECURITY PROPERTY: secret values, caller-supplied values and `key=` query params are masked, and `cf-list-vars` prints names + types NEVER values (Cloudflare returns plain_text values in the clear; `GH_DISPATCH_TOKEN` is stored as Text). Read-only to the repo, no git, own concurrency group, no assert_staged/WATCHDOG. Note the one honest limit: `args` for `cf-set-var` carries the value through the run's dispatch inputs, which GitHub records. Pins: `tests/test_ops.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. ONE IN-RUN RETRY for a failed market (2026-09-01 — runs #64/#88, both Yahoo-throttle-under-the-coverage-floor): main() re-scans just the failed market(s) once after `TURTLE_THROTTLE_RETRY_COOLDOWN_S` (180s; 0=off), because a throttle window clears in minutes while the per-batch retries sit seconds apart inside it. A persistent failure still reddens the run — the floor's alarm is untouched, only its false-positive rate. Pins: `tests/test_turtle.py` |
@@ -265,6 +265,32 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   slot becomes a no-op instead of a duplicate. Added 2026-09-10 after GitHub ran
   the ASX cron ~3h late (it eventually fires, but the owner wanted it on demand
   without the all-markets force re-sending it).
+- **THE POST-CLOSE DATA GATE (2026-09-11) — on time was not enough.** The first
+  on-time 06:35 US run (cron-job.org, run #16) read a 1:43pm New York MID-SESSION
+  scan — scan.yml's post-close NASDAQ scan (21:07 UTC cron) committed at 07:06
+  Melbourne — and posted "nothing new" while MDLZ/ASO/SWKS had set up in the last
+  hours of trade (verified by replaying `qualifies()` over the two commits). The
+  same trap sat under ASX: its closing scan (06:37 UTC cron) lands 17:4x–18:5x
+  AEST, after the 16:35 trigger. `scan_is_post_close()` now gates every `--slot`
+  run: it sends only once the gating market's `generated_at` is at/after that
+  market's most recent WEEKDAY close (`config.MORNING_PLAYS_SLOT_GATE`: ASX 16:12
+  Sydney — the closing auction prints ~16:10–16:12; NASDAQ **16:05** New York —
+  NOT later, because under EST the 21:07 UTC scan is 16:07 NY and is the ONLY
+  post-close scan of the day, so a 16:15 gate would silence the US digest all
+  winter). Before the gate passes the run is a silent no-op that MARKS NOTHING,
+  so the next attempt retries; `--force`/`--dry-run` bypass it. The triggers are
+  therefore a LADDER, all in UTC because the close scans are: cron-job.org
+  (timezone UTC) ASX `06:15..10:45` every 30 min Mon–Fri, US `20:15..23:45`
+  every 30 min Mon–Fri (Tue–Sat mornings Melbourne); morning_plays.yml's own
+  crons are the late backstop at `50 7`/`50 8` (ASX) and `50 21`/`50 22` (US)
+  Mon–Fri. First post-close attempt sends, the per-day marker silences the rest.
+  The wall-clock `MORNING_PLAYS_SLOTS` targets (16:30/06:30 Melbourne) survive
+  only as a FLOOR. Measured over the prior 8 days the ASX post-close scan lands
+  between 06:01 and 08:50 UTC and the NASDAQ one between 21:01 and 22:30 UTC,
+  which is why the ladders run that long. Pins: `test_the_real_2026_09_10_scans_*`,
+  `test_the_us_gate_accepts_the_winter_21_07_scan_*`,
+  `test_the_us_slot_waits_for_a_post_close_scan_*`,
+  `test_the_workflow_crons_fire_after_the_close_scans_*`.
 - **THE EXTERNAL TRIGGER — `/api/morning_plays` (2026-09-10).** GitHub's free-tier
   cron cannot be made to fire on time: it ran the ASX slot 2–5h late on 09-09 and
   had not fired at all by 19:19 Melbourne on 09-10. The delay-proof gate makes a
@@ -277,8 +303,9 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   KV cooldown (5 min/slot, refunded on a definite failure, kept on timeout —
   scan.js's rule) bounds Actions spam. Because the dispatch runs the real
   `--slot` path, an early/duplicate call is a harmless no-op and GitHub's own
-  late cron no-ops once the pinger has delivered. **Schedule the pinger AFTER
-  the target (16:35 / 06:35 Melbourne), never before.** Owner setup: set the
+  late cron no-ops once the pinger has delivered. **Schedule the pinger as a
+  LADDER after the close scan, not at a single time — see THE POST-CLOSE DATA
+  GATE above (the 16:35 / 06:35 single-shot design lasted one morning).** Owner setup: set the
   secret in Cloudflare Pages env vars, then two cron-job.org jobs (tz
   Australia/Melbourne) hitting the URL with `&key=`. Until the pinger is live,
   GitHub's own cron still delivers — hours late, via the delay-proof gate. A

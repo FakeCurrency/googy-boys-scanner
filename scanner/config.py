@@ -2053,8 +2053,35 @@ MORNING_PLAYS_TZ = "Australia/Melbourne"
 # is what stops the slot's OTHER DST superset cron from double-sending. `minute`
 # is only the intended send time shown in the message; the gate keys on `hour`.
 MORNING_PLAYS_SLOTS = {
-    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # ~30 min after the 16:00 ASX close
-    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # ~30 min after the US close
+    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # FLOOR: never before 16:30 Melbourne
+    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # FLOOR: never before 06:30 Melbourne
+}
+# THE POST-CLOSE DATA GATE (2026-09-11). The slot floor above is a wall-clock
+# floor; this is the gate that actually decides. A slot sends only once the scan
+# it reads was GENERATED at/after the gating market's most recent weekday session
+# close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
+# MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
+# missed the three names that set up in the last hours of trade and posted
+# "nothing new". Keyed on the payload's own `generated_at` in the market's own
+# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
+# cron-job.org jobs are a ladder of attempts every 30 min after the close, and
+# the first post-close one sends (the per-day marker silences the rest).
+#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
+#                            is pre-close. scan.yml's 05:07 UTC cron generates
+#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
+#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
+#                            21:07 UTC, which is 16:07 New York under EST, so a
+#                            later gate would refuse every winter session's only
+#                            post-close scan and the US digest would never send
+#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
+#                            passes too and the digest lands an hour earlier.
+# crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
+# gate reads (`<market>_vivek.json`'s generated_at).
+MORNING_PLAYS_SLOT_GATE = {
+    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.

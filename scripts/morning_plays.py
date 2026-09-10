@@ -326,6 +326,54 @@ def slot_due(slot_name: str, now_local: dt.datetime, slots_sent: dict[str, str])
     return True, "due"
 
 
+def latest_close(gate: dict, now_utc: dt.datetime) -> dt.datetime:
+    """The most recent WEEKDAY session close at or before now, in the gate's zone.
+
+    Sunday morning walks back to Friday's close; a Monday before the bell walks
+    back to Friday's too. (A holiday Monday reads as a Monday close -- scan.yml
+    still runs and stamps a Monday generated_at, so the gate passes; harmless.)
+    """
+    tz = ZoneInfo(gate["tz"])
+    local = now_utc.astimezone(tz)
+    close = local.replace(hour=int(gate["hour"]), minute=int(gate.get("minute", 0)),
+                          second=0, microsecond=0)
+    if local < close:
+        close -= dt.timedelta(days=1)
+    while close.weekday() > 4:                     # 5 = Sat, 6 = Sun
+        close -= dt.timedelta(days=1)
+    return close
+
+
+def scan_is_post_close(slot_name: str, generated_at: str | None,
+                       now_utc: dt.datetime) -> tuple[bool, str]:
+    """(ok, why): may this slot send off a scan stamped `generated_at`?
+
+    ok iff the scan was generated AT/AFTER the gating market's latest weekday
+    close (config.MORNING_PLAYS_SLOT_GATE). A slot with no gate is always ok.
+    No / unreadable timestamp is NOT ok: sending a mid-session list because the
+    stamp was missing is the exact failure the gate exists to stop.
+    """
+    gate = config.MORNING_PLAYS_SLOT_GATE.get(slot_name)
+    if not gate:
+        return True, "ungated"
+    if not generated_at:
+        return False, f"no generated_at on the {gate['market']} scan"
+    try:
+        t = dt.datetime.fromisoformat(generated_at)
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=dt.timezone.utc)
+    except Exception:
+        return False, f"unreadable generated_at {generated_at!r}"
+    tz = ZoneInfo(gate["tz"])
+    close = latest_close(gate, now_utc)
+    scan_local = t.astimezone(tz)
+    if scan_local >= close:
+        return True, (f"{gate['market']} scan {scan_local:%a %H:%M} is past the "
+                      f"{close:%a %H:%M} close ({gate['tz']})")
+    return False, (f"{gate['market']} scan {scan_local:%a %H:%M} predates the "
+                   f"{close:%a %H:%M} close ({gate['tz']})")
+
+
 def gather(markets, data_dir: pathlib.Path, now_utc: dt.datetime) -> tuple[dict, dict]:
     picks_by_market: dict[str, list[dict]] = {}
     ages: dict[str, float | None] = {}
@@ -404,6 +452,18 @@ def main(argv=None, now=None) -> int:
             print(f"morning_plays: {args.slot} slot {msg} "
                   f"({now_local:%a %H:%M} {config.MORNING_PLAYS_TZ}) - no-op.")
             return 0
+        # The post-close data gate: a slot that is due on the clock still waits
+        # until the scan it reads is a POST-CLOSE one. No marker is written, so
+        # the next attempt in the trigger ladder retries.
+        gate_market = (config.MORNING_PLAYS_SLOT_GATE.get(args.slot) or {}).get("market")
+        if gate_market:
+            stamp = load_market(gate_market, pathlib.Path(args.data_dir)).get("generated_at")
+            ok, why = scan_is_post_close(args.slot, stamp, now_utc)
+            if not ok:
+                print(f"morning_plays: {args.slot} slot is waiting for a post-close "
+                      f"{gate_market} scan ({why}) - no-op, retried on the next trigger.")
+                return 0
+            print(f"morning_plays: {args.slot} slot data gate passed ({why}).")
         slot_name, use_state = args.slot, window > 0
     else:
         # --force (send the union now) or a bare local run (legacy hour gate).

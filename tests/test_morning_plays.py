@@ -11,11 +11,15 @@ label, the message shape/chunking, the de-dup memory, and the exit codes.
 
 import datetime as dt
 import json
+import pathlib
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from scripts import morning_plays as mp
 from scanner import config
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 pytestmark = pytest.mark.risk
 
@@ -434,3 +438,133 @@ def test_a_dry_run_never_posts_and_records_nothing(tmp_path, monkeypatch):
                     "--seen-file", seen_path], now=US_SLOT) == 0
     assert not called
     assert mp.load_state(seen_path) == {"sent": {}, "slots": {}}, "a dry run buries nothing"
+
+
+# ── the post-close data gate (2026-09-11) ───────────────────────────────────
+# On-time was not enough: the first on-time 06:35 US digest read a 1:43pm New
+# York MID-SESSION scan and missed MDLZ/ASO/SWKS, which only set up in the last
+# hours of trade. A slot now waits for a scan GENERATED after the session close.
+
+NY = dt.timezone(dt.timedelta(hours=-4))          # EDT, the offset the real payload carried
+
+
+def test_latest_close_is_the_most_recent_weekday_close():
+    gate = config.MORNING_PLAYS_SLOT_GATE["us"]
+    ny = ZoneInfo(gate["tz"])
+    # Thursday 16:35 NY (after the bell) -> Thursday's close
+    c = mp.latest_close(gate, dt.datetime(2026, 9, 10, 20, 35, tzinfo=dt.timezone.utc))
+    assert (c.astimezone(ny).strftime("%a %H:%M")) == "Thu 16:05"
+    # Friday 08:00 NY (before the bell) -> Thursday's close
+    c = mp.latest_close(gate, dt.datetime(2026, 9, 11, 12, 0, tzinfo=dt.timezone.utc))
+    assert c.astimezone(ny).strftime("%a %d %H:%M") == "Thu 10 16:05"
+    # Sunday and Monday-before-the-bell both walk back to FRIDAY's close
+    for when in (dt.datetime(2026, 9, 13, 12, 0, tzinfo=dt.timezone.utc),
+                 dt.datetime(2026, 9, 14, 12, 0, tzinfo=dt.timezone.utc)):
+        c = mp.latest_close(gate, when)
+        assert c.astimezone(ny).strftime("%a %d") == "Fri 11"
+
+
+def test_the_real_2026_09_10_scans_mid_session_fails_post_close_passes():
+    """The actual stamps from the incident: what the 06:35 run read vs what
+    landed at 07:06 Melbourne."""
+    at_0635 = dt.datetime(2026, 9, 10, 20, 35, tzinfo=dt.timezone.utc)
+    ok, why = mp.scan_is_post_close("us", "2026-09-10T13:43:20-04:00", at_0635)
+    assert ok is False and "predates" in why
+    at_0715 = dt.datetime(2026, 9, 10, 21, 15, tzinfo=dt.timezone.utc)
+    ok, why = mp.scan_is_post_close("us", "2026-09-10T17:01:14-04:00", at_0715)
+    assert ok is True and "past" in why
+
+
+def test_the_asx_gate_refuses_a_scan_inside_the_closing_auction():
+    """ASX's closing auction prints ~16:10-16:12; a 16:09 scan has no close.
+    Both stamps are real ones from the 2026-09-08 / 2026-09-07 sessions."""
+    now = dt.datetime(2026, 9, 8, 7, 0, tzinfo=dt.timezone.utc)          # 17:00 AEST Tue
+    assert mp.scan_is_post_close("asx", "2026-09-08T16:09:58+10:00", now)[0] is False
+    assert mp.scan_is_post_close("asx", "2026-09-08T17:54:01+10:00", now)[0] is True
+    now = dt.datetime(2026, 9, 7, 7, 0, tzinfo=dt.timezone.utc)
+    assert mp.scan_is_post_close("asx", "2026-09-07T16:14:13+10:00", now)[0] is True
+
+
+def test_the_us_gate_accepts_the_winter_21_07_scan_or_the_digest_never_sends():
+    """Under EST scan.yml's LAST NASDAQ cron (21:07 UTC) is 16:07 New York, and it
+    is the only post-close scan of the day. The gate must let it through."""
+    now = dt.datetime(2026, 12, 10, 21, 45, tzinfo=dt.timezone.utc)
+    assert mp.scan_is_post_close("us", "2026-12-10T16:07:30-05:00", now)[0] is True
+    assert mp.scan_is_post_close("us", "2026-12-10T15:07:30-05:00", now)[0] is False
+    assert config.MORNING_PLAYS_SLOT_GATE["us"]["hour"] == 16
+    assert config.MORNING_PLAYS_SLOT_GATE["us"]["minute"] <= 7, \
+        "a gate later than 16:07 NY refuses every winter session's only post-close scan"
+
+
+def test_a_missing_or_unreadable_stamp_fails_closed():
+    now = dt.datetime(2026, 9, 10, 21, 15, tzinfo=dt.timezone.utc)
+    assert mp.scan_is_post_close("us", None, now)[0] is False
+    assert mp.scan_is_post_close("us", "yesterday-ish", now)[0] is False
+    assert mp.scan_is_post_close("nonexistent-slot", None, now) == (True, "ungated")
+
+
+def _fixtures_stamped(tmp_path, nasdaq_generated_at):
+    d = tmp_path / "public" / "data"
+    if not d.exists():
+        _fixtures(tmp_path)
+    (d / "nasdaq_vivek.json").write_text(json.dumps({
+        "generated_at": nasdaq_generated_at, "results": [_row("MDLZ", grade="A+")]}))
+    return d
+
+
+def test_the_us_slot_waits_for_a_post_close_scan_and_marks_nothing(tmp_path, monkeypatch):
+    """The incident replayed end to end: on time, mid-session data -> silent
+    no-op with NO marker; the next attempt after the post-close scan sends."""
+    _utc_tz(monkeypatch)
+    seen_path = _seen(tmp_path)
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    at_0635 = dt.datetime(2026, 9, 10, 20, 35, tzinfo=dt.timezone.utc)   # past the 06:30 floor
+    data_dir = str(_fixtures_stamped(tmp_path, "2026-09-10T13:43:20-04:00"))
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=at_0635) == 0
+    assert not posts, "a mid-session scan must not be sent as the morning list"
+    assert mp.load_state(seen_path)["slots"].get("us") is None, "nothing marked -> retried"
+    # the next attempt in the ladder finds the post-close scan
+    data_dir = str(_fixtures_stamped(tmp_path, "2026-09-10T17:01:14-04:00"))
+    at_0715 = dt.datetime(2026, 9, 10, 21, 15, tzinfo=dt.timezone.utc)
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path],
+                   now=at_0715) == 0
+    assert posts and "MDLZ" in posts[0]
+    assert mp.load_state(seen_path)["slots"].get("us") == "2026-09-10"
+
+
+def test_force_and_dry_run_ignore_the_gate(tmp_path, monkeypatch):
+    _utc_tz(monkeypatch)
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    data_dir = str(_fixtures_stamped(tmp_path, "2026-09-10T13:43:20-04:00"))
+    at_0635 = dt.datetime(2026, 9, 10, 20, 35, tzinfo=dt.timezone.utc)
+    assert mp.main(["--force", "--data-dir", data_dir, "--seen-file", _seen(tmp_path)],
+                   now=at_0635) == 0
+    assert posts and "MDLZ" in posts[0], "--force is a manual test and sends what is there"
+
+
+def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot():
+    """morning_plays.yml's crons are GitHub's late backstop behind the cron-job.org
+    ladder; every one must be AFTER scan.yml's close-scan cron for its market
+    (ASX 06:37 UTC, NASDAQ 21:07 UTC) and must map to a slot in the run block."""
+    import re
+    wf = (ROOT / ".github" / "workflows" / "morning_plays.yml").read_text()
+    crons = re.findall(r'- cron: "([^"]+)"', wf)
+    assert len(crons) == 4
+    for c in crons:
+        minute, hour = c.split()[:2]
+        h = int(hour)
+        assert f'"{c}"' in wf.split("case \"$SCHEDULE\" in")[1], f"{c} is not mapped to a slot"
+        assert h in (7, 8, 21, 22), c
+        if h in (7, 8):
+            assert f'"{c}"' in wf.split('ARGS="--slot asx"')[0].split("case")[-1]
+        else:
+            assert f'"{c}"' in wf.split('ARGS="--slot us"')[0].split("case")[-1]
+    assert '"30 5 * * *"' not in wf and '"30 19 * * *"' not in wf, \
+        "the pre-close wall-clock crons must not come back"

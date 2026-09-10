@@ -25,21 +25,29 @@ name: Morning plays (Discord)
 # owner creates the webhook and sets that secret, the script warns loudly and
 # exits 0 (a green setup gap).
 #
-# SUPERSET CRONS, the DST trick this repo uses on every local-time job. Each
-# slot has two crons (one per DST offset), and BOTH map to the same slot name.
-# The wrong-DST cron of the pair fires an hour before the target and the script
-# skips it (before-target); whichever cron fires at/after the target sends, and
-# the per-day marker no-ops the rest. So exactly one send per slot per day,
-# year-round, no matter which cron GitHub actually delivers or how late.
-#   16:30 Melbourne (ASX):            05:30 UTC (AEDT) / 06:30 UTC (AEST)
-#   06:30 Melbourne (NASDAQ+Crypto):  19:30 UTC (AEDT) / 20:30 UTC (AEST)
+# THE POST-CLOSE DATA GATE (2026-09-11). On-time was not enough: the first
+# on-time 06:35 US run read a 1:43pm New York MID-SESSION scan (scan.yml's
+# post-close scan committed at 07:06 Melbourne) and posted "nothing new" while
+# three names had set up in the last hours of trade. The script now sends a slot
+# only once the market's committed scan was GENERATED after the session close
+# (config.MORNING_PLAYS_SLOT_GATE), marking nothing until then. So the triggers
+# are a LADDER OF ATTEMPTS after the close scans, not a single wall-clock time:
+# the first post-close attempt sends, the per-day marker silences the rest.
+#
+# These crons are GitHub's own late backstop and are anchored to scan.yml's
+# close-scan crons in UTC (ASX closing scan 06:37 UTC, NASDAQ post-close 21:07
+# UTC), one attempt an hour apart each. The on-time delivery is the external
+# cron-job.org ladder (every 30 min after the close scan, see
+# functions/api/morning_plays.js) -- when it has delivered, these no-op.
+#   ASX:            07:50 + 08:50 UTC  = 17:50/18:50 AEST, 18:50/19:50 AEDT
+#   NASDAQ+Crypto:  21:50 + 22:50 UTC  = 07:50/08:50 AEST, 08:50/09:50 AEDT
 
 on:
   schedule:
-    - cron: "30 5 * * *"    # 16:30 Melbourne during AEDT (Oct-Apr) -- ASX
-    - cron: "30 6 * * *"    # 16:30 Melbourne during AEST (Apr-Oct) -- ASX
-    - cron: "30 19 * * *"   # 06:30 Melbourne during AEDT (Oct-Apr) -- NASDAQ+Crypto
-    - cron: "30 20 * * *"   # 06:30 Melbourne during AEST (Apr-Oct) -- NASDAQ+Crypto
+    - cron: "50 7 * * 1-5"    # ASX, after the 06:37 UTC closing scan has landed
+    - cron: "50 8 * * 1-5"    # ASX backstop, an hour later
+    - cron: "50 21 * * 1-5"   # NASDAQ+Crypto, after the 21:07 UTC post-close scan
+    - cron: "50 22 * * 1-5"   # NASDAQ+Crypto backstop, an hour later
   workflow_dispatch:
     inputs:
       slot:
@@ -112,8 +120,8 @@ jobs:
             fi
           else
             case "$SCHEDULE" in
-              "30 5 * * *"|"30 6 * * *")   ARGS="--slot asx" ;;   # 16:30 Melbourne
-              "30 19 * * *"|"30 20 * * *") ARGS="--slot us"  ;;   # 06:30 Melbourne
+              "50 7 * * 1-5"|"50 8 * * 1-5")   ARGS="--slot asx" ;;   # after the ASX closing scan
+              "50 21 * * 1-5"|"50 22 * * 1-5") ARGS="--slot us"  ;;   # after the NASDAQ post-close scan
               *) echo "morning_plays: unmapped schedule '$SCHEDULE' - no-op."; exit 0 ;;
             esac
           fi
