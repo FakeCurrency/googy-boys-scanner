@@ -2565,7 +2565,7 @@ Set: `DISCORD_WEBHOOK_URL` (ORPHANED 2026-08-27 — the channel was removed;
 nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
 `BYBIT_*` (testnet), `ALPACA_*` (legacy),
 `TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
-**STANDING ACCESS (ops.yml, 2026-09-10):** `CRONJOB_API_KEY`,
+**STANDING ACCESS (ops.yml, 2026-09-10 — ALL THREE SET the same day; `cronjob-list` and `cf-list-vars` both answered HTTP 200 from ops.yml runs #1 and #2):** `CRONJOB_API_KEY`,
 `CLOUDFLARE_API_TOKEN` (custom token, Account → Cloudflare Pages → Edit),
 `CLOUDFLARE_ACCOUNT_ID` — GitHub Actions secrets read ONLY by ops.yml; set
 them once and Claude can create/edit cron-job.org jobs and Cloudflare Pages
