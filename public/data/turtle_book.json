@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-10T22:27:29+00:00",
+ "generated_at": "2026-09-10T23:25:02+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -135,10 +135,10 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 109.76499939,
+   "last_mark": 107.44000244,
    "mark_date": "2026-09-10",
    "fees": 2.105294,
-   "mfe_r": 0.2549,
+   "mfe_r": 0.2818,
    "mae_r": -0.4303,
    "unpriced_runs": 0
   },
@@ -158,7 +158,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 105.05000305,
+   "last_mark": 106.48999786,
    "mark_date": "2026-09-10",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -181,7 +181,7 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 316.60998535,
+   "last_mark": 311.54000854,
    "mark_date": "2026-09-10",
    "fees": 1.205845,
    "mfe_r": 0.7205,
@@ -205,7 +205,7 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 17.42499924,
+   "last_mark": 17.37000084,
    "mark_date": "2026-09-10",
    "fees": 1.569816,
    "mfe_r": 0.7089,
@@ -228,7 +228,7 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 10.09000015,
+   "last_mark": 9.89999962,
    "mark_date": "2026-09-10",
    "fees": 0.324298,
    "mfe_r": 0.3065,
@@ -1305,6 +1305,16 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "CSCO",
+   "action": "add",
+   "reason": "cash",
+   "units_held": 1,
+   "want_notional": 1306.82,
+   "equity": 4739.89
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "UAL",
    "action": "add",
    "reason": "cash",
@@ -1327,10 +1337,32 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "TMUS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "OKTA",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1018.43,
+   "want_notional": 971.06,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "SWKS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1148.14,
    "equity": 4739.89,
    "system": 2
   },
@@ -1349,10 +1381,22 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "TENB",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "ASO",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1258.06,
+   "want_notional": 1255.47,
    "equity": 4739.89,
    "system": 2
   },
@@ -1362,9 +1406,57 @@
    "symbol": "CHRD",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1557.6,
+   "want_notional": 1548.79,
    "equity": 4739.89,
    "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "RELY",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "LKQ",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "SLAB",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "IRTC",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-10",
@@ -1381,7 +1473,55 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "OZK",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "SLM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "COLM",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "PPLI",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "LI",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1405,7 +1545,31 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "SNDX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "NMRK",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "DOO",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1441,6 +1605,18 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "PWP",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "GERN",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1449,6 +1625,30 @@
    "bucket": "unclassified",
    "side": "short",
    "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "DRVN",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "DAKT",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
   },
   {
    "as_of": "2026-09-10",
@@ -1513,17 +1713,53 @@
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
+   "symbol": "MOMO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "ZUMZ",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
+   "symbol": "IMMR",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-10",
+   "market": "nasdaq",
    "symbol": "MYFW",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1683.61,
+   "want_notional": 1694.0,
    "equity": 4739.89,
    "system": 1
   },
   {
    "as_of": "2026-09-10",
    "market": "nasdaq",
-   "symbol": "BRKRP",
+   "symbol": "CHW",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1587,9 +1823,9 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 33,
-  "close_corr_cap": 19,
-  "total": 52
+  "cash": 35,
+  "close_corr_cap": 37,
+  "total": 72
  },
  "summary": {
   "started": "2026-08-21",
