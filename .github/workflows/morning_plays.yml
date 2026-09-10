@@ -60,6 +60,10 @@ on:
         description: "(only when slot is blank) send ALL markets now regardless of hour"
         default: "true"
         required: false
+      redeliver:
+        description: "(only with slot) re-send the slot even though it already went out today; dedup + state still apply"
+        default: "false"
+        required: false
 
 permissions:
   contents: read
@@ -102,6 +106,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           FORCE: ${{ github.event.inputs.force }}
           SLOT_INPUT: ${{ github.event.inputs.slot }}
+          REDELIVER: ${{ github.event.inputs.redeliver }}
           # Which cron fired -- maps to a slot NAME below. Never interpolate a
           # ${{ }} value inside the run script (2026-07-20 security pass); read
           # the env var instead.
@@ -112,6 +117,7 @@ jobs:
           if [ "$EVENT" = "workflow_dispatch" ]; then
             if [ -n "$SLOT_INPUT" ]; then
               ARGS="--slot $SLOT_INPUT"          # run one slot as if scheduled (writes state)
+              if [ "$REDELIVER" = "true" ]; then ARGS="$ARGS --redeliver"; fi
             elif [ "$FORCE" != "false" ]; then
               ARGS="--force"                     # manual test: send all markets now
             else

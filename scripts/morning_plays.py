@@ -424,6 +424,11 @@ def main(argv=None, now=None) -> int:
                     help="the scheduled slot this run serves (set by morning_plays.yml "
                          "from the cron); sends when Melbourne is at/past its target "
                          "and it has not gone out today")
+    ap.add_argument("--redeliver", action="store_true",
+                    help="with --slot: ignore the per-day 'already sent' marker (the "
+                         "floor, the post-close data gate, the 7-day dedup and state "
+                         "recording all still apply). For re-sending a slot whose "
+                         "earlier delivery today missed names.")
     ap.add_argument("--force", action="store_true",
                     help="send all markets now regardless of hour/slot (manual test)")
     ap.add_argument("--dry-run", action="store_true",
@@ -446,6 +451,10 @@ def main(argv=None, now=None) -> int:
         markets = config.MORNING_PLAYS_SLOTS[args.slot]["markets"]
         state = load_state(seen_path)
         due, reason = slot_due(args.slot, now_local, state["slots"])
+        if not due and reason == "done" and args.redeliver:
+            print(f"morning_plays: {args.slot} slot already went out today - "
+                  "re-delivering on request (--redeliver); dedup + state still apply.")
+            due = True
         if not due:
             msg = ("is before its target time" if reason == "before"
                    else "already went out today")

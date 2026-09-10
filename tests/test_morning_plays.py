@@ -568,3 +568,33 @@ def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot()
             assert f'"{c}"' in wf.split('ARGS="--slot us"')[0].split("case")[-1]
     assert '"30 5 * * *"' not in wf and '"30 19 * * *"' not in wf, \
         "the pre-close wall-clock crons must not come back"
+
+
+def test_redeliver_skips_only_the_per_day_marker_and_still_records(tmp_path, monkeypatch):
+    """2026-09-11: the 06:35 run marked the US slot done off mid-session data; the
+    owner wanted the three post-close names sent the same day. --redeliver ignores
+    the marker ONLY -- dedup, the data gate and state recording all still apply."""
+    _utc_tz(monkeypatch)
+    seen_path = _seen(tmp_path)
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    data_dir = str(_fixtures_stamped(tmp_path, "2026-09-10T17:01:14-04:00"))
+    at = dt.datetime(2026, 9, 10, 21, 15, tzinfo=dt.timezone.utc)
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path], now=at) == 0
+    assert len(posts) == 1 and "MDLZ" in posts[0]
+    # same day, plain re-run: marker no-ops it
+    assert mp.main(["--slot", "us", "--data-dir", data_dir, "--seen-file", seen_path], now=at) == 0
+    assert len(posts) == 1
+    # a new name lands in the scan; --redeliver sends it, dedup holds MDLZ back
+    (pathlib.Path(data_dir) / "nasdaq_vivek.json").write_text(json.dumps({
+        "generated_at": "2026-09-10T17:01:14-04:00",
+        "results": [_row("MDLZ", grade="A+"), _row("ASO", grade="A")]}))
+    assert mp.main(["--slot", "us", "--redeliver", "--data-dir", data_dir,
+                    "--seen-file", seen_path], now=at) == 0
+    assert len(posts) == 2 and "ASO" in posts[1] and "MDLZ" not in posts[1]
+    assert mp.load_state(seen_path)["sent"].get("nasdaq:ASO"), "redelivered names are recorded"
+    wf = (ROOT / ".github" / "workflows" / "morning_plays.yml").read_text()
+    assert 'REDELIVER: ${{ github.event.inputs.redeliver }}' in wf
+    assert '--redeliver' in wf
