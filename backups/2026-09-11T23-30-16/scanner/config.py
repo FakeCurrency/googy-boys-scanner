@@ -606,8 +606,9 @@ SECTOR_BREADTH_PUBLISH_DAYS = 180
 #    being missed in progress, which is the whole reason this module exists.
 #    July ran nineteen. Report-only -- it changes the volume, never the trades.
 SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm to Discord (owner's choice, same
-#    channel as the confluence pings) instead of only colouring the page. A
+#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
+#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
+#    no live channel) instead of only colouring the page. A
 #    surface you have to open to be warned by is a surface that warns you after
 #    you already looked, which in July was never. Rate-limited through
 #    journal/alert_state.json so a 19-session run pings once, not nineteen times.
@@ -664,8 +665,7 @@ REGIME_MIN_DAY_COVERAGE = 0.5
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
 # EVERY configured channel — enabling this without wanting it means an email per
-# bot trade event (hourly-ish in session). Flip to True when you want pushes
-# (and add DISCORD_WEBHOOK_URL to the scan workflow env for Discord instead).
+# bot trade event (hourly-ish in session).
 VIVEK_BOT_NOTIFY_TRADES = False
 # Daily-loss guardrail (per market). Once today's realised + open-unrealised P&L
 # falls to -this% of equity, the runner HALTS new entries for the rest of the
@@ -689,12 +689,12 @@ VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
 # on ordinary trades. 0 = off.
 VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
 
-# Push the review flag to Discord when a flagged position is actually opened
+# Push the review flag through the NOTICE tier when a flagged position is opened
 # (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
 # and the difference is the point: that one digests EVERY open and close through
 # alert_dispatch, which fires every configured channel including email, so it is
 # off to avoid emailing routine trades. This one fires only on the flagged
-# minority, at NOTICE, to Discord alone. A flag nobody sees on the day is not a
+# minority, at NOTICE. A flag nobody sees on the day is not a
 # flag -- the whole instruction was so the owner could decide before the trade
 # has moved. Set False to keep the flag on the row and the page but stop the
 # push.
@@ -955,15 +955,22 @@ ALERT_SEVERITY = {
 # Flip back to True when the bot is ready to go live again.
 TELEGRAM_ENABLED = False
 
-# Map severity → alert channels (telegram / discord / email)
+# Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
+# by owner ruling — "get rid of the discord aspect, I will work on
+# implementing something new in the future". The router, tiers and rate
+# limits all stay: the next channel plugs in here by adding its name to the
+# tiers below and a sender to alert_dispatch. Until then CRITICAL/WARNING
+# route to telegram+email, both currently unconfigured, so delivery is the
+# router's "NOBODY WAS TOLD" log line plus GitHub's own red-run emails.)
 ALERT_CHANNELS = {
-    "CRITICAL": ["telegram", "discord", "email"],
-    "WARNING":  ["telegram", "discord"],
+    "CRITICAL": ["telegram", "email"],
+    "WARNING":  ["telegram"],
     "INFO":     [],  # log only — no push notification for routine events
-    # Discord only, by owner decision (2026-07-28) — the same private channel
-    # the confluence pings land in, so market observations stay in one place
-    # and the email/Telegram legs remain reserved for things that are broken.
-    "NOTICE":   ["discord"],
+    # NOTICE was Discord-only by the 2026-07-28 ruling (market observations,
+    # nothing broken). With that channel removed it pushes nowhere; the
+    # events are still computed, logged and deduped by their owners, so the
+    # future channel inherits them by adding itself to this list.
+    "NOTICE":   [],
 }
 
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
@@ -1159,10 +1166,11 @@ ALERT_RATE_LIMITS_EXTRA: dict = {
 }
 
 # ---------------------------------------------------------------------------
-# Discord digest — posts new tradeable setups to a Discord channel webhook
+# Alert credentials — the boundary every pasted secret crosses
 # ---------------------------------------------------------------------------
-# Enable by setting the DISCORD_WEBHOOK_URL env var / GitHub secret. Without it
-# the module writes a preview and no-ops (never fails the workflow).
+# (The Discord digest that used to live under this heading was removed with
+# the whole Discord channel on 2026-08-27; clean_secret stays because it
+# guards EVERY pasted credential, not one channel's.)
 
 
 def clean_secret(value) -> str:
@@ -1183,25 +1191,14 @@ def clean_secret(value) -> str:
     """
     return str(value or "").strip(
         " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
-DISCORD_USERNAME       = "Vivek 5.0"
-DISCORD_AVATAR_URL     = ""          # optional avatar image URL for the webhook
-DISCORD_MIN_GRADE      = "A"         # post setups graded at least this (A → A+/A; "A+" → only A+)
-DISCORD_MAX_PER_MARKET = 8           # cap setups listed per market so the message stays clean
-DISCORD_CONF_MENTION   = "@here"     # mention on TRIPLE-lens confluence alerts ("" = silent)
-DISCORD_CONF_MIN_LENSES = 3          # only post alignments with at least this many lenses
+CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this many lenses
                                      # (3 = triples only — owner's call 2026-07-02; the site
-                                     # still shows every 2-lens alignment visually)
+                                     # still shows every 2-lens alignment visually. Channel-
+                                     # independent POLICY, kept through the 2026-08-27 Discord
+                                     # removal: confluence_alert still computes what deserves a
+                                     # push and records it as undelivered, so the next channel
+                                     # pings everything current on its first run.)
 SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
-DISCORD_BRAND_COLOR    = 0x0A84FF    # default embed colour (iOS blue)
-DISCORD_GRADE_COLORS   = {           # embed colour by the best grade present
-    "A+": 0x30D158, "A": 0x0A84FF, "B": 0xFF9500, "C": 0x8E8E93,
-}
-DISCORD_GRADE_EMOJI    = {           # per-setup marker
-    "A+": "🟢", "A": "🔵", "B": "🟠", "C": "⚪",
-}
-DISCORD_POST_RETRIES   = 4           # network/5xx retry attempts (with back-off)
-# Grade precedence for the min-grade filter (lower index = stronger).
-GRADE_PRECEDENCE       = ["A+", "A", "B", "C"]
 
 # ---------------------------------------------------------------------------
 # Phase 9: Capital Scaling Framework
@@ -1331,7 +1328,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
 # same lesson as sectorbreadth's ping memory), resets on the first successful
-# publish, and pings Discord ONCE per episode, exactly at the threshold.
+# publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
 
@@ -1617,6 +1614,18 @@ TURTLE_DVOL_LOOKBACK = 20
 # under its 55-day high today is the one you want to have seen yesterday.
 TURTLE_APPROACH_PCT = 3.0
 
+# One in-run SECOND CHANCE for a market that failed, after this cooldown
+# (2026-09-01 — turtle runs #64 and #88, both the same shape). The dominant
+# failure class is Yahoo throttling gutting one market's batch below the
+# coverage floor, and a throttle window routinely clears in minutes — but the
+# runner's only retries were the per-batch ones (seconds apart, inside the
+# same window), so the run went red, emailed the owner, and then healed
+# untouched on the next cron hours later. Now the runner sleeps this long and
+# re-scans just the failed market(s) once; a retry that still fails keeps the
+# red run and the email, so the coverage floor's alarm is not softened — only
+# its false-positive rate on transient throttling. 0 = off.
+TURTLE_THROTTLE_RETRY_COOLDOWN_S = 180.0
+
 # Round-trip trading cost charged to every replayed trade, in basis points
 # PER SIDE of notional. A trend-following system takes a great many small
 # losses, so cost is not a rounding error on the result -- it is a material
@@ -1757,7 +1766,123 @@ TURTLE_FUTURES = [
     # CME E-mini Nasdaq-100: $20 x index. Micro MNQ: $2 x index.
     {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
      "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
+    # --- added 2026-09-02, owner ask: "US30, NAS100, GOLD, COPPER, SILVER --
+    #     effectively every future CMC's CFDs allow".
+    #
+    # FOUR OF THE FIVE HE NAMED WERE ALREADY HERE (NAS100=NQ, GOLD=GC,
+    # SILVER=SI, COPPER=HG). They did not read as available because the fit
+    # table refuses them: a Turtle unit at $5,000 is a FRACTION of one
+    # contract, so the sleeve says "0.628 contracts - refused" and a reader
+    # reasonably concludes the instrument is missing. What was genuinely
+    # absent is the Dow, plus the four below that round out the same asset
+    # groups on tapes CMC also quotes. The CFD sizing block (cfd_sizing) is
+    # the other half of that answer: same tape, a vehicle that sizes
+    # fractionally, and a verdict that is readable rather than a refusal.
+    #
+    # SAFETY NOTE on these five dpp values: the CFD lens uses dpp = 1 by
+    # construction (one unit = one dollar per point), so an error in the
+    # exchange multipliers below can only misprice the FUTURES fit verdict --
+    # which already refuses every row at this equity -- and cannot reach the
+    # CFD unit. That is why they were safe to add before a spec file exists.
+    # CBOT E-mini Dow: $5 x index. Micro MYM: $0.50 x index. THE ONE THE
+    # OWNER NAMED THAT WAS ACTUALLY MISSING.
+    {"symbol": "YM", "yf": "YM=F", "name": "Dow 30", "group": "index",
+     "dpp": 5, "micro": "MYM", "micro_dpp": 0.5},
+    # CME E-mini Russell 2000: $50 x index. Micro M2K: $5 x index.
+    {"symbol": "RTY", "yf": "RTY=F", "name": "Russell 2000", "group": "index",
+     "dpp": 50, "micro": "M2K", "micro_dpp": 5},
+    # ICE Brent Crude (Yahoo BZ=F is the Last Day Financial contract):
+    # 1,000 barrels, quoted USD per barrel -> $1,000 per $1. The second
+    # energy benchmark; it and WTI are the same bucket, not two bets.
+    {"symbol": "BZ", "yf": "BZ=F", "name": "Brent Crude", "group": "energy",
+     "dpp": 1_000, "micro": "", "micro_dpp": 0},
+    # NYMEX Platinum: 50 troy oz, quoted USD per oz -> $50 per $1.
+    {"symbol": "PL", "yf": "PL=F", "name": "Platinum", "group": "metals",
+     "dpp": 50, "micro": "", "micro_dpp": 0},
+    # NYMEX Palladium: 100 troy oz, quoted USD per oz -> $100 per $1.
+    {"symbol": "PA", "yf": "PA=F", "name": "Palladium", "group": "metals",
+     "dpp": 100, "micro": "", "micro_dpp": 0},
 ]
+
+# THE CFD SIZING LENS (2026-09-02, owner ask). The same tapes as the futures
+# sleeve above, read through the vehicle he can actually reach: a CMC CFD.
+#
+# WHY THIS IS A LENS AND NOT A BOOK. A CFD differs from an exchange future on
+# every axis the forward book models -- fractional sizing, broker margin
+# rather than exchange IM, a close-out that can PRECEDE the 2N stop, and daily
+# financing on full notional -- and every one of those numbers is a fact from
+# CMC's product library and PDS, not an estimate. This repo already refuses to
+# invent exchange initial margin (TURTLE_FUTURES_MARGIN_FILE); inventing a
+# broker's margin rate, minimum trade size and funding rate would be the same
+# error with more decimals. So what ships here is the half that needs NO
+# broker data at all, and it is the half that answers the question:
+#
+#   units = (TURTLE_RISK_PCT x equity) / N        -- with dpp = 1
+#
+# THE POINT OF dpp = 1: a CFD unit is quoted as CURRENCY PER POINT, so setting
+# dollars-per-point to 1 makes `units` mean "dollars of exposure per point of
+# price", which is VEHICLE-INDEPENDENT and correct whatever CMC's own unit
+# turns out to be. The owner reads "Value of 1 point" off the CMC order ticket
+# and divides. If CMC's unit is $1/point (the convention every source points
+# at, though only one primary source was found for it), the number transfers
+# 1:1. Nothing downstream has to trust an unverified multiplier.
+TURTLE_CFD_DPP = 1.0
+
+# Broker minimum trade size and step. UNKNOWN, and it is THE number that
+# decides whether this project exists: at $5,000 the Turtle unit on the Dow,
+# the Nasdaq, the S&P and gold is a FRACTION of one $1/point unit (measured
+# 2026-09-02: NQ 0.096, GC 0.628, ES 0.670), so a 1.0-unit floor refuses
+# exactly the instruments the owner asked for and the fractional vehicle
+# solves nothing for them. A 0.1 floor takes gold, the S&P and the Dow and
+# still refuses the Nasdaq. The sleeve therefore publishes the verdict at
+# BOTH floors rather than picking one, and says which it used. Replace with
+# the real per-instrument figure when the spec file lands.
+TURTLE_CFD_MIN_UNITS = (1.0, 0.1)
+
+# Annual holding (financing) rate charged on FULL NOTIONAL, not on the
+# borrowed part -- 20:1 margin does not mean you finance a twentieth.
+#
+# THIS IS A STATED ASSUMPTION, NOT A MEASURED RATE, and it is labelled as one
+# everywhere it surfaces. CMC charges a benchmark plus a spread and the pair
+# moves; the owner's own statement is the only authority. It is here at all
+# because financing is not a rounding error on a system that holds winners for
+# months, and a sleeve that omitted it would quote a number nobody could earn:
+#
+#   carry over D days, in R = 0.5 x (P/N) x r x D/365
+#
+# which depends only on the volatility ratio, so it PUNISHES QUIET MARKETS
+# hardest -- the ones a trend follower most wants to hold. Measured on the
+# live tape at 8%: crude 0.16R over 60 days, the S&P 0.67R, the Nasdaq 0.37R.
+# An index position that has to clear two thirds of an R before it breaks even
+# on carry is a materially different trade from the futures one it replaces.
+TURTLE_CFD_FINANCING_PCT_ASSUMED = 8.0
+
+# ASIC's retail leverage caps by asset class (Product Intervention Order,
+# Instrument 2020/986, in force 2021-03-29, extended by 2022/259). These are
+# REGULATORY CEILINGS on what any Australian retail CFD issuer may offer --
+# CMC may require MORE margin than this and never less, so using the cap
+# computes the MOST leveraged (worst) case, which is the honest direction for
+# a risk read. Recorded as the owner's jurisdiction, flagged as needing
+# confirmation against his own account's classification (retail vs wholesale
+# changes them entirely).
+#
+# The number that matters is not the leverage, it is where the broker's
+# close-out sits relative to the 2N stop: on posted-margin exhaustion the
+# close-out distance is P/L, so the Turtle stop only binds while
+# N/P < 1/(2L). At 20:1 that is N/P < 2.5%. ABOVE that line leverage has
+# silently replaced the exit rule, and the row says so.
+TURTLE_CFD_ASIC_LEVERAGE = {
+    "index": 20.0,      # major stock index CFDs
+    "metals": 20.0,     # gold is 20:1; the other metals are 10:1 (see below)
+    "currency": 30.0,   # major FX pairs
+    "energy": 10.0,     # commodities other than gold
+    "softs": 10.0,
+    "rates": 10.0,
+}
+# Gold is the only metal ASIC puts in the 20:1 band; silver, copper, platinum
+# and palladium are "commodities other than gold" at 10:1. Keyed per symbol
+# so the group default above cannot quietly over-leverage them.
+TURTLE_CFD_LEVERAGE_OVERRIDE = {"SI": 10.0, "HG": 10.0, "PL": 10.0, "PA": 10.0}
 
 # ROLL-GAP DETECTION for the futures sleeve. Continuous front-month "=F"
 # series are BACK-ADJUSTED, so the roll from one contract month to the next
@@ -1888,3 +2013,106 @@ TURTLE_SMALL_UNIVERSE_MAX_MISSING = 2
 # breakouts than a page can show; ranking is by proximity to the level and
 # then by liquidity, and the payload states how many were dropped.
 TURTLE_MAX_ROWS = 400
+
+# ---------------------------------------------------------------------------
+# MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
+# (owner ask, 2026-09-08; scheduling reworked 2026-09-09). scripts/morning_plays
+# reads the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
+# Discord. The name is historical -- ASX now goes out in the AFTERNOON.
+#
+# TWO MARKET-SPECIFIC SLOTS, each ~30 min after its market's close (owner,
+# 2026-09-09): ASX at 16:30 Melbourne, NASDAQ + Crypto at 06:30 Melbourne.
+# Crypto trades 24/7 but rides the US slot so both sides land in one message.
+#
+# DELAY-PROOF SCHEDULING (rebuilt 2026-09-10 after the first design missed a
+# whole day). GitHub batches free-tier crons and delayed them 2-5 HOURS on
+# 2026-09-09, so an hour-EQUALITY gate ("send only when it is exactly hour 16")
+# no-op'd every delayed run and nothing was delivered. Instead: morning_plays.yml
+# maps each cron to a slot NAME, and the run sends that slot when Melbourne is AT
+# OR PAST the slot's target time today AND the slot has not already gone out today
+# (a per-day marker in the sent-list cache). "at or past" tolerates any delay;
+# the marker stops the slot's second DST superset cron -- and any repeat run in
+# the window -- from double-sending. Net effect: each slot delivers exactly once
+# per day, on the first run at/after its target, however late GitHub is.
+#
+# THE CHANNEL IS DELIBERATELY NEW, NOT A REVIVAL. Discord as an ALERT channel
+# was ruled out 2026-08-27 ("get rid of the discord aspect, I will work on
+# implementing something new in the future"), and tests/test_alert_credentials
+# pins that the removed alert webhook (DISCORD_WEBHOOK_URL) never creeps back
+# into a workflow or scanner/scripts. That pin's own docstring names the
+# sanctioned path for the "something new": its OWN secret name. So this digest
+# uses a SEPARATE secret and is a standalone content push, NOT routed through
+# the severity/rate-limit alert router (a once-a-day digest is not an alert).
+MORNING_PLAYS_WEBHOOK_ENV = "DISCORD_MORNING_WEBHOOK_URL"   # owner sets this secret
+MORNING_PLAYS_TZ = "Australia/Melbourne"
+# The named send slots. Each cron in morning_plays.yml maps to a slot NAME (not
+# to a wall-clock hour), so GitHub delaying a cron by hours can no longer make it
+# miss: the run sends its slot as long as Melbourne is AT OR PAST the slot's
+# target time today and the slot has not already gone out today (a per-day marker
+# in the sent-list). "at or past" (not "==") is the whole delay fix; the marker
+# is what stops the slot's OTHER DST superset cron from double-sending. `minute`
+# is only the intended send time shown in the message; the gate keys on `hour`.
+MORNING_PLAYS_SLOTS = {
+    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # FLOOR: never before 16:30 Melbourne
+    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # FLOOR: never before 06:30 Melbourne
+}
+# THE POST-CLOSE DATA GATE (2026-09-11). The slot floor above is a wall-clock
+# floor; this is the gate that actually decides. A slot sends only once the scan
+# it reads was GENERATED at/after the gating market's most recent weekday session
+# close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
+# MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
+# missed the three names that set up in the last hours of trade and posted
+# "nothing new". Keyed on the payload's own `generated_at` in the market's own
+# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
+# cron-job.org jobs are a ladder of attempts every 30 min after the close, and
+# the first post-close one sends (the per-day marker silences the rest).
+#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
+#                            is pre-close. scan.yml's 05:07 UTC cron generates
+#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
+#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
+#                            21:07 UTC, which is 16:07 New York under EST, so a
+#                            later gate would refuse every winter session's only
+#                            post-close scan and the US digest would never send
+#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
+#                            passes too and the digest lands an hour earlier.
+# crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
+# gate reads (`<market>_vivek.json`'s generated_at).
+MORNING_PLAYS_SLOT_GATE = {
+    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
+}
+# {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
+# by a bare local run (no --slot, no --force); the scheduled path uses --slot.
+MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
+# Every market any slot sends, in printed order, de-duplicated. Derived so the
+# slots stay the single source of truth (a manual --force test sends this union;
+# build_messages labels the empty case from the live slot's keys).
+MORNING_PLAYS_MARKETS = tuple(dict.fromkeys(
+    m for v in MORNING_PLAYS_SLOTS.values() for m in v["markets"]))
+# Don't repeat a ticker the digest already SENT within this many days -- the
+# reader charts each name, so a name should not be re-shared while its weekly
+# setup persists (weekly setups stay valid for days/weeks, so without this the
+# same names recur morning after morning). Counted from when it was SENT, not
+# from when it went high-conviction: a name reappears once the gap passes, if
+# still qualifying. State is a small actions/cache file (below) -- the same
+# ephemeral cross-run pattern as the watchdog state -- so the JOB STAYS
+# READ-ONLY to the repo. Only ACTUALLY-DELIVERED tickers are recorded, so a
+# failed post never silently buries a name. 0 = no dedup (repeat freely).
+MORNING_PLAYS_DEDUP_DAYS = 7
+MORNING_PLAYS_SEEN_FILE = ".cache/morning_plays_sent.json"
+MORNING_PLAYS_MAX_ROWS = 20        # per market, to stay inside Discord's limits
+# False = LONG high-conviction plays only (a tight, focused list, ~7/day).
+# True = ALSO every plain LONG A+ play (~100/day across ASX+NASDAQ) -- a much
+# longer watchlist, chunked across several Discord posts. Shorts and
+# funds/REITs (is_product) are excluded either way.
+MORNING_PLAYS_INCLUDE_ALL_APLUS = False
+MORNING_PLAYS_UA = "vivek5-morning/1.0"   # named UA — Discord 403s Python's default
+# A stale scan (weekend / dropped cron) still sends, but says so: flag a market
+# whose newest scan is older than this many hours.
+MORNING_PLAYS_STALE_H = 20.0
+# Absolute URL of the deployed app, for a "open the SCAN page" link in the
+# digest. Empty = omit the link (a dead link is worse than none). The owner
+# can set their Cloudflare Pages URL here.
+MORNING_PLAYS_APP_URL = ""
