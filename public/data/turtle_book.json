@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-13T13:58:50+00:00",
+ "generated_at": "2026-09-13T18:44:23+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -251,7 +251,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.3459512,
+   "last_mark": 1.35986388,
    "mark_date": "2026-09-13",
    "fees": 0.775953,
    "mfe_r": 0.0872,
@@ -277,7 +277,7 @@
    "stop": 2.23794598,
    "last_fill": 2.48609376,
    "opened": "2026-09-04",
-   "last_mark": 2.30279994,
+   "last_mark": 2.35739994,
    "mark_date": "2026-09-13",
    "fees": 2.603559,
    "mfe_r": 1.8111,
@@ -306,7 +306,7 @@
    "fees": 1.072303,
    "mfe_r": 0.5362,
    "mae_r": -0.8323,
-   "unpriced_runs": 0
+   "unpriced_runs": 1
   },
   {
    "symbol": "ZEC",
@@ -324,7 +324,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 1092.55004883,
+   "last_mark": 1108.42004395,
    "mark_date": "2026-09-13",
    "fees": 1.495422,
    "mfe_r": 6.3715,
@@ -348,7 +348,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 54.06000137,
+   "last_mark": 54.81999969,
    "mark_date": "2026-09-13",
    "fees": 1.59963,
    "mfe_r": 9.962,
@@ -373,7 +373,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 6.2723999,
+   "last_mark": 6.3434,
    "mark_date": "2026-09-13",
    "fees": 2.795106,
    "mfe_r": 6.5177,
@@ -397,7 +397,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 2.30279994,
+   "last_mark": 2.35739994,
    "mark_date": "2026-09-13",
    "fees": 1.422235,
    "mfe_r": 3.8311,
@@ -421,7 +421,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.39210001,
+   "last_mark": 0.39399999,
    "mark_date": "2026-09-13",
    "fees": 1.080912,
    "mfe_r": 1.7043,
@@ -445,7 +445,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.3459512,
+   "last_mark": 1.35986388,
    "mark_date": "2026-09-13",
    "fees": 1.441954,
    "mfe_r": 0.0872,
@@ -1570,6 +1570,18 @@
   },
   {
    "as_of": "2026-09-13",
+   "market": "crypto",
+   "symbol": "JST",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-13",
    "market": "crypto5x",
    "symbol": "ZEC",
    "action": "add",
@@ -1619,13 +1631,25 @@
    "side": "long",
    "units_held": 1,
    "system": 2
+  },
+  {
+   "as_of": "2026-09-13",
+   "market": "crypto5x",
+   "symbol": "JST",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "crypto",
+   "side": "long",
+   "system": 2
   }
  ],
  "started": "2026-08-21",
  "skip_counts": {
   "cash": 34,
-  "close_corr_cap": 17,
-  "total": 51
+  "close_corr_cap": 19,
+  "total": 53
  },
  "summary": {
   "started": "2026-08-21",
