@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-09-13T00:03:10+00:00",
+ "updated_at": "2026-09-14T00:16:20+00:00",
  "entries": [
   {
    "key": "2026-08-20|nasdaq|TMUS|short|2",
@@ -35038,7 +35038,7 @@
    "fwd": {
     "1": 0.002493,
     "5": 0.025679,
-    "10": null,
+    "10": 0.021311,
     "20": null
    },
    "grade_raw": "A+",
@@ -35767,7 +35767,7 @@
    "fwd": {
     "1": -0.009584,
     "5": -0.027214,
-    "10": null,
+    "10": -0.028704,
     "20": null
    },
    "grade_raw": "B+",
@@ -35790,7 +35790,7 @@
    "fwd": {
     "1": -0.010434,
     "5": -0.028341,
-    "10": null,
+    "10": -0.03004,
     "20": null
    },
    "grade_raw": "B+",
@@ -40260,7 +40260,7 @@
    "base_close": 0.8545,
    "fwd": {
     "1": -0.032265,
-    "5": null,
+    "5": 0.143967,
     "10": null,
     "20": null
    },
@@ -40283,7 +40283,7 @@
    "base_close": 2.28600001,
    "fwd": {
     "1": -0.009718,
-    "5": null,
+    "5": -0.012809,
     "10": null,
     "20": null
    },
@@ -40658,7 +40658,7 @@
    "base_close": 0.0288129,
    "fwd": {
     "1": -0.012739,
-    "5": null,
+    "5": -0.038496,
     "10": null,
     "20": null
    },
@@ -40681,7 +40681,7 @@
    "base_close": 12.54300022,
    "fwd": {
     "1": -0.060347,
-    "5": null,
+    "5": -0.102612,
     "10": null,
     "20": null
    },
@@ -45073,13 +45073,129 @@
    "base_day": "2026-09-12",
    "base_close": 0.09268,
    "fwd": {
-    "1": null,
+    "1": 0.03171,
     "5": null,
     "10": null,
     "20": null
    },
    "grade_raw": "B+",
    "score": 5,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-14|asx|VCX|long|2",
+   "date": "2026-09-13T14:58:13+00:00",
+   "market": "asx",
+   "ticker": "VCX",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-14",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Real Estate",
+   "grade_raw": "B+",
+   "score": 7,
+   "is_product": true
+  },
+  {
+   "key": "2026-09-14|asx|TLC|long|2",
+   "date": "2026-09-13T14:58:13+00:00",
+   "market": "asx",
+   "ticker": "TLC",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-14",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Discretionary",
+   "grade_raw": "B+",
+   "score": 8,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-14|asx|PPC|long|2",
+   "date": "2026-09-13T14:58:13+00:00",
+   "market": "asx",
+   "ticker": "PPC",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-14",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Real Estate",
+   "grade_raw": "B+",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-14|asx|BLU|long|2",
+   "date": "2026-09-13T14:58:13+00:00",
+   "market": "asx",
+   "ticker": "BLU",
+   "side": "long",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "SPECS"
+   ],
+   "base_day": "2026-09-14",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Energy"
+  },
+  {
+   "key": "2026-09-13|crypto|CAKE|short|2",
+   "date": "2026-09-13T00:04:28+00:00",
+   "market": "crypto",
+   "ticker": "CAKE",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-13",
+   "base_close": 2.23600006,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "A",
+   "score": 6,
    "is_product": false
   }
  ]
