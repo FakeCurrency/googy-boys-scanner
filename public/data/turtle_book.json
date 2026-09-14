@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-14T16:06:38+00:00",
+ "generated_at": "2026-09-14T20:17:29+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -251,7 +251,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.35047865,
+   "last_mark": 1.35724175,
    "mark_date": "2026-09-14",
    "fees": 0.775953,
    "mfe_r": 0.0872,
@@ -277,7 +277,7 @@
    "stop": 2.23794598,
    "last_fill": 2.48609376,
    "opened": "2026-09-04",
-   "last_mark": 2.40350008,
+   "last_mark": 2.55439997,
    "mark_date": "2026-09-14",
    "fees": 2.603559,
    "mfe_r": 1.8111,
@@ -306,7 +306,7 @@
    "fees": 1.072303,
    "mfe_r": 0.5362,
    "mae_r": -0.8323,
-   "unpriced_runs": 5
+   "unpriced_runs": 6
   },
   {
    "symbol": "ZEC",
@@ -324,7 +324,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 1135.43994141,
+   "last_mark": 1215.17004395,
    "mark_date": "2026-09-14",
    "fees": 1.495422,
    "mfe_r": 6.3715,
@@ -348,7 +348,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 53.93000031,
+   "last_mark": 55.22000122,
    "mark_date": "2026-09-14",
    "fees": 1.59963,
    "mfe_r": 9.962,
@@ -373,7 +373,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 6.35489988,
+   "last_mark": 6.74569988,
    "mark_date": "2026-09-14",
    "fees": 2.795106,
    "mfe_r": 6.5177,
@@ -397,7 +397,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 2.40350008,
+   "last_mark": 2.55439997,
    "mark_date": "2026-09-14",
    "fees": 1.422235,
    "mfe_r": 3.8311,
@@ -421,7 +421,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.3836,
+   "last_mark": 0.39789999,
    "mark_date": "2026-09-14",
    "fees": 1.080912,
    "mfe_r": 1.7043,
@@ -445,7 +445,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.35047865,
+   "last_mark": 1.35724175,
    "mark_date": "2026-09-14",
    "fees": 1.441954,
    "mfe_r": 0.0872,
@@ -469,7 +469,7 @@
    "stop": 4411.81385397,
    "last_fill": 4278.21533203,
    "opened": "2026-09-14",
-   "last_mark": 4291.53710938,
+   "last_mark": 4289.33056641,
    "mark_date": "2026-09-14",
    "fees": 3.445746,
    "mfe_r": 0.1239,
@@ -493,7 +493,7 @@
    "stop": 4419.31057088,
    "last_fill": 4282.85009766,
    "opened": "2026-09-14",
-   "last_mark": 4293.49023438,
+   "last_mark": 4295.81982422,
    "mark_date": "2026-09-14",
    "fees": 3.377134,
    "mfe_r": 0.0956,
@@ -1627,10 +1627,20 @@
   {
    "as_of": "2026-09-14",
    "market": "crypto",
+   "symbol": "NEAR",
+   "action": "add",
+   "reason": "per_market_cap",
+   "units_held": 4,
+   "cap": 4,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-14",
+   "market": "crypto",
    "symbol": "XAUT",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1503.55,
+   "want_notional": 1502.77,
    "equity": 3656.76,
    "system": 1
   },
@@ -1640,7 +1650,7 @@
    "symbol": "PAXG",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1472.68,
+   "want_notional": 1473.48,
    "equity": 3656.76,
    "system": 1
   },
@@ -1701,7 +1711,8 @@
  "skip_counts": {
   "cash": 38,
   "close_corr_cap": 16,
-  "total": 54
+  "per_market_cap": 1,
+  "total": 55
  },
  "summary": {
   "started": "2026-08-21",
