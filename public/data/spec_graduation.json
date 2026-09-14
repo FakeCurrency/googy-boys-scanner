@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-09-13T23:33:50+10:00",
+ "updated_at": "2026-09-15T01:16:36+10:00",
  "markets": {
   "asx": {
    "seen": {
@@ -808,12 +808,6 @@
      "name": "Petratherm Limited",
      "last_seen": "2026-08-17"
     },
-    "BAS": {
-     "first_seen": "2026-08-17",
-     "price": 0.053,
-     "name": "Bass Oil Limited",
-     "last_seen": "2026-08-21"
-    },
     "QXR": {
      "first_seen": "2026-08-17",
      "price": 0.004,
@@ -1268,7 +1262,7 @@
      "first_seen": "2026-08-29",
      "price": 0.016,
      "name": "C29 Metals Limited",
-     "last_seen": "2026-09-13"
+     "last_seen": "2026-09-15"
     },
     "ECS": {
      "first_seen": "2026-08-29",
@@ -1424,12 +1418,6 @@
      "first_seen": "2026-09-01",
      "price": 0.008,
      "name": "Alchemy Resources Limited",
-     "last_seen": "2026-09-01"
-    },
-    "AL3": {
-     "first_seen": "2026-09-01",
-     "price": 0.15000001,
-     "name": "AML3D Limited",
      "last_seen": "2026-09-01"
     },
     "WSI": {
@@ -1677,6 +1665,12 @@
      "price": 0.095,
      "name": "Merino & Co. Limited",
      "last_seen": "2026-09-11"
+    },
+    "CRB": {
+     "first_seen": "2026-09-15",
+     "price": 0.011,
+     "name": "Carbine Resources Limited",
+     "last_seen": "2026-09-15"
     }
    },
    "graduates": [
@@ -1869,9 +1863,29 @@
      "vivek_price": 0.13,
      "grade": "B+",
      "days": 1
+    },
+    {
+     "symbol": "BAS",
+     "name": "Bass Oil Limited",
+     "first_seen": "2026-08-17",
+     "spec_price": 0.053,
+     "graduated": "2026-09-14",
+     "vivek_price": 0.07,
+     "grade": "A+",
+     "days": 28
+    },
+    {
+     "symbol": "AL3",
+     "name": "AML3D Limited",
+     "first_seen": "2026-09-01",
+     "spec_price": 0.15000001,
+     "graduated": "2026-09-14",
+     "vivek_price": 0.13500001,
+     "grade": "A+",
+     "days": 13
     }
    ],
-   "graduated_total": 19
+   "graduated_total": 21
   },
   "nasdaq": {
    "seen": {},
