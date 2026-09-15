@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-15T04:43:55+00:00",
+ "generated_at": "2026-09-15T13:26:56+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.34231853,
+   "last_mark": 1.3421452,
    "mark_date": "2026-09-15",
    "fees": 0.775953,
    "mfe_r": 0.0872,
@@ -47,7 +47,7 @@
    "stop": 2.23794598,
    "last_fill": 2.48609376,
    "opened": "2026-09-04",
-   "last_mark": 2.44309998,
+   "last_mark": 2.3993001,
    "mark_date": "2026-09-15",
    "fees": 2.603559,
    "mfe_r": 1.8111,
@@ -76,7 +76,7 @@
    "fees": 1.072303,
    "mfe_r": 0.5362,
    "mae_r": -0.8323,
-   "unpriced_runs": 7
+   "unpriced_runs": 8
   }
  ],
  "closed": [
@@ -470,30 +470,8 @@
   "sizing_equity": 2340.32
  },
  "events": [],
- "skips": [
-  {
-   "as_of": "2026-09-15",
-   "market": "crypto",
-   "symbol": "XAUT",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1558.25,
-   "equity": 3656.76,
-   "system": 1
-  },
-  {
-   "as_of": "2026-09-15",
-   "market": "crypto",
-   "symbol": "PAXG",
-   "action": "entry",
-   "reason": "cash",
-   "want_notional": 1519.77,
-   "equity": 3656.76,
-   "system": 1
-  }
- ],
+ "skips": [],
  "skip_counts": {
-  "cash": 2,
-  "total": 2
+  "total": 0
  }
 }
