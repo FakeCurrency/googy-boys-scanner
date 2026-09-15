@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-15T19:39:47+10:00",
+  "generated_at": "2026-09-15T20:07:20+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "VKA",
+      "name": "Viking Mines Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.009,
+      "turnover_avg20": 57180,
+      "turnover_today": 352904,
+      "rvol": 6.5,
+      "adv_usd": 57180.03,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "BRK",
       "name": "Brookside Energy Limited",
