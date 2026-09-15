@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-15T16:34:50+10:00",
+  "generated_at": "2026-09-15T19:39:47+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "BRK",
+      "name": "Brookside Energy Limited",
+      "sector": "Energy",
+      "dir": "SHORT",
+      "price": 0.41999999,
+      "turnover_avg20": 57115,
+      "turnover_today": 178020,
+      "rvol": 3.0,
+      "adv_usd": 57115.92,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "TOT",
       "name": "360 Capital Reit",
