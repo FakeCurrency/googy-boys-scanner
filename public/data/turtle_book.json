@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "all",
- "generated_at": "2026-09-15T22:52:10+00:00",
+ "generated_at": "2026-09-15T23:39:12+00:00",
  "equity_start": 20000.0,
  "open": [
   {
@@ -135,7 +135,7 @@
    "stop": 117.39817014,
    "last_fill": 109.58999634,
    "opened": "2026-08-21",
-   "last_mark": 111.05000305,
+   "last_mark": 110.06999969,
    "mark_date": "2026-09-15",
    "fees": 2.105294,
    "mfe_r": 0.2818,
@@ -158,7 +158,7 @@
    "stop": 120.56743054,
    "last_fill": 111.70999908,
    "opened": "2026-08-21",
-   "last_mark": 106.68000031,
+   "last_mark": 106.91999817,
    "mark_date": "2026-09-15",
    "fees": 1.891801,
    "mfe_r": 0.8513,
@@ -181,10 +181,10 @@
    "stop": 356.42168281,
    "last_fill": 316.98999023,
    "opened": "2026-08-21",
-   "last_mark": 286.33499146,
+   "last_mark": 282.1499939,
    "mark_date": "2026-09-15",
    "fees": 1.205845,
-   "mfe_r": 0.8042,
+   "mfe_r": 0.9439,
    "mae_r": -0.346,
    "unpriced_runs": 0
   },
@@ -205,7 +205,7 @@
    "stop": 20.90040822,
    "last_fill": 17.55319645,
    "opened": "2026-08-21",
-   "last_mark": 16.45999908,
+   "last_mark": 16.04000092,
    "mark_date": "2026-09-15",
    "fees": 1.569816,
    "mfe_r": 0.7089,
@@ -228,10 +228,10 @@
    "stop": 14.55737467,
    "last_fill": 10.11999989,
    "opened": "2026-09-01",
-   "last_mark": 8.54500008,
+   "last_mark": 8.39999962,
    "mark_date": "2026-09-15",
    "fees": 0.324298,
-   "mfe_r": 0.3606,
+   "mfe_r": 0.4079,
    "mae_r": -0.4056,
    "unpriced_runs": 0
   },
@@ -1320,6 +1320,48 @@
   {
    "as_of": "2026-09-15",
    "market": "nasdaq",
+   "symbol": "STX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "OKTA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 990.5,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "FTNT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1172.97,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "ZS",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 959.79,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
    "symbol": "AXON",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1335,7 +1377,7 @@
    "symbol": "FFIV",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1508.99,
+   "want_notional": 1492.17,
    "equity": 4739.89,
    "system": 1
   },
@@ -1366,6 +1408,122 @@
   {
    "as_of": "2026-09-15",
    "market": "nasdaq",
+   "symbol": "AEIS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CAI",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 998.54,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CYTK",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CGNX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "DFTX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CENX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "BWIN",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1168.18,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "OLED",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "VSEC",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CECO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
    "symbol": "IMVT",
    "action": "entry",
    "reason": "close_corr_cap",
@@ -1378,7 +1536,65 @@
   {
    "as_of": "2026-09-15",
    "market": "nasdaq",
+   "symbol": "ADPT",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1057.47,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "SBRA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CBRL",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "EYE",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
    "symbol": "LI",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "KALU",
    "action": "entry",
    "reason": "close_corr_cap",
    "units_on_book": 6,
@@ -1414,10 +1630,40 @@
   {
    "as_of": "2026-09-15",
    "market": "nasdaq",
+   "symbol": "ZD",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1689.6,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
    "symbol": "FA",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1129.01,
+   "want_notional": 1105.42,
+   "equity": 4739.89,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "SDGR",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1001.74,
+   "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "FTRE",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 926.45,
    "equity": 4739.89,
    "system": 1
   },
@@ -1427,9 +1673,31 @@
    "symbol": "GTM",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 841.39,
+   "want_notional": 836.86,
    "equity": 4739.89,
    "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CABA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CRVL",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 1549.78,
+   "equity": 4739.89,
+   "system": 2
   },
   {
    "as_of": "2026-09-15",
@@ -1437,9 +1705,33 @@
    "symbol": "LILAK",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1582.95,
+   "want_notional": 1570.81,
    "equity": 4739.89,
    "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "OLMA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "AVO",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
   },
   {
    "as_of": "2026-09-15",
@@ -1468,10 +1760,34 @@
   {
    "as_of": "2026-09-15",
    "market": "nasdaq",
+   "symbol": "KYTX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "IQMX",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
    "symbol": "CTKB",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1072.74,
+   "want_notional": 1061.89,
    "equity": 4739.89,
    "system": 2
   },
@@ -1485,7 +1801,19 @@
    "cap": 6,
    "bucket": "unclassified",
    "side": "short",
-   "system": 1
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "ENTA",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
   },
   {
    "as_of": "2026-09-15",
@@ -1493,8 +1821,56 @@
    "symbol": "TLX",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 1279.12,
+   "want_notional": 1258.09,
    "equity": 4739.89,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "BCYC",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "CCD",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "HBANP",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-15",
+   "market": "nasdaq",
+   "symbol": "FLWS",
+   "action": "entry",
+   "reason": "close_corr_cap",
+   "units_on_book": 6,
+   "cap": 6,
+   "bucket": "unclassified",
+   "side": "short",
    "system": 2
   },
   {
@@ -1552,9 +1928,9 @@
  ],
  "started": "2026-08-21",
  "skip_counts": {
-  "cash": 21,
-  "close_corr_cap": 14,
-  "total": 35
+  "cash": 31,
+  "close_corr_cap": 37,
+  "total": 68
  },
  "summary": {
   "started": "2026-08-21",
