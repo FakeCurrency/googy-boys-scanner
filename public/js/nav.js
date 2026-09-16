@@ -6,7 +6,8 @@
  *
  *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ ·
  *     ★ MY NAMES · ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
- *     AI BOT / SYSTEM / HOW IT WORKS — see the MORE list below; TRACK and
+ *     SYSTEM / HOW IT WORKS — see the MORE list below; AI BOT was REMOVED
+ *     2026-09-17 with its whole scalp-era bot; TRACK and
  *     DEBUG are retired; the TURTLE tab was REMOVED 2026-09-17, owner: "I
  *     don't use it and never have").
  *     (The LISTS below are the truth, this is a map, so re-check it here
@@ -37,7 +38,6 @@
   );
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
-    { href: "bot.html",     label: "AI BOT",       key: "bot", bot: true, tab: "🤖" },
     { href: "system.html",  label: "SYSTEM",       key: "system", tab: "⚙️" },
     { href: "about.html",   label: "HOW IT WORKS", key: "about", tab: "❓" },
   ];
@@ -87,8 +87,8 @@
     if (mount) {
       const pill = (it) => {
         const label = it.key === "index" ? "VIVEK 5.0" : it.label;
-        return `<a class="howto-link${it.bot ? " bot-nav-link" : ""}${it.key === here ? " is-here" : ""}" href="${it.href}">` +
-          `${it.bot ? '<span class="bot-nav-dot"></span>' : ""}${label}` +
+        return `<a class="howto-link${it.key === here ? " is-here" : ""}" href="${it.href}">` +
+          `${label}` +
           `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
       };
       const moreActive = more.some((it) => it.key === here);
@@ -102,7 +102,7 @@
         `<span class="nav-more">` +
           `<button class="howto-link nav-more-btn${moreActive ? " is-here" : ""}" type="button" aria-haspopup="true" aria-expanded="false">MORE ▾</button>` +
           `<span class="nav-more-menu" hidden>` +
-            more.map((it) => `<a class="nav-more-item${it.key === here ? " is-here" : ""}" href="${it.href}">${it.bot ? '<span class="bot-nav-dot"></span> ' : ""}${it.label}</a>`).join("") +
+            more.map((it) => `<a class="nav-more-item${it.key === here ? " is-here" : ""}" href="${it.href}">${it.label}</a>`).join("") +
           `</span>` +
         `</span>`;
 
@@ -146,7 +146,7 @@
       bar.setAttribute("aria-label", "Primary");
       const sheetActive = SHEET.some((it) => it.key === here);
       // #30: a 6th MORE tab opens a bottom sheet with every overflow
-      // destination — the only way to reach SPECS/ALERTS/NEWS/AI BOT/SYSTEM/
+      // destination — the only way to reach SPECS/ALERTS/NEWS/SYSTEM/
       // HOW IT WORKS on a phone (the desktop pill row is hidden there).
       const moreTab =
         `<button class="site-tab site-tab-more${sheetActive ? " is-here" : ""}" type="button" aria-haspopup="dialog" aria-expanded="false">` +
@@ -227,7 +227,7 @@
           `<span class="more-sheet-go" aria-hidden="true">›</span></button>` +
           SHEET.map((it) =>
             `<a class="more-sheet-row${it.key === here ? " is-here" : ""}" href="${it.href}">` +
-            `<span class="more-sheet-ico" aria-hidden="true">${it.bot ? '<span class="bot-nav-dot"></span>' : it.tab || "•"}</span>` +
+            `<span class="more-sheet-ico" aria-hidden="true">${it.tab || "•"}</span>` +
             `<span class="more-sheet-lbl">${it.label.replace(" ⚡", "")}` +
             `${it.key === "alerts" && paCount() ? ` <span class="nav-count">${paCount()}</span>` : ""}</span>` +
             `<span class="more-sheet-go" aria-hidden="true">›</span></a>`).join("") +

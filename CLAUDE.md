@@ -48,7 +48,7 @@ agreements get banners everywhere, a permanent ALERTS page log
 | Backend API | Cloudflare Pages Functions (`functions/api/*.js`) — CF **Workers runtime, NOT Node** (no `require`, no fs; env via `context.env`) |
 | Scheduler | GitHub Actions cron (`.github/workflows/`) |
 | Data source | `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history. Production-grade provider (EODHD/Norgate) is an open owner decision |
-| Broker | **Bybit** USDT perps: client/bracket/reconcile/kill-switch BUILT + tested, paper/testnet only, live double-gated. IBKR for ASX later |
+| Broker | PAPER ONLY. The scalp-era Bybit execution bot (bracket/reconcile/run) and the AI BOT page were REMOVED 2026-09-17 (see AI BOT below). `bybit_client.py`/`alpaca_client.py` survive only as the kill switch's flatten path |
 
 ---
 
@@ -75,8 +75,11 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        sector relative strength, basing counts. Also REPORT-ONLY.
   broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
                        across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
-                       bybit_client/bybit_bracket/bybit_reconcile, kill_switch,
-                       circuit_breaker, pre_trade_check, ...
+                       kill_switch (+ bybit_client/alpaca_client for its
+                       flatten path), alert_router/alert_dispatch, vivek_guard.
+                       The scalp-era risk stack (risk_manager, circuit_breaker,
+                       pre_trade_check, bybit_run/bracket/reconcile, ...) was
+                       REMOVED 2026-09-17 with the AI BOT page
 phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
@@ -2206,6 +2209,36 @@ meant** — the failure mode that survives review because the value looks fine.
    probe — which deliberately goes SILENT on a failed latest run, a real
    trade-off on a CRITICAL alarm) needs the owner's sign-off.
 
+## AI BOT — REMOVED ENTIRELY (2026-09-17)
+
+Owner: *"I want to rip that off the site and all the history it carries. It
+means nothing to me and I don't use it. Rip the guts out of it too."* The
+`bot.html` page was the SCALP-ERA execution-bot console (status feed frozen at
+25 June 2026, futures/CFD markets, the browser risk engine) and none of it
+touched the paper book that is the real track record. Gone: `public/bot.html`
++ `js/bot.js` + `css/bot.css` + `js/risk_manager.js` + `data/bot_status.json`;
+the nav's AI BOT entry and its pulsing dot (`nav.js`, `styles.css`); and the
+guts — `scanner/broker/bybit_run.py` + `bybit_bracket.py` + `bybit_reconcile.py`
+(the Bybit execution path), the scalp risk stack (`risk_manager.py`,
+`circuit_breaker.py`, `pre_trade_check.py`, `scaling_advisor.py`,
+`performance_report.py`) and its analytics (`alert_digest`, `anomaly`,
+`attribution`, `expectancy`, `fill_analysis`, `live_vs_backtest`,
+`event_calendar`, `journal_utils`), `scripts/health_check.py`, and their tests
+(`test_circuit_breaker/pre_trade_check/risk_manager/sizing.py`, the
+bracket/reconcile half of `test_order_path.py` — its three kill-switch tests
+moved to `tests/test_kill_switch_flatten.py` — the expectancy/health_check
+halves of `test_phase7.py`, `test/risk_manager.test.js`,
+`test/risk_defaults.test.js`, and the #85/#87 suites of `statekeep.test.js`).
+**What deliberately STAYS**: `kill_switch.py` + `kill_switch.yml` (the live
+loss guard on the paper book — `trade_pnl` moved into it from risk_manager,
+identical arithmetic), `bybit_client.py`/`alpaca_client.py` (its flatten path;
+cutting that is a kill-switch decision, not a page removal), `bot_rules.json`
+(status.js + journal.js read it), the legacy `journal.py`/`scalp_journal.py`
+(close_position.yml's swing/scalp path + `_session_day`), and every `SCALP_*`
+/ `BYBIT_*` config constant (inert without readers; not worth a config diff).
+The Tier 1/2 write-ups above that mention risk_manager, pre_trade_check,
+bot.js or risk_manager.js are HISTORY of code that no longer exists.
+
 ## TURTLE — REMOVED ENTIRELY (2026-09-17)
 
 Owner: *"rip OUT the entire TURTLE section/tab and all data associated with
@@ -2284,7 +2317,7 @@ The facts a later session must not re-derive:
 3. **Config first:** any new threshold/constant goes in `scanner/config.py`
    (or `phasemap/config.py`) before use. Bot rule constants are published to
    `public/data/bot_rules.json` each scan — the dashboard reads them; never
-   hardcode the numbers twice (bot.js warns on drift).
+   hardcode the numbers twice (status.js + journal.js read it).
 4. **PhaseMap spec is law** (see above). Schema note: published
    `latest.json` is SLIM (narrations in `narrations.json` sidecar); the
    dated snapshot keeps the full spec schema.

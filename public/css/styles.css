@@ -333,8 +333,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   transition: color .15s;
 }
 .howto-link:hover { color: var(--green); }
-.howto-link.bot-nav-link { color: var(--blue); }
-.howto-link.bot-nav-link:hover { color: var(--blue); opacity: 0.8; }
 
 /* Dashboard nav links as quiet mono tags, set apart from the market switch
    by a gap + hairline divider so the two groups read as distinct. */
@@ -352,18 +350,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: var(--muted); font: 600 10px/1 var(--mono); letter-spacing: 0.08em; transition: all .15s;
 }
 .nav-pills .howto-link:hover { color: var(--green); border-color: rgba(47,208,127,0.4); background: var(--green-soft); }
-.nav-pills .howto-link.bot-nav-link {
-  background: var(--blue-soft); border-color: rgba(77,163,255,0.35); color: var(--blue);
-}
-.bot-nav-dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--blue); vertical-align: middle; margin-right: 4px; flex-shrink: 0;
-  animation: pulse-bot-dot 2.4s infinite;
-}
-@keyframes pulse-bot-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
 
 .reload-btn {
   appearance: none; cursor: pointer;
@@ -1573,9 +1559,6 @@ body.debug-mode .debug-panel {
   color: var(--green); border-color: rgba(48,209,88,0.45); background: var(--green-soft);
 }
 .nav-pills .howto-link.nav-minor { font-size: 10.5px; font-weight: 600; padding: 6px 10px; }
-.nav-pills .howto-link.bot-nav-link {
-  background: var(--blue-soft); border-color: rgba(10,132,255,0.4); color: #6cb5ff;
-}
 .pm-topnav .howto-link { font-family: var(--sans); }
 .howto-link { font-family: var(--sans); letter-spacing: 0.02em; }
 
@@ -1665,8 +1648,6 @@ body { letter-spacing: -0.012em; }
 .howto-link.is-here {
   background: var(--blue); border-color: var(--blue); color: #fff;
 }
-.nav-pills .howto-link.bot-nav-link.is-here { color: #fff; }
-.nav-pills .howto-link.bot-nav-link.is-here .bot-nav-dot { background: #fff; }
 
 /* MORE ▾ dropdown */
 .nav-more { position: relative; display: inline-flex; }

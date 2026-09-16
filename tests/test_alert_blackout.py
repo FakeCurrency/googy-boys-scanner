@@ -33,12 +33,11 @@ pytestmark = pytest.mark.risk
 
 @pytest.fixture
 def state(tmp_path, monkeypatch):
-    """Point every writer of journal/alert_state.json at one temp file."""
+    """Point the router at a temp alert_state.json. (The circuit-breaker
+    co-writer and the orphan-position sweep went with the scalp bot, 2026-09-17.)"""
     from scanner.broker import alert_router as ar
-    from scanner.broker import circuit_breaker as cb
     f = tmp_path / "alert_state.json"
     monkeypatch.setattr(ar, "STATE_FILE", f)
-    monkeypatch.setattr(cb, "_STATE_FILE", f)
     return f
 
 
@@ -145,35 +144,6 @@ class TestFallbackTablesTrackConfig:
 
 # ── #12: one file, one writer ─────────────────────────────────────────────────
 
-class TestOneWriterForAlertState:
-    def test_saving_breaker_state_preserves_the_routers_keys(self, state):
-        from scanner.broker import alert_router as ar
-        from scanner.broker import circuit_breaker as cb
-        ar.mark_sent("health")
-        ar.acknowledge("anomaly", 1.0)
-        cb._save_cb_state({"drawdown": True})
-        saved = json.loads(state.read_text())
-        assert saved["cb_state"] == {"drawdown": True}
-        assert "health" in saved["last_sent"]          # not reverted
-        assert "anomaly" in saved["acknowledged"]      # not reverted
-
-    def test_router_writes_preserve_the_breakers_key(self, state):
-        from scanner.broker import alert_router as ar
-        from scanner.broker import circuit_breaker as cb
-        cb._save_cb_state({"anomaly": True})
-        ar.mark_sent("health")
-        saved = json.loads(state.read_text())
-        assert saved["cb_state"] == {"anomaly": True}
-        assert "health" in saved["last_sent"]
-
-    def test_breaker_reads_back_what_it_wrote_through_the_router(self, state):
-        from scanner.broker import circuit_breaker as cb
-        cb._save_cb_state({"consecutive_losses": True})
-        assert cb._load_cb_state() == {"consecutive_losses": True}
-
-
-# ── #8: staleness is measured on files the pipeline cannot re-stamp ───────────
-
 class TestBookStalenessReadsCanonicalFiles:
     NOW = dt.datetime(2026, 7, 20, 12, 0, tzinfo=dt.timezone.utc)
 
@@ -234,59 +204,6 @@ class TestBookStalenessReadsCanonicalFiles:
 
 
 # ── #10: orphans are routed, and deduped on the set rather than a clock ────────
-
-class TestOrphanAlerts:
-    def _pos(self, sym):
-        return {"symbol": sym, "side": "Buy", "size": "1",
-                "avgPrice": "100", "unrealisedPnl": "0"}
-
-    @pytest.fixture
-    def sent(self, monkeypatch):
-        out = []
-        monkeypatch.setattr("scanner.broker.alert_router.smart_send",
-                            lambda *a, **k: out.append(a))
-        return out
-
-    def test_it_goes_through_the_router_now(self, sent):
-        from scanner.broker import bybit_reconcile as br
-        j = {}
-        br._sweep_orphans(j, [self._pos("BTCUSDT")], set(), "now")
-        assert len(sent) == 1 and sent[0][0] == "orphan_position"
-
-    def test_the_same_orphan_does_not_re_fire_every_reconcile(self, sent):
-        from scanner.broker import bybit_reconcile as br
-        j = {}
-        for _ in range(5):
-            br._sweep_orphans(j, [self._pos("BTCUSDT")], set(), "now")
-        assert len(sent) == 1
-
-    def test_a_new_orphan_alongside_an_old_one_is_still_news(self, sent):
-        """The reason the dedupe is a symbol set and not a time window: a window
-        long enough to stop this becoming wallpaper is long enough to swallow
-        the arrival that matters."""
-        from scanner.broker import bybit_reconcile as br
-        j = {}
-        br._sweep_orphans(j, [self._pos("BTCUSDT")], set(), "now")
-        br._sweep_orphans(j, [self._pos("BTCUSDT"), self._pos("ETHUSDT")],
-                          set(), "now")
-        assert len(sent) == 2
-
-    def test_clearing_them_makes_the_same_symbol_news_again(self, sent):
-        from scanner.broker import bybit_reconcile as br
-        j = {}
-        br._sweep_orphans(j, [self._pos("BTCUSDT")], set(), "now")
-        br._sweep_orphans(j, [], set(), "now")
-        br._sweep_orphans(j, [self._pos("BTCUSDT")], set(), "now")
-        assert len(sent) == 2
-
-    def test_a_known_symbol_is_not_an_orphan(self, sent):
-        from scanner.broker import bybit_reconcile as br
-        j = {}
-        br._sweep_orphans(j, [self._pos("BTCUSDT")], {"BTCUSDT"}, "now")
-        assert sent == [] and j["orphans"] == []
-
-
-# ── #11: a corrupt journal is not a silent fresh start ────────────────────────
 
 class TestCorruptJournalAlerts:
     def test_it_alerts_and_still_recovers(self, tmp_path, monkeypatch):

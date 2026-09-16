@@ -13,21 +13,13 @@
  *        the modal is open must invalidate it — a stale preview is a worse bug
  *        than a slow one.
  *
- *   #85  `getCurrentRiskState()` walked the open book SIX times per read. Now
- *        twice. Common-subexpression elimination, deliberately NOT a cache:
- *        nothing is held across calls, so nothing here can go stale, and the
- *        suite below pins both halves — same numbers, fewer walks, AND a price
- *        move visible on the very next read.
+ *   #85  (risk_manager.js — removed with the AI BOT page, 2026-09-17)
  *
  *   #86  `ensureActiveVisible()` read `scrollWidth` / `getBoundingClientRect()`
  *        synchronously from inside render, forcing a layout mid-render, twice
  *        per click. Now deferred to a frame and coalesced.
  *
- *   #87  `LOG = d.log || []` and `JOURNAL = d.journal || []` ran every 30 s and
- *        silently discarded everything this browser had put there — including
- *        the kill-switch confirmation, on the page whose whole job is to say
- *        what the bot is currently allowed to do. Feed and session are now held
- *        APART and composed.
+ *   #87  (bot.js — removed with the AI BOT page, 2026-09-17)
  *
  *   #88  The `.catch()` sat AFTER `.then(mount)`, so a renderer that threw was
  *        handled by the branch whose job is "the JSON isn't there yet" — and
@@ -59,7 +51,6 @@ const codeOnly = (src) =>
 
 const JOURNAL_SRC = codeOnly(fs.readFileSync(P("journal.js"), "utf8"));
 const APP_SRC = codeOnly(fs.readFileSync(P("app.js"), "utf8"));
-const BOT_SRC = codeOnly(fs.readFileSync(P("bot.js"), "utf8"));
 const HORIZON_SRC = codeOnly(fs.readFileSync(P("horizon.js"), "utf8"));
 const REGIME_SRC = codeOnly(fs.readFileSync(P("regime.js"), "utf8"));
 
@@ -248,180 +239,6 @@ test("updateClosePreview goes through the memo and no longer reads the store its
 });
 
 // ===========================================================================
-suite("#85 · risk_manager.js — one book walk, not six");
-// ===========================================================================
-const RiskManager = require(path.resolve(__dirname, "../public/js/risk_manager.js"));
-
-function makeStorage() {
-  let d = {};
-  return {
-    getItem: (k) => (Object.prototype.hasOwnProperty.call(d, k) ? d[k] : null),
-    setItem: (k, v) => { d[k] = String(v); },
-    removeItem: (k) => { delete d[k]; },
-    clear: () => { d = {}; },
-  };
-}
-const BOOK = [
-  { symbol: "AAA", direction: "long", entry: 100, stop: 90, target: 130, units: 50, current: 105 },
-  { symbol: "BBB", direction: "long", entry: 50, stop: 45, target: 70, units: 100, current: 48, tp1: 60 },
-  { symbol: "CCC", direction: "short", entry: 20, stop: 23, target: 12, units: 300, current: 19 },
-  // Already de-risked: the branch the OLD code short-circuited on, so it is the
-  // one place where "once or twice per position" became "once".
-  { symbol: "DDD", direction: "long", entry: 10, stop: 10, target: 15, units: 200, current: 12,
-    tp1: 11, tp1_hit: true, stop_at_breakeven: true },
-];
-function mk() {
-  const r = new RiskManager({ equity: 100000, verbose: false, storage: makeStorage() });
-  r.loadPositions(BOOK.map((p) => Object.assign({}, p)));
-  return r;
-}
-// Count calls to a method without changing what it does. An own property
-// shadows the prototype one; deleting it restores the class method exactly.
-function countCalls(obj, names, fn) {
-  const hits = {};
-  names.forEach((n) => {
-    hits[n] = 0;
-    const real = Object.getPrototypeOf(obj)[n];
-    obj[n] = function (...a) { hits[n]++; return real.apply(this, a); };
-  });
-  try { fn(); } finally { names.forEach((n) => { delete obj[n]; }); }
-  return hits;
-}
-
-test("the state getter's four book numbers are BIT-identical to the getters they replaced", () => {
-  // Not "close enough". A risk figure that drifts in the last cent is a support
-  // ticket nobody can reproduce, and the whole licence for this change was that
-  // it substitutes one expression for an identical one.
-  const r = mk();
-  const s = r.getCurrentRiskState();
-  assert.strictEqual(s.openRiskUsd, r.getOpenRiskUsd(), "openRiskUsd drifted from getOpenRiskUsd()");
-  assert.strictEqual(s.positionCount, r.positionCount(), "positionCount drifted from positionCount()");
-  assert.strictEqual(s.openRiskPct, r.getOpenRiskPct(), "openRiskPct drifted from getOpenRiskPct()");
-  assert.strictEqual(s.portfolioCapUsd, r.getBookHealth().portfolioCapUsd, "portfolioCapUsd drifted");
-  assert.ok(s.openRiskUsd > 0, "the fixture book carries no open risk — this test would pass on zeros");
-});
-
-test("getBookHealth's own sum is bit-identical to the reduce it absorbed", () => {
-  const r = mk();
-  assert.strictEqual(r.getBookHealth().openRiskUsd, r.getOpenRiskUsd());
-});
-
-test("one read = one health walk, one getPositionOpenRisk per position, zero re-walks", () => {
-  const r = mk();
-  const n = r.positionCount();
-  const hits = countCalls(r, ["getBookHealth", "getOpenPositions", "getPositionOpenRisk", "getOpenRiskUsd", "getOpenRiskPct"],
-    () => r.getCurrentRiskState());
-  assert.strictEqual(hits.getBookHealth, 1, `getBookHealth ran ${hits.getBookHealth}x per state read`);
-  assert.strictEqual(hits.getOpenPositions, 1, `the book was CLONED ${hits.getOpenPositions}x per state read`);
-  assert.strictEqual(hits.getPositionOpenRisk, n,
-    `getPositionOpenRisk ran ${hits.getPositionOpenRisk}x for ${n} positions — it must be exactly once each`);
-  assert.strictEqual(hits.getOpenRiskUsd, 0, "the book is still being re-walked by getOpenRiskUsd()");
-  assert.strictEqual(hits.getOpenRiskPct, 0, "the book is still being re-walked by getOpenRiskPct()");
-});
-
-test("hoisting the open risk out of the break-even test made the calls FEWER, never more", () => {
-  // The old line was `atBE || this.getPositionOpenRisk(p) <= 0`, which
-  // short-circuited — a break-even position skipped its second call. So the
-  // claim "strictly fewer in every case" has to hold on a book that contains
-  // one, which BOOK does.
-  const r = mk();
-  const n = r.positionCount();
-  const atBE = r.getOpenPositions().filter((p) => p.stopAtBreakeven).length;
-  assert.ok(atBE > 0, "the fixture no longer contains a break-even position — this test proves nothing");
-  const hits = countCalls(r, ["getPositionOpenRisk"], () => r.getBookHealth());
-  assert.strictEqual(hits.getPositionOpenRisk, n);
-});
-
-test("break-even accounting is unchanged — atBE OR zero open risk still means risk-free", () => {
-  const r = mk();
-  const h = r.getBookHealth();
-  let free = 0, on = 0;
-  r.getOpenPositions().forEach((p) => {
-    if (p.stopAtBreakeven || r.getPositionOpenRisk(p) <= 0) free++; else on++;
-  });
-  assert.strictEqual(h.riskFreeCount, free, "riskFreeCount moved");
-  assert.strictEqual(h.riskOnCount, on, "riskOnCount moved");
-  assert.strictEqual(h.riskFreeCount + h.riskOnCount, h.positionCount,
-    "every position must land in exactly one bucket");
-});
-
-test("it is common-subexpression elimination, NOT a cache — a price move lands on the very next read", () => {
-  // The one thing a memo here would have broken. `onPrice()` only `_emit()`s
-  // when TP1 actually fires, so an ordinary tick moves the number and announces
-  // nothing a memo could have keyed on.
-  const r = mk();
-  const before = r.getCurrentRiskState();
-  r.onPrice("BBB", 60);                                   // BBB's tp1 — stop goes to break-even
-  const after = r.getCurrentRiskState();
-  assert.ok(after.openRiskUsd < before.openRiskUsd,
-    `open risk did not fall after TP1 (${before.openRiskUsd} → ${after.openRiskUsd}) — a value is being held across calls`);
-  assert.strictEqual(after.openRiskUsd, r.getOpenRiskUsd(), "the fresh walk and the state read disagree");
-
-  const un = r.getBookHealth().unrealizedUsd;
-  r.onPrice("AAA", 140);                                  // no TP1 on this one: pure mark move
-  assert.notStrictEqual(r.getBookHealth().unrealizedUsd, un,
-    "an ordinary tick did not reach the next read — this has become a cache");
-});
-
-test("getPortfolioStance does not re-walk the book when it is handed one", () => {
-  const r = mk();
-  const health = Object.getPrototypeOf(r).getBookHealth.call(r);   // uncounted
-  let hits = countCalls(r, ["getBookHealth"], () => r.getPortfolioStance(health));
-  assert.strictEqual(hits.getBookHealth, 0, "the health object passed in was ignored and recomputed");
-  hits = countCalls(r, ["getBookHealth"], () => r.getPortfolioStance());
-  assert.strictEqual(hits.getBookHealth, 1, "called bare, it must still compute its own health");
-});
-
-test("the state getter reaches the stance through the SAME health it already computed", () => {
-  const r = mk();
-  const s = r.getCurrentRiskState();
-  const stance = r.getPortfolioStance(r.getBookHealth());
-  assert.strictEqual(s.bookHealthScore, stance.healthScore);
-  assert.strictEqual(s.bookPosture, stance.stance);
-  assert.strictEqual(s.bookEffectiveCapUsd, stance.effectiveCapUsd);
-});
-
-test("the comment above getCurrentRiskState names methods that exist", () => {
-  // It named `updatePrice`/`updatePrices` for months. They have never existed;
-  // the price entry points are onPrice/onPrices. A comment explaining WHY a
-  // cache would be wrong is load-bearing — it is the thing standing between the
-  // next reader and re-introducing one — so it has to survive a grep.
-  const raw = fs.readFileSync(P("risk_manager.js"), "utf8");
-  // Anchor on the DECLARATION, not on the first mention. `getCurrentRiskState()`
-  // appears 10x in this file and the first is a doc listing 977 lines above the
-  // method — slicing back from that one reads a comment about something else
-  // entirely and the assertions below pass on a preamble they never saw. The
-  // declaration is the one occurrence at the start of a line.
-  const at = raw.search(/^\s*getCurrentRiskState\(\)\s*\{/m);
-  assert.ok(at > 0, "getCurrentRiskState() is no longer declared as a method");
-  const preamble = raw.slice(Math.max(0, at - 2000), at);
-
-  // Every `name()` the comment cites in backticks has to be something that
-  // exists. This is the general form of the bug — the two named regexes below
-  // only catch the one instance of it we already know about.
-  const cited = [...new Set((preamble.match(/`(\w+)\(\)`/g) || [])
-    .map((m) => m.replace(/[`()]/g, "")))];
-  assert.ok(cited.length >= 4, `only ${cited.length} methods cited — has the comment been gutted?`);
-  const local = new Set(["loadData", "startClocks"]);   // bot.js's, named as callers
-  cited.forEach((name) => {
-    if (local.has(name)) return;
-    assert.strictEqual(typeof RiskManager.prototype[name], "function",
-      `the comment above getCurrentRiskState cites \`${name}()\`, which is not a method on RiskManager`);
-  });
-
-  assert.ok(!/updatePrices?\b/.test(preamble),
-    "the comment still cites updatePrice/updatePrices — the real entry points are onPrice/onPrices");
-  assert.ok(/onPrices?\(/.test(preamble), "the comment no longer names the price entry points at all");
-
-  // The sentence that says this is NOT a cache is the whole point of the
-  // comment: the next reader looking at three getters collapsed into one walk
-  // will reach for a memo, and this is what stands in the way. A test above
-  // proves the CODE is not a cache; this one proves the REASON survived.
-  assert.ok(/NOT a cache/.test(preamble),
-    "the comment no longer says this is CSE and not a cache — that sentence is what stops the next memo");
-});
-
-// ===========================================================================
 suite("#86 · app.js — the layout read is deferred and coalesced");
 // ===========================================================================
 function mkVisSandbox() {
@@ -478,131 +295,6 @@ test("the render path still calls the deferred entry point, not the reader", () 
   const callers = APP_SRC.split("ensureActiveVisible").length - 1;
   assert.ok(callers >= 3,
     `ensureActiveVisible has ${callers - 1} call sites left; the render path stopped calling it`);
-});
-
-// ===========================================================================
-suite("#87 · bot.js — this session's rows survive the 30-second refresh");
-// ===========================================================================
-function mkLogSandbox() {
-  return build("bot.js #87", [
-    "var FEED_LOG = [], LOCAL_LOG = [], LOG = [];",
-    "var FEED_JOURNAL = [], LOCAL_JOURNAL = [], JOURNAL = [];",
-    "var renders = 0, lastRender = null;",
-    "function renderLog(log) { renders++; lastRender = log; }",
-    "var LOCAL_LOG_MAX = " + pullFrom(BOT_SRC, "LOCAL_LOG_MAX", "bot.js") + ";",
-    fnSrc(BOT_SRC, "_ms", "bot.js"),
-    fnSrc(BOT_SRC, "composeLog", "bot.js"),
-    fnSrc(BOT_SRC, "prependLog", "bot.js"),
-    fnSrc(BOT_SRC, "composeJournal", "bot.js"),
-  ], `return {
-    _ms: _ms, composeLog: composeLog, composeJournal: composeJournal, prependLog: prependLog,
-    MAX: LOCAL_LOG_MAX,
-    log: function () { return LOG; },
-    journal: function () { return JOURNAL; },
-    localLog: function () { return LOCAL_LOG; },
-    renders: function () { return renders; },
-    lastRender: function () { return lastRender; },
-    localJournalUnshift: function (r) { LOCAL_JOURNAL.unshift(r); },
-    // Models loadData()'s two assignments. The STATIC tests below pin that
-    // loadData really does assign the FEED_ halves and nothing else, so the two
-    // together cover the real path without this file re-typing loadData.
-    feedRefresh: function (d) {
-      FEED_JOURNAL = d.journal || []; composeJournal();
-      FEED_LOG = d.log || []; composeLog();
-    },
-  };`);
-}
-const T = (h) => `2026-07-28T0${h}:00:00.000Z`;
-
-test("a feed refresh does not discard what happened in THIS browser", () => {
-  const s = mkLogSandbox();
-  s.prependLog({ ts: T(1), type: "kill", msg: "KILL SWITCH (manual)" });
-  s.prependLog({ ts: T(2), type: "system", msg: "Bot paused" });
-  s.feedRefresh({ log: [{ ts: T(3), type: "signal", msg: "from the scan" }] });
-  const msgs = s.log().map((e) => e.msg);
-  assert.ok(msgs.includes("KILL SWITCH (manual)"),
-    "the kill-switch confirmation vanished on the next 30s refresh — the exact failure #87 exists to stop");
-  assert.ok(msgs.includes("Bot paused"));
-  assert.ok(msgs.includes("from the scan"), "the feed's own rows were dropped");
-  assert.strictEqual(s.log().length, 3);
-});
-
-test("the merge is newest-first, so a fresh feed line can outrank an older local one", () => {
-  const s = mkLogSandbox();
-  s.prependLog({ ts: T(1), msg: "local-old" });
-  s.feedRefresh({ log: [{ ts: T(5), msg: "feed-new" }] });
-  assert.deepStrictEqual(s.log().map((e) => e.msg), ["feed-new", "local-old"]);
-});
-
-test("undated rows sort to the BACK, never the front", () => {
-  // TOP100 #69 made the opposite mistake with `or ""` on exit dates and the
-  // rows we knew least about ended up leading the list.
-  const s = mkLogSandbox();
-  assert.strictEqual(s._ms(""), 0);
-  assert.strictEqual(s._ms(null), 0);
-  assert.strictEqual(s._ms(undefined), 0);
-  assert.strictEqual(s._ms("not a date"), 0, "an unparseable date must be the sentinel, not NaN");
-  s.prependLog({ ts: "", msg: "undated" });
-  s.feedRefresh({ log: [{ ts: T(1), msg: "dated" }] });
-  assert.deepStrictEqual(s.log().map((e) => e.msg), ["dated", "undated"]);
-});
-
-test("a tie keeps the local row first — sort is stable and concat puts local first", () => {
-  const s = mkLogSandbox();
-  s.prependLog({ ts: T(4), msg: "mine" });
-  s.feedRefresh({ log: [{ ts: T(4), msg: "theirs" }] });
-  assert.deepStrictEqual(s.log().map((e) => e.msg), ["mine", "theirs"]);
-});
-
-test("prependLog caps the session's own lines and keeps the newest", () => {
-  const s = mkLogSandbox();
-  for (let i = 0; i < s.MAX + 50; i++) s.prependLog({ ts: T(1), msg: "line " + i });
-  assert.strictEqual(s.localLog().length, s.MAX, "the local log grows without bound");
-  assert.strictEqual(s.localLog()[0].msg, "line " + (s.MAX + 49), "the cap dropped the NEWEST line");
-});
-
-test("prependLog draws the MERGE, not just the local half", () => {
-  const s = mkLogSandbox();
-  s.feedRefresh({ log: [{ ts: T(1), msg: "feed" }] });
-  s.prependLog({ ts: T(2), msg: "local" });
-  assert.deepStrictEqual(s.lastRender().map((e) => e.msg), ["local", "feed"],
-    "a click-driven line blanked the feed's rows out of the panel until the next fetch");
-});
-
-test("a browser-closed trade survives the feed replacing the journal", () => {
-  const s = mkLogSandbox();
-  s.localJournalUnshift({ id: "T-1753660000", symbol: "NQ", closed: T(6), r: 1.4 });
-  s.composeJournal();
-  s.feedRefresh({ journal: [{ id: "srv-1", symbol: "BHP", closed: T(2), r: -1 }] });
-  const ids = s.journal().map((t) => t.id);
-  assert.ok(ids.includes("T-1753660000"),
-    "the paper engine's close vanished 30s later, and it reaches no server that could bring it back");
-  assert.deepStrictEqual(ids, ["T-1753660000", "srv-1"], "journal rows must be newest-closed first");
-});
-
-test("the feed is assigned to FEED_*, and the bare names are never assigned from it", () => {
-  assert.ok(/FEED_LOG\s*=\s*d\.log/.test(BOT_SRC), "loadData no longer fills FEED_LOG from the feed");
-  assert.ok(/FEED_JOURNAL\s*=\s*d\.journal/.test(BOT_SRC), "loadData no longer fills FEED_JOURNAL from the feed");
-  assert.ok(!/(^|[^_A-Za-z])LOG\s*=\s*d\.log/m.test(BOT_SRC),
-    "`LOG = d.log` is back — every line this browser logged is discarded every 30 seconds");
-  assert.ok(!/(^|[^_A-Za-z])JOURNAL\s*=\s*d\.journal/m.test(BOT_SRC),
-    "`JOURNAL = d.journal` is back — a browser-closed trade is discarded every 30 seconds");
-});
-
-test("a failed fetch never blanks the panel outright", () => {
-  assert.ok(!/renderLog\(\s*\[\s*\]\s*\)/.test(BOT_SRC),
-    "renderLog([]) is back in the catch branch — one flaky fetch erases the session's own record");
-  assert.ok(/FEED_LOG\s*=\s*\[\];\s*renderLog\(composeLog\(\)\)/.test(BOT_SRC),
-    "the catch branch must clear only the FEED half and re-compose");
-});
-
-test("the two sets are merged, never deduped", () => {
-  // Feed rows come from the scheduled scan, local rows from this browser's
-  // paper engine, and the id shapes are disjoint. A dedupe on symbol or price
-  // could only ever hide a real second trade in the same name.
-  const compose = fnSrc(BOT_SRC, "composeJournal", "bot.js");
-  assert.ok(!/(filter|Set|some|findIndex|indexOf)\s*\(/.test(compose),
-    "composeJournal has grown a dedupe — that can only ever hide a real second trade in the same name");
 });
 
 // ===========================================================================

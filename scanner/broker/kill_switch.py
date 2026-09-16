@@ -4,10 +4,9 @@ Checks the session P&L (realised + unrealised) against SCALP_MAX_DAILY_LOSS.
 If the limit is breached, flattens all broker positions and cancels all orders,
 then fires an alert via alert_dispatch.
 
-Runs:
-  • At the start of bybit_run / paper_run (pre-trade gate)
-  • As a standalone hourly workflow to catch moves between scans
-    (python -m scanner.broker.kill_switch)
+Runs as the half-hourly kill_switch.yml workflow (python -m
+scanner.broker.kill_switch). (The bybit_run / paper_run pre-trade callers were
+removed with the AI BOT page on 2026-09-17.)
 """
 
 import logging
@@ -56,6 +55,36 @@ def _flatten_alpaca() -> None:
 # flatten itself is resolved through module globals at call time, not bound
 # here, so a test (or a future broker) can replace _flatten_<name> and be seen.
 _FLATTEN_KEYS = {"bybit": "BYBIT_API_KEY", "alpaca": "ALPACA_API_KEY"}
+
+
+def trade_pnl(t: dict) -> float:
+    """Realised dollar P&L of one CLOSED trade, from either journal shape.
+
+    Two closed-trade shapes exist: the legacy scalp journal writes `pnl`; the
+    BOT BOOK (the one and only track record) writes no `pnl` at all, it stores
+    `realized_r` and the `risk_usd` that R is denominated in. An explicit `pnl`
+    wins when it is a real number; otherwise derive from R. None-safe and
+    NaN-safe on purpose: a NaN inside a sum makes every downstream comparison
+    False, i.e. it DISARMS the guard rather than tripping it.
+    (Moved here from risk_manager.py on 2026-09-17 when that module went with
+    the AI BOT page; identical arithmetic.)
+    """
+    import math
+    raw = t.get("pnl")
+    if raw is not None:
+        try:
+            v = float(raw)
+        except (TypeError, ValueError):
+            v = float("nan")
+        if not math.isnan(v):
+            return v
+    try:
+        r = float(t.get("realized_r") or 0.0)
+        risk = float(t.get("risk_usd") or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    v = r * risk
+    return 0.0 if math.isnan(v) else v
 
 
 def _flatten(name: str) -> None:
@@ -234,16 +263,14 @@ def _book_market_journal(book: dict, market: str, market_day: str,
     to the unreal_usd mark from the last scan. Banked partial-exit R
     (realized_r) is added either way.
 
-    The closed-row conversion is risk_manager.trade_pnl, which is the same
-    `realized_r x risk_usd` this line has always hand-rolled -- it was the only
-    place in the repo that knew the bot book records R rather than dollars, and
-    that knowledge now lives in one function that every reader shares. Identical
-    arithmetic, one owner.
+    The closed-row conversion is trade_pnl (below), the same
+    `realized_r x risk_usd` this line has always hand-rolled. It lived in
+    risk_manager.py until the scalp-era risk stack was removed with the AI BOT
+    page (2026-09-17); this is now its only consumer, so it lives here.
     """
     from scanner.scalp_journal import _session_day
 
     from . import vivek_guard
-    from .risk_manager import trade_pnl
     key = _session_day()
     closed = [{"session_day": key, "pnl": trade_pnl(t)}
               for t in book.get("closed", [])

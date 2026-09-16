@@ -38,7 +38,7 @@ on:
       #                would never start.
       #   public/css/**   test/contrast.test.js gates the design tokens in
       #                styles.css; journal_review.test.js reads journal.css.
-      #   public/*.html   risk_defaults.test.js parses bot.html as source, and
+      #   public/*.html   several suites parse shipped pages as source, and
       #                journal_money.test.js enforces the `?v=` floor on
       #                journal.html — i.e. project rule 2 (bump the version on
       #                every asset edit) was enforced by a suite that did not
@@ -132,8 +132,6 @@ jobs:
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
-      - name: Risk-engine tests (65)
-        run: node test/risk_manager.test.js
       - name: Unit tests (67)
         run: node test/unit.test.js
       - name: Cloud-watcher VIVEK parity tests (21)
@@ -150,8 +148,6 @@ jobs:
         run: node test/journal_review.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
         run: node test/journal_stale.test.js
-      - name: Risk-default + size-calculator drift gate (TOP100 #34/#35, 20)
-        run: node test/risk_defaults.test.js
       - name: Journal money-path tests (TOP100 #25/#26/#30/#33, 22)
         run: node test/journal_money.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
@@ -160,7 +156,7 @@ jobs:
         run: node test/staleview.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82/#83 + sync honesty, 52)
         run: node test/leaks.test.js
-      - name: Derived-state + fault-scoping rules (TOP100 #84-#88, 55)
+      - name: Derived-state + fault-scoping rules (TOP100 #84/#86/#88)
         run: node test/statekeep.test.js
       - name: Stalled-position decision surface (read-only, probe marks only)
         run: node test/stalled.test.js

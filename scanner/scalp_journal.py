@@ -14,7 +14,6 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from . import config
-from .broker.bybit_bracket import calc_qty_risk
 from .journal_common import (
     atomic_write,
     dir_stats_core,
