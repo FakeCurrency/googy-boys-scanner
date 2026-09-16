@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto",
- "generated_at": "2026-09-16T14:25:05+00:00",
+ "generated_at": "2026-09-16T19:32:01+00:00",
  "started": "2026-08-21",
  "equity_start": 5000.0,
  "open": [
@@ -21,10 +21,10 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.30921805,
+   "last_mark": 1.29106712,
    "mark_date": "2026-09-16",
    "fees": 0.775953,
-   "mfe_r": 0.0872,
+   "mfe_r": 0.1387,
    "mae_r": -0.9963,
    "unpriced_runs": 0
   },
@@ -47,7 +47,7 @@
    "stop": 2.23794598,
    "last_fill": 2.48609376,
    "opened": "2026-09-04",
-   "last_mark": 2.45120001,
+   "last_mark": 2.50270009,
    "mark_date": "2026-09-16",
    "fees": 2.603559,
    "mfe_r": 1.8111,
@@ -76,7 +76,7 @@
    "fees": 1.072303,
    "mfe_r": 0.5362,
    "mae_r": -0.8323,
-   "unpriced_runs": 14
+   "unpriced_runs": 15
   },
   {
    "symbol": "ONDO",
@@ -94,7 +94,7 @@
    "stop": 0.37527523,
    "last_fill": 0.33399999,
    "opened": "2026-09-15",
-   "last_mark": 0.33041,
+   "last_mark": 0.33307001,
    "mark_date": "2026-09-16",
    "fees": 0.568138,
    "mfe_r": 0.259,
@@ -497,6 +497,16 @@
   {
    "as_of": "2026-09-16",
    "market": "crypto",
+   "symbol": "NEAR",
+   "action": "add",
+   "reason": "per_market_cap",
+   "units_held": 4,
+   "cap": 4,
+   "system": 2
+  },
+  {
+   "as_of": "2026-09-16",
+   "market": "crypto",
    "symbol": "ONDO",
    "action": "add",
    "reason": "cash",
@@ -510,13 +520,24 @@
    "symbol": "LINK",
    "action": "entry",
    "reason": "cash",
-   "want_notional": 445.31,
+   "want_notional": 451.12,
+   "equity": 3656.76,
+   "system": 1
+  },
+  {
+   "as_of": "2026-09-16",
+   "market": "crypto",
+   "symbol": "ADA",
+   "action": "entry",
+   "reason": "cash",
+   "want_notional": 393.37,
    "equity": 3656.76,
    "system": 1
   }
  ],
  "skip_counts": {
-  "cash": 2,
-  "total": 2
+  "per_market_cap": 1,
+  "cash": 3,
+  "total": 4
  }
 }
