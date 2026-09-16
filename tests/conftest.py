@@ -22,7 +22,7 @@ from scanner.scalp_journal import _session_day  # noqa: E402
 def _isolated_frame_cache(tmp_path, monkeypatch):
     """Every test gets its own empty last-good frame cache (2026-09-05).
 
-    `turtle_run.scan_market` now routes its download through
+    the since-removed turtle runner routed its download through
     `data.merge_with_cache`, the same last-good cache the VIVEK scan uses.
     Without this redirect a test that hands the runner full frames would SAVE
     them to the repo's real `.cache/frames`, and the next test expecting a

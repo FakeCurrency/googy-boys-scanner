@@ -14,8 +14,9 @@ Australia). Brand name everywhere: **Vivek 5.0** — never "Googy Boys
 Scanner", never "Vivek's Beta Scanner" as the primary name ("BETA SCANNER"
 as a subtitle under the wordmark is fine).
 
-**The lenses** (see ROADMAP.md for the honest project state). Three feed the
-confluence machinery; the fourth, TURTLE, is deliberately outside it:
+**The lenses** (see ROADMAP.md for the honest project state). All three feed
+the confluence machinery. (A fourth, TURTLE, existed 2026-08-21 → 2026-09-17
+and was REMOVED ENTIRELY — see the TURTLE note near the end.)
 
 1. **VIVEK** (`scanner/vivek.py` + `scan.py`) — the core lens. Price
    *reacting* at its 200-SMA on Weekly / 3-Day / Daily(H4-proxy) levels.
@@ -30,11 +31,6 @@ confluence machinery; the fourth, TURTLE, is deliberately outside it:
 3. **Specs** (`scanner/spec.py` via `spec_run.py`) — the discovery lens.
    Sub-$0.50 names breaking out of a base on a ≥3× volume spike. Its own
    backtest says it's a shortlist generator, NOT an entry system.
-4. **TURTLE** (`scanner/turtle.py` via `turtle_run.py`) — the reference lens,
-   added 2026-08-21. The 1983 Dennis/Eckhardt breakout system implemented from
-   the Original Turtle Trading Rules. **NOT a confluence lens and not in any
-   signal path** — it has its own tab, its own nightly workflow and no reader
-   anywhere else in the tree. See the TURTLE section below.
 
 **Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
 agreements get banners everywhere, a permanent ALERTS page log
@@ -85,7 +81,7 @@ phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
 functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
                        journal.js (KV sync store), price/quote/tick proxies
-tests/ + phasemap/tests/ + test/*.test.js   1255 pytest (58 files) + 650 JS (16 suites) — EVERY push (test.yml)
+tests/ + phasemap/tests/ + test/*.test.js   pytest + JS suites — EVERY push (test.yml); counts drift, read test.yml
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
@@ -119,7 +115,6 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | morning_plays.yml | backstop crons in UTC behind the cron-job.org ladder: `50 7`+`50 8` (ASX, after the 06:37 closing scan) · `50 21`+`50 22` (NASDAQ+Crypto, after the 21:07 post-close scan), Mon–Fri — gated on POST-CLOSE data, see MORNING PLAYS | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
 | ops.yml | manual only | **Claude's standing access (2026-09-10, owner: "you should be able to set up jobs and all to make this hands off").** `scripts/ops.py` runs on a runner (which can reach APIs the cloud session's proxy refuses — api.cron-job.org and api.cloudflare.com both answer HTTP 000 from a session) and Claude dispatches it via the GitHub MCP with an `action` (`cronjob-list/get/history/create/update/delete`, `cf-list-vars/set-var/delete-var/redeploy`) + JSON `args`, then reads the job log. Secrets: `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`. REDACTED OUTPUT IS THE ONLY SECURITY PROPERTY: secret values, caller-supplied values and `key=` query params are masked, and `cf-list-vars` prints names + types NEVER values (Cloudflare returns plain_text values in the clear; `GH_DISPATCH_TOKEN` is stored as Text). Read-only to the repo, no git, own concurrency group, no assert_staged/WATCHDOG. Note the one honest limit: `args` for `cf-set-var` carries the value through the run's dispatch inputs, which GitHub records. Pins: `tests/test_ops.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
-| turtle.yml | daily 09:30 UTC | the TURTLE lens (`scanner/turtle_run.py`) -> `public/data/<market>_turtle.json` for asx/nasdaq/crypto. Own concurrency group (`turtle`), NOT `scan` -- it writes only its own three files. 09:30 is clear of the 08:30/08:45/08:52 nightly cluster so the two full-universe Yahoo walks are an hour apart. One pathspec per `git add`, ANY-OF assert_staged gated to `schedule` (a single-market dispatch legitimately leaves two files absent), Tier 3 retry loop. WATCHDOG_RUNS 26h at WARNING, not CRITICAL: a stale Turtle file costs a day of signals on a report-only surface and the page prints its own `generated_at`. ONE IN-RUN RETRY for a failed market (2026-09-01 — runs #64/#88, both Yahoo-throttle-under-the-coverage-floor): main() re-scans just the failed market(s) once after `TURTLE_THROTTLE_RETRY_COOLDOWN_S` (180s; 0=off), because a throttle window clears in minutes while the per-batch retries sit seconds apart inside it. A persistent failure still reddens the run — the floor's alarm is untouched, only its false-positive rate. Pins: `tests/test_turtle.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
@@ -2211,294 +2206,25 @@ meant** — the failure mode that survives review because the value looks fine.
    probe — which deliberately goes SILENT on a failed latest run, a real
    trade-off on a CRITICAL alarm) needs the owner's sign-off.
 
-## TURTLE — the fourth lens (2026-08-21)
+## TURTLE — REMOVED ENTIRELY (2026-09-17)
 
-> **FUTURES MARKET REMOVED 2026-09-08 (owner: "I don't use it and have never
-> used it").** This SUPERSEDES the futures/CFD material below (the "THE FUTURES
-> SLEEVE" config block, the "TURTLE 2026-09-02 — the CFD lens" subsection, and
-> the futures halves of the 2026-08-22 sleeve/portfolio notes). What was
-> removed: `futures` from `turtle_run.MARKETS`, the `0 23` futures cron and the
-> `futures` dispatch option in turtle.yml, the FUTURES market tab in
-> `turtle.html` + `turtle.js` (MARKETS/CUR/NEXT_CRON), the `futures21_5k`
-> portfolio sleeve, and the published data (`public/data/futures_turtle.json`,
-> `journal/turtle_book.futures.json`, plus futures pruned from the combined
-> `turtle_book.json` and `turtle_portfolio.json`). **Do NOT re-add `futures` to
-> `turtle_run.MARKETS` or a FUTURES market tab.** DORMANT and retained on
-> purpose (only so the pure-maths unit tests still pin them — nothing routes to
-> them): `config.TURTLE_FUTURES` + `TURTLE_CFD_*` + `TURTLE_FUTURES_MARGIN_FILE`
-> + `TURTLE_ROLL_GAP_RATIO`; `turtle.py` cfd_sizing/contract_sizing/cfd_leverage/
-> roll_suspects; `turtle_run.fit_table` + the `scan_market("futures")` branch;
-> `turtle_book` `_futures_gates`/`_load_margin_file`/the `futures` branch of
-> `update()` + `write_combined`'s `futures` default; `turtle_portfolio`'s
-> `contracts=` path; and the RULES/SIZING reference views' CFD content in
-> `turtle.js`. A later session may fully excise these dormant pieces (and their
-> ~30 unit tests) as a clean follow-up; they are inert and harmless until then.
-
-The 1983 Dennis/Eckhardt breakout system, on its own tab at `/turtle.html`.
-Owner asked for "a separate set of RULES on a separate TAB", and *separate* is
-the load-bearing word: this lens is outside the confluence machinery, outside
-the paper book, and outside every signal path in the repo. `scanner/turtle.py`
-(engine) + `turtle_run.py` (runner) + `turtle.yml` (nightly) +
-`public/{turtle.html,js/turtle.js,css/turtle.css}`.
-
-1. **IT IS BUILT FROM THE ORIGINAL RULES, NOT THE POPULAR SHORT VERSION, AND
-   THE DIFFERENCE IS TWO RULES.** (a) **The System 1 filter**: a 20-day
-   breakout is SKIPPED when the previous breakout in that market would have
-   been a winner — where "loser" means *price moved 2N against it before a
-   profitable 10-day exit*, so a trade that drifted out slightly below entry
-   without ever going 2N offside counts as a WINNER and blocks the next entry.
-   It counts every breakout the market printed, taken or skipped, and it is
-   **direction-agnostic** (a losing short enables the next long): one
-   chronological chain per market. (b) **The 55-day failsafe**: System 2 is
-   never filtered, so a blocked System 1 signal is picked up at 55 days.
-   Both are pinned by named tests. Dropping (a) turns System 1 into a plain
-   Donchian channel that takes every whipsaw in a range.
-2. **The engine is a deterministic REPLAY, and it has to be.** The filter is a
-   function of the market's own breakout history, so "is today's 20-day
-   breakout takeable" cannot be answered without walking the bars that precede
-   it. A `_Shadow` runs beside the real position taking every 20-day breakout
-   to keep that memory. Having paid for the walk, the replay also yields each
-   name's own record under these rules, which is what the SIGNALS rows show.
-3. **`indicators.atr(df, 20)` IS N.** The rules' `N = (19*PDN + TR)/20` is
-   Wilder smoothing at period 20, which is exactly what that function computes,
-   so `compute_n` calls it rather than re-typing the recurrence. Do not "fix"
-   it to a rolling mean: N sets the size, the stop AND the pyramid spacing, so
-   the two smoothings diverge three times over. (Also 20 periods, not 14.)
-4. **A full four-unit position risks 5% of the account, not 2%, 4% or 8%** —
-   entries at 0/+½N/+1N/+3⁄2N, one shared stop ½N BELOW the breakout, so the
-   units lose ½N+1N+1½N+2N = 5N. Left on their own 2N stops it would be 8N.
-   That halving is the entire purpose of the ½N stop raise. Pinned in BOTH
-   `tests/test_turtle.py` and `test/turtle.test.js` because the page PRINTS
-   the figure, and 2% and 4% are both plausible-looking wrong answers (a
-   research pass produced the 4% one).
-5. **Channels are `.shift(1)`.** A 20-day high that includes today's own high
-   can never be exceeded by it. Entry tests are strictly `>`, so a flat band
-   never breaks out; `>=` would fire every day in a dead range. Both pinned.
-6. **Fences, test-enforced**: nothing under `scanner/broker/` may mention
-   turtle; `turtle_run` has exactly one `write_json` and may not name the book,
-   the bot rules, `sector_map` or `journal/`; no TURTLE_ constant may reach
-   `bot_rules.json`; `turtle.js` fetches `data/` only, writes no storage, and
-   reads no other lens's file. The freeze is untouched by construction.
-7. **The page is four views and THREE OF THEM NEED NO DATA** — RULES, SIZING
-   and EVIDENCE render from constants and from what you type, because a rules
-   reference that goes blank on a failed fetch is not a reference. Only
-   SIGNALS needs the scan file and it says so when absent.
-8. **`turtle.js` carries a hand-typed mirror of the config constants** as its
-   offline fallback — the risk_manager.js `PUBLISHED_DEFAULTS` shape that
-   drifted for months (TOP100 #34). `test/turtle.test.js` parses the real
-   `config.py` and fails on any mismatch, plus asserts every `P.<key>` the
-   renderers read exists in the mirror. A published `params` block always wins
-   over it, key by key.
-9. **The EVIDENCE view exists because the ask was "5k to 10M".** It states the
-   arithmetic (2,000x = 7.60 natural logs; ~12.9 years at the Turtles' reported
-   80%, ~29 at a very good 30%) and the part usually left out: Dennis was down
-   ~55% by April 1988 and shut the program; 30-50% drawdowns were routine;
-   blended S1+S2 testing showed a worst case nearer -80% than -50%; the ~80%
-   average is survivorship-biased. And the structural gap — **the Turtles
-   traded ~20 uncorrelated futures with margin, this scans equities and
-   crypto**. Diversification is the mechanism that makes the expectancy
-   positive, not a garnish, so a Turtle system on correlated single names is a
-   materially different and worse strategy. Say this; do not soften it.
-10. **The correlation limits (4/6/10/12) are STATED, NOT ENFORCED.** There is
-    no correlation matrix in this repo and sector is a poor proxy. Enforcing
-    them would be inventing a rule the data cannot support.
-11. **Ranking never sorts on the record** — signal today, then open position,
-    then proximity, then liquidity. Sorting a scanner by its own backtest is
-    how a page becomes a curve fit; `rank_key` is pinned against it.
-12. **THREE ENGINE BUGS WERE FOUND BY AN EXTERNAL AUDIT ON 2026-08-21 AND ARE
-    FIXED — all three flattered the result.** (a) The ENTRY BAR never checked
-    its own stop: a bar that broke out at 101 with a 97 stop and then traded to
-    95 booked no trade at all, so the loss was invisible. (b) An add walks the
-    shared stop up, and the bar that did the adding was never re-tested against
-    the stop it had just created. (c) `pyramid_ladder`'s docstring claimed a
-    full position risks "about 2% and not 4%" — both wrong, it is 5% vs 8%, and
-    they are the exact plausible-looking wrong answers the tests exist to
-    catch. Booking the stop on an ambiguous bar is the conservative reading and
-    the direction of the error is the point: these can only ever ADD a loss the
-    old code missed, never remove one, which is what made them shippable
-    without re-litigating every published number. All three pinned.
-13. **Costs are charged and the gross is published beside the net**
-    (`TURTLE_COST_BPS`, 15 bps a side). A trend system takes many small losses,
-    so cost is a material part of the result rather than a rounding error.
-    `summarize()` also publishes `median_r` and `top10_share`, because a trend
-    system's MEAN is carried by a handful of trades and publishing only the
-    mean is how a fat tail reads as an edge. On crypto the mean is +1.41R while
-    the median trade is about -1.2R and the top twenty trades hold ~84% of all
-    profit — the same engine loses on ASX (2,212 names) and NASDAQ (1,428),
-    and the only positive market is the one whose universe is today's
-    top-100 coin list. That contrast IS the finding; it is not "crypto works".
-14. **The page LANDS ON SIGNALS, not on the rulebook.** It shipped defaulting
-    to RULES and a tab carrying 400 live rows read as empty to anyone who did
-    not think to click through. `load()` picks the view (`signals` when a scan
-    exists, `rules` when none does) and a `TOUCHED` flag stops it overriding a
-    view the reader chose.
-15. **Cadence is four crons, one job** (`github.event.schedule` selects the
-    market): crypto every 4 hours because crypto trades every 4 hours, ASX at
-    06:30 UTC and NASDAQ at 21:30 UTC (both past their closes in either half of
-    the DST year), and the full three-market pass at 09:30 UTC. The
-    must-change gate fires only on the nightly all-markets cron — the
-    per-market crons legitimately leave two of the three files untouched.
-16. **`#tt-views` scrolls its own overflow.** The shared `.view-tabs` has no
-    overflow rule and four labels measure 383px, which pushed the whole page
-    sideways at 320px — found by RENDERING it, not by reading it. Scoped by
-    id so the fix cannot touch another page. `turtle.html` is now in
-    `smoke.e2e.js`'s 320px list.
-17. **Both suites are mutation-verified: 15 mutations, 15 caught** (47 pytest,
-    53 JS). Two SURVIVED on the first pass and the fixes are worth knowing,
-    because both gaps are the kind that re-open easily. (a) *The pyramid used
-    entry-N* — every fixture in the file pins N at exactly 2.0, so entry-N and
-    current-N are the same number there and the mutation was invisible; the
-    test now uses a frame where N DECAYS after entry (2.0 -> 1.38) and asserts
-    on the REALIZED second fill. A first attempt asserted on `next_add`, which
-    is computed in the output block from `pos["n"]` and is therefore untouched
-    by a mutation to the add loop — assert on a fill, not on a projection.
-    (b) *`esc()` was tested but never asserted to be CALLED*, so deleting it
-    from the row name left everything green while `name` is the one field a
-    third-party listings directory controls. There is now a test that walks
-    every untrusted field to its render site.
-18. **Two defects were found by RENDERING, not by reading**, both in code that
-    read fine: a click anywhere inside an expanded row collapsed it (so you
-    could not select a number out of the pyramid table, and the `is-open`
-    cursor was already promising otherwise), and the keyboard handler built a
-    `querySelector` out of `row.dataset.sym` — which is the DECODED symbol, so
-    a name carrying a quote made the selector invalid and threw. Real tickers
-    never contain one; a hostile fixture does. Rows now carry
-    `tabindex`/`role`/`aria-expanded` like the main deck's, and the
-    replacement node is found by comparing dataset rather than by building a
-    selector.
-
-### TURTLE 2026-09-02 — the CFD lens, and the correlation bug it uncovered
-
-Owner ask: *"I want to expand on the FUTURES — US30, NAS100, GOLD, COPPER,
-SILVER, effectively every future that CMC CFD's allows."* What shipped is the
-half that needs NO broker data; what did not ship is named below with the one
-number that unblocks it.
-
-1. **FOUR OF THE FIVE HE NAMED WERE ALREADY IN THE SLEEVE.** NAS100 = NQ,
-   GOLD = GC, SILVER = SI, COPPER = HG, all there since 2026-08-21. They read
-   as missing because the fit table REFUSES them — a Turtle unit at $5,000 is
-   a fraction of one contract — and a refusal looks like an absence. Only the
-   Dow was genuinely gone. Added YM (Dow 30) plus RTY, BZ, PL, PA: **21 -> 26
-   rows, deliberately still under `TURTLE_SMALL_UNIVERSE_MAX` = 30** so the
-   max-2-missing protection keeps applying. Grow it past 30 and that ceiling
-   silently stops covering the sleeve (the dead-code test catches it).
-2. **THE CFD LENS IS PRICED IN DOLLARS PER POINT, and that is what let it ship
-   without CMC's product library.** `turtle.cfd_sizing` sets `dpp = 1`, so
-   `units = (1% x equity) / N` means "dollars of exposure per point" — a
-   VEHICLE-INDEPENDENT quantity. The owner reads *Value of 1 point* off the
-   CMC ticket and divides. A test feeds one row two wildly different exchange
-   multipliers and fails if the CFD unit moves: no unverified broker number
-   can reach it, which is the KC-100x failure class closed by construction.
-3. **THE MINIMUM TRADE SIZE IS THE NUMBER THAT DECIDES THE PROJECT, AND IT IS
-   UNKNOWN.** Measured on the live tape at $5,000: NQ 0.096 units, GC 0.628,
-   ES 0.670, CC 0.175 — so a **1.0-unit floor refuses every instrument the
-   owner named except the ones that were already tradeable**, and the
-   fractional vehicle rescues nothing for them. A 0.1 floor takes gold, the
-   S&P and the Dow and still refuses the Nasdaq. The sleeve therefore
-   publishes the verdict at BOTH floors (`TURTLE_CFD_MIN_UNITS`) rather than
-   picking one. **Read CMC's minimum trade size / step first; it decides
-   whether any of this is reachable.**
-4. **CARRY PUNISHES THE QUIET MARKETS HARDEST, which is the counter-intuitive
-   fact this vehicle turns on.** Financing is charged on FULL notional, so in
-   R it is `0.5 x (P/N) x r x D/365` — a function of the volatility ratio
-   alone. A calm tape buys a big unit, hence big notional, hence a big bill.
-   Measured at an assumed 8%: crude 0.16R over 60 days, the Nasdaq 0.37R, the
-   S&P 0.67R, **the euro 1.61R** — a EURUSD CFD held two months owes more than
-   its own 1R before it does anything. `TURTLE_CFD_FINANCING_PCT_ASSUMED` is
-   an ASSUMPTION, labelled as one on the page; the owner's statement is the
-   only authority.
-5. **A BROKER CLOSE-OUT CAN PRECEDE THE 2N STOP, and then it is not this
-   system.** Close-out on posted margin sits `P/L` away, so the Turtle stop
-   only binds while `N/P < 1/(2L)` — at 20:1 that is `N/P < 2.5%`. Above it
-   the exit rule has been silently replaced by the leverage. Published per row
-   as `stop_binds`; every row on the live tape currently passes.
-6. **ASIC's retail caps are used as the leverage model** (Instrument 2020/986,
-   extended by 2022/259) because they are REGULATORY CEILINGS — CMC may demand
-   more margin and never less, so the cap computes the worst case, which is
-   the honest direction for a risk read. Gold is the only metal in the 20:1
-   band; silver/copper/platinum/palladium are 10:1 "commodities other than
-   gold" and carry a per-symbol override so a group default cannot quietly
-   double their leverage.
-7. **NO CFD FORWARD BOOK SHIPPED, deliberately.** A book needs the real margin
-   rate, minimum size, step and funding rate — all facts from CMC's product
-   library and PDS, none of them estimable. This repo already refuses to
-   invent exchange initial margin (`TURTLE_FUTURES_MARGIN_FILE`); inventing a
-   broker's would be the same error with more decimals. The lens answers "what
-   would this cost and would it fit"; the book waits for the file.
-8. **THE CORRELATION-BUCKET BUG, found while wiring this and confirmed against
-   the live payload.** `turtle_book._bucket` read `row["sector"]` only, but
-   `config.TURTLE_FUTURES` rows carry `group` and NO `sector` — so all 21
-   contracts fell through to `"unclassified"` and **gold, crude, the euro and
-   coffee shared ONE 6-unit correlated ceiling** while six genuinely different
-   asset groups counted as one. Invisible because the sleeve is 0/0, and
-   accidentally CONSERVATIVE while it lasted (one bucket is tighter than six),
-   so no trade was ever wrongly allowed. Now `sector or group`, which keeps an
-   equity row's real sector winning where it exists and leaves crypto's
-   deliberate single bucket alone. **Fixed while the sleeve has no series to
-   disturb** — the same repair after it starts trading would be a mid-flight
-   change to which trades it takes.
-
-### TURTLE 2026-08-22 — the 5x sleeve, the gates, and the portfolio replay
-
-Facts a later session must not re-derive (ledger of record:
-`TURTLE_LEDGER_2026-08-22.md`; all items mutation-tested):
-
-1. **The re-entry guard keys on the BAR, not the calendar.** Closes stamp
-   `closed_bar` (the row's own `date`); entry is refused while that bar is
-   still the signal bar, across any number of cron runs. Legacy closed rows
-   fall back to their run date. The old run-date key would have let a Friday
-   NASDAQ stop refill at Saturday's 09:30 pass off the same Friday bar.
-2. **The add-path room check counts every open dollar** (self + unmanaged
-   tail), exactly as `_caps_allow` counts units. The pre-fix undercount let
-   DOGE pyramid to u3/u4 past the cash cap; those rows stand (append-only).
-3. **`crypto5x` is a REAL fifth book** (`journal/turtle_book.crypto5x.json`,
-   started 2026-08-22): posted margin = notional/5, isolated, liquidation AT
-   the liq price (capped loss — isolated margin cannot lose more than
-   posted; stops keep gap semantics), refuse `no_margin` when posted > free.
-   Unit formula unchanged (1%/N, fractional). Crypto = ONE close bucket on
-   BOTH crypto books. Same `update()` law as cash — no forked loop. Config:
-   `TURTLE_5X` + `TURTLE_5X_YF_OVERRIDES` (APT/ARB/SUI/UNI/TON → real Yahoo
-   ids, 5x sleeve ONLY — the cash universe is a running experiment, do not
-   "fix" it mid-flight). The page renders the 5x disclosure FROM the book's
-   own `params`; `turtle.js` must never hardcode the sleeve name (pinned).
-4. **Futures opens are triple-gated**: unit >= 1 whole contract AND no roll
-   suspect in the current 20-bar N window AND a REAL margin file at
-   `data/futures_margins.json` (`TURTLE_FUTURES_MARGIN_FILE`). The file does
-   not exist and must never be invented — while absent the sleeve is 0/0 by
-   construction (`no_margin_file`). `fit_table` on the futures payload. KC
-   dpp corrected 37,500 → 375 (ICE cents rule; the "owner-affirmed" 37,500
-   traced to an audit whose table did not contain KC).
-5. **`scanner/turtle_portfolio.py`** — shared-equity replay per sleeve, on
-   the 09:30 cron only (`--portfolio`), publishing
-   `public/data/turtle_portfolio.json` (merge-per-sleeve, sector_breadth
-   pattern). Deterministic entry order (bar dollar volume desc, symbol) in
-   the payload; carries its own NOT-walk-forward caveat. Writes ONLY its own
-   file; central broker/ascii fences extended to it.
-6. **Engine pin added, engine unchanged**: a bar breaking BOTH channels with
-   S1 unblocked tags System 2 (failsafe first — S2 owns the 20-day exit).
-7. **Fixture rename**: engine fixture NEAR → NRBY. NEAR is a real coin; the
-   guard against fixture symbols in real books false-positived when the
-   04:42 cron legitimately cash-skipped NEAR Protocol.
-8. **Reading rules now on the BOOK view**: equity headlines are realized-
-   only; the combined figure adds A$+US$ at face value; a first print is not
-   evidence until >= 30 closes AND >= 20 trading days; the 4h crypto cron is
-   a scan cadence, not a 4-hour Donchian (daily bars are the clock).
-9. **The scan reads through the LAST-GOOD FRAME CACHE (2026-09-05, `c9ff4957`).**
-   Every red run this workflow ever had (#29/#64/#88/#120) was Yahoo
-   throttling one market under the coverage floor while scan.yml walked the
-   same directory through the same window and published — because the scan
-   fills dropped names from `.cache/frames` and `turtle_run` fetched fresh
-   only. `scan_market` now routes `data.download` through
-   `data.merge_with_cache` (same fossil ceiling — a >10-day cached frame is
-   refused, so a prolonged outage still trips the floor) and turtle.yml
-   restores the shared `vivek-frames-` cache entry BEFORE the scan step.
-   The cache share is published (`data_from_cache`) and printed on the
-   coverage line. The floor, the refusal and the red-run alarm are untouched.
-   Do not re-introduce a bare `data.download` here. Side effect worth
-   knowing: `tests/conftest.py` now gives EVERY test its own empty
-   `_CACHE_DIR` (autouse) — a test that needs a warm cache seeds it with
-   `data.save_frame_cache`, and `band()` frames are 2015-dated so a cached
-   copy of one is a fossil by construction.
+Owner: *"rip OUT the entire TURTLE section/tab and all data associated with
+TURTLE from the scanner page. It's redundant to me. I don't use it and never
+have."* The fourth lens existed 2026-08-21 → 2026-09-17 and is gone from the
+tree: `scanner/turtle.py` + `turtle_run.py` + `turtle_book.py` +
+`turtle_portfolio.py`, `turtle.yml`, `public/turtle.html` + `js/turtle.js` +
+`css/turtle.css`, the published `public/data/*_turtle.json` /
+`turtle_book.json` / `turtle_portfolio.json`, the five `journal/turtle_book*.json`
+books, every `TURTLE_*` constant in `config.py` (incl. the dormant futures/CFD
+block), the `WATCHDOG_RUNS["turtle.yml"]` entry, the nav tab (`nav.js`), the
+chart back-link (`chart.js`), the smoke-test 320px entry, the test.yml step,
+`tests/test_turtle*.py` + `test/turtle.test.js`, the ledger/handoff/review
+markdowns. The lens was outside every signal path by construction (its fences
+were test-pinned), so nothing in `broker/`, the bot book or the confluence
+machinery changed. **Do not re-add it.** If the owner ever wants a breakout
+system again it starts from `git log -- scanner/turtle.py` at the removal
+commit, not from memory — the engine's three audit-found bugs, the ½N stop
+5%-risk arithmetic and the System-1 filter are all recorded there.
 
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 

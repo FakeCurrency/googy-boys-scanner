@@ -4,13 +4,13 @@
  * the dashboard) with a different link set on every page. This renders ONE
  * consistent nav into the `#site-nav` mount on each page:
  *
- *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ · TURTLE 🐢 ·
+ *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ ·
  *     ★ MY NAMES · ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
  *     AI BOT / SYSTEM / HOW IT WORKS — see the MORE list below; TRACK and
- *     DEBUG are retired).
- *     (Comment refreshed 2026-08-22 — TURTLE moved from MORE into PRIMARY,
- *     between SPECS and MY NAMES; the LISTS below are the truth, this is a
- *     map, so re-check it here first if it ever drifts again.)
+ *     DEBUG are retired; the TURTLE tab was REMOVED 2026-09-17, owner: "I
+ *     don't use it and never have").
+ *     (The LISTS below are the truth, this is a map, so re-check it here
+ *     first if it ever drifts again.)
  *   • Mobile (≤680px): the pill row hides and a fixed bottom TAB BAR appears
  *     with the five primary destinations — one-thumb navigation.
  *
@@ -26,17 +26,14 @@
     { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
     { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
     { href: "specs.html",           label: "SPECS ⚡",   tab: "⚡", key: "specs" },
-    { href: "turtle.html",          label: "TURTLE 🐢",  tab: "🐢", key: "turtle" },
     { href: "mynames.html",         label: "★ MY NAMES", tab: "★", key: "mynames" },
     { href: "alerts.html",          label: "ALERTS",     tab: "🔔", key: "alerts" },
     { href: "journal.html",         label: "JOURNAL",    tab: "📒", key: "journal" },
   ];
-  // Bottom tab bar fits 5 — SPECS + TURTLE + ALERTS live in the top pills /
-  // MORE on mobile (RECS took a slot, owner 2026-07-22; TURTLE joined PRIMARY
-  // 2026-08-22 but stays off the bottom bar for the same reason SPECS does —
-  // five tabs is the rule, not six).
+  // Bottom tab bar fits 5 — SPECS + ALERTS live in the top pills / MORE on
+  // mobile (RECS took a slot, owner 2026-07-22; five tabs is the rule).
   const TABS = PRIMARY.filter(
-    (x) => x.key !== "specs" && x.key !== "alerts" && x.key !== "turtle",
+    (x) => x.key !== "specs" && x.key !== "alerts",
   );
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
@@ -45,10 +42,10 @@
     { href: "about.html",   label: "HOW IT WORKS", key: "about", tab: "❓" },
   ];
   // Everything not on the 5-slot bottom bar, for the mobile MORE sheet (#30):
-  // SPECS + TURTLE + ALERTS (top-pill-only on desktop) plus the MORE set.
+  // SPECS + ALERTS (top-pill-only on desktop) plus the MORE set.
   const SHEET = [
     ...PRIMARY.filter(
-      (x) => x.key === "specs" || x.key === "alerts" || x.key === "turtle",
+      (x) => x.key === "specs" || x.key === "alerts",
     ),
     ...MORE,
   ];
