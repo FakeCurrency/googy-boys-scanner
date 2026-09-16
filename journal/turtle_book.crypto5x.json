@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "market": "crypto5x",
- "generated_at": "2026-09-16T04:39:52+00:00",
+ "generated_at": "2026-09-16T13:26:43+00:00",
  "started": "2026-08-22",
  "equity_start": 5000.0,
  "open": [
@@ -21,7 +21,7 @@
    "stop": 708.78784838,
    "last_fill": 787.80999756,
    "opened": "2026-08-22",
-   "last_mark": 1146.59997559,
+   "last_mark": 1230.7199707,
    "mark_date": "2026-09-16",
    "fees": 1.495422,
    "mfe_r": 6.3715,
@@ -45,7 +45,7 @@
    "stop": 36.60256171,
    "last_fill": 40.38999939,
    "opened": "2026-08-22",
-   "last_mark": 50.79000092,
+   "last_mark": 53.20000076,
    "mark_date": "2026-09-16",
    "fees": 1.59963,
    "mfe_r": 9.962,
@@ -70,7 +70,7 @@
    "stop": 4.21020919,
    "last_fill": 4.67825079,
    "opened": "2026-08-22",
-   "last_mark": 6.45760012,
+   "last_mark": 6.2723999,
    "mark_date": "2026-09-16",
    "fees": 2.795106,
    "mfe_r": 6.5177,
@@ -94,7 +94,7 @@
    "stop": 1.7254631,
    "last_fill": 1.9289,
    "opened": "2026-08-22",
-   "last_mark": 2.35290003,
+   "last_mark": 2.46160007,
    "mark_date": "2026-09-16",
    "fees": 1.422235,
    "mfe_r": 3.8311,
@@ -118,7 +118,7 @@
    "stop": 0.34931419,
    "last_fill": 0.40560001,
    "opened": "2026-08-22",
-   "last_mark": 0.3642,
+   "last_mark": 0.36449999,
    "mark_date": "2026-09-16",
    "fees": 1.080912,
    "mfe_r": 1.7043,
@@ -142,7 +142,7 @@
    "stop": 1.43725478,
    "last_fill": 1.30887294,
    "opened": "2026-09-02",
-   "last_mark": 1.31476164,
+   "last_mark": 1.31124103,
    "mark_date": "2026-09-16",
    "fees": 1.441954,
    "mfe_r": 0.0872,
@@ -166,7 +166,7 @@
    "stop": 4411.81385397,
    "last_fill": 4278.21533203,
    "opened": "2026-09-14",
-   "last_mark": 4322.50683594,
+   "last_mark": 4346.99072266,
    "mark_date": "2026-09-16",
    "fees": 3.445746,
    "mfe_r": 0.1239,
@@ -190,7 +190,7 @@
    "stop": 4419.31057088,
    "last_fill": 4282.85009766,
    "opened": "2026-09-14",
-   "last_mark": 4327.37988281,
+   "last_mark": 4352.43994141,
    "mark_date": "2026-09-16",
    "fees": 3.377134,
    "mfe_r": 0.1156,
@@ -215,13 +215,36 @@
    "stop": 0.36495642,
    "last_fill": 0.32368118,
    "opened": "2026-09-15",
-   "last_mark": 0.32988,
+   "last_mark": 0.32525,
    "mark_date": "2026-09-16",
    "fees": 1.714542,
    "mfe_r": 0.259,
    "mae_r": -0.4998,
    "posted": 228.605603,
    "unpriced_runs": 0
+  },
+  {
+   "symbol": "LINK",
+   "market": "crypto5x",
+   "name": "Chainlink",
+   "sector": "",
+   "side": "short",
+   "system": 1,
+   "n": 0.55880515,
+   "units": 64.18605412,
+   "fills": [
+    10.72000027
+   ],
+   "cost_basis": 688.074517,
+   "stop": 11.83761057,
+   "last_fill": 10.72000027,
+   "opened": "2026-09-16",
+   "last_mark": 10.72000027,
+   "mark_date": "2026-09-16",
+   "fees": 1.032112,
+   "mfe_r": 0.0,
+   "mae_r": 0.0,
+   "posted": 137.614903
   }
  ],
  "closed": [
@@ -315,8 +338,8 @@
   "equity_start": 5000.0,
   "equity": 4483.44,
   "return_pct": -10.331,
-  "open_positions": 9,
-  "open_units": 11,
+  "open_positions": 10,
+  "open_units": 12,
   "closed": 3,
   "wins": 0,
   "win_pct": 0.0,
@@ -327,8 +350,8 @@
   "fees_paid": 31.48,
   "sizing_equity": 3586.75,
   "leverage": 5.0,
-  "posted_margin": 2449.69,
-  "free_margin": 2033.75
+  "posted_margin": 2587.31,
+  "free_margin": 1896.13
  },
  "params": {
   "leverage": 5.0,
@@ -337,7 +360,7 @@
   "margin_mode": "isolated"
  },
  "events": [
-  "ADD ONDO u2 @ 0.323681"
+  "ENTER LINK S1 short @ 10.72"
  ],
  "skips": [
   {
