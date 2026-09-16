@@ -43,7 +43,6 @@ if str(ROOT) not in sys.path:
 
 from scanner import config, vivek                                      # noqa: E402
 from scanner.broker import vivek_run                                   # noqa: E402
-from scanner.journal_common import atomic_write                        # noqa: E402
 
 log = logging.getLogger("backfill_level_tf")
 
@@ -135,7 +134,7 @@ def backfill_market(market: str, apply: bool, stamp: str,
     rows = list(book.get("open") or []) + list(book.get("closed") or [])
     before = [frozen_fingerprint(p) for p in rows]
 
-    filled = skipped = already = failed = 0
+    filled = already = failed = 0
     changes = []
     for pos in rows:
         if pos.get("level_tf"):

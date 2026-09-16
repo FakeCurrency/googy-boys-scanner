@@ -30,7 +30,7 @@ _KEY = {"reclaim": "reclaim", "base": "base", "volume": "volume",
 def evaluate(df: pd.DataFrame) -> dict | None:
     if df is None or len(df) < config.REV_MIN_HISTORY:
         return None
-    close, high, low, vol = df["Close"], df["High"], df["Low"], df["Volume"]
+    close, high, vol = df["Close"], df["High"], df["Volume"]
     c = float(close.iloc[-1])
     if not np.isfinite(c) or c <= 0:
         return None

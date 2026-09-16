@@ -22,9 +22,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from collections import Counter
-from copy import deepcopy
-from dataclasses import dataclass, field
-from typing import Iterable
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -34,17 +32,12 @@ from .broker.vivek_bot import _is_fund_or_reit, _sector_key, size_position
 from .vivek_backtest import (
     EQUITY,
     LEVEL_TFS,
-    TIMEFRAMES,
     _build_row,
     _candidate_mask,
-    _dollars,
     _force_close,
-    _manage_bar,
     _metrics,
-    _risk_usd,
     _sample,
     _sizing_basis,
-    _split,
     _turnover_series,
     fx_rates,
 )
@@ -435,8 +428,6 @@ def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> di
     peak_open = 0
     # slot-day integral for R/slot-month
     # walk event timeline
-    events: list[tuple[str, str, dict]] = []  # (date, kind, trade) kind=enter|exit
-
     for t in trs:
         day = t["entry_date"]
         # free exits strictly before today

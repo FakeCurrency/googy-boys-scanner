@@ -37,7 +37,6 @@ import math
 import os
 import statistics as st
 import subprocess
-import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(ROOT, "data", "alert_forward_returns.json")

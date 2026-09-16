@@ -3,7 +3,6 @@ expanded. All values are derived from the same signal/level computation, so the
 text never disagrees with the numbers.
 """
 
-import numpy as np
 import pandas as pd
 
 from . import config

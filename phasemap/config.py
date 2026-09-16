@@ -10,7 +10,7 @@ and fixture 3 all say displacement must print within 5 bars of the sweep
 SWEEP_ACTIVE_BARS = 10 is kept only as a re-detection cooldown.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant

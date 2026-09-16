@@ -321,8 +321,8 @@ def report(results: dict, target: float, equity: float) -> list[str]:
         lines.append(f"  WIDE STOPS: {len(wide)} position(s) sit beyond the "
                      f"{gate:.0f}% max_stop_pct gate that every NEW entry must "
                      f"pass.")
-        lines.append(f"  They were opened before the gate applied to them. At "
-                     f"this size each now risks:")
+        lines.append("  They were opened before the gate applied to them. At "
+                     "this size each now risks:")
         for sp, sym, r in wide:
             share = (r / daily * 100.0) if daily else 0.0
             lines.append(f"    {sym:<6} stop {sp:5.1f}% of entry   risk "

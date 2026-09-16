@@ -14,10 +14,8 @@ import json
 import logging
 import sys
 from collections import Counter, defaultdict
-from copy import deepcopy
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from scanner import config, output  # noqa: E402
 from scanner import vivek_parity as vp  # noqa: E402
-from scanner.vivek_journal import _apply_costs, _mark, _r_of, _snapshot, costs_for  # noqa: E402
+from scanner.vivek_journal import _mark, _snapshot, costs_for  # noqa: E402
 
 log = logging.getLogger("lens_fill_confluence")
 

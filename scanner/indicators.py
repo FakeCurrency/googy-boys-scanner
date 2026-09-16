@@ -6,8 +6,6 @@ Frames are expected to have columns: Open, High, Low, Close, Volume.
 import numpy as np
 import pandas as pd
 
-from . import config
-
 
 def ema(series: pd.Series, span: int) -> pd.Series:
     """Exponential moving average (recursive form, no warm-up bias)."""

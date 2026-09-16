@@ -306,7 +306,7 @@ def restore(backup_path: str) -> None:
 
     manifest_file = src_dir / "manifest.json"
     if not manifest_file.exists():
-        print(f"ERROR: not a valid backup (no manifest.json)", file=sys.stderr)
+        print("ERROR: not a valid backup (no manifest.json)", file=sys.stderr)
         sys.exit(1)
 
     manifest = json.loads(manifest_file.read_text())

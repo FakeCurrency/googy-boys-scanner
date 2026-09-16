@@ -22,7 +22,7 @@ import os
 import sys
 import zoneinfo
 
-from . import config, data, output, reversal, scanerrors, spec, universe
+from . import config, data, output, scanerrors, spec, universe
 
 MARKETS = ("asx", "nasdaq")
 GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}

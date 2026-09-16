@@ -76,7 +76,6 @@ def _compression_flags(high, low, close, tr) -> np.ndarray:
     (excluding current bar) <= own 40th percentile of that series.
     Fallback (<2y): ATR14/Close <= own 30th percentile over available history.
     """
-    n = len(close)
     lb = CONFIG.box_lookback
     s_high, s_low = pd.Series(high), pd.Series(low)
     box_hi = s_high.rolling(lb, min_periods=lb).max().shift(1)

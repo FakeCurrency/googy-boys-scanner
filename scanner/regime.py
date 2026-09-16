@@ -447,7 +447,7 @@ def notes(blk: dict) -> list:
         move = "" if prior is None else (
             f", up from {pct(prior)} a month ago" if a200 - prior > 0.02 else
             f", down from {pct(prior)} a month ago" if prior - a200 > 0.02 else
-            f", flat on a month ago")
+            ", flat on a month ago")
         out.append(f"{pct(a200)} of names are above their "
                    f"{win.get('sma_slow', 200)}-day average{move}. New "
                    f"{win.get('hl', 20)}-day highs minus lows: "

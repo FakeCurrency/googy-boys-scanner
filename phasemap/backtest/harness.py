@@ -15,7 +15,6 @@ import math
 import random
 
 from phasemap.config import CONFIG
-from phasemap.engine.buffers import pct_floor  # noqa: F401  (re-export convenience)
 from phasemap.engine.indicators import compute_indicators
 from phasemap.engine.setup_engine import SetupEngine
 
