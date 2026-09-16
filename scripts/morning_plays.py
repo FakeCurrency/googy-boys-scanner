@@ -35,8 +35,9 @@ records nothing, so no name is ever silently buried. The record is counted from
 when a name was SENT, not from when it went high-conviction, so a still-valid
 setup reappears once the window passes.
 
-Each play renders as `SYMBOL -> label`, where the label is "A+ High conviction",
-"High conviction", or "A+".
+Each market renders as a bold `MARKET PLAYS` header, then each label ONCE as a
+sub-heading ("A+ High conviction" / "High conviction" / "A+") with its symbols one
+per line -- no per-row arrows (owner, 2026-09-17).
 
 THE CHANNEL. Discord as an ALERT channel was removed 2026-08-27; this is the
 "something new" the owner foreshadowed, on its OWN secret
@@ -219,14 +220,28 @@ def record_sent(sent: dict[str, str], delivered_by_market: dict[str, list[dict]]
 
 # ── formatting the clean text (pure) ─────────────────────────────────────────
 
+LABEL_ORDER = ("A+ High conviction", "High conviction", "A+")
+
+
 def _market_block(market: str, picks: list[dict], cap: int,
                   age: float | None, stale_h: float) -> list[str]:
-    lines = [f"**{market.upper()} plays**"]
+    """One market, GROUPED BY LABEL (owner, 2026-09-17): a bold `MARKET PLAYS`
+    header, then each label once as a sub-heading with its symbols one per
+    line -- no per-row arrows. Strongest label group first (LABEL_ORDER)."""
+    lines = [f"**{market.upper()} PLAYS**"]
     if not picks:
         lines.append("(none this morning)")
         return lines
-    for r in picks[:cap]:
-        lines.append(f"{r.get('symbol', '?')} → {play_label(r)}")   # SYM -> label
+    shown = picks[:cap]
+    for label in LABEL_ORDER:
+        syms = [str(r.get("symbol", "?")) for r in shown if play_label(r) == label]
+        if not syms:
+            continue
+        lines.append(label)
+        lines.extend(syms)
+        lines.append("")
+    if lines[-1] == "":
+        lines.pop()
     if len(picks) > cap:
         lines.append(f"...+{len(picks) - cap} more (see the app)")
     if age is not None and stale_h and age > stale_h:

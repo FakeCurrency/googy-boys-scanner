@@ -203,9 +203,11 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   high-conviction longs only -- a tight list (~8/day across the three markets).
   `MORNING_PLAYS_INCLUDE_ALL_APLUS` (config, default False) widens it to also
   include every plain long A+ (~100/day, capped at `MORNING_PLAYS_MAX_ROWS`/
-  market with a "+N more" line). Output is CLEAN TEXT, not embeds: `SYMBOL ->
-  label` grouped under `**ASX plays**` / `**NASDAQ plays**` / `**CRYPTO plays**`,
-  where the label is "A+ High conviction" / "High conviction" / "A+". Messages
+  market with a "+N more" line). Output is CLEAN TEXT, not embeds — **grouped by
+  market THEN by label, one symbol per line (owner, 2026-09-17)**: a bold
+  `**ASX PLAYS**` header, then `A+ High conviction` once with its symbols under
+  it, then `High conviction`, then `A+` (`LABEL_ORDER`); no per-row
+  `SYMBOL -> label` arrows (that was the 2026-09-08 shape). Messages
   are chunked to stay under Discord's 2000-char `content` limit (`_chunk`). No
   entry/stop/RR/company-name clutter -- the owner asked for a scannable list.
 - **TWO MARKET-SPECIFIC SLOTS, ~30 min after each market's close (owner,

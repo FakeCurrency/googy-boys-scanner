@@ -103,19 +103,22 @@ def test_all_suppressed_reads_differently_from_no_plays():
     assert "No new plays" in msgs[0] and "already shared" in msgs[0]
 
 
-def test_the_message_is_clean_symbol_arrow_label_grouped_by_market():
-    picks = {"asx": [_row("JHX", grade="A+")],
+def test_the_message_is_grouped_by_market_then_by_label_one_symbol_per_line():
+    """Owner, 2026-09-17: `ASX PLAYS` / `A+ High conviction` / NIC / PPT ... /
+    `High conviction` / TLS -- NOT a `SYM -> label` arrow per row."""
+    picks = {"asx": [_row("NIC", grade="A+", score=9), _row("PPT", grade="A+", score=8),
+                     _row("TLS", grade="A", score=7)],
              "nasdaq": [_row("CRWV", grade="A")],
              "crypto": [_row("LINK", grade="A+")]}
     msgs = mp.build_messages(picks, {"asx": 1.0, "nasdaq": 1.0, "crypto": 1.0},
                              "Mon 1 Jan")
     text = "\n".join(msgs)
-    assert "**ASX plays**" in text and "**NASDAQ plays**" in text
-    assert "**CRYPTO plays**" in text
-    assert "JHX → A+ High conviction" in text
-    assert "CRWV → High conviction" in text
-    assert "LINK → A+ High conviction" in text
-    # clean: none of the old entry/stop/RR clutter, no company names, no arrows
+    assert "**ASX PLAYS**\nA+ High conviction\nNIC\nPPT\n\nHigh conviction\nTLS" in text
+    assert "**NASDAQ PLAYS**\nHigh conviction\nCRWV" in text
+    assert "**CRYPTO PLAYS**\nA+ High conviction\nLINK" in text
+    assert "→" not in text and "->" not in text, "no per-row arrows"
+    assert text.count("A+ High conviction") == 2, "a label appears once per market, not per row"
+    # clean: none of the old entry/stop/RR clutter, no company names
     assert "entry" not in text and "stop" not in text and "R:R" not in text
     assert "▲" not in text and "▼" not in text and "Ltd" not in text
 
@@ -124,7 +127,7 @@ def test_a_market_with_no_plays_still_shows_a_header():
     msgs = mp.build_messages({"asx": [_row("JHX")], "nasdaq": [], "crypto": []},
                              {"asx": 1.0, "nasdaq": 1.0, "crypto": 1.0}, "Mon 1 Jan")
     text = "\n".join(msgs)
-    assert "**NASDAQ plays**" in text and "(none this morning)" in text
+    assert "**NASDAQ PLAYS**" in text and "(none this morning)" in text
 
 
 def test_a_long_list_is_chunked_under_the_discord_limit():
