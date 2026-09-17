@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-17T14:50:20+10:00",
+  "generated_at": "2026-09-17T16:33:16+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "JAV",
-      "name": "Javelin Minerals Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.097,
-      "turnover_avg20": 75648,
-      "turnover_today": 989847,
-      "rvol": 12.1,
-      "adv_usd": 75648.11,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "MLG",
       "name": "Mlg Oz Limited",
@@ -51,38 +38,12 @@
       "symbol": "HMD",
       "name": "Heramed Limited",
       "sector": "Health Care Equipment & Services",
-      "dir": "SHORT",
-      "price": 0.039,
-      "turnover_avg20": 33096,
-      "turnover_today": 464569,
-      "rvol": 13.8,
-      "adv_usd": 33096.35,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "FSA",
-      "name": "Fsa Group Limited",
-      "sector": "Financial Services",
-      "dir": "SHORT",
-      "price": 1.20500004,
-      "turnover_avg20": 89729,
-      "turnover_today": 287780,
-      "rvol": 3.3,
-      "adv_usd": 89729.67,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "ARN",
-      "name": "Aldoro Resources Limited",
-      "sector": "Materials",
       "dir": "LONG",
-      "price": 0.25,
-      "turnover_avg20": 36914,
-      "turnover_today": 122135,
-      "rvol": 3.3,
-      "adv_usd": 36914.63,
+      "price": 0.041,
+      "turnover_avg20": 47723,
+      "turnover_today": 303930,
+      "rvol": 6.1,
+      "adv_usd": 47723.48,
       "fund": false,
       "is_product": false
     }
