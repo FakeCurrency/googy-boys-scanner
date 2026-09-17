@@ -40,6 +40,8 @@
  *        06:35 daily → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=us&key=<that string>
  */
 
+import { dispatchWorkflow } from "./_dispatch.js";
+
 const VALID_SLOTS = ["asx", "us"];
 
 const json = (status, body) =>
@@ -118,27 +120,15 @@ export const onRequest = async ({ request, env }) => {
     } catch (_) { /* KV hiccup → let the request through */ }
   }
 
-  const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "googy-boys-scanner",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ref, inputs: { slot } }),
-      signal: ctrl.signal,
-    });
+  // Transport + the cooldown refund rule live in _dispatch.js.
+  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { slot }, refund: refundGuard });
 
-    if (res.status === 204) {
-      return json(202, { ok: true, configured: true, slot,
-        message: `${slot.toUpperCase()} slot dispatched — it posts if the slot is due and has not gone out today.` });
-    }
+  if (r.ok) {
+    return json(202, { ok: true, configured: true, slot,
+      message: `${slot.toUpperCase()} slot dispatched — it posts if the slot is due and has not gone out today.` });
+  }
+
+  if (r.status) {
     // Never echo the upstream body — it can carry token/repo details.
     const friendly = {
       401: "GH_DISPATCH_TOKEN is invalid or expired — regenerate it in Cloudflare.",
@@ -146,17 +136,10 @@ export const onRequest = async ({ request, env }) => {
       404: `Workflow "${workflow}" or repo not found.`,
       422: `GitHub couldn't dispatch on ref "${ref}" — check the workflow has workflow_dispatch with a slot input.`,
       429: "GitHub is rate-limiting — try again in a minute.",
-    }[res.status] || `GitHub rejected the request (${res.status}).`;
-    if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
-    return json(502, { ok: false, configured: true, slot, status: res.status, message: friendly });
-  } catch (err) {
-    const aborted = err && err.name === "AbortError";
-    // A timeout MAY have landed server-side: keep the cooldown (a duplicate run
-    // costs more than a 5-minute wait). A clean network failure sent nothing.
-    if (!aborted && refundGuard) await refundGuard();
-    return json(aborted ? 504 : 502, { ok: false, configured: true, slot,
-      message: aborted ? "GitHub took too long — the dispatch may still start." : "Network error reaching GitHub." });
-  } finally {
-    clearTimeout(timer);
+    }[r.status] || `GitHub rejected the request (${r.status}).`;
+    return json(502, { ok: false, configured: true, slot, status: r.status, message: friendly });
   }
+
+  return json(r.aborted ? 504 : 502, { ok: false, configured: true, slot,
+    message: r.aborted ? "GitHub took too long — the dispatch may still start." : "Network error reaching GitHub." });
 };

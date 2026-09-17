@@ -46,15 +46,23 @@ const SRC = (f) => fs.readFileSync(path.join(__dirname, "..", "functions", "api"
 // (2026-08-20). Its source is prepended, exports stripped, so the wrapped
 // handlers run with the shipped logging code rather than a stub — the
 // logging path is part of what these guards now exercise.
-const ACCESS_LOG_HELPER = SRC("_access_log.js")
+const STRIP_EXPORTS = (src) => src
   .replace(/export\s+async\s+function/g, "async function")
   .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
+const ACCESS_LOG_HELPER = STRIP_EXPORTS(SRC("_access_log.js"));
+
+// Same treatment for the shared GitHub workflow_dispatch transport (2026-09-17):
+// the REAL _dispatch.js source is prepended, so the headers, the 10s abort and
+// the cooldown refund rule these guards assert on are the shipped ones rather
+// than a stub that could drift away from them.
+const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_dispatch.js"));
 
 function loadModule(file, { strip = [], sandboxExtra = {} } = {}) {
   let source = SRC(file);
   source = source.replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_access_log\.js";\s*$/m, "");
-  source = ACCESS_LOG_HELPER + "\n" + source;
+  source = source.replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "");
+  source = ACCESS_LOG_HELPER + "\n" + DISPATCH_HELPER + "\n" + source;
   for (const [re, sub] of strip) source = source.replace(re, sub);
   const sandbox = {
     Response, Request, URL, TextEncoder, JSON, Math, Date, String, Number,

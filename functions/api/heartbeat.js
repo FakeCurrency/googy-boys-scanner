@@ -55,6 +55,8 @@
  * alarm.
  */
 
+import { dispatchWorkflow } from "./_dispatch.js";
+
 // Default staleness before a heal fires. Deliberately BETWEEN the two numbers
 // either side of it and not settable without checking both: a healthy full
 // cycle is ~40-80 min (so anything under ~90 would fight a working schedule
@@ -217,30 +219,20 @@ export async function onRequestGet(context) {
   const repo = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const workflow = env.GH_WORKFLOW || "scan.yml";
   const ref = env.GH_REF || "main";
-  const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
+  // Transport + the cooldown refund rule live in _dispatch.js. `reason` marks
+  // the row this dispatch produces as a HEAL in funnel_history (scan.yml
+  // declares the input; default "manual").
+  const r = await dispatchWorkflow({
+    token, repo, workflow, ref,
+    inputs: { market, reason: "heartbeat" },
+    refund,
+  });
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "googy-boys-scanner",
-        "Content-Type": "application/json",
-      },
-      // `reason` marks the row this dispatch produces as a HEAL in
-      // funnel_history (scan.yml declares the input; default "manual").
-      body: JSON.stringify({ ref, inputs: { market, reason: "heartbeat" } }),
-      signal: ctrl.signal,
-    });
+  if (r.ok) {
+    return json(200, { ok: true, healthy: false, action: "dispatched", market, ...base });
+  }
 
-    if (res.status === 204) {
-      return json(200, { ok: true, healthy: false, action: "dispatched", market, ...base });
-    }
-
+  if (r.status) {
     // Never echo the upstream body — it can carry token/repo details.
     const friendly = {
       401: "Dispatch token invalid or expired — regenerate GH_DISPATCH_TOKEN in Cloudflare.",
@@ -248,27 +240,19 @@ export async function onRequestGet(context) {
       404: `Workflow "${workflow}" or repo not found — check GH_WORKFLOW / GH_REPO.`,
       422: `GitHub could not dispatch on ref "${ref}" — check the branch and that the workflow has workflow_dispatch.`,
       429: "GitHub is rate-limiting dispatches.",
-    }[res.status] || `GitHub rejected the dispatch (${res.status}).`;
+    }[r.status] || `GitHub rejected the dispatch (${r.status}).`;
 
-    if (refund) await refund();   // nothing was dispatched — free the retry
-    return json(503, { ok: false, action: "dispatch_failed", status: res.status, error: friendly, ...base });
-  } catch (err) {
-    const aborted = err && err.name === "AbortError";
-    // On timeout the dispatch MAY still have landed, so the cooldown is
-    // deliberately NOT refunded: a duplicate scan costs more than a 5-minute
-    // wait. A clean network failure dispatched nothing — refund.
-    if (!aborted && refund) await refund();
-    return json(503, {
-      ok: false,
-      action: aborted ? "dispatch_timeout" : "dispatch_error",
-      error: aborted
-        ? "GitHub took too long to respond — the scan may still have started."
-        : "Network error reaching GitHub.",
-      ...base,
-    });
-  } finally {
-    clearTimeout(timer);
+    return json(503, { ok: false, action: "dispatch_failed", status: r.status, error: friendly, ...base });
   }
+
+  return json(503, {
+    ok: false,
+    action: r.aborted ? "dispatch_timeout" : "dispatch_error",
+    error: r.aborted
+      ? "GitHub took too long to respond — the scan may still have started."
+      : "Network error reaching GitHub.",
+    ...base,
+  });
 }
 
 /* HEAD must answer, not 404 — found live 2026-08-07.

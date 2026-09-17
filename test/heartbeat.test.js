@@ -32,7 +32,14 @@ const vm = require("vm");
 
 // ---- load the real handler --------------------------------------------------
 const SRC = path.join(__dirname, "..", "functions", "api", "heartbeat.js");
-const source = fs.readFileSync(SRC, "utf8")
+// The REAL shared dispatch transport is prepended (exports stripped) rather than
+// stubbed — see api_guards.test.js for why.
+const DISPATCH_HELPER = fs
+  .readFileSync(path.join(__dirname, "..", "functions", "api", "_dispatch.js"), "utf8")
+  .replace(/export\s+async\s+function/g, "async function")
+  .replace(/export\s+const/g, "const");
+const source = DISPATCH_HELPER + "\n" + fs.readFileSync(SRC, "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "")
   .replace(/export\s+async\s+function\s+onRequestGet/, "async function onRequestGet")
   .replace(/export\s+const\s+onRequestHead/, "globalThis.onRequestHead");
 

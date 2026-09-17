@@ -28,7 +28,15 @@ function test(name, fn) {
 
 // ---- load the real handler --------------------------------------------------
 const SRC = path.join(__dirname, "..", "functions", "api", "morning_plays.js");
-const source = fs.readFileSync(SRC, "utf8")
+// The REAL shared dispatch transport is prepended (exports stripped) rather than
+// stubbed, so the headers, the 10s abort and the cooldown refund rule these
+// tests assert on are the shipped ones. Same pattern as api_guards.test.js.
+const DISPATCH_HELPER = fs
+  .readFileSync(path.join(__dirname, "..", "functions", "api", "_dispatch.js"), "utf8")
+  .replace(/export\s+async\s+function/g, "async function")
+  .replace(/export\s+const/g, "const");
+const source = DISPATCH_HELPER + "\n" + fs.readFileSync(SRC, "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "")
   .replace(/export\s+const\s+onRequest/, "globalThis.onRequest");
 
 function load(fetchImpl) {

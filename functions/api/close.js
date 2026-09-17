@@ -20,6 +20,7 @@
  * _access_log.js — best-effort, never blocks the close. See that file.
  */
 import { withAccessLog } from "./_access_log.js";
+import { dispatchWorkflow } from "./_dispatch.js";
 export const onRequestPost = withAccessLog("/api/close", async ({ request, env }) => {
   const token = env.GH_DISPATCH_TOKEN;
   const repo  = env.GH_REPO     || "FakeCurrency/googy-boys-scanner";
@@ -163,33 +164,21 @@ async function dispatchClose(env, json, inputs, cdKey, nCloses) {
     } catch (_) { /* KV hiccup → let it through */ }
   }
 
-  const url  = `https://api.github.com/repos/${repo}/actions/workflows/close_position.yml/dispatches`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  // Transport + the cooldown refund rule live in _dispatch.js.
+  const r = await dispatchWorkflow({
+    token, repo, workflow: "close_position.yml", ref, inputs, refund: refundGuard,
+  });
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization:          `Bearer ${token}`,
-        Accept:                 "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent":           "googy-boys-scanner",
-        "Content-Type":         "application/json",
-      },
-      body: JSON.stringify({ ref, inputs }),
-      signal: ctrl.signal,
+  if (r.ok) {
+    return json(202, {
+      ok: true,
+      message: nCloses > 1
+        ? `${nCloses} closes queued as ONE run — the strip confirms each against the book.`
+        : `${inputs.symbol} ${inputs.direction} close queued — journal updates in ~1 minute.`,
     });
+  }
 
-    if (res.status === 204) {
-      return json(202, {
-        ok: true,
-        message: nCloses > 1
-          ? `${nCloses} closes queued as ONE run — the strip confirms each against the book.`
-          : `${inputs.symbol} ${inputs.direction} close queued — journal updates in ~1 minute.`,
-      });
-    }
-
+  if (r.status) {
     // Never echo the upstream body — it can carry token/repo details. But DO
     // say something actionable: this endpoint's input is a deliberate human
     // act on the track record, and it used to give the least useful error of
@@ -200,18 +189,13 @@ async function dispatchClose(env, json, inputs, cdKey, nCloses) {
       404: "close_position.yml or the repo was not found — check GH_REPO.",
       422: "GitHub could not dispatch on this ref — check the branch and workflow inputs.",
       429: "GitHub is rate-limiting dispatches — wait a minute and retry.",
-    }[res.status] || `GitHub rejected the request (${res.status}).`;
+    }[r.status] || `GitHub rejected the request (${r.status}).`;
 
-    if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
     return json(502, { ok: false, message: friendly });
-  } catch (err) {
-    const aborted = err?.name === "AbortError";
-    if (!aborted && refundGuard) await refundGuard();
-    return json(aborted ? 504 : 502, {
-      ok: false,
-      message: aborted ? "GitHub took too long — try again." : "Network error reaching GitHub.",
-    });
-  } finally {
-    clearTimeout(timer);
   }
+
+  return json(r.aborted ? 504 : 502, {
+    ok: false,
+    message: r.aborted ? "GitHub took too long — try again." : "Network error reaching GitHub.",
+  });
 }

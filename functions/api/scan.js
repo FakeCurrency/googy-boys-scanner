@@ -22,6 +22,7 @@
  * _access_log.js — best-effort, never blocks the dispatch. See that file.
  */
 import { withAccessLog } from "./_access_log.js";
+import { dispatchWorkflow } from "./_dispatch.js";
 
 export const onRequestPost = withAccessLog("/api/scan", async ({ env, request }) => {
   const token = env.GH_DISPATCH_TOKEN;
@@ -96,36 +97,22 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
     } catch (_) { /* KV hiccup → let the request through */ }
   }
 
-  const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
+  // Transport + the cooldown refund rule live in _dispatch.js; the wording below
+  // is this endpoint's own (it answers the deck's SCAN button).
+  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { market }, refund: refundGuard });
 
-  // Abort if GitHub is slow so the browser never hangs on this request.
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "googy-boys-scanner",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ref, inputs: { market } }),
-      signal: ctrl.signal,
+  if (r.ok) {
+    const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;
+    const eta = market === "all" ? "~6–10 minutes" : "~2–4 minutes";
+    return json(202, {
+      ok: true,
+      configured: true,
+      market,
+      message: `${scope} started — fresh data in ${eta}.`,
     });
+  }
 
-    if (res.status === 204) {
-      const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;
-      const eta = market === "all" ? "~6–10 minutes" : "~2–4 minutes";
-      return json(202, {
-        ok: true,
-        configured: true,
-        market,
-        message: `${scope} started — fresh data in ${eta}.`,
-      });
-    }
-
+  if (r.status) {
     // Map the common GitHub failure modes to a clear, actionable message.
     // Never echo the upstream body — it can carry token/repo details.
     const friendly = {
@@ -134,24 +121,16 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
       404: `Workflow "${workflow}" or repo not found — check GH_WORKFLOW / GH_REPO.`,
       422: `GitHub couldn't dispatch on ref "${ref}" — check the branch exists and the workflow has workflow_dispatch.`,
       429: "GitHub is rate-limiting scan requests — wait a minute and try again.",
-    }[res.status] || `GitHub rejected the request (${res.status}).`;
+    }[r.status] || `GitHub rejected the request (${r.status}).`;
 
-    if (refundGuard) await refundGuard();   // nothing was dispatched — free the retry
-    return json(502, { ok: false, configured: true, status: res.status, message: friendly });
-  } catch (err) {
-    const aborted = err && err.name === "AbortError";
-    // On timeout the dispatch MAY still have landed server-side, so the
-    // cooldown is deliberately NOT refunded — a duplicate run costs more than
-    // a 5-minute wait. A clean network failure dispatched nothing: refund.
-    if (!aborted && refundGuard) await refundGuard();
-    return json(aborted ? 504 : 502, {
-      ok: false,
-      configured: true,
-      message: aborted
-        ? "GitHub took too long to respond — the scan may still start; check back shortly."
-        : "Network error reaching GitHub.",
-    });
-  } finally {
-    clearTimeout(timer);
+    return json(502, { ok: false, configured: true, status: r.status, message: friendly });
   }
+
+  return json(r.aborted ? 504 : 502, {
+    ok: false,
+    configured: true,
+    message: r.aborted
+      ? "GitHub took too long to respond — the scan may still start; check back shortly."
+      : "Network error reaching GitHub.",
+  });
 });
