@@ -835,6 +835,15 @@
     // adds this host, and the page must stay whole in between.
     const sortHost = $("#" + side + "-open-sort");
     if (sortHost) sortHost.innerHTML = state[side].open.length ? openSortControl() : "";
+    // Same guard as above: journal.js can land a commit ahead of the journal.html
+    // that adds this host. While a close-all is in flight the button reads Sending
+    // and is disabled, so a second click cannot race the first.
+    const allHost = $("#" + side + "-close-all");
+    if (allHost) {
+      allHost.innerHTML = closeAllBusy
+        ? `<button type="button" class="jr-close-all" disabled>Sending…</button>`
+        : closeAllControl(side, state[side].open);
+    }
   }
 
   // Per-section (Claude / Me) tables sit in half-width side-by-side columns, so
@@ -2328,6 +2337,145 @@
     if (!data.deleted.includes(id)) data.deleted.push(id);
     mjSave(data); loadMe(data); renderAll(); refreshLive();
   }
+
+  // ── CLOSE ALL — one button per side (owner ask, 2026-09-17: "the ability to
+  //    Close all trades i've taken and also all trades Claude has taken ... a
+  //    button for each") ─────────────────────────────────────────────────────
+  //
+  // TWO buttons rather than one, because the two sides close by COMPLETELY
+  // different mechanisms and a single shared control would have to hide that:
+  //
+  //   * CLAUDE's side is the bot book — the one and only track record. It closes
+  //     SERVER-side via POST /api/close with journal_type "bot", using the
+  //     pre-existing BATCH shape (N closes in ONE workflow run). This adds a
+  //     CALLER, not a capability: the stalled strip has posted that exact body
+  //     since 2026-08-13, and it is the validated, rate-limited dispatcher.
+  //     Each row books at its OWN last_mark — the number the Open R beside it
+  //     was computed from — so what you read is what you book.
+  //   * MY side is the manual journal in localStorage (KV-synced). It closes
+  //     CLIENT-side at the LIVE price, writing exactly the fields saveClose()
+  //     writes, so a bulk close and a one-by-one close leave identical rows
+  //     (status/exit/exit_date/exit_time/exit_reason "manual"/mtime, _init
+  //     dropped so R re-resolves cleanly).
+  //
+  // FAIL-CLOSED on BOTH sides: a position with no honest price is SKIPPED and
+  // NAMED, never closed at a guess — the stalled strip's rule, for the same
+  // reason. If that leaves nothing closable the button says so and sends
+  // nothing. And the confirm states the exact count BEFORE anything happens,
+  // because this is the most destructive control on the page.
+  //
+  // A 202 from /api/close is an ACCEPTED DISPATCH, not a landed close (the gap
+  // where six closes went missing on 2026-08-07), so the message says queued
+  // and points at the book rather than claiming the positions are closed.
+
+  const CLOSE_ALL_MAX = 30;   // /api/close's own batch ceiling (the book cap is 30 too)
+  let closeAllBusy = false;
+
+  // A bot row's honest close price: its OWN last_mark. Same fail-closed test as
+  // stalled.js's closePrice — no finite positive mark means no close, not a guess.
+  function botMark(p) {
+    const v = p && p.last_mark;
+    return (typeof v === "number" && isFinite(v) && v > 0) ? v : null;
+  }
+
+  function closeAllControl(side, list) {
+    if (!list.length) return "";
+    const who = side === "bot" ? "Claude's" : "your";
+    return `<button type="button" class="jr-close-all" data-closeall="${side}"` +
+      ` title="Close all ${list.length} of ${who} open positions. The exact count is confirmed first; nothing is sent until then.">` +
+      `Close all ${list.length}</button>`;
+  }
+
+  function closeAllBot() {
+    const open = (state.bot.open || []).slice();
+    const entries = [], noPx = [];
+    for (const p of open) {
+      const px = botMark(p);
+      if (px == null) noPx.push(String(p.symbol || "?").toUpperCase());
+      else entries.push({ symbol: p.symbol, market: p.market, direction: p.direction, price: px });
+    }
+    if (!entries.length) {
+      alert(open.length
+        ? `None of Claude's ${open.length} open position(s) carry a usable last mark, so there is no honest price to book them at. Close them via close_position.yml (journal_type=bot) instead.`
+        : "Claude holds no open positions.");
+      return;
+    }
+    // Deliberately REFUSE rather than truncate: silently sending the first 30 of
+    // 34 is the same failure as the six closes that went missing in 2026-08-07.
+    if (entries.length > CLOSE_ALL_MAX) {
+      alert(`${entries.length} closable positions is over the ${CLOSE_ALL_MAX}-per-run limit of /api/close.\n\n` +
+            `Nothing was sent. Close them in batches from the stalled strip — that is safer than silently sending only the first ${CLOSE_ALL_MAX}.`);
+      return;
+    }
+    const skipNote = noPx.length
+      ? `\n\nSKIPPED, left open (no usable mark): ${noPx.join(", ")}`
+      : "";
+    if (!confirm(`Close ALL ${entries.length} of Claude's open positions?\n\n` +
+                 `They are queued as ONE workflow run. Each books at its own last mark — the price the Open R beside it is computed from.\n\n` +
+                 `This writes the bot book, which is the real track record, and cannot be undone from this page.${skipNote}`)) return;
+    if (closeAllBusy) return;
+    closeAllBusy = true;
+    paintOpen("bot");
+    // The chain is RETURNED, not fired and forgotten: the click handler ignores
+    // it, but a caller that wants to know when the dispatch settled (the tests
+    // do) must be able to await it.
+    return fetch("/api/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ journal_type: "bot", closes: entries }),
+    })
+      .then((r) => r.json().catch(() => ({})).then((b) => ({ ok: r.ok, b })))
+      .then(({ ok, b }) => {
+        alert(ok
+          ? `${entries.length} closes queued as one run. The book updates when that run lands — check Claude's open positions again in a minute or two.`
+          : `The close was NOT queued.\n\n${(b && b.message) || "Unknown error."}`);
+      })
+      .catch(() => alert("The close was NOT queued — the request could not reach the server."))
+      .finally(() => { closeAllBusy = false; paintOpen("bot"); });
+  }
+
+  async function closeAllMine() {
+    const open = (state.me.open || []).slice();
+    if (!open.length) { alert("You have no open positions."); return; }
+    if (!confirm(`Close ALL ${open.length} of your open positions at the live price?\n\n` +
+                 `Each is booked exactly as closing it one by one would be. Anything with no live price is skipped and left open.\n\n` +
+                 `This writes your journal on this device and syncs it.`)) return;
+    if (closeAllBusy) return;
+    closeAllBusy = true;
+    paintOpen("me");
+    try {
+      // Resolve every price FIRST, then write the store ONCE — a save per row
+      // would fire a sync per row and leave the journal half-closed if one
+      // lookup hangs.
+      const prices = await Promise.all(open.map((t) => priceFor(t).catch(() => null)));
+      const data = mjLoad();
+      const done = [], noPx = [];
+      open.forEach((row, i) => {
+        const px = prices[i];
+        const sym = String(row.symbol || "?").toUpperCase();
+        if (!(px > 0)) { noPx.push(sym); return; }
+        const t = (data.trades || []).find((x) => x && x.id === row.id && x.status === "open");
+        if (!t) return;                       // closed under us: leave it alone
+        t.status = "closed"; t.exit = +px; t.exit_date = today(); t.exit_time = nowTime();
+        t.exit_reason = "manual"; t.mtime = Date.now();
+        delete t._init;                       // force a clean re-resolve
+        done.push(sym);
+      });
+      if (!done.length) {
+        alert(`Nothing was closed — no live price came back for any of them (${noPx.join(", ")}).`);
+        return;
+      }
+      mjSave(data); loadMe(data); renderAll(); refreshLive();
+      alert(`Closed ${done.length}: ${done.join(", ")}.` +
+            (noPx.length ? `\n\nSkipped, still open (no live price): ${noPx.join(", ")}` : ""));
+    } catch (_) {
+      alert("Nothing was closed — the prices could not be fetched.");
+    } finally {
+      closeAllBusy = false;
+      paintOpen("me");
+    }
+  }
+
   function saveClose() {
     if (!closeId) return;
     const data = mjLoad();
@@ -2496,6 +2644,12 @@
       // headers — are the same attribute, so they cannot drift apart.
       const osort = e.target.closest("[data-osort]");
       if (osort) { setOpenSort(osort.getAttribute("data-osort")); return; }
+      const all = e.target.closest("[data-closeall]");
+      if (all) {
+        if (all.getAttribute("data-closeall") === "bot") closeAllBot();
+        else closeAllMine();
+        return;
+      }
       const btn = e.target.closest("[data-close]");
       if (btn) openCloseModal(btn.getAttribute("data-close"));
     });

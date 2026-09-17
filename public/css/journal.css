@@ -948,3 +948,32 @@ details.jr-fold.jr-fold-quiet > summary {
 
 /* The performance fold gets a little air from the strips above it. */
 .jr-fold-perf { margin-top: 4px; }
+
+/* ── Close all (2026-09-17) ────────────────────────────────────────────────────
+   One per side, in that side's "Open positions" header. Deliberately the LOUDEST
+   button in the journal's section titles and the only red one, because it is the
+   only control on the page that can close a whole book in one act -- but still a
+   small outlined chip rather than a filled bar, because the thing that actually
+   stops a mistake is the confirm dialog that names the exact count, not the
+   button's size. Sits after the sort chips (which are quiet, greyscale and
+   reversible) so the eye reaches the reversible controls first. */
+.jr-close-all {
+  margin-left: 10px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--sys-red, #ff453a);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--sys-red, #ff453a) 55%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background .15s ease, border-color .15s ease;
+}
+.jr-close-all:hover:not([disabled]) {
+  background: color-mix(in srgb, var(--sys-red, #ff453a) 14%, transparent);
+  border-color: var(--sys-red, #ff453a);
+}
+.jr-close-all:focus-visible { outline: 2px solid var(--sys-red, #ff453a); outline-offset: 2px; }
+.jr-close-all[disabled] { opacity: .55; cursor: default; color: var(--muted, #8e8e93); border-color: currentColor; }
