@@ -925,6 +925,34 @@ details.jr-fold.jr-fold-quiet > summary {
   }
 }
 
+/* ── CLOSE ALL (2026-09-17) ───────────────────────────────────────────────────
+   One per side, sharing the "Open positions" header line with the sort chips, so
+   it borrows .jr-osort-b's geometry exactly — a taller or fatter control there
+   would reflow the header on both sides of the page. What it does NOT borrow is
+   the colour: this is the only control in the journal that can close a whole
+   book in one act, so it takes the established danger idiom from .mj-btn-danger
+   (var(--red) text on a var(--red-soft) border, hover tightens to solid --red)
+   rather than the sort chips' greyscale. Loud enough to read as different in
+   kind, still small — the thing that actually stops a mistake is the confirm
+   dialog that names the exact count, not the button's size. */
+.jr-close-all {
+  margin-left: 10px; border: 1px solid var(--red-soft); background: none; cursor: pointer;
+  font: 600 10.5px/1 var(--sans); letter-spacing: .4px; text-transform: uppercase;
+  color: var(--red); padding: 4px 7px; border-radius: 6px; vertical-align: middle;
+  transition: border-color .15s, background-color .15s;
+}
+.jr-close-all:hover:not([disabled]) { border-color: var(--red); background: var(--red-soft); }
+.jr-close-all:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+/* Disabled is the in-flight state. It must not read as dangerous-and-clickable,
+   so it drops to muted entirely — the request is already gone. */
+.jr-close-all[disabled] { color: var(--muted); border-color: var(--border); cursor: default; }
+
+@media (max-width: 680px) {
+  /* Same tap-target floor as the sort chips beside it, for the same measured
+     reason — but this one is destructive, so a fumbled tap matters more. */
+  .jr-close-all { padding: 9px 12px; font-size: 11px; min-height: 36px; }
+}
+
 /* ── CLOSED-TRADE PREVIEW (UI pass 2026-08-18) ────────────────────────────
    The closed table was 1,884px of a 5,183px page and grows with every trade.
    Rows past the preview stay in the DOM (indices must not move - the
@@ -949,31 +977,3 @@ details.jr-fold.jr-fold-quiet > summary {
 /* The performance fold gets a little air from the strips above it. */
 .jr-fold-perf { margin-top: 4px; }
 
-/* ── Close all (2026-09-17) ────────────────────────────────────────────────────
-   One per side, in that side's "Open positions" header. Deliberately the LOUDEST
-   button in the journal's section titles and the only red one, because it is the
-   only control on the page that can close a whole book in one act -- but still a
-   small outlined chip rather than a filled bar, because the thing that actually
-   stops a mistake is the confirm dialog that names the exact count, not the
-   button's size. Sits after the sort chips (which are quiet, greyscale and
-   reversible) so the eye reaches the reversible controls first. */
-.jr-close-all {
-  margin-left: 10px;
-  padding: 3px 10px;
-  font: inherit;
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--sys-red, #ff453a);
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--sys-red, #ff453a) 55%, transparent);
-  border-radius: 999px;
-  cursor: pointer;
-  vertical-align: middle;
-  transition: background .15s ease, border-color .15s ease;
-}
-.jr-close-all:hover:not([disabled]) {
-  background: color-mix(in srgb, var(--sys-red, #ff453a) 14%, transparent);
-  border-color: var(--sys-red, #ff453a);
-}
-.jr-close-all:focus-visible { outline: 2px solid var(--sys-red, #ff453a); outline-offset: 2px; }
-.jr-close-all[disabled] { opacity: .55; cursor: default; color: var(--muted, #8e8e93); border-color: currentColor; }
