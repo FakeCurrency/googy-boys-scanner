@@ -66,7 +66,8 @@
       "fill_slip_bps": 0.0,
       "last_mark": 0.78500003,
       "day_marks": {
-        "2026-09-17": 0.80500001
+        "2026-09-17": 0.80500001,
+        "2026-09-18": 0.78500003
       },
       "unreal_r": -0.153,
       "unreal_usd": -124.22
@@ -124,12 +125,13 @@
       "level_tf": "weekly",
       "signal_entry": 12.64000034,
       "fill_slip_bps": 0.0,
-      "last_mark": 12.67000008,
+      "last_mark": 12.40999985,
       "day_marks": {
-        "2026-09-17": 12.64000034
+        "2026-09-17": 12.64000034,
+        "2026-09-18": 12.67000008
       },
-      "unreal_r": 0.019,
-      "unreal_usd": 11.87
+      "unreal_r": -0.148,
+      "unreal_usd": -90.98
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -186,7 +188,8 @@
       "fill_slip_bps": 101.0,
       "last_mark": 1.98500001,
       "day_marks": {
-        "2026-09-17": 2.0
+        "2026-09-17": 2.0,
+        "2026-09-18": 1.98500001
       },
       "unreal_r": -0.078,
       "unreal_usd": -33.94
@@ -246,7 +249,8 @@
       "fill_slip_bps": -106.1,
       "last_mark": 28.57999992,
       "day_marks": {
-        "2026-09-17": 28.92000008
+        "2026-09-17": 28.92000008,
+        "2026-09-18": 28.57999992
       },
       "unreal_r": -0.094,
       "unreal_usd": -63.13
@@ -315,10 +319,75 @@
       "fill_slip_bps": 0.0,
       "last_mark": 0.91500002,
       "day_marks": {
-        "2026-09-17": 0.91500002
+        "2026-09-17": 0.91500002,
+        "2026-09-18": 0.91500002
       },
       "unreal_r": 0.0,
       "unreal_usd": 0.0
+    },
+    {
+      "id": "PGNY:long:1W:2026-09-17",
+      "symbol": "PGNY",
+      "name": "Progyny, Inc. - Common Stock",
+      "sector": "Healthcare",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 27.27000046,
+      "stop": 23.00212573,
+      "tp1": 33.06499863,
+      "tp2": 42.08000183,
+      "tp3": 44.95000076,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 4.26787473,
+      "rr": 3.47,
+      "trigger_bar": null,
+      "entry_date": "2026-09-17",
+      "opened_at": "2026-09-17T15:11:34+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 27.27000046,
+      "mfe": 27.27000046,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 182.61505308,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.533,
+      "risk_usd": 799.47,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 17.8,
+          "stop_pct": 16.0,
+          "risk_usd": 799.47,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $799 - 18% of the $4,500 daily loss guard, on a 16% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "signal_entry": 27.37999916,
+      "fill_slip_bps": -40.2,
+      "last_mark": 27.27000046
     }
   ],
   "closed": [
@@ -8839,25 +8908,25 @@
   "guard": {
     "asx": {
       "market": "asx",
-      "day": "2026-09-17",
+      "day": "2026-09-18",
       "breached": false,
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -1335.7,
+      "week_usd": -1438.55,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -1442.32,
-      "worst_week_usd": -1335.7,
-      "realised_usd": -1215.48,
-      "open_realised_usd": -17.42,
-      "unrealised_usd": -209.43,
-      "session_usd": -1442.32,
+      "worst_session_usd": -102.85,
+      "worst_week_usd": -1438.55,
+      "realised_usd": 0.0,
+      "open_realised_usd": 0.0,
+      "unrealised_usd": -102.85,
+      "session_usd": -102.85,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 5,
-      "open_total_usd": -226.85,
+      "open_total_usd": -329.69,
       "notified": ""
     },
     "nasdaq": {
@@ -8908,9 +8977,9 @@
     }
   },
   "summary": {
-    "open": 5,
-    "unreal_usd": -209.42,
+    "open": 6,
+    "unreal_usd": -312.27,
     "updated_day": "2026-09-17"
   },
-  "updated_at": "2026-09-17T13:36:55+00:00"
+  "updated_at": "2026-09-17T15:17:13+00:00"
 }
