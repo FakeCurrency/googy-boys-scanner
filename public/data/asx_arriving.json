@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-17T16:33:16+10:00",
+  "generated_at": "2026-09-17T19:36:11+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "MLG",
-      "name": "Mlg Oz Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.82999998,
-      "turnover_avg20": 75735,
-      "turnover_today": 778137,
-      "rvol": 10.2,
-      "adv_usd": 75735.55,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "VKA",
       "name": "Viking Mines Limited",
@@ -44,6 +31,19 @@
       "turnover_today": 303930,
       "rvol": 6.1,
       "adv_usd": 47723.48,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "CND",
+      "name": "Condor Energy Limited",
+      "sector": "Energy",
+      "dir": "LONG",
+      "price": 0.019,
+      "turnover_avg20": 14101,
+      "turnover_today": 117250,
+      "rvol": 7.9,
+      "adv_usd": 14101.6,
       "fund": false,
       "is_product": false
     }
