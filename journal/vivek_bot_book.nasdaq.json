@@ -33,13 +33,13 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0032,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0032,
       "exits": [],
-      "mae": 27.27000046,
+      "mae": 27.209999084472656,
       "mfe": 27.27000046,
-      "mae_r": 0.0,
+      "mae_r": -0.014,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 182.61505308,
@@ -65,7 +65,12 @@
       "level_tf": "weekly",
       "signal_entry": 27.37999916,
       "fill_slip_bps": -40.2,
-      "last_mark": 27.27000046
+      "last_mark": 27.20999908,
+      "day_marks": {
+        "2026-09-17": 27.27000046
+      },
+      "unreal_r": -0.014,
+      "unreal_usd": -11.24
     }
   ],
   "closed": [
@@ -4418,27 +4423,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -2432.88,
+      "week_usd": -2446.68,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 0.0,
-      "worst_week_usd": -2432.88,
+      "worst_session_usd": -13.8,
+      "worst_week_usd": -2446.68,
       "realised_usd": 0.0,
-      "open_realised_usd": 0.0,
-      "unrealised_usd": 0.0,
-      "session_usd": 0.0,
+      "open_realised_usd": -2.56,
+      "unrealised_usd": -11.24,
+      "session_usd": -13.8,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 0,
-      "open_total_usd": 0.0,
+      "open": 1,
+      "open_total_usd": -13.8,
       "notified": ""
     }
   },
   "summary": {
     "open": 1,
-    "unreal_usd": 0.0,
+    "unreal_usd": -11.24,
     "updated_day": "2026-09-17"
   },
-  "updated_at": "2026-09-17T15:11:34+00:00"
+  "updated_at": "2026-09-17T16:53:20+00:00"
 }
