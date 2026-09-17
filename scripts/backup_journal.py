@@ -145,9 +145,7 @@ REQUIRED_FILES = [
 ]
 
 LOG_FILES = [
-    "journal/bybit_run.log",
     "journal/scan.log",
-    "journal/paper_run.log",
 ]
 LOG_TAIL_LINES = 50_000
 

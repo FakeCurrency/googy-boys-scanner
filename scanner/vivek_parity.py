@@ -965,21 +965,6 @@ def sample_symbol_map(coverage: dict) -> dict[str, list[str]]:
             for mk, cov in (coverage or {}).items()}
 
 
-def reconstruct_is_sample(limit: int = 120) -> dict[str, list[str]]:
-    """Deterministically rebuild the first-run sample (same _sample stride)."""
-    from .universe import load_universe
-    out = {}
-    for mk in config.MARKETS:
-        uni_all = load_universe(mk, full=True)
-        if getattr(config, "VIVEK_BOT_EXCLUDE_FUNDS", True):
-            uni_all = [u for u in uni_all
-                       if not _is_fund_or_reit({"name": u.get("name"),
-                                                 "sector": u.get("sector")})]
-        uni = _sample(uni_all, limit)
-        out[mk] = [u.get("symbol") for u in uni]
-    return out
-
-
 def run_parity(markets: list[str], limit: int | None, period: str,
                run_variants: bool = True,
                exclude_map: dict[str, set[str]] | None = None,

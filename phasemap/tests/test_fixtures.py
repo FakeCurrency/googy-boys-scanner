@@ -112,7 +112,6 @@ def test_fixture5_momentum_touch_stalls_and_routes_to_fib():
 # ---------------------------------------------------------------- fixture 6
 def test_fixture6_hard_zone_wick_is_test_close_is_kill():
     rec, eng = run(synth.fixture6())
-    chain = dict(eng.state_log)          # index -> state
     # bar 262 wicked through the floor but closed back inside: alive
     assert eng.state_log[-1][1] == "DEAD"
     dead_index = eng.state_log[-1][0]
@@ -125,7 +124,6 @@ def test_fixture6_hard_zone_wick_is_test_close_is_kill():
 
 def test_fixture6_wick_only_stays_alive():
     """First ending bar only: wick through floor, close back above => alive."""
-    import pandas as pd
     df = synth.fixture6().iloc[:-1].reset_index(drop=True)   # drop the kill bar
     rec, eng = run(df)
     assert eng.state != "DEAD"
