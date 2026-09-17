@@ -1,11 +1,38 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-09-17T15:55:49-04:00",
+  "generated_at": "2026-09-17T17:38:21-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "FEAM",
+      "name": "5E Advanced Materials, Inc. - Common Stock",
+      "sector": "",
+      "dir": "LONG",
+      "price": 2.05999994,
+      "turnover_avg20": 935990,
+      "turnover_today": 7700506,
+      "rvol": 7.2,
+      "adv_usd": 935990.97,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "JSM",
+      "name": "Navient Corporation - 6% Senior Notes due December 15, 2043",
+      "sector": "",
+      "dir": "LONG",
+      "price": 17.59000015,
+      "turnover_avg20": 232766,
+      "turnover_today": 1227342,
+      "rvol": 5.3,
+      "adv_usd": 232766.95,
+      "fund": false,
+      "is_product": true
+    }
+  ]
 }
