@@ -37,9 +37,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0032,
       "exits": [],
-      "mae": 27.09000015258789,
+      "mae": 27.010000228881836,
       "mfe": 27.34000015258789,
-      "mae_r": -0.042,
+      "mae_r": -0.061,
       "mfe_r": 0.016,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 182.61505308,
@@ -72,6 +72,70 @@
       },
       "unreal_r": -0.061,
       "unreal_usd": -48.7
+    },
+    {
+      "id": "ASTS:long:3D:2026-09-18",
+      "symbol": "ASTS",
+      "name": "AST SpaceMobile, Inc. - Class A Common Stock",
+      "sector": "Technology",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 58.56000137,
+      "stop": 48.26144545,
+      "tp1": 75.08000183,
+      "tp2": 91.81500244,
+      "tp3": 102.79000092,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 10.29855592,
+      "rr": 3.23,
+      "trigger_bar": null,
+      "entry_date": "2026-09-18",
+      "opened_at": "2026-09-18T15:14:04+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 58.56000137,
+      "mfe": 58.56000137,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 79.73210131,
+      "notional": 5000.0,
+      "leverage": 0.03,
+      "leverage_target": 5.0,
+      "risk_pct": 0.768,
+      "risk_usd": 1152.01,
+      "sizing_mode": "fixed_notional",
+      "cycle": "w3-1",
+      "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 25.6,
+          "stop_pct": 23.0,
+          "risk_usd": 1152.01,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $1,152 - 26% of the $4,500 daily loss guard, on a 23% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 62.70999908,
+      "fill_slip_bps": -661.8,
+      "last_mark": 58.56000137
     }
   ],
   "closed": [
@@ -4442,9 +4506,9 @@
     }
   },
   "summary": {
-    "open": 1,
+    "open": 2,
     "unreal_usd": -48.7,
     "updated_day": "2026-09-18"
   },
-  "updated_at": "2026-09-18T13:33:29+00:00"
+  "updated_at": "2026-09-18T15:14:04+00:00"
 }
