@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-18T21:54:31+10:00",
+  "generated_at": "2026-09-18T23:39:17+10:00",
   "tz_label": "AEST",
   "markets": {
     "asx": {
@@ -312,28 +312,36 @@
       },
       "top_volume": [
         {
-          "symbol": "BHP",
-          "name": "Bhp Group Limited",
-          "sector": "Materials",
-          "pct": 1.4,
-          "turnover": 1026213369,
-          "spike": 2.1
-        },
-        {
           "symbol": "EVN",
           "name": "Evolution Mining Limited",
           "sector": "Materials",
           "pct": 4.42,
-          "turnover": 977605956,
-          "spike": 7.2
+          "turnover": 1052127804,
+          "spike": 7.7
+        },
+        {
+          "symbol": "BHP",
+          "name": "Bhp Group Limited",
+          "sector": "Materials",
+          "pct": 1.4,
+          "turnover": 1045981175,
+          "spike": 2.1
         },
         {
           "symbol": "CSL",
           "name": "Csl Limited",
           "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
           "pct": -1.11,
-          "turnover": 700614094,
-          "spike": 3.2
+          "turnover": 745720179,
+          "spike": 3.4
+        },
+        {
+          "symbol": "MQG",
+          "name": "Macquarie Group Limited",
+          "sector": "Financial Services",
+          "pct": -0.43,
+          "turnover": 664987395,
+          "spike": 4.6
         },
         {
           "symbol": "NAB",
@@ -344,25 +352,17 @@
           "spike": 3.5
         },
         {
-          "symbol": "MQG",
-          "name": "Macquarie Group Limited",
-          "sector": "Financial Services",
-          "pct": -0.43,
-          "turnover": 617913397,
-          "spike": 4.3
-        },
-        {
           "symbol": "CBA",
           "name": "Commonwealth Bank Of Australia.",
           "sector": "Banks",
           "pct": -1.03,
-          "turnover": 583153100,
+          "turnover": 599511887,
           "spike": 1.8
         }
       ],
       "rotation_detail": "Class Pend led the session (avg +3.9% across its big names): AXQ +10.1%, DGT +1.2%, EF2 +0.4%. Consumer Services was the weakest (avg -1.6%): JIN -13.4%, DMP -3.0%, FLT -2.5%.",
       "eli5": "The ASX market barely moved today (-0.0%). Gold companies did the best, and Property companies did the worst. The biggest winner was LYC (up 5.0%), and the biggest faller was XRO (down 4.1%).",
-      "enriched_at": "2026-09-18T11:54:31+00:00"
+      "enriched_at": "2026-09-18T13:39:18+00:00"
     },
     "us": {
       "label": "US",
@@ -370,23 +370,23 @@
         {
           "symbol": "SPX",
           "name": "S&P 500",
-          "last": 7637.8,
-          "chg": 85.95,
-          "chg_pct": 1.14
+          "last": 7640.8,
+          "chg": 2.99,
+          "chg_pct": 0.04
         },
         {
           "symbol": "COMP",
           "name": "Nasdaq",
-          "last": 26418.3,
-          "chg": 439.87,
-          "chg_pct": 1.69
+          "last": 26508.2,
+          "chg": 89.92,
+          "chg_pct": 0.34
         },
         {
           "symbol": "DJI",
           "name": "Dow Jones",
-          "last": 51778.0,
-          "chg": 316.14,
-          "chg_pct": 0.61
+          "last": 51662.6,
+          "chg": -115.46,
+          "chg_pct": -0.22
         },
         {
           "symbol": "RUT",
@@ -398,121 +398,103 @@
         {
           "symbol": "VIX",
           "name": "VIX",
-          "last": 15.33,
-          "chg": -0.11,
-          "chg_pct": -0.71
+          "last": 15.4,
+          "chg": -0.04,
+          "chg_pct": -0.26
         },
         {
           "symbol": "US10Y",
           "name": "10Y Yield",
-          "last": 4.95,
-          "chg": -0.06,
-          "chg_pct": -1.18
+          "last": 4.98,
+          "chg": 0.04,
+          "chg_pct": 0.75
         }
       ],
       "sectors": [
         {
           "symbol": "XLK",
           "name": "Technology",
-          "last": 188.06,
-          "chg": 4.13,
-          "chg_pct": 2.25
+          "last": 188.59,
+          "chg": 0.53,
+          "chg_pct": 0.28
         },
         {
           "symbol": "XLF",
           "name": "Financials",
-          "last": 55.88,
-          "chg": -0.05,
-          "chg_pct": -0.09
+          "last": 55.52,
+          "chg": -0.36,
+          "chg_pct": -0.64
         },
         {
           "symbol": "XLE",
           "name": "Energy",
-          "last": 64.48,
-          "chg": 0.45,
-          "chg_pct": 0.7
+          "last": 64.14,
+          "chg": -0.35,
+          "chg_pct": -0.54
         },
         {
           "symbol": "XLV",
           "name": "Health Care",
-          "last": 168.81,
-          "chg": 1.04,
-          "chg_pct": 0.62
+          "last": 168.72,
+          "chg": -0.09,
+          "chg_pct": -0.05
         },
         {
           "symbol": "XLI",
           "name": "Industrials",
-          "last": 169.01,
-          "chg": 0.3,
-          "chg_pct": 0.18
+          "last": 168.92,
+          "chg": -0.09,
+          "chg_pct": -0.05
         },
         {
           "symbol": "XLY",
           "name": "Cons. Disc.",
-          "last": 111.39,
-          "chg": 1.21,
-          "chg_pct": 1.1
+          "last": 111.33,
+          "chg": -0.06,
+          "chg_pct": -0.05
         },
         {
           "symbol": "XLP",
           "name": "Cons. Staples",
-          "last": 83.49,
-          "chg": 0.16,
-          "chg_pct": 0.19
+          "last": 82.96,
+          "chg": -0.53,
+          "chg_pct": -0.63
         },
         {
           "symbol": "XLU",
           "name": "Utilities",
-          "last": 41.69,
-          "chg": 0.37,
-          "chg_pct": 0.9
+          "last": 41.33,
+          "chg": -0.36,
+          "chg_pct": -0.86
         },
         {
           "symbol": "XLB",
           "name": "Materials",
-          "last": 50.71,
-          "chg": 0.35,
-          "chg_pct": 0.69
+          "last": 50.08,
+          "chg": -0.63,
+          "chg_pct": -1.24
         },
         {
           "symbol": "XLRE",
           "name": "Real Estate",
-          "last": 42.94,
-          "chg": 0.13,
-          "chg_pct": 0.3
+          "last": 42.72,
+          "chg": -0.22,
+          "chg_pct": -0.52
         },
         {
           "symbol": "XLC",
           "name": "Comm. Services",
-          "last": 112.35,
-          "chg": -0.65,
-          "chg_pct": -0.58
+          "last": 111.81,
+          "chg": -0.54,
+          "chg_pct": -0.49
         }
       ],
-      "summary": "S&P 500 +1.1%; Nasdaq +1.7%; Dow Jones +0.6%; Russell 2000 +0.6%. VIX 15.33 (-0.7%) \u00b7 10Y 4.95% (-1.2%). Breadth 9 up / 2 down across sectors \u2014 Technology led (+2.2%), Comm. Services lagged (-0.6%). Tone reads risk-on (cyclicals leading) \u2014 cyclicals +0.6% vs defensives +0.5%. See the calendar & news below for the events behind it.",
-      "rotation": "Money rotated INTO XLK (+2.2%), XLY (+1.1%), XLU (+0.9%) and OUT OF XLC (-0.6%), XLF (-0.1%), XLI (+0.2%). Cyclicals/growth leading \u2014 appetite for risk.",
+      "summary": "S&P 500 +0.0%; Nasdaq +0.3%; Dow Jones -0.2%; Russell 2000 +0.6%. VIX 15.4 (-0.3%) \u00b7 10Y 4.98% (+0.8%). Breadth 1 up / 10 down across sectors \u2014 Technology led (+0.3%), Materials lagged (-1.2%). Tone reads risk-on (cyclicals leading) \u2014 cyclicals -0.4% vs defensives -0.5%. See the calendar & news below for the events behind it.",
+      "rotation": "Money rotated INTO XLK (+0.3%), XLV (-0.1%), XLI (-0.1%) and OUT OF XLB (-1.2%), XLU (-0.9%), XLF (-0.6%). Cyclicals/growth leading \u2014 appetite for risk.",
       "upcoming": [],
       "latest_event": null,
       "top_movers": {
         "winners": [
-          {
-            "symbol": "TEM",
-            "name": "Tempus AI, Inc. - Class A Common Stock",
-            "sector": "",
-            "last": 80.36,
-            "pct": 14.85,
-            "mcap": 10647454720,
-            "tier": "mega"
-          },
-          {
-            "symbol": "SMCI",
-            "name": "Super Micro Computer, Inc. - Common Stock",
-            "sector": "",
-            "last": 40.35,
-            "pct": 9.5,
-            "mcap": 24209172480,
-            "tier": "mega"
-          },
           {
             "symbol": "ALAB",
             "name": "Astera Labs, Inc. - Common Stock",
@@ -532,31 +514,31 @@
             "tier": "mega"
           },
           {
-            "symbol": "MRNA",
-            "name": "Moderna, Inc. - Common Stock",
+            "symbol": "AMD",
+            "name": "Advanced Micro Devices, Inc. - Common Stock",
             "sector": "",
-            "last": 158.07,
-            "pct": 8.55,
+            "last": 545.09,
+            "pct": 6.36,
             "mcap": 0,
             "tier": "mega"
           },
           {
-            "symbol": "SDGR",
-            "name": "Schrodinger, Inc. - Common Stock",
+            "symbol": "ASTS",
+            "name": "AST SpaceMobile, Inc. - Class A Common Stock",
             "sector": "",
-            "last": 30.24,
-            "pct": 26.37,
-            "mcap": 1739230976,
-            "tier": "small"
+            "last": 62.71,
+            "pct": 5.8,
+            "mcap": 23350048768,
+            "tier": "mega"
           },
           {
-            "symbol": "VICR",
-            "name": "Vicor Corporation - Common Stock",
+            "symbol": "COIN",
+            "name": "Coinbase Global, Inc. - Class A Common Stock",
             "sector": "",
-            "last": 216.39,
-            "pct": 17.66,
-            "mcap": 9124983808,
-            "tier": "small"
+            "last": 173.97,
+            "pct": 5.75,
+            "mcap": 50511577088,
+            "tier": "mega"
           },
           {
             "symbol": "ABSI",
@@ -568,41 +550,50 @@
             "tier": "small"
           },
           {
-            "symbol": "RXT",
-            "name": "Rackspace Technology, Inc. - Common Stock",
+            "symbol": "CAPR",
+            "name": "Capricor Therapeutics, Inc. - Common Stock",
             "sector": "",
-            "last": 3.92,
-            "pct": 12.64,
+            "last": 9.42,
+            "pct": 10.05,
+            "mcap": 1268270464,
+            "tier": "small"
+          },
+          {
+            "symbol": "CAI",
+            "name": "Caris Life Sciences, Inc. - Common Stock",
+            "sector": "",
+            "last": 30.92,
+            "pct": 9.61,
+            "mcap": 6878367232,
+            "tier": "small"
+          },
+          {
+            "symbol": "ABCL",
+            "name": "AbCellera Biologics Inc. - Common Shares",
+            "sector": "",
+            "last": 12.73,
+            "pct": 9.08,
             "mcap": 0,
             "tier": "small"
           },
           {
-            "symbol": "RARE",
-            "name": "Ultragenyx Pharmaceutical Inc. - Common Stock",
+            "symbol": "CMPS",
+            "name": "COMPASS Pathways Plc - American Depository Shares",
             "sector": "",
-            "last": 14.5,
-            "pct": 12.58,
-            "mcap": 2615562752,
+            "last": 15.0,
+            "pct": 8.7,
+            "mcap": 0,
             "tier": "small"
           }
         ],
         "losers": [
           {
-            "symbol": "TMUS",
-            "name": "T-Mobile US, Inc. - Common Stock",
+            "symbol": "NFLX",
+            "name": "Netflix, Inc. - Common Stock",
             "sector": "",
-            "last": 166.45,
-            "pct": -5.57,
-            "mcap": 189069099008,
-            "tier": "mega"
-          },
-          {
-            "symbol": "PSKY",
-            "name": "Paramount Skydance Corporation - Class B Common Stock",
-            "sector": "",
-            "last": 10.62,
-            "pct": -4.67,
-            "mcap": 12195550208,
+            "last": 70.16,
+            "pct": -6.84,
+            "mcap": 308714471424,
             "tier": "mega"
           },
           {
@@ -633,77 +624,62 @@
             "tier": "mega"
           },
           {
-            "symbol": "FLNC",
-            "name": "Fluence Energy, Inc. - Class A Common Stock",
+            "symbol": "AXON",
+            "name": "Axon Enterprise, Inc. - Common Stock",
             "sector": "",
-            "last": 7.66,
-            "pct": -15.36,
-            "mcap": 2987276032,
-            "tier": "small"
+            "last": 453.5,
+            "pct": -3.19,
+            "mcap": 39820955648,
+            "tier": "mega"
           },
           {
-            "symbol": "DKNG",
-            "name": "DraftKings Inc. - Class A Common Stock",
+            "symbol": "VOD",
+            "name": "Vodafone Group Plc - American Depositary Shares each representing ten Ordinary Shares",
             "sector": "",
-            "last": 22.47,
-            "pct": -7.64,
+            "last": 16.72,
+            "pct": -4.59,
             "mcap": 0,
             "tier": "small"
           },
           {
-            "symbol": "TTAN",
-            "name": "ServiceTitan, Inc. - Class A Common Stock",
+            "symbol": "BTSG",
+            "name": "BrightSpring Health Services, Inc. - Common Stock",
             "sector": "",
-            "last": 54.25,
-            "pct": -7.53,
-            "mcap": 9105698816,
-            "tier": "small"
-          },
-          {
-            "symbol": "XRAY",
-            "name": "DENTSPLY SIRONA Inc. - Common Stock",
-            "sector": "",
-            "last": 9.38,
-            "pct": -7.5,
-            "mcap": 2310511360,
-            "tier": "small"
-          },
-          {
-            "symbol": "SRAD",
-            "name": "Sportradar Group AG - Class A Ordinary Shares",
-            "sector": "",
-            "last": 12.36,
-            "pct": -6.58,
+            "last": 56.6,
+            "pct": -4.0,
             "mcap": 0,
+            "tier": "small"
+          },
+          {
+            "symbol": "CSGP",
+            "name": "CoStar Group, Inc. - Common Stock",
+            "sector": "",
+            "last": 29.3,
+            "pct": -3.49,
+            "mcap": 0,
+            "tier": "small"
+          },
+          {
+            "symbol": "ASND",
+            "name": "Ascendis Pharma A/S - Ordinary Share",
+            "sector": "",
+            "last": 239.04,
+            "pct": -3.49,
+            "mcap": 0,
+            "tier": "small"
+          },
+          {
+            "symbol": "BILI",
+            "name": "Bilibili Inc. - American Depositary Shares",
+            "sector": "",
+            "last": 14.4,
+            "pct": -3.36,
+            "mcap": 7947424256,
             "tier": "small"
           }
         ]
       },
       "top_volume": [
-        {
-          "symbol": "MU",
-          "name": "Micron Technology, Inc. - Common Stock",
-          "sector": "",
-          "pct": 5.5,
-          "turnover": 21488773500,
-          "spike": 0.9
-        },
-        {
-          "symbol": "NVDA",
-          "name": "NVIDIA Corporation - Common Stock",
-          "sector": "",
-          "pct": 2.54,
-          "turnover": 20609295726,
-          "spike": 0.7
-        },
-        {
-          "symbol": "INTC",
-          "name": "Intel Corporation - Common Stock",
-          "sector": "",
-          "pct": 7.67,
-          "turnover": 16203486534,
-          "spike": 1.6
-        },
         {
           "symbol": "AMD",
           "name": "Advanced Micro Devices, Inc. - Common Stock",
@@ -713,25 +689,49 @@
           "spike": 1.6
         },
         {
-          "symbol": "TSLA",
-          "name": "Tesla, Inc.  - Common Stock",
+          "symbol": "AAPL",
+          "name": "Apple Inc. - Common Stock",
           "sector": "",
-          "pct": 2.27,
-          "turnover": 14218997174,
-          "spike": 1.0
+          "pct": 1.38,
+          "turnover": 12345253600,
+          "spike": 0.9
         },
         {
-          "symbol": "SNDK",
-          "name": "Sandisk Corporation - Common Stock When-Issued",
+          "symbol": "AVGO",
+          "name": "Broadcom Inc. - Common Stock",
           "sector": "",
-          "pct": 6.21,
-          "turnover": 13627550431,
-          "spike": 0.8
+          "pct": 2.29,
+          "turnover": 8457171463,
+          "spike": 0.9
+        },
+        {
+          "symbol": "AMZN",
+          "name": "Amazon.com, Inc. - Common Stock",
+          "sector": "",
+          "pct": 2.13,
+          "turnover": 7620275747,
+          "spike": 0.9
+        },
+        {
+          "symbol": "CRWV",
+          "name": "CoreWeave, Inc. - Class A Common Stock",
+          "sector": "",
+          "pct": -4.16,
+          "turnover": 6336584626,
+          "spike": 3.8
+        },
+        {
+          "symbol": "NVDA",
+          "name": "NVIDIA Corporation - Common Stock",
+          "sector": "",
+          "pct": -0.48,
+          "turnover": 3645845180,
+          "spike": 0.1
         }
       ],
-      "rotation_detail": "Standout names: TEM +14.8%, SMCI +9.5%, ALAB +9.1%, ARM +8.6%. Weakest: TMUS -5.6%, PSKY -4.7%, CRWV -4.2%.",
-      "eli5": "The US market went up a bit today (+1.1%). Technology companies did the best, and Comm. Services companies did the worst. The biggest winner was TEM (up 14.8%), and the biggest faller was TMUS (down 5.6%).",
-      "enriched_at": "2026-09-18T11:48:53+00:00"
+      "rotation_detail": "Standout names: ALAB +9.1%, ARM +8.6%, AMD +6.4%, ASTS +5.8%. Weakest: NFLX -6.8%, CRWV -4.2%, CPRT -3.8%.",
+      "eli5": "The US market barely moved today (+0.1%). Technology companies did the best, and Materials companies did the worst. The biggest winner was ALAB (up 9.1%), and the biggest faller was NFLX (down 6.8%).",
+      "enriched_at": "2026-09-18T13:33:31+00:00"
     }
   }
 }
