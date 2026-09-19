@@ -34,6 +34,7 @@ import io
 import json
 import statistics
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -252,6 +253,37 @@ def live_endpoint(site: str, symbol: str, rng: str = "25y") -> dict:
             "source": j.get("source"), "degraded": j.get("degraded")}
 
 
+
+def intraday_bulk(symbols: list[str], interval: str = "1h", rng: str = "2y") -> dict:
+    """Can we get HOURLY bars in bulk, and is a real 4H 200-SMA reachable?
+
+    Owner, 2026-09-19: "4h trade levels need to be based on 4h not on daily."
+    The chart already draws real 4H candles and a real 4H 200-SMA from the 2y of
+    1h bars it fetches per symbol; what it cannot do is show 4H ENTRY/STOP/TARGET
+    levels, because the engine never computes a 4H plan. Doing that in the engine
+    needs hourly bars at scan time, so the question is cost and reach:
+
+      * does Yahoo serve 1h over a 2-year window at all (it caps intraday depth)?
+      * how many 4H bars does that give, against the 200 a 200-SMA needs?
+      * how long does a symbol take, i.e. what would a few hundred rows cost?
+    """
+    t0 = time.time()
+    rows, failures = [], 0
+    for sym in symbols:
+        res = yahoo_chart(sym, interval=interval, rng=rng)
+        d = describe(res, want_interval_sec=3600)
+        if not d["ok"]:
+            failures += 1
+            rows.append((sym, None))
+            continue
+        # 4H bars built by bucketing 1h, the way public/js/chart.js does it.
+        ts = res.get("timestamp") or []
+        buckets = {t // (4 * 3600) for t in ts}
+        rows.append((sym, {"h1": d["bars"], "h4": len(buckets), "years": d["years"],
+                           "first": d["first"], "degraded": d["degraded"]}))
+    return {"rows": rows, "failures": failures, "seconds": round(time.time() - t0, 1)}
+
+
 def stooq(symbol: str) -> dict:
     """Stooq's free daily CSV — no key, no quota published. A candidate SECOND
     free source for depth. ASX maps <ticker>.AX -> <ticker>.au."""
@@ -277,6 +309,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--chunk-years", type=int, default=5, help="window size for the stitch test")
     ap.add_argument("--back-years", type=int, default=25, help="how far back to try stitching")
     ap.add_argument("--skip-stooq", action="store_true")
+    ap.add_argument("--intraday", action="store_true",
+                    help="probe hourly/4H reach for the 4H-plan question")
     ap.add_argument("--site", help="also probe THIS deployment's /api/price "
                                    "(e.g. https://googy-boys-scanner.pages.dev)")
     a = ap.parse_args(argv)
@@ -336,6 +370,24 @@ def main(argv: list[str] | None = None) -> int:
                               f"{'COARSE' if r['degraded'] else ''}")
                     else:
                         print(f"{sym + ' ' + rng:10} {'(fail)':>7}  {r['why']}")
+
+    if a.intraday:
+        print(f"\n\n{'=' * 78}\nINTRADAY REACH — can the engine build a real 4H plan?")
+        print("(a 200-period 4H SMA needs 200 finished 4H bars)")
+        print("=" * 78)
+        print(f"{'symbol':10} {'1h bars':>9} {'4H bars':>9} {'years':>7} {'first':>12}  200-SMA?")
+        for market, syms in sample.items():
+            out = intraday_bulk(syms)
+            for sym, r in out["rows"]:
+                if not r:
+                    print(f"{sym:10} {'(failed)':>9}")
+                    continue
+                print(f"{sym:10} {r['h1']:>9} {r['h4']:>9} {r['years']:>7.2f} "
+                      f"{str(r['first']):>12}  {'YES' if r['h4'] >= 200 else 'NO — too few'}")
+            n = len(out["rows"]) or 1
+            print(f"  -> {market}: {out['seconds']}s for {n} symbols "
+                  f"({out['seconds']/n:.2f}s each, {out['failures']} failed). "
+                  f"300 rows would cost about {out['seconds']/n*300/60:.1f} min sequentially.")
 
     print(f"\n\n{'=' * 78}\nSEAM TEST — do two overlapping windows agree about the same dates?")
     print("(if not, stitched history would jump at every join and every level would be wrong)")

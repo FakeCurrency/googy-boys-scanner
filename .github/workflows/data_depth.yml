@@ -34,6 +34,10 @@ on:
         description: "Also probe THIS deployment's /api/price (blank = skip)"
         required: false
         default: ""
+      intraday:
+        description: "Probe hourly/4H reach (for the 4H-plan question): true/false"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -59,6 +63,7 @@ jobs:
           # (2026-07-20 security pass).
           SYMBOLS: ${{ github.event.inputs.symbols }}
           SITE: ${{ github.event.inputs.site }}
+          INTRADAY: ${{ github.event.inputs.intraday }}
           CHUNK: ${{ github.event.inputs.chunk_years }}
           BACK: ${{ github.event.inputs.back_years }}
         run: |
@@ -66,6 +71,7 @@ jobs:
           ARGS="--chunk-years ${CHUNK:-5} --back-years ${BACK:-25}"
           if [ -n "$SYMBOLS" ]; then ARGS="$ARGS --symbols $SYMBOLS"; fi
           if [ -n "$SITE" ]; then ARGS="$ARGS --site $SITE"; fi
+          if [ "$INTRADAY" = "true" ]; then ARGS="$ARGS --intraday"; fi
           python3 scripts/data_depth.py $ARGS 2>&1 | tee /tmp/depth.txt
 
       - name: Step summary
