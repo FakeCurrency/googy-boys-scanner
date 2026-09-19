@@ -169,6 +169,56 @@ def stitch_windows(symbol: str, chunk_years: int, back_years: int) -> dict:
     }
 
 
+
+def overlap_check(symbol: str, chunk_years: int = 5) -> dict:
+    """THE STITCHING SAFETY TEST.
+
+    Yahoo back-adjusts history for splits and dividends. The question that
+    decides whether deep history can be stitched at all: is that adjustment
+    ABSOLUTE (relative to today, so any window agrees about a given date), or
+    is it RELATIVE TO THE LAST BAR OF THE RESPONSE (so an old window is scaled
+    to its own final close)? If it is relative, joining windows would create a
+    fake price JUMP at every seam -- catastrophic on a chart whose entire
+    purpose is reading levels.
+
+    So: fetch two deliberately OVERLAPPING windows and compare the adjusted
+    close for the same dates. ratio 1.0 means absolute and safe to concatenate.
+    Anything else is the scale factor a stitcher would have to correct by.
+    """
+    now = int(dt.datetime.now(dt.timezone.utc).timestamp())
+    recent = yahoo_chart(symbol, p1=now - chunk_years * 365 * DAY, p2=now)
+    older = yahoo_chart(symbol, p1=now - 2 * chunk_years * 365 * DAY,
+                        p2=now - (chunk_years - 1) * 365 * DAY)
+    if not recent or not older:
+        return {"ok": False}
+
+    def closes(res):
+        ts = res.get("timestamp") or []
+        q = (res.get("indicators") or {}).get("quote") or [{}]
+        adj = ((res.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose")
+        raw = q[0].get("close") or []
+        # Mirror _prices.js yahooCandles(): bars are scaled by adjclose/close.
+        out = {}
+        for i, t in enumerate(ts):
+            c = raw[i] if i < len(raw) else None
+            a = adj[i] if adj and i < len(adj) else None
+            if c:
+                out[t] = (a / c) * c if a else c      # == a when present
+        return out
+
+    a, b = closes(recent), closes(older)
+    shared = sorted(set(a) & set(b))
+    if not shared:
+        return {"ok": False, "why": "no overlapping dates"}
+    ratios = [a[t] / b[t] for t in shared if b[t]]
+    if not ratios:
+        return {"ok": False, "why": "no comparable closes"}
+    med = statistics.median(ratios)
+    return {"ok": True, "shared": len(shared), "median_ratio": round(med, 6),
+            "min_ratio": round(min(ratios), 6), "max_ratio": round(max(ratios), 6),
+            "absolute": abs(med - 1.0) < 0.001 and abs(max(ratios) - min(ratios)) < 0.002}
+
+
 def stooq(symbol: str) -> dict:
     """Stooq's free daily CSV — no key, no quota published. A candidate SECOND
     free source for depth. ASX maps <ticker>.AX -> <ticker>.au."""
@@ -235,6 +285,20 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             print(f"{sym:10} {st['bars']:>7} {str(st['first']):>12} {st['years']:>7.1f} "
                   f"{st['chunks_ok']:>7} {st['degraded_chunks']:>7} {str(st['median_gap_days']):>7}")
+
+    print(f"\n\n{'=' * 78}\nSEAM TEST — do two overlapping windows agree about the same dates?")
+    print("(if not, stitched history would jump at every join and every level would be wrong)")
+    print("=" * 78)
+    print(f"{'symbol':10} {'shared':>7} {'median':>10} {'min':>10} {'max':>10}  verdict")
+    for market, syms in sample.items():
+        for sym in syms:
+            ov = overlap_check(sym, a.chunk_years)
+            if not ov["ok"]:
+                print(f"{sym:10} {'(n/a)':>7}  {ov.get('why','failed')}")
+                continue
+            verdict = "SAFE to concatenate" if ov["absolute"] else "NEEDS RESCALING"
+            print(f"{sym:10} {ov['shared']:>7} {ov['median_ratio']:>10.6f} "
+                  f"{ov['min_ratio']:>10.6f} {ov['max_ratio']:>10.6f}  {verdict}")
 
     if not a.skip_stooq:
         print(f"\n\n{'=' * 78}\nSTOOQ (free CSV, no key) — a candidate second source\n{'=' * 78}")
