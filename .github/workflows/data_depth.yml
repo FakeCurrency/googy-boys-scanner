@@ -38,6 +38,10 @@ on:
         description: "Probe hourly/4H reach (for the 4H-plan question): true/false"
         required: false
         default: "false"
+      h4_ab:
+        description: "BEFORE/AFTER the H4 level change (daily proxy vs real 4H 200): asx|nasdaq|<symbols>|blank"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -64,6 +68,7 @@ jobs:
           SYMBOLS: ${{ github.event.inputs.symbols }}
           SITE: ${{ github.event.inputs.site }}
           INTRADAY: ${{ github.event.inputs.intraday }}
+          H4AB: ${{ github.event.inputs.h4_ab }}
           CHUNK: ${{ github.event.inputs.chunk_years }}
           BACK: ${{ github.event.inputs.back_years }}
         run: |
@@ -74,6 +79,20 @@ jobs:
           if [ "$INTRADAY" = "true" ]; then ARGS="$ARGS --intraday"; fi
           python3 scripts/data_depth.py $ARGS 2>&1 | tee /tmp/depth.txt
 
+      # The H4-level A/B needs pandas/yfinance, so it installs only when asked.
+      - name: H4 level BEFORE/AFTER
+        if: ${{ github.event.inputs.h4_ab != '' }}
+        env:
+          H4AB: ${{ github.event.inputs.h4_ab }}
+        run: |
+          set -o pipefail
+          pip install -q -r requirements.txt
+          case "$H4AB" in
+            asx|nasdaq) ARGS="--market $H4AB --limit 25" ;;
+            *)          ARGS="--symbols $H4AB" ;;
+          esac
+          python3 scripts/h4_level_ab.py $ARGS 2>&1 | tee /tmp/h4ab.txt
+
       - name: Step summary
         if: always()
         run: |
@@ -82,4 +101,10 @@ jobs:
             echo '```'
             cat /tmp/depth.txt 2>/dev/null || echo '(no output)'
             echo '```'
+            if [ -s /tmp/h4ab.txt ]; then
+              echo '### H4 level BEFORE/AFTER'
+              echo '```'
+              cat /tmp/h4ab.txt
+              echo '```'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

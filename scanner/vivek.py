@@ -63,8 +63,19 @@ def _structure(df: pd.DataFrame, direction: str) -> float:
     return round(score, 2)
 
 
-def evaluate(df: pd.DataFrame) -> dict | None:
-    """Find a 200 SMA reaction. Returns a signal dict or None if no setup."""
+def evaluate(df: pd.DataFrame, h4_sma: float | None = None) -> dict | None:
+    """Find a 200 SMA reaction. Returns a signal dict or None if no setup.
+
+    `h4_sma` is the TRUE 4H 200-SMA, and it is optional and defaults to None on
+    purpose: None reproduces today's behaviour exactly, where the "h4" level is
+    the DAILY 200 as a stand-in (see the levels list below). Passing a real one
+    changes which level can be in play, and therefore the direction, the score,
+    the grade and which names reach the deck -- a trade decision, and the
+    owner's. The parameter exists so that decision can be MEASURED against the
+    real engine (scripts/h4_level_ab.py) instead of a re-typed copy of it, and
+    so that turning it on later is one caller passing one number rather than a
+    rewrite of this function.
+    """
     if df is None or len(df) < config.VIVEK_MIN_HISTORY:
         return None
 
@@ -101,7 +112,13 @@ def evaluate(df: pd.DataFrame) -> dict | None:
         levels.append(("weekly", weekly_sma))
     if sma_3d:
         levels.append(("3d", sma_3d))
-    levels.append(("h4", daily_sma))   # Daily-200 proxy for the H4 200 SMA
+    # The H4 level. `h4_sma` is None in every production path today, so this is
+    # the Daily-200 stand-in it has always been; the A/B harness passes a real
+    # 4H 200-SMA to measure what switching would do.
+    if h4_sma is not None and np.isfinite(h4_sma) and h4_sma > 0:
+        levels.append(("h4", float(h4_sma)))
+    else:
+        levels.append(("h4", daily_sma))   # Daily-200 proxy for the H4 200 SMA
 
     best = None
     for tf, lvl in levels:
