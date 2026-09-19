@@ -229,6 +229,30 @@ VIVEK_BREAK_VOL_MULT   = 1.5       # a structure break needs >= this x average v
 VIVEK_TRIGGER_PRIORITY = ["reclaim", "retest", "break"]   # first match wins
 VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g. Weekly)
 
+# ── 4H PLANS (owner, 2026-09-19) ─────────────────────────────────────────────
+# "I need to see genuine set ups forming on d and weekly 3d and then if i toggle
+# down i want to see a genuine set up on the 4hr."
+#
+# Until now the chart's 4H toggle borrowed the DAILY plan and said so in a
+# tooltip, because the scan downloads daily bars only and never built a 4H plan.
+# The engine still uses the Daily 200 SMA as its "h4" LEVEL in evaluate() -- that
+# one is signal path (it feeds scoring and grading) and is deliberately NOT
+# touched here. This block is the DISPLAY half: a real 4H plan, from real 4H
+# bars, published as its own timeframe like 3D and 1W.
+#
+# Measured 2026-09-19 on a runner before building it: Yahoo serves 2 full years
+# of 1h bars (~3,500), which buckets to ~1,200 4H bars -- six times the 200 a
+# 200-period average needs -- at 0.18s a symbol, so the whole published row set
+# costs about a minute of scan time.
+VIVEK_H4_PLANS         = True      # build a real 4H plan for published rows
+VIVEK_H4_PERIOD        = "2y"      # Yahoo's intraday ceiling is ~730 days
+VIVEK_H4_INTERVAL      = "1h"      # bucketed to 4H locally (Yahoo has no 4h)
+VIVEK_H4_BUCKET_HOURS  = 4
+# Cap the extra download so a huge result set cannot stretch a scheduled scan.
+# Rows beyond this simply keep today's behaviour (the chart falls back to the
+# Daily plan and labels it), which is a degrade, never a failure.
+VIVEK_H4_MAX_SYMBOLS   = 400
+
 VIVEK_RISK_PCT_MAX     = 0.5
 VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
 VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)

@@ -419,6 +419,8 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     errors.report(scanned)
     price_errors.report(scanned)
     _report_sma_proxies(results)
+    # AFTER scoring/grading/gating, so a 4H plan cannot influence any of them.
+    _attach_h4_plans(results, market)
 
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
@@ -516,6 +518,78 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         **errors.payload(),
         **price_errors.payload("price_"),
     }
+
+
+def _attach_h4_plans(results: list[dict], market: str) -> None:
+    """Give every published row a REAL 4H plan (owner, 2026-09-19).
+
+    "I need to see genuine set ups forming on d and weekly 3d and then if i
+    toggle down i want to see a genuine set up on the 4hr."
+
+    Until this, the chart's 4H toggle drew real 4H candles and real 4H SMAs but
+    borrowed the DAILY plan for its entry/stop/targets, and said so in a tooltip.
+    So the 4H chip in the multi-timeframe strip echoed the Daily numbers and
+    confirmed nothing. Now the 4H toggle shows a plan built from 4H bars.
+
+    DISPLAY ONLY, and the fence is deliberate. This runs AFTER scoring, grading
+    and `gate_tf`, and writes into ONE key -- `row["plans"]["4H"]`. `gate_tf`
+    still considers only ("1W", "3D", "1D"), the headline plan `hp` is already
+    chosen, and no score, grade, arming decision or bot input can see this. The
+    engine's own "h4" LEVEL inside evaluate() is still the Daily-200 proxy;
+    changing THAT moves scores and grades and is the owner's call, not this
+    function's.
+
+    DEGRADES, NEVER FAILS. Yahoo's intraday endpoint is flakier than its daily
+    one and this runs inside a scheduled scan that commits the book. Any failure
+    -- the whole download, one ticker, one resample -- leaves the row exactly as
+    it was, which is today's behaviour: the chart falls back to the Daily plan
+    and labels it. A 4H plan is a nicety; a scan that dies trying to draw one is
+    not.
+    """
+    import time
+    from . import vivek                 # deferred, matching scan_vivek_market
+
+    if not config.VIVEK_H4_PLANS or not results:
+        return
+    rows = [r for r in results if r.get("yf") or r.get("symbol")]
+    rows = rows[:config.VIVEK_H4_MAX_SYMBOLS]
+    if not rows:
+        return
+    tickers = [r.get("yf") or r["symbol"] for r in rows]
+    t0 = time.time()
+    try:
+        frames = download(tickers,
+                          period=config.VIVEK_H4_PERIOD,
+                          interval=config.VIVEK_H4_INTERVAL)
+    except Exception as exc:                       # noqa: BLE001 - see DEGRADES above
+        print(f"  h4: download failed ({type(exc).__name__}) - 4H toggles keep the Daily plan")
+        return
+
+    built = skipped = 0
+    for row in rows:
+        try:
+            df = frames.get(row.get("yf") or row["symbol"])
+            if df is None or df.empty:
+                skipped += 1
+                continue
+            direction = "long" if str(row.get("dir") or "").upper() == "LONG" else "short"
+            plan = vivek.build_h4_plan(df, direction)
+            if not plan:
+                skipped += 1
+                continue
+            row.setdefault("plans", {})["4H"] = plan
+            # build_markers() already ran (before this pass, by design), so the
+            # 4H entry has to bring its own or the toggle would draw a real plan
+            # with no reaction/trigger marks on it.
+            m4 = vivek.build_markers({"4H": plan}).get("4H") or []
+            if m4:
+                row.setdefault("markers", {})["4H"] = m4
+            built += 1
+        except Exception:                          # noqa: BLE001 - one bad ticker is not a scan
+            skipped += 1
+    armed = sum(1 for r in rows if (r.get("plans", {}).get("4H") or {}).get("armed"))
+    print(f"  h4: {built}/{len(rows)} rows carry a real 4H plan ({armed} armed on 4H), "
+          f"{skipped} fell back to the Daily plan - {time.time() - t0:.0f}s [{market}]")
 
 
 def _report_sma_proxies(results: list[dict]) -> None:

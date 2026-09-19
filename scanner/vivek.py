@@ -373,6 +373,49 @@ def _resample_weekly_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
 
+def _resample_4h_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
+    """HOURLY OHLCV -> a 4-hour OHLCV frame, for the 4H plan (owner, 2026-09-19).
+
+    Takes 1h bars because Yahoo has no 4h interval; the chart buckets the same
+    way (public/js/chart.js bucketBars(intraday, 4*3600)), so the candles a
+    reader sees and the plan they read are built from the same arithmetic.
+
+    Epoch-anchored buckets, NOT session-anchored: `resample("4h")` cuts on
+    00:00/04:00/08:00/... UTC exactly as the chart's `t - t % (4*3600)` does.
+    Anchoring to each market's open would produce prettier candles and would
+    NOT match the chart, and two 4H series that disagree about where a bar
+    starts is the one outcome worth avoiding here."""
+    try:
+        h4 = pd.DataFrame({
+            "Open":   df["Open"].resample("4h").first(),
+            "High":   df["High"].resample("4h").max(),
+            "Low":    df["Low"].resample("4h").min(),
+            "Close":  df["Close"].resample("4h").last(),
+            "Volume": df["Volume"].resample("4h").sum(),
+        }).dropna()
+        return h4 if len(h4) else None
+    except Exception:
+        return None
+
+
+def build_h4_plan(df_1h: pd.DataFrame, direction: str) -> dict | None:
+    """A real 4H plan from hourly bars, or None if the frame is unusable.
+
+    DISPLAY ONLY, and that fence is the whole design. It is built AFTER scoring
+    and grading, attached to the published row's `plans` under "4H", and read by
+    nothing else: `gate_tf` in scan.py still considers only ("1W", "3D", "1D"),
+    so arming, the headline plan, the grade and therefore which names appear are
+    all untouched by it. The engine's own "h4" LEVEL in evaluate() is still the
+    Daily-200 proxy -- changing THAT changes scores, and it is the owner's call.
+    """
+    if df_1h is None or len(df_1h) < config.VIVEK_MIN_TF_BARS:
+        return None
+    h4 = _resample_4h_ohlc(df_1h)
+    if h4 is None or len(h4) < config.VIVEK_MIN_TF_BARS:
+        return None
+    return build_tf_plan(h4, direction)
+
+
 def _resample_3day_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     """Daily OHLCV -> a 3-Day OHLCV frame for the 3-Day plan.
 

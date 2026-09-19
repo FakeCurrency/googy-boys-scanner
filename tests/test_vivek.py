@@ -61,16 +61,34 @@ def test_far_from_sma_is_no_setup():
 
 
 def test_vivek_reuses_caller_frames_no_second_download(monkeypatch):
-    """When the runner passes deep frames, VIVEK must NOT download again."""
+    """When the runner passes deep frames, VIVEK must NOT re-download them.
+
+    NARROWED 2026-09-19, deliberately. This used to ban EVERY call to download(),
+    which was the same thing as the real invariant right up until the 4H pass
+    existed: that pass fetches HOURLY bars, which the caller never provides and
+    which the daily frames cannot supply, so banning it outright would forbid a
+    different dataset rather than the duplicate work this test is about. The
+    property that matters is unchanged and still enforced below -- the DAILY
+    frames the caller handed in must not be fetched a second time.
+    """
     from scanner import scan
-    monkeypatch.setattr(scan, "download",
-                        lambda *a, **k: pytest.fail("VIVEK downloaded despite being given frames"))
+    calls = []
+
+    def guard(tickers, *a, **k):
+        interval = k.get("interval", "1d")
+        if interval == "1d":
+            pytest.fail("VIVEK re-downloaded the daily frames despite being given them")
+        calls.append(interval)
+        return {}                                    # hourly pass degrades to no 4H plans
+
+    monkeypatch.setattr(scan, "download", guard)
     uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP Group", "sector": "Materials"}]
     frames = {"BHP.AX": _frame("long_bounce")}
     out = scan.scan_vivek_market("asx", universe=uni, frames=frames,
                                  pulse_data=[], progress=False)
     assert out["scanned"] == 1                      # used the provided frame
     assert out["setup_type"] == "vivek"
+    assert all(i != "1d" for i in calls), "only non-daily (4H) pulls may be added"
 
 
 def test_vivek_payload_carries_freshness_and_schema_stamp():

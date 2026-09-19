@@ -764,9 +764,14 @@
       return intradayP.then((intraday) => {
         if (intraday && intraday.length >= 24) {
           const h4 = bucketBars(intraday, 4 * 3600);
-          // 4H candles/SMAs are real 4H; the trade levels are the Daily plan
-          // (reference), labelled on the chart so there's no confusion.
-          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", dailyPlan, true);
+          // 4H now works exactly like 3D: if the scan emitted a real 4H plan
+          // (built from 4H bars, 2026-09-19) the toggle gets its OWN levels and
+          // markers; on older payloads with no 4H plan it still falls back to
+          // the Daily plan as a labelled reference (approx=true), which is what
+          // every 4H view did before. Same bucketing as the engine's resampler
+          // (epoch-anchored 4h), so the candles and the plan agree.
+          const p4 = plans["4H"];
+          if (h4.length >= 6) d.timeframes["4H"] = makeTF(h4, "4H", p4 || dailyPlan, !p4);
         }
         console.info(`[vivek] ${SYM} chart TFs: [${Object.keys(d.timeframes).join(", ")}] ` +
                      `(daily=${daily.length}, intraday=${(intraday || []).length}); ` +
