@@ -1,0 +1,73 @@
+name: Data depth probe (how much free history can we get?)
+
+# MANUAL ONLY, READ-ONLY. Answers the owner's 2026-09-19 question -- "how is it
+# possible to get MORE data for every chart ... ASX charts are lacking 1-2 years
+# whereas nasdaq seems to have more" -- with measurements rather than inference.
+#
+# It runs on a runner because a cloud Claude session's egress proxy refuses
+# query1.finance.yahoo.com and stooq.com outright (HTTP 000), the same reason
+# ops.yml exists. The runner can reach both.
+#
+# Read-only by construction, so -- like evidence_brief.yml and ops.yml -- it has
+# NO git, NO assert_staged call and NO WATCHDOG_RUNS entry: it commits nothing.
+# Not scheduled: the answer only changes when a data source does, and the
+# printed table IS the deliverable (the backfill_history.yml pattern).
+#
+# The script is stdlib-only, so there is no pip install step to go stale.
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "Comma list to probe instead of the built-in ASX/NASDAQ sample (blank = sample)"
+        required: false
+        default: ""
+      chunk_years:
+        description: "Window size for the stitched date-range test"
+        required: false
+        default: "5"
+      back_years:
+        description: "How far back to try stitching"
+        required: false
+        default: "25"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data-depth
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe the free data sources
+        env:
+          # Free-text inputs travel through env, never ${{ }} inside a run block
+          # (2026-07-20 security pass).
+          SYMBOLS: ${{ github.event.inputs.symbols }}
+          CHUNK: ${{ github.event.inputs.chunk_years }}
+          BACK: ${{ github.event.inputs.back_years }}
+        run: |
+          set -o pipefail
+          ARGS="--chunk-years ${CHUNK:-5} --back-years ${BACK:-25}"
+          if [ -n "$SYMBOLS" ]; then ARGS="$ARGS --symbols $SYMBOLS"; fi
+          python3 scripts/data_depth.py $ARGS 2>&1 | tee /tmp/depth.txt
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo '### Data depth probe'
+            echo '```'
+            cat /tmp/depth.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
