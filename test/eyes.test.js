@@ -380,6 +380,133 @@ test("with no PM the penalty degrades to nothing, exactly like pmLegQuality", ()
 
 
 console.log(`\n${"─".repeat(48)}`);
+// ═══════════════ reviewed names leave the strip (owner, 2026-09-19) ══════════
+/* "Once ive clicked a chart under that window, that window should no longer
+ * show that. Otherwise there's too much shit going on."
+ *
+ * The store lives in localStorage, so these run the REAL helpers against a fake
+ * one and cover the three things that could go wrong: a reviewed name not
+ * leaving, a name never coming back, and the whole strip breaking where
+ * localStorage throws (private windows). */
+suite("reviewed names — the worklist shrinks as you work it");
+
+function eyesSeenSandbox(storage, stamp) {
+  const src = [
+    sliceConstFrom(SRC, "EYES_SEEN_KEY", "app.js"),
+    sliceConstFrom(SRC, "eyesStamp", "app.js").replace(
+      "String((state.data && state.data.generated_at) || \"\")", "String(__STAMP)"),
+    sliceFn(SRC, "eyesSeenLoad", "app.js"),
+    sliceFn(SRC, "eyesSeenSave", "app.js"),
+    sliceConstFrom(SRC, "eyesKey", "app.js"),
+    sliceFn(SRC, "markEyeSeen", "app.js"),
+    sliceFn(SRC, "eyesResetSeen", "app.js"),
+  ].join("\n");
+  return new Function("localStorage", "__STAMP", "JSON", src +
+    "\nreturn { eyesSeenLoad, markEyeSeen, eyesResetSeen, eyesKey };")(storage, stamp, JSON);
+}
+function fakeStore(initial) {
+  const m = new Map(Object.entries(initial || {}));
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+    _dump: () => Object.fromEntries(m),
+  };
+}
+
+test("opening a name records it, and it is then reviewed", () => {
+  const store = fakeStore();
+  const api = eyesSeenSandbox(store, "2026-09-19T05:00:00+10:00");
+  assert.deepEqual(api.eyesSeenLoad(), {});
+  api.markEyeSeen("nasdaq", "UNIT");
+  assert.equal(api.eyesSeenLoad()[api.eyesKey("nasdaq", "UNIT")], true);
+});
+
+test("the key is market-scoped, so an ASX LINK and a crypto LINK never collide", () => {
+  const api = eyesSeenSandbox(fakeStore(), "s1");
+  assert.notEqual(api.eyesKey("asx", "LINK"), api.eyesKey("crypto", "LINK"));
+});
+
+test("tickers are matched case-insensitively", () => {
+  const api = eyesSeenSandbox(fakeStore(), "s1");
+  assert.equal(api.eyesKey("asx", "enr"), api.eyesKey("asx", "ENR"));
+});
+
+test("A NEW SCAN brings every reviewed name back", () => {
+  // The point of stamping: a name reviewed against yesterday's tape has not
+  // been reviewed against today's.
+  const store = fakeStore();
+  eyesSeenSandbox(store, "scan-1").markEyeSeen("nasdaq", "UNIT");
+  const next = eyesSeenSandbox(store, "scan-2");
+  assert.deepEqual(next.eyesSeenLoad(), {}, "a new scan must reset the worklist");
+});
+
+test("the same scan keeps them hidden across a reload", () => {
+  const store = fakeStore();
+  eyesSeenSandbox(store, "scan-1").markEyeSeen("nasdaq", "UNIT");
+  const again = eyesSeenSandbox(store, "scan-1");
+  assert.equal(Object.keys(again.eyesSeenLoad()).length, 1);
+});
+
+test("reset brings them back within the same scan", () => {
+  const store = fakeStore();
+  const api = eyesSeenSandbox(store, "scan-1");
+  api.markEyeSeen("nasdaq", "UNIT");
+  api.eyesResetSeen();
+  assert.deepEqual(api.eyesSeenLoad(), {});
+});
+
+test("a throwing localStorage degrades to showing everything, never a crash", () => {
+  // Private windows and blocked site data. The strip must still render; it just
+  // forgets what was reviewed, which is the safe direction to fail.
+  const hostile = {
+    getItem: () => { throw new Error("blocked"); },
+    setItem: () => { throw new Error("blocked"); },
+    removeItem: () => { throw new Error("blocked"); },
+  };
+  const api = eyesSeenSandbox(hostile, "scan-1");
+  assert.deepEqual(api.eyesSeenLoad(), {});
+  api.markEyeSeen("nasdaq", "UNIT");        // must not throw
+  api.eyesResetSeen();                       // must not throw
+  assert.deepEqual(api.eyesSeenLoad(), {});
+});
+
+test("corrupt stored JSON is survived", () => {
+  const api = eyesSeenSandbox(fakeStore({ "gbs:eyes_seen": "{not json" }), "scan-1");
+  assert.deepEqual(api.eyesSeenLoad(), {});
+});
+
+test("every chip carries the hook the click handler needs", () => {
+  const html = eyesHTML([mk("UNIT", 2, "short"), mk("CVLT", 2, "long")], "nasdaq");
+  assert.ok(/data-eyes-tk="UNIT"/.test(html), "no ticker hook — clicks could not be recorded");
+  assert.ok(/data-eyes-tk="CVLT"/.test(html));
+});
+
+test("renderEyes filters the reviewed set BEFORE ranking and counting", () => {
+  // Filtering after the fact would leave the summary claiming names that are
+  // no longer on screen.
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(/eyesSeenLoad\(\)/.test(fn), "renderEyes does not consult the reviewed set");
+  assert.ok(fn.indexOf("filter") < fn.indexOf("eyesHTML("), "must filter before rendering");
+});
+
+test("the strip hides itself once everything has been reviewed", () => {
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(/rows\.length \? eyesHTML/.test(fn) && /host\.hidden = true/.test(fn),
+    "an empty worklist must remove the strip, not leave an empty box");
+});
+
+test("the restore control is offered whenever something is hidden", () => {
+  const html = eyesHTML([mk("UNIT", 2, "short")], "nasdaq", 0, 3);
+  assert.ok(/data-eyes-reset/.test(html));
+  assert.ok(/3 reviewed/.test(html));
+});
+
+test("and is absent when nothing is hidden, so a clean strip stays clean", () => {
+  const html = eyesHTML([mk("UNIT", 2, "short")], "nasdaq", 0, 0);
+  assert.ok(!/data-eyes-reset/.test(html));
+});
+
 if (failed) {
   console.error(`FAILED  ${failed} test(s) failed, ${passed} passed`);
   process.exit(1);

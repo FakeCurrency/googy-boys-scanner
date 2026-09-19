@@ -88,3 +88,24 @@
     display: inline-flex; align-items: center;
   }
 }
+
+/* "N reviewed" — the way back (2026-09-19).
+   Opening a chip's chart removes it from the strip, so this says how many left
+   and undoes it. Deliberately the quietest thing in the strip: muted, no fill,
+   no border, because it is bookkeeping, not a signal. It must never compete
+   with a chip, which is the actual content. */
+.ey-seen {
+  margin-right: 8px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: .72rem;
+  color: var(--muted, #8e8e93);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.ey-seen:hover { color: var(--text-2, #c7c7cc); background: rgba(120,120,128,.16); }
+.ey-seen:focus-visible { outline: 2px solid var(--blue, #0a84ff); outline-offset: 2px; }

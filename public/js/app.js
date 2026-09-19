@@ -706,7 +706,55 @@
       (pq(b) - pq(a)) || (vs(b) - vs(a)) || a.ticker.localeCompare(b.ticker);
   });
 
-  const eyesHTML = (rows, market, cap) => {
+  /* ── EYES: reviewed names drop out of the strip ───────────────────────────
+   * Owner, 2026-09-19: "Once ive clicked a chart under that window, that window
+   * should no longer show that. Otherwise there's too much shit going on."
+   *
+   * The strip is a WORKLIST, so opening a name's chart is the act of dealing
+   * with it and it leaves. Per-viewer and per-SCAN: the reviewed set is stamped
+   * with the scan it was formed against, so the next scan brings everything
+   * back. That is the point -- a new scan is new evidence, and a name you
+   * reviewed against yesterday's tape has not been reviewed against today's.
+   *
+   * localStorage only, wrapped, and the strip renders correctly when it throws
+   * or comes back empty (private windows, cleared site data). Nothing here is
+   * state anyone else needs and nothing reads it back server-side. It is also
+   * REVERSIBLE: the summary gains a quiet "N reviewed" button that restores
+   * them, because a worklist you cannot un-hide is one bad tap from useless.
+   */
+  const EYES_SEEN_KEY = "gbs:eyes_seen";
+  const eyesStamp = () => String((state.data && state.data.generated_at) || "");
+
+  function eyesSeenLoad() {
+    try {
+      const raw = localStorage.getItem(EYES_SEEN_KEY);
+      if (!raw) return {};
+      const o = JSON.parse(raw);
+      // A set formed against a DIFFERENT scan is stale: drop it wholesale so the
+      // new scan's names all surface again.
+      if (!o || o.stamp !== eyesStamp()) return {};
+      const out = {};
+      for (const k of (o.keys || [])) out[k] = true;
+      return out;
+    } catch (_) { return {}; }
+  }
+  function eyesSeenSave(map) {
+    try {
+      localStorage.setItem(EYES_SEEN_KEY,
+        JSON.stringify({ stamp: eyesStamp(), keys: Object.keys(map) }));
+    } catch (_) { /* private window / quota — the strip still works, it just forgets */ }
+  }
+  const eyesKey = (market, ticker) => `${market}:${String(ticker || "").toUpperCase()}`;
+  function markEyeSeen(market, ticker) {
+    const m = eyesSeenLoad();
+    m[eyesKey(market, ticker)] = true;
+    eyesSeenSave(m);
+  }
+  function eyesResetSeen() {
+    try { localStorage.removeItem(EYES_SEEN_KEY); } catch (_) { /* nothing to clear */ }
+  }
+
+  const eyesHTML = (rows, market, cap, seenN) => {
     const ranked = eyesRank(rows);
     if (!ranked.length) return "";
     cap = cap || 8;
@@ -745,7 +793,7 @@
         (ap ? " — and VIVEK grades it A+" : "") +
         (fund ? " — fund / LIC / preferred-type product, not an operating company" : "") +
         " — open the combined chart";
-      return `<a class="${cls}" title="${esc(title)}" ` +
+      return `<a class="${cls}" title="${esc(title)}" data-eyes-tk="${esc(x.ticker)}" ` +
         `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
         `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
         `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
@@ -755,17 +803,34 @@
     const more = ranked.length > cap
       ? `<button class="ey-more" type="button" data-eyes-more title="Filter the list below to every multi-lens name">+${ranked.length - cap} more</button>`
       : "";
-    return `<span class="ey-label" title="Names where 2+ lenses agree on direction right now — the highest-signal thing this page knows">` +
+    // `seenN` is how many this viewer has already opened. Shown as a quiet
+    // button rather than plain text, because hiding things with no way back is
+    // how a worklist becomes a mystery.
+    const seenBack = seenN
+      ? `<button class="ey-seen" type="button" data-eyes-reset ` +
+        `title="You opened ${seenN} of these, so they left the strip. Click to bring them back.">` +
+        `${seenN} reviewed</button>`
+      : "";
+    return `<span class="ey-label" title="Names where 2+ lenses agree on direction right now — the highest-signal thing this page knows. Opening one's chart takes it off this strip until the next scan.">` +
       `👁 WHAT NEEDS MY EYES</span>` +
       `<span class="ey-sum">${ranked.length} aligned${nTriple ? ` · <b>${nTriple} triple</b>` : ""}${nAp ? ` · <b>${nAp} A+</b>` : ""}</span>` +
-      chips + more;
+      seenBack + chips + more;
   };
 
   function renderEyes() {
     const host = $("#eyes-strip");
     if (!host) return;
-    const rows = state.confl ? state.confl.all() : [];
-    const html = rows.length ? eyesHTML(rows, state.market) : "";
+    const all = state.confl ? state.confl.all() : [];
+    // Names whose chart this viewer has already opened against THIS scan drop
+    // out (owner, 2026-09-19). Filtered here rather than inside eyesHTML so the
+    // ranking, the triple/A+ counts and the "+N more" overflow all describe
+    // what is actually on screen.
+    const seen = eyesSeenLoad();
+    const rows = all.filter((x) => !seen[eyesKey(state.market, x.ticker)]);
+    const seenN = all.length - rows.length;
+    // Everything reviewed = the strip has nothing left to say, so it goes away
+    // entirely rather than sitting there empty. The next scan brings it back.
+    const html = rows.length ? eyesHTML(rows, state.market, 0, seenN) : "";
     if (!html) { host.hidden = true; host.innerHTML = ""; return; }
     host.hidden = false;
     host.classList.toggle("is-hot", rows.some((x) => x.count >= 3));
@@ -776,6 +841,13 @@
       savePrefs();
       renderDeckPills(state.data);
       renderRows();
+    });
+    const reset = host.querySelector("[data-eyes-reset]");
+    if (reset) reset.addEventListener("click", () => { eyesResetSeen(); renderEyes(); });
+    // Recorded on click, which runs before the link navigates, so the name is
+    // already gone when the back button returns to this page.
+    host.querySelectorAll("a.ey-chip[data-eyes-tk]").forEach((a) => {
+      a.addEventListener("click", () => markEyeSeen(state.market, a.getAttribute("data-eyes-tk")));
     });
   }
 
