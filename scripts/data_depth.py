@@ -219,6 +219,39 @@ def overlap_check(symbol: str, chunk_years: int = 5) -> dict:
             "absolute": abs(med - 1.0) < 0.001 and abs(max(ratios) - min(ratios)) < 0.002}
 
 
+
+def live_endpoint(site: str, symbol: str, rng: str = "25y") -> dict:
+    """Probe OUR OWN deployed /api/price, not Yahoo.
+
+    Added 2026-09-19 after the deep-history change shipped and the owner still
+    saw 5 years. The three explanations -- an old build still deployed, the new
+    build erroring, or the browser holding a cached page -- are indistinguishable
+    from a dev box, and this separates them in one call. A cloud session's proxy
+    refuses pages.dev, so it runs on the runner with everything else.
+    """
+    url = f"{site.rstrip('/')}/api/price?symbol={urllib.parse.quote(symbol)}&range={rng}&interval=1d"
+    try:
+        raw = _get(url, timeout=40)
+    except urllib.error.HTTPError as exc:
+        return {"ok": False, "why": f"HTTP {exc.code}"}
+    except Exception as exc:                          # noqa: BLE001
+        return {"ok": False, "why": type(exc).__name__}
+    try:
+        j = json.loads(raw)
+    except Exception:                                 # noqa: BLE001
+        return {"ok": False, "why": "not JSON: " + raw[:60].decode("utf-8", "replace")}
+    if not j.get("ok"):
+        return {"ok": False, "why": str(j.get("error"))[:60]}
+    cs = j.get("candles") or []
+    if not cs:
+        return {"ok": False, "why": "no candles"}
+    f = dt.datetime.fromtimestamp(cs[0]["time"], dt.timezone.utc).date()
+    l = dt.datetime.fromtimestamp(cs[-1]["time"], dt.timezone.utc).date()
+    return {"ok": True, "bars": len(cs), "first": f, "last": l,
+            "years": round((l - f).days / 365.25, 2),
+            "source": j.get("source"), "degraded": j.get("degraded")}
+
+
 def stooq(symbol: str) -> dict:
     """Stooq's free daily CSV — no key, no quota published. A candidate SECOND
     free source for depth. ASX maps <ticker>.AX -> <ticker>.au."""
@@ -244,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--chunk-years", type=int, default=5, help="window size for the stitch test")
     ap.add_argument("--back-years", type=int, default=25, help="how far back to try stitching")
     ap.add_argument("--skip-stooq", action="store_true")
+    ap.add_argument("--site", help="also probe THIS deployment's /api/price "
+                                   "(e.g. https://googy-boys-scanner.pages.dev)")
     a = ap.parse_args(argv)
 
     sample = ({"custom": [s.strip() for s in a.symbols.split(",") if s.strip()]}
@@ -285,6 +320,22 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             print(f"{sym:10} {st['bars']:>7} {str(st['first']):>12} {st['years']:>7.1f} "
                   f"{st['chunks_ok']:>7} {st['degraded_chunks']:>7} {str(st['median_gap_days']):>7}")
+
+    if a.site:
+        print(f"\n\n{'=' * 78}\nLIVE ENDPOINT — what {a.site} actually serves the chart")
+        print("(old build deployed? new build erroring? or is it the browser cache?)")
+        print("=" * 78)
+        print(f"{'symbol':10} {'bars':>7} {'first':>12} {'years':>7} {'source':>12}  note")
+        for market, syms in sample.items():
+            for sym in syms:
+                for rng in ("5y", "25y"):
+                    r = live_endpoint(a.site, sym, rng)
+                    if r["ok"]:
+                        print(f"{sym + ' ' + rng:10} {r['bars']:>7} {str(r['first']):>12} "
+                              f"{r['years']:>7.1f} {str(r['source']):>12}  "
+                              f"{'COARSE' if r['degraded'] else ''}")
+                    else:
+                        print(f"{sym + ' ' + rng:10} {'(fail)':>7}  {r['why']}")
 
     print(f"\n\n{'=' * 78}\nSEAM TEST — do two overlapping windows agree about the same dates?")
     print("(if not, stitched history would jump at every join and every level would be wrong)")

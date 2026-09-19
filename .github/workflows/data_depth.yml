@@ -30,6 +30,10 @@ on:
         description: "How far back to try stitching"
         required: false
         default: "25"
+      site:
+        description: "Also probe THIS deployment's /api/price (blank = skip)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -54,12 +58,14 @@ jobs:
           # Free-text inputs travel through env, never ${{ }} inside a run block
           # (2026-07-20 security pass).
           SYMBOLS: ${{ github.event.inputs.symbols }}
+          SITE: ${{ github.event.inputs.site }}
           CHUNK: ${{ github.event.inputs.chunk_years }}
           BACK: ${{ github.event.inputs.back_years }}
         run: |
           set -o pipefail
           ARGS="--chunk-years ${CHUNK:-5} --back-years ${BACK:-25}"
           if [ -n "$SYMBOLS" ]; then ARGS="$ARGS --symbols $SYMBOLS"; fi
+          if [ -n "$SITE" ]; then ARGS="$ARGS --site $SITE"; fi
           python3 scripts/data_depth.py $ARGS 2>&1 | tee /tmp/depth.txt
 
       - name: Step summary
