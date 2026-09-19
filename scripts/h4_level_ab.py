@@ -30,13 +30,20 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import numpy as np
 
-from scanner import config, vivek
-from scanner.data import download
-from scanner.indicators import sma
-from scanner.universe import load_universe
+# Run straight from a checkout (`python3 scripts/h4_level_ab.py`) — the repo root
+# is not on sys.path there. Same bootstrap as scripts/lens_fill_confluence.py.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scanner import config, vivek                      # noqa: E402
+from scanner.data import download                      # noqa: E402
+from scanner.indicators import sma                     # noqa: E402
+from scanner.universe import load_universe             # noqa: E402
 
 
 def true_h4_sma(df_1h) -> float | None:
