@@ -6,6 +6,31 @@
 (() => {
   "use strict";
 
+  /* DAILY CHART DEPTH (owner, 2026-09-19). Was "5y" on every symbol, which is
+   * why every chart on the site started in Sept 2021 regardless of ticker or
+   * market, and why the WEEKLY 200-SMA -- the level this whole lens exists to
+   * read -- had only ~52 of 251 weekly bars to stand on. A 200-period average
+   * needs 200 finished bars before it produces its first value, so at 5 years
+   * roughly four fifths of the weekly chart carried no 200 line at all and no
+   * prior reaction at that level was visible.
+   *
+   * "25y" is served by /api/price's stitched date-window path (see
+   * functions/api/_prices.js): asking Yahoo for range=max does NOT work, it
+   * silently returns coarser candles (measured: 14 of 14 symbols, BHP came back
+   * with 156 bars to cover 38.7 years). Five 5-year windows joined by date come
+   * back at true 1d granularity -- measured 6345 bars over 25 years, 0 chunks
+   * degraded, median spacing exactly 1.0 day.
+   *
+   * TO REVERSE WITHOUT A DEPLOY: set CHART_MAX_YEARS=5 in the Cloudflare Pages
+   * env vars. price.js clamps every request to that cap, so the old behaviour
+   * comes back on the next request for everyone. Changing this constant back to
+   * "5y" is the permanent version of the same thing.
+   *
+   * CRYPTO IS DELIBERATELY LEFT AT 5y: its history is shallower anyway and its
+   * bars come from a different path (Binance klines cap at 1000), so deepening
+   * it would be a separate change with its own measurements. */
+  const DAILY_RANGE = "25y";
+
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
   // Per-timeframe tooltips — used to flag the 4H view's honest limitations.
@@ -713,7 +738,7 @@
     // the wrong token (or missing → a same-named stock), which throws the price
     // scale off and pushes the real levels off-screen.
     const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d", true)
-                            : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true);
+                            : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true);
     const intradayP = (isCrypto ? vivekCryptoBars(SYM, "2y", "1h")
                                 : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
 
@@ -836,7 +861,7 @@
     }
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d", true)
-      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true));
+      : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
     const intradayP = (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "2y", "1h")
       : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
@@ -906,7 +931,7 @@
 
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d", true)
-      : yahooBars(yfTickerFor(SYM, assetType), "5y", "1d", true));
+      : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
     const intradayP = (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "2y", "1h")
       : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);

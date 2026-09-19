@@ -71,7 +71,11 @@ export function targetBars(range, interval) {
   if (["1m", "5m", "15m", "30m", "60m", "1h"].includes(interval)) return 750;
   return ({
     "1d": 2, "5d": 5, "1mo": 22, "3mo": 66, "6mo": 130,
-    "1y": 260, "2y": 520, "5y": 1900, "10y": 2600, "max": 2600,
+    "1y": 260, "2y": 520, "5y": 1900,
+    // Deep ranges are served by the STITCHER below, so their caps have to allow
+    // the whole span (~252 sessions a year) instead of the old flat 2600, which
+    // silently trimmed 25 years back to about ten.
+    "10y": 2700, "15y": 4000, "20y": 5300, "25y": 6600, "max": 6600,
   })[range] || 260;
 }
 
@@ -122,6 +126,89 @@ export async function fetchBinanceCandles(sym, { interval = "1d", limit = 260, t
       volume: k[5] == null ? 0 : Math.round(+k[5]),
     }));
   } catch (_) { return []; }
+}
+
+/* ── DEEP HISTORY (2026-09-19) ────────────────────────────────────────────────
+ * Owner: the charts started in Sept 2021 on EVERY symbol and the weekly 200-SMA
+ * had only ~52 of 251 bars to stand on, which is the level the whole lens is
+ * built to read.
+ *
+ * Asking Yahoo for range=max does NOT fix it: measured on 14 symbols, 14 came
+ * back COARSER than daily (BHP returned 156 bars to span 38.7 years, i.e.
+ * quarterly candles). The coarsening is a function of the REQUESTED RANGE, not
+ * of how old the data is -- so several shallow windows, asked for by explicit
+ * date, come back at true 1d granularity where one deep window does not.
+ * Measured: 5 x 5-year windows = 6345 daily bars over 25 years, 0 of 5 chunks
+ * degraded, median bar spacing exactly 1.0 day.
+ *
+ * WHY PLAIN CONCATENATION IS SAFE, and it was not assumed. yahooCandles() below
+ * rescales every bar by adjclose/close for basis parity with the engine. If
+ * Yahoo back-adjusted each response relative to ITS OWN last bar, every seam
+ * between windows would introduce a fake price jump -- fatal on a chart whose
+ * purpose is reading levels. So it was tested first: two deliberately
+ * overlapping windows were compared on the dates they share, and the ratio came
+ * back 1.000000 (min, median and max) across 253 shared sessions on all six
+ * symbols. The adjustment is ABSOLUTE, so windows agree about a date and can be
+ * joined with no rescaling. scripts/data_depth.py holds that test; re-run it
+ * before trusting this if Yahoo ever changes.
+ */
+const DEEP_YEARS = { "10y": 10, "15y": 15, "20y": 20, "25y": 25, "max": 25 };
+const DEEP_CHUNK_YEARS = 5;          // the window size proven to stay at 1d
+
+export function deepYears(range) {
+  return DEEP_YEARS[range] || 0;
+}
+
+/** One Yahoo chart call for an explicit date window. null on failure. */
+export async function fetchYahooWindow(sym, { p1, p2, interval = "1d", timeout = 9000 } = {}) {
+  for (const host of YH_HOSTS) {
+    try {
+      const url = `https://${host}/v8/finance/chart/${encodeURIComponent(sym)}` +
+        `?interval=${interval}&period1=${Math.floor(p1)}&period2=${Math.floor(p2)}&events=div`;
+      const res = await timedFetch(url, { headers: { "User-Agent": UA, "Accept": "application/json" } }, timeout);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      if (result) return result;
+    } catch (_) { /* try the other host, then give up on this window */ }
+  }
+  return null;
+}
+
+/** Deep daily history, stitched from chunked date windows.
+ *
+ * Windows are fetched IN PARALLEL (5 subrequests, well inside a Worker's
+ * budget) because sequential chunks would add ~1.5s to every chart open.
+ * A window that fails is SKIPPED, not fatal: a symbol younger than the span
+ * legitimately 400s on the windows before it existed, and half a chart beats
+ * none. Bars are deduped by timestamp (adjacent windows share their boundary
+ * session) and sorted ascending, so a source that answers newest-first or
+ * repeats a seam bar cannot double-count. */
+export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
+                                            chunkYears = DEEP_CHUNK_YEARS } = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  const yearSec = 365 * 86400;
+  const jobs = [];
+  for (let k = 0; k < years; k += chunkYears) {
+    // +1 day of overlap at each seam so a boundary session cannot fall between
+    // two windows; the dedupe below removes the duplicate.
+    const p2 = now - k * yearSec + 86400;
+    const p1 = now - Math.min(k + chunkYears, years) * yearSec;
+    jobs.push(fetchYahooWindow(sym, { p1, p2, interval }));
+  }
+  const results = (await Promise.all(jobs)).filter(Boolean);
+  if (!results.length) return { candles: [], result: null };
+
+  const byTime = new Map();
+  for (const r of results) {
+    for (const c of yahooCandles(r)) {
+      if (!byTime.has(c.time)) byTime.set(c.time, c);
+    }
+  }
+  const candles = [...byTime.values()].sort((a, b) => a.time - b.time);
+  // results[0] is the NEWEST window — the one whose dividend events and adjusted
+  // flag describe the tape the chart is actually reading right now.
+  return { candles, result: results[0], chunks: results.length };
 }
 
 /** Yahoo chart result → clean candle objects (nulls dropped).
@@ -298,6 +385,22 @@ export async function history(sym, assetType, { range = "1y", interval = "1d", p
   }
   // Crypto on Yahoo MUST be "<base>-USD" (a bare base = a same-named equity).
   const ySym = crypto ? yahooCryptoSymbol(sym) : sym;
+
+  // DEEP daily history: stitched date windows (see the block above). Only ever
+  // reached by a range that did not exist before this shipped, so every caller
+  // asking 1d..5y takes exactly the path it always did.
+  const deep = interval === "1d" ? deepYears(range) : 0;
+  if (deep) {
+    try {
+      const d = await fetchYahooDeep(ySym, { years: deep, interval });
+      if (d.candles.length) {
+        return { candles: trimCandles(d.candles, want), source: "yahoo-deep", delayed: !crypto,
+                 basis: crypto ? "adj" : (isAdjusted(d.result) ? "adj" : "raw"),
+                 recent_div: recentDividend(d.result), chunks: d.chunks };
+      }
+    } catch (_) { /* fall through to the ordinary single-range path */ }
+  }
+
   try {
     const result = await fetchYahooChart(ySym, { interval, range });
     const c = yahooCandles(result);

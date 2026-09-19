@@ -35,7 +35,8 @@ export const onRequestGet = async (ctx) => {
 
   // Whitelist the ranges / intervals we actually use so the param can't craft
   // arbitrary upstream requests.
-  const RANGES = new Set(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "max"]);
+  const RANGES = new Set(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y",
+                          "10y", "15y", "20y", "25y", "max"]);
   const INTERVALS = new Set(["1m", "5m", "15m", "30m", "60m", "1h", "1d", "1wk", "1mo"]);
   const range = RANGES.has(url.searchParams.get("range")) ? url.searchParams.get("range") : null;
   const interval = INTERVALS.has(url.searchParams.get("interval")) ? url.searchParams.get("interval") : null;
@@ -45,6 +46,27 @@ export const onRequestGet = async (ctx) => {
   const prefer = ["yahoo", "binance"].includes((url.searchParams.get("src") || "").toLowerCase())
     ? url.searchParams.get("src").toLowerCase() : null;
   const wantCandles = Boolean(range && interval);
+
+  /* THE REVERSE SWITCH (owner, 2026-09-19: "Give me the option in a day or 2 to
+   * reverse to where it is now").
+   *
+   * Set CHART_MAX_YEARS in Cloudflare Pages env vars to cap how deep any chart
+   * may go, without a code change, a deploy or a version bump. CHART_MAX_YEARS=5
+   * restores the exact behaviour that shipped before deep history existed, for
+   * every visitor, on the next request. Unset (the default) means no cap.
+   *
+   * It clamps rather than rejects, so an old cached page still asking for 25y
+   * gets 5y of real bars instead of an error. */
+  const capYears = Math.floor(Number((ctx.env && ctx.env.CHART_MAX_YEARS) || 0));
+  const RANGE_YEARS = { "1y": 1, "2y": 2, "5y": 5, "10y": 10, "15y": 15, "20y": 20, "25y": 25, "max": 25 };
+  let effRange = range;
+  if (capYears > 0 && range && RANGE_YEARS[range] > capYears) {
+    // step down to the deepest whitelisted range still inside the cap
+    const allowed = Object.keys(RANGE_YEARS)
+      .filter((r) => RANGE_YEARS[r] <= capYears)
+      .sort((a, b) => RANGE_YEARS[b] - RANGE_YEARS[a]);
+    effRange = allowed[0] || "5y";
+  }
 
   if (!symbol || symbol.length > 30 || !/^[\w.\-^=]+$/i.test(symbol)) {
     return json(400, { ok: false, error: "Invalid symbol" });
@@ -70,7 +92,8 @@ export const onRequestGet = async (ctx) => {
     // the GitHub-Actions scan engine cannot read it even by accident — that
     // is the live-grade-path fence, structural rather than promised.
     const hist = await history(symbol, assetType,
-      { range, interval, prefer, eodKey: ctx.env && ctx.env.EODHD_API_TOKEN ? ctx.env.EODHD_API_TOKEN : null });
+      { range: effRange, interval, prefer,
+        eodKey: ctx.env && ctx.env.EODHD_API_TOKEN ? ctx.env.EODHD_API_TOKEN : null });
     // Prefer the live tick for `price`; fall back to the last candle close.
     const lastClose = hist.candles.length ? hist.candles[hist.candles.length - 1].close : null;
     const price = live.price != null ? +live.price : lastClose;
