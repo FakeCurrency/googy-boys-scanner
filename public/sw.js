@@ -11,7 +11,7 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v6";   // v6 2026-07-26: UX-20 #19 — offline.html fallback + maskable icons
+const CACHE = "vivek5-v7";   // v7 2026-09-19: deep chart history — force every device to drop the 5y-era shell
 
 // #63: precache the app shell on install — read index.html and pull its
 // CURRENT versioned CSS/JS (so the list is always in sync with the deploy,
