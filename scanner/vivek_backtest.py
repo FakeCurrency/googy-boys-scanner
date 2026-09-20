@@ -242,6 +242,13 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
                 if tr is not None:
                     tr["market"] = market
                     tr["level_tf"] = row.get("level_tf")
+                    # Carried so the HIGH CONVICTION cohort can be measured
+                    # (2026-09-20). It lives on the plan and stopped there, so
+                    # the one rule the deck actually promotes had no backtest
+                    # slice of its own -- the number the badge's own tooltip
+                    # cites ("the best-performing setup in the backtest") could
+                    # not be recomputed from the report it claims to come from.
+                    tr["structural_tps"] = plan.get("structural_tps")
                     open_slots[tf] = tr
         pending = []
 
@@ -505,6 +512,39 @@ def _split(trades: list[dict], key, values=None) -> dict:
     return {str(v): _metrics([t for t in trades if t.get(key) == v]) for v in vals}
 
 
+def is_high_conviction(tr: dict) -> bool:
+    """The deck's HIGH CONVICTION rule, applied to a backtest trade.
+
+    MIRRORS public/js/app.js isHighConviction EXACTLY, and
+    tests/test_high_conviction_cohort.py slices the shipped app.js so the two
+    cannot drift. That parity is the whole point: this exists to check whether
+    the badge still earns its own claim, so a cohort defined even slightly
+    differently would answer a question nobody asked.
+
+      a WEEKLY (1W) plan, ARMED, whose trigger is a RECLAIM,
+      and either an A/A+ grade or at least 2 structural targets.
+
+    One honest difference, recorded rather than smoothed over: app.js reads the
+    1W plan off a row whose HEADLINE may be another timeframe, while a backtest
+    trade IS the 1W plan (the replay opens one position per timeframe). So this
+    tests "the 1W reclaim the deck would badge", which is the same population,
+    reached from the other end.
+    """
+    if (tr.get("timeframe") or "") != "1W":
+        return False
+    if (tr.get("entry_type") or "") != "reclaim":
+        return False
+    if (tr.get("grade") or "") in ("A+", "A"):
+        return True
+    # Fail-closed on anything non-numeric. A bare int() here raises on a junk
+    # value and takes the WHOLE report down with it, which is a poor trade for
+    # a field that is only ever a small count.
+    try:
+        return float(tr.get("structural_tps") or 0) >= 2
+    except (TypeError, ValueError):
+        return False
+
+
 def aggregate(trades: list[dict]) -> dict:
     # batch-100 items 47/48/50 (2026-08-20, ADDITIVE ONLY - nothing renamed or
     # removed, no consumer changes): the blended per-pattern numbers answer a
@@ -530,6 +570,17 @@ def aggregate(trades: list[dict]) -> dict:
         "by_grade": _split(trades, "grade", ["A+", "A"]),
         "by_direction": _split(trades, "direction", ["long", "short"]),
         "by_level_tf": _split(trades, "level_tf", list(LEVEL_TFS)),
+        # HIGH CONVICTION vs everything else (2026-09-20, owner: "see whether
+        # the high conviction status still has the edge"). Split LONG-only as
+        # well, because that is how the morning digest ships it.
+        "by_conviction": {
+            "high": _metrics([t for t in trades if is_high_conviction(t)]),
+            "rest": _metrics([t for t in trades if not is_high_conviction(t)]),
+        },
+        "by_conviction_long": {
+            "high": _metrics([t for t in longs if is_high_conviction(t)]),
+            "rest": _metrics([t for t in longs if not is_high_conviction(t)]),
+        },
     }
 
 
@@ -546,7 +597,8 @@ def aggregate(trades: list[dict]) -> dict:
 # exit, without which a drawdown curve can only step at exits.
 _SLIM_KEYS = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
               "direction", "entry", "stop", "risk", "exit", "entry_date", "exit_date",
-              "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "sector")
+              "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "sector",
+              "structural_tps")
 
 
 def _slim(tr: dict) -> dict:
