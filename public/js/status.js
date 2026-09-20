@@ -50,7 +50,7 @@
   const HEALTH_MAX_H = 4;      // functions/api/health.js (max_h default)
   const HEAL_STALE_MIN = 90;   // functions/api/heartbeat.js (DEFAULT_STALE_MIN)
   const FALLBACK_CAP = 30;     // only if bot_rules.json is unreachable
-  const CYCLE_TAG = "w3-1";    // scanner/config.py VIVEK_BOT_CYCLE_TAG
+  const CYCLE_TAG = "hc4-1";   // scanner/config.py VIVEK_BOT_CYCLE_TAG (w3-1 ended 2026-09-21)
   const CYCLE_TARGET = 30;     // the pre-registered close count for the cohort
   const REPO = "FakeCurrency/googy-boys-scanner";
   // Mirrors journal.js MECHANICAL_EXITS. test/status.test.js parses BOTH files
@@ -98,7 +98,7 @@
     };
   };
 
-  // The w3-1 cohort, straight off the audit tag vivek_run stamps on each row.
+  // The live cycle's cohort, straight off the audit tag vivek_run stamps on each row.
   // Rows written before the gate carry no `cycle` key at all, so absent means
   // out-of-cohort rather than "unknown" — the same absent-is-not-empty
   // convention the review flags use.
@@ -415,12 +415,12 @@
     h += row("Integrity", `<b>passed</b>`,
       "vivek_run --verify gates the commit — a failed book never lands, so a fresh commit IS a passed verify");
 
-    h += `<h3 class="sys-h">w3-1 cycle</h3>`;
-    h += row("Gated open", `<b>${ch.open}</b>`, "opened under the weekly/3d gate");
+    h += `<h3 class="sys-h">${CYCLE_TAG} cycle</h3>`;
+    h += row("Gated open", `<b>${ch.open}</b>`, "opened under the A/A+ four-cell rules (weekly/3d level gate)");
     h += row("Closes", `<b>${ch.closed}</b> of ${CYCLE_TARGET}`,
       ch.closed ? `${ch.byRules} by the rules · ${ch.byOwner} by you` : "readout at the pre-registered count");
     if (ch.closed && !ch.byRules) {
-      // Same sentence the journal's w3-1 strip uses, deliberately: two
+      // Same sentence the journal's cycle strip uses, deliberately: two
       // surfaces describing one cohort in two vocabularies reads as two
       // findings. The journal is where the exits are listed; this is the
       // one-line version of the same fact.

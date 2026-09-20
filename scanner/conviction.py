@@ -22,10 +22,13 @@ tests/test_conviction.py parses those literals out of the shipped files and
 asserts they equal HC_CELLS, so the badge, the chart chip, the Discord digest,
 the roster baseline and the backtest cohort cannot drift apart silently.
 
-DISPLAY ONLY. Nothing under scanner/broker/ imports this module: the paper
-bot's eligibility is its own ruleset (VIVEK_BOT_*), and aligning it to these
-cells is a trade change that needs the owner's word. tests/test_conviction.py
-pins that fence.
+THE BOT AGREES, BUT DOES NOT IMPORT THIS. On 2026-09-21 the owner aligned the
+paper bot's entries to these cells (config.VIVEK_BOT_GRADES /
+VIVEK_BOT_ENTRY_CELLS; shorts declined on the numbers). The bot keeps its OWN
+copy of the table in config so a display-side edit can never silently change
+what gets traded: tests/test_bot_alignment.py pins the two tables equal, and
+tests/test_conviction.py pins that nothing under scanner/broker/ imports this
+module.
 """
 from __future__ import annotations
 

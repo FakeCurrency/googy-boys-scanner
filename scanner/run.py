@@ -340,10 +340,14 @@ def main() -> None:
     rules = {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "scanner/config.py — single source of truth for bot rules",
-        "min_grade": config.VIVEK_BOT_MIN_GRADE,
+        # 2026-09-21: `grades` + `entry_cells` replace the retired min_grade /
+        # skip_entry_types / prefer_tf trio (the bot trades the deck's four
+        # conviction cells at A/A+). The old keys are NOT republished — a
+        # reader that still wants them is reading a rule that no longer exists.
+        "grades": list(config.VIVEK_BOT_GRADES),
+        "entry_cells": {tf: list(ets) for tf, ets in config.VIVEK_BOT_ENTRY_CELLS.items()},
+        "cycle_tag": config.VIVEK_BOT_CYCLE_TAG,
         "min_rr": config.VIVEK_BOT_MIN_RR,
-        "skip_entry_types": list(config.VIVEK_BOT_SKIP_ENTRY_TYPES),
-        "prefer_tf": config.VIVEK_BOT_PREFER_TF,
         "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
         "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
         "max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL,

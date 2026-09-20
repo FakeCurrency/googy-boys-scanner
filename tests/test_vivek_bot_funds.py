@@ -51,15 +51,15 @@ def test_bot_still_takes_a_normal_operating_company():
     assert d["take"] is True and d["code"] == "OK"
 
 
-def test_bot_skips_weak_entry_types():
+def test_bot_skips_a_retest_because_it_sits_in_no_cell():
     row = _row("Ansell Limited", "Health Care Equipment & Services",
                plans={"1W": _plan(entry_trigger="retest")})
     d = vb.evaluate_setup(row)
-    assert d["take"] is False and d["code"] == "weak_entry_type"
+    assert d["take"] is False and d["code"] == "no_cell_plan"
 
 
-def test_skip_entry_types_is_configurable(monkeypatch):
-    monkeypatch.setattr(vb._cfg, "VIVEK_BOT_SKIP_ENTRY_TYPES", [])
+def test_the_cell_table_is_configurable(monkeypatch):
+    monkeypatch.setattr(vb._cfg, "VIVEK_BOT_ENTRY_CELLS", {"1W": ("reclaim", "retest", "break")})
     row = _row("Ansell Limited", "Health Care Equipment & Services",
                plans={"1W": _plan(entry_trigger="retest")})
     assert vb.evaluate_setup(row)["take"] is True

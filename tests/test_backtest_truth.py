@@ -32,7 +32,7 @@ def _trade(**kw) -> dict:
     tr = {"symbol": "TEST", "market": "nasdaq", "direction": "long",
           "entry": 100.0, "stop": 90.0, "risk": 10.0,
           "entry_date": "2026-01-05", "exit_date": "2026-02-05",
-          "grade": "A+", "entry_type": "reclaim", "timeframe": "1D",
+          "grade": "A+", "entry_type": "break", "timeframe": "1D",   # 1D break = an entry cell
           "realized_r": 1.0, "exits": []}
     tr.update(kw)
     return tr

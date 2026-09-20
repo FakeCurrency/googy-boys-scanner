@@ -287,7 +287,14 @@ VIVEK_JOURNAL_SESSION = {
 }
 
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
-VIVEK_BOT_MIN_GRADE    = "A+"      # A+ ONLY — never A / B+ / WATCH
+# GRADES (owner ruling 2026-09-21: "the paper bot should only take the highest
+# R and conviction plays so it needs to take what we're changing the high
+# conviction list [to]"). A+ AND A, matching the deck's HIGH CONVICTION rule.
+# Evidence (600-name long-only replay): HC cells at A/A+ +0.212R n=2403 PF 1.47
+# vs A+ only +0.216R n=1423 — the same edge per trade, on 70% more trades.
+# Compare the rule it replaces: A+ / 1W>3D>1D / no retest = +0.094R n=2718.
+# Read against grade_raw (unsmoothed), never the displayed grade.
+VIVEK_BOT_GRADES       = ("A+", "A")
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
 # Skip non-operating vehicles (REITs / ETFs / LICs / managed funds) — they hug
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
@@ -304,7 +311,7 @@ VIVEK_BOT_EXCLUDE_FUNDS = True
 # THE FENCE, stated where the patterns live: scan.py publishes the flag for the
 # UI to dim/mark/rank with. NOTHING in scanner/broker/ may read `is_product` or
 # this constant — the bot's fund test is _is_fund_or_reit and it stays
-# byte-untouched, because changing what the bot may take mid-w3-1 is a rule
+# byte-untouched, because changing what the bot may take mid-cycle is a rule
 # change by stealth. tests/test_product_flag.py greps the broker tree and goes
 # red on the first reference.
 #
@@ -329,10 +336,19 @@ PRODUCT_NAME_PATTERNS = (
     r"\bWARRANTS?\b",
     r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
 )
-# Favour the strongest trigger: the walk-forward backtest showed "retest" is
-# flat-to-negative while "reclaim" carries the edge, so the bot skips these
-# entry types. Selection-only; the scanner still shows them. Empty list = take all.
-VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
+# ENTRY CELLS (owner ruling 2026-09-21): the bot trades a plan ONLY when its
+# (timeframe, trigger) is one of the deck's four HIGH CONVICTION cells, walked
+# in this order and taking the FIRST armed, complete plan that sits in a cell:
+#   1W reclaim +0.299R n=691 · 1W break +0.161R n=122 ·
+#   3D reclaim +0.196R n=1309 · 1D break +0.091R n=281   (long-only replay)
+# A 1W plan whose trigger is a retest no longer blocks the row — the walk
+# falls through to the 3D / 1D plan. Retest is in no cell (worst trigger on
+# every timeframe). This table MUST equal scanner/conviction.py HC_CELLS —
+# tests/test_bot_alignment.py pins it — so the bot and the badge agree about
+# what is worth taking; the bot deliberately does NOT import that module
+# (its ruleset stays its own, and the fence in test_conviction.py stays).
+# The level gate below (VIVEK_BOT_LEVEL_TF_ALLOW) still applies on top.
+VIVEK_BOT_ENTRY_CELLS = {"1W": ("reclaim", "break"), "3D": ("reclaim",), "1D": ("break",)}
 # W3-ONLY LEVEL GATE (owner-signed 2026-08-02, pre-registered cycle "w3-1").
 # The bot considers only candidate rows whose headline plan level_tf is in this
 # tuple. Evidence: three disjoint pre-registered samples (IS / OOS / C3) each
@@ -349,8 +365,11 @@ VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
 # cycle runs (the sizing_mode precedent: nothing reads it to decide anything;
 # it exists so pre-gate and in-cycle cohorts never blur in later reads).
 # Empty string = no active cycle, no stamp.
-VIVEK_BOT_CYCLE_TAG = "w3-1"
-VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
+# 2026-09-21: cycle "w3-1" (A+ only, 1W>3D>1D, no retest) ENDED when the
+# entry rules were aligned to the four conviction cells; rows it opened keep
+# their tag (the journal's w3-1 evidence strip still reads them). New rows
+# carry "hc4-1": grades A/A+, VIVEK_BOT_ENTRY_CELLS, same level gate.
+VIVEK_BOT_CYCLE_TAG = "hc4-1"
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per

@@ -1,12 +1,24 @@
 {
   "generated_at": "2026-07-26T04:48:13Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
-  "min_grade": "A+",
-  "min_rr": 1.5,
-  "skip_entry_types": [
-    "retest"
+  "grades": [
+    "A+",
+    "A"
   ],
-  "prefer_tf": "1W",
+  "entry_cells": {
+    "1W": [
+      "reclaim",
+      "break"
+    ],
+    "3D": [
+      "reclaim"
+    ],
+    "1D": [
+      "break"
+    ]
+  },
+  "cycle_tag": "hc4-1",
+  "min_rr": 1.5,
   "allow_shorts": false,
   "max_positions": 30,
   "max_open_total": 30,

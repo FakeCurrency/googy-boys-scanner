@@ -175,7 +175,7 @@ def test_replay_symbol_parity_smoke_does_not_crash():
     assert isinstance(trades, list)
     for t in trades:
         assert t["status"] == "closed"
-        assert t.get("grade") == "A+"
+        assert t.get("grade") in ("A+", "A")
         assert t.get("direction") == "long"
         assert "mfe_r_at" in t
 

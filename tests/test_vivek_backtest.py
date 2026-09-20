@@ -117,12 +117,16 @@ def test_portfolio_sim_cooldown_after_stop_out():
 
 
 def test_portfolio_sim_filters_non_bot_trades():
-    trades = [_sim_trade("AAA", "2026-01-05", "2026-02-01", grade="A"),
+    # 2026-09-21: grade A is bot-eligible now (VIVEK_BOT_GRADES); B+ is not,
+    # a retest sits in no cell, a 1W BREAK does, and shorts stay out.
+    trades = [_sim_trade("AAA", "2026-01-05", "2026-02-01", grade="B+"),
               _sim_trade("BBB", "2026-01-05", "2026-02-01", entry_type="retest"),
               _sim_trade("CCC", "2026-01-05", "2026-02-01", direction="short"),
-              _sim_trade("DDD", "2026-01-05", "2026-02-01")]
+              _sim_trade("DDD", "2026-01-05", "2026-02-01"),
+              _sim_trade("EEE", "2026-01-05", "2026-02-01", grade="A"),
+              _sim_trade("FFF", "2026-01-05", "2026-02-01", entry_type="break")]
     r = bt.portfolio_sim(trades)
-    assert r["eligible"]["n"] == 1 and r["taken"] == 1
+    assert r["eligible"]["n"] == 3 and r["taken"] == 3
 
 
 def test_portfolio_sim_legacy_trades_without_entry_date():

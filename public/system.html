@@ -175,10 +175,10 @@
       <h2>5 · Autonomous bot rulebook <span class="who">(live from bot_rules.json)</span></h2>
       <table class="sys-t">
         <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
-        <tr><td>Grade</td><td class="rule" data-r="min_grade">A+ only</td><td>A+ carried the whole backtest edge; A was ~breakeven</td></tr>
-        <tr><td>Direction</td><td class="rule" data-r="allow_shorts">long-only</td><td>Shorts lost ~0.5R/trade on every market tested</td></tr>
-        <tr><td>Entry types skipped</td><td class="rule red" data-r="skip_entry_types">retest</td><td>Backtest-weak trigger</td></tr>
-        <tr><td>Preferred timeframe</td><td class="rule blue" data-r="prefer_tf">1W</td><td>Weekly plans first (less noise), falls back to 1D</td></tr>
+        <tr><td>Grade</td><td class="rule" data-r="grades">A+ / A</td><td>Aligned to HIGH CONVICTION 🎯 (2026-09-21): the four cells at A/A+ ran +0.212R over 2,403 long trades vs +0.216R at A+ only — same edge, 70% more trades</td></tr>
+        <tr><td>Direction</td><td class="rule" data-r="allow_shorts">long-only</td><td>Shorts lost on every cell and every market (HC-cell shorts −0.36R, PF 0.43)</td></tr>
+        <tr><td>Entry cells</td><td class="rule blue" data-r="entry_cells">1W reclaim/break · 3D reclaim · 1D break</td><td>Walked 1W → 3D → 1D; the first armed plan whose trigger sits in its cell is traded. Retest is in no cell (worst trigger on every timeframe)</td></tr>
+        <tr><td>Level gate</td><td class="rule blue">weekly / 3d</td><td>Rows reacting at the Weekly or 3-Day 200 only — the thrice-replicated w3 cohort; unchanged by the 2026-09-21 alignment</td></tr>
         <tr><td>Minimum R:R (to TP2)</td><td class="rule" data-r="min_rr">1.5</td><td>Skip poor-reward setups</td></tr>
         <tr><td>Funds / REITs / ETFs / LICs</td><td class="rule red" data-r="exclude_funds">excluded</td><td>They hug the 200-SMA (false reactions) and CFD brokers don’t list them</td></tr>
         <tr><td>Open positions (all markets)</td><td class="rule" data-r="max_open_total">30</td><td>The binding book cap — ASX, NASDAQ and crypto share it, so the book concentrates wherever the A+ setups are instead of holding a fixed slice each. A full book benches new setups until something closes</td></tr>
@@ -298,11 +298,14 @@
       <p>A walk-forward backtest replays the <em>real engine</em> bar-by-bar (causal, pessimistic intrabar fills:
         stop checked before target). Headline findings that set today’s rules:</p>
       <ul>
-        <li><strong>Long only.</strong> Shorts ran consistently negative, so the bot takes none.</li>
+        <li><strong>Long only.</strong> Shorts ran negative in every cell on every market (the four
+          conviction cells short: −0.36R over 793 trades), so the bot takes none.</li>
         <li><strong>Weekly reclaim is the best cell</strong> (+0.30R), with 3D reclaim, 1W break and 1D break
-          behind it — the four cells High Conviction 🎯 selects for — and why the bot prefers 1W + reclaim.</li>
-        <li><strong>A+ only, retests skipped.</strong> Grade A came out around breakeven and the retest
-          trigger came out roughly flat.</li>
+          behind it — the four cells High Conviction 🎯 selects for, and since 2026-09-21 the ONLY cells the
+          bot trades, walked 1W → 3D → 1D.</li>
+        <li><strong>A and A+ both, retests never.</strong> Inside the four cells grade A carried the same edge
+          as A+ (+0.212R vs +0.216R); the retest trigger was the worst on every timeframe and sits in no cell.
+          The old rule (A+ only, any armed 1W plan bar retests) measured +0.094R over the same replay.</li>
       </ul>
       <p class="bt-warn">The figures that used to sit in this list were typed in from an early run and
         could not be checked against anything published. They are gone. <a href="#backtest">Section 9</a>
@@ -330,7 +333,7 @@
   </main>
 
   <script src="js/nav.js?v=23"></script>
-  <script src="js/status.js?v=3"></script>
+  <script src="js/status.js?v=4"></script>
   <script src="js/system-backtest.js?v=2"></script>
   <script>
   /* Fix-10 #7: scan-coverage panel — Range-read the first 2KB of each scan
@@ -382,10 +385,12 @@
       if (!r.ok) throw 0;
       const j = await r.json();
       const set = (k, v) => document.querySelectorAll(`[data-r="${k}"]`).forEach((el) => { el.textContent = v; });
-      set("min_grade", `${j.min_grade} only`);
+      if (Array.isArray(j.grades)) set("grades", j.grades.join(" / "));
       set("allow_shorts", j.allow_shorts ? "longs + shorts" : "long-only");
-      set("skip_entry_types", (j.skip_entry_types || []).join(", ") || "none");
-      set("prefer_tf", j.prefer_tf);
+      if (j.entry_cells && typeof j.entry_cells === "object") {
+        set("entry_cells", Object.keys(j.entry_cells)
+          .map((tf) => `${tf} ${(j.entry_cells[tf] || []).join("/")}`).join(" · "));
+      }
       set("min_rr", j.min_rr);
       set("exclude_funds", j.exclude_funds ? "excluded" : "allowed");
       set("max_positions", j.max_positions);

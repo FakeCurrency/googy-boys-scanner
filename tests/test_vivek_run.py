@@ -20,7 +20,7 @@ pytestmark = pytest.mark.risk
 
 
 def _plan(**kw):
-    p = {"armed": True, "entry_trigger": "reclaim", "trigger_bar": "2024-01-01",
+    p = {"armed": True, "entry_trigger": "break", "trigger_bar": "2024-01-01",
          "entry": 100.0, "stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
          "rr": 3.0, "scale": config.VIVEK_TP_SCALE_LONG}
     p.update(kw)
@@ -28,7 +28,7 @@ def _plan(**kw):
 
 
 def _short_plan(**kw):
-    p = {"armed": True, "entry_trigger": "reclaim", "trigger_bar": "2024-01-01",
+    p = {"armed": True, "entry_trigger": "break", "trigger_bar": "2024-01-01",
          "entry": 100.0, "stop": 104.0, "tp1": 94.0, "tp2": 88.0, "tp3": 80.0,
          "rr": 3.0, "scale": config.VIVEK_TP_SCALE_SHORT}
     p.update(kw)
@@ -43,7 +43,7 @@ def _row(symbol="BHP", direction="long", **kw):
          # headline plan's level). Without it the 2026-08-02 W3 level gate
          # (fail-closed by design) would drop every fixture row before
          # decide() and these tests would stop testing what they claim to.
-         "entry_types": ["reclaim"], "level_tf": "weekly", "plans": plans}
+         "entry_types": ["break"], "level_tf": "weekly", "plans": plans}
     r.update(kw)
     return r
 
@@ -126,9 +126,9 @@ def test_fills_at_intraday_price_and_carries_entry_type_label(tmp_path, monkeypa
     assert len(bk["open"]) == 1
     pos = bk["open"][0]
     assert pos["entry"] == 101.0                          # the live intraday price
-    assert pos["entry_type"] == "reclaim"
+    assert pos["entry_type"] == "break"
     from scanner.broker.vivek_bot import ENTRY_TYPE_LABEL
-    assert pos["entry_type_label"] == ENTRY_TYPE_LABEL["reclaim"]
+    assert pos["entry_type_label"] == ENTRY_TYPE_LABEL["break"]
     assert pos["timeframe"] == "1D" and pos["grade"] == "A+"
     assert pos["units"] > 0 and pos["leverage_target"] == 5
     assert _mfile(tmp_path, "asx").exists()               # canonical persisted
@@ -303,9 +303,9 @@ def _ny(y, m, d, hh, mm):
 def _open_position(symbol="MDB", market="nasdaq"):
     from scanner.vivek_journal import _snapshot
     row = {"symbol": symbol, "name": symbol, "sector": "", "grade": "A+",
-           "dir": "LONG", "entry_types": ["reclaim"]}
+           "dir": "LONG", "entry_types": ["break"]}
     plan = {"stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
-            "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
+            "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "break",
             "armed": True, "trigger_bar": None}
     pos = _snapshot(row, "1D", plan, market, 100.0, "2024-01-01")
     pos["market"] = market
@@ -804,7 +804,7 @@ def _held(symbol, sector="", notional=5_000.0, entry=100.0, **kw):
     to find one (``_vpos`` above is the thinner shape verify_books works on)."""
     p = {"id": f"{symbol}-1", "symbol": symbol, "name": symbol, "sector": sector,
          "market": "asx", "direction": "long", "grade": "A+",
-         "entry_type": "reclaim", "timeframe": "1D",
+         "entry_type": "break", "timeframe": "1D",
          "entry": entry, "stop": entry - 4.0,
          "tp1": entry + 6.0, "tp2": entry + 12.0, "tp3": entry + 20.0,
          "scale": list(config.VIVEK_TP_SCALE_LONG), "risk": 4.0, "rr": 3.0,

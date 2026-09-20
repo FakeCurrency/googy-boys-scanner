@@ -2249,11 +2249,36 @@ the same table as a JSON literal that `tests/test_conviction.py` parses out
 of the shipped files and compares to `HC_CELLS`. The backtest report now
 records `conviction_rule` + `by_conviction_cell_long`; `system-backtest.js`
 labels a pre-2026-09-20 report as the OLD rule instead of dressing it in the
-new text. **DISPLAY ONLY**: nothing under `scanner/broker/` imports it
-(test-pinned fence) — aligning the paper bot to these cells, and the owner's
-"let's open it to shorts too", are trade changes awaiting his explicit word
-after seeing the numbers (every short cell is negative; HC-cell shorts
-n=793 −0.360R PF 0.43).
+new text. Nothing under `scanner/broker/` IMPORTS it
+(test-pinned fence) — the bot carries its own copy of the table, see next.
+
+### THE BOT TRADES THE FOUR CELLS (2026-09-21, owner-confirmed; shorts declined)
+
+Owner: *"The paper bot should only take the highest R and conviction plays so
+I feel like it needs to take what we're changing the high conviction list
+[to] … lets open it to take shorts too."* Shorts were put in front of him
+with the numbers (every short cell negative on every market; the four cells
+short n=793 −0.360R PF 0.43) and he ruled *"Yeah lets not do shorts."*
+Shipped: `VIVEK_BOT_GRADES = ("A+", "A")` replaces the A+-only gate
+(`VIVEK_BOT_MIN_GRADE` retired; skip code `not_a_plus` → `grade_excluded`);
+`VIVEK_BOT_ENTRY_CELLS` (the deck's table, walked 1W → 3D → 1D, first armed
+complete plan whose trigger sits in its cell) replaces `VIVEK_BOT_PREFER_TF`
++ `VIVEK_BOT_SKIP_ENTRY_TYPES` (skip code `weak_entry_type`/`no_armed_plan` →
+`no_cell_plan`); a 1W retest no longer blocks a row whose 3D reclaim is
+armed. Evidence: bot rule before = +0.094R n=2718 PF 1.18; four cells at
+A/A+ = +0.212R n=2403 PF 1.47 (A+ only +0.216R n=1423). UNCHANGED: long-only,
+the weekly/3d LEVEL gate (`VIVEK_BOT_LEVEL_TF_ALLOW`, the thrice-replicated
+w3 cohort — so a 1D-break plan is only taken on a row reacting at a weekly/3d
+level), every size / R:R / liquidity / sector / loss guard. **Cycle w3-1
+ENDED** with this change: rows it opened keep their `cycle: "w3-1"` tag (the
+journal's w3-1 evidence strip still reads them); new rows carry
+`VIVEK_BOT_CYCLE_TAG = "hc4-1"` (status.js `CYCLE_TAG` follows).
+`bot_rules.json` now publishes `grades` + `entry_cells` + `cycle_tag` and no
+longer the retired trio; `system.html`'s rulebook and `vivek_parity` /
+`vivek_backtest.portfolio_sim` mirror the cells. Pins:
+`tests/test_bot_alignment.py` (bot table == `conviction.HC_CELLS`, shorts
+off, level gate standing, retired names gone, every deck-HC row is
+bot-takeable and every non-cell is not).
 
 ## AI BOT — REMOVED ENTIRELY (2026-09-17)
 

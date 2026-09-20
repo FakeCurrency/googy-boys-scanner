@@ -7,13 +7,16 @@ thin layer on top — this module never places an order itself.
 
 The rules it enforces (locked-in, audited on every decision):
 
-  1. A+ ONLY. It will not take A, B+ or WATCH under any circumstances.
+  1. GRADE A/A+ (config.VIVEK_BOT_GRADES, read off grade_raw). It will not
+     take B+ or WATCH under any circumstances. (A+ ONLY until 2026-09-21.)
   2. ENTRY TYPE is labelled on every trade — reclaim / retest / break — in both
      the logs and the returned ticket, with the full human description.
-  3. TIMEFRAME: Weekly plans are primary (less noise); it falls back to the
-     Daily plan only if the Weekly one has no armed trigger. The timeframe it
-     traded is recorded on the ticket. A runner can override the preference
-     (e.g. to mirror the timeframe the user has selected on the chart).
+  3. TIMEFRAME + TRIGGER: the plan must sit in one of the four CONVICTION
+     CELLS (config.VIVEK_BOT_ENTRY_CELLS: 1W reclaim/break, 3D reclaim, 1D
+     break — the deck's HIGH CONVICTION rule, owner ruling 2026-09-21). The
+     cells are walked 1W > 3D > 1D and the first armed, complete plan in a
+     cell is the one traded; the timeframe is recorded on the ticket. A
+     runner can hand in a different cell table (`cells`).
   4. SIZING: risk 0.25–0.5% of equity per trade; leverage is 5× for stocks
      (ASX/NASDAQ) and 3× for crypto. Effective size + leverage are logged.
   5. BOOK: the binding ceiling is GLOBAL — config.VIVEK_BOT_MAX_OPEN_TOTAL open
@@ -71,33 +74,41 @@ def _is_fund_or_reit(row: dict) -> bool:
     return any(kw in name for kw in _FUND_NAME_KEYWORDS)
 
 
-def _pick_plan(row: dict, prefer_tf: str) -> tuple[str | None, dict | None]:
-    """Rule 3 — choose the timeframe plan to trade.
+def _cells() -> dict:
+    """The (timeframe -> triggers) table the bot may trade, in walk order."""
+    cells = getattr(_cfg, "VIVEK_BOT_ENTRY_CELLS", None)
+    return dict(cells) if isinstance(cells, dict) and cells else {}
 
-    Weekly (or the runner-supplied `prefer_tf`) is primary; fall back through
-    3-Day then Daily. (3D was silently invisible here even though the engine
-    builds a 3D plan and the 3D-200 level was added for exactly the moves the
-    other frames missed.) Only an ARMED plan with a complete level set
-    qualifies. Returns (timeframe, plan) or (None, None).
+
+def _pick_plan(row: dict, cells: dict | None = None) -> tuple[str | None, dict | None]:
+    """Rule 3 — choose the timeframe plan to trade (owner ruling 2026-09-21).
+
+    Walk the entry CELLS in table order (1W, 3D, 1D) and take the FIRST plan
+    that is ARMED, carries a complete level set, and whose trigger is one the
+    cell allows. A weekly plan armed on a trigger the cell does not list (a
+    retest) no longer blocks the row: the walk falls through to the 3-Day
+    then the Daily plan. Returns (timeframe, plan) or (None, None).
     """
     plans = row.get("plans") or {}
-    order = [prefer_tf] + [tf for tf in ("1W", "3D", "1D") if tf != prefer_tf]
-    for tf in order:
+    for tf, triggers in (cells if cells is not None else _cells()).items():
         p = plans.get(tf)
-        if p and p.get("armed") and all(p.get(k) is not None for k in _LEVEL_KEYS):
+        if not (p and p.get("armed") and all(p.get(k) is not None for k in _LEVEL_KEYS)):
+            continue
+        et = p.get("entry_trigger") or (row.get("entry_types") or [None])[0]
+        if et in set(triggers or ()):
             return tf, p
     return None, None
 
 
-# ── 1. should we take it? (A+ only, armed, ordered, R:R, labelled) ────────────
+# ── 1. should we take it? (A/A+, armed in a conviction cell, ordered, R:R) ────
 
-def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None = None) -> dict:
-    """Decide whether a VIVEK row is takeable, on the preferred timeframe's plan.
+def evaluate_setup(row: dict, cells: dict | None = None, min_rr: float | None = None) -> dict:
+    """Decide whether a VIVEK row is takeable, on the first cell plan it carries.
 
     Returns a decision dict; on a take it carries the timeframe, the entry-type
     label, and the plan it will trade. Every skip carries an auditable code.
     """
-    prefer_tf = prefer_tf or _cfg.VIVEK_BOT_PREFER_TF
+    cells = cells if cells is not None else _cells()
     min_rr = _cfg.VIVEK_BOT_MIN_RR if min_rr is None else min_rr
     sym = row.get("symbol", "?")
     # H2 (2026-07-20): buy off the RAW gated grade. row["grade"] is smoothed by
@@ -127,14 +138,16 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
     if max_age > 0 and age > max_age:
         return skip("stale_data", f"{sym} data is {age}d old (cache reuse) — max {max_age}d")
 
-    # Rule 1 — A+ ONLY.
-    if grade != _cfg.VIVEK_BOT_MIN_GRADE:
-        return skip("not_a_plus", f"grade {grade} — bot trades {_cfg.VIVEK_BOT_MIN_GRADE} only")
+    # Rule 1 — grade A/A+ (VIVEK_BOT_GRADES), read off grade_raw.
+    grades = tuple(getattr(_cfg, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
+    if grade not in grades:
+        return skip("grade_excluded", f"grade {grade} — bot trades {'/'.join(grades)} only")
 
-    # Rule 3 — pick the timeframe plan (Weekly primary).
-    tf, plan = _pick_plan(row, prefer_tf)
+    # Rule 3 — the first armed plan that sits in an entry cell (1W > 3D > 1D).
+    tf, plan = _pick_plan(row, cells)
     if plan is None:
-        return skip("no_armed_plan", f"no armed {prefer_tf}/1D plan to trade")
+        return skip("no_cell_plan", "no armed plan in a conviction cell "
+                    "(1W reclaim/break, 3D reclaim, 1D break)")
 
     direction = _direction(row)
     e, s = float(plan["entry"]), float(plan["stop"])
@@ -169,17 +182,14 @@ def evaluate_setup(row: dict, prefer_tf: str | None = None, min_rr: float | None
                         f"{tf} stop {stop_pct:.2f}% from entry < min {min_stop_pct:g}% — "
                         f"dead/pegged instrument")
 
-    # Rule 2 — entry-type label (must be one of the three known triggers).
+    # Rule 2 — entry-type label. The cell walk above already guarantees the
+    # trigger is one the cell allows; this only labels it.
     et = plan.get("entry_trigger") or (row.get("entry_types") or [None])[0]
-    # Favour the strongest trigger — skip the entry types the backtest flagged
-    # weak (default: retest). Reclaim carries the edge.
-    if et in set(getattr(_cfg, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ()):
-        return skip("weak_entry_type", f"{et} entry — backtest weak; bot favours reclaim")
     et_label = ENTRY_TYPE_LABEL.get(et)
     if et_label is None:
         return skip("unknown_entry_type", f"entry type {et!r} not one of reclaim/retest/break")
 
-    why = f"A+ {direction} · {tf} · {et}: {et_label} · entry {e:g} SL {s:g} · R:R {rr:.1f}"
+    why = f"{grade} {direction} · {tf} · {et}: {et_label} · entry {e:g} SL {s:g} · R:R {rr:.1f}"
     log.info("TAKE  %-8s %s", sym, why)
     return {"take": True, "grade": grade, "direction": direction, "timeframe": tf,
             "entry_type": et, "entry_type_label": et_label, "rr": rr,
@@ -331,10 +341,10 @@ def review_flags(ticket: dict) -> list[dict]:
 # ── 3. full trade plan ────────────────────────────────────────────────────────
 
 def plan_trade(row: dict, equity: float, market: str | None = None,
-               prefer_tf: str | None = None, risk_pct: float | None = None,
+               cells: dict | None = None, risk_pct: float | None = None,
                min_rr: float | None = None) -> dict:
     """Combine evaluate + size into a ready-to-place ticket (or a skip)."""
-    decision = evaluate_setup(row, prefer_tf, min_rr)
+    decision = evaluate_setup(row, cells, min_rr)
     if not decision["take"]:
         return {**decision, "plan": None}
 
@@ -504,7 +514,7 @@ def _sector_key(symbol: str, sector: str | None, market: str | None) -> str:
 
 
 def decide(rows: list[dict], equity: float, market: str | None = None,
-           prefer_tf: str | None = None, open_book: list[dict] | None = None, **kw) -> dict:
+           cells: dict | None = None, open_book: list[dict] | None = None, **kw) -> dict:
     """Run the engine over ONE market's VIVEK scan and apply the book rules.
 
     Rows are expected best-first (the scan sorts by grade → score → R:R). The
@@ -639,7 +649,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         skipped.append({**out, "take": False, "code": code, "reason": reason, "plan": None})
 
     for row in rows:
-        out = plan_trade(row, equity, market=market, prefer_tf=prefer_tf, **{
+        out = plan_trade(row, equity, market=market, cells=cells, **{
             k: kw[k] for k in ("risk_pct", "min_rr") if k in kw})
         if not out.get("plan"):
             reasons[out.get("code", "skip")] += 1

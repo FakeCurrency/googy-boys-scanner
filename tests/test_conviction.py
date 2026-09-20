@@ -176,9 +176,11 @@ def test_every_python_reader_imports_the_rule(path):
 # ── the FENCE: display only, the bot does not read it ────────────────────────
 
 def test_nothing_under_broker_imports_the_conviction_rule():
-    """Aligning the paper bot to these cells changes which trades get taken —
-    the owner's call, not a refactor. Until he gives it, the bot's eligibility
-    stays its own ruleset (VIVEK_BOT_*)."""
+    """The bot's eligibility is its OWN ruleset (VIVEK_BOT_GRADES /
+    VIVEK_BOT_ENTRY_CELLS in config). It was aligned to these cells on the
+    owner's word (2026-09-21) and tests/test_bot_alignment.py pins the two
+    tables equal — but the broker never IMPORTS the display module, so a
+    display-side edit can never silently change what gets traded."""
     hits = [p.name for p in (ROOT / "scanner" / "broker").glob("*.py")
-            if "conviction" in p.read_text(encoding="utf-8")]
-    assert hits == [], f"scanner/broker now reads the display rule: {hits}"
+            if re.search(r"^\s*(from|import)\s+.*\bconviction\b", p.read_text(encoding="utf-8"), re.M)]
+    assert hits == [], f"scanner/broker now imports the display rule: {hits}"

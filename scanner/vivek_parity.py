@@ -3,7 +3,7 @@
 Replays the LIVE bot lifecycle over history — not the looser Insights walk-forward:
 
   * A+ only (raw grade), long-only, funds excluded, retest skipped
-  * one plan per symbol via bot prefer_tf order (1W > 3D > 1D)
+  * one plan per symbol via the bot's cell walk (1W > 3D > 1D, trigger must sit in the cell)
   * live TP ladder + trail (same ``_mark`` / ``manage_position`` path)
   * pre-TP1 time-stop at ``VIVEK_BOT_MAX_HOLD_DAYS`` (default 28)
   * tradeability gates (min price, stop width) + ADV floor at entry
@@ -58,8 +58,8 @@ class ParityRules:
     early_cut_day: int | None = None          # calendar days; None = off
     early_cut_mfe: float | None = None        # cut if peak mfe_r still below this
     level_tfs: tuple[str, ...] | None = None  # None = all; e.g. ("weekly",)
-    entry_types: tuple[str, ...] | None = None  # None = bot default (skip retest)
-    grades: tuple[str, ...] = ("A+",)
+    entry_types: tuple[str, ...] | None = None  # None = bot default (the cell table)
+    grades: tuple[str, ...] | None = None       # None = config.VIVEK_BOT_GRADES
     long_only: bool = True
     apply_adv_gate: bool = True
     apply_tradeability: bool = True
@@ -70,12 +70,16 @@ class ParityRules:
         return int(self.max_hold_days or 0)
 
     def allowed_entry_types(self) -> set[str] | None:
+        """Triggers a variant may take (any timeframe). None = the live cell
+        table decides per timeframe (see _prefer_plan)."""
         if self.entry_types is not None:
             return set(self.entry_types)
-        skip = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
-        # Live takes reclaim + break (retest skipped). Open set = known triggers − skip.
-        known = set(getattr(config, "VIVEK_TRIGGER_PRIORITY", ("reclaim", "retest", "break")))
-        return known - skip if known else None
+        return None
+
+    def allowed_grades(self) -> tuple[str, ...]:
+        if self.grades is not None:
+            return tuple(self.grades)
+        return tuple(getattr(config, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
 
 
 def baseline_rules() -> ParityRules:
@@ -102,15 +106,29 @@ def variant_grid() -> list[ParityRules]:
 
 # ── entry detection + management ──────────────────────────────────────────────
 
-def _prefer_plan(plans: dict) -> tuple[str | None, dict | None]:
-    """Mirror vivek_bot._pick_plan without importing private botside mutation surface."""
-    prefer = getattr(config, "VIVEK_BOT_PREFER_TF", "1W")
-    order = [prefer] + [tf for tf in ("1W", "3D", "1D") if tf != prefer]
-    for tf in order:
+def _bot_cells() -> dict:
+    cells = getattr(config, "VIVEK_BOT_ENTRY_CELLS", None)
+    return dict(cells) if isinstance(cells, dict) and cells else {}
+
+
+def _in_cell(timeframe, entry_type) -> bool:
+    """Is (timeframe, trigger) one of the bot's entry cells?"""
+    return entry_type in set(_bot_cells().get(timeframe) or ())
+
+
+def _prefer_plan(plans: dict, allowed: set[str] | None = None) -> tuple[str | None, dict | None]:
+    """Mirror vivek_bot._pick_plan without importing private botside mutation
+    surface: walk the CELL table (1W > 3D > 1D) and take the first armed,
+    complete plan whose trigger the cell allows. `allowed`, when given by a
+    variant, replaces the cell's trigger set on every timeframe."""
+    for tf, triggers in _bot_cells().items():
         p = plans.get(tf)
         if not p or not p.get("armed"):
             continue
         if any(p.get(k) is None for k in ("stop", "tp1", "tp2", "tp3")):
+            continue
+        ok = set(allowed) if allowed is not None else set(triggers or ())
+        if p.get("entry_trigger") not in ok:
             continue
         return tf, p
     return None, None
@@ -350,7 +368,7 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
         if sig is None:
             continue
         row, plans, grade = _build_row(sig, df.iloc[: j + 1], symbol, name, sector)
-        if not row or grade not in rules.grades:
+        if not row or grade not in rules.allowed_grades():
             continue
         if rules.long_only and row["dir"] == "SHORT":
             continue
@@ -359,7 +377,7 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
         # Attach plans so prefer_plan can read them; also keep row shape scan-like.
         row = dict(row)
         row["plans"] = plans
-        tf, plan = _prefer_plan(plans)
+        tf, plan = _prefer_plan(plans, rules.allowed_entry_types())
         if plan is None:
             continue
         rr = float(plan.get("rr") or 0)
@@ -394,7 +412,7 @@ def _slim_parity(tr: dict) -> dict:
 
 def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> dict:
     """Chronological global book — true cross-market slot contention."""
-    skip_types = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
+    grades = tuple(getattr(config, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
     long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
     max_total = int(max_total if max_total is not None
                     else (getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0)
@@ -403,8 +421,8 @@ def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> di
     cooldown = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
 
     elig = [t for t in trades
-            if t.get("grade") == "A+"
-            and t.get("entry_type") not in skip_types
+            if t.get("grade") in grades
+            and _in_cell(t.get("timeframe"), t.get("entry_type"))
             and (not long_only or t.get("direction") == "long")
             and t.get("entry_date") and t.get("exit_date")]
     if not elig:
@@ -471,12 +489,13 @@ def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> di
             "max_per_sector": max_sector,
             "cooldown_days": cooldown,
             "long_only": long_only,
-            "skip_entry_types": sorted(skip_types),
+            "grades": list(grades),
+            "entry_cells": {tf: list(ets) for tf, ets in _bot_cells().items()},
             "simulated": ["time_stop", "tp_ladder_trail", "one_per_symbol",
                           "global_slot_cap", "sector_cap", "cooldown",
                           "min_price", "stop_width", "adv_gates",
-                          "a_plus_only", "long_only", "skip_retest",
-                          "prefer_tf_one_plan"],
+                          "grade_gate", "long_only", "entry_cells",
+                          "cell_walk_one_plan"],
         },
         "eligible": _metrics(elig),
         "portfolio": _metrics(taken_all),
@@ -765,10 +784,9 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
         "baseline": {
             "rules": {
                 "max_hold_days": baseline_rules().resolved_hold(),
-                "grades": ["A+"],
+                "grades": list(baseline_rules().allowed_grades()),
                 "long_only": True,
-                "skip_entry_types": list(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", []) or []),
-                "prefer_tf": getattr(config, "VIVEK_BOT_PREFER_TF", "1W"),
+                "entry_cells": {tf: list(ets) for tf, ets in _bot_cells().items()},
                 "max_open_total": int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 30) or 30),
             },
             "all_signals": report_by_slices(published),
@@ -796,7 +814,7 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
 def _taken_list(trades: list[dict]) -> list[dict]:
     """Re-run portfolio selection and return the taken trade dicts."""
     # Duplicate the selection logic returning objects.
-    skip_types = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
+    grades = tuple(getattr(config, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
     long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
     max_total = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0)
                     or config.VIVEK_BOT_MAX_POSITIONS)
@@ -804,8 +822,8 @@ def _taken_list(trades: list[dict]) -> list[dict]:
     cooldown = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
 
     elig = [t for t in trades
-            if t.get("grade") == "A+"
-            and t.get("entry_type") not in skip_types
+            if t.get("grade") in grades
+            and _in_cell(t.get("timeframe"), t.get("entry_type"))
             and (not long_only or t.get("direction") == "long")
             and t.get("entry_date") and t.get("exit_date")]
     trs = sorted(elig, key=lambda t: (t["entry_date"],
@@ -984,7 +1002,7 @@ def run_parity(markets: list[str], limit: int | None, period: str,
         "period": period,
         "exclude_funds": True,
         "long_only": True,
-        "grades": ["A+"],
+        "grades": list(rules.allowed_grades()),
         "time_stop_days": rules.resolved_hold(),
         "mfe_days": list(MFE_DAYS),
         "excluded_counts": {mk: len(exclude_map.get(mk) or []) for mk in markets},

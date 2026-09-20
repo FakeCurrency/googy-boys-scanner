@@ -101,9 +101,9 @@ def test_pin_dont_chase_wrong_side_of_stop_both_directions():
     """An entry on the wrong side of its stop would be born dead (instant
     stop-out next mark) and book a guaranteed -R into the record."""
     row = {"symbol": "X", "name": "X", "sector": "", "dir": "LONG",
-           "grade": "A+", "entry_types": ["reclaim"]}
+           "grade": "A+", "entry_types": ["break"]}
     jplan = {"stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
-             "scale": [0.25, 0.50, 0.15], "entry_trigger": "reclaim",
+             "scale": [0.25, 0.50, 0.15], "entry_trigger": "break",
              "armed": True, "trigger_bar": None}
     assert vj._snapshot(row, "1D", jplan, "asx", 95.9, "2024-01-02") is None
     assert vj._snapshot(row, "1D", jplan, "asx", 96.0, "2024-01-02") is None
@@ -184,8 +184,8 @@ def _row():
     # level_tf: live scan rows always carry it; the w3 level gate is
     # FAIL-CLOSED, so a fixture row without it never reaches decide().
     return {"symbol": "BHP", "name": "BHP", "sector": "", "grade": "A+",
-            "dir": "LONG", "entry_types": ["reclaim"], "level_tf": "weekly",
-            "plans": {"1D": {"armed": True, "entry_trigger": "reclaim",
+            "dir": "LONG", "entry_types": ["break"], "level_tf": "weekly",
+            "plans": {"1D": {"armed": True, "entry_trigger": "break",
                              "trigger_bar": "2024-01-01", "entry": 100.0,
                              "stop": 96.0, "tp1": 106.0, "tp2": 112.0,
                              "tp3": 120.0, "rr": 3.0,

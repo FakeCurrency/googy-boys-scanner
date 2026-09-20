@@ -117,7 +117,7 @@ def test_cycle_tag_is_stamped_only_while_a_cycle_is_active():
 
 def test_config_ships_the_gate_and_the_cycle_tag():
     assert tuple(config.VIVEK_BOT_LEVEL_TF_ALLOW) == ("weekly", "3d")
-    assert config.VIVEK_BOT_CYCLE_TAG == "w3-1"
+    assert config.VIVEK_BOT_CYCLE_TAG == "hc4-1"   # w3-1 ended 2026-09-21 with the cell alignment
     # The gate must never be widenable to an unknown level by accident: the
     # allowlist may only ever contain levels the engine actually publishes.
     assert set(config.VIVEK_BOT_LEVEL_TF_ALLOW) <= {"weekly", "3d", "h4"}

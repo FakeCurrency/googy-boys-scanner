@@ -325,7 +325,9 @@ def test_entry_types_always_returns_at_least_one():
 # ── bot: take / skip (A+ only, plan-based, entry-type labelled) ─────────────────
 
 def _bplan(**kw):
-    p = {"armed": True, "entry_trigger": "reclaim", "entry": 100.0, "stop": 96.0,
+    # 1D BREAK by default — one of the four entry cells (2026-09-21); a 1D
+    # reclaim is not a cell and the bot would skip it with no_cell_plan.
+    p = {"armed": True, "entry_trigger": "break", "entry": 100.0, "stop": 96.0,
          "tp1": 106.0, "tp2": 112.0, "tp3": 120.0, "rr": 3.0, "scale": config.VIVEK_TP_SCALE_LONG}
     p.update(kw)
     return p
@@ -333,7 +335,7 @@ def _bplan(**kw):
 
 def _row(**kw):
     plans = kw.pop("plans", None) or {"1D": _bplan()}
-    r = {"symbol": "BHP", "dir": "LONG", "grade": "A+", "entry_types": ["reclaim"], "plans": plans}
+    r = {"symbol": "BHP", "dir": "LONG", "grade": "A+", "entry_types": ["break"], "plans": plans}
     r.update(kw)
     return r
 
@@ -341,28 +343,40 @@ def _row(**kw):
 def test_bot_takes_a_plus_and_labels_entry_type():
     d = vivek_bot.evaluate_setup(_row())
     assert d["take"] is True and d["direction"] == "long" and d["timeframe"] == "1D"
-    assert d["entry_type"] == "reclaim"
-    assert d["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["reclaim"]
+    assert d["entry_type"] == "break"
+    assert d["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["break"]
 
 
-def test_bot_takes_only_a_plus():
-    for g in ("A", "B+", "WATCH"):
+def test_bot_takes_A_and_A_plus_and_nothing_below():
+    """Owner ruling 2026-09-21: the bot takes what the HIGH CONVICTION list
+    takes — A and A+. B+ / WATCH never."""
+    assert vivek_bot.evaluate_setup(_row(grade="A"))["take"] is True
+    for g in ("B+", "WATCH"):
         d = vivek_bot.evaluate_setup(_row(grade=g))
-        assert d["take"] is False and d["code"] == "not_a_plus"
+        assert d["take"] is False and d["code"] == "grade_excluded"
 
 
-def test_bot_prefers_weekly_then_falls_back_to_daily():
-    # Weekly armed → trade the Weekly plan.
-    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(), "1W": _bplan(entry_trigger="break")}))
+def test_bot_walks_the_cells_weekly_first_and_falls_through():
+    # Weekly armed on a cell trigger → trade the Weekly plan.
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(entry_trigger="break"),
+                                             "1W": _bplan(entry_trigger="break")}))
     assert d["timeframe"] == "1W" and d["entry_type"] == "break"
-    # Weekly NOT armed → fall back to the Daily plan.
-    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(), "1W": _bplan(armed=False)}))
+    # Weekly NOT armed → fall through to the Daily plan.
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(entry_trigger="break"), "1W": _bplan(armed=False)}))
     assert d["timeframe"] == "1D"
+    # Weekly armed on a RETEST (no cell) no longer blocks the row: 3D reclaim is taken.
+    d = vivek_bot.evaluate_setup(_row(plans={"1W": _bplan(entry_trigger="retest"),
+                                             "3D": _bplan(entry_trigger="reclaim")}))
+    assert d["take"] is True and d["timeframe"] == "3D" and d["entry_type"] == "reclaim"
+    # 1D reclaim / 3D break are NOT cells.
+    for plans in ({"1D": _bplan(entry_trigger="reclaim")}, {"3D": _bplan(entry_trigger="break")}):
+        d = vivek_bot.evaluate_setup(_row(plans=plans))
+        assert d["take"] is False and d["code"] == "no_cell_plan", plans
 
 
 def test_bot_skips_when_no_armed_plan():
-    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(armed=False)}))
-    assert d["take"] is False and d["code"] == "no_armed_plan"
+    d = vivek_bot.evaluate_setup(_row(plans={"1D": _bplan(entry_trigger="break", armed=False)}))
+    assert d["take"] is False and d["code"] == "no_cell_plan"
 
 
 def test_bot_skips_low_rr_and_bad_order():
@@ -372,8 +386,8 @@ def test_bot_skips_low_rr_and_bad_order():
 
 def test_entry_type_label_flows_into_the_ticket():
     out = vivek_bot.plan_trade(_row(), equity=10_000, market="asx")
-    assert out["plan"]["entry_type"] == "reclaim"
-    assert out["plan"]["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["reclaim"]
+    assert out["plan"]["entry_type"] == "break"
+    assert out["plan"]["entry_type_label"] == vivek_bot.ENTRY_TYPE_LABEL["break"]
     assert out["plan"]["timeframe"] == "1D" and out["plan"]["grade"] == "A+"
 
 
@@ -456,7 +470,7 @@ def test_short_management_mirrors():
 
 
 def _short_plan(**kw):
-    p = {"armed": True, "entry_trigger": "reclaim", "entry": 100.0, "stop": 104.0,
+    p = {"armed": True, "entry_trigger": "break", "entry": 100.0, "stop": 104.0,
          "tp1": 94.0, "tp2": 88.0, "tp3": 80.0, "rr": 3.0, "scale": config.VIVEK_TP_SCALE_SHORT}
     p.update(kw)
     return p
@@ -502,11 +516,13 @@ def test_decide_is_long_only_by_default():
     assert out["summary"]["skip_reasons"].get("shorts_disabled") == 2
 
 
-def test_decide_takes_only_a_plus():
-    rows = [_long("A1"), _row(symbol="A2", grade="A"), _row(symbol="A3", grade="WATCH")]
+def test_decide_takes_A_and_A_plus_only():
+    rows = [_long("A1"), _row(symbol="A2", grade="A"), _row(symbol="A3", grade="WATCH"),
+            _row(symbol="A4", grade="B+")]
     out = vivek_bot.decide(rows, equity=10_000, market="asx")
-    assert out["summary"]["taken"] == 1 and out["plans"][0]["plan"]["symbol"] == "A1"
-    assert out["summary"]["skip_reasons"].get("not_a_plus") == 2
+    assert out["summary"]["taken"] == 2
+    assert [p["plan"]["symbol"] for p in out["plans"]] == ["A1", "A2"]
+    assert out["summary"]["skip_reasons"].get("grade_excluded") == 2
 
 
 def test_decide_stops_at_the_per_market_cap(shorts_on, small_book):

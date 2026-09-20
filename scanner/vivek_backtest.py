@@ -742,8 +742,10 @@ def portfolio_sim(trades: list[dict]) -> dict:
     from collections import Counter
     from .broker.vivek_bot import _sector_key
 
-    skip_types = set(getattr(config, "VIVEK_BOT_SKIP_ENTRY_TYPES", ()) or ())
+    grades = tuple(getattr(config, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
     long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
+    _c = getattr(config, "VIVEK_BOT_ENTRY_CELLS", None)
+    cells = dict(_c) if isinstance(_c, dict) and _c else {}
     # Slot count. The live book's binding constraint is now a GLOBAL cap shared
     # across markets (VIVEK_BOT_MAX_OPEN_TOTAL), but this sim runs one market at
     # a time and structurally cannot model cross-market contention. Using the
@@ -769,7 +771,8 @@ def portfolio_sim(trades: list[dict]) -> dict:
     ungated = 0
     elig = []
     for t in trades:
-        if (t.get("grade") != "A+" or t.get("entry_type") in skip_types
+        if (t.get("grade") not in grades
+                or t.get("entry_type") not in set(cells.get(t.get("timeframe")) or ())
                 or (long_only and t.get("direction") != "long")
                 or not t.get("entry_date") or not t.get("exit_date")):
             continue
@@ -837,7 +840,8 @@ def portfolio_sim(trades: list[dict]) -> dict:
     return {
         "params": {"max_positions": max_pos, "max_per_sector": max_sector,
                    "cooldown_days": cooldown, "long_only": long_only,
-                   "skip_entry_types": sorted(skip_types),
+                   "grades": list(grades),
+                   "entry_cells": {tf: list(ets) for tf, ets in cells.items()},
                    # Say what IS replayed, not only what is not — a bare
                    # "not_simulated" list invites the reader to assume
                    # everything absent from it was modelled, which is the

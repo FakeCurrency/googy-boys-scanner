@@ -118,10 +118,10 @@ def test_bot_skips_stale_cache_reused_rows(monkeypatch):
 def test_bot_buys_off_grade_raw_not_the_smoothed_grade():
     plans = {"1W": _plan(103.0, armed=True)}
     row = {"symbol": "BHP", "name": "BHP", "sector": "Materials", "dir": "LONG",
-           "grade": "A+", "grade_raw": "A", "entry_types": ["reclaim"],
+           "grade": "A+", "grade_raw": "B+", "entry_types": ["reclaim"],
            "plans": plans, "price": 103.0}
     out = vivek_bot.evaluate_setup(row)
-    assert out["take"] is False and out["code"] == "not_a_plus"
+    assert out["take"] is False and out["code"] == "grade_excluded"
 
     row["grade_raw"] = "A+"
     out = vivek_bot.evaluate_setup(row)
