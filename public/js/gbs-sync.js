@@ -79,6 +79,12 @@
     // { snap, date, mtime } for live stars, { del: mtime } for un-stars
     // (tombstones so removals propagate across devices, same as trades).
     if (!d.watchlists || typeof d.watchlists !== "object" || Array.isArray(d.watchlists)) d.watchlists = {};
+    // WHAT NEEDS MY EYES reviewed-marks (2026-09-21, eyes-store.js): flat map
+    // "<market>:<TICKER>" -> mtime of the review, plus a reset stamp. Lives in
+    // this store so the worklist follows the owner across devices the way the
+    // journal does; the phone was re-showing names reviewed on the desktop.
+    if (!d.eyes_seen || typeof d.eyes_seen !== "object" || Array.isArray(d.eyes_seen)) d.eyes_seen = {};
+    if (typeof d.eyes_reset !== "number") d.eyes_reset = 0;
     if (typeof d.updated_at !== "number") d.updated_at = 0;
     return d;
   }
@@ -146,7 +152,18 @@
         if (vm >= em) wl[k] = v;
       }
     }
+    // Eyes marks: newest mtime per name wins; the reset stamp is the max of
+    // both, so a restore on one device is a restore everywhere.
+    const eyes = {};
+    for (const src of [a.eyes_seen || {}, b.eyes_seen || {}]) {
+      for (const [k, v] of Object.entries(src)) {
+        const t = Number(v) || 0;
+        if (t > (eyes[k] || 0)) eyes[k] = t;
+      }
+    }
     return normalize({
+      eyes_seen:        eyes,
+      eyes_reset:       Math.max(a.eyes_reset || 0, b.eyes_reset || 0),
       capital:          pick("capital"),
       brokerage:        pick("brokerage"),
       stock_capital:    pick("stock_capital"),

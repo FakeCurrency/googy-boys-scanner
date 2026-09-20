@@ -78,7 +78,7 @@ for (const f of files) {
   const src = fs.readFileSync(path.join(JS_DIR, f), "utf8");
   const expr = extractConst(src, "esc");
   if (!expr) continue;
-  // `const esc = PM.esc;` (mynames.js) is an alias, not a definition — the
+  // `const esc = PM.esc;` (an alias, as mynames.js once had) is not a definition — the
   // real one is tested when phasemap-shared.js comes round, and section 2
   // below is what proves the alias resolves.
   if (/^[\w$]+(\.[\w$]+)*$/.test(expr)) continue;

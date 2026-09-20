@@ -439,7 +439,7 @@
     const STEPS = [
       ["🧭", "Three markets, one scanner", "ASX, NASDAQ and Crypto — switch up top. Every name is graded on how price is REACTING at its 200-SMA."],
       ["🎯", "A+ is the shortlist", "The A+ / A / WATCH tabs filter by setup grade. A+ means every gate passed — that's the tab worth checking daily. Pills under the title filter further (at-level, multi-lens…)."],
-      ["📋", "Tap a row for the plan", "Every row expands into the full trade plan — entry, stop, targets with R:R — plus a chart. Star (☆) anything to track it across every lens on ★ MY NAMES."],
+      ["📋", "Tap a row for the plan", "Every row expands into the full trade plan — entry, stop, targets with R:R — plus a chart. Star (☆) anything to keep it on that lens's ★ watchlist."],
     ];
     let i = 0;
     const scrim = document.createElement("div");
@@ -1137,53 +1137,6 @@
         const p = r.plans[k];
         return `<i class="tfd ${p ? (p.armed ? "on" : "near") : "off"}"></i>`;
       }).join("") + `</span>`;
-  }
-
-  // ── UX-20 #3: ★ MY NAMES live strip on the dashboard ─────────────────────
-  // Your starred names for the current market as one compact row: names with
-  // an active setup show grade/direction/at-level and jump to their row;
-  // quiet names link to their chart. Collapsible, remembered.
-  function renderWatchStrip() {
-    const host = document.getElementById("watch-strip");
-    if (!host || !state.data) return;
-    let collapsed = false;
-    try { collapsed = localStorage.getItem("gbs:wstrip") === "0"; } catch (_) {}
-    const res = state.data.results || [];
-    const inScan = new Map(res.map((r) => [r.symbol, r]));
-    const w = _pmWatch();
-    const syms = new Set();
-    if (w) LENS_TAG.forEach(([ns]) => Object.keys(w.map(ns, state.market)).forEach((s) => syms.add(s)));
-    else res.filter((r) => isStarred(r.symbol)).forEach((r) => syms.add(r.symbol));
-    if (!syms.size) { host.hidden = true; return; }
-    host.hidden = false;
-    const chip = (s) => {
-      const r = inScan.get(s);
-      if (r) {
-        const sh = r.dir === "SHORT";
-        return `<button type="button" class="ws-chip live" data-sym="${esc(s)}" ` +
-          `title="${esc(r.grade)} ${sh ? "SHORT" : "LONG"}${r.at_level ? " · at level now" : ""} — tap to open in the list">` +
-          `${esc(s)} <span class="ws-g">${esc(r.grade)}</span><span class="ws-d ${sh ? "s" : "l"}">${sh ? "▼" : "▲"}</span>${r.at_level ? `<span class="ws-al" title="At its 200-SMA now">◎</span>` : ""}</button>`;
-      }
-      return `<a class="ws-chip quiet" href="chart.html?m=${state.market}&s=${encodeURIComponent(s)}" ` +
-        `title="No active setup this scan — open the chart">${esc(s)}</a>`;
-    };
-    host.innerHTML =
-      `<button type="button" class="ws-lbl" id="ws-toggle" aria-expanded="${collapsed ? "false" : "true"}" title="${collapsed ? "Show" : "Hide"} your starred names">★ MY NAMES ${collapsed ? "▸" : "▾"}</button>` +
-      (collapsed ? "" : [...syms].sort().map(chip).join("") + `<a class="ws-all" href="mynames.html">all lenses →</a>`);
-    if (!host._wired) {
-      host._wired = true;
-      host.addEventListener("click", (e) => {
-        const t = e.target.closest("#ws-toggle, .ws-chip.live");
-        if (!t) return;
-        if (t.id === "ws-toggle") {
-          try { localStorage.setItem("gbs:wstrip", localStorage.getItem("gbs:wstrip") === "0" ? "1" : "0"); } catch (_) {}
-          renderWatchStrip(); return;
-        }
-        const wrap = document.querySelector(`.row-wrap[data-sym="${CSS.escape(t.dataset.sym)}"]`);
-        if (wrap) { wrap.scrollIntoView({ behavior: "smooth", block: "center" }); if (!wrap.classList.contains("open")) wrap.click(); }
-        else location.href = `chart.html?m=${state.market}&s=${encodeURIComponent(t.dataset.sym)}`;
-      });
-    }
   }
 
   // ── UX-20 #2: saved view presets + shareable view URLs ───────────────────
@@ -2486,7 +2439,6 @@
 
   let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts
   function renderRows() {
-    setTimeout(renderWatchStrip, 0);   // UX-20 #3: strip reflects the fresh rows
     refreshAlertSyms();                // Fix-10 #6: ⏰ chips read the live store
     const wrap = $("#results");
     const list = buildList();
@@ -3407,7 +3359,7 @@
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const [pm, sp] = await Promise.all([
         grab(`data/phasemap/${state.market}/latest.json`),
-        // No crypto Specs file exists (the lens never ran there) — mynames.js
+        // No crypto Specs file exists (the lens never ran there) — the old mynames.js
         // has guarded this identical fetch since it was written; this call and
         // phasemap-shared's were firing a live 404 on every CRYPTO visit.
         state.market !== "crypto" ? grab(`data/${state.market}_spec.json`) : null,

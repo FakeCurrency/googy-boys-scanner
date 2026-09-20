@@ -5,7 +5,7 @@
  * consistent nav into the `#site-nav` mount on each page:
  *
  *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ ·
- *     ★ MY NAMES · ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
+ *     ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
  *     SYSTEM / HOW IT WORKS — see the MORE list below; AI BOT was REMOVED
  *     2026-09-17 with its whole scalp-era bot; TRACK and
  *     DEBUG are retired; the TURTLE tab was REMOVED 2026-09-17, owner: "I
@@ -27,14 +27,13 @@
     { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
     { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
     { href: "specs.html",           label: "SPECS ⚡",   tab: "⚡", key: "specs" },
-    { href: "mynames.html",         label: "★ MY NAMES", tab: "★", key: "mynames" },
     { href: "alerts.html",          label: "ALERTS",     tab: "🔔", key: "alerts" },
     { href: "journal.html",         label: "JOURNAL",    tab: "📒", key: "journal" },
   ];
   // Bottom tab bar fits 5 — SPECS + ALERTS live in the top pills / MORE on
   // mobile (RECS took a slot, owner 2026-07-22; five tabs is the rule).
   const TABS = PRIMARY.filter(
-    (x) => x.key !== "specs" && x.key !== "alerts",
+    (x) => x.key !== "alerts",
   );
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
@@ -42,10 +41,11 @@
     { href: "about.html",   label: "HOW IT WORKS", key: "about", tab: "❓" },
   ];
   // Everything not on the 5-slot bottom bar, for the mobile MORE sheet (#30):
-  // SPECS + ALERTS (top-pill-only on desktop) plus the MORE set.
+  // ALERTS (top-pill-only on desktop) plus the MORE set. (SPECS took the
+  // slot ★ MY NAMES vacated when that page was removed, 2026-09-21.)
   const SHEET = [
     ...PRIMARY.filter(
-      (x) => x.key === "specs" || x.key === "alerts",
+      (x) => x.key === "alerts",
     ),
     ...MORE,
   ];
@@ -449,7 +449,7 @@
     const sel = cpList.querySelector(".cp-item.is-sel");
     if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
   }
-  const CP_KIND = { star: ["★", "starred", "mynames"], bot: ["🤖", "bot position", "journal"], me: ["✏️", "your position", "journal"] };
+  const CP_KIND = { star: ["★", "starred", "index"], bot: ["🤖", "bot position", "journal"], me: ["✏️", "your position", "journal"] };
   const cpMineRow = (t) => {
     const [ico, label, src] = CP_KIND[t.kind] || ["•", "", "index"];
     return `<button class="cp-item" type="button" data-href="chart.html?m=${t.m}&s=${encodeURIComponent(t.s)}&mode=vivek&src=${src}" role="option">` +

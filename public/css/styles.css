@@ -1186,7 +1186,7 @@ body.debug-mode .debug-panel {
   .detail-anim { transition: grid-template-rows .01ms; }
   .detail-inner > .row-detail, .detail-inner > .debug-panel { transition: none; transform: none; }
   .row:active, .seg-btn:active, .scan-btn:active, .market-btn:active,
-  .view-tab:active, .reload-btn:active, .mn-row:hover { transform: none; }
+  .view-tab:active, .reload-btn:active { transform: none; }
 }
 
 /* ============================================================== responsive */
@@ -2490,30 +2490,6 @@ body { letter-spacing: -0.012em; }
 .tfd.on   { background: var(--green); border-color: var(--green); box-shadow: 0 0 4px var(--green); }
 .tfd.near { background: transparent; border-color: var(--orange); }
 .tfd.off  { opacity: .55; }
-
-/* ── UX-20 #3: ★ MY NAMES strip ─────────────────────────────────────────── */
-.watch-strip {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
-  margin: 0 0 12px; padding: 9px 12px; border-radius: 12px;
-  background: var(--panel); border: 1px solid var(--border);
-}
-.watch-strip[hidden] { display: none; }
-.ws-lbl { appearance: none; border: none; background: none; cursor: pointer;
-  font: 800 10px/1 var(--sans); letter-spacing: .08em; color: var(--muted); padding: 4px 2px; }
-.ws-lbl:hover { color: var(--text); }
-.ws-chip {
-  display: inline-flex; align-items: center; gap: 5px; text-decoration: none; cursor: pointer;
-  font: 700 11.5px/1 var(--mono); color: var(--text);
-  background: var(--fill); border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px;
-  transition: border-color .15s;
-}
-.ws-chip:hover { border-color: var(--green); }
-.ws-chip.quiet { color: var(--muted); }
-.ws-g { font: 800 9px/1 var(--sans); color: var(--grade-aplus); }
-.ws-d.l { color: var(--green); } .ws-d.s { color: var(--red); }
-.ws-al { color: var(--teal); }
-.ws-all { margin-left: auto; font: 700 10.5px/1 var(--sans); color: var(--blue); text-decoration: none; }
-.ws-all:hover { text-decoration: underline; }
 
 /* ── UX-20 #2: views menu ────────────────────────────────────────────────── */
 .tb-views { min-width: 34px; }

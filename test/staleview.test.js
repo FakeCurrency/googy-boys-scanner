@@ -1005,7 +1005,7 @@ test("every entry-tint tier is REACHABLE against the file the chips read", () =>
 });
 
 test("the crypto Specs fetch is guarded in BOTH remaining call sites", () => {
-  // No crypto spec file exists; mynames.js always guarded it, these two fired
+  // No crypto spec file exists; the (since-removed) mynames.js always guarded it, these two fired
   // a live 404 on every CRYPTO visit until 2026-08-15.
   assert.ok(/state\.market !== "crypto" \? grab\(`data\/\$\{state\.market\}_spec\.json`\) : null/.test(APP),
     "app.js lensIdx fetches crypto_spec.json unguarded again");

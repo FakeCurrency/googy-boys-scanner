@@ -450,10 +450,68 @@ test("A NEW SCAN DOES NOT bring reviewed names back — the regression", () => {
   }
 });
 
-test("the next DAY brings them back, once", () => {
+test("the next DAY does NOT bring them back — the second regression (phone, 2026-09-21)", () => {
+  /* v2 scoped the marks to the Melbourne day, per device. The owner reviewed
+   * the list and next morning, on his phone, every name was back. A reviewed
+   * name now stays reviewed for EYES.SEEN_DAYS from the moment it was opened,
+   * whatever the calendar does. */
   const store = fakeStore();
-  eyesSeenSandbox(store, "2026-09-20").markEyeSeen("nasdaq", "UNIT");
-  assert.deepEqual(eyesSeenSandbox(store, "2026-09-21").eyesSeenLoad(), {});
+  const T0 = Date.parse("2026-09-20T22:00:00+10:00");
+  const a = eyesSeenSandbox(store, "2026-09-20"); a.E.now = () => T0;
+  a.markEyeSeen("nasdaq", "UNIT");
+  const b = eyesSeenSandbox(store, "2026-09-21"); b.E.now = () => T0 + 10 * 3600 * 1000;   // next morning
+  assert.deepEqual(Object.keys(b.eyesSeenLoad()), ["nasdaq:UNIT"], "midnight must not clear the worklist");
+  const c = eyesSeenSandbox(store, "2026-09-26"); c.E.now = () => T0 + 6 * 86400000;      // day 6
+  assert.deepEqual(Object.keys(c.eyesSeenLoad()), ["nasdaq:UNIT"], "inside the window it stays reviewed");
+});
+
+test("a reviewed name comes back once the 7-day window passes", () => {
+  const store = fakeStore();
+  const T0 = Date.parse("2026-09-20T22:00:00+10:00");
+  const a = eyesSeenSandbox(store, "x"); a.E.now = () => T0;
+  a.markEyeSeen("nasdaq", "UNIT");
+  const late = eyesSeenSandbox(store, "x"); late.E.now = () => T0 + (a.E.SEEN_DAYS * 86400000) + 1;
+  assert.deepEqual(late.eyesSeenLoad(), {}, "past the window the name is news again");
+  assert.equal(a.E.SEEN_DAYS, 7, "the window matches the morning digest's de-dup, for the same reason");
+});
+
+test("the marks live in the SYNCED journal store when it is on the page, so they follow the owner across devices", () => {
+  // A fake gbs-sync: one shared object standing in for the KV-mirrored journal.
+  let saved = null, pushed = 0;
+  const shared = { trades: [], watchlists: {} };
+  const win = { GBSSync: { load: () => shared, saveLocal: (d) => { saved = d; return d; },
+                           syncOutDebounced: () => { pushed++; } } };
+  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8");
+  const local = fakeStore();
+  new Function("window", "localStorage", "JSON", "Object", "Array", src)(win, local, JSON, Object, Array);
+  const E = win.EYES;
+  E.mark("nasdaq", "UNIT", "x");
+  assert.ok(saved === shared && typeof shared.eyes_seen["nasdaq:UNIT"] === "number", "the mark is written INTO the synced store");
+  assert.equal(pushed, 1, "and a sync push is scheduled, so the other device learns of it");
+  assert.equal(local.getItem(E.SEEN_KEY), null, "nothing goes to the per-device fallback when the store is present");
+  // the OTHER device: same shared store, fresh module instance, empty localStorage
+  const win2 = { GBSSync: { load: () => shared, saveLocal: (d) => d, syncOutDebounced: () => {} } };
+  new Function("window", "localStorage", "JSON", "Object", "Array", src)(win2, fakeStore(), JSON, Object, Array);
+  assert.deepEqual(Object.keys(win2.EYES.seen("y")), ["nasdaq:UNIT"], "the phone sees the desktop's review");
+  // reset from the phone restores everywhere: a reset STAMP, older marks stop counting
+  win2.EYES.reset();
+  assert.deepEqual(win.EYES.seen("x"), {}, "a restore on one device is a restore on the other");
+  win.EYES.mark("nasdaq", "CVLT", "x");
+  assert.deepEqual(Object.keys(win2.EYES.seen("y")), ["nasdaq:CVLT"], "a mark after the reset counts again");
+});
+
+test("gbs-sync merges the eyes marks newest-wins and keeps the later reset stamp", () => {
+  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/gbs-sync.js"), "utf8");
+  const win = {};
+  new Function("window", "localStorage", "fetch", "setTimeout", "clearTimeout", "CustomEvent", src)(
+    win, fakeStore(), () => Promise.reject(new Error("no net")), () => 0, () => {}, function () {});
+  const S = win.GBSSync;
+  const m = S.merge({ eyes_seen: { "asx:ENR": 100, "asx:XRF": 500 }, eyes_reset: 50 },
+                    { eyes_seen: { "asx:ENR": 300 }, eyes_reset: 20 });
+  assert.deepEqual(m.eyes_seen, { "asx:ENR": 300, "asx:XRF": 500 }, "per name, the newer review wins; nothing is dropped");
+  assert.equal(m.eyes_reset, 50);
+  assert.deepEqual(S.normalize({}).eyes_seen, {}, "the schema default is an empty map");
+  assert.equal(S.normalize({}).eyes_reset, 0);
 });
 
 test("the day is a real Melbourne calendar date", () => {

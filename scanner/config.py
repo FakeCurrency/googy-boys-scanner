@@ -159,7 +159,7 @@ VIVEK_SCHEMA_VERSION   = 5
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, mynames.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
 # marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and

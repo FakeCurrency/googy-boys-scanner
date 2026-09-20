@@ -267,45 +267,6 @@
   padding: 7px 12px; width: 140px; outline: none; }
 .al-search:focus { border-color: var(--blue); }
 
-/* --------------------------------------------------------- MY NAMES page */
-.mn-row {
-  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
-  border: 1px solid var(--border); padding: 10px 14px; margin-top: 8px;
-  transition: border-color .15s, transform .08s ease;
-}
-/* #89: dashboard row-card language — a subtle lift + accent on hover. */
-.mn-row:hover { border-color: color-mix(in srgb, var(--teal) 45%, transparent); transform: translateY(-1px); }
-.mn-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-/* #89: per-market chip, colour-matched to the dashboard market accents. */
-.mn-mkt {
-  font: 700 9.5px/1 var(--sans); letter-spacing: .07em; padding: 4px 7px; border-radius: 6px;
-  color: var(--muted); background: var(--fill); border: 1px solid var(--border); white-space: nowrap;
-}
-.mn-mkt-asx    { color: var(--green); background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 32%, transparent); }
-.mn-mkt-nasdaq { color: var(--blue);  background: var(--blue-soft);  border-color: color-mix(in srgb, var(--blue) 32%, transparent); }
-.mn-mkt-crypto { color: var(--orange); background: color-mix(in srgb, var(--orange) 12%, transparent); border-color: color-mix(in srgb, var(--orange) 32%, transparent); }
-.mn-chart-link { margin-left: auto; }
-.mn-star-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
-  color: var(--orange); background: color-mix(in srgb, var(--orange) 12%, transparent);
-  border-radius: 999px; padding: 3px 9px;
-}
-.mn-trade-chip { color: var(--purple); background: color-mix(in srgb, var(--purple) 12%, transparent); }
-.mn-unstar {
-  background: none; border: 0; cursor: pointer; color: var(--muted);
-  font-size: 11px; line-height: 1; padding: 0 0 0 2px;
-}
-.mn-unstar:hover { color: var(--red); }
-.mn-row-lenses { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.mn-lens {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em;
-  color: var(--muted); background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius-sm, 6px); padding: 3px 8px;
-}
-.mn-lens-on { color: var(--text); border-color: var(--teal); }
-.mn-lens b { font-weight: 800; }
-
 @media (max-width: 560px) {
   .pm-rung { grid-template-columns: 96px 1fr; }
   .pm-rung-prices { font-size: 9.5px; }
@@ -347,7 +308,7 @@
 .pm-search { font-family: var(--sans); border-radius: 999px; padding: 7px 13px; width: 130px; }
 .pm-ticker { font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: -0.015em; }
 .pm-dir, .pm-state, .pm-tier, .pm-tag, .pm-regime, .sp-grade, .sp-spike,
-.pm-conf, .pm-stale-badge, .mn-lens, .mn-star-chip {
+.pm-conf, .pm-stale-badge {
   border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
 }
 .pm-dir, .pm-state, .pm-tier { padding: 3px 10px; font-weight: 700; }
@@ -357,7 +318,7 @@
 .pm-sub { font-family: var(--sans); font-weight: 500; }
 .pm-lg-section h3 { font-family: var(--sans); font-weight: 800; letter-spacing: 0.02em; }
 .sp-name, .al-lenses { font-family: var(--sans); }
-.pm-more-btn, .mn-chart-link { font-family: var(--sans); font-weight: 700; border-radius: 999px; }
+.pm-more-btn { font-family: var(--sans); font-weight: 700; border-radius: 999px; }
 
 /* ALERTS: collapsible day groups (2026-07-10) */
 .al-day-group { margin: 12px 0; }

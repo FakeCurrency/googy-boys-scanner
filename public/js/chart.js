@@ -82,7 +82,7 @@
   const mode = market === "scalp" ? (urlMode || "scalp")
     : urlMode === "spec" ? "spec" : "vivek";
   // Back-link context: return to wherever the user actually came from
-  // (journal / phasemap / specs / mynames / alerts pass src=...) instead of
+  // (journal / phasemap / specs / alerts pass src=...) instead of
   // always dumping them on the dashboard. src already drives prev/next
   // lists. (The TURTLE back-link went with the lens, 2026-09-17.)
   {
@@ -90,7 +90,6 @@
       journal:  ["journal.html",  "← Journal"],
       phasemap: ["phasemap.html", "← Phase Map"],
       specs:    ["specs.html",    "← Specs"],
-      mynames:  ["mynames.html",  "← My Names"],
       alerts:   ["alerts.html",   "← Alerts"],
       sectors:  ["sectors.html",  "← News"],
     };
@@ -110,7 +109,7 @@
 
   // #71: which lens's watchlist this chart's star belongs to — matches the
   // page the user arrived from (src=…) so a star set here shows up on that
-  // lens's list and on ★ My Names. Same unified PM.watch store the dashboard,
+  // lens's list. Same unified PM.watch store the dashboard,
   // PhaseMap and Specs pages write to (mirrors to Cloudflare KV with a sync
   // code). scalp/crypto charts fold into the market's vivek watchlist.
   const _src = (params.get("src") || "").toLowerCase();

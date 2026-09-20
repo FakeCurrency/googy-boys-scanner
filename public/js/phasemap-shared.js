@@ -20,7 +20,7 @@ window.PM = (() => {
   };
   // Null-safe like the other nine copies. This one was `String(s)`, so
   // `esc(null)` rendered the literal word "null" into the page — which is why
-  // several call sites here and in phasemap.js/specs.js/mynames.js carry a
+  // several call sites here and in phasemap.js/specs.js carry a
   // defensive `|| ""`. The guard belongs in one place, not at every caller.
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -387,7 +387,7 @@ window.PM = (() => {
     const [vivek, pm, spec] = await Promise.all([
       vivekData ? Promise.resolve(vivekData) : grab(`data/${market}_vivek.json`),
       grab(`data/phasemap/${market}/latest.json`),
-      // No crypto Specs file exists — same guard mynames.js has always used.
+      // No crypto Specs file exists — the guard every reader has always used.
       market !== "crypto" ? grab(`data/${market}_spec.json`) : null,
     ]);
     const map = {};
