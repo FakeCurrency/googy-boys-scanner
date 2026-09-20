@@ -1,6 +1,6 @@
 # Specs backtest — ASX
 
-Generated 2026-09-13 · engine scanner/spec.py (restored 2026-07-02) · universe 2045 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
+Generated 2026-09-20 · engine scanner/spec.py (restored 2026-07-02) · universe 2046 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** yfinance has no delisted history. Sub-$0.50 specs delist *constantly* — this cohort is missing its casualties and every number below is optimistic. Directional use only.
 
@@ -8,12 +8,12 @@ A **signal** = the first day a fire-streak passes every mandatory gate (3× volu
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | target first | stopped | still open | MAE |
 |---|---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 1002 | -1.5% | -1.8% | -2.4% | 31.7% | 30.2% | 38.0% | -17.0% |
-| grade A+ | 728 | -1.0% | -1.2% | -2.0% | 30.5% | 30.6% | 38.9% | -16.9% |
-| grade A | 243 | -3.1% | -3.4% | -3.5% | 33.3% | 29.6% | 37.0% | -17.3% |
-| grade B | 31 | -1.8% | -2.1% | -3.9% | 48.4% | 25.8% | 25.8% | -15.8% |
+| ALL SIGNALS | 1036 | -1.3% | -0.8% | +0.2% | 31.0% | 30.9% | 38.1% | -16.9% |
+| grade A+ | 751 | -1.4% | -1.2% | +0.2% | 27.8% | 31.4% | 40.7% | -17.4% |
+| grade A | 255 | -1.7% | +0.4% | -0.4% | 37.3% | 30.2% | 32.5% | -15.7% |
+| grade B | 30 | +2.5% | +0.4% | +3.6% | 56.7% | 23.3% | 20.0% | -14.4% |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (1002 samples, seeded): fwd 5: +0.5% · fwd 10: +0.4% · fwd 20: +1.2%
+- Random entry on the same sub-$0.50 universe (1036 samples, seeded): fwd 5: -0.1% · fwd 10: +1.9% · fwd 20: +2.9%
 
 Analysis only — not financial advice.
