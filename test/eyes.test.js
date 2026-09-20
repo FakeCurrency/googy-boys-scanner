@@ -435,20 +435,44 @@ test("tickers are matched case-insensitively", () => {
   assert.equal(api.eyesKey("asx", "enr"), api.eyesKey("asx", "ENR"));
 });
 
-test("A NEW SCAN brings every reviewed name back", () => {
-  // The point of stamping: a name reviewed against yesterday's tape has not
-  // been reviewed against today's.
+test("A NEW SCAN DOES NOT bring reviewed names back — the regression", () => {
+  /* The first version keyed this to the scan's generated_at, so the hourly ASX
+   * re-scan wiped the worklist every hour and the owner watched names he had
+   * just worked through reappear. The scope is the DAY: within it, any number
+   * of scans may land and a reviewed name stays reviewed. */
   const store = fakeStore();
-  eyesSeenSandbox(store, "scan-1").markEyeSeen("nasdaq", "UNIT");
-  const next = eyesSeenSandbox(store, "scan-2");
-  assert.deepEqual(next.eyesSeenLoad(), {}, "a new scan must reset the worklist");
+  const day = "2026-09-20";
+  eyesSeenSandbox(store, day).markEyeSeen("nasdaq", "UNIT");
+  for (let scan = 0; scan < 5; scan++) {            // five refreshes later...
+    const after = eyesSeenSandbox(store, day);
+    assert.equal(Object.keys(after.eyesSeenLoad()).length, 1,
+      "a re-scan must not clear the worklist");
+  }
 });
 
-test("the same scan keeps them hidden across a reload", () => {
+test("the next DAY brings them back, once", () => {
   const store = fakeStore();
-  eyesSeenSandbox(store, "scan-1").markEyeSeen("nasdaq", "UNIT");
-  const again = eyesSeenSandbox(store, "scan-1");
-  assert.equal(Object.keys(again.eyesSeenLoad()).length, 1);
+  eyesSeenSandbox(store, "2026-09-20").markEyeSeen("nasdaq", "UNIT");
+  assert.deepEqual(eyesSeenSandbox(store, "2026-09-21").eyesSeenLoad(), {});
+});
+
+test("the day is a real Melbourne calendar date", () => {
+  const { E } = eyesSeenSandbox(fakeStore(), "x");
+  assert.match(E.day(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("nothing keys the worklist to the scan timestamp any more", () => {
+  /* The exact defect: generated_at must not be what SCOPES this. Checked on the
+   * code with comments stripped — the first draft of this assertion tripped over
+   * the block comment that explains the very fix it was checking for, which is
+   * the same prose-vs-property mistake the data_depth probe hit. */
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const store = strip(
+    fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8"));
+  assert.ok(!/generated_at/.test(store), "the store is scan-scoped again");
+  const app = strip(SRC.slice(SRC.indexOf("const eyesStamp"), SRC.indexOf("const eyesSeenLoad")));
+  assert.ok(!/generated_at/.test(app), "app.js still scopes the worklist by scan");
+  assert.ok(/EYES\.day\(\)/.test(app), "app.js should scope by the trading day");
 });
 
 test("reset brings them back within the same scan", () => {
@@ -536,12 +560,13 @@ test("a chain from ANOTHER MARKET is ignored", () => {
   assert.deepEqual(E.chain("nasdaq", "s1"), [], "ASX order must not drive a NASDAQ chart");
 });
 
-test("a chain from an OLDER SCAN is ignored", () => {
-  // Stepping yesterday's order through today's data would walk names that are
-  // no longer aligned. No chain is better than a wrong one.
-  const { E } = eyesSeenSandbox(fakeStore(), "s1");
-  E.saveChain("asx", "s1", ["ENR", "NOL"]);
-  assert.deepEqual(E.chain("asx", "s2"), []);
+test("a chain from an EARLIER DAY is ignored", () => {
+  // Yesterday's order would walk names that have since stopped being aligned.
+  // No chain is better than a wrong one. Within a day it survives re-scans.
+  const { E } = eyesSeenSandbox(fakeStore(), "2026-09-20");
+  E.saveChain("asx", "2026-09-20", ["ENR", "NOL"]);
+  assert.deepEqual(E.chain("asx", "2026-09-20"), ["ENR", "NOL"], "same day must survive");
+  assert.deepEqual(E.chain("asx", "2026-09-21"), []);
 });
 
 test("a hostile localStorage yields no chain rather than throwing", () => {

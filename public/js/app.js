@@ -720,7 +720,10 @@
    * Everything here degrades if that script is missing or localStorage throws:
    * no reviewed set, no chain, strip shows everything. The safe direction.
    */
-  const eyesStamp = () => String((state.data && state.data.generated_at) || "");
+  // Scoped to the DAY, not the scan (2026-09-20). Keying this to the scan's
+  // generated_at meant the hourly ASX re-scan wiped the worklist every hour and
+  // names the owner had just worked through came straight back.
+  const eyesStamp = () => (window.EYES ? window.EYES.day() : "");
   const eyesSeenLoad = () => (window.EYES ? window.EYES.seen(eyesStamp()) : {});
   const eyesKey = (market, ticker) =>
     (window.EYES ? window.EYES.key(market, ticker)

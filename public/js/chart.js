@@ -3945,10 +3945,9 @@
      * no longer aligned.
      */
     if (navSrc === "eyes" && window.EYES) {
-      const stamp = await fetch(`data/${market}_vivek.json`, { cache: "no-cache" })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => String((j && j.generated_at) || ""))
-        .catch(() => "");
+      // The scope is the trading DAY, so this no longer has to fetch the scan
+      // file just to learn a timestamp — one less request per chart open.
+      const stamp = window.EYES.day();
       const chain = window.EYES.chain(market, stamp);
       const cur = decodeURIComponent(symbol).toUpperCase();
       // Mark on ARRIVAL, so stepping with the arrows (or the keyboard, or a
