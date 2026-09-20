@@ -62,15 +62,22 @@
 }
 .ey-more:hover { border-color: var(--blue); }
 
-/* FUND/LIC marker on chips (owner fix, 2026-08-01) — the deck's existing
-   heuristic surfaced where the ranking lives. Amber like the row badge,
-   compact like the A+ tag; the chip itself dims a touch so an operating
-   company and a listed vehicle stop reading identically at a glance. */
-.ey-chip.ey-fund { opacity: 0.78; }
-.ey-tag.ey-fund-tag {
-  color: var(--orange); border-color: rgba(255,159,10,0.55);
-  background: rgba(255,159,10,0.10);
+/* The FUND/LIC chip marker (2026-08-01) went with the products themselves on
+   2026-09-21: they are filtered out of the strip entirely now, so there is
+   nothing left to mark. app.js `eyesIsProduct` is the filter. */
+
+/* CLEAR ALL (owner, 2026-09-21) — sixteen aligned names meant sixteen chart
+   opens to empty the strip. Sits LAST, after the chips, and reads as an action
+   on the list rather than one of its items: same dashed outline as "+N more"
+   so neither competes with a chip, muted until hovered. */
+.ey-clear {
+  margin-left: 8px;
+  font: 700 11px/1 var(--sans); color: var(--muted, #8e8e93);
+  background: none; border: 1px dashed var(--border-2);
+  border-radius: 999px; padding: 6px 10px; cursor: pointer;
 }
+.ey-clear:hover { color: var(--text-2, #c7c7cc); border-color: var(--muted, #8e8e93); }
+.ey-clear:focus-visible { outline: 2px solid var(--blue, #0a84ff); outline-offset: 2px; }
 
 /* MOBILE — this file shipped with no width breakpoint at all (2026-08-13).
    styles.css gives #deck-pills .fpill a 38px floor and the toolbar controls
@@ -83,15 +90,15 @@
    to miss, and a name that scrolls out of view on the surface built so nothing
    is missed would defeat the point. Height is the cost; being seen is the job. */
 @media (max-width: 680px) {
-  .ey-chip, .ey-more {
+  .ey-chip, .ey-more, .ey-clear {
     min-height: 40px; padding-top: 0; padding-bottom: 0;
     display: inline-flex; align-items: center;
   }
 }
 
 /* "N reviewed" — the way back (2026-09-19).
-   Opening a chip's chart removes it from the strip, so this says how many left
-   and undoes it. Deliberately the quietest thing in the strip: muted, no fill,
+   Opening a chip (or clearing all) removes names from the strip, so this says
+   how many left and undoes it. Deliberately the quietest thing in the strip: muted, no fill,
    no border, because it is bookkeeping, not a signal. It must never compete
    with a chip, which is the actual content. */
 .ey-seen {

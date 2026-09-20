@@ -676,22 +676,6 @@
     // a dual, this key is what stops the strip sorting by the alphabet.
     const pq = (x) => (typeof PM !== "undefined" && PM.pmLegQuality)
       ? PM.pmLegQuality(x.detail && x.detail.phasemap) : 0;
-    // Product penalty (2026-08-13, owner-ordered). A cash/bond ETF sitting on
-    // its 200-SMA in two lenses is a real agreement between two detectors and
-    // a non-event to trade — the chip already says FUND, but a marker the eye
-    // skips is not a ranking. Products now sort BELOW operating companies at
-    // equal lens count, so the default top set is names you could act on.
-    //
-    // Deliberately BELOW count and ABOVE grade: a triple-lens product is
-    // still a genuine triple and keeps its place ahead of duals (the strip's
-    // whole premise is agreement), but among equals the real company leads.
-    // Degrades to 0 — no penalty — when PM is absent, same as pq above.
-    const prod = (x) => {
-      const v = x.detail && x.detail.vivek;
-      return (typeof PM !== "undefined" && PM.isFundReit && v
-        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
-                           is_product: v.is_product })) ? 1 : 0;
-    };
     // Leg-strength completion (2026-08-19, Session C): the VIVEK leg's own
     // SCORE breaks the last tie before the alphabet. The rank already reads
     // the PM leg's quality (pq) and the VIVEK grade band (ap); score is the
@@ -702,7 +686,7 @@
       const v = x.detail && x.detail.vivek;
       return (v && typeof v.score === "number" && isFinite(v.score)) ? v.score : 0;
     };
-    return (b.count - a.count) || (prod(a) - prod(b)) || (ap(b) - ap(a)) ||
+    return (b.count - a.count) || (ap(b) - ap(a)) ||
       (pq(b) - pq(a)) || (vs(b) - vs(a)) || a.ticker.localeCompare(b.ticker);
   });
 
@@ -720,16 +704,41 @@
    * Everything here degrades if that script is missing or localStorage throws:
    * no reviewed set, no chain, strip shows everything. The safe direction.
    */
-  // Scoped to the DAY, not the scan (2026-09-20). Keying this to the scan's
-  // generated_at meant the hourly ASX re-scan wiped the worklist every hour and
-  // names the owner had just worked through came straight back.
+  // THE DISMISSAL RULE (owner, 2026-09-21: "how many times am i going to have
+  // to see the same shit again and again?"). A name you have opened stays off
+  // this strip until its ALIGNMENT MATERIALLY CHANGES — not for a day, not for
+  // a week. `eyesFingerprint` is that "why is it here" in one string, and
+  // eyes-store.js keeps it beside the mark. Same setup sitting aligned for a
+  // fortnight = you see it once. See eyes-store.js for the three earlier
+  // scopings this replaces and why each one failed.
   const eyesStamp = () => (window.EYES ? window.EYES.day() : "");
-  const eyesSeenLoad = () => (window.EYES ? window.EYES.seen(eyesStamp()) : {});
   const eyesKey = (market, ticker) =>
     (window.EYES ? window.EYES.key(market, ticker)
                  : `${market}:${String(ticker || "").toUpperCase()}`);
-  function markEyeSeen(market, ticker) {
-    if (window.EYES) window.EYES.mark(market, ticker, eyesStamp());
+  const EYES_UNKNOWN = "*";   // mirrors EYES.UNKNOWN when the store is absent
+
+  // Lenses + direction + VIVEK grade. Narrow on purpose: PhaseMap's state
+  // advancing churns on its own, and re-surfacing on it walks straight back
+  // into the complaint this rule exists to answer.
+  const eyesFingerprint = (x) => {
+    const v = (x && x.detail && x.detail.vivek) || null;
+    return `${((x && x.lenses) || []).slice().sort().join("+")}` +
+           `|${(x && x.side) || ""}|${(v && v.grade) || ""}`;
+  };
+  // PRODUCTS ARE NOT SHOWN AT ALL (owner, 2026-09-21). Two detectors agreeing
+  // on an index ETF is a real agreement and a non-event to trade; 66 of the
+  // 216 ASX rows that day were products, and two of the eight visible chips
+  // were. Marking them was not enough — a marker the eye has to skip is still
+  // something you read. They are filtered BEFORE ranking, which is what makes
+  // the old product-penalty sort key unreachable (removed above).
+  const eyesIsProduct = (x) => {
+    const v = x && x.detail && x.detail.vivek;
+    return !!(typeof PM !== "undefined" && PM.isFundReit && v
+      && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
+                         is_product: v.is_product }));
+  };
+  function markEyeSeen(market, ticker, fp) {
+    if (window.EYES) window.EYES.mark(market, ticker, fp);
   }
   function eyesResetSeen() { if (window.EYES) window.EYES.reset(); }
 
@@ -739,78 +748,77 @@
     cap = cap || 8;
     const nTriple = ranked.filter((x) => x.count >= 3).length;
     const isAp = (x) => !!(x.detail && x.detail.vivek && x.detail.vivek.grade === "A+");
-    const isProd = (x) => {
-      const v = x.detail && x.detail.vivek;
-      return !!(typeof PM !== "undefined" && PM.isFundReit && v
-        && PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
-                           is_product: v.is_product }));
-    };
-    // The "N A+" summary counts TRADEABLE A+ only (2026-08-13), for the same
-    // reason the deck pills do: a headline that includes bond ETFs overstates
-    // how much of this strip is actionable. The chips themselves still render
-    // every name, marked.
-    const nAp = ranked.filter((x) => isAp(x) && !isProd(x)).length;
+    const nAp = ranked.filter(isAp).length;
     const chips = ranked.slice(0, cap).map((x) => {
       const ap = isAp(x);
-      const arrow = x.side === "short" ? "▼" : "▲";
+      const arrow = x.side === "short" ? "\u25BC" : "\u25B2";
       const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
-      // Owner fix (2026-08-01): the deck's EXISTING fund/LIC/ETF heuristic
-      // now travels to the chips — a CQE-type name stops dressing like an
-      // FMG-type name. Display only; nothing reads the marker back.
-      const v = x.detail && x.detail.vivek;
-      const fund = !!(typeof PM !== "undefined" && PM.isFundReit && v &&
-        PM.isFundReit({ name: v.name, sector: v.sector, ticker: x.ticker,
-                        is_product: v.is_product }));
       const leg = x.detail && x.detail.phasemap;
-      const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "") +
-        (fund ? " ey-fund" : "");
+      const cls = "ey-chip" + (x.count >= 3 ? " ey-3" : "") + (ap ? " ey-ap" : "");
       // "displays as A+": the confluence set carries the DISPLAYED grade
       // (smoothed), and the bot buys grade_raw — an honest chip claims the
       // page's own grade, not the bot's decision.
       const title = `${x.lenses.join(" + ")} aligned ${x.side.toUpperCase()}` +
-        (leg ? ` — PhaseMap ${leg.state}${leg.tier ? "/" + leg.tier : ""}` : "") +
-        (ap ? " — and VIVEK grades it A+" : "") +
-        (fund ? " — fund / LIC / preferred-type product, not an operating company" : "") +
-        " — open the combined chart";
+        (leg ? ` \u2014 PhaseMap ${leg.state}${leg.tier ? "/" + leg.tier : ""}` : "") +
+        (ap ? " \u2014 and VIVEK grades it A+" : "") +
+        " \u2014 open the combined chart";
       // src=eyes tells chart.js to step the EYES chain with its arrows rather
       // than the whole deck, and to mark each name it lands on as reviewed.
       return `<a class="${cls}" title="${esc(title)}" data-eyes-tk="${esc(x.ticker)}" ` +
         `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}&src=eyes">` +
-        `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
+        `${x.count >= 3 ? "\uD83C\uDFAF " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
         `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
-        `${fund ? `<em class="ey-tag ey-fund-tag">PRODUCT</em>` : ""}` +
-        `<span class="ey-n">×${x.count}</span></a>`;
+        `<span class="ey-n">\u00D7${x.count}</span></a>`;
     }).join("");
     const more = ranked.length > cap
       ? `<button class="ey-more" type="button" data-eyes-more title="Filter the list below to every multi-lens name">+${ranked.length - cap} more</button>`
       : "";
-    // `seenN` is how many this viewer has already opened. Shown as a quiet
+    // CLEAR ALL (owner, 2026-09-21): sixteen aligned names meant sixteen chart
+    // opens to empty the strip. One tap dismisses the lot at their current
+    // state — they come back individually if their alignment changes.
+    const clear = `<button class="ey-clear" type="button" data-eyes-clear ` +
+      `title="Dismiss all ${ranked.length} \u2014 each comes back only if its alignment changes">` +
+      `\u2713 clear all</button>`;
+    // `seenN` is how many this viewer has already dismissed. Shown as a quiet
     // button rather than plain text, because hiding things with no way back is
     // how a worklist becomes a mystery.
     const seenBack = seenN
       ? `<button class="ey-seen" type="button" data-eyes-reset ` +
-        `title="You opened ${seenN} of these, so they left the strip. Click to bring them back.">` +
+        `title="You dismissed ${seenN} of these. Click to bring them all back.">` +
         `${seenN} reviewed</button>`
       : "";
-    return `<span class="ey-label" title="Names where 2+ lenses agree on direction right now — the highest-signal thing this page knows. Opening one's chart takes it off this strip until the next scan.">` +
-      `👁 WHAT NEEDS MY EYES</span>` +
-      `<span class="ey-sum">${ranked.length} aligned${nTriple ? ` · <b>${nTriple} triple</b>` : ""}${nAp ? ` · <b>${nAp} A+</b>` : ""}</span>` +
-      seenBack + chips + more;
+    return `<span class="ey-label" title="Names where 2+ lenses agree on direction right now \u2014 the highest-signal thing this page knows. Opening one takes it off this strip until its alignment changes.">` +
+      `\uD83D\uDC41 WHAT NEEDS MY EYES</span>` +
+      `<span class="ey-sum">${ranked.length} aligned${nTriple ? ` \u00B7 <b>${nTriple} triple</b>` : ""}${nAp ? ` \u00B7 <b>${nAp} A+</b>` : ""}</span>` +
+      seenBack + chips + more + clear;
   };
 
   function renderEyes() {
     const host = $("#eyes-strip");
     if (!host) return;
-    const all = state.confl ? state.confl.all() : [];
-    // Names whose chart this viewer has already opened against THIS scan drop
-    // out (owner, 2026-09-19). Filtered here rather than inside eyesHTML so the
-    // ranking, the triple/A+ counts and the "+N more" overflow all describe
-    // what is actually on screen.
-    const seen = eyesSeenLoad();
-    const rows = all.filter((x) => !seen[eyesKey(state.market, x.ticker)]);
+    // Products never reach the strip, so the counts, the ranking and the
+    // "+N more" overflow all describe names that could actually be traded.
+    const all = (state.confl ? state.confl.all() : []).filter((x) => !eyesIsProduct(x));
+    const marks = window.EYES ? window.EYES.marks() : {};
+    const unknown = window.EYES ? window.EYES.UNKNOWN : EYES_UNKNOWN;
+    // A mark made by the CHART (which knows the name but not why it was
+    // aligned) or inherited from a build before fingerprints existed is stored
+    // UNKNOWN. Teach it today's fingerprint so it tracks changes from here on
+    // — read from the snapshot ABOVE, so upgrading never un-dismisses anything
+    // on this render.
+    if (window.EYES) {
+      window.EYES.upgrade(state.market, all
+        .filter((x) => marks[eyesKey(state.market, x.ticker)] === unknown)
+        .map((x) => ({ ticker: x.ticker, fp: eyesFingerprint(x) })));
+    }
+    const rows = all.filter((x) => {
+      const f = marks[eyesKey(state.market, x.ticker)];
+      if (f === undefined) return true;                 // never dismissed
+      return f !== unknown && f !== eyesFingerprint(x); // changed since = show again
+    });
     const seenN = all.length - rows.length;
-    // Everything reviewed = the strip has nothing left to say, so it goes away
-    // entirely rather than sitting there empty. The next scan brings it back.
+    // Everything dismissed = the strip has nothing left to say, so it goes
+    // away entirely rather than sitting there empty.
     const html = rows.length ? eyesHTML(rows, state.market, 0, seenN) : "";
     if (!html) { host.hidden = true; host.innerHTML = ""; return; }
     host.hidden = false;
@@ -825,17 +833,27 @@
     });
     const reset = host.querySelector("[data-eyes-reset]");
     if (reset) reset.addEventListener("click", () => { eyesResetSeen(); renderEyes(); });
+    const clear = host.querySelector("[data-eyes-clear]");
+    if (clear) clear.addEventListener("click", () => {
+      if (window.EYES) {
+        window.EYES.markAll(state.market,
+          rows.map((x) => ({ ticker: x.ticker, fp: eyesFingerprint(x) })));
+      }
+      renderEyes();
+    });
     // Recorded on click, which runs before the link navigates, so the name is
     // already gone when the back button returns to this page.
-    // The chain is the FULL ranked set still unreviewed, not just the 8 chips
-    // on screen: the arrows should keep going past the "+N more" cut-off.
+    // The chain is the FULL ranked set still showing, not just the 8 chips on
+    // screen: the arrows should keep going past the "+N more" cut-off.
     host.querySelectorAll("a.ey-chip[data-eyes-tk]").forEach((a) => {
       a.addEventListener("click", () => {
         if (window.EYES) {
           window.EYES.saveChain(state.market, eyesStamp(),
                                 eyesRank(rows).map((x) => x.ticker));
         }
-        markEyeSeen(state.market, a.getAttribute("data-eyes-tk"));
+        const tk = a.getAttribute("data-eyes-tk");
+        const row = rows.find((x) => String(x.ticker).toUpperCase() === String(tk).toUpperCase());
+        markEyeSeen(state.market, tk, row ? eyesFingerprint(row) : null);
       });
     });
   }

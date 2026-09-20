@@ -80,11 +80,11 @@ const PM_REAL = new Function(
   "\n" + sliceFn(SHARED, "isFundReit", "phasemap-shared.js") +
   "\nreturn { pmLegQuality, isFundReit };")();
 
-const NAMES = ["esc", "eyesRank", "eyesHTML"];
-const { eyesRank, eyesHTML } =
+const NAMES = ["esc", "eyesRank", "eyesHTML", "eyesIsProduct", "eyesFingerprint"];
+const { eyesRank, eyesHTML, eyesIsProduct, eyesFingerprint } =
   new Function("PM", NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`)(PM_REAL);
 // A second sandbox with NO PM at all — the strip must degrade, never throw.
-const bare = new Function("PM", NAMES.map(sliceConst).join("\n") + `\nreturn { eyesRank, eyesHTML };`)(undefined);
+const bare = new Function("PM", NAMES.map(sliceConst).join("\n") + `\nreturn { eyesRank, eyesHTML, eyesIsProduct };`)(undefined);
 
 const mk = (t, count, grade, side) => ({
   ticker: t, count, side: side || "long",
@@ -239,56 +239,62 @@ test("score never outranks PM leg quality — it is the LAST quality key", () =>
   assert.deepEqual(eyesRank(rows).map((x) => x.ticker), ["RUN", "SWP"]);
 });
 
-suite("fund markers");
+suite("products never reach the strip (owner, 2026-09-21)");
 
-test("a fund-named chip carries the marker and the dimming class", () => {
-  const html = eyesHTML([mkq("CQE", "A+", "SWEPT", "Watch",
-    { name: "Charter Hall Social Infrastructure REIT", sector: "Real Estate" })], "asx");
-  assert.ok(html.includes("ey-fund"), html);
-  // Session C (2026-08-19): the tag reads PRODUCT, not FUND — the caught class
-  // widened to LICs and preferred lines, where "FUND" would be flatly wrong on
-  // the chip (STRF is not a fund; it is a preferred line). Same class, same
-  // penalty, honest word.
-  assert.ok(html.includes(">PRODUCT<"), html);
-  assert.ok(html.includes("preferred-type product"), html);
+/* "how many times am i going to have to see the same shit again and again?"
+ * — and two of the eight chips in the screenshot that prompted it were AFI and
+ * IEU: an LIC and an index ETF. Marking them was the 2026-08-01 answer and it
+ * was not enough; a marker the eye has to skip is still something you read.
+ * They are now filtered out BEFORE ranking, which is also what makes the old
+ * product-penalty sort key unreachable (it was removed with this change). */
+
+// Distinct from `mk` above: carries name+sector, which is what PM.isFundReit
+// reads. Product-ness lives in the NAME, never the ticker.
+const mkp = (t, name, sector, extra) => ({
+  ticker: t, count: 2, side: "long", lenses: ["VIVEK", "PHASEMAP"],
+  detail: { vivek: Object.assign({ grade: "A+", name, sector: sector || "Materials" }, extra || {}) },
 });
 
-test("the PUBLISHED is_product flag marks a chip the keywords cannot catch", () => {
-  // AFI-class: nothing in the name matches the keyword list — before the flag
-  // this chip dressed exactly like an operating company. The scanner's
-  // server-side classification travels through loadConfluence's detail and
-  // must win here.
-  const html = eyesHTML([mkq("AFI", "A+", "SWEPT", "Watch",
-    { name: "Australian Foundation Investment Company Limited",
-      sector: "Financials", is_product: true })], "asx");
-  assert.ok(html.includes("ey-fund"), "the published flag did not reach the chip");
-  assert.ok(html.includes(">PRODUCT<"), html);
+test("a REIT, an ETF and a keyword-invisible LIC are all products", () => {
+  assert.ok(eyesIsProduct(mkp("CQE", "Charter Hall Social Infrastructure REIT", "Real Estate")));
+  assert.ok(eyesIsProduct(mkp("A200", "BETASHARES AUSTRALIA 200 ETF", "Unclassified")));
+  // AFI-class: nothing in the name matches the keyword list, so ONLY the
+  // scanner's published verdict can catch it.
+  assert.ok(eyesIsProduct(mkp("AFI", "Australian Foundation Investment Company Limited",
+                              "Financials", { is_product: true })));
 });
 
 test("an explicit is_product:false wins over a fund-looking name", () => {
   // The classifier looked and says operating company — the keyword fallback
   // must not overrule it. (Absent stays a guess; false is a verdict.)
-  const html = eyesHTML([mkq("XTR", "A+", "SWEPT", "Watch",
-    { name: "Extra Trust Holdings", sector: "Industrials", is_product: false })], "asx");
-  assert.ok(!html.includes("ey-fund"), "explicit false was overruled by the keyword guess");
+  assert.ok(!eyesIsProduct(mkp("XTR", "Extra Trust Holdings", "Industrials", { is_product: false })));
 });
 
 test("NETFLIX is clean — the ETF keyword no longer matches inside words", () => {
   // The false positive the owner ordered fixed: includes() saw N-ETF-LIX.
-  const html = eyesHTML([mkq("NFLX", "A+", "SWEPT", "Watch",
-    { name: "Netflix, Inc. - Common Stock", sector: "Communication Services" })], "nasdaq");
-  assert.ok(!html.includes("ey-fund"), html);
-  assert.ok(!html.includes(">FUND<"), html);
-  // ...while the real vehicles keep their flags through the same regex:
-  assert.ok(PM_REAL.isFundReit({ name: "BETASHARES AUSTRALIA 200 ETF", ticker: "A200" }));
-  assert.ok(PM_REAL.isFundReit({ name: "VanEck Global X Thing", ticker: "GX" }));
-  assert.ok(!PM_REAL.isFundReit({ name: "Netflix, Inc. - Common Stock", ticker: "NFLX" }));
+  assert.ok(!eyesIsProduct(mkp("NFLX", "Netflix, Inc. - Common Stock", "Communication Services")));
+  assert.ok(!eyesIsProduct(mkp("FMG", "Fortescue Ltd", "Materials")));
 });
 
-test("an operating company with no fund traits renders unmarked", () => {
-  const html = eyesHTML([mkq("FMG", "A+", "SWEPT", "Watch",
-    { name: "Fortescue Ltd", sector: "Materials" })], "asx");
-  assert.ok(!html.includes("ey-fund"), html);
+test("renderEyes drops products BEFORE the marks, the ranking and the counts", () => {
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  const filt = fn.indexOf("eyesIsProduct");
+  assert.ok(filt > 0, "renderEyes no longer filters products at all");
+  assert.ok(filt < fn.indexOf("EYES.marks"), "products must be gone before the dismissals are read");
+  assert.ok(filt < fn.indexOf("eyesHTML("), "products must be gone before anything is rendered");
+});
+
+test("no chip can carry a product marker any more, because none can appear", () => {
+  const html = eyesHTML([mk("FMG", 2, "A+"), mk("BHP", 2, "A")], "asx");
+  assert.ok(!/ey-fund/.test(html) && !/>PRODUCT</.test(html),
+    "the product marker is back — it is dead markup now that products are filtered");
+  assert.ok(!/prod\(/.test(sliceConst("eyesRank")), "the product penalty is back in the ranking");
+});
+
+test("without PM the filter lets everything through rather than throwing", () => {
+  // Same degrade rule as pmLegQuality: no PM on the page = no opinion.
+  assert.doesNotThrow(() => bare.eyesIsProduct(mkp("CQE", "Some REIT", "Real Estate")));
+  assert.strictEqual(bare.eyesIsProduct(mkp("CQE", "Some REIT", "Real Estate")), false);
 });
 
 // ── wiring — a surface nobody sees is not a surface ──────────────────────────
@@ -319,92 +325,21 @@ test("renderEyes is hooked into BOTH the confluence load and the market-switch r
 // The chip already SAID fund. A marker the eye skips is not a ranking, so a
 // bond ETF could still lead the strip that exists to answer "what needs my
 // eyes". Products now sort below operating companies at equal lens count.
-suite("products rank below real companies");
+suite("dismissed until it CHANGES (owner, 2026-09-21)");
 
-// Distinct from the file's `mk` above: this one carries name+sector, which is
-// what PM.isFundReit reads. Product-ness lives in the NAME, never the ticker.
-const mkp = (t, count, grade, name, sector) => ({
-  ticker: t, count, side: "long",
-  lenses: count >= 3 ? ["VIVEK", "PHASEMAP", "SPECS"] : ["VIVEK", "PHASEMAP"],
-  detail: { vivek: { grade, name: name || (t + " Holdings Ltd"), sector: sector || "Materials" } },
-});
-
-test("at equal lens count, a real company outranks a product", () => {
-  const out = eyesRank([
-    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
-    mkp("FMG", 2, "A+", "Fortescue Ltd"),
-  ]).map((x) => x.ticker);
-  assert.deepStrictEqual(out, ["FMG", "AAA"],
-    "a cash ETF is leading the strip over an operating company");
-});
-
-test("the penalty sits BELOW lens count — a triple product still beats a dual", () => {
-  // The strip's premise is agreement between detectors. A triple IS a triple,
-  // even when the name is a product; demoting it under count would make the
-  // headline number ("1 triple") disagree with the order beneath it.
-  const out = eyesRank([
-    mkp("FMG", 2, "A+", "Fortescue Ltd"),
-    mkp("VAS", 3, "A+", "Vanguard Australian Shares Index ETF", "Unclassified"),
-  ]).map((x) => x.ticker);
-  assert.deepStrictEqual(out, ["VAS", "FMG"]);
-});
-
-test("the penalty sits ABOVE grade — a real A outranks a product A+", () => {
-  const out = eyesRank([
-    mkp("GOVT", 2, "A+", "iShares Government Bond ETF", "Unclassified"),
-    mkp("BHP", 2, "A", "BHP Group Limited"),
-  ]).map((x) => x.ticker);
-  assert.deepStrictEqual(out, ["BHP", "GOVT"]);
-});
-
-test("the A+ summary counts TRADEABLE A+ only", () => {
-  const html = eyesHTML([
-    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
-    mkp("FMG", 2, "A+", "Fortescue Ltd"),
-  ], "asx");
-  assert.ok(/1 A\+/.test(html), "the headline still counts the bond ETF as A+ opportunity");
-  // …but BOTH chips still render — nothing is hidden, the product is marked.
-  assert.strictEqual((html.match(/ey-chip/g) || []).length, 2);
-  assert.ok(/ey-fund/.test(html), "the product lost its marker");
-});
-
-test("with no PM the penalty degrades to nothing, exactly like pmLegQuality", () => {
-  // Same contract as the 2026-08-01 quality key: a missing PM must not throw
-  // and must not silently reorder — it just stops penalising.
-  const out = bare.eyesRank([
-    mkp("AAA", 2, "A+", "Betashares Australian High Interest Cash ETF", "Unclassified"),
-    mkp("FMG", 2, "A+", "Fortescue Ltd"),
-  ]).map((x) => x.ticker);
-  assert.deepStrictEqual(out, ["AAA", "FMG"], "alphabetical fallback, no throw");
-});
-
-
-console.log(`\n${"─".repeat(48)}`);
-// ═══════════════ reviewed names leave the strip (owner, 2026-09-19) ══════════
-/* "Once ive clicked a chart under that window, that window should no longer
- * show that. Otherwise there's too much shit going on."
+/* "how many times am i going to have to see the same shit again and again?"
  *
- * The store lives in localStorage, so these run the REAL helpers against a fake
- * one and cover the three things that could go wrong: a reviewed name not
- * leaving, a name never coming back, and the whole strip breaking where
- * localStorage throws (private windows). */
-suite("reviewed names — the worklist shrinks as you work it");
+ * Three earlier scopings each brought reviewed names back on a clock — per
+ * scan, per day, per week. A dismissal now lasts until the name's ALIGNMENT
+ * changes, so a setup that sits there for a fortnight is seen ONCE. These run
+ * the REAL public/js/eyes-store.js, not a copy. */
 
-function eyesSeenSandbox(storage, stamp) {
-  // The store now lives in the SHARED module both the deck and the chart load
-  // (public/js/eyes-store.js). Run the real file, not a copy.
+function eyesStore(storage) {
   const src = fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8");
   const win = {};
   new Function("window", "localStorage", "JSON", "Object", "Array", src)(
     win, storage, JSON, Object, Array);
-  const E = win.EYES;
-  return {
-    eyesSeenLoad: () => E.seen(stamp),
-    markEyeSeen: (m, t) => E.mark(m, t, stamp),
-    eyesResetSeen: () => E.reset(),
-    eyesKey: (m, t) => E.key(m, t),
-    E, stamp,
-  };
+  return win.EYES;
 }
 
 function fakeStore(initial) {
@@ -417,149 +352,147 @@ function fakeStore(initial) {
   };
 }
 
-test("opening a name records it, and it is then reviewed", () => {
-  const store = fakeStore();
-  const api = eyesSeenSandbox(store, "2026-09-19T05:00:00+10:00");
-  assert.deepEqual(api.eyesSeenLoad(), {});
-  api.markEyeSeen("nasdaq", "UNIT");
-  assert.equal(api.eyesSeenLoad()[api.eyesKey("nasdaq", "UNIT")], true);
+test("a dismissed name stays dismissed while its alignment is unchanged", () => {
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "CVV", "VIVEK+PHASEMAP|short|A");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|short|A"), true);
+  // ...and again, and again. No clock is consulted anywhere in the decision.
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|short|A"), true);
 });
 
-test("the key is market-scoped, so an ASX LINK and a crypto LINK never collide", () => {
-  const api = eyesSeenSandbox(fakeStore(), "s1");
-  assert.notEqual(api.eyesKey("asx", "LINK"), api.eyesKey("crypto", "LINK"));
+test("it comes back the moment the alignment DOES change", () => {
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "CVV", "VIVEK+PHASEMAP|short|A");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "PHASEMAP+SPECS+VIVEK|short|A"), false,
+    "a dual that became a triple is new information");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|long|A"), false,
+    "a direction flip is new information");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|short|A+"), false,
+    "a grade upgrade is new information");
 });
 
-test("tickers are matched case-insensitively", () => {
-  const api = eyesSeenSandbox(fakeStore(), "s1");
-  assert.equal(api.eyesKey("asx", "enr"), api.eyesKey("asx", "ENR"));
+test("the fingerprint is lenses + direction + grade, and nothing else", () => {
+  const fp = (o) => eyesFingerprint(o);
+  const base = { ticker: "X", side: "long", lenses: ["VIVEK", "PHASEMAP"],
+                 detail: { vivek: { grade: "A+" } } };
+  // lens ORDER must not matter, or a reordered payload re-surfaces everything
+  assert.strictEqual(fp(base), fp(Object.assign({}, base, { lenses: ["PHASEMAP", "VIVEK"] })));
+  assert.notStrictEqual(fp(base), fp(Object.assign({}, base, { side: "short" })));
+  assert.notStrictEqual(fp(base), fp(Object.assign({}, base, { lenses: ["VIVEK", "PHASEMAP", "SPECS"] })));
+  assert.notStrictEqual(fp(base), fp(Object.assign({}, base, { detail: { vivek: { grade: "A" } } })));
+  // PhaseMap state advancing is deliberately NOT in it — it churns on its own,
+  // and re-surfacing on it walks back into the complaint (see eyes-store.js).
+  assert.strictEqual(fp(base),
+    fp(Object.assign({}, base, { detail: { vivek: { grade: "A+" }, phasemap: { state: "RUNNING" } } })));
+  assert.doesNotThrow(() => fp(null));
+  assert.doesNotThrow(() => fp({}));
 });
 
-test("A NEW SCAN DOES NOT bring reviewed names back — the regression", () => {
-  /* The first version keyed this to the scan's generated_at, so the hourly ASX
-   * re-scan wiped the worklist every hour and the owner watched names he had
-   * just worked through reappear. The scope is the DAY: within it, any number
-   * of scans may land and a reviewed name stays reviewed. */
-  const store = fakeStore();
-  const day = "2026-09-20";
-  eyesSeenSandbox(store, day).markEyeSeen("nasdaq", "UNIT");
-  for (let scan = 0; scan < 5; scan++) {            // five refreshes later...
-    const after = eyesSeenSandbox(store, day);
-    assert.equal(Object.keys(after.eyesSeenLoad()).length, 1,
-      "a re-scan must not clear the worklist");
-  }
+test("UNKNOWN matches ANY state — the chart marks without knowing why", () => {
+  // chart.js has the ticker but never computes confluence, so it dismisses at
+  // UNKNOWN. That must hide the name whatever the deck later computes, or the
+  // arrows would mark names that reappear immediately.
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "CVV");
+  assert.strictEqual(E.marks()["asx:CVV"], E.UNKNOWN);
+  assert.strictEqual(E.isDismissed("asx", "CVV", "anything at all"), true);
+  assert.strictEqual(E.isDismissed("asx", "CVV", null), true);
 });
 
-test("the next DAY does NOT bring them back — the second regression (phone, 2026-09-21)", () => {
-  /* v2 scoped the marks to the Melbourne day, per device. The owner reviewed
-   * the list and next morning, on his phone, every name was back. A reviewed
-   * name now stays reviewed for EYES.SEEN_DAYS from the moment it was opened,
-   * whatever the calendar does. */
-  const store = fakeStore();
-  const T0 = Date.parse("2026-09-20T22:00:00+10:00");
-  const a = eyesSeenSandbox(store, "2026-09-20"); a.E.now = () => T0;
-  a.markEyeSeen("nasdaq", "UNIT");
-  const b = eyesSeenSandbox(store, "2026-09-21"); b.E.now = () => T0 + 10 * 3600 * 1000;   // next morning
-  assert.deepEqual(Object.keys(b.eyesSeenLoad()), ["nasdaq:UNIT"], "midnight must not clear the worklist");
-  const c = eyesSeenSandbox(store, "2026-09-26"); c.E.now = () => T0 + 6 * 86400000;      // day 6
-  assert.deepEqual(Object.keys(c.eyesSeenLoad()), ["nasdaq:UNIT"], "inside the window it stays reviewed");
+test("upgrade() teaches an UNKNOWN mark today's fingerprint without un-dismissing it", () => {
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "CVV");                                  // chart-style mark
+  assert.strictEqual(E.upgrade("asx", [{ ticker: "CVV", fp: "VIVEK+PHASEMAP|short|A" }]), 1);
+  assert.strictEqual(E.marks()["asx:CVV"], "VIVEK+PHASEMAP|short|A");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|short|A"), true, "still dismissed");
+  assert.strictEqual(E.isDismissed("asx", "CVV", "VIVEK+PHASEMAP|long|A"), false, "and now it tracks");
+  // a REAL fingerprint is never overwritten by a later upgrade
+  assert.strictEqual(E.upgrade("asx", [{ ticker: "CVV", fp: "SOMETHING|else|B+" }]), 0);
+  assert.strictEqual(E.marks()["asx:CVV"], "VIVEK+PHASEMAP|short|A");
 });
 
-test("a reviewed name comes back once the 7-day window passes", () => {
-  const store = fakeStore();
-  const T0 = Date.parse("2026-09-20T22:00:00+10:00");
-  const a = eyesSeenSandbox(store, "x"); a.E.now = () => T0;
-  a.markEyeSeen("nasdaq", "UNIT");
-  const late = eyesSeenSandbox(store, "x"); late.E.now = () => T0 + (a.E.SEEN_DAYS * 86400000) + 1;
-  assert.deepEqual(late.eyesSeenLoad(), {}, "past the window the name is news again");
-  assert.equal(a.E.SEEN_DAYS, 7, "the window matches the morning digest's de-dup, for the same reason");
+test("MIGRATION: marks from every earlier build survive (the 2026-09-21 loss)", () => {
+  /* The complaint's immediate cause: the v2->v3 store changed shape and the
+   * reader did not understand the old one, so every name already reviewed came
+   * straight back. All three shapes are honoured now, at UNKNOWN — so nothing
+   * already done is lost, and the deck upgrades them on the next render. */
+  const v1 = eyesStore(fakeStore({ "gbs:eyes_seen":
+    JSON.stringify({ stamp: "2026-09-20", keys: ["asx:CVV", "asx:EMP"] }) }));
+  assert.deepStrictEqual(Object.keys(v1.marks()).sort(), ["asx:CVV", "asx:EMP"]);
+  assert.strictEqual(v1.isDismissed("asx", "CVV", "whatever"), true);
+
+  const v3 = eyesStore(fakeStore({ "gbs:eyes_seen":
+    JSON.stringify({ marks: { "asx:KOV": Date.now() }, reset: 0 }) }));
+  assert.strictEqual(v3.isDismissed("asx", "KOV", "whatever"), true);
 });
 
-test("the marks live in the SYNCED journal store when it is on the page, so they follow the owner across devices", () => {
-  // A fake gbs-sync: one shared object standing in for the KV-mirrored journal.
-  let saved = null, pushed = 0;
-  const shared = { trades: [], watchlists: {} };
-  const win = { GBSSync: { load: () => shared, saveLocal: (d) => { saved = d; return d; },
-                           syncOutDebounced: () => { pushed++; } } };
-  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8");
-  const local = fakeStore();
-  new Function("window", "localStorage", "JSON", "Object", "Array", src)(win, local, JSON, Object, Array);
-  const E = win.EYES;
-  E.mark("nasdaq", "UNIT", "x");
-  assert.ok(saved === shared && typeof shared.eyes_seen["nasdaq:UNIT"] === "number", "the mark is written INTO the synced store");
-  assert.equal(pushed, 1, "and a sync push is scheduled, so the other device learns of it");
-  assert.equal(local.getItem(E.SEEN_KEY), null, "nothing goes to the per-device fallback when the store is present");
-  // the OTHER device: same shared store, fresh module instance, empty localStorage
-  const win2 = { GBSSync: { load: () => shared, saveLocal: (d) => d, syncOutDebounced: () => {} } };
-  new Function("window", "localStorage", "JSON", "Object", "Array", src)(win2, fakeStore(), JSON, Object, Array);
-  assert.deepEqual(Object.keys(win2.EYES.seen("y")), ["nasdaq:UNIT"], "the phone sees the desktop's review");
-  // reset from the phone restores everywhere: a reset STAMP, older marks stop counting
-  win2.EYES.reset();
-  assert.deepEqual(win.EYES.seen("x"), {}, "a restore on one device is a restore on the other");
-  win.EYES.mark("nasdaq", "CVLT", "x");
-  assert.deepEqual(Object.keys(win2.EYES.seen("y")), ["nasdaq:CVLT"], "a mark after the reset counts again");
+test("markAll dismisses the whole strip in one tap", () => {
+  const E = eyesStore(fakeStore());
+  E.markAll("asx", [{ ticker: "CVV", fp: "a" }, { ticker: "EMP", fp: "b" }, { ticker: "ALL", fp: "c" }]);
+  assert.deepStrictEqual(Object.keys(E.marks()).sort(), ["asx:ALL", "asx:CVV", "asx:EMP"]);
+  assert.strictEqual(E.isDismissed("asx", "EMP", "b"), true);
+  assert.strictEqual(E.isDismissed("asx", "EMP", "b2"), false, "clear-all still tracks changes");
 });
 
-test("gbs-sync merges the eyes marks newest-wins and keeps the later reset stamp", () => {
-  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/gbs-sync.js"), "utf8");
-  const win = {};
-  new Function("window", "localStorage", "fetch", "setTimeout", "clearTimeout", "CustomEvent", src)(
-    win, fakeStore(), () => Promise.reject(new Error("no net")), () => 0, () => {}, function () {});
-  const S = win.GBSSync;
-  const m = S.merge({ eyes_seen: { "asx:ENR": 100, "asx:XRF": 500 }, eyes_reset: 50 },
-                    { eyes_seen: { "asx:ENR": 300 }, eyes_reset: 20 });
-  assert.deepEqual(m.eyes_seen, { "asx:ENR": 300, "asx:XRF": 500 }, "per name, the newer review wins; nothing is dropped");
-  assert.equal(m.eyes_reset, 50);
-  assert.deepEqual(S.normalize({}).eyes_seen, {}, "the schema default is an empty map");
-  assert.equal(S.normalize({}).eyes_reset, 0);
+test("keys are market-scoped and case-insensitive", () => {
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "link", "f");
+  assert.strictEqual(E.isDismissed("asx", "LINK", "f"), true, "case must not matter");
+  assert.strictEqual(E.isDismissed("crypto", "LINK", "f"), false,
+    "an ASX LINK and a crypto LINK are different names");
 });
 
-test("the day is a real Melbourne calendar date", () => {
-  const { E } = eyesSeenSandbox(fakeStore(), "x");
-  assert.match(E.day(), /^\d{4}-\d{2}-\d{2}$/);
+test("reset brings everything back", () => {
+  const E = eyesStore(fakeStore());
+  E.mark("asx", "CVV", "f");
+  E.reset();
+  assert.deepStrictEqual(E.marks(), {});
 });
 
-test("nothing keys the worklist to the scan timestamp any more", () => {
-  /* The exact defect: generated_at must not be what SCOPES this. Checked on the
-   * code with comments stripped — the first draft of this assertion tripped over
-   * the block comment that explains the very fix it was checking for, which is
-   * the same prose-vs-property mistake the data_depth probe hit. */
-  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  const store = strip(
-    fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8"));
-  assert.ok(!/generated_at/.test(store), "the store is scan-scoped again");
-  const app = strip(SRC.slice(SRC.indexOf("const eyesStamp"), SRC.indexOf("const eyesSeenLoad")));
-  assert.ok(!/generated_at/.test(app), "app.js still scopes the worklist by scan");
-  assert.ok(/EYES\.day\(\)/.test(app), "app.js should scope by the trading day");
+test("the map is bounded, and evicts the OLDEST dismissal first", () => {
+  const E = eyesStore(fakeStore());
+  const many = [];
+  for (let i = 0; i < E.MAX_MARKS + 50; i++) many.push({ ticker: "T" + i, fp: "f" });
+  E.markAll("asx", many);
+  const kept = Object.keys(E.marks());
+  assert.ok(kept.length <= E.MAX_MARKS, `unbounded: ${kept.length} marks stored`);
+  assert.ok(kept.length > 0);
 });
 
-test("reset brings them back within the same scan", () => {
-  const store = fakeStore();
-  const api = eyesSeenSandbox(store, "scan-1");
-  api.markEyeSeen("nasdaq", "UNIT");
-  api.eyesResetSeen();
-  assert.deepEqual(api.eyesSeenLoad(), {});
-});
-
-test("a throwing localStorage degrades to showing everything, never a crash", () => {
-  // Private windows and blocked site data. The strip must still render; it just
-  // forgets what was reviewed, which is the safe direction to fail.
+test("a hostile or corrupt localStorage degrades to showing everything", () => {
   const hostile = {
     getItem: () => { throw new Error("blocked"); },
     setItem: () => { throw new Error("blocked"); },
     removeItem: () => { throw new Error("blocked"); },
   };
-  const api = eyesSeenSandbox(hostile, "scan-1");
-  assert.deepEqual(api.eyesSeenLoad(), {});
-  api.markEyeSeen("nasdaq", "UNIT");        // must not throw
-  api.eyesResetSeen();                       // must not throw
-  assert.deepEqual(api.eyesSeenLoad(), {});
+  const E = eyesStore(hostile);
+  assert.deepStrictEqual(E.marks(), {});
+  assert.doesNotThrow(() => E.mark("asx", "CVV", "f"));
+  assert.doesNotThrow(() => E.reset());
+  assert.strictEqual(E.isDismissed("asx", "CVV", "f"), false, "safe direction: show it");
+  const junk = eyesStore(fakeStore({ "gbs:eyes_seen": "{not json" }));
+  assert.deepStrictEqual(junk.marks(), {});
 });
 
-test("corrupt stored JSON is survived", () => {
-  const api = eyesSeenSandbox(fakeStore({ "gbs:eyes_seen": "{not json" }), "scan-1");
-  assert.deepEqual(api.eyesSeenLoad(), {});
+test("NOTHING in the store re-surfaces a name on a clock", () => {
+  /* The property all three previous versions failed. The 90-day age cut in
+   * saveMarks is garbage collection on a name nobody has seen aligned in three
+   * months — it must not be reachable as a "show it again" timer, and no
+   * calendar/day value may appear in the dismissal decision at all. */
+  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const at = src.indexOf("isDismissed:");
+  assert.ok(at > 0, "eyes-store.js no longer exposes isDismissed");
+  const body = src.slice(at, src.indexOf("\n    },", at));
+  assert.ok(!/Date\.now|day\(\)|stamp|AGE|DAY_MS/.test(body),
+    "the dismissal decision consults a clock again — that is the bug, three times over");
+  // and the deck's own filter must not either
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(!/eyesStamp\(\)[\s\S]{0,200}?filter/.test(fn),
+    "renderEyes is scoping the dismissals by day again");
 });
+
+// ── the strip's own wiring ───────────────────────────────────────────────────
 
 test("every chip carries the hook the click handler needs", () => {
   const html = eyesHTML([mk("UNIT", 2, "short"), mk("CVLT", 2, "long")], "nasdaq");
@@ -567,15 +500,29 @@ test("every chip carries the hook the click handler needs", () => {
   assert.ok(/data-eyes-tk="CVLT"/.test(html));
 });
 
-test("renderEyes filters the reviewed set BEFORE ranking and counting", () => {
+test("renderEyes filters the dismissed set BEFORE ranking and counting", () => {
   // Filtering after the fact would leave the summary claiming names that are
   // no longer on screen.
   const fn = sliceFn(SRC, "renderEyes", "app.js");
-  assert.ok(/eyesSeenLoad\(\)/.test(fn), "renderEyes does not consult the reviewed set");
+  assert.ok(/EYES\.marks\(\)/.test(fn), "renderEyes does not consult the dismissals");
   assert.ok(fn.indexOf("filter") < fn.indexOf("eyesHTML("), "must filter before rendering");
 });
 
-test("the strip hides itself once everything has been reviewed", () => {
+test("the deck marks a clicked chip WITH its fingerprint, not a bare ticker", () => {
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(/markEyeSeen\(state\.market, tk, row \? eyesFingerprint\(row\) : null\)/.test(fn),
+    "a click that stored no fingerprint would dismiss the name forever");
+});
+
+test("clear-all is wired to markAll at each row's CURRENT fingerprint", () => {
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(/data-eyes-clear/.test(fn) && /markAll\(/.test(fn), "the clear-all control is not wired");
+  assert.ok(/eyesFingerprint\(x\)/.test(fn.slice(fn.indexOf("markAll("))),
+    "clear-all must record WHY each name was dismissed, or none of them can come back");
+  assert.ok(/data-eyes-clear/.test(sliceConst("eyesHTML")), "no clear-all button is rendered");
+});
+
+test("the strip hides itself once everything has been dismissed", () => {
   const fn = sliceFn(SRC, "renderEyes", "app.js");
   assert.ok(/rows\.length \? eyesHTML/.test(fn) && /host\.hidden = true/.test(fn),
     "an empty worklist must remove the strip, not leave an empty box");
@@ -601,19 +548,19 @@ suite("the chain — stepping the strip with the chart's arrows");
 
 test("the deck saves the order and the chart reads it back", () => {
   const store = fakeStore();
-  const { E } = eyesSeenSandbox(store, "scan-1");
+  const E = eyesStore(store);
   E.saveChain("nasdaq", "scan-1", ["UNIT", "CVLT", "WMT"]);
   assert.deepEqual(E.chain("nasdaq", "scan-1"), ["UNIT", "CVLT", "WMT"]);
 });
 
 test("tickers are normalised, so a lowercase link still matches the chain", () => {
-  const { E } = eyesSeenSandbox(fakeStore(), "s1");
+  const E = eyesStore(fakeStore());
   E.saveChain("asx", "s1", ["enr", "Nol"]);
   assert.deepEqual(E.chain("asx", "s1"), ["ENR", "NOL"]);
 });
 
 test("a chain from ANOTHER MARKET is ignored", () => {
-  const { E } = eyesSeenSandbox(fakeStore(), "s1");
+  const E = eyesStore(fakeStore());
   E.saveChain("asx", "s1", ["ENR"]);
   assert.deepEqual(E.chain("nasdaq", "s1"), [], "ASX order must not drive a NASDAQ chart");
 });
@@ -621,7 +568,7 @@ test("a chain from ANOTHER MARKET is ignored", () => {
 test("a chain from an EARLIER DAY is ignored", () => {
   // Yesterday's order would walk names that have since stopped being aligned.
   // No chain is better than a wrong one. Within a day it survives re-scans.
-  const { E } = eyesSeenSandbox(fakeStore(), "2026-09-20");
+  const E = eyesStore(fakeStore());
   E.saveChain("asx", "2026-09-20", ["ENR", "NOL"]);
   assert.deepEqual(E.chain("asx", "2026-09-20"), ["ENR", "NOL"], "same day must survive");
   assert.deepEqual(E.chain("asx", "2026-09-21"), []);
@@ -633,7 +580,7 @@ test("a hostile localStorage yields no chain rather than throwing", () => {
     setItem: () => { throw new Error("blocked"); },
     removeItem: () => { throw new Error("blocked"); },
   };
-  const { E } = eyesSeenSandbox(hostile, "s1");
+  const E = eyesStore(hostile);
   assert.equal(E.saveChain("asx", "s1", ["ENR"]), false);
   assert.deepEqual(E.chain("asx", "s1"), []);
 });

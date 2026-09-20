@@ -3969,7 +3969,10 @@
       const cur = decodeURIComponent(symbol).toUpperCase();
       // Mark on ARRIVAL, so stepping with the arrows (or the keyboard, or a
       // swipe) crosses names off exactly as clicking a chip does.
-      window.EYES.mark(market, cur, stamp);
+      // No fingerprint from here: the chart knows WHICH name but not why it
+      // was aligned, so this dismisses at EYES.UNKNOWN and the deck upgrades
+      // it to the real fingerprint on its next render (see eyes-store.js).
+      window.EYES.mark(market, cur);
       const idx = chain.indexOf(cur);
       if (idx >= 0 && chain.length > 1) {
         const hrefEyes = (t) =>
