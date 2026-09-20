@@ -76,14 +76,25 @@
     html += `<p class="bt-lead">${lead}</p>`;
     html += coverageLine(d);
 
-    // The cohort the owner actually trades leads the panel.
+    // The cohort the owner actually trades leads the panel. The rule that
+    // produced it travels with the report (conviction_rule, since 2026-09-20):
+    // a file written under the old "weekly reclaim, A/A+ or strong structure"
+    // definition says so beside the row instead of wearing the new label.
+    const rule = res.conviction_rule ||
+      "weekly reclaim, A/A+ or strong structure (the rule BEFORE 2026-09-20 — next run re-measures the widened one)";
     html += table("High conviction", [
-      row("🎯 High conviction", conv.high, "weekly reclaim, A/A+ or strong structure"),
+      row("🎯 High conviction", conv.high, rule),
       row("Everything else", conv.rest),
     ].join(""));
     if (!conv.high) {
       html += `<p class="bt-none">This report predates the high-conviction cohort. ` +
         `The next backtest run fills it in.</p>`;
+    }
+    // The four cells the widened rule is built from, one at a time (long only).
+    const cells = res.by_conviction_cell_long;
+    if (cells && Object.keys(cells).length) {
+      html += table("By conviction cell",
+        Object.keys(cells).map((k) => row(k, cells[k])).join(""));
     }
 
     const byTf = res.by_timeframe_long || res.by_timeframe || {};

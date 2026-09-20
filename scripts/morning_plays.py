@@ -67,27 +67,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:                # runnable as `python scripts/morning_plays.py`
     sys.path.insert(0, str(ROOT))
 
-from scanner import config                   # noqa: E402
+from scanner import config, conviction       # noqa: E402
 
 DATA_DIR = ROOT / "public" / "data"
 CONTENT_LIMIT = 1900                          # Discord caps `content` at 2000; leave slack
 
 
-# ── the definition, identical to app.js isHighConviction ─────────────────────
+# ── the definition — IMPORTED, never re-typed (scanner/conviction.py) ────────
+# Owner ruling 2026-09-20: 1W reclaim / 1W break / 3D reclaim / 1D break, armed,
+# grade A/A+. The digest widened with the deck ("Widen to match") and each
+# symbol carries one target mark per cell it fires on, like the deck badge.
 
-def is_high_conviction(row: dict) -> bool:
-    """A WEEKLY reclaim that's armed and A/A+ or has strong structure.
+is_high_conviction = conviction.is_high_conviction
+conviction_count = conviction.conviction_count
+MARK = "\U0001F3AF"                          # the deck's target mark
 
-    Mirrors public/js/app.js isHighConviction exactly:
-        p = row.plans["1W"]; p.armed && p.entry_trigger === "reclaim"
-        && (grade in {A+, A} || (p.structural_tps || 0) >= 2)
-    """
-    p = (row.get("plans") or {}).get("1W")
-    if not p or not p.get("armed") or p.get("entry_trigger") != "reclaim":
-        return False
-    good_grade = row.get("grade") in ("A+", "A")
-    strong_structure = (p.get("structural_tps") or 0) >= 2
-    return bool(good_grade or strong_structure)
+
+def marked(row: dict) -> str:
+    """`SYM` plus one mark per cell fired (up to three), e.g. `ENR 🎯🎯`."""
+    n = conviction_count(row)
+    return f"{row.get('symbol', '?')} {MARK * n}" if n else str(row.get("symbol", "?"))
 
 
 def _is_long(row: dict) -> bool:
@@ -141,9 +140,11 @@ def _scan_age_hours(generated_at: str | None, now_utc: dt.datetime) -> float | N
 
 
 def select(rows: list[dict]) -> list[dict]:
-    """Qualifying LONG rows, strongest first (score desc)."""
+    """Qualifying LONG rows, strongest first: most conviction cells fired,
+    then score desc."""
     q = [r for r in rows if qualifies(r)]
-    q.sort(key=lambda r: (-(r.get("score") or 0), str(r.get("symbol") or "")))
+    q.sort(key=lambda r: (-conviction_count(r), -(r.get("score") or 0),
+                          str(r.get("symbol") or "")))
     return q
 
 
@@ -234,7 +235,7 @@ def _market_block(market: str, picks: list[dict], cap: int,
         return lines
     shown = picks[:cap]
     for label in LABEL_ORDER:
-        syms = [str(r.get("symbol", "?")) for r in shown if play_label(r) == label]
+        syms = [marked(r) for r in shown if play_label(r) == label]
         if not syms:
             continue
         lines.append(label)

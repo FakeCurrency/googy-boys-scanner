@@ -47,15 +47,22 @@ def test_the_key_is_day_name_side_in_the_markets_own_calendar():
 
 
 def test_high_conviction_mirrors_the_deck_condition():
+    """IMPORTED from scanner/conviction.py (2026-09-20: 1W reclaim/break, 3D
+    reclaim, 1D break; armed; A/A+; no structure branch)."""
+    from scanner import conviction
+    assert SRC.count("conviction.is_high_conviction(row)") == 1, "the roster re-typed the rule"
     armed_reclaim = {"1W": {"armed": True, "entry_trigger": "reclaim", "structural_tps": 0}}
     assert er.high_conviction(_row(plans=armed_reclaim)) is True          # A+ grade path
+    assert er.high_conviction(_row(plans={"3D": {"armed": True, "entry_trigger": "reclaim"}})) is True
+    assert er.high_conviction(_row(plans={"1D": {"armed": True, "entry_trigger": "break"}})) is True
     weak = _row(grade_raw="A+", plans=armed_reclaim); weak["grade"] = "B+"
-    assert er.high_conviction(weak) is False, "neither good grade nor structure"
+    assert er.high_conviction(weak) is False, "grade A/A+ is required"
     weak2 = _row(plans={"1W": {"armed": True, "entry_trigger": "reclaim", "structural_tps": 2}})
     weak2["grade"] = "B+"
-    assert er.high_conviction(weak2) is True, "structure path"
+    assert er.high_conviction(weak2) is False, "the structure path was dropped"
     assert er.high_conviction(_row(plans={"1W": {"armed": True, "entry_trigger": "retest"}})) is False
     assert er.high_conviction(_row(plans={})) is False
+    assert er.high_conviction(_row(plans=armed_reclaim)) == conviction.is_high_conviction(_row(plans=armed_reclaim))
 
 
 def test_strong_structure_reads_the_chip():

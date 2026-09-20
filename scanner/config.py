@@ -155,7 +155,7 @@ VIVEK_SCHEMA_VERSION   = 5
 # THE LITE-PLAN DRIFT-PIN (owner clarification, 2026-07-31 ruling): the exact
 # per-timeframe plan fields the SUMMARY keeps, named so they cannot drift.
 # Every list-path consumer reads ONLY these:
-#   app.js  isHighConviction()  -> armed, entry_trigger, structural_tps
+#   app.js  convictionCells()   -> armed, entry_trigger (every TF the rule reads)
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
@@ -164,6 +164,8 @@ VIVEK_SCHEMA_VERSION   = 5
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
 # test/staleview.test.js proves isHighConviction passes on a lite-only plan.
+# (structural_tps stays in the tuple for the row chips; the conviction rule
+# stopped reading it on 2026-09-20 — see scanner/conviction.py.)
 VIVEK_SUMMARY_PLAN_FIELDS = ("armed", "entry_trigger", "structural_tps",
                              "level_tf", "direction")
 VIVEK_DETAIL_ROW_FIELDS   = ("plans", "detail", "analysis", "markers")

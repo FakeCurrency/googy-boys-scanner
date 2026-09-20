@@ -261,7 +261,7 @@
     caps: {},           // "<market>:<symbol>" -> raw market cap (float)
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
-    vkHighConv: false,  // VIVEK "high conviction" filter (weekly reclaim + A/strong structure)
+    vkHighConv: false,  // VIVEK "high conviction" filter (A/A+ in a backtest-edge cell — see convictionCells)
     vkDir: null,        // direction filter: null = both · "LONG" · "SHORT"
     vkConfl: false,     // deck pill (Wave 3): only rows with 2+ lens alignment
     vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
@@ -1007,14 +1007,35 @@
     return (scanDateMs() - tb) / 86400000 <= RECENT_DAYS + 0.5;
   }
 
-  // High conviction (from the walk-forward backtest): a WEEKLY reclaim that's
-  // also A/A+ or has strong structure — the cleanest, lowest-drawdown cell.
+  // HIGH CONVICTION (owner ruling 2026-09-20, off the 600-name long-only
+  // replay): the four backtest cells that carried a real edge — 1W reclaim
+  // (+0.30R), 1W break (+0.16R), 3D reclaim (+0.20R), 1D break (+0.09R) — on
+  // a row whose displayed grade is A/A+. The old "weekly reclaim, A/A+ or
+  // strong structure" rule was ONE of those cells plus a structure branch that
+  // measured NEGATIVE (-0.07R) and was dropped. A row can fire on up to three
+  // cells (one per timeframe); the badge shows one 🎯 per cell.
+  // PARITY: the HC_CELLS literal below is parsed out of this file by
+  // tests/test_conviction.py and must equal scanner/conviction.py HC_CELLS —
+  // the digest, roster baseline, backtest cohort and chart chip all read it.
+  function convictionCells(r) {
+    const HC_CELLS = { "1W": ["reclaim", "break"], "3D": ["reclaim"], "1D": ["break"] };
+    if (!r || !r.plans || (r.grade !== "A+" && r.grade !== "A")) return [];
+    const out = [];
+    for (const tf of Object.keys(HC_CELLS)) {
+      const p = r.plans[tf];
+      if (p && p.armed && HC_CELLS[tf].includes(p.entry_trigger)) out.push(tf + " " + p.entry_trigger);
+    }
+    return out;
+  }
   function isHighConviction(r) {
-    const p = r && r.plans && r.plans["1W"];
-    if (!p || !p.armed || p.entry_trigger !== "reclaim") return false;
-    const goodGrade = r.grade === "A+" || r.grade === "A";
-    const strongStructure = (p.structural_tps || 0) >= 2;
-    return goodGrade || strongStructure;
+    return convictionCells(r).length > 0;
+  }
+  function hiconvBadge(r) {
+    const cells = convictionCells(r);
+    if (!cells.length) return "";
+    return `<span class="rbadge hiconv" title="High conviction: ${esc(cells.join(" + "))} — ` +
+      `armed A/A+ in the backtest's best cells (1W reclaim/break, 3D reclaim, 1D break); one 🎯 per cell">` +
+      `${"🎯".repeat(Math.min(cells.length, 3))} High conviction</span>`;
   }
   // Compact, scannable badges for the VIVEK list — what moved + why it
   // matters. Returns an ARRAY; rowHtml caps the row at 3 chips + a "+N"
@@ -1029,8 +1050,8 @@
       out.push(PM.confluenceChipHTML(ci, "VIVEK"));
     if (isFundReit(r))
       out.push(`<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>`);
-    if (isHighConviction(r))
-      out.push(`<span class="rbadge hiconv" title="Weekly reclaim, A/strong structure — the best-performing setup in the backtest">🎯 High conviction</span>`);
+    const hcb = hiconvBadge(r);
+    if (hcb) out.push(hcb);
     if (triggeredRecently(r))
       out.push(`<span class="rbadge fresh" title="Trigger fired on/near the latest bar">⚡ Triggered recently</span>`);
     const trig = r.entry_trigger || (r.armed && (r.entry_types || [])[0]) || null;
@@ -2004,7 +2025,7 @@
     if (state.vkRecent) {
       list = list.filter(triggeredRecently);
     }
-    // "High conviction" — weekly reclaims (A / strong structure).
+    // "High conviction" — armed A/A+ in one of the four backtest cells.
     if (state.vkHighConv) {
       list = list.filter(isHighConviction);
     }
@@ -2397,7 +2418,7 @@
       `<span class="vkf-legend" title="Chip colour = backtest edge (avg R)">🟢 best · 🟠 ok · 🔴 weak</span>` +
       `<span class="vkf-sep"></span>` +
       `<button class="vkf-chip vkf-highconv${state.vkHighConv ? " is-active" : ""}" data-high="1" ` +
-        `title="The best cell in the backtest: weekly reclaims that are A/A+ or have strong structure">🎯 High conviction <b>${nHigh}</b></button>` +
+        `title="The backtest's best cells: 1W reclaim/break, 3D reclaim or 1D break, armed and graded A/A+ — one 🎯 per cell a name fires on">🎯 High conviction <b>${nHigh}</b></button>` +
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
         `title="Triggered recently — setups whose trigger fired on or near the latest scanned bar">⚡ Triggered <b>${nRecent}</b></button>` +
       `<span class="vkf-sep"></span>` +

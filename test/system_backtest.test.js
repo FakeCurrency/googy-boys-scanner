@@ -76,6 +76,23 @@ test("the high-conviction cohort leads, because that is what gets traded", async
   assert.ok(/58\.3%/.test(h) && /\+0\.420/.test(h));
 });
 
+test("the cohort row names the RULE that produced it, old or new", async () => {
+  // A report written before 2026-09-20 carries no conviction_rule: it must be
+  // labelled as the OLD rule, never dressed as the widened one.
+  const old = await render(REPORT(), null);
+  assert.ok(/rule BEFORE 2026-09-20/.test(old), "an old report must say it predates the widened rule");
+  const r = REPORT();
+  r.results.conviction_rule = "1W reclaim/break, 3D reclaim or 1D break - armed, grade A/A+";
+  r.results.by_conviction_cell_long = { "1W reclaim": M({ n: 691, avg_r: 0.299 }), "1W break": M({ n: 122 }),
+                                        "3D reclaim": M({ n: 1309 }), "1D break": M({ n: 281 }) };
+  const h = await render(r, null);
+  assert.ok(/1W reclaim\/break, 3D reclaim or 1D break/.test(h), "the shipped rule text is printed");
+  assert.ok(!/rule BEFORE 2026-09-20/.test(h));
+  assert.ok(/By conviction cell/.test(h) && /\+0\.299/.test(h) && /691/.test(h), "the per-cell table renders");
+  const noCells = await render(REPORT(), null);
+  assert.ok(!/By conviction cell/.test(noCells), "no per-cell block when the report has none");
+});
+
 test("the long-only report leads the both-directions one", async () => {
   const h = await render(REPORT(), REPORT());
   assert.ok(h.indexOf("Long-only replay") < h.indexOf("Both directions"));

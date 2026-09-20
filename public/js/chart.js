@@ -1137,15 +1137,26 @@
     });
   }
 
-  // High conviction (matches the dashboard): a WEEKLY reclaim that's A/A+ or has
-  // strong structure — the cleanest, lowest-drawdown cell in the backtest.
+  // HIGH CONVICTION (matches the dashboard, owner ruling 2026-09-20): an A/A+
+  // row with an ARMED plan in one of the four backtest-edge cells — 1W
+  // reclaim, 1W break, 3D reclaim, 1D break. One 🎯 per cell it fires on.
+  // PARITY: the HC_CELLS literal is parsed out of this file by
+  // tests/test_conviction.py and must equal scanner/conviction.py HC_CELLS.
+  function convictionCells(d) {
+    const HC_CELLS = { "1W": ["reclaim", "break"], "3D": ["reclaim"], "1D": ["break"] };
+    if (!d || (d.grade !== "A+" && d.grade !== "A")) return [];
+    const out = [];
+    for (const tf of Object.keys(HC_CELLS)) {
+      // Prefer the raw scan plan (always present in the JSON); fall back to the
+      // built timeframe when it is a genuine (non-approx) one.
+      const built = d.timeframes && d.timeframes[tf];
+      const p = (d.plans && d.plans[tf]) || (built && !built.approx && built.levels) || null;
+      if (p && p.armed && HC_CELLS[tf].includes(p.entry_trigger)) out.push(tf + " " + p.entry_trigger);
+    }
+    return out;
+  }
   function isHighConviction(d) {
-    // Prefer the raw scan plan (always present in the JSON); fall back to the
-    // built Weekly timeframe. A genuine weekly reclaim that's A/A+ or structured.
-    const tf = d && d.timeframes && d.timeframes["1W"];
-    const p = (d && d.plans && d.plans["1W"]) || (tf && !tf.approx && tf.levels) || null;
-    if (!p || !p.armed || p.entry_trigger !== "reclaim") return false;
-    return d.grade === "A+" || d.grade === "A" || (p.structural_tps || 0) >= 2;
+    return convictionCells(d).length > 0;
   }
 
   // REIT / ETF / LIC / managed fund — mirrors scanner/broker/vivek_bot.py. The
@@ -1279,7 +1290,14 @@
     // plain-fallback charts (no setup anywhere) have no direction — hide the chip
     dirEl.hidden = !d.dir;
     const hc = $("#ct-hiconv");
-    if (hc) hc.hidden = !isHighConviction(d);
+    if (hc) {
+      const cells = convictionCells(d);
+      hc.hidden = !cells.length;
+      if (cells.length) {
+        hc.textContent = `${"🎯".repeat(Math.min(cells.length, 3))} HIGH CONVICTION`;
+        hc.title = `High conviction: ${cells.join(" + ")} — armed A/A+ in the backtest's best cells; one 🎯 per cell`;
+      }
+    }
     $("#ct-chips").innerHTML = (d.chips || [])
       .map((c) => `<span class="chip${String(c).startsWith("WEEKLY") ? " weekly" : ""}">${esc(c)}</span>`).join("");
   }

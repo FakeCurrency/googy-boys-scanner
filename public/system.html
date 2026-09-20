@@ -162,9 +162,12 @@
         <tr><td><span class="pill-b">B+</span></td><td>Watching — near the level, no trigger yet</td><td>Un-armed setups cap here</td></tr>
         <tr><td><span class="pill-w">WATCH</span></td><td>Informational</td><td>—</td></tr>
       </table>
-      <p>Low R:R demotes a grade. <strong>High Conviction 🎯</strong> = a Weekly reclaim that’s A/A+ or has strong
-        structure — the best cell in the walk-forward backtest. This line used to quote fixed numbers; it now
-        points at <a href="#backtest">section 9</a>, which reads whatever the latest run actually produced.</p>
+      <p>Low R:R demotes a grade. <strong>High Conviction 🎯</strong> = an A/A+ setup with an ARMED plan in one of
+        the four cells that carried the edge in the walk-forward backtest — <strong>1W reclaim, 1W break, 3D reclaim,
+        1D break</strong> (widened 2026-09-20 from “weekly reclaim only”; the old “strong structure” branch measured
+        negative and was dropped). A name fires on up to three cells and wears one 🎯 per cell. This line used to
+        quote fixed numbers; it now points at <a href="#backtest">section 9</a>, which reads whatever the latest
+        run actually produced.</p>
     </section>
 
     <!-- ═══════════════ 5 · BOT RULEBOOK ═══════════════ -->
@@ -296,8 +299,8 @@
         stop checked before target). Headline findings that set today’s rules:</p>
       <ul>
         <li><strong>Long only.</strong> Shorts ran consistently negative, so the bot takes none.</li>
-        <li><strong>Weekly reclaim is the best cell</strong>, which is what High Conviction 🎯 selects for,
-          and why the bot prefers 1W + reclaim.</li>
+        <li><strong>Weekly reclaim is the best cell</strong> (+0.30R), with 3D reclaim, 1W break and 1D break
+          behind it — the four cells High Conviction 🎯 selects for — and why the bot prefers 1W + reclaim.</li>
         <li><strong>A+ only, retests skipped.</strong> Grade A came out around breakeven and the retest
           trigger came out roughly flat.</li>
       </ul>
@@ -328,7 +331,7 @@
 
   <script src="js/nav.js?v=22"></script>
   <script src="js/status.js?v=3"></script>
-  <script src="js/system-backtest.js?v=1"></script>
+  <script src="js/system-backtest.js?v=2"></script>
   <script>
   /* Fix-10 #7: scan-coverage panel — Range-read the first 2KB of each scan
      file (the header fields precede the results array), pull universe_size +

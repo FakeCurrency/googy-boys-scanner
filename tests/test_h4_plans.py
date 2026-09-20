@@ -96,7 +96,8 @@ def test_attaching_a_4h_plan_changes_NOTHING_else_on_the_row(monkeypatch):
     monkeypatch.setattr(scan, "download", lambda t, **k: {x: df for x in t})
     row = {"symbol": "ON", "yf": "ON", "dir": "LONG", "grade": "A+", "score": 10,
            "armed": True, "armed_tf": "1W", "entry": 1.5, "stop": 1.0,
-           "plans": {"1D": {"entry": 1.5}, "1W": {"entry": 9.9, "armed": True}},
+           "plans": {"1D": {"entry": 1.5}, "3D": {"entry": 5.0, "armed": True},
+                     "1W": {"entry": 9.9, "armed": True}},
            "markers": {"1D": [{"date": "2026-01-01", "kind": "reaction"}]}}
     before = {k: v for k, v in row.items() if k not in ("plans", "markers")}
     plans_before = {k: dict(v) for k, v in row["plans"].items()}
@@ -107,23 +108,24 @@ def test_attaching_a_4h_plan_changes_NOTHING_else_on_the_row(monkeypatch):
     assert {k: v for k, v in row.items() if k not in ("plans", "markers")} == before
     assert row["plans"]["1D"] == plans_before["1D"]
     assert row["plans"]["1W"] == plans_before["1W"], "the weekly plan drives high conviction"
+    assert row["plans"]["3D"] == plans_before["3D"], "so does the 3D plan (reclaim cell)"
     assert row["markers"]["1D"] == markers_1d
     assert "4H" in row["plans"]
 
 
-def test_high_conviction_reads_the_WEEKLY_plan_only_so_the_list_cannot_move():
-    """isHighConviction in app.js keys off plans["1W"]. A 4H plan cannot reach
-    it, which is why the owner's high-conviction list and the morning digest are
-    unchanged by this feature."""
+def test_high_conviction_never_reads_the_4H_plan_so_the_list_cannot_move():
+    """convictionCells in app.js keys off the 1W / 3D / 1D plans (owner ruling
+    2026-09-20). A 4H plan cannot reach it, which is why the owner's
+    high-conviction list and the morning digest are unchanged by this feature."""
     import pathlib
+    from scanner import conviction
+    assert "4H" not in conviction.HC_CELLS
     app = pathlib.Path(__file__).resolve().parents[1] / "public" / "js" / "app.js"
     src = app.read_text(encoding="utf-8")
-    body = src[src.index("function isHighConviction"):]
+    body = src[src.index("function convictionCells"):]
     body = body[:body.index("\n  }") + 4]
-    assert 'plans["1W"]' in body
+    assert '"1W"' in body
     assert '"4H"' not in body, "high conviction started reading 4H — that changes the list"
-
-
 # ── degrade, never fail ──────────────────────────────────────────────────────
 
 def test_a_failed_download_leaves_every_row_exactly_as_it_was(monkeypatch, capsys):

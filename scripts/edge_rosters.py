@@ -30,7 +30,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from scanner import config, output                                  # noqa: E402
+from scanner import config, conviction, output                      # noqa: E402
 
 # The stamping machinery is IMPORTED from the alert ledger (mirror-drift rule:
 # two forward-return implementations would diverge exactly when it matters).
@@ -64,13 +64,10 @@ def load_ledger(path: str = LEDGER) -> dict:
 
 
 def high_conviction(row: dict) -> bool:
-    """The SAME condition app.js's isHighConviction applies (weekly reclaim
-    that is A/A+ or has >=2 structural TPs) — mirrored here so the tag's
+    """The SAME condition the deck applies — IMPORTED from scanner/conviction.py
+    (1W reclaim/break, 3D reclaim, 1D break; armed; grade A/A+), so the tag's
     forward returns are measured against the tag as displayed."""
-    p = (row.get("plans") or {}).get("1W") or {}
-    if not (p.get("armed") and p.get("entry_trigger") == "reclaim"):
-        return False
-    return (row.get("grade") in ("A+", "A")) or ((p.get("structural_tps") or 0) >= 2)
+    return conviction.is_high_conviction(row)
 
 
 def roster_rows(scan: dict, market: str) -> list[dict]:

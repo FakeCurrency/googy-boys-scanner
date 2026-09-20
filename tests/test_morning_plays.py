@@ -5,7 +5,8 @@ text `SYMBOL -> label`. Default = high-conviction longs; an opt-in widens to
 every long A+. 2026-09-09: added CRYPTO as a third market and a 7-day de-dup
 so a ticker shared once is not re-sent inside the window.
 
-Pins the definition (identical to app.js isHighConviction), the filter, the
+Pins the definition (imported from scanner/conviction.py — the four-cell
+rule of 2026-09-20, one target mark per cell), the filter, the
 label, the message shape/chunking, the de-dup memory, and the exit codes.
 """
 
@@ -34,25 +35,32 @@ def _row(symbol="AAA", grade="A+", direction="LONG", trigger="reclaim",
     return r
 
 
-# ── the definition, byte-for-byte with app.js isHighConviction ───────────────
+# ── the definition — IMPORTED from scanner/conviction.py (2026-09-20) ────────
+# The four-cell rule and its browser parity are pinned in tests/test_conviction.py;
+# here we pin that the digest USES that rule and nothing of its own.
 
-def test_high_conviction_is_a_weekly_armed_reclaim_that_is_A_or_strong():
-    assert mp.is_high_conviction(_row(grade="A+"))
-    assert mp.is_high_conviction(_row(grade="A"))
-    assert mp.is_high_conviction(_row(grade="B+", structural=2))     # strong structure
-    assert not mp.is_high_conviction(_row(grade="B+", structural=1))
+def test_high_conviction_is_the_shared_four_cell_rule():
+    from scanner import conviction
+    assert mp.is_high_conviction is conviction.is_high_conviction
+    assert mp.conviction_count is conviction.conviction_count
+    assert mp.is_high_conviction(_row(grade="A+"))                    # 1W reclaim
+    assert mp.is_high_conviction(_row(grade="A", trigger="break"))    # 1W break
+    assert not mp.is_high_conviction(_row(grade="B+", structural=2)), \
+        "the structure branch was dropped (owner: 'Drop it')"
     assert not mp.is_high_conviction(_row(trigger="retest"))
     assert not mp.is_high_conviction(_row(armed=False))
     assert not mp.is_high_conviction({"grade": "A+", "plans": {}})
 
 
-def test_it_matches_the_shipped_app_js_rule():
-    src = (mp.ROOT / "public" / "js" / "app.js").read_text(encoding="utf-8")
-    body = src[src.index("function isHighConviction("):]
-    body = body[:body.index("}")]
-    assert 'entry_trigger !== "reclaim"' in body
-    assert '"A+"' in body and '"A"' in body
-    assert "structural_tps" in body and ">= 2" in body
+def test_marked_stacks_one_target_per_cell_like_the_deck_badge():
+    one = _row("XRF")
+    two = _row("ENR"); two["plans"]["3D"] = {"armed": True, "entry_trigger": "reclaim"}
+    three = dict(two, symbol="SOL"); three["plans"] = dict(two["plans"],
+                                                         **{"1D": {"armed": True, "entry_trigger": "break"}})
+    assert mp.marked(one) == "XRF " + mp.MARK
+    assert mp.marked(two) == "ENR " + mp.MARK * 2
+    assert mp.marked(three) == "SOL " + mp.MARK * 3
+    assert mp.marked(_row("PLAIN", trigger="retest")) == "PLAIN", "a non-HC row wears no mark"
 
 
 # ── the filter: long only, no funds, high-conviction (or opt-in A+) ──────────
@@ -79,11 +87,13 @@ def test_the_label_says_why_a_play_made_the_cut():
     assert mp.play_label(_row(grade="A+", trigger="retest")) == "A+"  # A+ but not HC
 
 
-def test_select_filters_and_sorts_by_score():
-    rows = [_row("LOW", score=1), _row("HI", score=99),
+def test_select_filters_and_sorts_by_cells_then_score():
+    two = _row("TWO", score=5); two["plans"]["3D"] = {"armed": True, "entry_trigger": "reclaim"}
+    rows = [_row("LOW", score=1), _row("HI", score=99), two,
             _row("SHORT_HC", direction="SHORT", score=50),           # dropped: short
             _row("FUND", is_product=True, score=50)]                 # dropped: product
-    assert [r["symbol"] for r in mp.select(rows)] == ["HI", "LOW"]
+    assert [r["symbol"] for r in mp.select(rows)] == ["TWO", "HI", "LOW"], \
+        "most cells fired first, then score"
 
 
 # ── the clean text message ───────────────────────────────────────────────────
@@ -113,9 +123,10 @@ def test_the_message_is_grouped_by_market_then_by_label_one_symbol_per_line():
     msgs = mp.build_messages(picks, {"asx": 1.0, "nasdaq": 1.0, "crypto": 1.0},
                              "Mon 1 Jan")
     text = "\n".join(msgs)
-    assert "**ASX PLAYS**\nA+ High conviction\nNIC\nPPT\n\nHigh conviction\nTLS" in text
-    assert "**NASDAQ PLAYS**\nHigh conviction\nCRWV" in text
-    assert "**CRYPTO PLAYS**\nA+ High conviction\nLINK" in text
+    M = mp.MARK
+    assert f"**ASX PLAYS**\nA+ High conviction\nNIC {M}\nPPT {M}\n\nHigh conviction\nTLS {M}" in text
+    assert f"**NASDAQ PLAYS**\nHigh conviction\nCRWV {M}" in text
+    assert f"**CRYPTO PLAYS**\nA+ High conviction\nLINK {M}" in text
     assert "→" not in text and "->" not in text, "no per-row arrows"
     assert text.count("A+ High conviction") == 2, "a label appears once per market, not per row"
     # clean: none of the old entry/stop/RR clutter, no company names

@@ -32,7 +32,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 
-from . import config, output, vivek
+from . import config, conviction, output, vivek
 from .broker.vivek_bot import size_position, _is_fund_or_reit
 from .vivek_journal import _snapshot, _mark, _apply_costs, _r_of, costs_for
 
@@ -513,36 +513,16 @@ def _split(trades: list[dict], key, values=None) -> dict:
 
 
 def is_high_conviction(tr: dict) -> bool:
-    """The deck's HIGH CONVICTION rule, applied to a backtest trade.
+    """The deck's HIGH CONVICTION rule applied to a backtest trade — IMPORTED
+    from scanner/conviction.py, never re-typed, so the cohort measures the rule
+    the badge actually applies (owner ruling 2026-09-20: 1W reclaim / 1W break
+    / 3D reclaim / 1D break, armed, grade A/A+).
 
-    MIRRORS public/js/app.js isHighConviction EXACTLY, and
-    tests/test_high_conviction_cohort.py slices the shipped app.js so the two
-    cannot drift. That parity is the whole point: this exists to check whether
-    the badge still earns its own claim, so a cohort defined even slightly
-    differently would answer a question nobody asked.
-
-      a WEEKLY (1W) plan, ARMED, whose trigger is a RECLAIM,
-      and either an A/A+ grade or at least 2 structural targets.
-
-    One honest difference, recorded rather than smoothed over: app.js reads the
-    1W plan off a row whose HEADLINE may be another timeframe, while a backtest
-    trade IS the 1W plan (the replay opens one position per timeframe). So this
-    tests "the 1W reclaim the deck would badge", which is the same population,
-    reached from the other end.
+    A backtest trade IS one timeframe's plan (the replay opens one position per
+    timeframe), so it sits in at most one cell; the deck stacks the cells a
+    ROW fires on. Same population, reached from the other end.
     """
-    if (tr.get("timeframe") or "") != "1W":
-        return False
-    if (tr.get("entry_type") or "") != "reclaim":
-        return False
-    if (tr.get("grade") or "") in ("A+", "A"):
-        return True
-    # Fail-closed on anything non-numeric. A bare int() here raises on a junk
-    # value and takes the WHOLE report down with it, which is a poor trade for
-    # a field that is only ever a small count.
-    try:
-        return float(tr.get("structural_tps") or 0) >= 2
-    except (TypeError, ValueError):
-        return False
+    return conviction.trade_is_high_conviction(tr)
 
 
 def aggregate(trades: list[dict]) -> dict:
@@ -580,6 +560,16 @@ def aggregate(trades: list[dict]) -> dict:
         "by_conviction_long": {
             "high": _metrics([t for t in longs if is_high_conviction(t)]),
             "rest": _metrics([t for t in longs if not is_high_conviction(t)]),
+        },
+        # Which rule produced the cohort above, so a report written under the
+        # old definition can never be read as evidence for the new one (the
+        # system page prints this text beside the cohort row).
+        "conviction_rule": conviction.RULE_TEXT,
+        # The four cells one at a time, LONG only — the evidence the widened
+        # rule rests on, kept live so the next run re-argues it.
+        "by_conviction_cell_long": {
+            cell: _metrics([t for t in longs if conviction.trade_cell(t) == cell])
+            for cell in conviction.cell_names()
         },
     }
 

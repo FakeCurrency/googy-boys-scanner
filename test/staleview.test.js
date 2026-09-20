@@ -570,11 +570,27 @@ function pullFn(name) {
   }
   assert.fail("could not slice function " + name);
 }
+function pullSrc(name) {
+  const at = APP.search(new RegExp("function\\s+" + name + "\\s*\\("));
+  assert.ok(at >= 0, "app.js no longer defines function " + name);
+  for (let i = APP.indexOf("}", at); i > 0 && i - at < 4000; i = APP.indexOf("}", i + 1)) {
+    const cand = APP.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep walking */ }
+  }
+  assert.fail("could not slice function " + name);
+}
 test("isHighConviction passes on a LITE-only plan (the five drift-pin fields)", () => {
-  const isHighConviction = pullFn("isHighConviction");
+  // isHighConviction reads convictionCells (2026-09-20 four-cell rule), so the
+  // two are sliced together and evaluated as one scope.
+  const isHighConviction = new Function(pullSrc("convictionCells") + "\n" + pullSrc("isHighConviction") +
+    "\nreturn isHighConviction;")();
   const litePlan = { armed: true, entry_trigger: "reclaim", structural_tps: 2,
                     level_tf: "weekly", direction: "long" };
-  assert.strictEqual(isHighConviction({ grade: "B+", plans: { "1W": litePlan } }), true);
+  assert.strictEqual(isHighConviction({ grade: "A", plans: { "1W": litePlan } }), true);
+  assert.strictEqual(isHighConviction({ grade: "A+", plans: { "3D": litePlan } }), true, "3D reclaim is a cell");
+  assert.strictEqual(isHighConviction({ grade: "A+", plans: { "1D": { ...litePlan, entry_trigger: "break" } } }), true, "1D break is a cell");
+  assert.strictEqual(isHighConviction({ grade: "B+", plans: { "1W": litePlan } }), false,
+    "the structure branch (B+ with structural_tps 2) was dropped 2026-09-20");
   assert.strictEqual(isHighConviction({ grade: "A+", plans: { "1W": { ...litePlan, entry_trigger: "retest" } } }), false);
 });
 
