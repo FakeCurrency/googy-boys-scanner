@@ -5,7 +5,6 @@
  * already drifted into THREE different character classes:
  *
  *     sectors.js            [&<>]        <- the real hole
- *     horizon.js regime.js  [&<>"]
  *     the other seven       [&<>"']
  *
  * and sectors.js interpolated straight into a double-quoted attribute

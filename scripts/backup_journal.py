@@ -15,7 +15,7 @@ public/data files were retired and deleted, see git history):
   journal/*.log  (last 50k lines each)
   public/data/vivek_bot_book.json + events.json
   scanner/config.py
-  (2026-07-28, TOP100 #50) accumulated state: data/sector_history.json,
+  (2026-07-28, TOP100 #50) accumulated state:
   data/sector_map.json + its public twin, journal/confluence_state.json,
   public/data/phasemap/alert_history.json, data/universe_cache/*.json —
   see the comment on BACKUP_FILES for why each one cannot be recomputed.
@@ -63,16 +63,6 @@ BACKUP_FILES = [
     # cannot be recomputed from what remains. Every entry below fails that test
     # in a different way.
     #
-    #   data/sector_history.json      the ONLY long sector memory in the system
-    #                                 (the PhaseMap archive is 7 days). One row
-    #                                 per market per day; the pre-2026-06-28
-    #                                 rows exist solely because a ~25-minute
-    #                                 backfill replayed the engine to make them,
-    #                                 and `held` is null there because it is
-    #                                 genuinely unknowable. It also carries the
-    #                                 sector_run ping memory, so losing it
-    #                                 re-fires the sector-run alarm for every
-    #                                 sector mid-run.
     #   data/sector_map.json          a SIGNAL PATH since REFINEMENTS #38 - it
     #   public/data/sector_map.json   decides which rows the 3-per-sector cap
     #                                 can see, so a wipe changes which trades
@@ -97,10 +87,6 @@ BACKUP_FILES = [
     #                                 asx because a half-restored roster dir is
     #                                 worse than a whole one.
     #
-    # Deliberately OUT: public/data/regime.json and sector_breadth.json. A scan
-    # recomputes both wholesale from bars, so a snapshot of them is a snapshot
-    # of something the next run overwrites anyway.
-    "data/sector_history.json",
     "data/sector_map.json",
     "public/data/sector_map.json",
     "journal/confluence_state.json",
@@ -136,7 +122,6 @@ REQUIRED_FILES = [
     "journal/journal.json",
     "journal/scalp_journal.json",
     "scanner/config.py",
-    "data/sector_history.json",
     "data/sector_map.json",
     "public/data/sector_map.json",
     "journal/confluence_state.json",

@@ -54,14 +54,11 @@ ARTIFACT_MAP = {
     "arriving.json":   {"scanner/config.py", "scanner/scan.py"},
     "funnel_history":  {"scanner/config.py", "scanner/funnelhistory.py"},
     "spec_graduation": {"scanner/config.py", "scanner/specgrad.py"},
-    "sector_history":  {"scanner/config.py", "scanner/sectorbreadth.py"},
 }
 
 MODULE_MAP = {  # module name -> the ONE file allowed to import it
     "funnelhistory": "scanner/run.py",
     "specgrad":      "scanner/spec_run.py",
-    "sectorbreadth": "scanner/run.py",
-    "regime":        "scanner/run.py",
 }
 
 

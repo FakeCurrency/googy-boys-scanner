@@ -2,9 +2,10 @@
 
 `backup_book.yml`'s only gate was `assert_staged.sh "book backup" backups`,
 which proves a DIRECTORY appeared. It could not see what was in it, so the
-three files this item found missing from `BACKUP_FILES` — sector_history,
-sector_map, confluence_state — had never been snapshotted and the nightly run
-had been green about it every night regardless.
+three files this item found missing from `BACKUP_FILES` — sector_history
+(gone with HORIZON on 2026-09-20), sector_map, confluence_state — had never
+been snapshotted and the nightly run had been green about it every night
+regardless.
 
 The tests below are mostly about the two ways that stays fixed: the required
 list cannot drift away from the backed-up list, and `verify()` actually bites
@@ -43,8 +44,7 @@ def test_the_accumulated_state_files_are_in_the_backup_list():
     """The #50 additions, pinned by name.
 
     Each is here because losing it loses something no run recomputes:
-    sector_history is the only long sector memory (and holds the sector_run
-    ping dedupe); sector_map is a SIGNAL PATH since REFINEMENTS #38, so a wipe
+    sector_map is a SIGNAL PATH since REFINEMENTS #38, so a wipe
     changes which trades get taken until it refills; confluence_state is alert
     dedupe, whose 'regeneration' is re-firing every ping it had already sent;
     alert_history is the permanent ALERTS log; universe_cache/asx.json is
@@ -52,7 +52,6 @@ def test_the_accumulated_state_files_are_in_the_backup_list():
     nothing at all.
     """
     for rel in (
-        "data/sector_history.json",
         "data/sector_map.json",
         "public/data/sector_map.json",
         "journal/confluence_state.json",
@@ -127,7 +126,7 @@ def test_verify_fails_when_a_required_file_is_missing(live):
     snapshot. Before this gate the run was green and the loss surfaced at
     restore time."""
     dest = bj.backup()
-    (dest / "data" / "sector_history.json").unlink()
+    (dest / "data" / "sector_map.json").unlink()
     assert bj.verify() == 1
 
 
@@ -195,6 +194,6 @@ def test_the_manifest_is_not_what_verify_trusts(live):
     two disagree."""
     dest = bj.backup()
     manifest = json.loads((dest / "manifest.json").read_text())
-    assert "data/sector_history.json" in manifest["files"]
-    (dest / "data" / "sector_history.json").unlink()   # manifest still claims it
+    assert "data/sector_map.json" in manifest["files"]
+    (dest / "data" / "sector_map.json").unlink()   # manifest still claims it
     assert bj.verify() == 1

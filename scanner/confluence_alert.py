@@ -153,7 +153,7 @@ def _entry_session_day(e: dict) -> str:
 
     Dedup runs on the MARKET's calendar date, not UTC's: one AEDT ASX session
     runs 23:00–05:00 UTC — two UTC dates — so a UTC day key can log the same
-    alignment twice per session (same class as sectorbreadth._session_day).
+    alignment twice per session (one session-day per market-local calendar day).
     The stored `date` field stays a UTC timestamp; BOTH sides of the comparison
     convert to the market's day, or the boundary hour would just move instead
     of closing."""

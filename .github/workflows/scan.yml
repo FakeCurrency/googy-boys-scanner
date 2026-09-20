@@ -323,7 +323,7 @@ jobs:
           # Discord REMOVED 2026-08-27 (owner ruling) — its webhook env line
           # is gone from this block. Telegram + SMTP stay exported so the
           # router's remaining channels work the moment their secrets are
-          # configured; NOTICE-tier events (trade_review, sector_run, ...)
+          # configured; NOTICE-tier events (trade_review, scan_dry, ...)
           # push nowhere until the replacement channel lands.
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -462,14 +462,8 @@ jobs:
           # a run only ever stages/re-applies files it generated itself.
           # (SCANNED_MARKET is exported by the scan step above.)
           M="${SCANNED_MARKET:-all}"
-          # sector_breadth.json + sector_history.json + regime.json are SHARED,
-          # not per-market: one run recomputes only the market it scanned and
-          # MERGES it into the published file, so an ASX-only run must still
-          # stage the whole thing or the NASDAQ block it just carried forward is
-          # dropped. The history file is the only record the HORIZON trend column
-          # has — leave it unstaged and every session starts from day one forever.
-          # (regime.json has no such memory — it recomputes six months from bars
-          # every run — but it is merged the same way, so it stages the same way.)
+          # (the HORIZON / REGIME artefacts left this list on 2026-09-20 when
+          # both surfaces were removed entirely.)
           # data/scan_health.json (2026-07-29): the consecutive-dry-run counter
           # run.py keeps per market. It MUST be in this list — the whole point
           # is surviving the container across runs (a dry run's only diff can
@@ -477,9 +471,9 @@ jobs:
           # funnel_history.json (2026-07-30, owner-ruled Task 2): the append-only
           # funnel trend. SHARED, not per-market — one file carries all three
           # markets' columns, so an asx-only run must stage the whole file or
-          # the crypto rows it just carried forward are dropped (same rule as
-          # sector_breadth.json). Report-only; nothing reads it back.
-          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json public/data/sector_breadth.json data/sector_history.json data/scan_health.json public/data/regime.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json public/data/funnel_history.json data/history"
+          # the crypto rows it just carried forward are dropped. Report-only;
+          # nothing reads it back.
+          SHARED="public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json public/data/market_caps.json public/data/sector_map.json data/sector_map.json data/scan_health.json public/data/phasemap/alert_history.json journal/vivek_bot_book.json journal/vivek_bot_book.unassigned.json journal/confluence_state.json data/market_caps.json public/data/funnel_history.json data/history"
           if [ "$M" = "all" ]; then MK="asx nasdaq crypto"; else MK="$M"; fi
           PATHS="$SHARED"
           for m in $MK; do

@@ -21,7 +21,7 @@ without them:
 
   3. `assert_staged` is the house answer to silent-failure, and it is the
      WRONG answer where a no-op is legitimate. Two places here prove it: a
-     quiet confluence night, and an idempotent backfill re-merge. Asserting
+     quiet confluence night. Asserting
      must-change in either would fail on the normal case, which is how a gate
      gets deleted rather than fixed.
 """
@@ -109,7 +109,7 @@ def test_every_run_block_is_valid_shell(wf):
     A YAML parse proves the file is well-formed YAML, which says nothing about
     the shell inside the `run:` scalars, and a broken `if`/`for`/`fi` in there
     is only discovered by dispatching the workflow. For the manual ones
-    (close_position, backfill, test_alerts) that means discovering it at the
+    (close_position, test_alerts) that means discovering it at the
     moment you need them, which for a manual close is the moment you are
     already trying to record a real trade.
     """
@@ -351,107 +351,9 @@ def test_a_failed_specs_run_still_says_what_it_costs():
     assert "freshness" in tail.lower()
 
 
-# --------------------------------------------------------------------------
-# #55 — the backfill merge proves its own postcondition
-# --------------------------------------------------------------------------
-
-def _bf():
-    spec = importlib.util.spec_from_file_location(
-        "bf_hardening", ROOT / "scripts" / "backfill_sector_history.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-@pytest.fixture
-def history(tmp_path, monkeypatch):
-    from scanner import sectorbreadth
-    monkeypatch.setattr(sectorbreadth, "HISTORY_FILE",
-                        tmp_path / "sector_history.json")
-    return tmp_path
-
-
-def _rows(days, market="asx"):
-    return [{"d": f"2026-07-{d:02d}", "m": market, "r": 1,
-             "top": [{"s": "Consumer Discretionary", "rate": 0.11}],
-             "held": None} for d in days]
-
-
-def _park(tmp_path, rows, market="asx"):
-    p = tmp_path / "rows.json"
-    p.write_text(json.dumps({"market": market, "horizon": "", "rows": rows}),
-                 encoding="utf-8")
-    return str(p)
-
-
-def test_merge_only_verifies_the_write_landed(history):
-    bf = _bf()
-    rows = _rows((10, 11, 12))
-    assert bf.merge_only(_park(history, rows)) == 0
-
-
-def test_a_re_run_is_idempotent_and_must_not_be_treated_as_a_failure(history):
-    """THE reason this is not an assert_staged call.
-
-    merge_rows is documented idempotent, so a second run legitimately produces
-    a byte-identical file and stages nothing. A must-change gate would fail on
-    exactly the property the script advertises — so the postcondition asks
-    "does the file CONTAIN the reconstruction", which is true both times.
-    """
-    bf = _bf()
-    parked = _park(history, _rows((10, 11, 12)))
-    assert bf.merge_only(parked) == 0
-    assert bf.merge_only(parked) == 0
-
-
-def test_a_session_lost_between_the_merge_and_the_disk_is_caught(history):
-    """The failure the old code reported as "nothing to commit"."""
-    from scanner import sectorbreadth
-    bf = _bf()
-    rows = _rows((10, 11, 12))
-    assert bf.merge_only(_park(history, rows)) == 0
-    hist = sectorbreadth.load_history()
-    hist["rows"] = [r for r in hist["rows"] if r["d"] != "2026-07-11"]
-    sectorbreadth._write_json(sectorbreadth.HISTORY_FILE, hist)
-    assert bf._verify_merged(rows) == 1
-
-
-def test_rows_dropped_by_the_history_cap_are_excused_not_reported_lost(history):
-    """Truncation is legitimate, and must not read as data loss.
-
-    SECTOR_BREADTH_HISTORY_MAX keeps the NEWEST rows, so a long enough replay
-    can legitimately lose its oldest sessions off the far end. Reporting that
-    as a failed write would make a successful long backfill un-committable.
-    """
-    from scanner import sectorbreadth
-    bf = _bf()
-    rows = _rows((10, 11, 12))
-    # Only the newest survives — as the cap would leave it.
-    sectorbreadth._write_json(sectorbreadth.HISTORY_FILE,
-                              {"version": sectorbreadth.HISTORY_VERSION,
-                               "rows": _rows((12,))})
-    assert bf._verify_merged(rows) == 0
-
-
-def test_an_empty_parked_file_is_still_a_failure(history):
-    """A replay that produced nothing must not merge quietly and exit 0."""
-    bf = _bf()
-    assert bf.merge_only(_park(history, [])) == 1
-
-
-def test_the_backfill_commit_step_deliberately_has_no_assert_staged():
-    """Pinned as a DECISION, so it reads as considered rather than forgotten.
-
-    Every other committing workflow here has one. Adding it to this one would
-    fail every idempotent re-run; the postcondition inside merge_only is the
-    replacement, and this test is what stops someone "restoring consistency".
-    """
-    body = "\n".join(str(s.get("run", ""))
-                     for s in _load("backfill_history.yml")["jobs"]["backfill"]["steps"])
-    assert not [l for _, l in _code(body) if "assert_staged.sh" in l]
-    assert "--merge-only" in body
-    assert "set -e" in body
-
+# (#55 — the backfill merge's postcondition tests — left with
+#  scripts/backfill_sector_history.py and backfill_history.yml on 2026-09-20,
+#  when HORIZON was removed entirely.)
 
 # --------------------------------------------------------------------------
 # #56 — least privilege, and the pin rule that actually matters

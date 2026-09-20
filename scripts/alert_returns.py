@@ -41,7 +41,7 @@ which is exactly where a must-change gate would be the wrong tool.
 
 CONTEXT ENRICHMENT (2026-08-20, batch-100): entries additionally carry, when
 derivable, `sector` (day-independent; backfilled), `breadth200` (the market's
-above-200-day share ON base_day, exact from the committed regime series), and
+above-200-day share ON base_day — blank since the 2026-09-20 REGIME removal), and
 - same-day scans only, because a later day's grade stamped backwards would be
 look-ahead - the VIVEK leg's `grade_raw`, `score`, `is_product`. All stamps
 are BLANK-ONLY and frozen once written, exactly like the returns.
@@ -177,18 +177,13 @@ def _scan_day_rows() -> dict:
 
 
 def _breadth_series() -> dict:
-    """{market: {day: above200 share}} from the committed regime series —
-    day-indexed, so breadth CAN be backfilled exactly for any base_day."""
-    out = {}
-    try:
-        with open(os.path.join(ROOT, "public", "data", "regime.json"), encoding="utf-8") as fh:
-            mkts = json.load(fh).get("markets") or {}
-        for m, blk in mkts.items():
-            days, a200 = blk.get("days") or [], blk.get("above200") or []
-            out[m] = dict(zip(days, a200))
-    except (OSError, ValueError):
-        pass
-    return out
+    """{market: {day: above200 share}}. The source (public/data/regime.json,
+    the REGIME surface) was REMOVED on 2026-09-20 with the whole surface, so
+    this now returns nothing and `breadth200` stays BLANK on new entries —
+    rows stamped while it existed keep their frozen value (blank-only rule).
+    Kept as a seam so a future breadth series plugs in here without touching
+    enrich()."""
+    return {}
 
 
 def enrich(ledger: dict) -> int:

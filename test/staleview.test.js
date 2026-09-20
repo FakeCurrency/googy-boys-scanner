@@ -358,10 +358,6 @@ test("every data fetch in the deck's scripts goes through the timeout helper", (
     assert.ok(wrapped >= min, `${file}: expected >=${min} PM.fetchTimeout call(s), found ${wrapped}`);
     assert.ok(!/[^.\w]fetch\(`data\//.test(src), `${file} still fetches data/ without a timeout`);
   }
-  for (const file of ["horizon.js", "regime.js"]) {
-    const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", file), "utf8");
-    assert.ok(/PM\.fetchTimeout/.test(src), `${file} (deck strip) is not timeout-wrapped`);
-  }
 });
 
 // ---------------------------------------------------------------------------
@@ -912,11 +908,10 @@ test("the tour is still only built after first paint, off the critical path", ()
    cannot provide (2026-08-13).
    Measured before writing these: all four e2e shots drift 0.00% against a
    baseline cut from origin/main, because the fixture set has no
-   sector_breadth.json, no <m>_prices.json, no phasemap/spec files and a closed
+   <m>_prices.json, no phasemap/spec files and a closed
    book that is 6/6 `stop`. So none of the changed surfaces RENDER under the
    gate. The screenshots are not protection here; these assertions are. */
 // ---------------------------------------------------------------------------
-const HZ = fs.readFileSync(path.join(__dirname, "..", "public", "js", "horizon.js"), "utf8");
 const NAV = fs.readFileSync(path.join(__dirname, "..", "public", "js", "nav.js"), "utf8");
 // A CODE-ONLY view. The house rule: a ban on a construct must not be satisfied
 // or broken by prose. The comment that RECORDS why the badge was retired quotes
@@ -924,44 +919,6 @@ const NAV = fs.readFileSync(path.join(__dirname, "..", "public", "js", "nav.js")
 // fail on the explanation of the fix.
 const codeOnly = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const css = (f) => fs.readFileSync(path.join(__dirname, "..", "public", "css", f), "utf8");
-
-test("horizon's COMPACT strip no longer states capacity — one surface owns it", () => {
-  // data.book is a SCAN-TIME SNAPSHOT (only an ASX/NASDAQ scan rewrites
-  // sector_breadth.json). On 2026-08-13 it read "29/30 · 1 free" beside
-  // #bot-activity's live "20 of 30 slots · 10 free", and the stale one was the
-  // loud one, on the screen where you decide whether to stop hunting.
-  const strip = HZ.slice(HZ.indexOf("function renderStrip"), HZ.indexOf("// ── mount"));
-  assert.ok(strip.length > 100, "renderStrip could not be sliced");
-  assert.ok(!/bookHTML\(/.test(strip), "the compact strip is stating capacity again");
-  // The FULL panel must keep it — that is where it is labelled scan-time and
-  // sits beside the deployNote reconciliation it exists for.
-  assert.ok(/bookHTML\(/.test(HZ.slice(0, HZ.indexOf("function renderStrip"))) ||
-            /bookHTML\(data\.book\)/.test(HZ),
-    "the full board lost its capacity block too — that was not the fix");
-});
-
-test("and it does not state capacity in PROSE either", () => {
-  // notes[0] is the sustained-run line, but sectorbreadth also writes capacity
-  // notes into the same array. Dropping the chip while still printing "Only 1
-  // of 30 slots free" would have fixed nothing.
-  // Pinned by RUNNING the shipped noteHTML, not by grepping for the regex.
-  // A first pass asserted only that CAP_NOTE_RE existed and matched the right
-  // strings — and a mutation that replaced `notes.find(...)` with `notes[0]`,
-  // reinstating the exact bug, sailed through it. The constant was pinned; its
-  // USE was not.
-  const m = HZ.match(/const CAP_NOTE_RE = (\/.*\/[a-z]*);/);
-  assert.ok(m, "CAP_NOTE_RE is no longer a literal regex");
-  const noteHTML = new Function("esc", "CAP_NOTE_RE",
-    fnSrc(HZ, "noteHTML") + "; return noteHTML;")((x) => String(x), eval(m[1]));  // eslint-disable-line no-eval
-  const CAP = "Only 1 of 30 slots free - the book is nearly out of room.";
-  const RUN = "Consumer Discretionary has led on breadth for 19 sessions with nothing held.";
-  assert.equal(noteHTML({ notes: [CAP] }), "", "the strip is printing a capacity claim again");
-  assert.ok(noteHTML({ notes: [RUN] }).includes("19 sessions"),
-    "the filter is eating the sustained-run note, which is the strip's whole job");
-  assert.ok(noteHTML({ notes: [CAP, RUN] }).includes("19 sessions"),
-    "a capacity note must be SKIPPED, not make the whole line vanish");
-  assert.equal(noteHTML({}), "");
-});
 
 test("the mobile SCAN badge no longer publishes an uncorrected A+ count", () => {
   // It read 96 off <m>_prices.json while the page it links to read 52: that
@@ -1616,42 +1573,7 @@ test("the JOURNAL badge is INFORMATION (blue), not a standing alarm (red)", () =
     "the red base rule must remain for a badge that really does mean 'attention'");
 });
 
-test("HORIZON names the unclassified bucket for what it mostly is — display only", () => {
-  const HZ = fs.readFileSync(path.join(__dirname, "..", "public", "js", "horizon.js"), "utf8");
-  const secLabel = new Function(`const secLabel = ${extractConst(HZ, "secLabel")}; return secLabel;`)();
-  assert.strictEqual(secLabel("Unclassified"), "Products & unclassified");
-  assert.strictEqual(secLabel("unclassified"), "Products & unclassified", "case must not matter");
-  assert.strictEqual(secLabel("Materials"), "Materials", "a real sector is never relabelled");
-  assert.strictEqual(secLabel(""), "", "empty stays empty");
-  assert.ok(/esc\(secLabel\(b\.sector\)\)/.test(HZ), "the label map is not wired into the row");
-  assert.ok(!/secLabel/.test(HZ.slice(HZ.indexOf("streaks["))) || true);
-});
-
-
-// ── UI PASS 2026-08-18: deck clarity (context strip, colour, toolbar) ──────
-test("LOOK WIDER and NARROW read as ONE context card, not two competing ones", () => {
-  const hz = css("horizon.css"), rg = css("regime.css");
-  assert.ok(/\.hz-strip \{[^}]*border-radius: 14px 14px 0 0/s.test(hz),
-    "the horizon strip must form the TOP half of one card");
-  assert.ok(/\.hz-strip \{[^}]*border-bottom: none/s.test(hz));
-  assert.ok(/\.rg-strip \{[^}]*border-radius: 0 0 14px 14px/s.test(rg),
-    "the regime strip must form the BOTTOM half");
-});
-
-test("red means loss or danger — nothing else on the deck", () => {
-  // It was doing four jobs on one screen: losses, LOOK WIDER, NARROW and the
-  // stalled warning. A colour that means four things means none.
-  const hz = css("horizon.css"), rg = css("regime.css");
-  assert.ok(/\.hz-strip\.is-expand \{ border-left-color: var\(--blue\); \}/.test(hz),
-    "a sustained unheld run is information, not an alarm");
-  assert.ok(/\.rg-strip\.is-narrow \{ border-left-color: var\(--orange\); \}/.test(rg),
-    "a narrow tape is a market fact, not an alarm");
-  assert.ok(!/\.hz-strip\.is-expand \{ border-left-color: var\(--red\)/.test(hz));
-  assert.ok(!/\.rg-strip\.is-narrow \{ border-left-color: var\(--red\)/.test(rg));
-  // …and the states that DO mean trouble keep it
-  assert.ok(/is-warn \{ border-left-color: var\(--orange\); \}/.test(hz),
-    "the genuine warning state must keep its colour");
-});
+// (the HORIZON / REGIME strip pins that sat here left with the surfaces, 2026-09-20)
 
 test("the 13-chip toolbar is grouped by question, with nothing moved or hidden", () => {
   const st = css("styles.css");

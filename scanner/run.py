@@ -53,8 +53,8 @@ def _scan_health(market_key: str, published: bool, send=None) -> int:
     run is weather; SCAN_DRY_ALERT_RUNS in a row is an outage worth a NOTICE.
 
     The counter lives in config.SCAN_HEALTH_FILE, which scan.yml's SHARED
-    staging list commits — the same container-death lesson as sectorbreadth's
-    ping memory (journal/alert_state.json is NOT staged, so any state kept
+    staging list commits — the container-death lesson (journal/alert_state.json
+    is NOT staged, so any state kept
     there reads "never fired" every run). Firing EXACTLY at the threshold —
     `==`, not `>=` — is the whole dedupe: one ping per episode, no repeat
     while the outage drags on (the external /api/health monitor owns
@@ -140,12 +140,6 @@ def main() -> None:
     mover_inputs: dict[str, tuple] = {}
     MOVER_MIN_DVOL = getattr(config, "SECTOR_MOVER_MIN_DVOL",
                              {"asx": 1_000_000, "us": 10_000_000})
-    # Same idea, keyed by SCAN market rather than page: the sector-breadth
-    # surface needs this run's universe (the denominator) and results (the
-    # numerator) together, and it is computed after the sector tape is written
-    # so it can join the index changes that fetch already pays for.
-    breadth_inputs: dict[str, dict] = {}
-    regime_blocks: dict[str, dict] = {}
     # TOP100 #67. A market that THREW used to print one line and let main() run
     # to completion, so the process exited 0 — a scan that scanned nothing was
     # indistinguishable in CI from a scan that found nothing, which is the one
@@ -201,7 +195,6 @@ def main() -> None:
             frames = {t: df.tail(config.DATA_DAILY_BARS) for t, df in deep_frames.items()}
             if market_key in ("asx", "nasdaq"):
                 mover_inputs["us" if market_key == "nasdaq" else "asx"] = (frames, universe)
-                breadth_inputs[market_key] = {"universe": universe}
 
             # VIVEK (5.0-style 200 SMA reactions) -> <market>_vivek.json — the
             # only scan the app consumes.
@@ -217,35 +210,16 @@ def main() -> None:
             output.write_vivek_pair(vk, args.out, market_key)
             _scan_health(market_key, published=True)
             # Funnel history (owner-ruled Task 2): append this publish's
-            # counts to the report-only trend file. Same posture as regime
-            # below — a report artefact must never kill the scan, so the
-            # failure is named and the scan walks on.
+            # counts to the report-only trend file. A report artefact must
+            # never kill the scan, so the failure is named and the scan walks on.
             try:
                 from . import funnelhistory
                 funnelhistory.append(market_key, vk, args.out,
                                      trigger=funnelhistory.trigger_from_env())
             except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
                 print(f"  WARNING funnel history append failed: {e.__class__.__name__}: {e}")
-            if market_key in breadth_inputs:
-                breadth_inputs[market_key]["results"] = vk["results"]
             print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
-
-            # REGIME + RELATIVE STRENGTH (2026-07-28). Computed HERE, inside the
-            # market loop, because it reads `deep_frames` — five years of bars
-            # for every name, the largest object in the scan — and this is the
-            # only point at which they exist. Carrying them out to compute all
-            # markets together at the end would hold two full markets of bars
-            # alive at once to save nothing. Only the finished block travels.
-            # Report-only; a failure costs one panel, never the scan.
-            try:
-                from . import regime as _regime
-                if _regime.wanted(market_key):
-                    regime_blocks[market_key] = _regime.compute(
-                        market_key, deep_frames, universe,
-                        bench=_regime.fetch_benchmark(market_key))
-            except Exception as e:                          # noqa: BLE001
-                print(f"  regime [{market_key}]: skipped ({e})", flush=True)
 
             # Slim per-market companion (2026-07-20, perf): the journal page
             # only needs symbol -> price + grade/dir to mark positions, but was
@@ -339,40 +313,6 @@ def main() -> None:
           f"US {len(sec['markets']['us']['sectors'])} sectors"
           + (f" | carried {carried} field(s) forward" if carried else ""))
 
-    # SECTOR BREADTH + HORIZON (2026-07-28). Runs LAST of the sector steps so it
-    # can read the index tape just written above, and after every market's bot
-    # run so `held` reflects today's book. Report-only: nothing it computes
-    # reaches a trade decision. Best-effort — a failure here must never cost a
-    # scan, and the previous published file simply stands.
-    try:
-        from . import sectorbreadth as _breadth
-        ready = {m: d for m, d in breadth_inputs.items() if d.get("results") is not None}
-        payload = _breadth.update(ready, out_dir=args.out) if ready else None
-        for market, blk in ((payload or {}).get("markets") or {}).items():
-            if market not in ready:
-                continue        # carried forward from a previous run, not rescanned
-            hz = blk["horizon"]
-            print(f"  breadth [{market}]: leaders {', '.join(hz['leaders']) or '-'}"
-                  f" | book {blk['book']['open']}/{blk['book']['max_open']}"
-                  f"{' AT CAP' if blk['book']['at_cap'] else ''}"
-                  f"{'  >> LOOK WIDER' if hz['expand'] else ''}")
-            for note in hz["notes"]:
-                print(f"    ! {note}")
-    except Exception as e:
-        print(f"  breadth: skipped ({e})", flush=True)
-
-    # REGIME publish. The blocks were computed per-market above; this is only
-    # the merge-and-write, so a market that did not scan keeps its last read
-    # rather than being blanked.
-    try:
-        from . import regime as _regime
-        payload = _regime.publish(regime_blocks, out_dir=args.out)
-        for market, blk in ((payload or {}).get("markets") or {}).items():
-            if market in regime_blocks:
-                _regime.report(market, blk)
-    except Exception as e:
-        print(f"  regime: skipped ({e})", flush=True)
-
     # FX honesty: the ASX book is A$ while NASDAQ/crypto are US$ — the journal
     # converts ASX P&L at this rate so combined totals stop mixing currencies
     # at face value (~50% overstatement). Fail-soft: keep the last-good file.
@@ -457,7 +397,7 @@ def main() -> None:
 
     # TOP100 #67 — the exit, placed HERE rather than inside the loop on purpose.
     # Raising at the throw site would skip the sectors / breadth / HORIZON /
-    # REGIME / FX / bot_rules publishes below it, so one market's bad frame
+    # FX / bot_rules publishes below it, so one market's bad frame
     # would silently stop the OTHER markets' surfaces from updating: a fix that
     # costs more than the defect. Everything publishes first; the process then
     # reports what actually happened.

@@ -160,7 +160,7 @@ VIVEK_SCHEMA_VERSION   = 5
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
 # recs.js, mynames.js, journal.js, phasemap-shared.js, confluence_alert.py,
-# marketcaps/sectorcache/breadth/regime read ROW-level fields only — no plans.
+# marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
 # test/staleview.test.js proves isHighConviction passes on a lite-only plan.
@@ -515,88 +515,10 @@ VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 3
 
-# ── SECTOR BREADTH / HORIZON (2026-07-28, scanner/sectorbreadth.py) ───────────
-# REPORT-ONLY. None of these change which trades get taken; they decide what the
-# rotation surface can see and remember. Written after the July post-mortem, in
-# which an entire sector ran for four weeks while the only published sector
-# number (a RAW setup count, dominated by how many names each sector lists) said
-# nothing, and the book sat at its ceiling for 20 straight sessions unable to
-# act even if it had.
-SECTOR_BREADTH_ENABLED   = True
-#  • MIN_NAMES: a sector with fewer listed names than this is computed but never
-#    RANKED. Participation rate on a 3-name sector is 0% or 33% and would top
-#    every leaderboard on noise alone.
-SECTOR_BREADTH_MIN_NAMES = 15
-#  • TOP_N: how many sectors count as "leading" for the unheld-leaders alarm.
-SECTOR_BREADTH_TOP_N     = 3
-#  • HISTORY_MAX: rows kept in data/sector_history.json (one per market per DAY,
-#    ~2 markets x 250 sessions = a year at 500). This file is the ONLY long
-#    sector memory in the system — the 7-day PhaseMap archive was too short to
-#    reconstruct the July rotation after the fact — so keep it generous.
-SECTOR_BREADTH_HISTORY_MAX = 2000
-#  • PUBLISH_DAYS: how much of that history is republished for the page to plot.
-SECTOR_BREADTH_PUBLISH_DAYS = 180
-#  • RUN_ALERT: sessions a top-N sector may lead on breadth with NOTHING held
-#    before the surface stops describing it and starts shouting. One day is a
-#    coincidence and the page should stay calm; a run this long is a rotation
-#    being missed in progress, which is the whole reason this module exists.
-#    July ran nineteen. Report-only -- it changes the volume, never the trades.
-SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
-#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
-#    no live channel) instead of only colouring the page. A
-#    surface you have to open to be warned by is a surface that warns you after
-#    you already looked, which in July was never. Rate-limited through
-#    journal/alert_state.json so a 19-session run pings once, not nineteen times.
-SECTOR_BREADTH_RUN_ALERT_PUSH = True
-#  • RUN_ALERT_REPEAT_DAYS: re-ping an already-alerted sector only after this
-#    many days. 0 = never repeat while the run continues.
-SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS = 7
-
-# ── REGIME / RELATIVE STRENGTH (2026-07-28, scanner/regime.py) ────────────────
-# REPORT-ONLY, same as breadth above: nothing here reaches decide(). This block
-# is the OTHER half of the July post-mortem. Breadth answers "which sector is
-# setting up today"; this answers "is the market actually as bad as the index
-# says, and who is beating it" — the two things the owner could feel but could
-# not read anywhere. Every number below is arithmetic on daily closes, so the
-# full history recomputes on each run: no state file, no backfill, correct on
-# the first execution and able to describe JUNE.
-REGIME_ENABLED = True
-#  • DAYS: published sessions per market (~6 months). Long enough that a run
-#    that started in June is visible in full; the cost is only JSON size.
-REGIME_DAYS = 126
-#  • RET_WINDOWS: (fast, slow) return lookbacks in sessions, ~1 and ~3 months.
-#    The fast one is what "consumer discretionaries ran for a month" means.
-REGIME_RET_WINDOWS = (21, 63)
-#  • HL_WINDOW: lookback for new-highs-minus-new-lows.
-REGIME_HL_WINDOW = 20
-#  • FAST_SMA: the shorter participation line. The slow one is deliberately
-#    VIVEK_SMA (200) — the engine's OWN level — so "above the average" on this
-#    page means the same thing it means in a setup.
-REGIME_FAST_SMA = 50
-#  • TOP_N: how many sectors count as leading on relative strength, and the
-#    membership the rs_streak counter tests against.
-REGIME_TOP_N = 3
-#  • BENCHMARK: the cap-weighted index per market, used ONLY to state the
-#    divergence between it and the equal-weight median name. Markets absent
-#    from this map are skipped entirely (crypto has no sectors to rank).
-#    The relative-strength maths never uses it — the benchmark for rs21/rs63 is
-#    the market's own median name, which is survivorship-consistent with the
-#    numerator and cannot fail to download.
-REGIME_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC"}
-#  • RISK_ON/RISK_OFF_ABOVE200: the two cut points of the three-way state read
-#    (BROAD / MIXED / NARROW). Coarse on purpose — a count of names above a
-#    moving average does not support a finer scale than thirds.
-REGIME_RISK_ON_ABOVE200 = 0.55
-REGIME_RISK_OFF_ABOVE200 = 0.35
-#  • DIVERGENCE_MIN: how far the median name and the index must part before the
-#    page says so. Below this they are the same story told twice.
-REGIME_DIVERGENCE_MIN = 0.02
-#  • MIN_DAY_COVERAGE: a date on which fewer than this share of the market's
-#    best-covered session has a bar is a pseudo-session (a mis-dated bar, a
-#    half day, a foreign holiday) and is dropped rather than published as a day
-#    the market vanished.
-REGIME_MIN_DAY_COVERAGE = 0.5
+# HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
+# on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
+# SECTOR_BREADTH_* / REGIME_* blocks that lived here are gone with the engines;
+# the bot's 3-per-sector correlation cap above is unrelated and stays.
 
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
@@ -773,12 +695,6 @@ ALERT_SEVERITY = {
     "daily_report":    "INFO",
     "health":          "WARNING",
     "info":            "INFO",
-    # HORIZON's sustained-run alarm (2026-07-28, scanner/sectorbreadth.notify).
-    # Its own tier because neither existing one fits: INFO is silent, and the
-    # module is REPORT-ONLY, so calling a rotation a WARNING would put it beside
-    # order rejections and circuit breakers in the same feed and at the same
-    # volume. Nothing is wrong when this fires -- something is HAPPENING.
-    "sector_run":      "NOTICE",
     # A position was opened carrying a review flag (2026-07-28, owner: "Flag
     # this in the future so i can verify whether claude or I should take the
     # position or not"). Same tier and the same reason: the trade passed every
@@ -851,13 +767,9 @@ ALERT_RATE_LIMITS = {
     "daily_report":    82800,    # max 1 per 23h
     "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
-    # 0 = the router never suppresses this one; sectorbreadth.notify owns the
-    # dedupe entirely (per market AND per sector, memory in the history file).
-    # A limit here would be per EVENT TYPE, so the first market to fire would
-    # silence the second — and scan.yml runs the markets sequentially inside a
-    # single job, which makes that the normal case rather than an edge one.
-    "sector_run":      0,
-    # 0 for the same per-EVENT-TYPE reason, plus a sharper one: this fires only
+    # 0 = the router never suppresses this one (per-EVENT-TYPE limits would let
+    # the first market to fire silence the second — scan.yml runs the markets
+    # sequentially inside a single job). Plus a sharper reason: this fires only
     # when a flagged position was actually OPENED, which is inherently one-shot
     # -- a position is opened once and never again -- so there is no storm to
     # limit. What a limit WOULD do is silently drop the second flagged open of a
@@ -1133,7 +1045,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # cuts both ways: every ASX scan of the morning session ran dry and nothing
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
-# same lesson as sectorbreadth's ping memory), resets on the first successful
+# same container-death lesson as scan_health), resets on the first successful
 # publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"

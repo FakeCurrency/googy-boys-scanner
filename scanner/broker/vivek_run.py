@@ -1297,7 +1297,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         #      is keyed per EVENT TYPE and scan.yml runs the markets sequentially
         #      in ONE job: any nonzero limit silently swallows the second
         #      market's breach, which is the message you cannot afford to lose.
-        # So the dedupe lives where `sector_run`'s does — in the file the same
+        # So the dedupe lives where scan_health's does — in the file the same
         # run commits — keyed by day AND kind AND (by construction, since the
         # per-market book files are canonical) market. The stamp is written only
         # after a channel accepts, so a failed send retries on the next scan.

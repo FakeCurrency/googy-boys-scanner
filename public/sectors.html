@@ -21,8 +21,6 @@
   <link rel="stylesheet" href="css/styles.css?v=113" />
   <link rel="stylesheet" href="css/status.css?v=1" />
   <link rel="stylesheet" href="css/sectors.css?v=8" />
-  <link rel="stylesheet" href="css/horizon.css?v=4" />
-  <link rel="stylesheet" href="css/regime.css?v=4" />
   <script src="js/nav.js?v=22"></script>
   <script src="js/status.js?v=3"></script>
   <script src="js/sw-register.js?v=4" defer></script>
@@ -45,17 +43,6 @@
       <p class="sec-sub" id="sec-sub">Loading…</p>
     </div>
 
-    <!-- HORIZON: sector participation vs what the book holds vs whether it has
-         room (js/horizon.js). Above the tape on purpose — the July rotation was
-         missed with all of the data below already on the page. -->
-    <section class="hz-panel" id="horizon-panel" hidden></section>
-
-    <!-- REGIME: participation, the median-name-vs-index divergence, and sectors
-         ranked by RELATIVE strength with their coiling counts (js/regime.js).
-         Below HORIZON deliberately — HORIZON is today's actionable board, this
-         is the six months of context that explains why it looks like it does. -->
-    <section class="rg-panel" id="regime-panel" hidden></section>
-
     <!-- two markets side by side: ASX (left) / US (right) -->
     <div class="sec-grid">
       <section class="sec-col" id="col-asx"></section>
@@ -66,7 +53,5 @@
   </main>
 
   <script src="js/sectors.js?v=11"></script>
-  <script src="js/horizon.js?v=8"></script>
-  <script src="js/regime.js?v=5"></script>
 </body>
 </html>

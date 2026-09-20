@@ -360,12 +360,12 @@ jobs:
           # very sibling it was queued behind, which is the failure this whole
           # job was written to prevent. Two passes now:
           #   (a) run-level, for the members still scoped at workflow level
-          #       (Confluence alert, Backfill sector history - the latter was
-          #       simply missing from the list, so a backfill holding the mutex
-          #       was invisible here);
+          #       (Confluence alert; the since-removed backfill workflow was
+          #       once simply missing from this list, so a run holding the
+          #       mutex was invisible here);
           #   (b) job-level, for the job-scoped members: a started run whose
           #       scan/crypto/close job has not been picked up yet.
-          WATCHED='"Scheduled scan","Crypto bot (24/7 paper)","Confluence alert (post-nightly)","Close position (manual)","Backfill sector history"'
+          WATCHED='"Scheduled scan","Crypto bot (24/7 paper)","Confluence alert (post-nightly)","Close position (manual)"'
           mutex_pending() {
             n=$(gh run list --limit 60 --json status,workflowName \
               --jq "[.[] | select(.status == \"queued\" or .status == \"waiting\"

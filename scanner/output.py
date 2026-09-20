@@ -8,7 +8,7 @@ two reasons that were each a live defect (TOP100 #62 and #64).
 That is not JSON: ``JSON.parse`` rejects it and so does ``response.json()``, so
 ONE non-finite value anywhere in a market payload takes the ENTIRE page down
 rather than showing one blank cell. ``_finite`` walks the payload first and maps
-every non-finite float to ``null`` — the same choice ``regime._r`` and
+every non-finite float to ``null`` — the same choice the (since-removed) regime/breadth publishers and
 ``vivek_backtest`` already made locally — and ``allow_nan=False`` then stands
 behind it as a backstop, so anything that evades the walk fails LOUDLY at write
 time instead of silently at load time in the browser. Sanitising first is what
@@ -202,7 +202,7 @@ def write_vivek_pair(vk: dict, out_dir: str | pathlib.Path, market: str) -> path
     VPS decision is partly about.
 
     ``indent=None, separators=(",", ":")`` is the house form already used by
-    ``regime.publish`` and ``sectorbreadth.update``; this brings the oldest and
+    the report-only publishers; this brings the oldest and
     largest publisher into line with the newest ones. ``ensure_ascii`` and the
     trailing-newline behaviour are deliberately left alone so the diff is the
     whitespace and nothing else.

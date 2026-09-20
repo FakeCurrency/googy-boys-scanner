@@ -338,8 +338,6 @@ _ARTEFACTS = [
     ("public/data/bot_rules.json",              {}, True),
     ("public/data/vivek_backtest.json",         {}, False),
     ("public/data/phasemap/alert_history.json", {"indent": 1}, True),
-    ("public/data/regime.json",                 {"indent": None, "separators": (",", ":")}, True),
-    ("public/data/sector_breadth.json",         {"indent": None, "separators": (",", ":")}, True),
     ("journal/confluence_state.json",           {"sort_keys": True}, True),
     # spec_run's two writes — converted after the first pass had classified them
     # as "already atomic, leave alone". Atomic was only #64's half; both kept

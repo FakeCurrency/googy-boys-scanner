@@ -69,10 +69,9 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        (notify/alerts/pulse + broker paper_run/bracket_order/
                        reconcile DELETED 2026-07-20 — see git history)
   universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
-  sectorbreadth.py     HORIZON — sector participation + rotation (see below).
-                       REPORT-ONLY: it never touches which trades get taken.
-  regime.py            REGIME — participation, index-vs-median divergence,
-                       sector relative strength, basing counts. Also REPORT-ONLY.
+  conviction.py        HIGH CONVICTION — the one four-cell definition every
+                       Python reader imports; app.js/chart.js carry the same
+                       table as a JSON literal, parity test-pinned (2026-09-20)
   broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
                        across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
                        kill_switch (+ bybit_client/alpaca_client for its
@@ -89,8 +88,6 @@ journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
   reco_note.py         daily auto-written commentary (reco_note.yml)
-  backfill_sector_history.py   replays the engine backwards to rebuild
-                       data/sector_history.json (backfill_history.yml)
   resize_book_notional.py      one-off: restates the OPEN book at the current
                        fixed notional. Dry by default, idempotent, --apply
 ```
@@ -113,7 +110,6 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | stop_watcher.yml | */5 cron, TICK LOOP per run | curls /api/tick (cloud watcher for the KV manual journal). REWRITTEN 2026-08-27: GitHub coalesces the 5-min cron to ~31 starts/day (gaps to 115 min, measured), so each run now fires 4 ticks at 5-min spacing (~15 min runner time; repo is public so minutes are free), and kill_switch.yml + crypto_bot.yml each fire a best-effort piggyback tick per run — combined ≈ a tick every ~8 min real-world. Verdict taxonomy unchanged: 503 green+warn (setup gap), 000 green+warn per tick, continue the loop (watchdog owns the alarm), 401/5xx fatal immediately. All behaviourally pinned in `test_workflow_hardening.py` |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
-| backfill_history.yml | manual | replays the real engine backwards to rebuild `data/sector_history.json` (`scripts/backfill_sector_history.py`). `dry_run` defaults TRUE — run that first, the printed post-mortem IS the deliverable. In the `scan` group because it writes a file every scan also writes. Not scheduled: once the gap is filled there is nothing left to fill (2026-07-28, see HORIZON → BACKFILL) |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
 | morning_plays.yml | backstop crons in UTC behind the cron-job.org ladder: `50 7`+`50 8` (ASX, after the 06:37 closing scan) · `50 21`+`50 22` (NASDAQ+Crypto, after the 21:07 post-close scan), Mon–Fri — gated on POST-CLOSE data, see MORNING PLAYS | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
 | ops.yml | manual only | **Claude's standing access (2026-09-10, owner: "you should be able to set up jobs and all to make this hands off").** `scripts/ops.py` runs on a runner (which can reach APIs the cloud session's proxy refuses — api.cron-job.org and api.cloudflare.com both answer HTTP 000 from a session) and Claude dispatches it via the GitHub MCP with an `action` (`cronjob-list/get/history/create/update/delete`, `cf-list-vars/set-var/delete-var/redeploy`) + JSON `args`, then reads the job log. Secrets: `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`. REDACTED OUTPUT IS THE ONLY SECURITY PROPERTY: secret values, caller-supplied values and `key=` query params are masked, and `cf-list-vars` prints names + types NEVER values (Cloudflare returns plain_text values in the clear; `GH_DISPATCH_TOKEN` is stored as Text). Read-only to the repo, no git, own concurrency group, no assert_staged/WATCHDOG. Note the one honest limit: `args` for `cf-set-var` carries the value through the run's dispatch inputs, which GitHub records. Pins: `tests/test_ops.py` |
@@ -908,7 +904,7 @@ opening GitHub.
 
 ---
 
-## HORIZON — the rotation surface (2026-07-28)
+## HORIZON — the rotation surface (2026-07-28) — REMOVED ENTIRELY 2026-09-20, HISTORY ONLY
 
 **Why it exists.** Owner post-mortem: ASX consumer discretionaries ran for four
 weeks while the market was "SHIT to trade", and the book held none of them. Two
@@ -1037,7 +1033,7 @@ the owner's call, not a refactor. Keep it that way.
     scoped to the market in hand, so a crypto-only weekend cannot wipe ASX
     memory. Report-only: it changes what gets SAID, never what gets taken.
 
-### BACKFILL — filling the memory backwards (2026-07-28)
+### BACKFILL — filling the memory backwards (2026-07-28) — REMOVED 2026-09-20, HISTORY ONLY
 
 `scripts/backfill_sector_history.py` + `.github/workflows/backfill_history.yml`.
 History only started being written on 2026-07-28, a week after the ASX Consumer
@@ -1083,7 +1079,7 @@ on frames truncated to each session — and writes rows marked `"r": 1`.
 
 ---
 
-## REGIME — is the index telling the truth? (2026-07-28)
+## REGIME — is the index telling the truth? (2026-07-28) — REMOVED ENTIRELY 2026-09-20, HISTORY ONLY
 
 The owner's framing: *"this scanner and this scanner alone is INSUFFICIENT."*
 HORIZON answers "which sector is running"; REGIME answers the question that sits
@@ -2208,6 +2204,56 @@ meant** — the failure mode that survives review because the value looks fine.
    the safe path (drop the dir probe, lean on WATCHDOG_RUNS's run-history
    probe — which deliberately goes SILENT on a failed latest run, a real
    trade-off on a CRITICAL alarm) needs the owner's sign-off.
+
+## HORIZON + REGIME — REMOVED ENTIRELY (2026-09-20)
+
+Owner, pointing at the LOOK WIDER / NARROW strips on the deck: *"Get rid of
+it entirely, rip out the guts of it, it's a waste of space and i never look
+at it."* Scope confirmed as "Everything": the two deck strips, the two
+Sectors-page boards, both Python engines (`scanner/sectorbreadth.py`,
+`scanner/regime.py`), their `SECTOR_BREADTH_*` / `REGIME_*` config blocks,
+the `run.py` wiring, `public/data/sector_breadth.json` + `regime.json` +
+`data/sector_history.json` (and their scan.yml SHARED-list and backup-list
+entries), the backfill (`scripts/backfill_sector_history.py` +
+`backfill_history.yml`), the `sector_run` NOTICE event, `public/js/horizon.js`
++ `regime.js` + both CSS files, and every test that pinned them
+(`test_sector_breadth/test_regime/test_backfill_sector_history.py`,
+`test/regime_stretch.test.js`, the #55 backfill block in
+`test_workflow_hardening.py`, the #88 suite in `statekeep.test.js`, the
+strip pins in `staleview.test.js`). **`sectors.html` STAYS** — it is the
+NEWS & MARKETS page (`js/sectors.js`, movers, calendar) with its own
+content; only the two panels came off it, and the NEWS nav tab is untouched.
+**The bot's 3-per-sector correlation cap (`sector_map.json` / `sectorcache`)
+is unrelated and stays** — it is a signal path, not a report surface.
+`alert_returns._breadth_series()` now returns `{}` so `breadth200` stays
+blank on new ledger rows (frozen values on old rows survive under the
+blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
+are kept as HISTORY of code that no longer exists — do not re-add any of it;
+`git log -- scanner/sectorbreadth.py` at the removal commit has the engines.
+
+## HIGH CONVICTION — the four-cell rule (2026-09-20)
+
+Owner ruling off the 600-name-per-market long-only replay (8,239 trades):
+**HIGH CONVICTION = grade A/A+ with an ARMED plan in any of 1W reclaim
+(+0.299R n=691), 1W break (+0.161R n=122), 3D reclaim (+0.196R n=1309) or
+1D break (+0.091R n=281)** — together n=2403, +0.212R, PF 1.47. The old rule
+(a 1W reclaim that is A/A+ OR has >= 2 structural targets) was one cell plus
+a structure branch that measured −0.067R and was dropped ("Drop it"). A
+name fires on up to three cells and wears **one 🎯 per cell** ("if it fires
+on all 3 have 3"). ONE definition: `scanner/conviction.py` (`HC_CELLS`,
+`conviction_cells/count`, `is_high_conviction`, `trade_cell` for backtest
+trades); `morning_plays.py` (digest widened to match, `SYM 🎯🎯` lines, most
+cells first), `edge_rosters.py` and `vivek_backtest.py` IMPORT it;
+`app.js convictionCells`/`hiconvBadge` and `chart.js convictionCells` carry
+the same table as a JSON literal that `tests/test_conviction.py` parses out
+of the shipped files and compares to `HC_CELLS`. The backtest report now
+records `conviction_rule` + `by_conviction_cell_long`; `system-backtest.js`
+labels a pre-2026-09-20 report as the OLD rule instead of dressing it in the
+new text. **DISPLAY ONLY**: nothing under `scanner/broker/` imports it
+(test-pinned fence) — aligning the paper bot to these cells, and the owner's
+"let's open it to shorts too", are trade changes awaiting his explicit word
+after seeing the numbers (every short cell is negative; HC-cell shorts
+n=793 −0.360R PF 0.43).
 
 ## AI BOT — REMOVED ENTIRELY (2026-09-17)
 

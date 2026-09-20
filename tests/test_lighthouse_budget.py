@@ -283,7 +283,7 @@ def test_the_payload_url_list_is_DERIVED_not_hard_coded(src: str) -> None:
     """A hard-coded manifest is a list that silently stops being complete.
 
     The URLs come out of the run's own `network-requests` audit, which records
-    404s too -- so the unfixtured files (phasemap, regime, backtest, prices) are
+    404s too -- so the unfixtured files (phasemap, backtest, prices) are
     counted at their REAL size even though the gate served them as misses, and a
     new /data/ file the page starts fetching is counted the day it lands with
     nothing to remember to update.

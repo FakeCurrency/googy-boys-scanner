@@ -95,7 +95,7 @@ def test_bookkeeping_failure_cannot_kill_the_scan(health, monkeypatch, capsys):
 
 
 def test_the_event_is_registered_everywhere_it_needs_to_be():
-    """Same shape as sector_run's routing pin: a key missing from the router's
+    """A routing pin: a key missing from the router's
     fallback tables is not an error, it is a silent severity DOWNGRADE."""
     from scanner.broker import alert_router as ar
     assert ar.get_severity("scan_dry") == "NOTICE"

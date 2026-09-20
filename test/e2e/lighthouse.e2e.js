@@ -26,7 +26,7 @@
  *
  * WHAT IS AND IS NOT COVERED. Covered: the weight and layout stability of the
  * COMMIT -- js, css, fonts, markup, and the panels the fixture set feeds. NOT
- * covered: the phasemap, regime, backtest and prices panels, whose payloads
+ * covered: the phasemap, backtest and prices panels, whose payloads
  * have no fixture and 404 here, so a CLS regression inside one of them is
  * invisible to this gate (screenshot-diff carries the same blind spot for the
  * same reason -- widen it by adding fixtures, in both places at once).

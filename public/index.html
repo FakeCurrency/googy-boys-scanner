@@ -22,8 +22,6 @@
   <link rel="stylesheet" href="css/styles.css?v=113" />
   <link rel="stylesheet" href="css/status.css?v=1" />
   <link rel="stylesheet" href="css/eyes.css?v=4" />
-  <link rel="stylesheet" href="css/horizon.css?v=4" />
-  <link rel="stylesheet" href="css/regime.css?v=4" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -135,21 +133,6 @@
       <div class="deck-bot" id="bot-activity" hidden></div>
     </section>
 
-    <!-- HORIZON strip (js/horizon.js): the day's leading sectors BY
-         PARTICIPATION RATE, how many of each the book holds, and whether it has
-         room left. Sits under the deck because the July Consumer Discretionary
-         rotation was missed with every underlying number already published —
-         just never as "leading, and you hold none of it". -->
-    <section class="hz-strip" id="horizon-strip" hidden aria-label="Sector horizon"></section>
-
-    <!-- REGIME strip (js/regime.js): participation, whether the index is
-         understating the tape, and which sector is beating the market median —
-         with how many straight sessions it has been doing it. HORIZON above
-         says what is set up today; this says what has been WORKING, which is
-         the half of "the market was shit but consumer discretionaries ran"
-         that nothing on this page could previously express. -->
-    <section class="rg-strip" id="regime-strip" hidden aria-label="Market regime"></section>
-
     <!-- PULSE removed 2026-07-03 (owner: unused). The macro data still
          generates server-side; restore this section + the renderPulse call
          guards in app.js to bring it back. -->
@@ -202,7 +185,5 @@
   <script src="js/cache.js?v=2"></script>
   <script src="js/eyes-store.js?v=2"></script>
   <script src="js/app.js?v=126"></script>
-  <script src="js/horizon.js?v=8"></script>
-  <script src="js/regime.js?v=5"></script>
 </body>
 </html>

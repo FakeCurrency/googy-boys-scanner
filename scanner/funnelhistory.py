@@ -15,7 +15,7 @@ never influences what the pipeline does. ``tests/test_funnel_history.py``
 pins both directions.
 
 Shape (columnar per market, to keep the committed file small — the same
-reasoning as ``sector_breadth.json``'s ``series`` block)::
+reasoning the removed sector_breadth.json ``series`` block used)::
 
     {"schema_version": 1, "updated_at": "...",
      "markets": {"asx": {"t": [...iso...], "scanned": [...],
