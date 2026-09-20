@@ -15,6 +15,15 @@ on:
   schedule:
     - cron: "0 8 * * 0"        # Sunday 08:00 UTC ≈ 18:00 Melbourne — markets shut
   workflow_dispatch:
+    inputs:
+      vivek_limit:
+        description: "Names per market for the VIVEK walk-forward (60 = the scheduled default; bigger = better evidence, longer run)"
+        required: false
+        default: "60"
+      vivek_period:
+        description: "History replayed per name"
+        required: false
+        default: "5y"
 
 permissions:
   contents: write
@@ -26,7 +35,7 @@ concurrency:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -54,9 +63,22 @@ jobs:
         continue-on-error: true
         run: python -m scanner.spec_backtest --market asx --period 5y
 
-      - name: VIVEK walk-forward backtest (5y, all markets)
+      # The sample size is dispatchable (2026-09-20). TOP100 #58 recorded that
+      # 60 names is a thin basis for the claim the deck makes off this file;
+      # a scheduled run keeps 60 so the weekly cadence is unchanged, and a
+      # manual run can ask for a far larger slice when the evidence matters.
+      # _sample() takes an even stride over the sorted universe, so a bigger
+      # limit widens the same spread rather than reaching further into one
+      # corner of the alphabet.
+      - name: VIVEK walk-forward backtest (all markets)
         continue-on-error: true
-        run: python -m scanner.vivek_backtest --market all --limit 60 --period 5y
+        env:
+          VLIMIT: ${{ github.event.inputs.vivek_limit }}
+          VPERIOD: ${{ github.event.inputs.vivek_period }}
+        run: |
+          set -o pipefail
+          python -m scanner.vivek_backtest --market all \
+            --limit "${VLIMIT:-60}" --period "${VPERIOD:-5y}"
 
       - name: Commit & push refreshed proof records
         run: |
