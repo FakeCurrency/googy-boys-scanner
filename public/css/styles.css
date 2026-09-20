@@ -2733,3 +2733,27 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 /* An empty chip container must not leave an orphan divider floating. */
 .tb-line > .tb-chips:empty { margin-left: 0; padding-left: 0; }
 .tb-line > .tb-chips:empty::before { display: none; }
+
+/* ── SYSTEM page: live backtest evidence (2026-09-20) ────────────────────────
+   Owner: "Every time we run a back test I want the results to be seen on the
+   HOW THE SYSTEM works page." These plays get taken on real money, so the
+   panel's job is to be READ, not to look impressive.
+   Only expectancy is coloured. Win rate deliberately is not: a 45% win rate on
+   a positive R is a good system, and colouring it red would teach the wrong
+   lesson on every read. */
+.bt-h { margin: 18px 0 2px; font-size: 1rem; }
+.bt-when { font-weight: 400; font-size: .78rem; color: var(--muted); }
+.bt-lead { margin: 2px 0 6px; color: var(--text-2); }
+.bt-cov { margin: 2px 0 10px; font-size: .82rem; color: var(--muted); }
+.bt-warn {
+  margin: 8px 0 14px; padding: 8px 12px; font-size: .84rem;
+  color: var(--text-2); border-left: 3px solid var(--amber, #ff9f0a);
+  background: rgba(255,159,10,.07); border-radius: 0 8px 8px 0;
+}
+.bt-t { margin-bottom: 14px; }
+.bt-t td:nth-child(n+2), .bt-t th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+.bt-note { font-weight: 400; font-size: .76rem; color: var(--muted); }
+.bt-none { color: var(--muted); font-size: .85rem; font-style: italic; }
+.bt-pos  { color: var(--green); font-weight: 700; }
+.bt-neg  { color: var(--red);   font-weight: 700; }
+.bt-flat { color: var(--muted); }

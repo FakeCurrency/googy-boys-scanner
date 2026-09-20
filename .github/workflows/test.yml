@@ -150,6 +150,8 @@ jobs:
         run: node test/close_all.test.js
       - name: Deep chart history tests (stitched windows, reverse switch)
         run: node test/deep_history.test.js
+      - name: System page live backtest panel
+        run: node test/system_backtest.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
         run: node test/journal_stale.test.js
       - name: Journal money-path tests (TOP100 #25/#26/#30/#33, 22)

@@ -14,7 +14,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=112" />
+  <link rel="stylesheet" href="css/styles.css?v=113" />
   <link rel="stylesheet" href="css/status.css?v=1" />
   <style>
     /* doc-local layout — everything else inherits the app theme */
@@ -163,7 +163,8 @@
         <tr><td><span class="pill-w">WATCH</span></td><td>Informational</td><td>—</td></tr>
       </table>
       <p>Low R:R demotes a grade. <strong>High Conviction 🎯</strong> = a Weekly reclaim that’s A/A+ or has strong
-        structure — the best cell in the walk-forward backtest (~65% win, +0.85R avg).</p>
+        structure — the best cell in the walk-forward backtest. This line used to quote fixed numbers; it now
+        points at <a href="#backtest">section 9</a>, which reads whatever the latest run actually produced.</p>
     </section>
 
     <!-- ═══════════════ 5 · BOT RULEBOOK ═══════════════ -->
@@ -247,6 +248,18 @@
     </section>
 
     <!-- ═══════════════ 8 · STORAGE MAP ═══════════════ -->
+    <section class="sys" id="backtest">
+      <h2>9 · Backtest evidence <span class="who">(live from the published reports)</span></h2>
+      <p>Every backtest run lands here. Nothing on this page is typed in by hand — if a number below
+        looks wrong, the run produced it, and the fix is a better test rather than a better sentence.</p>
+      <p class="bt-warn">Read these as evidence, not as a promise. Each replay covers a SAMPLE of the
+        market, the history is survivor-biased (delisted names are simply absent), and a walk-forward
+        replay cannot model the fill you would really have got. The sample sizes are printed below so
+        you can weigh them.</p>
+      <div id="sys-backtest"><p class="bt-none">Loading the latest reports…</p></div>
+    </section>
+
+    <!-- ═══════════════ 8 · STORAGE ═══════════════ -->
     <section class="sys" id="storage">
       <h2>8 · Storage map — who writes what</h2>
       <table class="sys-t">
@@ -282,10 +295,18 @@
       <p>A walk-forward backtest replays the <em>real engine</em> bar-by-bar (causal, pessimistic intrabar fills:
         stop checked before target). Headline findings that set today’s rules:</p>
       <ul>
-        <li>Long-only ex-NASDAQ ≈ <strong>+0.46R/trade</strong>, PF ≈ 2.0, ~56% win.</li>
-        <li><strong>Weekly reclaim</strong> is the cleanest cell (~65% win, +0.85R, PF ≈ 3.3) → bot prefers 1W + reclaim.</li>
-        <li>Shorts ≈ <strong>−0.5R/trade everywhere</strong> → long-only. Retests ~flat → skipped. A ≈ breakeven → A+ only.</li>
+        <li><strong>Long only.</strong> Shorts ran consistently negative, so the bot takes none.</li>
+        <li><strong>Weekly reclaim is the best cell</strong>, which is what High Conviction 🎯 selects for,
+          and why the bot prefers 1W + reclaim.</li>
+        <li><strong>A+ only, retests skipped.</strong> Grade A came out around breakeven and the retest
+          trigger came out roughly flat.</li>
       </ul>
+      <p class="bt-warn">The figures that used to sit in this list were typed in from an early run and
+        could not be checked against anything published. They are gone. <a href="#backtest">Section 9</a>
+        now reads the current reports, and the numbers there are whatever the latest run produced —
+        including where that is less flattering than these rules imply. Note also that the original
+        long-only claim was made <em>excluding NASDAQ</em>, while the published replay includes it, so the
+        two were never measuring the same population.</p>
       <p>Forward evidence accrues in the journal’s <strong>Edge Tracker</strong> (expectancy per setup cell from real
         closed trades — needs ~20 per cell to mean anything) and refreshes automatically: weekly (canonical) + monthly (long-only).</p>
     </section>
@@ -307,6 +328,7 @@
 
   <script src="js/nav.js?v=22"></script>
   <script src="js/status.js?v=3"></script>
+  <script src="js/system-backtest.js?v=1"></script>
   <script>
   /* Fix-10 #7: scan-coverage panel — Range-read the first 2KB of each scan
      file (the header fields precede the results array), pull universe_size +
