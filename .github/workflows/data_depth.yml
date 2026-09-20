@@ -42,6 +42,10 @@ on:
         description: "BEFORE/AFTER the H4 level change (daily proxy vs real 4H 200): asx|nasdaq|<symbols>|blank"
         required: false
         default: ""
+      h4_limit:
+        description: "Cap the A/B universe (0 = every name in the market)"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -53,7 +57,7 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -84,11 +88,12 @@ jobs:
         if: ${{ github.event.inputs.h4_ab != '' }}
         env:
           H4AB: ${{ github.event.inputs.h4_ab }}
+          H4LIMIT: ${{ github.event.inputs.h4_limit }}
         run: |
           set -o pipefail
           pip install -q -r requirements.txt
           case "$H4AB" in
-            asx|nasdaq) ARGS="--market $H4AB --limit 25" ;;
+            asx|nasdaq) ARGS="--market $H4AB --limit ${H4LIMIT:-0}" ;;
             *)          ARGS="--symbols $H4AB" ;;
           esac
           python3 scripts/h4_level_ab.py $ARGS 2>&1 | tee /tmp/h4ab.txt

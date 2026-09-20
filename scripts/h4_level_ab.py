@@ -83,78 +83,152 @@ def fmt(o: dict) -> str:
             f"{o['level']:>9.4f} {o['points']:>3}pts {'armed' if o['armed'] else 'watch':>5}")
 
 
+def _classify(before: dict, after: dict) -> str:
+    """One word for what the switch would do to this name."""
+    if before["setup"] != after["setup"]:
+        return "appears" if after["setup"] else "disappears"
+    if not before["setup"]:
+        return "same"
+    if before["dir"] != after["dir"]:
+        return "flips"
+    if before["grade"] != after["grade"]:
+        return "regrades"
+    if before["tf"] != after["tf"] or before["armed"] != after["armed"]:
+        return "shifts"
+    return "same"
+
+
+TRADEABLE = ("A+", "A")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="A/B the H4 level: daily proxy vs a real 4H 200-SMA")
     ap.add_argument("--market", default="asx", choices=("asx", "nasdaq"))
     ap.add_argument("--symbols", help="comma list (yfinance tickers), overrides --market")
-    ap.add_argument("--limit", type=int, default=12)
+    ap.add_argument("--limit", type=int, default=0, help="0 = the whole universe")
+    ap.add_argument("--chunk", type=int, default=150,
+                    help="symbols per download batch — keeps hourly frames out of memory")
     a = ap.parse_args(argv)
 
     if a.symbols:
         tickers = [s.strip() for s in a.symbols.split(",") if s.strip()]
+        label = "custom"
     else:
-        uni = load_universe(a.market, full=True)[: a.limit]
+        uni = load_universe(a.market, full=True)
+        if a.limit:
+            uni = uni[: a.limit]
         tickers = [u["yf"] for u in uni]
+        label = a.market
 
-    print("=" * 100)
-    print("H4 LEVEL A/B — today's DAILY-200 stand-in vs a REAL 4H 200-SMA")
-    print("=" * 100)
-    print("BEFORE = what the scanner does today.  AFTER = if the h4 level became a true 4H 200.")
-    print("Only the H4 level changes; the weekly and 3-day levels are identical in both runs.\n")
+    print("=" * 96)
+    print(f"H4 LEVEL A/B — {label.upper()}: today's DAILY-200 stand-in vs a REAL 4H 200-SMA")
+    print("=" * 96)
+    print("Only the H4 level changes. The weekly and 3-day levels are identical in both runs,")
+    print("so any name resting on a weekly or 3-day level is untouched by construction.\n")
+    print(f"{len(tickers)} symbols, in batches of {a.chunk}\n")
 
-    daily = download(tickers, period=config.VIVEK_DATA_PERIOD, interval="1d")
-    hourly = download(tickers, period=config.VIVEK_H4_PERIOD,
-                      interval=config.VIVEK_H4_INTERVAL)
-
-    hdr = f"{'symbol':10} {'BEFORE (grade dir tf level pts state)':>40}   {'AFTER':>40}   verdict"
-    print(hdr)
-    print("-" * len(hdr))
-
-    changed = same = nodata = 0
-    flips, added, dropped, regrades = [], [], [], []
-    for t in tickers:
-        df = daily.get(t)
-        if df is None or df.empty:
-            print(f"{t:10} {'(no daily data)':>40}")
-            nodata += 1
+    rows = []          # one small dict per symbol — frames are never kept
+    nodata = 0
+    for i in range(0, len(tickers), a.chunk):
+        batch = tickers[i:i + a.chunk]
+        try:
+            daily = download(batch, period=config.VIVEK_DATA_PERIOD, interval="1d")
+            hourly = download(batch, period=config.VIVEK_H4_PERIOD,
+                              interval=config.VIVEK_H4_INTERVAL)
+        except Exception as exc:                       # noqa: BLE001
+            print(f"  batch {i // a.chunk + 1}: download failed ({type(exc).__name__}) - skipped")
+            nodata += len(batch)
             continue
-        h4 = true_h4_sma(hourly.get(t))
-        if h4 is None:
-            print(f"{t:10} {'(no 4H 200 available — stays on the proxy)':>40}")
-            nodata += 1
-            continue
-        before, after = outcome(df), outcome(df, h4)
+        for t in batch:
+            df = daily.get(t)
+            h4 = true_h4_sma(hourly.get(t)) if df is not None else None
+            if df is None or df.empty or h4 is None:
+                nodata += 1
+                continue
+            before, after = outcome(df), outcome(df, h4)
+            rows.append({"t": t, "b": before, "a": after, "k": _classify(before, after)})
+        del daily, hourly
+        done = min(i + a.chunk, len(tickers))
+        print(f"  ... {done}/{len(tickers)} compared ({len(rows)} usable, {nodata} skipped)",
+              flush=True)
 
-        note = []
-        if before["setup"] != after["setup"]:
-            note.append("APPEARS" if after["setup"] else "DISAPPEARS")
-            (added if after["setup"] else dropped).append(t)
-        elif before["setup"]:
-            if before["dir"] != after["dir"]:
-                note.append(f"DIRECTION {before['dir']}->{after['dir']}")
-                flips.append(t)
-            if before["grade"] != after["grade"]:
-                note.append(f"GRADE {before['grade']}->{after['grade']}")
-                regrades.append(t)
-            if before["tf"] != after["tf"]:
-                note.append(f"level {before['tf']}->{after['tf']}")
-            if before["armed"] != after["armed"]:
-                note.append(f"{'armed' if after['armed'] else 'disarmed'}")
-        if note:
-            changed += 1
-        else:
-            same += 1
-        print(f"{t:10} {fmt(before):>40}   {fmt(after):>40}   {', '.join(note) or 'no change'}")
+    n = len(rows)
+    if not n:
+        print("\nNothing comparable — no data.")
+        return 0
 
-    n = changed + same
-    print("\n" + "=" * 100)
-    print(f"{n} names compared: {same} unchanged, {changed} changed  ({nodata} skipped for data)")
-    if n:
-        print(f"  {100*changed/n:.0f}% of the names the owner sees would be affected")
-    for label, lst in (("direction flipped", flips), ("newly appear", added),
-                       ("disappear", dropped), ("grade changed", regrades)):
-        if lst:
-            print(f"  {label}: {', '.join(lst)}")
+    kinds = {}
+    for r in rows:
+        kinds[r["k"]] = kinds.get(r["k"], 0) + 1
+    changed = n - kinds.get("same", 0)
+
+    print("\n" + "=" * 96)
+    print("WHAT WOULD CHANGE")
+    print("=" * 96)
+    print(f"{'outcome':14} {'names':>7}  {'share':>7}   meaning")
+    order = [("same", "identical before and after"),
+             ("disappears", "a setup you see today would no longer exist"),
+             ("appears", "a setup you cannot see today would appear"),
+             ("flips", "same name, opposite direction"),
+             ("regrades", "same direction, different grade"),
+             ("shifts", "same call, different level or armed state")]
+    for k, meaning in order:
+        c = kinds.get(k, 0)
+        print(f"{k:14} {c:>7}  {100*c/n:>6.1f}%   {meaning}")
+    print(f"\n{n} names compared, {nodata} skipped for data. {changed} would change "
+          f"({100*changed/n:.1f}%).")
+
+    # The set the owner actually trades off: today's A+/A armed names.
+    today_set = [r for r in rows
+                 if r["b"]["setup"] and r["b"]["armed"] and r["b"]["grade"] in TRADEABLE]
+    kept = [r for r in today_set if r["a"]["setup"] and r["a"]["armed"]
+            and r["a"]["grade"] in TRADEABLE and r["a"]["dir"] == r["b"]["dir"]]
+    lost = [r for r in today_set if r not in kept]
+    new_set = [r for r in rows
+               if r["a"]["setup"] and r["a"]["armed"] and r["a"]["grade"] in TRADEABLE
+               and not (r["b"]["setup"] and r["b"]["armed"] and r["b"]["grade"] in TRADEABLE)]
+
+    print("\n" + "=" * 96)
+    print("YOUR TRADEABLE DECK (A+/A and armed) — the list you actually work from")
+    print("=" * 96)
+    if today_set:
+        print(f"  today               {len(today_set):>5}")
+        print(f"  survive unchanged   {len(kept):>5}  ({100*len(kept)/len(today_set):.0f}%)")
+        print(f"  lost or altered     {len(lost):>5}  ({100*len(lost)/len(today_set):.0f}%)")
+    print(f"  newly qualifying    {len(new_set):>5}")
+    if today_set:
+        after_n = len(kept) + len(new_set)
+        print(f"  deck size           {len(today_set)} -> {after_n}")
+
+    # Group the losses by WHY, which is the part that decides whether the change
+    # is an improvement or a demolition.
+    by_level = {}
+    for r in today_set:
+        by_level.setdefault(r["b"]["tf"], {"n": 0, "lost": 0})
+        by_level[r["b"]["tf"]]["n"] += 1
+        if r in lost:
+            by_level[r["b"]["tf"]]["lost"] += 1
+    print(f"\n  {'level today':14} {'on deck':>8} {'lost':>6}   (weekly/3d cannot move — only h4 can)")
+    for tf, d in sorted(by_level.items()):
+        print(f"  {tf:14} {d['n']:>8} {d['lost']:>6}")
+
+    def show(title, lst, cap=40):
+        if not lst:
+            return
+        print(f"\n{title} ({len(lst)}):")
+        for r in lst[:cap]:
+            b, aa = r["b"], r["a"]
+            bs = f"{b['grade']} {b['dir'][:5]} {b['tf']}" if b["setup"] else "no setup"
+            as_ = f"{aa['grade']} {aa['dir'][:5]} {aa['tf']}" if aa["setup"] else "no setup"
+            print(f"  {r['t']:12} {bs:>18}  ->  {as_:<18}")
+        if len(lst) > cap:
+            print(f"  ... and {len(lst) - cap} more")
+
+    show("LOST from the deck", lost)
+    show("NEW on the deck", new_set)
+    show("DIRECTION FLIPS (the ones to look at hardest)",
+         [r for r in rows if r["k"] == "flips"])
+
     print("\nNothing was written. This is a measurement, not a change.")
     return 0
 
