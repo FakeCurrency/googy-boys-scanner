@@ -14,52 +14,49 @@ on:
   # GitHub's ref backend was erroring (crypto_bot #255, "fatal error in
   # commit_refs"). This touch re-registers all schedules (2026-07-24 precedent).
   schedule:
-    # Hourly during trading hours (UTC). GitHub cron is best-effort, may be a few mins late.
-    # ASX  10:00 AM–4:00 PM AEST  = 00:00–06:00 UTC
-    # NASDAQ 9:30 AM–4:00 PM ET   = 13:30–21:00 UTC  (EDT; add 1h in EST winter)
+    # MARKET HOURS ONLY (owner ruling, 2026-09-21: "lets turn off NASDAQ and
+    # ASX scans after market closing moving forward", first scan an hour after
+    # the open, last scan at the close).
     #
-    # SCHEDULE RE-REGISTRATION (2026-07-24): GitHub's scheduler silently dropped
-    # the 00:07 / 01:07 / 02:07 ASX runs (no run created at all — the same
-    # "silently skipped morning runs" failure the :07 move was meant to dodge;
-    # every run that DID start stayed green). A file-touch re-registration at
-    # 02:19 did NOT bring the 03:07 cron back, so the :47 SELF-HEALING BACKSTOP
-    # below now covers the window: it fires 40 min after each :07 slot, asks the
-    # LIVE site's /api/health whether a scan landed within the last hour, and
-    # skips itself when one did. A healthy scheduler costs zero extra runs; a
-    # ghosted :07 is caught within the hour instead of aging into a watchdog
-    # alert. (Gate logic: see the backstop branch in the gate job below.)
+    # WHAT THIS REPLACED, because it was worse than it looked: the weekend cron
+    # was commented "crypto only" and passed NO market, so scheduled runs fell
+    # through to `all` and re-scanned ~2,000 ASX names four times a day on a
+    # shut market. 2026-09-19/20 took eleven full weekend scans that way.
     #
-    # OFF-:00 MINUTES (2026-07-22): GitHub's scheduler is most congested at the
-    # top of the hour — their own docs recommend a random minute — and this
-    # repo has recorded 48-min drift and silently skipped morning runs. :07
-    # keeps the same effective cadence while dodging the worst-load slot.
+    # THE CRONS ARE A SUPERSET; THE GATE DECIDES (the TOP100 #41 pattern).
+    # Melbourne and New York change daylight saving on different dates, so the
+    # UTC hour of either session slides by an hour twice a year and by TWO
+    # relative to each other. Every attempt to write that as fixed UTC hours
+    # has been wrong for part of the year. So these fire more often than
+    # needed and the gate job asks the tz database, in the MARKET's own
+    # calendar, whether now is inside that market's window:
+    #     ASX     11:00 .. 16:45 Australia/Sydney   (open 10:00 + 1h .. close + auction)
+    #     NASDAQ  10:30 .. 16:45 America/New_York   (open 09:30 + 1h .. close + settle)
+    # Anything outside every window is skipped, so weekends and overnight cost
+    # one ~5-second gate job and nothing else. The two windows never overlap in
+    # UTC, so a run scans exactly one market and `all` never happens on a
+    # schedule again.
     #
-    # TOP100 #41 — DAYLIGHT SAVING. Every ASX cron below is written for AEST
-    # (UTC+10), which is only correct Apr–Oct. From the first Sunday in October
-    # Melbourne moves to AEDT (UTC+11) and the 10:00–16:00 session becomes
-    # 23:00–05:00 UTC — i.e. it OPENS ON THE PREVIOUS UTC DAY. The `0-5` hours
-    # below then cover 11:00–16:00 AEDT only, and the first hour of every ASX
-    # session — the open, the hour that matters most — has no scan at all. For
-    # Monday it is worse: Monday's open is Sunday 23:00 UTC, which `* * 1-5`
-    # excludes outright, so nothing fires and nothing notices. This is latent
-    # right now (it is July, AEST) and would have gone live in October.
+    # The 16:45 tails are load-bearing, not slack: the ASX closing auction
+    # prints ~16:10-16:12 and the morning_plays digest refuses to send until it
+    # has a scan stamped at/after it (MORNING_PLAYS_SLOT_GATE). A window that
+    # ended at 16:00 would silently kill the afternoon Discord ping.
     #
-    # Fixed the way kill_switch.yml fixed the same bug class: let cron fire a
-    # SUPERSET and let the gate decide with real Melbourne local time. The two
-    # 23:xx crons below are no-ops under AEST — the gate skips them outright —
-    # so nothing about today's behaviour changes.
-    - cron: "7 0-5 * * 1-5"       # ASX  00:07–05:07 UTC (hourly)
-    - cron: "47 0-5 * * 1-5"      # ASX BACKSTOP — no-op unless the :07 ghosted (gate job)
-    - cron: "7 23 * * 0-4"        # ASX AEDT OPEN — 23:07 UTC = 10:07 next-day AEDT.
-                                  # Sun–Thu because Monday's open is Sunday in UTC.
-                                  # Skipped by the gate while Melbourne is on AEST.
-    - cron: "47 23 * * 0-4"       # ASX AEDT OPEN BACKSTOP — same freshness probe as :47
-    - cron: "37 6 * * 1-5"        # ASX  06:37 UTC ≈ 4:37 PM AEST (closing alert)
-    - cron: "37 13 * * 1-5"       # NASDAQ open  13:37 UTC
-    - cron: "7 14-20 * * 1-5"     # NASDAQ 14:07–20:07 UTC (hourly)
-    - cron: "7 21 * * 1-5"        # NASDAQ close 21:07 UTC
-    - cron: "7 2,8,14,20 * * 0,6" # weekends: crypto only, 6-hourly (24/7 market —
-                                  # dashboard data used to stale from Fri to Mon)
+    # OFF-:00 MINUTES: GitHub's scheduler is most congested at the top of the
+    # hour — their own docs recommend a random minute — and this repo has
+    # recorded 48-min drift and silently skipped morning runs.
+    #
+    # CRYPTO IS NOT HERE ANY MORE. crypto_bot.yml owns it outright, hourly,
+    # seven days a week (owner: "keep crypto scanning every hour 7 days per
+    # week"). That also retires that file's window-ownership gate, which only
+    # existed because this one used to scan crypto too.
+    - cron: "7 0-6 * * 1-5"       # ASX hourly superset (00:07-06:07 UTC covers
+                                  # 11:07-16:07 local under AEDT and AEST both)
+    - cron: "30 5,6 * * 1-5"      # ASX CLOSING scan, 16:30 local in either regime
+    - cron: "47 5,6 * * 1-5"      # ASX closing BACKSTOP — freshness-gated, see below
+    - cron: "37 14,15 * * 1-5"    # NASDAQ first scan, ~10:37 local in either regime
+    - cron: "7 16-21 * * 1-5"     # NASDAQ hourly through the close + post-close
+    - cron: "47 20,21 * * 1-5"    # NASDAQ closing BACKSTOP — freshness-gated
   workflow_dispatch:
     inputs:
       market:
@@ -118,93 +115,93 @@ jobs:
     steps:
       - id: check
         run: |
-          DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
           SCHED="${{ github.event.schedule }}"
 
-          # TOP100 #41 — DAYLIGHT SAVING. The two 23:xx crons exist ONLY to
-          # cover the ASX open once Melbourne is on AEDT (UTC+11), when the
-          # session shifts to 23:00–05:00 UTC and its first hour falls on the
-          # previous UTC day. Under AEST (UTC+10) 23:07 UTC is 09:07 — an hour
-          # BEFORE the open — so they must not run. Ask the tz database rather
-          # than hardcoding the changeover dates, which move and which are the
-          # thing that made the original crons wrong in the first place.
+          # A manual dispatch means a human (or the heartbeat healer) asked for
+          # a specific scan. The session window does not apply — that is the
+          # whole point of being able to ask.
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual dispatch — running whatever was asked for."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "market_override=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # THE WHOLE SCHEDULE DECISION, in the MARKET's own calendar (owner,
+          # 2026-09-21). Ask the tz database rather than hardcoding UTC hours:
+          # the changeover dates move, Melbourne and New York move on different
+          # ones, and hardcoded offsets are what made every previous version of
+          # this wrong for part of the year.
           #
-          # This branch returns EARLY and deliberately: 23:00 UTC Sunday is
-          # 10:00 Monday in Melbourne, and the `DOW -ge 6` weekend test further
-          # down reads UTC days, so letting a Sunday-night AEDT open reach it
-          # would downgrade the ASX open to a crypto-only scan. Handling the
-          # slot here means the weekend rule keeps its UTC semantics, which is
-          # what NASDAQ's Friday 21:07 UTC close scan depends on.
-          if [ "${{ github.event_name }}" = "schedule" ] && { [ "$SCHED" = "7 23 * * 0-4" ] || [ "$SCHED" = "47 23 * * 0-4" ]; }; then
-            OFFSET=$(python3 -c "import datetime as dt;from zoneinfo import ZoneInfo;print(int(dt.datetime.now(ZoneInfo('Australia/Melbourne')).utcoffset().total_seconds()//3600))" 2>/dev/null || echo "")
-            echo "AEDT-open slot [$SCHED] — Melbourne UTC offset reads: ${OFFSET:-unknown}"
-            if [ "$OFFSET" = "10" ]; then
-              echo "Melbourne is on AEST — 23:07 UTC is an hour before the open. Skipping."
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              echo "market_override=" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            # Not AEST (AEDT, or the offset probe failed): this IS the open.
-            # Fail open, same rule as the freshness backstops below — an extra
-            # pre-open scan costs one run, a missed open costs the session.
-            if [ "$SCHED" = "47 23 * * 0-4" ]; then
-              HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=asx&max_h=1" || echo "")
-              echo "AEDT open backstop health probe: $HEALTH"
-              if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
-                echo "Backstop 23:47 — an ASX scan already landed this hour. Skipping."
+          # Returns the market whose session window contains "now", or empty
+          # for "no market is open — skip". The windows cannot overlap, so a
+          # scheduled run now scans exactly ONE market and never `all`.
+          # (one line, because `python3 -c` rejects a leading-indented block)
+          MARKET=$(python3 -c "import datetime as dt; from zoneinfo import ZoneInfo; W=[('asx','Australia/Sydney',11*60,16*60+45),('nasdaq','America/New_York',10*60+30,16*60+45)]; now=lambda tz: dt.datetime.now(ZoneInfo(tz)); ok=lambda n,lo,hi: n.weekday()<5 and lo<=n.hour*60+n.minute<=hi; print(next((m+' '+str(now(tz).hour*60+now(tz).minute) for m,tz,lo,hi in W if ok(now(tz),lo,hi)), ''))" 2>/dev/null || echo "PROBE_FAILED")
+
+          # FAIL OPEN, same rule as the freshness backstops: an unusable tz
+          # database must not silently stop the pipeline. An extra out-of-hours
+          # scan costs one run; a session with no scan costs the day.
+          if [ "$MARKET" = "PROBE_FAILED" ]; then
+            echo "::warning::scan gate — session probe failed; scanning all markets (fail open)"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "market_override=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$MARKET" ]; then
+            echo "Outside every market session (weekend, overnight, or pre-open) — nothing to scan."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "market_override=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LOCAL_MIN="${MARKET##* }"        # minute-of-day in the MARKET's zone
+          MARKET="${MARKET%% *}"
+
+          # THE CLOSING CRONS ONLY COUNT AFTER THE CLOSE. Each closing slot is
+          # written twice (05/06 UTC for the ASX, 20/21 for NASDAQ) because the
+          # right one depends on daylight saving; the OTHER one lands an hour
+          # before the close, inside the session, and would run as an ordinary
+          # extra scan. Under AEST that was two surplus full ASX scans a day.
+          # 960 = 16:00 market-local, both markets' close.
+          case "$SCHED" in
+            "30 5,6 * * 1-5"|"47 5,6 * * 1-5"|"47 20,21 * * 1-5")
+              if [ "$LOCAL_MIN" -lt 960 ]; then
+                echo "Closing slot [$SCHED] fired at $((LOCAL_MIN/60)):$(printf %02d $((LOCAL_MIN%60))) $MARKET-local — the other DST regime owns it. Skipping."
                 echo "run=false" >> "$GITHUB_OUTPUT"
                 echo "market_override=" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
-              echo "Backstop 23:47 — ASX data stale or probe failed. Running the missed open."
-            fi
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "market_override=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+              ;;
+          esac
 
-          # :47 ASX BACKSTOP (2026-07-24): only exists to catch a :07 run the
-          # GitHub scheduler silently never started. Ask the LIVE site whether
-          # an ASX scan landed within the last hour (max_h=1); if yes, this run
-          # is redundant — skip. If the data is stale OR health is unreachable,
-          # run the missed scan (fail open: a broken probe must never leave
-          # the site stale).
-          #
-          # market=asx IS LOAD-BEARING (2026-07-28). Without it the probe read
-          # the COMBINED bot book, whose updated_at moves whenever ANY market
-          # commits — so it answered "did the pipeline commit?" when the only
-          # question this backstop cares about is "did ASX scan?". Worked example
-          # from the commit log: at 01:47 UTC Mon 2026-07-27 the combined book was
-          # 24 min old (crypto_bot's 01:23 commit) so the old probe said ok:true
-          # and this backstop skipped — while the newest ASX scan was 4.6 h old
-          # (Sun 21:11) and the 00:07 + 01:07 ASX crons had both produced nothing.
-          # Exactly the miss it exists to catch, waved through by a probe aimed at
-          # the wrong file. Scoping it to this backstop's own market is the fix.
-          # Pinned by test/health.test.js ("the combined book hides a stale ASX").
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "47 0-5 * * 1-5" ]; then
-            HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=asx&max_h=1" || echo "")
-            echo "backstop health probe: $HEALTH"
-            if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
-              echo "Backstop :47 — an ASX scan already landed this hour. Skipping."
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              echo "market_override=" >> "$GITHUB_OUTPUT"
-            else
-              echo "Backstop :47 — ASX data stale or probe failed. Running the missed scan."
-              echo "run=true" >> "$GITHUB_OUTPUT"
-              echo "market_override=" >> "$GITHUB_OUTPUT"
-            fi
-            exit 0
-          fi
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -ge 6 ]; then
-            # Weekend schedule: stock markets are shut, but crypto trades 24/7 —
-            # run a crypto-only scan so the dashboard doesn't stale Fri->Mon.
-            echo "Weekend scheduled run — crypto only."
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "market_override=crypto" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "market_override=" >> "$GITHUB_OUTPUT"
-          fi
+          # CLOSING BACKSTOPS (:47). GitHub silently drops crons — it dropped
+          # every ASX morning run on 2026-07-24 and created no run at all — and
+          # the one scan whose loss is expensive is the CLOSING scan, because
+          # the Discord plays digest will not send without it. These fire ~17
+          # min after the closing scan and ask the LIVE site whether that
+          # market's data landed within the hour; fresh = skip, stale OR
+          # unreachable = run it (fail open: a broken probe must never leave
+          # the site stale). Scoped to the market by ?market= — without it the
+          # probe reads the COMBINED book, whose timestamp moves whenever any
+          # market commits, and answers a question nobody asked (2026-07-28).
+          case "$SCHED" in
+            "47 5,6 * * 1-5"|"47 20,21 * * 1-5")
+              HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=$MARKET&max_h=1" || echo "")
+              echo "closing backstop [$MARKET] health probe: $HEALTH"
+              if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
+                echo "Backstop :47 — a $MARKET scan already landed this hour. Skipping."
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                echo "market_override=" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "Backstop :47 — $MARKET data stale or probe failed. Running the missed closing scan."
+              ;;
+          esac
+
+          echo "In session: $MARKET"
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "market_override=$MARKET" >> "$GITHUB_OUTPUT"
 
   # THE "scan" MUTEX LIVES HERE, NOT AT WORKFLOW LEVEL (2026-07-28).
   #

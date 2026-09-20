@@ -316,6 +316,44 @@ def _default_fetch(url: str) -> dict:
         return json.loads(r.read().decode("utf-8"))
 
 
+def session_hours_between(start: dt.datetime, end: dt.datetime) -> float:
+    """Hours between two instants during which SOME market was open to scan.
+
+    Wall-clock age is the wrong ruler for scan.yml now that it only runs in
+    market hours: the Friday-to-Monday gap is ~52 normal hours and zero
+    *session* hours, so a weekend would alarm every week while a real weekday
+    outage would have to wait three days to clear the same bar. Walks the
+    interval in 15-minute steps against config.MARKET_SCAN_WINDOWS — coarse on
+    purpose, since the thresholds it feeds are whole hours, and a step small
+    enough to matter would cost more than the precision is worth.
+
+    Returns 0.0 on any unusable input (bad tz, end before start): fail QUIET,
+    because the alternative is a watchdog that invents an outage out of a
+    timezone error.
+    """
+    from zoneinfo import ZoneInfo
+    if start is None or end is None or end <= start:
+        return 0.0
+    try:
+        zones = {m: (ZoneInfo(tz), lo, hi)
+                 for m, (tz, lo, hi) in config.MARKET_SCAN_WINDOWS.items()}
+    except Exception:                                              # noqa: BLE001
+        return 0.0
+    step = dt.timedelta(minutes=15)
+    # Hard ceiling so a wildly stale timestamp cannot spin: 30 days of steps.
+    max_steps = 30 * 24 * 4
+    open_steps, t, n = 0, start, 0
+    while t < end and n < max_steps:
+        for _tz, lo, hi in zones.values():
+            local = t.astimezone(_tz)
+            if local.weekday() < 5 and lo <= local.hour * 60 + local.minute <= hi:
+                open_steps += 1
+                break
+        t += step
+        n += 1
+    return open_steps * 0.25
+
+
 def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
                notes: list | None = None) -> list[dict]:
     """GitHub Actions run history per critical workflow — the heartbeat.
@@ -352,13 +390,23 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
             continue
         succ = next((r for r in concluded
                      if r.get("conclusion") == "success"), None)
-        age = _age_h(_parse_ts((succ or {}).get("run_started_at")), now)
-        if age is None or age > spec["max_age_h"]:
+        last = _parse_ts((succ or {}).get("run_started_at"))
+        age = _age_h(last, now)
+        # A session-aware target is measured in hours a market was OPEN, not
+        # wall-clock hours — see session_hours_between and the scan.yml entry.
+        measured = age
+        unit = "h"
+        if spec.get("session_aware") and age is not None:
+            measured = session_hours_between(last, now)
+            unit = "h in-session"
+        if measured is None or measured > spec["max_age_h"]:
             shown = "never" if age is None else f"{age:.1f}h ago"
+            extra = ("" if not spec.get("session_aware") or age is None
+                     else f", {measured:.1f}h of it in market hours")
             out.append(_finding(
                 f"run_{wf}", spec["severity"],
-                f"{wf}: last successful run {shown} (limit "
-                f"{spec['max_age_h']:.0f}h) - schedule skipped or silently "
+                f"{wf}: last successful run {shown}{extra} (limit "
+                f"{spec['max_age_h']:.0f}{unit}) - schedule skipped or silently "
                 f"doing nothing"))
     return out
 

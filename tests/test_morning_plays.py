@@ -564,19 +564,29 @@ def test_force_and_dry_run_ignore_the_gate(tmp_path, monkeypatch):
 
 
 def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot():
-    """morning_plays.yml's crons are GitHub's late backstop behind the cron-job.org
-    ladder; every one must be AFTER scan.yml's close-scan cron for its market
-    (ASX 06:37 UTC, NASDAQ 21:07 UTC) and must map to a slot in the run block."""
+    """morning_plays.yml's crons are GitHub's backstop behind the cron-job.org
+    ladder; every one must be AFTER scan.yml's closing-scan cron for its market
+    and must map to a slot in the run block.
+
+    The ASX closing scan moved to 16:30 market-local on 2026-09-21 (05:30 UTC
+    under AEDT, 06:30 under AEST), so :50 in hours 5 and 6 are now the ~20-min
+    on-time slots and 7/8 are the late backstops. The wrong-regime one of the
+    pair is a harmless no-op: the post-close data gate refuses a scan stamped
+    before the close."""
     import re
     wf = (ROOT / ".github" / "workflows" / "morning_plays.yml").read_text()
     crons = re.findall(r'- cron: "([^"]+)"', wf)
-    assert len(crons) == 4
+    assert len(crons) == 6
+    asx_scan_hours = {5, 6}          # scan.yml's "30 5,6 * * 1-5" closing scan
+    assert asx_scan_hours <= {int(c.split()[1]) for c in crons}, \
+        "no ASX digest cron fires in the hour the closing scan lands"
     for c in crons:
         minute, hour = c.split()[:2]
         h = int(hour)
         assert f'"{c}"' in wf.split("case \"$SCHEDULE\" in")[1], f"{c} is not mapped to a slot"
-        assert h in (7, 8, 21, 22), c
-        if h in (7, 8):
+        assert h in (5, 6, 7, 8, 21, 22), c
+        assert int(minute) == 50, f"{c} must land after the closing scan commits, not with it"
+        if h in (5, 6, 7, 8):
             assert f'"{c}"' in wf.split('ARGS="--slot asx"')[0].split("case")[-1]
         else:
             assert f'"{c}"' in wf.split('ARGS="--slot us"')[0].split("case")[-1]

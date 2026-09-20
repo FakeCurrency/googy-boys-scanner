@@ -44,7 +44,15 @@ name: Morning plays (Discord)
 
 on:
   schedule:
-    - cron: "50 7 * * 1-5"    # ASX, after the 06:37 UTC closing scan has landed
+    # ASX. The closing scan moved to 16:30 market-local on 2026-09-21 (owner:
+    # "make the last scan 16:30 then trigger the discord to send shortly there
+    # after"), which is 05:30 UTC under AEDT and 06:30 under AEST — so :50 in
+    # BOTH those hours is ~20 min after it commits, and the wrong-regime one is
+    # a silent no-op (the post-close data gate refuses a pre-close scan). The
+    # 07/08 slots stay as late backstops for a dropped cron.
+    - cron: "50 5 * * 1-5"    # ASX, ~20 min after the 16:30 AEDT closing scan
+    - cron: "50 6 * * 1-5"    # ASX, ~20 min after the 16:30 AEST closing scan
+    - cron: "50 7 * * 1-5"    # ASX backstop
     - cron: "50 8 * * 1-5"    # ASX backstop, an hour later
     - cron: "50 21 * * 1-5"   # NASDAQ+Crypto, after the 21:07 UTC post-close scan
     - cron: "50 22 * * 1-5"   # NASDAQ+Crypto backstop, an hour later
@@ -126,6 +134,7 @@ jobs:
             fi
           else
             case "$SCHEDULE" in
+              "50 5 * * 1-5"|"50 6 * * 1-5"| \
               "50 7 * * 1-5"|"50 8 * * 1-5")   ARGS="--slot asx" ;;   # after the ASX closing scan
               "50 21 * * 1-5"|"50 22 * * 1-5") ARGS="--slot us"  ;;   # after the NASDAQ post-close scan
               *) echo "morning_plays: unmapped schedule '$SCHEDULE' - no-op."; exit 0 ;;

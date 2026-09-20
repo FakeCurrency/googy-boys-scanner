@@ -31,8 +31,12 @@ _CACHE_MIN = {"asx": 400, "nasdaq": 400, "crypto": 40}
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
+# per_page is deliberately ABOVE the target count: stablecoins and wrapped
+# tokens are filtered out of the response (CRYPTO_SKIP), so asking for exactly
+# N coins returns fewer than N tradeable ones. ~30% headroom covers the pegs.
 COINGECKO_URL = ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
-                 "&order=market_cap_desc&per_page=130&page=1&sparkline=false")
+                 f"&order=market_cap_desc&per_page={config.CRYPTO_UNIVERSE_SIZE + 60}"
+                 "&page=1&sparkline=false")
 
 # Stablecoins / wrapped-pegged tokens to skip (they don't trend, so the 200-SMA
 # reaction system is meaningless on them — e.g. a "long" on a $1 peg is noise).
@@ -235,12 +239,14 @@ def _fetch_nasdaq_listed(suffix: str, tiers: str = "Q") -> list[dict]:
     return items
 
 
-def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
+def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
     """Top coins by market cap from CoinGecko (stablecoins/wrapped tokens skipped).
 
     Maps each coin to a Yahoo ``<SYMBOL>-USD`` ticker; coins Yahoo doesn't carry
     under that exact ticker are dropped at scan time when no data comes back.
     """
+    if limit is None:
+        limit = int(getattr(config, "CRYPTO_UNIVERSE_SIZE", 100) or 100)
     try:
         data = json.loads(_http_get(COINGECKO_URL, timeout=30, headers=_BROWSER_HEADERS))
     except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
@@ -258,8 +264,7 @@ def _fetch_crypto(suffix: str, limit: int = 100) -> list[dict]:
         if len(items) >= limit:
             break
     # Pinned extras (2026-07-02): coins the owner tracks that must never fall
-    # out of the universe because their market-cap rank slips below the top-100
-    # cut. Coins Yahoo doesn't carry are dropped at scan time as usual.
+    # out of the universe because their market-cap rank slips below the cut. Coins Yahoo doesn't carry are dropped at scan time as usual.
     for sym in getattr(config, "CRYPTO_EXTRA_SYMBOLS", []):
         sym = str(sym).strip().upper()
         if sym and sym.isalnum() and sym not in seen:
@@ -295,7 +300,7 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
             _save_universe_cache(market_key, items)
             return items
 
-    # Crypto: top 100 by market cap from CoinGecko.
+    # Crypto: top CRYPTO_UNIVERSE_SIZE by market cap from CoinGecko.
     if market_key == "crypto":
         items = _fetch_crypto(market.suffix)
         if items:

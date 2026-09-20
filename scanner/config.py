@@ -172,6 +172,15 @@ VIVEK_DETAIL_ROW_FIELDS   = ("plans", "detail", "analysis", "markers")
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
+# How many tradeable coins the crypto universe holds, by market-cap rank
+# (owner, 2026-09-21: "see if you can branch into the top 200 coins rather
+# than the current selection"). Honest expectation, measured at 100: of 101
+# names in the universe only 69 had Yahoo data under "<SYM>-USD", and the
+# $100M crypto liquidity floor (LIQUID_TIER) cuts more of the tail. Doubling
+# the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
+# thin alt territory where a paper fill is the most fictional, and the
+# liquidity gate is what keeps it honest.
+CRYPTO_UNIVERSE_SIZE   = 200
 # Coins pinned into the crypto universe regardless of market-cap rank
 # (2026-07-02, the FLASH gap: not in CoinGecko's top-100 -> invisible to
 # every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
@@ -886,10 +895,31 @@ WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
 # LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
 # GitHub already emails failures; the watchdog only covers SILENT problems.
+# MARKET SCAN WINDOWS (owner, 2026-09-21) — the canonical session table.
+# (market -> (tz, first-scan minute-of-day, last-scan minute-of-day), market-local,
+# weekdays only.) First scan is one hour after the open; the tail runs past the
+# close so the closing auction is captured and the Discord plays digest has a
+# post-close scan to gate on.
+#
+# THE MIRROR: scan.yml's gate job checks out nothing (contents: read, by
+# design), so it cannot import this — it carries the same numbers inline and
+# tests/test_scan_windows.py parses them back out and fails if the two drift.
+MARKET_SCAN_WINDOWS = {
+    "asx":    ("Australia/Sydney",  11 * 60,      16 * 60 + 45),
+    "nasdaq": ("America/New_York",  10 * 60 + 30, 16 * 60 + 45),
+}
+
 WATCHDOG_RUNS = {
     "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
     "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
-    "scan.yml":        {"max_age_h": 24.0, "severity": "WARNING"},
+    # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
+    # hours, so wall-clock age alarms every weekend: Friday's last scan to
+    # Monday's first is ~52h, and a long weekend is ~75h. Raising the limit
+    # past that would make a genuine weekday outage invisible for three days.
+    # `session_aware` measures only the hours a market was actually OPEN, which
+    # accrue at ~11h/day on weekdays and not at all at the weekend — so 12h is
+    # about one missed session, and a quiet Sunday is correctly silent.
+    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True},
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},

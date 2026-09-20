@@ -184,13 +184,47 @@ def test_runs_fresh_success_is_silent():
     assert wd.probe_runs(_runs_fetch(by), NOW, repo="x/y") == []
 
 
-def test_runs_old_success_fires_with_config_severity():
+def test_runs_old_success_fires_with_config_severity(monkeypatch):
     by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
     by["kill_switch.yml"] = [_run(3.0)]          # limit 2h, CRITICAL
-    by["scan.yml"] = [_run(30.0)]                # limit 24h, WARNING
+    by["scan.yml"] = [_run(30.0)]                # limit 12h IN-SESSION, WARNING
+    # scan.yml is session_aware since 2026-09-21: wall-clock age no longer
+    # decides it (that is the whole point -- a weekend is 52 wall hours and
+    # zero session hours). Stub the session clock so this test keeps asking its
+    # own question, which is whether the SEVERITY comes from config.
+    monkeypatch.setattr(wd, "session_hours_between", lambda a, b: 30.0)
     probs = wd.probe_runs(_runs_fetch(by), NOW, repo="x/y")
     got = {p["key"]: p["severity"] for p in probs}
     assert got == {"run_kill_switch.yml": "CRITICAL", "run_scan.yml": "WARNING"}
+
+
+def test_a_weekend_never_alarms_the_scan_workflow_but_a_lost_session_does():
+    """The reason session_hours_between exists (owner, 2026-09-21: scans stop
+    outside market hours). Friday's last scan to Sunday night is ~50 wall hours
+    and ZERO session hours, so the watchdog must stay silent; the same wall
+    gap across a weekday IS a missed session and must fire."""
+    import datetime as dt
+    U = dt.timezone.utc
+    fri_last = dt.datetime(2026, 9, 18, 21, 10, tzinfo=U)   # after the NASDAQ post-close scan
+    sun_night = dt.datetime(2026, 9, 20, 22, 0, tzinfo=U)
+    assert (sun_night - fri_last).total_seconds() / 3600 > 48, "fixture is not a weekend gap"
+    assert wd.session_hours_between(fri_last, sun_night) == 0.0
+
+    tue = dt.datetime(2026, 9, 15, 0, 0, tzinfo=U)
+    wed = dt.datetime(2026, 9, 16, 0, 0, tzinfo=U)
+    assert wd.session_hours_between(tue, wed) > config.WATCHDOG_RUNS["scan.yml"]["max_age_h"], \
+        "a whole weekday with no scan must still breach the limit"
+
+
+def test_session_hours_fails_QUIET_on_unusable_input():
+    """A tz error inventing an outage is worse than missing one."""
+    import datetime as dt
+    U = dt.timezone.utc
+    n = dt.datetime(2026, 9, 15, 0, 0, tzinfo=U)
+    assert wd.session_hours_between(None, n) == 0.0
+    assert wd.session_hours_between(n, None) == 0.0
+    assert wd.session_hours_between(n, n) == 0.0
+    assert wd.session_hours_between(n, n - dt.timedelta(hours=5)) == 0.0
 
 
 def test_runs_latest_failure_is_suppressed_but_noted():

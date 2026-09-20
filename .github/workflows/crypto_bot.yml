@@ -23,9 +23,9 @@ on:
     # this workflow's 23:22 UTC owned-hour run (alongside scan.yml's morning
     # crons — no runs created, nothing failed). Editing the file re-registers
     # the crons; that is this comment's only purpose.
-    - cron: "22 * * * *"       # hourly, all days (weekday stock-session hours
-                               # skipped by the gate job below — scan.yml owns
-                               # crypto during those windows)
+    - cron: "22 * * * *"       # hourly, EVERY hour, EVERY day (2026-09-21 —
+                               # no longer skipped during stock sessions; see
+                               # the gate job below)
     # :52 FRESHNESS BACKSTOP (Fix-10 #8, 2026-07-26): GitHub's scheduler
     # silently dropped four hourly :22 fires in one day — 2-3h crypto gaps
     # that stay under the watchdog's 6h alarm. This slot only exists to catch
@@ -51,13 +51,11 @@ permissions:
 # in turn. Do not re-add a workflow-level concurrency block here.
 
 jobs:
-  # De-double the queue (2026-07-22): during weekday stock sessions scan.yml's
-  # full hourly cycle ALREADY scans crypto and manages the crypto book — a
-  # second hourly run in the same serialized "scan" group just displaces queued
-  # runs and doubles the Yahoo load (the red-run / failure-email pattern every
-  # ASX morning). Scheduled runs therefore skip the scan.yml windows and own
-  # the OFF-window hours (07–13 + 22–23 UTC weekdays; all hours on weekends,
-  # where scan.yml fires only 4×/day). Manual dispatches always run.
+  # CRYPTO IS OURS, EVERY HOUR, SEVEN DAYS (owner, 2026-09-21: "keep crypto
+  # scanning every hour 7 days per week"). This gate used to skip the weekday
+  # hours scan.yml owned, because scan.yml scanned crypto too; it no longer
+  # does (market-hours only, one stock market per run), so the only thing left
+  # here is the :52 freshness backstop.
   gate:
     runs-on: ubuntu-latest
     # TOP100 #44 - clock/probe only; see scan.yml's gate.
@@ -67,8 +65,6 @@ jobs:
     steps:
       - id: check
         run: |
-          DOW=$(date -u +%u)   # 1=Mon … 6=Sat 7=Sun
-          HR=$(date -u +%H)
           # :52 backstop (Fix-10 #8): freshness-gated, fail-open. Deliberately
           # bypasses the weekday window-ownership skip below — if the data is
           # stale, whichever workflow owned the hour has already missed it.
@@ -86,35 +82,15 @@ jobs:
             fi
             exit 0
           fi
-          # TOP100 #41 — hour 23 changes owner with daylight saving. The window
-          # list below is written in UTC against an AEST (UTC+10) ASX session.
-          # Under AEDT (UTC+11) that session starts at 23:00 UTC on the PREVIOUS
-          # day, and scan.yml now has 23:07/23:47 crons covering it (Sun–Thu UTC,
-          # because Monday's open is Sunday in UTC). Hour 23 is currently one of
-          # THIS workflow's owned off-window hours, so without this branch the
-          # AEDT open would put a full 3-market scan and a crypto scan into the
-          # same one-slot `scan` queue 15 minutes apart — the exact de-doubling
-          # this gate was written to prevent, arriving silently in October.
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$HR" = "23" ]; then
-            case "$DOW" in
-              7|1|2|3|4)
-                OFFSET=$(python3 -c "import datetime as dt;from zoneinfo import ZoneInfo;print(int(dt.datetime.now(ZoneInfo('Australia/Melbourne')).utcoffset().total_seconds()//3600))" 2>/dev/null || echo "")
-                if [ "$OFFSET" = "11" ]; then
-                  echo "23 UTC on a Melbourne AEDT trading eve — scan.yml owns the ASX open; skipping."
-                  echo "run=false" >> "$GITHUB_OUTPUT"
-                  exit 0
-                fi
-                echo "23 UTC, Melbourne offset ${OFFSET:-unknown} — not AEDT, this hour is still ours." ;;
-            esac
-          fi
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$DOW" -le 5 ]; then
-            case "$HR" in
-              0[0-6]|1[4-9]|2[01])
-                echo "Weekday scan-window hour ${HR} UTC — scan.yml owns crypto now; skipping."
-                echo "run=false" >> "$GITHUB_OUTPUT"
-                exit 0 ;;
-            esac
-          fi
+          # NO WINDOW-OWNERSHIP GATE ANY MORE (2026-09-21). Everything that
+          # used to live here — the weekday UTC hour table, and the hour-23
+          # daylight-saving branch that handed the AEDT ASX open back to
+          # scan.yml — existed for ONE reason: scan.yml's scheduled runs passed
+          # no market, fell through to `all`, and scanned crypto too, so two
+          # workflows raced for the same one-slot `scan` queue every weekday
+          # hour. scan.yml now scans exactly one STOCK market per run and never
+          # crypto, so there is nothing to de-double against and crypto is
+          # simply scanned every hour, seven days a week, as the owner asked.
           echo "run=true" >> "$GITHUB_OUTPUT"
 
       # PIGGYBACK TICK (2026-08-27) — same rationale as kill_switch.yml's:
