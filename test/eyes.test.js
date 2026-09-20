@@ -391,19 +391,22 @@ console.log(`\n${"─".repeat(48)}`);
 suite("reviewed names — the worklist shrinks as you work it");
 
 function eyesSeenSandbox(storage, stamp) {
-  const src = [
-    sliceConstFrom(SRC, "EYES_SEEN_KEY", "app.js"),
-    sliceConstFrom(SRC, "eyesStamp", "app.js").replace(
-      "String((state.data && state.data.generated_at) || \"\")", "String(__STAMP)"),
-    sliceFn(SRC, "eyesSeenLoad", "app.js"),
-    sliceFn(SRC, "eyesSeenSave", "app.js"),
-    sliceConstFrom(SRC, "eyesKey", "app.js"),
-    sliceFn(SRC, "markEyeSeen", "app.js"),
-    sliceFn(SRC, "eyesResetSeen", "app.js"),
-  ].join("\n");
-  return new Function("localStorage", "__STAMP", "JSON", src +
-    "\nreturn { eyesSeenLoad, markEyeSeen, eyesResetSeen, eyesKey };")(storage, stamp, JSON);
+  // The store now lives in the SHARED module both the deck and the chart load
+  // (public/js/eyes-store.js). Run the real file, not a copy.
+  const src = fs.readFileSync(path.resolve(__dirname, "../public/js/eyes-store.js"), "utf8");
+  const win = {};
+  new Function("window", "localStorage", "JSON", "Object", "Array", src)(
+    win, storage, JSON, Object, Array);
+  const E = win.EYES;
+  return {
+    eyesSeenLoad: () => E.seen(stamp),
+    markEyeSeen: (m, t) => E.mark(m, t, stamp),
+    eyesResetSeen: () => E.reset(),
+    eyesKey: (m, t) => E.key(m, t),
+    E, stamp,
+  };
 }
+
 function fakeStore(initial) {
   const m = new Map(Object.entries(initial || {}));
   return {
@@ -505,6 +508,88 @@ test("the restore control is offered whenever something is hidden", () => {
 test("and is absent when nothing is hidden, so a clean strip stays clean", () => {
   const html = eyesHTML([mk("UNIT", 2, "short")], "nasdaq", 0, 0);
   assert.ok(!/data-eyes-reset/.test(html));
+});
+
+
+// ═══════════════ the chain: arrows walk the strip (owner, 2026-09-20) ════════
+/* "that arrow back and forward; this should continue down the chain of FOR MY
+ * EYES. So once i've clicked forward or back a few times it marks off the
+ * LIST." */
+suite("the chain — stepping the strip with the chart's arrows");
+
+test("the deck saves the order and the chart reads it back", () => {
+  const store = fakeStore();
+  const { E } = eyesSeenSandbox(store, "scan-1");
+  E.saveChain("nasdaq", "scan-1", ["UNIT", "CVLT", "WMT"]);
+  assert.deepEqual(E.chain("nasdaq", "scan-1"), ["UNIT", "CVLT", "WMT"]);
+});
+
+test("tickers are normalised, so a lowercase link still matches the chain", () => {
+  const { E } = eyesSeenSandbox(fakeStore(), "s1");
+  E.saveChain("asx", "s1", ["enr", "Nol"]);
+  assert.deepEqual(E.chain("asx", "s1"), ["ENR", "NOL"]);
+});
+
+test("a chain from ANOTHER MARKET is ignored", () => {
+  const { E } = eyesSeenSandbox(fakeStore(), "s1");
+  E.saveChain("asx", "s1", ["ENR"]);
+  assert.deepEqual(E.chain("nasdaq", "s1"), [], "ASX order must not drive a NASDAQ chart");
+});
+
+test("a chain from an OLDER SCAN is ignored", () => {
+  // Stepping yesterday's order through today's data would walk names that are
+  // no longer aligned. No chain is better than a wrong one.
+  const { E } = eyesSeenSandbox(fakeStore(), "s1");
+  E.saveChain("asx", "s1", ["ENR", "NOL"]);
+  assert.deepEqual(E.chain("asx", "s2"), []);
+});
+
+test("a hostile localStorage yields no chain rather than throwing", () => {
+  const hostile = {
+    getItem: () => { throw new Error("blocked"); },
+    setItem: () => { throw new Error("blocked"); },
+    removeItem: () => { throw new Error("blocked"); },
+  };
+  const { E } = eyesSeenSandbox(hostile, "s1");
+  assert.equal(E.saveChain("asx", "s1", ["ENR"]), false);
+  assert.deepEqual(E.chain("asx", "s1"), []);
+});
+
+test("the deck links chips with src=eyes so the chart knows to walk the chain", () => {
+  const html = eyesHTML([mk("UNIT", 2, "A+"), mk("CVLT", 2, "A+")], "nasdaq");
+  assert.ok(/src=eyes/.test(html), "without src=eyes the arrows fall back to the whole deck");
+});
+
+test("the deck saves the FULL ranked set, not just the visible chips", () => {
+  // The strip caps at 8 chips behind "+N more"; the arrows must keep going.
+  const fn = sliceFn(SRC, "renderEyes", "app.js");
+  assert.ok(/saveChain\(/.test(fn), "renderEyes never stores the chain");
+  assert.ok(/eyesRank\(rows\)\.map/.test(fn),
+    "the chain must be the ranked set, not the sliced chips");
+});
+
+test("the chart marks a name reviewed on ARRIVAL, not just on a chip click", () => {
+  const chart = fs.readFileSync(path.resolve(__dirname, "../public/js/chart.js"), "utf8");
+  const blk = chart.slice(chart.indexOf('navSrc === "eyes"'));
+  const scoped = blk.slice(0, blk.indexOf("fetch(file,"));
+  assert.ok(/EYES\.mark\(/.test(scoped), "arrowing onto a name must cross it off");
+  assert.ok(/EYES\.chain\(/.test(scoped), "the arrows must read the saved order");
+  assert.ok(/eyes`/.test(scoped) || /eyes"/.test(scoped), "the counter should say it is the eyes chain");
+});
+
+test("an expired chain falls through to the normal deck nav, never dead arrows", () => {
+  const chart = fs.readFileSync(path.resolve(__dirname, "../public/js/chart.js"), "utf8");
+  const blk = chart.slice(chart.indexOf('navSrc === "eyes"'));
+  const scoped = blk.slice(0, blk.indexOf("fetch(file,"));
+  assert.ok(/idx >= 0 && chain\.length > 1/.test(scoped),
+    "must only take over the arrows when the current name IS in a usable chain");
+});
+
+test("both pages load the shared store, so they cannot drift apart", () => {
+  for (const page of ["index.html", "chart.html"]) {
+    const html = fs.readFileSync(path.resolve(__dirname, "../public", page), "utf8");
+    assert.ok(/js\/eyes-store\.js\?v=/.test(html), `${page} does not load eyes-store.js`);
+  }
 });
 
 if (failed) {

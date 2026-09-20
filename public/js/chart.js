@@ -3847,7 +3847,7 @@
   // Lets you step down the same scan (e.g. all ASX reversals) without bouncing
   // back to the dashboard. Reads the scan-results JSON that backs this chart,
   // finds the current symbol's position, and wires the header arrows + ←/→ keys.
-  function wireScanNav() {
+  async function wireScanNav() {
     const nav = $("#ct-nav"), prevB = $("#ct-prev"), nextB = $("#ct-next"), posEl = $("#ct-nav-pos");
     if (!nav || !symbol) return;
 
@@ -3930,6 +3930,50 @@
         else if (sort === "price") out = [...out].sort(bynum((r) => r.price, true));
         return out;
       };
+    }
+
+    /* src=eyes (owner, 2026-09-20): "that arrow back and forward; this should
+     * continue down the chain of FOR MY EYES ... once i've clicked forward or
+     * back a few times it marks off the LIST."
+     *
+     * So the arrows walk the STRIP's order, not the 200-name deck, and every
+     * name landed on is marked reviewed — arriving here IS reviewing it. The
+     * order was saved by the deck when the chip was clicked (window.EYES), and
+     * it is scoped to this market and this scan: a stale chain is treated as no
+     * chain and the arrows fall back to the ordinary deck list below, because
+     * stepping yesterday's order through today's data would walk names that are
+     * no longer aligned.
+     */
+    if (navSrc === "eyes" && window.EYES) {
+      const stamp = await fetch(`data/${market}_vivek.json`, { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => String((j && j.generated_at) || ""))
+        .catch(() => "");
+      const chain = window.EYES.chain(market, stamp);
+      const cur = decodeURIComponent(symbol).toUpperCase();
+      // Mark on ARRIVAL, so stepping with the arrows (or the keyboard, or a
+      // swipe) crosses names off exactly as clicking a chip does.
+      window.EYES.mark(market, cur, stamp);
+      const idx = chain.indexOf(cur);
+      if (idx >= 0 && chain.length > 1) {
+        const hrefEyes = (t) =>
+          `chart.html?m=${market}&s=${encodeURIComponent(t)}&pm=1&src=eyes`;
+        nav.hidden = false;
+        posEl.textContent = `${idx + 1} / ${chain.length} eyes`;
+        const goE = (i) => { if (i >= 0 && i < chain.length) location.href = hrefEyes(chain[i]); };
+        prevB.disabled = idx === 0;
+        nextB.disabled = idx === chain.length - 1;
+        prevB.onclick = () => goE(idx - 1);
+        nextB.onclick = () => goE(idx + 1);
+        document.addEventListener("keydown", (e) => {
+          if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+          if (e.key === "ArrowLeft" && idx > 0) goE(idx - 1);
+          if (e.key === "ArrowRight" && idx < chain.length - 1) goE(idx + 1);
+        });
+        return;
+      }
+      // Not in the chain (a stale link, or the chain expired): fall through to
+      // the ordinary deck nav rather than leaving the arrows dead.
     }
 
     fetch(file, { cache: "no-cache" })

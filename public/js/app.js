@@ -706,53 +706,29 @@
       (pq(b) - pq(a)) || (vs(b) - vs(a)) || a.ticker.localeCompare(b.ticker);
   });
 
-  /* ── EYES: reviewed names drop out of the strip ───────────────────────────
+  /* ── EYES: a worklist you walk ────────────────────────────────────────────
    * Owner, 2026-09-19: "Once ive clicked a chart under that window, that window
    * should no longer show that. Otherwise there's too much shit going on."
+   * Owner, 2026-09-20: the chart's arrows should "continue down the chain of
+   * FOR MY EYES", marking each one off as you step through it.
    *
-   * The strip is a WORKLIST, so opening a name's chart is the act of dealing
-   * with it and it leaves. Per-viewer and per-SCAN: the reviewed set is stamped
-   * with the scan it was formed against, so the next scan brings everything
-   * back. That is the point -- a new scan is new evidence, and a name you
-   * reviewed against yesterday's tape has not been reviewed against today's.
+   * The store itself lives in public/js/eyes-store.js because the CHART writes
+   * to it too (it marks each name you arrow onto). One file, not a copy per
+   * page: a chart marking names under a key the deck does not read would look
+   * like it worked and do nothing.
    *
-   * localStorage only, wrapped, and the strip renders correctly when it throws
-   * or comes back empty (private windows, cleared site data). Nothing here is
-   * state anyone else needs and nothing reads it back server-side. It is also
-   * REVERSIBLE: the summary gains a quiet "N reviewed" button that restores
-   * them, because a worklist you cannot un-hide is one bad tap from useless.
+   * Everything here degrades if that script is missing or localStorage throws:
+   * no reviewed set, no chain, strip shows everything. The safe direction.
    */
-  const EYES_SEEN_KEY = "gbs:eyes_seen";
   const eyesStamp = () => String((state.data && state.data.generated_at) || "");
-
-  function eyesSeenLoad() {
-    try {
-      const raw = localStorage.getItem(EYES_SEEN_KEY);
-      if (!raw) return {};
-      const o = JSON.parse(raw);
-      // A set formed against a DIFFERENT scan is stale: drop it wholesale so the
-      // new scan's names all surface again.
-      if (!o || o.stamp !== eyesStamp()) return {};
-      const out = {};
-      for (const k of (o.keys || [])) out[k] = true;
-      return out;
-    } catch (_) { return {}; }
-  }
-  function eyesSeenSave(map) {
-    try {
-      localStorage.setItem(EYES_SEEN_KEY,
-        JSON.stringify({ stamp: eyesStamp(), keys: Object.keys(map) }));
-    } catch (_) { /* private window / quota — the strip still works, it just forgets */ }
-  }
-  const eyesKey = (market, ticker) => `${market}:${String(ticker || "").toUpperCase()}`;
+  const eyesSeenLoad = () => (window.EYES ? window.EYES.seen(eyesStamp()) : {});
+  const eyesKey = (market, ticker) =>
+    (window.EYES ? window.EYES.key(market, ticker)
+                 : `${market}:${String(ticker || "").toUpperCase()}`);
   function markEyeSeen(market, ticker) {
-    const m = eyesSeenLoad();
-    m[eyesKey(market, ticker)] = true;
-    eyesSeenSave(m);
+    if (window.EYES) window.EYES.mark(market, ticker, eyesStamp());
   }
-  function eyesResetSeen() {
-    try { localStorage.removeItem(EYES_SEEN_KEY); } catch (_) { /* nothing to clear */ }
-  }
+  function eyesResetSeen() { if (window.EYES) window.EYES.reset(); }
 
   const eyesHTML = (rows, market, cap, seenN) => {
     const ranked = eyesRank(rows);
@@ -793,8 +769,10 @@
         (ap ? " — and VIVEK grades it A+" : "") +
         (fund ? " — fund / LIC / preferred-type product, not an operating company" : "") +
         " — open the combined chart";
+      // src=eyes tells chart.js to step the EYES chain with its arrows rather
+      // than the whole deck, and to mark each name it lands on as reviewed.
       return `<a class="${cls}" title="${esc(title)}" data-eyes-tk="${esc(x.ticker)}" ` +
-        `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
+        `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}&src=eyes">` +
         `${x.count >= 3 ? "🎯 " : ""}<b>${esc(x.ticker)}</b> ${arrow}` +
         `${ap ? `<em class="ey-tag">A+</em>` : ""}` +
         `${fund ? `<em class="ey-tag ey-fund-tag">PRODUCT</em>` : ""}` +
@@ -846,8 +824,16 @@
     if (reset) reset.addEventListener("click", () => { eyesResetSeen(); renderEyes(); });
     // Recorded on click, which runs before the link navigates, so the name is
     // already gone when the back button returns to this page.
+    // The chain is the FULL ranked set still unreviewed, not just the 8 chips
+    // on screen: the arrows should keep going past the "+N more" cut-off.
     host.querySelectorAll("a.ey-chip[data-eyes-tk]").forEach((a) => {
-      a.addEventListener("click", () => markEyeSeen(state.market, a.getAttribute("data-eyes-tk")));
+      a.addEventListener("click", () => {
+        if (window.EYES) {
+          window.EYES.saveChain(state.market, eyesStamp(),
+                                eyesRank(rows).map((x) => x.ticker));
+        }
+        markEyeSeen(state.market, a.getAttribute("data-eyes-tk"));
+      });
     });
   }
 
