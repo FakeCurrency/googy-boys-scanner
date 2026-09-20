@@ -8,12 +8,12 @@ A **signal** = the first day a fire-streak passes every mandatory gate (3× volu
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | target first | stopped | still open | MAE |
 |---|---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 8989 | -1.2% | -1.2% | -1.1% | 30.0% | 30.6% | 39.4% | -17.5% |
-| grade A+ | 6426 | -0.9% | -0.7% | -0.7% | 28.2% | 30.0% | 41.8% | -17.6% |
-| grade A | 2315 | -2.0% | -2.2% | -2.1% | 33.9% | 32.9% | 33.2% | -17.0% |
-| grade B | 248 | -2.1% | -2.1% | -1.4% | 39.5% | 27.0% | 33.5% | -17.3% |
+| ALL SIGNALS | 1208 | -1.2% | -1.8% | -2.0% | 29.1% | 31.2% | 39.7% | -17.5% |
+| grade A+ | 886 | -1.1% | -2.0% | -2.1% | 28.1% | 32.3% | 39.6% | -17.8% |
+| grade A | 298 | -1.5% | -1.2% | -1.9% | 31.5% | 28.5% | 39.9% | -16.7% |
+| grade B | 24 | +0.9% | -1.2% | +0.9% | 33.3% | 25.0% | 41.7% | -17.2% |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (8989 samples, seeded): fwd 5: +0.5% · fwd 10: +1.1% · fwd 20: +2.9%
+- Random entry on the same sub-$0.50 universe (1208 samples, seeded): fwd 5: +0.2% · fwd 10: +0.8% · fwd 20: +0.9%
 
 Analysis only — not financial advice.
