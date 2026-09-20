@@ -262,6 +262,23 @@
     vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
   };
 
+  // Sort direction. Each sort has a natural default (numeric -> descending,
+  // alphabetical -> ascending); clicking the already-active sort flips it. The
+  // active button shows a up/down arrow for the current direction.
+  const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc", sector: "asc" };
+  const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
+  const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
+  // Compact cycling sort (backlog #2): one control instead of five buttons.
+  // The label advances through the cycle; the arrow flips direction.
+  const SORT_CYCLE = ["score", "price", "rr", "mcap", "az", "sector"];
+  const SORT_LABEL = { score: "SCORE", price: "PRICE", rr: "R:R", mcap: "M.C", az: "A-Z", sector: "SECTOR" };
+  function updateSortButtons() {
+    const label = document.getElementById("sort-cycle");
+    const dir = document.getElementById("sort-dir");
+    if (label) label.textContent = SORT_LABEL[state.sort] || String(state.sort).toUpperCase();
+    if (dir) dir.textContent = sortDirOf() === "asc" ? "\u2191" : "\u2193";
+  }
+  // (syncWatchToggle removed 2026-09-21 with the stars.)
   // FUNDS DIMMED chip (v2 #47, relabelled 2026-07-29): active = FUND/REIT rows dimmed.
   function syncFundDim() {
     const b = document.getElementById("fund-dim");
@@ -3635,6 +3652,35 @@
         else localStorage.removeItem(k);
       } catch (_) {}
     });
+  }
+
+  // Triple-lens browser notification (the star-arm variant, notifyWatchArms,
+  // went with the stars 2026-09-21). Same 🔔 permission + once-per-day dedupe.
+  function notifyEnabled() {
+    try { return localStorage.getItem("gbs:notify") === "1" &&
+      "Notification" in window && Notification.permission === "granted"; }
+    catch (_) { return false; }
+  }
+  function notifyTriples(rows) {
+    if (!notifyEnabled()) return;
+    let seen = {};
+    try { seen = JSON.parse(localStorage.getItem("gbs:notified") || "{}"); } catch (_) {}
+    const day = new Date().toISOString().slice(0, 10);
+    (rows || []).filter((x) => x.count >= 3).forEach((x) => {
+      const k = `${day}:${state.market}:${x.ticker}:${x.side}`;
+      if (seen[k]) return;
+      seen[k] = 1;
+      try {
+        new Notification("\uD83C\uDFAF Triple-lens alignment", {
+          body: `${x.ticker} ${x.side.toUpperCase()} \u00b7 ${state.market.toUpperCase()} \u2014 ${x.lenses.join(" + ")}`,
+          icon: "icons/icon-192.png", tag: k,
+        });
+      } catch (_) {}
+    });
+    try {
+      const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
+      localStorage.setItem("gbs:notified", JSON.stringify(pruned));
+    } catch (_) {}
   }
 
   function wireNotifyBell() {

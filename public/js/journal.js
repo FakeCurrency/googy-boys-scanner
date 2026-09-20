@@ -1459,7 +1459,7 @@
     const cell = (label, val, cls) =>
       `<div class="jr-dg-cell"><span class="jr-dg-label">${label}</span><span class="jr-dg-val ${cls || ""}">${val}</span></div>`;
     grid.innerHTML =
-      cell("Closes", `${closes.length} <span class="num-sub">🤖${bot.length} ✏️${me.length}</span>`, "") +
+      cell("Closes", `${closes.length}`, "") +
       cell("Net R", rfmt(totalR), rcls(totalR)) +
       cell("Net $", dfmt(totalD), pcls(totalD)) +
       cell("Win rate", Math.round((wins / closes.length) * 100) + "%", "") +
@@ -1691,6 +1691,22 @@
     }
   }
 
+
+  // TOP100 #29: a failed refresh keeps the LAST GOOD BOOK on screen, so the
+  // error has to be surfaced or a frozen book looks like an unchanged one.
+  // r.ok is checked too: a 404 (never published) and a 500 both used to fall
+  // through in silence.
+  let botLoadErr = null;
+  async function loadBot() {
+    try {
+      const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
+      if (!r.ok) { botLoadErr = `HTTP ${r.status}`; return; }
+      state.bot = splitBot(await r.json());
+      botLoadErr = null;   // cleared only by a load that actually succeeded
+    } catch (e) {
+      botLoadErr = "unreachable";
+    }
+  }
 
   // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
   // source for manual trades) from the live scans. Re-runnable: prices overwrite.
