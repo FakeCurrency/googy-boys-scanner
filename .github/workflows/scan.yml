@@ -421,7 +421,6 @@ jobs:
       # the scan.
       - name: Confluence alert engine (ALERTS log + state)
         continue-on-error: true
-        env:
         run: python -m scanner.confluence_alert
 
       # NOTE: the paper-trade journal and Telegram alerts read the retired
