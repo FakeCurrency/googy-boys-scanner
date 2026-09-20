@@ -6,71 +6,71 @@
  "period": "5y",
  "survivorship_bias": true,
  "all": {
-  "n": 946,
-  "fwd_5": 0.0263,
-  "fwd_10": 0.0257,
-  "fwd_20": -1.5427,
-  "mae": -2.0539,
-  "t1_hit_pct": 42.9,
+  "n": 952,
+  "fwd_5": 0.0267,
+  "fwd_10": 0.026,
+  "fwd_20": -1.5321,
+  "mae": -2.0383,
+  "t1_hit_pct": 43.1,
   "avg_bars_to_t1": 9.2,
-  "stalled_pct": 92.8,
-  "dead_pct": 34.9
+  "stalled_pct": 92.9,
+  "dead_pct": 35.0
  },
  "cohorts": {
   "tier A+": {
-   "n": 125,
-   "fwd_5": 0.0171,
-   "fwd_10": 0.0257,
-   "fwd_20": 1.2313,
-   "mae": -0.1544,
-   "t1_hit_pct": 48.0,
-   "avg_bars_to_t1": 9.3,
-   "stalled_pct": 94.4,
-   "dead_pct": 33.6
+   "n": 127,
+   "fwd_5": 0.0193,
+   "fwd_10": 0.0312,
+   "fwd_20": 1.2202,
+   "mae": -0.1526,
+   "t1_hit_pct": 48.8,
+   "avg_bars_to_t1": 9.2,
+   "stalled_pct": 94.5,
+   "dead_pct": 33.1
   },
   "tier A": {
-   "n": 591,
-   "fwd_5": 0.0274,
-   "fwd_10": 0.0231,
-   "fwd_20": -2.7533,
-   "mae": -3.2139,
+   "n": 595,
+   "fwd_5": 0.0276,
+   "fwd_10": 0.0223,
+   "fwd_20": -2.7353,
+   "mae": -3.1839,
    "t1_hit_pct": 42.5,
    "avg_bars_to_t1": 9.5,
-   "stalled_pct": 92.2,
-   "dead_pct": 35.4
+   "stalled_pct": 92.3,
+   "dead_pct": 35.5
   },
   "long": {
-   "n": 510,
-   "fwd_5": 0.0259,
-   "fwd_10": 0.0255,
-   "fwd_20": 0.3633,
-   "mae": -0.1229,
-   "t1_hit_pct": 45.3,
-   "avg_bars_to_t1": 7.7,
-   "stalled_pct": 92.5,
-   "dead_pct": 32.0
+   "n": 514,
+   "fwd_5": 0.0265,
+   "fwd_10": 0.0261,
+   "fwd_20": 0.3612,
+   "mae": -0.1232,
+   "t1_hit_pct": 45.5,
+   "avg_bars_to_t1": 7.6,
+   "stalled_pct": 92.6,
+   "dead_pct": 31.9
   },
   "short": {
-   "n": 436,
-   "fwd_5": 0.0267,
-   "fwd_10": 0.0261,
-   "fwd_20": -3.7752,
-   "mae": -4.3038,
-   "t1_hit_pct": 40.1,
+   "n": 438,
+   "fwd_5": 0.0269,
+   "fwd_10": 0.0259,
+   "fwd_20": -3.757,
+   "mae": -4.2857,
+   "t1_hit_pct": 40.2,
    "avg_bars_to_t1": 11.2,
-   "stalled_pct": 93.1,
-   "dead_pct": 38.3
+   "stalled_pct": 93.2,
+   "dead_pct": 38.6
   },
   "liquid": {
-   "n": 855,
-   "fwd_5": 0.0279,
-   "fwd_10": 0.0273,
-   "fwd_20": 0.037,
-   "mae": -0.1313,
-   "t1_hit_pct": 44.1,
-   "avg_bars_to_t1": 9.0,
-   "stalled_pct": 93.2,
-   "dead_pct": 34.9
+   "n": 861,
+   "fwd_5": 0.0283,
+   "fwd_10": 0.0275,
+   "fwd_20": 0.0376,
+   "mae": -0.1319,
+   "t1_hit_pct": 44.3,
+   "avg_bars_to_t1": 8.9,
+   "stalled_pct": 93.3,
+   "dead_pct": 35.0
   },
   "illiquid": {
    "n": 91,
@@ -84,66 +84,66 @@
    "dead_pct": 35.2
   },
   "price >= $1": {
-   "n": 526,
-   "fwd_5": 0.0295,
-   "fwd_10": 0.022,
-   "fwd_20": 0.0315,
-   "mae": -0.1186,
-   "t1_hit_pct": 43.0,
+   "n": 527,
+   "fwd_5": 0.0294,
+   "fwd_10": 0.0218,
+   "fwd_20": 0.0317,
+   "mae": -0.1188,
+   "t1_hit_pct": 42.9,
    "avg_bars_to_t1": 8.5,
    "stalled_pct": 92.2,
-   "dead_pct": 35.9
+   "dead_pct": 36.1
   },
   "cents (<$1)": {
-   "n": 420,
-   "fwd_5": 0.0222,
-   "fwd_10": 0.0304,
-   "fwd_20": -3.5094,
-   "mae": -4.4685,
-   "t1_hit_pct": 42.9,
-   "avg_bars_to_t1": 10.2,
+   "n": 425,
+   "fwd_5": 0.0232,
+   "fwd_10": 0.0311,
+   "fwd_20": -3.4666,
+   "mae": -4.4185,
+   "t1_hit_pct": 43.3,
+   "avg_bars_to_t1": 10.1,
    "stalled_pct": 93.6,
    "dead_pct": 33.6
   },
   "in-sample": {
-   "n": 674,
-   "fwd_5": 0.0233,
+   "n": 676,
+   "fwd_5": 0.0235,
    "fwd_10": 0.0242,
-   "fwd_20": -2.1629,
-   "mae": -2.624,
-   "t1_hit_pct": 41.5,
+   "fwd_20": -2.1562,
+   "mae": -2.6173,
+   "t1_hit_pct": 41.6,
    "avg_bars_to_t1": 9.7,
-   "stalled_pct": 92.4,
-   "dead_pct": 36.6
+   "stalled_pct": 92.5,
+   "dead_pct": 36.7
   },
   "out-of-sample": {
-   "n": 272,
-   "fwd_5": 0.0337,
-   "fwd_10": 0.0295,
-   "fwd_20": 0.0409,
-   "mae": -0.6308,
-   "t1_hit_pct": 46.3,
-   "avg_bars_to_t1": 8.1,
+   "n": 276,
+   "fwd_5": 0.0346,
+   "fwd_10": 0.0305,
+   "fwd_20": 0.042,
+   "mae": -0.6202,
+   "t1_hit_pct": 46.7,
+   "avg_bars_to_t1": 8.0,
    "stalled_pct": 93.8,
-   "dead_pct": 30.5
+   "dead_pct": 30.8
   }
  },
  "stall": {
-  "stalled": 878,
-  "saved_capital": 265,
-  "cut_winner": 390,
-  "neither": 223
+  "stalled": 884,
+  "saved_capital": 268,
+  "cut_winner": 394,
+  "neither": 222
  },
  "baselines": {
   "random": {
-   "n": 909,
-   "fwd_5": 0.0107,
-   "fwd_10": 0.0093,
-   "fwd_20": 0.0419
+   "n": 912,
+   "fwd_5": 0.0159,
+   "fwd_10": 0.0174,
+   "fwd_20": 0.0499
   },
   "buy_hold": {
-   "n": 66,
-   "total_return": 10.521
+   "n": 67,
+   "total_return": 11.1401
   }
  }
 }

@@ -8,27 +8,27 @@ A **signal** is a displacement confirmation (state DISPLACED). Forward returns a
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | T1 hit | bars→T1 | MAE |
 |---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 946 | +2.6% | +2.6% | -154.3% | 42.9% | 9.2 | -205.4% |
-| tier A+ | 125 | +1.7% | +2.6% | +123.1% | 48.0% | 9.3 | -15.4% |
-| tier A | 591 | +2.7% | +2.3% | -275.3% | 42.5% | 9.5 | -321.4% |
-| long | 510 | +2.6% | +2.5% | +36.3% | 45.3% | 7.7 | -12.3% |
-| short | 436 | +2.7% | +2.6% | -377.5% | 40.1% | 11.2 | -430.4% |
-| liquid | 855 | +2.8% | +2.7% | +3.7% | 44.1% | 9.0 | -13.1% |
+| ALL SIGNALS | 952 | +2.7% | +2.6% | -153.2% | 43.1% | 9.2 | -203.8% |
+| tier A+ | 127 | +1.9% | +3.1% | +122.0% | 48.8% | 9.2 | -15.3% |
+| tier A | 595 | +2.8% | +2.2% | -273.5% | 42.5% | 9.5 | -318.4% |
+| long | 514 | +2.6% | +2.6% | +36.1% | 45.5% | 7.6 | -12.3% |
+| short | 438 | +2.7% | +2.6% | -375.7% | 40.2% | 11.2 | -428.6% |
+| liquid | 861 | +2.8% | +2.8% | +3.8% | 44.3% | 8.9 | -13.2% |
 | illiquid | 91 | +1.1% | +1.1% | -1624.6% | 31.9% | 12.5 | -2007.6% |
-| price >= $1 | 526 | +2.9% | +2.2% | +3.1% | 43.0% | 8.5 | -11.9% |
-| cents (<$1) | 420 | +2.2% | +3.0% | -350.9% | 42.9% | 10.2 | -446.8% |
-| in-sample | 674 | +2.3% | +2.4% | -216.3% | 41.5% | 9.7 | -262.4% |
-| out-of-sample | 272 | +3.4% | +2.9% | +4.1% | 46.3% | 8.1 | -63.1% |
+| price >= $1 | 527 | +2.9% | +2.2% | +3.2% | 42.9% | 8.5 | -11.9% |
+| cents (<$1) | 425 | +2.3% | +3.1% | -346.7% | 43.3% | 10.1 | -441.8% |
+| in-sample | 676 | +2.4% | +2.4% | -215.6% | 41.6% | 9.7 | -261.7% |
+| out-of-sample | 276 | +3.5% | +3.0% | +4.2% | 46.7% | 8.0 | -62.0% |
 
 ## Baselines (same tickers, same window)
-- Random entry (909 samples, seeded): fwd 5: +1.1% · fwd 10: +0.9% · fwd 20: +4.2%
-- Buy & hold (66 tickers): +1052.1% mean total return over the replay window
+- Random entry (912 samples, seeded): fwd 5: +1.6% · fwd 10: +1.7% · fwd 20: +5.0%
+- Buy & hold (67 tickers): +1114.0% mean total return over the replay window
 
 ## The 50% rule, measured
-- Signals that stalled (momentum zone touched): 878
-- Saved capital (hard floor broke first after the stall): 265
-- Cut a winner (T1 was still consumed first): 390
-- Neither within the tracking window: 223
+- Signals that stalled (momentum zone touched): 884
+- Saved capital (hard floor broke first after the stall): 268
+- Cut a winner (T1 was still consumed first): 394
+- Neither within the tracking window: 222
 
 In-sample = signals before 2025-07-01; out-of-sample = after. If a cohort doesn't beat the baselines out-of-sample, the spec says cut it and note it here.
 
