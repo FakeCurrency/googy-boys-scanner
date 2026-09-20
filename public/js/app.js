@@ -29,7 +29,6 @@
   const SMA_COLOR = { 9: "#e5e9f0", 26: "#ffd23f", 43: "#a78bfa", 200: "#ff5b5b" };
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const GRADE_RANK = { "A+": 0, "A": 1, "B+": 2, "B": 2, "WATCH": 3, "C": 3 };
-  const WATCH_KEY = "gbs:watch";
 
   // ---- evidence that this browser has used the app before -----------------
   // The first-visit tour used to be gated on ONE key, `gbs:onboarded`, which is
@@ -52,12 +51,8 @@
   // for evidence of a previous one.
   const PRIOR_USE_KEYS = [
     "gbs:prefs",            // changed market / tab / sort
-    "gbs:watch",            // starred a name
-    "gbs:manual_journal",   // logged a trade
     "gbs:presets",          // saved a view
     "gbs:density",          // toggled row density
-    "gbs:wstrip",           // collapsed the watch strip
-    "gbs:sync_code",        // set up cross-device sync
     "gbs:mysize-acct",      // used the size calculator
     "gbs:notify",           // turned on alerts
     "gbs:alerts-seen",      // read the alerts page
@@ -267,30 +262,6 @@
     vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
   };
 
-  // Sort direction. Each sort has a natural default (numeric → descending,
-  // alphabetical → ascending); clicking the already-active sort flips it. The
-  // active button shows a ↑ / ↓ arrow for the current direction.
-  const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc", sector: "asc" };
-  const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
-  const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
-  // Compact cycling sort (backlog #2): one control instead of five buttons.
-  // The label advances through the cycle; the arrow flips direction.
-  const SORT_CYCLE = ["score", "price", "rr", "mcap", "az", "sector"];
-  const SORT_LABEL = { score: "SCORE", price: "PRICE", rr: "R:R", mcap: "M.C", az: "A-Z", sector: "SECTOR" };
-  function updateSortButtons() {
-    const label = document.getElementById("sort-cycle");
-    const dir = document.getElementById("sort-dir");
-    if (label) label.textContent = SORT_LABEL[state.sort] || String(state.sort).toUpperCase();
-    if (dir) dir.textContent = sortDirOf() === "asc" ? "↑" : "↓";
-  }
-  // ★ watch toggle (backlog #1): the old Results/Watch tab pair as one chip.
-  function syncWatchToggle() {
-    const b = document.getElementById("watch-toggle");
-    if (!b) return;
-    const on = state.view === "watch";
-    b.classList.toggle("is-active", on);
-    b.setAttribute("aria-pressed", on ? "true" : "false");
-  }
   // FUNDS DIMMED chip (v2 #47, relabelled 2026-07-29): active = FUND/REIT rows dimmed.
   function syncFundDim() {
     const b = document.getElementById("fund-dim");
@@ -329,7 +300,6 @@
     });
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => { const on = b.dataset.tab === state.tab; b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
     updateSortButtons();
-    syncWatchToggle();
     syncFundDim();
   })();
 
@@ -371,43 +341,6 @@
   // turns empty back into NaN so "absent" stays absent instead of becoming 0.
   const numAttr = (v) => (v == null || !isFinite(+v)) ? "" : String(+v);
   const numAttrOf = (s) => (s == null || s === "") ? NaN : +s;
-
-  // ----------------------------------------------------------- watchlist
-  // Since 2026-07-03 stars live in the UNIFIED synced store (PM.watch inside
-  // the GBSSync journal — mirrors to Cloudflare KV with a sync code, so stars
-  // follow phone <-> desktop). The legacy localStorage set migrates itself.
-  const _pmWatch = () => (window.PM && PM.watch) || null;
-  const isStarred = (sym) => {
-    const w = _pmWatch();
-    if (w) return w.has("vivek", state.market, sym);
-    try { return new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]")).has(`${state.market}:${sym}`); }
-    catch (_) { return false; }
-  };
-  // #55: cross-lens watch — which lenses have starred this name (current
-  // market). Powers the ★ watch view's per-lens badges + inclusion.
-  const LENS_TAG = [["vivek", "V"], ["phasemap", "P"], ["specs", "S"]];
-  const LENS_NAME = { V: "VIVEK", P: "PhaseMap", S: "Specs" };
-  function lensStars(sym) {
-    const w = _pmWatch();
-    if (!w) return isStarred(sym) ? ["V"] : [];
-    return LENS_TAG.filter(([ns]) => w.has(ns, state.market, sym)).map(([, t]) => t);
-  }
-  const isWatchedAny = (sym) => lensStars(sym).length > 0;
-  function toggleStar(sym) {
-    const w = _pmWatch();
-    if (w) {
-      const r = (state.data && state.data.results || []).find((x) => x.symbol === sym) || null;
-      w.toggle("vivek", state.market, sym,
-        r ? { symbol: sym, name: r.name, grade: r.grade, dir: r.dir, price: r.price } : null);
-      return;
-    }
-    try {
-      const s = new Set(JSON.parse(localStorage.getItem(WATCH_KEY) || "[]"));
-      const k = `${state.market}:${sym}`;
-      s.has(k) ? s.delete(k) : s.add(k);
-      localStorage.setItem(WATCH_KEY, JSON.stringify([...s]));
-    } catch (_) {}
-  }
 
   // ── First-visit onboarding (UX top-10 #3, 2026-07-26) ─────────────────────
   // A new visitor lands on hundreds of setups and ~20 controls with no guide.
@@ -468,12 +401,12 @@
     scrim.querySelector(".ob-next").focus();
   }
 
-  // Long-press quick actions (#45): a scrimmed sheet with Chart / Star /
-  // Journal for one ticker. Built lazily, reused across presses.
+  // Long-press quick actions (#45): a scrimmed sheet with Chart / Journal for
+  // one ticker. Built lazily, reused across presses. (The ★ action went with
+  // the watchlists, 2026-09-21.)
   function openQuickActions(sym) {
     if (!sym) return;
     const r = (state.data && state.data.results || []).find((x) => x.symbol === sym) || {};
-    const starred = isStarred(sym);
     let scrim = document.getElementById("qa-scrim");
     if (!scrim) {
       scrim = document.createElement("div");
@@ -488,22 +421,11 @@
         `<div class="more-sheet-grip" aria-hidden="true"></div>` +
         `<div class="qa-hd"><b>${esc(sym)}</b>${r.name ? `<span>${esc(r.name)}</span>` : ""}</div>` +
         `<a class="qa-act" href="${chartHref}"><span class="qa-ico">📈</span> View chart</a>` +
-        `<button class="qa-act" type="button" data-act="star"><span class="qa-ico">${starred ? "★" : "☆"}</span> ${starred ? "Remove from watchlist" : "Add to watchlist"}</button>` +
         `<a class="qa-act" href="journal.html"><span class="qa-ico">📒</span> Open journal</a>` +
         `<button class="qa-act qa-cancel" type="button">Cancel</button>` +
       `</div>`;
     scrim.hidden = false;
     requestAnimationFrame(() => scrim.classList.add("is-open"));
-    scrim.querySelector('[data-act="star"]').addEventListener("click", () => {
-      toggleStar(sym);
-      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
-      const nowStar = isStarred(sym);
-      // reflect on the underlying row without a full re-render
-      const rowStar = document.querySelector(`.row-wrap[data-sym="${CSS.escape(sym)}"] .t-star`);
-      if (rowStar) rowStar.classList.toggle("starred", nowStar);   // #65: fill is CSS-driven
-      const wc = $("#watch-count"); if (wc && state.data) wc.textContent = (state.data.results || []).filter((x) => isStarred(x.symbol)).length;
-      closeQuickActions();
-    });
     scrim.querySelector(".qa-cancel").addEventListener("click", closeQuickActions);
     document.addEventListener("keydown", _qaEsc);
   }
@@ -877,8 +799,8 @@
       `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} aria-pressed="${active ? "true" : "false"}" title="${esc(title)}">` +
       `${label}${n == null ? "" : ` <b>${n}</b>`}</button>`;
     box.innerHTML =
-      pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.view === "results" && state.tab === "aplus") +
-      pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.view === "results" && state.tab === "a") +
+      pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.tab === "aplus") +
+      pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.tab === "a") +
       pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
         "Names with 2+ lenses aligned right now — click to filter the list to them", state.vkConfl) +
       pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
@@ -914,9 +836,7 @@
       renderRows();
     });
     box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
-      state.view = "results";
       state.tab = b.dataset.goto;
-      syncWatchToggle();
       document.querySelectorAll("#tabs .seg-btn").forEach((x) => { const on = x.dataset.tab === state.tab; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
       savePrefs();
       renderDeckPills(state.data);
@@ -932,7 +852,6 @@
     $("#count-aplus").textContent = nAplus;
     $("#count-a").textContent = nA;
     $("#count-watch").textContent = c.watch;
-    $("#watch-count").textContent = res.filter((r) => isStarred(r.symbol)).length;
   }
 
   // ----------------------------------------------------------- a row
@@ -1165,7 +1084,7 @@
   const VIEW_KEYS = ["tab", "sort", "sortDir", "view"];
   function captureView() {
     return { market: state.market, tab: state.tab, sort: state.sort, sortDir: state.sortDir,
-      view: state.view, dir: state.vkDir, entry: [...state.vkEntry], recent: state.vkRecent,
+      dir: state.vkDir, entry: [...state.vkEntry], recent: state.vkRecent,
       hc: state.vkHighConv, confl: state.vkConfl, atLevel: state.vkAtLevel,
       funds: state.dimFunds !== false };
   }
@@ -1201,7 +1120,6 @@
     if (v.tab) state.tab = v.tab;
     if (v.sort) state.sort = v.sort;
     state.sortDir = v.sortDir || null;
-    if (v.view) state.view = v.view;
     state.vkDir = v.dir || null;
     state.vkEntry = new Set(v.entry || []);
     state.vkRecent = !!v.recent; state.vkHighConv = !!v.hc;
@@ -1354,7 +1272,6 @@
       : "";
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "low" : "";
-    const starred = isStarred(r.symbol);
 
     // Day change (backlog #7): the price block shows today's % beneath the
     // price. Scan-provided fields win when the publisher ships them; until
@@ -1382,7 +1299,6 @@
           <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
           ${tfDots(r)}${changeMark(r)}${heldChip(r)}${sectorCapChip(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
           ${mcapBadge}
-          ${state.view === "watch" ? lensStars(r.symbol).map((l) => `<span class="lens-badge lens-${l}" title="Starred in ${LENS_NAME[l]}">${l}</span>`).join("") : ""}
           <span class="cname">${esc(r.name || "")}</span>
         </div>
         <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
@@ -1399,9 +1315,6 @@
           <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
           <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + rrStar}</span>
         </div>
-        <button class="t-star ${starred ? "starred" : ""}" data-sym="${esc(r.symbol)}" title="Watchlist" aria-label="Toggle watchlist">
-          <svg width="17" height="17" aria-hidden="true"><use href="#ic-star"/></svg>
-        </button>
         <button class="row-expand" title="Details" aria-label="Toggle details">
           <svg width="18" height="18" aria-hidden="true"><use href="#ic-chevron"/></svg>
         </button>
@@ -1976,9 +1889,7 @@
   function buildList() {
     const all = (state.data && state.data.results) || [];
     let list;
-    if (state.view === "watch") {
-      list = all.filter((r) => isWatchedAny(r.symbol));   // #55: any lens, not just VIVEK
-    } else if (state.tab === "aplus") {
+    if (state.tab === "aplus") {
       list = all.filter((r) => r.grade === "A+");
     } else if (state.tab === "a") {
       list = all.filter((r) => r.grade === "A");
@@ -2472,9 +2383,7 @@
         state.vkDir && (state.vkDir === "LONG" ? "Longs only" : "Shorts only"),
         state.vkEntry && state.vkEntry.size ? [...state.vkEntry].join("/") : null,
       ].filter(Boolean);
-      const msg = state.view === "watch"
-        ? { h: "Your watchlist is empty", p: "Tap the ☆ on any setup to add it here." }
-        : activeFilters.length
+      const msg = activeFilters.length
           ? { h: "No setups match these filters", p: `${activeFilters.join(" + ")} has no matches in ${state.market ? state.market.toUpperCase() : "this market"} on this tab — tap a pill or filter to widen, or switch market/tab.` }
           : { h: "No setups in this tab", p: "The gates are strict — a quiet tape can pass nothing, and that is the honest reading. Try another grade tab or market, or check back after the next scan (ASX and NASDAQ scan only while their market trades; crypto scans around the clock)." };
       wrap.innerHTML = `<div class="placeholder"><h3>${msg.h}</h3><p>${msg.p}</p></div>`;
@@ -2537,7 +2446,6 @@
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
     // #55: the other-lens strip lives at the end of the watch view — append it
     // here (before the small-list early return, so short watchlists get it too).
-    if (state.view === "watch") appendOtherLensWatched(wrap, renderList);
     if (renderList.length <= FIRST) { if (capNotice()) wrap.insertAdjacentHTML("beforeend", capNotice()); wireCapAll(wrap); return; }
     const token = _rowsToken;
     let i = FIRST;
@@ -2560,33 +2468,6 @@
     if (btn) btn.addEventListener("click", () => { state._showAll = true; renderRows(); }, { once: true });
   }
 
-  // #55: starred names in PhaseMap/Specs for this market that AREN'T in the
-  // VIVEK scan get a compact "also watched" strip below the rows — so the ★
-  // view is the true, whole watchlist, not just its VIVEK slice.
-  function appendOtherLensWatched(wrap, shownList) {
-    const w = _pmWatch();
-    if (!w) return;
-    const shown = new Set(shownList.map((r) => r.symbol));
-    const extras = {};   // symbol -> lenses
-    [["phasemap", "P"], ["specs", "S"]].forEach(([ns, tag]) => {
-      const m = w.map(ns, state.market) || {};
-      Object.keys(m).forEach((sym) => {
-        if (shown.has(sym)) return;
-        (extras[sym] = extras[sym] || { lenses: [], snap: m[sym] && m[sym].snap }).lenses.push(tag);
-      });
-    });
-    const syms = Object.keys(extras);
-    if (!syms.length) return;
-    const chips = syms.slice(0, 40).map((sym) => {
-      const e = extras[sym];
-      const href = `chart.html?m=${state.market}&s=${encodeURIComponent(sym)}&pm=1`;
-      const badges = e.lenses.map((l) => `<span class="lens-badge lens-${l}">${l}</span>`).join("");
-      return `<a class="olw-chip" href="${href}" title="Open ${esc(sym)} — not in the current VIVEK scan">${badges}<b>${esc(sym)}</b></a>`;
-    }).join("");
-    wrap.insertAdjacentHTML("beforeend",
-      `<div class="olw"><div class="olw-hd">Also on your watchlist — other lenses, not in the current VIVEK scan</div>` +
-      `<div class="olw-row">${chips}</div></div>`);
-  }
 
   // AT-LEVEL banner strip retired (Wave 3, 2026-07-22): the deck's ◎ At-level
   // pill filters the real rows instead — same data, one click, no extra band.
@@ -2668,7 +2549,6 @@
         renderDeckPills(d);
         renderEyes();
         notifyTriples(c.all());
-        notifyWatchArms(d.results || []);   // UX #6: ★ names newly arming/triggering
         checkPriceAlerts(d.results || []);  // UX-20 #4: chart-set price alert lines
       });
     }
@@ -3311,13 +3191,6 @@
       load();
     }));
 
-    const watchToggle = document.getElementById("watch-toggle");
-    if (watchToggle) watchToggle.addEventListener("click", () => {
-      state.view = state.view === "watch" ? "results" : "watch"; state._showAll = false;
-      syncWatchToggle();
-      renderRows();
-    });
-
     // FUNDS DIMMED toggle (v2 #47) — active chip = funds dimmed (the default).
     const fundDim = document.getElementById("fund-dim");
     if (fundDim) fundDim.addEventListener("click", () => {
@@ -3330,10 +3203,6 @@
     document.querySelectorAll("#tabs .seg-btn").forEach((b) => b.addEventListener("click", () => {
       state.tab = b.dataset.tab; state._showAll = false;
       savePrefs();
-      if (state.view !== "results") {
-        state.view = "results";
-        syncWatchToggle();
-      }
       document.querySelectorAll("#tabs .seg-btn").forEach((x) => { const on = x === b; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
       renderRows();
     }));
@@ -3432,35 +3301,6 @@
           <span class="sr-price">${fmtPrice(r.price)}</span>
         </a>`);
       });
-      // Starred names (any lens, this market) — the watchlist is searchable
-      if (window.PM && PM.watch) {
-        const seen = new Set(rows.map(() => 0));
-        ["vivek", "phasemap", "specs"].forEach((ns) => {
-          Object.keys(PM.watch.map(ns, state.market))
-            .filter((t) => t.toLowerCase().includes(q)).slice(0, 4)
-            .forEach((t) => rows.push(`<a class="sr-row" href="chart.html?m=${state.market}&s=${encodeURIComponent(t)}&pm=1">
-              <span class="sr-grade" style="color:var(--orange)">★</span>
-              <span class="sr-sym">${esc(t)}</span>
-              <span class="sr-name">on your ${esc(ns.toUpperCase())} watchlist</span>
-              <span class="sr-price"></span>
-            </a>`));
-        });
-      }
-      // Open journal positions — a name you're IN should always be findable
-      if (window.GBSSync) {
-        const mFor = (t) => t.asset_type === "crypto" ? "crypto"
-          : t.asset_type === "asx" ? "asx" : "nasdaq";
-        GBSSync.load().trades
-          .filter((t) => t.status === "open" &&
-            ((t.symbol || "").toLowerCase().includes(q)))
-          .slice(0, 5)
-          .forEach((t) => rows.push(`<a class="sr-row" href="chart.html?m=${mFor(t)}&s=${encodeURIComponent(t.symbol)}&pm=1">
-            <span class="sr-grade" style="color:var(--purple)">📓</span>
-            <span class="sr-sym">${esc(t.symbol)}</span>
-            <span class="sr-name">OPEN ${esc(String(t.direction || "").toUpperCase())} @ ${t.entry}${t.lens ? " · " + esc(t.lens) : ""}</span>
-            <span class="sr-price"></span>
-          </a>`));
-      }
       searchResults.innerHTML = rows.join("");
       // Record the ticker into Recent, then close, when a result is picked (#32).
       searchResults.querySelectorAll(".sr-row").forEach((a) => a.addEventListener("click", () => {
@@ -3487,7 +3327,7 @@
     rowsHost.addEventListener("touchstart", (e) => {
       const t = e.touches[0]; _slop = 0; _sx = t.clientX; _sy = t.clientY; _lpFired = false;
       const wrap = e.target.closest(".row-wrap");
-      if (!wrap || e.target.closest(".t-star, .row-expand, .row-copy-debug, a")) return;
+      if (!wrap || e.target.closest(".row-expand, .row-copy-debug, a")) return;
       cancelLongPress();
       _lpT = setTimeout(() => {
         _lpFired = true;
@@ -3523,18 +3363,6 @@
           }).catch(() => {});
         }
         e.stopPropagation();
-        return;
-      }
-      const star = e.target.closest(".t-star");
-      if (star) {
-        toggleStar(star.dataset.sym);
-        $("#watch-count").textContent = (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
-        if (state.view === "watch") { renderRows(); return; }
-        const on = isStarred(star.dataset.sym);
-        star.classList.toggle("starred", on);   // #65: fill is CSS-driven
-        // #44: haptic tick + a bounce only when STARRING (not un-starring).
-        if (on && navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
-        if (on) { star.classList.remove("pop"); void star.offsetWidth; star.classList.add("pop"); }
         return;
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
@@ -3699,78 +3527,6 @@
     }
   }
 
-  // Browser notifications for triple-lens alignments (2026-07-03). Opt-in
-  // via the bell; dedupe in localStorage so a refresh doesn't re-ping.
-  function notifyEnabled() {
-    try { return localStorage.getItem("gbs:notify") === "1" &&
-      "Notification" in window && Notification.permission === "granted"; }
-    catch (_) { return false; }
-  }
-  function notifyTriples(rows) {
-    if (!notifyEnabled()) return;
-    let seen = {};
-    try { seen = JSON.parse(localStorage.getItem("gbs:notified") || "{}"); } catch (_) {}
-    const day = new Date().toISOString().slice(0, 10);
-    (rows || []).filter((x) => x.count >= 3).forEach((x) => {
-      const k = `${day}:${state.market}:${x.ticker}:${x.side}`;
-      if (seen[k]) return;
-      seen[k] = 1;
-      try {
-        new Notification("🎯 Triple-lens alignment", {
-          body: `${x.ticker} ${x.side.toUpperCase()} · ${state.market.toUpperCase()} — ${x.lenses.join(" + ")}`,
-          icon: "icons/icon-192.png", tag: k,
-        });
-      } catch (_) {}
-    });
-    try {
-      const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
-      localStorage.setItem("gbs:notified", JSON.stringify(pruned));
-    } catch (_) {}
-  }
-  // ── Watchlist arm/trigger alerts (UX top-10 #6, 2026-07-26) ──────────────
-  // Stars stop being passive: when a ★ name's headline plan NEWLY arms (or its
-  // entry trigger fires) between scans, a browser notification says so — the
-  // same 🔔 permission and enable flag the triple-lens alerts use, the same
-  // once-per-day dedupe. State snapshot lives in gbs:watch-state; the FIRST
-  // sighting of a name just records it (no alert), so enabling the bell never
-  // floods you with already-armed names. Max 3 notifications per scan load.
-  function notifyWatchArms(results) {
-    if (!notifyEnabled() || !Array.isArray(results)) return;
-    let snap = {};
-    try { snap = JSON.parse(localStorage.getItem("gbs:watch-state") || "{}"); } catch (_) {}
-    let seen = {};
-    try { seen = JSON.parse(localStorage.getItem("gbs:notified") || "{}"); } catch (_) {}
-    const day = new Date().toISOString().slice(0, 10);
-    let fired = 0;
-    for (const r of results) {
-      if (!isWatchedAny(r.symbol)) continue;
-      const tf = r.headline_tf || "1D";
-      const p = (r.plans && (r.plans[tf] || r.plans["1D"] || r.plans["1W"])) || null;
-      const armed = !!(p && p.armed);
-      const trig = (p && p.entry_trigger) || null;
-      const key = `${state.market}:${r.symbol}`;
-      const prev = snap[key];
-      snap[key] = { armed, trig };
-      if (!prev) continue;                       // first sighting: record only
-      const newlyArmed = armed && !prev.armed;
-      const newTrigger = trig && trig !== prev.trig && armed;
-      if ((!newlyArmed && !newTrigger) || fired >= 3) continue;
-      const nk = `${day}:watch:${key}:${trig || "armed"}`;
-      if (seen[nk]) continue;
-      seen[nk] = 1; fired++;
-      try {
-        new Notification(`★ ${r.symbol} ${newlyArmed ? "armed" : "trigger"}`, {
-          body: `${r.dir || ""} ${r.grade || ""} · ${state.market.toUpperCase()} — ${trig || "setup"} on ${tf}`.trim(),
-          icon: "icons/icon-192.png", tag: nk,
-        });
-      } catch (_) {}
-    }
-    try { localStorage.setItem("gbs:watch-state", JSON.stringify(snap)); } catch (_) {}
-    try {
-      const pruned = Object.fromEntries(Object.entries(seen).filter(([k]) => k.startsWith(day)));
-      localStorage.setItem("gbs:notified", JSON.stringify(pruned));
-    } catch (_) {}
-  }
 
   // ── Per-setup position sizing (UX-20 #12) ────────────────────────────────
   // Shared with the row-detail builder AND the delegated input handler: turn
@@ -3957,17 +3713,6 @@
         if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
       }
     } catch (_) {}
-    // #66: defer the watchlist sync-in until AFTER the first rows are on
-    // screen — the star reconcile is not first-paint-critical.
-    if (!MEASURE && window.GBSSync && GBSSync.enabled()) {
-      whenIdle(() => GBSSync.syncIn().then(() => {
-        if (state.data) {
-          renderRows();
-          const el = document.getElementById("watch-count");
-          if (el) el.textContent = (state.data.results || []).filter((r) => isStarred(r.symbol)).length;
-        }
-      }).catch(() => {}));
-    }
     // #69: first-paint→interactive timing beacon (console only) — before/after
     // evidence for the perf program, zero UI cost.
     try {

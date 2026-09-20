@@ -1575,13 +1575,14 @@ test("the JOURNAL badge is INFORMATION (blue), not a standing alarm (red)", () =
 
 // (the HORIZON / REGIME strip pins that sat here left with the surfaces, 2026-09-20)
 
-test("the 13-chip toolbar is grouped by question, with nothing moved or hidden", () => {
+test("the toolbar is grouped by question, with nothing moved or hidden", () => {
   const st = css("styles.css");
   assert.ok(/\.tb-line > \.tb-sort \{[^}]*padding-left: 12px/s.test(st), "the group separators are gone");
   assert.ok(/\.tb-line > \.tb-chips:empty::before \{ display: none; \}/.test(st),
     "an empty chip container must not leave an orphan divider");
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
-  for (const id of ["tabs", "watch-toggle", "vk-filters", "sort-cycle"]) {
+  // (watch-toggle left with the ★ watchlists, 2026-09-21.)
+  for (const id of ["tabs", "vk-filters", "sort-cycle"]) {
     assert.ok(html.includes(`id="${id}"`), `${id} must still be in the toolbar — grouping moves nothing`);
   }
 });

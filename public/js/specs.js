@@ -35,7 +35,6 @@
 
   function rowHTML(r, idx) {
     const cur = (state.data && state.data.currency_symbol) || "A$";
-    const starred = PM.watch.has("specs", state.market, r.symbol);
     const ci = alignedOf(r);
     const gc = GRADE_VAR[r.grade] || "var(--grade-c)";
     const fund = PM.isFundReit({ name: r.name, sector: r.sector, ticker: r.symbol });
@@ -67,7 +66,6 @@
             <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
             <span class="rk-rr ${r.low_rr ? "low" : ""}">${r.rr != null ? r.rr.toFixed(1) + "R" : "—"}</span>
           </div>
-          ${PM.starHTML(starred, r.symbol)}
           <button class="row-expand" title="Details" aria-label="Toggle details">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
@@ -93,8 +91,8 @@
 
   function visibleRows() {
     const q = state.q.trim().toUpperCase();
-    if (state.view === "watchlist") {
-      const wl = PM.watch.map("specs", state.market);
+    if (state.view === "watchlist") {   // removed 2026-09-21 — no-op for a stale saved view
+      const wl = {};
       const out = [];
       for (const [sym, entry] of Object.entries(wl).sort()) {
         if (q && !sym.toUpperCase().includes(q)) continue;
@@ -155,26 +153,15 @@
     const rows = visibleRows();
     list.innerHTML = rows.length
       ? rows.map(rowHTML).join("")
-      : `<div class="placeholder"><h3>${state.view === "watchlist" ? "Nothing starred yet" : "No spec setups in this view"}</h3>
-         <p>${state.view === "watchlist"
-          ? "Hit ☆ on any row and it stays here even after the setup ends."
-          : state.confOnly ? "No multi-lens agreement among these specs right now — tap the pill to widen."
+      : `<div class="placeholder"><h3>No spec setups in this view</h3>
+         <p>${state.confOnly
+          ? "No multi-lens agreement among these specs right now — tap the pill to widen."
           : "The gates are strict (3× volume spike + base + breakout, all mandatory)."}</p></div>`;
 
     $$(".row-wrap", list).forEach((row) => {
       row.querySelector(".row").addEventListener("click", (e) => {
-        if (e.target.closest(".pm-star") || e.target.closest("a.tkr")) return;
+        if (e.target.closest("a.tkr")) return;
         row.classList.toggle("open");
-      });
-    });
-    $$(".pm-star", list).forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const sym = btn.dataset.star;
-        const rec = (state.data && state.data.results.find((r) => r.symbol === sym)) || null;
-        PM.watch.toggle("specs", state.market, sym, rec);
-        renderCounts();
-        render();
       });
     });
     renderCounts();
@@ -182,7 +169,6 @@
 
   function renderCounts() {
     $("#sp-count-results").textContent = state.data ? state.data.results.length : 0;
-    $("#sp-count-watchlist").textContent = PM.watch.count("specs", state.market);
   }
 
   // ── Specs → VIVEK graduates (owner-ruled, 2026-07-31) ────────────────────
@@ -257,11 +243,6 @@
         `${PM.fmtMelb(state.data.generated_at)} · ${state.data.universe_size} names scanned · ` +
         `volume-spike breakouts · sub-$0.50 · the discovery lens`)
         + PM.staleBadgeHTML(state.data.generated_at);
-      const wl = PM.watch.map("specs", state.market);
-      for (const sym of Object.keys(wl)) {
-        const live = state.data.results.find((r) => r.symbol === sym);
-        if (live) PM.watch.refresh("specs", state.market, sym, live);
-      }
       state.confl = null;
       renderPills();
       PM.loadConfluence(state.market).then((c) => {
@@ -317,8 +298,4 @@
 
   syncMarketButtons();
   load();
-  // pull remote stars (unified watchlist) so phone/desktop agree
-  if (window.GBSSync && GBSSync.enabled()) {
-    GBSSync.syncIn().then(() => render()).catch(() => {});
-  }
 })();

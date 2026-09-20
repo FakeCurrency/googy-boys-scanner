@@ -18,11 +18,10 @@ webhook post is gone; everything below it survives on purpose:
     recorded with NEGATIVE counts (see build_state), exactly as the old
     "webhook not configured" branch did — so the first run after the next
     channel lands pings everything still current, with nothing burned.
-  * WATCHLIST-AWARE: when GBS_SYNC_CODE is set (GitHub secret, same code the
-    owner types on the site), starred names and open journal positions
-    bypass the lens threshold (config.CONF_ALERT_MIN_LENSES). The bypass
-    still decides what counts as push-worthy, so the future channel inherits
-    it unchanged.
+  * The lens threshold (config.CONF_ALERT_MIN_LENSES) is the only gate on
+    what counts as push-worthy. A WATCHLIST-AWARE bypass let starred names
+    and open manual positions ping below it; both the stars and the synced
+    journal they lived in were removed 2026-09-21, and it went with them.
   * The ALERTS page log (append_history) is written for EVERY new alignment
     regardless of the push threshold — and the daily edge pipeline ingests
     it, so it must keep being written.
@@ -117,14 +116,13 @@ def build_state(alignments: list[dict], state: dict, posted_keys: set[str]) -> d
     -count means "seen for the history log, but never delivered". The old state
     recorded a bare +count for EVERYTHING current — including 2-lens alignments
     that were below the push threshold (CONF_ALERT_MIN_LENSES) and not
-    watchlisted, and including
-    runs where the watchlist itself was unavailable (GBS_SYNC_CODE unset, or
-    the /api/journal fetch flaked, both of which return an empty watch set).
+    watchlisted.
     That burned the count: star the name a day later and `count > prev` is
     `2 > 2` — the ping the watchlist bypass exists for can never fire. The
-    webhook secret already had exactly this protection ("don't mark as seen");
-    the sign extends it to the watchlist without re-logging persisting
-    alignments to the ALERTS page every run.
+    webhook secret already had exactly this protection ("don't mark as seen").
+    (The watchlist bypass itself was removed with the manual journal on
+    2026-09-21; the signed state stays, because a logged-but-undelivered
+    alignment must still ping when it upgrades.)
 
     Pre-fix state files hold bare positive counts, which read as "posted" —
     correct for everything at/above the threshold, conservative (no
@@ -194,41 +192,6 @@ def append_history(fresh: list[dict]) -> None:
                       indent=1, newline=True)
 
 
-def load_watch_keys() -> set[str]:
-    """"market:TICKER" keys the owner cares about: stars from any lens plus
-    open journal positions, read from the synced journal in Cloudflare KV.
-    Requires the GBS_SYNC_CODE env (GitHub secret) — empty set without it."""
-    code = os.environ.get("GBS_SYNC_CODE", "").strip()
-    if not code:
-        return set()
-    import urllib.parse
-    import urllib.request
-    url = f"{SITE}/api/journal?code={urllib.parse.quote(code)}"
-    try:
-        with urllib.request.urlopen(url, timeout=20) as r:
-            payload = json.loads(r.read().decode("utf-8"))
-    except Exception as e:
-        print(f"confluence: watchlist fetch failed ({e}) — continuing without")
-        return set()
-    data = (payload or {}).get("data") or {}
-    out: set[str] = set()
-    for k, v in (data.get("watchlists") or {}).items():
-        if isinstance(v, dict) and v.get("del"):
-            continue                                   # tombstoned un-star
-        parts = str(k).split(":")                      # "<lens>:<market>:<TICKER>"
-        if len(parts) == 3:
-            out.add(f"{parts[1]}:{parts[2]}".upper())
-    for t in data.get("trades") or []:
-        if t.get("status") == "open" and t.get("symbol"):
-            mkt = t.get("asset_type") if t.get("asset_type") in ("asx", "crypto") else "nasdaq"
-            out.add(f"{mkt}:{t['symbol']}".upper())
-    return out
-
-
-def _watch_key(a: dict) -> str:
-    return f"{a['market']}:{a['ticker']}".upper()
-
-
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="confluence alert")
     ap.add_argument("--market", default="all")
@@ -251,21 +214,18 @@ def main(argv=None) -> int:
     # state tracks them all (signed, see build_state), so a 2->3 upgrade
     # always earns a ping.
     min_lenses = getattr(config, "CONF_ALERT_MIN_LENSES", 2)
-    # Starred names + open positions bypass the threshold: YOUR names ping
-    # at 2 lenses even while the channel is triples-only.
-    watch = load_watch_keys()
-    # Post = eligible (threshold or watchlisted) AND above the SIGNED prev —
-    # so a count that was only ever logged (-2, e.g. starred after it formed,
-    # or the watchlist was unreachable when it formed) still pings, while a
-    # count that was delivered (+2) never re-pings. Drawn from `alignments`,
-    # not `fresh`: the star-later ping is precisely the not-"new" case.
+    # THE WATCHLIST BYPASS IS GONE (2026-09-21). Starred names and open manual
+    # positions used to ping at 2 lenses even while the channel was
+    # triples-only, read from the synced journal via GBS_SYNC_CODE. Both the
+    # stars and that journal were removed with the manual side, so the
+    # threshold is now the only gate. The SIGNED state below is untouched and
+    # still matters: a 2-lens alignment logged but never delivered keeps a
+    # negative count, so a later upgrade to 3 still pings.
     to_post = [a for a in alignments
-               if (a["count"] >= min_lenses or _watch_key(a) in watch)
+               if a["count"] >= min_lenses
                and a["count"] > state.get(_state_key(a), 0)]
-    starred = sum(1 for a in to_post if _watch_key(a) in watch)
     print(f"confluence: {len(alignments)} active, {len(fresh)} new/upgraded, "
-          f"{len(to_post)} to post (>= {min_lenses} lenses or watchlisted; "
-          f"{starred} watchlisted, {len(watch)} names tracked)")
+          f"{len(to_post)} to post (>= {min_lenses} lenses)")
     if not args.dry_run:
         append_history(fresh)   # the ALERTS page log — independent of any push
     # DELIVERY REMOVED 2026-08-27 (owner ruling). No payload is built and no
@@ -276,8 +236,7 @@ def main(argv=None) -> int:
     # the replacement channel lands finds `count > signed prev` true for
     # everything still current and pings the lot, with nothing burned.
     for a in to_post:
-        star = "* " if _watch_key(a) in watch else ""
-        print(f"confluence: push-worthy (undelivered) {star}{a['market']}:"
+        print(f"confluence: push-worthy (undelivered) {a['market']}:"
               f"{a['ticker']} {a['side'].upper()} {a['count']}-lens - "
               f"{' + '.join(a['labels'])}")
     if args.dry_run and to_post:

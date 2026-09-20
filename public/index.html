@@ -19,7 +19,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=114" />
+  <link rel="stylesheet" href="css/styles.css?v=115" />
   <link rel="stylesheet" href="css/status.css?v=1" />
   <link rel="stylesheet" href="css/eyes.css?v=5" />
   <script>
@@ -47,7 +47,7 @@
     };
   } catch (_e) {}
   </script>
-  <script src="js/nav.js?v=23" defer></script>
+  <script src="js/nav.js?v=24" defer></script>
   <script src="js/status.js?v=4" defer></script>
   <script src="js/sw-register.js?v=4" defer></script>
 </head>
@@ -56,7 +56,6 @@
        the expand chevron are <use>d instead of re-emitting their point data
        per row (~15% less list HTML at 200 rows). -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-    <symbol id="ic-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
     <symbol id="ic-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
   </svg>
   <!-- Command Deck topbar (Wave 3): ONE row — brand · markets · nav · clocks · actions -->
@@ -137,7 +136,7 @@
          generates server-side; restore this section + the renderPulse call
          guards in app.js to bring it back. -->
 
-    <!-- ONE sticky toolbar (backlog #1-3): grades + ★ watch + VIVEK filter
+    <!-- ONE sticky toolbar (backlog #1-3): grades + VIVEK filter
          chips + a compact cycling sort — a single line that pins under the
          topbar and slims on scroll. Replaces the old view-tabs nav + controls
          row + separate vk-filters strip. -->
@@ -150,8 +149,6 @@
           <button class="seg-btn" data-tab="a" aria-pressed="false">A <span class="seg-count" id="count-a">0</span></button>
           <button class="seg-btn" data-tab="watch" aria-pressed="false">WATCH <span class="seg-count" id="count-watch">0</span></button>
         </div>
-        <button class="seg-btn tb-watch" id="watch-toggle" aria-pressed="false"
-          title="Your starred names, from every lens — tap to show only them">★ <span class="seg-count" id="watch-count">0</span></button>
           <!-- FUNDS DIMMED chip retired (Lane A, 2026-08-16): the deck's
                "⊘ N products · dimmed/shown" chip is this control now and names
                the count it dims, which this one never did. app.js still hides
@@ -176,11 +173,9 @@
     <p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>
     <p class="credit">Vivek 5.0 · data via Yahoo Finance · refreshed daily after each market close</p>
   </footer>
-
-  <script src="js/gbs-sync.js?v=11"></script>
-  <script src="js/phasemap-shared.js?v=16"></script>
+  <script src="js/phasemap-shared.js?v=17"></script>
   <script src="js/cache.js?v=2"></script>
   <script src="js/eyes-store.js?v=4"></script>
-  <script src="js/app.js?v=128"></script>
+  <script src="js/app.js?v=129"></script>
 </body>
 </html>

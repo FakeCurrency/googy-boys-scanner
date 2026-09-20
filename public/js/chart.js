@@ -48,8 +48,8 @@
   // NEW box element (document.createElement) and appended it, so after a
   // session of clicking D/3D/W/M/3M the page held one orphaned interval, one
   // orphaned resize listener and three orphaned tick subscribers PER CLICK,
-  // every one of them still doing full work — findOpen(), a large HTML build,
-  // an innerHTML write — against a node render() had already detached. Not a
+  // every one of them still doing full work — a lookup, a large HTML build, an
+  // innerHTML write — against a node render() had already detached. Not a
   // slow leak of bytes; a growing pile of live work with no visible output.
   //
   // The `beforeunload → clearInterval` teardowns that were there did nothing
@@ -107,15 +107,10 @@
   // directly. If per-ticker chart JSON ever gets a producer, reintroduce the
   // path THERE first.
 
-  // #71: which lens's watchlist this chart's star belongs to — matches the
-  // page the user arrived from (src=…) so a star set here shows up on that
-  // lens's list. Same unified PM.watch store the dashboard,
-  // PhaseMap and Specs pages write to (mirrors to Cloudflare KV with a sync
-  // code). scalp/crypto charts fold into the market's vivek watchlist.
-  const _src = (params.get("src") || "").toLowerCase();
-  const starLens = _src === "phasemap" ? "phasemap"
-    : (mode === "spec" || _src === "specs") ? "specs" : "vivek";
-  const starMarket = market === "scalp" ? "crypto" : market;
+  // scalp/crypto charts label themselves CRYPTO. (This used to pick the lens
+  // whose ★ watchlist the header star wrote to; the stars went with the manual
+  // journal on 2026-09-21 and only the market label survives.)
+  const chartMarket = market === "scalp" ? "crypto" : market;
   const MARKET_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO", scalp: "CRYPTO" };
 
   // ── PhaseMap overlay — draws the scanned zone bands + sweep/displacement
@@ -183,8 +178,8 @@
   //
   // This page used to charge a FLAT round-trip brokerage: `2 * (isCrypto ? 5 :
   // 10)` dollars, out of `stock_brokerage`/`crypto_brokerage` on the manual
-  // journal blob. Those two fields have no editor anywhere in the app — they are
-  // schema defaults written by gbs-sync and never touched again — so they were
+  // journal blob. Those two fields had no editor anywhere in the app — they were
+  // schema defaults written by the (since-removed) sync layer, never touched — so they were
   // not a setting, they were a second hardcoded cost model sitting next to the
   // real one. journal.js prices the SAME rows in basis points per market,
   // adopted from `bot_rules.json`, which is itself published from
@@ -233,9 +228,9 @@
   })();
   // Shared with the simulate buttons / live box so a buy/sell fills at the true
   // live price and every dependent widget reacts on each tick.
-  const liveState = { price: null, entryLineFns: null, listeners: [] };
-  // Every subscriber is registered from inside render() (wireSim, initAlerts,
-  // wireLiveBox), so each one is scoped to the render that added it — otherwise
+  const liveState = { price: null, listeners: [] };
+  // Every subscriber is registered from inside render() (initAlerts, the stock
+  // quote poll), so each one is scoped to the render that added it — otherwise
   // a price tick fans out to N copies of the same handler writing into N-1
   // detached boxes. Unsubscribing here rather than at the three call sites is
   // deliberate: a fourth caller added later inherits the teardown for free.
@@ -247,7 +242,6 @@
     });
   };
 
-  const posId = params.get("pos");   // open-position id passed from the journal
 
   // Held-plan passthrough (2026-08-20): he/hs/hd(+ht1/ht2/ht3) carry a real
   // journal position's own entry/stop/direction/targets, set by journal.js's
@@ -1232,46 +1226,16 @@
       .catch(() => {});
   }
 
-  // #71: the header watchlist star — same unified PM.watch store as every
-  // other page, namespaced to the lens the user came from. Persists locally
-  // even without a sync code; mirrors to the cloud when one is set.
-  function wireStar(d) {
-    const btn = $("#ct-star");
-    const w = window.PM && PM.watch;
-    if (!btn || !w) return;
-    const SYM = (d.symbol || symbol).toUpperCase();
-    const paint = () => {
-      const on = w.has(starLens, starMarket, SYM);
-      btn.textContent = on ? "★" : "☆";
-      btn.classList.toggle("is-on", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-      btn.title = (on ? "Remove from" : "Add to") +
-        " watchlist — starred names stay monitored even after the setup ends";
-    };
-    btn.hidden = false;
-    paint();
-    if (!btn._wired) {
-      btn._wired = true;
-      btn.addEventListener("click", () => {
-        w.toggle(starLens, starMarket, SYM, {
-          symbol: SYM, name: d.name || d.symbol, grade: d.grade || null,
-          dir: d.dir || null, price: d.price != null ? d.price : null,
-        });
-        paint();
-      });
-    }
-  }
 
   function header(d) {
     const cur = d.currency_symbol || "";
     hideSkeleton();
     $("#ct-sym").textContent = d.symbol;
     document.title = `${d.symbol} — Vivek 5.0`;
-    wireStar(d);
     const mk = $("#ct-market");
     if (mk) {
       const lbl = MARKET_LABEL[market] || market.toUpperCase();
-      mk.textContent = lbl; mk.dataset.mk = starMarket; mk.hidden = false;
+      mk.textContent = lbl; mk.dataset.mk = chartMarket; mk.hidden = false;
     }
     if (d.sector) { const s = $("#ct-sector"); s.textContent = d.sector; s.hidden = false; }
     const fw = $("#ct-fundwarn");
@@ -1375,38 +1339,6 @@
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
-  // ----------------------------------------------------------- simulate buy/sell
-  // Writes straight into the same localStorage the "My Trades" journal reads
-  // (gbs:manual_journal), so a simulated entry/exit shows up there with full P&L.
-  const MJ_KEY = "gbs:manual_journal";
-  // Prefer the shared GBSSync store (handles schema + optional cloud sync); fall
-  // back to plain localStorage if the module didn't load for some reason.
-  function mjLoad() {
-    if (window.GBSSync) return window.GBSSync.load();
-    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { capital: 10000, brokerage: 10, stock_capital: 10000, stock_brokerage: 10, crypto_capital: 10000, crypto_brokerage: 5, trades: [] };
-  }
-  function mjSave(x) {   // local + cloud — user actions only (Simulate Buy/Sell)
-    if (window.GBSSync) { window.GBSSync.saveLocal(x); window.GBSSync.syncOutDebounced(); return; }
-    localStorage.setItem(MJ_KEY, JSON.stringify(x));
-  }
-  // Local-only — for rule-computed auto-closes (stop/target hit while the chart
-  // is open). Each device re-derives these, so they must not spam the cloud.
-  function mjSaveLocal(x) {
-    if (window.GBSSync) { window.GBSSync.saveLocal(x); return; }
-    localStorage.setItem(MJ_KEY, JSON.stringify(x));
-  }
-  function mjUid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
-  const nowDate = () => new Date().toLocaleDateString("en-CA");          // YYYY-MM-DD (local)
-  const nowTime = () => new Date().toTimeString().slice(0, 5);            // HH:MM (local)
-  // Tidy a (possibly fractional, possibly large) unit count for display.
-  const fmtUnits = (n) => {
-    if (n == null || isNaN(n)) return "—";
-    const a = Math.abs(n);
-    if (a >= 1000) return Math.round(n).toLocaleString();
-    if (a >= 1)    return (+n.toFixed(2)).toString();
-    return (+n.toFixed(4)).toString();
-  };
   const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
 
   // Recompute TP1/2/3 as fresh R-multiples from the ACTUAL entry, so a late or
@@ -1460,9 +1392,8 @@
   // looking at. Nothing on screen said which timeframe it meant, so there was
   // no way to catch it by eye either.
   //
-  // The fix is `_activeLevels`, the same channel wireSim already uses to make
-  // Simulate-Buy log the timeframe on screen rather than the default one, plus
-  // a recompute hook applyVivekLevels calls after it swaps the plan.
+  // The fix is `_activeLevels`, plus a recompute hook applyVivekLevels calls
+  // after it swaps the plan.
   // DELIBERATELY not a re-invocation of wireSizeCalc: that rebuilds host
   // innerHTML, which would blow away focus and caret position mid-keystroke on
   // every switch. Only the output line is recomputed.
@@ -1517,273 +1448,7 @@
     calc();
   }
 
-  function wireSim(d) {
-    const buyBtn  = $("#cf-sim-buy");
-    const sellBtn = $("#cf-sim-sell");
-    const statusEl = $("#cf-sim-status");
-    if (!buyBtn || !sellBtn) return;
-    // No plan anywhere (tier-3 plain chart) → simulating would journal a trade
-    // with no stop/target. Hide the buttons instead of logging nonsense.
-    if (d.entry == null || d.stop == null) {
-      buyBtn.hidden = true;
-      sellBtn.hidden = true;
-      return;
-    }
-    buyBtn.hidden = false;
-    sellBtn.hidden = false;
 
-    const cur     = d.currency_symbol || "";
-    const dir     = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
-    const SYM     = (d.symbol || symbol).toUpperCase();
-    // Crypto is identified by the row's asset_type — NOT by market==="scalp",
-    // because the scalp universe also contains commodities (GOLD, OIL) and ASX
-    // stocks (BHP, CBA) which must NOT be sized/priced as 10× crypto.
-    const isCrypto = d.asset_type === "crypto" || market === "crypto";
-    // TOP100 #28 — same three cost buckets as the live box and the journal. A
-    // simulated fill lands in the SAME manual journal as a hand-logged one and
-    // is re-priced there, so pricing it differently here made the sim's own
-    // "P&L" and the journal's disagree about a trade neither of them disputed.
-    const simMkt = isCrypto ? "crypto"
-      : (d.asset_type === "asx" || market === "asx") ? "asx" : "nasdaq";
-
-    // Re-label AND re-colour the buttons to match the setup direction: the entry
-    // action is coloured by its side (long entry = green ▲, short entry = red ▼),
-    // and the close is the opposite (cover a short = green ▲, sell a long = red ▼).
-    const isShort = dir === "short";
-    buyBtn.textContent  = isShort ? "▼ Simulate Short" : "▲ Simulate Buy";
-    sellBtn.textContent = isShort ? "▲ Cover / Close"  : "▼ Simulate Sell";
-    buyBtn.classList.toggle("sim-sell", isShort);   // short entry → red
-    buyBtn.classList.toggle("sim-buy", !isShort);
-    sellBtn.classList.toggle("sim-buy", isShort);   // cover → green
-    sellBtn.classList.toggle("sim-sell", !isShort);
-
-    const openSimTrade = () =>
-      mjLoad().trades.find((t) => t.sim && t.status === "open" &&
-        (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
-
-    function refresh(livePx) {
-      const t = openSimTrade();
-      if (!t) {
-        buyBtn.disabled = false; sellBtn.disabled = true;
-        statusEl.className = "sim-status";
-        statusEl.textContent = "";
-        return;
-      }
-      buyBtn.disabled = true; sellBtn.disabled = false;
-      const px = livePx || liveState.price;
-      if (px) {
-        const m      = dir === "long" ? 1 : -1;
-        const unreal = t.shares * m * (px - t.entry);  // unrealised, before costs
-        // Closing now is a market exit on both legs (TOP100 #28).
-        const net    = unreal - legCost(simMkt, t.shares, t.entry, true)
-                              - legCost(simMkt, t.shares, px, true);
-        const pnlCls = net >= 0 ? " live" : " neg";
-        const sign   = net >= 0 ? "+" : "";
-        statusEl.className = `sim-status${pnlCls}`;
-        statusEl.innerHTML =
-          `● ${dir.toUpperCase()} @ ${fmt(t.entry, cur)} &nbsp;·&nbsp; ` +
-          `Live P&L <strong>${sign}${cur}${net.toFixed(2)}</strong> &nbsp;·&nbsp; ` +
-          `${fmt(px, cur)} now`;
-      } else {
-        statusEl.className = "sim-status live";
-        statusEl.textContent = `● In ${dir} @ ${fmt(t.entry, cur)} · ${fmtUnits(t.shares)} units${t.leverage > 1 ? ` ×${t.leverage}` : ""}`;
-      }
-    }
-
-    function checkAutoClose(t, livePx) {
-      const m        = dir === "long" ? 1 : -1;
-      const stopped  = t.stop   != null && (dir === "long" ? livePx <= t.stop   : livePx >= t.stop);
-      const targeted = t.target != null && (dir === "long" ? livePx >= t.target : livePx <= t.target);
-      if (!stopped && !targeted) return false;
-      const data = mjLoad();
-      const rec  = data.trades.find((x) => x.id === t.id);
-      if (!rec || rec.status === "closed") return true;
-      // Honest fills: a stop that gaps through fills at the worse live price
-      // (never better than the stop); a target never credits overshoot. This
-      // keeps the simulated P&L from being optimistic vs. real execution.
-      const fillPx = stopped
-        ? (dir === "long" ? Math.min(t.stop, livePx) : Math.max(t.stop, livePx))
-        : t.target;
-      rec.status = "closed"; rec.exit = fillPx; rec.exit_date = nowDate(); rec.exit_time = nowTime();
-      rec.mtime = Date.now();
-      mjSaveLocal(data);   // rule-computed auto-close → local only
-      if (liveState.entryLineFns) liveState.entryLineFns.remove();
-      // Stop = market order (pays slippage); target = resting limit (does not).
-      const pnl = t.shares * m * (fillPx - t.entry)
-                - legCost(simMkt, t.shares, t.entry, true)
-                - legCost(simMkt, t.shares, fillPx, stopped);
-      statusEl.className = `sim-status${pnl >= 0 ? " live" : " neg"}`;
-      statusEl.textContent = `${stopped ? "🛑 Stopped out" : "🎯 Target hit"} @ ${fmt(fillPx, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)}`;
-      buyBtn.disabled = false; sellBtn.disabled = true;
-      return true;
-    }
-    // Hook into the live price stream — auto-close on stop/target, then refresh P&L.
-    onLiveTick((px) => {
-      const t = openSimTrade();
-      if (!t) return;
-      if (checkAutoClose(t, px)) return;
-      refresh(px);
-    });
-
-    // Always fill at the TRUE live price. Never fall back to the scan price
-    // (d.entry/d.price), which can be hours stale — that was booking trades at a
-    // phantom entry so the journal showed an instant loss the moment it marked
-    // the position against the real live price.
-    async function livePriceNow() {
-      if (+liveState.price) return +liveState.price;     // streaming feed already has it
-      if (isCrypto) {
-        try {
-          const r = await fetch(
-            `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(cryptoPair(SYM))}`,
-            { cache: "no-store" });
-          if (r.ok) { const j = await r.json(); if (j && j.price != null) return +j.price; }
-        } catch (_) {}
-        return null;
-      }
-      return await fetchStockQuote(SYM, market === "asx" ? "asx" : "nasdaq");
-    }
-
-    buyBtn.addEventListener("click", async () => {
-      if (openSimTrade()) return;
-      buyBtn.disabled = true;
-      statusEl.className = "sim-status"; statusEl.textContent = "Fetching live price…";
-      const px = await livePriceNow();
-      if (!px) {
-        statusEl.textContent = "Couldn't fetch a live price — try again in a moment.";
-        buyBtn.disabled = false;
-        return;
-      }
-      const margin   = isCrypto ? SIM_CRYPTO_MARGIN   : SIM_STOCK_SIZE;
-      const leverage = isCrypto ? SIM_CRYPTO_LEVERAGE : 1;
-      const exposure = margin * leverage;
-      const data  = mjLoad();
-      const isLong = dir === "long";
-      // VIVEK: book the SL/TP of the timeframe the user is viewing (the per-TF
-      // plan), not the scan's canonical daily plan. Falls back to the scan plan.
-      const av     = d._vivek ? (d._activeLevels || null) : null;
-      const stopV  = av ? (av.stop ?? null) : (d.stop ?? null);
-      const planEntry = av ? (av.entry ?? null) : (d.entry ?? null);
-      const planTp1 = av ? (av.tp1 ?? null) : (d.tp1 ?? null);
-      const planTp2 = av ? (av.tp2 ?? null) : (d.tp2 ?? null);
-      const planTp3 = av ? (av.tp3 ?? null) : (d.tp3 ?? null);
-
-      // (a) Chasing guard — if the live price is already at/through the plan's
-      // first target, the setup has run and the reward left is degraded. Warn
-      // before booking a chased entry (targets get recut from the real entry).
-      if (planTp1 != null && (isLong ? px >= planTp1 : px <= planTp1)) {
-        const side = isLong ? "above" : "below";
-        const ok = confirm(
-          `⚠️ Chasing ${SYM}\n\n` +
-          `${fmt(px, cur)} is already ${side} the plan's first target (${fmt(planTp1, cur)}). ` +
-          `The move looks extended and your risk:reward is reduced.\n\n` +
-          `Targets will be recalculated as fresh 1R/2R/3R from this entry. Take the trade anyway?`);
-        if (!ok) {
-          buyBtn.disabled = false;
-          statusEl.className = "sim-status"; statusEl.textContent = "";
-          return;
-        }
-      }
-
-      // (b) Entry-relative targets — recompute TP1/2/3 from the ACTUAL entry so a
-      // late/chased fill still gets three real targets. Risk = |entry − stop|;
-      // we mirror the plan's R-multiples when they're sane + increasing, else
-      // fall back to 1R / 2R / 3R. The structural stop is kept as-is.
-      const tps = entryRelTargets(isLong, px, stopV, planEntry, [planTp1, planTp2, planTp3]);
-      const tp1V = tps[0], tp2V = tps[1], tp3V = tps[2];
-      const tgtV = tp2V != null ? tp2V : (av ? (av.tp2 ?? null) : (d.target ?? null));
-      const tfTag  = d._vivek && d._activeTf ? `${d._activeTf} · ` : "";
-      data.trades.push({
-        id: mjUid(), symbol: SYM, direction: dir,
-        // Preserve the instrument's true type so it buckets correctly in the
-        // journal: a scalp index/commodity (NAS100, GOLD) must keep "index" /
-        // "commodity" and never be coerced to a stock or crypto.
-        asset_type: isCrypto ? "crypto"
-          : (d.asset_type || (market === "asx" ? "asx" : "nasdaq")),
-        entry: px, entry_date: nowDate(), entry_time: nowTime(),
-        size_usd: margin, leverage, shares: +(exposure / px).toFixed(8),
-        stop: stopV, target: tgtV, tp1: tp1V, tp2: tp2V, tp3: tp3V,
-        timeframe: d._vivek ? (d._activeTf || "1D") : null,
-        // Log the grade + setup type so the journal matches Claude's rows: the
-        // canonical scan grade, and the entry trigger on the timeframe you took
-        // (reclaim / retest / break → "Weekly reclaim" etc. in the journal).
-        grade: d.grade || null,
-        entry_type: (av && av.entry_trigger) || d.entry_trigger || null,
-        // Which lens produced this trade — lets the journal answer
-        // "which system actually makes money" (2026-07-03)
-        lens: d._zonePlan ? "phasemap" : d._vivek ? "vivek"
-            : mode === "spec" ? "specs" : market === "scalp" ? "scalp" : "chart",
-        notes: `Simulated from chart · ${tfTag}${d.grade || ""} ${(d.chips && d.chips[0]) || ""}`.trim(),
-        status: "open", exit: null, exit_date: null, exit_time: null, sim: true, mtime: Date.now(),
-      });
-      mjSave(data);
-      refresh(px);
-    });
-
-    sellBtn.addEventListener("click", async () => {
-      const t = openSimTrade();
-      if (!t) return;
-      sellBtn.disabled = true;
-      statusEl.textContent = "Fetching live price…";
-      const px = await livePriceNow();
-      if (!px) {
-        statusEl.textContent = "Couldn't fetch a live price to close — try again in a moment.";
-        sellBtn.disabled = false;
-        return;
-      }
-      const data = mjLoad();
-      const rec  = data.trades.find((x) => x.id === t.id);
-      if (rec) {
-        rec.status = "closed";
-        rec.exit = px; rec.exit_date = nowDate(); rec.exit_time = nowTime();
-        rec.mtime = Date.now();
-        mjSave(data);
-      }
-      if (liveState.entryLineFns) liveState.entryLineFns.remove();
-      const m   = dir === "long" ? 1 : -1;
-      // A button-press close is a market exit — both legs pay slippage (#28).
-      const pnl = t.shares * m * (px - t.entry)
-                - legCost(simMkt, t.shares, t.entry, true)
-                - legCost(simMkt, t.shares, px, true);
-      statusEl.className = "sim-status" + (pnl >= 0 ? " live" : "");
-      statusEl.textContent = `Closed @ ${fmt(px, cur)} · P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} — logged to My Trades`;
-      buyBtn.disabled = false; sellBtn.disabled = true;
-    });
-
-    refresh();
-  }
-
-  // Draw a purple entry-price line on the chart while a sim position is open.
-  // Must be called after the candle series is created (inside render).
-  function wireChartPosition(candle, d) {
-    const dir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
-    const SYM = (d.symbol || symbol).toUpperCase();
-    let entryLine = null;
-
-    const getOpenTrade = () => mjLoad().trades.find(
-      (t) => t.sim && t.status === "open" && (t.symbol || "").toUpperCase() === SYM && t.direction === dir);
-
-    function addLine(price) {
-      if (entryLine) return;
-      entryLine = candle.createPriceLine({
-        price, color: "#a78bfa", lineWidth: 2, lineStyle: 0,
-        axisLabelVisible: true, title: `▶ IN ${dir.toUpperCase()}`,
-      });
-    }
-    function removeLine() {
-      if (!entryLine) return;
-      try { candle.removePriceLine(entryLine); } catch (_) {}
-      entryLine = null;
-    }
-    liveState.entryLineFns = { add: addLine, remove: removeLine };
-
-    const t = getOpenTrade();
-    if (t) addLine(t.entry);
-
-    const buy  = $("#cf-sim-buy");
-    const sell = $("#cf-sim-sell");
-    if (buy)  buy.addEventListener("click",  () => setTimeout(() => { const t2 = getOpenTrade(); if (t2) addLine(t2.entry); }, 60));
-    if (sell) sell.addEventListener("click", () => setTimeout(removeLine, 60));
-  }
 
   // Poll a delayed live quote for a non-crypto instrument and push it into the
   // header price + liveState (so the sim box, auto-close and entry P&L all react
@@ -1926,7 +1591,7 @@
     // listeners and tick subscribers can be reached — by the time the new box
     // node exists, the old one has already been orphaned.
     tearDownPreviousRender();
-    header(d); footer(d); wireSim(d); wireSizeCalc(d);
+    header(d); footer(d); wireSizeCalc(d);
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
     if (!available.length) {
@@ -2325,15 +1990,10 @@
     // ── open-position context (entry marker + floating LIVE box) ──────────────
     const SYM    = (d.symbol || symbol).toUpperCase();
     const posDir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
-    // Any open trade (sim OR manually logged) for this symbol+direction.
-    const findOpen = () => mjLoad().trades.find(
-      (t) => t.status === "open" && (t.symbol || "").toUpperCase() === SYM && t.direction === posDir);
-    const entryEpochOf = (t) => {
-      if (!t || !t.entry_date) return null;
-      const ms = new Date(`${t.entry_date}T${(t.entry_time || "00:00")}:00`).getTime();
-      return isFinite(ms) ? Math.floor(ms / 1000) : null;
-    };
-    const entryEpoch = entryEpochOf(findOpen());
+    // The ▶ ENTRY arrow marked YOUR open manual position's fill bar. The manual
+    // journal was removed 2026-09-21, so there is never one to mark;
+    // buildEntryMarker returns null on a null epoch, which is the no-op.
+    const entryEpoch = null;
 
     function legend(tf) {
       const smas = tf.lines.map((l) => {
@@ -2547,8 +2207,6 @@
       startStockLive(d, SYM);
     }
 
-    wireChartPosition(candle, d);
-    wireLiveBox(d, el, SYM, posDir, findOpen);
 
     // Fix-10 #4: ⧉ Plan — copy the ACTIVE timeframe's plan as pasteable text.
     const planBtn = $("#cf-plan");
@@ -3629,236 +3287,7 @@
     } catch (_) { /* banner is best-effort */ }
   }
 
-  // Floating LIVE box — shows the full state of the open position (entry, time,
-  // current, P&L, R, move %, stop/target distance, time-in-trade) and updates on
-  // every tick. Visible only while a matching position is open.
-  function wireLiveBox(d, el, SYM, posDir, findOpen) {
-    const cur        = d.currency_symbol || "";
-    // Crypto when the row says so, or the market is crypto. Scalp charts now
-    // always carry a real asset_type, so an index/commodity (NAS100, GOLD) is
-    // correctly treated as a stock-style position rather than crypto.
-    const isCryptoPos = d.asset_type === "crypto" || market === "crypto";
-    // TOP100 #28 — the market key the cost tables are indexed by. Same three
-    // buckets journal.js `marketOf` resolves to, so an ASX name is charged ASX
-    // bps on both pages rather than crypto bps on one of them.
-    const posMkt = isCryptoPos ? "crypto"
-      : (d.asset_type === "asx" || market === "asx") ? "asx" : "nasdaq";
-    const box = document.createElement("div");
-    box.className = "live-pos-box";
-    box.style.display = "none";
-    el.style.position = "relative";
-    el.appendChild(box);
-    makeLiveBoxDraggable(box, el);
 
-    // Banner shown when a manual position auto-closes on stop/target.
-    const banner = document.createElement("div");
-    banner.style.display = "none";
-    el.appendChild(banner);
-
-    const dur = (t) => {
-      if (!t || !t.entry_date) return "—";
-      const start = new Date(`${t.entry_date}T${(t.entry_time || "00:00")}:00`).getTime();
-      let s = Math.max(0, Math.floor((Date.now() - start) / 1000));
-      const dd = Math.floor(s / 86400); s -= dd * 86400;
-      const hh = Math.floor(s / 3600);  s -= hh * 3600;
-      const mm = Math.floor(s / 60);
-      return (dd ? dd + "d " : "") + (hh ? hh + "h " : "") + mm + "m";
-    };
-
-    // Auto-close a MANUALLY-logged position when the live price hits its stop or
-    // target. Sim trades are handled separately by wireSim(); we skip them here
-    // to avoid double-closing. Fires only while this chart page is open — it is a
-    // simulator, not a resting exchange order. A banner shows when it triggers.
-    function maybeAutoClose(px) {
-      const t = findOpen();
-      if (!t || t.sim || px == null) return false;
-      const stopped  = t.stop   != null && (posDir === "long" ? px <= t.stop   : px >= t.stop);
-      const targeted = t.target != null && (posDir === "long" ? px >= t.target : px <= t.target);
-      if (!stopped && !targeted) return false;
-      const data = mjLoad();
-      const rec  = data.trades.find((x) => x.id === t.id);
-      if (!rec || rec.status === "closed") return true;
-      // Honest fills: a stop that gaps through fills at the worse live price
-      // (never better than the stop); a target never credits overshoot.
-      const fillPx = stopped
-        ? (posDir === "long" ? Math.min(t.stop, px) : Math.max(t.stop, px))
-        : t.target;
-      rec.status = "closed"; rec.exit = fillPx;
-      rec.exit_date = nowDate(); rec.exit_time = nowTime();
-      rec.auto_closed = stopped ? "stop" : "target";
-      rec.mtime = Date.now();
-      mjSaveLocal(data);   // rule-computed auto-close → local only
-      const m   = posDir === "long" ? 1 : -1;
-      // TOP100 #28. The exit leg is charged by HOW it filled, not by a flat fee:
-      // a stop is a market order and pays slippage, a target is the resting
-      // limit you named and does not. journal.js `costR` makes exactly this
-      // carve-out, so the banner and the journal row now agree on the sign and
-      // the size of the cost instead of only on the gross move.
-      const cost = legCost(posMkt, t.shares, t.entry, true)
-                 + legCost(posMkt, t.shares, fillPx, stopped);
-      const pnl = t.shares * m * (fillPx - t.entry) - cost;
-      banner.className = "lpb-banner " + (stopped ? "neg" : "pos");
-      banner.innerHTML = `${stopped ? "🛑 STOP HIT" : "🎯 TARGET HIT"} — auto-closed @ ${fmt(fillPx, cur)} · ` +
-        `P&L ${pnl >= 0 ? "+" : ""}${cur}${pnl.toFixed(2)} <small>(logged to your journal)</small>`;
-      banner.style.display = "block";
-      if (liveState.entryLineFns) liveState.entryLineFns.remove();
-      return true;
-    }
-
-    function update(px) {
-      if (maybeAutoClose(px)) { box.style.display = "none"; return; }
-      const t = findOpen();
-      if (!t) { box.style.display = "none"; return; }
-      const wasHidden = box.style.display === "none";
-      box.style.display = "block";
-      // Apply the saved drag position once the box has real dimensions.
-      if (wasHidden && box.__restorePos) box.__restorePos();
-      const m     = posDir === "long" ? 1 : -1;
-      const price = px || liveState.price || t.entry;
-      // TOP100 #28. "If I closed right now" is a MARKET exit, so both legs pay
-      // slippage — which is also what journal.js will charge this row the moment
-      // you close it by hand. Note the journal's OPEN "$" column is deliberately
-      // GROSS (it mirrors the server-published `unreal_usd` on the Claude side so
-      // the two halves of that page compare like with like); this box has always
-      // been the net "what would I bank" number and stays one, now with the cost
-      // printed rather than buried.
-      const cost  = legCost(posMkt, t.shares, t.entry, true)
-                  + legCost(posMkt, t.shares, price, true);
-      const net   = t.shares * m * (price - t.entry) - cost;
-      const move  = (price - t.entry) / t.entry * 100 * m;       // signed in trade's favour
-      let rStr = "—", rCls = "";
-      if (t.stop != null) {
-        const risk = posDir === "long" ? t.entry - t.stop : t.stop - t.entry;
-        if (risk > 0) { const r = (m * (price - t.entry)) / risk; rStr = (r >= 0 ? "+" : "") + r.toFixed(2) + "R"; rCls = r >= 0 ? "pos" : "neg"; }
-      }
-      const pnlCls   = net >= 0 ? "pos" : "neg";
-      const distStop = t.stop   != null ? Math.abs((price - t.stop) / price * 100)   : null;
-      const distTgt  = t.target != null ? Math.abs((t.target - price) / price * 100) : null;
-      box.innerHTML =
-        `<div class="lpb-head ${posDir}"><span class="lpb-dot"></span> IN ${posDir.toUpperCase()} · ${SYM}` +
-          `<span class="lpb-units">${fmtUnits(t.shares)} u${levTag(t)}</span></div>` +
-        `<div class="lpb-pnl ${pnlCls}">${net >= 0 ? "+" : ""}${cur}${net.toFixed(2)}</div>` +
-        `<div class="lpb-grid">` +
-          `<span class="lpb-k">Entry</span><span class="lpb-v">${fmt(t.entry, cur)}</span>` +
-          `<span class="lpb-k">Now</span><span class="lpb-v">${fmt(price, cur)}</span>` +
-          `<span class="lpb-k">Move</span><span class="lpb-v ${move >= 0 ? "pos" : "neg"}">${move >= 0 ? "+" : ""}${move.toFixed(2)}%</span>` +
-          `<span class="lpb-k">R mult</span><span class="lpb-v ${rCls}">${rStr}</span>` +
-          `<span class="lpb-k">Stop</span><span class="lpb-v neg">${t.stop != null ? fmt(t.stop, cur) : "—"}${distStop != null ? ` <small>(${distStop.toFixed(2)}%)</small>` : ""}</span>` +
-          `<span class="lpb-k">Target</span><span class="lpb-v pos">${t.target != null ? fmt(t.target, cur) : "—"}${distTgt != null ? ` <small>(${distTgt.toFixed(2)}%)</small>` : ""}</span>` +
-          `<span class="lpb-k">Opened</span><span class="lpb-v">${t.entry_date || "—"} ${t.entry_time || ""}</span>` +
-          `<span class="lpb-k">In trade</span><span class="lpb-v">${dur(t)}</span>` +
-          // TOP100 #28: the cost is stated, not silently netted off. It is the
-          // only line here the market cannot move, and it is what the P&L above
-          // is net OF — a headline that quietly absorbs it reads as a losing
-          // trade when the move was flat.
-          `<span class="lpb-k">Costs</span><span class="lpb-v">−${cur}${cost.toFixed(2)} <small>(round trip)</small></span>` +
-        `</div>`;
-    }
-
-    onLiveTick(update);
-    update();
-    // `update()` does real work — findOpen(), a large HTML build, an innerHTML
-    // write — against THIS render's box. Left running, every timeframe click
-    // added another copy painting into a node nobody can see.
-    const durIv = setInterval(() => { if (findOpen()) update(); }, 30000);
-    onRenderTeardown(() => clearInterval(durIv));
-  }
-
-  // ── entry point ────────────────────────────────────────────────────────────
-  // A `pos` param means "open the chart for this journal position" — render it
-  // live (crypto) with the entry, entry time and a floating LIVE box.
-  function renderPosition(id) {
-    const trade = mjLoad().trades.find((t) => t.id === id);
-    if (!trade) { fail("That position is no longer in your journal."); return; }
-    const SYM = (trade.symbol || "").toUpperCase();
-    const d = {
-      symbol: SYM, name: SYM, price: trade.entry, entry: trade.entry,
-      stop: trade.stop ?? null, target: trade.target ?? null,
-      grade: "", score: 0, score_max: 0, chips: [], sector: "",
-      asset_type: trade.asset_type,
-      currency_symbol: "$", dir: trade.direction === "short" ? "SHORT" : "LONG",
-      rr: 0, low_rr: false, rr_text: "", risk_pct: null,
-      analysis: trade.notes || "Your open position — live view.",
-      default_tf: "1H", tv_symbol: SYM, level_lines: [], timeframes: {},
-    };
-    if (trade.stop   != null) d.level_lines.push({ price: trade.stop,   color: "#ff5b5b", title: "STOP" });
-    d.level_lines.push({ price: trade.entry, color: "#f0a500", title: "ENTRY" });
-    if (trade.target != null) d.level_lines.push({ price: trade.target, color: "#2fd07f", title: "TARGET" });
-
-    // Crypto = anything that isn't a known stock-style asset type (matches the
-    // journal's bucketing; legacy crypto trades have null/"" asset_type).
-    const STOCK_TYPES = ["asx", "nasdaq", "commodity", "index"];
-    const pair = STOCK_TYPES.includes(trade.asset_type) ? null : cryptoPair(SYM);
-    if (pair) {
-      binanceKlines(pair, "1h", 1000)
-        .then((bars) => { d.timeframes["1H"] = barsToTF(bars); render(d); })
-        .catch(() => fail(`Couldn't load live data for ${SYM} right now.`));
-    } else {
-      const isStock = trade.asset_type === "asx" || trade.asset_type === "nasdaq";
-      let stockTick = null;
-      if (isStock) {
-        const liveBadge = $("#ct-live");
-        if (liveBadge) { liveBadge.hidden = false; }
-        let lastStockPx = null;
-        const priceHd = $("#ct-price");
-        stockTick = async () => {
-          if (document.hidden) return;   // backgrounded tab: don't burn the quote relay
-          const price = await fetchStockQuote(SYM, trade.asset_type);
-          if (price == null) return;
-          liveState.price = price;
-          if (priceHd) {
-            if (lastStockPx != null && price !== lastStockPx) {
-              priceHd.classList.remove("tick-up", "tick-down");
-              void priceHd.offsetWidth;
-              priceHd.classList.add(price > lastStockPx ? "tick-up" : "tick-down");
-            }
-            priceHd.textContent = fmt(price, "$");
-            lastStockPx = price;
-          }
-          liveState.listeners.forEach((fn) => { try { fn(price); } catch (_) {} });
-        };
-        // BOOT-scoped, not render-scoped, and deliberately NOT on the
-        // onRenderTeardown registry: renderPosition runs once per page load and
-        // this interval is created BEFORE the first render() call below, so
-        // registering it would have that very first render tear it down and the
-        // stock quote would never poll at all. One interval for the life of the
-        // page is the correct lifetime here. The `beforeunload → clearInterval`
-        // that used to sit on this line is gone rather than converted: the page
-        // being destroyed already clears every interval, so it bought nothing
-        // and cost back-navigation performance (a beforeunload listener makes
-        // the page ineligible for the bfcache).
-        setInterval(stockTick, 15000);
-      }
-
-      // No per-ticker chart JSON exists (see the note at the top of the file),
-      // so build the minimal stub directly — the live position box and level
-      // lines render from it exactly as they did when this was the .catch arm.
-      {
-          const ts  = Math.floor(Date.now() / 1000);
-          const ep  = trade.entry;
-          // Use exactly 1 minMove unit as the high/low spread so the stub is valid
-          // even for sub-micro-cap prices where a % spread collapses to zero after
-          // lightweight-charts' internal quantisation.
-          const absEp  = Math.abs(ep || 1);
-          const prec0  = absEp >= 100 ? 2 : absEp >= 1 ? 3 : absEp >= 0.1 ? 4 : absEp >= 0.01 ? 5 : absEp >= 0.001 ? 6 : 8;
-          const mv     = Math.pow(10, -prec0);
-          d.timeframes["1D"] = {
-            candles: [
-              { time: ts - 86400, open: ep, high: ep + mv, low: Math.max(ep - mv, 0), close: ep },
-              { time: ts,         open: ep, high: ep + mv, low: Math.max(ep - mv, 0), close: ep },
-            ],
-            volume: [
-              { time: ts - 86400, value: 0, color: "rgba(47,208,127,0.5)" },
-              { time: ts,         value: 0, color: "rgba(47,208,127,0.5)" },
-            ],
-            lines: [],
-          };
-          d.default_tf = "1D";
-          render(d);
-          if (stockTick) stockTick();
-      }
-    }
-  }
 
   // ── prev / next through the scanner result list ──────────────────────────────
   // Lets you step down the same scan (e.g. all ASX reversals) without bouncing
@@ -4151,7 +3580,6 @@
     initOffline();
     initMobileSheet();
     wireShare();
-    if (posId) { renderPosition(posId); return; }
     if (!symbol) { emptyState(); return; }
     wireScanNav();
     wireBotPosBanner();
@@ -4181,11 +3609,5 @@
     fallbackFromLive();
   }
 
-  // If cloud sync is on, pull the latest journal first so positions taken on
-  // another device show here too. Never block rendering on it for long.
-  if (window.GBSSync && window.GBSSync.enabled()) {
-    Promise.race([window.GBSSync.syncIn(), new Promise((res) => setTimeout(res, 2500))]).finally(boot);
-  } else {
-    boot();
-  }
+  boot();
 })();

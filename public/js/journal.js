@@ -141,8 +141,8 @@
       // this page reports — and they were a hand-typed copy of
       // scanner/config.py VIVEK_TP_SCALE_LONG/SHORT that nothing compared. A
       // trade already carries its own `scale` from the day it was taken
-      // (ensureInit pins it), so adopting a new ladder only ever affects
-      // positions opened from here on, which is the correct scope.
+      // so adopting a new ladder only ever affects positions opened from here
+      // on, which is the correct scope.
       if (j.tp_scale && typeof j.tp_scale === "object") {
         for (const side of ["long", "short"]) {
           const v = j.tp_scale[side];
@@ -164,8 +164,7 @@
       }
       if (Object.keys(drift).length) {
         console.warn("[journal] sizing fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
-        RULES_GEN++;  // invalidate every cached ensureInit, or the loadMe() below is a no-op
-        loadMe();     // re-derive manual sizing with the live constants
+        RULES_GEN++;  // invalidate anything derived from the old constants
       }
     } catch (_) { /* offline — fallbacks stand */ }
   }
@@ -266,163 +265,11 @@
 
   // ── auto-management of a manual position (mirror of vivek_journal._mark) ──────
   //
-  // Session-scoped generation stamp for `_init` (TOP100 #26). loadBotRules()
-  // bumps it when bot_rules.json disagrees with the fallbacks, which is what
-  // finally makes its "re-derive manual sizing with the live constants" comment
-  // true: `_init` used to be a plain boolean, so the loadMe() that line fires
-  // re-entered ensureInit and returned on its FIRST line, re-deriving nothing.
+  // Session-scoped generation stamp (TOP100 #26). loadBotRules() bumps it when
+  // bot_rules.json disagrees with the fallbacks, so anything derived from the
+  // old constants is known to be stale rather than silently kept.
   let RULES_GEN = 1;
 
-  function ensureInit(t) {
-    if (t._init === RULES_GEN) return;
-    t.market = marketOf(t);
-    const isLong = t.direction !== "short";
-    if (isVivek(t)) {
-      // THE 1R DENOMINATOR IS PINNED TO THE PLAN STOP (TOP100 #26). `manage()`
-      // TRAILS `t.stop` — to break-even when tp1 fills, to tp1 when tp2 fills —
-      // so deriving risk from the LIVE stop silently rescales every R already
-      // booked on the trade. After a tp1 trail the stop IS the entry, so `risk`
-      // came out exactly 0 and `realized_r` came out Infinity; saveClose()
-      // `delete`s `_init` on every manual close, which is precisely the path
-      // that hit it, and computeCloseOutcome does the same so the preview
-      // agreed with the corrupted outcome.
-      // A legacy row has no `risk_stop`, but its stored `risk` was written from
-      // the plan stop back when the stop still WAS the plan stop, so the plan
-      // stop is recoverable from it exactly — no guessing, no migration.
-      if (t.risk_stop == null) {
-        t.risk_stop = t.risk > 0 ? (isLong ? t.entry - t.risk : t.entry + t.risk) : t.stop;
-      }
-      t.risk = Math.abs(t.entry - t.risk_stop);
-      // risk_usd, UNLIKE risk, must track the live constants: it is a dollar
-      // figure derived from account equity and position notional, and those
-      // only arrive once bot_rules.json has loaded.
-      t.risk_usd = sizeOf(t.market, t.entry, t.risk_stop).risk_usd;
-      if (!Array.isArray(t.scale)) t.scale = SCALE[isLong ? "long" : "short"];
-    }
-    if (t.gross_r == null) t.gross_r = 0;
-    if (t.booked_pct == null) t.booked_pct = 0;
-    if (!Array.isArray(t.exits)) t.exits = [];
-    if (t.tp1_hit == null) { t.tp1_hit = false; t.tp2_hit = false; t.tp3_hit = false; }
-    if (t.mae == null) t.mae = t.entry;
-    if (t.mfe == null) t.mfe = t.entry;
-    // `_init` is a per-session CACHE, never data — defined NON-ENUMERABLE so
-    // JSON.stringify cannot carry it out through any of the three paths that
-    // serialise a trade (localStorage here, the KV PUT body and localStorage in
-    // gbs-sync, the Backup export). A persisted `_init` froze risk_usd at
-    // whatever constants the first device to touch the row happened to have
-    // loaded — forever, on every device, because the early return above fired
-    // before a single line of sizing ran. Everything above is now idempotent,
-    // so re-running this is cheap and correct rather than merely cheap.
-    Object.defineProperty(t, "_init",
-      { value: RULES_GEN, writable: true, configurable: true, enumerable: false });
-  }
-  function finalizeR(t) {
-    const [slip, comm] = costsFor(t.market);
-    t.cost_r = round(costR(t, slip, comm), 4);
-    t.realized_r = round((t.gross_r || 0) - t.cost_r, 4);
-  }
-  function book(t, name, price, pct, isLong) {
-    t.exits.push({ reason: name, price: round(price, 8), pct, date: today() });
-    t.gross_r = round((t.gross_r || 0) + pct * rOf(price, t.entry, t.risk, isLong), 4);
-    t.booked_pct = round((t.booked_pct || 0) + pct, 6);
-  }
-  // Returns the kind of change so the caller can decide whether to PERSIST:
-  //   false   — nothing material (or only MAE/MFE drift)
-  //   "book"  — a TP scaled out / stop trailed (still open)
-  //   "close" — the position closed
-  // MAE/MFE high-water marks are tracked in memory only — they moved on almost
-  // every tick and were burning the KV write quota; they ride along on the next
-  // material save.
-  function manage(t, price) {
-    if (t.status !== "open" || !isVivek(t) || price == null) return false;
-    ensureInit(t);
-    const isLong = t.direction !== "short", risk = t.risk;
-    if (!(risk > 0)) return false;
-    t.mfe = isLong ? Math.max(t.mfe, price) : Math.min(t.mfe, price);
-    t.mae = isLong ? Math.min(t.mae, price) : Math.max(t.mae, price);
-
-    let material = false;
-    const stopHit = isLong ? price <= t.stop : price >= t.stop;
-    if (stopHit) {
-      const remaining = round(1 - (t.booked_pct || 0), 6);
-      if (remaining > 1e-9) {
-        t.exits.push({ reason: "stop", price: round(price, 8), pct: remaining, date: today() });
-        t.gross_r = round((t.gross_r || 0) + remaining * rOf(price, t.entry, risk, isLong), 4);
-        t.booked_pct = 1;
-      }
-      t.status = "closed"; t.exit = round(price, 8);
-      t.exit_date = today(); t.exit_time = nowTime();
-      t.exit_reason = t.tp3_hit ? "target" : (t.tp1_hit ? "trail" : "stop");
-      material = true;
-    } else {
-      const scale = t.scale, reached = (lvl) => (isLong ? price >= lvl : price <= lvl);
-      // A TP only counts if it's a genuine profit target BEYOND the entry. This
-      // stops a chased entry (taken above the plan's TP1) from instantly booking
-      // "TP1" and trailing the stop to break-even on the entry bar.
-      const valid = (lvl) => (isLong ? lvl > t.entry : lvl < t.entry);
-      if (!t.tp1_hit && t.tp1 != null && valid(t.tp1) && reached(t.tp1)) {
-        t.tp1_hit = true; book(t, "tp1", t.tp1, scale[0], isLong);
-        if (fav(t.entry, t.stop, isLong)) t.stop = t.entry;        // SL → break-even
-        material = true;
-      }
-      if (!t.tp2_hit && t.tp2 != null && valid(t.tp2) && reached(t.tp2)) {
-        t.tp2_hit = true; book(t, "tp2", t.tp2, scale[1], isLong);
-        if (fav(t.tp1, t.stop, isLong)) t.stop = t.tp1;            // SL → locked structure
-        material = true;
-      }
-      if (!t.tp3_hit && t.tp3 != null && valid(t.tp3) && reached(t.tp3)) {
-        t.tp3_hit = true; book(t, "tp3", t.tp3, scale[2], isLong); material = true;
-      }
-    }
-    if (material) finalizeR(t);
-    return material ? (t.status === "closed" ? "close" : "book") : false;
-  }
-  // Make sure a CLOSED manual trade has its realized R/$ resolved once.
-  //
-  // THE REMAINDER IS THE POINT (TOP100 #25). This used to guard on
-  // `!t.exits.length`, which is only ever true of a trade that never scaled out
-  // at all — so the un-booked tail of every OTHER closed trade was dropped on
-  // the floor. Two shapes, both live:
-  //
-  //   partial ladder — tp1 (0.25) filled, closed by hand: 0.75 of the position
-  //     exits at the manual price and books nothing.
-  //   FULL ladder — SCALE is [0.25, 0.50, 0.15], which sums to 0.90. Even a
-  //     trade that hit all three targets is still holding a 0.10 runner, and
-  //     that runner was never priced either. Every completed VIVEK winner on
-  //     this page has been under-reported by a tenth of its move.
-  //
-  // The exit price was sitting on the row the whole time, unread. And because
-  // `computeCloseOutcome` deep-clones the trade and calls this same resolver,
-  // the close PREVIEW was wrong by exactly the same amount as the outcome it
-  // predicted — which is why the two never disagreed and nothing looked broken.
-  //
-  // IDEMPOTENCY IS LOAD-BEARING: this runs on EVERY load (the `closed` branch
-  // of the render loop), not once at close time. Once the remainder is booked
-  // `booked_pct` is 1, so `remaining` is 0 and every later pass is a no-op —
-  // the same once-only property the old `!t.exits.length` guard had by accident.
-  // `booked` takes the LARGER of the summed exits and the stored `booked_pct`
-  // so a legacy row carrying a `booked_pct` with an empty `exits` array cannot
-  // be booked twice: under-booking is the bug being fixed here, but
-  // double-booking would invent R that was never made, which is worse.
-  function ensureClosedR(t) {
-    if (t.status !== "closed") return;
-    ensureInit(t);
-    if (!isVivek(t)) { t.realized_r = null; return; }
-    const summed = (t.exits || []).reduce((s, e) => s + (+e.pct || 0), 0);
-    const booked = Math.max(summed, +t.booked_pct || 0);
-    const remaining = round(1 - booked, 6);
-    // `manage()` refuses a zero-width stop rather than dividing by it, and so
-    // does this: one degenerate row would otherwise put a NaN into gross_r and
-    // NaN poisons every $ aggregate on the page, not just its own.
-    if (remaining > 1e-9 && t.exit != null && t.risk > 0) {
-      const isLong = t.direction !== "short";
-      t.gross_r = round((t.gross_r || 0) + remaining * rOf(t.exit, t.entry, t.risk, isLong), 4);
-      t.exits.push({ reason: "manual", price: round(t.exit, 8), pct: remaining,
-                     date: t.exit_date || today() });
-      t.booked_pct = 1;
-    }
-    finalizeR(t);
-  }
 
   // FX honesty: ASX positions are priced in A$ while NASDAQ/crypto are US$.
   // Every $ AGGREGATE on this page converts ASX P&L to US$ at the scan's
@@ -671,11 +518,9 @@
 
   // Now / Unreal-R / Unreal-$ cells (returned separately — some tables put other
   // columns between Now and the R/$ pair).
-  //  • Bot positions are marked to market by the scan SERVER-SIDE every run
+  //  • Positions are marked to market by the scan SERVER-SIDE every run
   //    (unreal_r / unreal_usd live in the book JSON), so render those straight
   //    away — reliable, refreshed each scan, no client fetch.
-  //  • Manual positions are filled by refreshLive (scan-price snapshot first,
-  //    then a live quote) — these carry the data-* hooks it reads.
   function liveCellParts(t, side) {
     const isLong = t.direction !== "short";
     if (side === "bot") {
@@ -748,15 +593,10 @@
   };
   let openSort = { key: "opened", dir: -1 };   // dir -1 = best/newest at the top
 
-  // The two numbers a row can be sorted by, for EITHER book — ONE resolver, so
-  // the order can never disagree with the cells it is ordering.
-  //
-  // The asymmetry it exists to absorb: the BOT side is marked server-side and
-  // arrives with unreal_r / unreal_usd already on the object, while the ME side
-  // carries NEITHER at render time — refreshLive paints those cells afterwards,
-  // straight into the DOM. Sorting the Me table off its rendered cells would
-  // therefore sort the literal placeholder "—", so this re-derives from the
-  // same scan-price map refreshLive itself reads first.
+  // The two numbers a row can be sorted by — ONE resolver, so the order can
+  // never disagree with the cells it is ordering. (It took a `side` argument
+  // while a second, client-priced book existed; the manual journal was removed
+  // 2026-09-21 and the bot book arrives already marked.)
   //
   // Returns null, never 0, when a value cannot be resolved. An unpriced row is
   // UNKNOWN, not flat, and sorting it as flat drops it into the middle of the
@@ -780,7 +620,7 @@
     (key === "opened" ? openedMs(t) : openMetric(t, side)[key]);
 
   // House rule (see byExit above): never sort the caller's array in place.
-  // `state.bot.open` / `state.me.open` are the live books, and reordering them
+  // `state.bot.open` is the live book, and reordering it
   // would silently reorder every other surface that reads them.
   function sortedOpen(list, side) {
     const { key, dir } = openSort;
@@ -819,11 +659,7 @@
     // best-first, because "show me the best" is the question being asked.
     if (openSort.key === key) openSort = { key, dir: -openSort.dir };
     else openSort = { key, dir: -1 };
-    paintOpen("bot"); paintOpen("me");
-    // The Me side's R/$ cells are painted by refreshLive, not by openRows, so
-    // a re-render leaves them on placeholders until this runs. Cached scan
-    // prices resolve without a network round trip.
-    refreshLive();
+    paintOpen("bot");
   }
 
   // Just the open table + its control — NOT renderSide, which also redraws the
@@ -862,21 +698,16 @@
         ` title="${esc(OPEN_SORT_TIPS[key])}">${label}</th>`;
     };
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
-      ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("opened", "Opened")}${side === "me" ? "<th></th>" : ""}</tr>`;
+      ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("opened", "Opened")}</tr>`;
     const rows = sortedOpen(list, side).map((t) => {
       const isLong = t.direction !== "short";
-      const actions = side === "me"
-        ? `<td class="num jr-actions"><button class="jr-close-btn" data-close="${esc(t.id)}">Close</button>` +
-          `<button class="jr-note-btn${t.note ? " has-note" : ""}" data-note="${esc(t.id)}" ` +
-          `title="${t.note ? esc(t.note) : "Add a note — why did you take this trade?"}">📝</button>` +
-          `<button class="jr-del-btn" data-del="${esc(t.id)}" title="Remove from journal (no P&L logged)">✕</button></td>` : "";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
         <td class="num" data-label="Entry">${px(t.entry)}</td>
         <td class="num" data-label="Stop">${px(t.stop)}</td>
         ${liveCells(t, side)}
-        <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td>${actions}</tr>`;
+        <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td></tr>`;
     }).join("");
     return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
@@ -1188,91 +1019,6 @@
   // Claude's R/$ are marked server-side each scan, yours update live.
   const tradeKey = (t) => `${marketOf(t)}:${symKey(t)}:${t.direction === "short" ? "S" : "L"}`;
 
-  function renderBoth() {
-    const openHost = $("#both-open");
-    if (!openHost) return;
-
-    // open overlaps — every (Claude, me) pair currently open on the same key
-    const meByKey = new Map();
-    for (const t of state.me.open) {
-      const k = tradeKey(t);
-      if (!meByKey.has(k)) meByKey.set(k, []);
-      meByKey.get(k).push(t);
-    }
-    const pairs = [];
-    for (const b of state.bot.open) {
-      for (const m of meByKey.get(tradeKey(b)) || []) pairs.push([b, m]);
-    }
-    pairs.sort((a, b) => (openedMs(b[1]) || 0) - (openedMs(a[1]) || 0));
-    const nEl = $("#both-open-n");
-    if (nEl) nEl.textContent = pairs.length ? `(${pairs.length})` : "";
-
-    if (!pairs.length) {
-      openHost.innerHTML = `<div class="jr-empty">No overlap right now — when you and Claude hold the
-        same position, it lines up here head to head.</div>`;
-    } else {
-      const head = `<tr><th>Symbol</th><th class="num">Now</th>
-        <th class="num h-bot bsep">🤖 Entry</th><th class="num h-bot">🤖 Opened</th><th class="num h-bot">🤖 R</th><th class="num h-bot">🤖 $</th>
-        <th class="num h-me bsep">✏️ Entry</th><th class="num h-me">✏️ Opened</th><th class="num h-me">✏️ R</th><th class="num h-me">✏️ $</th></tr>`;
-      const body = pairs.map(([b, m]) => {
-        // Claude's cells are static (marked by the scan) — plain classes so
-        // refreshLive only drives the Me cells (.jr-ur/.jr-ud) + shared Now.
-        const ur = b.unreal_r, ud = b.unreal_usd != null ? b.unreal_usd * fxOf(b) : null;
-        const me = liveCellParts(m, "me");
-        return `<tr data-tid="${esc(m.id)}" data-side="me">
-          ${symCell(b)}
-          ${me.now}
-          <td class="num bsep">${px(b.entry)}</td>
-          <td class="num jr-stamp">${stamp(openedMs(b))}</td>
-          <td class="num ${ur != null ? rcls(ur) : ""}">${ur != null ? rfmt(ur) : "—"}</td>
-          <td class="num ${ud != null ? pcls(ud) : ""}">${ud != null ? d2(ud) : "—"}</td>
-          <td class="num bsep">${px(m.entry)}</td>
-          <td class="num jr-stamp">${stamp(openedMs(m))}</td>
-          ${me.ur}${me.ud}</tr>`;
-      }).join("");
-      openHost.innerHTML = `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${body}</tbody></table>`;
-    }
-
-    // settled head-to-heads — same symbol+direction, both sides fully closed.
-    // Totals per symbol (either side may have traded it more than once).
-    const agg = (list) => {
-      const out = new Map();
-      for (const t of list) {
-        if (t.realized_r == null) continue;
-        const k = tradeKey(t);
-        const a = out.get(k) || { n: 0, r: 0, d: 0, t };
-        a.n += 1; a.r += t.realized_r; a.d += (dollarsOf(t) || 0);
-        out.set(k, a);
-      }
-      return out;
-    };
-    const bAgg = agg(state.bot.closed), mAgg = agg(state.me.closed);
-    const settled = [];
-    for (const [k, b] of bAgg) { const m = mAgg.get(k); if (m) settled.push([b, m]); }
-    settled.sort((x, y) => Math.abs(y[0].r + y[1].r) - Math.abs(x[0].r + x[1].r));
-
-    const wrap = $("#both-closed-wrap");
-    if (wrap) wrap.hidden = !settled.length;
-    if (settled.length) {
-      const win = (b, m) => b.r > m.r + 1e-9
-        ? `<span class="both-win w-bot">🤖 Claude</span>`
-        : m.r > b.r + 1e-9 ? `<span class="both-win w-me">✏️ Me</span>`
-        : `<span class="both-win">Tie</span>`;
-      const head = `<tr><th>Symbol</th>
-        <th class="num h-bot bsep">🤖 R</th><th class="num h-bot">🤖 $</th>
-        <th class="num h-me bsep">✏️ R</th><th class="num h-me">✏️ $</th>
-        <th class="num">Trades</th><th class="num">Winner</th></tr>`;
-      const body = settled.map(([b, m]) => `<tr>
-        ${symCell(b.t)}
-        <td class="num bsep ${rcls(b.r)}">${rfmt(b.r)}</td>
-        <td class="num ${pcls(b.d)}">${d2(b.d)}</td>
-        <td class="num bsep ${rcls(m.r)}">${rfmt(m.r)}</td>
-        <td class="num ${pcls(m.d)}">${d2(m.d)}</td>
-        <td class="num"><span class="num-sub">${b.n} vs ${m.n}</span></td>
-        <td class="num">${win(b, m)}</td></tr>`).join("");
-      $("#both-closed").innerHTML = `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${body}</tbody></table>`;
-    }
-  }
 
   // ── live prices (reused from the manual-journal helpers) ──────────────────
   // Hard client-side timeout so a slow/hanging upstream can never leave the
@@ -1303,42 +1049,9 @@
   }
   const priceFor = (t) => (marketOf(t) === "crypto" ? cryptoPrice(t.symbol) : stockPrice(t.symbol, marketOf(t)));
 
-  // ── store (manual side) ───────────────────────────────────────────────────
-  const MJ_KEY = "gbs:manual_journal";
-  // TOP100 #84 — a generation counter for the manual store. `mjLoad()` is not
-  // cheap: it reads localStorage, `JSON.parse`s the whole journal and runs
-  // `normalize()` over every trade (which now also walks up to TOMBSTONE_MAX
-  // deleted ids). Anything that wants to hold ONE parsed row across a burst of
-  // events compares this instead of re-parsing defensively on each one.
-  //
-  // Bumped by EVERY path that can change the store: both writers below, the
-  // post-sync-in refresh, and the cross-tab `storage` event. That set is what
-  // makes a cache off it exactly as fresh as a re-read would have been — miss
-  // one and the cache is a bug, so bump here rather than at the call site.
-  let mjGen = 0;
-  function mjLoad() {
-    if (window.GBSSync) return window.GBSSync.load();
-    try { const r = localStorage.getItem(MJ_KEY); if (r) return JSON.parse(r); } catch (_) {}
-    return { trades: [], deleted: [] };
-  }
-  // Local-only save: for changes the rules COMPUTE (TP scale-outs, stop trails,
-  // auto-closes). Every device re-derives these from the same entry/targets +
-  // price, so they must NEVER be pushed to the shared cloud store — doing so on
-  // every price move is what burned the KV write quota.
-  function mjSaveLocal(d) {
-    mjGen++;
-    if (window.GBSSync) { window.GBSSync.saveLocal(d); return; }
-    localStorage.setItem(MJ_KEY, JSON.stringify(d));
-  }
-  // Cloud save: ONLY for genuine user actions (take / close / delete / import).
-  function mjSave(d) {
-    mjGen++;
-    if (window.GBSSync) { window.GBSSync.saveLocal(d); window.GBSSync.syncOutDebounced(); return; }
-    localStorage.setItem(MJ_KEY, JSON.stringify(d));
-  }
 
   // ── state + render ────────────────────────────────────────────────────────
-  const state = { bot: { open: [], closed: [] }, me: { open: [], closed: [] } };
+  const state = { bot: { open: [], closed: [] } };
 
   function splitBot(book) {
     const open = (book.open || []).slice();
@@ -1346,15 +1059,6 @@
     // Bot trades already carry net realized_r + risk_usd from the server.
     // updated_at rides along so the UI can show how fresh the bot's marks are.
     return { open, closed, updated_at: book.updated_at || null };
-  }
-  function splitMe(data) {
-    const trades = (data.trades || []).filter((t) => t && t.status);
-    const open = [], closed = [];
-    for (const t of trades) {
-      if (t.status === "open") { ensureInit(t); open.push(t); }
-      else if (t.status === "closed") { ensureClosedR(t); closed.push(t); }
-    }
-    return { open, closed };
   }
 
   // w3-1 PROGRESS (2026-08-15) → w3-1 EXIT EVIDENCE (Session B, 2026-08-19).
@@ -1508,28 +1212,6 @@
     return s;
   }
 
-  function renderComparison(sb, sm) {
-    drawEquity("cmp-eq-bot", series(state.bot.closed), "Claude");
-    drawEquity("cmp-eq-me", series(state.me.closed), "you");
-    const row = (label, b, m, fmt, better) => {
-      const bv = fmt(b), mv = fmt(m);
-      const lead = better == null ? "" : (b > m ? "lead-bot" : m > b ? "lead-me" : "");
-      return `<div class="cmp-row ${lead}">
-        <span class="cmp-k">${label}</span>
-        <span class="cmp-v cmp-bot">${bv}</span>
-        <span class="cmp-vs">vs</span>
-        <span class="cmp-v cmp-me">${mv}</span></div>`;
-    };
-    $("#cmp-stats").innerHTML =
-      `<div class="cmp-head"><span></span><span class="cmp-bot">🤖 Claude</span><span></span><span class="cmp-me">✏️ Me</span></div>` +
-      row("Account value", startCapital() + sb.totalD, startCapital() + sm.totalD, money0, true) +
-      row("Total R", sb.totalR, sm.totalR, rfmt, true) +
-      row("Total $", sb.totalD, sm.totalD, dfmt, true) +
-      row("Win rate", sb.win || 0, sm.win || 0, (v) => v ? v.toFixed(0) + "%" : "—", true) +
-      row("Trades", sb.n, sm.n, (v) => String(v), null) +
-      row("Open now", sb.open, sm.open, (v) => String(v), null) +
-      row("Max DD", sb.maxDD, sm.maxDD, dfmt, null);
-  }
 
   // ── Edge tracker: forward expectancy per setup cell (timeframe × trigger) ──
   // This is the table that eventually says which setups ACTUALLY make money
@@ -1537,7 +1219,7 @@
   // closed trades. Cells need ~20 trades before the numbers mean anything.
   // Bot and manual trades are aggregated in SEPARATE sections (🤖 / ✏️) so the
   // bot's evidence is never contaminated by manual discretion.
-  const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed], ["✏️ Me", state.me.closed]];
+  const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed]];
 
   // ── Edge headline card (UX top-10 #8, 2026-07-26) ─────────────────────────
   // The edge tracker's single most important row, surfaced ABOVE the fold:
@@ -1696,32 +1378,18 @@
         (rows || `<div class="jr-new-empty">No new positions in the last 7 days.</div>`);
     };
     paint("new-bot", state.bot, "🤖 Claude · new positions");
-    paint("new-me", state.me, "✏️ Me · new positions");
   }
 
   // ── OPEN POSITIONS P&L headline (owner 2026-07-22): the total $ up/down on
-  // current positions, before anything else on the page. Bot side comes marked
-  // from the book JSON (last scan / kill-switch pricing); the Me side uses the
-  // same scan-price snapshot the tables use and re-renders after refreshLive
-  // upgrades marks to live quotes. All US$ per the page convention (fx-note).
+  // current positions, before anything else on the page. Marked from the book
+  // JSON (last scan / kill-switch pricing). All US$ per the page convention
+  // (fx-note).
   function renderPnlHeadline() {
     const box = $("#jr-pnl");
     if (!box) return;
     const botOpen = state.bot.open || [];
-    const botU = botOpen.reduce((s, t) => s + (t.unreal_usd != null ? t.unreal_usd * fxOf(t) : 0), 0);
-    let meU = 0, meN = 0, mePriced = 0;
-    for (const t of state.me.open || []) {
-      meN++;
-      const price = scanPrice.get(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
-      const isLong = t.direction !== "short";
-      const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
-      if (price != null && risk > 0 && t.risk_usd != null) {
-        meU += rOf(price, t.entry, risk, isLong) * t.risk_usd * fxOf(t);
-        mePriced++;
-      }
-    }
-    const total = botU + meU;
-    const nOpen = botOpen.length + meN;
+    const total = botOpen.reduce((s, t) => s + (t.unreal_usd != null ? t.unreal_usd * fxOf(t) : 0), 0);
+    const nOpen = botOpen.length;
     if (!nOpen) { box.hidden = true; return; }
     box.hidden = false;
     const totEl = $("#jr-pnl-total");
@@ -1730,21 +1398,17 @@
     const t = Date.parse(state.bot.updated_at || "");
     const m = isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null;
     const age = m == null ? "" : m < 60 ? ` · marked ${m}m ago` : m < 2880 ? ` · marked ${Math.round(m / 60)}h ago` : ` · marked ${Math.round(m / 1440)}d ago`;
-    const unpriced = meN - mePriced;
-    // TOP100 #24. Counted across BOTH sides — the bot's marks come off the same
-    // merged frames — and surfaced here as well as on the row, because this
-    // headline is the one number on the page that gets read every time, and a
-    // total summed partly from week-old closes should not present itself as
-    // today's P&L in silence.
-    const fossil = [...botOpen, ...(state.me.open || [])].filter(
+    // TOP100 #24. Surfaced here as well as on the row, because this headline is
+    // the one number on the page that gets read every time, and a total summed
+    // partly from week-old closes should not present itself as today's P&L in
+    // silence.
+    const fossil = botOpen.filter(
       (t) => ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase()) > 0).length;
     $("#jr-pnl-sub").textContent =
       `${nOpen} open position${nOpen === 1 ? "" : "s"} · US$${age}` +
-      (unpriced > 0 ? ` · ${unpriced} of yours awaiting a price` : "") +
       (fossil > 0 ? ` · ${fossil} priced off a stale close` : "");
     $("#jr-pnl-split").innerHTML =
-      `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(botU)}">${d2(botU)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>` +
-      (meN ? `<span class="jr-pnl-chip"><span class="ts-who">✏️ Me</span> <b class="${pcls(meU)}">${d2(meU)}</b> <span class="ts-who">· ${meN} open</span></span>` : "");
+      `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(total)}">${d2(total)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>`;
     // The realised mini-sparkline was retired from this header (UI pass
     // 2026-08-18) - see journal.html. drawMiniEquity still drives the full
     // per-book equity curves, so nothing else changes; this block simply stops
@@ -1766,15 +1430,13 @@
   function renderWeeklyDigest() {
     const box = $("#jr-digest");
     if (!box) return;
-    const anyEver = (state.bot.closed || []).some((t) => t.realized_r != null) ||
-                    (state.me.closed || []).some((t) => t.realized_r != null);
+    const anyEver = (state.bot.closed || []).some((t) => t.realized_r != null);
     if (!anyEver) { box.hidden = true; return; }
     box.hidden = false;
     const { start, end, mon } = weekBounds(wkOffset);
     const inWeek = (t) => { const ms = exitMs(t); return ms != null && ms >= start && ms < end && t.realized_r != null; };
     const bot = (state.bot.closed || []).filter(inWeek);
-    const me  = (state.me.closed  || []).filter(inWeek);
-    const closes = [...bot, ...me];
+    const closes = bot;
     const fmtD = (d) => d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
     const range = $("#jr-digest-range");
     if (range) range.textContent = wkOffset === 0
@@ -1894,7 +1556,7 @@
   function renderRDist() {
     const box = $("#jr-rdist");
     if (!box) return;
-    const closed = [...(state.bot.closed || []), ...(state.me.closed || [])]
+    const closed = (state.bot.closed || [])
       .filter((t) => t.realized_r != null);
     if (closed.length < 5) { box.hidden = true; return; }
     const BUCKETS = [
@@ -1956,15 +1618,13 @@
   }
 
   function renderAll() {
-    const sb = renderSide("bot"), sm = renderSide("me");
+    const sb = renderSide("bot");
     renderPnlHeadline();
     renderWeeklyDigest();
     renderRDist();               // UX-20 #10
     renderExitQuality();         // Fix-10 #1
     renderEdgeCard();
     renderNewPositions();
-    renderComparison(sb, sm);
-    renderBoth();
     renderEdgeTracker();
     renderLensTracker();
     const note = $("#bot-note");
@@ -1996,7 +1656,7 @@
       const cell = (who, st, openN) =>
         `<span class="ts-who">${who}</span><span class="${pcls(st.totalD)}">${money0(startCapital() + st.totalD)}</span>` +
         `<span class="ts-who">· ${openN} open</span>`;
-      ts.innerHTML = cell("🤖", sb, state.bot.open.length) + cell("✏️", sm, state.me.open.length);
+      ts.innerHTML = cell("🤖", sb, state.bot.open.length);
     }
     const fxn = $("#fx-note");
     if (fxn) fxn.textContent = ` · $ figures in US$ — ASX P&L converted at AUD/USD ${FX_AUDUSD.toFixed(4)}`;
@@ -2031,125 +1691,7 @@
     }
   }
 
-  // ── live refresh: price the MANUAL opens, auto-manage them, update cells ────
-  // Bot rows are already marked to market by the scan (rendered from the book
-  // JSON), so this only touches Me rows. Each Me symbol's price comes from the
-  // latest scan snapshot first (reliable, refreshes every scan); a live quote is
-  // only fetched as a fallback when the symbol isn't in the current scan.
-  async function refreshLive() {
-    let meChanged = false;   // any persisted change (MAE/MFE, scale-out, close)
-    let meClosed = false;    // a position actually CLOSED → rows move tables
-    const data = mjLoad();
-    const byId = new Map((data.trades || []).map((t) => [t.id, t]));
 
-    // Each Me position is rendered in TWO tables (combined + per-section), so
-    // GROUP rows by symbol and resolve each symbol's price once.
-    const trs = $$("tbody tr[data-tid][data-side='me']");
-    const keyOf = (t) => marketOf(t) + ":" + String(t.symbol || "").toUpperCase();
-    const groups = new Map();            // key -> { src, rows:[tr], manual }
-    for (const tr of trs) {
-      const id = tr.getAttribute("data-tid");
-      const src = byId.get(id);
-      if (!src) continue;
-      const key = keyOf(src);
-      let g = groups.get(key);
-      if (!g) { g = { src, key, rows: [], manual: src }; groups.set(key, g); }
-      g.rows.push(tr);
-    }
-
-    const paint = (g, price, days) => {
-      // Remember the freshest mark so the P&L headline uses live quotes too.
-      if (price != null) scanPrice.set(g.key, price);
-      if (g.manual && price != null) {
-        const r = manage(g.manual, price);   // false | "book" | "close"
-        if (r) {
-          meChanged = true;
-          if (r === "close") meClosed = true;
-          // A LADDER EVENT IS NOT RE-DERIVABLE (TOP100 #31), so it gets an
-          // mtime like any other real change. `manage()` books a TP and TRAILS
-          // THE STOP at the instant price crosses the level; a device that was
-          // closed during that move only ever sees a later price, and if price
-          // has since fallen back below tp1 it will never book tp1 at all — it
-          // will sit on the ORIGINAL stop and eventually take a full loss on a
-          // trade the other device had already moved to break-even. Without an
-          // mtime the booked copy also loses every merge tie (gbs-sync #32), so
-          // the device that got it right was the one that got overwritten.
-          g.manual.mtime = Date.now();
-        }
-      }
-      const src = g.src;
-      for (const tr of g.rows) {
-        const nowCell = tr.querySelector(".jr-now");
-        if (!nowCell || !document.body.contains(nowCell)) continue;
-        const urCell = tr.querySelector(".jr-ur");
-        const udCell = tr.querySelector(".jr-ud");
-        if (price == null) { nowCell.textContent = "—"; markStale(nowCell, 0); continue; }
-        const isLong = src.direction !== "short";
-        const risk = src.risk != null ? src.risk : Math.abs(src.entry - (src.stop ?? src.entry));
-        const ru = src.risk_usd;
-        nowCell.textContent = px(price);
-        markStale(nowCell, days || 0);      // TOP100 #24 — 0 clears a stale badge
-        if (src.status === "closed") { nowCell.textContent = "closed"; continue; }
-        if (risk > 0) {
-          const ur = rOf(price, src.entry, risk, isLong);
-          if (urCell) { urCell.textContent = rfmt(ur); urCell.className = "num jr-ur " + rcls(ur); }
-          if (ru != null && udCell) { const ud = ur * ru * fxOf(src); udCell.textContent = d2(ud); udCell.className = "num jr-ud " + pcls(ud); }
-        }
-      }
-    };
-
-    // Scan price first (reliable, every scan); live quote only if absent.
-    // A live quote carries no staleness BY CONSTRUCTION — it was just fetched —
-    // so the age only travels with the scan-snapshot branch (TOP100 #24).
-    await inBatches([...groups.values()], 6, async (g) => {
-      const cached = scanPrice.has(g.key);
-      const price = cached ? scanPrice.get(g.key) : await priceFor(g.src);
-      paint(g, price, cached ? ageOf(g.key) : 0);
-    });
-
-    // Persist rule-computed changes (scale-outs, stop trails, auto-close) to the
-    // CLOUD as well as locally (TOP100 #31). The old comment here said each
-    // device re-derives them so a cloud push was pure quota burn — but a device
-    // re-derives from a point-in-time PRICE, not from the price series, so it
-    // can only reconstruct a ladder event it happened to be open for. What
-    // actually burned the quota was MAE/MFE drift on every tick, and `manage()`
-    // already returns false for that: `meChanged` is set ONLY by "book" or
-    // "close", which is at most four events in a trade's entire life.
-    // Only RE-RENDER when a position actually closed (rows move tables).
-    if (meChanged) mjSave(data);
-    if (meClosed) { loadMe(data); renderAll(); }
-    // Live quotes may have upgraded manual marks — refresh the P&L headline.
-    renderPnlHeadline();
-  }
-
-  // ── loaders ───────────────────────────────────────────────────────────────
-  function loadMe(data) { state.me = splitMe(data || mjLoad()); }
-  // TOP100 #29. This used to say `catch (_) { /* keep empty */ }`, and the
-  // comment was the giveaway: "keep empty" is only true on the FIRST load.
-  // `loadBot` is re-run by the refresh loop against a `state.bot` that is
-  // already populated, so a failed fetch keeps the LAST GOOD BOOK on screen —
-  // open positions, marks, P&L headline, the lot — with nothing anywhere saying
-  // the number is frozen. That is the failure mode you least want on a page
-  // whose entire job is telling you what is open right now: the book stops
-  // updating and looks exactly like a book that has not changed.
-  //
-  // `r.ok` was swallowed the same way. A 404 (the file has never been
-  // published) and a 500 (Cloudflare is having a bad day) both fell through
-  // the `if` in silence.
-  let botLoadErr = null;
-  async function loadBot() {
-    try {
-      const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
-      if (!r.ok) { botLoadErr = `HTTP ${r.status}`; return; }
-      state.bot = splitBot(await r.json());
-      botLoadErr = null;   // cleared only by a load that actually succeeded
-    } catch (e) {
-      // Offline, DNS, CORS, or a truncated body that failed to parse. The
-      // message is not shown to the user (it is browser-specific and unhelpful);
-      // the fact of it is.
-      botLoadErr = "unreachable";
-    }
-  }
   // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
   // source for manual trades) from the live scans. Re-runnable: prices overwrite.
   async function loadScanMeta() {
@@ -2216,149 +1758,20 @@
     }));
   }
 
-  // Surface quota-lost saves (2026-07-20): gbs-sync dispatches gbs:save-error
-  // when localStorage rejects a write — previously NOTHING listened, so a
-  // just-closed trade could vanish silently. Loud, persistent red banner.
-  window.addEventListener("gbs:save-error", () => {
-    let el = document.getElementById("gbs-save-error");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "gbs-save-error";
-      el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);"
-        + "z-index:9999;background:#ff453a;color:#fff;padding:10px 18px;border-radius:12px;"
-        + "font-weight:600;font-size:13px;max-width:520px;box-shadow:0 6px 24px rgba(0,0,0,.45)";
-      document.body.appendChild(el);
-    }
-    el.textContent = "STORAGE FULL — this device could NOT save your last change. "
-      + "Export a backup now (Backup button), then reload; if it repeats, clear old site data.";
-  });
-
-  // ── close modal (Me) ──────────────────────────────────────────────────────
-  let closeId = null;
-  // TOP100 #84 — the row being closed, held across the keystroke burst.
-  // `updateClosePreview` runs on every `input` event in the exit-price field, and
-  // it used to `mjLoad().trades.find(...)` each time: a full localStorage read +
-  // JSON.parse + normalize() of the entire journal, per character typed, to find
-  // one row that cannot have changed between two keystrokes. Typing "1234.56" did
-  // it seven times.
-  //
-  // The cache is keyed on `mjGen` as well as the id, so it is invalidated by
-  // every path that writes the store — including a cross-tab write and a sync
-  // pull landing WHILE the modal is open. That is why this is a memo and not a
-  // snapshot: a stale preview is a worse bug than a slow one, and the identity
-  // it must preserve is "shows what a fresh read would have shown".
-  let closeRow = null, closeRowGen = -1;
-  function closeRowNow() {
-    if (!closeId) return null;
-    if (closeRow && closeRow.id === closeId && closeRowGen === mjGen) return closeRow;
-    closeRow = mjLoad().trades.find((x) => x.id === closeId) || null;
-    closeRowGen = mjGen;
-    return closeRow;
-  }
-  // #82: what closing at `exit` WOULD book — realised R + $ impact. Clones the
-  // trade and runs the exact same resolver the load path uses (ensureClosedR
-  // via the same field-sets saveClose does), so the preview equals the outcome.
-  function computeCloseOutcome(t, exit) {
-    if (!(exit > 0)) return null;
-    let c;
-    try { c = JSON.parse(JSON.stringify(t)); } catch (_) { return null; }
-    c.status = "closed"; c.exit = exit; c.exit_date = today(); c.exit_time = nowTime();
-    c.exit_reason = "manual"; delete c._init;
-    ensureClosedR(c);
-    const r = c.realized_r;
-    const dollars = (r != null && c.risk_usd != null) ? r * c.risk_usd * fxOf(c) : null;
-    return { r, dollars };
-  }
-  function updateClosePreview() {
-    const box = $("#jr-close-preview");
-    if (!box) return;
-    const t = closeRowNow();
-    const exit = parseFloat($("#jr-exit-price").value);
-    const out = t ? computeCloseOutcome(t, exit) : null;
-    if (!out || out.r == null) { box.hidden = true; return; }
-    box.hidden = false;
-    const rEl = $("#jr-cp-r"), dEl = $("#jr-cp-d");
-    rEl.textContent = rfmt(out.r); rEl.className = "jr-cp-val " + rcls(out.r);
-    if (out.dollars == null) { dEl.textContent = ""; }
-    else { dEl.textContent = dfmt(out.dollars); dEl.className = "jr-cp-val " + pcls(out.dollars); }
-    const note = $("#jr-cp-note");
-    if (note) note.textContent = out.r >= 0 ? "This is a winning close." : "This books a loss.";
-  }
-
-  function openCloseModal(id) {
-    const t = mjLoad().trades.find((x) => x.id === id);
-    if (!t) return;
-    closeId = id;
-    closeRow = t; closeRowGen = mjGen;   // #84: seed from the read we just did
-    $("#jr-modal-title").textContent = "Close " + String(t.symbol || "").toUpperCase();
-    $("#jr-exit-price").value = "";
-    $("#jr-price-tag").textContent = "loading live…";
-    const box = $("#jr-close-preview"); if (box) box.hidden = true;
-    $("#jr-close-overlay").hidden = false;
-    priceFor(t).then((p) => {
-      if (p != null) { $("#jr-exit-price").value = +(+p).toFixed(6); $("#jr-price-tag").textContent = "live"; }
-      else $("#jr-price-tag").textContent = "";
-      updateClosePreview();
-    });
-  }
-  function closeModal() {
-    $("#jr-close-overlay").hidden = true;
-    closeId = null; closeRow = null; closeRowGen = -1;   // #84: never outlive the modal
-  }
-
-  // Remove a manual trade entirely (no P&L logged) — for setups you logged but
-  // didn't actually take (e.g. a fund/REIT not listed on your broker). Records a
-  // tombstone so the deletion propagates across synced devices.
-  // Post-trade review needs the WHY, not just the numbers — a free-text note
-  // per manual trade (cloud-synced: adding/editing one is a genuine user action).
-  function editNote(id) {
-    const data = mjLoad();
-    const t = data.trades.find((x) => x.id === id);
-    if (!t) return;
-    const note = prompt(`Note for ${String(t.symbol || "").toUpperCase()} — why did you take it?`,
-                        t.note || "");
-    if (note == null) return;                      // cancelled
-    t.note = note.trim();
-    if (!t.note) delete t.note;
-    t.mtime = Date.now();
-    mjSave(data);
-    renderAll();
-    refreshLive();
-  }
-
-  function removeTrade(id) {
-    const data = mjLoad();
-    const t = (data.trades || []).find((x) => x.id === id);
-    if (!t) return;
-    const sym = String(t.symbol || "").toUpperCase();
-    if (!confirm(`Remove ${sym} from your journal?\n\nThis deletes the trade entirely — no profit/loss is logged. Use this for setups you didn't actually take.`)) return;
-    data.trades = (data.trades || []).filter((x) => x.id !== id);
-    if (!Array.isArray(data.deleted)) data.deleted = [];
-    if (!data.deleted.includes(id)) data.deleted.push(id);
-    mjSave(data); loadMe(data); renderAll(); refreshLive();
-  }
-
   // ── CLOSE ALL — one button per side (owner ask, 2026-09-17: "the ability to
   //    Close all trades i've taken and also all trades Claude has taken ... a
   //    button for each") ─────────────────────────────────────────────────────
   //
-  // TWO buttons rather than one, because the two sides close by COMPLETELY
-  // different mechanisms and a single shared control would have to hide that:
+  // ONE button now (2026-09-21): the manual journal it used to sit beside was
+  // removed, so this closes the BOT BOOK — the one and only track record.
+  // SERVER-side via POST /api/close with journal_type "bot", using the
+  // pre-existing BATCH shape (N closes in ONE workflow run). That adds a
+  // CALLER, not a capability: the stalled strip has posted that exact body
+  // since 2026-08-13, and it is the validated, rate-limited dispatcher. Each
+  // row books at its OWN last_mark — the number the Open R beside it was
+  // computed from — so what you read is what you book.
   //
-  //   * CLAUDE's side is the bot book — the one and only track record. It closes
-  //     SERVER-side via POST /api/close with journal_type "bot", using the
-  //     pre-existing BATCH shape (N closes in ONE workflow run). This adds a
-  //     CALLER, not a capability: the stalled strip has posted that exact body
-  //     since 2026-08-13, and it is the validated, rate-limited dispatcher.
-  //     Each row books at its OWN last_mark — the number the Open R beside it
-  //     was computed from — so what you read is what you book.
-  //   * MY side is the manual journal in localStorage (KV-synced). It closes
-  //     CLIENT-side at the LIVE price, writing exactly the fields saveClose()
-  //     writes, so a bulk close and a one-by-one close leave identical rows
-  //     (status/exit/exit_date/exit_time/exit_reason "manual"/mtime, _init
-  //     dropped so R re-resolves cleanly).
-  //
-  // FAIL-CLOSED on BOTH sides: a position with no honest price is SKIPPED and
+  // FAIL-CLOSED: a position with no honest price is SKIPPED and
   // NAMED, never closed at a guess — the stalled strip's rule, for the same
   // reason. If that leaves nothing closable the button says so and sends
   // nothing. And the confirm states the exact count BEFORE anything happens,
@@ -2434,198 +1847,12 @@
       .finally(() => { closeAllBusy = false; paintOpen("bot"); });
   }
 
-  async function closeAllMine() {
-    const open = (state.me.open || []).slice();
-    if (!open.length) { alert("You have no open positions."); return; }
-    if (!confirm(`Close ALL ${open.length} of your open positions at the live price?\n\n` +
-                 `Each is booked exactly as closing it one by one would be. Anything with no live price is skipped and left open.\n\n` +
-                 `This writes your journal on this device and syncs it.`)) return;
-    if (closeAllBusy) return;
-    closeAllBusy = true;
-    paintOpen("me");
-    try {
-      // Resolve every price FIRST, then write the store ONCE — a save per row
-      // would fire a sync per row and leave the journal half-closed if one
-      // lookup hangs.
-      const prices = await Promise.all(open.map((t) => priceFor(t).catch(() => null)));
-      const data = mjLoad();
-      const done = [], noPx = [];
-      open.forEach((row, i) => {
-        const px = prices[i];
-        const sym = String(row.symbol || "?").toUpperCase();
-        if (!(px > 0)) { noPx.push(sym); return; }
-        const t = (data.trades || []).find((x) => x && x.id === row.id && x.status === "open");
-        if (!t) return;                       // closed under us: leave it alone
-        t.status = "closed"; t.exit = +px; t.exit_date = today(); t.exit_time = nowTime();
-        t.exit_reason = "manual"; t.mtime = Date.now();
-        delete t._init;                       // force a clean re-resolve
-        done.push(sym);
-      });
-      if (!done.length) {
-        alert(`Nothing was closed — no live price came back for any of them (${noPx.join(", ")}).`);
-        return;
-      }
-      mjSave(data); loadMe(data); renderAll(); refreshLive();
-      alert(`Closed ${done.length}: ${done.join(", ")}.` +
-            (noPx.length ? `\n\nSkipped, still open (no live price): ${noPx.join(", ")}` : ""));
-    } catch (_) {
-      alert("Nothing was closed — the prices could not be fetched.");
-    } finally {
-      closeAllBusy = false;
-      paintOpen("me");
-    }
-  }
 
-  function saveClose() {
-    if (!closeId) return;
-    const data = mjLoad();
-    const t = data.trades.find((x) => x.id === closeId);
-    const exit = parseFloat($("#jr-exit-price").value);
-    if (!t || !(exit > 0)) return;
-    t.status = "closed"; t.exit = exit; t.exit_date = today(); t.exit_time = nowTime();
-    t.exit_reason = "manual"; t.mtime = Date.now();
-    delete t._init;                              // force a clean re-resolve
-    mjSave(data); closeModal(); loadMe(data); renderAll(); refreshLive();
-  }
 
-  // ── cross-device sync + backup/restore (Cloudflare KV via gbs-sync) ────────
-  function syncStatus(msg, cls) {
-    const el = $("#mj-sync-status");
-    if (el) { el.textContent = msg || ""; el.className = "mj-sync-status" + (cls ? " " + cls : ""); }
-  }
-  // #83: the always-visible header pill — synced / local-only / error. `error`
-  // sticks until the next successful reflect() clears it.
-  function reflectSyncPill(errored) {
-    const pill = $("#jr-sync-pill");
-    if (!pill) return;
-    const on = !!(window.GBSSync && window.GBSSync.enabled());
-    let cls, txt;
-    if (errored) { cls = "err"; txt = "⚠ Sync error"; }
-    else if (on) { cls = "on"; txt = "☁ Synced"; }
-    else { cls = "off"; txt = "📴 Local only"; }
-    pill.className = "jr-sync-pill " + cls;
-    pill.textContent = txt;
-  }
-  // Every caller has just had the store replaced under it by something OTHER
-  // than the two writers above — a `syncIn()` pull, a `syncOut()` round trip, an
-  // import merge. #84's cache keys off `mjGen`, so the bump belongs here rather
-  // than at four call sites where the fifth would eventually be forgotten.
-  function afterStoreChange() { mjGen++; loadMe(); renderAll(); refreshLive(); }
-  function wireSync() {
-    // Backup / Restore
-    const exportBtn = $("#mj-export-btn");
-    if (exportBtn) exportBtn.addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(mjLoad(), null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = Object.assign(document.createElement("a"), { href: url, download: `my-trades-${today()}.json` });
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
-    // CSV of BOTH books (open + closed) — for tax time and Excel analysis.
-    // $ P&L column is US$-converted like the page; native risk/prices as-is.
-    const csvBtn = $("#mj-csv-btn");
-    if (csvBtn) csvBtn.addEventListener("click", () => {
-      const cols = ["side", "symbol", "market", "direction", "grade", "entry_type",
-                    "timeframe", "status", "entry", "stop", "exit", "entry_date",
-                    "exit_date", "exit_reason", "realized_r", "risk_usd",
-                    "pnl_usd", "note"];
-      const csvEsc = (v) => {
-        const s = v == null ? "" : String(v);
-        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-      };
-      const rows = [];
-      const push = (t, side) => rows.push(cols.map((c) => csvEsc(
-        c === "side" ? side
-        : c === "pnl_usd" ? (dollarsOf(t) == null ? "" : dollarsOf(t).toFixed(2))
-        : c === "market" ? marketOf(t)
-        : t[c])).join(","));
-      for (const t of [...state.bot.open, ...state.bot.closed]) push(t, "claude");
-      for (const t of [...state.me.open, ...state.me.closed]) push(t, "me");
-      const blob = new Blob([cols.join(",") + "\n" + rows.join("\n") + "\n"], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = Object.assign(document.createElement("a"), { href: url, download: `vivek-journal-${today()}.csv` });
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
-    const importBtn = $("#mj-import-btn"), importInput = $("#mj-import-input");
-    if (importBtn && importInput) {
-      importBtn.addEventListener("click", () => importInput.click());
-      importInput.addEventListener("change", () => {
-        const file = importInput.files && importInput.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          let incoming;
-          try { incoming = JSON.parse(reader.result); } catch (_) { alert("That file isn't valid trade backup JSON."); return; }
-          if (!incoming || !Array.isArray(incoming.trades)) { alert("That file doesn't look like a trades backup."); return; }
-          const merged = window.GBSSync ? window.GBSSync.merge(mjLoad(), incoming) : incoming;
-          mjSave(merged); afterStoreChange();
-          alert(`Imported — ${merged.trades.length} trade(s) now in your journal.`);
-        };
-        reader.readAsText(file); importInput.value = "";
-      });
-    }
-    // Cloud sync (private code)
-    const codeEl = $("#mj-sync-code"), onBtn = $("#mj-sync-on"), offBtn = $("#mj-sync-off"), nowBtn = $("#mj-sync-now");
-    if (!codeEl || !window.GBSSync) return;
-    const reflect = () => {
-      const on = window.GBSSync.enabled();
-      codeEl.value = on ? window.GBSSync.getCode() : "";
-      if (onBtn) onBtn.classList.toggle("mj-hidden", on);
-      if (offBtn) offBtn.classList.toggle("mj-hidden", !on);
-      if (nowBtn) nowBtn.classList.toggle("mj-hidden", !on);
-      syncStatus(on ? "Sync ON — same trades on every device with this code." : "", on ? "live" : "");
-      reflectSyncPill(false);   // #83
-    };
-    // #83: the header pill opens the (folded) sync settings; a save/sync error
-    // anywhere flips it to the error state until the next clean reflect().
-    const pill = $("#jr-sync-pill");
-    if (pill) pill.addEventListener("click", () => {
-      const fold = codeEl.closest("details.jr-fold");
-      if (fold) { fold.open = true; fold.scrollIntoView({ behavior: "smooth", block: "center" }); }
-      codeEl.focus();
-    });
-    window.addEventListener("gbs:save-error", () => reflectSyncPill(true));
-    const enable = async () => {
-      const code = (codeEl.value || "").trim();
-      if (code.length < 4) { syncStatus("Pick a code with at least 4 characters.", "neg"); return; }
-      window.GBSSync.setCode(code); syncStatus("Connecting…");
-      try {
-        const probe = await window.GBSSync.pull();
-        if (probe.configured === false) {
-          window.GBSSync.setCode(""); reflect();
-          syncStatus("Cloud sync isn't set up on the server yet — use Backup/Restore for now.", "neg"); return;
-        }
-        const r = await window.GBSSync.syncOut(); afterStoreChange(); reflect();
-        if (!r.ok) { syncStatus("Code saved, but the first sync didn't go through — will retry on the next change.", "neg"); reflectSyncPill(true); }
-      } catch (_) { syncStatus("Couldn't reach the sync server — trades are still saved on this device.", "neg"); reflectSyncPill(true); }
-    };
-    const syncedAt = () => syncStatus("Synced at " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), "live");
-    // "Synced at" is only ever printed off r.ok === true (2026-07-29). syncIn/
-    // syncOut report failure by VALUE, not by throw — the old code path printed
-    // the success stamp off the mere return, so a rate-limited or offline sync
-    // showed "Synced at HH:MM" while cross-device sync had silently stopped.
-    const syncFailMsg = (r) => r && r.reason === "budget"
-      ? "Daily sync budget spent — trades save locally; cloud sync resumes at UTC midnight."
-      : "Sync failed — will retry on the next change.";
-    if (onBtn) onBtn.addEventListener("click", enable);
-    if (offBtn) offBtn.addEventListener("click", () => { window.GBSSync.setCode(""); reflect(); syncStatus("Sync off — this device keeps its own copy."); });
-    if (nowBtn) nowBtn.addEventListener("click", async () => { syncStatus("Syncing…"); try { const r = await window.GBSSync.syncOut(); afterStoreChange(); if (r.ok) syncedAt(); else { syncStatus(syncFailMsg(r), "neg"); reflectSyncPill(true); } } catch (_) { syncStatus("Sync failed — will retry on the next change.", "neg"); reflectSyncPill(true); } });
-    codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enable(); } });
-    const silentPull = async () => { if (!window.GBSSync.enabled()) return; try { const r = await window.GBSSync.syncIn(); afterStoreChange(); if (r.ok) syncedAt(); } catch (_) {} };
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) silentPull(); });
-    setInterval(() => { if (!document.hidden) silentPull(); }, 60000);
-    reflect();
-    if (window.GBSSync.enabled()) silentPull();
-  }
 
   // ── wire-up ───────────────────────────────────────────────────────────────
   function wire() {
     document.addEventListener("click", (e) => {
-      const del = e.target.closest("[data-del]");
-      if (del) { removeTrade(del.getAttribute("data-del")); return; }
-      const noteBtn = e.target.closest("[data-note]");
-      if (noteBtn) { editNote(noteBtn.getAttribute("data-note")); return; }
       const card = e.target.closest("[data-card]");
       if (card) { downloadTradeCard(card.getAttribute("data-card")); return; }   // UX-20 #13
       // Closed-trade preview: reveal in place. Delegated because the table is
@@ -2645,37 +1872,18 @@
       const osort = e.target.closest("[data-osort]");
       if (osort) { setOpenSort(osort.getAttribute("data-osort")); return; }
       const all = e.target.closest("[data-closeall]");
-      if (all) {
-        if (all.getAttribute("data-closeall") === "bot") closeAllBot();
-        else closeAllMine();
-        return;
-      }
-      const btn = e.target.closest("[data-close]");
-      if (btn) openCloseModal(btn.getAttribute("data-close"));
+      if (all) { closeAllBot(); return; }
     });
     // UX-20 #11: page the week review back / forward
     const wp = $("#jr-wk-prev"), wn = $("#jr-wk-next");
     if (wp) wp.addEventListener("click", () => { wkOffset++; renderWeeklyDigest(); });
     if (wn) wn.addEventListener("click", () => { if (wkOffset > 0) { wkOffset--; renderWeeklyDigest(); } });
-    $("#jr-modal-x").addEventListener("click", closeModal);
-    $("#jr-modal-cancel").addEventListener("click", closeModal);
-    $("#jr-modal-save").addEventListener("click", saveClose);
-    $("#jr-exit-price").addEventListener("input", updateClosePreview);   // #82 live R/$ preview
-    $("#jr-close-overlay").addEventListener("click", (e) => { if (e.target.id === "jr-close-overlay") closeModal(); });
-    // react to manual trades opened on another tab/device
-    // #84: `afterStoreChange()` rather than the same three calls inline — the
-    // cross-tab write is exactly the invalidation a per-keystroke re-read used
-    // to cover for free, so it has to bump the generation like every other one.
-    window.addEventListener("storage", (e) => { if (e.key === MJ_KEY) afterStoreChange(); });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLive(); });
-    setInterval(() => { if (!document.hidden) refreshLive(); }, 20000);
-    // Pick up a fresh scan while the page is open: re-pull the bot book + scan
-    // prices every few minutes and re-render (the bot side + manual Now update).
+    // Pick up a fresh scan while the page is open: re-pull the bot book + the
+    // scan's prices every few minutes and re-render.
     setInterval(async () => {
       if (document.hidden) return;
       await Promise.all([loadBot(), loadScanMeta()]);
       renderAll();
-      refreshLive();
     }, 180000);
   }
 
@@ -2690,13 +1898,10 @@
     // repaint real) — rather than holding a blank page on a flaky connection.
     const rules = loadBotRules();
     await Promise.race([rules, new Promise((r) => setTimeout(r, 1500))]);
-    loadMe();
-    renderAll();                 // paint Me with the live constants
+    renderAll();                 // paint with whatever constants are in hand
     await Promise.all([loadBot(), loadScanMeta(), loadFx(), rules]);
-    renderAll();                 // repaint with Claude + live rules + grade/setup fallback
+    renderAll();                 // repaint with the live rules + grade/setup fallback
     wire();
-    wireSync();
-    refreshLive();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

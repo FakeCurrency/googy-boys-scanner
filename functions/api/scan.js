@@ -58,7 +58,8 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
   // GitHub Actions run. KV-backed cooldown — one dispatch per market per
   // 5 minutes, and a hard daily cap across all markets. Degrades to
   // no-limiting if the KV binding is absent, so a misconfig can't brick the
-  // button. (Reuses the JOURNAL_KV namespace — see functions/api/journal.js.)
+  // button. (Reuses the JOURNAL_KV namespace, which now backs only these rate limits
+  // and the access log — the journal sync store it was named for is gone.)
   //
   // The cooldown/counter are written BEFORE the GitHub call (closing the
   // double-click race) and REFUNDED if the dispatch fails (2026-07-29). They

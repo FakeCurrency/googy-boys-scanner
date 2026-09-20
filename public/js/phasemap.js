@@ -26,7 +26,7 @@
 
   const state = {
     data: null, q: "", shown: PAGE,
-    view: lsGet("pm-view", "setups", (v) => v in VIEWS || v === "watchlist"),
+    view: lsGet("pm-view", "setups", (v) => v in VIEWS),
     tier: lsGet("pm-tier", "all"),
     dir:  lsGet("pm-dir", "all"),
     sort: lsGet("pm-sort", "default"),
@@ -127,7 +127,6 @@
     const m = rec.metrics || {};
     const rd = state.data && state.data.run_date;
     const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
-    const starred = PM.watch.has("phasemap", state.market, rec.ticker);
     const ci = state.confl ? state.confl.of(rec.ticker) : null;
     const aligned = ci && ci.side === (rec.direction === "bearish" ? "short" : "long");
     const key = `${rec.ticker}|${rec.direction}`;
@@ -142,7 +141,6 @@
         ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
         ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
         ${PM.headBadgesHTML(rec)}
-        ${PM.starHTML(starred, rec.ticker)}
         ${speak}
         <span class="pm-chart-cue" aria-hidden="true">CHART →</span>
       </div>
@@ -171,10 +169,8 @@
 
   function filtered() {
     const q = state.q.trim().toUpperCase();
-    if (state.view === "watchlist") {
-      // Starred names: live records where a setup still exists, snapshot
-      // placeholders where it doesn't — the watch NEVER silently drops one.
-      const wl = PM.watch.map("phasemap", state.market);
+    if (state.view === "watchlist") {   // removed 2026-09-21 — kept as a no-op for a stale saved view
+      const wl = {};
       const out = [];
       for (const [ticker, entry] of Object.entries(wl).sort()) {
         if (q && !fuzzyHit(q, ticker)) continue;
@@ -216,7 +212,7 @@
 
     $$(".pm-card-link", list).forEach((card) => {
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".pm-speak") || e.target.closest(".pm-star")
+        if (e.target.closest(".pm-speak")
           || e.target.closest(".pm-why") || e.target.closest(".pm-term")) return;
         const rec = shown[+card.dataset.idx];
         if (rec) window.location.href = chartURL(rec);
@@ -238,16 +234,6 @@
         if (rec) PM.toggleSpeak(btn, rec.narration);
       });
     });
-    $$(".pm-star", list).forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const ticker = btn.dataset.star;
-        const rec = state.data.results.find((r) => r.ticker === ticker) || null;
-        PM.watch.toggle("phasemap", state.market, ticker, rec);
-        renderCounts();
-        render();
-      });
-    });
   }
 
   function renderConfBanner() {
@@ -266,7 +252,7 @@
   }
 
   function renderCounts() {
-    const counts = { watchlist: PM.watch.count("phasemap", state.market) };
+    const counts = {};
     for (const [view, states] of Object.entries(VIEWS)) {
       counts[view] = state.data
         ? state.data.results.filter((r) => states.includes(r.state)).length : 0;
@@ -559,12 +545,6 @@
         + PM.staleBadgeHTML(state.data.run_date);
       state.sinceDismissed = false;
       diffSinceLastVisit();
-      // keep starred snapshots fresh while their setups are still live
-      const wl = PM.watch.map("phasemap", state.market);
-      for (const ticker of Object.keys(wl)) {
-        const live = state.data.results.find((r) => r.ticker === ticker);
-        if (live) PM.watch.refresh("phasemap", state.market, ticker, live);
-      }
       // multi-lens confluence badges + banner (async — re-render when known)
       state.confl = null;
       renderConfBanner();
@@ -604,8 +584,4 @@
   renderPresets();
   wireKeyboard();
   load();
-  // pull remote stars (unified watchlist) so phone/desktop agree
-  if (window.GBSSync && GBSSync.enabled()) {
-    GBSSync.syncIn().then(() => { renderCounts(); render(); }).catch(() => {});
-  }
 })();

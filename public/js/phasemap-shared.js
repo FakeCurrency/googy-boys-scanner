@@ -271,96 +271,6 @@ window.PM = (() => {
     synth.speak(u);
   }
 
-  /* ── Watchlist (VIVEK + PhaseMap + Specs, ONE synced store) ─────────────
-     Starring stores a SNAPSHOT of the record, so a name stays monitorable
-     even after it drops out of the scan. Since 2026-07-03 the store lives
-     INSIDE the GBSSync journal object (localStorage `gbs:manual_journal`,
-     mirrored to Cloudflare KV when a sync code is set) — stars follow you
-     from desktop to phone exactly like paper trades do. Keys:
-     "<lens>:<market>:<TICKER>"; un-stars are tombstones so they propagate. */
-  const LEGACY_LENS_KEY = "gbs-lens-watchlist";
-  const LEGACY_VIVEK_KEY = "gbs:watch";
-  const MIGRATED_KEY = "gbs:watch_migrated_v1";
-
-  function _sync() { return window.GBSSync || null; }
-
-  function _migrateOnce(d) {
-    try {
-      if (localStorage.getItem(MIGRATED_KEY)) return d;
-      const now = Date.now();
-      // old lens store: { ns: { market: { TICKER: {snap, date} } } }
-      try {
-        const old = JSON.parse(localStorage.getItem(LEGACY_LENS_KEY) || "{}");
-        for (const [ns, mkts] of Object.entries(old || {})) {
-          for (const [mkt, ticks] of Object.entries(mkts || {})) {
-            for (const [t, e] of Object.entries(ticks || {})) {
-              const k = `${ns}:${mkt}:${t}`;
-              if (!d.watchlists[k]) d.watchlists[k] =
-                { snap: (e && e.snap) || null, date: (e && e.date) || "", mtime: now };
-            }
-          }
-        }
-      } catch (_) {}
-      // old VIVEK star set: [ "market:SYM", ... ]
-      try {
-        const old = JSON.parse(localStorage.getItem(LEGACY_VIVEK_KEY) || "[]");
-        for (const mk of old || []) {
-          const i = String(mk).indexOf(":");
-          if (i > 0) {
-            const k = `vivek:${mk.slice(0, i)}:${mk.slice(i + 1)}`;
-            if (!d.watchlists[k]) d.watchlists[k] =
-              { snap: null, date: "", mtime: now };
-          }
-        }
-      } catch (_) {}
-      localStorage.setItem(MIGRATED_KEY, "1");
-      const s = _sync();
-      if (s) { s.saveLocal(d); s.syncOutDebounced(); }
-    } catch (_) {}
-    return d;
-  }
-
-  function _store() {
-    const s = _sync();
-    if (!s) return { watchlists: {} };            // no sync layer on this page
-    return _migrateOnce(s.load());
-  }
-
-  const watch = {
-    map(ns, market) {
-      const pre = `${ns}:${market}:`;
-      const out = {};
-      for (const [k, v] of Object.entries(_store().watchlists)) {
-        if (k.startsWith(pre) && v && !v.del) out[k.slice(pre.length)] = v;
-      }
-      return out;
-    },
-    has(ns, market, ticker) { return !!this.map(ns, market)[ticker]; },
-    count(ns, market) { return Object.keys(this.map(ns, market)).length; },
-    toggle(ns, market, ticker, snap) {
-      const s = _sync();
-      if (!s) return false;
-      const d = _store();
-      const k = `${ns}:${market}:${ticker}`;
-      const live = d.watchlists[k] && !d.watchlists[k].del;
-      d.watchlists[k] = live
-        ? { del: Date.now() }
-        : { snap: snap || null, date: new Date().toISOString().slice(0, 10),
-            mtime: Date.now() };
-      s.saveLocal(d);
-      s.syncOutDebounced();
-      return !live;
-    },
-    refresh(ns, market, ticker, snap) {   // keep the stored snapshot current
-      const s = _sync();
-      if (!s) return;
-      const d = _store();
-      const k = `${ns}:${market}:${ticker}`;
-      const e = d.watchlists[k];
-      if (e && !e.del) { e.snap = snap; s.saveLocal(d); }
-    },
-  };
-
   /* ── Multi-lens confluence ──────────────────────────────────────────────
      The rare event: the SAME name with an ACTIVE setup on more than one
      lens, direction-aligned (VIVEK LONG + PhaseMap bullish + Specs = the
@@ -502,12 +412,6 @@ window.PM = (() => {
       `${triple ? "🎯 " : "⨂ "}${info.count}-LENS · +${others.join(" +")}</span>`;
   }
 
-  function starHTML(on, ticker) {
-    return `<button class="pm-star${on ? " is-on" : ""}" data-star="${esc(ticker)}" ` +
-      `title="${on ? "Remove from" : "Add to"} watchlist — starred names stay ` +
-      `monitored even after the setup ends" aria-label="Toggle watchlist">` +
-      `${on ? "★" : "☆"}</button>`;
-  }
 
   /* Data-fetch timeout (2026-07-29, Phase B). A NETWORK FAILURE rejects and
    * lands in the cold-load retry states below — but a HUNG connection neither
@@ -561,7 +465,7 @@ window.PM = (() => {
   return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            stepperHTML, whyHTML, glossaryHTML,
-           isFundReit, toggleSpeak, watch, starHTML,
+           isFundReit, toggleSpeak,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
            fetchTimeout, DATA_FETCH_TIMEOUT_MS, pmLegQuality };

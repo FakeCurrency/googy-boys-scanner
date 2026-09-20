@@ -150,12 +150,19 @@ test("the loader DELETES an age that has gone fresh", () => {
             "loadScanMeta no longer clears a stale age when the mark goes fresh");
 });
 
-test("a live quote is never treated as stale", () => {
-  // refreshLive falls back to a live quote when the scan has no price. That
-  // quote was fetched seconds ago, so it carries no age BY CONSTRUCTION —
-  // reading scanAge for it would badge a genuinely live price.
-  assert.ok(SRC.includes("paint(g, price, cached ? ageOf(g.key) : 0);"),
-            "refreshLive no longer distinguishes a scan snapshot from a live quote");
+test("there is no live-quote path left to mis-badge", () => {
+  // Until 2026-09-21 refreshLive fetched a live quote for the MANUAL side when
+  // the scan had no price, and had to pass age 0 for it by construction —
+  // reading scanAge for a quote fetched seconds ago badges a genuinely live
+  // price. The manual side went with the journal's Me half, and so did that
+  // fetch: every mark the page renders now comes from the committed scan, so
+  // every mark legitimately carries a scan age. If a live-quote path ever comes
+  // back it must pass 0 rather than ageOf(), which is why this pin survives the
+  // code it was written for.
+  assert.ok(!/function refreshLive/.test(SRC),
+            "refreshLive is back — a live quote must pass age 0, never ageOf()");
+  assert.ok(!/\bpriceFor\s*\(/.test(SRC),
+            "a live per-symbol quote fetch is back on the journal page");
 });
 
 test("the bot side gets the badge too", () => {

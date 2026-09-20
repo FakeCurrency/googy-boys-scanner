@@ -11,7 +11,7 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v7";   // v7 2026-09-19: deep chart history — force every device to drop the 5y-era shell
+const CACHE = "vivek5-v8";   // v8 2026-09-21: the MY JOURNAL side + MY NAMES page were removed — drop every shell that still cached them
 
 // #63: precache the app shell on install — read index.html and pull its
 // CURRENT versioned CSS/JS (so the list is always in sync with the deploy,

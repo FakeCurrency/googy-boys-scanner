@@ -372,40 +372,18 @@
           }
         });
         cpIndex = out;
-        // Fix-10 #3: YOUR names rank first — ★ stars (unified watchlist, on
-        // pages where gbs-sync is loaded), the bot's open book, and your own
-        // open manual positions. Deduped by symbol+market, stars win.
+        // Fix-10 #3: the bot's open positions rank first in the palette.
         const mine = new Map();
         const put = (s, m, kind) => {
           const key = `${m}:${s}`;
-          if (!s || (mine.has(key) && kind !== "star")) return;
+          if (!s || mine.has(key)) return;
           mine.set(key, { s, m, kind });
         };
         ((book && book.open) || []).forEach((p) =>
           put(String(p.symbol || "").toUpperCase(), p.market || "asx", "bot"));
-        try {
-          const mj = JSON.parse(localStorage.getItem("gbs:manual_journal") || "{}");
-          (mj.trades || []).filter((t) => t.status === "open").forEach((t) =>
-            put(String(t.symbol || "").toUpperCase(),
-              ["asx", "nasdaq"].indexOf(t.asset_type) >= 0 ? t.asset_type : (t.market || "crypto"), "me"));
-        } catch (_) {}
-        try {
-          // Stars read straight from the unified store (works on EVERY page —
-          // no dependency on phasemap-shared being loaded): keys are
-          // "<lens>:<market>:<TICKER>", un-stars are tombstoned with .del.
-          const wl = (JSON.parse(localStorage.getItem("gbs:manual_journal") || "{}").watchlists) || {};
-          for (const k in wl) {
-            const v = wl[k];
-            if (!v || v.del) continue;
-            const parts = k.split(":");
-            if (parts.length === 3 && ["asx", "nasdaq", "crypto"].indexOf(parts[1]) >= 0)
-              put(parts[2].toUpperCase(), parts[1], "star");
-          }
-        } catch (_) {}
-        // Stars first, then your own positions, then the bot's book.
-        const rank = { star: 0, me: 1, bot: 2 };
-        cpMine = [...mine.values()].sort((a, b) =>
-          (rank[a.kind] - rank[b.kind]) || a.s.localeCompare(b.s));
+        // (The manual journal and the ★ watchlists were removed 2026-09-21;
+        // "yours" is the bot's open book now, which is the only book there is.)
+        cpMine = [...mine.values()].sort((a, b) => a.s.localeCompare(b.s));
         return out;
       });
     return cpIndexP;
@@ -449,7 +427,7 @@
     const sel = cpList.querySelector(".cp-item.is-sel");
     if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
   }
-  const CP_KIND = { star: ["★", "starred", "index"], bot: ["🤖", "bot position", "journal"], me: ["✏️", "your position", "journal"] };
+  const CP_KIND = { bot: ["🤖", "bot position", "journal"] };
   const cpMineRow = (t) => {
     const [ico, label, src] = CP_KIND[t.kind] || ["•", "", "index"];
     return `<button class="cp-item" type="button" data-href="chart.html?m=${t.m}&s=${encodeURIComponent(t.s)}&mode=vivek&src=${src}" role="option">` +

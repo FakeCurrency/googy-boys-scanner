@@ -422,7 +422,6 @@ jobs:
       - name: Confluence alert engine (ALERTS log + state)
         continue-on-error: true
         env:
-          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
       # NOTE: the paper-trade journal and Telegram alerts read the retired

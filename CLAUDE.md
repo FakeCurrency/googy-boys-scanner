@@ -35,7 +35,8 @@ and was REMOVED ENTIRELY — see the TURTLE note near the end.)
 **Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
 agreements get banners everywhere, a permanent ALERTS page log
 (`scanner/confluence_alert.py`, state-deduped — push DELIVERY REMOVED
-2026-08-27, see ALERT DELIVERY below), and the ★ MY NAMES page.
+2026-08-27, see ALERT DELIVERY below) and the deck's WHAT NEEDS MY EYES strip.
+(The ★ MY NAMES page was REMOVED 2026-09-21 with the stars — see MY JOURNAL.)
 
 ---
 
@@ -81,8 +82,9 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        REMOVED 2026-09-17 with the AI BOT page
 phasemap/              PhaseMap package (engine/narrate/output/backtest/tests)
 public/                the site (see "Frontend rules")
-functions/api/         scan.js + close.js (Actions dispatch, KV rate-limited),
-                       journal.js (KV sync store), price/quote/tick proxies
+functions/api/         scan.js + close.js + morning_plays.js (Actions dispatch,
+                       KV rate-limited), heartbeat/health, price/quote proxies
+                       (journal.js/tick.js/_vivek_manage.js went 2026-09-21)
 tests/ + phasemap/tests/ + test/*.test.js   pytest + JS suites — EVERY push (test.yml); counts drift, read test.yml
 journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
@@ -367,7 +369,12 @@ recovery; red runs are GitHub's to email about). Thresholds: config
 WATCHDOG_*. When adding a workflow that commits data, give it an
 assert_staged call and a WATCHDOG_RUNS entry.
 
-### The tick endpoint — and why a 503 must NOT fail the job (2026-07-28)
+### The tick endpoint — and why a 503 must NOT fail the job (2026-07-28) — HISTORY ONLY
+
+> **`/api/tick` and stop_watcher.yml were REMOVED 2026-09-21** with the manual
+> journal they watched (see MY JOURNAL). Everything below is the record of a
+> blackout and of a verdict taxonomy worth re-reading BEFORE writing the next
+> polled endpoint — nothing in it describes code that still exists.
 
 **2026-08-27 — THE 5-MINUTE CRON WAS NEVER DELIVERING 5 MINUTES.** A run
 audit measured stop_watcher at ~31 STARTS/day against its */5 cron (gaps
@@ -699,10 +706,12 @@ can verify whether claude or I should take the position or not."* A plan whose
 - The old "track-record journal" (every armed A+/A, every timeframe, no cap —
   it hit 203 open / 12 closed) was **retired 2026-07-09** along with the
   dashboard strip and TRACK page. Do not resurrect it as a headline number.
-- Manual journals ("Me" side) live in browser localStorage, synced via
-  Cloudflare KV (`gbs-sync.js`, `/api/journal?code=...`). The unified
-  watchlist (stars from all lenses) lives INSIDE that store
-  (`watchlists`, keys `<lens>:<market>:<TICKER>`, tombstoned un-stars).
+- **Manual journals are GONE (2026-09-21).** The "Me" side lived in browser
+  localStorage, synced via Cloudflare KV (`gbs-sync.js`, `/api/journal?code=`),
+  and the unified watchlist (stars) lived inside that same store. The owner
+  takes real trades on a real brokerage account and asked for the whole Me half
+  to come out; see MY JOURNAL below. There is now exactly ONE journal on the
+  site and it is the bot book.
 
 ---
 
@@ -2186,13 +2195,16 @@ meant** — the failure mode that survives review because the value looks fine.
    KV writes are the scarce quota (journal.js's own limiter comments), so
    per-request success logging would burn the budget sync itself needs. The
    api_guards "hit-GET writes" pin was updated to exactly this bound — do not
-   "fix" it back to zero, and do not log per-request there either.
-2. **Auth on /api/close, /api/scan, /api/journal is a Cloudflare Access
-   decision, not a secret** — all three are called from BROWSER JS (app.js
-   SCAN button, stalled.js batch close, gbs-sync), so a tick.js-style shared
-   secret would ship in page source and protect nothing. /api/journal also
-   has one CI-side reader (`confluence_alert.py` with GBS_SYNC_CODE) that an
-   Access policy would break without a service token. The Access write-up
+   "fix" it back to zero, and do not log per-request there either. **UPDATED
+   2026-09-21: /api/journal and the coalescing branch are gone with the manual
+   journal; the two remaining callers (close, scan) are daily-capped, so every
+   call is logged individually and the quota argument is the reason coalescing
+   must come BACK WITH any future polled endpoint rather than sit uncalled.**
+2. **Auth on /api/close and /api/scan is a Cloudflare Access decision, not a
+   secret** — both are called from BROWSER JS (app.js SCAN button, stalled.js
+   and the journal's close-all), so a shared secret would ship in page source
+   and protect nothing. (/api/journal was the third and its CI-side reader was
+   `confluence_alert.py` with GBS_SYNC_CODE; both went 2026-09-21.) The Access write-up
    went to the owner in the 2026-08-20 batch summary; until he configures
    it, the access log above is the compensating control.
 3. **`backups/` in-tree commits are LOAD-BEARING — do not drop the commit
@@ -2279,6 +2291,66 @@ longer the retired trio; `system.html`'s rulebook and `vivek_parity` /
 `tests/test_bot_alignment.py` (bot table == `conviction.HC_CELLS`, shorts
 off, level gate standing, retired names gone, every deck-HC row is
 bot-takeable and every non-cell is not).
+
+## MY JOURNAL — THE "ME" SIDE REMOVED ENTIRELY (2026-09-21)
+
+Owner: *"I want to get rid of the entire 'MY JOURNAL' page ... I no longer am
+wasting time taking trades on this scanner, if anything I'll take REAL trades
+on my REAL brokerage account ... rip the guts out of the entire journal MY
+section. Only keep the Claude paper journal going moving forward."* Scope
+confirmed in the same turn: **keep journal.html, delete the Me side**, and
+*"Bin the stars too."*
+
+**THE PAGE STAYS AND IS NOW SINGLE-BOOK.** `public/journal.html` renders only
+Claude's paper book — stats, equity curve, open/closed tables, the week review,
+R distribution, exit quality, the stalled strip, the w3-1 exit-evidence strip,
+the tide line, and ONE close-all button. `public/js/journal.js` went 2,704 →
+~1,910 lines: gone are `ensureInit`/`finalizeR`/`ensureClosedR` (the manual
+sizing + R resolver), `mjLoad`/`mjSave`/`mjSaveLocal`/`mjGen`, `splitMe`,
+`loadMe`, `renderBoth`, `renderComparison`, the close modal and its preview
+memo, `closeAllMine`, `refreshLive`, the backup/restore controls and the
+save-error banner. `state` is `{ bot: {...} }`.
+
+**WHAT ELSE WENT, AND WHY IT WAS NOT OPTIONAL** — each of these existed only to
+serve the manual journal, so leaving it would have left a live write path to a
+store nothing reads:
+  * `public/js/gbs-sync.js` + `functions/api/journal.js` — the localStorage
+    journal and its Cloudflare KV sync (`?code=`). The unified watchlist lived
+    INSIDE that store, which is why the stars could not outlive it.
+  * `functions/api/_vivek_manage.js` — the manual-position management endpoint.
+  * `functions/api/tick.js` + `.github/workflows/stop_watcher.yml` — **the cloud
+    stop/target watcher watched the KV MANUAL journal, nothing else.** The bot
+    book's stops are evaluated by the scan itself and by kill_switch.yml, so the
+    paper track record loses NOTHING here; what is gone is a */5 cron, its
+    4-tick loop, the kill_switch/crypto_bot piggyback ticks, `TICK_SECRET`'s only
+    reader, `watchdog.probe_endpoints()` and the `tick_unreachable` finding. The
+    long 503/401/000 taxonomy in the tick section above is HISTORY — do not
+    re-derive it for a new endpoint without re-reading why 000 was made green.
+  * The stars: `public/mynames.html`, `public/js/mynames.js`, the ★ nav tab, and
+    app.js's `WATCH_KEY`/`isStarred`/`toggleStar`/`lensStars`/`isWatchedAny`/
+    `notifyWatchArms`/`syncWatchToggle`/`state.view`/`.t-star` — plus
+    `confluence_alert`'s WATCHLIST BYPASS, which read the synced journal via
+    `GBS_SYNC_CODE` so starred names could ping below the lens threshold. The
+    SIGNED state it shares with the threshold gate is untouched and still
+    load-bearing (see that module's docstring).
+  * `_access_log.js`'s `coalesceOk` branch — it existed for /api/journal's
+    60-second GET poll. `JOURNAL_KV` now backs ONLY the scan/close/morning-plays
+    rate limits and the access log; the name is historical.
+  * Tests: `test/unit.test.js` and `test/vivek_manage.test.js` deleted;
+    `close_all`, `journal_money`, `journal_stale`, `leaks`, `statekeep`,
+    `staleview`, `api_guards`, `access_log`, `test_confluence_state`,
+    `test_watchdog`, `test_workflow_hardening` pruned to what still ships.
+    Several pins were kept but INVERTED — e.g. journal_stale now asserts
+    `refreshLive` and `priceFor` stay gone, because a live per-symbol quote must
+    pass age 0 rather than `ageOf()`, and that lesson outlives the code.
+
+**`GBS_SYNC_CODE` is orphaned** (nothing reads it) and can be deleted from
+GitHub whenever convenient, same as `DISCORD_WEBHOOK_URL` and `TICK_SECRET`.
+**What deliberately STAYS**: `/api/close` (the close-all button and the stalled
+strip both post to it), `close_position.yml` including its legacy swing/scalp
+path, `scanner/journal.py` / `scalp_journal.py`, and every bot-book surface. The
+Tier 2 "Journal arithmetic" write-up above is now HISTORY of the manual side's
+maths — the numbers it fixed were the Me side's.
 
 ## AI BOT — REMOVED ENTIRELY (2026-09-17)
 
@@ -2422,6 +2494,9 @@ The facts a later session must not re-derive:
 
 Set: `DISCORD_WEBHOOK_URL` (ORPHANED 2026-08-27 — the channel was removed;
 nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
+`TICK_SECRET` + `GBS_SYNC_CODE` (ORPHANED 2026-09-21 — /api/tick,
+stop_watcher.yml and the KV journal went with the manual journal; nothing reads
+either, safe to delete from GitHub + Cloudflare),
 `BYBIT_*` (testnet), `ALPACA_*` (legacy),
 `TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
 **STANDING ACCESS (ops.yml, 2026-09-10 — ALL THREE SET the same day; `cronjob-list` and `cf-list-vars` both answered HTTP 200 from ops.yml runs #1 and #2):** `CRONJOB_API_KEY`,
@@ -2433,8 +2508,7 @@ env vars itself via `workflow_dispatch` (see the ops.yml row).
 the on-time external trigger for the plays digest — see MORNING PLAYS),
 `DISCORD_MORNING_WEBHOOK_URL` (SET 2026-09-08 — deliveries prove it; switches on the morning
 high-conviction digest — see MORNING PLAYS; a fresh webhook for a dedicated
-channel, distinct from the removed alert webhook), `GBS_SYNC_CODE` (activates
-watchlist-aware pings),
+channel, distinct from the removed alert webhook),
 data-provider key, Cloudflare Access.
 
 ---

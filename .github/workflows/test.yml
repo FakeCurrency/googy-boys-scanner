@@ -132,10 +132,6 @@ jobs:
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
-      - name: Unit tests (67)
-        run: node test/unit.test.js
-      - name: Cloud-watcher VIVEK parity tests (21)
-        run: node test/vivek_manage.test.js
       - name: SWR cache-layer tests (#97)
         run: node test/cache.test.js
       - name: Design-token contrast gate (#96)

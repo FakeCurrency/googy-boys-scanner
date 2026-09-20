@@ -1,19 +1,18 @@
-"""The confluence alert's state machine — the watchlist ping that could never fire.
+"""The confluence alert's state machine — counts that get burned without delivery.
 
 WHY THIS FILE EXISTS (2026-07-29): `diff_new` used to record a bare +count for
-EVERY current alignment, posted or not. With DISCORD_CONF_MIN_LENSES=3, every
-2-lens alignment had its count burned into journal/confluence_state.json on the
-run it formed — including runs where the watchlist was UNAVAILABLE (GBS_SYNC_CODE
-unset, or the /api/journal fetch flaked; both return an empty watch set). Star
-the name a day later and `count > prev` is `2 > 2`: the ping the watchlist
-bypass exists for could never fire. The webhook secret already had exactly this
-protection ("don't mark anything as seen"); state counts are now SIGNED so the
-watchlist gets it too — +count means DELIVERED, -count means seen for the
-ALERTS-page log but never posted.
+EVERY current alignment, posted or not. With the push threshold at 3 lenses,
+every 2-lens alignment had its count burned into journal/confluence_state.json
+on the run it formed, so a later upgrade read `count > prev` as `3 > 3` and
+could never fire. The webhook secret already had exactly this protection
+("don't mark anything as seen"); state counts are now SIGNED so everything
+gets it — +count means DELIVERED, -count means seen for the ALERTS-page log
+but never posted. (The watchlist bypass these tests were originally written
+around was removed 2026-09-21 with the manual journal; the signed state it
+motivated is what stayed, and it is what the next channel inherits.)
 
 These tests run the real module against a tmp filesystem (DATA/STATE_FILE/
-HISTORY_FILE are monkeypatched module globals) with load_watch_keys stubbed at
-the call boundary — no re-typed logic.
+HISTORY_FILE are monkeypatched module globals) — no re-typed logic.
 
 DELIVERY REMOVED 2026-08-27 (owner ruling): there is no webhook post anymore.
 "Pings" in these tests became "push-worthy (undelivered)" run-log lines plus
@@ -87,16 +86,13 @@ class TestBuildState:
 
 @pytest.fixture()
 def wired(tmp_path, monkeypatch):
-    """Real main() with DATA/STATE/HISTORY on tmp, webhook + watchlist stubbed."""
+    """Real main() with DATA/STATE/HISTORY on tmp."""
     data = tmp_path / "data"
     (data / "phasemap" / "asx").mkdir(parents=True)
     monkeypatch.setattr(ca, "DATA", data)
     monkeypatch.setattr(ca, "STATE_FILE", tmp_path / "confluence_state.json")
     monkeypatch.setattr(ca, "HISTORY_FILE", data / "phasemap" / "alert_history.json")
     monkeypatch.setattr(ca.config, "CONF_ALERT_MIN_LENSES", 3, raising=False)
-
-    watch: set[str] = set()
-    monkeypatch.setattr(ca, "load_watch_keys", lambda: set(watch))
 
     def scan(count=2):
         """Publish fixture artefacts that yield one WES alignment of `count` lenses."""
@@ -112,41 +108,29 @@ def wired(tmp_path, monkeypatch):
         return json.loads((tmp_path / "confluence_state.json").read_text(encoding="utf-8"))
 
     return type("W", (), {"scan": staticmethod(scan),
-                          "watch": watch, "state": staticmethod(state),
+                          "state": staticmethod(state),
                           "run": staticmethod(lambda: ca.main(["--market", "asx"]))})
 
 
-class TestStarLater:
-    def test_the_burned_count_scenario_stays_owed(self, wired, capsys):
-        # Day 1: 2-lens forms, unwatched, threshold is triples-only → not
-        # push-worthy, state records it as SEEN-NOT-DELIVERED (negative).
+class TestOwedCounts:
+    """The SIGNED state, which is what the future channel inherits.
+
+    The star-later scenarios this class used to hold went with the watchlist
+    bypass on 2026-09-21 (the stars and the synced journal they lived in were
+    removed). What remains is the property that actually protects the next
+    channel: an alignment logged but never delivered stays OWED, and one that
+    really was delivered never re-pings.
+    """
+
+    def test_a_below_threshold_alignment_is_recorded_as_owed_not_burned(self, wired, capsys):
         wired.scan(count=2)
         assert wired.run() == 0
         assert "push-worthy" not in capsys.readouterr().out
         assert wired.state()["asx:WES:long"] == -2
 
-        # Day 2: the owner stars WES. Same alignment, same count — the OLD code
-        # was `2 > 2` here and stayed silent forever. It must now be recognised
-        # as push-worthy, and — with no channel — stay recorded as OWED
-        # (negative), so the future channel's first run delivers it.
-        wired.watch.add("ASX:WES")
-        assert wired.run() == 0
-        assert "push-worthy (undelivered)" in capsys.readouterr().out
-        assert wired.state()["asx:WES:long"] == -2
-
-    def test_watchlist_outage_does_not_burn_the_count(self, wired, capsys):
-        # The fetch-failed case is indistinguishable from "no stars" at the call
-        # site (both are an empty set) — the sign is what keeps it safe.
-        wired.scan(count=2)
-        assert wired.run() == 0                      # outage run: watch empty
-        capsys.readouterr()
-        wired.watch.add("ASX:WES")                   # fetch recovers, name starred
-        assert wired.run() == 0
-        assert "push-worthy (undelivered)" in capsys.readouterr().out
-
     def test_an_upgrade_is_owed_over_a_negative(self, wired, capsys):
         wired.scan(count=2)
-        wired.run()                                  # -2, unwatched
+        wired.run()                                  # -2, below threshold
         capsys.readouterr()
         wired.scan(count=3)
         assert wired.run() == 0                      # 3 >= min_lenses, 3 > -2

@@ -222,22 +222,9 @@
   background: var(--orange-soft); border-radius: 6px;
   padding: 4px 8px; white-space: nowrap;
 }
-
-/* ── simulate buy / sell ── */
-.sim-btn {
-  appearance: none; cursor: pointer;
-  padding: 9px 16px; border-radius: 8px; font: 700 13px/1 var(--sans);
-  transition: filter .15s, opacity .15s;
-}
-/* Solid, unmistakable colours: BUY green, SELL red. */
-.sim-buy  { background: var(--green); color: #04130b; border: 1px solid var(--green); }
-.sim-sell { background: var(--red);   color: #1a0606; border: 1px solid var(--red); }
-.sim-btn:hover:not(:disabled) { filter: brightness(1.12); }
-.sim-btn:disabled { opacity: .4; cursor: not-allowed; }
-.sim-status { font: 600 12.5px/1.4 var(--sans); color: var(--muted); }
+/* Solid, unmistakable colours: BUY green{ background: var(--green); color: #04130b; border: 1px solid var(--green); }
 .sim-status.live { color: var(--green); }
 .sim-status.neg  { color: var(--red); }
-.sim-status strong { font-variant-numeric: tabular-nums; }
 
 /* ── measure tool (TradingView-style: % move + bar/time span) ── */
 .draw-btn.draw-measure.is-active { background: var(--blue); color: #fff; }
@@ -263,49 +250,19 @@
   font-size: 12px; line-height: 1; box-shadow: 0 4px 14px rgba(0,0,0,.45);
 }
 .draw-del-btn:hover { background: var(--red); }
-
-/* ── floating LIVE position box ── */
-.live-pos-box {
-  position: absolute; top: 14px; right: 16px; z-index: 16; min-width: 208px;
-  background: rgba(8,11,17,.9); border: 1px solid var(--border); border-radius: 12px;
-  padding: 11px 13px; backdrop-filter: blur(7px);
-  box-shadow: 0 8px 26px rgba(0,0,0,.4);
-  pointer-events: auto; cursor: move; touch-action: none; user-select: none; -webkit-user-select: none;
-}
 .live-pos-box.dragging { opacity: .92; box-shadow: 0 12px 34px rgba(0,0,0,.55); }
 .lpb-head { display: flex; align-items: center; gap: 6px; font: 800 11.5px/1 var(--sans); letter-spacing: .04em; }
 .lpb-head.long  { color: var(--green); }
 .lpb-head.short { color: var(--red); }
 .lpb-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: ctLivePulse 1.6s ease-in-out infinite; }
 .lpb-units { margin-left: auto; color: var(--muted); font-weight: 600; }
-.lpb-pnl { font: 800 23px/1.1 var(--mono); margin: 7px 0 9px; font-variant-numeric: tabular-nums; }
 .lpb-pnl.pos { color: var(--green); }
 .lpb-pnl.neg { color: var(--red); }
 .lpb-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font: 600 11.5px/1.35 var(--mono); }
-.lpb-k { color: var(--muted); }
-.lpb-v { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 .lpb-v.pos { color: var(--green); }
 .lpb-v.neg { color: var(--red); }
-.lpb-v small { color: var(--muted); font-size: 10px; }
-@media (max-width: 560px) { .live-pos-box { left: 16px; right: 16px; top: 10px; } }
-
-/* Auto-close banner (manual position hit its stop/target) */
-.lpb-banner {
-  position: absolute; top: 14px; left: 16px; z-index: 17; max-width: 60%;
-  font: 800 12.5px/1.4 var(--sans); letter-spacing: .01em;
-  padding: 10px 13px; border-radius: 10px; backdrop-filter: blur(7px);
-  box-shadow: 0 8px 26px rgba(0,0,0,.45);
-}
-.lpb-banner small { font-weight: 600; opacity: .8; }
 .lpb-banner.pos { background: rgba(47,208,127,.16); border: 1px solid var(--green); color: var(--green); }
 .lpb-banner.neg { background: rgba(255,91,91,.16);  border: 1px solid var(--red);   color: var(--red); }
-@media (max-width: 560px) { .lpb-banner { max-width: calc(100% - 32px); top: auto; bottom: 16px; } }
-
-.sim-journal-link {
-  display: inline-block; margin: 12px 0 0; color: var(--blue);
-  text-decoration: none; font: 600 12.5px/1 var(--sans);
-}
-.sim-journal-link:hover { text-decoration: underline; }
 
 .cf-disclaimer { color: var(--muted-2); font-size: 11.5px; margin: 14px 0 0; }
 
@@ -322,7 +279,6 @@
 .chart-error h2 { color: var(--text); }
 .chart-error .tv-link { color: var(--accent-blue); text-decoration: none; font-size: 14px; }
 .chart-error .tv-link:hover { text-decoration: underline; }
-
 
 /* ═══ iOS REVAMP pass (owner 2026-07-10) — brings the chart page in line
    with the styles.css revamp: frosted sticky bar, pill buttons, capsule
@@ -359,9 +315,7 @@
 }
 .draw-tools { background: rgba(18,22,30,0.82); border-radius: 11px; border-color: rgba(255,255,255,0.09); }
 .draw-btn { border-radius: 8px; }
-.tv-btn, .sim-btn { border-radius: 999px; font-weight: 700; }
-.sim-buy  { box-shadow: 0 2px 10px rgba(48,209,88,0.30); }
-.sim-sell { box-shadow: 0 2px 10px rgba(255,69,58,0.30); }
+.tv-btn{ border-radius: 999px; font-weight: 700; }
 .tfs-strip { border-radius: var(--radius-md); }
 .cf-metric .cfm-label { font-weight: 700; }
 
@@ -398,17 +352,12 @@
 .pm-zone-tip-row + .pm-zone-tip-row { margin-top: 4px; border-top: 1px solid #1c2230; padding-top: 4px; }
 .pm-zone-tip-src { display: block; color: #6d7889; font-size: 9.5px; }
 
-/* ── Wave 7: header star + market chip (#71), loading skeleton (#77),
-   offline states (#78) ── */
-.ct-star {
+/* ── Wave 7: header star + market chip (#71), loading skeleton (#77){
   appearance: none; border: none; background: none; cursor: pointer;
   font-size: 20px; line-height: 1; color: var(--muted); padding: 0 2px;
   transition: color .15s, transform .1s;
 }
-.ct-star:hover,
 .ct-star.is-on { color: #ffb020; }
-.ct-star:active { transform: scale(.86); }
-.ct-star[hidden] { display: none; }
 
 .ct-market {
   font: 700 10px/1 var(--sans); letter-spacing: .08em;

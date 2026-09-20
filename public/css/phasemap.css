@@ -153,13 +153,6 @@
 .sp-levels b { color: var(--text); }
 .sp-levels .sp-stop { color: var(--red); }
 .sp-levels .sp-target { color: var(--green); }
-
-/* watchlist star (PhaseMap + Specs) */
-.pm-star {
-  cursor: pointer; border: none; background: transparent;
-  color: var(--muted-2); font-size: 17px; line-height: 1; padding: 2px 6px;
-}
-.pm-star:hover { color: var(--orange); }
 .pm-star.is-on { color: var(--orange); }
 .pm-tab-watchlist.is-active .pm-count, .pm-tab-watchlist .pm-count { color: var(--orange); }
 .pm-tag-stale { color: var(--muted); border-style: dashed; }

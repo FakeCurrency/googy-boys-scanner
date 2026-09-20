@@ -46,7 +46,6 @@ jobs:
 
       - name: Confluence alert engine (ALERTS log + state)
         env:
-          GBS_SYNC_CODE: ${{ secrets.GBS_SYNC_CODE }}
         run: python -m scanner.confluence_alert
 
       - name: Commit state (surgical — the two confluence files only)

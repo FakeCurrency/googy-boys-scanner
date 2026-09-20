@@ -138,23 +138,21 @@ const req = (url, init, headers = {}) => new Request(url, {
     assert.equal(e.ua.length, 120);
   });
 
-  await test("coalesceOk: N ok-calls from one IP in one day write ONE seen marker", async () => {
+  await test("there is no coalescing branch left to opt into", async () => {
+    // It existed for /api/journal's 60-second GET poll, whose write volume would
+    // have eaten the KV quota the sync itself needed. That endpoint went with the
+    // manual journal on 2026-09-21, and both remaining callers are daily-capped
+    // dispatch endpoints — so every call is logged individually. If a polled
+    // endpoint is ever added, coalescing comes back with it rather than sitting
+    // here uncalled (the header carries the argument).
+    const src = SRC("_access_log.js");
+    assert.ok(!/coalesceOk/.test(src), "coalesceOk is back with no polled caller");
     const kv = fakeKV();
-    for (let i = 0; i < 5; i++) {
-      await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/journal"), "/api/journal", 200, { coalesceOk: true });
-    }
-    const seen = alogEntries(kv).filter(([k]) => k.startsWith("alog:seen:"));
-    assert.equal(seen.length, 1, "exactly one coalesced marker");
-    assert.equal(kv.ops.filter(([op, k]) => op === "put" && k.startsWith("alog:")).length, 1);
-  });
-
-  await test("coalesceOk: a NON-ok outcome is still logged individually", async () => {
-    const kv = fakeKV();
-    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/journal"), "/api/journal", 429, { coalesceOk: true });
-    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/journal"), "/api/journal", 429, { coalesceOk: true });
-    const events = alogEntries(kv).filter(([k]) => !k.startsWith("alog:seen:"));
-    assert.equal(events.length, 2, "each rate-limited call gets its own entry");
-    assert.equal(events[0][1].o, "rate-limited");
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 200);
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 200);
+    const entries = alogEntries(kv);
+    assert.equal(entries.length, 2, "each dispatch call gets its own entry");
+    assert.ok(!entries.some(([k]) => k.startsWith("alog:seen:")), "no seen markers");
   });
 
   suite("withAccessLog — the wrapper contract");
@@ -251,37 +249,7 @@ const req = (url, init, headers = {}) => new Request(url, {
     assert.equal(events[0][1].o, "rate-limited");
   });
 
-  suite("journal.js — PUTs logged individually, ok-GETs coalesced");
+  // (The journal.js access-log suite went with the KV journal store on
+  //  2026-09-21 — the manual journal it served was removed.)
 
-  const J = loadModule("journal.js", {
-    strip: [
-      [/export const onRequestGet = withAccessLog\(/, "globalThis.onRequestGet = withAccessLog("],
-      [/export const onRequestPut = withAccessLog\(/, "globalThis.onRequestPut = withAccessLog("],
-    ],
-  });
-  const H = { "X-Sync-Code": "viv-code" };
-
-  await test("a PUT writes one event entry; repeated ok-GETs share one seen marker", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    const put = await J.onRequestPut({ env, request: req("https://x/api/journal", {
-      method: "PUT", body: JSON.stringify({ trades: [{ id: "private-trade" }] }) }, H) });
-    assert.equal(put.status, 200);
-    for (let i = 0; i < 3; i++) {
-      const get = await J.onRequestGet({ env, request: req("https://x/api/journal", {}, H) });
-      assert.equal(get.status, 200);
-    }
-    const events = alogEntries(kv).filter(([k]) => !k.startsWith("alog:seen:"));
-    const seen = alogEntries(kv).filter(([k]) => k.startsWith("alog:seen:"));
-    assert.equal(events.length, 1, "one PUT event");
-    assert.equal(events[0][1].m, "PUT");
-    assert.equal(seen.length, 1, "three ok-GETs share one seen marker");
-    for (const [, v] of alogEntries(kv)) {
-      assert.ok(!JSON.stringify(v).includes("private-trade"),
-        "journal contents must never reach the access log");
-    }
-  });
-
-  console.log(`\naccess_log.test.js: ${passed} passed, ${failed} failed`);
-  if (failed) process.exit(1);
 })();

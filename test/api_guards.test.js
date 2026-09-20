@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Guard-rail tests for the five state-touching Pages Functions —
- * functions/api/journal.js, scan.js, close.js, tick.js, heartbeat.js.
+ * functions/api/scan.js, close.js, heartbeat.js.
  *
  * WHY THIS FILE EXISTS (2026-07-29): three of these guards were verified wrong
  * the same day, and none of them had a single test.
@@ -96,91 +96,8 @@ function fakeKV(initial = {}) {
   };
 }
 
-// ═══════════════════ 1. journal.js — the sync rate limiter ═══════════════════
-
-// NOTE the replacement is `globalThis.x =`, not `const x =`: vm scripts put
-// `function` declarations on the contextified sandbox but keep `const` in a
-// separate lexical environment the test could never reach.
-const J = loadModule("journal.js", {
-  strip: [
-    [/export const onRequestGet/, "globalThis.onRequestGet"],
-    [/export const onRequestPut/, "globalThis.onRequestPut"],
-  ],
-});
-const jGet = (env, headers) => J.onRequestGet({
-  env, request: new Request("https://x/api/journal", { headers }),
-});
-const jPut = (env, headers, body) => J.onRequestPut({
-  env, request: new Request("https://x/api/journal", {
-    method: "PUT", headers, body: JSON.stringify(body || { trades: [] }),
-  }),
-});
-const H = { "X-Sync-Code": "viv-code", "CF-Connecting-IP": "1.2.3.4" };
-
-const jTests = async () => {
-  suite("journal.js — polling can never lock itself out");
-
-  await test("61 GETs in one hour all succeed — the poll cadence is 60/hr and the old cap was 30", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    await jPut(env, H, { trades: [{ id: "t1" }] });      // seed so GETs are hits
-    for (let i = 0; i < 61; i++) {
-      const r = await jGet(env, H);
-      assert.equal(r.status, 200, `GET #${i + 1} returned ${r.status}`);
-    }
-  });
-
-  await test("hit-GETs cost at most ONE KV write per IP per day — counting was burning the write quota", async () => {
-    // Was "zero writes" until 2026-08-20: the access log now writes a single
-    // coalesced `alog:seen:` marker per IP per UTC day (incident diagnosis —
-    // see _access_log.js). The property this test defends is unchanged:
-    // per-REQUEST counting on the poll path must never come back.
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    await jPut(env, H, { trades: [] });
-    const before = kv.writes();
-    const alogBefore = kv.writes("alog:");
-    for (let i = 0; i < 10; i++) await jGet(env, H);
-    assert.equal(kv.writes("alog:"), alogBefore + 1,
-      "10 successful GETs coalesce to exactly ONE alog:seen marker");
-    assert.equal(kv.writes() - kv.writes("alog:"), before - alogBefore,
-      "outside the access log, 10 successful GETs must cost zero KV writes");
-  });
-
-  await test("PUTs are still capped per hour", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    let limited = 0;
-    for (let i = 0; i < 40; i++) {
-      const r = await jPut(env, H, { trades: [] });
-      if (r.status === 429) limited++;
-    }
-    assert.ok(limited >= 5, `expected the tail of 40 PUTs limited, got ${limited}`);
-  });
-
-  await test("over the PUT cap the counter itself stops being written", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    for (let i = 0; i < 40; i++) await jPut(env, H, { trades: [] });
-    const counterWrites = kv.ops.filter(([op, k]) => op === "put" && k.startsWith("ratelimit:journal:")).length;
-    assert.ok(counterWrites <= 31, `counter kept writing past the cap (${counterWrites})`);
-  });
-
-  await test("an unknown code still counts a miss (the enumeration guard is the GET guard now)", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    await jGet(env, { ...H, "X-Sync-Code": "wrong-code" });
-    assert.equal(kv.writes("ratelimit:journal-miss:"), 1);
-  });
-
-  await test("30 misses lock the IP out for the day", async () => {
-    const kv = fakeKV();
-    const env = { JOURNAL_KV: kv };
-    for (let i = 0; i < 30; i++) await jGet(env, { ...H, "X-Sync-Code": `guess-${i}` });
-    const r = await jGet(env, H);                        // even the RIGHT code now
-    assert.equal(r.status, 429);
-  });
-};
+// (1. journal.js — the sync rate limiter — went with the KV journal store on
+//  2026-09-21 when the manual journal was removed.)
 
 // ═══════════════ 2. scan.js / close.js — the cooldown refund ════════════════
 
@@ -354,68 +271,8 @@ const scanTests = async () => {
   });
 };
 
-// ══════════ 3. tick.js — the watcher prices the RIGHT instrument ═════════════
-
-const tickTests = async () => {
-  suite("tick.js — crypto fallback queries <base>-USD, never the bare base");
-
-  const yahooCalls = [];
-  const T = loadModule("tick.js", {
-    strip: [
-      [/import\s*\{[^}]*\}\s*from\s*"\.\/_prices\.js";/, ""],
-      [/import\s*\{[^}]*\}\s*from\s*"\.\/_vivek_manage\.js";/, ""],
-      [/export const onRequest\b/, "const onRequest"],
-    ],
-    sandboxExtra: {
-      fetchBinancePrice: async () => null,               // thin coin: not on Binance
-      fetchYahooChart: async (sym) => { yahooCalls.push(sym); return { meta: { regularMarketPrice: 0.07 } }; },
-      // real normaliser, inlined from _prices.js semantics — asserted below
-      yahooCryptoSymbol: (sym) => String(sym || "").toUpperCase()
-        .replace(/-USD$/, "").replace(/-USDT$/, "").replace(/USDT$/, "") + "-USD",
-      isVivek: () => false,
-      manageVivek: () => false,
-    },
-  });
-
-  await test("a bare journal base like BDX goes to Yahoo as BDX-USD", async () => {
-    yahooCalls.length = 0;
-    const px = await T.cryptoPrice("BDX", {});
-    assert.equal(px, 0.07);
-    assert.deepEqual(yahooCalls, ["BDX-USD"],
-      "bare BDX resolves to Becton Dickinson (~$230) — the wrong instrument under an auto-closer");
-  });
-
-  await test("an already-suffixed symbol is not double-suffixed", async () => {
-    yahooCalls.length = 0;
-    await T.cryptoPrice("ETH-USD", {});
-    assert.deepEqual(yahooCalls, ["ETH-USD"]);
-  });
-
-  await test("the shipped tick.js actually imports the normaliser (the stub above must mirror _prices.js)", () => {
-    const src = SRC("tick.js");
-    assert.match(src, /import\s*\{[^}]*yahooCryptoSymbol[^}]*\}\s*from\s*"\.\/_prices\.js"/,
-      "tick.js must take yahooCryptoSymbol from _prices.js, not roll its own");
-    // and the real exporter still exports it, so the import cannot go dead:
-    assert.match(SRC("_prices.js"), /export function yahooCryptoSymbol/);
-  });
-
-  await test("a null price stays null — no fill on a missing quote", async () => {
-    const T2 = loadModule("tick.js", {
-      strip: [
-        [/import\s*\{[^}]*\}\s*from\s*"\.\/_prices\.js";/, ""],
-        [/import\s*\{[^}]*\}\s*from\s*"\.\/_vivek_manage\.js";/, ""],
-        [/export const onRequest\b/, "const onRequest"],
-      ],
-      sandboxExtra: {
-        fetchBinancePrice: async () => null,
-        fetchYahooChart: async () => { throw new Error("both hosts down"); },
-        yahooCryptoSymbol: (s) => s + "-USD",
-        isVivek: () => false, manageVivek: () => false,
-      },
-    });
-    assert.equal(await T2.cryptoPrice("BDX", {}), null);
-  });
-};
+// (3. tick.js — the cloud stop/target watcher — went the same day, with the
+//  manual positions it was the only reader of.)
 
 // ═════════ 4. heartbeat.js — the self-heal leg, and what it must NOT do ══════
 //
@@ -644,9 +501,7 @@ const hbTests = async () => {
 
 // ── summary (sequential so the suite headers stay attached to their tests) ───
 (async () => {
-  await jTests();
   await scanTests();
-  await tickTests();
   await hbTests();
   console.log(`\napi_guards.test.js: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

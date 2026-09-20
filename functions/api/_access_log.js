@@ -1,5 +1,5 @@
-/* Best-effort access logging for the unauthenticated dispatch/sync endpoints
- * (/api/close, /api/scan, /api/journal) — 2026-08-20.
+/* Best-effort access logging for the unauthenticated dispatch endpoints
+ * (/api/close, /api/scan) — 2026-08-20.
  *
  * WHY: after the 2026-08-20 bad-commit incident there was nothing to read to
  * answer "what else hit these endpoints in the last 24 hours". This is the
@@ -8,18 +8,20 @@
  *
  * THE RULES (same spirit as the cooldown-refund try/catch patterns beside it):
  *   - BEST-EFFORT ONLY. Every KV touch is inside try/catch; a logging failure
- *     must never block or fail the close/scan/journal action it describes.
+ *     must never block or fail the close/scan action it describes.
  *     Callers route through ctx.waitUntil() so it does not even add latency.
- *   - NO REQUEST BODIES. Journal PUTs carry the user's whole journal; close
- *     bodies carry trade details. Only the envelope is recorded.
- *   - WRITES STAY PROPORTIONAL TO RARE EVENTS. journal.js's own limiter
- *     comments document the constraint: KV writes are the scarce resource
- *     (~1k/day free vs 100k reads), and the journal page polls GET every 60s
- *     per open tab (~1,440/day). Logging every successful GET per-request
- *     would burn the write quota the sync itself needs — so hot-path success
- *     is COALESCED to one "seen" marker per IP per UTC day (callers opt in
- *     via coalesceOk). Dispatch endpoints are already daily-capped (40 scans,
- *     60 closes) so their every call is cheap to record individually.
+ *   - NO REQUEST BODIES. Close bodies carry trade details; only the envelope
+ *     is recorded.
+ *   - WRITES STAY PROPORTIONAL TO RARE EVENTS. KV writes are the scarce
+ *     resource (~1k/day free vs 100k reads), so nothing polled may be logged
+ *     per request. Both remaining callers are daily-capped dispatch endpoints
+ *     (40 scans, 60 closes), so every one of their calls is cheap to record
+ *     individually. THE COALESCING BRANCH IS GONE (2026-09-21): it existed for
+ *     /api/journal's 60-second GET poll — one "seen" marker per IP per UTC day
+ *     — and that endpoint went with the manual journal it synced. If a polled
+ *     endpoint is ever added back, coalescing comes back WITH it rather than
+ *     sitting here uncalled; the write-quota argument above is the reason it
+ *     existed and is what to re-read first.
  */
 
 const LOG_TTL_S = 4 * 86400;   // a few days is plenty — incident diagnosis, not analytics
@@ -30,9 +32,9 @@ export function outcomeOf(status) {
   return "error";
 }
 
-/* Record one request's envelope. `opts.coalesceOk` switches successful calls
- * to the once-per-IP-per-day marker (for polled endpoints — see header). */
-export async function logAccess(env, request, path, status, opts = {}) {
+/* Record one request's envelope. One entry per call: every caller is a
+ * daily-capped dispatch endpoint (see the header on coalescing). */
+export async function logAccess(env, request, path, status) {
   try {
     if (!env || !env.JOURNAL_KV) return;               // same degradation as the rate limiters
     const now = new Date();
@@ -41,16 +43,6 @@ export async function logAccess(env, request, path, status, opts = {}) {
       || request.headers.get("CF-IPCountry") || "";
     const ua = (request.headers.get("User-Agent") || "").slice(0, 120);
     const outcome = outcomeOf(status);
-
-    if (opts.coalesceOk && outcome === "ok") {
-      const day = now.toISOString().slice(0, 10);
-      const seenKey = `alog:seen:${path}:${day}:${ip}`;
-      if (await env.JOURNAL_KV.get(seenKey)) return;   // already recorded today
-      await env.JOURNAL_KV.put(seenKey,
-        JSON.stringify({ t: now.toISOString(), cc: country, ua }),
-        { expirationTtl: LOG_TTL_S });
-      return;
-    }
 
     // One entry per event. The random suffix stops two same-millisecond
     // requests clobbering each other's key.
@@ -72,9 +64,9 @@ export async function logAccess(env, request, path, status, opts = {}) {
  * The log write rides ctx.waitUntil when the runtime provides it (so the
  * response is not delayed); otherwise it is awaited — which is what makes
  * the behaviour deterministic under test. */
-export const withAccessLog = (path, handler, opts = {}) => async (ctx) => {
+export const withAccessLog = (path, handler) => async (ctx) => {
   const res = await handler(ctx);
-  const p = logAccess(ctx.env, ctx.request, path, res.status, opts);
+  const p = logAccess(ctx.env, ctx.request, path, res.status);
   if (typeof ctx.waitUntil === "function") ctx.waitUntil(p);
   else await p;
   return res;
